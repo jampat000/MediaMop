@@ -548,6 +548,24 @@ body.mm-body {
   color: var(--mm-text);
 }
 
+.mm-activity-panel {
+  margin: 0;
+  max-width: 40rem;
+  padding: 1rem 1.15rem;
+  border-radius: var(--mm-radius-sm);
+  border: 1px solid rgba(231, 231, 234, 0.07);
+  background: var(--mm-slate);
+  box-shadow: var(--mm-shadow-card-inner);
+}
+
+.mm-activity-empty {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  letter-spacing: -0.01em;
+  color: var(--mm-text2);
+}
+
 .mm-shell-aside {
   padding: 1.2rem 1.3rem 1.25rem;
   border-radius: var(--mm-radius);
