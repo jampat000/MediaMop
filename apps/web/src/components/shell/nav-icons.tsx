@@ -103,12 +103,24 @@ export function NavIconRefiner({ className = "" }: { className?: string }) {
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >
+      <path d="M3 21h18" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
       <path
-        d="M5 7h10l-2.5 5H7.5L5 7zm2.5 5L8 19h8l-1.5-7"
+        d="M5 21V15L7.5 10 10 15V21H5z"
         stroke="currentColor"
         strokeWidth="1.35"
-        strokeLinecap="round"
         strokeLinejoin="round"
+      />
+      <path
+        d="M12 21V11h9v10H12zM16 11V6h2v5"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M13.5 15.5h6M13.5 18.5h6"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
       />
     </svg>
   );
@@ -125,9 +137,11 @@ export function NavIconTrimmer({ className = "" }: { className?: string }) {
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >
-      <circle cx="7.5" cy="7.5" r="3" stroke="currentColor" strokeWidth="1.35" />
-      <circle cx="16.5" cy="16.5" r="3" stroke="currentColor" strokeWidth="1.35" />
-      <path d="M10 14l4-4" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+      <circle cx="8" cy="17" r="2.4" stroke="currentColor" strokeWidth="1.35" />
+      <circle cx="16" cy="17" r="2.4" stroke="currentColor" strokeWidth="1.35" />
+      <path d="M9.7 15.8L14 6.5" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+      <path d="M14.3 15.8L10 6.5" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+      <circle cx="12" cy="6.75" r="1.1" stroke="currentColor" strokeWidth="1.2" />
     </svg>
   );
 }
