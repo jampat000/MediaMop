@@ -7,13 +7,13 @@ export default {
         outfit: ['"Outfit"', "system-ui", "-apple-system", "sans-serif"],
       },
       colors: {
-        mb: {
-          bg: "var(--mb-bg)",
-          "bg-main": "var(--mb-bg-main)",
-          text: "var(--mb-text)",
-          text2: "var(--mb-text2)",
-          accent: "var(--mb-accent)",
-          "accent-bright": "var(--mb-accent-bright)",
+        mm: {
+          bg: "var(--mm-bg)",
+          "bg-main": "var(--mm-bg-main)",
+          text: "var(--mm-text)",
+          text2: "var(--mm-text2)",
+          accent: "var(--mm-accent)",
+          "accent-bright": "var(--mm-accent-bright)",
         },
       },
     },

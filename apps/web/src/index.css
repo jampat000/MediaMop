@@ -1,5 +1,5 @@
-@import "./styles/mb-tokens.css";
-@import "./styles/mb-shell.css";
+@import "./styles/mediamop-tokens.css";
+@import "./styles/mediamop-shell.css";
 
 @tailwind base;
 @tailwind components;

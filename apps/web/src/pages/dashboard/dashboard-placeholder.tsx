@@ -20,7 +20,7 @@ function FrameGlyph({ className }: { className?: string }) {
 
 function PillarIcon({ children }: { children: ReactNode }) {
   return (
-    <span className="mb-pillar__icon" aria-hidden="true">
+    <span className="mm-pillar__icon" aria-hidden="true">
       {children}
     </span>
   );
@@ -76,59 +76,59 @@ export function DashboardPlaceholder() {
   const me = useMeQuery();
 
   return (
-    <div className="mb-page">
-      <header className="mb-page__intro mb-page__intro--hero">
-        <span className="mb-page__hero-line" aria-hidden="true" />
-        <p className="mb-page__eyebrow">Overview</p>
-        <h1 className="mb-page__title">Dashboard</h1>
-        <p className="mb-page__subtitle">At a glance, your media workflows will live here.</p>
-        <p className="mb-page__lead">
-          Signed in as <strong className="font-semibold text-[var(--mb-text)]">{me.data?.username}</strong>{" "}
-          <span className="text-[var(--mb-text3)]">({me.data?.role})</span>. A tidy companion for your library —
+    <div className="mm-page">
+      <header className="mm-page__intro mm-page__intro--hero">
+        <span className="mm-page__hero-line" aria-hidden="true" />
+        <p className="mm-page__eyebrow">Overview</p>
+        <h1 className="mm-page__title">Dashboard</h1>
+        <p className="mm-page__subtitle">At a glance, your media workflows will live here.</p>
+        <p className="mm-page__lead">
+          Signed in as <strong className="font-semibold text-[var(--mm-text)]">{me.data?.username}</strong>{" "}
+          <span className="text-[var(--mm-text3)]">({me.data?.role})</span>. A tidy companion for your library —
           automated, intelligent, and fastidious about quality.
         </p>
       </header>
 
-      <p className="mb-dashboard-preamble" role="note">
-        <span className="mb-dashboard-preamble__mark" aria-hidden="true" />
+      <p className="mm-dashboard-preamble" role="note">
+        <span className="mm-dashboard-preamble__mark" aria-hidden="true" />
         Shell only: module tools are not wired yet. This layout matches the shipping product frame from the brand
         system — not a dev scaffold.
       </p>
 
-      <div className="mb-dashboard-grid">
-        <article className="mb-card mb-card--shell" data-testid="shell-ready">
-          <div className="mb-card__top">
-            <span className="mb-card__glyph" aria-hidden="true">
-              <FrameGlyph className="text-[var(--mb-gold)]" />
+      <div className="mm-dashboard-grid">
+        <article className="mm-card mm-card--shell" data-testid="shell-ready">
+          <div className="mm-card__top">
+            <span className="mm-card__glyph" aria-hidden="true">
+              <FrameGlyph className="text-[var(--mm-gold)]" />
             </span>
-            <div className="mb-card__top-copy">
-              <h2 className="mb-card__title mb-card__title--inline">Product shell</h2>
-              <p className="mb-card__body mb-card__body--tight">
+            <div className="mm-card__top-copy">
+              <h2 className="mm-card__title mm-card__title--inline">Product shell</h2>
+              <p className="mm-card__body mm-card__body--tight">
                 Authentication, sidebar, and canvas follow the MediaMop shell spec. Fetcher-era screens are not
                 recreated here — only the spine until real routes ship.
               </p>
             </div>
           </div>
         </article>
-        <aside className="mb-shell-aside" aria-labelledby="mb-shell-aside-heading">
-          <h2 id="mb-shell-aside-heading" className="mb-shell-aside__title">
+        <aside className="mm-shell-aside" aria-labelledby="mm-shell-aside-heading">
+          <h2 id="mm-shell-aside-heading" className="mm-shell-aside__title">
             What is next
           </h2>
-          <p className="mb-shell-aside__body">
+          <p className="mm-shell-aside__body">
             Library and workflow modules will appear as first-class navigation and views. Until then, Settings holds
             honest placeholders.
           </p>
         </aside>
       </div>
 
-      <section className="mb-pillars" aria-label="Product principles">
-        <h2 className="mb-pillars__heading">Why MediaMop</h2>
-        <ul className="mb-pillars__grid">
+      <section className="mm-pillars" aria-label="Product principles">
+        <h2 className="mm-pillars__heading">Why MediaMop</h2>
+        <ul className="mm-pillars__grid">
           {PILLARS.map((p) => (
-            <li key={p.title} className="mb-pillar">
+            <li key={p.title} className="mm-pillar">
               <PillarIcon>{p.icon}</PillarIcon>
-              <h3 className="mb-pillar__title">{p.title}</h3>
-              <p className="mb-pillar__body">{p.body}</p>
+              <h3 className="mm-pillar__title">{p.title}</h3>
+              <p className="mm-pillar__body">{p.body}</p>
             </li>
           ))}
         </ul>

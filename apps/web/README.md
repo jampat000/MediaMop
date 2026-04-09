@@ -7,7 +7,7 @@
 ## Stack
 
 - React 18, React Router 6, TanStack Query
-- Tailwind CSS (minimal tokens in `tailwind.config.js`); **shell look** is owned by `src/styles/mb-tokens.css` and `src/styles/mb-shell.css` — **warm charcoal base + gold accent** product language (approved one-pager direction); indigo only as a restrained depth veil in tokens.
+- Tailwind CSS (minimal tokens in `tailwind.config.js`); **shell look** is owned by `src/styles/mediamop-tokens.css` and `src/styles/mediamop-shell.css` - **warm charcoal base + gold accent** product language (approved one-pager direction); indigo only as a restrained depth veil in tokens.
 - Vitest + Testing Library for small unit tests
 
 ## Development

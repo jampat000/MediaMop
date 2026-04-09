@@ -23,12 +23,12 @@ export function SetupPage() {
 
   if (boot.isError) {
     return (
-      <main className="mb-auth-body" id="mb-main-content" tabIndex={-1}>
-        <div className="mb-auth-frame">
+      <main className="mm-auth-body" id="mm-main-content" tabIndex={-1}>
+        <div className="mm-auth-frame">
           <AuthBrandStack />
-          <div className="mb-auth-card">
+          <div className="mm-auth-card">
             <ApiEntryError error={boot.error} />
-            <p className="mb-auth-footer-link !mt-4">
+            <p className="mm-auth-footer-link !mt-4">
               <Link to="/login">Back to sign in</Link>
             </p>
           </div>
@@ -52,19 +52,19 @@ export function SetupPage() {
   };
 
   return (
-    <main className="mb-auth-body" id="mb-main-content" tabIndex={-1}>
-      <div className="mb-auth-frame">
+    <main className="mm-auth-body" id="mm-main-content" tabIndex={-1}>
+      <div className="mm-auth-frame">
         <AuthBrandStack />
-        <div className="mb-auth-card">
-          <p className="mb-auth-eyebrow">First run</p>
-          <h1 className="mb-auth-title">Create admin</h1>
-          <p className="mb-auth-lead">
+        <div className="mm-auth-card">
+          <p className="mm-auth-eyebrow">First run</p>
+          <h1 className="mm-auth-title">Create admin</h1>
+          <p className="mm-auth-lead">
             This workspace has no administrator yet. Choose credentials for the initial account —
             afterward this step is locked.
           </p>
 
-          <form data-testid="setup-form" className="mb-auth-form" onSubmit={onSubmit}>
-            <label className="mb-auth-label" htmlFor="setup-user">
+          <form data-testid="setup-form" className="mm-auth-form" onSubmit={onSubmit}>
+            <label className="mm-auth-label" htmlFor="setup-user">
               Admin username
             </label>
             <input
@@ -72,13 +72,13 @@ export function SetupPage() {
               data-testid="setup-username"
               name="username"
               autoComplete="username"
-              className="mb-auth-input"
+              className="mm-auth-input"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
               maxLength={64}
             />
-            <label className="mb-auth-label" htmlFor="setup-pass">
+            <label className="mm-auth-label" htmlFor="setup-pass">
               Password (min. 8 characters)
             </label>
             <input
@@ -87,7 +87,7 @@ export function SetupPage() {
               name="password"
               type="password"
               autoComplete="new-password"
-              className="mb-auth-input"
+              className="mm-auth-input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -95,21 +95,21 @@ export function SetupPage() {
               maxLength={512}
             />
             {bootstrap.isError ? (
-              <p className="mb-auth-banner" role="alert">
+              <p className="mm-auth-banner" role="alert">
                 {bootstrap.error instanceof Error ? bootstrap.error.message : "Setup failed."}
               </p>
             ) : null}
             <button
               type="submit"
               data-testid="setup-submit"
-              className="mb-auth-submit"
+              className="mm-auth-submit"
               disabled={bootstrap.isPending}
             >
               {bootstrap.isPending ? "Creating…" : "Create admin account"}
             </button>
           </form>
 
-          <p className="mb-auth-footer-link">
+          <p className="mm-auth-footer-link">
             Already have an account? <Link to="/login">Sign in</Link>
           </p>
         </div>

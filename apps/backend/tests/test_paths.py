@@ -10,7 +10,7 @@ from mediamop.core.paths import default_mediamop_home, resolve_mediamop_home
 
 
 def test_resolve_explicit_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    target = tmp_path / "custom-mb"
+    target = tmp_path / "custom-mediamop"
     monkeypatch.setenv("MEDIAMOP_HOME", str(target))
     assert resolve_mediamop_home() == target.resolve()
 

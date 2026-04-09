@@ -1,6 +1,6 @@
 # MediaMop — visual identity (web shell)
 
-Approved **one-pager** palette (implement in `apps/web/src/styles/mb-tokens.css`):
+Approved **one-pager** palette (implement in `apps/web/src/styles/mediamop-tokens.css`):
 
 | Token     | Hex       | Use                                      |
 |----------|-----------|------------------------------------------|
@@ -10,4 +10,4 @@ Approved **one-pager** palette (implement in `apps/web/src/styles/mb-tokens.css`
 | Warm gold| `#D4AF37` | Brand accent, monogram, key highlights   |
 | Indigo   | `#4F56EF` | Secondary accent (sparingly)             |
 
-**Implementation:** `mb-tokens.css` + `mb-shell.css`.
+**Implementation:** `mediamop-tokens.css` + `mediamop-shell.css`.

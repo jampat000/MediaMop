@@ -18,10 +18,10 @@ export function RootEntry() {
   if (me.isError || boot.isError) {
     const err = boot.error ?? me.error;
     return (
-      <main className="mb-auth-body" id="mb-main-content" tabIndex={-1}>
-        <div className="mb-auth-frame">
+      <main className="mm-auth-body" id="mm-main-content" tabIndex={-1}>
+        <div className="mm-auth-frame">
           <AuthBrandStack />
-          <div className="mb-auth-card">
+          <div className="mm-auth-card">
             <ApiEntryError error={err} />
           </div>
         </div>

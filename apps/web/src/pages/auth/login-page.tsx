@@ -26,10 +26,10 @@ export function LoginPage() {
   if (me.isError || boot.isError) {
     const err = boot.error ?? me.error;
     return (
-      <main className="mb-auth-body" id="mb-main-content" tabIndex={-1}>
-        <div className="mb-auth-frame">
+      <main className="mm-auth-body" id="mm-main-content" tabIndex={-1}>
+        <div className="mm-auth-frame">
           <AuthBrandStack />
-          <div className="mb-auth-card">
+          <div className="mm-auth-card">
             <ApiEntryError error={err} />
           </div>
         </div>
@@ -48,32 +48,32 @@ export function LoginPage() {
   };
 
   return (
-    <main className="mb-auth-body" id="mb-main-content" tabIndex={-1}>
-      <div className="mb-auth-frame">
+    <main className="mm-auth-body" id="mm-main-content" tabIndex={-1}>
+      <div className="mm-auth-frame">
         <AuthBrandStack />
-        <div className="mb-auth-card">
-          <p className="mb-auth-eyebrow">MediaMop</p>
-          <h1 className="mb-auth-title">Sign in</h1>
-          <p className="mb-auth-lead">Session authentication — your account stays on the server.</p>
+        <div className="mm-auth-card">
+          <p className="mm-auth-eyebrow">MediaMop</p>
+          <h1 className="mm-auth-title">Sign in</h1>
+          <p className="mm-auth-lead">Session authentication — your account stays on the server.</p>
 
           {fromSetup ? (
-            <p className="mb-auth-banner mb-auth-banner--ok" role="status">
+            <p className="mm-auth-banner mm-auth-banner--ok" role="status">
               Initial account created. Sign in with the credentials you chose.
             </p>
           ) : null}
 
           {boot.data?.bootstrap_allowed ? (
-            <p className="mb-auth-lead mt-2">
+            <p className="mm-auth-lead mt-2">
               First-time setup?{" "}
-              <Link to="/setup" className="font-medium text-[var(--mb-accent-bright)] hover:underline">
+              <Link to="/setup" className="font-medium text-[var(--mm-accent-bright)] hover:underline">
                 Create the admin account
               </Link>
               .
             </p>
           ) : null}
 
-          <form data-testid="login-form" className="mb-auth-form mt-4" onSubmit={onSubmit}>
-            <label className="mb-auth-label" htmlFor="login-user">
+          <form data-testid="login-form" className="mm-auth-form mt-4" onSubmit={onSubmit}>
+            <label className="mm-auth-label" htmlFor="login-user">
               Username
             </label>
             <input
@@ -81,12 +81,12 @@ export function LoginPage() {
               data-testid="login-username"
               name="username"
               autoComplete="username"
-              className="mb-auth-input"
+              className="mm-auth-input"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
             />
-            <label className="mb-auth-label" htmlFor="login-pass">
+            <label className="mm-auth-label" htmlFor="login-pass">
               Password
             </label>
             <input
@@ -95,20 +95,20 @@ export function LoginPage() {
               name="password"
               type="password"
               autoComplete="current-password"
-              className="mb-auth-input"
+              className="mm-auth-input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
             {login.isError ? (
-              <p className="mb-auth-banner" role="alert">
+              <p className="mm-auth-banner" role="alert">
                 {login.error instanceof Error ? login.error.message : "Sign-in failed."}
               </p>
             ) : null}
             <button
               type="submit"
               data-testid="login-submit"
-              className="mb-auth-submit"
+              className="mm-auth-submit"
               disabled={login.isPending}
             >
               {login.isPending ? "Signing in…" : "Sign in"}
