@@ -566,6 +566,11 @@ body.mm-body {
   color: var(--mm-text2);
 }
 
+.mm-fetcher-module-surface {
+  max-width: 36rem;
+  margin: 0;
+}
+
 .mm-shell-aside {
   padding: 1.2rem 1.3rem 1.25rem;
   border-radius: var(--mm-radius);
