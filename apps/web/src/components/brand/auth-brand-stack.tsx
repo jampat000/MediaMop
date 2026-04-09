@@ -1,17 +1,13 @@
-import { MonogramMark } from "./monogram-mark";
+import { MediaMopLogo } from "./mediamop-logo";
 
-/** Auth/setup — same wordmark system as sidebar (one-pager). */
+/** Auth/setup — premium logo + taglines above the card. */
 export function AuthBrandStack() {
   return (
     <div className="mm-auth-brand">
-      <span className="mm-sidebar-mark mm-sidebar-mark--auth" aria-hidden="true">
-        <MonogramMark />
-      </span>
-      <div className="mm-wordmark mm-wordmark--auth">
-        <span className="mm-wordmark-media">Media</span>
-        <span className="mm-wordmark-mop">Mop</span>
+      <div className="mm-auth-brand-logo">
+        <MediaMopLogo variant="auth" />
       </div>
-      <p className="mm-auth-brand-tagline">More order. More time. Better movies.</p>
+      <p className="mm-auth-brand-tagline">One app to clean up your entire media workflow.</p>
       <p className="mm-auth-brand-tagline-sub">Personal. Thoughtful. Built by and for media lovers.</p>
     </div>
   );

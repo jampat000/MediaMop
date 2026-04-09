@@ -1,6 +1,6 @@
 # MediaMop — web shell
 
-**React + TypeScript + Vite** app: real consumer of `apps/backend` cookie session auth and bootstrap APIs. **This directory is the forward visual source of truth** for the MediaMop shell (tokens, monogram, **Outfit**, sidebar/main). Branding was initially ported from an older static/CSS spike (not maintained in this repository); ongoing UI work should live here only.
+**React + TypeScript + Vite** app: real consumer of `apps/backend` cookie session auth and bootstrap APIs. **This directory is the forward visual source of truth** for the MediaMop shell (tokens, logo, **Outfit**, sidebar/main). Branding was initially ported from an older static/CSS spike (not maintained in this repository); ongoing UI work should live here only.
 
 **Version:** the shell footer reads **`package.json`** `version`, injected at build time via `vite.config.ts` `define` (`WEB_APP_VERSION` in `src/lib/app-meta.ts`).
 

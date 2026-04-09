@@ -94,107 +94,41 @@ body.mm-body {
   opacity: 0.98;
 }
 
-.mm-sidebar-brand:hover .mm-sidebar-mark {
-  border-color: rgba(212, 175, 55, 0.38);
-  box-shadow:
-    0 0 0 1px rgba(212, 175, 55, 0.08),
-    0 0 14px rgba(212, 175, 55, 0.06),
-    0 6px 18px rgba(0, 0, 0, 0.34);
-}
-
-.mm-sidebar-brand-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.mm-sidebar-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 52px;
-  height: 52px;
-  flex-shrink: 0;
-  border-radius: 14px;
-  background:
-    radial-gradient(100% 80% at 40% 12%, rgba(212, 175, 55, 0.06), transparent 55%),
-    linear-gradient(165deg, #22262d 0%, #14161c 100%);
-  border: 1px solid rgba(212, 175, 55, 0.22);
-  box-shadow:
-    var(--mm-shadow-card-inner),
-    0 2px 12px rgba(0, 0, 0, 0.28),
-    0 0 0 1px rgba(0, 0, 0, 0.22) inset;
-  padding: 6px;
-}
-
-.mm-sidebar-mark--auth {
-  width: 58px;
-  height: 58px;
-  padding: 7px;
-  border-radius: 15px;
-}
-
-.mm-monogram {
-  width: 100%;
-  height: 100%;
+.mm-sidebar-brand-logo {
   display: block;
-  overflow: visible;
+  width: 100%;
+  max-width: 220px;
 }
 
-.mm-sidebar-wordmark-block {
-  flex: 1;
-  min-width: 0;
-  padding-top: 2px;
+.mm-logo {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
-.mm-wordmark {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.28rem 0.4rem;
-  line-height: 1.05;
+.mm-logo--sidebar {
+  max-height: 52px;
 }
 
-.mm-wordmark--sidebar {
-  flex-direction: row;
-  align-items: baseline;
+.mm-logo--auth {
+  max-height: 72px;
 }
 
-.mm-wordmark-media {
-  font-size: 1.0625rem;
-  font-weight: 400;
-  letter-spacing: -0.02em;
-  color: var(--mm-text);
-}
-
-.mm-wordmark-mop {
-  font-size: 1.0625rem;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  color: var(--mm-gold);
-  text-shadow: 0 0 20px rgba(212, 175, 55, 0.12);
-}
-
-.mm-wordmark--auth {
-  flex-direction: row;
-  justify-content: center;
-  margin-top: 0.4rem;
-}
-
-.mm-wordmark--auth .mm-wordmark-media,
-.mm-wordmark--auth .mm-wordmark-mop {
-  font-size: 1.25rem;
+.mm-logo--hero {
+  max-height: 96px;
 }
 
 .mm-sidebar-tagline {
   margin: 12px 0 0;
   padding: 10px 0 0 11px;
-  font-size: 9.5px;
+  font-size: 11px;
   line-height: 1.45;
-  font-weight: 600;
+  font-weight: 500;
   font-style: normal;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-transform: none;
   color: var(--mm-text2);
   max-width: 100%;
   border-left: 2px solid rgba(212, 175, 55, 0.5);
@@ -673,19 +607,22 @@ body.mm-body {
   margin-bottom: 1.5rem;
 }
 
-.mm-auth-brand .mm-sidebar-mark {
-  margin-bottom: 1rem;
+.mm-auth-brand-logo {
+  display: block;
+  width: 100%;
+  max-width: 280px;
+  margin-bottom: 0.25rem;
 }
 
 .mm-auth-brand-tagline {
   margin: 0.75rem 0 0;
   max-width: 22rem;
-  font-size: 9.5px;
+  font-size: 12px;
   line-height: 1.45;
   font-style: normal;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: none;
   color: var(--mm-text2);
 }
 
