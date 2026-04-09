@@ -1,0 +1,2 @@
+"""Activity aggregation — unimplemented."""
+

@@ -1,0 +1,72 @@
+# MediaMop — backend tests, web build/tests, optional E2E (Playwright + live API).
+name: Test
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  mediamop:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: mmtest
+          POSTGRES_PASSWORD: mmtest
+          POSTGRES_DB: mmtest
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mmtest -d mmtest"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install MediaMop backend (editable) + Playwright browser
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e "./apps/backend[dev]"
+          python -m playwright install --with-deps chromium
+
+      - name: Run MediaMop backend tests
+        working-directory: apps/backend
+        env:
+          MEDIAMOP_DATABASE_URL: postgresql+psycopg://mmtest:mmtest@localhost:5432/mmtest
+          MEDIAMOP_SESSION_SECRET: ci-mediamop-session-secret-32chars-min
+        run: |
+          alembic upgrade head
+          pytest -q
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: MediaMop web — install, build, unit tests
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm run build
+          npm run test
+
+      - name: MediaMop E2E smoke (Playwright + real API)
+        env:
+          MEDIAMOP_E2E: "1"
+          MEDIAMOP_DATABASE_URL: postgresql+psycopg://mmtest:mmtest@localhost:5432/mmtest
+          MEDIAMOP_SESSION_SECRET: ci-mediamop-session-secret-32chars-min
+        run: python -m pytest tests/e2e/mediamop -q --tb=short

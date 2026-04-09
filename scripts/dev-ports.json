@@ -1,0 +1,12 @@
+{
+  "development": {
+    "webHost": "127.0.0.1",
+    "webPort": 8782,
+    "apiHost": "127.0.0.1",
+    "apiPort": 8788
+  },
+  "production": {
+    "publicHttpsPort": 443,
+    "containerApiBindPort": 8000
+  }
+}

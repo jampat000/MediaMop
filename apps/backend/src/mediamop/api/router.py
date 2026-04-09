@@ -1,0 +1,25 @@
+"""API composition — versioned JSON product surface.
+
+Convention (locked in Phase 3):
+
+- **Operational health**: ``GET /health`` at the **application root** (probe-friendly, no version prefix).
+- **Product JSON API**: all future browser- and integration-facing JSON routes under **``/api/v1``**
+  (mounted via :func:`build_v1_router`). Do not add unversioned product paths at root.
+
+Module routers (fetcher/refiner/etc.) will be included under ``/api/v1`` in later phases — not in the nested ``mediamop/`` Jinja app.
+"""
+
+from __future__ import annotations
+
+from fastapi import APIRouter
+
+from mediamop.platform.auth.router import router as auth_router
+
+API_V1_PREFIX = "/api/v1"
+
+
+def build_v1_router() -> APIRouter:
+    """Version 1 API — auth boundary under ``/api/v1/auth`` (Phase 5)."""
+    router = APIRouter(prefix=API_V1_PREFIX)
+    router.include_router(auth_router)
+    return router

@@ -1,0 +1,6 @@
+@import "./styles/mb-tokens.css";
+@import "./styles/mb-shell.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
