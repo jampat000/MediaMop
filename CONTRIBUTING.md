@@ -1,10 +1,10 @@
 # Contributing — MediaMop
 
-This repository is the **MediaMop** spine only. It does **not** contain the shipping Fetcher Windows app or Fetcher’s SQLite workflow.
+This repository is **MediaMop** (`apps/backend` + `apps/web`).
 
 ## Workflow
 
-Use the same discipline your organization expects for `main`/`master` (branch protection, PRs, green CI). Exact branch names depend on how you host this repo after the split.
+Use short-lived branches and open pull requests into `main`. Keep CI green before merge.
 
 ## Local checks
 
