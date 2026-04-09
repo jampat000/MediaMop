@@ -1,9 +1,8 @@
 import type { UserPublic } from "../api/types";
 
 /**
- * Authenticated product shell is mounted at `/app` with child routes such as
- * `/app/activity`, suite tools (`/app/fetcher`, …), and `/app/settings`.
- * Entry routing only needs the shell root; individual paths live in the app router.
+ * Entry routing: where to send the user on initial load (shell root `/app`, setup, or login).
+ * Authenticated JSON such as `GET /api/v1/dashboard/status` is separate from this helper.
  */
 
 export type EntryDecision =
@@ -11,7 +10,6 @@ export type EntryDecision =
   | { kind: "redirect"; to: "/app" | "/setup" | "/login" };
 
 /**
- * Where to send the user on initial load: dashboard, first-run setup, or login.
  * Pure helper — tested without React.
  */
 export function resolveEntryDecision(args: {

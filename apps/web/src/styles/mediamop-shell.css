@@ -499,6 +499,55 @@ body.mm-body {
   line-height: 1.55;
 }
 
+.mm-dash-grid {
+  display: grid;
+  gap: 1rem 1.25rem;
+  grid-template-columns: 1fr;
+  margin-bottom: var(--mm-space-lg);
+}
+
+@media (min-width: 880px) {
+  .mm-dash-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.mm-dash-card.mm-card {
+  min-height: 0;
+}
+
+.mm-dash-kv {
+  margin: 0.85rem 0 0;
+  padding: 0.65rem 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.055);
+  display: grid;
+  grid-template-columns: minmax(6.5rem, 7.75rem) 1fr;
+  column-gap: 1rem;
+  row-gap: 0.45rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.mm-dash-kv-label {
+  margin: 0;
+  color: var(--mm-text3);
+  font-weight: 500;
+}
+
+.mm-dash-kv-value {
+  margin: 0;
+  color: var(--mm-text2);
+  word-break: break-word;
+}
+
+.mm-dash-code {
+  font-size: 0.85em;
+  padding: 0.12em 0.4em;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--mm-text);
+}
+
 .mm-shell-aside {
   padding: 1.2rem 1.3rem 1.25rem;
   border-radius: var(--mm-radius);

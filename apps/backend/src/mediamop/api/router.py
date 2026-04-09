@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from mediamop.modules.dashboard.router import router as dashboard_router
 from mediamop.platform.auth.router import router as auth_router
 
 API_V1_PREFIX = "/api/v1"
@@ -22,4 +23,5 @@ def build_v1_router() -> APIRouter:
     """Version 1 API — auth boundary under ``/api/v1/auth`` (Phase 5)."""
     router = APIRouter(prefix=API_V1_PREFIX)
     router.include_router(auth_router)
+    router.include_router(dashboard_router)
     return router

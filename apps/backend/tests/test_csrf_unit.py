@@ -53,6 +53,7 @@ def test_origin_skipped_when_no_trusted_list() -> None:
         bootstrap_rate_window_seconds=3600,
         security_enable_hsts=False,
         mediamop_home="/tmp/mediamop-csrf-test-home",
+        fetcher_base_url=None,
     )
     req = _request_with_headers([])
     validate_browser_post_origin(req, settings)  # no-op
@@ -79,6 +80,7 @@ def test_origin_enforced_when_configured() -> None:
         bootstrap_rate_window_seconds=3600,
         security_enable_hsts=False,
         mediamop_home="/tmp/mediamop-csrf-test-home",
+        fetcher_base_url=None,
     )
     good = _request_with_headers([(b"origin", b"http://127.0.0.1:8782")])
     validate_browser_post_origin(good, settings)
@@ -111,6 +113,7 @@ def test_origin_uses_trusted_browser_origins_override() -> None:
         bootstrap_rate_window_seconds=3600,
         security_enable_hsts=False,
         mediamop_home="/tmp/mediamop-csrf-test-home",
+        fetcher_base_url=None,
     )
     good = _request_with_headers([(b"origin", b"http://127.0.0.1:9000")])
     validate_browser_post_origin(good, settings)

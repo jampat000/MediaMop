@@ -29,3 +29,15 @@ def test_session_ttl_clamps_to_at_least_one(monkeypatch: pytest.MonkeyPatch) -> 
     s = MediaMopSettings.load()
     assert s.session_idle_minutes == 1
     assert s.session_absolute_days == 1
+
+
+def test_fetcher_base_url_non_http_scheme_dropped(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MEDIAMOP_FETCHER_BASE_URL", "ftp://example.com")
+    s = MediaMopSettings.load()
+    assert s.fetcher_base_url is None
+
+
+def test_fetcher_base_url_https_trimmed(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MEDIAMOP_FETCHER_BASE_URL", " https://fetcher.local:8443/path ")
+    s = MediaMopSettings.load()
+    assert s.fetcher_base_url == "https://fetcher.local:8443/path"

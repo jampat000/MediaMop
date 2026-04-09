@@ -66,6 +66,7 @@ class MediaMopSettings:
     bootstrap_rate_window_seconds: int
     security_enable_hsts: bool
     mediamop_home: str
+    fetcher_base_url: str | None
 
     @property
     def trusted_browser_origins(self) -> tuple[str, ...]:
@@ -107,6 +108,9 @@ class MediaMopSettings:
         boot_win = max(1, _env_int("MEDIAMOP_BOOTSTRAP_RATE_WINDOW_SECONDS", 3600))
         enable_hsts = _env_bool("MEDIAMOP_SECURITY_ENABLE_HSTS", default=False)
         resolved_home = resolve_mediamop_home()
+        fetcher_url = (os.environ.get("MEDIAMOP_FETCHER_BASE_URL") or "").strip() or None
+        if fetcher_url and not fetcher_url.startswith(("http://", "https://")):
+            fetcher_url = None
         return cls(
             env=env,
             database_url=url,
@@ -125,4 +129,5 @@ class MediaMopSettings:
             bootstrap_rate_window_seconds=boot_win,
             security_enable_hsts=enable_hsts,
             mediamop_home=str(resolved_home),
+            fetcher_base_url=fetcher_url,
         )

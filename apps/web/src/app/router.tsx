@@ -1,7 +1,7 @@
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
 import { AppShell } from "../layouts/app-shell";
 import { ActivityPlaceholder } from "../pages/activity/activity-placeholder";
-import { DashboardPlaceholder } from "../pages/dashboard/dashboard-placeholder";
+import { DashboardPage } from "../pages/dashboard/dashboard-page";
 import { FetcherPlaceholder } from "../pages/fetcher/fetcher-placeholder";
 import { LoginPage } from "../pages/auth/login-page";
 import { RefinerPlaceholder } from "../pages/refiner/refiner-placeholder";
@@ -23,7 +23,7 @@ const router = createBrowserRouter([
       {
         element: <AppShell />,
         children: [
-          { index: true, element: <DashboardPlaceholder /> },
+          { index: true, element: <DashboardPage /> },
           { path: "activity", element: <ActivityPlaceholder /> },
           { path: "fetcher", element: <FetcherPlaceholder /> },
           { path: "refiner", element: <RefinerPlaceholder /> },
