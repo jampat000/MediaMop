@@ -82,9 +82,9 @@ body.mm-body {
 
 .mm-sidebar-brand {
   display: block;
-  padding: 0 12px 18px;
+  padding: 0 10px 12px;
   border-bottom: 1px solid var(--mm-border);
-  margin: 0 12px 14px;
+  margin: 0 10px 10px;
   text-decoration: none;
   color: inherit;
   transition: opacity 0.15s ease;
@@ -97,7 +97,7 @@ body.mm-body {
 .mm-sidebar-brand-logo {
   display: block;
   width: 100%;
-  max-width: 220px;
+  max-width: min(100%, 232px);
 }
 
 .mm-logo {
@@ -109,40 +109,29 @@ body.mm-body {
 }
 
 .mm-logo--sidebar {
-  max-height: 52px;
-}
-
-.mm-logo--auth {
-  max-height: 72px;
-}
-
-.mm-logo--hero {
   max-height: 96px;
 }
 
+.mm-logo--auth {
+  max-height: 128px;
+}
+
+.mm-logo--hero {
+  max-height: 160px;
+}
+
 .mm-sidebar-tagline {
-  margin: 12px 0 0;
-  padding: 10px 0 0 11px;
-  font-size: 11px;
-  line-height: 1.45;
+  margin: 8px 0 0;
+  padding: 6px 0 0 10px;
+  font-size: 10px;
+  line-height: 1.4;
   font-weight: 500;
   font-style: normal;
   letter-spacing: 0.02em;
   text-transform: none;
-  color: var(--mm-text2);
-  max-width: 100%;
-  border-left: 2px solid rgba(212, 175, 55, 0.5);
-}
-
-.mm-sidebar-tagline-sub {
-  margin: 8px 0 0;
-  padding-left: 11px;
-  font-size: 10.5px;
-  line-height: 1.45;
-  font-weight: 400;
-  letter-spacing: 0.02em;
   color: var(--mm-text3);
   max-width: 100%;
+  border-left: 2px solid rgba(212, 175, 55, 0.45);
 }
 
 .mm-sidebar-nav {
@@ -604,35 +593,26 @@ body.mm-body {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.15rem;
 }
 
 .mm-auth-brand-logo {
   display: block;
   width: 100%;
-  max-width: 280px;
-  margin-bottom: 0.25rem;
+  max-width: 320px;
+  margin-bottom: 0;
 }
 
 .mm-auth-brand-tagline {
-  margin: 0.75rem 0 0;
-  max-width: 22rem;
-  font-size: 12px;
-  line-height: 1.45;
+  margin: 0.5rem 0 0;
+  max-width: 20rem;
+  font-size: 11px;
+  line-height: 1.4;
   font-style: normal;
   font-weight: 500;
   letter-spacing: 0.02em;
   text-transform: none;
-  color: var(--mm-text2);
-}
-
-.mm-auth-brand-tagline-sub {
-  margin: 0.5rem 0 0;
-  max-width: 22rem;
-  font-size: 10.5px;
-  line-height: 1.45;
   color: var(--mm-text3);
-  letter-spacing: 0.02em;
 }
 
 .mm-auth-card {
