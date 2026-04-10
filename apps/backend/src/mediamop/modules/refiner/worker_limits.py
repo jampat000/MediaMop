@@ -1,6 +1,6 @@
 """Refiner worker bounds — shared by :mod:`mediamop.core.config` without import cycles.
 
-Rollout semantics (Pass 21):
+Worker count rollout semantics:
 
 - **0** — In-process Refiner asyncio workers disabled (tests, controlled runtime).
 - **1** — Supported default for SQLite-first deployments (single writer; predictable).

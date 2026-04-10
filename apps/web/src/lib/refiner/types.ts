@@ -1,4 +1,4 @@
-/** Shapes for ``GET /api/v1/refiner/jobs/inspection`` (Pass 19). */
+/** Shapes for Refiner operator APIs: job inspection, runtime visibility, manual cleanup-drive enqueue. */
 
 export type RefinerJobInspectionRow = {
   id: number;
@@ -20,17 +20,7 @@ export type RefinerJobsInspectionOut = {
   default_terminal_only: boolean;
 };
 
-/** ``GET /api/v1/refiner/runtime/visibility`` (Pass 22) — settings intent, not liveness. */
-
-/** ``POST /api/v1/refiner/cleanup-drive/{radarr|sonarr}/enqueue`` (Pass 23). */
-
-export type ManualCleanupDriveEnqueueOut = {
-  job_id: number;
-  dedupe_key: string;
-  job_kind: string;
-  enqueue_outcome: "created" | "already_present";
-};
-
+/** ``GET /api/v1/refiner/runtime/visibility`` — loaded settings; not liveness. */
 export type RefinerRuntimeVisibilityOut = {
   refiner_worker_count: number;
   in_process_workers_disabled: boolean;
@@ -41,4 +31,12 @@ export type RefinerRuntimeVisibilityOut = {
   refiner_sonarr_cleanup_drive_schedule_enabled: boolean;
   refiner_sonarr_cleanup_drive_schedule_interval_seconds: number;
   visibility_note: string;
+};
+
+/** Response body for operator ``POST …/cleanup-drive/{radarr|sonarr}/enqueue``. */
+export type ManualCleanupDriveEnqueueOut = {
+  job_id: number;
+  dedupe_key: string;
+  job_kind: string;
+  enqueue_outcome: "created" | "already_present";
 };

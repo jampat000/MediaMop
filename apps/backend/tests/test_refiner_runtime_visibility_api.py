@@ -1,4 +1,4 @@
-"""Pass 22: GET /refiner/runtime/visibility (authenticated read-only)."""
+"""Authenticated read-only ``GET /api/v1/refiner/runtime/visibility``."""
 
 from __future__ import annotations
 

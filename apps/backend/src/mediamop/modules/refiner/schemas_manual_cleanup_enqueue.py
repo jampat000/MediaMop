@@ -1,4 +1,4 @@
-"""Pydantic for operator manual cleanup-drive enqueue (Pass 23)."""
+"""Pydantic for operator-triggered cleanup-drive enqueue (Radarr/Sonarr POST bodies and responses)."""
 
 from __future__ import annotations
 

@@ -1,6 +1,6 @@
 import { REFINER_STATUS_HANDLER_OK_FINALIZE_FAILED } from "./refiner-job-status-labels";
 
-/** Admin/operator only — manual cleanup-drive enqueue (Pass 23). */
+/** Admin/operator only — show manual cleanup-drive enqueue controls. */
 export function showManualCleanupDriveEnqueueControl(role: string | undefined): boolean {
   if (!role) {
     return false;

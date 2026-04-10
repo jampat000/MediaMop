@@ -1,4 +1,4 @@
-"""Refiner Pass 23: manual POST enqueue for Radarr/Sonarr cleanup-drive jobs."""
+"""Operator ``POST`` enqueue for Radarr/Sonarr cleanup-drive jobs (dedupe-aware)."""
 
 from __future__ import annotations
 

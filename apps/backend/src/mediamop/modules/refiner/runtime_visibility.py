@@ -1,6 +1,6 @@
-"""Build read-only Refiner runtime visibility from :class:`~mediamop.core.config.MediaMopSettings` (Pass 22).
+"""Map :class:`~mediamop.core.config.MediaMopSettings` to a bounded Refiner runtime visibility DTO.
 
-No asyncio introspection: operators see **configured intent** only, not proved liveness.
+No asyncio introspection — **configured intent** only, not proved task liveness.
 """
 
 from __future__ import annotations

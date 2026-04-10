@@ -1,4 +1,4 @@
-"""Pydantic shapes for read-only Refiner runtime configuration visibility (Pass 22)."""
+"""Pydantic shapes for read-only Refiner runtime configuration (loaded settings, not liveness)."""
 
 from __future__ import annotations
 

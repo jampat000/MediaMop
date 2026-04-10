@@ -1,6 +1,6 @@
-"""Operator-triggered enqueue for *arr cleanup-drive jobs (Pass 23).
+"""Operator-triggered enqueue for Radarr/Sonarr cleanup-drive jobs.
 
-Uses existing enqueue functions only; does not run handlers or touch the worker loop.
+Calls the existing enqueue helpers only — no handler execution in-request and no worker-loop changes.
 """
 
 from __future__ import annotations

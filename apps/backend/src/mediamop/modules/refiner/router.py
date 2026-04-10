@@ -1,4 +1,4 @@
-"""Authenticated Refiner operational routes (read + narrow manual recovery)."""
+"""Authenticated Refiner operator routes: runtime visibility, job inspection, manual cleanup-drive enqueue, finalize recovery."""
 
 from __future__ import annotations
 

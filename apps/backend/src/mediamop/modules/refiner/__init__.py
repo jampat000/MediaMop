@@ -1,18 +1,10 @@
-"""Refiner module — domain and future product surface.
+"""Refiner module — MediaMop’s *arr failed-import cleanup and durable job queue.
 
-Pass 1–2: ownership/blocking and anchors. Pass 3: *arr queue adapters. Pass 4–6: failed
-import classification, policy, eligibility. Pass 7/7.5: Radarr and Sonarr cleanup
-planning seams (separate modules). Pass 8: orchestration dispatch. Pass 9: env-backed Refiner cleanup policy settings on
-``MediaMopSettings`` (Radarr vs Sonarr separated). Pass 10/10.5: Radarr and Sonarr
-cleanup execution seams (separate modules; optional stdlib HTTP clients). Pass 11/11.5:
-Radarr and Sonarr wired verticals (settings → plan → execute), separate modules.
-Pass 12: Radarr-only live queue fetch + cleanup drive (no shared *arr live driver).
-Pass 12.5: Sonarr-only live queue fetch + cleanup drive (parallel isolation).
-Pass 13: Refiner-local ``refiner_jobs`` table + atomic claim/lease/complete/fail (SQLite).
-Pass 14: env worker count (default 1) + Refiner-only asyncio worker loop + handler dispatch seam.
-Pass 15: Radarr live cleanup drive as first real ``refiner_jobs`` kind (producer + handler; Sonarr later).
-Pass 15.5: Sonarr live cleanup drive as second ``refiner_jobs`` kind (parallel isolation to Radarr).
-Pass 16: independent Radarr vs Sonarr periodic enqueue tasks for those jobs (no shared schedule gate).
+Radarr and Sonarr stay in separate modules wherever behavior can diverge. Core pieces:
+failed-import classification/policy/planning, optional execution against live queues, the SQLite
+``refiner_jobs`` table with atomic claim/lease/complete/fail, in-process workers + periodic
+cleanup-drive enqueue, and operator HTTP surfaces (runtime settings visibility, job inspection,
+manual cleanup-drive enqueue, narrow finalize recovery) under ``mediamop.modules.refiner.router``.
 """
 
 from __future__ import annotations

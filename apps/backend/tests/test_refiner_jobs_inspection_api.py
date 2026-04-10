@@ -1,4 +1,4 @@
-"""Refiner Pass 18: authenticated read-only /refiner/jobs/inspection."""
+"""Authenticated read-only ``GET /api/v1/refiner/jobs/inspection``."""
 
 from __future__ import annotations
 

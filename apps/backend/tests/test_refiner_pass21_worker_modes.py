@@ -1,4 +1,4 @@
-"""Refiner Pass 21: worker_count modes (0 / 1 / >1) and multi-worker guardrail validation.
+"""Refiner ``refiner_worker_count`` modes (0 / 1 / >1) and multi-worker guardrails.
 
 Contract-driven SQLite-backed tests; no new job kinds. Multi-worker remains a guarded capability;
 default worker_count stays 1; 0 is explicit disable.

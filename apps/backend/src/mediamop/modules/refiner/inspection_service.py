@@ -1,4 +1,4 @@
-"""Read-only Refiner job listing for operational visibility (Pass 18)."""
+"""Read-only listing of persisted ``refiner_jobs`` rows for operator inspection."""
 
 from __future__ import annotations
 

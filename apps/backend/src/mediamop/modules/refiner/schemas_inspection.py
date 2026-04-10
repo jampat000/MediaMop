@@ -1,4 +1,4 @@
-"""Pydantic shapes for read-only Refiner job inspection (Pass 18)."""
+"""Pydantic shapes for read-only Refiner job inspection API responses."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ class RefinerJobInspectionRow(BaseModel):
     id: int
     dedupe_key: str
     job_kind: str
-    status: str = Field(description="Persisted refiner_jobs.status (distinct terminal values).")
+    status: str = Field(description="Persisted status string for this queue row.")
     attempt_count: int
     max_attempts: int
     lease_owner: str | None

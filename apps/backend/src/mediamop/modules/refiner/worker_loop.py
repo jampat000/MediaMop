@@ -1,8 +1,8 @@
-"""Refiner-only in-process worker loop (Pass 14–15).
+"""Refiner-only in-process asyncio worker loop.
 
 Claims rows from ``refiner_jobs``, dispatches by ``job_kind``, then completes or fails via
 :class:`mediamop.modules.refiner.jobs_ops`. Production handlers are built from
-:class:`~mediamop.core.config.MediaMopSettings` (Pass 15–15.5: Radarr + Sonarr live cleanup drives).
+:class:`~mediamop.core.config.MediaMopSettings` (Radarr and Sonarr cleanup-drive kinds, separate handlers).
 """
 
 from __future__ import annotations
@@ -244,7 +244,7 @@ def start_refiner_worker_background_tasks(
     - **0** — Returns an empty task list (workers intentionally off; lifespan still stops cleanly).
     - **1** — Supported default.
     - **>1** — Guarded only: concurrent tasks compete under SQLite single-writer rules; this is
-      **not** documented as the normal rollout target (see Pass 21 tests and logs).
+      **not** documented as the normal rollout target (see worker-mode tests and logs).
     """
 
     if settings.refiner_worker_count > 1:

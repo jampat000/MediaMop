@@ -1,4 +1,4 @@
-/** Human-readable schedule interval for Refiner visibility UI (Pass 22). */
+/** Human-readable schedule interval for Refiner runtime visibility UI. */
 
 export function formatScheduleIntervalSeconds(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) {

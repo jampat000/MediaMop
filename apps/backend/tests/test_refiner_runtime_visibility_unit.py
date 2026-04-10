@@ -1,4 +1,4 @@
-"""Pass 22: Refiner runtime visibility DTO from settings (no HTTP)."""
+"""Unit: ``refiner_runtime_visibility_from_settings`` maps settings to the visibility DTO."""
 
 from __future__ import annotations
 

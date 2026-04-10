@@ -1,4 +1,4 @@
-"""Refiner Pass 20: POST /refiner/jobs/{id}/recover-finalize-failure."""
+"""``POST /api/v1/refiner/jobs/{id}/recover-finalize-failure`` finalize recovery."""
 
 from __future__ import annotations
 

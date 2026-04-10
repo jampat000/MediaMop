@@ -1,4 +1,4 @@
-"""Pydantic for manual finalize-failure recovery (Pass 20)."""
+"""Pydantic for operator manual recovery from ``handler_ok_finalize_failed``."""
 
 from __future__ import annotations
 
