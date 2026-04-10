@@ -35,7 +35,7 @@ def main() -> int:
         eng = create_engine(url)
         ensure_database_at_application_head(eng)
     except DatabaseSchemaMismatch as exc:
-        print(f"FAIL: {exc}", file=sys.stderr)
+        print(f"FAIL [{exc.kind}]: {exc}", file=sys.stderr)
         return 4
     except RuntimeError as exc:
         print(f"FAIL: {exc}", file=sys.stderr)

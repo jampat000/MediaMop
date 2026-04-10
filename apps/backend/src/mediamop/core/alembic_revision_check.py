@@ -23,6 +23,16 @@ class DatabaseSchemaMismatch(RuntimeError):
         self.kind = kind
 
 
+def _manual_migration_instructions() -> str:
+    """Operator text for local installs on any OS (not only Windows PowerShell)."""
+
+    return (
+        "To apply migrations: from the repository root run .\\scripts\\dev-migrate.ps1 in PowerShell, "
+        "or from apps/backend run PYTHONPATH=src python -m alembic upgrade head "
+        "(on Windows, py -3 -m alembic upgrade head if python is not on PATH)."
+    )
+
+
 def _backend_root() -> Path:
     return Path(__file__).resolve().parents[3]
 
@@ -84,8 +94,7 @@ def _run_alembic_upgrade_head() -> None:
         raise DatabaseSchemaMismatch(
             f"Alembic upgrade to head failed: {exc}. "
             "Fix the error above, or restore a database backup. "
-            "Manual retry: .\\scripts\\dev-migrate.ps1 or "
-            "`alembic upgrade head` from apps/backend with PYTHONPATH=src.",
+            + _manual_migration_instructions(),
             kind="upgrade_failed",
         ) from exc
 
@@ -99,10 +108,7 @@ def ensure_database_at_application_head(engine: Engine) -> None:
     """
 
     script, head = _script_and_head()
-    migrate_hint = (
-        "Run .\\scripts\\dev-migrate.ps1 or, from apps/backend with PYTHONPATH=src, "
-        "`alembic upgrade head`."
-    )
+    migrate_hint = _manual_migration_instructions()
 
     current = _current_revision(engine)
     if current == head:
@@ -132,7 +138,8 @@ def ensure_database_at_application_head(engine: Engine) -> None:
         after = _current_revision(engine)
         if after != head:
             raise DatabaseSchemaMismatch(
-                f"After upgrade, database revision is {after!r}, expected {head!r}. {migrate_hint}",
+                f"After upgrade, database revision is {after!r}, expected {head!r}. "
+                + migrate_hint,
                 kind="upgrade_failed",
             )
         return
