@@ -1,11 +1,15 @@
 """Refiner module — domain and future product surface.
 
-Pass 1–2 expose pure queue ownership vs blocking and title/year anchor rules only;
-no routes or *arr clients yet.
+Pass 1–2: pure ownership/blocking and anchors. Pass 3: thin *arr queue adapters;
+no HTTP clients or orchestration here.
 """
 
 from __future__ import annotations
 
+from mediamop.modules.refiner.arr_queue_adapters import (
+    map_arr_queue_row_to_refiner_view,
+    normalize_storage_path,
+)
 from mediamop.modules.refiner.domain import (
     FileAnchorCandidate,
     RefinerQueueRowView,
@@ -23,6 +27,8 @@ from mediamop.modules.refiner.domain import (
 
 __all__ = [
     "FileAnchorCandidate",
+    "map_arr_queue_row_to_refiner_view",
+    "normalize_storage_path",
     "RefinerQueueRowView",
     "TitleYearAnchor",
     "extract_title_tokens_and_year",
