@@ -63,13 +63,14 @@ def test_refiner_worker_count_defaults_to_one(monkeypatch: pytest.MonkeyPatch) -
 
 def test_refiner_worker_count_clamps_low_and_high(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MEDIAMOP_REFINER_WORKER_COUNT", "0")
-    assert MediaMopSettings.load().refiner_worker_count == 1
+    assert MediaMopSettings.load().refiner_worker_count == 0
     monkeypatch.setenv("MEDIAMOP_REFINER_WORKER_COUNT", "99")
     assert MediaMopSettings.load().refiner_worker_count == 8
 
 
 def test_clamp_refiner_worker_count_unit() -> None:
-    assert clamp_refiner_worker_count(0) == 1
+    assert clamp_refiner_worker_count(-1) == 1
+    assert clamp_refiner_worker_count(0) == 0
     assert clamp_refiner_worker_count(1) == 1
     assert clamp_refiner_worker_count(8) == 8
     assert clamp_refiner_worker_count(9) == 8

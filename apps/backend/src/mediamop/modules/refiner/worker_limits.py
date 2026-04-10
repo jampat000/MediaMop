@@ -2,8 +2,8 @@
 
 
 def clamp_refiner_worker_count(raw: int) -> int:
-    """Enforce 1..8 workers (SQLite-first; single worker remains the safe default)."""
+    """Enforce 0..8 workers (0 = no in-process workers; default from config is 1)."""
 
-    if raw < 1:
+    if raw < 0:
         return 1
     return min(8, raw)

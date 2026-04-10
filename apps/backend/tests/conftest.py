@@ -21,6 +21,9 @@ def _mediamop_sqlite_runtime(tmp_path_factory: pytest.TempPathFactory) -> Iterat
 
     home = tmp_path_factory.mktemp("mediamop_pytest_home")
     os.environ["MEDIAMOP_HOME"] = str(home)
+    # Refiner asyncio workers otherwise race tests: they claim synthetic ``pending`` rows and
+    # move them to ``failed`` before assertions run (timing-sensitive on CI).
+    os.environ["MEDIAMOP_REFINER_WORKER_COUNT"] = "0"
     backend = Path(__file__).resolve().parents[1]
     cfg = Config(str(backend / "alembic.ini"))
     command.upgrade(cfg, "head")

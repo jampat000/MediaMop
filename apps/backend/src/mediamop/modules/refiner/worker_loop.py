@@ -104,6 +104,7 @@ def process_one_refiner_job(
                         job_id=ctx.id,
                         lease_owner=ctx.lease_owner,
                         error_message=err_text,
+                        now=when,
                     )
         except Exception:
             logger.exception(
@@ -125,6 +126,7 @@ def process_one_refiner_job(
                         job_id=ctx.id,
                         lease_owner=ctx.lease_owner,
                         error_message=err_text,
+                        now=when,
                     )
         except Exception:
             logger.exception(
