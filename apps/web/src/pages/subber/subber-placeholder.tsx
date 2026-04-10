@@ -1,10 +1,9 @@
 import { MinimalShellPlaceholder } from "../shell/minimal-shell-placeholder";
 
-// TODO: Final product name for this module is not decided; route and nav label may change.
-export function SubtitlesPlaceholder() {
+export function SubberPlaceholder() {
   return (
     <MinimalShellPlaceholder
-      title="Subtitles"
+      title="Subber"
       lead="Not built yet — subtitle workflows will use this route when the module ships."
     />
   );

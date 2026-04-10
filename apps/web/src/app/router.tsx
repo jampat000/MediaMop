@@ -8,7 +8,7 @@ import { RefinerPlaceholder } from "../pages/refiner/refiner-placeholder";
 import { RootEntry } from "../pages/root-entry";
 import { SettingsPlaceholder } from "../pages/settings/settings-placeholder";
 import { SetupPage } from "../pages/setup/setup-page";
-import { SubtitlesPlaceholder } from "../pages/subtitles/subtitles-placeholder";
+import { SubberPlaceholder } from "../pages/subber/subber-placeholder";
 import { TrimmerPlaceholder } from "../pages/trimmer/trimmer-placeholder";
 import { RequireAuth } from "./require-auth";
 
@@ -28,7 +28,7 @@ const router = createBrowserRouter([
           { path: "fetcher", element: <FetcherPage /> },
           { path: "refiner", element: <RefinerPlaceholder /> },
           { path: "trimmer", element: <TrimmerPlaceholder /> },
-          { path: "subtitles", element: <SubtitlesPlaceholder /> },
+          { path: "subber", element: <SubberPlaceholder /> },
           { path: "settings", element: <SettingsPlaceholder /> },
         ],
       },

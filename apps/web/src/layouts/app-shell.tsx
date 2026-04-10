@@ -6,7 +6,7 @@ import {
   NavIconFetcher,
   NavIconRefiner,
   NavIconSettings,
-  NavIconSubtitles,
+  NavIconSubber,
   NavIconTrimmer,
 } from "../components/shell/nav-icons";
 import { WEB_APP_VERSION } from "../lib/app-meta";
@@ -39,7 +39,7 @@ export function AppShell() {
             <span className="mm-sidebar-link-label">Activity</span>
           </NavLink>
 
-          <p className="mm-sidebar-section-label">Suite</p>
+          <p className="mm-sidebar-section-label">Modules</p>
           <NavLink to="/app/fetcher" className={sidebarNavClass}>
             <span className="mm-sidebar-link-icon" aria-hidden="true">
               <NavIconFetcher />
@@ -58,12 +58,11 @@ export function AppShell() {
             </span>
             <span className="mm-sidebar-link-label">Trimmer</span>
           </NavLink>
-          {/* TODO: Nav label "Subtitles" is temporary until the module name is finalized. */}
-          <NavLink to="/app/subtitles" className={sidebarNavClass}>
+          <NavLink to="/app/subber" className={sidebarNavClass}>
             <span className="mm-sidebar-link-icon" aria-hidden="true">
-              <NavIconSubtitles />
+              <NavIconSubber />
             </span>
-            <span className="mm-sidebar-link-label">Subtitles</span>
+            <span className="mm-sidebar-link-label">Subber</span>
           </NavLink>
 
           <p className="mm-sidebar-section-label">System</p>
