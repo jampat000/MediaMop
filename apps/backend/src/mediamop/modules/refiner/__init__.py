@@ -3,8 +3,8 @@
 Pass 1–2: ownership/blocking and anchors. Pass 3: *arr queue adapters. Pass 4–6: failed
 import classification, policy, eligibility. Pass 7/7.5: Radarr and Sonarr cleanup
 planning seams (separate modules). Pass 8: orchestration dispatch. Pass 9: env-backed Refiner cleanup policy settings on
-``MediaMopSettings`` (Radarr vs Sonarr separated). Pass 10: Radarr cleanup execution
-seam (optional HTTP client). No Sonarr execution here.
+``MediaMopSettings`` (Radarr vs Sonarr separated). Pass 10/10.5: Radarr and Sonarr
+cleanup execution seams (separate modules; optional stdlib HTTP clients).
 """
 
 from __future__ import annotations
@@ -65,6 +65,12 @@ from mediamop.modules.refiner.radarr_failed_import_cleanup import (
     plan_radarr_failed_import_cleanup,
 )
 from mediamop.modules.refiner.radarr_queue_adapter import map_radarr_queue_row_to_refiner_view
+from mediamop.modules.refiner.sonarr_cleanup_execution import (
+    SonarrFailedImportCleanupExecutionOutcome,
+    SonarrQueueHttpClient,
+    SonarrQueueOperations,
+    execute_sonarr_failed_import_cleanup_plan,
+)
 from mediamop.modules.refiner.sonarr_failed_import_cleanup import (
     SonarrFailedImportCleanupAction,
     SonarrFailedImportCleanupPlan,
@@ -102,7 +108,11 @@ __all__ = [
     "plan_radarr_failed_import_cleanup",
     "map_radarr_queue_row_to_refiner_view",
     "SonarrFailedImportCleanupAction",
+    "SonarrFailedImportCleanupExecutionOutcome",
     "SonarrFailedImportCleanupPlan",
+    "SonarrQueueHttpClient",
+    "SonarrQueueOperations",
+    "execute_sonarr_failed_import_cleanup_plan",
     "plan_sonarr_failed_import_cleanup",
     "map_sonarr_queue_row_to_refiner_view",
     "normalize_storage_path",
