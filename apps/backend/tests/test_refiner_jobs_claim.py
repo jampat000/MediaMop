@@ -255,7 +255,7 @@ def test_fail_requeues_until_max_attempts_then_failed(session_factory):
         assert row.last_error == "e1"
 
 
-def test_fail_leased_after_complete_failure_terminalizes_without_bumping_attempts(session_factory):
+def test_fail_leased_after_complete_failure_sets_handler_ok_finalize_failed(session_factory):
     fac = session_factory
     t0 = _t0()
     with fac() as s:
@@ -283,7 +283,7 @@ def test_fail_leased_after_complete_failure_terminalizes_without_bumping_attempt
         s.commit()
     with fac() as s:
         row = s.get(RefinerJob, jid)
-        assert row.status == RefinerJobStatus.FAILED.value
+        assert row.status == RefinerJobStatus.HANDLER_OK_FINALIZE_FAILED.value
         assert row.attempt_count == 1
         assert row.lease_owner is None
         assert "synthetic" in (row.last_error or "")
@@ -292,6 +292,31 @@ def test_fail_leased_after_complete_failure_terminalizes_without_bumping_attempt
             claim_next_eligible_refiner_job(
                 s,
                 lease_owner="w2",
+                lease_expires_at=t0 + timedelta(hours=1),
+                now=t0,
+            )
+            is None
+        )
+
+
+def test_handler_ok_finalize_failed_row_is_not_claimable(session_factory):
+    fac = session_factory
+    t0 = _t0()
+    with fac() as s:
+        refiner_enqueue_or_get_job(s, dedupe_key="finalize-stuck", job_kind="test")
+        s.commit()
+    with fac() as s:
+        row = s.get(RefinerJob, 1)
+        assert row is not None
+        row.status = RefinerJobStatus.HANDLER_OK_FINALIZE_FAILED.value
+        row.lease_owner = None
+        row.lease_expires_at = None
+        s.commit()
+    with fac() as s:
+        assert (
+            claim_next_eligible_refiner_job(
+                s,
+                lease_owner="w",
                 lease_expires_at=t0 + timedelta(hours=1),
                 now=t0,
             )

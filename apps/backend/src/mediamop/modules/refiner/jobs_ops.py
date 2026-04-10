@@ -176,11 +176,11 @@ def fail_leased_refiner_job_after_complete_failure(
     error_message: str,
     now: datetime | None = None,
 ) -> bool:
-    """Terminal ``failed`` after handler success when ``complete_claimed_refiner_job`` could not run.
+    """Terminal ``handler_ok_finalize_failed`` when the handler succeeded but finalize did not.
 
     Same lease guards as :func:`complete_claimed_refiner_job`. Clears the lease, sets
-    ``last_error``, marks ``failed``, and does **not** change ``attempt_count`` or requeue — so the
-    successful handler body is not run again as a new attempt.
+    ``last_error``, and does **not** change ``attempt_count``. Not claimable by the normal worker
+    claim path (distinct from ordinary ``failed`` after handler errors).
     """
 
     when = now if now is not None else _utc_now()
@@ -194,7 +194,7 @@ def fail_leased_refiner_job_after_complete_failure(
     if job.lease_expires_at is None or job.lease_expires_at < when:
         return False
 
-    job.status = RefinerJobStatus.FAILED.value
+    job.status = RefinerJobStatus.HANDLER_OK_FINALIZE_FAILED.value
     job.lease_owner = None
     job.lease_expires_at = None
     job.last_error = error_message[:10_000]

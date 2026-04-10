@@ -286,7 +286,7 @@ def test_process_one_survives_complete_claim_raises(session_factory) -> None:
     assert out == "processed"
     with session_factory() as s:
         row = s.get(RefinerJob, 1)
-        assert row.status == RefinerJobStatus.FAILED.value
+        assert row.status == RefinerJobStatus.HANDLER_OK_FINALIZE_FAILED.value
         assert row.attempt_count == 1
         assert row.lease_owner is None
         assert "refiner_terminalization_failure:" in (row.last_error or "")
@@ -317,7 +317,7 @@ def test_process_one_complete_refused_triggers_terminalization(session_factory) 
     assert out == "processed"
     with session_factory() as s:
         row = s.get(RefinerJob, 1)
-        assert row.status == RefinerJobStatus.FAILED.value
+        assert row.status == RefinerJobStatus.HANDLER_OK_FINALIZE_FAILED.value
         assert "refiner_terminalization_failure:" in (row.last_error or "")
         assert "refused" in (row.last_error or "")
 
@@ -371,7 +371,7 @@ def test_terminalization_of_first_job_does_not_block_second_job_completion(sessi
     with session_factory() as s:
         r1 = s.get(RefinerJob, 1)
         r2 = s.get(RefinerJob, 2)
-        assert r1.status == RefinerJobStatus.FAILED.value
+        assert r1.status == RefinerJobStatus.HANDLER_OK_FINALIZE_FAILED.value
         assert "refiner_terminalization_failure:" in (r1.last_error or "")
         assert r2.status == RefinerJobStatus.COMPLETED.value
 
@@ -413,11 +413,11 @@ def test_worker_stays_alive_after_complete_failure_terminalization(
             for _ in range(400):
                 with session_factory() as s:
                     row = s.get(RefinerJob, 1)
-                    if row is not None and row.status == RefinerJobStatus.FAILED.value:
+                    if row is not None and row.status == RefinerJobStatus.HANDLER_OK_FINALIZE_FAILED.value:
                         break
                 await asyncio.sleep(0.01)
             else:
-                pytest.fail("expected terminalization to FAILED")
+                pytest.fail("expected terminalization to handler_ok_finalize_failed")
             stop.set()
             await asyncio.wait_for(task, timeout=5.0)
 

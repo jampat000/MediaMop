@@ -15,12 +15,18 @@ from mediamop.core.db import Base
 
 
 class RefinerJobStatus(str, enum.Enum):
-    """Persisted in ``refiner_jobs.status`` (VARCHAR)."""
+    """Persisted in ``refiner_jobs.status`` (VARCHAR).
+
+    ``failed`` means the handler (or missing-handler path) failed or exhausted retries.
+    ``handler_ok_finalize_failed`` means the handler ran without error but persisting
+    ``completed`` (finalize) failed — distinct from ordinary failure, not re-runnable.
+    """
 
     PENDING = "pending"
     LEASED = "leased"
     COMPLETED = "completed"
     FAILED = "failed"
+    HANDLER_OK_FINALIZE_FAILED = "handler_ok_finalize_failed"
 
 
 class RefinerJob(Base):
