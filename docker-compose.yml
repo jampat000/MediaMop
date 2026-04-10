@@ -1,5 +1,5 @@
 # Optional PostgreSQL container — NOT used by MediaMop backend (SQLite-first under MEDIAMOP_HOME).
-# Kept for ad hoc experiments or external tools only. Do not set MEDIAMOP_DATABASE_URL; the app does not target this service.
+# Kept for ad hoc experiments or external tools only. The MediaMop API uses file-backed SQLite under MEDIAMOP_HOME — do not point it at this container.
 #
 # From repo root:
 #   docker compose up -d
