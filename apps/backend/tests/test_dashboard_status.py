@@ -61,12 +61,11 @@ def test_build_dashboard_fetcher_unreachable(mock_probe: MagicMock) -> None:
     assert out.fetcher.reachable is False
     assert out.fetcher.target_display == "http://127.0.0.1:9"
     assert "refused" in (out.fetcher.detail or "").lower()
-    assert out.activity_summary.last_fetcher_probe is not None
-    assert out.activity_summary.last_fetcher_probe.event_type == activity_constants.FETCHER_PROBE_FAILED
+    assert out.activity_summary.last_fetcher_probe is None
 
 
 @patch("mediamop.modules.dashboard.service.probe_fetcher_healthz")
-def test_build_dashboard_fetcher_probe_deduped(mock_probe: MagicMock) -> None:
+def test_build_dashboard_fetcher_probe_does_not_write_activity(mock_probe: MagicMock) -> None:
     mock_probe.return_value = FetcherHealthProbe(
         reachable=False,
         http_status=None,
@@ -92,7 +91,7 @@ def test_build_dashboard_fetcher_probe_deduped(mock_probe: MagicMock) -> None:
                 ActivityEvent.event_type == activity_constants.FETCHER_PROBE_FAILED,
             ),
         )
-    assert int(n or 0) == 1
+    assert int(n or 0) == 0
 
 
 def test_get_dashboard_status_authenticated(client_with_admin: TestClient) -> None:

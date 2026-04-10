@@ -1,4 +1,8 @@
-"""Compose dashboard payload — Fetcher probe may append throttled activity rows."""
+"""Compose dashboard payload — read-only for persistence (live Fetcher probe in JSON only).
+
+Fetcher reachability is reported from :func:`probe_fetcher_healthz` without writing
+``activity_events`` on dashboard load (SQLite-first: avoid write-on-read).
+"""
 
 from __future__ import annotations
 
@@ -64,13 +68,6 @@ def build_dashboard_status(db: Session, settings: MediaMopSettings) -> Dashboard
     detail: str | None = None
     if not probe.reachable:
         detail = probe.error_summary or "Fetcher did not respond as expected."
-
-    probe_ok = probe.reachable is True
-    activity_service.maybe_record_fetcher_probe_result(
-        db,
-        target_display=display,
-        probe_succeeded=probe_ok,
-    )
 
     return DashboardStatusOut(
         system=SystemStatusOut(
