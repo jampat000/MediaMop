@@ -55,4 +55,5 @@ jobs:
           MEDIAMOP_E2E: "1"
           MEDIAMOP_HOME: ${{ runner.temp }}/mediamop-e2e
           MEDIAMOP_SESSION_SECRET: ci-mediamop-session-secret-32chars-min
+          PYTHONPATH: ${{ github.workspace }}/apps/backend/src
         run: python -m pytest tests/e2e/mediamop -q --tb=short

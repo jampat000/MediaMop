@@ -32,6 +32,15 @@ WEB_DIR = REPO_ROOT / "apps" / "web"
 SRC_PATH = (BACKEND_DIR / "src").resolve()
 
 
+def _ensure_backend_src_on_path() -> None:
+    """Match subprocess env (``PYTHONPATH``) so in-process imports see ``mediamop``."""
+
+    src = str(SRC_PATH.resolve())
+    while src in sys.path:
+        sys.path.remove(src)
+    sys.path.insert(0, src)
+
+
 def _pick_loopback_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("127.0.0.1", 0))
@@ -46,8 +55,7 @@ def _e2e_home() -> str:
 
 
 def _truncate_auth_tables(home: str) -> None:
-    if str(SRC_PATH) not in sys.path:
-        sys.path.insert(0, str(SRC_PATH))
+    _ensure_backend_src_on_path()
     os.environ["MEDIAMOP_HOME"] = home
     from sqlalchemy import delete
 
