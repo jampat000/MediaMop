@@ -13,6 +13,13 @@ from mediamop.modules.refiner.failed_import_classification import (
     classify_failed_import_message,
     normalize_failed_import_blob,
 )
+from mediamop.modules.refiner.failed_import_cleanup_policy import (
+    FailedImportCleanupPolicy,
+    FailedImportCleanupPolicyKey,
+    cleanup_policy_key_for_outcome,
+    default_failed_import_cleanup_policy,
+    is_failed_import_cleanup_enabled,
+)
 from mediamop.modules.refiner.domain import (
     FileAnchorCandidate,
     RefinerQueueRowView,
@@ -31,6 +38,11 @@ from mediamop.modules.refiner.radarr_queue_adapter import map_radarr_queue_row_t
 from mediamop.modules.refiner.sonarr_queue_adapter import map_sonarr_queue_row_to_refiner_view
 
 __all__ = [
+    "FailedImportCleanupPolicy",
+    "FailedImportCleanupPolicyKey",
+    "cleanup_policy_key_for_outcome",
+    "default_failed_import_cleanup_policy",
+    "is_failed_import_cleanup_enabled",
     "FailedImportOutcome",
     "classify_failed_import_message",
     "normalize_failed_import_blob",
