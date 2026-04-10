@@ -35,7 +35,10 @@ export function useLoginMutation() {
   return useMutation({
     mutationFn: ({ username, password }: { username: string; password: string }) =>
       postLogin(username, password),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Anonymous /me is cached as `null` (401). Hydrate before navigation so RequireAuth does not
+      // see stale null while isPending is already false (successful null is not "loading").
+      qc.setQueryData(qk.me, data.user);
       void qc.invalidateQueries({ queryKey: qk.me });
       void qc.invalidateQueries({ queryKey: qk.bootstrap });
       void qc.invalidateQueries({ queryKey: activityRecentKey });

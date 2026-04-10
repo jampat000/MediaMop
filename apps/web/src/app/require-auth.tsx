@@ -8,6 +8,10 @@ export function RequireAuth() {
   if (me.isPending) {
     return <PageLoading />;
   }
+  // After sign-in, /me may still be cached `null` from the anonymous 401 while a refetch runs.
+  if (!me.data && me.isFetching) {
+    return <PageLoading />;
+  }
   if (!me.data) {
     return <Navigate to="/login" replace />;
   }
