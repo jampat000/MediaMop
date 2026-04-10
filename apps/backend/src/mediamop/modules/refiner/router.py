@@ -15,8 +15,10 @@ from mediamop.modules.refiner.inspection_service import (
 )
 from mediamop.modules.refiner.jobs_model import RefinerJobStatus
 from mediamop.modules.refiner.jobs_ops import recover_handler_ok_finalize_failed_to_completed
+from mediamop.modules.refiner.runtime_visibility import refiner_runtime_visibility_from_settings
 from mediamop.modules.refiner.schemas_inspection import RefinerJobsInspectionOut
 from mediamop.modules.refiner.schemas_recovery import RecoverFinalizeFailureIn, RecoverFinalizeFailureOut
+from mediamop.modules.refiner.schemas_runtime_visibility import RefinerRuntimeVisibilityOut
 from mediamop.platform.auth.authorization import RequireOperatorDep
 from mediamop.platform.auth.csrf import (
     require_session_secret,
@@ -26,6 +28,19 @@ from mediamop.platform.auth.csrf import (
 from mediamop.platform.auth.deps_auth import UserPublicDep
 
 router = APIRouter(tags=["refiner"])
+
+
+@router.get("/refiner/runtime/visibility", response_model=RefinerRuntimeVisibilityOut)
+def get_refiner_runtime_visibility(
+    _user: UserPublicDep,
+    settings: SettingsDep,
+) -> RefinerRuntimeVisibilityOut:
+    """Read-only Refiner runtime **configuration** (workers + cleanup-drive schedules).
+
+    Does not report asyncio task liveness or external connectivity.
+    """
+
+    return refiner_runtime_visibility_from_settings(settings)
 
 
 @router.get("/refiner/jobs/inspection", response_model=RefinerJobsInspectionOut)

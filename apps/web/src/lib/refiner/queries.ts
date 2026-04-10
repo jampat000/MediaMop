@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchRefinerJobsInspection } from "./refiner-inspection-api";
+import { fetchRefinerRuntimeVisibility } from "./refiner-runtime-visibility-api";
 import { postRecoverFinalizeFailure } from "./refiner-recover-api";
 
 /** ``terminal`` = no ``status`` query param — server returns completed, failed, handler_ok_finalize_failed only. */
@@ -7,6 +8,16 @@ export type RefinerInspectionFilter = "terminal" | "pending" | "leased" | "compl
 
 export const refinerInspectionQueryKey = (filter: RefinerInspectionFilter) =>
   ["refiner", "jobs-inspection", filter] as const;
+
+export const refinerRuntimeVisibilityQueryKey = ["refiner", "runtime-visibility"] as const;
+
+export function useRefinerRuntimeVisibilityQuery() {
+  return useQuery({
+    queryKey: refinerRuntimeVisibilityQueryKey,
+    queryFn: () => fetchRefinerRuntimeVisibility(),
+    staleTime: 30_000,
+  });
+}
 
 export function useRefinerJobsInspectionQuery(filter: RefinerInspectionFilter) {
   return useQuery({

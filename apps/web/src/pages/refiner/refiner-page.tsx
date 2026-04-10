@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { UseMutationResult } from "@tanstack/react-query";
+import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 import { PageLoading } from "../../components/shared/page-loading";
 import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
 import { useMeQuery } from "../../lib/auth/queries";
@@ -8,9 +8,12 @@ import {
   refinerJobStatusPrimaryLabel,
 } from "../../lib/refiner/refiner-job-status-labels";
 import type { RefinerInspectionFilter } from "../../lib/refiner/queries";
+import type { RefinerRuntimeVisibilityOut } from "../../lib/refiner/types";
+import { formatScheduleIntervalSeconds } from "../../lib/refiner/refiner-runtime-format";
 import {
   useRecoverFinalizeFailureMutation,
   useRefinerJobsInspectionQuery,
+  useRefinerRuntimeVisibilityQuery,
 } from "../../lib/refiner/queries";
 import { showRecoverFinalizeFailureControl } from "../../lib/refiner/refiner-recover-eligibility";
 import type { RecoverFinalizeFailureResult } from "../../lib/refiner/refiner-recover-api";
@@ -26,6 +29,94 @@ function formatUpdated(iso: string): string {
   } catch {
     return iso;
   }
+}
+
+function RefinerRuntimeVisibilitySection({
+  rv,
+}: {
+  rv: UseQueryResult<RefinerRuntimeVisibilityOut, Error>;
+}) {
+  return (
+    <section
+      className="mm-card mm-dash-card mb-6"
+      aria-labelledby="mm-refiner-runtime-heading"
+      data-testid="refiner-runtime-visibility"
+    >
+      <h2 id="mm-refiner-runtime-heading" className="mm-card__title">
+        Runtime configuration (read-only)
+      </h2>
+      <p className="mm-card__body mm-card__body--tight text-sm text-[var(--mm-text3)]">
+        Settings at load time — not a liveness check for background tasks.
+      </p>
+      {rv.isPending ? (
+        <p className="mm-card__body text-sm text-[var(--mm-text3)]" data-testid="refiner-runtime-visibility-loading">
+          Loading runtime settings…
+        </p>
+      ) : rv.isError ? (
+        <p className="mm-card__body text-sm text-red-400" data-testid="refiner-runtime-visibility-error" role="alert">
+          {rv.error instanceof Error ? rv.error.message : "Could not load runtime visibility."}
+        </p>
+      ) : rv.data ? (
+        <div className="mm-card__body mm-card__body--tight space-y-4 text-sm text-[var(--mm-text2)]">
+          <div data-testid="refiner-runtime-worker-section">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Workers</h3>
+            <p className="mt-1">
+              <span className="text-[var(--mm-text3)]">refiner_worker_count:</span>{" "}
+              <code className="mm-dash-code" data-testid="refiner-runtime-worker-count">
+                {rv.data.refiner_worker_count}
+              </code>
+            </p>
+            <p className="mt-1 text-[var(--mm-text)]" data-testid="refiner-runtime-worker-summary">
+              {rv.data.worker_mode_summary}
+            </p>
+          </div>
+          <div
+            className="border-t border-[var(--mm-border)] pt-3"
+            data-testid="refiner-runtime-radarr-schedule"
+          >
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+              Radarr cleanup-drive schedule
+            </h3>
+            <p className="mt-1">
+              Enabled:{" "}
+              <code className="mm-dash-code" data-testid="refiner-runtime-radarr-enabled">
+                {String(rv.data.refiner_radarr_cleanup_drive_schedule_enabled)}
+              </code>
+            </p>
+            <p className="mt-1">
+              Interval:{" "}
+              <span data-testid="refiner-runtime-radarr-interval">
+                {formatScheduleIntervalSeconds(rv.data.refiner_radarr_cleanup_drive_schedule_interval_seconds)}
+              </span>
+            </p>
+          </div>
+          <div
+            className="border-t border-[var(--mm-border)] pt-3"
+            data-testid="refiner-runtime-sonarr-schedule"
+          >
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+              Sonarr cleanup-drive schedule
+            </h3>
+            <p className="mt-1">
+              Enabled:{" "}
+              <code className="mm-dash-code" data-testid="refiner-runtime-sonarr-enabled">
+                {String(rv.data.refiner_sonarr_cleanup_drive_schedule_enabled)}
+              </code>
+            </p>
+            <p className="mt-1">
+              Interval:{" "}
+              <span data-testid="refiner-runtime-sonarr-interval">
+                {formatScheduleIntervalSeconds(rv.data.refiner_sonarr_cleanup_drive_schedule_interval_seconds)}
+              </span>
+            </p>
+          </div>
+          <p className="border-t border-[var(--mm-border)] pt-3 text-xs text-[var(--mm-text3)]">
+            {rv.data.visibility_note}
+          </p>
+        </div>
+      ) : null}
+    </section>
+  );
 }
 
 const FILTER_OPTIONS: { value: RefinerInspectionFilter; label: string }[] = [
@@ -102,6 +193,7 @@ function JobRow({
 export function RefinerPage() {
   const [filter, setFilter] = useState<RefinerInspectionFilter>("terminal");
   const me = useMeQuery();
+  const rv = useRefinerRuntimeVisibilityQuery();
   const q = useRefinerJobsInspectionQuery(filter);
   const recoverMutation = useRecoverFinalizeFailureMutation();
 
@@ -112,7 +204,25 @@ export function RefinerPage() {
   }, [filter]);
 
   if (q.isPending) {
-    return <PageLoading label="Loading Refiner jobs" />;
+    return (
+      <div className="mm-page">
+        <header className="mm-page__intro">
+          <p className="mm-page__eyebrow">MediaMop</p>
+          <h1 className="mm-page__title">Refiner</h1>
+          <p className="mm-page__subtitle">
+            Terminal view is the default.
+            <code className="mm-dash-code"> handler_ok_finalize_failed</code> means the handler ran but persisting{" "}
+            <code className="mm-dash-code">completed</code> failed — not the same as ordinary{" "}
+            <code className="mm-dash-code">failed</code>. Admins and operators may use{" "}
+            <strong className="font-semibold text-[var(--mm-text)]">Mark completed (manual)</strong> on those rows only:
+            it records an audit line and sets status to <code className="mm-dash-code">completed</code> without re-running
+            the handler.
+          </p>
+        </header>
+        <RefinerRuntimeVisibilitySection rv={rv} />
+        <PageLoading label="Loading Refiner jobs" />
+      </div>
+    );
   }
 
   if (q.isError) {
@@ -130,6 +240,7 @@ export function RefinerPage() {
                 : "Could not load Refiner job inspection."}
           </p>
         </header>
+        <RefinerRuntimeVisibilitySection rv={rv} />
         {err instanceof Error ? (
           <p className="mm-page__lead font-mono text-sm text-[var(--mm-text3)]">{err.message}</p>
         ) : null}
@@ -155,6 +266,8 @@ export function RefinerPage() {
           the handler.
         </p>
       </header>
+
+      <RefinerRuntimeVisibilitySection rv={rv} />
 
       <section className="mm-card mm-dash-card mb-6" aria-labelledby="mm-refiner-filter-heading">
         <h2 id="mm-refiner-filter-heading" className="mm-card__title">
