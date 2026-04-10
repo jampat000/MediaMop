@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { PageLoading } from "../../components/shared/page-loading";
 import { useFetcherOperationalOverviewQuery } from "../../lib/fetcher/queries";
 import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
@@ -47,6 +48,8 @@ export function FetcherPage() {
     status_label,
     status_detail,
     probe_persisted_24h,
+    probe_failure_window_days,
+    recent_probe_failures,
     latest_probe_event,
     recent_probe_events,
   } = overview.data;
@@ -122,6 +125,44 @@ export function FetcherPage() {
           <FetcherStatusRow label="OK rows" value={String(probe_persisted_24h.persisted_ok)} />
           <FetcherStatusRow label="Failed rows" value={String(probe_persisted_24h.persisted_failed)} />
         </dl>
+      </section>
+
+      <section
+        className="mm-card mm-dash-card mm-fetcher-module-surface mt-4"
+        aria-labelledby="mm-fetcher-failures-heading"
+      >
+        <h2 id="mm-fetcher-failures-heading" className="mm-card__title">
+          Recent health check failures
+        </h2>
+        <p className="mm-card__body mm-card__body--tight">
+          Up to five persisted <code className="mm-dash-code">fetcher.probe_failed</code> rows from the last{" "}
+          {probe_failure_window_days} days (newest first). Same throttle rules as other probe history; not every
+          failed reachability attempt is guaranteed to appear.
+        </p>
+        {recent_probe_failures.length > 0 ? (
+          <ul className="mt-3 space-y-2 text-sm">
+            {recent_probe_failures.map((event) => (
+              <li
+                key={event.id}
+                className="rounded-md border border-[var(--mm-border)] border-l-4 border-l-amber-600/80 p-2"
+              >
+                <p className="font-medium text-[var(--mm-text1)]">{event.title}</p>
+                <p className="text-[var(--mm-text2)]">
+                  {event.event_type} — {formatEventTime(event)}
+                </p>
+                {event.detail ? <p className="text-[var(--mm-text3)]">{event.detail}</p> : null}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-3 text-sm text-[var(--mm-text3)]">No persisted failures in this window.</p>
+        )}
+        <p className="mm-card__body mm-card__body--tight mt-3">
+          <Link to="/app/activity" className="text-[var(--mm-accent)] underline-offset-2 hover:underline">
+            Open Activity
+          </Link>{" "}
+          for the full persisted event list.
+        </p>
       </section>
 
       <section

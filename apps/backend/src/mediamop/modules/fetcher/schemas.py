@@ -34,5 +34,13 @@ class FetcherOperationalOverviewOut(BaseModel):
     status_detail: str = Field(..., description="Short operator-facing explanation of current status.")
     connection: FetcherConnectionOut
     probe_persisted_24h: FetcherProbePersistedWindowOut
+    probe_failure_window_days: int = Field(
+        7,
+        description="Rolling window width for recent_probe_failures (persisted failures only).",
+    )
+    recent_probe_failures: list[ActivityEventItemOut] = Field(
+        default_factory=list,
+        description="Newest persisted fetcher.probe_failed rows in the window, capped in the service.",
+    )
     latest_probe_event: ActivityEventItemOut | None = None
     recent_probe_events: list[ActivityEventItemOut] = Field(default_factory=list)

@@ -21,6 +21,8 @@ from mediamop.platform.activity.schemas import ActivityEventItemOut
 
 _STALE_MINUTES = 30
 _PROBE_LOG_WINDOW_HOURS = 24
+_PROBE_FAILURE_WINDOW_DAYS = 7
+_PROBE_FAILURE_LIST_LIMIT = 5
 
 
 def _fetcher_target_display(base_url: str) -> str:
@@ -63,6 +65,21 @@ def _status_lines(
     )
 
 
+def _recent_probe_failure_items(
+    db: Session,
+) -> tuple[int, list[ActivityEventItemOut]]:
+    since_fail = datetime.now(timezone.utc) - timedelta(days=_PROBE_FAILURE_WINDOW_DAYS)
+    fail_rows = activity_service.list_recent_fetcher_probe_failures(
+        db,
+        since=since_fail,
+        limit=_PROBE_FAILURE_LIST_LIMIT,
+    )
+    return (
+        _PROBE_FAILURE_WINDOW_DAYS,
+        [ActivityEventItemOut.model_validate(r) for r in fail_rows],
+    )
+
+
 def build_fetcher_operational_overview(
     db: Session,
     settings: MediaMopSettings,
@@ -76,6 +93,7 @@ def build_fetcher_operational_overview(
             persisted_ok=ok_24h,
             persisted_failed=failed_24h,
         )
+        fail_days, failure_items = _recent_probe_failure_items(db)
         connection = FetcherConnectionOut(
             configured=False,
             detail="Fetcher URL is not configured. Set MEDIAMOP_FETCHER_BASE_URL to probe a running Fetcher instance.",
@@ -87,6 +105,8 @@ def build_fetcher_operational_overview(
             status_detail=detail,
             connection=connection,
             probe_persisted_24h=probe_window,
+            probe_failure_window_days=fail_days,
+            recent_probe_failures=failure_items,
             latest_probe_event=None,
             recent_probe_events=[],
         )
@@ -105,6 +125,7 @@ def build_fetcher_operational_overview(
         persisted_ok=ok_24h,
         persisted_failed=failed_24h,
     )
+    fail_days, failure_items = _recent_probe_failure_items(db)
     latest_row = activity_service.get_latest_fetcher_probe_event(db)
     recent_rows = activity_service.list_recent_fetcher_probe_events(db, limit=8)
     latest = ActivityEventItemOut.model_validate(latest_row) if latest_row else None
@@ -131,6 +152,8 @@ def build_fetcher_operational_overview(
         status_detail=detail,
         connection=connection,
         probe_persisted_24h=probe_window,
+        probe_failure_window_days=fail_days,
+        recent_probe_failures=failure_items,
         latest_probe_event=latest,
         recent_probe_events=recent,
     )

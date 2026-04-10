@@ -60,6 +60,8 @@ export type FetcherOperationalOverview = {
   status_detail: string;
   connection: DashboardFetcherStatus;
   probe_persisted_24h: FetcherProbePersistedWindow;
+  probe_failure_window_days: number;
+  recent_probe_failures: ActivityEventItem[];
   latest_probe_event: ActivityEventItem | null;
   recent_probe_events: ActivityEventItem[];
 };

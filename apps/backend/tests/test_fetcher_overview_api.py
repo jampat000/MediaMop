@@ -6,7 +6,6 @@ from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
-import pytest
 from sqlalchemy import delete
 from starlette.testclient import TestClient
 
@@ -39,6 +38,8 @@ def test_build_fetcher_overview_not_configured() -> None:
     assert out.probe_persisted_24h.window_hours == 24
     assert out.probe_persisted_24h.persisted_ok == 0
     assert out.probe_persisted_24h.persisted_failed == 0
+    assert out.probe_failure_window_days == 7
+    assert out.recent_probe_failures == []
 
 
 def test_build_fetcher_overview_probe_persisted_24h_counts() -> None:
@@ -81,6 +82,49 @@ def test_build_fetcher_overview_probe_persisted_24h_counts() -> None:
         db.commit()
     assert out.probe_persisted_24h.persisted_ok == 2
     assert out.probe_persisted_24h.persisted_failed == 1
+    assert len(out.recent_probe_failures) == 1
+    assert out.recent_probe_failures[0].event_type == activity_constants.FETCHER_PROBE_FAILED
+
+
+def test_build_fetcher_overview_recent_probe_failures_capped_and_ordered() -> None:
+    settings, fac = _session_factory()
+    settings = replace(settings, fetcher_base_url=None)
+    now = datetime.now(timezone.utc)
+    with fac() as db:
+        db.execute(delete(ActivityEvent))
+        for h in range(1, 7):
+            db.add(
+                ActivityEvent(
+                    created_at=now - timedelta(hours=h),
+                    event_type=activity_constants.FETCHER_PROBE_FAILED,
+                    module="fetcher",
+                    title="Fetcher health check failed",
+                    detail=f"target-{h}",
+                )
+            )
+        db.add(
+            ActivityEvent(
+                created_at=now - timedelta(days=8),
+                event_type=activity_constants.FETCHER_PROBE_FAILED,
+                module="fetcher",
+                title="Fetcher health check failed",
+                detail="too-old",
+            )
+        )
+        db.commit()
+    with fac() as db:
+        out = build_fetcher_operational_overview(db, settings)
+        db.commit()
+    assert out.probe_failure_window_days == 7
+    assert len(out.recent_probe_failures) == 5
+    assert [e.detail for e in out.recent_probe_failures] == [
+        "target-1",
+        "target-2",
+        "target-3",
+        "target-4",
+        "target-5",
+    ]
+    assert all(e.event_type == activity_constants.FETCHER_PROBE_FAILED for e in out.recent_probe_failures)
 
 
 @patch("mediamop.modules.fetcher.service.probe_fetcher_healthz")
@@ -109,6 +153,8 @@ def test_build_fetcher_overview_failed_probe(mock_probe: MagicMock) -> None:
     assert out.recent_probe_events
     assert out.probe_persisted_24h.window_hours == 24
     assert out.probe_persisted_24h.persisted_failed >= 1
+    assert out.recent_probe_failures
+    assert all(e.event_type == activity_constants.FETCHER_PROBE_FAILED for e in out.recent_probe_failures)
 
 
 @patch("mediamop.modules.fetcher.service.probe_fetcher_healthz")
@@ -144,6 +190,7 @@ def test_build_fetcher_overview_records_probe_when_reachable(mock_probe: MagicMo
     assert out.latest_probe_event is not None
     assert out.latest_probe_event.event_type == activity_constants.FETCHER_PROBE_SUCCEEDED
     assert out.probe_persisted_24h.persisted_ok >= 1
+    assert out.recent_probe_failures == []
 
 
 def test_get_fetcher_overview_authenticated(client_with_admin: TestClient) -> None:
@@ -171,3 +218,5 @@ def test_get_fetcher_overview_authenticated(client_with_admin: TestClient) -> No
     assert snap.get("window_hours") == 24
     assert "persisted_ok" in snap
     assert "persisted_failed" in snap
+    assert body.get("probe_failure_window_days") == 7
+    assert isinstance(body.get("recent_probe_failures"), list)

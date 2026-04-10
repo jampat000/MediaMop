@@ -155,6 +155,29 @@ def get_latest_fetcher_probe_event(db: Session) -> ActivityEvent | None:
     ).first()
 
 
+def list_recent_fetcher_probe_failures(
+    db: Session,
+    *,
+    since: datetime,
+    limit: int = 5,
+) -> list[ActivityEvent]:
+    """Persisted ``fetcher.probe_failed`` rows from ``since`` onward, newest first."""
+
+    lim = max(1, min(limit, 20))
+    return list(
+        db.scalars(
+            select(ActivityEvent)
+            .where(
+                ActivityEvent.module == "fetcher",
+                ActivityEvent.event_type == C.FETCHER_PROBE_FAILED,
+                ActivityEvent.created_at >= since,
+            )
+            .order_by(desc(ActivityEvent.created_at))
+            .limit(lim),
+        ).all(),
+    )
+
+
 def count_fetcher_probe_outcomes_since(db: Session, *, since: datetime) -> tuple[int, int]:
     """Count persisted Fetcher probe rows from ``since`` onward, split by outcome."""
 
