@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.jobs_model import RefinerJob
+from mediamop.modules.refiner import periodic_cleanup_drive_enqueue as periodic_enqueue_mod
 from mediamop.modules.refiner.periodic_cleanup_drive_enqueue import (
     refiner_cleanup_drive_enqueue_schedule_specs,
     run_periodic_refiner_cleanup_drive_enqueue,
@@ -201,5 +202,125 @@ def test_start_schedule_tasks_respects_settings_independence(session_factory) ->
         assert len(tasks) == 1
         stop.set()
         await stop_refiner_cleanup_drive_enqueue_schedule_tasks(tasks)
+
+    asyncio.run(_run())
+
+
+def test_periodic_enqueue_failure_then_recovery_still_one_row(
+    session_factory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        periodic_enqueue_mod,
+        "REFINER_SCHEDULE_ENQUEUE_FAILURE_COOLDOWN_SECONDS",
+        0.05,
+    )
+    n_ok = 0
+
+    def flaky_enqueue(session: Session) -> RefinerJob:
+        nonlocal n_ok
+        n_ok += 1
+        if n_ok == 1:
+            raise RuntimeError("transient enqueue failure")
+        return enqueue_radarr_failed_import_cleanup_drive_job(session)
+
+    async def _run() -> None:
+        stop = asyncio.Event()
+        t0 = asyncio.create_task(
+            run_periodic_refiner_cleanup_drive_enqueue(
+                session_factory,
+                stop_event=stop,
+                interval_seconds=0.06,
+                log_label="test_radarr_flaky",
+                enqueue_fn=flaky_enqueue,
+            ),
+        )
+        await asyncio.sleep(0.35)
+        stop.set()
+        await t0
+
+    asyncio.run(_run())
+    assert n_ok >= 2
+    with session_factory() as s:
+        n = s.scalar(
+            select(func.count()).select_from(RefinerJob).where(
+                RefinerJob.job_kind == REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE,
+            ),
+        )
+    assert n == 1
+
+
+def test_radarr_enqueue_always_fails_sonarr_schedule_still_enqueues(
+    session_factory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        periodic_enqueue_mod,
+        "REFINER_SCHEDULE_ENQUEUE_FAILURE_COOLDOWN_SECONDS",
+        0.05,
+    )
+
+    def broken_radarr(_session: Session) -> RefinerJob:
+        raise RuntimeError("radarr config path broken")
+
+    async def _run() -> None:
+        stop = asyncio.Event()
+        t_radarr = asyncio.create_task(
+            run_periodic_refiner_cleanup_drive_enqueue(
+                session_factory,
+                stop_event=stop,
+                interval_seconds=0.06,
+                log_label="radarr_broken",
+                enqueue_fn=broken_radarr,
+            ),
+        )
+        t_sonarr = asyncio.create_task(
+            run_periodic_refiner_cleanup_drive_enqueue(
+                session_factory,
+                stop_event=stop,
+                interval_seconds=0.06,
+                log_label="sonarr_ok",
+                enqueue_fn=enqueue_sonarr_failed_import_cleanup_drive_job,
+            ),
+        )
+        await asyncio.sleep(0.25)
+        stop.set()
+        await asyncio.gather(t_radarr, t_sonarr)
+
+    asyncio.run(_run())
+    with session_factory() as s:
+        r = s.scalar(
+            select(func.count()).select_from(RefinerJob).where(
+                RefinerJob.job_kind == REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE,
+            ),
+        )
+        so = s.scalar(
+            select(func.count()).select_from(RefinerJob).where(
+                RefinerJob.job_kind == REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE,
+            ),
+        )
+    assert r == 0
+    assert so == 1
+
+
+def test_stop_schedule_tasks_does_not_hang(session_factory) -> None:
+    async def _run() -> None:
+        stop = asyncio.Event()
+        tasks = [
+            asyncio.create_task(
+                run_periodic_refiner_cleanup_drive_enqueue(
+                    session_factory,
+                    stop_event=stop,
+                    interval_seconds=60.0,
+                    log_label="slow_tick",
+                    enqueue_fn=enqueue_radarr_failed_import_cleanup_drive_job,
+                ),
+            ),
+        ]
+        stop.set()
+        await asyncio.wait_for(
+            stop_refiner_cleanup_drive_enqueue_schedule_tasks(tasks),
+            timeout=5.0,
+        )
 
     asyncio.run(_run())

@@ -24,6 +24,8 @@ from mediamop.modules.refiner.sonarr_failed_import_cleanup_job import (
 
 logger = logging.getLogger(__name__)
 
+REFINER_SCHEDULE_ENQUEUE_FAILURE_COOLDOWN_SECONDS = 2.0
+
 ScheduleSpec = tuple[str, float, Callable[[Session], RefinerJob]]
 
 
@@ -98,9 +100,18 @@ async def run_periodic_refiner_cleanup_drive_enqueue(
         try:
             await asyncio.to_thread(_enqueue_once)
         except asyncio.CancelledError:
-            break
+            raise
         except Exception:
             logger.exception("Refiner periodic cleanup-drive enqueue failed label=%s", log_label)
+            if stop_event.is_set():
+                break
+            fail_deadline = loop.time() + REFINER_SCHEDULE_ENQUEUE_FAILURE_COOLDOWN_SECONDS
+            while loop.time() < fail_deadline and not stop_event.is_set():
+                remaining = fail_deadline - loop.time()
+                if remaining <= 0:
+                    break
+                await asyncio.sleep(min(0.25, remaining))
+            continue
 
         if stop_event.is_set():
             break

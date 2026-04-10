@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import replace
 from datetime import datetime, timezone
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy.orm import Session, sessionmaker
@@ -13,6 +14,7 @@ from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.worker_limits import clamp_refiner_worker_count
+from mediamop.modules.refiner import worker_loop as refiner_worker_loop_mod
 from mediamop.modules.refiner.worker_loop import (
     process_one_refiner_job,
     refiner_worker_run_forever,
@@ -207,3 +209,103 @@ def test_refiner_worker_loop_processes_one_job_then_stops(session_factory, monke
     with session_factory() as s:
         row = s.get(RefinerJob, 1)
         assert row.status == RefinerJobStatus.COMPLETED.value
+
+
+def test_worker_survives_tick_exception_then_processes_idle(
+    session_factory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        refiner_worker_loop_mod,
+        "REFINER_WORKER_TICK_ERROR_BACKOFF_SECONDS",
+        0.05,
+    )
+    monkeypatch.setattr(
+        refiner_worker_loop_mod,
+        "REFINER_WORKER_IDLE_SLEEP_SECONDS",
+        0.05,
+    )
+    tick_calls = 0
+
+    def _tick_side_effect(*_a, **_kw) -> str:
+        nonlocal tick_calls
+        tick_calls += 1
+        if tick_calls == 1:
+            raise RuntimeError("synthetic tick crash")
+        return "idle"
+
+    async def _run() -> None:
+        stop = asyncio.Event()
+        with patch.object(
+            refiner_worker_loop_mod,
+            "process_one_refiner_job",
+            side_effect=_tick_side_effect,
+        ):
+            task = asyncio.create_task(
+                refiner_worker_run_forever(
+                    session_factory,
+                    worker_index=0,
+                    stop_event=stop,
+                    job_handlers={},
+                    idle_sleep_seconds=0.05,
+                ),
+            )
+            for _ in range(500):
+                if tick_calls >= 2:
+                    break
+                await asyncio.sleep(0.01)
+            assert tick_calls >= 2, "worker should retry after tick exception"
+            stop.set()
+            await asyncio.wait_for(task, timeout=5.0)
+
+    asyncio.run(_run())
+
+
+def test_process_one_survives_complete_claim_raises(session_factory) -> None:
+    t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
+    with session_factory() as s:
+        refiner_enqueue_or_get_job(s, dedupe_key="d-complete-raise", job_kind="ok.kind", max_attempts=3)
+        s.commit()
+
+    def _ok(_ctx) -> None:
+        return None
+
+    with patch.object(
+        refiner_worker_loop_mod,
+        "complete_claimed_refiner_job",
+        side_effect=RuntimeError("db write failed"),
+    ):
+        out = process_one_refiner_job(
+            session_factory,
+            lease_owner="w",
+            job_handlers={"ok.kind": _ok},
+            now=t0,
+            lease_seconds=3600,
+        )
+    assert out == "processed"
+    with session_factory() as s:
+        row = s.get(RefinerJob, 1)
+        assert row.status == RefinerJobStatus.LEASED.value
+
+
+def test_start_and_stop_workers_completes_within_timeout(
+    session_factory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        refiner_worker_loop_mod,
+        "REFINER_WORKER_IDLE_SLEEP_SECONDS",
+        0.05,
+    )
+    base = MediaMopSettings.load()
+    settings = replace(base, refiner_worker_count=1)
+
+    async def _run() -> None:
+        stop, tasks = start_refiner_worker_background_tasks(session_factory, settings)
+        stop.set()
+        await asyncio.wait_for(
+            stop_refiner_worker_background_tasks(stop, tasks),
+            timeout=5.0,
+        )
+
+    asyncio.run(_run())

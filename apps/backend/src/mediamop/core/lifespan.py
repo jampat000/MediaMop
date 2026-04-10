@@ -59,6 +59,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
+        # Refiner shutdown: signal cooperative exit first, then cancel stragglers.
+        # Stop periodic enqueue tasks before workers so enqueuers do not add work while workers drain.
         refiner_stop.set()
         await stop_refiner_cleanup_drive_enqueue_schedule_tasks(refiner_schedule_tasks)
         await stop_refiner_worker_background_tasks(refiner_stop, refiner_tasks)

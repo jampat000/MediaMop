@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_REFINER_JOB_LEASE_SECONDS = 300
 REFINER_WORKER_IDLE_SLEEP_SECONDS = 5.0
+REFINER_WORKER_TICK_ERROR_BACKOFF_SECONDS = 1.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,14 +94,20 @@ def process_one_refiner_job(
     if handler is None:
         exc: BaseException = RefinerNoHandlerForJobKind(ctx.job_kind)
         err_text = str(exc)[:10_000]
-        with session_factory() as session:
-            with session.begin():
-                fail_claimed_refiner_job(
-                    session,
-                    job_id=ctx.id,
-                    lease_owner=ctx.lease_owner,
-                    error_message=err_text,
-                )
+        try:
+            with session_factory() as session:
+                with session.begin():
+                    fail_claimed_refiner_job(
+                        session,
+                        job_id=ctx.id,
+                        lease_owner=ctx.lease_owner,
+                        error_message=err_text,
+                    )
+        except Exception:
+            logger.exception(
+                "Refiner fail_claimed_refiner_job failed after missing handler job_id=%s",
+                ctx.id,
+            )
         return "processed"
 
     try:
@@ -108,29 +115,38 @@ def process_one_refiner_job(
     except Exception as exc:
         logger.exception("Refiner job handler failed for job_id=%s kind=%s", ctx.id, ctx.job_kind)
         err_text = str(exc)[:10_000]
+        try:
+            with session_factory() as session:
+                with session.begin():
+                    fail_claimed_refiner_job(
+                        session,
+                        job_id=ctx.id,
+                        lease_owner=ctx.lease_owner,
+                        error_message=err_text,
+                    )
+        except Exception:
+            logger.exception(
+                "Refiner fail_claimed_refiner_job failed after handler error job_id=%s",
+                ctx.id,
+            )
+        return "processed"
+
+    try:
         with session_factory() as session:
             with session.begin():
-                fail_claimed_refiner_job(
+                ok = complete_claimed_refiner_job(
                     session,
                     job_id=ctx.id,
                     lease_owner=ctx.lease_owner,
-                    error_message=err_text,
                 )
-        return "processed"
-
-    with session_factory() as session:
-        with session.begin():
-            ok = complete_claimed_refiner_job(
-                session,
-                job_id=ctx.id,
-                lease_owner=ctx.lease_owner,
-            )
-            if not ok:
-                logger.warning(
-                    "complete_claimed_refiner_job refused job_id=%s owner=%s (lease or state)",
-                    ctx.id,
-                    ctx.lease_owner,
-                )
+                if not ok:
+                    logger.warning(
+                        "complete_claimed_refiner_job refused job_id=%s owner=%s (lease or state)",
+                        ctx.id,
+                        ctx.lease_owner,
+                    )
+    except Exception:
+        logger.exception("Refiner complete_claimed_refiner_job failed job_id=%s", ctx.id)
     return "processed"
 
 
@@ -164,7 +180,11 @@ async def refiner_worker_run_forever(
         try:
             outcome = await asyncio.to_thread(_tick)
         except asyncio.CancelledError:
-            break
+            raise
+        except Exception:
+            logger.exception("Refiner worker tick crashed worker_index=%s", worker_index)
+            await asyncio.sleep(REFINER_WORKER_TICK_ERROR_BACKOFF_SECONDS)
+            continue
 
         if stop_event.is_set():
             break
