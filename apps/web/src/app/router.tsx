@@ -4,7 +4,7 @@ import { ActivityPage } from "../pages/activity/activity-page";
 import { DashboardPage } from "../pages/dashboard/dashboard-page";
 import { FetcherPage } from "../pages/fetcher/fetcher-page";
 import { LoginPage } from "../pages/auth/login-page";
-import { RefinerPlaceholder } from "../pages/refiner/refiner-placeholder";
+import { RefinerPage } from "../pages/refiner/refiner-page";
 import { RootEntry } from "../pages/root-entry";
 import { SettingsPlaceholder } from "../pages/settings/settings-placeholder";
 import { SetupPage } from "../pages/setup/setup-page";
@@ -26,7 +26,7 @@ const router = createBrowserRouter([
           { index: true, element: <DashboardPage /> },
           { path: "activity", element: <ActivityPage /> },
           { path: "fetcher", element: <FetcherPage /> },
-          { path: "refiner", element: <RefinerPlaceholder /> },
+          { path: "refiner", element: <RefinerPage /> },
           { path: "trimmer", element: <TrimmerPlaceholder /> },
           { path: "subber", element: <SubberPlaceholder /> },
           { path: "settings", element: <SettingsPlaceholder /> },
