@@ -32,15 +32,6 @@ WEB_DIR = REPO_ROOT / "apps" / "web"
 SRC_PATH = (BACKEND_DIR / "src").resolve()
 
 
-def _ensure_backend_src_on_path() -> None:
-    """Match subprocess env (``PYTHONPATH``) so in-process imports see ``mediamop``."""
-
-    src = str(SRC_PATH.resolve())
-    while src in sys.path:
-        sys.path.remove(src)
-    sys.path.insert(0, src)
-
-
 def _pick_loopback_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("127.0.0.1", 0))
@@ -55,22 +46,41 @@ def _e2e_home() -> str:
 
 
 def _truncate_auth_tables(home: str) -> None:
-    _ensure_backend_src_on_path()
-    os.environ["MEDIAMOP_HOME"] = home
-    from sqlalchemy import delete
+    """Clear auth rows in a **subprocess** (same pattern as Alembic).
 
-    from mediamop.core.config import MediaMopSettings
-    from mediamop.core.db import create_db_engine, create_session_factory
-    from mediamop.platform.auth.models import User, UserSession
+    The pytest parent process can still fail ``import mediamop`` on CI (editable hooks,
+    importlib mode, sys.path ordering). A fresh ``python -c`` with an explicit ``src``
+    prefix matches the working uvicorn/alembic children.
+    """
 
-    settings = MediaMopSettings.load()
-    eng = create_db_engine(settings)
-    fac = create_session_factory(eng)
-    with fac() as db:
-        db.execute(delete(UserSession))
-        db.execute(delete(User))
-        db.commit()
-    eng.dispose()
+    src = str(SRC_PATH.resolve())
+    code = (
+        "import os, sys\n"
+        "sys.path.insert(0, os.environ['MEDIAMOP_BACKEND_SRC'])\n"
+        "os.environ['MEDIAMOP_HOME'] = os.environ['MEDIAMOP_E2E_TRUNCATE_HOME']\n"
+        "from sqlalchemy import delete\n"
+        "from mediamop.core.config import MediaMopSettings\n"
+        "from mediamop.core.db import create_db_engine, create_session_factory\n"
+        "from mediamop.platform.auth.models import User, UserSession\n"
+        "settings = MediaMopSettings.load()\n"
+        "eng = create_db_engine(settings)\n"
+        "fac = create_session_factory(eng)\n"
+        "with fac() as db:\n"
+        "    db.execute(delete(UserSession))\n"
+        "    db.execute(delete(User))\n"
+        "    db.commit()\n"
+        "eng.dispose()\n"
+    )
+    subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=str(BACKEND_DIR.resolve()),
+        env={
+            **os.environ,
+            "MEDIAMOP_BACKEND_SRC": src,
+            "MEDIAMOP_E2E_TRUNCATE_HOME": home,
+        },
+        check=True,
+    )
 
 
 def _wait_http(url: str, *, timeout_s: float = 60.0) -> None:
