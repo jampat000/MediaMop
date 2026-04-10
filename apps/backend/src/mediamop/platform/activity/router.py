@@ -63,7 +63,9 @@ def _authenticate_stream_user(request: Request, settings) -> None:
         _row, user = pair
         if user.role not in _VALID_SESSION_ROLES:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid account role.")
-        db.commit()
+        # Avoid SQLite commit churn when load_valid_session did not persist (throttled last_seen).
+        if db.dirty or db.new or db.deleted:
+            db.commit()
 
 
 def _latest_event_id_once(request: Request) -> int | None:
