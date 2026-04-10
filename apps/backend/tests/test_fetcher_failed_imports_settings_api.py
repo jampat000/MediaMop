@@ -1,4 +1,4 @@
-"""Authenticated read-only ``GET /api/v1/refiner/runtime/visibility``."""
+"""Authenticated read-only ``GET /api/v1/fetcher/failed-imports/settings`` (Fetcher failed-import workflow)."""
 
 from __future__ import annotations
 
@@ -17,14 +17,14 @@ def _login(client: TestClient) -> None:
     assert r.status_code == 200, r.text
 
 
-def test_refiner_runtime_visibility_requires_auth(client_with_admin: TestClient) -> None:
-    r = client_with_admin.get("/api/v1/refiner/runtime/visibility")
+def test_fetcher_failed_imports_settings_requires_auth(client_with_admin: TestClient) -> None:
+    r = client_with_admin.get("/api/v1/fetcher/failed-imports/settings")
     assert r.status_code == 401
 
 
-def test_refiner_runtime_visibility_authenticated_shape(client_with_admin: TestClient) -> None:
+def test_fetcher_failed_imports_settings_authenticated_shape(client_with_admin: TestClient) -> None:
     _login(client_with_admin)
-    r = client_with_admin.get("/api/v1/refiner/runtime/visibility")
+    r = client_with_admin.get("/api/v1/fetcher/failed-imports/settings")
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["refiner_worker_count"] == 0

@@ -1,7 +1,7 @@
-import type { RefinerInspectionFilter } from "./queries";
+import type { FailedImportInspectionFilter } from "./queries";
 
-/** Select options for the Refiner task inspection filter (plain labels; raw status in parentheses where needed). */
-export const REFINER_INSPECTION_FILTER_OPTIONS: { value: RefinerInspectionFilter; label: string }[] = [
+/** Filter options for Fetcher failed-import task inspection. */
+export const FAILED_IMPORT_INSPECTION_FILTER_OPTIONS: { value: FailedImportInspectionFilter; label: string }[] = [
   {
     value: "terminal",
     label: "Finished (default): completed, stopped after errors, needs manual finish",

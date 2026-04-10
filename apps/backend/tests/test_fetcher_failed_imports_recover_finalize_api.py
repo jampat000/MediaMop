@@ -1,4 +1,4 @@
-"""``POST /api/v1/refiner/jobs/{id}/recover-finalize-failure`` finalize recovery."""
+"""``POST /api/v1/fetcher/failed-imports/tasks/{id}/recover-finalize-failure`` finalize recovery."""
 
 from __future__ import annotations
 
@@ -72,13 +72,13 @@ def _seed_finalize_failed_job() -> int:
     return jid
 
 
-def test_recover_finalize_success(client_with_admin: TestClient) -> None:
+def test_fetcher_failed_imports_recover_finalize_success(client_with_admin: TestClient) -> None:
     jid = _seed_finalize_failed_job()
     _login_admin(client_with_admin)
     tok = fetch_csrf(client_with_admin)
     r = auth_post(
         client_with_admin,
-        f"/api/v1/refiner/jobs/{jid}/recover-finalize-failure",
+        f"/api/v1/fetcher/failed-imports/tasks/{jid}/recover-finalize-failure",
         json={"confirm": True, "csrf_token": tok},
     )
     assert r.status_code == 200, r.text
@@ -92,7 +92,7 @@ def test_recover_finalize_success(client_with_admin: TestClient) -> None:
         assert row.status == RefinerJobStatus.COMPLETED.value
 
 
-def test_recover_finalize_409_when_not_finalize_failed(client_with_admin: TestClient) -> None:
+def test_fetcher_failed_imports_recover_finalize_409_when_not_finalize_failed(client_with_admin: TestClient) -> None:
     t0 = _t0()
     fac = _fac()
     with fac() as db:
@@ -122,24 +122,25 @@ def test_recover_finalize_409_when_not_finalize_failed(client_with_admin: TestCl
     tok = fetch_csrf(client_with_admin)
     r = auth_post(
         client_with_admin,
-        f"/api/v1/refiner/jobs/{jid}/recover-finalize-failure",
+        f"/api/v1/fetcher/failed-imports/tasks/{jid}/recover-finalize-failure",
         json={"confirm": True, "csrf_token": tok},
     )
     assert r.status_code == 409, r.text
 
 
-def test_recover_finalize_404_missing_job(client_with_admin: TestClient) -> None:
+def test_fetcher_failed_imports_recover_finalize_404_missing_job(client_with_admin: TestClient) -> None:
     _login_admin(client_with_admin)
     tok = fetch_csrf(client_with_admin)
     r = auth_post(
         client_with_admin,
-        "/api/v1/refiner/jobs/999999/recover-finalize-failure",
+        "/api/v1/fetcher/failed-imports/tasks/999999/recover-finalize-failure",
         json={"confirm": True, "csrf_token": tok},
     )
     assert r.status_code == 404
+    assert r.json().get("detail") == "Fetcher task not found."
 
 
-def test_recover_finalize_403_viewer(client_with_viewer: TestClient) -> None:
+def test_fetcher_failed_imports_recover_finalize_403_viewer(client_with_viewer: TestClient) -> None:
     jid = _seed_finalize_failed_job()
     tok = fetch_csrf(client_with_viewer)
     r_login = auth_post(
@@ -151,18 +152,18 @@ def test_recover_finalize_403_viewer(client_with_viewer: TestClient) -> None:
     tok2 = fetch_csrf(client_with_viewer)
     r = auth_post(
         client_with_viewer,
-        f"/api/v1/refiner/jobs/{jid}/recover-finalize-failure",
+        f"/api/v1/fetcher/failed-imports/tasks/{jid}/recover-finalize-failure",
         json={"confirm": True, "csrf_token": tok2},
     )
     assert r.status_code == 403
 
 
-def test_recover_finalize_rejects_invalid_csrf(client_with_admin: TestClient) -> None:
+def test_fetcher_failed_imports_recover_finalize_rejects_invalid_csrf(client_with_admin: TestClient) -> None:
     jid = _seed_finalize_failed_job()
     _login_admin(client_with_admin)
     r = auth_post(
         client_with_admin,
-        f"/api/v1/refiner/jobs/{jid}/recover-finalize-failure",
+        f"/api/v1/fetcher/failed-imports/tasks/{jid}/recover-finalize-failure",
         json={"confirm": True, "csrf_token": "not-valid"},
     )
     assert r.status_code == 400

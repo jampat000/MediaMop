@@ -1,6 +1,6 @@
-/** Shapes for Refiner operator APIs: task inspection, loaded settings, manual failed-import pass enqueue. */
+/** Shapes for Fetcher failed-import queue workflow APIs (JSON field names follow backend). */
 
-export type RefinerJobInspectionRow = {
+export type FailedImportTaskRow = {
   id: number;
   dedupe_key: string;
   job_kind: string;
@@ -15,13 +15,13 @@ export type RefinerJobInspectionRow = {
   updated_at: string;
 };
 
-export type RefinerJobsInspectionOut = {
-  jobs: RefinerJobInspectionRow[];
+export type FailedImportTasksInspectionOut = {
+  jobs: FailedImportTaskRow[];
   default_terminal_only: boolean;
 };
 
-/** ``GET /api/v1/refiner/runtime/visibility`` — loaded settings; not liveness. */
-export type RefinerRuntimeVisibilityOut = {
+/** GET /api/v1/fetcher/failed-imports/settings — same payload shape as legacy refiner visibility (settings keys unchanged). */
+export type FailedImportFetcherSettingsOut = {
   refiner_worker_count: number;
   in_process_workers_disabled: boolean;
   in_process_workers_enabled: boolean;
@@ -33,8 +33,7 @@ export type RefinerRuntimeVisibilityOut = {
   visibility_note: string;
 };
 
-/** Response body for operator POST enqueue (movies / TV library paths — URLs unchanged). */
-export type ManualCleanupDriveEnqueueOut = {
+export type FailedImportEnqueueOut = {
   job_id: number;
   dedupe_key: string;
   job_kind: string;

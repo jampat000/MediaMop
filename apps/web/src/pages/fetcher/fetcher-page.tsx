@@ -3,6 +3,7 @@ import { PageLoading } from "../../components/shared/page-loading";
 import { useFetcherOperationalOverviewQuery } from "../../lib/fetcher/queries";
 import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
 import type { ActivityEventItem } from "../../lib/api/types";
+import { FetcherFailedImportsWorkspace } from "./fetcher-failed-imports-workspace";
 
 function FetcherStatusRow({ label, value }: { label: string; value: string }) {
   return (
@@ -16,32 +17,61 @@ function FetcherStatusRow({ label, value }: { label: string; value: string }) {
 export function FetcherPage() {
   const overview = useFetcherOperationalOverviewQuery();
 
-  if (overview.isPending) {
-    return <PageLoading label="Loading Fetcher status" />;
-  }
+  return (
+    <div className="mm-page">
+      <header className="mm-page__intro">
+        <p className="mm-page__eyebrow">MediaMop</p>
+        <h1 className="mm-page__title">Fetcher</h1>
+        <p className="mm-page__subtitle">
+          Fetcher covers MediaMop’s integration with your separate Fetcher app (live{" "}
+          <code className="mm-dash-code">/healthz</code> probe and persisted probe history), and it owns Radarr/Sonarr{" "}
+          <strong>download-queue</strong> failed-import review and removal — task list, schedules, and manual queue
+          actions below.
+        </p>
+        <p className="mm-page__lead text-sm text-[var(--mm-text3)]">
+          Refiner stays focused on refining movies/TV and future disk-level stale-file cleanup — not this queue
+          workflow.{" "}
+          <Link to="/app/refiner" className="text-[var(--mm-accent)] underline-offset-2 hover:underline">
+            Refiner overview
+          </Link>
+        </p>
+      </header>
 
-  if (overview.isError) {
-    const err = overview.error;
-    return (
-      <div className="mm-page">
-        <header className="mm-page__intro">
-          <p className="mm-page__eyebrow">MediaMop</p>
-          <h1 className="mm-page__title">Fetcher</h1>
-          <p className="mm-page__lead">
-            {isLikelyNetworkFailure(err)
-              ? "Could not reach the MediaMop API. Check that the backend is running."
-              : isHttpErrorFromApi(err)
-                ? "The server refused this request. Sign in again or check API logs."
-                : "Could not load Fetcher status."}
-          </p>
-        </header>
-        {err instanceof Error ? (
-          <p className="mm-page__lead font-mono text-sm text-[var(--mm-text3)]">{err.message}</p>
-        ) : null}
-      </div>
-    );
-  }
+      <FetcherFailedImportsWorkspace />
 
+      {overview.isPending ? (
+        <PageLoading label="Loading Fetcher probe status" />
+      ) : overview.isError ? (
+        <FetcherOverviewError err={overview.error} />
+      ) : (
+        <FetcherOperationalOverviewSections data={overview.data} />
+      )}
+    </div>
+  );
+}
+
+function FetcherOverviewError({ err }: { err: unknown }) {
+  return (
+    <div className="mm-page__intro">
+      <p className="mm-page__lead">
+        {isLikelyNetworkFailure(err)
+          ? "Could not reach the MediaMop API. Check that the backend is running."
+          : isHttpErrorFromApi(err)
+            ? "The server refused this request. Sign in again or check API logs."
+            : "Could not load Fetcher probe status."}
+      </p>
+      {err instanceof Error ? (
+        <p className="mm-page__lead font-mono text-sm text-[var(--mm-text3)]">{err.message}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function FetcherOperationalOverviewSections({
+  data,
+}: {
+  data: NonNullable<ReturnType<typeof useFetcherOperationalOverviewQuery>["data"]>;
+}) {
   const {
     mediamop_version,
     connection,
@@ -52,33 +82,21 @@ export function FetcherPage() {
     recent_probe_failures,
     latest_probe_event,
     recent_probe_events,
-  } = overview.data;
+  } = data;
   const lastProbeText = latest_probe_event ? formatEventTime(latest_probe_event) : "No probe event recorded yet";
 
   return (
-    <div className="mm-page">
-      <header className="mm-page__intro">
-        <p className="mm-page__eyebrow">MediaMop</p>
-        <h1 className="mm-page__title">Fetcher</h1>
-        <p className="mm-page__subtitle">
-          Read-only operational view: live <code className="mm-dash-code">/healthz</code> probe plus throttled
-          history in the activity log when you open this page.
-        </p>
-        <p className="mm-page__lead">
-          No scheduler, queue browser, or settings controls here — only status for the separate Fetcher app.
-        </p>
-      </header>
-
+    <>
       <section
-        className="mm-card mm-dash-card mm-fetcher-module-surface"
+        className="mm-card mm-dash-card mm-fetcher-module-surface mt-8"
         aria-labelledby="mm-fetcher-status-heading"
       >
         <h2 id="mm-fetcher-status-heading" className="mm-card__title">
-          Connection
+          Fetcher app — connection
         </h2>
         <p className="mm-card__body mm-card__body--tight">
-          Values below come from <code className="mm-dash-code">MEDIAMOP_FETCHER_BASE_URL</code> and a single GET
-          to <code className="mm-dash-code">/healthz</code> on that origin.
+          Values below come from <code className="mm-dash-code">MEDIAMOP_FETCHER_BASE_URL</code> and a single GET to{" "}
+          <code className="mm-dash-code">/healthz</code> on that origin.
         </p>
         <dl className="mm-dash-kv">
           <FetcherStatusRow label="MediaMop API" value={mediamop_version} />
@@ -114,14 +132,11 @@ export function FetcherPage() {
           24-hour log snapshot
         </h2>
         <p className="mm-card__body mm-card__body--tight">
-          Counts are <strong>persisted</strong> probe rows in MediaMop only (15-minute throttle can under-count
-          actual <code className="mm-dash-code">/healthz</code> checks).
+          Counts are <strong>persisted</strong> probe rows in MediaMop only (15-minute throttle can under-count actual{" "}
+          <code className="mm-dash-code">/healthz</code> checks).
         </p>
         <dl className="mm-dash-kv">
-          <FetcherStatusRow
-            label="Window"
-            value={`Last ${probe_persisted_24h.window_hours} hours`}
-          />
+          <FetcherStatusRow label="Window" value={`Last ${probe_persisted_24h.window_hours} hours`} />
           <FetcherStatusRow label="OK rows" value={String(probe_persisted_24h.persisted_ok)} />
           <FetcherStatusRow label="Failed rows" value={String(probe_persisted_24h.persisted_failed)} />
         </dl>
@@ -136,8 +151,8 @@ export function FetcherPage() {
         </h2>
         <p className="mm-card__body mm-card__body--tight">
           Up to five persisted <code className="mm-dash-code">fetcher.probe_failed</code> rows from the last{" "}
-          {probe_failure_window_days} days (newest first). Same throttle rules as other probe history; not every
-          failed reachability attempt is guaranteed to appear.
+          {probe_failure_window_days} days (newest first). Same throttle rules as other probe history; not every failed
+          reachability attempt is guaranteed to appear.
         </p>
         {recent_probe_failures.length > 0 ? (
           <ul className="mt-3 space-y-2 text-sm">
@@ -196,7 +211,7 @@ export function FetcherPage() {
           <p className="mt-3 text-sm text-[var(--mm-text3)]">No persisted probe events yet.</p>
         )}
       </section>
-    </div>
+    </>
   );
 }
 

@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { REFINER_STATUS_HANDLER_OK_FINALIZE_FAILED } from "./refiner-job-status-labels";
-import { REFINER_INSPECTION_FILTER_OPTIONS } from "./refiner-inspection-filter-labels";
+import { FAILED_IMPORT_STATUS_HANDLER_OK_FINALIZE_FAILED } from "./task-status-labels";
+import { FAILED_IMPORT_INSPECTION_FILTER_OPTIONS } from "./inspection-filter-labels";
 
 function labelFor(value: string): string | undefined {
-  return REFINER_INSPECTION_FILTER_OPTIONS.find((o) => o.value === value)?.label;
+  return FAILED_IMPORT_INSPECTION_FILTER_OPTIONS.find((o) => o.value === value)?.label;
 }
 
-describe("REFINER_INSPECTION_FILTER_OPTIONS", () => {
+describe("FAILED_IMPORT_INSPECTION_FILTER_OPTIONS", () => {
   it("keeps needs-manual-finish filter distinct and names the stored status for honesty", () => {
-    const h = labelFor(REFINER_STATUS_HANDLER_OK_FINALIZE_FAILED);
+    const h = labelFor(FAILED_IMPORT_STATUS_HANDLER_OK_FINALIZE_FAILED);
     const f = labelFor("failed");
     expect(h).toBeDefined();
     expect(f).toBeDefined();
@@ -26,7 +26,7 @@ describe("REFINER_INSPECTION_FILTER_OPTIONS", () => {
   });
 
   it("lists every filter value exactly once", () => {
-    const values = REFINER_INSPECTION_FILTER_OPTIONS.map((o) => o.value);
+    const values = FAILED_IMPORT_INSPECTION_FILTER_OPTIONS.map((o) => o.value);
     expect(new Set(values).size).toBe(values.length);
     expect(values).toContain("terminal");
     expect(values).toContain("pending");

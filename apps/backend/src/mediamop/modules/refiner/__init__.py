@@ -1,11 +1,11 @@
 """Refiner module — MediaMop’s media refinement surface (movies and TV).
 
-Today’s shipped automation centers on Radarr/Sonarr download-queue failed-import removal (per policy),
-with a durable SQLite ``refiner_jobs`` task store, in-process runners, and periodic enqueue of those
-passes. That is not stale-file deletion on disk — keep naming distinct if/when disk-level cleanup ships.
+Implementation here still drives Radarr/Sonarr **download-queue** failed-import removal (per policy) via
+``refiner_jobs``, in-process runners, and periodic enqueue — but **product-facing HTTP** for that
+queue workflow lives under ``mediamop.modules.fetcher.failed_imports_api`` (Fetcher ownership).
+Refiner-native disk-level stale-file cleanup (after importing is done) remains a separate future concern.
 
-Radarr and Sonarr stay in separate Python modules wherever behavior can diverge. Operator HTTP routes
-live under ``mediamop.modules.refiner.router``.
+Radarr and Sonarr stay in separate Python modules wherever behavior can diverge.
 """
 
 from __future__ import annotations

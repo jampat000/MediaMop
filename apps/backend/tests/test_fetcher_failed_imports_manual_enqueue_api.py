@@ -1,4 +1,4 @@
-"""Operator ``POST`` enqueue for Radarr/Sonarr cleanup-drive jobs (dedupe-aware)."""
+"""Operator ``POST`` enqueue for Fetcher Radarr/Sonarr failed-import passes (dedupe-aware)."""
 
 from __future__ import annotations
 
@@ -54,13 +54,15 @@ def _login_viewer(client: TestClient) -> None:
     assert r.status_code == 200, r.text
 
 
-def test_manual_enqueue_radarr_admin_created_then_already_present(client_with_admin: TestClient) -> None:
+def test_fetcher_failed_imports_enqueue_radarr_admin_created_then_already_present(
+    client_with_admin: TestClient,
+) -> None:
     _clear_refiner_jobs()
     _login_admin(client_with_admin)
     tok = fetch_csrf(client_with_admin)
     r1 = auth_post(
         client_with_admin,
-        "/api/v1/refiner/cleanup-drive/radarr/enqueue",
+        "/api/v1/fetcher/failed-imports/radarr/enqueue",
         json={"confirm": True, "csrf_token": tok},
     )
     assert r1.status_code == 200, r1.text
@@ -72,7 +74,7 @@ def test_manual_enqueue_radarr_admin_created_then_already_present(client_with_ad
     tok2 = fetch_csrf(client_with_admin)
     r2 = auth_post(
         client_with_admin,
-        "/api/v1/refiner/cleanup-drive/radarr/enqueue",
+        "/api/v1/fetcher/failed-imports/radarr/enqueue",
         json={"confirm": True, "csrf_token": tok2},
     )
     assert r2.status_code == 200, r2.text
@@ -86,13 +88,15 @@ def test_manual_enqueue_radarr_admin_created_then_already_present(client_with_ad
         assert n == 1
 
 
-def test_manual_enqueue_sonarr_admin_created_then_already_present(client_with_admin: TestClient) -> None:
+def test_fetcher_failed_imports_enqueue_sonarr_admin_created_then_already_present(
+    client_with_admin: TestClient,
+) -> None:
     _clear_refiner_jobs()
     _login_admin(client_with_admin)
     tok = fetch_csrf(client_with_admin)
     r1 = auth_post(
         client_with_admin,
-        "/api/v1/refiner/cleanup-drive/sonarr/enqueue",
+        "/api/v1/fetcher/failed-imports/sonarr/enqueue",
         json={"confirm": True, "csrf_token": tok},
     )
     assert r1.status_code == 200, r1.text
@@ -103,7 +107,7 @@ def test_manual_enqueue_sonarr_admin_created_then_already_present(client_with_ad
     tok2 = fetch_csrf(client_with_admin)
     r2 = auth_post(
         client_with_admin,
-        "/api/v1/refiner/cleanup-drive/sonarr/enqueue",
+        "/api/v1/fetcher/failed-imports/sonarr/enqueue",
         json={"confirm": True, "csrf_token": tok2},
     )
     assert r2.status_code == 200
@@ -115,20 +119,20 @@ def test_manual_enqueue_sonarr_admin_created_then_already_present(client_with_ad
         assert n == 1
 
 
-def test_manual_enqueue_radarr_radarr_and_sonarr_independent_rows(client_with_admin: TestClient) -> None:
+def test_fetcher_failed_imports_enqueue_radarr_and_sonarr_independent_rows(client_with_admin: TestClient) -> None:
     _clear_refiner_jobs()
     _login_admin(client_with_admin)
     tok = fetch_csrf(client_with_admin)
     r_rad = auth_post(
         client_with_admin,
-        "/api/v1/refiner/cleanup-drive/radarr/enqueue",
+        "/api/v1/fetcher/failed-imports/radarr/enqueue",
         json={"confirm": True, "csrf_token": tok},
     )
     assert r_rad.status_code == 200
     tok2 = fetch_csrf(client_with_admin)
     r_son = auth_post(
         client_with_admin,
-        "/api/v1/refiner/cleanup-drive/sonarr/enqueue",
+        "/api/v1/fetcher/failed-imports/sonarr/enqueue",
         json={"confirm": True, "csrf_token": tok2},
     )
     assert r_son.status_code == 200
@@ -139,34 +143,34 @@ def test_manual_enqueue_radarr_radarr_and_sonarr_independent_rows(client_with_ad
         assert (db.scalar(select(func.count()).select_from(RefinerJob)) or 0) == 2
 
 
-def test_manual_enqueue_radarr_anonymous_401(client_with_admin: TestClient) -> None:
+def test_fetcher_failed_imports_enqueue_radarr_anonymous_401(client_with_admin: TestClient) -> None:
     _clear_refiner_jobs()
     r = auth_post(
         client_with_admin,
-        "/api/v1/refiner/cleanup-drive/radarr/enqueue",
+        "/api/v1/fetcher/failed-imports/radarr/enqueue",
         json={"confirm": True, "csrf_token": "x"},
     )
     assert r.status_code == 401
 
 
-def test_manual_enqueue_radarr_viewer_403(client_with_viewer: TestClient) -> None:
+def test_fetcher_failed_imports_enqueue_radarr_viewer_403(client_with_viewer: TestClient) -> None:
     _clear_refiner_jobs()
     _login_viewer(client_with_viewer)
     tok = fetch_csrf(client_with_viewer)
     r = auth_post(
         client_with_viewer,
-        "/api/v1/refiner/cleanup-drive/radarr/enqueue",
+        "/api/v1/fetcher/failed-imports/radarr/enqueue",
         json={"confirm": True, "csrf_token": tok},
     )
     assert r.status_code == 403
 
 
-def test_manual_enqueue_radarr_rejects_invalid_csrf(client_with_admin: TestClient) -> None:
+def test_fetcher_failed_imports_enqueue_radarr_rejects_invalid_csrf(client_with_admin: TestClient) -> None:
     _clear_refiner_jobs()
     _login_admin(client_with_admin)
     r = auth_post(
         client_with_admin,
-        "/api/v1/refiner/cleanup-drive/radarr/enqueue",
+        "/api/v1/fetcher/failed-imports/radarr/enqueue",
         json={"confirm": True, "csrf_token": "not-valid"},
     )
     assert r.status_code == 400

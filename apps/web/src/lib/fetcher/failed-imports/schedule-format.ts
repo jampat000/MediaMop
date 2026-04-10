@@ -1,4 +1,4 @@
-/** Human-readable schedule interval for Refiner loaded-settings UI. */
+/** Human-readable schedule interval for Fetcher failed-import settings UI. */
 
 export function formatScheduleIntervalSeconds(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) {
