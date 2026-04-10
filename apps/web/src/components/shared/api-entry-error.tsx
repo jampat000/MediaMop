@@ -54,38 +54,35 @@ export function ApiEntryError({ error }: { error: unknown }) {
         <>
           <h1 className="mm-auth-title mm-auth-title--caution">API is running but not ready</h1>
           <p className="mm-auth-lead">
-            Auth routes need PostgreSQL. Set{" "}
+            Auth routes need a migrated SQLite database under{" "}
             <code className="rounded bg-[rgba(0,0,0,0.35)] px-1.5 py-0.5 text-[0.85em] text-[var(--mm-text)]">
-              MEDIAMOP_DATABASE_URL
+              MEDIAMOP_HOME
             </code>{" "}
-            and{" "}
+            (optional{" "}
+            <code className="rounded bg-[rgba(0,0,0,0.35)] px-1.5 py-0.5 text-[0.85em] text-[var(--mm-text)]">
+              MEDIAMOP_DB_PATH
+            </code>
+            ), plus{" "}
             <code className="rounded bg-[rgba(0,0,0,0.35)] px-1.5 py-0.5 text-[0.85em] text-[var(--mm-text)]">
               MEDIAMOP_SESSION_SECRET
             </code>
-            , run{" "}
+            . Run{" "}
+            <code className="rounded bg-[rgba(0,0,0,0.35)] px-1.5 py-0.5 text-[0.85em] text-[var(--mm-text)]">
+              .\scripts\dev-migrate.ps1
+            </code>{" "}
+            from the repo root (or{" "}
             <code className="rounded bg-[rgba(0,0,0,0.35)] px-1.5 py-0.5 text-[0.85em] text-[var(--mm-text)]">
               alembic upgrade head
             </code>{" "}
-            from <code className="text-[0.85em]">apps/backend</code>, then restart the backend. A typical{" "}
-            <strong>native</strong> PostgreSQL listen address is{" "}
-            <code className="rounded bg-[rgba(0,0,0,0.35)] px-1.5 py-0.5 text-[0.85em] text-[var(--mm-text)]">
-              127.0.0.1:5432
-            </code>
-            ; optional dev-only Compose in this repo maps Postgres to host port{" "}
-            <code className="rounded bg-[rgba(0,0,0,0.35)] px-1.5 py-0.5 text-[0.85em] text-[var(--mm-text)]">
-              5433
-            </code>{" "}
-            (see <code className="text-[0.85em]">docs/local-development.md</code>).
+            from <code className="text-[0.85em]">apps/backend</code> with <code className="text-[0.85em]">PYTHONPATH=src</code>
+            ), then restart the backend. See <code className="text-[0.85em]">apps/backend/.env.example</code> and{" "}
+            <code className="text-[0.85em]">docs/local-development.md</code>.
           </p>
           <p className="mm-auth-lead">
             <code className="rounded bg-[rgba(0,0,0,0.35)] px-1.5 py-0.5 text-[0.85em] text-[var(--mm-text)]">
               GET /health
             </code>{" "}
-            should still respond while the database is unset; product JSON under{" "}
-            <code className="rounded bg-[rgba(0,0,0,0.35)] px-1.5 py-0.5 text-[0.85em] text-[var(--mm-text)]">
-              /api/v1
-            </code>{" "}
-            returns 503 until the URL is set.
+            can still return 200 while <code className="text-[0.85em]">/api/v1</code> returns 503 if migrations, session secret, or the database path are not ready.
           </p>
         </>
       );

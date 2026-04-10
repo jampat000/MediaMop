@@ -1,82 +1,57 @@
 # MediaMop — local development (backend + web)
 
-This **MediaMop** repository contains **`apps/backend`** (FastAPI, PostgreSQL, cookie sessions) and **`apps/web`** (React/Vite). It does **not** include the Fetcher app or Fetcher’s Docker stack.
+This **MediaMop** repository contains **`apps/backend`** (FastAPI, **SQLite**, cookie sessions) and **`apps/web`** (React/Vite). It does **not** include the Fetcher app or Fetcher’s Docker stack.
 
 **Local web/API ports** are versioned in **`scripts/dev-ports.json`**; the policy is summarized in **[`docs/ports.md`](ports.md)**.
 
-## Windows — native PostgreSQL (first-class)
+## Prerequisites
 
-On Windows, **install and run PostgreSQL without Docker** (e.g. **EDB PostgreSQL** installer or **winget**). Create a database and role, then set:
+- **Python 3.11+**
+- **Node.js LTS** (npm on `PATH`)
 
-- **`MEDIAMOP_DATABASE_URL`** — e.g. `postgresql+psycopg://YOUR_USER:YOUR_PASSWORD@127.0.0.1:5432/YOUR_DB` (**5432** is the default listen port for a typical local install).
-
-Copy **`apps/backend/.env.example`** → **`apps/backend/.env`** and put the URL and **`MEDIAMOP_SESSION_SECRET`** there (see below). Run migrations (**`.\scripts\dev-migrate.ps1`** with the URL set, or **`alembic upgrade head`** from **`apps/backend`** with **`PYTHONPATH=src`**).
-
-**Docker is not required** on Windows for normal development.
-
-## Optional — PostgreSQL via Docker Compose (developer convenience)
-
-If you **choose** to use Docker for Postgres only: from the repo root run **`docker compose up -d`**. The bundled file maps host **`5433`** → container **5432** to avoid clashing with a native Postgres on **5432**.
-
-Example URL for that optional stack:
-
-`postgresql+psycopg://mediamop:mediamop@127.0.0.1:5433/mediamop`
-
-Do **not** treat this as the only supported path; it is optional on Windows.
-
-## Linux — development and container deployment
-
-On Linux, PostgreSQL may be a **system package**, **managed service**, or **Docker/Compose** stack. Set **`MEDIAMOP_DATABASE_URL`** accordingly. The same **`docker-compose.yml`** remains a valid way to run Postgres for local dev or small deployments when you want containers.
-
-**CI** uses a **`postgres:16`** **service** in **`.github/workflows/ci.yml`** (Linux runner) — that is CI infrastructure, not a statement that developers must use Docker locally.
+The backend persists state in **file-backed SQLite** under **`MEDIAMOP_HOME`** (see **`apps/backend/.env.example`**). You do **not** install or run PostgreSQL for normal MediaMop development.
 
 ## Backend `.env` (local)
 
-Copy **`apps/backend/.env.example`** to **`apps/backend/.env`** and set **`MEDIAMOP_DATABASE_URL`** and **`MEDIAMOP_SESSION_SECRET`**. The running API loads this file automatically (see **`MediaMopSettings.load`**), and **Alembic** loads it too. Shell variables still override if both are set.
+Copy **`apps/backend/.env.example`** → **`apps/backend/.env`**.
 
-**Migrations from repo root:** **`.\scripts\dev-migrate.ps1`** — it loads **`apps/backend/.env`** into the process (shell variables still win). **`MEDIAMOP_DATABASE_URL` must be set** (uncommented in **`.env`** or in the shell). There is **no silent default** to Compose. To migrate against optional Compose Postgres on **`127.0.0.1:5433`**, run **`.\scripts\dev-migrate.ps1 -UseComposeDevDb`** (after **`docker compose up -d`**).
+Required for auth and `/api/v1`:
 
-## MediaMop home (product paths)
+- **`MEDIAMOP_SESSION_SECRET`** — long random value.
 
-On-disk runtime defaults must **not** be tied to “the Git clone directory” or the process current working directory.
+Optional path overrides (defaults are under the OS-specific **`MEDIAMOP_HOME`**):
 
-- **`MEDIAMOP_HOME`** (optional): explicit absolute root for product-owned data. Loaded into `MediaMopSettings.mediamop_home`.
-- **Default when unset:**
-  - **Windows:** `%LOCALAPPDATA%\MediaMop`
-  - **Linux/macOS:** `$XDG_DATA_HOME/mediamop`, or `~/.local/share/mediamop`
+- **`MEDIAMOP_HOME`**, **`MEDIAMOP_DB_PATH`**, **`MEDIAMOP_BACKUP_DIR`**, **`MEDIAMOP_LOG_DIR`**, **`MEDIAMOP_TEMP_DIR`**
 
-The backend does **not** yet write logs or cache under this root automatically; it is the **canonical** anchor for future artifacts (see `apps/backend/src/mediamop/core/paths.py`). PostgreSQL URLs remain **separate** (`MEDIAMOP_DATABASE_URL`).
-
-**Linux containers:** set `MEDIAMOP_HOME` to a volume mount (e.g. `/var/lib/mediamop`) so data survives restarts.
+The API and **Alembic** load **`apps/backend/.env`** automatically; shell variables still override.
 
 ## Apply migrations
 
-From repo root (**`.\scripts\dev-migrate.ps1`**) or manually:
+From repo root:
+
+```powershell
+.\scripts\dev-migrate.ps1
+```
+
+Or manually:
 
 ```powershell
 cd apps/backend
 $env:PYTHONPATH = "src"
-# Native Postgres example (adjust user, password, db):
-$env:MEDIAMOP_DATABASE_URL = "postgresql+psycopg://mediamop:secret@127.0.0.1:5432/mediamop"
 alembic upgrade head
 ```
 
-Optional Compose example (host port **5433** only if you started **`docker compose up -d`**):
-
-```text
-postgresql+psycopg://mediamop:mediamop@127.0.0.1:5433/mediamop
-```
-
-## Backend API
+## Backend API (manual)
 
 ```powershell
 cd apps/backend
 $env:PYTHONPATH = "src"
-$env:MEDIAMOP_DATABASE_URL = "postgresql+psycopg://..."
 $env:MEDIAMOP_SESSION_SECRET = "<long random>"
 # $env:MEDIAMOP_CORS_ORIGINS = "http://127.0.0.1:8782"
 uvicorn mediamop.api.main:app --host 127.0.0.1 --port 8788 --reload
 ```
+
+Prefer **`.\scripts\dev-backend.ps1`** from the repo root (uses **`scripts/dev-ports.json`**).
 
 ## Web app
 
@@ -88,17 +63,30 @@ npm run dev
 
 The Vite dev server and **`vite preview`** use **[`scripts/dev-ports.json`](../scripts/dev-ports.json)**. See **[`docs/ports.md`](ports.md)**. To override temporarily, set **`VITE_DEV_API_PROXY_TARGET`** and **`MEDIAMOP_DEV_API_PORT`** together.
 
+## MediaMop home (product paths)
+
+On-disk runtime defaults must **not** be tied to “the Git clone directory” or the process current working directory.
+
+- **`MEDIAMOP_HOME`** (optional): explicit absolute root for product-owned data. Loaded into `MediaMopSettings.mediamop_home`.
+- **Default when unset:**
+  - **Windows:** `%LOCALAPPDATA%\MediaMop`
+  - **Linux/macOS:** `$XDG_DATA_HOME/mediamop`, or `~/.local/share/mediamop`
+
+The default SQLite file is **`{MEDIAMOP_HOME}/data/mediamop.sqlite3`** unless **`MEDIAMOP_DB_PATH`** overrides.
+
+**Linux containers:** set `MEDIAMOP_HOME` to a volume mount (e.g. `/var/lib/mediamop`) so data survives restarts.
+
 ## CI validation
 
-The **`Test`** workflow:
+The **`Test`** workflow (`.github/workflows/ci.yml`):
 
-1. Runs **`apps/backend`** tests against a **Linux** Postgres **service** + Alembic.
+1. Runs **`apps/backend`** tests with **`MEDIAMOP_HOME`** on the runner temp dir, **`alembic upgrade head`**, then **`pytest`** (no Postgres service).
 2. Runs **`npm ci` → `npm run build` → `npm run test`** in **`apps/web`**.
-3. Runs **E2E** with **`MEDIAMOP_E2E=1`**, uvicorn + **`vite preview`** + Playwright.
+3. Runs **E2E** with **`MEDIAMOP_E2E=1`**, **`MEDIAMOP_HOME`** on a temp dir, uvicorn + **`vite preview`** + Playwright.
 
 ## E2E (local, optional)
 
-Requires: Postgres, Playwright + Chromium, Node/npm, built web shell.
+Requires: Playwright + Chromium, Node/npm, built web shell.
 
 ```powershell
 cd apps/web
@@ -106,10 +94,11 @@ npm ci
 npm run build
 cd ../..
 $env:MEDIAMOP_E2E = "1"
-$env:MEDIAMOP_DATABASE_URL = "postgresql+psycopg://..."
 $env:MEDIAMOP_SESSION_SECRET = "local-dev-secret-at-least-32-characters-long"
 pytest tests/e2e/mediamop -q --tb=short
 ```
+
+Optional: **`MEDIAMOP_E2E_HOME`** for a fixed data directory; otherwise a temp directory is used (see **`tests/e2e/mediamop/conftest.py`**).
 
 ## Split-origin production (deferred wiring)
 
@@ -128,10 +117,10 @@ If the static site and API are on **different origins**:
    Use the **Vite proxy** (same origin); do not set **`VITE_API_BASE_URL`** unless you intend split-origin dev.
 
 3. **“Cannot reach the API” vs HTTP 503**  
-   **`GET /health`** on the API port (**`scripts/dev-ports.json`**) should return **200** when uvicorn is up (process liveness). That does **not** mean **`/api/v1`** is ready: without DB URL, secret, and migrations, auth JSON routes return **503**. The web shell treats **network errors** (no TCP response) separately from **HTTP 503** from a live API (see **`apps/web`** error guards + **`ApiEntryError`**).
+   **`GET /health`** on the API port (**`scripts/dev-ports.json`**) should return **200** when uvicorn is up (process liveness). **`/api/v1`** still needs **`MEDIAMOP_SESSION_SECRET`**, **`alembic upgrade head`**, and a **writable** database path under **`MEDIAMOP_HOME`**. The web shell treats **network errors** (no TCP response) separately from **HTTP 503** from a live API (see **`apps/web`** error guards + **`ApiEntryError`**).
 
-4. **PostgreSQL**  
-   **Windows:** Prefer **native** install (**`127.0.0.1:5432`** typical). **Optional:** **`docker compose up -d`** exposes **5433** on the host (see `docker-compose.yml`). Set **`MEDIAMOP_DATABASE_URL`** to match whichever you use.
+4. **SQLite / migrations**  
+   Confirm **`.\scripts\dev-migrate.ps1`** completed without errors. If the DB file lives on a read-only volume, set **`MEDIAMOP_HOME`** (or **`MEDIAMOP_DB_PATH`**) to a writable location.
 
 5. **Python import errors (`No module named mediamop`)**  
    Use **`PYTHONPATH=src`** and cwd **`apps/backend`**, or **`.\scripts\dev-backend.ps1`**.
@@ -140,7 +129,11 @@ If the static site and API are on **different origins**:
    See **`scripts/dev-ports.json`**. **`MEDIAMOP_DEV_API_PORT`** + **`VITE_DEV_API_PROXY_TARGET`** can override for one session.
 
 7. **Two dev windows**  
-   **`.\scripts\dev.ps1`** (launcher only — preflight warns if `.env` / DB URL / session secret are missing). Full check: **`.\scripts\verify-local.ps1`** with API running.
+   **`.\scripts\dev.ps1`** (launcher only — preflight warns if `.env` / session secret are missing). Full check: **`.\scripts\verify-local.ps1`** with API running.
+
+## Optional `docker-compose.yml` (PostgreSQL)
+
+The repo may still ship a **`docker-compose.yml`** that starts **PostgreSQL** on host port **5433**. **MediaMop’s backend does not use it** in the SQLite-first configuration. Treat it as optional infrastructure for other experiments, not part of the default onboarding path.
 
 ## Visual shell
 

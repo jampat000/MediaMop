@@ -1,13 +1,12 @@
-# Optional PostgreSQL for local development — NOT required on Windows (native PostgreSQL is first-class).
-# Convenience for developers who want Postgres in a container, or Linux-style Compose workflows.
-# From this repo root:
-#   docker compose up -d
-# Connection URL when using this file (host port 5433 avoids clashing with typical native Postgres on 5432):
-#   postgresql+psycopg://mediamop:mediamop@127.0.0.1:5433/mediamop
+# Optional PostgreSQL container — NOT used by MediaMop backend (SQLite-first under MEDIAMOP_HOME).
+# Kept for ad hoc experiments or external tools only. Do not set MEDIAMOP_DATABASE_URL; the app does not target this service.
 #
-# Then set MEDIAMOP_DATABASE_URL (or apps/backend/.env), run alembic, uvicorn + npm run dev.
+# From repo root:
+#   docker compose up -d
+#
+# Default map: host 5433 -> container 5432 (avoids clashing with a local Postgres on 5432, if any).
 # Web/API dev ports: docs/ports.md and scripts/dev-ports.json
-# For production API containers, set MEDIAMOP_HOME to a volume path (e.g. /var/lib/mediamop).
+#
 # See docs/local-development.md
 
 services:

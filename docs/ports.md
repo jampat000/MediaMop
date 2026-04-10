@@ -28,12 +28,9 @@ There is **no fixed “production port” in application code**. Deployments use
 
 For **containers** (Docker/Kubernetes), the API process bind port (e.g. **8000** inside the container) is an implementation detail. `dev-ports.json` includes **`production.containerApiBindPort`** as a documented convention for examples only—set the real port in your orchestration layer and reverse proxy.
 
-## Other local services
+## Database (local dev)
 
-| Service | Default host port | Notes |
-|---------|-------------------|--------|
-| PostgreSQL (**native** install, typical) | **5432** | First-class on Windows; not related to web/API ports above |
-| PostgreSQL (**optional** `docker-compose.yml` in this repo) | **5433** → container **5432** | Developer convenience only; not a Windows prerequisite |
+MediaMop **`apps/backend`** uses **file-backed SQLite** under **`MEDIAMOP_HOME`** — there is **no** extra listen port for the database. An optional **`docker-compose.yml`** in this repo may still expose PostgreSQL on **5433** for unrelated experiments; it is **not** used by the default SQLite-first app configuration (see **`docs/local-development.md`**).
 
 ## CI / E2E
 

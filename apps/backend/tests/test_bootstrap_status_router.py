@@ -1,4 +1,4 @@
-"""HTTP tests: GET bootstrap/status maps DB errors to HTTP status (no PostgreSQL required).
+"""HTTP tests: GET bootstrap/status maps DB errors to HTTP status (DB session mocked).
 
 Uses dependency override for the DB session so ``bootstrap_allowed`` is exercised via monkeypatch
 without a live database (contract tests only).

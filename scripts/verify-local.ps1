@@ -1,7 +1,7 @@
 # Local stabilization verification from repo root.
 #
 # Phases (fail fast, concrete messages):
-#   1) Static/unit — pytest subset; no PostgreSQL, no running API.
+#   1) Static/unit — pytest subset; no running API.
 #   2) Config presence — apps/backend/.env file hint + required env vars after dotenv load (values never printed).
 #   3) Live database — SQLite path + Alembic head via scripts/verify_local_db.py (MEDIAMOP_HOME / MEDIAMOP_DB_PATH).
 #   4) Live API — GET /health and GET /api/v1/auth/bootstrap/status (needs dev-backend.ps1 running).

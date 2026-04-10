@@ -56,4 +56,4 @@ Write-Host ""
 Write-Host "Started API and web dev in new windows (launcher only - not a full stack guarantee)." -ForegroundColor Gray
 Write-Host ("  API: http://{0}:{1}" -f $d.apiHost, $d.apiPort)
 Write-Host ("  Web: http://{0}:{1}" -f $d.webHost, $d.webPort)
-Write-Host "First-time: PostgreSQL running, then .\scripts\dev-migrate.ps1, then use this launcher." -ForegroundColor DarkGray
+Write-Host "First-time: .\scripts\dev-migrate.ps1, then use this launcher." -ForegroundColor DarkGray
