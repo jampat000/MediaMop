@@ -28,7 +28,7 @@ def test_programming_error_undefined_table_pgcode_becomes_503() -> None:
     assert "schema" in ei.value.detail.lower()
 
 
-def test_programming_error_postgres_message_becomes_503() -> None:
+def test_programming_error_missing_relation_message_becomes_503() -> None:
     exc = ProgrammingError(
         "statement",
         {},

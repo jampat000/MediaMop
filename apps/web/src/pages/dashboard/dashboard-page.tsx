@@ -128,7 +128,7 @@ export function DashboardPage() {
             {fetcher.latency_ms != null ? (
               <StatusRow label="Probe latency" value={`${fetcher.latency_ms} ms`} />
             ) : null}
-            {fetcher.fetcher_app ? <StatusRow label="Fetcher app" value={fetcher.fetcher_app} /> : null}
+            {fetcher.fetcher_app ? <StatusRow label="Service name" value={fetcher.fetcher_app} /> : null}
             {fetcher.fetcher_version ? <StatusRow label="Fetcher version" value={fetcher.fetcher_version} /> : null}
             {fetcher.detail ? <StatusRow label="Note" value={fetcher.detail} /> : null}
           </dl>

@@ -32,11 +32,11 @@ def raise_http_for_bootstrap_status_db(exc: OperationalError | ProgrammingError)
     if isinstance(exc, OperationalError):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database unavailable or connection failed.",
+            detail="SQLite database unavailable or cannot be opened (check MEDIAMOP_HOME and MEDIAMOP_DB_PATH).",
         ) from exc
     if _is_missing_relation_or_schema(exc):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database schema is not ready (run alembic upgrade head).",
+            detail="Local SQLite schema is not ready (run alembic upgrade head).",
         ) from exc
     raise exc

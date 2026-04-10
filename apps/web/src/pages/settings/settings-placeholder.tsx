@@ -1,4 +1,4 @@
-/** Honest placeholder — real route, no product settings logic yet (Phase 10). */
+/** Honest placeholder — real route, no product settings logic yet. */
 
 export function SettingsPlaceholder() {
   return (

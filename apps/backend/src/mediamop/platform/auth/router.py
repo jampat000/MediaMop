@@ -131,7 +131,7 @@ def post_bootstrap(
     db: DbSessionDep,
     settings: SettingsDep,
 ) -> schemas.BootstrapOut:
-    """Create the first ``admin`` user once per deployment (guarded + rate limited).
+    """Create the first ``admin`` user once per MediaMop installation (guarded + rate limited).
 
     Requires the same CSRF + Origin/Referer posture as ``POST /login``. After success,
     callers use ``POST /login`` normally. Not available once any ``admin`` user exists.
