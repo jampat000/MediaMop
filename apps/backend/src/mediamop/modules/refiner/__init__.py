@@ -8,6 +8,7 @@ cleanup execution seams (separate modules; optional stdlib HTTP clients). Pass 1
 Radarr and Sonarr wired verticals (settings → plan → execute), separate modules.
 Pass 12: Radarr-only live queue fetch + cleanup drive (no shared *arr live driver).
 Pass 12.5: Sonarr-only live queue fetch + cleanup drive (parallel isolation).
+Pass 13: Refiner-local ``refiner_jobs`` table + atomic claim/lease/complete/fail (SQLite).
 """
 
 from __future__ import annotations

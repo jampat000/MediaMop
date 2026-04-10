@@ -8,6 +8,7 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
+from alembic.script import ScriptDirectory
 from starlette.testclient import TestClient
 
 from mediamop.api.factory import create_app
@@ -72,6 +73,8 @@ def test_api_startup_auto_upgrades_known_behind_revision_to_head(
 
     settings = MediaMopSettings.load()
     engine = create_db_engine(settings)
+    script = ScriptDirectory.from_config(cfg)
+    head = script.get_heads()[0]
     with engine.connect() as conn:
         ctx = MigrationContext.configure(conn)
-        assert ctx.get_current_revision() == "0002_activity_events"
+        assert ctx.get_current_revision() == head

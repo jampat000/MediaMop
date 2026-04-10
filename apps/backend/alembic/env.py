@@ -26,6 +26,7 @@ from mediamop.core.db import Base
 # Register models on Base.metadata (Alembic autogenerate / revision drift checks).
 from mediamop.platform.activity import models as _activity_orm  # noqa: F401
 from mediamop.platform.auth import models as _auth_orm  # noqa: F401
+from mediamop.modules.refiner import jobs_model as _refiner_jobs_orm  # noqa: F401
 
 # this is the Alembic Config object, which provides access to the values within alembic.ini
 config = context.config
