@@ -26,7 +26,7 @@ def upgrade() -> None:
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
             nullable=False,
         ),
         sa.Column("event_type", sa.String(length=64), nullable=False),

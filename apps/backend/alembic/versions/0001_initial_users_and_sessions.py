@@ -4,6 +4,7 @@ Revision ID: 0001_initial_auth
 Revises:
 Create Date: 2026-04-07
 
+SQLite-first: portable types and defaults (no PostgreSQL-specific DDL).
 """
 
 from __future__ import annotations
@@ -12,7 +13,6 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
 
 revision: str = "0001_initial_auth"
 down_revision: Union[str, None] = None
@@ -35,19 +35,19 @@ def upgrade() -> None:
         sa.Column(
             "is_active",
             sa.Boolean(),
-            server_default=sa.text("true"),
+            server_default=sa.text("1"),
             nullable=False,
         ),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
             nullable=False,
         ),
         sa.Column(
             "updated_at",
             sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
             nullable=False,
         ),
         sa.PrimaryKeyConstraint("id", name="pk_users"),
@@ -55,20 +55,20 @@ def upgrade() -> None:
     )
     op.create_table(
         "user_sessions",
-        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("id", sa.Uuid(as_uuid=True), nullable=False),
         sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("token_hash", sa.String(length=64), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
             nullable=False,
         ),
         sa.Column("absolute_expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column(
             "last_seen_at",
             sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
+            server_default=sa.text("(CURRENT_TIMESTAMP)"),
             nullable=False,
         ),
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),

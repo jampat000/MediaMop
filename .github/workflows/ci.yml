@@ -17,20 +17,6 @@ permissions:
 jobs:
   mediamop:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: mmtest
-          POSTGRES_PASSWORD: mmtest
-          POSTGRES_DB: mmtest
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U mmtest -d mmtest"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - uses: actions/checkout@v6
 
@@ -47,7 +33,7 @@ jobs:
       - name: Run MediaMop backend tests
         working-directory: apps/backend
         env:
-          MEDIAMOP_DATABASE_URL: postgresql+psycopg://mmtest:mmtest@localhost:5432/mmtest
+          MEDIAMOP_HOME: ${{ runner.temp }}/mediamop-ci
           MEDIAMOP_SESSION_SECRET: ci-mediamop-session-secret-32chars-min
         run: |
           alembic upgrade head
@@ -67,6 +53,6 @@ jobs:
       - name: MediaMop E2E smoke (Playwright + real API)
         env:
           MEDIAMOP_E2E: "1"
-          MEDIAMOP_DATABASE_URL: postgresql+psycopg://mmtest:mmtest@localhost:5432/mmtest
+          MEDIAMOP_HOME: ${{ runner.temp }}/mediamop-e2e
           MEDIAMOP_SESSION_SECRET: ci-mediamop-session-secret-32chars-min
         run: python -m pytest tests/e2e/mediamop -q --tb=short

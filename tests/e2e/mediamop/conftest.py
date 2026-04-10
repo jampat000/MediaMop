@@ -1,7 +1,6 @@
-"""MediaMop spine E2E: real PostgreSQL, uvicorn API, Vite preview (proxied /api).
+"""MediaMop spine E2E: SQLite, uvicorn API, Vite preview (proxied /api).
 
-Opt-in only: ``MEDIAMOP_E2E=1`` and ``MEDIAMOP_DATABASE_URL`` must be set
-(see CI workflow). Does not start Postgres — use GitHub Actions service or local Docker.
+Opt-in only: ``MEDIAMOP_E2E=1``. Uses ``MEDIAMOP_E2E_HOME`` when set, else a fresh temp directory for an isolated database file.
 """
 
 from __future__ import annotations
@@ -10,6 +9,7 @@ import os
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -38,13 +38,31 @@ def _pick_loopback_port() -> int:
         return int(s.getsockname()[1])
 
 
-def _truncate_auth_tables(database_url: str) -> None:
-    from sqlalchemy import create_engine, text
+def _e2e_home() -> str:
+    explicit = (os.environ.get("MEDIAMOP_E2E_HOME") or "").strip()
+    if explicit:
+        return str(Path(explicit).expanduser().resolve())
+    return str(Path(tempfile.mkdtemp(prefix="mediamop_e2e_")))
 
-    eng = create_engine(database_url)
-    with eng.begin() as conn:
-        conn.execute(text("DELETE FROM user_sessions"))
-        conn.execute(text("DELETE FROM users"))
+
+def _truncate_auth_tables(home: str) -> None:
+    if str(SRC_PATH) not in sys.path:
+        sys.path.insert(0, str(SRC_PATH))
+    os.environ["MEDIAMOP_HOME"] = home
+    from sqlalchemy import delete
+
+    from mediamop.core.config import MediaMopSettings
+    from mediamop.core.db import create_db_engine, create_session_factory
+    from mediamop.platform.auth.models import User, UserSession
+
+    settings = MediaMopSettings.load()
+    eng = create_db_engine(settings)
+    fac = create_session_factory(eng)
+    with fac() as db:
+        db.execute(delete(UserSession))
+        db.execute(delete(User))
+        db.commit()
+    eng.dispose()
 
 
 def _wait_http(url: str, *, timeout_s: float = 60.0) -> None:
@@ -65,13 +83,11 @@ def _wait_http(url: str, *, timeout_s: float = 60.0) -> None:
 def mediamop_shell() -> str:
     if os.environ.get("MEDIAMOP_E2E") != "1":
         pytest.skip("MEDIAMOP_E2E=1 required")
-    db_url = os.environ.get("MEDIAMOP_DATABASE_URL", "").strip()
-    if not db_url:
-        pytest.skip("MEDIAMOP_DATABASE_URL required for MediaMop E2E")
     secret = os.environ.get("MEDIAMOP_SESSION_SECRET", "").strip()
     if not secret:
         pytest.fail("MEDIAMOP_SESSION_SECRET must be set for MediaMop E2E")
 
+    home = _e2e_home()
     api_port = _pick_loopback_port()
     web_port = _pick_loopback_port()
     web_origin = f"http://127.0.0.1:{web_port}"
@@ -79,7 +95,7 @@ def mediamop_shell() -> str:
 
     env_base = {
         **os.environ,
-        "MEDIAMOP_DATABASE_URL": db_url,
+        "MEDIAMOP_HOME": home,
         "MEDIAMOP_SESSION_SECRET": secret,
         "MEDIAMOP_CORS_ORIGINS": web_origin,
         "PYTHONPATH": str(SRC_PATH),
@@ -91,7 +107,7 @@ def mediamop_shell() -> str:
         env=env_base,
         check=True,
     )
-    _truncate_auth_tables(db_url)
+    _truncate_auth_tables(home)
 
     api_proc = subprocess.Popen(
         [

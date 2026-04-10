@@ -20,4 +20,4 @@ def test_get_db_session_503_without_factory() -> None:
     client = TestClient(app)
     response = client.get("/needs-db")
     assert response.status_code == 503
-    assert "Database not configured" in response.json().get("detail", "")
+    assert "session factory not initialized" in response.json().get("detail", "").lower()

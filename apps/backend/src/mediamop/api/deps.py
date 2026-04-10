@@ -25,14 +25,15 @@ SettingsDep = Annotated[MediaMopSettings, Depends(get_settings)]
 def get_db_session(request: Request) -> Generator[Session, None, None]:
     """Request-scoped synchronous ORM session — close after the request.
 
-    Raises ``503`` when no database is configured (intentional spine posture: PostgreSQL is
-    required for real installs; CI and local smoke still run ``/health`` without a URL).
+    Raises ``503`` only when the app failed to attach a session factory during lifespan
+    (abnormal: SQLite-first startup always builds an engine from ``MEDIAMOP_HOME`` /
+    ``MEDIAMOP_DB_PATH``).
     """
     factory = getattr(request.app.state, "session_factory", None)
     if factory is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database not configured (set MEDIAMOP_DATABASE_URL).",
+            detail="Database session factory not initialized (app lifespan did not start cleanly).",
         )
     session = factory()
     try:

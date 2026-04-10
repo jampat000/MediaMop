@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from logging.config import fileConfig
 from pathlib import Path
 
@@ -21,6 +20,7 @@ if load_dotenv is not None and _env_file.is_file():
 from sqlalchemy import engine_from_config, pool
 
 # Import Base after ensuring src/ is on path (run from apps/backend with PYTHONPATH=src).
+from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
 
 # Register models on Base.metadata (Alembic autogenerate / revision drift checks).
@@ -37,10 +37,9 @@ target_metadata = Base.metadata
 
 
 def get_url() -> str:
-    env_url = (os.environ.get("MEDIAMOP_DATABASE_URL") or "").strip()
-    if env_url:
-        return env_url
-    return config.get_main_option("sqlalchemy.url") or ""
+    """SQLite-first URL from ``MediaMopSettings`` (same resolution as the running API)."""
+
+    return MediaMopSettings.load().sqlalchemy_database_url
 
 
 def run_migrations_offline() -> None:

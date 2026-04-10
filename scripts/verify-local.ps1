@@ -3,7 +3,7 @@
 # Phases (fail fast, concrete messages):
 #   1) Static/unit — pytest subset; no PostgreSQL, no running API.
 #   2) Config presence — apps/backend/.env file hint + required env vars after dotenv load (values never printed).
-#   3) Live database — TCP + Alembic head via scripts/verify_local_db.py (needs DATABASE_URL).
+#   3) Live database — SQLite path + Alembic head via scripts/verify_local_db.py (MEDIAMOP_HOME / MEDIAMOP_DB_PATH).
 #   4) Live API — GET /health and GET /api/v1/auth/bootstrap/status (needs dev-backend.ps1 running).
 #   5) Static repo check only — vite.config.ts mentions API port and /api (NOT proof Vite is running or proxying).
 #
@@ -32,12 +32,13 @@ if (-not (Test-Path $backend)) {
 
 # --- Phase 1: static/unit tests (no DB, no API) ---
 if (-not $SkipBackendTests) {
-    Write-Section "Phase 1: static/unit tests (no PostgreSQL, no API)"
+    Write-Section "Phase 1: static/unit tests (no live API)"
     Push-Location $backend
     $env:PYTHONPATH = "src"
     try {
         & py -3 -m pytest `
             tests/test_health.py `
+            tests/test_sqlite_foundation.py `
             tests/test_bootstrap_status_db_unit.py `
             tests/test_bootstrap_status_router.py `
             tests/test_db_dep.py `
@@ -67,25 +68,20 @@ if (Test-Path -LiteralPath $envFile) {
 
 Import-MediaMopBackendDotEnv -BackendDir $backend
 
-$dbUrl = if ($env:MEDIAMOP_DATABASE_URL -and $env:MEDIAMOP_DATABASE_URL.Trim()) {
-    $env:MEDIAMOP_DATABASE_URL.Trim()
-} else { $null }
 $sessionSecret = if ($env:MEDIAMOP_SESSION_SECRET -and $env:MEDIAMOP_SESSION_SECRET.Trim()) {
     $env:MEDIAMOP_SESSION_SECRET.Trim()
 } else { $null }
-
-if (-not $dbUrl) {
-    Write-Host "FAIL: MEDIAMOP_DATABASE_URL is not set (shell or apps/backend/.env after load)." -ForegroundColor Red
-    Write-Host "Set it for native Postgres (often 127.0.0.1:5432) or use optional Compose with -UseComposeDevDb on dev-migrate.ps1 only." -ForegroundColor DarkYellow
-    exit 10
-}
-Write-Host "OK: MEDIAMOP_DATABASE_URL is set (value not shown)." -ForegroundColor Green
 
 if (-not $sessionSecret) {
     Write-Host "FAIL: MEDIAMOP_SESSION_SECRET is not set — auth and CSRF require it." -ForegroundColor Red
     exit 11
 }
 Write-Host "OK: MEDIAMOP_SESSION_SECRET is set (value not shown)." -ForegroundColor Green
+if ($env:MEDIAMOP_HOME -and $env:MEDIAMOP_HOME.Trim()) {
+    Write-Host "OK: MEDIAMOP_HOME is set (value not shown)." -ForegroundColor Green
+} else {
+    Write-Host "Note: MEDIAMOP_HOME unset — default OS data directory will be used for SQLite (see apps/backend/.env.example)." -ForegroundColor DarkGray
+}
 
 $venvPython = Join-Path $backend '.venv\Scripts\python.exe'
 if (Test-Path $venvPython) {
@@ -100,7 +96,6 @@ if (Test-Path $venvPython) {
 }
 
 Write-Section "Phase 3: live database + Alembic head"
-$env:MEDIAMOP_DATABASE_URL = $dbUrl
 & $pyExe (Join-Path $PSScriptRoot "verify_local_db.py")
 if ($LASTEXITCODE -ne 0) {
     Write-Host "FAIL: database / migration check (exit $($LASTEXITCODE))." -ForegroundColor Red

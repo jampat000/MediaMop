@@ -1,8 +1,7 @@
-"""Activity SSE stream tests (Stage 8 Pass 3) — PostgreSQL required."""
+"""Activity SSE stream tests (Stage 8 Pass 3) — SQLite (session ``MEDIAMOP_HOME``)."""
 
 from __future__ import annotations
 
-import os
 from types import SimpleNamespace
 
 import pytest
@@ -18,11 +17,6 @@ from mediamop.platform.activity import constants as activity_constants
 from mediamop.platform.activity import service as activity_service
 from mediamop.platform.activity.router import get_activity_stream, iter_activity_latest_sse
 from tests.integration_helpers import auth_post, csrf as fetch_csrf
-
-pytestmark = pytest.mark.skipif(
-    not os.environ.get("MEDIAMOP_DATABASE_URL"),
-    reason="Set MEDIAMOP_DATABASE_URL to run activity stream integration tests.",
-)
 
 
 def _seed_activity_row(*, title: str) -> int:

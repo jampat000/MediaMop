@@ -9,7 +9,7 @@ Python package **`mediamop`** lives under `src/mediamop/`. See **`../../docs/adr
 
 ### Auth (Phase 5)
 
-Requires **`MEDIAMOP_DATABASE_URL`**, **`MEDIAMOP_SESSION_SECRET`**, and Alembic at **`0001_initial_auth`** or newer.
+Requires **`MEDIAMOP_SESSION_SECRET`**, a writable SQLite file under **`MEDIAMOP_HOME`** / **`MEDIAMOP_DB_PATH`**, and Alembic at **`0001_initial_auth`** or newer.
 
 | Method | Path | Notes |
 |--------|------|--------|
@@ -53,23 +53,21 @@ uvicorn mediamop.api.main:app --reload --host 127.0.0.1 --port 8788
 
 Health: `GET http://127.0.0.1:8788/health` (see **`../../docs/ports.md`** and **`../../scripts/dev-ports.json`**)
 
-Set `MEDIAMOP_DATABASE_URL` for real use: the app starts without it (`session_factory` stays `None`), **`GET /health`** returns **200**, but **`/api/v1/***` returns **503** until a URL is configured (see `mediamop/api/deps.py`).
+The API always opens SQLite from **`MediaMopSettings.sqlalchemy_database_url`** (derived from **`MEDIAMOP_HOME`** and optional **`MEDIAMOP_DB_PATH`**). **`GET /health`** does not need schema; **`/api/v1/**`** needs **`MEDIAMOP_SESSION_SECRET`**, migrations applied, and a readable/writable DB file.
 
 For the React/Vite app in **`../web`**, local dev uses the **Vite `/api` proxy** to the API port in **`../../scripts/dev-ports.json`** (same-origin cookies on the web port). If you run the SPA against the API origin directly, set `MEDIAMOP_CORS_ORIGINS` (comma-separated), e.g. `http://127.0.0.1:8782`, and see **`../web/README.md`** / **`../../docs/local-development.md`** for split-origin and production cookie notes.
 
 ## Alembic
 
-Set **`MEDIAMOP_DATABASE_URL`** to a PostgreSQL URL (see ADR-0002), then:
+From **`apps/backend`** with **`PYTHONPATH=src`** (same env as the API — **`MEDIAMOP_HOME`** / **`MEDIAMOP_DB_PATH`**):
 
 ```powershell
 $env:PYTHONPATH = "src"
-# Native Postgres example (port 5432 typical). Optional Compose-only dev URL uses 5433 — see ../../docs/local-development.md
-$env:MEDIAMOP_DATABASE_URL = "postgresql+psycopg://USER:PASS@127.0.0.1:5432/mediamop"
 alembic upgrade head
 ```
 
-Revision **`0001_initial_auth`** creates **`users`** and **`user_sessions`** (platform auth foundation). Settings and activity tables are **not** in this revision.
+Revision **`0001_initial_auth`** creates **`users`** and **`user_sessions`**. Later revisions add **`activity_events`**.
 
 ## Database sessions in routes
 
-Use **`DbSessionDep`** from `mediamop.api.deps`. If **`MEDIAMOP_DATABASE_URL`** is unset, those routes return **503** — **`GET /health`** does not require a database.
+Use **`DbSessionDep`** from `mediamop.api.deps`. A **503** here means the app lifespan did not attach a session factory (abnormal); **`GET /health`** does not use the ORM.

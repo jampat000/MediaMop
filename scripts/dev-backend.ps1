@@ -12,18 +12,12 @@ if (-not (Test-Path $portsPath)) {
     Write-Error "Missing scripts/dev-ports.json (repo dev port registry)."
 }
 
-$db = if ($env:MEDIAMOP_DATABASE_URL) { $env:MEDIAMOP_DATABASE_URL.Trim() } else { "" }
 $sec = if ($env:MEDIAMOP_SESSION_SECRET) { $env:MEDIAMOP_SESSION_SECRET.Trim() } else { "" }
-if (-not $db) {
-    Write-Warning 'MEDIAMOP_DATABASE_URL is empty; auth/DB routes will fail. Set it to your PostgreSQL URL in apps/backend/.env (loaded automatically) or this shell, then run .\scripts\dev-migrate.ps1 from repo root.'
-    Write-Host 'docs/local-development.md - Windows native PostgreSQL (typical port 5432) or optional Docker Compose Postgres (host port 5433).' -ForegroundColor DarkGray
-    Write-Host ''
-    Write-Host 'Note: GET /health still works, but /api/v1 returns HTTP 503 until MEDIAMOP_DATABASE_URL is set and migrations are applied.' -ForegroundColor DarkYellow
-    Write-Host ""
-}
 if (-not $sec) {
     Write-Warning "MEDIAMOP_SESSION_SECRET is empty; set a long random value before using login/bootstrap."
 }
+Write-Host "SQLite: data under MEDIAMOP_HOME (see apps/backend/.env.example). Run .\scripts\dev-migrate.ps1 once before first API use." -ForegroundColor DarkGray
+Write-Host ""
 
 $ports = Get-Content $portsPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $apiHost = $ports.development.apiHost

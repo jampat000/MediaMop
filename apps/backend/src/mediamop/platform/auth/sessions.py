@@ -21,6 +21,7 @@ import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
 
+from mediamop.core.datetime_util import as_utc
 from mediamop.platform.auth.models import UserSession
 
 DEFAULT_ABSOLUTE_TTL = timedelta(days=14)
@@ -63,7 +64,7 @@ def is_revoked(session_row: UserSession) -> bool:
 
 
 def is_past_absolute_expiry(session_row: UserSession, *, now: datetime | None = None) -> bool:
-    return (now or utcnow()) >= session_row.absolute_expires_at
+    return (now or utcnow()) >= as_utc(session_row.absolute_expires_at)
 
 
 def is_idle_expired(
@@ -72,7 +73,7 @@ def is_idle_expired(
     idle: timedelta = DEFAULT_IDLE_TIMEOUT,
     now: datetime | None = None,
 ) -> bool:
-    return (now or utcnow()) > session_row.last_seen_at + idle
+    return (now or utcnow()) > as_utc(session_row.last_seen_at) + idle
 
 
 def session_is_valid(

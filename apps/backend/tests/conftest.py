@@ -3,12 +3,28 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
+from alembic import command
+from alembic.config import Config
 from starlette.testclient import TestClient
 
 from mediamop.api.factory import create_app
 from tests.integration_helpers import seed_admin_user, seed_viewer_user
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _mediamop_sqlite_runtime(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
+    """Isolated SQLite under a temp ``MEDIAMOP_HOME`` + Alembic at head (shared session DB)."""
+
+    home = tmp_path_factory.mktemp("mediamop_pytest_home")
+    os.environ["MEDIAMOP_HOME"] = str(home)
+    backend = Path(__file__).resolve().parents[1]
+    cfg = Config(str(backend / "alembic.ini"))
+    command.upgrade(cfg, "head")
+    yield
 
 
 @pytest.fixture(autouse=True)

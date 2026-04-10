@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
+from mediamop.core.datetime_util import as_utc
 from mediamop.modules.fetcher.probe import probe_fetcher_healthz
 from mediamop.modules.fetcher.schemas import FetcherConnectionOut, FetcherOperationalOverviewOut
 from mediamop.platform.activity import service as activity_service
@@ -44,7 +45,7 @@ def _status_lines(
             "Checking",
             "No persisted Fetcher probe events yet. Keep this page open while checks run.",
         )
-    created = latest_probe_event.created_at
+    created = as_utc(latest_probe_event.created_at)
     if datetime.now(timezone.utc) - created >= timedelta(minutes=_STALE_MINUTES):
         return (
             "Stale signal",

@@ -45,7 +45,7 @@ def _get_session_factory_or_503(request: Request):
     if factory is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database not configured (set MEDIAMOP_DATABASE_URL).",
+            detail="Database session factory not initialized (app lifespan did not start cleanly).",
         )
     return factory
 

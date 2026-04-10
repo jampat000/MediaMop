@@ -146,13 +146,7 @@ def post_bootstrap(
             detail="Invalid or expired CSRF token.",
         )
     logger.info("auth event: bootstrap attempted")
-    try:
-        bootstrap_service.acquire_bootstrap_transaction_lock(db)
-    except ProgrammingError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Bootstrap requires PostgreSQL advisory locks.",
-        ) from exc
+    bootstrap_service.acquire_bootstrap_transaction_lock(db)
     if not bootstrap_service.bootstrap_allowed(db):
         logger.warning("auth event: bootstrap denied (admin already exists)")
         activity_service.maybe_record_bootstrap_denied(db)

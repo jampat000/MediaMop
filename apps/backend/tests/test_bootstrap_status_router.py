@@ -23,7 +23,6 @@ def client_bootstrap_status(monkeypatch: pytest.MonkeyPatch) -> TestClient:
         "mediamop.core.config._load_backend_dotenv_if_present",
         lambda: None,
     )
-    monkeypatch.delenv("MEDIAMOP_DATABASE_URL", raising=False)
     monkeypatch.setenv("MEDIAMOP_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
     app = create_app()
 

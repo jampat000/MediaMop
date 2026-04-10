@@ -11,8 +11,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, func, text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from mediamop.core.db import Base
@@ -40,7 +39,7 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
-        server_default=text("true"),
+        server_default=text("1"),
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -67,7 +66,7 @@ class UserSession(Base):
     __tablename__ = "user_sessions"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
     )

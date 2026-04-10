@@ -14,8 +14,8 @@ from playwright.sync_api import expect, sync_playwright
 pytestmark = [
     pytest.mark.mediamop_e2e,
     pytest.mark.skipif(
-        os.environ.get("MEDIAMOP_E2E") != "1" or not os.environ.get("MEDIAMOP_DATABASE_URL"),
-        reason="MediaMop E2E requires MEDIAMOP_E2E=1 and MEDIAMOP_DATABASE_URL.",
+        os.environ.get("MEDIAMOP_E2E") != "1",
+        reason="MediaMop E2E requires MEDIAMOP_E2E=1 (see tests/e2e/mediamop/conftest.py).",
     ),
 ]
 

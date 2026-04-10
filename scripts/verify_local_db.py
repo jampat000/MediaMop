@@ -8,19 +8,20 @@ from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _BACKEND = _REPO_ROOT / "apps" / "backend"
+_SRC = _BACKEND / "src"
 
 
 def main() -> int:
-    url = (os.environ.get("MEDIAMOP_DATABASE_URL") or "").strip()
-    if not url:
-        print("FAIL: MEDIAMOP_DATABASE_URL is not set.", file=sys.stderr)
-        return 2
+    if str(_SRC) not in sys.path:
+        sys.path.insert(0, str(_SRC))
 
     try:
         from alembic.config import Config
         from alembic.runtime.migration import MigrationContext
         from alembic.script import ScriptDirectory
         from sqlalchemy import create_engine, text
+
+        from mediamop.core.config import MediaMopSettings
     except ImportError as exc:
         print(f"FAIL: missing dependency ({exc}). Install apps/backend with pip install -e .", file=sys.stderr)
         return 2
@@ -30,15 +31,22 @@ def main() -> int:
         print(f"FAIL: missing {ini_path}", file=sys.stderr)
         return 2
 
-    cfg = Config(str(ini_path))
-    script = ScriptDirectory.from_config(cfg)
-    heads = script.get_heads()
+    # alembic.ini paths (script_location=alembic) resolve relative to cwd.
+    old_cwd = os.getcwd()
+    os.chdir(_BACKEND)
+    try:
+        cfg = Config("alembic.ini")
+        script = ScriptDirectory.from_config(cfg)
+        heads = script.get_heads()
+    finally:
+        os.chdir(old_cwd)
     if len(heads) != 1:
         print(f"FAIL: expected a single Alembic head, got {heads!r}", file=sys.stderr)
         return 2
     head = heads[0]
 
     try:
+        url = MediaMopSettings.load().sqlalchemy_database_url
         eng = create_engine(url)
         with eng.connect() as conn:
             conn.execute(text("SELECT 1"))

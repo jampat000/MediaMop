@@ -1,8 +1,7 @@
-"""Dashboard JSON — service composition and authenticated route (PostgreSQL required)."""
+"""Dashboard JSON — service composition and authenticated route (SQLite)."""
 
 from __future__ import annotations
 
-import os
 from dataclasses import replace
 from unittest.mock import MagicMock, patch
 
@@ -17,11 +16,6 @@ from mediamop.modules.fetcher.probe import FetcherHealthProbe
 from mediamop.platform.activity import constants as activity_constants
 from mediamop.platform.activity.models import ActivityEvent
 from tests.integration_helpers import auth_post, csrf as fetch_csrf
-
-pytestmark = pytest.mark.skipif(
-    not os.environ.get("MEDIAMOP_DATABASE_URL"),
-    reason="Set MEDIAMOP_DATABASE_URL to run dashboard DB tests.",
-)
 
 
 def _session_factory():

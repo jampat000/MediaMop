@@ -7,20 +7,22 @@ Unavailable once **any** user with role ``admin`` exists (active or not — reco
 
 from __future__ import annotations
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from mediamop.platform.auth.models import User, UserRole
 from mediamop.platform.auth.password import hash_password
 
-# Serialize bootstrap across concurrent requests (same DB, many workers still need one winner).
-_PG_BOOTSTRAP_ADVISORY_LOCK = 8_914_201
-
 
 def acquire_bootstrap_transaction_lock(db: Session) -> None:
-    """Take a transaction-scoped PostgreSQL advisory lock before the bootstrap check+insert."""
+    """Serialize concurrent bootstrap attempts.
 
-    db.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": _PG_BOOTSTRAP_ADVISORY_LOCK})
+    SQLite: ``BEGIN IMMEDIATE`` must be the first statement on the DBAPI connection. Using the
+    driver connection avoids SQLAlchemy emitting a deferred ``BEGIN`` before our statement.
+    """
+
+    raw = db.connection().connection.driver_connection
+    raw.execute("BEGIN IMMEDIATE")
 
 
 def any_admin_user_exists(db: Session) -> bool:

@@ -3,7 +3,7 @@
 Use when you forgot the admin password or your DB was seeded by integration tests
 (username ``alice``, password ``test-password-strong``).
 
-Requires ``MEDIAMOP_DATABASE_URL`` (e.g. from ``apps/backend/.env``).
+Uses the SQLite file from ``MEDIAMOP_HOME`` / ``MEDIAMOP_DB_PATH`` (e.g. from ``apps/backend/.env``).
 Refuses to run unless ``MEDIAMOP_ENV`` is ``development`` unless you pass ``--force``.
 """
 
@@ -65,9 +65,6 @@ def main() -> int:
         return 2
 
     settings = MediaMopSettings.load()
-    if not settings.database_url:
-        print("FAIL: MEDIAMOP_DATABASE_URL is not set.", file=sys.stderr)
-        return 2
 
     env = (settings.env or "").strip().lower()
     if env != "development" and not args.force:
@@ -80,9 +77,6 @@ def main() -> int:
 
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
-    if fac is None:
-        print("FAIL: could not create session factory.", file=sys.stderr)
-        return 2
 
     with fac() as db:
         assert isinstance(db, Session)

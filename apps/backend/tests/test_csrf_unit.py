@@ -1,6 +1,9 @@
-"""CSRF token signing and optional app wiring (no PostgreSQL required)."""
+"""CSRF token signing and optional app wiring (no live database required)."""
 
 from __future__ import annotations
+
+from pathlib import Path
+import tempfile
 
 import pytest
 from starlette.requests import Request
@@ -13,6 +16,37 @@ from mediamop.platform.auth.csrf import (
     validate_browser_post_origin,
     verify_csrf_token,
 )
+
+
+def _csrf_settings(**overrides: object) -> MediaMopSettings:
+    home = Path(tempfile.gettempdir()) / "mediamop-csrf-unit"
+    db = home / "data" / "mediamop.sqlite3"
+    base = dict(
+        env="development",
+        log_level="INFO",
+        cors_origins=(),
+        session_secret="x",
+        session_cookie_name="mediamop_session",
+        session_cookie_secure=False,
+        session_cookie_samesite="lax",
+        session_idle_minutes=720,
+        session_absolute_days=14,
+        trusted_browser_origins_override=(),
+        auth_login_rate_max_attempts=30,
+        auth_login_rate_window_seconds=60,
+        bootstrap_rate_max_attempts=10,
+        bootstrap_rate_window_seconds=3600,
+        security_enable_hsts=False,
+        mediamop_home=str(home),
+        db_path=str(db),
+        backup_dir=str(home / "backups"),
+        log_dir=str(home / "logs"),
+        temp_dir=str(home / "temp"),
+        sqlalchemy_database_url="sqlite:///" + db.as_posix(),
+        fetcher_base_url=None,
+    )
+    base.update(overrides)
+    return MediaMopSettings(**base)  # type: ignore[arg-type]
 
 
 def test_issue_and_verify_csrf() -> None:
@@ -35,26 +69,7 @@ def _request_with_headers(items: list[tuple[bytes, bytes]]) -> Request:
 
 
 def test_origin_skipped_when_no_trusted_list() -> None:
-    settings = MediaMopSettings(
-        env="development",
-        database_url=None,
-        log_level="INFO",
-        cors_origins=(),
-        session_secret="x",
-        session_cookie_name="mediamop_session",
-        session_cookie_secure=False,
-        session_cookie_samesite="lax",
-        session_idle_minutes=720,
-        session_absolute_days=14,
-        trusted_browser_origins_override=(),
-        auth_login_rate_max_attempts=30,
-        auth_login_rate_window_seconds=60,
-        bootstrap_rate_max_attempts=10,
-        bootstrap_rate_window_seconds=3600,
-        security_enable_hsts=False,
-        mediamop_home="/tmp/mediamop-csrf-test-home",
-        fetcher_base_url=None,
-    )
+    settings = _csrf_settings(cors_origins=())
     req = _request_with_headers([])
     validate_browser_post_origin(req, settings)  # no-op
 
@@ -62,26 +77,7 @@ def test_origin_skipped_when_no_trusted_list() -> None:
 def test_origin_enforced_when_configured() -> None:
     from fastapi import HTTPException
 
-    settings = MediaMopSettings(
-        env="development",
-        database_url=None,
-        log_level="INFO",
-        cors_origins=("http://127.0.0.1:8782",),
-        session_secret="x",
-        session_cookie_name="mediamop_session",
-        session_cookie_secure=False,
-        session_cookie_samesite="lax",
-        session_idle_minutes=720,
-        session_absolute_days=14,
-        trusted_browser_origins_override=(),
-        auth_login_rate_max_attempts=30,
-        auth_login_rate_window_seconds=60,
-        bootstrap_rate_max_attempts=10,
-        bootstrap_rate_window_seconds=3600,
-        security_enable_hsts=False,
-        mediamop_home="/tmp/mediamop-csrf-test-home",
-        fetcher_base_url=None,
-    )
+    settings = _csrf_settings(cors_origins=("http://127.0.0.1:8782",))
     good = _request_with_headers([(b"origin", b"http://127.0.0.1:8782")])
     validate_browser_post_origin(good, settings)
     bad = _request_with_headers([(b"origin", b"http://evil.test")])
@@ -95,25 +91,8 @@ def test_origin_enforced_when_configured() -> None:
 def test_origin_uses_trusted_browser_origins_override() -> None:
     from fastapi import HTTPException
 
-    settings = MediaMopSettings(
-        env="development",
-        database_url=None,
-        log_level="INFO",
-        cors_origins=(),
-        session_secret="x",
-        session_cookie_name="mediamop_session",
-        session_cookie_secure=False,
-        session_cookie_samesite="lax",
-        session_idle_minutes=720,
-        session_absolute_days=14,
+    settings = _csrf_settings(
         trusted_browser_origins_override=("http://127.0.0.1:9000",),
-        auth_login_rate_max_attempts=30,
-        auth_login_rate_window_seconds=60,
-        bootstrap_rate_max_attempts=10,
-        bootstrap_rate_window_seconds=3600,
-        security_enable_hsts=False,
-        mediamop_home="/tmp/mediamop-csrf-test-home",
-        fetcher_base_url=None,
     )
     good = _request_with_headers([(b"origin", b"http://127.0.0.1:9000")])
     validate_browser_post_origin(good, settings)

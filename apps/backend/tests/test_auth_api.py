@@ -1,8 +1,6 @@
-"""Auth boundary integration tests — require PostgreSQL (see CI ``services: postgres``)."""
+"""Auth boundary integration tests — SQLite under ``MEDIAMOP_HOME`` (session autouse in conftest)."""
 
 from __future__ import annotations
-
-import os
 
 import pytest
 from sqlalchemy import delete, func, select
@@ -17,11 +15,6 @@ from mediamop.platform.activity.models import ActivityEvent
 from mediamop.platform.auth.models import User, UserRole
 from mediamop.platform.auth.password import hash_password
 from tests.integration_helpers import auth_post, csrf as fetch_csrf, reset_user_tables
-
-pytestmark = pytest.mark.skipif(
-    not os.environ.get("MEDIAMOP_DATABASE_URL"),
-    reason="Set MEDIAMOP_DATABASE_URL to run auth integration tests.",
-)
 
 
 def test_login_me_logout_flow(client_with_admin: TestClient) -> None:

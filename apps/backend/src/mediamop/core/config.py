@@ -6,7 +6,11 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from mediamop.core.paths import resolve_mediamop_home
+from mediamop.core.runtime_paths import (
+    ensure_runtime_directories,
+    resolve_all_runtime_paths,
+    sqlalchemy_sqlite_url,
+)
 
 
 def _load_backend_dotenv_if_present() -> None:
@@ -50,7 +54,6 @@ class MediaMopSettings:
     """Runtime configuration loaded at process start."""
 
     env: str
-    database_url: str | None
     log_level: str
     cors_origins: tuple[str, ...]
     session_secret: str | None
@@ -66,6 +69,11 @@ class MediaMopSettings:
     bootstrap_rate_window_seconds: int
     security_enable_hsts: bool
     mediamop_home: str
+    db_path: str
+    backup_dir: str
+    log_dir: str
+    temp_dir: str
+    sqlalchemy_database_url: str
     fetcher_base_url: str | None
 
     @property
@@ -80,7 +88,6 @@ class MediaMopSettings:
     def load(cls) -> MediaMopSettings:
         _load_backend_dotenv_if_present()
         env = (os.environ.get("MEDIAMOP_ENV") or "development").strip().lower()
-        url = (os.environ.get("MEDIAMOP_DATABASE_URL") or "").strip() or None
         level = (os.environ.get("MEDIAMOP_LOG_LEVEL") or "INFO").strip() or "INFO"
         cors = _parse_csv_urls(os.environ.get("MEDIAMOP_CORS_ORIGINS") or "")
         session = (os.environ.get("MEDIAMOP_SESSION_SECRET") or "").strip() or None
@@ -107,13 +114,21 @@ class MediaMopSettings:
         boot_max = max(1, _env_int("MEDIAMOP_BOOTSTRAP_RATE_MAX_ATTEMPTS", 10))
         boot_win = max(1, _env_int("MEDIAMOP_BOOTSTRAP_RATE_WINDOW_SECONDS", 3600))
         enable_hsts = _env_bool("MEDIAMOP_SECURITY_ENABLE_HSTS", default=False)
-        resolved_home = resolve_mediamop_home()
         fetcher_url = (os.environ.get("MEDIAMOP_FETCHER_BASE_URL") or "").strip() or None
         if fetcher_url and not fetcher_url.startswith(("http://", "https://")):
             fetcher_url = None
+
+        home_path, db_p, backup_p, log_p, temp_p = resolve_all_runtime_paths()
+        ensure_runtime_directories(
+            db_path=db_p,
+            backup_dir=backup_p,
+            log_dir=log_p,
+            temp_dir=temp_p,
+        )
+        db_url = sqlalchemy_sqlite_url(db_p)
+
         return cls(
             env=env,
-            database_url=url,
             log_level=level,
             cors_origins=cors,
             session_secret=session,
@@ -128,6 +143,11 @@ class MediaMopSettings:
             bootstrap_rate_max_attempts=boot_max,
             bootstrap_rate_window_seconds=boot_win,
             security_enable_hsts=enable_hsts,
-            mediamop_home=str(resolved_home),
+            mediamop_home=str(home_path),
+            db_path=str(db_p),
+            backup_dir=str(backup_p),
+            log_dir=str(log_p),
+            temp_dir=str(temp_p),
+            sqlalchemy_database_url=db_url,
             fetcher_base_url=fetcher_url,
         )

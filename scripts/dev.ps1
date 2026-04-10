@@ -1,8 +1,8 @@
 # Launcher: opens two new windows for API (uvicorn) and web (Vite).
-# This script does NOT run migrations or PostgreSQL. It performs lightweight preflight
+# This script does NOT run migrations. It performs lightweight preflight
 # checks only — fix anything reported as MISSING before expecting a working app.
 #
-# Intended order: native Postgres → apps/backend/.env → .\scripts\dev-migrate.ps1 → this script.
+# Intended order: apps/backend/.env → .\scripts\dev-migrate.ps1 → this script.
 # See docs/local-development.md.
 $ErrorActionPreference = "Stop"
 . "$PSScriptRoot\mediamop-env.ps1"
@@ -28,10 +28,6 @@ if (-not (Test-Path -LiteralPath $envFile)) {
 
 Import-MediaMopBackendDotEnv -BackendDir $backendDir
 
-if (-not ($env:MEDIAMOP_DATABASE_URL -and $env:MEDIAMOP_DATABASE_URL.Trim())) {
-    Write-Host "MISSING: MEDIAMOP_DATABASE_URL - API will serve /health but /api/v1 will 503 until set." -ForegroundColor Yellow
-    $issues++
-}
 if (-not ($env:MEDIAMOP_SESSION_SECRET -and $env:MEDIAMOP_SESSION_SECRET.Trim())) {
     Write-Host "MISSING: MEDIAMOP_SESSION_SECRET - auth/CSRF will not work until set." -ForegroundColor Yellow
     $issues++
@@ -41,7 +37,7 @@ if ($issues -gt 0) {
     Write-Host ""
     Write-Host ('Preflight: {0} issue(s) above - app is not fully ready until resolved. Run .\scripts\verify-local.ps1 when API is up.' -f $issues) -ForegroundColor Yellow
 } else {
-    Write-Host "Preflight: .env, DATABASE_URL, and SESSION_SECRET present (values not verified here)." -ForegroundColor Green
+    Write-Host "Preflight: .env and SESSION_SECRET present (values not verified here). Run dev-migrate if the DB is new." -ForegroundColor Green
 }
 
 $shell = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
