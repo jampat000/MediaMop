@@ -16,6 +16,7 @@ from mediamop.modules.refiner.jobs_ops import (
     complete_claimed_refiner_job,
     fail_claimed_refiner_job,
     fail_leased_refiner_job_after_complete_failure,
+    recover_handler_ok_finalize_failed_to_completed,
     refiner_enqueue_or_get_job,
 )
 
@@ -348,6 +349,88 @@ def test_fail_leased_after_complete_failure_rejects_wrong_owner(session_factory)
             now=t0,
         )
         s.rollback()
+
+
+def test_recover_handler_ok_finalize_failed_to_completed(session_factory):
+    fac = session_factory
+    t0 = _t0()
+    with fac() as s:
+        refiner_enqueue_or_get_job(s, dedupe_key="recover-ok", job_kind="test")
+        s.commit()
+    with fac() as s:
+        j = claim_next_eligible_refiner_job(
+            s,
+            lease_owner="w",
+            lease_expires_at=t0 + timedelta(hours=1),
+            now=t0,
+        )
+        jid = j.id
+        fail_leased_refiner_job_after_complete_failure(
+            s,
+            job_id=jid,
+            lease_owner="w",
+            error_message="refiner_terminalization_failure: synthetic",
+            now=t0,
+        )
+        s.commit()
+    with fac() as s:
+        assert (
+            recover_handler_ok_finalize_failed_to_completed(
+                s,
+                job_id=jid,
+                recovered_by_label="tester",
+                now=t0,
+            )
+            == "ok"
+        )
+        s.commit()
+    with fac() as s:
+        row = s.get(RefinerJob, jid)
+        assert row.status == RefinerJobStatus.COMPLETED.value
+        assert "manual_recover_finalize_failure" in (row.last_error or "")
+        assert "refiner_terminalization_failure" in (row.last_error or "")
+        assert row.lease_owner is None
+
+
+def test_recover_finalize_rejects_wrong_status(session_factory):
+    fac = session_factory
+    t0 = _t0()
+    with fac() as s:
+        refiner_enqueue_or_get_job(s, dedupe_key="recover-wrong", job_kind="test")
+        s.commit()
+    with fac() as s:
+        j = claim_next_eligible_refiner_job(
+            s,
+            lease_owner="w",
+            lease_expires_at=t0 + timedelta(hours=1),
+            now=t0,
+        )
+        jid = j.id
+        s.commit()
+    with fac() as s:
+        assert (
+            recover_handler_ok_finalize_failed_to_completed(
+                s,
+                job_id=jid,
+                recovered_by_label="x",
+                now=t0,
+            )
+            == "wrong_status"
+        )
+        s.rollback()
+
+
+def test_recover_finalize_rejects_missing_job(session_factory):
+    fac = session_factory
+    with fac() as s:
+        assert (
+            recover_handler_ok_finalize_failed_to_completed(
+                s,
+                job_id=99999,
+                recovered_by_label="x",
+            )
+            == "not_found"
+        )
 
 
 def test_two_workers_claim_different_jobs(session_factory):

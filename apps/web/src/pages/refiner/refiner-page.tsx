@@ -1,12 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { UseMutationResult } from "@tanstack/react-query";
 import { PageLoading } from "../../components/shared/page-loading";
 import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
+import { useMeQuery } from "../../lib/auth/queries";
 import {
   isHandlerOkFinalizeFailedStatus,
   refinerJobStatusPrimaryLabel,
 } from "../../lib/refiner/refiner-job-status-labels";
 import type { RefinerInspectionFilter } from "../../lib/refiner/queries";
-import { useRefinerJobsInspectionQuery } from "../../lib/refiner/queries";
+import {
+  useRecoverFinalizeFailureMutation,
+  useRefinerJobsInspectionQuery,
+} from "../../lib/refiner/queries";
+import { showRecoverFinalizeFailureControl } from "../../lib/refiner/refiner-recover-eligibility";
+import type { RecoverFinalizeFailureResult } from "../../lib/refiner/refiner-recover-api";
 import type { RefinerJobInspectionRow } from "../../lib/refiner/types";
 
 function formatUpdated(iso: string): string {
@@ -30,12 +37,22 @@ const FILTER_OPTIONS: { value: RefinerInspectionFilter; label: string }[] = [
   { value: "leased", label: "Only leased" },
 ];
 
-function JobRow({ job }: { job: RefinerJobInspectionRow }) {
+function JobRow({
+  job,
+  role,
+  recoverMutation,
+}: {
+  job: RefinerJobInspectionRow;
+  role: string | undefined;
+  recoverMutation: UseMutationResult<RecoverFinalizeFailureResult, Error, number, unknown>;
+}) {
   const emphasizeFinalize = isHandlerOkFinalizeFailedStatus(job.status);
+  const showRecover = showRecoverFinalizeFailureControl(role, job.status);
   return (
     <tr
       data-testid="refiner-inspection-row"
       data-job-status={job.status}
+      data-recover-visible={showRecover ? "true" : "false"}
       className={
         emphasizeFinalize
           ? "border-l-2 border-l-[var(--mm-accent)] bg-[rgba(212,175,55,0.06)]"
@@ -63,13 +80,36 @@ function JobRow({ job }: { job: RefinerJobInspectionRow }) {
       <td className="mm-refiner-inspection__cell align-top py-2 text-sm text-[var(--mm-text3)] break-words max-w-[min(28rem,40vw)]">
         {job.last_error ? <span className="font-mono text-xs">{job.last_error}</span> : "—"}
       </td>
+      <td className="mm-refiner-inspection__cell align-top py-2 pr-0">
+        {showRecover ? (
+          <button
+            type="button"
+            data-testid={`refiner-recover-finalize-${job.id}`}
+            className="rounded border border-[var(--mm-border)] bg-[var(--mm-slate)] px-2 py-1 text-xs font-medium text-[var(--mm-text)] hover:bg-[var(--mm-card-bg)] disabled:opacity-50"
+            disabled={recoverMutation.isPending}
+            onClick={() => recoverMutation.mutate(job.id)}
+          >
+            Mark completed (manual)
+          </button>
+        ) : (
+          <span className="text-xs text-[var(--mm-text3)]">—</span>
+        )}
+      </td>
     </tr>
   );
 }
 
 export function RefinerPage() {
   const [filter, setFilter] = useState<RefinerInspectionFilter>("terminal");
+  const me = useMeQuery();
   const q = useRefinerJobsInspectionQuery(filter);
+  const recoverMutation = useRecoverFinalizeFailureMutation();
+
+  useEffect(() => {
+    recoverMutation.reset();
+    // Only clear stale mutation UI when the inspection filter changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- recoverMutation is stable from useMutation
+  }, [filter]);
 
   if (q.isPending) {
     return <PageLoading label="Loading Refiner jobs" />;
@@ -106,9 +146,13 @@ export function RefinerPage() {
         <p className="mm-page__eyebrow">MediaMop</p>
         <h1 className="mm-page__title">Refiner</h1>
         <p className="mm-page__subtitle">
-          Read-only job queue inspection — no retries or recovery from here. Terminal view is the default;
-          <code className="mm-dash-code"> handler_ok_finalize_failed</code> means the handler ran but completing the row
-          in the database failed (not the same as ordinary <code className="mm-dash-code">failed</code>).
+          Terminal view is the default.
+          <code className="mm-dash-code"> handler_ok_finalize_failed</code> means the handler ran but persisting{" "}
+          <code className="mm-dash-code">completed</code> failed — not the same as ordinary{" "}
+          <code className="mm-dash-code">failed</code>. Admins and operators may use{" "}
+          <strong className="font-semibold text-[var(--mm-text)]">Mark completed (manual)</strong> on those rows only:
+          it records an audit line and sets status to <code className="mm-dash-code">completed</code> without re-running
+          the handler.
         </p>
       </header>
 
@@ -146,6 +190,13 @@ export function RefinerPage() {
         <h2 id="mm-refiner-jobs-heading" className="mm-card__title">
           Jobs
         </h2>
+        {recoverMutation.isError ? (
+          <p className="mm-card__body text-sm text-red-400" role="alert">
+            {recoverMutation.error instanceof Error
+              ? recoverMutation.error.message
+              : "Recovery request failed."}
+          </p>
+        ) : null}
         {isEmpty ? (
           <p className="mm-card__body" data-testid="refiner-inspection-empty">
             No rows match this view.
@@ -160,12 +211,18 @@ export function RefinerPage() {
                   <th className="pb-2 pr-3 font-semibold">Dedupe key</th>
                   <th className="pb-2 pr-3 font-semibold">Attempts</th>
                   <th className="pb-2 pr-3 font-semibold">Updated</th>
-                  <th className="pb-2 font-semibold">Last error</th>
+                  <th className="pb-2 pr-3 font-semibold">Last error</th>
+                  <th className="pb-2 font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--mm-border)]">
                 {jobs.map((j) => (
-                  <JobRow key={j.id} job={j} />
+                  <JobRow
+                    key={j.id}
+                    job={j}
+                    role={me.data?.role}
+                    recoverMutation={recoverMutation}
+                  />
                 ))}
               </tbody>
             </table>

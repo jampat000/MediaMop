@@ -7,6 +7,7 @@ the one-writer rule. Callers should keep transactions short.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Literal
 
 from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
@@ -200,3 +201,39 @@ def fail_leased_refiner_job_after_complete_failure(
     job.last_error = error_message[:10_000]
     session.flush()
     return True
+
+
+def recover_handler_ok_finalize_failed_to_completed(
+    session: Session,
+    *,
+    job_id: int,
+    recovered_by_label: str,
+    now: datetime | None = None,
+) -> Literal["ok", "not_found", "wrong_status"]:
+    """Operator recovery: mark ``completed`` without re-running the handler.
+
+    Only rows in ``handler_ok_finalize_failed`` are eligible. Appends an audit line to
+    ``last_error`` (preserving prior finalize context), clears any lease fields, leaves
+    ``attempt_count`` unchanged.
+    """
+
+    when = now if now is not None else _utc_now()
+    job = session.scalars(select(RefinerJob).where(RefinerJob.id == job_id)).one_or_none()
+    if job is None:
+        return "not_found"
+    if job.status != RefinerJobStatus.HANDLER_OK_FINALIZE_FAILED.value:
+        return "wrong_status"
+
+    prev = (job.last_error or "").strip()
+    iso = when.isoformat().replace("+00:00", "Z")
+    note = (
+        f"manual_recover_finalize_failure: marked completed at {iso} by {recovered_by_label} "
+        "(handler was not re-run; row was handler_ok_finalize_failed)."
+    )
+    new_err = f"{prev}\n--- {note}" if prev else note
+    job.last_error = new_err[:10_000]
+    job.status = RefinerJobStatus.COMPLETED.value
+    job.lease_owner = None
+    job.lease_expires_at = None
+    session.flush()
+    return "ok"
