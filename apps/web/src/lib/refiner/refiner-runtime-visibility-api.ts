@@ -6,7 +6,7 @@ export const refinerRuntimeVisibilityPath = () => "/api/v1/refiner/runtime/visib
 export async function fetchRefinerRuntimeVisibility(): Promise<RefinerRuntimeVisibilityOut> {
   const r = await apiFetch(refinerRuntimeVisibilityPath());
   if (!r.ok) {
-    throw new Error(`refiner runtime visibility: ${r.status}`);
+    throw new Error(`Could not load Refiner settings (${r.status})`);
   }
   return readJson<RefinerRuntimeVisibilityOut>(r);
 }

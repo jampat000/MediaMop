@@ -9,8 +9,8 @@ from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.schemas_runtime_visibility import RefinerRuntimeVisibilityOut
 
 _VISIBILITY_NOTE = (
-    "Values reflect application settings at request time. They do not prove that asyncio worker or "
-    "schedule tasks are running, healthy, or successfully connected to external services."
+    "Taken from saved settings when this was loaded. This is not proof that background workers or "
+    "timed schedules are running, or that Radarr or Sonarr are reachable."
 )
 
 
@@ -21,18 +21,18 @@ def refiner_runtime_visibility_from_settings(settings: MediaMopSettings) -> Refi
     disabled = n == 0
     if disabled:
         summary = (
-            "In-process Refiner workers are disabled (refiner_worker_count=0). "
-            "No background claim/execute tasks are intended."
+            "Refiner background workers are disabled (worker count is 0). "
+            "Queued jobs will not be picked up automatically."
         )
     elif n == 1:
         summary = (
-            "Single in-process Refiner worker (supported default for SQLite-first deployments)."
+            "One background worker is enabled — the usual default for a single SQLite database."
         )
     else:
         summary = (
-            f"Multiple in-process Refiner workers (refiner_worker_count={n}). "
-            "This is a guarded capability under SQLite single-writer rules — not the normal "
-            "recommended rollout; validate behavior before relying on it in production."
+            f"Multiple background workers are enabled (count {n}). "
+            "On SQLite this is a guarded setup and not the recommended default — "
+            "confirm behavior before relying on it in production."
         )
 
     return RefinerRuntimeVisibilityOut(

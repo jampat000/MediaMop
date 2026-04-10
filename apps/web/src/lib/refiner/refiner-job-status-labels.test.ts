@@ -10,13 +10,14 @@ describe("refinerJobStatusPrimaryLabel", () => {
     const finalize = refinerJobStatusPrimaryLabel(REFINER_STATUS_HANDLER_OK_FINALIZE_FAILED);
     const failed = refinerJobStatusPrimaryLabel("failed");
     expect(finalize).not.toBe(failed);
-    expect(finalize.toLowerCase()).toContain("finalize");
-    expect(failed.toLowerCase()).not.toContain("finalize");
+    expect(finalize.toLowerCase()).toMatch(/finish|finalize/);
+    expect(failed.toLowerCase()).not.toContain("finish");
   });
 
-  it("labels completed and leased", () => {
+  it("labels completed, queued, and running", () => {
     expect(refinerJobStatusPrimaryLabel("completed")).toBe("Completed");
-    expect(refinerJobStatusPrimaryLabel("leased")).toBe("Leased");
+    expect(refinerJobStatusPrimaryLabel("leased")).toContain("Running");
+    expect(refinerJobStatusPrimaryLabel("pending")).toContain("Queued");
   });
 });
 

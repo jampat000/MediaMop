@@ -23,7 +23,7 @@ export async function postRecoverFinalizeFailure(jobId: number): Promise<Recover
     } catch {
       /* ignore */
     }
-    throw new Error(detail || `recover finalize failure: ${r.status}`);
+    throw new Error(detail || `Could not apply manual completion (${r.status})`);
   }
   return readJson<RecoverFinalizeFailureResult>(r);
 }

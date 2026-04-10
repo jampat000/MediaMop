@@ -63,5 +63,6 @@ def test_radarr_and_sonarr_schedules_independent(base_settings: MediaMopSettings
 
 def test_visibility_note_present(base_settings: MediaMopSettings) -> None:
     out = refiner_runtime_visibility_from_settings(base_settings)
-    assert "settings" in out.visibility_note.lower()
-    assert "liveness" in out.visibility_note.lower() or "healthy" in out.visibility_note.lower()
+    note = out.visibility_note.lower()
+    assert "settings" in note
+    assert "proof" in note or "reachable" in note

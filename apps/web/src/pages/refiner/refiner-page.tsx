@@ -7,6 +7,7 @@ import {
   isHandlerOkFinalizeFailedStatus,
   refinerJobStatusPrimaryLabel,
 } from "../../lib/refiner/refiner-job-status-labels";
+import { REFINER_INSPECTION_FILTER_OPTIONS } from "../../lib/refiner/refiner-inspection-filter-labels";
 import type { RefinerInspectionFilter } from "../../lib/refiner/queries";
 import type { RefinerRuntimeVisibilityOut } from "../../lib/refiner/types";
 import { manualCleanupEnqueueResultMessage } from "../../lib/refiner/refiner-manual-cleanup-enqueue-messages";
@@ -37,6 +38,32 @@ function formatUpdated(iso: string): string {
   }
 }
 
+function yesNo(value: boolean): string {
+  return value ? "Yes" : "No";
+}
+
+function RefinerPageIntroSubtitle() {
+  return (
+    <p className="mm-page__subtitle">
+      <span className="block">
+        By default this page lists <strong className="font-semibold text-[var(--mm-text)]">finished</strong> jobs:
+        completed, stopped after errors, or{" "}
+        <strong className="font-semibold text-[var(--mm-text)]">needs manual finish</strong> — the work ran, but
+        the app could not mark the row completed (not the same as a hard failure). Each row still shows the exact
+        stored status under the plain label.
+      </span>
+      <span className="mt-2 block text-sm text-[var(--mm-text3)]">
+        Admins and operators can use{" "}
+        <strong className="font-semibold text-[var(--mm-text)]">Mark completed (manual)</strong> only on{" "}
+        <strong>needs manual finish</strong> rows. It records an audit line and sets the row to completed without
+        running the job again. Technical codes for reference:{" "}
+        <code className="mm-dash-code">handler_ok_finalize_failed</code>,{" "}
+        <code className="mm-dash-code">completed</code>, <code className="mm-dash-code">failed</code>.
+      </span>
+    </p>
+  );
+}
+
 function RefinerManualCleanupEnqueuePanel({ enabled }: { enabled: boolean }) {
   const mRad = useManualEnqueueRadarrCleanupDriveMutation();
   const mSon = useManualEnqueueSonarrCleanupDriveMutation();
@@ -53,10 +80,10 @@ function RefinerManualCleanupEnqueuePanel({ enabled }: { enabled: boolean }) {
       className="border-t border-[var(--mm-border)] pt-4 mt-4"
       data-testid="refiner-manual-cleanup-enqueue"
     >
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Manual enqueue</h3>
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Queue cleanup drive</h3>
       <p className="mt-1 text-xs text-[var(--mm-text3)]">
-        Queues the existing deduplicated cleanup-drive job row only. Does not run the handler in this request, does not
-        prove a worker is running, and does not mean the job has completed.
+        Adds or reuses one cleanup-drive queue entry per app. Nothing runs in this browser request, this does not show
+        whether a worker picked the job up, and it does not mean the run finished.
       </p>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <button
@@ -66,7 +93,7 @@ function RefinerManualCleanupEnqueuePanel({ enabled }: { enabled: boolean }) {
           disabled={mRad.isPending || mSon.isPending}
           onClick={() => mRad.mutate()}
         >
-          {mRad.isPending ? "Enqueuing…" : "Enqueue Radarr cleanup drive"}
+          {mRad.isPending ? "Adding to queue…" : "Queue Radarr cleanup drive"}
         </button>
         <button
           type="button"
@@ -75,7 +102,7 @@ function RefinerManualCleanupEnqueuePanel({ enabled }: { enabled: boolean }) {
           disabled={mRad.isPending || mSon.isPending}
           onClick={() => mSon.mutate()}
         >
-          {mSon.isPending ? "Enqueuing…" : "Enqueue Sonarr cleanup drive"}
+          {mSon.isPending ? "Adding to queue…" : "Queue Sonarr cleanup drive"}
         </button>
       </div>
       {mRad.isError ? (
@@ -116,25 +143,25 @@ function RefinerRuntimeVisibilitySection({
       data-testid="refiner-runtime-visibility"
     >
       <h2 id="mm-refiner-runtime-heading" className="mm-card__title">
-        Runtime configuration (read-only)
+        Loaded settings (read-only)
       </h2>
       <p className="mm-card__body mm-card__body--tight text-sm text-[var(--mm-text3)]">
-        Settings at load time — not a liveness check for background tasks.
+        From saved configuration when this loaded — not proof that background work is running.
       </p>
       {rv.isPending ? (
         <p className="mm-card__body text-sm text-[var(--mm-text3)]" data-testid="refiner-runtime-visibility-loading">
-          Loading runtime settings…
+          Loading settings…
         </p>
       ) : rv.isError ? (
         <p className="mm-card__body text-sm text-red-400" data-testid="refiner-runtime-visibility-error" role="alert">
-          {rv.error instanceof Error ? rv.error.message : "Could not load runtime visibility."}
+          {rv.error instanceof Error ? rv.error.message : "Could not load Refiner settings."}
         </p>
       ) : rv.data ? (
         <div className="mm-card__body mm-card__body--tight space-y-4 text-sm text-[var(--mm-text2)]">
           <div data-testid="refiner-runtime-worker-section">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Workers</h3>
             <p className="mt-1">
-              <span className="text-[var(--mm-text3)]">refiner_worker_count:</span>{" "}
+              <span className="text-[var(--mm-text3)]">Worker slots (configured):</span>{" "}
               <code className="mm-dash-code" data-testid="refiner-runtime-worker-count">
                 {rv.data.refiner_worker_count}
               </code>
@@ -151,10 +178,10 @@ function RefinerRuntimeVisibilitySection({
               Radarr cleanup-drive schedule
             </h3>
             <p className="mt-1">
-              Enabled:{" "}
-              <code className="mm-dash-code" data-testid="refiner-runtime-radarr-enabled">
-                {String(rv.data.refiner_radarr_cleanup_drive_schedule_enabled)}
-              </code>
+              Scheduled:{" "}
+              <span className="font-medium text-[var(--mm-text)]" data-testid="refiner-runtime-radarr-enabled">
+                {yesNo(rv.data.refiner_radarr_cleanup_drive_schedule_enabled)}
+              </span>
             </p>
             <p className="mt-1">
               Interval:{" "}
@@ -171,10 +198,10 @@ function RefinerRuntimeVisibilitySection({
               Sonarr cleanup-drive schedule
             </h3>
             <p className="mt-1">
-              Enabled:{" "}
-              <code className="mm-dash-code" data-testid="refiner-runtime-sonarr-enabled">
-                {String(rv.data.refiner_sonarr_cleanup_drive_schedule_enabled)}
-              </code>
+              Scheduled:{" "}
+              <span className="font-medium text-[var(--mm-text)]" data-testid="refiner-runtime-sonarr-enabled">
+                {yesNo(rv.data.refiner_sonarr_cleanup_drive_schedule_enabled)}
+              </span>
             </p>
             <p className="mt-1">
               Interval:{" "}
@@ -192,15 +219,6 @@ function RefinerRuntimeVisibilitySection({
     </section>
   );
 }
-
-const FILTER_OPTIONS: { value: RefinerInspectionFilter; label: string }[] = [
-  { value: "terminal", label: "Terminal (default): completed, failed, handler_ok_finalize_failed" },
-  { value: "handler_ok_finalize_failed", label: "Only handler_ok_finalize_failed" },
-  { value: "failed", label: "Only failed" },
-  { value: "completed", label: "Only completed" },
-  { value: "pending", label: "Only pending" },
-  { value: "leased", label: "Only leased" },
-];
 
 function JobRow({
   job,
@@ -283,15 +301,7 @@ export function RefinerPage() {
         <header className="mm-page__intro">
           <p className="mm-page__eyebrow">MediaMop</p>
           <h1 className="mm-page__title">Refiner</h1>
-          <p className="mm-page__subtitle">
-            Terminal view is the default.
-            <code className="mm-dash-code"> handler_ok_finalize_failed</code> means the handler ran but persisting{" "}
-            <code className="mm-dash-code">completed</code> failed — not the same as ordinary{" "}
-            <code className="mm-dash-code">failed</code>. Admins and operators may use{" "}
-            <strong className="font-semibold text-[var(--mm-text)]">Mark completed (manual)</strong> on those rows only:
-            it records an audit line and sets status to <code className="mm-dash-code">completed</code> without re-running
-            the handler.
-          </p>
+          <RefinerPageIntroSubtitle />
         </header>
         <RefinerRuntimeVisibilitySection rv={rv} role={me.data?.role} />
         <PageLoading label="Loading Refiner jobs" />
@@ -330,15 +340,7 @@ export function RefinerPage() {
       <header className="mm-page__intro">
         <p className="mm-page__eyebrow">MediaMop</p>
         <h1 className="mm-page__title">Refiner</h1>
-        <p className="mm-page__subtitle">
-          Terminal view is the default.
-          <code className="mm-dash-code"> handler_ok_finalize_failed</code> means the handler ran but persisting{" "}
-          <code className="mm-dash-code">completed</code> failed — not the same as ordinary{" "}
-          <code className="mm-dash-code">failed</code>. Admins and operators may use{" "}
-          <strong className="font-semibold text-[var(--mm-text)]">Mark completed (manual)</strong> on those rows only:
-          it records an audit line and sets status to <code className="mm-dash-code">completed</code> without re-running
-          the handler.
-        </p>
+        <RefinerPageIntroSubtitle />
       </header>
 
       <RefinerRuntimeVisibilitySection rv={rv} role={me.data?.role} />
@@ -355,7 +357,7 @@ export function RefinerPage() {
             value={filter}
             onChange={(e) => setFilter(e.target.value as RefinerInspectionFilter)}
           >
-            {FILTER_OPTIONS.map((o) => (
+            {REFINER_INSPECTION_FILTER_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>
@@ -364,11 +366,11 @@ export function RefinerPage() {
         </label>
         {default_terminal_only ? (
           <p className="mm-card__body mm-card__body--tight text-sm text-[var(--mm-text3)]">
-            Showing server default: terminal statuses only.
+            Showing the server default: finished jobs only.
           </p>
         ) : (
           <p className="mm-card__body mm-card__body--tight text-sm text-[var(--mm-text3)]">
-            Filtered to a single persisted status (see <code className="mm-dash-code">status</code> column).
+            Filtered to a single stored status — see the Status column for the exact value.
           </p>
         )}
       </section>
@@ -381,7 +383,7 @@ export function RefinerPage() {
           <p className="mm-card__body text-sm text-red-400" role="alert">
             {recoverMutation.error instanceof Error
               ? recoverMutation.error.message
-              : "Recovery request failed."}
+              : "Could not apply manual completion."}
           </p>
         ) : null}
         {isEmpty ? (
@@ -394,8 +396,8 @@ export function RefinerPage() {
               <thead>
                 <tr className="border-b border-[var(--mm-border)] text-xs uppercase tracking-wide text-[var(--mm-text3)]">
                   <th className="pb-2 pr-3 font-semibold">Status</th>
-                  <th className="pb-2 pr-3 font-semibold">Job kind</th>
-                  <th className="pb-2 pr-3 font-semibold">Dedupe key</th>
+                  <th className="pb-2 pr-3 font-semibold">Job type</th>
+                  <th className="pb-2 pr-3 font-semibold">Identity key</th>
                   <th className="pb-2 pr-3 font-semibold">Attempts</th>
                   <th className="pb-2 pr-3 font-semibold">Updated</th>
                   <th className="pb-2 pr-3 font-semibold">Last error</th>

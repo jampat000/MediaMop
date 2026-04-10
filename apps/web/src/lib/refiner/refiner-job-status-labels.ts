@@ -1,6 +1,6 @@
 /**
- * Human labels for persisted ``refiner_jobs.status`` strings.
- * ``handler_ok_finalize_failed`` must stay explicit — not folded into generic “failed”.
+ * Plain labels for persisted job status strings.
+ * ``handler_ok_finalize_failed`` must stay distinct from ordinary ``failed`` (never fold together).
  */
 
 export const REFINER_STATUS_HANDLER_OK_FINALIZE_FAILED = "handler_ok_finalize_failed";
@@ -8,15 +8,15 @@ export const REFINER_STATUS_HANDLER_OK_FINALIZE_FAILED = "handler_ok_finalize_fa
 export function refinerJobStatusPrimaryLabel(status: string): string {
   switch (status) {
     case REFINER_STATUS_HANDLER_OK_FINALIZE_FAILED:
-      return "Handler succeeded — finalize failed";
+      return "Needs manual finish — work ran; completion not saved";
     case "failed":
-      return "Failed (handler or retries exhausted)";
+      return "Stopped after errors";
     case "completed":
       return "Completed";
     case "pending":
-      return "Pending";
+      return "Queued — waiting to start";
     case "leased":
-      return "Leased";
+      return "Running — picked up by a worker";
     default:
       return status;
   }

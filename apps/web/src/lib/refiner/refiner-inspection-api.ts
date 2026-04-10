@@ -25,7 +25,7 @@ export async function fetchRefinerJobsInspection(
 ): Promise<RefinerJobsInspectionOut> {
   const r = await apiFetch(refinerJobsInspectionPath(opts));
   if (!r.ok) {
-    throw new Error(`refiner jobs inspection: ${r.status}`);
+    throw new Error(`Could not load Refiner jobs (${r.status})`);
   }
   return readJson<RefinerJobsInspectionOut>(r);
 }

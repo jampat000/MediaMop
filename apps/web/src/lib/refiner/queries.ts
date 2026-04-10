@@ -7,7 +7,7 @@ import {
 import { fetchRefinerRuntimeVisibility } from "./refiner-runtime-visibility-api";
 import { postRecoverFinalizeFailure } from "./refiner-recover-api";
 
-/** ``terminal`` = no ``status`` query param — server returns completed, failed, handler_ok_finalize_failed only. */
+/** ``terminal`` = omit status query param — server returns the three finished states only (completed, failed, handler_ok_finalize_failed). */
 export type RefinerInspectionFilter = "terminal" | "pending" | "leased" | "completed" | "failed" | "handler_ok_finalize_failed";
 
 export const refinerInspectionQueryKey = (filter: RefinerInspectionFilter) =>
