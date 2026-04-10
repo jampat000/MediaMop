@@ -53,7 +53,11 @@ def create_db_engine(settings: MediaMopSettings) -> Engine:
         raise RuntimeError("MediaMop is SQLite-only; expected sqlalchemy_database_url to be sqlite:…")
     engine = create_engine(
         url,
-        connect_args={"check_same_thread": False},
+        connect_args={
+            "check_same_thread": False,
+            # Seconds sqlite3 waits on locked DB (complements PRAGMA busy_timeout).
+            "timeout": 30.0,
+        },
         pool_pre_ping=True,
         future=True,
     )

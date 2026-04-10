@@ -11,6 +11,7 @@ Default layout (when overrides are unset):
 from __future__ import annotations
 
 import os
+import tempfile
 from pathlib import Path
 
 from mediamop.core.paths import resolve_mediamop_home
@@ -76,6 +77,44 @@ def ensure_runtime_directories(
     log_dir.mkdir(parents=True, exist_ok=True)
     temp_dir.mkdir(parents=True, exist_ok=True)
     db_path.parent.mkdir(parents=True, exist_ok=True)
+
+
+def assert_sqlite_db_location_usable(db_path: Path) -> None:
+    """Fail fast if the SQLite file path cannot be used read-write (local / packaged installs).
+
+    - Rejects ``MEDIAMOP_DB_PATH`` resolving to an existing **directory** (common misconfiguration).
+    - Verifies the parent directory allows creating a new file (writable volume / permissions).
+    - If the DB file already exists, verifies it is a regular file and openable read-write.
+
+    Call after :func:`ensure_runtime_directories` so the parent directory exists.
+    """
+
+    resolved = db_path.resolve()
+    if resolved.exists() and resolved.is_dir():
+        raise RuntimeError(
+            f"SQLite database path must be a file, not a directory: {resolved}. "
+            "Fix MEDIAMOP_DB_PATH or remove the directory at that location.",
+        )
+    if resolved.exists() and not resolved.is_file():
+        raise RuntimeError(
+            f"SQLite database path must be a regular file: {resolved}",
+        )
+    parent = resolved.parent
+    try:
+        with tempfile.NamedTemporaryFile(dir=parent, delete=True):
+            pass
+    except OSError as exc:
+        raise RuntimeError(
+            f"Cannot create files under database directory (check permissions and disk): {parent}",
+        ) from exc
+    if resolved.exists():
+        try:
+            with open(resolved, "r+b"):
+                pass
+        except OSError as exc:
+            raise RuntimeError(
+                f"SQLite database file exists but is not writable: {resolved}",
+            ) from exc
 
 
 def resolve_all_runtime_paths() -> tuple[Path, Path, Path, Path, Path]:

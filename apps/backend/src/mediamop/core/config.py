@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from mediamop.core.runtime_paths import (
+    assert_sqlite_db_location_usable,
     ensure_runtime_directories,
     resolve_all_runtime_paths,
     sqlalchemy_sqlite_url,
@@ -125,6 +126,7 @@ class MediaMopSettings:
             log_dir=log_p,
             temp_dir=temp_p,
         )
+        assert_sqlite_db_location_usable(db_p)
         db_url = sqlalchemy_sqlite_url(db_p)
 
         return cls(
