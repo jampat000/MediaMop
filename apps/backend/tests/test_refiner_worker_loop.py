@@ -15,6 +15,7 @@ from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.worker_limits import clamp_refiner_worker_count
 from mediamop.modules.refiner import worker_loop as refiner_worker_loop_mod
+from mediamop.modules.refiner.jobs_ops import complete_claimed_refiner_job as real_complete_claimed
 from mediamop.modules.refiner.worker_loop import (
     process_one_refiner_job,
     refiner_worker_run_forever,
@@ -285,7 +286,142 @@ def test_process_one_survives_complete_claim_raises(session_factory) -> None:
     assert out == "processed"
     with session_factory() as s:
         row = s.get(RefinerJob, 1)
-        assert row.status == RefinerJobStatus.LEASED.value
+        assert row.status == RefinerJobStatus.FAILED.value
+        assert row.attempt_count == 1
+        assert row.lease_owner is None
+        assert "refiner_terminalization_failure:" in (row.last_error or "")
+        assert "db write failed" in (row.last_error or "")
+
+
+def test_process_one_complete_refused_triggers_terminalization(session_factory) -> None:
+    t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
+    with session_factory() as s:
+        refiner_enqueue_or_get_job(s, dedupe_key="d-complete-false", job_kind="ok.kind", max_attempts=3)
+        s.commit()
+
+    def _ok(_ctx) -> None:
+        return None
+
+    with patch.object(
+        refiner_worker_loop_mod,
+        "complete_claimed_refiner_job",
+        return_value=False,
+    ):
+        out = process_one_refiner_job(
+            session_factory,
+            lease_owner="w",
+            job_handlers={"ok.kind": _ok},
+            now=t0,
+            lease_seconds=3600,
+        )
+    assert out == "processed"
+    with session_factory() as s:
+        row = s.get(RefinerJob, 1)
+        assert row.status == RefinerJobStatus.FAILED.value
+        assert "refiner_terminalization_failure:" in (row.last_error or "")
+        assert "refused" in (row.last_error or "")
+
+
+def test_terminalization_of_first_job_does_not_block_second_job_completion(session_factory) -> None:
+    t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
+    with session_factory() as s:
+        refiner_enqueue_or_get_job(s, dedupe_key="seq-a", job_kind="ok.kind", max_attempts=3)
+        refiner_enqueue_or_get_job(s, dedupe_key="seq-b", job_kind="ok.kind", max_attempts=3)
+        s.commit()
+
+    def _ok(_ctx) -> None:
+        return None
+
+    def complete_shim(session, **kwargs: object) -> bool:
+        job_id = int(kwargs["job_id"])
+        if job_id == 1:
+            raise RuntimeError("first job complete failed")
+        return real_complete_claimed(
+            session,
+            job_id=job_id,
+            lease_owner=str(kwargs["lease_owner"]),
+            now=kwargs.get("now"),
+        )
+
+    with patch.object(
+        refiner_worker_loop_mod,
+        "complete_claimed_refiner_job",
+        side_effect=complete_shim,
+    ):
+        assert (
+            process_one_refiner_job(
+                session_factory,
+                lease_owner="w",
+                job_handlers={"ok.kind": _ok},
+                now=t0,
+                lease_seconds=3600,
+            )
+            == "processed"
+        )
+        assert (
+            process_one_refiner_job(
+                session_factory,
+                lease_owner="w",
+                job_handlers={"ok.kind": _ok},
+                now=t0,
+                lease_seconds=3600,
+            )
+            == "processed"
+        )
+    with session_factory() as s:
+        r1 = s.get(RefinerJob, 1)
+        r2 = s.get(RefinerJob, 2)
+        assert r1.status == RefinerJobStatus.FAILED.value
+        assert "refiner_terminalization_failure:" in (r1.last_error or "")
+        assert r2.status == RefinerJobStatus.COMPLETED.value
+
+
+def test_worker_stays_alive_after_complete_failure_terminalization(
+    session_factory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        refiner_worker_loop_mod,
+        "REFINER_WORKER_IDLE_SLEEP_SECONDS",
+        0.05,
+    )
+    t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
+    with session_factory() as s:
+        refiner_enqueue_or_get_job(s, dedupe_key="w-term", job_kind="term.kind", max_attempts=3)
+        s.commit()
+
+    def _ok(_ctx) -> None:
+        return None
+
+    async def _run() -> None:
+        stop = asyncio.Event()
+        with patch.object(
+            refiner_worker_loop_mod,
+            "complete_claimed_refiner_job",
+            side_effect=RuntimeError("complete unavailable"),
+        ):
+            task = asyncio.create_task(
+                refiner_worker_run_forever(
+                    session_factory,
+                    worker_index=0,
+                    stop_event=stop,
+                    job_handlers={"term.kind": _ok},
+                    idle_sleep_seconds=0.05,
+                    lease_seconds=3600,
+                ),
+            )
+            for _ in range(400):
+                with session_factory() as s:
+                    row = s.get(RefinerJob, 1)
+                    if row is not None and row.status == RefinerJobStatus.FAILED.value:
+                        break
+                await asyncio.sleep(0.01)
+            else:
+                pytest.fail("expected terminalization to FAILED")
+            stop.set()
+            await asyncio.wait_for(task, timeout=5.0)
+
+    asyncio.run(_run())
 
 
 def test_start_and_stop_workers_completes_within_timeout(

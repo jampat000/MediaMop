@@ -15,6 +15,7 @@ from mediamop.modules.refiner.jobs_ops import (
     claim_next_eligible_refiner_job,
     complete_claimed_refiner_job,
     fail_claimed_refiner_job,
+    fail_leased_refiner_job_after_complete_failure,
     refiner_enqueue_or_get_job,
 )
 
@@ -252,6 +253,76 @@ def test_fail_requeues_until_max_attempts_then_failed(session_factory):
         row = s.get(RefinerJob, jid)
         assert row.status == RefinerJobStatus.FAILED.value
         assert row.last_error == "e1"
+
+
+def test_fail_leased_after_complete_failure_terminalizes_without_bumping_attempts(session_factory):
+    fac = session_factory
+    t0 = _t0()
+    with fac() as s:
+        refiner_enqueue_or_get_job(s, dedupe_key="term-fail", job_kind="test")
+        s.commit()
+    with fac() as s:
+        j = claim_next_eligible_refiner_job(
+            s,
+            lease_owner="w",
+            lease_expires_at=t0 + timedelta(hours=1),
+            now=t0,
+        )
+        assert j is not None
+        assert j.attempt_count == 1
+        jid = j.id
+        s.commit()
+    with fac() as s:
+        assert fail_leased_refiner_job_after_complete_failure(
+            s,
+            job_id=jid,
+            lease_owner="w",
+            error_message="refiner_terminalization_failure: synthetic",
+            now=t0,
+        )
+        s.commit()
+    with fac() as s:
+        row = s.get(RefinerJob, jid)
+        assert row.status == RefinerJobStatus.FAILED.value
+        assert row.attempt_count == 1
+        assert row.lease_owner is None
+        assert "synthetic" in (row.last_error or "")
+    with fac() as s:
+        assert (
+            claim_next_eligible_refiner_job(
+                s,
+                lease_owner="w2",
+                lease_expires_at=t0 + timedelta(hours=1),
+                now=t0,
+            )
+            is None
+        )
+
+
+def test_fail_leased_after_complete_failure_rejects_wrong_owner(session_factory):
+    fac = session_factory
+    t0 = _t0()
+    with fac() as s:
+        refiner_enqueue_or_get_job(s, dedupe_key="term-owner", job_kind="test")
+        s.commit()
+    with fac() as s:
+        j = claim_next_eligible_refiner_job(
+            s,
+            lease_owner="good",
+            lease_expires_at=t0 + timedelta(hours=1),
+            now=t0,
+        )
+        jid = j.id
+        s.commit()
+    with fac() as s:
+        assert not fail_leased_refiner_job_after_complete_failure(
+            s,
+            job_id=jid,
+            lease_owner="evil",
+            error_message="x",
+            now=t0,
+        )
+        s.rollback()
 
 
 def test_two_workers_claim_different_jobs(session_factory):

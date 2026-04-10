@@ -166,3 +166,37 @@ def fail_claimed_refiner_job(
         job.status = RefinerJobStatus.PENDING.value
     session.flush()
     return True
+
+
+def fail_leased_refiner_job_after_complete_failure(
+    session: Session,
+    *,
+    job_id: int,
+    lease_owner: str,
+    error_message: str,
+    now: datetime | None = None,
+) -> bool:
+    """Terminal ``failed`` after handler success when ``complete_claimed_refiner_job`` could not run.
+
+    Same lease guards as :func:`complete_claimed_refiner_job`. Clears the lease, sets
+    ``last_error``, marks ``failed``, and does **not** change ``attempt_count`` or requeue — so the
+    successful handler body is not run again as a new attempt.
+    """
+
+    when = now if now is not None else _utc_now()
+    job = session.scalars(select(RefinerJob).where(RefinerJob.id == job_id)).one_or_none()
+    if job is None:
+        return False
+    if job.status != RefinerJobStatus.LEASED.value:
+        return False
+    if job.lease_owner != lease_owner:
+        return False
+    if job.lease_expires_at is None or job.lease_expires_at < when:
+        return False
+
+    job.status = RefinerJobStatus.FAILED.value
+    job.lease_owner = None
+    job.lease_expires_at = None
+    job.last_error = error_message[:10_000]
+    session.flush()
+    return True

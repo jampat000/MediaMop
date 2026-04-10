@@ -23,6 +23,7 @@ from mediamop.modules.refiner.jobs_ops import (
     claim_next_eligible_refiner_job,
     complete_claimed_refiner_job,
     fail_claimed_refiner_job,
+    fail_leased_refiner_job_after_complete_failure,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_REFINER_JOB_LEASE_SECONDS = 300
 REFINER_WORKER_IDLE_SLEEP_SECONDS = 5.0
 REFINER_WORKER_TICK_ERROR_BACKOFF_SECONDS = 1.0
+REFINER_TERMINALIZATION_FAILURE_PREFIX = "refiner_terminalization_failure: "
 
 
 @dataclass(frozen=True, slots=True)
@@ -131,6 +133,8 @@ def process_one_refiner_job(
             )
         return "processed"
 
+    complete_ok = True
+    complete_err: str | None = None
     try:
         with session_factory() as session:
             with session.begin():
@@ -138,15 +142,39 @@ def process_one_refiner_job(
                     session,
                     job_id=ctx.id,
                     lease_owner=ctx.lease_owner,
+                    now=when,
                 )
                 if not ok:
-                    logger.warning(
-                        "complete_claimed_refiner_job refused job_id=%s owner=%s (lease or state)",
-                        ctx.id,
-                        ctx.lease_owner,
-                    )
-    except Exception:
+                    complete_ok = False
+                    complete_err = "complete_claimed_refiner_job refused (lease/state mismatch)"
+    except Exception as exc:
+        complete_ok = False
         logger.exception("Refiner complete_claimed_refiner_job failed job_id=%s", ctx.id)
+        complete_err = str(exc)
+
+    if not complete_ok and complete_err is not None:
+        bounded = (REFINER_TERMINALIZATION_FAILURE_PREFIX + complete_err)[:10_000]
+        try:
+            with session_factory() as session:
+                with session.begin():
+                    recovered = fail_leased_refiner_job_after_complete_failure(
+                        session,
+                        job_id=ctx.id,
+                        lease_owner=ctx.lease_owner,
+                        error_message=bounded,
+                        now=when,
+                    )
+            if not recovered:
+                logger.warning(
+                    "Refiner terminalization recovery did not apply job_id=%s owner=%s",
+                    ctx.id,
+                    ctx.lease_owner,
+                )
+        except Exception:
+            logger.exception(
+                "Refiner fail_leased_refiner_job_after_complete_failure failed job_id=%s",
+                ctx.id,
+            )
     return "processed"
 
 
