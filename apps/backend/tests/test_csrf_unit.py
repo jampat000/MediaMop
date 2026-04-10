@@ -49,6 +49,8 @@ def _csrf_settings(**overrides: object) -> MediaMopSettings:
         fetcher_base_url=None,
         refiner_failed_import_cleanup=default_refiner_failed_import_cleanup_settings_bundle(),
         refiner_worker_count=1,
+        refiner_radarr_base_url=None,
+        refiner_radarr_api_key=None,
     )
     base.update(overrides)
     return MediaMopSettings(**base)  # type: ignore[arg-type]

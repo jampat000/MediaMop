@@ -1,8 +1,8 @@
-"""Refiner-only in-process worker loop (Pass 14).
+"""Refiner-only in-process worker loop (Pass 14–15).
 
 Claims rows from ``refiner_jobs``, dispatches by ``job_kind``, then completes or fails via
-:class:`mediamop.modules.refiner.jobs_ops`. No cross-module worker framework; live *arr drives
-are not enqueued here yet.
+:class:`mediamop.modules.refiner.jobs_ops`. Production handlers are built from
+:class:`~mediamop.core.config.MediaMopSettings` (Pass 15: Radarr live cleanup drive).
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ class RefinerNoHandlerForJobKind(LookupError):
 
 
 def default_refiner_job_handler_registry() -> dict[str, Callable[[RefinerJobWorkContext], None]]:
-    """Built-in handlers for production (empty until real kinds are registered)."""
+    """Empty registry for tests or callers that inject handlers explicitly."""
 
     return {}
 
@@ -183,8 +183,18 @@ async def refiner_worker_run_forever(
 def start_refiner_worker_background_tasks(
     session_factory: sessionmaker[Session],
     settings: MediaMopSettings,
+    *,
+    job_handlers: Mapping[str, Callable[[RefinerJobWorkContext], None]] | None = None,
 ) -> tuple[asyncio.Event, list[asyncio.Task[None]]]:
     """Create one asyncio task per configured Refiner worker (count clamped at load time)."""
+
+    handlers: Mapping[str, Callable[[RefinerJobWorkContext], None]]
+    if job_handlers is not None:
+        handlers = job_handlers
+    else:
+        from mediamop.modules.refiner.job_handlers_registry import build_production_refiner_job_handlers
+
+        handlers = build_production_refiner_job_handlers(settings)
 
     stop = asyncio.Event()
     tasks: list[asyncio.Task[None]] = []
@@ -194,6 +204,7 @@ def start_refiner_worker_background_tasks(
                 session_factory,
                 worker_index=i,
                 stop_event=stop,
+                job_handlers=handlers,
             ),
             name=f"refiner-worker-{i}",
         )
