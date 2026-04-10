@@ -2,7 +2,8 @@
 
 Pass 1–2: ownership/blocking and anchors. Pass 3: *arr queue adapters. Pass 4–6: failed
 import classification, policy, eligibility. Pass 7/7.5: Radarr and Sonarr cleanup
-planning seams (separate modules). No HTTP clients or destructive execution here.
+planning seams (separate modules). Pass 8: thin orchestration dispatch by app. No HTTP
+clients or destructive execution here.
 """
 
 from __future__ import annotations
@@ -17,6 +18,12 @@ from mediamop.modules.refiner.failed_import_cleanup_decision import (
     FailedImportCleanupEligibilityDecision,
     FailedImportCleanupEligibilityReason,
     decide_failed_import_cleanup_eligibility,
+)
+from mediamop.modules.refiner.failed_import_cleanup_orchestration import (
+    FailedImportCleanupPlanningResult,
+    RefinerArrApp,
+    parse_refiner_arr_app,
+    plan_failed_import_cleanup,
 )
 from mediamop.modules.refiner.failed_import_cleanup_policy import (
     FailedImportCleanupPolicy,
@@ -56,6 +63,10 @@ __all__ = [
     "FailedImportCleanupEligibilityDecision",
     "FailedImportCleanupEligibilityReason",
     "decide_failed_import_cleanup_eligibility",
+    "FailedImportCleanupPlanningResult",
+    "RefinerArrApp",
+    "parse_refiner_arr_app",
+    "plan_failed_import_cleanup",
     "FailedImportCleanupPolicy",
     "FailedImportCleanupPolicyKey",
     "cleanup_policy_key_for_outcome",
