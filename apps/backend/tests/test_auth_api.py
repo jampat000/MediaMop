@@ -440,9 +440,12 @@ def test_activity_recent_includes_logout_event(client_with_admin: TestClient) ->
     assert "auth.logout" in types_in_order
 
 
-def test_load_valid_session_throttles_last_seen_persistence() -> None:
+def test_load_valid_session_throttles_last_seen_persistence(monkeypatch: pytest.MonkeyPatch) -> None:
     """Avoid persisting last_seen on every authenticated read (SQLite write pressure)."""
 
+    # Touch gap is min(60s, idle/2); a low MEDIAMOP_SESSION_IDLE_MINUTES in .env/CI would
+    # shrink the gap and make +30s persist last_seen, breaking the assertions below.
+    monkeypatch.setenv("MEDIAMOP_SESSION_IDLE_MINUTES", "720")
     seed_admin_user()
     settings = MediaMopSettings.load()
     eng = create_db_engine(settings)
