@@ -28,3 +28,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.code-workspace
+
+# Local-only working files (never commit)
+.local/
