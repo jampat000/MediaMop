@@ -13,14 +13,15 @@ from sqlalchemy.orm import Session, sessionmaker
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
 from mediamop.modules.fetcher.failed_import_queue_job_handlers import build_failed_import_queue_job_handlers
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.modules.fetcher.fetcher_jobs_model import FetcherJob, FetcherJobStatus
+from mediamop.modules.fetcher.fetcher_worker_loop import process_one_fetcher_job
 from mediamop.modules.fetcher.radarr_cleanup_execution import RadarrFailedImportCleanupExecutionOutcome
 from mediamop.modules.fetcher.radarr_failed_import_cleanup_drive import RadarrFailedImportCleanupDriveItemResult
 from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import enqueue_radarr_failed_import_cleanup_drive_job
-from mediamop.modules.refiner.worker_loop import process_one_refiner_job
 from mediamop.platform.activity import constants as act_c
 from mediamop.platform.activity.models import ActivityEvent
 
+import mediamop.modules.fetcher.fetcher_jobs_model  # noqa: F401
 import mediamop.modules.refiner.jobs_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
@@ -59,8 +60,8 @@ def test_radarr_drive_removal_summary_activity(
     t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
     settings = replace(
         MediaMopSettings.load(),
-        refiner_radarr_base_url="http://127.0.0.1:7878",
-        refiner_radarr_api_key="k",
+        fetcher_radarr_base_url="http://127.0.0.1:7878",
+        fetcher_radarr_api_key="k",
     )
     fake_results = (
         RadarrFailedImportCleanupDriveItemResult(1, "m", RadarrFailedImportCleanupExecutionOutcome.REMOVED_QUEUE_ITEM),
@@ -79,7 +80,7 @@ def test_radarr_drive_removal_summary_activity(
         "mediamop.modules.fetcher.radarr_failed_import_cleanup_job.drive_radarr_failed_import_cleanup_from_live_queue",
         return_value=fake_results,
     ):
-        out = process_one_refiner_job(
+        out = process_one_fetcher_job(
             session_factory,
             lease_owner="unit",
             job_handlers=handlers,
@@ -89,7 +90,7 @@ def test_radarr_drive_removal_summary_activity(
     assert out == "processed"
 
     with session_factory() as s:
-        assert s.get(RefinerJob, 1).status == RefinerJobStatus.COMPLETED.value
+        assert s.get(FetcherJob, 1).status == FetcherJobStatus.COMPLETED.value
         rows = s.scalars(select(ActivityEvent).order_by(ActivityEvent.id.asc())).all()
         types = [r.event_type for r in rows]
         assert act_c.FETCHER_FAILED_IMPORT_RUN_STARTED in types
@@ -108,8 +109,8 @@ def test_radarr_drive_all_policy_skips_activity(
     t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
     settings = replace(
         MediaMopSettings.load(),
-        refiner_radarr_base_url="http://127.0.0.1:7878",
-        refiner_radarr_api_key="k",
+        fetcher_radarr_base_url="http://127.0.0.1:7878",
+        fetcher_radarr_api_key="k",
     )
     fake_results = tuple(
         RadarrFailedImportCleanupDriveItemResult(i, "b", RadarrFailedImportCleanupExecutionOutcome.NO_OP)
@@ -128,7 +129,7 @@ def test_radarr_drive_all_policy_skips_activity(
         "mediamop.modules.fetcher.radarr_failed_import_cleanup_job.drive_radarr_failed_import_cleanup_from_live_queue",
         return_value=fake_results,
     ):
-        process_one_refiner_job(
+        process_one_fetcher_job(
             session_factory,
             lease_owner="unit",
             job_handlers=handlers,

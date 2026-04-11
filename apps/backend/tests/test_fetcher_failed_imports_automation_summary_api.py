@@ -9,7 +9,7 @@ from starlette.testclient import TestClient
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.modules.fetcher.fetcher_jobs_model import FetcherJob, FetcherJobStatus
 from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import (
     RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
     FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
@@ -20,6 +20,7 @@ from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import (
 )
 from tests.integration_helpers import auth_post, csrf as fetch_csrf
 
+import mediamop.modules.fetcher.fetcher_jobs_model  # noqa: F401
 import mediamop.modules.refiner.jobs_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
@@ -45,8 +46,8 @@ def _wipe_drive_jobs() -> None:
     fac = _fac()
     with fac() as db:
         db.execute(
-            delete(RefinerJob).where(
-                RefinerJob.dedupe_key.in_(
+            delete(FetcherJob).where(
+                FetcherJob.dedupe_key.in_(
                     (
                         RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
                         SONARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
@@ -61,10 +62,10 @@ def _seed_radarr_completed(*, updated_at: datetime) -> None:
     fac = _fac()
     with fac() as db:
         db.add(
-            RefinerJob(
+            FetcherJob(
                 dedupe_key=RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
                 job_kind=FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
-                status=RefinerJobStatus.COMPLETED.value,
+                status=FetcherJobStatus.COMPLETED.value,
                 attempt_count=1,
                 updated_at=updated_at,
             ),
@@ -76,10 +77,10 @@ def _seed_sonarr_failed(*, updated_at: datetime) -> None:
     fac = _fac()
     with fac() as db:
         db.add(
-            RefinerJob(
+            FetcherJob(
                 dedupe_key=SONARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
                 job_kind=FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE,
-                status=RefinerJobStatus.FAILED.value,
+                status=FetcherJobStatus.FAILED.value,
                 attempt_count=1,
                 max_attempts=3,
                 last_error="x",

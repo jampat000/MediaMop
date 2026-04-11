@@ -21,11 +21,16 @@ from mediamop.modules.fetcher.failed_import_cleanup_drive_schedule_specs import 
 )
 from mediamop.modules.fetcher.failed_import_queue_job_handlers import build_failed_import_queue_job_handlers
 from mediamop.modules.fetcher.failed_import_queue_worker_runtime import build_failed_import_queue_worker_runtime_bundle
-from mediamop.modules.refiner.periodic_cleanup_drive_enqueue import (
-    start_refiner_cleanup_drive_enqueue_schedule_tasks,
-    stop_refiner_cleanup_drive_enqueue_schedule_tasks,
+from mediamop.modules.fetcher.fetcher_worker_loop import (
+    start_fetcher_worker_background_tasks,
+    stop_fetcher_worker_background_tasks,
+)
+from mediamop.modules.fetcher.periodic_failed_import_cleanup_enqueue import (
+    start_fetcher_failed_import_cleanup_drive_enqueue_tasks,
+    stop_fetcher_failed_import_cleanup_drive_enqueue_tasks,
 )
 from mediamop.modules.refiner.worker_loop import (
+    default_refiner_job_handler_registry,
     start_refiner_worker_background_tasks,
     stop_refiner_worker_background_tasks,
 )
@@ -50,12 +55,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.engine = engine
     session_factory = create_session_factory(engine)
     app.state.session_factory = session_factory
-    refiner_stop = asyncio.Event()
+    stop = asyncio.Event()
     failed_import_queue_worker_runtime = build_failed_import_queue_worker_runtime_bundle()
     schedule_specs = failed_import_cleanup_drive_schedule_specs(settings)
-    refiner_schedule_tasks = start_refiner_cleanup_drive_enqueue_schedule_tasks(
+    fetcher_schedule_tasks = start_fetcher_failed_import_cleanup_drive_enqueue_tasks(
         session_factory,
-        stop_event=refiner_stop,
+        stop_event=stop,
         timed_failed_import_pass_queued=failed_import_queue_worker_runtime.timed_schedule_pass_queued,
         schedule_specs=schedule_specs,
     )
@@ -64,20 +69,26 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         session_factory,
         failed_import_runtime=failed_import_queue_worker_runtime,
     )
-    refiner_stop, refiner_tasks = start_refiner_worker_background_tasks(
+    fetcher_stop, fetcher_worker_tasks = start_fetcher_worker_background_tasks(
         session_factory,
         settings,
-        stop_event=refiner_stop,
+        stop_event=stop,
         job_handlers=failed_import_job_handlers,
+    )
+    refiner_handlers = default_refiner_job_handler_registry()
+    refiner_stop, refiner_worker_tasks = start_refiner_worker_background_tasks(
+        session_factory,
+        settings,
+        stop_event=stop,
+        job_handlers=refiner_handlers,
     )
     try:
         yield
     finally:
-        # Refiner shutdown: signal cooperative exit first, then cancel stragglers.
-        # Stop periodic enqueue tasks before workers so enqueuers do not add work while workers drain.
-        refiner_stop.set()
-        await stop_refiner_cleanup_drive_enqueue_schedule_tasks(refiner_schedule_tasks)
-        await stop_refiner_worker_background_tasks(refiner_stop, refiner_tasks)
+        stop.set()
+        await stop_fetcher_failed_import_cleanup_drive_enqueue_tasks(fetcher_schedule_tasks)
+        await stop_fetcher_worker_background_tasks(fetcher_stop, fetcher_worker_tasks)
+        await stop_refiner_worker_background_tasks(refiner_stop, refiner_worker_tasks)
         dispose_engine(app.state.engine)
         app.state.engine = None
         app.state.session_factory = None

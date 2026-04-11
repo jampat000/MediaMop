@@ -4,8 +4,9 @@ Download-queue failed-import cleanup **planning, drives, and *arr execution** li
 ``mediamop.modules.fetcher`` (Fetcher product/runtime ownership). Shared classification and
 policy toggles live in ``mediamop.modules.arr_failed_import`` (neutral *arr rules).
 
-Refiner still runs persisted ``refiner_jobs`` workers and periodic enqueue tasks; composition
-injects Fetcher ports without Refiner importing ``mediamop.modules.fetcher``.
+Refiner owns persisted ``refiner_jobs`` and optional in-process Refiner workers
+(``MEDIAMOP_REFINER_WORKER_COUNT``). Durable Fetcher background work uses ``fetcher_jobs`` and
+Fetcher workers instead. Composition may inject neutral ports; Refiner does not import Fetcher.
 
 Radarr and Sonarr stay in separate Python modules wherever behavior can diverge.
 """

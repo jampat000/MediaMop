@@ -1,8 +1,4 @@
-"""Radarr failed-import cleanup: refiner_jobs row producer + in-process worker handler (Fetcher-owned).
-
-Uses :mod:`mediamop.modules.refiner` for persisted ``refiner_jobs`` rows and worker context; the live-queue
-drive runs in this package. ``job_kind`` values remain the stable ``refiner.*`` strings stored in the DB.
-"""
+"""Radarr failed-import cleanup: ``fetcher_jobs`` row producer + Fetcher in-process worker handler."""
 
 from __future__ import annotations
 
@@ -11,25 +7,26 @@ from collections.abc import Callable
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.failed_import_queue_worker_ports import FailedImportRadarrWorkerRuntimePort
-from mediamop.modules.refiner.jobs_model import RefinerJob
-from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
+from mediamop.modules.fetcher.fetcher_jobs_model import FetcherJob
+from mediamop.modules.fetcher.fetcher_jobs_ops import fetcher_enqueue_or_get_job
+from mediamop.modules.fetcher.fetcher_worker_loop import FetcherJobWorkContext
 from mediamop.modules.fetcher.radarr_cleanup_execution import RadarrQueueHttpClient
 from mediamop.modules.fetcher.radarr_failed_import_cleanup_drive import (
     RadarrQueueHttpFetchClient,
     drive_radarr_failed_import_cleanup_from_live_queue,
 )
-from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
+from mediamop.modules.fetcher.failed_import_drive_job_kinds import (
+    FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
+)
+from mediamop.modules.queue_worker.failed_import_worker_ports import FailedImportRadarrWorkerRuntimePort
 
-FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE = "refiner.radarr.failed_import_cleanup_drive.v1"
-
-RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY = "refiner.radarr.failed_import_cleanup_drive:v1"
+RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY = "failed_import.radarr.cleanup_drive:v1"
 
 
-def enqueue_radarr_failed_import_cleanup_drive_job(session: Session) -> RefinerJob:
+def enqueue_radarr_failed_import_cleanup_drive_job(session: Session) -> FetcherJob:
     """Insert or return the single durable Radarr live cleanup sweep job."""
 
-    return refiner_enqueue_or_get_job(
+    return fetcher_enqueue_or_get_job(
         session,
         dedupe_key=RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
         job_kind=FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
@@ -42,17 +39,17 @@ def make_radarr_failed_import_cleanup_drive_handler(
     session_factory: sessionmaker[Session],
     *,
     fetcher_runtime: FailedImportRadarrWorkerRuntimePort,
-) -> Callable[[RefinerJobWorkContext], None]:
+) -> Callable[[FetcherJobWorkContext], None]:
     """Build a worker handler that runs the existing Radarr live drive (HTTP clients from settings)."""
 
-    def _run(_ctx: RefinerJobWorkContext) -> None:
+    def _run(_ctx: FetcherJobWorkContext) -> None:
         try:
-            base = settings.refiner_radarr_base_url
-            key = settings.refiner_radarr_api_key
+            base = settings.fetcher_radarr_base_url
+            key = settings.fetcher_radarr_api_key
             if not base or not key:
                 msg = (
-                    "Radarr live cleanup drive requires MEDIAMOP_REFINER_RADARR_BASE_URL and "
-                    "MEDIAMOP_REFINER_RADARR_API_KEY"
+                    "Radarr live cleanup drive requires MEDIAMOP_FETCHER_RADARR_BASE_URL and "
+                    "MEDIAMOP_FETCHER_RADARR_API_KEY"
                 )
                 raise RuntimeError(msg)
 

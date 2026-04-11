@@ -12,12 +12,13 @@ from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.modules.fetcher.automation_summary_service import (
     build_fetcher_failed_import_automation_summary,
 )
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.modules.fetcher.fetcher_jobs_model import FetcherJob, FetcherJobStatus
 from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import (
     RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
     FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
 )
 
+import mediamop.modules.fetcher.fetcher_jobs_model  # noqa: F401
 import mediamop.modules.refiner.jobs_model  # noqa: F401
 
 
@@ -34,10 +35,10 @@ def test_schedule_off_no_secondary_caveat() -> None:
         base,
         failed_import_radarr_cleanup_drive_schedule_enabled=False,
         failed_import_sonarr_cleanup_drive_schedule_enabled=False,
-        refiner_worker_count=1,
+        fetcher_worker_count=1,
     )
     with _session() as db:
-        db.execute(delete(RefinerJob).where(RefinerJob.dedupe_key == RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY))
+        db.execute(delete(FetcherJob).where(FetcherJob.dedupe_key == RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY))
         db.commit()
         out = build_fetcher_failed_import_automation_summary(db, s)
     assert "off" in out.movies.saved_schedule_primary.lower()
@@ -50,10 +51,10 @@ def test_schedule_on_interval_and_caveat() -> None:
         base,
         failed_import_radarr_cleanup_drive_schedule_enabled=True,
         failed_import_radarr_cleanup_drive_schedule_interval_seconds=3600,
-        refiner_worker_count=1,
+        fetcher_worker_count=1,
     )
     with _session() as db:
-        db.execute(delete(RefinerJob).where(RefinerJob.dedupe_key == RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY))
+        db.execute(delete(FetcherJob).where(FetcherJob.dedupe_key == RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY))
         db.commit()
         out = build_fetcher_failed_import_automation_summary(db, s)
     assert "on" in out.movies.saved_schedule_primary.lower()
@@ -64,15 +65,15 @@ def test_schedule_on_interval_and_caveat() -> None:
 
 def test_last_finished_from_persisted_terminal_row_only() -> None:
     base = MediaMopSettings.load()
-    s = replace(base, refiner_worker_count=1)
+    s = replace(base, fetcher_worker_count=1)
     t_done = datetime(2026, 5, 1, 12, 0, 0, tzinfo=timezone.utc)
     with _session() as db:
-        db.execute(delete(RefinerJob).where(RefinerJob.dedupe_key == RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY))
+        db.execute(delete(FetcherJob).where(FetcherJob.dedupe_key == RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY))
         db.add(
-            RefinerJob(
+            FetcherJob(
                 dedupe_key=RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
                 job_kind=FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
-                status=RefinerJobStatus.COMPLETED.value,
+                status=FetcherJobStatus.COMPLETED.value,
                 attempt_count=1,
                 updated_at=t_done,
             ),

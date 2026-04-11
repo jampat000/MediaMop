@@ -1,7 +1,8 @@
-"""Typed ports for Fetcher-owned behavior invoked from Refiner failed-import runtime.
+"""Typed composition ports for Fetcher-owned failed-import queue workers.
 
-Refiner must not import ``mediamop.modules.fetcher``; composition wires concrete
-implementations (built in Fetcher) into these protocols.
+Concrete implementations live in ``mediamop.modules.fetcher``. Lifespan wires Fetcher
+periodic enqueue and Fetcher workers; this module stays import-light so Refiner never
+imports Fetcher.
 """
 
 from __future__ import annotations
@@ -69,7 +70,7 @@ class FailedImportTimedSchedulePassQueuedPort(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class FailedImportQueueWorkerPorts:
-    """Fetcher implementations wired into the Refiner queue worker for failed-import drives + schedule."""
+    """Fetcher implementations wired into the in-process queue worker for failed-import drives + schedule."""
 
     radarr_worker: FailedImportRadarrWorkerRuntimePort
     sonarr_worker: FailedImportSonarrWorkerRuntimePort

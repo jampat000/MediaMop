@@ -1,4 +1,4 @@
-"""Sonarr live cleanup drive refiner_jobs producer + handler."""
+"""Sonarr live cleanup drive fetcher_jobs producer + handler."""
 
 from __future__ import annotations
 
@@ -21,9 +21,10 @@ from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import (
     SONARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
     enqueue_sonarr_failed_import_cleanup_drive_job,
 )
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.refiner.worker_loop import process_one_refiner_job
+from mediamop.modules.fetcher.fetcher_jobs_model import FetcherJob, FetcherJobStatus
+from mediamop.modules.fetcher.fetcher_worker_loop import process_one_fetcher_job
 
+import mediamop.modules.fetcher.fetcher_jobs_model  # noqa: F401
 import mediamop.modules.refiner.jobs_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
@@ -88,8 +89,8 @@ def test_sonarr_handler_calls_drive_when_sonarr_configured(
     base = MediaMopSettings.load()
     settings = replace(
         base,
-        refiner_sonarr_base_url="http://127.0.0.1:8989",
-        refiner_sonarr_api_key="test-key",
+        fetcher_sonarr_base_url="http://127.0.0.1:8989",
+        fetcher_sonarr_api_key="test-key",
     )
     with session_factory() as s:
         enqueue_sonarr_failed_import_cleanup_drive_job(s)
@@ -104,7 +105,7 @@ def test_sonarr_handler_calls_drive_when_sonarr_configured(
         "mediamop.modules.fetcher.sonarr_failed_import_cleanup_job.drive_sonarr_failed_import_cleanup_from_live_queue",
     ) as drive_mock:
         drive_mock.return_value = ()
-        out = process_one_refiner_job(
+        out = process_one_fetcher_job(
             session_factory,
             lease_owner="unit",
             job_handlers=handlers,
@@ -119,8 +120,8 @@ def test_sonarr_handler_calls_drive_when_sonarr_configured(
     assert "queue_fetch_client" in kwargs and "queue_operations" in kwargs
 
     with session_factory() as s:
-        row = s.get(RefinerJob, 1)
-        assert row.status == RefinerJobStatus.COMPLETED.value
+        row = s.get(FetcherJob, 1)
+        assert row.status == FetcherJobStatus.COMPLETED.value
         rows = s.scalars(
             select(ActivityEvent)
             .where(ActivityEvent.module == "fetcher")
@@ -142,8 +143,8 @@ def test_sonarr_handler_failure_requeues_via_fail_op(
     base = MediaMopSettings.load()
     settings = replace(
         base,
-        refiner_sonarr_base_url="http://127.0.0.1:8989",
-        refiner_sonarr_api_key="test-key",
+        fetcher_sonarr_base_url="http://127.0.0.1:8989",
+        fetcher_sonarr_api_key="test-key",
     )
     with session_factory() as s:
         enqueue_sonarr_failed_import_cleanup_drive_job(s)
@@ -158,7 +159,7 @@ def test_sonarr_handler_failure_requeues_via_fail_op(
         "mediamop.modules.fetcher.sonarr_failed_import_cleanup_job.drive_sonarr_failed_import_cleanup_from_live_queue",
         side_effect=RuntimeError("sonarr down"),
     ):
-        out = process_one_refiner_job(
+        out = process_one_fetcher_job(
             session_factory,
             lease_owner="unit",
             job_handlers=handlers,
@@ -167,8 +168,8 @@ def test_sonarr_handler_failure_requeues_via_fail_op(
         )
     assert out == "processed"
     with session_factory() as s:
-        row = s.get(RefinerJob, 1)
-        assert row.status == RefinerJobStatus.PENDING.value
+        row = s.get(FetcherJob, 1)
+        assert row.status == FetcherJobStatus.PENDING.value
         assert "sonarr down" in (row.last_error or "")
         types = [
             r.event_type
@@ -189,7 +190,7 @@ def test_sonarr_handler_without_config_fails_job(
 ) -> None:
     t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
     base = MediaMopSettings.load()
-    settings = replace(base, refiner_sonarr_base_url=None, refiner_sonarr_api_key=None)
+    settings = replace(base, fetcher_sonarr_base_url=None, fetcher_sonarr_api_key=None)
     with session_factory() as s:
         enqueue_sonarr_failed_import_cleanup_drive_job(s)
         s.commit()
@@ -199,7 +200,7 @@ def test_sonarr_handler_without_config_fails_job(
         session_factory,
         failed_import_runtime=failed_import_queue_worker_runtime_bundle,
     )
-    out = process_one_refiner_job(
+    out = process_one_fetcher_job(
         session_factory,
         lease_owner="unit",
         job_handlers=handlers,
@@ -208,9 +209,9 @@ def test_sonarr_handler_without_config_fails_job(
     )
     assert out == "processed"
     with session_factory() as s:
-        row = s.get(RefinerJob, 1)
-        assert row.status == RefinerJobStatus.PENDING.value
-        assert "MEDIAMOP_REFINER_SONARR" in (row.last_error or "")
+        row = s.get(FetcherJob, 1)
+        assert row.status == FetcherJobStatus.PENDING.value
+        assert "MEDIAMOP_FETCHER_SONARR" in (row.last_error or "")
         rows = s.scalars(select(ActivityEvent).where(ActivityEvent.module == "fetcher")).all()
         types = [r.event_type for r in rows]
         assert act_c.FETCHER_FAILED_IMPORT_RUN_STARTED not in types

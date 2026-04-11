@@ -1,4 +1,4 @@
-"""Concrete Fetcher implementations of :mod:`mediamop.modules.refiner.failed_import_queue_worker_ports`."""
+"""Concrete Fetcher implementations of :mod:`mediamop.modules.queue_worker.failed_import_worker_ports`."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from mediamop.modules.fetcher.cleanup_policy_service import (
     load_fetcher_failed_import_cleanup_bundle,
 )
 from mediamop.modules.fetcher import failed_import_activity
-from mediamop.modules.refiner.failed_import_queue_worker_ports import (
+from mediamop.modules.queue_worker.failed_import_worker_ports import (
     FailedImportQueueWorkerPorts,
     FailedImportTimedSchedulePassQueuedPort,
 )
@@ -78,7 +78,7 @@ class _FetcherTimedSchedulePassQueued(FailedImportTimedSchedulePassQueuedPort):
 
 
 def build_failed_import_queue_worker_runtime_bundle() -> FailedImportQueueWorkerPorts:
-    """Production wiring: Fetcher policy + activity behind Refiner ports."""
+    """Production wiring: Fetcher policy + activity behind :class:`FailedImportQueueWorkerPorts`."""
 
     return FailedImportQueueWorkerPorts(
         radarr_worker=_FetcherRadarrWorkerRuntime(),

@@ -1,7 +1,7 @@
-"""Refiner ``refiner_worker_count`` modes (0 / 1 / >1) and multi-worker guardrails.
+"""Fetcher vs Refiner worker lanes: counts, SQLite claim behavior, and cross-lane job kinds.
 
-Contract-driven SQLite-backed tests; no new job kinds. Multi-worker remains a guarded capability;
-default worker_count stays 1; 0 is explicit disable.
+Failed-import concurrency and real Radarr/Sonarr ``job_kind`` rows use ``fetcher_jobs``;
+Refiner-only ordering and synthetic kinds use ``refiner_jobs``.
 """
 
 from __future__ import annotations
@@ -18,15 +18,27 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
+from mediamop.modules.fetcher.failed_import_queue_job_handlers import build_failed_import_queue_job_handlers
+from mediamop.modules.fetcher.fetcher_jobs_model import FetcherJob, FetcherJobStatus
+from mediamop.modules.fetcher.fetcher_jobs_ops import (
+    claim_next_eligible_fetcher_job,
+    fail_leased_fetcher_job_after_complete_failure,
+    fetcher_enqueue_or_get_job,
+)
+from mediamop.modules.fetcher import fetcher_worker_loop as fetcher_worker_loop_mod
+from mediamop.modules.fetcher.fetcher_worker_loop import (
+    process_one_fetcher_job,
+    start_fetcher_worker_background_tasks,
+    stop_fetcher_worker_background_tasks,
+)
+from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE
+from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.jobs_ops import (
     claim_next_eligible_refiner_job,
     fail_leased_refiner_job_after_complete_failure,
     refiner_enqueue_or_get_job,
 )
-from mediamop.modules.fetcher.failed_import_queue_job_handlers import build_failed_import_queue_job_handlers
-from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE
-from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE
 from mediamop.modules.refiner import worker_loop as refiner_worker_loop_mod
 from mediamop.modules.refiner.worker_loop import (
     process_one_refiner_job,
@@ -34,6 +46,7 @@ from mediamop.modules.refiner.worker_loop import (
     stop_refiner_worker_background_tasks,
 )
 
+import mediamop.modules.fetcher.fetcher_jobs_model  # noqa: F401
 import mediamop.modules.refiner.jobs_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
@@ -67,9 +80,14 @@ def _t0() -> datetime:
     return datetime(2026, 4, 11, 12, 0, 0, tzinfo=timezone.utc)
 
 
-def test_default_refiner_worker_count_from_env_unset_is_one(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_default_refiner_worker_count_from_env_unset_is_zero(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("MEDIAMOP_REFINER_WORKER_COUNT", raising=False)
-    assert MediaMopSettings.load().refiner_worker_count == 1
+    assert MediaMopSettings.load().refiner_worker_count == 0
+
+
+def test_default_fetcher_worker_count_from_env_unset_is_one(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("MEDIAMOP_FETCHER_WORKER_COUNT", raising=False)
+    assert MediaMopSettings.load().fetcher_worker_count == 1
 
 
 def test_start_refiner_worker_background_tasks_zero_spawns_no_tasks(
@@ -93,18 +111,18 @@ def test_start_refiner_worker_background_tasks_zero_spawns_no_tasks(
     asyncio.run(_run())
 
 
-def test_start_refiner_worker_count_gt_one_emits_guard_warning(
+def test_start_fetcher_worker_count_gt_one_emits_guard_warning(
     session_factory,
     monkeypatch: pytest.MonkeyPatch,
     failed_import_queue_worker_runtime_bundle,
 ) -> None:
     monkeypatch.setattr(
-        refiner_worker_loop_mod,
-        "REFINER_WORKER_IDLE_SLEEP_SECONDS",
+        fetcher_worker_loop_mod,
+        "FETCHER_WORKER_IDLE_SLEEP_SECONDS",
         0.05,
     )
     base = MediaMopSettings.load()
-    settings = replace(base, refiner_worker_count=3)
+    settings = replace(base, fetcher_worker_count=3)
 
     async def _run() -> None:
         handlers = build_failed_import_queue_job_handlers(
@@ -112,16 +130,16 @@ def test_start_refiner_worker_count_gt_one_emits_guard_warning(
             session_factory,
             failed_import_runtime=failed_import_queue_worker_runtime_bundle,
         )
-        stop, tasks = start_refiner_worker_background_tasks(
+        stop, tasks = start_fetcher_worker_background_tasks(
             session_factory,
             settings,
             job_handlers=handlers,
         )
         assert len(tasks) == 3
         stop.set()
-        await stop_refiner_worker_background_tasks(stop, tasks)
+        await stop_fetcher_worker_background_tasks(stop, tasks)
 
-    with patch.object(refiner_worker_loop_mod.logger, "warning") as mock_warn:
+    with patch.object(fetcher_worker_loop_mod.logger, "warning") as mock_warn:
         asyncio.run(_run())
     assert mock_warn.called
     texts: list[str] = []
@@ -133,7 +151,7 @@ def test_start_refiner_worker_count_gt_one_emits_guard_warning(
         else:
             texts.append(c.args[0] % tuple(c.args[1:]))
     assert any("guarded capability" in t for t in texts)
-    assert any("refiner_worker_count=3" in t for t in texts)
+    assert any("fetcher_worker_count=3" in t for t in texts)
 
 
 def test_concurrent_process_one_only_one_handler_runs_for_single_job(session_factory) -> None:
@@ -259,12 +277,12 @@ def test_radarr_and_sonarr_real_job_kinds_process_concurrently_without_cross_mut
     }
 
     with session_factory() as s:
-        refiner_enqueue_or_get_job(
+        fetcher_enqueue_or_get_job(
             s,
             dedupe_key="pass21-isolate-rad",
             job_kind=FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
         )
-        refiner_enqueue_or_get_job(
+        fetcher_enqueue_or_get_job(
             s,
             dedupe_key="pass21-isolate-son",
             job_kind=FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE,
@@ -275,7 +293,7 @@ def test_radarr_and_sonarr_real_job_kinds_process_concurrently_without_cross_mut
 
     def _run(owner: str) -> None:
         barrier.wait()
-        process_one_refiner_job(
+        process_one_fetcher_job(
             session_factory,
             lease_owner=owner,
             job_handlers=handlers,
@@ -293,10 +311,10 @@ def test_radarr_and_sonarr_real_job_kinds_process_concurrently_without_cross_mut
     assert sorted(touched["radarr"]) == [1]
     assert sorted(touched["sonarr"]) == [2]
     with session_factory() as s:
-        r1 = s.get(RefinerJob, 1)
-        r2 = s.get(RefinerJob, 2)
-        assert r1.status == RefinerJobStatus.COMPLETED.value
-        assert r2.status == RefinerJobStatus.COMPLETED.value
+        r1 = s.get(FetcherJob, 1)
+        r2 = s.get(FetcherJob, 2)
+        assert r1.status == FetcherJobStatus.COMPLETED.value
+        assert r2.status == FetcherJobStatus.COMPLETED.value
 
 
 def test_concurrent_workers_radarr_handler_failure_does_not_block_sonarr_completion(
@@ -316,13 +334,13 @@ def test_concurrent_workers_radarr_handler_failure_does_not_block_sonarr_complet
     }
 
     with session_factory() as s:
-        refiner_enqueue_or_get_job(
+        fetcher_enqueue_or_get_job(
             s,
             dedupe_key="pass21-fail-rad",
             job_kind=FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
             max_attempts=1,
         )
-        refiner_enqueue_or_get_job(
+        fetcher_enqueue_or_get_job(
             s,
             dedupe_key="pass21-ok-son",
             job_kind=FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE,
@@ -333,7 +351,7 @@ def test_concurrent_workers_radarr_handler_failure_does_not_block_sonarr_complet
 
     def _run(owner: str) -> None:
         barrier.wait()
-        process_one_refiner_job(
+        process_one_fetcher_job(
             session_factory,
             lease_owner=owner,
             job_handlers=handlers,
@@ -349,11 +367,11 @@ def test_concurrent_workers_radarr_handler_failure_does_not_block_sonarr_complet
     b.join()
 
     with session_factory() as s:
-        rad = s.get(RefinerJob, 1)
-        son = s.get(RefinerJob, 2)
-        assert rad.status == RefinerJobStatus.FAILED.value
+        rad = s.get(FetcherJob, 1)
+        son = s.get(FetcherJob, 2)
+        assert rad.status == FetcherJobStatus.FAILED.value
         assert "synthetic failure" in (rad.last_error or "")
-        assert son.status == RefinerJobStatus.COMPLETED.value
+        assert son.status == FetcherJobStatus.COMPLETED.value
 
 
 def test_parallel_claim_next_skips_handler_ok_finalize_failed_prefers_pending(
@@ -412,18 +430,18 @@ def test_parallel_claim_next_skips_handler_ok_finalize_failed_prefers_pending(
         assert pend.status == RefinerJobStatus.LEASED.value
 
 
-def test_stop_multiple_refiner_workers_completes_within_timeout(
+def test_stop_multiple_fetcher_workers_completes_within_timeout(
     session_factory,
     monkeypatch: pytest.MonkeyPatch,
     failed_import_queue_worker_runtime_bundle,
 ) -> None:
     monkeypatch.setattr(
-        refiner_worker_loop_mod,
-        "REFINER_WORKER_IDLE_SLEEP_SECONDS",
+        fetcher_worker_loop_mod,
+        "FETCHER_WORKER_IDLE_SLEEP_SECONDS",
         0.05,
     )
     base = MediaMopSettings.load()
-    settings = replace(base, refiner_worker_count=4)
+    settings = replace(base, fetcher_worker_count=4)
 
     async def _run() -> None:
         handlers = build_failed_import_queue_job_handlers(
@@ -431,7 +449,7 @@ def test_stop_multiple_refiner_workers_completes_within_timeout(
             session_factory,
             failed_import_runtime=failed_import_queue_worker_runtime_bundle,
         )
-        stop, tasks = start_refiner_worker_background_tasks(
+        stop, tasks = start_fetcher_worker_background_tasks(
             session_factory,
             settings,
             job_handlers=handlers,
@@ -439,7 +457,7 @@ def test_stop_multiple_refiner_workers_completes_within_timeout(
         assert len(tasks) == 4
         stop.set()
         await asyncio.wait_for(
-            stop_refiner_worker_background_tasks(stop, tasks),
+            stop_fetcher_worker_background_tasks(stop, tasks),
             timeout=5.0,
         )
 

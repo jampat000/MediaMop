@@ -10,6 +10,7 @@ from typing import Literal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from mediamop.modules.fetcher.fetcher_jobs_model import FetcherJob
 from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import (
     RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
     enqueue_radarr_failed_import_cleanup_drive_job,
@@ -18,15 +19,14 @@ from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import (
     SONARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
     enqueue_sonarr_failed_import_cleanup_drive_job,
 )
-from mediamop.modules.refiner.jobs_model import RefinerJob
 
 
 def manual_enqueue_radarr_cleanup_drive(
     session: Session,
-) -> tuple[RefinerJob, Literal["created", "already_present"]]:
+) -> tuple[FetcherJob, Literal["created", "already_present"]]:
     prior = session.scalar(
-        select(RefinerJob.id).where(
-            RefinerJob.dedupe_key == RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
+        select(FetcherJob.id).where(
+            FetcherJob.dedupe_key == RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
         ),
     )
     job = enqueue_radarr_failed_import_cleanup_drive_job(session)
@@ -37,10 +37,10 @@ def manual_enqueue_radarr_cleanup_drive(
 
 def manual_enqueue_sonarr_cleanup_drive(
     session: Session,
-) -> tuple[RefinerJob, Literal["created", "already_present"]]:
+) -> tuple[FetcherJob, Literal["created", "already_present"]]:
     prior = session.scalar(
-        select(RefinerJob.id).where(
-            RefinerJob.dedupe_key == SONARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
+        select(FetcherJob.id).where(
+            FetcherJob.dedupe_key == SONARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
         ),
     )
     job = enqueue_sonarr_failed_import_cleanup_drive_job(session)

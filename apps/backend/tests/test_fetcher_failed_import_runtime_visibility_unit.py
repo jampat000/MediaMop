@@ -14,14 +14,14 @@ from mediamop.modules.fetcher.failed_import_runtime_visibility import (
 
 @pytest.fixture
 def base_settings(monkeypatch: pytest.MonkeyPatch) -> MediaMopSettings:
-    monkeypatch.setenv("MEDIAMOP_REFINER_WORKER_COUNT", "1")
+    monkeypatch.setenv("MEDIAMOP_FETCHER_WORKER_COUNT", "1")
     monkeypatch.setenv("MEDIAMOP_FAILED_IMPORT_RADARR_CLEANUP_DRIVE_SCHEDULE_ENABLED", "0")
     monkeypatch.setenv("MEDIAMOP_FAILED_IMPORT_SONARR_CLEANUP_DRIVE_SCHEDULE_ENABLED", "0")
     return MediaMopSettings.load()
 
 
 def test_worker_count_zero_disabled_summary(base_settings: MediaMopSettings) -> None:
-    s = replace(base_settings, refiner_worker_count=0)
+    s = replace(base_settings, fetcher_worker_count=0)
     out = failed_import_runtime_visibility_from_settings(s)
     assert out.background_job_worker_count == 0
     assert out.in_process_workers_disabled is True
@@ -31,7 +31,7 @@ def test_worker_count_zero_disabled_summary(base_settings: MediaMopSettings) -> 
 
 
 def test_worker_count_one_default_summary(base_settings: MediaMopSettings) -> None:
-    s = replace(base_settings, refiner_worker_count=1)
+    s = replace(base_settings, fetcher_worker_count=1)
     out = failed_import_runtime_visibility_from_settings(s)
     assert out.background_job_worker_count == 1
     assert out.in_process_workers_disabled is False
@@ -41,7 +41,7 @@ def test_worker_count_one_default_summary(base_settings: MediaMopSettings) -> No
 
 
 def test_worker_count_multi_cautions_operator(base_settings: MediaMopSettings) -> None:
-    s = replace(base_settings, refiner_worker_count=3)
+    s = replace(base_settings, fetcher_worker_count=3)
     out = failed_import_runtime_visibility_from_settings(s)
     assert out.background_job_worker_count == 3
     assert "3" in out.worker_mode_summary

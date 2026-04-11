@@ -9,10 +9,10 @@ from starlette.testclient import TestClient
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.modules.fetcher.fetcher_jobs_model import FetcherJob, FetcherJobStatus
 from tests.integration_helpers import auth_post, csrf as fetch_csrf
 
-import mediamop.modules.refiner.jobs_model  # noqa: F401
+import mediamop.modules.fetcher.fetcher_jobs_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
 
@@ -39,22 +39,22 @@ def _seed_mixed_status_rows() -> None:
     t2 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=timezone.utc)
     fac = _fac()
     with fac() as db:
-        db.execute(delete(RefinerJob))
+        db.execute(delete(FetcherJob))
         db.commit()
     with fac() as db:
         db.add(
-            RefinerJob(
+            FetcherJob(
                 dedupe_key="insp-pending",
                 job_kind="k.pending",
-                status=RefinerJobStatus.PENDING.value,
+                status=FetcherJobStatus.PENDING.value,
                 updated_at=t0,
             ),
         )
         db.add(
-            RefinerJob(
+            FetcherJob(
                 dedupe_key="insp-leased",
                 job_kind="k.leased",
-                status=RefinerJobStatus.LEASED.value,
+                status=FetcherJobStatus.LEASED.value,
                 lease_owner="w1",
                 lease_expires_at=t2,
                 attempt_count=1,
@@ -62,19 +62,19 @@ def _seed_mixed_status_rows() -> None:
             ),
         )
         db.add(
-            RefinerJob(
+            FetcherJob(
                 dedupe_key="insp-done",
                 job_kind="k.done",
-                status=RefinerJobStatus.COMPLETED.value,
+                status=FetcherJobStatus.COMPLETED.value,
                 attempt_count=1,
                 updated_at=t2,
             ),
         )
         db.add(
-            RefinerJob(
+            FetcherJob(
                 dedupe_key="insp-fail",
                 job_kind="k.fail",
-                status=RefinerJobStatus.FAILED.value,
+                status=FetcherJobStatus.FAILED.value,
                 attempt_count=2,
                 max_attempts=2,
                 last_error="handler boom",
@@ -82,10 +82,10 @@ def _seed_mixed_status_rows() -> None:
             ),
         )
         db.add(
-            RefinerJob(
+            FetcherJob(
                 dedupe_key="insp-finalize",
                 job_kind="k.finalize",
-                status=RefinerJobStatus.HANDLER_OK_FINALIZE_FAILED.value,
+                status=FetcherJobStatus.HANDLER_OK_FINALIZE_FAILED.value,
                 attempt_count=1,
                 last_error="refiner_terminalization_failure: db",
                 updated_at=t2,
@@ -116,10 +116,10 @@ def test_fetcher_failed_imports_inspection_default_returns_only_terminal_states(
     assert "k.fail" in kinds
     assert "k.finalize" in kinds
     by_kind = {j["job_kind"]: j for j in jobs}
-    assert by_kind["k.fail"]["status"] == RefinerJobStatus.FAILED.value
-    assert by_kind["k.finalize"]["status"] == RefinerJobStatus.HANDLER_OK_FINALIZE_FAILED.value
-    assert by_kind["k.finalize"]["status"] != RefinerJobStatus.FAILED.value
-    assert by_kind["k.done"]["status"] == RefinerJobStatus.COMPLETED.value
+    assert by_kind["k.fail"]["status"] == FetcherJobStatus.FAILED.value
+    assert by_kind["k.finalize"]["status"] == FetcherJobStatus.HANDLER_OK_FINALIZE_FAILED.value
+    assert by_kind["k.finalize"]["status"] != FetcherJobStatus.FAILED.value
+    assert by_kind["k.done"]["status"] == FetcherJobStatus.COMPLETED.value
     for j in jobs:
         assert "dedupe_key" in j
         assert "attempt_count" in j
@@ -139,7 +139,7 @@ def test_fetcher_failed_imports_inspection_status_filter_includes_pending(client
     body = r.json()
     assert body["default_terminal_only"] is False
     assert len(body["jobs"]) >= 1
-    assert all(j["status"] == RefinerJobStatus.PENDING.value for j in body["jobs"])
+    assert all(j["status"] == FetcherJobStatus.PENDING.value for j in body["jobs"])
 
 
 def test_fetcher_failed_imports_inspection_invalid_status_422(client_with_admin: TestClient) -> None:

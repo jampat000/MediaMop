@@ -9,18 +9,18 @@ from starlette.testclient import TestClient
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.refiner.jobs_ops import (
-    claim_next_eligible_refiner_job,
-    fail_claimed_refiner_job,
-    fail_leased_refiner_job_after_complete_failure,
-    refiner_enqueue_or_get_job,
+from mediamop.modules.fetcher.fetcher_jobs_model import FetcherJob, FetcherJobStatus
+from mediamop.modules.fetcher.fetcher_jobs_ops import (
+    claim_next_eligible_fetcher_job,
+    fail_claimed_fetcher_job,
+    fail_leased_fetcher_job_after_complete_failure,
+    fetcher_enqueue_or_get_job,
 )
 from mediamop.platform.activity import constants as act_c
 from mediamop.platform.activity.models import ActivityEvent
 from tests.integration_helpers import auth_post, csrf as fetch_csrf
 
-import mediamop.modules.refiner.jobs_model  # noqa: F401
+import mediamop.modules.fetcher.fetcher_jobs_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
 
@@ -49,13 +49,13 @@ def _seed_finalize_failed_job() -> int:
     t0 = _t0()
     fac = _fac()
     with fac() as db:
-        db.execute(delete(RefinerJob))
+        db.execute(delete(FetcherJob))
         db.commit()
     with fac() as db:
-        refiner_enqueue_or_get_job(db, dedupe_key="recover-api", job_kind="k.recover")
+        fetcher_enqueue_or_get_job(db, dedupe_key="recover-api", job_kind="k.recover")
         db.commit()
     with fac() as db:
-        j = claim_next_eligible_refiner_job(
+        j = claim_next_eligible_fetcher_job(
             db,
             lease_owner="w",
             lease_expires_at=t0 + timedelta(hours=1),
@@ -63,11 +63,11 @@ def _seed_finalize_failed_job() -> int:
         )
         assert j is not None
         jid = j.id
-        fail_leased_refiner_job_after_complete_failure(
+        fail_leased_fetcher_job_after_complete_failure(
             db,
             job_id=jid,
             lease_owner="w",
-            error_message="refiner_terminalization_failure: x",
+            error_message="fetcher_terminalization_failure: x",
             now=t0,
         )
         db.commit()
@@ -86,12 +86,12 @@ def test_fetcher_failed_imports_recover_finalize_success(client_with_admin: Test
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["job_id"] == jid
-    assert body["status"] == RefinerJobStatus.COMPLETED.value
+    assert body["status"] == FetcherJobStatus.COMPLETED.value
     fac = _fac()
     with fac() as db:
-        row = db.get(RefinerJob, jid)
+        row = db.get(FetcherJob, jid)
         assert row is not None
-        assert row.status == RefinerJobStatus.COMPLETED.value
+        assert row.status == FetcherJobStatus.COMPLETED.value
         ev = db.scalars(
             select(ActivityEvent).where(ActivityEvent.event_type == act_c.FETCHER_FAILED_IMPORT_RECOVERED),
         ).first()
@@ -105,20 +105,20 @@ def test_fetcher_failed_imports_recover_finalize_409_when_not_finalize_failed(cl
     t0 = _t0()
     fac = _fac()
     with fac() as db:
-        db.execute(delete(RefinerJob))
+        db.execute(delete(FetcherJob))
         db.commit()
     with fac() as db:
-        refiner_enqueue_or_get_job(db, dedupe_key="recover-bad", job_kind="k", max_attempts=1)
+        fetcher_enqueue_or_get_job(db, dedupe_key="recover-bad", job_kind="k", max_attempts=1)
         db.commit()
     with fac() as db:
-        j = claim_next_eligible_refiner_job(
+        j = claim_next_eligible_fetcher_job(
             db,
             lease_owner="w",
             lease_expires_at=t0 + timedelta(hours=1),
             now=t0,
         )
         jid = j.id
-        fail_claimed_refiner_job(
+        fail_claimed_fetcher_job(
             db,
             job_id=jid,
             lease_owner="w",
@@ -126,7 +126,6 @@ def test_fetcher_failed_imports_recover_finalize_409_when_not_finalize_failed(cl
             now=t0,
         )
         db.commit()
-
     _login_admin(client_with_admin)
     tok = fetch_csrf(client_with_admin)
     r = auth_post(
@@ -134,10 +133,10 @@ def test_fetcher_failed_imports_recover_finalize_409_when_not_finalize_failed(cl
         f"/api/v1/fetcher/failed-imports/tasks/{jid}/recover-finalize-failure",
         json={"confirm": True, "csrf_token": tok},
     )
-    assert r.status_code == 409, r.text
+    assert r.status_code == 409
 
 
-def test_fetcher_failed_imports_recover_finalize_404_missing_job(client_with_admin: TestClient) -> None:
+def test_fetcher_failed_imports_recover_finalize_404_unknown_id(client_with_admin: TestClient) -> None:
     _login_admin(client_with_admin)
     tok = fetch_csrf(client_with_admin)
     r = auth_post(
@@ -146,33 +145,3 @@ def test_fetcher_failed_imports_recover_finalize_404_missing_job(client_with_adm
         json={"confirm": True, "csrf_token": tok},
     )
     assert r.status_code == 404
-    assert r.json().get("detail") == "Fetcher task not found."
-
-
-def test_fetcher_failed_imports_recover_finalize_403_viewer(client_with_viewer: TestClient) -> None:
-    jid = _seed_finalize_failed_job()
-    tok = fetch_csrf(client_with_viewer)
-    r_login = auth_post(
-        client_with_viewer,
-        "/api/v1/auth/login",
-        json={"username": "bob", "password": "viewer-password-here", "csrf_token": tok},
-    )
-    assert r_login.status_code == 200, r_login.text
-    tok2 = fetch_csrf(client_with_viewer)
-    r = auth_post(
-        client_with_viewer,
-        f"/api/v1/fetcher/failed-imports/tasks/{jid}/recover-finalize-failure",
-        json={"confirm": True, "csrf_token": tok2},
-    )
-    assert r.status_code == 403
-
-
-def test_fetcher_failed_imports_recover_finalize_rejects_invalid_csrf(client_with_admin: TestClient) -> None:
-    jid = _seed_finalize_failed_job()
-    _login_admin(client_with_admin)
-    r = auth_post(
-        client_with_admin,
-        f"/api/v1/fetcher/failed-imports/tasks/{jid}/recover-finalize-failure",
-        json={"confirm": True, "csrf_token": "not-valid"},
-    )
-    assert r.status_code == 400

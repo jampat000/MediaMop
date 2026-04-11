@@ -7,7 +7,7 @@ from starlette.testclient import TestClient
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.refiner.jobs_model import RefinerJob
+from mediamop.modules.fetcher.fetcher_jobs_model import FetcherJob
 from mediamop.platform.activity import constants as act_c
 from mediamop.platform.activity.models import ActivityEvent
 from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import (
@@ -18,6 +18,7 @@ from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import (
 )
 from tests.integration_helpers import auth_post, csrf as fetch_csrf
 
+import mediamop.modules.fetcher.fetcher_jobs_model  # noqa: F401
 import mediamop.modules.refiner.jobs_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
@@ -32,7 +33,7 @@ def _fac():
 def _clear_refiner_jobs() -> None:
     fac = _fac()
     with fac() as db:
-        db.execute(delete(RefinerJob))
+        db.execute(delete(FetcherJob))
         db.commit()
 
 
@@ -94,7 +95,7 @@ def test_fetcher_failed_imports_enqueue_radarr_admin_created_then_already_presen
 
     fac = _fac()
     with fac() as db:
-        n = db.scalar(select(func.count()).select_from(RefinerJob)) or 0
+        n = db.scalar(select(func.count()).select_from(FetcherJob)) or 0
         assert n == 1
         q_rows = db.scalars(
             select(ActivityEvent)
@@ -137,7 +138,7 @@ def test_fetcher_failed_imports_enqueue_sonarr_admin_created_then_already_presen
 
     fac = _fac()
     with fac() as db:
-        n = db.scalar(select(func.count()).select_from(RefinerJob)) or 0
+        n = db.scalar(select(func.count()).select_from(FetcherJob)) or 0
         assert n == 1
 
 
@@ -162,7 +163,7 @@ def test_fetcher_failed_imports_enqueue_radarr_and_sonarr_independent_rows(clien
 
     fac = _fac()
     with fac() as db:
-        assert (db.scalar(select(func.count()).select_from(RefinerJob)) or 0) == 2
+        assert (db.scalar(select(func.count()).select_from(FetcherJob)) or 0) == 2
 
 
 def test_fetcher_failed_imports_enqueue_radarr_anonymous_401(client_with_admin: TestClient) -> None:

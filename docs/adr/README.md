@@ -5,7 +5,6 @@ ADRs in this folder capture **locked** structural and platform choices for this 
 | ADR | Title |
 |-----|--------|
 | [ADR-0001](ADR-0001-repo-structure.md) | Repository and application layout |
-| [ADR-0002](ADR-0002-database-postgresql-alembic.md) | Database and Alembic (SQLite-first) |
+| [ADR-0002](ADR-0002-database-sqlite-alembic.md) | Database and Alembic (SQLite-first) |
 | [ADR-0003](ADR-0003-auth-session-model.md) | Auth and session model |
-
-The **Fetcher** application is a separate repository and is out of scope for these ADRs.
+| [ADR-0007](ADR-0007-module-owned-worker-lanes.md) | Module-owned worker lanes (SQLite) |

@@ -3,23 +3,10 @@
 Radarr and Sonarr each have their own toggle set so defaults and future persistence
 can diverge without a shared blob.
 
-Primary env names use ``MEDIAMOP_FAILED_IMPORT_*``. Legacy ``MEDIAMOP_REFINER_*_CLEANUP_*``
-names for the same toggles are still read when the primary variable for a given toggle
-is unset (empty string only — a set primary always wins). Precedence: **primary first**,
-then legacy, then default off.
-
-Primary pattern:
-
-- ``MEDIAMOP_FAILED_IMPORT_RADARR_CLEANUP_QUALITY``
-- ``MEDIAMOP_FAILED_IMPORT_RADARR_CLEANUP_UNMATCHED``
-- … (same suffixes for Radarr / Sonarr)
-
-Legacy (read only if primary key absent):
-
-- ``MEDIAMOP_REFINER_RADARR_CLEANUP_QUALITY``, etc.
+Env names use ``MEDIAMOP_FAILED_IMPORT_*`` only (see ``.env.example``).
 
 Truthy: ``1``, ``true``, ``yes``, ``on`` (case-insensitive). Falsy: ``0``, ``false``,
-``no``, ``off``, or empty/unset for both primary and legacy.
+``no``, ``off``, or empty/unset.
 """
 
 from __future__ import annotations
@@ -30,22 +17,11 @@ from dataclasses import dataclass
 from mediamop.modules.arr_failed_import.policy import FailedImportCleanupPolicy
 
 
-def _cleanup_toggle(new_key: str, legacy_key: str) -> bool:
-    """Bool toggle: non-empty primary env wins; else non-empty legacy; else False."""
-
-    if (os.environ.get(new_key) or "").strip() != "":
-        raw = (os.environ.get(new_key) or "").strip().lower()
-        if raw in ("1", "true", "yes", "on"):
-            return True
-        if raw in ("0", "false", "no", "off"):
-            return False
-        return False
-    if (os.environ.get(legacy_key) or "").strip() != "":
-        raw = (os.environ.get(legacy_key) or "").strip().lower()
-        if raw in ("1", "true", "yes", "on"):
-            return True
-        if raw in ("0", "false", "no", "off"):
-            return False
+def _env_cleanup_bool(key: str) -> bool:
+    raw = (os.environ.get(key) or "").strip().lower()
+    if raw in ("1", "true", "yes", "on"):
+        return True
+    if raw in ("0", "false", "no", "off"):
         return False
     return False
 
@@ -85,26 +61,24 @@ class FailedImportCleanupSettingsBundle:
 
 
 def _load_radarr_cleanup_settings() -> AppFailedImportCleanupPolicySettings:
-    p_new = "MEDIAMOP_FAILED_IMPORT_RADARR_CLEANUP_"
-    p_leg = "MEDIAMOP_REFINER_RADARR_CLEANUP_"
+    p = "MEDIAMOP_FAILED_IMPORT_RADARR_CLEANUP_"
     return AppFailedImportCleanupPolicySettings(
-        remove_quality_rejections=_cleanup_toggle(p_new + "QUALITY", p_leg + "QUALITY"),
-        remove_unmatched_manual_import_rejections=_cleanup_toggle(p_new + "UNMATCHED", p_leg + "UNMATCHED"),
-        remove_corrupt_imports=_cleanup_toggle(p_new + "CORRUPT", p_leg + "CORRUPT"),
-        remove_failed_downloads=_cleanup_toggle(p_new + "DOWNLOAD_FAILED", p_leg + "DOWNLOAD_FAILED"),
-        remove_failed_imports=_cleanup_toggle(p_new + "IMPORT_FAILED", p_leg + "IMPORT_FAILED"),
+        remove_quality_rejections=_env_cleanup_bool(p + "QUALITY"),
+        remove_unmatched_manual_import_rejections=_env_cleanup_bool(p + "UNMATCHED"),
+        remove_corrupt_imports=_env_cleanup_bool(p + "CORRUPT"),
+        remove_failed_downloads=_env_cleanup_bool(p + "DOWNLOAD_FAILED"),
+        remove_failed_imports=_env_cleanup_bool(p + "IMPORT_FAILED"),
     )
 
 
 def _load_sonarr_cleanup_settings() -> AppFailedImportCleanupPolicySettings:
-    p_new = "MEDIAMOP_FAILED_IMPORT_SONARR_CLEANUP_"
-    p_leg = "MEDIAMOP_REFINER_SONARR_CLEANUP_"
+    p = "MEDIAMOP_FAILED_IMPORT_SONARR_CLEANUP_"
     return AppFailedImportCleanupPolicySettings(
-        remove_quality_rejections=_cleanup_toggle(p_new + "QUALITY", p_leg + "QUALITY"),
-        remove_unmatched_manual_import_rejections=_cleanup_toggle(p_new + "UNMATCHED", p_leg + "UNMATCHED"),
-        remove_corrupt_imports=_cleanup_toggle(p_new + "CORRUPT", p_leg + "CORRUPT"),
-        remove_failed_downloads=_cleanup_toggle(p_new + "DOWNLOAD_FAILED", p_leg + "DOWNLOAD_FAILED"),
-        remove_failed_imports=_cleanup_toggle(p_new + "IMPORT_FAILED", p_leg + "IMPORT_FAILED"),
+        remove_quality_rejections=_env_cleanup_bool(p + "QUALITY"),
+        remove_unmatched_manual_import_rejections=_env_cleanup_bool(p + "UNMATCHED"),
+        remove_corrupt_imports=_env_cleanup_bool(p + "CORRUPT"),
+        remove_failed_downloads=_env_cleanup_bool(p + "DOWNLOAD_FAILED"),
+        remove_failed_imports=_env_cleanup_bool(p + "IMPORT_FAILED"),
     )
 
 

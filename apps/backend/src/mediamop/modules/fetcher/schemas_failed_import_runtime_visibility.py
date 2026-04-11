@@ -1,7 +1,7 @@
 """Pydantic shapes for read-only failed-import automation settings (from config, not liveness).
 
-Exposed on ``GET /api/v1/fetcher/failed-imports/settings``. ``background_job_worker_count`` is the
-configured in-process worker pool that processes ``refiner_jobs`` (including failed-import drives).
+Exposed on ``GET /api/v1/fetcher/failed-imports/settings``. ``background_job_worker_count`` mirrors
+``MEDIAMOP_FETCHER_WORKER_COUNT`` — the in-process pool that processes ``fetcher_jobs`` (failed-import drives).
 """
 
 from __future__ import annotations

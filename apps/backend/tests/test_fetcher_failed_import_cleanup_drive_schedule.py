@@ -10,11 +10,11 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.jobs_model import RefinerJob
-from mediamop.modules.refiner import periodic_cleanup_drive_enqueue as periodic_enqueue_mod
 from mediamop.modules.fetcher.failed_import_cleanup_drive_schedule_specs import (
     failed_import_cleanup_drive_schedule_specs,
 )
+from mediamop.modules.fetcher.fetcher_jobs_model import FetcherJob
+from mediamop.modules.fetcher import periodic_failed_import_cleanup_enqueue as periodic_enqueue_mod
 from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import (
     FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
     enqueue_radarr_failed_import_cleanup_drive_job,
@@ -23,15 +23,16 @@ from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import (
     FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE,
     enqueue_sonarr_failed_import_cleanup_drive_job,
 )
-from mediamop.modules.refiner.failed_import_queue_worker_ports import NoOpFailedImportTimedSchedulePassQueuedPort
-from mediamop.modules.refiner.periodic_cleanup_drive_enqueue import (
-    run_periodic_refiner_cleanup_drive_enqueue,
-    start_refiner_cleanup_drive_enqueue_schedule_tasks,
-    stop_refiner_cleanup_drive_enqueue_schedule_tasks,
+from mediamop.modules.queue_worker.failed_import_worker_ports import NoOpFailedImportTimedSchedulePassQueuedPort
+from mediamop.modules.fetcher.periodic_failed_import_cleanup_enqueue import (
+    run_periodic_fetcher_failed_import_cleanup_enqueue,
+    start_fetcher_failed_import_cleanup_drive_enqueue_tasks,
+    stop_fetcher_failed_import_cleanup_drive_enqueue_tasks,
 )
 from mediamop.platform.activity import constants as act_c
 from mediamop.platform.activity.models import ActivityEvent
 
+import mediamop.modules.fetcher.fetcher_jobs_model  # noqa: F401
 import mediamop.modules.refiner.jobs_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
@@ -139,7 +140,7 @@ def test_periodic_radarr_enqueue_dedupes_across_ticks(session_factory) -> None:
     async def _run() -> None:
         stop = asyncio.Event()
         t0 = asyncio.create_task(
-            run_periodic_refiner_cleanup_drive_enqueue(
+            run_periodic_fetcher_failed_import_cleanup_enqueue(
                 session_factory,
                 stop_event=stop,
                 interval_seconds=0.06,
@@ -155,8 +156,8 @@ def test_periodic_radarr_enqueue_dedupes_across_ticks(session_factory) -> None:
 
     with session_factory() as s:
         n = s.scalar(
-            select(func.count()).select_from(RefinerJob).where(
-                RefinerJob.job_kind == FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
+            select(func.count()).select_from(FetcherJob).where(
+                FetcherJob.job_kind == FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
             ),
         )
     assert n == 1
@@ -171,7 +172,7 @@ def test_periodic_radarr_production_label_one_fetcher_pass_queued_across_ticks(
     async def _run() -> None:
         stop = asyncio.Event()
         t0 = asyncio.create_task(
-            run_periodic_refiner_cleanup_drive_enqueue(
+            run_periodic_fetcher_failed_import_cleanup_enqueue(
                 session_factory,
                 stop_event=stop,
                 interval_seconds=0.06,
@@ -200,7 +201,7 @@ def test_periodic_sonarr_enqueue_runs_independently(session_factory) -> None:
     async def _run() -> None:
         stop = asyncio.Event()
         t0 = asyncio.create_task(
-            run_periodic_refiner_cleanup_drive_enqueue(
+            run_periodic_fetcher_failed_import_cleanup_enqueue(
                 session_factory,
                 stop_event=stop,
                 interval_seconds=0.06,
@@ -216,8 +217,8 @@ def test_periodic_sonarr_enqueue_runs_independently(session_factory) -> None:
 
     with session_factory() as s:
         n = s.scalar(
-            select(func.count()).select_from(RefinerJob).where(
-                RefinerJob.job_kind == FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE,
+            select(func.count()).select_from(FetcherJob).where(
+                FetcherJob.job_kind == FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE,
             ),
         )
     assert n == 1
@@ -233,7 +234,7 @@ def test_start_schedule_tasks_respects_settings_independence(session_factory) ->
             failed_import_sonarr_cleanup_drive_schedule_enabled=False,
         )
         stop = asyncio.Event()
-        tasks = start_refiner_cleanup_drive_enqueue_schedule_tasks(
+        tasks = start_fetcher_failed_import_cleanup_drive_enqueue_tasks(
             session_factory,
             stop_event=stop,
             timed_failed_import_pass_queued=NoOpFailedImportTimedSchedulePassQueuedPort(),
@@ -241,7 +242,7 @@ def test_start_schedule_tasks_respects_settings_independence(session_factory) ->
         )
         assert len(tasks) == 1
         stop.set()
-        await stop_refiner_cleanup_drive_enqueue_schedule_tasks(tasks)
+        await stop_fetcher_failed_import_cleanup_drive_enqueue_tasks(tasks)
 
     asyncio.run(_run())
 
@@ -252,12 +253,12 @@ def test_periodic_enqueue_failure_then_recovery_still_one_row(
 ) -> None:
     monkeypatch.setattr(
         periodic_enqueue_mod,
-        "REFINER_SCHEDULE_ENQUEUE_FAILURE_COOLDOWN_SECONDS",
+        "FETCHER_SCHEDULE_ENQUEUE_FAILURE_COOLDOWN_SECONDS",
         0.05,
     )
     n_ok = 0
 
-    def flaky_enqueue(session: Session) -> RefinerJob:
+    def flaky_enqueue(session: Session) -> FetcherJob:
         nonlocal n_ok
         n_ok += 1
         if n_ok == 1:
@@ -267,7 +268,7 @@ def test_periodic_enqueue_failure_then_recovery_still_one_row(
     async def _run() -> None:
         stop = asyncio.Event()
         t0 = asyncio.create_task(
-            run_periodic_refiner_cleanup_drive_enqueue(
+            run_periodic_fetcher_failed_import_cleanup_enqueue(
                 session_factory,
                 stop_event=stop,
                 interval_seconds=0.06,
@@ -283,8 +284,8 @@ def test_periodic_enqueue_failure_then_recovery_still_one_row(
     assert n_ok >= 2
     with session_factory() as s:
         n = s.scalar(
-            select(func.count()).select_from(RefinerJob).where(
-                RefinerJob.job_kind == FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
+            select(func.count()).select_from(FetcherJob).where(
+                FetcherJob.job_kind == FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
             ),
         )
     assert n == 1
@@ -296,17 +297,17 @@ def test_radarr_enqueue_always_fails_sonarr_schedule_still_enqueues(
 ) -> None:
     monkeypatch.setattr(
         periodic_enqueue_mod,
-        "REFINER_SCHEDULE_ENQUEUE_FAILURE_COOLDOWN_SECONDS",
+        "FETCHER_SCHEDULE_ENQUEUE_FAILURE_COOLDOWN_SECONDS",
         0.05,
     )
 
-    def broken_radarr(_session: Session) -> RefinerJob:
+    def broken_radarr(_session: Session) -> FetcherJob:
         raise RuntimeError("radarr config path broken")
 
     async def _run() -> None:
         stop = asyncio.Event()
         t_radarr = asyncio.create_task(
-            run_periodic_refiner_cleanup_drive_enqueue(
+            run_periodic_fetcher_failed_import_cleanup_enqueue(
                 session_factory,
                 stop_event=stop,
                 interval_seconds=0.06,
@@ -315,7 +316,7 @@ def test_radarr_enqueue_always_fails_sonarr_schedule_still_enqueues(
             ),
         )
         t_sonarr = asyncio.create_task(
-            run_periodic_refiner_cleanup_drive_enqueue(
+            run_periodic_fetcher_failed_import_cleanup_enqueue(
                 session_factory,
                 stop_event=stop,
                 interval_seconds=0.06,
@@ -330,13 +331,13 @@ def test_radarr_enqueue_always_fails_sonarr_schedule_still_enqueues(
     asyncio.run(_run())
     with session_factory() as s:
         r = s.scalar(
-            select(func.count()).select_from(RefinerJob).where(
-                RefinerJob.job_kind == FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
+            select(func.count()).select_from(FetcherJob).where(
+                FetcherJob.job_kind == FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
             ),
         )
         so = s.scalar(
-            select(func.count()).select_from(RefinerJob).where(
-                RefinerJob.job_kind == FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE,
+            select(func.count()).select_from(FetcherJob).where(
+                FetcherJob.job_kind == FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE,
             ),
         )
     assert r == 0
@@ -348,7 +349,7 @@ def test_stop_schedule_tasks_does_not_hang(session_factory) -> None:
         stop = asyncio.Event()
         tasks = [
             asyncio.create_task(
-                run_periodic_refiner_cleanup_drive_enqueue(
+                run_periodic_fetcher_failed_import_cleanup_enqueue(
                     session_factory,
                     stop_event=stop,
                     interval_seconds=60.0,
@@ -359,7 +360,7 @@ def test_stop_schedule_tasks_does_not_hang(session_factory) -> None:
         ]
         stop.set()
         await asyncio.wait_for(
-            stop_refiner_cleanup_drive_enqueue_schedule_tasks(tasks),
+            stop_fetcher_failed_import_cleanup_drive_enqueue_tasks(tasks),
             timeout=5.0,
         )
 

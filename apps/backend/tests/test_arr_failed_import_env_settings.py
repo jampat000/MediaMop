@@ -63,21 +63,13 @@ def test_load_bundle_reads_primary_failed_import_env(monkeypatch: pytest.MonkeyP
     assert sp.remove_corrupt_imports is False
 
 
-def test_load_bundle_reads_legacy_refiner_cleanup_env_when_primary_unset(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_legacy_refiner_cleanup_env_vars_are_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
     _clear_failed_import_cleanup_env(monkeypatch)
     monkeypatch.setenv("MEDIAMOP_REFINER_RADARR_CLEANUP_CORRUPT", "1")
     monkeypatch.setenv("MEDIAMOP_REFINER_SONARR_CLEANUP_IMPORT_FAILED", "true")
     b = load_failed_import_cleanup_settings_bundle()
-    assert b.radarr_policy().remove_corrupt_imports is True
-    assert b.sonarr_policy().remove_failed_imports is True
-
-
-def test_primary_cleanup_env_wins_over_legacy_when_both_set(monkeypatch: pytest.MonkeyPatch) -> None:
-    _clear_failed_import_cleanup_env(monkeypatch)
-    monkeypatch.setenv("MEDIAMOP_FAILED_IMPORT_RADARR_CLEANUP_CORRUPT", "0")
-    monkeypatch.setenv("MEDIAMOP_REFINER_RADARR_CLEANUP_CORRUPT", "1")
-    b = load_failed_import_cleanup_settings_bundle()
     assert b.radarr_policy().remove_corrupt_imports is False
+    assert b.sonarr_policy().remove_failed_imports is False
 
 
 def test_pending_unknown_remain_non_destructive_via_resolved_radarr_policy() -> None:
@@ -100,11 +92,13 @@ def test_mediomop_settings_radarr_and_sonarr_policies_delegate_to_bundle() -> No
     assert s.sonarr_failed_import_cleanup_policy().remove_quality_rejections is False
 
 
-def test_media_mop_settings_failed_import_schedule_reads_legacy_env(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_media_mop_settings_failed_import_schedule_ignores_legacy_refiner_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.delenv("MEDIAMOP_FAILED_IMPORT_RADARR_CLEANUP_DRIVE_SCHEDULE_ENABLED", raising=False)
     monkeypatch.delenv("MEDIAMOP_FAILED_IMPORT_RADARR_CLEANUP_DRIVE_SCHEDULE_INTERVAL_SECONDS", raising=False)
     monkeypatch.setenv("MEDIAMOP_REFINER_RADARR_CLEANUP_DRIVE_SCHEDULE_ENABLED", "1")
     monkeypatch.setenv("MEDIAMOP_REFINER_RADARR_CLEANUP_DRIVE_SCHEDULE_INTERVAL_SECONDS", "7200")
     s = MediaMopSettings.load()
-    assert s.failed_import_radarr_cleanup_drive_schedule_enabled is True
-    assert s.failed_import_radarr_cleanup_drive_schedule_interval_seconds == 7200
+    assert s.failed_import_radarr_cleanup_drive_schedule_enabled is False
+    assert s.failed_import_radarr_cleanup_drive_schedule_interval_seconds == 3600

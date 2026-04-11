@@ -1,9 +1,4 @@
-"""Refiner-only in-process asyncio worker loop.
-
-Claims rows from ``refiner_jobs`` only, dispatches by ``job_kind``, then completes or fails via
-:class:`mediamop.modules.refiner.jobs_ops`. Fetcher background work uses ``fetcher_jobs`` and
-:class:`mediamop.modules.fetcher.fetcher_worker_loop` instead.
-"""
+"""Fetcher in-process asyncio worker loop — claims rows from ``fetcher_jobs`` only."""
 
 from __future__ import annotations
 
@@ -20,26 +15,26 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.queue_worker.job_kind_boundaries import (
-    job_kind_forbidden_on_refiner_lane,
-    validate_refiner_worker_handler_registry,
+    job_kind_forbidden_on_fetcher_worker,
+    validate_fetcher_worker_handler_registry_keys,
 )
-from mediamop.modules.refiner.jobs_ops import (
-    claim_next_eligible_refiner_job,
-    complete_claimed_refiner_job,
-    fail_claimed_refiner_job,
-    fail_leased_refiner_job_after_complete_failure,
+from mediamop.modules.fetcher.fetcher_jobs_ops import (
+    claim_next_eligible_fetcher_job,
+    complete_claimed_fetcher_job,
+    fail_claimed_fetcher_job,
+    fail_leased_fetcher_job_after_complete_failure,
 )
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_REFINER_JOB_LEASE_SECONDS = 300
-REFINER_WORKER_IDLE_SLEEP_SECONDS = 5.0
-REFINER_WORKER_TICK_ERROR_BACKOFF_SECONDS = 1.0
-REFINER_TERMINALIZATION_FAILURE_PREFIX = "refiner_terminalization_failure: "
+DEFAULT_FETCHER_JOB_LEASE_SECONDS = 300
+FETCHER_WORKER_IDLE_SLEEP_SECONDS = 5.0
+FETCHER_WORKER_TICK_ERROR_BACKOFF_SECONDS = 1.0
+FETCHER_TERMINALIZATION_FAILURE_PREFIX = "fetcher_terminalization_failure: "
 
 
 @dataclass(frozen=True, slots=True)
-class RefinerJobWorkContext:
+class FetcherJobWorkContext:
     """Immutable view passed to job handlers after a successful claim (outside the claim txn)."""
 
     id: int
@@ -48,40 +43,36 @@ class RefinerJobWorkContext:
     lease_owner: str
 
 
-class RefinerNoHandlerForJobKind(LookupError):
+class FetcherNoHandlerForJobKind(LookupError):
     """Raised when ``job_kind`` has no registered handler (becomes ``fail_claimed`` path)."""
 
     def __init__(self, job_kind: str) -> None:
         self.job_kind = job_kind
-        super().__init__(f"no Refiner job handler registered for job_kind={job_kind!r}")
+        super().__init__(f"no Fetcher job handler registered for job_kind={job_kind!r}")
 
 
-def default_refiner_job_handler_registry() -> dict[str, Callable[[RefinerJobWorkContext], None]]:
+def default_fetcher_job_handler_registry() -> dict[str, Callable[[FetcherJobWorkContext], None]]:
     """Empty registry for tests or callers that inject handlers explicitly."""
 
     return {}
 
 
-def process_one_refiner_job(
+def process_one_fetcher_job(
     session_factory: sessionmaker[Session],
     *,
     lease_owner: str,
-    job_handlers: Mapping[str, Callable[[RefinerJobWorkContext], None]],
-    lease_seconds: int = DEFAULT_REFINER_JOB_LEASE_SECONDS,
+    job_handlers: Mapping[str, Callable[[FetcherJobWorkContext], None]],
+    lease_seconds: int = DEFAULT_FETCHER_JOB_LEASE_SECONDS,
     now: datetime | None = None,
 ) -> Literal["idle", "processed"]:
-    """Claim at most one job, run handler, then complete or fail via :mod:`jobs_ops`.
-
-    Returns ``\"idle\"`` when no row was claimable; ``\"processed\"`` when a row was leased and
-    finished (success or handler failure).
-    """
+    """Claim at most one job, run handler, then complete or fail via :mod:`fetcher_jobs_ops`."""
 
     when = now if now is not None else datetime.now(timezone.utc)
     lease_until = when + timedelta(seconds=lease_seconds)
 
     with session_factory() as session:
         with session.begin():
-            job = claim_next_eligible_refiner_job(
+            job = claim_next_eligible_fetcher_job(
                 session,
                 lease_owner=lease_owner,
                 lease_expires_at=lease_until,
@@ -89,22 +80,22 @@ def process_one_refiner_job(
             )
             if job is None:
                 return "idle"
-            ctx = RefinerJobWorkContext(
+            ctx = FetcherJobWorkContext(
                 id=job.id,
                 job_kind=job.job_kind,
                 payload_json=job.payload_json,
                 lease_owner=lease_owner,
             )
 
-    if job_kind_forbidden_on_refiner_lane(ctx.job_kind):
+    if job_kind_forbidden_on_fetcher_worker(ctx.job_kind):
         err_text = (
-            "refiner worker refused job_kind reserved for another module lane: "
+            "fetcher worker refused job_kind reserved for another module lane: "
             f"{ctx.job_kind!r} (row id={ctx.id}); use the correct table + workers for that prefix"
         )[:10_000]
         try:
             with session_factory() as session:
                 with session.begin():
-                    fail_claimed_refiner_job(
+                    fail_claimed_fetcher_job(
                         session,
                         job_id=ctx.id,
                         lease_owner=ctx.lease_owner,
@@ -113,19 +104,19 @@ def process_one_refiner_job(
                     )
         except Exception:
             logger.exception(
-                "Refiner fail_claimed after cross-lane job_kind guard job_id=%s",
+                "Fetcher fail_claimed after cross-lane job_kind guard job_id=%s",
                 ctx.id,
             )
         return "processed"
 
     handler = job_handlers.get(ctx.job_kind)
     if handler is None:
-        exc: BaseException = RefinerNoHandlerForJobKind(ctx.job_kind)
+        exc: BaseException = FetcherNoHandlerForJobKind(ctx.job_kind)
         err_text = str(exc)[:10_000]
         try:
             with session_factory() as session:
                 with session.begin():
-                    fail_claimed_refiner_job(
+                    fail_claimed_fetcher_job(
                         session,
                         job_id=ctx.id,
                         lease_owner=ctx.lease_owner,
@@ -134,7 +125,7 @@ def process_one_refiner_job(
                     )
         except Exception:
             logger.exception(
-                "Refiner fail_claimed_refiner_job failed after missing handler job_id=%s",
+                "Fetcher fail_claimed_fetcher_job failed after missing handler job_id=%s",
                 ctx.id,
             )
         return "processed"
@@ -142,12 +133,12 @@ def process_one_refiner_job(
     try:
         handler(ctx)
     except Exception as exc:
-        logger.exception("Refiner job handler failed for job_id=%s kind=%s", ctx.id, ctx.job_kind)
+        logger.exception("Fetcher job handler failed for job_id=%s kind=%s", ctx.id, ctx.job_kind)
         err_text = str(exc)[:10_000]
         try:
             with session_factory() as session:
                 with session.begin():
-                    fail_claimed_refiner_job(
+                    fail_claimed_fetcher_job(
                         session,
                         job_id=ctx.id,
                         lease_owner=ctx.lease_owner,
@@ -156,7 +147,7 @@ def process_one_refiner_job(
                     )
         except Exception:
             logger.exception(
-                "Refiner fail_claimed_refiner_job failed after handler error job_id=%s",
+                "Fetcher fail_claimed_fetcher_job failed after handler error job_id=%s",
                 ctx.id,
             )
         return "processed"
@@ -166,7 +157,7 @@ def process_one_refiner_job(
     try:
         with session_factory() as session:
             with session.begin():
-                ok = complete_claimed_refiner_job(
+                ok = complete_claimed_fetcher_job(
                     session,
                     job_id=ctx.id,
                     lease_owner=ctx.lease_owner,
@@ -174,18 +165,18 @@ def process_one_refiner_job(
                 )
                 if not ok:
                     complete_ok = False
-                    complete_err = "complete_claimed_refiner_job refused (lease/state mismatch)"
+                    complete_err = "complete_claimed_fetcher_job refused (lease/state mismatch)"
     except Exception as exc:
         complete_ok = False
-        logger.exception("Refiner complete_claimed_refiner_job failed job_id=%s", ctx.id)
+        logger.exception("Fetcher complete_claimed_fetcher_job failed job_id=%s", ctx.id)
         complete_err = str(exc)
 
     if not complete_ok and complete_err is not None:
-        bounded = (REFINER_TERMINALIZATION_FAILURE_PREFIX + complete_err)[:10_000]
+        bounded = (FETCHER_TERMINALIZATION_FAILURE_PREFIX + complete_err)[:10_000]
         try:
             with session_factory() as session:
                 with session.begin():
-                    recovered = fail_leased_refiner_job_after_complete_failure(
+                    recovered = fail_leased_fetcher_job_after_complete_failure(
                         session,
                         job_id=ctx.id,
                         lease_owner=ctx.lease_owner,
@@ -194,39 +185,39 @@ def process_one_refiner_job(
                     )
             if not recovered:
                 logger.warning(
-                    "Refiner terminalization recovery did not apply job_id=%s owner=%s",
+                    "Fetcher terminalization recovery did not apply job_id=%s owner=%s",
                     ctx.id,
                     ctx.lease_owner,
                 )
         except Exception:
             logger.exception(
-                "Refiner fail_leased_refiner_job_after_complete_failure failed job_id=%s",
+                "Fetcher fail_leased_fetcher_job_after_complete_failure failed job_id=%s",
                 ctx.id,
             )
     return "processed"
 
 
 def _lease_owner(worker_index: int) -> str:
-    return f"{socket.gethostname()}-{os.getpid()}-w{worker_index}"
+    return f"{socket.gethostname()}-{os.getpid()}-fetcher-w{worker_index}"
 
 
-async def refiner_worker_run_forever(
+async def fetcher_worker_run_forever(
     session_factory: sessionmaker[Session],
     *,
     worker_index: int,
     stop_event: asyncio.Event,
-    job_handlers: Mapping[str, Callable[[RefinerJobWorkContext], None]] | None = None,
-    idle_sleep_seconds: float = REFINER_WORKER_IDLE_SLEEP_SECONDS,
-    lease_seconds: int = DEFAULT_REFINER_JOB_LEASE_SECONDS,
+    job_handlers: Mapping[str, Callable[[FetcherJobWorkContext], None]] | None = None,
+    idle_sleep_seconds: float = FETCHER_WORKER_IDLE_SLEEP_SECONDS,
+    lease_seconds: int = DEFAULT_FETCHER_JOB_LEASE_SECONDS,
 ) -> None:
-    """One asyncio task: repeatedly process jobs until ``stop_event`` is set."""
+    """One asyncio task: repeatedly process Fetcher jobs until ``stop_event`` is set."""
 
     owner = _lease_owner(worker_index)
-    handlers = job_handlers if job_handlers is not None else default_refiner_job_handler_registry()
+    handlers = job_handlers if job_handlers is not None else default_fetcher_job_handler_registry()
     while not stop_event.is_set():
 
         def _tick() -> Literal["idle", "processed"]:
-            return process_one_refiner_job(
+            return process_one_fetcher_job(
                 session_factory,
                 lease_owner=owner,
                 job_handlers=handlers,
@@ -238,8 +229,8 @@ async def refiner_worker_run_forever(
         except asyncio.CancelledError:
             raise
         except Exception:
-            logger.exception("Refiner worker tick crashed worker_index=%s", worker_index)
-            await asyncio.sleep(REFINER_WORKER_TICK_ERROR_BACKOFF_SECONDS)
+            logger.exception("Fetcher worker tick crashed worker_index=%s", worker_index)
+            await asyncio.sleep(FETCHER_WORKER_TICK_ERROR_BACKOFF_SECONDS)
             continue
 
         if stop_event.is_set():
@@ -253,65 +244,54 @@ async def refiner_worker_run_forever(
                 if remaining <= 0:
                     break
                 await asyncio.sleep(min(0.25, remaining))
-        # processed: tight spin for back-to-back queue drain
 
 
-def start_refiner_worker_background_tasks(
+def start_fetcher_worker_background_tasks(
     session_factory: sessionmaker[Session],
     settings: MediaMopSettings,
     *,
-    job_handlers: Mapping[str, Callable[[RefinerJobWorkContext], None]] | None = None,
+    job_handlers: Mapping[str, Callable[[FetcherJobWorkContext], None]] | None = None,
     stop_event: asyncio.Event | None = None,
 ) -> tuple[asyncio.Event, list[asyncio.Task[None]]]:
-    """Create one asyncio task per configured Refiner worker (``refiner_worker_count`` from settings).
+    """Create one asyncio task per configured Fetcher worker (``fetcher_worker_count`` from settings)."""
 
-    When ``refiner_worker_count > 0``, callers must pass ``job_handlers`` (built at the application
-    composition root so Refiner never imports Fetcher).
-
-    Modes:
-
-    - **0** — Returns an empty task list (workers intentionally off; lifespan still stops cleanly).
-    - **1** — Supported default.
-    - **>1** — Guarded only: concurrent tasks compete under SQLite single-writer rules; this is
-      **not** documented as the normal rollout target (see worker-mode tests and logs).
-    """
-
-    if settings.refiner_worker_count > 1:
+    if settings.fetcher_worker_count > 1:
         logger.warning(
-            "Refiner refiner_worker_count=%s: multi-worker is a guarded capability under SQLite "
+            "Fetcher fetcher_worker_count=%s: multi-worker is a guarded capability under SQLite "
             "(single-writer database). Default remains 1; validate behavior before treating "
             ">1 as normal rollout.",
-            settings.refiner_worker_count,
+            settings.fetcher_worker_count,
         )
 
-    handlers: Mapping[str, Callable[[RefinerJobWorkContext], None]]
+    handlers: Mapping[str, Callable[[FetcherJobWorkContext], None]]
     if job_handlers is not None:
         handlers = job_handlers
-    elif settings.refiner_worker_count == 0:
+    elif settings.fetcher_worker_count == 0:
         handlers = {}
     else:
-        msg = "job_handlers is required when refiner_worker_count > 0"
+        msg = "job_handlers is required when fetcher_worker_count > 0"
         raise TypeError(msg)
 
-    validate_refiner_worker_handler_registry(handlers)
+    if settings.fetcher_worker_count > 0 and handlers:
+        validate_fetcher_worker_handler_registry_keys(handlers)
 
     stop = stop_event if stop_event is not None else asyncio.Event()
     tasks: list[asyncio.Task[None]] = []
-    for i in range(settings.refiner_worker_count):
+    for i in range(settings.fetcher_worker_count):
         t = asyncio.create_task(
-            refiner_worker_run_forever(
+            fetcher_worker_run_forever(
                 session_factory,
                 worker_index=i,
                 stop_event=stop,
                 job_handlers=handlers,
             ),
-            name=f"refiner-worker-{i}",
+            name=f"fetcher-worker-{i}",
         )
         tasks.append(t)
     return stop, tasks
 
 
-async def stop_refiner_worker_background_tasks(
+async def stop_fetcher_worker_background_tasks(
     stop: asyncio.Event,
     tasks: list[asyncio.Task[None]],
 ) -> None:

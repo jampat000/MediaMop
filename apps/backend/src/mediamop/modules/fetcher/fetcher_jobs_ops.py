@@ -1,4 +1,4 @@
-"""Atomic claim / lease / complete / fail for :class:`~mediamop.modules.refiner.jobs_model.RefinerJob`.
+"""Atomic claim / lease / complete / fail for :class:`~mediamop.modules.fetcher.fetcher_jobs_model.FetcherJob`.
 
 SQLite: single-statement ``UPDATE … WHERE id = (SELECT … LIMIT 1)`` makes claims atomic under
 the one-writer rule. Callers should keep transactions short.
@@ -13,16 +13,16 @@ from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from mediamop.modules.queue_worker.job_kind_boundaries import validate_refiner_enqueue_job_kind
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.modules.fetcher.fetcher_jobs_model import FetcherJob, FetcherJobStatus
+from mediamop.modules.queue_worker.job_kind_boundaries import validate_fetcher_enqueue_job_kind
 
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-_CLAIM_NEXT_SQL = """
-UPDATE refiner_jobs
+_CLAIM_NEXT_FETCHER_SQL = """
+UPDATE fetcher_jobs
 SET
   status = :leased,
   lease_owner = :owner,
@@ -30,7 +30,7 @@ SET
   updated_at = CURRENT_TIMESTAMP,
   attempt_count = attempt_count + 1
 WHERE id = (
-  SELECT id FROM refiner_jobs
+  SELECT id FROM fetcher_jobs
   WHERE status = :pending
      OR (
        status = :leased
@@ -43,27 +43,27 @@ RETURNING id
 """
 
 
-def refiner_enqueue_or_get_job(
+def fetcher_enqueue_or_get_job(
     session: Session,
     *,
     dedupe_key: str,
     job_kind: str,
     payload_json: str | None = None,
     max_attempts: int = 3,
-) -> RefinerJob:
+) -> FetcherJob:
     """Insert a ``pending`` job or return the existing row for ``dedupe_key``."""
 
-    validate_refiner_enqueue_job_kind(job_kind)
+    validate_fetcher_enqueue_job_kind(job_kind)
 
-    existing = session.scalar(select(RefinerJob).where(RefinerJob.dedupe_key == dedupe_key))
+    existing = session.scalar(select(FetcherJob).where(FetcherJob.dedupe_key == dedupe_key))
     if existing is not None:
         return existing
 
-    row = RefinerJob(
+    row = FetcherJob(
         dedupe_key=dedupe_key,
         job_kind=job_kind,
         payload_json=payload_json,
-        status=RefinerJobStatus.PENDING.value,
+        status=FetcherJobStatus.PENDING.value,
         max_attempts=max(1, max_attempts),
     )
     with session.begin_nested():
@@ -75,20 +75,20 @@ def refiner_enqueue_or_get_job(
         else:
             return row
 
-    found = session.scalar(select(RefinerJob).where(RefinerJob.dedupe_key == dedupe_key))
+    found = session.scalar(select(FetcherJob).where(FetcherJob.dedupe_key == dedupe_key))
     if found is None:
-        msg = "refiner job dedupe race: row missing after IntegrityError"
+        msg = "fetcher job dedupe race: row missing after IntegrityError"
         raise RuntimeError(msg)
     return found
 
 
-def claim_next_eligible_refiner_job(
+def claim_next_eligible_fetcher_job(
     session: Session,
     *,
     lease_owner: str,
     lease_expires_at: datetime,
     now: datetime | None = None,
-) -> RefinerJob | None:
+) -> FetcherJob | None:
     """Atomically lease the next ``pending`` or **expired** ``leased`` row.
 
     Increments ``attempt_count`` on every successful claim (including reclaim).
@@ -97,10 +97,10 @@ def claim_next_eligible_refiner_job(
 
     when = now if now is not None else _utc_now()
     result = session.execute(
-        text(_CLAIM_NEXT_SQL),
+        text(_CLAIM_NEXT_FETCHER_SQL),
         {
-            "leased": RefinerJobStatus.LEASED.value,
-            "pending": RefinerJobStatus.PENDING.value,
+            "leased": FetcherJobStatus.LEASED.value,
+            "pending": FetcherJobStatus.PENDING.value,
             "owner": lease_owner,
             "lease_exp": lease_expires_at,
             "now": when,
@@ -110,10 +110,10 @@ def claim_next_eligible_refiner_job(
     if row is None:
         return None
     job_id = int(row[0])
-    return session.scalars(select(RefinerJob).where(RefinerJob.id == job_id)).one()
+    return session.scalars(select(FetcherJob).where(FetcherJob.id == job_id)).one()
 
 
-def complete_claimed_refiner_job(
+def complete_claimed_fetcher_job(
     session: Session,
     *,
     job_id: int,
@@ -123,24 +123,24 @@ def complete_claimed_refiner_job(
     """Mark ``completed`` only when ``lease_owner`` matches and lease is still valid."""
 
     when = now if now is not None else _utc_now()
-    job = session.scalars(select(RefinerJob).where(RefinerJob.id == job_id)).one_or_none()
+    job = session.scalars(select(FetcherJob).where(FetcherJob.id == job_id)).one_or_none()
     if job is None:
         return False
-    if job.status != RefinerJobStatus.LEASED.value:
+    if job.status != FetcherJobStatus.LEASED.value:
         return False
     if job.lease_owner != lease_owner:
         return False
     if job.lease_expires_at is None or job.lease_expires_at < when:
         return False
 
-    job.status = RefinerJobStatus.COMPLETED.value
+    job.status = FetcherJobStatus.COMPLETED.value
     job.lease_owner = None
     job.lease_expires_at = None
     session.flush()
     return True
 
 
-def fail_claimed_refiner_job(
+def fail_claimed_fetcher_job(
     session: Session,
     *,
     job_id: int,
@@ -151,10 +151,10 @@ def fail_claimed_refiner_job(
     """After a failed processing attempt: requeue as ``pending`` or mark ``failed`` if attempts exhausted."""
 
     when = now if now is not None else _utc_now()
-    job = session.scalars(select(RefinerJob).where(RefinerJob.id == job_id)).one_or_none()
+    job = session.scalars(select(FetcherJob).where(FetcherJob.id == job_id)).one_or_none()
     if job is None:
         return False
-    if job.status != RefinerJobStatus.LEASED.value:
+    if job.status != FetcherJobStatus.LEASED.value:
         return False
     if job.lease_owner != lease_owner:
         return False
@@ -165,14 +165,14 @@ def fail_claimed_refiner_job(
     job.lease_owner = None
     job.lease_expires_at = None
     if job.attempt_count >= job.max_attempts:
-        job.status = RefinerJobStatus.FAILED.value
+        job.status = FetcherJobStatus.FAILED.value
     else:
-        job.status = RefinerJobStatus.PENDING.value
+        job.status = FetcherJobStatus.PENDING.value
     session.flush()
     return True
 
 
-def fail_leased_refiner_job_after_complete_failure(
+def fail_leased_fetcher_job_after_complete_failure(
     session: Session,
     *,
     job_id: int,
@@ -180,25 +180,20 @@ def fail_leased_refiner_job_after_complete_failure(
     error_message: str,
     now: datetime | None = None,
 ) -> bool:
-    """Terminal ``handler_ok_finalize_failed`` when the handler succeeded but finalize did not.
-
-    Same lease guards as :func:`complete_claimed_refiner_job`. Clears the lease, sets
-    ``last_error``, and does **not** change ``attempt_count``. Not claimable by the normal worker
-    claim path (distinct from ordinary ``failed`` after handler errors).
-    """
+    """Terminal ``handler_ok_finalize_failed`` when the handler succeeded but finalize did not."""
 
     when = now if now is not None else _utc_now()
-    job = session.scalars(select(RefinerJob).where(RefinerJob.id == job_id)).one_or_none()
+    job = session.scalars(select(FetcherJob).where(FetcherJob.id == job_id)).one_or_none()
     if job is None:
         return False
-    if job.status != RefinerJobStatus.LEASED.value:
+    if job.status != FetcherJobStatus.LEASED.value:
         return False
     if job.lease_owner != lease_owner:
         return False
     if job.lease_expires_at is None or job.lease_expires_at < when:
         return False
 
-    job.status = RefinerJobStatus.HANDLER_OK_FINALIZE_FAILED.value
+    job.status = FetcherJobStatus.HANDLER_OK_FINALIZE_FAILED.value
     job.lease_owner = None
     job.lease_expires_at = None
     job.last_error = error_message[:10_000]
@@ -213,18 +208,13 @@ def recover_handler_ok_finalize_failed_to_completed(
     recovered_by_label: str,
     now: datetime | None = None,
 ) -> Literal["ok", "not_found", "wrong_status"]:
-    """Operator recovery: mark ``completed`` without re-running the handler.
-
-    Only rows in ``handler_ok_finalize_failed`` are eligible. Appends an audit line to
-    ``last_error`` (preserving prior finalize context), clears any lease fields, leaves
-    ``attempt_count`` unchanged.
-    """
+    """Operator recovery: mark ``completed`` without re-running the handler."""
 
     when = now if now is not None else _utc_now()
-    job = session.scalars(select(RefinerJob).where(RefinerJob.id == job_id)).one_or_none()
+    job = session.scalars(select(FetcherJob).where(FetcherJob.id == job_id)).one_or_none()
     if job is None:
         return "not_found"
-    if job.status != RefinerJobStatus.HANDLER_OK_FINALIZE_FAILED.value:
+    if job.status != FetcherJobStatus.HANDLER_OK_FINALIZE_FAILED.value:
         return "wrong_status"
 
     prev = (job.last_error or "").strip()
@@ -235,7 +225,7 @@ def recover_handler_ok_finalize_failed_to_completed(
     )
     new_err = f"{prev}\n--- {note}" if prev else note
     job.last_error = new_err[:10_000]
-    job.status = RefinerJobStatus.COMPLETED.value
+    job.status = FetcherJobStatus.COMPLETED.value
     job.lease_owner = None
     job.lease_expires_at = None
     session.flush()

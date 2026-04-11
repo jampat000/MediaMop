@@ -12,6 +12,11 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.fetcher.failed_import_queue_job_handlers import build_failed_import_queue_job_handlers
+from mediamop.modules.fetcher import fetcher_worker_loop as fetcher_worker_loop_mod
+from mediamop.modules.fetcher.fetcher_worker_loop import (
+    start_fetcher_worker_background_tasks,
+    stop_fetcher_worker_background_tasks,
+)
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.worker_limits import clamp_refiner_worker_count
@@ -24,6 +29,7 @@ from mediamop.modules.refiner.worker_loop import (
     stop_refiner_worker_background_tasks,
 )
 
+import mediamop.modules.fetcher.fetcher_jobs_model  # noqa: F401
 import mediamop.modules.refiner.jobs_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
@@ -56,10 +62,16 @@ def session_factory(jobs_engine):
     )
 
 
-def test_refiner_worker_count_defaults_to_one(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_refiner_worker_count_defaults_to_zero(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("MEDIAMOP_REFINER_WORKER_COUNT", raising=False)
     s = MediaMopSettings.load()
-    assert s.refiner_worker_count == 1
+    assert s.refiner_worker_count == 0
+
+
+def test_fetcher_worker_count_defaults_to_one(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("MEDIAMOP_FETCHER_WORKER_COUNT", raising=False)
+    s = MediaMopSettings.load()
+    assert s.fetcher_worker_count == 1
 
 
 def test_refiner_worker_count_clamps_low_and_high(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -162,11 +174,11 @@ def test_spawn_worker_task_count_matches_settings(
     failed_import_queue_worker_runtime_bundle,
 ) -> None:
     monkeypatch.setattr(
-        "mediamop.modules.refiner.worker_loop.REFINER_WORKER_IDLE_SLEEP_SECONDS",
+        "mediamop.modules.fetcher.fetcher_worker_loop.FETCHER_WORKER_IDLE_SLEEP_SECONDS",
         0.05,
     )
     base = MediaMopSettings.load()
-    settings = replace(base, refiner_worker_count=2)
+    settings = replace(base, fetcher_worker_count=2)
 
     async def _run() -> None:
         handlers = build_failed_import_queue_job_handlers(
@@ -174,14 +186,14 @@ def test_spawn_worker_task_count_matches_settings(
             session_factory,
             failed_import_runtime=failed_import_queue_worker_runtime_bundle,
         )
-        stop, tasks = start_refiner_worker_background_tasks(
+        stop, tasks = start_fetcher_worker_background_tasks(
             session_factory,
             settings,
             job_handlers=handlers,
         )
         assert len(tasks) == 2
         stop.set()
-        await stop_refiner_worker_background_tasks(stop, tasks)
+        await stop_fetcher_worker_background_tasks(stop, tasks)
 
     asyncio.run(_run())
 
@@ -445,12 +457,12 @@ def test_start_and_stop_workers_completes_within_timeout(
     failed_import_queue_worker_runtime_bundle,
 ) -> None:
     monkeypatch.setattr(
-        refiner_worker_loop_mod,
-        "REFINER_WORKER_IDLE_SLEEP_SECONDS",
+        fetcher_worker_loop_mod,
+        "FETCHER_WORKER_IDLE_SLEEP_SECONDS",
         0.05,
     )
     base = MediaMopSettings.load()
-    settings = replace(base, refiner_worker_count=1)
+    settings = replace(base, fetcher_worker_count=1)
 
     async def _run() -> None:
         handlers = build_failed_import_queue_job_handlers(
@@ -458,14 +470,14 @@ def test_start_and_stop_workers_completes_within_timeout(
             session_factory,
             failed_import_runtime=failed_import_queue_worker_runtime_bundle,
         )
-        stop, tasks = start_refiner_worker_background_tasks(
+        stop, tasks = start_fetcher_worker_background_tasks(
             session_factory,
             settings,
             job_handlers=handlers,
         )
         stop.set()
         await asyncio.wait_for(
-            stop_refiner_worker_background_tasks(stop, tasks),
+            stop_fetcher_worker_background_tasks(stop, tasks),
             timeout=5.0,
         )
 

@@ -17,6 +17,7 @@ from mediamop.modules.arr_failed_import.env_settings import (
     load_failed_import_cleanup_settings_bundle,
 )
 from mediamop.modules.arr_failed_import.policy import FailedImportCleanupPolicy
+from mediamop.modules.fetcher.fetcher_worker_limits import clamp_fetcher_worker_count
 from mediamop.modules.refiner.worker_limits import clamp_refiner_worker_count
 
 
@@ -62,26 +63,6 @@ def _clamp_failed_import_cleanup_drive_schedule_interval_seconds(n: int) -> int:
     return max(60, min(n, 7 * 24 * 3600))
 
 
-def _failed_import_env_bool_prefer_new(new_name: str, legacy_name: str, default: bool) -> bool:
-    """Non-empty primary env wins; else non-empty legacy; else ``default``."""
-
-    if (os.environ.get(new_name) or "").strip() != "":
-        return _env_bool(new_name, default)
-    if (os.environ.get(legacy_name) or "").strip() != "":
-        return _env_bool(legacy_name, default)
-    return default
-
-
-def _failed_import_env_int_prefer_new(new_name: str, legacy_name: str, default: int) -> int:
-    """Non-empty primary env wins; else non-empty legacy; else ``default``."""
-
-    if (os.environ.get(new_name) or "").strip() != "":
-        return _env_int(new_name, default)
-    if (os.environ.get(legacy_name) or "").strip() != "":
-        return _env_int(legacy_name, default)
-    return default
-
-
 @dataclass(frozen=True, slots=True)
 class MediaMopSettings:
     """Runtime configuration loaded at process start."""
@@ -109,12 +90,15 @@ class MediaMopSettings:
     sqlalchemy_database_url: str
     fetcher_base_url: str | None
     failed_import_cleanup_env: FailedImportCleanupSettingsBundle
-    # 0 = no in-process Refiner workers; 1 = default; >1 = guarded (see refiner.worker_limits).
+    # 0 = no in-process Fetcher workers; 1 = default for failed-import drives; >1 = guarded (fetcher_worker_limits).
+    fetcher_worker_count: int
+    # 0 = no in-process Refiner workers (Refiner-owned refiner_jobs only); >0 when Refiner queues durable work.
     refiner_worker_count: int
-    refiner_radarr_base_url: str | None
-    refiner_radarr_api_key: str | None
-    refiner_sonarr_base_url: str | None
-    refiner_sonarr_api_key: str | None
+    # Radarr/Sonarr HTTP for Fetcher-owned live failed-import cleanup drives (env: MEDIAMOP_FETCHER_*).
+    fetcher_radarr_base_url: str | None
+    fetcher_radarr_api_key: str | None
+    fetcher_sonarr_base_url: str | None
+    fetcher_sonarr_api_key: str | None
     failed_import_radarr_cleanup_drive_schedule_enabled: bool
     failed_import_radarr_cleanup_drive_schedule_interval_seconds: int
     failed_import_sonarr_cleanup_drive_schedule_enabled: bool
@@ -182,40 +166,23 @@ class MediaMopSettings:
         assert_sqlite_db_location_usable(db_p)
         db_url = sqlalchemy_sqlite_url(db_p)
         failed_import_cleanup = load_failed_import_cleanup_settings_bundle()
-        refiner_workers = clamp_refiner_worker_count(
-            _env_int("MEDIAMOP_REFINER_WORKER_COUNT", 1),
-        )
-        radarr_base = (os.environ.get("MEDIAMOP_REFINER_RADARR_BASE_URL") or "").strip()
+        fetcher_workers = clamp_fetcher_worker_count(_env_int("MEDIAMOP_FETCHER_WORKER_COUNT", 1))
+        refiner_workers = clamp_refiner_worker_count(_env_int("MEDIAMOP_REFINER_WORKER_COUNT", 0))
+        radarr_base = (os.environ.get("MEDIAMOP_FETCHER_RADARR_BASE_URL") or "").strip()
         if radarr_base and not radarr_base.startswith(("http://", "https://")):
             radarr_base = ""
-        radarr_key = (os.environ.get("MEDIAMOP_REFINER_RADARR_API_KEY") or "").strip()
-        sonarr_base = (os.environ.get("MEDIAMOP_REFINER_SONARR_BASE_URL") or "").strip()
+        radarr_key = (os.environ.get("MEDIAMOP_FETCHER_RADARR_API_KEY") or "").strip()
+        sonarr_base = (os.environ.get("MEDIAMOP_FETCHER_SONARR_BASE_URL") or "").strip()
         if sonarr_base and not sonarr_base.startswith(("http://", "https://")):
             sonarr_base = ""
-        sonarr_key = (os.environ.get("MEDIAMOP_REFINER_SONARR_API_KEY") or "").strip()
-        radarr_sched_on = _failed_import_env_bool_prefer_new(
-            "MEDIAMOP_FAILED_IMPORT_RADARR_CLEANUP_DRIVE_SCHEDULE_ENABLED",
-            "MEDIAMOP_REFINER_RADARR_CLEANUP_DRIVE_SCHEDULE_ENABLED",
-            False,
-        )
+        sonarr_key = (os.environ.get("MEDIAMOP_FETCHER_SONARR_API_KEY") or "").strip()
+        radarr_sched_on = _env_bool("MEDIAMOP_FAILED_IMPORT_RADARR_CLEANUP_DRIVE_SCHEDULE_ENABLED", False)
         radarr_sched_iv = _clamp_failed_import_cleanup_drive_schedule_interval_seconds(
-            _failed_import_env_int_prefer_new(
-                "MEDIAMOP_FAILED_IMPORT_RADARR_CLEANUP_DRIVE_SCHEDULE_INTERVAL_SECONDS",
-                "MEDIAMOP_REFINER_RADARR_CLEANUP_DRIVE_SCHEDULE_INTERVAL_SECONDS",
-                3600,
-            ),
+            _env_int("MEDIAMOP_FAILED_IMPORT_RADARR_CLEANUP_DRIVE_SCHEDULE_INTERVAL_SECONDS", 3600),
         )
-        sonarr_sched_on = _failed_import_env_bool_prefer_new(
-            "MEDIAMOP_FAILED_IMPORT_SONARR_CLEANUP_DRIVE_SCHEDULE_ENABLED",
-            "MEDIAMOP_REFINER_SONARR_CLEANUP_DRIVE_SCHEDULE_ENABLED",
-            False,
-        )
+        sonarr_sched_on = _env_bool("MEDIAMOP_FAILED_IMPORT_SONARR_CLEANUP_DRIVE_SCHEDULE_ENABLED", False)
         sonarr_sched_iv = _clamp_failed_import_cleanup_drive_schedule_interval_seconds(
-            _failed_import_env_int_prefer_new(
-                "MEDIAMOP_FAILED_IMPORT_SONARR_CLEANUP_DRIVE_SCHEDULE_INTERVAL_SECONDS",
-                "MEDIAMOP_REFINER_SONARR_CLEANUP_DRIVE_SCHEDULE_INTERVAL_SECONDS",
-                3600,
-            ),
+            _env_int("MEDIAMOP_FAILED_IMPORT_SONARR_CLEANUP_DRIVE_SCHEDULE_INTERVAL_SECONDS", 3600),
         )
 
         return cls(
@@ -242,11 +209,12 @@ class MediaMopSettings:
             sqlalchemy_database_url=db_url,
             fetcher_base_url=fetcher_url,
             failed_import_cleanup_env=failed_import_cleanup,
+            fetcher_worker_count=fetcher_workers,
             refiner_worker_count=refiner_workers,
-            refiner_radarr_base_url=radarr_base or None,
-            refiner_radarr_api_key=radarr_key or None,
-            refiner_sonarr_base_url=sonarr_base or None,
-            refiner_sonarr_api_key=sonarr_key or None,
+            fetcher_radarr_base_url=radarr_base or None,
+            fetcher_radarr_api_key=radarr_key or None,
+            fetcher_sonarr_base_url=sonarr_base or None,
+            fetcher_sonarr_api_key=sonarr_key or None,
             failed_import_radarr_cleanup_drive_schedule_enabled=radarr_sched_on,
             failed_import_radarr_cleanup_drive_schedule_interval_seconds=radarr_sched_iv,
             failed_import_sonarr_cleanup_drive_schedule_enabled=sonarr_sched_on,

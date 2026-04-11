@@ -6,14 +6,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
+from mediamop.modules.fetcher.fetcher_jobs_inspection_service import DEFAULT_TERMINAL_STATUSES
+from mediamop.modules.fetcher.fetcher_jobs_model import FetcherJob, FetcherJobStatus
+from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import (
+    FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
+)
 from mediamop.modules.fetcher.schemas_automation_summary import (
     FetcherFailedImportAutomationSummaryOut,
     FetcherFailedImportAxisSummaryOut,
-)
-from mediamop.modules.refiner.inspection_service import DEFAULT_TERMINAL_STATUSES
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import (
-    FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
 )
 from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import (
     FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE,
@@ -44,23 +44,23 @@ def _format_saved_interval(seconds: int) -> str:
 
 
 def _terminal_outcome_label(status: str) -> str:
-    if status == RefinerJobStatus.COMPLETED.value:
+    if status == FetcherJobStatus.COMPLETED.value:
         return "Completed"
-    if status == RefinerJobStatus.FAILED.value:
+    if status == FetcherJobStatus.FAILED.value:
         return "Stopped after errors"
-    if status == RefinerJobStatus.HANDLER_OK_FINALIZE_FAILED.value:
+    if status == FetcherJobStatus.HANDLER_OK_FINALIZE_FAILED.value:
         return "Needs manual finish"
     return status
 
 
-def _latest_terminal_job(session: Session, *, job_kind: str) -> RefinerJob | None:
+def _latest_terminal_job(session: Session, *, job_kind: str) -> FetcherJob | None:
     stmt = (
-        select(RefinerJob)
+        select(FetcherJob)
         .where(
-            RefinerJob.job_kind == job_kind,
-            RefinerJob.status.in_(DEFAULT_TERMINAL_STATUSES),
+            FetcherJob.job_kind == job_kind,
+            FetcherJob.status.in_(DEFAULT_TERMINAL_STATUSES),
         )
-        .order_by(RefinerJob.updated_at.desc())
+        .order_by(FetcherJob.updated_at.desc())
         .limit(1)
     )
     return session.scalars(stmt).first()
@@ -69,7 +69,7 @@ def _latest_terminal_job(session: Session, *, job_kind: str) -> RefinerJob | Non
 def _axis_from_settings(
     *,
     empty_history_label: str,
-    job: RefinerJob | None,
+    job: FetcherJob | None,
     schedule_enabled: bool,
     interval_seconds: int,
 ) -> FetcherFailedImportAxisSummaryOut:
@@ -102,7 +102,7 @@ def build_fetcher_failed_import_automation_summary(
     rad = _latest_terminal_job(session, job_kind=FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE)
     son = _latest_terminal_job(session, job_kind=FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE)
 
-    slots_note = _SLOTS_OFF_NOTE if settings.refiner_worker_count == 0 else None
+    slots_note = _SLOTS_OFF_NOTE if settings.fetcher_worker_count == 0 else None
 
     movies = _axis_from_settings(
         empty_history_label="No finished movie pass recorded yet.",

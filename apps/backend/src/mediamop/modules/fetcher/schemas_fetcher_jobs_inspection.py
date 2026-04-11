@@ -1,4 +1,4 @@
-"""Pydantic shapes for read-only persisted work-row listings (Fetcher failed-imports inspection, internal tools)."""
+"""Pydantic shapes for read-only ``fetcher_jobs`` listings (failed-import inspection API)."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class RefinerJobInspectionRow(BaseModel):
-    """One persisted row of queued work — ``status`` is the stored value (e.g. ``handler_ok_finalize_failed``)."""
+class FetcherJobInspectionRow(BaseModel):
+    """One persisted Fetcher background job row."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -26,10 +26,10 @@ class RefinerJobInspectionRow(BaseModel):
     updated_at: datetime
 
 
-class RefinerJobsInspectionOut(BaseModel):
-    """Bounded list of persisted work rows, newest activity first."""
+class FetcherJobsInspectionOut(BaseModel):
+    """Bounded list of persisted Fetcher job rows, newest activity first."""
 
-    jobs: list[RefinerJobInspectionRow]
+    jobs: list[FetcherJobInspectionRow]
     default_terminal_only: bool = Field(
         description="True when no ``status`` filter was applied (only terminal rows: completed, failed, handler_ok_finalize_failed).",
     )

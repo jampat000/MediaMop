@@ -13,7 +13,7 @@ _VISIBILITY_NOTE = (
 def failed_import_runtime_visibility_from_settings(settings: MediaMopSettings) -> FailedImportRuntimeVisibilityOut:
     """Map loaded settings to a bounded DTO (no DB reads; no liveness)."""
 
-    n = settings.refiner_worker_count
+    n = settings.fetcher_worker_count
     disabled = n == 0
     if disabled:
         summary = "Background automation is off — scheduled failed-import sweeps will not start by themselves."

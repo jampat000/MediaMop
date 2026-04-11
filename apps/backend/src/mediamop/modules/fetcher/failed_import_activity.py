@@ -1,6 +1,6 @@
 """Persist Activity rows for Fetcher failed-import download-queue passes (operator-facing trail).
 
-Execution is still driven by refiner job rows; summaries are attributed to module ``fetcher``.
+Execution is driven by ``fetcher_jobs`` rows; summaries are attributed to module ``fetcher``.
 """
 
 from __future__ import annotations

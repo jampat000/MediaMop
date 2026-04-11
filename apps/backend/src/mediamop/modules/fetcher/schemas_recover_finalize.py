@@ -1,4 +1,4 @@
-"""Pydantic for operator manual recovery when a task finished work but could not be marked completed."""
+"""Pydantic bodies for Fetcher failed-import manual recovery (finalize handler-ok rows)."""
 
 from __future__ import annotations
 

@@ -1,8 +1,4 @@
-"""Sonarr failed-import cleanup: refiner_jobs row producer + in-process worker handler (Fetcher-owned).
-
-Uses :mod:`mediamop.modules.refiner` for persisted ``refiner_jobs`` rows and worker context; the live-queue
-drive runs in this package. ``job_kind`` values remain the stable ``refiner.*`` strings stored in the DB.
-"""
+"""Sonarr failed-import cleanup: ``fetcher_jobs`` row producer + Fetcher in-process worker handler."""
 
 from __future__ import annotations
 
@@ -11,25 +7,26 @@ from collections.abc import Callable
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.failed_import_queue_worker_ports import FailedImportSonarrWorkerRuntimePort
-from mediamop.modules.refiner.jobs_model import RefinerJob
-from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
+from mediamop.modules.fetcher.fetcher_jobs_model import FetcherJob
+from mediamop.modules.fetcher.fetcher_jobs_ops import fetcher_enqueue_or_get_job
+from mediamop.modules.fetcher.fetcher_worker_loop import FetcherJobWorkContext
 from mediamop.modules.fetcher.sonarr_cleanup_execution import SonarrQueueHttpClient
 from mediamop.modules.fetcher.sonarr_failed_import_cleanup_drive import (
     SonarrQueueHttpFetchClient,
     drive_sonarr_failed_import_cleanup_from_live_queue,
 )
-from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
+from mediamop.modules.fetcher.failed_import_drive_job_kinds import (
+    FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE,
+)
+from mediamop.modules.queue_worker.failed_import_worker_ports import FailedImportSonarrWorkerRuntimePort
 
-FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE = "refiner.sonarr.failed_import_cleanup_drive.v1"
-
-SONARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY = "refiner.sonarr.failed_import_cleanup_drive:v1"
+SONARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY = "failed_import.sonarr.cleanup_drive:v1"
 
 
-def enqueue_sonarr_failed_import_cleanup_drive_job(session: Session) -> RefinerJob:
+def enqueue_sonarr_failed_import_cleanup_drive_job(session: Session) -> FetcherJob:
     """Insert or return the single durable Sonarr live cleanup sweep job."""
 
-    return refiner_enqueue_or_get_job(
+    return fetcher_enqueue_or_get_job(
         session,
         dedupe_key=SONARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
         job_kind=FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE,
@@ -42,17 +39,17 @@ def make_sonarr_failed_import_cleanup_drive_handler(
     session_factory: sessionmaker[Session],
     *,
     fetcher_runtime: FailedImportSonarrWorkerRuntimePort,
-) -> Callable[[RefinerJobWorkContext], None]:
+) -> Callable[[FetcherJobWorkContext], None]:
     """Build a worker handler that runs the existing Sonarr live drive (HTTP clients from settings)."""
 
-    def _run(_ctx: RefinerJobWorkContext) -> None:
+    def _run(_ctx: FetcherJobWorkContext) -> None:
         try:
-            base = settings.refiner_sonarr_base_url
-            key = settings.refiner_sonarr_api_key
+            base = settings.fetcher_sonarr_base_url
+            key = settings.fetcher_sonarr_api_key
             if not base or not key:
                 msg = (
-                    "Sonarr live cleanup drive requires MEDIAMOP_REFINER_SONARR_BASE_URL and "
-                    "MEDIAMOP_REFINER_SONARR_API_KEY"
+                    "Sonarr live cleanup drive requires MEDIAMOP_FETCHER_SONARR_BASE_URL and "
+                    "MEDIAMOP_FETCHER_SONARR_API_KEY"
                 )
                 raise RuntimeError(msg)
 

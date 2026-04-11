@@ -1,6 +1,6 @@
 """Fetcher-owned HTTP API for Radarr/Sonarr download-queue failed-import task workflow.
 
-Persistence still uses ``refiner_jobs`` and Refiner worker plumbing; planning and live-queue drives live
+Persistence uses ``fetcher_jobs`` and Fetcher in-process workers; planning and live-queue drives live
 under ``mediamop.modules.fetcher`` with shared classification/policy in ``mediamop.modules.arr_failed_import``.
 This module is the product-facing boundary only.
 """
@@ -26,34 +26,34 @@ from mediamop.modules.fetcher.failed_import_activity import (
     record_fetcher_failed_import_pass_queued,
     record_fetcher_failed_import_recovered,
 )
+from mediamop.modules.fetcher.fetcher_jobs_inspection_service import (
+    DEFAULT_TERMINAL_STATUSES,
+    list_fetcher_jobs_for_inspection,
+    validate_inspection_statuses,
+)
+from mediamop.modules.fetcher.fetcher_jobs_model import FetcherJob, FetcherJobStatus
+from mediamop.modules.fetcher.fetcher_jobs_ops import recover_handler_ok_finalize_failed_to_completed
+from mediamop.modules.fetcher.manual_cleanup_drive_enqueue import (
+    manual_enqueue_radarr_cleanup_drive,
+    manual_enqueue_sonarr_cleanup_drive,
+)
 from mediamop.modules.fetcher.schemas_automation_summary import FetcherFailedImportAutomationSummaryOut
 from mediamop.modules.fetcher.schemas_cleanup_policy import (
     FailedImportCleanupPolicyAxisOut,
     FetcherFailedImportCleanupPolicyOut,
     FetcherFailedImportCleanupPolicyPutIn,
 )
-from mediamop.modules.arr_failed_import.env_settings import AppFailedImportCleanupPolicySettings
-from mediamop.modules.refiner.inspection_service import (
-    DEFAULT_TERMINAL_STATUSES,
-    list_refiner_jobs_for_inspection,
-    validate_inspection_statuses,
-)
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.refiner.jobs_ops import recover_handler_ok_finalize_failed_to_completed
-from mediamop.modules.fetcher.manual_cleanup_drive_enqueue import (
-    manual_enqueue_radarr_cleanup_drive,
-    manual_enqueue_sonarr_cleanup_drive,
-)
-from mediamop.modules.refiner.schemas_inspection import RefinerJobsInspectionOut
+from mediamop.modules.fetcher.schemas_fetcher_jobs_inspection import FetcherJobsInspectionOut
 from mediamop.modules.fetcher.schemas_manual_cleanup_enqueue import (
     ManualCleanupDriveEnqueueIn,
     ManualCleanupDriveEnqueueOut,
 )
-from mediamop.modules.refiner.schemas_recovery import RecoverFinalizeFailureIn, RecoverFinalizeFailureOut
+from mediamop.modules.arr_failed_import.env_settings import AppFailedImportCleanupPolicySettings
 from mediamop.modules.fetcher.failed_import_runtime_visibility import (
     failed_import_runtime_visibility_from_settings,
 )
 from mediamop.modules.fetcher.schemas_failed_import_runtime_visibility import FailedImportRuntimeVisibilityOut
+from mediamop.modules.fetcher.schemas_recover_finalize import RecoverFinalizeFailureIn, RecoverFinalizeFailureOut
 from mediamop.platform.auth.authorization import RequireOperatorDep
 from mediamop.platform.auth.csrf import (
     require_session_secret,
@@ -158,7 +158,7 @@ def get_fetcher_failed_imports_settings(
     return failed_import_runtime_visibility_from_settings(settings)
 
 
-@router.get("/fetcher/failed-imports/inspection", response_model=RefinerJobsInspectionOut)
+@router.get("/fetcher/failed-imports/inspection", response_model=FetcherJobsInspectionOut)
 def get_fetcher_failed_imports_inspection(
     _user: UserPublicDep,
     db: DbSessionDep,
@@ -173,7 +173,7 @@ def get_fetcher_failed_imports_inspection(
             ),
         ),
     ] = None,
-) -> RefinerJobsInspectionOut:
+) -> FetcherJobsInspectionOut:
     """Fetcher: read-only persisted rows for the failed-import queue workflow."""
 
     if statuses:
@@ -184,13 +184,13 @@ def get_fetcher_failed_imports_inspection(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=str(exc),
             ) from exc
-        return list_refiner_jobs_for_inspection(
+        return list_fetcher_jobs_for_inspection(
             db,
             limit=limit,
             statuses=st,
             default_terminal_only=False,
         )
-    return list_refiner_jobs_for_inspection(
+    return list_fetcher_jobs_for_inspection(
         db,
         limit=limit,
         statuses=DEFAULT_TERMINAL_STATUSES,
@@ -305,10 +305,10 @@ def post_fetcher_failed_imports_recover_finalize_failure(
             status_code=status.HTTP_409_CONFLICT,
             detail="Task is not in handler_ok_finalize_failed state (needs manual finish only).",
         )
-    job_row = db.get(RefinerJob, job_id)
+    job_row = db.get(FetcherJob, job_id)
     if job_row is not None:
         record_fetcher_failed_import_recovered(db, job_id=job_id, job_kind=job_row.job_kind)
     return RecoverFinalizeFailureOut(
         job_id=job_id,
-        status=RefinerJobStatus.COMPLETED.value,
+        status=FetcherJobStatus.COMPLETED.value,
     )
