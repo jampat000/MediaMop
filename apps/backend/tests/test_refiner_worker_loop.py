@@ -1,9 +1,8 @@
-"""In-process worker loop and worker-count settings (Refiner-local)."""
+"""In-process Refiner worker loop and Refiner worker-count settings (Refiner-local)."""
 
 from __future__ import annotations
 
 import asyncio
-from dataclasses import replace
 from datetime import datetime, timezone
 from unittest.mock import patch
 
@@ -11,12 +10,6 @@ import pytest
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.fetcher.failed_import_queue_job_handlers import build_failed_import_queue_job_handlers
-from mediamop.modules.fetcher import fetcher_worker_loop as fetcher_worker_loop_mod
-from mediamop.modules.fetcher.fetcher_worker_loop import (
-    start_fetcher_worker_background_tasks,
-    stop_fetcher_worker_background_tasks,
-)
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.worker_limits import clamp_refiner_worker_count
@@ -29,7 +22,6 @@ from mediamop.modules.refiner.worker_loop import (
     stop_refiner_worker_background_tasks,
 )
 
-import mediamop.modules.fetcher.fetcher_jobs_model  # noqa: F401
 import mediamop.modules.refiner.jobs_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
@@ -66,12 +58,6 @@ def test_refiner_worker_count_defaults_to_zero(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.delenv("MEDIAMOP_REFINER_WORKER_COUNT", raising=False)
     s = MediaMopSettings.load()
     assert s.refiner_worker_count == 0
-
-
-def test_fetcher_worker_count_defaults_to_one(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("MEDIAMOP_FETCHER_WORKER_COUNT", raising=False)
-    s = MediaMopSettings.load()
-    assert s.fetcher_worker_count == 1
 
 
 def test_refiner_worker_count_clamps_low_and_high(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -166,36 +152,6 @@ def test_process_one_missing_handler_fails_claimed_job(session_factory) -> None:
         row = s.get(RefinerJob, 1)
         assert row.status == RefinerJobStatus.PENDING.value
         assert "unknown.kind" in (row.last_error or "")
-
-
-def test_spawn_worker_task_count_matches_settings(
-    session_factory,
-    monkeypatch: pytest.MonkeyPatch,
-    failed_import_queue_worker_runtime_bundle,
-) -> None:
-    monkeypatch.setattr(
-        "mediamop.modules.fetcher.fetcher_worker_loop.FETCHER_WORKER_IDLE_SLEEP_SECONDS",
-        0.05,
-    )
-    base = MediaMopSettings.load()
-    settings = replace(base, fetcher_worker_count=2)
-
-    async def _run() -> None:
-        handlers = build_failed_import_queue_job_handlers(
-            settings,
-            session_factory,
-            failed_import_runtime=failed_import_queue_worker_runtime_bundle,
-        )
-        stop, tasks = start_fetcher_worker_background_tasks(
-            session_factory,
-            settings,
-            job_handlers=handlers,
-        )
-        assert len(tasks) == 2
-        stop.set()
-        await stop_fetcher_worker_background_tasks(stop, tasks)
-
-    asyncio.run(_run())
 
 
 def test_refiner_worker_loop_processes_one_job_then_stops(session_factory, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -447,38 +403,5 @@ def test_worker_stays_alive_after_complete_failure_terminalization(
                 pytest.fail("expected terminalization to handler_ok_finalize_failed")
             stop.set()
             await asyncio.wait_for(task, timeout=5.0)
-
-    asyncio.run(_run())
-
-
-def test_start_and_stop_workers_completes_within_timeout(
-    session_factory,
-    monkeypatch: pytest.MonkeyPatch,
-    failed_import_queue_worker_runtime_bundle,
-) -> None:
-    monkeypatch.setattr(
-        fetcher_worker_loop_mod,
-        "FETCHER_WORKER_IDLE_SLEEP_SECONDS",
-        0.05,
-    )
-    base = MediaMopSettings.load()
-    settings = replace(base, fetcher_worker_count=1)
-
-    async def _run() -> None:
-        handlers = build_failed_import_queue_job_handlers(
-            settings,
-            session_factory,
-            failed_import_runtime=failed_import_queue_worker_runtime_bundle,
-        )
-        stop, tasks = start_fetcher_worker_background_tasks(
-            session_factory,
-            settings,
-            job_handlers=handlers,
-        )
-        stop.set()
-        await asyncio.wait_for(
-            stop_fetcher_worker_background_tasks(stop, tasks),
-            timeout=5.0,
-        )
 
     asyncio.run(_run())

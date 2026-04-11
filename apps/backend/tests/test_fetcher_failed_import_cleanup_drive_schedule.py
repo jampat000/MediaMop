@@ -23,7 +23,7 @@ from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import (
     FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE,
     enqueue_sonarr_failed_import_cleanup_drive_job,
 )
-from mediamop.modules.queue_worker.failed_import_worker_ports import NoOpFailedImportTimedSchedulePassQueuedPort
+from mediamop.modules.fetcher.failed_import_worker_ports import NoOpFailedImportTimedSchedulePassQueuedPort
 from mediamop.modules.fetcher.periodic_failed_import_cleanup_enqueue import (
     run_periodic_fetcher_failed_import_cleanup_enqueue,
     start_fetcher_failed_import_cleanup_drive_enqueue_tasks,

@@ -18,7 +18,7 @@ from mediamop.modules.fetcher.radarr_failed_import_cleanup_drive import (
 from mediamop.modules.fetcher.failed_import_drive_job_kinds import (
     FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
 )
-from mediamop.modules.queue_worker.failed_import_worker_ports import FailedImportRadarrWorkerRuntimePort
+from mediamop.modules.fetcher.failed_import_worker_ports import FailedImportRadarrWorkerRuntimePort
 
 RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY = "failed_import.radarr.cleanup_drive:v1"
 

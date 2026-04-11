@@ -19,7 +19,7 @@ from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import (
     FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE,
     make_sonarr_failed_import_cleanup_drive_handler,
 )
-from mediamop.modules.queue_worker.failed_import_worker_ports import FailedImportQueueWorkerPorts
+from mediamop.modules.fetcher.failed_import_worker_ports import FailedImportQueueWorkerPorts
 
 
 def build_failed_import_queue_job_handlers(

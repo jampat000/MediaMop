@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.modules.fetcher.fetcher_jobs_model import FetcherJob
-from mediamop.modules.queue_worker.failed_import_worker_ports import (
+from mediamop.modules.fetcher.failed_import_worker_ports import (
     FailedImportTimedSchedulePassQueuedPort,
     NoOpFailedImportTimedSchedulePassQueuedPort,
 )

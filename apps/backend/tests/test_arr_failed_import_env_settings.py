@@ -16,6 +16,14 @@ from mediamop.modules.arr_failed_import.env_settings import (
     load_failed_import_cleanup_settings_bundle,
 )
 
+from tests.legacy_refiner_failed_import_env_poison import (
+    LEGACY_REFINER_FAILED_IMPORT_CLEANUP_POLICY_ENV_KEYS,
+    LEGACY_REFINER_RADARR_CLEANUP_CORRUPT,
+    LEGACY_REFINER_RADARR_DRIVE_SCHEDULE_ENABLED,
+    LEGACY_REFINER_RADARR_DRIVE_SCHEDULE_INTERVAL_SECONDS,
+    LEGACY_REFINER_SONARR_CLEANUP_IMPORT_FAILED,
+)
+
 
 def _clear_failed_import_cleanup_env(monkeypatch: pytest.MonkeyPatch) -> None:
     keys = (
@@ -29,16 +37,7 @@ def _clear_failed_import_cleanup_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "MEDIAMOP_FAILED_IMPORT_SONARR_CLEANUP_CORRUPT",
         "MEDIAMOP_FAILED_IMPORT_SONARR_CLEANUP_DOWNLOAD_FAILED",
         "MEDIAMOP_FAILED_IMPORT_SONARR_CLEANUP_IMPORT_FAILED",
-        "MEDIAMOP_REFINER_RADARR_CLEANUP_QUALITY",
-        "MEDIAMOP_REFINER_RADARR_CLEANUP_UNMATCHED",
-        "MEDIAMOP_REFINER_RADARR_CLEANUP_CORRUPT",
-        "MEDIAMOP_REFINER_RADARR_CLEANUP_DOWNLOAD_FAILED",
-        "MEDIAMOP_REFINER_RADARR_CLEANUP_IMPORT_FAILED",
-        "MEDIAMOP_REFINER_SONARR_CLEANUP_QUALITY",
-        "MEDIAMOP_REFINER_SONARR_CLEANUP_UNMATCHED",
-        "MEDIAMOP_REFINER_SONARR_CLEANUP_CORRUPT",
-        "MEDIAMOP_REFINER_SONARR_CLEANUP_DOWNLOAD_FAILED",
-        "MEDIAMOP_REFINER_SONARR_CLEANUP_IMPORT_FAILED",
+        *LEGACY_REFINER_FAILED_IMPORT_CLEANUP_POLICY_ENV_KEYS,
     )
     for k in keys:
         monkeypatch.delenv(k, raising=False)
@@ -65,8 +64,8 @@ def test_load_bundle_reads_primary_failed_import_env(monkeypatch: pytest.MonkeyP
 
 def test_legacy_refiner_cleanup_env_vars_are_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
     _clear_failed_import_cleanup_env(monkeypatch)
-    monkeypatch.setenv("MEDIAMOP_REFINER_RADARR_CLEANUP_CORRUPT", "1")
-    monkeypatch.setenv("MEDIAMOP_REFINER_SONARR_CLEANUP_IMPORT_FAILED", "true")
+    monkeypatch.setenv(LEGACY_REFINER_RADARR_CLEANUP_CORRUPT, "1")
+    monkeypatch.setenv(LEGACY_REFINER_SONARR_CLEANUP_IMPORT_FAILED, "true")
     b = load_failed_import_cleanup_settings_bundle()
     assert b.radarr_policy().remove_corrupt_imports is False
     assert b.sonarr_policy().remove_failed_imports is False
@@ -97,8 +96,8 @@ def test_media_mop_settings_failed_import_schedule_ignores_legacy_refiner_env(
 ) -> None:
     monkeypatch.delenv("MEDIAMOP_FAILED_IMPORT_RADARR_CLEANUP_DRIVE_SCHEDULE_ENABLED", raising=False)
     monkeypatch.delenv("MEDIAMOP_FAILED_IMPORT_RADARR_CLEANUP_DRIVE_SCHEDULE_INTERVAL_SECONDS", raising=False)
-    monkeypatch.setenv("MEDIAMOP_REFINER_RADARR_CLEANUP_DRIVE_SCHEDULE_ENABLED", "1")
-    monkeypatch.setenv("MEDIAMOP_REFINER_RADARR_CLEANUP_DRIVE_SCHEDULE_INTERVAL_SECONDS", "7200")
+    monkeypatch.setenv(LEGACY_REFINER_RADARR_DRIVE_SCHEDULE_ENABLED, "1")
+    monkeypatch.setenv(LEGACY_REFINER_RADARR_DRIVE_SCHEDULE_INTERVAL_SECONDS, "7200")
     s = MediaMopSettings.load()
     assert s.failed_import_radarr_cleanup_drive_schedule_enabled is False
     assert s.failed_import_radarr_cleanup_drive_schedule_interval_seconds == 3600

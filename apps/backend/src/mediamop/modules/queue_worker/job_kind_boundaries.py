@@ -3,7 +3,7 @@
 Each module keeps its own persisted jobs table and worker pool. ``job_kind`` strings are
 function-named *inside* that module's namespace (prefix = module lane).
 
-See ``docs/adr/0007-module-owned-worker-lanes.md``.
+See ``docs/adr/ADR-0007-module-owned-worker-lanes.md``.
 """
 
 from __future__ import annotations

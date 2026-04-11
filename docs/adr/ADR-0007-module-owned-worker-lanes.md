@@ -37,6 +37,7 @@ MediaMop is **SQLite-first**: one writer per database. Durable background work m
 - `modules/fetcher/fetcher_jobs_ops.py`
 - `modules/fetcher/fetcher_worker_loop.py`
 - `modules/fetcher/fetcher_worker_limits.py` (if clamping)
+- `modules/fetcher/failed_import_worker_ports.py` (typed ports for failed-import worker wiring)
 - `modules/fetcher/fetcher_jobs_inspection*.py` / `schemas_*` when product surfaces exist
 
 ### Refiner lane (implemented substrate)

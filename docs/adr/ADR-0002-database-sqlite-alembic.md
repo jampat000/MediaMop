@@ -20,6 +20,10 @@ The **MediaMop** product in this monorepo includes the FastAPI backend and the V
 
 4. **SQLAlchemy** applies SQLite connection hardening (WAL, foreign keys, busy timeout) at the engine layer (`mediamop.core.db`).
 
+5. **Worker lanes and durable jobs** follow [ADR-0007 — Module-owned worker lanes](ADR-0007-module-owned-worker-lanes.md) (SQLite, per-module tables and pools).
+
+6. **Process-wide env and `MediaMopSettings`** remain a deliberate aggregate at current scale; see [ADR-0008 — `MediaMopSettings` aggregate](ADR-0008-mediomop-settings-aggregate-runtime-config.md).
+
 ## Consequences
 
 - Developers run **`alembic upgrade head`** and tests with a writable **`MEDIAMOP_HOME`** (CI uses a temp directory).

@@ -52,6 +52,10 @@ import {
   FETCHER_FI_TECHNICAL_SUMMARY_LABEL,
 } from "../../lib/fetcher/failed-imports/user-copy";
 import type { FailedImportRecoverFinalizeResult } from "../../lib/fetcher/failed-imports/recover-api";
+import {
+  failedImportDriveJobKindOperatorLabel,
+  failedImportDriveStableKeyOperatorLabel,
+} from "../../lib/fetcher/failed-imports/drive-job-operator-display";
 
 function formatUpdated(iso: string): string {
   try {
@@ -269,11 +273,17 @@ function TaskRow({
         </div>
         <code className="mm-dash-code mt-0.5 block text-xs text-[var(--mm-text3)]">{job.status}</code>
       </td>
-      <td className="mm-fetcher-fi-inspection__cell align-top py-2 pr-3 font-mono text-xs text-[var(--mm-text2)]">
-        {job.job_kind}
+      <td className="mm-fetcher-fi-inspection__cell align-top py-2 pr-3 text-sm text-[var(--mm-text)]">
+        <span data-testid="fetcher-failed-imports-inspection-job-kind-label">
+          {failedImportDriveJobKindOperatorLabel(job.job_kind)}
+        </span>
+        <span className="sr-only"> Technical job kind: {job.job_kind}.</span>
       </td>
-      <td className="mm-fetcher-fi-inspection__cell align-top py-2 pr-3 font-mono text-xs text-[var(--mm-text2)] break-all">
-        {job.dedupe_key}
+      <td className="mm-fetcher-fi-inspection__cell align-top py-2 pr-3 text-sm text-[var(--mm-text)] break-words">
+        <span data-testid="fetcher-failed-imports-inspection-stable-key-label">
+          {failedImportDriveStableKeyOperatorLabel(job.dedupe_key, job.job_kind)}
+        </span>
+        <span className="sr-only"> Technical stable key: {job.dedupe_key}.</span>
       </td>
       <td className="mm-fetcher-fi-inspection__cell align-top py-2 pr-3 text-sm text-[var(--mm-text2)] whitespace-nowrap">
         {job.attempt_count} / {job.max_attempts}

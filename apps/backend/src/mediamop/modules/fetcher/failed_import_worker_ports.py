@@ -1,8 +1,8 @@
-"""Typed composition ports for Fetcher-owned failed-import queue workers.
+"""Typed composition ports for Fetcher failed-import queue workers.
 
-Concrete implementations live in ``mediamop.modules.fetcher``. Lifespan wires Fetcher
-periodic enqueue and Fetcher workers; this module stays import-light so Refiner never
-imports Fetcher.
+Concrete implementations live in this package (``failed_import_queue_worker_runtime``).
+The in-process queue worker composes these ports at startup; the module stays here so
+``queue_worker`` remains a prefix/boundary helper without Fetcher job implementation imports.
 """
 
 from __future__ import annotations
