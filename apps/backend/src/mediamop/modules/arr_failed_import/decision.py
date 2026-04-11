@@ -1,7 +1,7 @@
 """Pure eligibility decision: failed-import message blob + cleanup policy → no side effects.
 
-Composes :func:`~mediamop.modules.refiner.failed_import_classification.classify_failed_import_message`
-with :func:`~mediamop.modules.refiner.failed_import_cleanup_policy.cleanup_policy_key_for_outcome`
+Composes :func:`~mediamop.modules.arr_failed_import.classification.classify_failed_import_message`
+with :func:`~mediamop.modules.arr_failed_import.policy.cleanup_policy_key_for_outcome`
 and policy toggles. Does not delete, mutate queues, or call *arr APIs.
 """
 
@@ -10,11 +10,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from mediamop.modules.refiner.failed_import_classification import (
+from mediamop.modules.arr_failed_import.classification import (
     FailedImportOutcome,
     classify_failed_import_message,
 )
-from mediamop.modules.refiner.failed_import_cleanup_policy import (
+from mediamop.modules.arr_failed_import.policy import (
     FailedImportCleanupPolicy,
     FailedImportCleanupPolicyKey,
     cleanup_policy_key_for_outcome,

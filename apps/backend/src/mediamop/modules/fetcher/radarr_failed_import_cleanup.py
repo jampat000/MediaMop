@@ -12,11 +12,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from mediamop.modules.refiner.failed_import_cleanup_decision import (
+from mediamop.modules.arr_failed_import.decision import (
     FailedImportCleanupEligibilityDecision,
     decide_failed_import_cleanup_eligibility,
 )
-from mediamop.modules.refiner.failed_import_cleanup_policy import FailedImportCleanupPolicy
+from mediamop.modules.arr_failed_import.policy import FailedImportCleanupPolicy
 
 
 class RadarrFailedImportCleanupAction(str, Enum):

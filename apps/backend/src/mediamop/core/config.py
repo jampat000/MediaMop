@@ -12,11 +12,11 @@ from mediamop.core.runtime_paths import (
     resolve_all_runtime_paths,
     sqlalchemy_sqlite_url,
 )
-from mediamop.modules.refiner.failed_import_cleanup_policy import FailedImportCleanupPolicy
-from mediamop.modules.refiner.failed_import_cleanup_settings import (
-    RefinerFailedImportCleanupSettingsBundle,
-    load_refiner_failed_import_cleanup_settings_bundle,
+from mediamop.modules.arr_failed_import.env_settings import (
+    FailedImportCleanupSettingsBundle,
+    load_failed_import_cleanup_settings_bundle,
 )
+from mediamop.modules.arr_failed_import.policy import FailedImportCleanupPolicy
 from mediamop.modules.refiner.worker_limits import clamp_refiner_worker_count
 
 
@@ -88,7 +88,7 @@ class MediaMopSettings:
     temp_dir: str
     sqlalchemy_database_url: str
     fetcher_base_url: str | None
-    refiner_failed_import_cleanup: RefinerFailedImportCleanupSettingsBundle
+    refiner_failed_import_cleanup: FailedImportCleanupSettingsBundle
     # 0 = no in-process Refiner workers; 1 = default; >1 = guarded (see refiner.worker_limits).
     refiner_worker_count: int
     refiner_radarr_base_url: str | None
@@ -161,7 +161,7 @@ class MediaMopSettings:
         )
         assert_sqlite_db_location_usable(db_p)
         db_url = sqlalchemy_sqlite_url(db_p)
-        refiner_cleanup = load_refiner_failed_import_cleanup_settings_bundle()
+        refiner_cleanup = load_failed_import_cleanup_settings_bundle()
         refiner_workers = clamp_refiner_worker_count(
             _env_int("MEDIAMOP_REFINER_WORKER_COUNT", 1),
         )

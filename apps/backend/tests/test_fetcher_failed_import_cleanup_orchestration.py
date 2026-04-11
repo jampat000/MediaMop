@@ -4,22 +4,22 @@ from __future__ import annotations
 
 import pytest
 
-from mediamop.modules.refiner.failed_import_cleanup_orchestration import (
+from mediamop.modules.fetcher.failed_import_cleanup_orchestration import (
     FailedImportCleanupPlanningResult,
     RefinerArrApp,
     parse_refiner_arr_app,
     plan_failed_import_cleanup,
 )
-from mediamop.modules.refiner.failed_import_cleanup_policy import (
+from mediamop.modules.arr_failed_import.policy import (
     FailedImportCleanupPolicy,
     FailedImportCleanupPolicyKey,
     default_failed_import_cleanup_policy,
 )
-from mediamop.modules.refiner.radarr_failed_import_cleanup import (
+from mediamop.modules.fetcher.radarr_failed_import_cleanup import (
     RadarrFailedImportCleanupPlan,
     plan_radarr_failed_import_cleanup,
 )
-from mediamop.modules.refiner.sonarr_failed_import_cleanup import (
+from mediamop.modules.fetcher.sonarr_failed_import_cleanup import (
     SonarrFailedImportCleanupPlan,
     plan_sonarr_failed_import_cleanup,
 )
@@ -90,5 +90,5 @@ def test_parse_refiner_arr_app_accepts_common_casing() -> None:
 
 
 def test_parse_refiner_arr_app_rejects_unknown() -> None:
-    with pytest.raises(ValueError, match="unknown refiner arr app"):
+    with pytest.raises(ValueError, match="unknown failed-import arr app"):
         parse_refiner_arr_app("prowlarr")

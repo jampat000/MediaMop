@@ -4,18 +4,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from mediamop.modules.refiner.failed_import_classification import FailedImportOutcome
-from mediamop.modules.refiner.failed_import_cleanup_decision import (
+from mediamop.modules.arr_failed_import.classification import FailedImportOutcome
+from mediamop.modules.arr_failed_import.decision import (
     FailedImportCleanupEligibilityDecision,
     FailedImportCleanupEligibilityReason,
 )
-from mediamop.modules.refiner.failed_import_cleanup_policy import FailedImportCleanupPolicyKey
-from mediamop.modules.refiner.radarr_cleanup_execution import (
+from mediamop.modules.arr_failed_import.policy import (
+    FailedImportCleanupPolicy,
+    FailedImportCleanupPolicyKey,
+)
+from mediamop.modules.fetcher.radarr_cleanup_execution import (
     RadarrFailedImportCleanupExecutionOutcome,
     execute_radarr_failed_import_cleanup_plan,
 )
-from mediamop.modules.refiner.failed_import_cleanup_policy import FailedImportCleanupPolicy
-from mediamop.modules.refiner.radarr_failed_import_cleanup import (
+from mediamop.modules.fetcher.radarr_failed_import_cleanup import (
     RadarrFailedImportCleanupAction,
     RadarrFailedImportCleanupPlan,
     plan_radarr_failed_import_cleanup,

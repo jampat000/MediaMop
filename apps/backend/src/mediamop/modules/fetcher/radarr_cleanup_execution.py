@@ -12,7 +12,7 @@ import urllib.request
 from enum import Enum
 from typing import Protocol
 
-from mediamop.modules.refiner.radarr_failed_import_cleanup import (
+from mediamop.modules.fetcher.radarr_failed_import_cleanup import (
     RadarrFailedImportCleanupAction,
     RadarrFailedImportCleanupPlan,
 )

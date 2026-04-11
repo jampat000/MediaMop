@@ -11,7 +11,7 @@ from starlette.testclient import TestClient
 
 from mediamop.api.factory import create_app
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.failed_import_cleanup_settings import (
+from mediamop.modules.arr_failed_import.env_settings import (
     default_refiner_failed_import_cleanup_settings_bundle,
 )
 from mediamop.platform.auth.csrf import (

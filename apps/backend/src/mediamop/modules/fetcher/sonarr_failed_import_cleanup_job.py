@@ -1,7 +1,7 @@
 """Sonarr failed-import cleanup: refiner_jobs row producer + in-process worker handler (Fetcher-owned).
 
-Uses :mod:`mediamop.modules.refiner` for persisted jobs and queue drive execution; job_kind values
-remain the stable ``refiner.*`` strings stored in ``refiner_jobs``.
+Uses :mod:`mediamop.modules.refiner` for persisted ``refiner_jobs`` rows and worker context; the live-queue
+drive runs in this package. ``job_kind`` values remain the stable ``refiner.*`` strings stored in the DB.
 """
 
 from __future__ import annotations
@@ -14,8 +14,8 @@ from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.failed_import_fetcher_runtime_ports import FailedImportSonarrWorkerRuntimePort
 from mediamop.modules.refiner.jobs_model import RefinerJob
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
-from mediamop.modules.refiner.sonarr_cleanup_execution import SonarrQueueHttpClient
-from mediamop.modules.refiner.sonarr_failed_import_cleanup_drive import (
+from mediamop.modules.fetcher.sonarr_cleanup_execution import SonarrQueueHttpClient
+from mediamop.modules.fetcher.sonarr_failed_import_cleanup_drive import (
     SonarrQueueHttpFetchClient,
     drive_sonarr_failed_import_cleanup_from_live_queue,
 )

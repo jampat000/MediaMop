@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from mediamop.modules.refiner.failed_import_classification import FailedImportOutcome
-from mediamop.modules.refiner.failed_import_cleanup_decision import (
+from mediamop.modules.arr_failed_import.classification import FailedImportOutcome
+from mediamop.modules.arr_failed_import.decision import (
     FailedImportCleanupEligibilityDecision,
     FailedImportCleanupEligibilityReason,
     decide_failed_import_cleanup_eligibility,
 )
-from mediamop.modules.refiner.failed_import_cleanup_policy import (
+from mediamop.modules.arr_failed_import.policy import (
     FailedImportCleanupPolicy,
     FailedImportCleanupPolicyKey,
     default_failed_import_cleanup_policy,

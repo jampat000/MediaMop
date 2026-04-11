@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from mediamop.modules.refiner.failed_import_cleanup_decision import decide_failed_import_cleanup_eligibility
-from mediamop.modules.refiner.failed_import_cleanup_policy import (
+from mediamop.modules.arr_failed_import.decision import decide_failed_import_cleanup_eligibility
+from mediamop.modules.arr_failed_import.policy import (
     FailedImportCleanupPolicy,
     FailedImportCleanupPolicyKey,
     default_failed_import_cleanup_policy,
 )
-from mediamop.modules.refiner.sonarr_failed_import_cleanup import (
+from mediamop.modules.fetcher.sonarr_failed_import_cleanup import (
     SonarrFailedImportCleanupAction,
     SonarrFailedImportCleanupPlan,
     plan_sonarr_failed_import_cleanup,

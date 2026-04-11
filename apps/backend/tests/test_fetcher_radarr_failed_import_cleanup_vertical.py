@@ -5,12 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.failed_import_cleanup_settings import (
+from mediamop.modules.arr_failed_import.env_settings import (
     AppFailedImportCleanupPolicySettings,
     RefinerFailedImportCleanupSettingsBundle,
 )
-from mediamop.modules.refiner.radarr_cleanup_execution import RadarrFailedImportCleanupExecutionOutcome
-from mediamop.modules.refiner.radarr_failed_import_cleanup_vertical import (
+from mediamop.modules.fetcher.radarr_cleanup_execution import RadarrFailedImportCleanupExecutionOutcome
+from mediamop.modules.fetcher.radarr_failed_import_cleanup_vertical import (
     run_radarr_failed_import_cleanup_vertical,
 )
 

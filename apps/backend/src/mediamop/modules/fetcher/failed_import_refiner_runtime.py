@@ -1,4 +1,4 @@
-"""Concrete Fetcher implementations of :mod:`refiner.failed_import_fetcher_runtime_ports`."""
+"""Concrete Fetcher implementations of :mod:`mediamop.modules.refiner.failed_import_fetcher_runtime_ports`."""
 
 from __future__ import annotations
 

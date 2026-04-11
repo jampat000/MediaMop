@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from mediamop.modules.refiner.failed_import_classification import (
+from mediamop.modules.arr_failed_import.classification import (
     FailedImportOutcome,
     classify_failed_import_message,
     normalize_failed_import_blob,

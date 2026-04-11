@@ -12,15 +12,15 @@ from mediamop.modules.fetcher.cleanup_policy_service import (
     load_fetcher_failed_import_cleanup_bundle,
     upsert_fetcher_failed_import_cleanup_policy,
 )
-from mediamop.modules.refiner.failed_import_cleanup_settings import (
+from mediamop.modules.arr_failed_import.env_settings import (
     AppFailedImportCleanupPolicySettings,
     default_refiner_failed_import_cleanup_settings_bundle,
 )
-from mediamop.modules.refiner.radarr_failed_import_cleanup import (
+from mediamop.modules.fetcher.radarr_failed_import_cleanup import (
     RadarrFailedImportCleanupAction,
     plan_radarr_failed_import_cleanup,
 )
-from mediamop.modules.refiner.sonarr_failed_import_cleanup import (
+from mediamop.modules.fetcher.sonarr_failed_import_cleanup import (
     SonarrFailedImportCleanupAction,
     plan_sonarr_failed_import_cleanup,
 )

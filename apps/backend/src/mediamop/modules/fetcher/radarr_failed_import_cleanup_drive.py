@@ -1,8 +1,8 @@
-"""Sonarr-only live queue fetch + failed-import cleanup drive.
+"""Radarr-only live queue fetch + failed-import cleanup drive.
 
-Fetches raw Sonarr v3 queue rows through a narrow Protocol, builds a single
+Fetches raw Radarr v3 queue rows through a narrow Protocol, builds a single
 ``status_message_blob`` string per row for the existing planner, and invokes
-:func:`run_sonarr_failed_import_cleanup_vertical` once per item. No Radarr, no
+:func:`run_radarr_failed_import_cleanup_vertical` once per item. No Sonarr, no
 shared *arr live driver.
 """
 
@@ -14,35 +14,35 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Any, Mapping, Protocol, Sequence
 
-from mediamop.modules.refiner.sonarr_cleanup_execution import (
-    SonarrFailedImportCleanupExecutionOutcome,
-    SonarrQueueOperations,
+from mediamop.modules.fetcher.radarr_cleanup_execution import (
+    RadarrFailedImportCleanupExecutionOutcome,
+    RadarrQueueOperations,
 )
-from mediamop.modules.refiner.sonarr_failed_import_cleanup_vertical import (
-    SonarrFailedImportCleanupSettingsSource,
-    run_sonarr_failed_import_cleanup_vertical,
+from mediamop.modules.fetcher.radarr_failed_import_cleanup_vertical import (
+    RadarrFailedImportCleanupSettingsSource,
+    run_radarr_failed_import_cleanup_vertical,
 )
 
 
-class SonarrQueueFetchOperations(Protocol):
-    """Narrow Sonarr queue read surface (list rows as API-shaped mappings)."""
+class RadarrQueueFetchOperations(Protocol):
+    """Narrow Radarr queue read surface (list rows as API-shaped mappings)."""
 
-    def fetch_sonarr_queue_items(self) -> Sequence[Mapping[str, Any]]:
+    def fetch_radarr_queue_items(self) -> Sequence[Mapping[str, Any]]:
         """Return queue item dicts (e.g. from ``GET /api/v3/queue``)."""
         ...
 
 
 @dataclass(frozen=True, slots=True)
-class SonarrFailedImportCleanupDriveItemResult:
+class RadarrFailedImportCleanupDriveItemResult:
     """One queue row after running the wired vertical."""
 
-    sonarr_queue_item_id: int | None
+    radarr_queue_item_id: int | None
     status_message_blob: str
-    outcome: SonarrFailedImportCleanupExecutionOutcome
+    outcome: RadarrFailedImportCleanupExecutionOutcome
 
 
-def sonarr_queue_item_status_message_blob(row: Mapping[str, Any]) -> str:
-    """Flatten Sonarr queue ``statusMessages`` and status-like fields into one string."""
+def radarr_queue_item_status_message_blob(row: Mapping[str, Any]) -> str:
+    """Flatten Radarr queue ``statusMessages`` and status-like fields into one string."""
     parts: list[str] = []
     sm = row.get("statusMessages") or row.get("status_messages")
     if isinstance(sm, list):
@@ -65,7 +65,7 @@ def sonarr_queue_item_status_message_blob(row: Mapping[str, Any]) -> str:
     return " ".join(parts).strip()
 
 
-def _sonarr_queue_item_id(row: Mapping[str, Any]) -> int | None:
+def _radarr_queue_item_id(row: Mapping[str, Any]) -> int | None:
     for k in ("id", "Id"):
         v = row.get(k)
         if isinstance(v, bool):
@@ -77,26 +77,26 @@ def _sonarr_queue_item_id(row: Mapping[str, Any]) -> int | None:
     return None
 
 
-def drive_sonarr_failed_import_cleanup_from_live_queue(
-    settings: SonarrFailedImportCleanupSettingsSource,
+def drive_radarr_failed_import_cleanup_from_live_queue(
+    settings: RadarrFailedImportCleanupSettingsSource,
     *,
-    queue_fetch_client: SonarrQueueFetchOperations,
-    queue_operations: SonarrQueueOperations,
-) -> tuple[SonarrFailedImportCleanupDriveItemResult, ...]:
-    """For each fetched queue row, run the existing Sonarr cleanup vertical."""
-    results: list[SonarrFailedImportCleanupDriveItemResult] = []
-    for row in queue_fetch_client.fetch_sonarr_queue_items():
-        qid = _sonarr_queue_item_id(row)
-        blob = sonarr_queue_item_status_message_blob(row)
-        outcome = run_sonarr_failed_import_cleanup_vertical(
+    queue_fetch_client: RadarrQueueFetchOperations,
+    queue_operations: RadarrQueueOperations,
+) -> tuple[RadarrFailedImportCleanupDriveItemResult, ...]:
+    """For each fetched queue row, run the existing Radarr cleanup vertical."""
+    results: list[RadarrFailedImportCleanupDriveItemResult] = []
+    for row in queue_fetch_client.fetch_radarr_queue_items():
+        qid = _radarr_queue_item_id(row)
+        blob = radarr_queue_item_status_message_blob(row)
+        outcome = run_radarr_failed_import_cleanup_vertical(
             settings,
             status_message_blob=blob,
-            sonarr_queue_item_id=qid,
+            radarr_queue_item_id=qid,
             queue_client=queue_operations,
         )
         results.append(
-            SonarrFailedImportCleanupDriveItemResult(
-                sonarr_queue_item_id=qid,
+            RadarrFailedImportCleanupDriveItemResult(
+                radarr_queue_item_id=qid,
                 status_message_blob=blob,
                 outcome=outcome,
             ),
@@ -104,7 +104,7 @@ def drive_sonarr_failed_import_cleanup_from_live_queue(
     return tuple(results)
 
 
-class SonarrQueueHttpFetchClient:
+class RadarrQueueHttpFetchClient:
     """Minimal stdlib HTTP client: ``GET {base}/api/v3/queue`` with ``X-Api-Key``."""
 
     def __init__(self, base_url: str, api_key: str, *, timeout_seconds: float = 30.0) -> None:
@@ -112,7 +112,7 @@ class SonarrQueueHttpFetchClient:
         self._api_key = api_key
         self._timeout = timeout_seconds
 
-    def fetch_sonarr_queue_items(self) -> list[dict[str, Any]]:
+    def fetch_radarr_queue_items(self) -> list[dict[str, Any]]:
         url = f"{self._base}/api/v3/queue?pageSize=1000"
         req = urllib.request.Request(
             url,
@@ -123,7 +123,7 @@ class SonarrQueueHttpFetchClient:
             with urllib.request.urlopen(req, timeout=self._timeout) as resp:
                 raw = resp.read().decode("utf-8")
         except urllib.error.HTTPError as e:
-            raise RuntimeError(f"Sonarr queue fetch failed: HTTP {e.code} for {url!r}") from e
+            raise RuntimeError(f"Radarr queue fetch failed: HTTP {e.code} for {url!r}") from e
         data = json.loads(raw)
         if isinstance(data, list):
             return [x for x in data if isinstance(x, dict)]

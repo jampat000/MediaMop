@@ -2,6 +2,9 @@
 
 Precedence: any terminal rejection signal beats pending/waiting-only text in the same
 blob. Among terminals, the first rule in :data:`_TERMINAL_RULE_ORDER` wins.
+
+This module is *arr-domain rules only* (no Refiner/Fetcher runtime). Refiner and Fetcher
+both consume it without importing each other.
 """
 
 from __future__ import annotations

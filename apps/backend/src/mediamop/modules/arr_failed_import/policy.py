@@ -1,4 +1,4 @@
-"""Cleanup toggle contract for :class:`~mediamop.modules.refiner.failed_import_classification.FailedImportOutcome`.
+"""Cleanup toggle contract for :class:`~mediamop.modules.arr_failed_import.classification.FailedImportOutcome`.
 
 Each terminal classifier outcome maps to exactly one policy field. There is no shared
 “cleanup everything” bucket. :attr:`FailedImportOutcome.PENDING_WAITING` and
@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Final
 
-from mediamop.modules.refiner.failed_import_classification import FailedImportOutcome
+from mediamop.modules.arr_failed_import.classification import FailedImportOutcome
 
 
 class FailedImportCleanupPolicyKey(str, Enum):

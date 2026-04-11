@@ -6,7 +6,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from mediamop.modules.refiner.failed_import_cleanup_settings import AppFailedImportCleanupPolicySettings
+from mediamop.modules.arr_failed_import.env_settings import AppFailedImportCleanupPolicySettings
 
 
 class FailedImportCleanupPolicyAxisOut(BaseModel):

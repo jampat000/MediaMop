@@ -7,9 +7,9 @@ from dataclasses import replace
 import pytest
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.failed_import_cleanup_decision import decide_failed_import_cleanup_eligibility
-from mediamop.modules.refiner.failed_import_cleanup_policy import default_failed_import_cleanup_policy
-from mediamop.modules.refiner.failed_import_cleanup_settings import (
+from mediamop.modules.arr_failed_import.decision import decide_failed_import_cleanup_eligibility
+from mediamop.modules.arr_failed_import.policy import default_failed_import_cleanup_policy
+from mediamop.modules.arr_failed_import.env_settings import (
     AppFailedImportCleanupPolicySettings,
     RefinerFailedImportCleanupSettingsBundle,
     default_refiner_failed_import_cleanup_settings_bundle,

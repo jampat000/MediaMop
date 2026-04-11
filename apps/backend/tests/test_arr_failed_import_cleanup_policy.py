@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from mediamop.modules.refiner.failed_import_classification import FailedImportOutcome
-from mediamop.modules.refiner.failed_import_cleanup_policy import (
+from mediamop.modules.arr_failed_import.classification import FailedImportOutcome
+from mediamop.modules.arr_failed_import.policy import (
     FailedImportCleanupPolicy,
     FailedImportCleanupPolicyKey,
     cleanup_policy_key_for_outcome,

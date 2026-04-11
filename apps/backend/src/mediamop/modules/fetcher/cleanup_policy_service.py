@@ -13,11 +13,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from mediamop.modules.fetcher.cleanup_policy_model import FetcherFailedImportCleanupPolicyRow
-from mediamop.modules.refiner.failed_import_cleanup_policy import FailedImportCleanupPolicy
-from mediamop.modules.refiner.failed_import_cleanup_settings import (
+from mediamop.modules.arr_failed_import.env_settings import (
     AppFailedImportCleanupPolicySettings,
     RefinerFailedImportCleanupSettingsBundle,
 )
+from mediamop.modules.arr_failed_import.policy import FailedImportCleanupPolicy
 
 
 @dataclass(frozen=True, slots=True)

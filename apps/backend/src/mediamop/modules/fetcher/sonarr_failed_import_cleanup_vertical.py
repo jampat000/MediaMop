@@ -2,20 +2,20 @@
 
 Uses :meth:`sonarr_failed_import_cleanup_policy` on the injected settings source so
 ``MediaMopSettings`` works without importing it here (avoids config↔refiner cycles).
-Parallel Radarr entry: :mod:`mediamop.modules.refiner.radarr_failed_import_cleanup_vertical`.
+Parallel Radarr entry: :mod:`mediamop.modules.fetcher.radarr_failed_import_cleanup_vertical`.
 """
 
 from __future__ import annotations
 
 from typing import Protocol
 
-from mediamop.modules.refiner.failed_import_cleanup_policy import FailedImportCleanupPolicy
-from mediamop.modules.refiner.sonarr_cleanup_execution import (
+from mediamop.modules.arr_failed_import.policy import FailedImportCleanupPolicy
+from mediamop.modules.fetcher.sonarr_cleanup_execution import (
     SonarrFailedImportCleanupExecutionOutcome,
     SonarrQueueOperations,
     execute_sonarr_failed_import_cleanup_plan,
 )
-from mediamop.modules.refiner.sonarr_failed_import_cleanup import plan_sonarr_failed_import_cleanup
+from mediamop.modules.fetcher.sonarr_failed_import_cleanup import plan_sonarr_failed_import_cleanup
 
 
 class SonarrFailedImportCleanupSettingsSource(Protocol):

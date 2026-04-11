@@ -12,7 +12,7 @@ from typing import Protocol, runtime_checkable
 from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.failed_import_cleanup_policy import FailedImportCleanupPolicy
+from mediamop.modules.arr_failed_import.policy import FailedImportCleanupPolicy
 
 
 @runtime_checkable

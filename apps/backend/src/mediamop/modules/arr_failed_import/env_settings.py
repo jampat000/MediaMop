@@ -1,7 +1,11 @@
-"""Refiner failed import cleanup policy loaded from environment.
+"""Failed-import cleanup toggles loaded from the process environment.
 
 Radarr and Sonarr each have their own toggle set so defaults and future persistence
 can diverge without a shared blob.
+
+Env variable names retain the historical ``MEDIAMOP_REFINER_*`` prefix (deployment
+compatibility). The module lives under ``arr_failed_import`` because these toggles are
+*arr download-queue policy*, not Refiner disk refinement.
 
 Env pattern (each defaults off when unset):
 
@@ -22,7 +26,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-from mediamop.modules.refiner.failed_import_cleanup_policy import FailedImportCleanupPolicy
+from mediamop.modules.arr_failed_import.policy import FailedImportCleanupPolicy
 
 _RADARR_ENV_PREFIX = "MEDIAMOP_REFINER_RADARR_CLEANUP_"
 _SONARR_ENV_PREFIX = "MEDIAMOP_REFINER_SONARR_CLEANUP_"
@@ -58,7 +62,7 @@ class AppFailedImportCleanupPolicySettings:
 
 
 @dataclass(frozen=True, slots=True)
-class RefinerFailedImportCleanupSettingsBundle:
+class FailedImportCleanupSettingsBundle:
     """App-separated cleanup policy settings; resolve with :meth:`radarr_policy` / :meth:`sonarr_policy`."""
 
     radarr: AppFailedImportCleanupPolicySettings
@@ -71,6 +75,10 @@ class RefinerFailedImportCleanupSettingsBundle:
         return self.sonarr.to_failed_import_cleanup_policy()
 
 
+# Historical type name (MediaMopSettings field and older call sites).
+RefinerFailedImportCleanupSettingsBundle = FailedImportCleanupSettingsBundle
+
+
 def _load_app_cleanup_settings(prefix: str) -> AppFailedImportCleanupPolicySettings:
     return AppFailedImportCleanupPolicySettings(
         remove_quality_rejections=_env_bool(prefix + "QUALITY"),
@@ -81,15 +89,27 @@ def _load_app_cleanup_settings(prefix: str) -> AppFailedImportCleanupPolicySetti
     )
 
 
-def default_refiner_failed_import_cleanup_settings_bundle() -> RefinerFailedImportCleanupSettingsBundle:
+def default_failed_import_cleanup_settings_bundle() -> FailedImportCleanupSettingsBundle:
     """All toggles off (no env read) — tests and manual ``MediaMopSettings`` construction."""
     off = AppFailedImportCleanupPolicySettings()
-    return RefinerFailedImportCleanupSettingsBundle(radarr=off, sonarr=off)
+    return FailedImportCleanupSettingsBundle(radarr=off, sonarr=off)
 
 
-def load_refiner_failed_import_cleanup_settings_bundle() -> RefinerFailedImportCleanupSettingsBundle:
-    """Read Refiner cleanup toggles from the process environment (default all off)."""
-    return RefinerFailedImportCleanupSettingsBundle(
+def load_failed_import_cleanup_settings_bundle() -> FailedImportCleanupSettingsBundle:
+    """Read cleanup toggles from the process environment (default all off)."""
+    return FailedImportCleanupSettingsBundle(
         radarr=_load_app_cleanup_settings(_RADARR_ENV_PREFIX),
         sonarr=_load_app_cleanup_settings(_SONARR_ENV_PREFIX),
     )
+
+
+def default_refiner_failed_import_cleanup_settings_bundle() -> FailedImportCleanupSettingsBundle:
+    """Alias of :func:`default_failed_import_cleanup_settings_bundle`."""
+
+    return default_failed_import_cleanup_settings_bundle()
+
+
+def load_refiner_failed_import_cleanup_settings_bundle() -> FailedImportCleanupSettingsBundle:
+    """Alias of :func:`load_failed_import_cleanup_settings_bundle`."""
+
+    return load_failed_import_cleanup_settings_bundle()

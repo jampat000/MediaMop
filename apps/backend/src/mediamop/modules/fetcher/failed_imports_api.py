@@ -1,7 +1,8 @@
 """Fetcher-owned HTTP API for Radarr/Sonarr download-queue failed-import task workflow.
 
-Implementation still lives under ``mediamop.modules.refiner`` services and ``refiner_jobs`` — this module is the
-product-facing boundary only.
+Persistence still uses ``refiner_jobs`` and Refiner worker plumbing; planning and live-queue drives live
+under ``mediamop.modules.fetcher`` with shared classification/policy in ``mediamop.modules.arr_failed_import``.
+This module is the product-facing boundary only.
 """
 
 from __future__ import annotations
@@ -31,7 +32,7 @@ from mediamop.modules.fetcher.schemas_cleanup_policy import (
     FetcherFailedImportCleanupPolicyOut,
     FetcherFailedImportCleanupPolicyPutIn,
 )
-from mediamop.modules.refiner.failed_import_cleanup_settings import AppFailedImportCleanupPolicySettings
+from mediamop.modules.arr_failed_import.env_settings import AppFailedImportCleanupPolicySettings
 from mediamop.modules.refiner.inspection_service import (
     DEFAULT_TERMINAL_STATUSES,
     list_refiner_jobs_for_inspection,
@@ -45,7 +46,7 @@ from mediamop.modules.fetcher.manual_cleanup_drive_enqueue import (
 )
 from mediamop.modules.refiner.runtime_visibility import refiner_runtime_visibility_from_settings
 from mediamop.modules.refiner.schemas_inspection import RefinerJobsInspectionOut
-from mediamop.modules.refiner.schemas_manual_cleanup_enqueue import (
+from mediamop.modules.fetcher.schemas_manual_cleanup_enqueue import (
     ManualCleanupDriveEnqueueIn,
     ManualCleanupDriveEnqueueOut,
 )
