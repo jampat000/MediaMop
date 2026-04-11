@@ -12,10 +12,10 @@ from mediamop.modules.fetcher.schemas_automation_summary import (
 )
 from mediamop.modules.refiner.inspection_service import DEFAULT_TERMINAL_STATUSES
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.refiner.radarr_failed_import_cleanup_job import (
+from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import (
     REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE,
 )
-from mediamop.modules.refiner.sonarr_failed_import_cleanup_job import (
+from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import (
     REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE,
 )
 

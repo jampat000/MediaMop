@@ -1,8 +1,9 @@
 """Refiner-only in-process asyncio worker loop.
 
 Claims rows from ``refiner_jobs``, dispatches by ``job_kind``, then completes or fails via
-:class:`mediamop.modules.refiner.jobs_ops`. Production handlers are built from
-:class:`~mediamop.core.config.MediaMopSettings` (Radarr and Sonarr cleanup-drive kinds, separate handlers).
+:class:`mediamop.modules.refiner.jobs_ops`. Production ``job_handlers`` are supplied by the app
+composition root (Fetcher failed-import drives today; :class:`~mediamop.core.config.MediaMopSettings`
+still governs worker count and timing env).
 """
 
 from __future__ import annotations
@@ -239,6 +240,9 @@ def start_refiner_worker_background_tasks(
 ) -> tuple[asyncio.Event, list[asyncio.Task[None]]]:
     """Create one asyncio task per configured Refiner worker (``refiner_worker_count`` from settings).
 
+    When ``refiner_worker_count > 0``, callers must pass ``job_handlers`` (built at the application
+    composition root so Refiner never imports Fetcher).
+
     Modes:
 
     - **0** — Returns an empty task list (workers intentionally off; lifespan still stops cleanly).
@@ -258,10 +262,11 @@ def start_refiner_worker_background_tasks(
     handlers: Mapping[str, Callable[[RefinerJobWorkContext], None]]
     if job_handlers is not None:
         handlers = job_handlers
+    elif settings.refiner_worker_count == 0:
+        handlers = {}
     else:
-        from mediamop.modules.refiner.job_handlers_registry import build_production_refiner_job_handlers
-
-        handlers = build_production_refiner_job_handlers(settings, session_factory)
+        msg = "job_handlers is required when refiner_worker_count > 0"
+        raise TypeError(msg)
 
     stop = stop_event if stop_event is not None else asyncio.Event()
     tasks: list[asyncio.Task[None]] = []

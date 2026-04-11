@@ -16,6 +16,11 @@ from mediamop.core.db import (
     dispose_engine,
 )
 from mediamop.core.logging import configure_logging
+from mediamop.modules.fetcher.failed_import_cleanup_drive_schedule_specs import (
+    failed_import_cleanup_drive_schedule_specs,
+)
+from mediamop.modules.fetcher.failed_import_refiner_job_handlers import build_failed_import_refiner_job_handlers
+from mediamop.modules.fetcher.failed_import_refiner_runtime import build_failed_import_refiner_runtime_bundle
 from mediamop.modules.refiner.periodic_cleanup_drive_enqueue import (
     start_refiner_cleanup_drive_enqueue_schedule_tasks,
     stop_refiner_cleanup_drive_enqueue_schedule_tasks,
@@ -46,15 +51,24 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     session_factory = create_session_factory(engine)
     app.state.session_factory = session_factory
     refiner_stop = asyncio.Event()
+    failed_import_refiner_runtime = build_failed_import_refiner_runtime_bundle()
+    schedule_specs = failed_import_cleanup_drive_schedule_specs(settings)
     refiner_schedule_tasks = start_refiner_cleanup_drive_enqueue_schedule_tasks(
         session_factory,
-        settings,
         stop_event=refiner_stop,
+        timed_failed_import_pass_queued=failed_import_refiner_runtime.timed_schedule_pass_queued,
+        schedule_specs=schedule_specs,
+    )
+    failed_import_job_handlers = build_failed_import_refiner_job_handlers(
+        settings,
+        session_factory,
+        failed_import_runtime=failed_import_refiner_runtime,
     )
     refiner_stop, refiner_tasks = start_refiner_worker_background_tasks(
         session_factory,
         settings,
         stop_event=refiner_stop,
+        job_handlers=failed_import_job_handlers,
     )
     try:
         yield

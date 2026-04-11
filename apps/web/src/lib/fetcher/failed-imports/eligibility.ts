@@ -8,8 +8,8 @@ export function showFailedImportCleanupPolicyEditor(role: string | undefined): b
   return role === "admin" || role === "operator";
 }
 
-/** Admin/operator — show manual enqueue for Radarr/Sonarr failed-import passes. */
-export function showFailedImportManualEnqueueControl(role: string | undefined): boolean {
+/** Admin/operator — show manual “add to work queue” controls for Radarr/Sonarr failed-import passes. */
+export function showFailedImportManualQueuePassControl(role: string | undefined): boolean {
   if (!role) {
     return false;
   }

@@ -39,7 +39,7 @@ from mediamop.modules.refiner.inspection_service import (
 )
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.jobs_ops import recover_handler_ok_finalize_failed_to_completed
-from mediamop.modules.refiner.manual_cleanup_drive_enqueue import (
+from mediamop.modules.fetcher.manual_cleanup_drive_enqueue import (
     manual_enqueue_radarr_cleanup_drive,
     manual_enqueue_sonarr_cleanup_drive,
 )
@@ -206,7 +206,7 @@ def post_fetcher_failed_imports_radarr_enqueue(
     db: DbSessionDep,
     settings: SettingsDep,
 ) -> ManualCleanupDriveEnqueueOut:
-    """Fetcher: enqueue movies (Radarr) download-queue failed-import pass (deduped). Does not run processing here."""
+    """Fetcher: add a movies (Radarr) download-queue failed-import pass for the worker (deduped). Does not run the pass here."""
 
     validate_browser_post_origin(request, settings)
     secret = require_session_secret(settings)
@@ -221,13 +221,13 @@ def post_fetcher_failed_imports_radarr_enqueue(
         db,
         movies=True,
         source="manual",
-        enqueue_outcome=outcome,
+        queue_outcome=outcome,
     )
     return ManualCleanupDriveEnqueueOut(
         job_id=job.id,
         dedupe_key=job.dedupe_key,
         job_kind=job.job_kind,
-        enqueue_outcome=outcome,
+        queue_outcome=outcome,
     )
 
 
@@ -242,7 +242,7 @@ def post_fetcher_failed_imports_sonarr_enqueue(
     db: DbSessionDep,
     settings: SettingsDep,
 ) -> ManualCleanupDriveEnqueueOut:
-    """Fetcher: enqueue TV (Sonarr) download-queue failed-import pass (deduped). Does not run processing here."""
+    """Fetcher: add a TV (Sonarr) download-queue failed-import pass for the worker (deduped). Does not run the pass here."""
 
     validate_browser_post_origin(request, settings)
     secret = require_session_secret(settings)
@@ -257,13 +257,13 @@ def post_fetcher_failed_imports_sonarr_enqueue(
         db,
         movies=False,
         source="manual",
-        enqueue_outcome=outcome,
+        queue_outcome=outcome,
     )
     return ManualCleanupDriveEnqueueOut(
         job_id=job.id,
         dedupe_key=job.dedupe_key,
         job_kind=job.job_kind,
-        enqueue_outcome=outcome,
+        queue_outcome=outcome,
     )
 
 

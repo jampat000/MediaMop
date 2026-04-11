@@ -13,7 +13,8 @@ export const FETCHER_FI_SCHEDULE_MOVIES_HEADING = "Movies (Radarr) — scheduled
 export const FETCHER_FI_SCHEDULE_TV_HEADING = "TV (Sonarr) — scheduled sweep";
 
 export const FETCHER_FI_MANUAL_SECTION_TITLE = "Run a check now";
-export const FETCHER_FI_MANUAL_SECTION_BODY = "Queues one pass for that app. Nothing runs in this browser.";
+export const FETCHER_FI_MANUAL_SECTION_BODY =
+  "Adds one download-queue pass for that app to the worker list. Nothing runs in this browser.";
 
 export const FETCHER_FI_MANUAL_BTN_MOVIES = "Movies (Radarr)";
 export const FETCHER_FI_MANUAL_BTN_TV = "TV (Sonarr)";

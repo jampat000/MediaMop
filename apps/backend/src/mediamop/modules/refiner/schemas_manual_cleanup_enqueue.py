@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 class ManualCleanupDriveEnqueueIn(BaseModel):
     """Browser POST with CSRF — mirrors finalize-recovery body shape."""
 
-    confirm: Literal[True] = Field(description="Must be true to acknowledge manual enqueue.")
+    confirm: Literal[True] = Field(description="Must be true to acknowledge adding a download-queue pass for the worker.")
     csrf_token: str
 
 
@@ -20,8 +20,8 @@ class ManualCleanupDriveEnqueueOut(BaseModel):
     job_id: int
     dedupe_key: str
     job_kind: str
-    enqueue_outcome: Literal["created", "already_present"] = Field(
+    queue_outcome: Literal["created", "already_present"] = Field(
         description=(
-            "``created`` = new persisted row inserted; ``already_present`` = same dedupe key already had a row."
+            "``created`` = new persisted job row inserted; ``already_present`` = same dedupe key already had a row."
         ),
     )

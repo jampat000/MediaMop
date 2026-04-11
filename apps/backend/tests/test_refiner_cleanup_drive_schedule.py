@@ -12,19 +12,22 @@ from sqlalchemy.orm import Session, sessionmaker
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.jobs_model import RefinerJob
 from mediamop.modules.refiner import periodic_cleanup_drive_enqueue as periodic_enqueue_mod
-from mediamop.modules.refiner.periodic_cleanup_drive_enqueue import (
-    refiner_cleanup_drive_enqueue_schedule_specs,
-    run_periodic_refiner_cleanup_drive_enqueue,
-    start_refiner_cleanup_drive_enqueue_schedule_tasks,
-    stop_refiner_cleanup_drive_enqueue_schedule_tasks,
+from mediamop.modules.fetcher.failed_import_cleanup_drive_schedule_specs import (
+    failed_import_cleanup_drive_schedule_specs,
 )
-from mediamop.modules.refiner.radarr_failed_import_cleanup_job import (
+from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import (
     REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE,
     enqueue_radarr_failed_import_cleanup_drive_job,
 )
-from mediamop.modules.refiner.sonarr_failed_import_cleanup_job import (
+from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import (
     REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE,
     enqueue_sonarr_failed_import_cleanup_drive_job,
+)
+from mediamop.modules.refiner.failed_import_fetcher_runtime_ports import NoOpFailedImportTimedSchedulePassQueuedPort
+from mediamop.modules.refiner.periodic_cleanup_drive_enqueue import (
+    run_periodic_refiner_cleanup_drive_enqueue,
+    start_refiner_cleanup_drive_enqueue_schedule_tasks,
+    stop_refiner_cleanup_drive_enqueue_schedule_tasks,
 )
 from mediamop.platform.activity import constants as act_c
 from mediamop.platform.activity.models import ActivityEvent
@@ -73,7 +76,7 @@ def test_schedule_specs_radarr_only_when_radarr_enabled() -> None:
         refiner_radarr_cleanup_drive_schedule_interval_seconds=120,
         refiner_sonarr_cleanup_drive_schedule_enabled=False,
     )
-    specs = refiner_cleanup_drive_enqueue_schedule_specs(s)
+    specs = failed_import_cleanup_drive_schedule_specs(s)
     assert len(specs) == 1
     assert specs[0][0] == "radarr_failed_import_cleanup_drive"
     assert specs[0][1] == 120.0
@@ -88,7 +91,7 @@ def test_schedule_specs_sonarr_only_when_sonarr_enabled() -> None:
         refiner_sonarr_cleanup_drive_schedule_enabled=True,
         refiner_sonarr_cleanup_drive_schedule_interval_seconds=90,
     )
-    specs = refiner_cleanup_drive_enqueue_schedule_specs(s)
+    specs = failed_import_cleanup_drive_schedule_specs(s)
     assert len(specs) == 1
     assert specs[0][0] == "sonarr_failed_import_cleanup_drive"
     assert specs[0][1] == 90.0
@@ -104,7 +107,7 @@ def test_schedule_specs_both_independent_when_both_enabled() -> None:
         refiner_sonarr_cleanup_drive_schedule_enabled=True,
         refiner_sonarr_cleanup_drive_schedule_interval_seconds=200,
     )
-    specs = refiner_cleanup_drive_enqueue_schedule_specs(s)
+    specs = failed_import_cleanup_drive_schedule_specs(s)
     assert len(specs) == 2
     assert specs[0][1] != specs[1][1]
 
@@ -116,7 +119,7 @@ def test_schedule_specs_empty_when_both_disabled() -> None:
         refiner_radarr_cleanup_drive_schedule_enabled=False,
         refiner_sonarr_cleanup_drive_schedule_enabled=False,
     )
-    assert refiner_cleanup_drive_enqueue_schedule_specs(s) == []
+    assert failed_import_cleanup_drive_schedule_specs(s) == []
 
 
 def test_disabling_radarr_does_not_imply_sonarr_spec() -> None:
@@ -127,7 +130,7 @@ def test_disabling_radarr_does_not_imply_sonarr_spec() -> None:
         refiner_sonarr_cleanup_drive_schedule_enabled=True,
         refiner_sonarr_cleanup_drive_schedule_interval_seconds=60,
     )
-    specs = refiner_cleanup_drive_enqueue_schedule_specs(s)
+    specs = failed_import_cleanup_drive_schedule_specs(s)
     assert len(specs) == 1
     assert specs[0][2] is enqueue_sonarr_failed_import_cleanup_drive_job
 
@@ -159,7 +162,10 @@ def test_periodic_radarr_enqueue_dedupes_across_ticks(session_factory) -> None:
     assert n == 1
 
 
-def test_periodic_radarr_production_label_one_fetcher_pass_queued_across_ticks(session_factory) -> None:
+def test_periodic_radarr_production_label_one_fetcher_pass_queued_across_ticks(
+    session_factory,
+    failed_import_refiner_runtime_bundle,
+) -> None:
     """Production log_label: emit timed pass-queued activity only when the dedupe job row is first created."""
 
     async def _run() -> None:
@@ -171,6 +177,7 @@ def test_periodic_radarr_production_label_one_fetcher_pass_queued_across_ticks(s
                 interval_seconds=0.06,
                 log_label="radarr_failed_import_cleanup_drive",
                 enqueue_fn=enqueue_radarr_failed_import_cleanup_drive_job,
+                timed_failed_import_pass_queued=failed_import_refiner_runtime_bundle.timed_schedule_pass_queued,
             ),
         )
         await asyncio.sleep(0.2)
@@ -228,8 +235,9 @@ def test_start_schedule_tasks_respects_settings_independence(session_factory) ->
         stop = asyncio.Event()
         tasks = start_refiner_cleanup_drive_enqueue_schedule_tasks(
             session_factory,
-            settings,
             stop_event=stop,
+            timed_failed_import_pass_queued=NoOpFailedImportTimedSchedulePassQueuedPort(),
+            schedule_specs=failed_import_cleanup_drive_schedule_specs(settings),
         )
         assert len(tasks) == 1
         stop.set()

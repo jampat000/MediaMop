@@ -1,4 +1,4 @@
-/** Shapes for Fetcher failed-import queue workflow APIs (JSON field names follow backend). */
+/** Shapes for Fetcher failed-import queue workflow APIs (JSON field names follow backend Pydantic models). */
 
 export type FailedImportTaskRow = {
   id: number;
@@ -33,11 +33,11 @@ export type FailedImportFetcherSettingsOut = {
   visibility_note: string;
 };
 
-export type FailedImportEnqueueOut = {
+export type FailedImportManualQueuePassOut = {
   job_id: number;
   dedupe_key: string;
   job_kind: string;
-  enqueue_outcome: "created" | "already_present";
+  queue_outcome: "created" | "already_present";
 };
 
 export type FetcherFailedImportAxisSummary = {

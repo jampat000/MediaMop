@@ -3,9 +3,9 @@ import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 import { PageLoading } from "../../components/shared/page-loading";
 import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
 import { useMeQuery } from "../../lib/auth/queries";
-import { failedImportEnqueueResultMessage } from "../../lib/fetcher/failed-imports/enqueue-messages";
+import { failedImportManualQueuePassResultMessage } from "../../lib/fetcher/failed-imports/enqueue-messages";
 import {
-  showFailedImportManualEnqueueControl,
+  showFailedImportManualQueuePassControl,
   showFailedImportRecoverControl,
 } from "../../lib/fetcher/failed-imports/eligibility";
 import { FetcherFailedImportsCleanupPolicySection } from "./fetcher-failed-imports-cleanup-policy";
@@ -90,7 +90,7 @@ function FetcherFailedImportsIntroSubtitle() {
   );
 }
 
-function FetcherFailedImportsManualEnqueuePanel({ enabled }: { enabled: boolean }) {
+function FetcherFailedImportsManualQueuePassPanel({ enabled }: { enabled: boolean }) {
   const mRad = useFailedImportRadarrEnqueueMutation();
   const mSon = useFailedImportSonarrEnqueueMutation();
 
@@ -104,7 +104,7 @@ function FetcherFailedImportsManualEnqueuePanel({ enabled }: { enabled: boolean 
   return (
     <div
       className="border-t border-[var(--mm-border)] pt-4 mt-4"
-      data-testid="fetcher-failed-imports-manual-enqueue"
+      data-testid="fetcher-failed-imports-manual-queue-pass"
     >
       <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
         {FETCHER_FI_MANUAL_SECTION_TITLE}
@@ -114,7 +114,7 @@ function FetcherFailedImportsManualEnqueuePanel({ enabled }: { enabled: boolean 
         <button
           type="button"
           className={btnClass}
-          data-testid="fetcher-failed-imports-enqueue-radarr"
+          data-testid="fetcher-failed-imports-queue-pass-radarr"
           disabled={mRad.isPending || mSon.isPending}
           onClick={() => mRad.mutate()}
         >
@@ -123,7 +123,7 @@ function FetcherFailedImportsManualEnqueuePanel({ enabled }: { enabled: boolean 
         <button
           type="button"
           className={btnClass}
-          data-testid="fetcher-failed-imports-enqueue-sonarr"
+          data-testid="fetcher-failed-imports-queue-pass-sonarr"
           disabled={mRad.isPending || mSon.isPending}
           onClick={() => mSon.mutate()}
         >
@@ -141,13 +141,13 @@ function FetcherFailedImportsManualEnqueuePanel({ enabled }: { enabled: boolean 
         </p>
       ) : null}
       {mRad.isSuccess && mRad.data ? (
-        <p className="mt-2 text-sm text-[var(--mm-text2)]" data-testid="fetcher-failed-imports-enqueue-radarr-result">
-          {FETCHER_FI_MANUAL_RESULT_MOVIES_PREFIX} {failedImportEnqueueResultMessage(mRad.data)}
+        <p className="mt-2 text-sm text-[var(--mm-text2)]" data-testid="fetcher-failed-imports-queue-pass-radarr-result">
+          {FETCHER_FI_MANUAL_RESULT_MOVIES_PREFIX} {failedImportManualQueuePassResultMessage(mRad.data)}
         </p>
       ) : null}
       {mSon.isSuccess && mSon.data ? (
-        <p className="mt-2 text-sm text-[var(--mm-text2)]" data-testid="fetcher-failed-imports-enqueue-sonarr-result">
-          {FETCHER_FI_MANUAL_RESULT_TV_PREFIX} {failedImportEnqueueResultMessage(mSon.data)}
+        <p className="mt-2 text-sm text-[var(--mm-text2)]" data-testid="fetcher-failed-imports-queue-pass-sonarr-result">
+          {FETCHER_FI_MANUAL_RESULT_TV_PREFIX} {failedImportManualQueuePassResultMessage(mSon.data)}
         </p>
       ) : null}
     </div>
@@ -234,7 +234,7 @@ function FetcherFailedImportsSettingsSection({
           <p className="border-t border-[var(--mm-border)] pt-3 text-xs text-[var(--mm-text3)]">
             {rv.data.visibility_note}
           </p>
-          <FetcherFailedImportsManualEnqueuePanel enabled={showFailedImportManualEnqueueControl(role)} />
+          <FetcherFailedImportsManualQueuePassPanel enabled={showFailedImportManualQueuePassControl(role)} />
         </div>
       ) : null}
     </section>

@@ -1,23 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { failedImportEnqueueResultMessage } from "./enqueue-messages";
+import { failedImportManualQueuePassResultMessage } from "./enqueue-messages";
 
-describe("failedImportEnqueueResultMessage", () => {
-  it("distinguishes created vs deduped enqueue", () => {
+describe("failedImportManualQueuePassResultMessage", () => {
+  it("distinguishes created vs already-present queue pass", () => {
     expect(
-      failedImportEnqueueResultMessage({
+      failedImportManualQueuePassResultMessage({
         job_id: 1,
         dedupe_key: "k",
         job_kind: "x",
-        enqueue_outcome: "created",
+        queue_outcome: "created",
       }),
-    ).toMatch(/recorded — a new/i);
+    ).toMatch(/added —/i);
     expect(
-      failedImportEnqueueResultMessage({
+      failedImportManualQueuePassResultMessage({
         job_id: 1,
         dedupe_key: "k",
         job_kind: "x",
-        enqueue_outcome: "already_present",
+        queue_outcome: "already_present",
       }),
-    ).toMatch(/already recorded/i);
+    ).toMatch(/already on the list/i);
   });
 });

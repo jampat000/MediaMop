@@ -13,7 +13,7 @@ from mediamop.modules.fetcher.automation_summary_service import (
     build_fetcher_failed_import_automation_summary,
 )
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.refiner.radarr_failed_import_cleanup_job import (
+from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import (
     RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
     REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE,
 )

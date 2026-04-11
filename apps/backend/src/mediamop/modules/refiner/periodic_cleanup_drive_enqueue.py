@@ -2,7 +2,7 @@
 
 Each :func:`run_periodic_refiner_cleanup_drive_enqueue` coroutine is a **separate** asyncio task
 with its own interval — not a global Refiner scheduler gate. Lifespan starts one task per
-enabled app (Radarr vs Sonarr) independently.
+enabled schedule row supplied by the caller (Fetcher builds failed-import specs).
 """
 
 from __future__ import annotations
@@ -14,17 +14,11 @@ from collections.abc import Callable
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
-from mediamop.core.config import MediaMopSettings
-from mediamop.modules.fetcher import failed_import_activity
+from mediamop.modules.refiner.failed_import_fetcher_runtime_ports import (
+    FailedImportTimedSchedulePassQueuedPort,
+    NoOpFailedImportTimedSchedulePassQueuedPort,
+)
 from mediamop.modules.refiner.jobs_model import RefinerJob
-from mediamop.modules.refiner.radarr_failed_import_cleanup_job import (
-    RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
-    enqueue_radarr_failed_import_cleanup_drive_job,
-)
-from mediamop.modules.refiner.sonarr_failed_import_cleanup_job import (
-    SONARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
-    enqueue_sonarr_failed_import_cleanup_drive_job,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -32,48 +26,26 @@ REFINER_SCHEDULE_ENQUEUE_FAILURE_COOLDOWN_SECONDS = 2.0
 
 ScheduleSpec = tuple[str, float, Callable[[Session], RefinerJob]]
 
-# Production schedule labels only — tests may use other labels without emitting Fetcher activity.
+# Production schedule labels only — must stay aligned with dedupe keys in
+# ``mediamop.modules.fetcher.radarr_failed_import_cleanup_job`` /
+# ``sonarr_failed_import_cleanup_job`` (Fetcher-owned).
 _SCHEDULE_PASS_QUEUED_META: dict[str, tuple[str, bool]] = {
-    "radarr_failed_import_cleanup_drive": (RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY, True),
-    "sonarr_failed_import_cleanup_drive": (SONARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY, False),
+    "radarr_failed_import_cleanup_drive": ("refiner.radarr.failed_import_cleanup_drive:v1", True),
+    "sonarr_failed_import_cleanup_drive": ("refiner.sonarr.failed_import_cleanup_drive:v1", False),
 }
-
-
-def refiner_cleanup_drive_enqueue_schedule_specs(
-    settings: MediaMopSettings,
-) -> list[ScheduleSpec]:
-    """Return (log_label, interval_seconds, enqueue_fn) for each independently enabled schedule."""
-
-    specs: list[ScheduleSpec] = []
-    if settings.refiner_radarr_cleanup_drive_schedule_enabled:
-        specs.append(
-            (
-                "radarr_failed_import_cleanup_drive",
-                float(settings.refiner_radarr_cleanup_drive_schedule_interval_seconds),
-                enqueue_radarr_failed_import_cleanup_drive_job,
-            ),
-        )
-    if settings.refiner_sonarr_cleanup_drive_schedule_enabled:
-        specs.append(
-            (
-                "sonarr_failed_import_cleanup_drive",
-                float(settings.refiner_sonarr_cleanup_drive_schedule_interval_seconds),
-                enqueue_sonarr_failed_import_cleanup_drive_job,
-            ),
-        )
-    return specs
 
 
 def start_refiner_cleanup_drive_enqueue_schedule_tasks(
     session_factory: sessionmaker[Session],
-    settings: MediaMopSettings,
     *,
     stop_event: asyncio.Event,
+    timed_failed_import_pass_queued: FailedImportTimedSchedulePassQueuedPort,
+    schedule_specs: list[ScheduleSpec],
 ) -> list[asyncio.Task[None]]:
-    """Create one asyncio task per enabled cleanup-drive enqueue schedule (Radarr/Sonarr separate)."""
+    """Create one asyncio task per supplied cleanup-drive enqueue schedule (Radarr/Sonarr separate)."""
 
     tasks: list[asyncio.Task[None]] = []
-    for label, interval_seconds, enqueue_fn in refiner_cleanup_drive_enqueue_schedule_specs(settings):
+    for label, interval_seconds, enqueue_fn in schedule_specs:
         tasks.append(
             asyncio.create_task(
                 run_periodic_refiner_cleanup_drive_enqueue(
@@ -82,6 +54,7 @@ def start_refiner_cleanup_drive_enqueue_schedule_tasks(
                     interval_seconds=interval_seconds,
                     log_label=label,
                     enqueue_fn=enqueue_fn,
+                    timed_failed_import_pass_queued=timed_failed_import_pass_queued,
                 ),
                 name=f"refiner-schedule-{label}",
             ),
@@ -96,8 +69,15 @@ async def run_periodic_refiner_cleanup_drive_enqueue(
     interval_seconds: float,
     log_label: str,
     enqueue_fn: Callable[[Session], RefinerJob],
+    timed_failed_import_pass_queued: FailedImportTimedSchedulePassQueuedPort | None = None,
 ) -> None:
     """Enqueue on a fixed interval until *stop_event* is set (uses existing deduping enqueue)."""
+
+    pass_queued = (
+        timed_failed_import_pass_queued
+        if timed_failed_import_pass_queued is not None
+        else NoOpFailedImportTimedSchedulePassQueuedPort()
+    )
 
     loop = asyncio.get_running_loop()
     while not stop_event.is_set():
@@ -117,11 +97,7 @@ async def run_periodic_refiner_cleanup_drive_enqueue(
                 enqueue_fn(session)
                 if meta is not None and not existed_before:
                     _, movies = meta
-                    failed_import_activity.record_fetcher_failed_import_pass_queued(
-                        session,
-                        movies=movies,
-                        source="timed_schedule",
-                    )
+                    pass_queued.record_timed_schedule_pass_queued_first_row(session, movies=movies)
                 session.commit()
 
         try:

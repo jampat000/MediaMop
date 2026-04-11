@@ -1,12 +1,12 @@
 import { fetchCsrfToken } from "../../api/auth-api";
 import { apiFetch, readJson } from "../../api/client";
-import type { FailedImportEnqueueOut } from "./types";
+import type { FailedImportManualQueuePassOut } from "./types";
 
 export const failedImportRadarrEnqueuePath = () => "/api/v1/fetcher/failed-imports/radarr/enqueue";
 
 export const failedImportSonarrEnqueuePath = () => "/api/v1/fetcher/failed-imports/sonarr/enqueue";
 
-async function postFailedImportEnqueue(path: string): Promise<FailedImportEnqueueOut> {
+async function postFailedImportEnqueue(path: string): Promise<FailedImportManualQueuePassOut> {
   const csrf_token = await fetchCsrfToken();
   const r = await apiFetch(path, {
     method: "POST",
@@ -25,13 +25,13 @@ async function postFailedImportEnqueue(path: string): Promise<FailedImportEnqueu
     }
     throw new Error(detail || `Could not queue failed-import pass (${r.status})`);
   }
-  return readJson<FailedImportEnqueueOut>(r);
+  return readJson<FailedImportManualQueuePassOut>(r);
 }
 
-export async function postFailedImportRadarrEnqueue(): Promise<FailedImportEnqueueOut> {
+export async function postFailedImportRadarrEnqueue(): Promise<FailedImportManualQueuePassOut> {
   return postFailedImportEnqueue(failedImportRadarrEnqueuePath());
 }
 
-export async function postFailedImportSonarrEnqueue(): Promise<FailedImportEnqueueOut> {
+export async function postFailedImportSonarrEnqueue(): Promise<FailedImportManualQueuePassOut> {
   return postFailedImportEnqueue(failedImportSonarrEnqueuePath());
 }

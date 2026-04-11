@@ -85,7 +85,7 @@ def record_fetcher_failed_import_pass_queued(
     *,
     movies: bool,
     source: Literal["manual", "timed_schedule"],
-    enqueue_outcome: Literal["created", "already_present"] | None = None,
+    queue_outcome: Literal["created", "already_present"] | None = None,
 ) -> None:
     """Persist queue/scheduling intent — not claim that the pass has already executed."""
 
@@ -93,21 +93,21 @@ def record_fetcher_failed_import_pass_queued(
     app = "Radarr" if movies else "Sonarr"
 
     if source == "manual":
-        if enqueue_outcome is None:
-            msg = "enqueue_outcome is required when source is manual"
+        if queue_outcome is None:
+            msg = "queue_outcome is required when source is manual"
             raise TypeError(msg)
-        if enqueue_outcome == "created":
-            title = f"Fetcher queued a {media} failed-import download-queue pass for processing."
-            detail = f"The {app} pass is pending; it runs when the worker picks it up."
+        if queue_outcome == "created":
+            title = f"Fetcher added a {media} failed-import download-queue pass to the work queue."
+            detail = f"The {app} pass is waiting for the worker; it does not run in the browser."
         else:
             title = (
                 f"Fetcher recorded a manual request for the {media} failed-import pass; "
-                "that work was already queued or still pending."
+                "that pass was already waiting or still in progress."
             )
             detail = None
     else:
         title = (
-            f"Fetcher timed schedule placed a {media} failed-import download-queue pass in the work queue."
+            f"Fetcher timed schedule added a {media} failed-import download-queue pass to the work queue."
         )
         detail = f"Uses the configured {app} interval; the pass runs when the worker picks it up."
 
@@ -159,10 +159,10 @@ def record_fetcher_failed_import_recovered(
     job_id: int,
     job_kind: str,
 ) -> None:
-    from mediamop.modules.refiner.radarr_failed_import_cleanup_job import (
+    from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import (
         REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE,
     )
-    from mediamop.modules.refiner.sonarr_failed_import_cleanup_job import (
+    from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import (
         REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE,
     )
 

@@ -1,7 +1,7 @@
-"""Sonarr-only refiner_jobs producer + worker handler for the live failed-import cleanup drive.
+"""Sonarr failed-import cleanup: refiner_jobs row producer + in-process worker handler (Fetcher-owned).
 
-Enqueue uses a stable dedupe key so only one sweep row exists at a time. The handler reuses
-:func:`~mediamop.modules.refiner.sonarr_failed_import_cleanup_drive.drive_sonarr_failed_import_cleanup_from_live_queue`.
+Uses :mod:`mediamop.modules.refiner` for persisted jobs and queue drive execution; job_kind values
+remain the stable ``refiner.*`` strings stored in ``refiner_jobs``.
 """
 
 from __future__ import annotations
@@ -11,11 +11,7 @@ from collections.abc import Callable
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.fetcher import failed_import_activity
-from mediamop.modules.fetcher.cleanup_policy_service import (
-    FailedImportDrivePolicySource,
-    load_fetcher_failed_import_cleanup_bundle,
-)
+from mediamop.modules.refiner.failed_import_fetcher_runtime_ports import FailedImportSonarrWorkerRuntimePort
 from mediamop.modules.refiner.jobs_model import RefinerJob
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.sonarr_cleanup_execution import SonarrQueueHttpClient
@@ -44,6 +40,8 @@ def enqueue_sonarr_failed_import_cleanup_drive_job(session: Session) -> RefinerJ
 def make_sonarr_failed_import_cleanup_drive_handler(
     settings: MediaMopSettings,
     session_factory: sessionmaker[Session],
+    *,
+    fetcher_runtime: FailedImportSonarrWorkerRuntimePort,
 ) -> Callable[[RefinerJobWorkContext], None]:
     """Build a worker handler that runs the existing Sonarr live drive (HTTP clients from settings)."""
 
@@ -60,17 +58,13 @@ def make_sonarr_failed_import_cleanup_drive_handler(
 
             with session_factory() as session:
                 with session.begin():
-                    bundle, _ = load_fetcher_failed_import_cleanup_bundle(
-                        session,
-                        settings.refiner_failed_import_cleanup,
-                    )
-            policy_source = FailedImportDrivePolicySource(bundle)
+                    policy_source = fetcher_runtime.load_sonarr_drive_policy_source(session, settings)
 
             fetch_client = SonarrQueueHttpFetchClient(base, key)
             queue_ops = SonarrQueueHttpClient(base, key)
             with session_factory() as session:
                 with session.begin():
-                    failed_import_activity.record_fetcher_failed_import_run_started(session, movies=False)
+                    fetcher_runtime.record_run_started(session)
             results = drive_sonarr_failed_import_cleanup_from_live_queue(
                 policy_source,
                 queue_fetch_client=fetch_client,
@@ -79,19 +73,11 @@ def make_sonarr_failed_import_cleanup_drive_handler(
             outcome_values = tuple(r.outcome.value for r in results)
             with session_factory() as session:
                 with session.begin():
-                    failed_import_activity.record_fetcher_failed_import_drive_finished(
-                        session,
-                        movies=False,
-                        outcome_values=outcome_values,
-                    )
+                    fetcher_runtime.record_drive_finished(session, outcome_values=outcome_values)
         except Exception as exc:
             with session_factory() as session:
                 with session.begin():
-                    failed_import_activity.record_fetcher_failed_import_drive_failed(
-                        session,
-                        movies=False,
-                        exc=exc,
-                    )
+                    fetcher_runtime.record_drive_failed(session, exc=exc)
             raise
 
     return _run

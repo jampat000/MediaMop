@@ -1,6 +1,6 @@
-"""Operator-triggered enqueue for Radarr/Sonarr failed-import download-queue pass jobs.
+"""Operator-triggered add of Radarr/Sonarr failed-import download-queue pass jobs (Fetcher API support).
 
-Calls the existing enqueue helpers only — no handler execution in-request and no runner-loop changes.
+Calls enqueue helpers in this package only — no handler execution in-request.
 """
 
 from __future__ import annotations
@@ -10,15 +10,15 @@ from typing import Literal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from mediamop.modules.refiner.jobs_model import RefinerJob
-from mediamop.modules.refiner.radarr_failed_import_cleanup_job import (
+from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import (
     RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
     enqueue_radarr_failed_import_cleanup_drive_job,
 )
-from mediamop.modules.refiner.sonarr_failed_import_cleanup_job import (
+from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import (
     SONARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
     enqueue_sonarr_failed_import_cleanup_drive_job,
 )
+from mediamop.modules.refiner.jobs_model import RefinerJob
 
 
 def manual_enqueue_radarr_cleanup_drive(

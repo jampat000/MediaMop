@@ -24,12 +24,9 @@ from mediamop.modules.refiner.jobs_ops import (
     fail_leased_refiner_job_after_complete_failure,
     refiner_enqueue_or_get_job,
 )
-from mediamop.modules.refiner.radarr_failed_import_cleanup_job import (
-    REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE,
-)
-from mediamop.modules.refiner.sonarr_failed_import_cleanup_job import (
-    REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE,
-)
+from mediamop.modules.fetcher.failed_import_refiner_job_handlers import build_failed_import_refiner_job_handlers
+from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE
+from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE
 from mediamop.modules.refiner import worker_loop as refiner_worker_loop_mod
 from mediamop.modules.refiner.worker_loop import (
     process_one_refiner_job,
@@ -99,6 +96,7 @@ def test_start_refiner_worker_background_tasks_zero_spawns_no_tasks(
 def test_start_refiner_worker_count_gt_one_emits_guard_warning(
     session_factory,
     monkeypatch: pytest.MonkeyPatch,
+    failed_import_refiner_runtime_bundle,
 ) -> None:
     monkeypatch.setattr(
         refiner_worker_loop_mod,
@@ -109,7 +107,16 @@ def test_start_refiner_worker_count_gt_one_emits_guard_warning(
     settings = replace(base, refiner_worker_count=3)
 
     async def _run() -> None:
-        stop, tasks = start_refiner_worker_background_tasks(session_factory, settings)
+        handlers = build_failed_import_refiner_job_handlers(
+            settings,
+            session_factory,
+            failed_import_runtime=failed_import_refiner_runtime_bundle,
+        )
+        stop, tasks = start_refiner_worker_background_tasks(
+            session_factory,
+            settings,
+            job_handlers=handlers,
+        )
         assert len(tasks) == 3
         stop.set()
         await stop_refiner_worker_background_tasks(stop, tasks)
@@ -408,6 +415,7 @@ def test_parallel_claim_next_skips_handler_ok_finalize_failed_prefers_pending(
 def test_stop_multiple_refiner_workers_completes_within_timeout(
     session_factory,
     monkeypatch: pytest.MonkeyPatch,
+    failed_import_refiner_runtime_bundle,
 ) -> None:
     monkeypatch.setattr(
         refiner_worker_loop_mod,
@@ -418,7 +426,16 @@ def test_stop_multiple_refiner_workers_completes_within_timeout(
     settings = replace(base, refiner_worker_count=4)
 
     async def _run() -> None:
-        stop, tasks = start_refiner_worker_background_tasks(session_factory, settings)
+        handlers = build_failed_import_refiner_job_handlers(
+            settings,
+            session_factory,
+            failed_import_runtime=failed_import_refiner_runtime_bundle,
+        )
+        stop, tasks = start_refiner_worker_background_tasks(
+            session_factory,
+            settings,
+            job_handlers=handlers,
+        )
         assert len(tasks) == 4
         stop.set()
         await asyncio.wait_for(

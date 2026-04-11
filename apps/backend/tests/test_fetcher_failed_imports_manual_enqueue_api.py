@@ -1,4 +1,4 @@
-"""Operator ``POST`` enqueue for Fetcher Radarr/Sonarr failed-import passes (dedupe-aware)."""
+"""Operator ``POST`` for Fetcher Radarr/Sonarr failed-import manual queue passes (dedupe-aware)."""
 
 from __future__ import annotations
 
@@ -10,10 +10,10 @@ from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.modules.refiner.jobs_model import RefinerJob
 from mediamop.platform.activity import constants as act_c
 from mediamop.platform.activity.models import ActivityEvent
-from mediamop.modules.refiner.radarr_failed_import_cleanup_job import (
+from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import (
     RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
 )
-from mediamop.modules.refiner.sonarr_failed_import_cleanup_job import (
+from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import (
     SONARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
 )
 from tests.integration_helpers import auth_post, csrf as fetch_csrf
@@ -77,7 +77,7 @@ def test_fetcher_failed_imports_enqueue_radarr_admin_created_then_already_presen
     )
     assert r1.status_code == 200, r1.text
     b1 = r1.json()
-    assert b1["enqueue_outcome"] == "created"
+    assert b1["queue_outcome"] == "created"
     assert b1["dedupe_key"] == RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY
     assert "radarr" in b1["job_kind"]
 
@@ -89,7 +89,7 @@ def test_fetcher_failed_imports_enqueue_radarr_admin_created_then_already_presen
     )
     assert r2.status_code == 200, r2.text
     b2 = r2.json()
-    assert b2["enqueue_outcome"] == "already_present"
+    assert b2["queue_outcome"] == "already_present"
     assert b2["job_id"] == b1["job_id"]
 
     fac = _fac()
@@ -106,8 +106,8 @@ def test_fetcher_failed_imports_enqueue_radarr_admin_created_then_already_presen
             .order_by(ActivityEvent.id.asc()),
         ).all()
         assert len(q_rows) == 2
-        assert "queued" in q_rows[0].title.lower()
-        assert "already" in q_rows[1].title.lower() or "pending" in q_rows[1].title.lower()
+        assert "added" in q_rows[0].title.lower() or "work queue" in q_rows[0].title.lower()
+        assert "already" in q_rows[1].title.lower() or "in progress" in q_rows[1].title.lower()
 
 
 def test_fetcher_failed_imports_enqueue_sonarr_admin_created_then_already_present(
@@ -123,7 +123,7 @@ def test_fetcher_failed_imports_enqueue_sonarr_admin_created_then_already_presen
     )
     assert r1.status_code == 200, r1.text
     b1 = r1.json()
-    assert b1["enqueue_outcome"] == "created"
+    assert b1["queue_outcome"] == "created"
     assert b1["dedupe_key"] == SONARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY
 
     tok2 = fetch_csrf(client_with_admin)
@@ -133,7 +133,7 @@ def test_fetcher_failed_imports_enqueue_sonarr_admin_created_then_already_presen
         json={"confirm": True, "csrf_token": tok2},
     )
     assert r2.status_code == 200
-    assert r2.json()["enqueue_outcome"] == "already_present"
+    assert r2.json()["queue_outcome"] == "already_present"
 
     fac = _fac()
     with fac() as db:

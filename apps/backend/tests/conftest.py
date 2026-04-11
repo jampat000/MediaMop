@@ -12,6 +12,7 @@ from alembic.config import Config
 from starlette.testclient import TestClient
 
 from mediamop.api.factory import create_app
+from mediamop.modules.fetcher.failed_import_refiner_runtime import build_failed_import_refiner_runtime_bundle
 from tests.integration_helpers import seed_admin_user, seed_viewer_user
 
 
@@ -52,3 +53,10 @@ def client_with_viewer() -> TestClient:
     app = create_app()
     with TestClient(app) as c:
         yield c
+
+
+@pytest.fixture
+def failed_import_refiner_runtime_bundle():
+    """Production Fetcher ports for Refiner failed-import handlers (tests that build production handlers)."""
+
+    return build_failed_import_refiner_runtime_bundle()

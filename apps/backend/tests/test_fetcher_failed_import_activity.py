@@ -12,11 +12,11 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
-from mediamop.modules.refiner.job_handlers_registry import build_production_refiner_job_handlers
+from mediamop.modules.fetcher.failed_import_refiner_job_handlers import build_failed_import_refiner_job_handlers
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.radarr_cleanup_execution import RadarrFailedImportCleanupExecutionOutcome
 from mediamop.modules.refiner.radarr_failed_import_cleanup_drive import RadarrFailedImportCleanupDriveItemResult
-from mediamop.modules.refiner.radarr_failed_import_cleanup_job import enqueue_radarr_failed_import_cleanup_drive_job
+from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import enqueue_radarr_failed_import_cleanup_drive_job
 from mediamop.modules.refiner.worker_loop import process_one_refiner_job
 from mediamop.platform.activity import constants as act_c
 from mediamop.platform.activity.models import ActivityEvent
@@ -52,7 +52,10 @@ def session_factory(jobs_engine):
     )
 
 
-def test_radarr_drive_removal_summary_activity(session_factory) -> None:
+def test_radarr_drive_removal_summary_activity(
+    session_factory,
+    failed_import_refiner_runtime_bundle,
+) -> None:
     t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
     settings = replace(
         MediaMopSettings.load(),
@@ -67,9 +70,13 @@ def test_radarr_drive_removal_summary_activity(session_factory) -> None:
         enqueue_radarr_failed_import_cleanup_drive_job(s)
         s.commit()
 
-    handlers = build_production_refiner_job_handlers(settings, session_factory)
+    handlers = build_failed_import_refiner_job_handlers(
+        settings,
+        session_factory,
+        failed_import_runtime=failed_import_refiner_runtime_bundle,
+    )
     with patch(
-        "mediamop.modules.refiner.radarr_failed_import_cleanup_job.drive_radarr_failed_import_cleanup_from_live_queue",
+        "mediamop.modules.fetcher.radarr_failed_import_cleanup_job.drive_radarr_failed_import_cleanup_from_live_queue",
         return_value=fake_results,
     ):
         out = process_one_refiner_job(
@@ -94,7 +101,10 @@ def test_radarr_drive_removal_summary_activity(session_factory) -> None:
         assert "not eligible" in summary_ev.detail.lower()
 
 
-def test_radarr_drive_all_policy_skips_activity(session_factory) -> None:
+def test_radarr_drive_all_policy_skips_activity(
+    session_factory,
+    failed_import_refiner_runtime_bundle,
+) -> None:
     t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
     settings = replace(
         MediaMopSettings.load(),
@@ -109,9 +119,13 @@ def test_radarr_drive_all_policy_skips_activity(session_factory) -> None:
         enqueue_radarr_failed_import_cleanup_drive_job(s)
         s.commit()
 
-    handlers = build_production_refiner_job_handlers(settings, session_factory)
+    handlers = build_failed_import_refiner_job_handlers(
+        settings,
+        session_factory,
+        failed_import_runtime=failed_import_refiner_runtime_bundle,
+    )
     with patch(
-        "mediamop.modules.refiner.radarr_failed_import_cleanup_job.drive_radarr_failed_import_cleanup_from_live_queue",
+        "mediamop.modules.fetcher.radarr_failed_import_cleanup_job.drive_radarr_failed_import_cleanup_from_live_queue",
         return_value=fake_results,
     ):
         process_one_refiner_job(
