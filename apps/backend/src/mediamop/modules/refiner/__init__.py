@@ -8,6 +8,10 @@ Refiner owns persisted ``refiner_jobs`` and optional in-process Refiner workers
 (``MEDIAMOP_REFINER_WORKER_COUNT``). Durable Fetcher background work uses ``fetcher_jobs`` and
 Fetcher workers instead. Composition may inject neutral ports; Refiner does not import Fetcher.
 
+Each future durable ``refiner.*`` job family must carry **its own** operator timing settings and
+persisted timing state per ``docs/adr/ADR-0009-suite-wide-timing-isolation.md`` (lane table
+ownership remains ``docs/adr/ADR-0007-module-owned-worker-lanes.md``).
+
 Radarr and Sonarr stay in separate Python modules wherever behavior can diverge.
 """
 

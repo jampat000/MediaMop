@@ -2,6 +2,8 @@
 
 ADRs in this folder capture **locked** structural and platform choices for this repository. They override ad hoc experimentation when the two conflict.
 
+**Durable-job timing:** operator-controlled intervals, schedules, cooldowns, retries, last-run, and timing-based pruning must follow [ADR-0009](ADR-0009-suite-wide-timing-isolation.md) (per module, then per job family).
+
 **Numbering:** [ADR-0004](ADR-0004-reserved-number.md), [ADR-0005](ADR-0005-reserved-number.md), and [ADR-0006](ADR-0006-reserved-number.md) are intentionally reserved (no architectural body) so filenames and cross-references stay stable. **Git rename noise** around the large Fetcher lane migration is documented in [note-git-rename-metadata-93547e2.md](note-git-rename-metadata-93547e2.md); fixing it would require history rewrite and force-push.
 
 | ADR | Title |
@@ -14,3 +16,4 @@ ADRs in this folder capture **locked** structural and platform choices for this 
 | [ADR-0006](ADR-0006-reserved-number.md) | Reserved number (no document) |
 | [ADR-0007](ADR-0007-module-owned-worker-lanes.md) | Module-owned worker lanes (SQLite) |
 | [ADR-0008](ADR-0008-mediomop-settings-aggregate-runtime-config.md) | `MediaMopSettings` aggregate for runtime configuration |
+| [ADR-0009](ADR-0009-suite-wide-timing-isolation.md) | Suite-wide timing isolation (durable work) |

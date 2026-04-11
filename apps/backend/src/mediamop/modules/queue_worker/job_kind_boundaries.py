@@ -3,7 +3,9 @@
 Each module keeps its own persisted jobs table and worker pool. ``job_kind`` strings are
 function-named *inside* that module's namespace (prefix = module lane).
 
-See ``docs/adr/ADR-0007-module-owned-worker-lanes.md``.
+See ``docs/adr/ADR-0007-module-owned-worker-lanes.md``. Operator timing contracts (intervals,
+schedules, cooldowns, retries, last-run, pruning horizons) must not cross job families; see
+``docs/adr/ADR-0009-suite-wide-timing-isolation.md``.
 """
 
 from __future__ import annotations

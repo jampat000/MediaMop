@@ -107,6 +107,12 @@ MediaMop is **SQLite-first**: one writer per database. Durable background work m
 
 ---
 
+## Related
+
+- [ADR-0009](ADR-0009-suite-wide-timing-isolation.md) — **Timing isolation:** intervals, schedule windows, cooldowns, retries, last-run timestamps, and timing-derived pruning are **per module** and **per job family**; no shared operator timing contracts across lanes.
+
+---
+
 ## Consequences
 
 - Adding a new **function** in Fetcher is a new **`job_kind`** under `failed_import.` / `missing_search.` / `upgrade_search.` — not a new table unless isolation is proven necessary.
