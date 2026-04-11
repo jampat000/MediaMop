@@ -14,7 +14,7 @@ from mediamop.modules.fetcher.cleanup_policy_service import (
 )
 from mediamop.modules.arr_failed_import.env_settings import (
     AppFailedImportCleanupPolicySettings,
-    default_refiner_failed_import_cleanup_settings_bundle,
+    default_failed_import_cleanup_settings_bundle,
 )
 from mediamop.modules.fetcher.radarr_failed_import_cleanup import (
     RadarrFailedImportCleanupAction,
@@ -55,7 +55,7 @@ def session_factory(policy_engine):
 
 
 def test_load_seeds_singleton_from_env_then_second_read_is_db_only(session_factory) -> None:
-    env = default_refiner_failed_import_cleanup_settings_bundle()
+    env = default_failed_import_cleanup_settings_bundle()
     with session_factory() as s:
         eff1, row1 = load_fetcher_failed_import_cleanup_bundle(s, env)
         s.commit()
@@ -72,14 +72,14 @@ def test_load_seeds_singleton_from_env_then_second_read_is_db_only(session_facto
         assert r is not None
         r.radarr_remove_failed_imports = True
         s.commit()
-    different_env = default_refiner_failed_import_cleanup_settings_bundle()
+    different_env = default_failed_import_cleanup_settings_bundle()
     with session_factory() as s:
         eff3, _ = load_fetcher_failed_import_cleanup_bundle(s, different_env)
     assert eff3.radarr.remove_failed_imports is True
 
 
 def test_upsert_after_seed_updates_db(session_factory) -> None:
-    env = default_refiner_failed_import_cleanup_settings_bundle()
+    env = default_failed_import_cleanup_settings_bundle()
     with session_factory() as s:
         load_fetcher_failed_import_cleanup_bundle(s, env)
         s.commit()
@@ -97,7 +97,7 @@ def test_upsert_after_seed_updates_db(session_factory) -> None:
 
 
 def test_drive_policy_source_implements_both_axes(session_factory) -> None:
-    env = default_refiner_failed_import_cleanup_settings_bundle()
+    env = default_failed_import_cleanup_settings_bundle()
     with session_factory() as s:
         upsert_fetcher_failed_import_cleanup_policy(
             s,

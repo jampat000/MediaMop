@@ -160,15 +160,15 @@ def record_fetcher_failed_import_recovered(
     job_kind: str,
 ) -> None:
     from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import (
-        REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE,
+        FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
     )
     from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import (
-        REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE,
+        FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE,
     )
 
-    if job_kind == REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE:
+    if job_kind == FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE:
         scope = "movies (Radarr)"
-    elif job_kind == REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE:
+    elif job_kind == FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE:
         scope = "TV (Sonarr)"
     else:
         scope = "download queue pass"

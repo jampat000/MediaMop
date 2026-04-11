@@ -1,4 +1,4 @@
-"""Concrete Fetcher implementations of :mod:`mediamop.modules.refiner.failed_import_fetcher_runtime_ports`."""
+"""Concrete Fetcher implementations of :mod:`mediamop.modules.refiner.failed_import_queue_worker_ports`."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from mediamop.modules.fetcher.cleanup_policy_service import (
     load_fetcher_failed_import_cleanup_bundle,
 )
 from mediamop.modules.fetcher import failed_import_activity
-from mediamop.modules.refiner.failed_import_fetcher_runtime_ports import (
-    FailedImportRefinerRuntimeBundle,
+from mediamop.modules.refiner.failed_import_queue_worker_ports import (
+    FailedImportQueueWorkerPorts,
     FailedImportTimedSchedulePassQueuedPort,
 )
 
@@ -24,7 +24,7 @@ class _FetcherRadarrWorkerRuntime:
         session: Session,
         settings: MediaMopSettings,
     ) -> FailedImportDrivePolicySource:
-        bundle, _ = load_fetcher_failed_import_cleanup_bundle(session, settings.refiner_failed_import_cleanup)
+        bundle, _ = load_fetcher_failed_import_cleanup_bundle(session, settings.failed_import_cleanup_env)
         return FailedImportDrivePolicySource(bundle)
 
     def record_run_started(self, session: Session) -> None:
@@ -49,7 +49,7 @@ class _FetcherSonarrWorkerRuntime:
         session: Session,
         settings: MediaMopSettings,
     ) -> FailedImportDrivePolicySource:
-        bundle, _ = load_fetcher_failed_import_cleanup_bundle(session, settings.refiner_failed_import_cleanup)
+        bundle, _ = load_fetcher_failed_import_cleanup_bundle(session, settings.failed_import_cleanup_env)
         return FailedImportDrivePolicySource(bundle)
 
     def record_run_started(self, session: Session) -> None:
@@ -77,10 +77,10 @@ class _FetcherTimedSchedulePassQueued(FailedImportTimedSchedulePassQueuedPort):
         )
 
 
-def build_failed_import_refiner_runtime_bundle() -> FailedImportRefinerRuntimeBundle:
+def build_failed_import_queue_worker_runtime_bundle() -> FailedImportQueueWorkerPorts:
     """Production wiring: Fetcher policy + activity behind Refiner ports."""
 
-    return FailedImportRefinerRuntimeBundle(
+    return FailedImportQueueWorkerPorts(
         radarr_worker=_FetcherRadarrWorkerRuntime(),
         sonarr_worker=_FetcherSonarrWorkerRuntime(),
         timed_schedule_pass_queued=_FetcherTimedSchedulePassQueued(),

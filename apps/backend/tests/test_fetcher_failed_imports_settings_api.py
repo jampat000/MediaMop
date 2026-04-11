@@ -27,12 +27,12 @@ def test_fetcher_failed_imports_settings_authenticated_shape(client_with_admin: 
     r = client_with_admin.get("/api/v1/fetcher/failed-imports/settings")
     assert r.status_code == 200, r.text
     body = r.json()
-    assert body["refiner_worker_count"] == 0
+    assert body["background_job_worker_count"] == 0
     assert body["in_process_workers_disabled"] is True
     assert body["in_process_workers_enabled"] is False
-    assert "refiner_radarr_cleanup_drive_schedule_enabled" in body
-    assert "refiner_radarr_cleanup_drive_schedule_interval_seconds" in body
-    assert "refiner_sonarr_cleanup_drive_schedule_enabled" in body
-    assert "refiner_sonarr_cleanup_drive_schedule_interval_seconds" in body
+    assert "failed_import_radarr_cleanup_drive_schedule_enabled" in body
+    assert "failed_import_radarr_cleanup_drive_schedule_interval_seconds" in body
+    assert "failed_import_sonarr_cleanup_drive_schedule_enabled" in body
+    assert "failed_import_sonarr_cleanup_drive_schedule_interval_seconds" in body
     assert "worker_mode_summary" in body
     assert "visibility_note" in body

@@ -20,16 +20,16 @@ export type FailedImportTasksInspectionOut = {
   default_terminal_only: boolean;
 };
 
-/** GET /api/v1/fetcher/failed-imports/settings — same payload shape as legacy refiner visibility (settings keys unchanged). */
+/** GET /api/v1/fetcher/failed-imports/settings — settings snapshot from loaded config (not liveness). */
 export type FailedImportFetcherSettingsOut = {
-  refiner_worker_count: number;
+  background_job_worker_count: number;
   in_process_workers_disabled: boolean;
   in_process_workers_enabled: boolean;
   worker_mode_summary: string;
-  refiner_radarr_cleanup_drive_schedule_enabled: boolean;
-  refiner_radarr_cleanup_drive_schedule_interval_seconds: number;
-  refiner_sonarr_cleanup_drive_schedule_enabled: boolean;
-  refiner_sonarr_cleanup_drive_schedule_interval_seconds: number;
+  failed_import_radarr_cleanup_drive_schedule_enabled: boolean;
+  failed_import_radarr_cleanup_drive_schedule_interval_seconds: number;
+  failed_import_sonarr_cleanup_drive_schedule_enabled: boolean;
+  failed_import_sonarr_cleanup_drive_schedule_interval_seconds: number;
   visibility_note: string;
 };
 

@@ -7,7 +7,7 @@ from dataclasses import dataclass, replace
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.arr_failed_import.env_settings import (
     AppFailedImportCleanupPolicySettings,
-    RefinerFailedImportCleanupSettingsBundle,
+    FailedImportCleanupSettingsBundle,
 )
 from mediamop.modules.fetcher.sonarr_cleanup_execution import SonarrFailedImportCleanupExecutionOutcome
 from mediamop.modules.fetcher.sonarr_failed_import_cleanup_vertical import (
@@ -28,11 +28,11 @@ class _RecordingSonarrClient:
 
 def _settings_with_sonarr_policy(sonarr: AppFailedImportCleanupPolicySettings) -> MediaMopSettings:
     base = MediaMopSettings.load()
-    bundle = RefinerFailedImportCleanupSettingsBundle(
-        radarr=base.refiner_failed_import_cleanup.radarr,
+    bundle = FailedImportCleanupSettingsBundle(
+        radarr=base.failed_import_cleanup_env.radarr,
         sonarr=sonarr,
     )
-    return replace(base, refiner_failed_import_cleanup=bundle)
+    return replace(base, failed_import_cleanup_env=bundle)
 
 
 def test_sonarr_vertical_resolves_policy_plans_and_executes_when_eligible() -> None:

@@ -12,10 +12,10 @@ from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import (
     RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
-    REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE,
+    FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
 )
 from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import (
-    REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE,
+    FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE,
     SONARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
 )
 from tests.integration_helpers import auth_post, csrf as fetch_csrf
@@ -63,7 +63,7 @@ def _seed_radarr_completed(*, updated_at: datetime) -> None:
         db.add(
             RefinerJob(
                 dedupe_key=RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
-                job_kind=REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE,
+                job_kind=FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
                 status=RefinerJobStatus.COMPLETED.value,
                 attempt_count=1,
                 updated_at=updated_at,
@@ -78,7 +78,7 @@ def _seed_sonarr_failed(*, updated_at: datetime) -> None:
         db.add(
             RefinerJob(
                 dedupe_key=SONARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
-                job_kind=REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE,
+                job_kind=FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE,
                 status=RefinerJobStatus.FAILED.value,
                 attempt_count=1,
                 max_attempts=3,

@@ -13,10 +13,10 @@ from mediamop.modules.fetcher.schemas_automation_summary import (
 from mediamop.modules.refiner.inspection_service import DEFAULT_TERMINAL_STATUSES
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import (
-    REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE,
+    FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
 )
 from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import (
-    REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE,
+    FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE,
 )
 
 _SCOPE_NOTE = (
@@ -99,22 +99,22 @@ def build_fetcher_failed_import_automation_summary(
     session: Session,
     settings: MediaMopSettings,
 ) -> FetcherFailedImportAutomationSummaryOut:
-    rad = _latest_terminal_job(session, job_kind=REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE)
-    son = _latest_terminal_job(session, job_kind=REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE)
+    rad = _latest_terminal_job(session, job_kind=FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE)
+    son = _latest_terminal_job(session, job_kind=FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE)
 
     slots_note = _SLOTS_OFF_NOTE if settings.refiner_worker_count == 0 else None
 
     movies = _axis_from_settings(
         empty_history_label="No finished movie pass recorded yet.",
         job=rad,
-        schedule_enabled=settings.refiner_radarr_cleanup_drive_schedule_enabled,
-        interval_seconds=settings.refiner_radarr_cleanup_drive_schedule_interval_seconds,
+        schedule_enabled=settings.failed_import_radarr_cleanup_drive_schedule_enabled,
+        interval_seconds=settings.failed_import_radarr_cleanup_drive_schedule_interval_seconds,
     )
     tv = _axis_from_settings(
         empty_history_label="No finished TV pass recorded yet.",
         job=son,
-        schedule_enabled=settings.refiner_sonarr_cleanup_drive_schedule_enabled,
-        interval_seconds=settings.refiner_sonarr_cleanup_drive_schedule_interval_seconds,
+        schedule_enabled=settings.failed_import_sonarr_cleanup_drive_schedule_enabled,
+        interval_seconds=settings.failed_import_sonarr_cleanup_drive_schedule_interval_seconds,
     )
 
     return FetcherFailedImportAutomationSummaryOut(

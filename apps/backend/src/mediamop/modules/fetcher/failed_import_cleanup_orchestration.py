@@ -26,9 +26,6 @@ class FailedImportArrApp(str, Enum):
     SONARR = "sonarr"
 
 
-RefinerArrApp = FailedImportArrApp
-
-
 FailedImportCleanupPlanningResult = RadarrFailedImportCleanupPlan | SonarrFailedImportCleanupPlan
 
 
@@ -40,12 +37,6 @@ def parse_failed_import_arr_app(raw: str) -> FailedImportArrApp:
     if key == FailedImportArrApp.SONARR.value:
         return FailedImportArrApp.SONARR
     raise ValueError(f"unknown failed-import arr app: {raw!r}")
-
-
-def parse_refiner_arr_app(raw: str) -> FailedImportArrApp:
-    """Deprecated alias for :func:`parse_failed_import_arr_app`."""
-
-    return parse_failed_import_arr_app(raw)
 
 
 def plan_failed_import_cleanup(

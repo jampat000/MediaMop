@@ -3,22 +3,23 @@
 Radarr and Sonarr each have their own toggle set so defaults and future persistence
 can diverge without a shared blob.
 
-Env variable names retain the historical ``MEDIAMOP_REFINER_*`` prefix (deployment
-compatibility). The module lives under ``arr_failed_import`` because these toggles are
-*arr download-queue policy*, not Refiner disk refinement.
+Primary env names use ``MEDIAMOP_FAILED_IMPORT_*``. Legacy ``MEDIAMOP_REFINER_*_CLEANUP_*``
+names for the same toggles are still read when the primary variable for a given toggle
+is unset (empty string only — a set primary always wins). Precedence: **primary first**,
+then legacy, then default off.
 
-Env pattern (each defaults off when unset):
+Primary pattern:
 
-- ``MEDIAMOP_REFINER_RADARR_CLEANUP_QUALITY``
-- ``MEDIAMOP_REFINER_RADARR_CLEANUP_UNMATCHED``
-- ``MEDIAMOP_REFINER_RADARR_CLEANUP_CORRUPT``
-- ``MEDIAMOP_REFINER_RADARR_CLEANUP_DOWNLOAD_FAILED``
-- ``MEDIAMOP_REFINER_RADARR_CLEANUP_IMPORT_FAILED``
+- ``MEDIAMOP_FAILED_IMPORT_RADARR_CLEANUP_QUALITY``
+- ``MEDIAMOP_FAILED_IMPORT_RADARR_CLEANUP_UNMATCHED``
+- … (same suffixes for Radarr / Sonarr)
 
-- ``MEDIAMOP_REFINER_SONARR_CLEANUP_QUALITY`` (and same suffixes)
+Legacy (read only if primary key absent):
+
+- ``MEDIAMOP_REFINER_RADARR_CLEANUP_QUALITY``, etc.
 
 Truthy: ``1``, ``true``, ``yes``, ``on`` (case-insensitive). Falsy: ``0``, ``false``,
-``no``, ``off``, or empty/unset.
+``no``, ``off``, or empty/unset for both primary and legacy.
 """
 
 from __future__ import annotations
@@ -28,17 +29,25 @@ from dataclasses import dataclass
 
 from mediamop.modules.arr_failed_import.policy import FailedImportCleanupPolicy
 
-_RADARR_ENV_PREFIX = "MEDIAMOP_REFINER_RADARR_CLEANUP_"
-_SONARR_ENV_PREFIX = "MEDIAMOP_REFINER_SONARR_CLEANUP_"
 
+def _cleanup_toggle(new_key: str, legacy_key: str) -> bool:
+    """Bool toggle: non-empty primary env wins; else non-empty legacy; else False."""
 
-def _env_bool(name: str, *, default: bool = False) -> bool:
-    raw = (os.environ.get(name) or "").strip().lower()
-    if raw in ("1", "true", "yes", "on"):
-        return True
-    if raw in ("0", "false", "no", "off"):
+    if (os.environ.get(new_key) or "").strip() != "":
+        raw = (os.environ.get(new_key) or "").strip().lower()
+        if raw in ("1", "true", "yes", "on"):
+            return True
+        if raw in ("0", "false", "no", "off"):
+            return False
         return False
-    return default
+    if (os.environ.get(legacy_key) or "").strip() != "":
+        raw = (os.environ.get(legacy_key) or "").strip().lower()
+        if raw in ("1", "true", "yes", "on"):
+            return True
+        if raw in ("0", "false", "no", "off"):
+            return False
+        return False
+    return False
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,17 +84,27 @@ class FailedImportCleanupSettingsBundle:
         return self.sonarr.to_failed_import_cleanup_policy()
 
 
-# Historical type name (MediaMopSettings field and older call sites).
-RefinerFailedImportCleanupSettingsBundle = FailedImportCleanupSettingsBundle
-
-
-def _load_app_cleanup_settings(prefix: str) -> AppFailedImportCleanupPolicySettings:
+def _load_radarr_cleanup_settings() -> AppFailedImportCleanupPolicySettings:
+    p_new = "MEDIAMOP_FAILED_IMPORT_RADARR_CLEANUP_"
+    p_leg = "MEDIAMOP_REFINER_RADARR_CLEANUP_"
     return AppFailedImportCleanupPolicySettings(
-        remove_quality_rejections=_env_bool(prefix + "QUALITY"),
-        remove_unmatched_manual_import_rejections=_env_bool(prefix + "UNMATCHED"),
-        remove_corrupt_imports=_env_bool(prefix + "CORRUPT"),
-        remove_failed_downloads=_env_bool(prefix + "DOWNLOAD_FAILED"),
-        remove_failed_imports=_env_bool(prefix + "IMPORT_FAILED"),
+        remove_quality_rejections=_cleanup_toggle(p_new + "QUALITY", p_leg + "QUALITY"),
+        remove_unmatched_manual_import_rejections=_cleanup_toggle(p_new + "UNMATCHED", p_leg + "UNMATCHED"),
+        remove_corrupt_imports=_cleanup_toggle(p_new + "CORRUPT", p_leg + "CORRUPT"),
+        remove_failed_downloads=_cleanup_toggle(p_new + "DOWNLOAD_FAILED", p_leg + "DOWNLOAD_FAILED"),
+        remove_failed_imports=_cleanup_toggle(p_new + "IMPORT_FAILED", p_leg + "IMPORT_FAILED"),
+    )
+
+
+def _load_sonarr_cleanup_settings() -> AppFailedImportCleanupPolicySettings:
+    p_new = "MEDIAMOP_FAILED_IMPORT_SONARR_CLEANUP_"
+    p_leg = "MEDIAMOP_REFINER_SONARR_CLEANUP_"
+    return AppFailedImportCleanupPolicySettings(
+        remove_quality_rejections=_cleanup_toggle(p_new + "QUALITY", p_leg + "QUALITY"),
+        remove_unmatched_manual_import_rejections=_cleanup_toggle(p_new + "UNMATCHED", p_leg + "UNMATCHED"),
+        remove_corrupt_imports=_cleanup_toggle(p_new + "CORRUPT", p_leg + "CORRUPT"),
+        remove_failed_downloads=_cleanup_toggle(p_new + "DOWNLOAD_FAILED", p_leg + "DOWNLOAD_FAILED"),
+        remove_failed_imports=_cleanup_toggle(p_new + "IMPORT_FAILED", p_leg + "IMPORT_FAILED"),
     )
 
 
@@ -98,18 +117,6 @@ def default_failed_import_cleanup_settings_bundle() -> FailedImportCleanupSettin
 def load_failed_import_cleanup_settings_bundle() -> FailedImportCleanupSettingsBundle:
     """Read cleanup toggles from the process environment (default all off)."""
     return FailedImportCleanupSettingsBundle(
-        radarr=_load_app_cleanup_settings(_RADARR_ENV_PREFIX),
-        sonarr=_load_app_cleanup_settings(_SONARR_ENV_PREFIX),
+        radarr=_load_radarr_cleanup_settings(),
+        sonarr=_load_sonarr_cleanup_settings(),
     )
-
-
-def default_refiner_failed_import_cleanup_settings_bundle() -> FailedImportCleanupSettingsBundle:
-    """Alias of :func:`default_failed_import_cleanup_settings_bundle`."""
-
-    return default_failed_import_cleanup_settings_bundle()
-
-
-def load_refiner_failed_import_cleanup_settings_bundle() -> FailedImportCleanupSettingsBundle:
-    """Alias of :func:`load_failed_import_cleanup_settings_bundle`."""
-
-    return load_failed_import_cleanup_settings_bundle()

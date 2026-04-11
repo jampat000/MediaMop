@@ -190,7 +190,7 @@ function FetcherFailedImportsSettingsSection({
             <p className="mt-1">
               <span className="text-[var(--mm-text3)]">{FETCHER_FI_RUNTIME_WORKER_COUNT_LABEL}</span>{" "}
               <code className="mm-dash-code" data-testid="fetcher-failed-imports-worker-count">
-                {rv.data.refiner_worker_count}
+                {rv.data.background_job_worker_count}
               </code>
             </p>
             <p className="mt-1 text-[var(--mm-text)]" data-testid="fetcher-failed-imports-worker-summary">
@@ -204,13 +204,13 @@ function FetcherFailedImportsSettingsSection({
             <p className="mt-1">
               Scheduled:{" "}
               <span className="font-medium text-[var(--mm-text)]" data-testid="fetcher-failed-imports-radarr-enabled">
-                {yesNo(rv.data.refiner_radarr_cleanup_drive_schedule_enabled)}
+                {yesNo(rv.data.failed_import_radarr_cleanup_drive_schedule_enabled)}
               </span>
             </p>
             <p className="mt-1">
               Interval:{" "}
               <span data-testid="fetcher-failed-imports-radarr-interval">
-                {formatScheduleIntervalSeconds(rv.data.refiner_radarr_cleanup_drive_schedule_interval_seconds)}
+                {formatScheduleIntervalSeconds(rv.data.failed_import_radarr_cleanup_drive_schedule_interval_seconds)}
               </span>
             </p>
           </div>
@@ -221,13 +221,13 @@ function FetcherFailedImportsSettingsSection({
             <p className="mt-1">
               Scheduled:{" "}
               <span className="font-medium text-[var(--mm-text)]" data-testid="fetcher-failed-imports-sonarr-enabled">
-                {yesNo(rv.data.refiner_sonarr_cleanup_drive_schedule_enabled)}
+                {yesNo(rv.data.failed_import_sonarr_cleanup_drive_schedule_enabled)}
               </span>
             </p>
             <p className="mt-1">
               Interval:{" "}
               <span data-testid="fetcher-failed-imports-sonarr-interval">
-                {formatScheduleIntervalSeconds(rv.data.refiner_sonarr_cleanup_drive_schedule_interval_seconds)}
+                {formatScheduleIntervalSeconds(rv.data.failed_import_sonarr_cleanup_drive_schedule_interval_seconds)}
               </span>
             </p>
           </div>

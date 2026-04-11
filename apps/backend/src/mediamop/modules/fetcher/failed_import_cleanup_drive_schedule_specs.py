@@ -21,19 +21,19 @@ def failed_import_cleanup_drive_schedule_specs(settings: MediaMopSettings) -> li
     """Return (log_label, interval_seconds, enqueue_fn) for each independently enabled failed-import schedule."""
 
     specs: list[ScheduleSpec] = []
-    if settings.refiner_radarr_cleanup_drive_schedule_enabled:
+    if settings.failed_import_radarr_cleanup_drive_schedule_enabled:
         specs.append(
             (
                 "radarr_failed_import_cleanup_drive",
-                float(settings.refiner_radarr_cleanup_drive_schedule_interval_seconds),
+                float(settings.failed_import_radarr_cleanup_drive_schedule_interval_seconds),
                 enqueue_radarr_failed_import_cleanup_drive_job,
             ),
         )
-    if settings.refiner_sonarr_cleanup_drive_schedule_enabled:
+    if settings.failed_import_sonarr_cleanup_drive_schedule_enabled:
         specs.append(
             (
                 "sonarr_failed_import_cleanup_drive",
-                float(settings.refiner_sonarr_cleanup_drive_schedule_interval_seconds),
+                float(settings.failed_import_sonarr_cleanup_drive_schedule_interval_seconds),
                 enqueue_sonarr_failed_import_cleanup_drive_job,
             ),
         )

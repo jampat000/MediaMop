@@ -15,7 +15,7 @@ from mediamop.modules.fetcher.automation_summary_service import (
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import (
     RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
-    REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE,
+    FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
 )
 
 import mediamop.modules.refiner.jobs_model  # noqa: F401
@@ -32,8 +32,8 @@ def test_schedule_off_no_secondary_caveat() -> None:
     base = MediaMopSettings.load()
     s = replace(
         base,
-        refiner_radarr_cleanup_drive_schedule_enabled=False,
-        refiner_sonarr_cleanup_drive_schedule_enabled=False,
+        failed_import_radarr_cleanup_drive_schedule_enabled=False,
+        failed_import_sonarr_cleanup_drive_schedule_enabled=False,
         refiner_worker_count=1,
     )
     with _session() as db:
@@ -48,8 +48,8 @@ def test_schedule_on_interval_and_caveat() -> None:
     base = MediaMopSettings.load()
     s = replace(
         base,
-        refiner_radarr_cleanup_drive_schedule_enabled=True,
-        refiner_radarr_cleanup_drive_schedule_interval_seconds=3600,
+        failed_import_radarr_cleanup_drive_schedule_enabled=True,
+        failed_import_radarr_cleanup_drive_schedule_interval_seconds=3600,
         refiner_worker_count=1,
     )
     with _session() as db:
@@ -71,7 +71,7 @@ def test_last_finished_from_persisted_terminal_row_only() -> None:
         db.add(
             RefinerJob(
                 dedupe_key=RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
-                job_kind=REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE,
+                job_kind=FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
                 status=RefinerJobStatus.COMPLETED.value,
                 attempt_count=1,
                 updated_at=t_done,

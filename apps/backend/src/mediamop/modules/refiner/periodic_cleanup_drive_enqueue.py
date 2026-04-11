@@ -14,7 +14,7 @@ from collections.abc import Callable
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
-from mediamop.modules.refiner.failed_import_fetcher_runtime_ports import (
+from mediamop.modules.refiner.failed_import_queue_worker_ports import (
     FailedImportTimedSchedulePassQueuedPort,
     NoOpFailedImportTimedSchedulePassQueuedPort,
 )

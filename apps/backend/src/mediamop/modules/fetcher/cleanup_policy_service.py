@@ -1,7 +1,7 @@
 """Fetcher failed-import cleanup policy — single source of truth in SQLite.
 
 The singleton row ``id = 1`` holds runtime values. If it is missing, it is **seeded once** from the
-process environment bundle (``MediaMopSettings.refiner_failed_import_cleanup`` at load time). After
+process environment bundle (``MediaMopSettings.failed_import_cleanup_env`` at load time). After
 that, all reads use the database row only — no ongoing env fallback.
 """
 
@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from mediamop.modules.fetcher.cleanup_policy_model import FetcherFailedImportCleanupPolicyRow
 from mediamop.modules.arr_failed_import.env_settings import (
     AppFailedImportCleanupPolicySettings,
-    RefinerFailedImportCleanupSettingsBundle,
+    FailedImportCleanupSettingsBundle,
 )
 from mediamop.modules.arr_failed_import.policy import FailedImportCleanupPolicy
 
@@ -24,7 +24,7 @@ from mediamop.modules.arr_failed_import.policy import FailedImportCleanupPolicy
 class FailedImportDrivePolicySource:
     """Supplies Radarr and Sonarr policies for live download-queue drives."""
 
-    bundle: RefinerFailedImportCleanupSettingsBundle
+    bundle: FailedImportCleanupSettingsBundle
 
     def radarr_failed_import_cleanup_policy(self) -> FailedImportCleanupPolicy:
         return self.bundle.radarr_policy()
@@ -33,8 +33,8 @@ class FailedImportDrivePolicySource:
         return self.bundle.sonarr_policy()
 
 
-def _row_to_bundle(row: FetcherFailedImportCleanupPolicyRow) -> RefinerFailedImportCleanupSettingsBundle:
-    return RefinerFailedImportCleanupSettingsBundle(
+def _row_to_bundle(row: FetcherFailedImportCleanupPolicyRow) -> FailedImportCleanupSettingsBundle:
+    return FailedImportCleanupSettingsBundle(
         radarr=AppFailedImportCleanupPolicySettings(
             remove_quality_rejections=row.radarr_remove_quality_rejections,
             remove_unmatched_manual_import_rejections=row.radarr_remove_unmatched_manual_import_rejections,
@@ -52,7 +52,7 @@ def _row_to_bundle(row: FetcherFailedImportCleanupPolicyRow) -> RefinerFailedImp
     )
 
 
-def _new_row_from_env(env_bundle: RefinerFailedImportCleanupSettingsBundle) -> FetcherFailedImportCleanupPolicyRow:
+def _new_row_from_env(env_bundle: FailedImportCleanupSettingsBundle) -> FetcherFailedImportCleanupPolicyRow:
     r, s = env_bundle.radarr, env_bundle.sonarr
     return FetcherFailedImportCleanupPolicyRow(
         id=1,
@@ -71,8 +71,8 @@ def _new_row_from_env(env_bundle: RefinerFailedImportCleanupSettingsBundle) -> F
 
 def load_fetcher_failed_import_cleanup_bundle(
     session: Session,
-    env_bundle: RefinerFailedImportCleanupSettingsBundle,
-) -> tuple[RefinerFailedImportCleanupSettingsBundle, FetcherFailedImportCleanupPolicyRow]:
+    env_bundle: FailedImportCleanupSettingsBundle,
+) -> tuple[FailedImportCleanupSettingsBundle, FetcherFailedImportCleanupPolicyRow]:
     """Return Fetcher failed-import cleanup policy from the persisted singleton row (``id = 1``).
 
     **This is the only lazy-seed entry point** for that row: if the row is missing, it is
@@ -111,7 +111,7 @@ def load_fetcher_failed_import_cleanup_bundle(
 def upsert_fetcher_failed_import_cleanup_policy(
     session: Session,
     *,
-    env_bundle: RefinerFailedImportCleanupSettingsBundle,
+    env_bundle: FailedImportCleanupSettingsBundle,
     radarr: AppFailedImportCleanupPolicySettings,
     sonarr: AppFailedImportCleanupPolicySettings,
 ) -> FetcherFailedImportCleanupPolicyRow:

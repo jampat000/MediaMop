@@ -46,14 +46,14 @@ const minimalOverview: FetcherOperationalOverview = {
 };
 
 const minimalFiSettings = {
-  refiner_worker_count: 0,
+  background_job_worker_count: 0,
   in_process_workers_disabled: true,
   in_process_workers_enabled: false,
   worker_mode_summary: "test",
-  refiner_radarr_cleanup_drive_schedule_enabled: false,
-  refiner_radarr_cleanup_drive_schedule_interval_seconds: 3600,
-  refiner_sonarr_cleanup_drive_schedule_enabled: false,
-  refiner_sonarr_cleanup_drive_schedule_interval_seconds: 3600,
+  failed_import_radarr_cleanup_drive_schedule_enabled: false,
+  failed_import_radarr_cleanup_drive_schedule_interval_seconds: 3600,
+  failed_import_sonarr_cleanup_drive_schedule_enabled: false,
+  failed_import_sonarr_cleanup_drive_schedule_interval_seconds: 3600,
   visibility_note: "note",
 };
 

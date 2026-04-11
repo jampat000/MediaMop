@@ -12,7 +12,7 @@ from starlette.testclient import TestClient
 from mediamop.api.factory import create_app
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.arr_failed_import.env_settings import (
-    default_refiner_failed_import_cleanup_settings_bundle,
+    default_failed_import_cleanup_settings_bundle,
 )
 from mediamop.platform.auth.csrf import (
     issue_csrf_token,
@@ -47,16 +47,16 @@ def _csrf_settings(**overrides: object) -> MediaMopSettings:
         temp_dir=str(home / "temp"),
         sqlalchemy_database_url="sqlite:///" + db.as_posix(),
         fetcher_base_url=None,
-        refiner_failed_import_cleanup=default_refiner_failed_import_cleanup_settings_bundle(),
+        failed_import_cleanup_env=default_failed_import_cleanup_settings_bundle(),
         refiner_worker_count=1,
         refiner_radarr_base_url=None,
         refiner_radarr_api_key=None,
         refiner_sonarr_base_url=None,
         refiner_sonarr_api_key=None,
-        refiner_radarr_cleanup_drive_schedule_enabled=False,
-        refiner_radarr_cleanup_drive_schedule_interval_seconds=3600,
-        refiner_sonarr_cleanup_drive_schedule_enabled=False,
-        refiner_sonarr_cleanup_drive_schedule_interval_seconds=3600,
+        failed_import_radarr_cleanup_drive_schedule_enabled=False,
+        failed_import_radarr_cleanup_drive_schedule_interval_seconds=3600,
+        failed_import_sonarr_cleanup_drive_schedule_enabled=False,
+        failed_import_sonarr_cleanup_drive_schedule_interval_seconds=3600,
     )
     base.update(overrides)
     return MediaMopSettings(**base)  # type: ignore[arg-type]

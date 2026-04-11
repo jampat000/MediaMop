@@ -5,9 +5,9 @@ from __future__ import annotations
 import pytest
 
 from mediamop.modules.fetcher.failed_import_cleanup_orchestration import (
+    FailedImportArrApp,
     FailedImportCleanupPlanningResult,
-    RefinerArrApp,
-    parse_refiner_arr_app,
+    parse_failed_import_arr_app,
     plan_failed_import_cleanup,
 )
 from mediamop.modules.arr_failed_import.policy import (
@@ -41,7 +41,7 @@ def test_orchestration_radarr_dispatches_to_radarr_planner() -> None:
     policy = _policy_only(FailedImportCleanupPolicyKey.REMOVE_FAILED_IMPORTS, on=True)
     blob = "Import failed"
     via = plan_failed_import_cleanup(
-        RefinerArrApp.RADARR,
+        FailedImportArrApp.RADARR,
         status_message_blob=blob,
         policy=policy,
         queue_item_id=55,
@@ -59,7 +59,7 @@ def test_orchestration_sonarr_dispatches_to_sonarr_planner() -> None:
     policy = _policy_only(FailedImportCleanupPolicyKey.REMOVE_CORRUPT_IMPORTS, on=True)
     blob = "file is corrupt"
     via = plan_failed_import_cleanup(
-        RefinerArrApp.SONARR,
+        FailedImportArrApp.SONARR,
         status_message_blob=blob,
         policy=policy,
         queue_item_id=66,
@@ -75,8 +75,8 @@ def test_orchestration_sonarr_dispatches_to_sonarr_planner() -> None:
 
 def test_orchestration_preserves_app_specific_plan_identity_union() -> None:
     policy = default_failed_import_cleanup_policy()
-    r = plan_failed_import_cleanup(RefinerArrApp.RADARR, status_message_blob="x", policy=policy)
-    s = plan_failed_import_cleanup(RefinerArrApp.SONARR, status_message_blob="x", policy=policy)
+    r = plan_failed_import_cleanup(FailedImportArrApp.RADARR, status_message_blob="x", policy=policy)
+    s = plan_failed_import_cleanup(FailedImportArrApp.SONARR, status_message_blob="x", policy=policy)
     assert type(r) is not type(s)
     assert isinstance(r, RadarrFailedImportCleanupPlan)
     assert isinstance(s, SonarrFailedImportCleanupPlan)
@@ -84,11 +84,11 @@ def test_orchestration_preserves_app_specific_plan_identity_union() -> None:
     _: FailedImportCleanupPlanningResult = s
 
 
-def test_parse_refiner_arr_app_accepts_common_casing() -> None:
-    assert parse_refiner_arr_app("Radarr") is RefinerArrApp.RADARR
-    assert parse_refiner_arr_app("  SONARR ") is RefinerArrApp.SONARR
+def test_parse_failed_import_arr_app_accepts_common_casing() -> None:
+    assert parse_failed_import_arr_app("Radarr") is FailedImportArrApp.RADARR
+    assert parse_failed_import_arr_app("  SONARR ") is FailedImportArrApp.SONARR
 
 
-def test_parse_refiner_arr_app_rejects_unknown() -> None:
+def test_parse_failed_import_arr_app_rejects_unknown() -> None:
     with pytest.raises(ValueError, match="unknown failed-import arr app"):
-        parse_refiner_arr_app("prowlarr")
+        parse_failed_import_arr_app("prowlarr")

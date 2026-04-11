@@ -8,7 +8,7 @@ from unittest.mock import patch
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.arr_failed_import.env_settings import (
     AppFailedImportCleanupPolicySettings,
-    RefinerFailedImportCleanupSettingsBundle,
+    FailedImportCleanupSettingsBundle,
 )
 from mediamop.modules.fetcher.radarr_cleanup_execution import RadarrFailedImportCleanupExecutionOutcome
 from mediamop.modules.fetcher.radarr_failed_import_cleanup_drive import (
@@ -41,11 +41,11 @@ class _RecordingRadarrClient:
 
 def _settings_with_radarr_policy(radarr: AppFailedImportCleanupPolicySettings) -> MediaMopSettings:
     base = MediaMopSettings.load()
-    bundle = RefinerFailedImportCleanupSettingsBundle(
+    bundle = FailedImportCleanupSettingsBundle(
         radarr=radarr,
-        sonarr=base.refiner_failed_import_cleanup.sonarr,
+        sonarr=base.failed_import_cleanup_env.sonarr,
     )
-    return replace(base, refiner_failed_import_cleanup=bundle)
+    return replace(base, failed_import_cleanup_env=bundle)
 
 
 def _row_import_failed(*, qid: int) -> dict:

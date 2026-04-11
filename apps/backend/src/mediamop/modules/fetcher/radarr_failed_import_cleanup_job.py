@@ -11,7 +11,7 @@ from collections.abc import Callable
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.failed_import_fetcher_runtime_ports import FailedImportRadarrWorkerRuntimePort
+from mediamop.modules.refiner.failed_import_queue_worker_ports import FailedImportRadarrWorkerRuntimePort
 from mediamop.modules.refiner.jobs_model import RefinerJob
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.fetcher.radarr_cleanup_execution import RadarrQueueHttpClient
@@ -21,7 +21,7 @@ from mediamop.modules.fetcher.radarr_failed_import_cleanup_drive import (
 )
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
 
-REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE = "refiner.radarr.failed_import_cleanup_drive.v1"
+FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE = "refiner.radarr.failed_import_cleanup_drive.v1"
 
 RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY = "refiner.radarr.failed_import_cleanup_drive:v1"
 
@@ -32,7 +32,7 @@ def enqueue_radarr_failed_import_cleanup_drive_job(session: Session) -> RefinerJ
     return refiner_enqueue_or_get_job(
         session,
         dedupe_key=RADARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
-        job_kind=REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE,
+        job_kind=FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
         payload_json="{}",
     )
 

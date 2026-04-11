@@ -11,7 +11,7 @@ import pytest
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.fetcher.failed_import_refiner_job_handlers import build_failed_import_refiner_job_handlers
+from mediamop.modules.fetcher.failed_import_queue_job_handlers import build_failed_import_queue_job_handlers
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.worker_limits import clamp_refiner_worker_count
@@ -159,7 +159,7 @@ def test_process_one_missing_handler_fails_claimed_job(session_factory) -> None:
 def test_spawn_worker_task_count_matches_settings(
     session_factory,
     monkeypatch: pytest.MonkeyPatch,
-    failed_import_refiner_runtime_bundle,
+    failed_import_queue_worker_runtime_bundle,
 ) -> None:
     monkeypatch.setattr(
         "mediamop.modules.refiner.worker_loop.REFINER_WORKER_IDLE_SLEEP_SECONDS",
@@ -169,10 +169,10 @@ def test_spawn_worker_task_count_matches_settings(
     settings = replace(base, refiner_worker_count=2)
 
     async def _run() -> None:
-        handlers = build_failed_import_refiner_job_handlers(
+        handlers = build_failed_import_queue_job_handlers(
             settings,
             session_factory,
-            failed_import_runtime=failed_import_refiner_runtime_bundle,
+            failed_import_runtime=failed_import_queue_worker_runtime_bundle,
         )
         stop, tasks = start_refiner_worker_background_tasks(
             session_factory,
@@ -442,7 +442,7 @@ def test_worker_stays_alive_after_complete_failure_terminalization(
 def test_start_and_stop_workers_completes_within_timeout(
     session_factory,
     monkeypatch: pytest.MonkeyPatch,
-    failed_import_refiner_runtime_bundle,
+    failed_import_queue_worker_runtime_bundle,
 ) -> None:
     monkeypatch.setattr(
         refiner_worker_loop_mod,
@@ -453,10 +453,10 @@ def test_start_and_stop_workers_completes_within_timeout(
     settings = replace(base, refiner_worker_count=1)
 
     async def _run() -> None:
-        handlers = build_failed_import_refiner_job_handlers(
+        handlers = build_failed_import_queue_job_handlers(
             settings,
             session_factory,
-            failed_import_runtime=failed_import_refiner_runtime_bundle,
+            failed_import_runtime=failed_import_queue_worker_runtime_bundle,
         )
         stop, tasks = start_refiner_worker_background_tasks(
             session_factory,

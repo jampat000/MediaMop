@@ -14,10 +14,10 @@ from mediamop.core.config import MediaMopSettings
 from mediamop.platform.activity import constants as act_c
 from mediamop.platform.activity.models import ActivityEvent
 from mediamop.modules.fetcher.cleanup_policy_service import FailedImportDrivePolicySource
-from mediamop.modules.fetcher.failed_import_refiner_job_handlers import build_failed_import_refiner_job_handlers
-from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE
+from mediamop.modules.fetcher.failed_import_queue_job_handlers import build_failed_import_queue_job_handlers
+from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE
 from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import (
-    REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE,
+    FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE,
     SONARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY,
     enqueue_sonarr_failed_import_cleanup_drive_job,
 )
@@ -65,24 +65,24 @@ def test_enqueue_sonarr_cleanup_drive_job_dedupes(session_factory) -> None:
         b = enqueue_sonarr_failed_import_cleanup_drive_job(s)
         s.commit()
     assert b.id == aid
-    assert a.job_kind == REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE
+    assert a.job_kind == FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE
     assert a.dedupe_key == SONARR_FAILED_IMPORT_CLEANUP_DRIVE_DEDUPE_KEY
 
 
-def test_build_production_registry_registers_sonarr_and_radarr_kinds(failed_import_refiner_runtime_bundle) -> None:
+def test_build_production_registry_registers_sonarr_and_radarr_kinds(failed_import_queue_worker_runtime_bundle) -> None:
     s = MediaMopSettings.load()
-    reg = build_failed_import_refiner_job_handlers(
+    reg = build_failed_import_queue_job_handlers(
         s,
         MagicMock(),
-        failed_import_runtime=failed_import_refiner_runtime_bundle,
+        failed_import_runtime=failed_import_queue_worker_runtime_bundle,
     )
-    assert REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE in reg
-    assert REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE in reg
+    assert FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE in reg
+    assert FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE in reg
 
 
 def test_sonarr_handler_calls_drive_when_sonarr_configured(
     session_factory,
-    failed_import_refiner_runtime_bundle,
+    failed_import_queue_worker_runtime_bundle,
 ) -> None:
     t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
     base = MediaMopSettings.load()
@@ -95,10 +95,10 @@ def test_sonarr_handler_calls_drive_when_sonarr_configured(
         enqueue_sonarr_failed_import_cleanup_drive_job(s)
         s.commit()
 
-    handlers = build_failed_import_refiner_job_handlers(
+    handlers = build_failed_import_queue_job_handlers(
         settings,
         session_factory,
-        failed_import_runtime=failed_import_refiner_runtime_bundle,
+        failed_import_runtime=failed_import_queue_worker_runtime_bundle,
     )
     with patch(
         "mediamop.modules.fetcher.sonarr_failed_import_cleanup_job.drive_sonarr_failed_import_cleanup_from_live_queue",
@@ -115,7 +115,7 @@ def test_sonarr_handler_calls_drive_when_sonarr_configured(
     drive_mock.assert_called_once()
     _args, kwargs = drive_mock.call_args
     assert isinstance(_args[0], FailedImportDrivePolicySource)
-    assert _args[0].bundle == settings.refiner_failed_import_cleanup
+    assert _args[0].bundle == settings.failed_import_cleanup_env
     assert "queue_fetch_client" in kwargs and "queue_operations" in kwargs
 
     with session_factory() as s:
@@ -136,7 +136,7 @@ def test_sonarr_handler_calls_drive_when_sonarr_configured(
 
 def test_sonarr_handler_failure_requeues_via_fail_op(
     session_factory,
-    failed_import_refiner_runtime_bundle,
+    failed_import_queue_worker_runtime_bundle,
 ) -> None:
     t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
     base = MediaMopSettings.load()
@@ -149,10 +149,10 @@ def test_sonarr_handler_failure_requeues_via_fail_op(
         enqueue_sonarr_failed_import_cleanup_drive_job(s)
         s.commit()
 
-    handlers = build_failed_import_refiner_job_handlers(
+    handlers = build_failed_import_queue_job_handlers(
         settings,
         session_factory,
-        failed_import_runtime=failed_import_refiner_runtime_bundle,
+        failed_import_runtime=failed_import_queue_worker_runtime_bundle,
     )
     with patch(
         "mediamop.modules.fetcher.sonarr_failed_import_cleanup_job.drive_sonarr_failed_import_cleanup_from_live_queue",
@@ -185,7 +185,7 @@ def test_sonarr_handler_failure_requeues_via_fail_op(
 
 def test_sonarr_handler_without_config_fails_job(
     session_factory,
-    failed_import_refiner_runtime_bundle,
+    failed_import_queue_worker_runtime_bundle,
 ) -> None:
     t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
     base = MediaMopSettings.load()
@@ -194,10 +194,10 @@ def test_sonarr_handler_without_config_fails_job(
         enqueue_sonarr_failed_import_cleanup_drive_job(s)
         s.commit()
 
-    handlers = build_failed_import_refiner_job_handlers(
+    handlers = build_failed_import_queue_job_handlers(
         settings,
         session_factory,
-        failed_import_runtime=failed_import_refiner_runtime_bundle,
+        failed_import_runtime=failed_import_queue_worker_runtime_bundle,
     )
     out = process_one_refiner_job(
         session_factory,

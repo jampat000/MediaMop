@@ -24,9 +24,9 @@ from mediamop.modules.refiner.jobs_ops import (
     fail_leased_refiner_job_after_complete_failure,
     refiner_enqueue_or_get_job,
 )
-from mediamop.modules.fetcher.failed_import_refiner_job_handlers import build_failed_import_refiner_job_handlers
-from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE
-from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE
+from mediamop.modules.fetcher.failed_import_queue_job_handlers import build_failed_import_queue_job_handlers
+from mediamop.modules.fetcher.radarr_failed_import_cleanup_job import FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE
+from mediamop.modules.fetcher.sonarr_failed_import_cleanup_job import FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE
 from mediamop.modules.refiner import worker_loop as refiner_worker_loop_mod
 from mediamop.modules.refiner.worker_loop import (
     process_one_refiner_job,
@@ -96,7 +96,7 @@ def test_start_refiner_worker_background_tasks_zero_spawns_no_tasks(
 def test_start_refiner_worker_count_gt_one_emits_guard_warning(
     session_factory,
     monkeypatch: pytest.MonkeyPatch,
-    failed_import_refiner_runtime_bundle,
+    failed_import_queue_worker_runtime_bundle,
 ) -> None:
     monkeypatch.setattr(
         refiner_worker_loop_mod,
@@ -107,10 +107,10 @@ def test_start_refiner_worker_count_gt_one_emits_guard_warning(
     settings = replace(base, refiner_worker_count=3)
 
     async def _run() -> None:
-        handlers = build_failed_import_refiner_job_handlers(
+        handlers = build_failed_import_queue_job_handlers(
             settings,
             session_factory,
-            failed_import_runtime=failed_import_refiner_runtime_bundle,
+            failed_import_runtime=failed_import_queue_worker_runtime_bundle,
         )
         stop, tasks = start_refiner_worker_background_tasks(
             session_factory,
@@ -246,28 +246,28 @@ def test_radarr_and_sonarr_real_job_kinds_process_concurrently_without_cross_mut
     def _rad(ctx) -> None:
         with lock:
             touched["radarr"].append(ctx.id)
-            assert ctx.job_kind == REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE
+            assert ctx.job_kind == FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE
 
     def _son(ctx) -> None:
         with lock:
             touched["sonarr"].append(ctx.id)
-            assert ctx.job_kind == REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE
+            assert ctx.job_kind == FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE
 
     handlers = {
-        REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE: _rad,
-        REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE: _son,
+        FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE: _rad,
+        FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE: _son,
     }
 
     with session_factory() as s:
         refiner_enqueue_or_get_job(
             s,
             dedupe_key="pass21-isolate-rad",
-            job_kind=REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE,
+            job_kind=FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
         )
         refiner_enqueue_or_get_job(
             s,
             dedupe_key="pass21-isolate-son",
-            job_kind=REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE,
+            job_kind=FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE,
         )
         s.commit()
 
@@ -311,21 +311,21 @@ def test_concurrent_workers_radarr_handler_failure_does_not_block_sonarr_complet
         return None
 
     handlers = {
-        REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE: _rad_fail,
-        REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE: _son_ok,
+        FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE: _rad_fail,
+        FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE: _son_ok,
     }
 
     with session_factory() as s:
         refiner_enqueue_or_get_job(
             s,
             dedupe_key="pass21-fail-rad",
-            job_kind=REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE,
+            job_kind=FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
             max_attempts=1,
         )
         refiner_enqueue_or_get_job(
             s,
             dedupe_key="pass21-ok-son",
-            job_kind=REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE,
+            job_kind=FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE,
         )
         s.commit()
 
@@ -415,7 +415,7 @@ def test_parallel_claim_next_skips_handler_ok_finalize_failed_prefers_pending(
 def test_stop_multiple_refiner_workers_completes_within_timeout(
     session_factory,
     monkeypatch: pytest.MonkeyPatch,
-    failed_import_refiner_runtime_bundle,
+    failed_import_queue_worker_runtime_bundle,
 ) -> None:
     monkeypatch.setattr(
         refiner_worker_loop_mod,
@@ -426,10 +426,10 @@ def test_stop_multiple_refiner_workers_completes_within_timeout(
     settings = replace(base, refiner_worker_count=4)
 
     async def _run() -> None:
-        handlers = build_failed_import_refiner_job_handlers(
+        handlers = build_failed_import_queue_job_handlers(
             settings,
             session_factory,
-            failed_import_runtime=failed_import_refiner_runtime_bundle,
+            failed_import_runtime=failed_import_queue_worker_runtime_bundle,
         )
         stop, tasks = start_refiner_worker_background_tasks(
             session_factory,

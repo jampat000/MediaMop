@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
-from mediamop.modules.fetcher.failed_import_refiner_job_handlers import build_failed_import_refiner_job_handlers
+from mediamop.modules.fetcher.failed_import_queue_job_handlers import build_failed_import_queue_job_handlers
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.fetcher.radarr_cleanup_execution import RadarrFailedImportCleanupExecutionOutcome
 from mediamop.modules.fetcher.radarr_failed_import_cleanup_drive import RadarrFailedImportCleanupDriveItemResult
@@ -54,7 +54,7 @@ def session_factory(jobs_engine):
 
 def test_radarr_drive_removal_summary_activity(
     session_factory,
-    failed_import_refiner_runtime_bundle,
+    failed_import_queue_worker_runtime_bundle,
 ) -> None:
     t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
     settings = replace(
@@ -70,10 +70,10 @@ def test_radarr_drive_removal_summary_activity(
         enqueue_radarr_failed_import_cleanup_drive_job(s)
         s.commit()
 
-    handlers = build_failed_import_refiner_job_handlers(
+    handlers = build_failed_import_queue_job_handlers(
         settings,
         session_factory,
-        failed_import_runtime=failed_import_refiner_runtime_bundle,
+        failed_import_runtime=failed_import_queue_worker_runtime_bundle,
     )
     with patch(
         "mediamop.modules.fetcher.radarr_failed_import_cleanup_job.drive_radarr_failed_import_cleanup_from_live_queue",
@@ -103,7 +103,7 @@ def test_radarr_drive_removal_summary_activity(
 
 def test_radarr_drive_all_policy_skips_activity(
     session_factory,
-    failed_import_refiner_runtime_bundle,
+    failed_import_queue_worker_runtime_bundle,
 ) -> None:
     t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
     settings = replace(
@@ -119,10 +119,10 @@ def test_radarr_drive_all_policy_skips_activity(
         enqueue_radarr_failed_import_cleanup_drive_job(s)
         s.commit()
 
-    handlers = build_failed_import_refiner_job_handlers(
+    handlers = build_failed_import_queue_job_handlers(
         settings,
         session_factory,
-        failed_import_runtime=failed_import_refiner_runtime_bundle,
+        failed_import_runtime=failed_import_queue_worker_runtime_bundle,
     )
     with patch(
         "mediamop.modules.fetcher.radarr_failed_import_cleanup_job.drive_radarr_failed_import_cleanup_from_live_queue",

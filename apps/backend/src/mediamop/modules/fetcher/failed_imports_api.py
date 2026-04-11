@@ -44,14 +44,16 @@ from mediamop.modules.fetcher.manual_cleanup_drive_enqueue import (
     manual_enqueue_radarr_cleanup_drive,
     manual_enqueue_sonarr_cleanup_drive,
 )
-from mediamop.modules.refiner.runtime_visibility import refiner_runtime_visibility_from_settings
 from mediamop.modules.refiner.schemas_inspection import RefinerJobsInspectionOut
 from mediamop.modules.fetcher.schemas_manual_cleanup_enqueue import (
     ManualCleanupDriveEnqueueIn,
     ManualCleanupDriveEnqueueOut,
 )
 from mediamop.modules.refiner.schemas_recovery import RecoverFinalizeFailureIn, RecoverFinalizeFailureOut
-from mediamop.modules.refiner.schemas_runtime_visibility import RefinerRuntimeVisibilityOut
+from mediamop.modules.fetcher.failed_import_runtime_visibility import (
+    failed_import_runtime_visibility_from_settings,
+)
+from mediamop.modules.fetcher.schemas_failed_import_runtime_visibility import FailedImportRuntimeVisibilityOut
 from mediamop.platform.auth.authorization import RequireOperatorDep
 from mediamop.platform.auth.csrf import (
     require_session_secret,
@@ -77,7 +79,7 @@ def _cleanup_policy_response(
     db: Session,
     settings: MediaMopSettings,
 ) -> FetcherFailedImportCleanupPolicyOut:
-    effective, row = load_fetcher_failed_import_cleanup_bundle(db, settings.refiner_failed_import_cleanup)
+    effective, row = load_fetcher_failed_import_cleanup_bundle(db, settings.failed_import_cleanup_env)
     return FetcherFailedImportCleanupPolicyOut(
         movies=_axis_out(effective.radarr),
         tv_shows=_axis_out(effective.sonarr),
@@ -122,7 +124,7 @@ def put_fetcher_failed_imports_cleanup_policy(
 
     upsert_fetcher_failed_import_cleanup_policy(
         db,
-        env_bundle=settings.refiner_failed_import_cleanup,
+        env_bundle=settings.failed_import_cleanup_env,
         radarr=body.movies.to_app_settings(),
         sonarr=body.tv_shows.to_app_settings(),
     )
@@ -143,17 +145,17 @@ def get_fetcher_failed_imports_automation_summary(
     return build_fetcher_failed_import_automation_summary(db, settings)
 
 
-@router.get("/fetcher/failed-imports/settings", response_model=RefinerRuntimeVisibilityOut)
+@router.get("/fetcher/failed-imports/settings", response_model=FailedImportRuntimeVisibilityOut)
 def get_fetcher_failed_imports_settings(
     _user: UserPublicDep,
     settings: SettingsDep,
-) -> RefinerRuntimeVisibilityOut:
+) -> FailedImportRuntimeVisibilityOut:
     """Fetcher: read-only settings for in-process workers and Radarr/Sonarr timed failed-import passes.
 
     Does not report live worker health, pass execution, or app connectivity.
     """
 
-    return refiner_runtime_visibility_from_settings(settings)
+    return failed_import_runtime_visibility_from_settings(settings)
 
 
 @router.get("/fetcher/failed-imports/inspection", response_model=RefinerJobsInspectionOut)

@@ -30,7 +30,7 @@ class FailedImportSonarrDrivePolicySourcePort(Protocol):
 
 
 class FailedImportRadarrWorkerRuntimePort(Protocol):
-    """Fetcher-backed hooks for the Radarr failed-import cleanup Refiner handler."""
+    """Fetcher-backed hooks for the Radarr failed-import cleanup queue worker."""
 
     def load_radarr_drive_policy_source(
         self,
@@ -46,7 +46,7 @@ class FailedImportRadarrWorkerRuntimePort(Protocol):
 
 
 class FailedImportSonarrWorkerRuntimePort(Protocol):
-    """Fetcher-backed hooks for the Sonarr failed-import cleanup Refiner handler."""
+    """Fetcher-backed hooks for the Sonarr failed-import cleanup queue worker."""
 
     def load_sonarr_drive_policy_source(
         self,
@@ -68,8 +68,8 @@ class FailedImportTimedSchedulePassQueuedPort(Protocol):
 
 
 @dataclass(frozen=True, slots=True)
-class FailedImportRefinerRuntimeBundle:
-    """All Fetcher-backed ports Refiner needs for failed-import cleanup drives + timed schedule."""
+class FailedImportQueueWorkerPorts:
+    """Fetcher implementations wired into the Refiner queue worker for failed-import drives + schedule."""
 
     radarr_worker: FailedImportRadarrWorkerRuntimePort
     sonarr_worker: FailedImportSonarrWorkerRuntimePort
