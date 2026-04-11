@@ -5,7 +5,9 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { qk } from "../../lib/auth/queries";
 import type { FetcherOperationalOverview, UserPublic } from "../../lib/api/types";
+import type { FetcherFailedImportAutomationSummary } from "../../lib/fetcher/failed-imports/types";
 import {
+  failedImportAutomationSummaryQueryKey,
   failedImportInspectionQueryKey,
   failedImportSettingsQueryKey,
 } from "../../lib/fetcher/failed-imports/queries";
@@ -55,11 +57,29 @@ const minimalFiSettings = {
   visibility_note: "note",
 };
 
+const minimalAutomationSummary: FetcherFailedImportAutomationSummary = {
+  scope_note: "From finished passes and saved settings in this app only.",
+  automation_slots_note: "Automation slots are set to 0 — timed passes will not start by themselves.",
+  movies: {
+    last_finished_at: null,
+    last_outcome_label: "No finished movie pass recorded yet.",
+    saved_schedule_primary: "Saved schedule: timed sweep off",
+    saved_schedule_secondary: null,
+  },
+  tv_shows: {
+    last_finished_at: "2026-04-11T12:00:00Z",
+    last_outcome_label: "Completed",
+    saved_schedule_primary: "Saved schedule: timed sweep off",
+    saved_schedule_secondary: null,
+  },
+};
+
 function renderFetcherPage() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   qc.setQueryData(qk.me, minimalMe);
   qc.setQueryData(fetcherOverviewKey, minimalOverview);
   qc.setQueryData(failedImportSettingsQueryKey, minimalFiSettings);
+  qc.setQueryData(failedImportAutomationSummaryQueryKey, minimalAutomationSummary);
   qc.setQueryData(failedImportInspectionQueryKey("terminal"), { jobs: [], default_terminal_only: true });
   return render(wrap(<FetcherPage />, qc));
 }
@@ -89,5 +109,17 @@ describe("FetcherPage (hero compression)", () => {
     expect(screen.getByRole("heading", { name: "Service checks" })).toBeInTheDocument();
     expect(screen.queryByText(/External Fetcher application/i)).toBeNull();
     expect(screen.queryByText(/MEDIAMOP_FETCHER_BASE_URL/i)).toBeNull();
+  });
+
+  it("shows read-only automation summary for movies and TV with no fake liveness copy", () => {
+    const { container } = renderFetcherPage();
+    expect(screen.getByTestId("fetcher-automation-summary")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Automation summary" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Movies" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "TV shows" })).toBeInTheDocument();
+    const t = container.textContent ?? "";
+    expect(t.toLowerCase()).not.toContain("healthy");
+    expect(t.toLowerCase()).not.toContain("live ok");
+    expect(t.toLowerCase()).not.toContain("reachable");
   });
 });

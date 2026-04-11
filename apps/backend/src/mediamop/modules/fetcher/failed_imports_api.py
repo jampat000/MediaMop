@@ -12,6 +12,10 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from starlette import status
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
+from mediamop.modules.fetcher.automation_summary_service import (
+    build_fetcher_failed_import_automation_summary,
+)
+from mediamop.modules.fetcher.schemas_automation_summary import FetcherFailedImportAutomationSummaryOut
 from mediamop.modules.refiner.inspection_service import (
     DEFAULT_TERMINAL_STATUSES,
     list_refiner_jobs_for_inspection,
@@ -40,6 +44,20 @@ from mediamop.platform.auth.csrf import (
 from mediamop.platform.auth.deps_auth import UserPublicDep
 
 router = APIRouter(tags=["fetcher"])
+
+
+@router.get(
+    "/fetcher/failed-imports/automation-summary",
+    response_model=FetcherFailedImportAutomationSummaryOut,
+)
+def get_fetcher_failed_imports_automation_summary(
+    _user: UserPublicDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+) -> FetcherFailedImportAutomationSummaryOut:
+    """Fetcher: read-only last finished passes (per app) + saved schedule wording — persisted/settings only."""
+
+    return build_fetcher_failed_import_automation_summary(db, settings)
 
 
 @router.get("/fetcher/failed-imports/settings", response_model=RefinerRuntimeVisibilityOut)

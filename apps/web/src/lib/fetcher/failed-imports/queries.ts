@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetchFailedImportAutomationSummary } from "./automation-summary-api";
 import { fetchFailedImportTasksInspection } from "./inspection-api";
 import { postFailedImportRadarrEnqueue, postFailedImportSonarrEnqueue } from "./manual-enqueue-api";
 import { fetchFailedImportFetcherSettings } from "./settings-api";
@@ -17,6 +18,16 @@ export const failedImportInspectionQueryKey = (filter: FailedImportInspectionFil
   ["fetcher", "failed-imports", "inspection", filter] as const;
 
 export const failedImportSettingsQueryKey = ["fetcher", "failed-imports", "settings"] as const;
+
+export const failedImportAutomationSummaryQueryKey = ["fetcher", "failed-imports", "automation-summary"] as const;
+
+export function useFailedImportAutomationSummaryQuery() {
+  return useQuery({
+    queryKey: failedImportAutomationSummaryQueryKey,
+    queryFn: () => fetchFailedImportAutomationSummary(),
+    staleTime: 15_000,
+  });
+}
 
 export function useFailedImportFetcherSettingsQuery() {
   return useQuery({
@@ -43,6 +54,7 @@ export function useFailedImportRecoverMutation() {
     mutationFn: (jobId: number) => postFailedImportRecoverFinalize(jobId),
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ["fetcher", "failed-imports", "inspection"] });
+      void qc.invalidateQueries({ queryKey: failedImportAutomationSummaryQueryKey });
     },
   });
 }
@@ -54,6 +66,7 @@ export function useFailedImportRadarrEnqueueMutation() {
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ["fetcher", "failed-imports", "inspection"] });
       void qc.invalidateQueries({ queryKey: ["fetcher", "failed-imports", "settings"] });
+      void qc.invalidateQueries({ queryKey: failedImportAutomationSummaryQueryKey });
     },
   });
 }
@@ -65,6 +78,7 @@ export function useFailedImportSonarrEnqueueMutation() {
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ["fetcher", "failed-imports", "inspection"] });
       void qc.invalidateQueries({ queryKey: ["fetcher", "failed-imports", "settings"] });
+      void qc.invalidateQueries({ queryKey: failedImportAutomationSummaryQueryKey });
     },
   });
 }

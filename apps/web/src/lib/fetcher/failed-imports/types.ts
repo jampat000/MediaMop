@@ -39,3 +39,17 @@ export type FailedImportEnqueueOut = {
   job_kind: string;
   enqueue_outcome: "created" | "already_present";
 };
+
+export type FetcherFailedImportAxisSummary = {
+  last_finished_at: string | null;
+  last_outcome_label: string;
+  saved_schedule_primary: string;
+  saved_schedule_secondary: string | null;
+};
+
+export type FetcherFailedImportAutomationSummary = {
+  scope_note: string;
+  automation_slots_note: string | null;
+  movies: FetcherFailedImportAxisSummary;
+  tv_shows: FetcherFailedImportAxisSummary;
+};

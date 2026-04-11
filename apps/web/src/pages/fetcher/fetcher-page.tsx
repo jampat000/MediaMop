@@ -3,6 +3,7 @@ import { PageLoading } from "../../components/shared/page-loading";
 import { useFetcherOperationalOverviewQuery } from "../../lib/fetcher/queries";
 import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
 import type { ActivityEventItem } from "../../lib/api/types";
+import { FetcherAutomationSummaryStrip } from "./fetcher-automation-summary";
 import { FetcherFailedImportsWorkspace } from "./fetcher-failed-imports-workspace";
 
 function FetcherStatusRow({ label, value }: { label: string; value: string }) {
@@ -27,6 +28,8 @@ export function FetcherPage() {
           Fetcher service answered on recent checks.
         </p>
       </header>
+
+      <FetcherAutomationSummaryStrip />
 
       <FetcherFailedImportsWorkspace />
 
