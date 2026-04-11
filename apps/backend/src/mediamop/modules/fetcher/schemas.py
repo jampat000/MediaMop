@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 from mediamop.platform.activity.schemas import ActivityEventItemOut
@@ -26,12 +28,42 @@ class FetcherConnectionOut(BaseModel):
     detail: str | None = None
 
 
+class FetcherFailedImportAutomationLaneOut(BaseModel):
+    """Read-only summary row for one failed-import automation lane."""
+
+    last_finished_at: datetime | None = Field(
+        None,
+        description="Newest persisted terminal row timestamp for this lane (completed/failed/manual-finish-needed).",
+    )
+    last_outcome: str | None = Field(
+        None,
+        description="Plain label for the last finished row outcome, or null when none exists.",
+    )
+    saved_schedule: str = Field(..., description="Saved schedule framing only (for example 'Off' or 'Every 1 hour').")
+    next_run_note: str = Field(
+        ...,
+        description="Honest next-run wording from saved settings only (no live scheduler claim).",
+    )
+
+
+class FetcherFailedImportAutomationSummaryOut(BaseModel):
+    """Read-only persisted automation summary for failed-import cleanup lanes."""
+
+    movies: FetcherFailedImportAutomationLaneOut
+    tv_shows: FetcherFailedImportAutomationLaneOut
+    source_note: str = Field(
+        ...,
+        description="Clarifies this summary comes from persisted history + saved settings, not live workers.",
+    )
+
+
 class FetcherOperationalOverviewOut(BaseModel):
     """Read-mostly operational slice from current probe + persisted probe events."""
 
     mediamop_version: str = Field(..., description="MediaMop API package version for this shell.")
     status_label: str = Field(..., description="One-line operational status for current Fetcher connectivity.")
     status_detail: str = Field(..., description="Short operator-facing explanation of current status.")
+    failed_import_automation: FetcherFailedImportAutomationSummaryOut
     connection: FetcherConnectionOut
     probe_persisted_24h: FetcherProbePersistedWindowOut
     probe_failure_window_days: int = Field(

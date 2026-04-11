@@ -26,6 +26,21 @@ const minimalOverview: FetcherOperationalOverview = {
   mediamop_version: "test",
   status_label: "ok",
   status_detail: "fine",
+  failed_import_automation: {
+    movies: {
+      last_finished_at: null,
+      last_outcome: null,
+      saved_schedule: "Every 1 hour",
+      next_run_note: "Next run follows this saved interval when automation is active.",
+    },
+    tv_shows: {
+      last_finished_at: null,
+      last_outcome: null,
+      saved_schedule: "Off",
+      next_run_note: "Schedule off.",
+    },
+    source_note: "From persisted task history and saved settings only.",
+  },
   connection: {
     configured: false,
     target_display: null,
@@ -55,10 +70,10 @@ const minimalFiSettings = {
   visibility_note: "note",
 };
 
-function renderFetcherPage() {
+function renderFetcherPage(overview: FetcherOperationalOverview = minimalOverview) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   qc.setQueryData(qk.me, minimalMe);
-  qc.setQueryData(fetcherOverviewKey, minimalOverview);
+  qc.setQueryData(fetcherOverviewKey, overview);
   qc.setQueryData(failedImportSettingsQueryKey, minimalFiSettings);
   qc.setQueryData(failedImportInspectionQueryKey("terminal"), { jobs: [], default_terminal_only: true });
   return render(wrap(<FetcherPage />, qc));
@@ -89,5 +104,29 @@ describe("FetcherPage (hero compression)", () => {
     expect(screen.getByRole("heading", { name: "Service checks" })).toBeInTheDocument();
     expect(screen.queryByText(/External Fetcher application/i)).toBeNull();
     expect(screen.queryByText(/MEDIAMOP_FETCHER_BASE_URL/i)).toBeNull();
+  });
+
+  it("shows a read-only automation summary with separate Movies and TV shows lanes", () => {
+    renderFetcherPage();
+    expect(screen.getByRole("heading", { name: "Automation summary" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Movies")).toBeInTheDocument();
+    expect(screen.getByLabelText("TV shows")).toBeInTheDocument();
+    expect(screen.getAllByText("Last finished").length).toBe(2);
+    expect(screen.getAllByText("Saved schedule").length).toBe(2);
+  });
+
+  it("uses honest schedule wording for enabled and off lanes", () => {
+    renderFetcherPage();
+    expect(screen.getByText("Every 1 hour")).toBeInTheDocument();
+    expect(screen.getByText("Next run follows this saved interval when automation is active.")).toBeInTheDocument();
+    expect(screen.getByText("Off")).toBeInTheDocument();
+    expect(screen.getByText("Schedule off.")).toBeInTheDocument();
+  });
+
+  it("does not claim live worker or scheduler health in the automation summary", () => {
+    renderFetcherPage();
+    const strip = screen.getByTestId("fetcher-automation-summary");
+    const text = strip.textContent ?? "";
+    expect(text).not.toMatch(/worker health|scheduler health|live worker|live scheduler/i);
   });
 });

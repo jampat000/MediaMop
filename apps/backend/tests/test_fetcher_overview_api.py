@@ -13,6 +13,13 @@ from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.modules.fetcher.probe import FetcherHealthProbe
 from mediamop.modules.fetcher.service import build_fetcher_operational_overview
+from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.modules.refiner.radarr_failed_import_cleanup_job import (
+    REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE,
+)
+from mediamop.modules.refiner.sonarr_failed_import_cleanup_job import (
+    REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE,
+)
 from mediamop.platform.activity import constants as activity_constants
 from mediamop.platform.activity.models import ActivityEvent
 from tests.integration_helpers import auth_post, csrf as fetch_csrf
@@ -84,6 +91,99 @@ def test_build_fetcher_overview_probe_persisted_24h_counts() -> None:
     assert out.probe_persisted_24h.persisted_failed == 1
     assert len(out.recent_probe_failures) == 1
     assert out.recent_probe_failures[0].event_type == activity_constants.FETCHER_PROBE_FAILED
+
+
+def test_build_fetcher_overview_failed_import_summary_defaults_and_schedule_wording() -> None:
+    settings, fac = _session_factory()
+    settings = replace(
+        settings,
+        fetcher_base_url=None,
+        refiner_radarr_cleanup_drive_schedule_enabled=True,
+        refiner_radarr_cleanup_drive_schedule_interval_seconds=3600,
+        refiner_sonarr_cleanup_drive_schedule_enabled=False,
+        refiner_sonarr_cleanup_drive_schedule_interval_seconds=7200,
+    )
+    with fac() as db:
+        db.execute(delete(RefinerJob))
+        db.commit()
+        out = build_fetcher_operational_overview(db, settings)
+        db.commit()
+    assert out.failed_import_automation.movies.last_finished_at is None
+    assert out.failed_import_automation.movies.last_outcome is None
+    assert out.failed_import_automation.movies.saved_schedule == "Every 1 hour"
+    assert out.failed_import_automation.movies.next_run_note == (
+        "Next run follows this saved interval when automation is active."
+    )
+    assert out.failed_import_automation.tv_shows.last_finished_at is None
+    assert out.failed_import_automation.tv_shows.last_outcome is None
+    assert out.failed_import_automation.tv_shows.saved_schedule == "Off"
+    assert out.failed_import_automation.tv_shows.next_run_note == "Schedule off."
+    assert out.failed_import_automation.source_note == "From persisted task history and saved settings only."
+
+
+def test_build_fetcher_overview_failed_import_summary_uses_terminal_history_per_lane() -> None:
+    settings, fac = _session_factory()
+    settings = replace(
+        settings,
+        fetcher_base_url=None,
+        refiner_radarr_cleanup_drive_schedule_enabled=True,
+        refiner_radarr_cleanup_drive_schedule_interval_seconds=1800,
+        refiner_sonarr_cleanup_drive_schedule_enabled=True,
+        refiner_sonarr_cleanup_drive_schedule_interval_seconds=5400,
+    )
+    now = datetime.now(timezone.utc)
+    with fac() as db:
+        db.execute(delete(RefinerJob))
+        db.add_all(
+            [
+                RefinerJob(
+                    dedupe_key="radarr-lane-completed",
+                    job_kind=REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE,
+                    payload_json="{}",
+                    status=RefinerJobStatus.COMPLETED.value,
+                    attempt_count=1,
+                    max_attempts=3,
+                    updated_at=now - timedelta(minutes=7),
+                ),
+                RefinerJob(
+                    dedupe_key="radarr-lane-older-failed",
+                    job_kind=REFINER_JOB_KIND_RADARR_FAILED_IMPORT_CLEANUP_DRIVE,
+                    payload_json="{}",
+                    status=RefinerJobStatus.FAILED.value,
+                    attempt_count=1,
+                    max_attempts=3,
+                    updated_at=now - timedelta(minutes=30),
+                ),
+                RefinerJob(
+                    dedupe_key="sonarr-lane-leased-ignored",
+                    job_kind=REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE,
+                    payload_json="{}",
+                    status=RefinerJobStatus.LEASED.value,
+                    attempt_count=1,
+                    max_attempts=3,
+                    updated_at=now - timedelta(minutes=2),
+                ),
+                RefinerJob(
+                    dedupe_key="sonarr-lane-manual-finish",
+                    job_kind=REFINER_JOB_KIND_SONARR_FAILED_IMPORT_CLEANUP_DRIVE,
+                    payload_json="{}",
+                    status=RefinerJobStatus.HANDLER_OK_FINALIZE_FAILED.value,
+                    attempt_count=1,
+                    max_attempts=3,
+                    updated_at=now - timedelta(minutes=5),
+                ),
+            ]
+        )
+        db.commit()
+    with fac() as db:
+        out = build_fetcher_operational_overview(db, settings)
+        db.commit()
+    assert out.failed_import_automation.movies.last_outcome == "Completed"
+    assert out.failed_import_automation.movies.last_finished_at is not None
+    assert out.failed_import_automation.movies.saved_schedule == "Every 30 minutes"
+    assert out.failed_import_automation.tv_shows.last_outcome == "Needs manual finish"
+    assert out.failed_import_automation.tv_shows.last_finished_at is not None
+    assert out.failed_import_automation.tv_shows.saved_schedule == "Every 90 minutes"
 
 
 def test_build_fetcher_overview_recent_probe_failures_capped_and_ordered() -> None:
@@ -210,6 +310,7 @@ def test_get_fetcher_overview_authenticated(client_with_admin: TestClient) -> No
     body = r.json()
     assert "status_label" in body
     assert "status_detail" in body
+    assert "failed_import_automation" in body
     assert "connection" in body
     assert "recent_probe_events" in body
     assert body.get("mediamop_version")
@@ -220,3 +321,6 @@ def test_get_fetcher_overview_authenticated(client_with_admin: TestClient) -> No
     assert "persisted_failed" in snap
     assert body.get("probe_failure_window_days") == 7
     assert isinstance(body.get("recent_probe_failures"), list)
+    fi = body["failed_import_automation"]
+    assert "movies" in fi
+    assert "tv_shows" in fi

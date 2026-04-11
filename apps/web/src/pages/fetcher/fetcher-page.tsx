@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { PageLoading } from "../../components/shared/page-loading";
 import { useFetcherOperationalOverviewQuery } from "../../lib/fetcher/queries";
 import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
-import type { ActivityEventItem } from "../../lib/api/types";
+import type { ActivityEventItem, FetcherFailedImportAutomationLane } from "../../lib/api/types";
 import { FetcherFailedImportsWorkspace } from "./fetcher-failed-imports-workspace";
 
 function FetcherStatusRow({ label, value }: { label: string; value: string }) {
@@ -28,6 +28,8 @@ export function FetcherPage() {
         </p>
       </header>
 
+      <FetcherAutomationSummaryBlock />
+
       <FetcherFailedImportsWorkspace />
 
       {overview.isPending ? (
@@ -38,6 +40,76 @@ export function FetcherPage() {
         <FetcherOperationalOverviewSections data={overview.data} />
       )}
     </div>
+  );
+}
+
+function FetcherAutomationSummaryBlock() {
+  const overview = useFetcherOperationalOverviewQuery();
+
+  if (overview.isPending) {
+    return (
+      <section
+        className="mm-card mm-dash-card mm-fetcher-module-surface mb-6"
+        aria-labelledby="mm-fetcher-automation-summary-heading"
+      >
+        <h2 id="mm-fetcher-automation-summary-heading" className="mm-card__title">
+          Automation summary
+        </h2>
+        <p className="mm-card__body text-sm text-[var(--mm-text3)]">Loading saved automation summary…</p>
+      </section>
+    );
+  }
+
+  if (overview.isError || !overview.data) {
+    return (
+      <section
+        className="mm-card mm-dash-card mm-fetcher-module-surface mb-6"
+        aria-labelledby="mm-fetcher-automation-summary-heading"
+      >
+        <h2 id="mm-fetcher-automation-summary-heading" className="mm-card__title">
+          Automation summary
+        </h2>
+        <p className="mm-card__body text-sm text-[var(--mm-text3)]">Could not load the saved automation summary.</p>
+      </section>
+    );
+  }
+
+  const summary = overview.data.failed_import_automation;
+  return (
+    <section
+      className="mm-card mm-dash-card mm-fetcher-module-surface mb-6"
+      aria-labelledby="mm-fetcher-automation-summary-heading"
+      data-testid="fetcher-automation-summary"
+    >
+      <h2 id="mm-fetcher-automation-summary-heading" className="mm-card__title">
+        Automation summary
+      </h2>
+      <p className="mm-card__body mm-card__body--tight text-sm text-[var(--mm-text3)]">{summary.source_note}</p>
+      <div className="mm-card__body mm-card__body--tight grid gap-4 md:grid-cols-2">
+        <FetcherAutomationLane label="Movies" lane={summary.movies} />
+        <FetcherAutomationLane label="TV shows" lane={summary.tv_shows} />
+      </div>
+    </section>
+  );
+}
+
+function FetcherAutomationLane({
+  label,
+  lane,
+}: {
+  label: string;
+  lane: FetcherFailedImportAutomationLane;
+}) {
+  return (
+    <section className="rounded border border-[var(--mm-border)] p-3" aria-label={label}>
+      <h3 className="text-sm font-semibold text-[var(--mm-text)]">{label}</h3>
+      <dl className="mt-2 space-y-1 text-sm">
+        <FetcherStatusRow label="Last finished" value={formatIsoText(lane.last_finished_at, "Not yet run")} />
+        <FetcherStatusRow label="Last outcome" value={lane.last_outcome ?? "Not yet run"} />
+        <FetcherStatusRow label="Saved schedule" value={lane.saved_schedule} />
+        <FetcherStatusRow label="Next run" value={lane.next_run_note} />
+      </dl>
+    </section>
   );
 }
 
@@ -211,6 +283,17 @@ function formatEventTime(item: ActivityEventItem): string {
   const d = new Date(item.created_at);
   if (Number.isNaN(d.valueOf())) {
     return item.created_at;
+  }
+  return d.toLocaleString();
+}
+
+function formatIsoText(iso: string | null, fallback: string): string {
+  if (!iso) {
+    return fallback;
+  }
+  const d = new Date(iso);
+  if (Number.isNaN(d.valueOf())) {
+    return iso;
   }
   return d.toLocaleString();
 }

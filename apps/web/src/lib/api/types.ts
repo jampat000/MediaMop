@@ -54,10 +54,24 @@ export type FetcherProbePersistedWindow = {
   persisted_failed: number;
 };
 
+export type FetcherFailedImportAutomationLane = {
+  last_finished_at: string | null;
+  last_outcome: string | null;
+  saved_schedule: string;
+  next_run_note: string;
+};
+
+export type FetcherFailedImportAutomationSummary = {
+  movies: FetcherFailedImportAutomationLane;
+  tv_shows: FetcherFailedImportAutomationLane;
+  source_note: string;
+};
+
 export type FetcherOperationalOverview = {
   mediamop_version: string;
   status_label: string;
   status_detail: string;
+  failed_import_automation: FetcherFailedImportAutomationSummary;
   connection: DashboardFetcherStatus;
   probe_persisted_24h: FetcherProbePersistedWindow;
   probe_failure_window_days: number;
