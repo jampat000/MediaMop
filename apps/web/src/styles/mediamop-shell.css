@@ -641,6 +641,57 @@ body.mm-body {
   word-break: break-word;
 }
 
+.mm-activity-remux-detail {
+  margin-top: 0.25rem;
+  max-width: 100%;
+}
+
+.mm-activity-remux-detail__dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(6rem, 10rem) 1fr;
+  gap: 0.2rem 0.65rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--mm-text2);
+}
+
+.mm-activity-remux-detail__row {
+  display: contents;
+}
+
+.mm-activity-remux-detail__row dt {
+  margin: 0;
+  font-weight: 500;
+  color: var(--mm-text3);
+}
+
+.mm-activity-remux-detail__row dd {
+  margin: 0;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.mm-activity-remux-detail__ffmpeg {
+  margin-top: 0.45rem;
+  font-size: 0.75rem;
+  color: var(--mm-text3);
+}
+
+.mm-activity-remux-detail__pre {
+  margin: 0.25rem 0 0;
+  padding: 0.4rem 0.5rem;
+  max-height: 8rem;
+  overflow: auto;
+  font-size: 0.7rem;
+  line-height: 1.35;
+  border-radius: var(--mm-radius-sm);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--mm-text2);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
 .mm-fetcher-module-surface {
   max-width: 100%;
   margin: 0;

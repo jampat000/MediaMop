@@ -10,11 +10,21 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.refiner_file_remux_pass_activity import record_refiner_file_remux_pass_completed
-from mediamop.modules.refiner.refiner_file_remux_pass_run import (
+from mediamop.modules.refiner.refiner_file_remux_pass_run import run_refiner_file_remux_pass
+from mediamop.modules.refiner.refiner_file_remux_pass_visibility import (
+    REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
+    remux_pass_activity_title,
     remux_pass_result_to_activity_detail,
-    run_refiner_file_remux_pass,
 )
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
+
+
+def _record(session_factory: sessionmaker[Session], *, payload: dict[str, Any]) -> None:
+    detail = remux_pass_result_to_activity_detail(payload)
+    title = remux_pass_activity_title(payload)
+    with session_factory() as session:
+        with session.begin():
+            record_refiner_file_remux_pass_completed(session, title=title, detail=detail)
 
 
 def make_refiner_file_remux_pass_handler(
@@ -26,47 +36,68 @@ def make_refiner_file_remux_pass_handler(
     def _run(ctx: RefinerJobWorkContext) -> None:
         raw = (ctx.payload_json or "").strip()
         if not raw:
-            detail_obj: dict[str, Any] = {"job_id": ctx.id, "ok": False, "reason": "missing payload_json"}
-            detail = remux_pass_result_to_activity_detail(detail_obj)
-            with session_factory() as session:
-                with session.begin():
-                    record_refiner_file_remux_pass_completed(session, detail=detail)
+            _record(
+                session_factory,
+                payload={
+                    "job_id": ctx.id,
+                    "ok": False,
+                    "outcome": REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
+                    "reason": "missing payload_json",
+                },
+            )
             return
 
         try:
             data = json.loads(raw)
         except json.JSONDecodeError as exc:
-            detail_obj = {"job_id": ctx.id, "ok": False, "reason": f"invalid json: {exc}"}
-            detail = remux_pass_result_to_activity_detail(detail_obj)
-            with session_factory() as session:
-                with session.begin():
-                    record_refiner_file_remux_pass_completed(session, detail=detail)
+            _record(
+                session_factory,
+                payload={
+                    "job_id": ctx.id,
+                    "ok": False,
+                    "outcome": REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
+                    "reason": f"invalid json: {exc}",
+                },
+            )
             return
 
         if not isinstance(data, dict):
-            detail_obj = {"job_id": ctx.id, "ok": False, "reason": "payload must be a JSON object"}
-            detail = remux_pass_result_to_activity_detail(detail_obj)
-            with session_factory() as session:
-                with session.begin():
-                    record_refiner_file_remux_pass_completed(session, detail=detail)
+            _record(
+                session_factory,
+                payload={
+                    "job_id": ctx.id,
+                    "ok": False,
+                    "outcome": REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
+                    "reason": "payload must be a JSON object",
+                },
+            )
             return
 
         rel = data.get("relative_media_path")
         if not isinstance(rel, str) or not rel.strip():
-            detail_obj = {"job_id": ctx.id, "ok": False, "reason": "relative_media_path is required"}
-            detail = remux_pass_result_to_activity_detail(detail_obj)
-            with session_factory() as session:
-                with session.begin():
-                    record_refiner_file_remux_pass_completed(session, detail=detail)
+            _record(
+                session_factory,
+                payload={
+                    "job_id": ctx.id,
+                    "ok": False,
+                    "outcome": REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
+                    "reason": "relative_media_path is required",
+                },
+            )
             return
 
         dry_run = data.get("dry_run", True)
         if not isinstance(dry_run, bool):
-            detail_obj = {"job_id": ctx.id, "ok": False, "reason": "dry_run must be a boolean when present"}
-            detail = remux_pass_result_to_activity_detail(detail_obj)
-            with session_factory() as session:
-                with session.begin():
-                    record_refiner_file_remux_pass_completed(session, detail=detail)
+            _record(
+                session_factory,
+                payload={
+                    "job_id": ctx.id,
+                    "ok": False,
+                    "outcome": REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
+                    "reason": "dry_run must be a boolean when present",
+                    "relative_media_path": rel.strip(),
+                },
+            )
             return
 
         result = run_refiner_file_remux_pass(
@@ -75,9 +106,6 @@ def make_refiner_file_remux_pass_handler(
             dry_run=bool(dry_run),
         )
         result["job_id"] = ctx.id
-        detail = remux_pass_result_to_activity_detail(result)
-        with session_factory() as session:
-            with session.begin():
-                record_refiner_file_remux_pass_completed(session, detail=detail)
+        _record(session_factory, payload=result)
 
     return _run

@@ -1,4 +1,8 @@
 import { PageLoading } from "../../components/shared/page-loading";
+import {
+  REFINER_FILE_REMUX_PASS_COMPLETED_EVENT,
+  RefinerFileRemuxPassActivityDetail,
+} from "../../lib/activity/refiner-file-remux-pass-detail";
 import { activityRecentKey, useActivityRecentQuery } from "../../lib/activity/queries";
 import { useActivityStreamInvalidation } from "../../lib/activity/use-activity-stream-invalidation";
 import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
@@ -56,9 +60,9 @@ export function ActivityPage() {
           Persisted platform events, newest first. Snapshot-backed view with live freshness updates.
         </p>
         <p className="mm-page__lead">
-          Read-only: no filters, export, or actions. Records sign-in outcomes, setup, sign-out, failed bootstrap
-          attempts, throttled Fetcher health checks, and Fetcher failed-import queue/run activity (queued passes,
-          run start, outcomes) — not every page load.
+          Read-only: no filters, export, or actions.           Records sign-in outcomes, setup, sign-out, failed bootstrap
+          attempts, throttled Fetcher health checks, Fetcher failed-import queue/run activity (queued passes,
+          run start, outcomes), and Refiner file remux pass results when you run them — not every page load.
         </p>
       </header>
 
@@ -78,7 +82,13 @@ export function ActivityPage() {
               </div>
               <div className="mm-activity-row__body">
                 <span className="mm-activity-row__title">{ev.title}</span>
-                {ev.detail ? <span className="mm-activity-row__detail">{ev.detail}</span> : null}
+                {ev.detail ? (
+                  ev.event_type === REFINER_FILE_REMUX_PASS_COMPLETED_EVENT ? (
+                    <RefinerFileRemuxPassActivityDetail detail={ev.detail} />
+                  ) : (
+                    <span className="mm-activity-row__detail">{ev.detail}</span>
+                  )
+                ) : null}
               </div>
             </li>
           ))}

@@ -64,7 +64,9 @@ export function RefinerPage() {
             <strong>ffprobe</strong> plus remux <strong>planning</strong> (audio/subtitle selection). Manual enqueue
             defaults to <strong>dry run</strong> (no ffmpeg output, no source moves). Live remux requires{" "}
             <code className="font-mono text-[0.85em]">dry_run: false</code> and ffmpeg/ffprobe available; output goes
-            under <code className="font-mono text-[0.85em]">MEDIAMOP_HOME/refiner/remux_output/</code>.
+            under <code className="font-mono text-[0.85em]">MEDIAMOP_HOME/refiner/remux_output/</code>. Finished passes
+            write a structured summary to the Activity feed (Overview → Activity) with dry-run vs live outcome, the
+            inspected file path, plan summary, before/after track lines, and skip or error reasons when applicable.
           </li>
         </ul>
       </section>

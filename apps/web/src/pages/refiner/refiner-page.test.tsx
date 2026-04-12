@@ -71,6 +71,7 @@ describe("RefinerPage (hero compression)", () => {
     expect(text).toMatch(/dry run/i);
     expect(text).toMatch(/ffprobe/i);
     expect(text).toMatch(/MEDIAMOP_REFINER_REMUX_MEDIA_ROOT/);
+    expect(text).toMatch(/Activity feed/i);
   });
 
   it("documents candidate gate live queue behavior honestly", () => {
