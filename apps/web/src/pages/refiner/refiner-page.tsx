@@ -14,8 +14,8 @@ export function RefinerPage() {
           <code className="rounded bg-black/25 px-1 py-0.5 font-mono text-[0.85em] text-[var(--mm-text)]">
             fetcher_jobs
           </code>
-          . Two families ship today; both apply Refiner domain rules (ownership and upstream blocking); neither one
-          scans your disks or walks a media tree by itself.
+          . Shipped families below apply Refiner domain rules where relevant; they are not a full watched-folder
+          service.
         </p>
       </header>
 
@@ -48,6 +48,19 @@ export function RefinerPage() {
             </strong>{" "}
             — manual jobs that fetch the live <strong>Radarr</strong> or <strong>Sonarr</strong> download queue from
             your configured service, then evaluate domain rules for a specific release named in the payload.
+          </li>
+          <li data-testid="refiner-family-file-remux-pass">
+            <strong>
+              <code className="rounded bg-black/25 px-1 py-0.5 font-mono text-[0.85em] text-[var(--mm-text)]">
+                refiner.file.remux_pass.v1
+              </code>
+            </strong>{" "}
+            — one file under{" "}
+            <code className="font-mono text-[0.85em]">MEDIAMOP_REFINER_REMUX_MEDIA_ROOT</code>:{" "}
+            <strong>ffprobe</strong> plus remux <strong>planning</strong> (audio/subtitle selection). Manual enqueue
+            defaults to <strong>dry run</strong> (no ffmpeg output, no source moves). Live remux requires{" "}
+            <code className="font-mono text-[0.85em]">dry_run: false</code> and ffmpeg/ffprobe available; output goes
+            under <code className="font-mono text-[0.85em]">MEDIAMOP_HOME/refiner/remux_output/</code>.
           </li>
         </ul>
       </section>

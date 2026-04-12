@@ -104,6 +104,8 @@ class MediaMopSettings:
     # Refiner supplied payload evaluation (``refiner.supplied_payload_evaluation.v1``) — Refiner-only schedule.
     refiner_supplied_payload_evaluation_schedule_enabled: bool
     refiner_supplied_payload_evaluation_schedule_interval_seconds: int
+    # Refiner per-file remux (``refiner.file.remux_pass.v1``) — optional root for safe relative paths only.
+    refiner_remux_media_root: str | None
     # Radarr/Sonarr HTTP for Fetcher-owned live failed-import cleanup drives (env: MEDIAMOP_FETCHER_*).
     fetcher_radarr_base_url: str | None
     fetcher_radarr_api_key: str | None
@@ -268,6 +270,8 @@ class MediaMopSettings:
 
         refiner_payload_eval_on = _refiner_supplied_payload_eval_schedule_enabled()
         refiner_payload_eval_iv = _refiner_supplied_payload_eval_schedule_interval_seconds()
+        refiner_remux_root = (os.environ.get("MEDIAMOP_REFINER_REMUX_MEDIA_ROOT") or "").strip()
+        refiner_remux_media_root = str(Path(refiner_remux_root).expanduser()) if refiner_remux_root else None
         radarr_base = (os.environ.get("MEDIAMOP_FETCHER_RADARR_BASE_URL") or "").strip()
         if radarr_base and not radarr_base.startswith(("http://", "https://")):
             radarr_base = ""
@@ -476,6 +480,7 @@ class MediaMopSettings:
             subber_worker_count=subber_workers,
             refiner_supplied_payload_evaluation_schedule_enabled=refiner_payload_eval_on,
             refiner_supplied_payload_evaluation_schedule_interval_seconds=refiner_payload_eval_iv,
+            refiner_remux_media_root=refiner_remux_media_root,
             fetcher_radarr_base_url=radarr_base or None,
             fetcher_radarr_api_key=radarr_key or None,
             fetcher_sonarr_base_url=sonarr_base or None,

@@ -15,6 +15,7 @@ from mediamop.core.db import Base
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.refiner_candidate_gate_job_kinds import REFINER_CANDIDATE_GATE_JOB_KIND
+from mediamop.modules.refiner.refiner_file_remux_pass_job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.refiner_job_handlers import build_refiner_job_handlers
 from mediamop.modules.refiner.refiner_supplied_payload_evaluation_job_kinds import (
     REFINER_SUPPLIED_PAYLOAD_EVALUATION_JOB_KIND,
@@ -55,7 +56,11 @@ def session_factory(jobs_engine):
 def test_build_refiner_job_handlers_registry_is_refiner_prefixed_only(session_factory) -> None:
     settings = MediaMopSettings.load()
     reg = build_refiner_job_handlers(settings, session_factory)
-    assert set(reg) == {REFINER_SUPPLIED_PAYLOAD_EVALUATION_JOB_KIND, REFINER_CANDIDATE_GATE_JOB_KIND}
+    assert set(reg) == {
+        REFINER_SUPPLIED_PAYLOAD_EVALUATION_JOB_KIND,
+        REFINER_CANDIDATE_GATE_JOB_KIND,
+        REFINER_FILE_REMUX_PASS_JOB_KIND,
+    }
     assert all(k.startswith("refiner.") for k in reg)
 
 

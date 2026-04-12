@@ -31,6 +31,7 @@ describe("RefinerPage (hero compression)", () => {
     expect(t).toMatch(/fetcher_jobs/);
     expect(t).toMatch(/refiner\.supplied_payload_evaluation\.v1/);
     expect(t).toMatch(/refiner\.candidate_gate\.v1/);
+    expect(t).toMatch(/refiner\.file\.remux_pass\.v1/);
   });
 
   it("documents supplied payload evaluation without overstating library or disk work", () => {
@@ -45,6 +46,19 @@ describe("RefinerPage (hero compression)", () => {
     expect(t).toMatch(/library-wide audit/i);
     expect(t).toMatch(/filesystem sweep/i);
     expect(t).toMatch(/rows/);
+  });
+
+  it("documents file remux pass with dry-run default and ffprobe honestly", () => {
+    render(
+      <MemoryRouter>
+        <RefinerPage />
+      </MemoryRouter>,
+    );
+    const li = screen.getByTestId("refiner-family-file-remux-pass");
+    const t = li.textContent ?? "";
+    expect(t).toMatch(/dry run/i);
+    expect(t).toMatch(/ffprobe/i);
+    expect(t).toMatch(/MEDIAMOP_REFINER_REMUX_MEDIA_ROOT/);
   });
 
   it("documents candidate gate live queue behavior honestly", () => {

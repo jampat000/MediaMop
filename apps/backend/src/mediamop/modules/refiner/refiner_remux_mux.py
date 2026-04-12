@@ -1,0 +1,215 @@
+"""FFprobe / FFmpeg remux execution — Refiner-owned (ported from Fetcher ``app/refiner_mux.py``).
+
+Binary resolution: ``<MEDIAMOP_HOME>/bin/ffmpeg/{ffprobe,ffmpeg}[.exe]`` first, then ``PATH``.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+import shutil
+import subprocess
+import tempfile
+from pathlib import Path
+from typing import Any
+
+from mediamop.modules.refiner.refiner_remux_rules import RemuxPlan
+
+logger = logging.getLogger(__name__)
+
+REFINER_FFMPEG_TIMEOUT_S: int = 3600
+_REFINER_FFPROBE_LOG_MAX_CHARS = 2000
+
+
+def _clip_probe_text(raw: object, *, max_chars: int = _REFINER_FFPROBE_LOG_MAX_CHARS) -> str:
+    t = "" if raw is None else str(raw)
+    if len(t) > max_chars:
+        return t[:max_chars] + "…(truncated)"
+    return t
+
+
+def resolve_ffprobe_ffmpeg(*, mediamop_home: str) -> tuple[str, str]:
+    """Prefer bundled tools under ``mediamop_home``, then host ``PATH``."""
+
+    home = Path(mediamop_home).expanduser().resolve()
+    bundled_win = [
+        home / "bin" / "ffmpeg" / "ffprobe.exe",
+        home / "bin" / "ffmpeg" / "ffmpeg.exe",
+    ]
+    if bundled_win[0].is_file() and bundled_win[1].is_file():
+        return str(bundled_win[0]), str(bundled_win[1])
+    bundled_unix = [
+        home / "bin" / "ffmpeg" / "ffprobe",
+        home / "bin" / "ffmpeg" / "ffmpeg",
+    ]
+    if bundled_unix[0].is_file() and bundled_unix[1].is_file():
+        return str(bundled_unix[0]), str(bundled_unix[1])
+
+    ffprobe = shutil.which("ffprobe")
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffprobe or not ffmpeg:
+        raise RuntimeError(
+            "Refiner needs ffprobe and ffmpeg. Place binaries under MEDIAMOP_HOME/bin/ffmpeg/, "
+            "or install both on the host PATH (Linux/macOS/Windows).",
+        )
+    return ffprobe, ffmpeg
+
+
+def ffprobe_json(path: Path, *, mediamop_home: str, timeout_s: int = 120) -> dict[str, Any]:
+    ffprobe, _ = resolve_ffprobe_ffmpeg(mediamop_home=mediamop_home)
+    try:
+        resolved_path = str(path.resolve())
+    except OSError:
+        resolved_path = str(path)
+    exists = bool(path.exists())
+    is_file = bool(path.is_file())
+    try:
+        st = path.stat()
+        f_size = int(st.st_size)
+        f_mtime = float(st.st_mtime)
+    except OSError:
+        f_size = -1
+        f_mtime = 0.0
+    logger.warning(
+        "REFINER_FFPROBE_FILE_STATE: %s",
+        json.dumps(
+            {
+                "path": str(path),
+                "resolved_path": resolved_path,
+                "exists": exists,
+                "is_file": is_file,
+                "size_bytes": f_size,
+                "suffix": _clip_probe_text(path.suffix, max_chars=64),
+                "mtime_epoch": f_mtime,
+            },
+            ensure_ascii=True,
+        ),
+    )
+    if (not exists) or (not is_file) or f_size == 0:
+        raise RuntimeError("file missing or empty at probe time")
+    argv = [
+        ffprobe,
+        "-v",
+        "quiet",
+        "-print_format",
+        "json",
+        "-show_streams",
+        "-show_format",
+        str(path),
+    ]
+    logger.warning(
+        "REFINER_FFPROBE_CALL: %s",
+        json.dumps(
+            {
+                "path": str(path),
+                "argv": [_clip_probe_text(a, max_chars=256) for a in argv],
+            },
+            ensure_ascii=True,
+        ),
+    )
+    r = subprocess.run(
+        argv,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=timeout_s,
+    )
+    logger.warning(
+        "REFINER_FFPROBE_RESULT: %s",
+        json.dumps(
+            {
+                "path": str(path),
+                "returncode": int(getattr(r, "returncode", -1)),
+                "stdout": _clip_probe_text(getattr(r, "stdout", "")),
+                "stderr": _clip_probe_text(getattr(r, "stderr", "")),
+            },
+            ensure_ascii=True,
+        ),
+    )
+    if r.returncode != 0:
+        raise RuntimeError((r.stderr or r.stdout or "").strip() or "ffprobe failed")
+    raw = r.stdout
+    if not isinstance(raw, str) or not raw.strip():
+        raise RuntimeError("ffprobe returned invalid or empty output")
+    try:
+        parsed = json.loads(raw)
+    except Exception as e:
+        raise RuntimeError("ffprobe returned invalid or empty output") from e
+    if not isinstance(parsed, dict):
+        raise RuntimeError("ffprobe returned invalid or empty output")
+    return parsed
+
+
+def validate_remux_output(path: Path, *, mediamop_home: str, expected_audio: int = 0) -> None:
+    data = ffprobe_json(path, mediamop_home=mediamop_home)
+    streams = data.get("streams") or []
+    if not isinstance(streams, list):
+        raise RuntimeError("validation failed: invalid ffprobe output")
+    n_audio = 0
+    for s in streams:
+        if isinstance(s, dict) and (s.get("codec_type") or "").lower() == "audio":
+            n_audio += 1
+    if n_audio < 1:
+        raise RuntimeError("validation failed: output has no audio stream")
+    if expected_audio > 0 and n_audio != expected_audio:
+        raise RuntimeError(
+            f"validation failed: expected {expected_audio} audio stream(s), got {n_audio}",
+        )
+
+
+def build_ffmpeg_argv(*, ffmpeg_bin: str, src: Path, dst: Path, plan: RemuxPlan) -> list[str]:
+    args = [ffmpeg_bin, "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", str(src)]
+    for vi in plan.video_indices:
+        args.extend(["-map", f"0:{vi}"])
+    for t in plan.audio:
+        args.extend(["-map", f"0:{t.input_index}"])
+    for t in plan.subtitles:
+        args.extend(["-map", f"0:{t.input_index}"])
+    args.extend(["-c", "copy"])
+    for i, t in enumerate(plan.audio):
+        args.extend(["-disposition:a:%d" % i, "default" if t.default else "0"])
+    for i, t in enumerate(plan.subtitles):
+        flags: list[str] = []
+        if t.default:
+            flags.append("default")
+        if t.forced:
+            flags.append("forced")
+        args.extend(["-disposition:s:%d" % i, "+".join(flags) if flags else "0"])
+    args.append(str(dst))
+    return args
+
+
+def run_ffmpeg(argv: list[str], *, timeout_s: int | None = REFINER_FFMPEG_TIMEOUT_S) -> None:
+    r = subprocess.run(argv, capture_output=True, text=True, timeout=timeout_s)
+    if r.returncode != 0:
+        msg = (r.stderr or r.stdout or "").strip()
+        raise RuntimeError(msg or "ffmpeg failed")
+
+
+def remux_to_temp_file(*, src: Path, work_dir: Path, plan: RemuxPlan, mediamop_home: str) -> Path:
+    """Write remux output into work_dir and validate it. Caller owns move/delete decisions."""
+
+    _, ffmpeg_bin = resolve_ffprobe_ffmpeg(mediamop_home=mediamop_home)
+    work_dir.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(
+        suffix=src.suffix or ".mkv",
+        prefix=f"{src.stem}.refiner.",
+        dir=str(work_dir),
+    )
+    os.close(fd)
+    tmp_path = Path(tmp_name)
+    try:
+        argv = build_ffmpeg_argv(ffmpeg_bin=ffmpeg_bin, src=src, dst=tmp_path, plan=plan)
+        logger.debug("Refiner: ffmpeg %s", " ".join(argv[:8]) + " ...")
+        run_ffmpeg(argv)
+        validate_remux_output(tmp_path, mediamop_home=mediamop_home, expected_audio=len(plan.audio))
+    except Exception:
+        try:
+            if tmp_path.is_file():
+                tmp_path.unlink()
+        except OSError:
+            logger.warning("Refiner: could not remove temp file %s", tmp_path, exc_info=True)
+        raise
+    return tmp_path

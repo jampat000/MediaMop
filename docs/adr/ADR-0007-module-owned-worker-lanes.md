@@ -53,7 +53,7 @@ MediaMop is **SQLite-first**: one writer per database. Durable background work m
 | Worker count env | `MEDIAMOP_REFINER_WORKER_COUNT` |
 | Reserved `job_kind` prefix (new durable Refiner work) | **`refiner.`** |
 
-**Refiner today:** shipped production durable kinds use **`refiner.*`** only on ``refiner_jobs``. Tests may still use short synthetic kinds where the worker loop’s unprefixed-row guard is under test.
+**Refiner today:** shipped production durable kinds use **`refiner.*`** only on ``refiner_jobs`` (including ``refiner.file.remux_pass.v1`` for per-file ffprobe + remux planning / optional ffmpeg). Tests may still use short synthetic kinds where the worker loop’s unprefixed-row guard is under test. Per-file remux enqueue: ``POST /api/v1/refiner/jobs/file-remux-pass/enqueue``; operator media root: ``MEDIAMOP_REFINER_REMUX_MEDIA_ROOT``.
 
 **Suggested file map (Refiner)**
 

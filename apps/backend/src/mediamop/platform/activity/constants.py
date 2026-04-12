@@ -33,3 +33,4 @@ TRIMMER_SUPPLIED_TRIM_PLAN_JSON_FILE_WRITE_COMPLETED = "trimmer.supplied_trim_pl
 
 SUBBER_SUPPLIED_CUE_TIMELINE_CONSTRAINTS_CHECK_COMPLETED = "subber.supplied_cue_timeline_constraints_check_completed"
 REFINER_CANDIDATE_GATE_COMPLETED = "refiner.candidate_gate_completed"
+REFINER_FILE_REMUX_PASS_COMPLETED = "refiner.file_remux_pass_completed"
