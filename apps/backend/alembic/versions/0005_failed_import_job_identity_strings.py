@@ -19,6 +19,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # Transitional: failed_import.* rows still live on ``refiner_jobs`` here; revision 0006 moves
+    # them to ``fetcher_jobs``. Current app code never enqueues failed_import.* onto refiner_jobs.
     # Radarr failed-import cleanup drive (Fetcher-owned lane; historical strings used refiner.*).
     op.execute(
         "UPDATE refiner_jobs SET job_kind = 'failed_import.radarr.cleanup_drive.v1' "

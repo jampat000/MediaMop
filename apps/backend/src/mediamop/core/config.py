@@ -103,6 +103,11 @@ class MediaMopSettings:
     fetcher_radarr_api_key: str | None
     fetcher_sonarr_base_url: str | None
     fetcher_sonarr_api_key: str | None
+    # Shared neutral *arr HTTP (env: MEDIAMOP_ARR_*). Refiner and Fetcher resolve via arr_http_*_credentials().
+    arr_radarr_base_url: str | None
+    arr_radarr_api_key: str | None
+    arr_sonarr_base_url: str | None
+    arr_sonarr_api_key: str | None
     failed_import_radarr_cleanup_drive_schedule_enabled: bool
     failed_import_radarr_cleanup_drive_schedule_interval_seconds: int
     failed_import_sonarr_cleanup_drive_schedule_enabled: bool
@@ -162,6 +167,33 @@ class MediaMopSettings:
 
         return self.failed_import_cleanup_env.sonarr_policy()
 
+    def arr_http_radarr_credentials(self) -> tuple[str | None, str | None]:
+        """Radarr HTTP ``(base_url, api_key)`` from exactly one configured pair — never mixed.
+
+        **Pair-level precedence:** If either ``arr_radarr_base_url`` or ``arr_radarr_api_key`` is
+        non-None after load, both values are taken **only** from the ``MEDIAMOP_ARR_RADARR_*``
+        fields (one may still be None if the operator omitted it). Otherwise both values are
+        taken **only** from ``MEDIAMOP_FETCHER_RADARR_*``. Never combine an ARR URL with a
+        Fetcher API key or the reverse.
+        """
+
+        arr_pair_active = self.arr_radarr_base_url is not None or self.arr_radarr_api_key is not None
+        if arr_pair_active:
+            return (self.arr_radarr_base_url, self.arr_radarr_api_key)
+        return (self.fetcher_radarr_base_url, self.fetcher_radarr_api_key)
+
+    def arr_http_sonarr_credentials(self) -> tuple[str | None, str | None]:
+        """Sonarr HTTP ``(base_url, api_key)`` from exactly one configured pair — never mixed.
+
+        Same **pair-level precedence** as :meth:`arr_http_radarr_credentials`, using
+        ``MEDIAMOP_ARR_SONARR_*`` vs ``MEDIAMOP_FETCHER_SONARR_*``.
+        """
+
+        arr_pair_active = self.arr_sonarr_base_url is not None or self.arr_sonarr_api_key is not None
+        if arr_pair_active:
+            return (self.arr_sonarr_base_url, self.arr_sonarr_api_key)
+        return (self.fetcher_sonarr_base_url, self.fetcher_sonarr_api_key)
+
     @classmethod
     def load(cls) -> MediaMopSettings:
         _load_backend_dotenv_if_present()
@@ -220,6 +252,14 @@ class MediaMopSettings:
         if sonarr_base and not sonarr_base.startswith(("http://", "https://")):
             sonarr_base = ""
         sonarr_key = (os.environ.get("MEDIAMOP_FETCHER_SONARR_API_KEY") or "").strip()
+        arr_radarr_base = (os.environ.get("MEDIAMOP_ARR_RADARR_BASE_URL") or "").strip()
+        if arr_radarr_base and not arr_radarr_base.startswith(("http://", "https://")):
+            arr_radarr_base = ""
+        arr_radarr_key = (os.environ.get("MEDIAMOP_ARR_RADARR_API_KEY") or "").strip()
+        arr_sonarr_base = (os.environ.get("MEDIAMOP_ARR_SONARR_BASE_URL") or "").strip()
+        if arr_sonarr_base and not arr_sonarr_base.startswith(("http://", "https://")):
+            arr_sonarr_base = ""
+        arr_sonarr_key = (os.environ.get("MEDIAMOP_ARR_SONARR_API_KEY") or "").strip()
         radarr_sched_on = _env_bool("MEDIAMOP_FAILED_IMPORT_RADARR_CLEANUP_DRIVE_SCHEDULE_ENABLED", False)
         radarr_sched_iv = _clamp_failed_import_cleanup_drive_schedule_interval_seconds(
             _env_int("MEDIAMOP_FAILED_IMPORT_RADARR_CLEANUP_DRIVE_SCHEDULE_INTERVAL_SECONDS", 3600),
@@ -414,6 +454,10 @@ class MediaMopSettings:
             fetcher_radarr_api_key=radarr_key or None,
             fetcher_sonarr_base_url=sonarr_base or None,
             fetcher_sonarr_api_key=sonarr_key or None,
+            arr_radarr_base_url=arr_radarr_base or None,
+            arr_radarr_api_key=arr_radarr_key or None,
+            arr_sonarr_base_url=arr_sonarr_base or None,
+            arr_sonarr_api_key=arr_sonarr_key or None,
             failed_import_radarr_cleanup_drive_schedule_enabled=radarr_sched_on,
             failed_import_radarr_cleanup_drive_schedule_interval_seconds=radarr_sched_iv,
             failed_import_sonarr_cleanup_drive_schedule_enabled=sonarr_sched_on,

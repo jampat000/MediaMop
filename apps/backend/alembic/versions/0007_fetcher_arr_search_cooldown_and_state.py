@@ -57,6 +57,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_table("fetcher_search_schedule_state")
-    op.drop_index("ix_fetcher_arr_action_log_lookup", table_name="fetcher_arr_action_log")
-    op.drop_table("fetcher_arr_action_log")
+    # IF EXISTS: downgrade after partial/manual schema drift must not hard-fail on missing objects.
+    op.execute(sa.text("DROP TABLE IF EXISTS fetcher_search_schedule_state"))
+    op.execute(sa.text("DROP INDEX IF EXISTS ix_fetcher_arr_action_log_lookup"))
+    op.execute(sa.text("DROP TABLE IF EXISTS fetcher_arr_action_log"))

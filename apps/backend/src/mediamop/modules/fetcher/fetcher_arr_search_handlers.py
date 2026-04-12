@@ -86,10 +86,12 @@ def build_fetcher_arr_search_job_handlers(
             now=now,
         ):
             return
-        base = settings.fetcher_sonarr_base_url
-        key = settings.fetcher_sonarr_api_key
+        base, key = settings.arr_http_sonarr_credentials()
         if not base or not key:
-            raise RuntimeError("Sonarr missing search requires MEDIAMOP_FETCHER_SONARR_BASE_URL and API key")
+            raise RuntimeError(
+                "Sonarr missing search requires Sonarr URL and API key "
+                "(MEDIAMOP_ARR_SONARR_* or legacy MEDIAMOP_FETCHER_SONARR_*)",
+            )
         client = FetcherArrV3Client(base, key)
         client.health_ok()
         limit = max(1, int(settings.fetcher_sonarr_missing_search_max_items_per_run))
@@ -150,10 +152,12 @@ def build_fetcher_arr_search_job_handlers(
             now=now,
         ):
             return
-        base = settings.fetcher_radarr_base_url
-        key = settings.fetcher_radarr_api_key
+        base, key = settings.arr_http_radarr_credentials()
         if not base or not key:
-            raise RuntimeError("Radarr missing search requires MEDIAMOP_FETCHER_RADARR_BASE_URL and API key")
+            raise RuntimeError(
+                "Radarr missing search requires Radarr URL and API key "
+                "(MEDIAMOP_ARR_RADARR_* or legacy MEDIAMOP_FETCHER_RADARR_*)",
+            )
         client = FetcherArrV3Client(base, key)
         client.health_ok()
         limit = max(1, int(settings.fetcher_radarr_missing_search_max_items_per_run))
@@ -214,10 +218,12 @@ def build_fetcher_arr_search_job_handlers(
             now=now,
         ):
             return
-        base = settings.fetcher_sonarr_base_url
-        key = settings.fetcher_sonarr_api_key
+        base, key = settings.arr_http_sonarr_credentials()
         if not base or not key:
-            raise RuntimeError("Sonarr upgrade search requires MEDIAMOP_FETCHER_SONARR_BASE_URL and API key")
+            raise RuntimeError(
+                "Sonarr upgrade search requires Sonarr URL and API key "
+                "(MEDIAMOP_ARR_SONARR_* or legacy MEDIAMOP_FETCHER_SONARR_*)",
+            )
         client = FetcherArrV3Client(base, key)
         client.health_ok()
         limit = max(1, int(settings.fetcher_sonarr_upgrade_search_max_items_per_run))
@@ -277,10 +283,12 @@ def build_fetcher_arr_search_job_handlers(
             now=now,
         ):
             return
-        base = settings.fetcher_radarr_base_url
-        key = settings.fetcher_radarr_api_key
+        base, key = settings.arr_http_radarr_credentials()
         if not base or not key:
-            raise RuntimeError("Radarr upgrade search requires MEDIAMOP_FETCHER_RADARR_BASE_URL and API key")
+            raise RuntimeError(
+                "Radarr upgrade search requires Radarr URL and API key "
+                "(MEDIAMOP_ARR_RADARR_* or legacy MEDIAMOP_FETCHER_RADARR_*)",
+            )
         client = FetcherArrV3Client(base, key)
         client.health_ok()
         limit = max(1, int(settings.fetcher_radarr_upgrade_search_max_items_per_run))

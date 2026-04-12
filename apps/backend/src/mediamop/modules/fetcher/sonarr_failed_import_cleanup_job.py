@@ -44,12 +44,11 @@ def make_sonarr_failed_import_cleanup_drive_handler(
 
     def _run(_ctx: FetcherJobWorkContext) -> None:
         try:
-            base = settings.fetcher_sonarr_base_url
-            key = settings.fetcher_sonarr_api_key
+            base, key = settings.arr_http_sonarr_credentials()
             if not base or not key:
                 msg = (
-                    "Sonarr live cleanup drive requires MEDIAMOP_FETCHER_SONARR_BASE_URL and "
-                    "MEDIAMOP_FETCHER_SONARR_API_KEY"
+                    "Sonarr live cleanup drive requires Sonarr URL and API key "
+                    "(MEDIAMOP_ARR_SONARR_* or legacy MEDIAMOP_FETCHER_SONARR_*)"
                 )
                 raise RuntimeError(msg)
 

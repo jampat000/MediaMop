@@ -1,4 +1,4 @@
-"""Guardrails for ADR-0009: per-lane timing fields exist on ``MediaMopSettings`` (Fetcher search)."""
+"""Guardrails for ADR-0009: per-lane timing fields exist on ``MediaMopSettings`` (Fetcher + Refiner)."""
 
 from __future__ import annotations
 
@@ -35,3 +35,11 @@ def test_fetcher_arr_search_has_four_distinct_lane_timing_surfaces() -> None:
     assert "fetcher_radarr_search_retry_delay_minutes" not in names
     assert "fetcher_sonarr_missing_search_enabled" in names
     assert "fetcher_sonarr_search_missing_enabled" not in names
+
+
+def test_refiner_library_audit_pass_has_distinct_schedule_surface_on_settings() -> None:
+    """ADR-0009 Refiner row: library audit pass owns its own schedule flags on the aggregate."""
+
+    names = _field_names()
+    assert "refiner_library_audit_pass_schedule_enabled" in names
+    assert "refiner_library_audit_pass_schedule_interval_seconds" in names

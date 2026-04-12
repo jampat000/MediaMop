@@ -50,9 +50,18 @@ These are **four** independent timing contracts today:
 
 Fetcher **failed-import** cleanup drives: Radarr vs Sonarr use **separate** schedule interval settings and **separate** dedupe keys / job kinds — independent contracts.
 
-### Refiner, Trimmer, Subber (future durable jobs)
+### Refiner (shipped durable families)
 
-Any new durable `job_kind` on `refiner_jobs`, `trimmer_jobs`, or `subber_jobs` **must** ship with:
+Refiner owns ``refiner_jobs`` and in-process Refiner workers. **Each** durable ``refiner.*`` family that exposes operator-controlled timing must keep that timing on **family-local** settings and tasks (no cross-family coupling on the Refiner lane).
+
+Shipped today:
+
+- **`refiner.library.audit_pass.v1`** — optional periodic enqueue via ``MEDIAMOP_REFINER_LIBRARY_AUDIT_PASS_SCHEDULE_*`` and ``refiner_library_audit_pass_schedule_interval_seconds`` on ``MediaMopSettings``; failure backoff is local to that enqueue module (process-internal per ADR-0009 “Out of scope”, not shared with Fetcher).
+- **`refiner.candidate_gate.v1`** — manual enqueue only in this product pass; **no** shared schedule/cooldown/last-run row with other Refiner families or with Fetcher.
+
+### Trimmer, Subber (future durable jobs)
+
+Any new durable `job_kind` on `trimmer_jobs` or `subber_jobs` **must** ship with:
 
 - Its own persisted timing and audit fields (or namespaced columns), **or** strictly separate tables if the product demands it — never one shared “last run” or “retry” column for unrelated families.
 - Its own env-backed settings in `MediaMopSettings` (or a module-local settings object loaded at startup) for every operator-controlled interval/schedule/cooldown/retry that applies to that family.
@@ -66,7 +75,7 @@ Trimmer and Subber packages point to ADR-0007 for lane ownership; **this ADR** i
 |------|-----------|-----|
 | Fetcher failed-import Radarr vs Sonarr | Yes | Separate `MEDIAMOP_FAILED_IMPORT_*` intervals, separate periodic tasks, separate dedupe keys. |
 | Fetcher Arr search four lanes | Yes | Per-lane settings in `MediaMopSettings`, per-lane `(app, action, …)` cooldown log, per-lane prune in `prune_fetcher_arr_action_log`, four last-run columns, four periodic enqueue tasks. |
-| Refiner (durable kinds) | N/A / pending | No production multi-family operator timing matrix in-repo yet; **RefinerTimingContract** task: when adding each durable `refiner.*` family, add isolated settings + persistence per ADR-0009. |
+| Refiner durable families (library audit pass vs candidate gate) | Yes | Separate job kinds, handlers, and enqueue paths; library audit has its own optional schedule env + interval only for that family; candidate gate has no periodic contract in this pass (manual jobs only). No shared last-run or cooldown between the two. |
 | Trimmer / Subber | N/A / pending | Stubs only; **TrimmerTimingContract** / **SubberTimingContract** tasks: same rule when first `trimmer.*` / `subber.*` jobs ship. |
 
 ### Soft spot (configuration, not runtime coupling)

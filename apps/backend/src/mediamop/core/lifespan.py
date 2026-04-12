@@ -99,7 +99,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         stop_event=stop,
         job_handlers=fetcher_job_handlers,
     )
-    refiner_handlers = build_refiner_job_handlers(session_factory)
+    refiner_handlers = build_refiner_job_handlers(settings, session_factory)
     refiner_stop, refiner_worker_tasks = start_refiner_worker_background_tasks(
         session_factory,
         settings,

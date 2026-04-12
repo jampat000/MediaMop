@@ -44,12 +44,11 @@ def make_radarr_failed_import_cleanup_drive_handler(
 
     def _run(_ctx: FetcherJobWorkContext) -> None:
         try:
-            base = settings.fetcher_radarr_base_url
-            key = settings.fetcher_radarr_api_key
+            base, key = settings.arr_http_radarr_credentials()
             if not base or not key:
                 msg = (
-                    "Radarr live cleanup drive requires MEDIAMOP_FETCHER_RADARR_BASE_URL and "
-                    "MEDIAMOP_FETCHER_RADARR_API_KEY"
+                    "Radarr live cleanup drive requires Radarr URL and API key "
+                    "(MEDIAMOP_ARR_RADARR_* or legacy MEDIAMOP_FETCHER_RADARR_*)"
                 )
                 raise RuntimeError(msg)
 

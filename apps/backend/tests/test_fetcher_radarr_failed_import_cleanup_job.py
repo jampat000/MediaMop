@@ -188,7 +188,13 @@ def test_radarr_handler_without_config_fails_job(
 ) -> None:
     t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
     base = MediaMopSettings.load()
-    settings = replace(base, fetcher_radarr_base_url=None, fetcher_radarr_api_key=None)
+    settings = replace(
+        base,
+        fetcher_radarr_base_url=None,
+        fetcher_radarr_api_key=None,
+        arr_radarr_base_url=None,
+        arr_radarr_api_key=None,
+    )
     with session_factory() as s:
         enqueue_radarr_failed_import_cleanup_drive_job(s)
         s.commit()
@@ -209,7 +215,9 @@ def test_radarr_handler_without_config_fails_job(
     with session_factory() as s:
         row = s.get(FetcherJob, 1)
         assert row.status == FetcherJobStatus.PENDING.value
-        assert "MEDIAMOP_FETCHER_RADARR" in (row.last_error or "")
+        assert "MEDIAMOP_ARR_RADARR" in (row.last_error or "") or "MEDIAMOP_FETCHER_RADARR" in (
+            row.last_error or ""
+        )
         rows = s.scalars(select(ActivityEvent).where(ActivityEvent.module == "fetcher")).all()
         types = [r.event_type for r in rows]
         assert act_c.FETCHER_FAILED_IMPORT_RUN_STARTED not in types

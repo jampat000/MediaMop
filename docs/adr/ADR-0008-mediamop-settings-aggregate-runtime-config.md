@@ -27,17 +27,23 @@ Module-owned worker lanes (see [ADR-0007](ADR-0007-module-owned-worker-lanes.md)
 4. **Coupling rules**
    - **Tolerated:** module packages reading **already-parsed** values from `MediaMopSettings` passed in from lifespan or route factories; module-owned **defaults** expressed next to the module but **wired** in `MediaMopSettings.load()` until a split happens.
    - **Not tolerated:** modules importing each other’s internals to “reach” settings; new cross-module env prefixes without ADR updates; silent fallback between `MEDIAMOP_REFINER_*` and `MEDIAMOP_FAILED_IMPORT_*` style namespaces (explicit migration only).
+   - **Allowed explicit exception (Radarr/Sonarr HTTP URL+key only):** neutral `MEDIAMOP_ARR_{RADARR|SONARR}_*` vs legacy `MEDIAMOP_FETCHER_{RADARR|SONARR}_*` is resolved **once at load time** by `MediaMopSettings.arr_http_radarr_credentials()` / `arr_http_sonarr_credentials()` using the **pair-level** rule in §6. That is not cross-lane timing creep, not Refiner-vs-Fetcher job routing, and does not mix a URL from one prefix with an API key from the other.
 
 5. **Relation to module-owned worker lanes**
    - ADR-0007 owns **where durable jobs live** and **which worker pool** runs them. `MediaMopSettings` owns **how many Fetcher/Refiner workers** the process starts and **which ARR endpoints** those workers call. That is orthogonal composition: lanes are data-plane tables; settings are control-plane env.
 
-6. **Fetcher Arr search keys on `MediaMopSettings`**
+6. **Shared neutral `MEDIAMOP_ARR_*` Radarr/Sonarr credentials (canonical)**
+   - Operators may set `MEDIAMOP_ARR_RADARR_BASE_URL`, `MEDIAMOP_ARR_RADARR_API_KEY`, `MEDIAMOP_ARR_SONARR_BASE_URL`, and `MEDIAMOP_ARR_SONARR_API_KEY` as the **canonical** shared upstream for any code that needs a Radarr/Sonarr HTTP base URL and API key together (Fetcher, Refiner, and other callers use the same accessors).
+   - **Pair-level precedence:** If **either** neutral ARR field for an app (base URL or API key) is non-empty after `MediaMopSettings.load()`, that app’s HTTP credentials are taken **only** from the neutral `MEDIAMOP_ARR_*` pair (either field may still be `None` if the operator omitted it). Otherwise both values are taken **only** from `MEDIAMOP_FETCHER_{RADARR|SONARR}_*`. Per-field mixing (e.g. ARR URL + Fetcher key) is **forbidden** by implementation.
+   - **Migration compatibility:** Legacy deployments that only set `MEDIAMOP_FETCHER_*` keep working unchanged until operators introduce `MEDIAMOP_ARR_*`; introducing any neutral ARR value for that app switches the whole pair to the neutral namespace so operators cannot accidentally straddle prefixes.
+
+7. **Fetcher Arr search keys on `MediaMopSettings`**
    - Missing/upgrade search for Sonarr and Radarr use **four distinct field groups** on the aggregate (`fetcher_*_{missing|upgrade}_search_*` for enable flags, max batch, retry delay minutes, schedule window fields).
    - Lane-prefixed enable env is `MEDIAMOP_FETCHER_{SONARR|RADARR}_{MISSING|UPGRADE}_SEARCH_ENABLED`. Legacy `MEDIAMOP_FETCHER_{SONARR|RADARR}_SEARCH_{MISSING|UPGRADE}_ENABLED` is still read when the lane-prefixed key is absent.
    - Other legacy `MEDIAMOP_FETCHER_SONARR_SEARCH_*` / `MEDIAMOP_FETCHER_RADARR_SEARCH_*` environment variables are read **only** inside `MediaMopSettings.load()` when a lane-specific env key is absent. They supply **defaults** at load time; they do **not** create one shared dataclass field serving two lanes at runtime.
    - Cross-lane timing contracts (no shared cooldowns, schedules, or pruning between families) are **locked in [ADR-0009](ADR-0009-suite-wide-timing-isolation.md)**.
 
-7. **Why `platform/settings` is not the owner of module-specific runtime config today**
+8. **Why `platform/settings` is not the owner of module-specific runtime config today**
    - There is no separate `platform/settings` package providing a plugin registry; `mediamop.core.config` *is* the platform seam today.
    - Moving keys into hypothetical `platform/settings` without changing the load contract would be a file shuffle, not looser coupling.
    - When triggers in §3 fire, prefer **explicit per-module dataclasses** composed into `MediaMopSettings` (constructor injection from a small number of loaders) over a dynamic plugin map unless multiple deployable binaries appear.

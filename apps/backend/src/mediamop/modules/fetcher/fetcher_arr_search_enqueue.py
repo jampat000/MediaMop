@@ -82,8 +82,10 @@ def arr_search_schedule_specs(settings: MediaMopSettings) -> list[tuple[str, flo
     """Periodic asyncio specs: (label, interval_seconds, enqueue_fn). Empty when disabled or missing URL/key."""
 
     out: list[tuple[str, float, Callable[[Session], None]]] = []
-    son_ok = bool(settings.fetcher_sonarr_base_url and settings.fetcher_sonarr_api_key)
-    rad_ok = bool(settings.fetcher_radarr_base_url and settings.fetcher_radarr_api_key)
+    son_b, son_k = settings.arr_http_sonarr_credentials()
+    rad_b, rad_k = settings.arr_http_radarr_credentials()
+    son_ok = bool(son_b and son_k)
+    rad_ok = bool(rad_b and rad_k)
     if son_ok and settings.fetcher_sonarr_missing_search_enabled:
         out.append(
             (
