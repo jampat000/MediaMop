@@ -3,10 +3,10 @@
 Convention (locked in Phase 3):
 
 - **Operational health**: ``GET /health`` at the **application root** (probe-friendly, no version prefix).
-- **Product JSON API**: all future browser- and integration-facing JSON routes under **``/api/v1``**
+- **Product JSON API**: browser- and integration-facing JSON routes under **``/api/v1``**
   (mounted via :func:`build_v1_router`). Do not add unversioned product paths at root.
 
-Module routers (fetcher/refiner/etc.) will be included under ``/api/v1`` in later phases — not in the nested ``mediamop/`` Jinja app.
+Module routers (dashboard, auth, fetcher, refiner, trimmer, subber, activity, …) are composed under ``/api/v1`` here — not in the nested ``mediamop/`` Jinja app.
 """
 
 from __future__ import annotations

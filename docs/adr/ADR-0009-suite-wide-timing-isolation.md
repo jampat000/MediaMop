@@ -33,7 +33,7 @@ These require per-family (and per-module) isolation when operators set expectati
 
 ### Worker count and leases
 
-- **`MEDIAMOP_FETCHER_WORKER_COUNT`**, **`MEDIAMOP_REFINER_WORKER_COUNT`**, and future Trimmer/Subber counts control **throughput and claim ordering**. They do **not** replace per-family intervals, cooldowns, or schedules. Increasing worker count must not be the only knob that “fixes” one family waiting on another.
+- **`MEDIAMOP_FETCHER_WORKER_COUNT`**, **`MEDIAMOP_REFINER_WORKER_COUNT`**, **`MEDIAMOP_TRIMMER_WORKER_COUNT`**, and **`MEDIAMOP_SUBBER_WORKER_COUNT`** control **throughput and claim ordering** on their respective lanes. They do **not** replace per-family intervals, cooldowns, or schedules. Increasing worker count must not be the only knob that “fixes” one family waiting on another.
 
 ### Process-internal mechanics (out of scope for “shared contracts”)
 

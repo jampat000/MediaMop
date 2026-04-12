@@ -314,6 +314,37 @@ def test_process_one_trimmer_job_fails_claimed_row_with_foreign_lane_job_kind(
         assert "trimmer worker refused" in row.last_error
 
 
+def test_process_one_trimmer_job_rejects_unprefixed_job_kind_row(session_factory) -> None:
+    """Direct-insert rows without ``trimmer.*`` must fail safe on the Trimmer worker."""
+
+    t0 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=timezone.utc)
+    with session_factory() as s:
+        s.add(
+            TrimmerJob(
+                dedupe_key="legacy-trimmer-unprefixed",
+                job_kind="legacy.unprefixed",
+                status=TrimmerJobStatus.PENDING.value,
+            ),
+        )
+        s.commit()
+
+    handlers = build_trimmer_job_handlers(session_factory)
+    out = process_one_trimmer_job(
+        session_factory,
+        lease_owner="t",
+        job_handlers=handlers,
+        now=t0,
+        lease_seconds=3600,
+    )
+    assert out == "processed"
+    with session_factory() as s:
+        row = s.scalars(select(TrimmerJob)).first()
+        assert row is not None
+        assert row.status == TrimmerJobStatus.PENDING.value
+        assert row.last_error is not None
+        assert "trimmer.* prefix" in row.last_error
+
+
 def test_process_one_fetcher_job_fails_claimed_row_with_refiner_prefix(
     session_factory,
 ) -> None:
@@ -416,3 +447,34 @@ def test_process_one_subber_job_fails_claimed_row_with_foreign_lane_job_kind(
         assert row.status == SubberJobStatus.PENDING.value
         assert row.last_error is not None
         assert "subber worker refused" in row.last_error
+
+
+def test_process_one_subber_job_rejects_unprefixed_job_kind_row(session_factory) -> None:
+    """Direct-insert rows without ``subber.*`` must fail safe on the Subber worker."""
+
+    t0 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=timezone.utc)
+    with session_factory() as s:
+        s.add(
+            SubberJob(
+                dedupe_key="legacy-subber-unprefixed",
+                job_kind="legacy.unprefixed",
+                status=SubberJobStatus.PENDING.value,
+            ),
+        )
+        s.commit()
+
+    handlers = build_subber_job_handlers(session_factory)
+    out = process_one_subber_job(
+        session_factory,
+        lease_owner="t",
+        job_handlers=handlers,
+        now=t0,
+        lease_seconds=3600,
+    )
+    assert out == "processed"
+    with session_factory() as s:
+        row = s.scalars(select(SubberJob)).first()
+        assert row is not None
+        assert row.status == SubberJobStatus.PENDING.value
+        assert row.last_error is not None
+        assert "subber.* prefix" in row.last_error

@@ -137,10 +137,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await stop_fetcher_arr_search_enqueue_tasks(fetcher_arr_search_tasks)
         await stop_refiner_supplied_payload_evaluation_enqueue_tasks(refiner_supplied_payload_eval_tasks)
         await stop_fetcher_failed_import_cleanup_drive_enqueue_tasks(fetcher_schedule_tasks)
-        await stop_fetcher_worker_background_tasks(fetcher_stop, fetcher_worker_tasks)
         await stop_subber_worker_background_tasks(subber_stop, subber_worker_tasks)
         await stop_trimmer_worker_background_tasks(trimmer_stop, trimmer_worker_tasks)
         await stop_refiner_worker_background_tasks(refiner_stop, refiner_worker_tasks)
+        await stop_fetcher_worker_background_tasks(fetcher_stop, fetcher_worker_tasks)
         dispose_engine(app.state.engine)
         app.state.engine = None
         app.state.session_factory = None

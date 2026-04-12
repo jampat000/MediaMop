@@ -22,7 +22,7 @@ FETCHER_QUEUE_JOB_KIND_PREFIXES: tuple[str, ...] = (
 # --- Refiner lane (`refiner_jobs`): Refiner-owned durable work -----------------------------------
 REFINER_QUEUE_JOB_KIND_PREFIX = "refiner."
 
-# --- Future module lanes (reserved on sibling queues; must never appear on Refiner/Fetcher) -----
+# --- Trimmer / Subber sibling lanes (reserved on sibling queues; must never appear on Fetcher/Refiner) ---
 TRIMMER_QUEUE_JOB_KIND_PREFIX = "trimmer."
 SUBBER_QUEUE_JOB_KIND_PREFIX = "subber."
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — **reference template** for Trimmer/Subber; Fetcher + Refiner lanes are live in code.
+Accepted — **four module lanes** are live: ``fetcher_jobs``, ``refiner_jobs``, ``trimmer_jobs``, ``subber_jobs`` (see tables below).
 
 ## Context
 
@@ -53,7 +53,7 @@ MediaMop is **SQLite-first**: one writer per database. Durable background work m
 | Worker count env | `MEDIAMOP_REFINER_WORKER_COUNT` |
 | Reserved `job_kind` prefix (new durable Refiner work) | **`refiner.`** |
 
-**Refiner today:** generic queue/worker/inspection/recovery stack exists; **production durable kinds** should migrate to **`refiner.*`** as they are introduced. Tests may still use short synthetic kinds until migrated.
+**Refiner today:** shipped production durable kinds use **`refiner.*`** only on ``refiner_jobs``. Tests may still use short synthetic kinds where the worker loop’s unprefixed-row guard is under test.
 
 **Suggested file map (Refiner)**
 
