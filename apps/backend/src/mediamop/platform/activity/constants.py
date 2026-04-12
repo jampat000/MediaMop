@@ -29,6 +29,7 @@ FETCHER_ARR_SEARCH_UPGRADE_ZERO_MANUAL = "fetcher.arr_search_upgrade_zero_manual
 REFINER_SUPPLIED_PAYLOAD_EVALUATION_COMPLETED = "refiner.supplied_payload_evaluation_completed"
 
 TRIMMER_TRIM_PLAN_CONSTRAINTS_CHECK_COMPLETED = "trimmer.trim_plan_constraints_check_completed"
+TRIMMER_SUPPLIED_TRIM_PLAN_JSON_FILE_WRITE_COMPLETED = "trimmer.supplied_trim_plan_json_file_write_completed"
 
 SUBBER_SUPPLIED_CUE_TIMELINE_CONSTRAINTS_CHECK_COMPLETED = "subber.supplied_cue_timeline_constraints_check_completed"
 REFINER_CANDIDATE_GATE_COMPLETED = "refiner.candidate_gate_completed"

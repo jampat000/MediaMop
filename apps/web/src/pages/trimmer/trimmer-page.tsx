@@ -19,7 +19,7 @@ export function TrimmerPage() {
         aria-labelledby="trimmer-shipped-heading"
       >
         <h2 id="trimmer-shipped-heading" className="text-base font-semibold text-[var(--mm-text)]">
-          Shipped durable job kind
+          Shipped durable job kinds
         </h2>
         <p data-testid="trimmer-family-trim-plan-constraints">
           <strong>
@@ -27,12 +27,25 @@ export function TrimmerPage() {
               trimmer.trim_plan.constraints_check.v1
             </code>
           </strong>{" "}
-          — operators can enqueue a job with segment start/end times (seconds on a notional timeline). Workers check
-          ordering, overlap, and optional source duration only.{" "}
+          — operators enqueue segment start/end times (seconds on a notional timeline). Workers check ordering,
+          overlap, and optional source duration only.{" "}
           <strong>No</strong> transcoding, <strong>no</strong> disk read of your media files, and{" "}
-          <strong>no</strong> calls to Radarr or Sonarr — this is constraint validation on the numbers you supply.
-          Enable Trimmer workers with <code className="font-mono text-[0.85em]">MEDIAMOP_TRIMMER_WORKER_COUNT</code> in
-          the backend configuration when you want jobs to run.
+          <strong>no</strong> calls to Radarr or Sonarr — constraint validation on the numbers you supply.
+        </p>
+        <p data-testid="trimmer-family-json-file-write">
+          <strong>
+            <code className="rounded bg-black/25 px-1 py-0.5 font-mono text-[0.85em] text-[var(--mm-text)]">
+              trimmer.supplied_trim_plan.json_file_write.v1
+            </code>
+          </strong>{" "}
+          — same segment rules; when valid, workers write one JSON file under{" "}
+          <code className="font-mono text-[0.85em]">MEDIAMOP_HOME/trimmer/plan_exports/</code>. That is a plan export
+          on disk, <strong>not</strong> cutting or remuxing media and <strong>not</strong> running FFmpeg.
+        </p>
+        <p className="text-[var(--mm-text2)]">
+          Enable Trimmer workers with{" "}
+          <code className="font-mono text-[0.85em]">MEDIAMOP_TRIMMER_WORKER_COUNT</code> in the backend configuration
+          when you want jobs to run.
         </p>
       </section>
     </div>

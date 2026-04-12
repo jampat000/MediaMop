@@ -59,9 +59,10 @@ Shipped today:
 - **`refiner.supplied_payload_evaluation.v1`** — optional periodic enqueue via ``MEDIAMOP_REFINER_SUPPLIED_PAYLOAD_EVALUATION_SCHEDULE_*`` (legacy ``MEDIAMOP_REFINER_LIBRARY_AUDIT_PASS_SCHEDULE_*`` still read when the new keys are absent) and ``refiner_supplied_payload_evaluation_schedule_enabled`` / ``refiner_supplied_payload_evaluation_schedule_interval_seconds`` on ``MediaMopSettings``; failure backoff is local to that enqueue module (process-internal per ADR-0009 “Out of scope”, not shared with Fetcher).
 - **`refiner.candidate_gate.v1`** — manual enqueue only in this product pass; **no** shared schedule/cooldown/last-run row with other Refiner families or with Fetcher.
 
-### Trimmer (shipped durable family)
+### Trimmer (shipped durable families)
 
-- **`trimmer.trim_plan.constraints_check.v1`** — **manual enqueue only** in this pass: no periodic schedule, no shared last-run row with Fetcher or Refiner. Constraint evaluation is process-local to the handler.
+- **`trimmer.trim_plan.constraints_check.v1`** — **manual enqueue only**: no periodic schedule, no shared last-run row with Fetcher or Refiner. Constraint evaluation is process-local to the handler.
+- **`trimmer.supplied_trim_plan.json_file_write.v1`** — **manual enqueue only**: same constraint rules, then a single JSON file write under ``MEDIAMOP_HOME``; no periodic schedule and no shared timing state with other modules or families.
 
 ### Subber (shipped durable family)
 
@@ -84,7 +85,7 @@ Trimmer and Subber packages point to ADR-0007 for lane ownership; **this ADR** i
 | Fetcher failed-import Radarr vs Sonarr | Yes | Separate `MEDIAMOP_FAILED_IMPORT_*` intervals, separate periodic tasks, separate dedupe keys. |
 | Fetcher Arr search four lanes | Yes | Per-lane settings in `MediaMopSettings`, per-lane `(app, action, …)` cooldown log, per-lane prune in `prune_fetcher_arr_action_log`, four last-run columns, four periodic enqueue tasks. |
 | Refiner durable families (supplied payload evaluation vs candidate gate) | Yes | Separate job kinds, handlers, and enqueue paths; supplied payload evaluation has its own optional schedule env + interval only for that family; candidate gate has no periodic contract in this pass (manual jobs only). No shared last-run or cooldown between the two. |
-| Trimmer durable families (trim plan constraint check) | Yes (manual-only) | Single shipped family; operator POST enqueue only — no Trimmer periodic task shares timing state with other modules. |
+| Trimmer durable families (trim plan constraint check + supplied trim plan JSON file write) | Yes (manual-only) | Both families: operator POST enqueue only — no Trimmer periodic task shares timing state with other modules. |
 | Subber durable families (cue timeline constraint check) | Yes (manual-only) | Single shipped family; operator POST enqueue only — no Subber periodic task shares timing state with other modules. |
 
 ### Soft spot (configuration, not runtime coupling)

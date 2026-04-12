@@ -82,7 +82,7 @@ MediaMop is **SQLite-first**: one writer per database. Durable background work m
 | Worker count env | **`MEDIAMOP_TRIMMER_WORKER_COUNT`** |
 | `job_kind` prefix | **`trimmer.`** |
 
-**Shipped durable family (P3):** `trimmer.trim_plan.constraints_check.v1` — manual enqueue only; validates supplied trim segment timing JSON (no transcode, no media file I/O, no *arr). HTTP: `POST /api/v1/trimmer/jobs/trim-plan-constraints-check/enqueue`.
+**Shipped durable families:** `trimmer.trim_plan.constraints_check.v1` — manual enqueue only; validates supplied trim segment timing JSON (no transcode, no media file I/O, no *arr). HTTP: `POST /api/v1/trimmer/jobs/trim-plan-constraints-check/enqueue`. `trimmer.supplied_trim_plan.json_file_write.v1` — manual enqueue only; validates the same segment JSON then writes a canonical JSON file under ``<MEDIAMOP_HOME>/trimmer/plan_exports/`` (filesystem write only — no FFmpeg, no container cut, no *arr). HTTP: `POST /api/v1/trimmer/jobs/supplied-trim-plan-json-file-write/enqueue`.
 
 **Package directory:** `apps/backend/src/mediamop/modules/trimmer/` (`trimmer_jobs_model.py`, `trimmer_jobs_ops.py`, `worker_loop.py`, `trimmer_job_handlers.py`, …).
 

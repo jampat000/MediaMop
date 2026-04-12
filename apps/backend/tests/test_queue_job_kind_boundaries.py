@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timezone
 
 import pytest
@@ -283,6 +284,7 @@ def test_validate_trimmer_worker_handler_registry_rejects_unprefixed_keys() -> N
 
 def test_process_one_trimmer_job_fails_claimed_row_with_foreign_lane_job_kind(
     session_factory,
+    tmp_path,
 ) -> None:
     """Mis-placed ``trimmer_jobs`` rows stamped with another module's prefix must not execute."""
 
@@ -297,7 +299,8 @@ def test_process_one_trimmer_job_fails_claimed_row_with_foreign_lane_job_kind(
         )
         s.commit()
 
-    handlers = build_trimmer_job_handlers(session_factory)
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(tmp_path / "mmhome"))
+    handlers = build_trimmer_job_handlers(settings, session_factory)
     out = process_one_trimmer_job(
         session_factory,
         lease_owner="t",
@@ -314,7 +317,7 @@ def test_process_one_trimmer_job_fails_claimed_row_with_foreign_lane_job_kind(
         assert "trimmer worker refused" in row.last_error
 
 
-def test_process_one_trimmer_job_rejects_unprefixed_job_kind_row(session_factory) -> None:
+def test_process_one_trimmer_job_rejects_unprefixed_job_kind_row(session_factory, tmp_path) -> None:
     """Direct-insert rows without ``trimmer.*`` must fail safe on the Trimmer worker."""
 
     t0 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=timezone.utc)
@@ -328,7 +331,8 @@ def test_process_one_trimmer_job_rejects_unprefixed_job_kind_row(session_factory
         )
         s.commit()
 
-    handlers = build_trimmer_job_handlers(session_factory)
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(tmp_path / "mmhome"))
+    handlers = build_trimmer_job_handlers(settings, session_factory)
     out = process_one_trimmer_job(
         session_factory,
         lease_owner="t",

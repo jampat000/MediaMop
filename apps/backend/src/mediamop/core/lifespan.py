@@ -116,7 +116,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         stop_event=stop,
         job_handlers=refiner_handlers,
     )
-    trimmer_handlers = build_trimmer_job_handlers(session_factory)
+    trimmer_handlers = build_trimmer_job_handlers(settings, session_factory)
     trimmer_stop, trimmer_worker_tasks = start_trimmer_worker_background_tasks(
         session_factory,
         settings,
