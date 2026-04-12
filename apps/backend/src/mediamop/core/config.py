@@ -20,6 +20,7 @@ from mediamop.modules.arr_failed_import.policy import FailedImportCleanupPolicy
 from mediamop.modules.fetcher.fetcher_worker_limits import clamp_fetcher_worker_count
 from mediamop.modules.refiner.refiner_family_intervals import clamp_refiner_schedule_interval_seconds
 from mediamop.modules.refiner.worker_limits import clamp_refiner_worker_count
+from mediamop.modules.subber.worker_limits import clamp_subber_worker_count
 from mediamop.modules.trimmer.worker_limits import clamp_trimmer_worker_count
 
 
@@ -98,6 +99,8 @@ class MediaMopSettings:
     refiner_worker_count: int
     # 0 = no in-process Trimmer workers (Trimmer-owned trimmer_jobs only); >0 when Trimmer queues durable work.
     trimmer_worker_count: int
+    # 0 = no in-process Subber workers (Subber-owned subber_jobs only); >0 when Subber queues durable work.
+    subber_worker_count: int
     # Refiner supplied payload evaluation (``refiner.supplied_payload_evaluation.v1``) — Refiner-only schedule.
     refiner_supplied_payload_evaluation_schedule_enabled: bool
     refiner_supplied_payload_evaluation_schedule_interval_seconds: int
@@ -244,6 +247,7 @@ class MediaMopSettings:
         fetcher_workers = clamp_fetcher_worker_count(_env_int("MEDIAMOP_FETCHER_WORKER_COUNT", 1))
         refiner_workers = clamp_refiner_worker_count(_env_int("MEDIAMOP_REFINER_WORKER_COUNT", 0))
         trimmer_workers = clamp_trimmer_worker_count(_env_int("MEDIAMOP_TRIMMER_WORKER_COUNT", 0))
+        subber_workers = clamp_subber_worker_count(_env_int("MEDIAMOP_SUBBER_WORKER_COUNT", 0))
         def _refiner_supplied_payload_eval_schedule_enabled() -> bool:
             new_k = "MEDIAMOP_REFINER_SUPPLIED_PAYLOAD_EVALUATION_SCHEDULE_ENABLED"
             old_k = "MEDIAMOP_REFINER_LIBRARY_AUDIT_PASS_SCHEDULE_ENABLED"
@@ -469,6 +473,7 @@ class MediaMopSettings:
             fetcher_worker_count=fetcher_workers,
             refiner_worker_count=refiner_workers,
             trimmer_worker_count=trimmer_workers,
+            subber_worker_count=subber_workers,
             refiner_supplied_payload_evaluation_schedule_enabled=refiner_payload_eval_on,
             refiner_supplied_payload_evaluation_schedule_interval_seconds=refiner_payload_eval_iv,
             fetcher_radarr_base_url=radarr_base or None,

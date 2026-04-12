@@ -181,6 +181,59 @@ def validate_trimmer_worker_handler_registry(
         raise ValueError(msg)
 
 
+# Prefixes that must never be enqueued or executed on ``subber_jobs`` / Subber workers.
+_FORBIDDEN_ON_SUBBER_LANE: tuple[str, ...] = (
+    *FETCHER_QUEUE_JOB_KIND_PREFIXES,
+    REFINER_QUEUE_JOB_KIND_PREFIX,
+    TRIMMER_QUEUE_JOB_KIND_PREFIX,
+)
+
+
+def job_kind_forbidden_on_subber_lane(job_kind: str) -> bool:
+    """True when ``job_kind`` is reserved for another module's table or lane."""
+
+    return any(job_kind.startswith(p) for p in _FORBIDDEN_ON_SUBBER_LANE)
+
+
+def validate_subber_enqueue_job_kind(job_kind: str) -> None:
+    """Subber queue rows must use the Subber lane only (not Fetcher/Refiner/Trimmer namespaces)."""
+
+    if job_kind_forbidden_on_subber_lane(job_kind):
+        msg = (
+            "subber_enqueue_or_get_job refuses job_kind reserved for another module lane "
+            f"(got {job_kind!r}); use that module's table + enqueue function"
+        )
+        raise ValueError(msg)
+    if not job_kind.startswith(SUBBER_QUEUE_JOB_KIND_PREFIX):
+        msg = (
+            "subber_enqueue_or_get_job requires job_kind to start with "
+            f"{SUBBER_QUEUE_JOB_KIND_PREFIX!r} (got {job_kind!r}); production durable Subber "
+            "families use subber.* kinds on subber_jobs only"
+        )
+        raise ValueError(msg)
+
+
+def validate_subber_worker_handler_registry(
+    job_handlers: Mapping[str, object],
+) -> None:
+    """Subber workers must register handlers only under the ``subber.*`` namespace."""
+
+    bad = sorted(
+        {
+            k
+            for k in job_handlers
+            if job_kind_forbidden_on_subber_lane(k) or not k.startswith(SUBBER_QUEUE_JOB_KIND_PREFIX)
+        },
+    )
+    if bad:
+        msg = (
+            "Subber worker handler registry keys must start with "
+            f"{SUBBER_QUEUE_JOB_KIND_PREFIX!r} and must not use another module's reserved "
+            f"prefixes (offending keys: {bad!r})"
+        )
+        raise ValueError(msg)
+
+
 def validate_fetcher_worker_handler_registry_keys(
     job_handlers: Mapping[str, object],
 ) -> None:

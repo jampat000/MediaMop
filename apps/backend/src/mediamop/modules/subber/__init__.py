@@ -1,7 +1,6 @@
-"""Subber module boundary — reserved for future implementation.
+"""Subber module — durable ``subber_jobs`` queue and in-process workers (ADR-0007).
 
-Durable work for this module must use its own queue and workers (module-owned lane), not
-``fetcher_jobs`` or ``refiner_jobs``. See ``docs/adr/ADR-0007-module-owned-worker-lanes.md``.
-Operator timing contracts for ``subber.*`` jobs must follow
-``docs/adr/ADR-0009-suite-wide-timing-isolation.md``.
+Production durable kinds use the ``subber.*`` prefix on ``subber_jobs`` only. Operator timing for
+scheduled Subber families must stay family-local per ADR-0009 (this pass: manual enqueue only for
+``subber.supplied_cue_timeline.constraints_check.v1`` — no shared periodic state with other modules).
 """

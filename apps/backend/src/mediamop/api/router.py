@@ -16,6 +16,7 @@ from fastapi import APIRouter
 from mediamop.modules.dashboard.router import router as dashboard_router
 from mediamop.modules.fetcher.router import router as fetcher_router
 from mediamop.modules.refiner.router import router as refiner_router
+from mediamop.modules.subber.router import router as subber_router
 from mediamop.modules.trimmer.router import router as trimmer_router
 from mediamop.platform.activity.router import router as activity_router
 from mediamop.platform.auth.router import router as auth_router
@@ -32,4 +33,5 @@ def build_v1_router() -> APIRouter:
     router.include_router(activity_router)
     router.include_router(refiner_router)
     router.include_router(trimmer_router)
+    router.include_router(subber_router)
     return router

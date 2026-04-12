@@ -24,6 +24,7 @@ from mediamop.modules.queue_worker.job_kind_boundaries import (
     job_kind_is_fetcher_failed_import_namespace,
     validate_fetcher_worker_handler_registry_keys,
     validate_refiner_worker_handler_registry,
+    validate_subber_worker_handler_registry,
     validate_trimmer_worker_handler_registry,
 )
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
@@ -32,13 +33,18 @@ from mediamop.modules.refiner.worker_loop import (
     default_refiner_job_handler_registry,
     process_one_refiner_job,
 )
+from mediamop.modules.subber.subber_job_handlers import build_subber_job_handlers
+from mediamop.modules.subber.subber_jobs_model import SubberJob, SubberJobStatus
+from mediamop.modules.subber.subber_jobs_ops import subber_enqueue_or_get_job
+from mediamop.modules.subber.worker_loop import process_one_subber_job
+from mediamop.modules.trimmer.trimmer_job_handlers import build_trimmer_job_handlers
 from mediamop.modules.trimmer.trimmer_jobs_model import TrimmerJob, TrimmerJobStatus
 from mediamop.modules.trimmer.trimmer_jobs_ops import trimmer_enqueue_or_get_job
-from mediamop.modules.trimmer.trimmer_job_handlers import build_trimmer_job_handlers
 from mediamop.modules.trimmer.worker_loop import process_one_trimmer_job
 
 import mediamop.modules.fetcher.fetcher_jobs_model  # noqa: F401
 import mediamop.modules.refiner.jobs_model  # noqa: F401
+import mediamop.modules.subber.subber_jobs_model  # noqa: F401
 import mediamop.modules.trimmer.trimmer_jobs_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
@@ -77,7 +83,7 @@ def test_default_refiner_handler_registry_has_no_foreign_lane_keys() -> None:
     assert all(str(k).startswith("refiner.") for k in reg)
 
 
-def test_refiner_enqueue_rejects_fetcher_and_trimmer_namespaces(session_factory) -> None:
+def test_refiner_enqueue_rejects_fetcher_trimmer_subber_namespaces(session_factory) -> None:
     with session_factory() as s:
         with pytest.raises(ValueError, match="refiner_enqueue_or_get_job refuses"):
             refiner_enqueue_or_get_job(
@@ -88,6 +94,13 @@ def test_refiner_enqueue_rejects_fetcher_and_trimmer_namespaces(session_factory)
     with session_factory() as s:
         with pytest.raises(ValueError, match="refiner_enqueue_or_get_job refuses"):
             refiner_enqueue_or_get_job(s, dedupe_key="t", job_kind="trimmer.probe.v1")
+    with session_factory() as s:
+        with pytest.raises(ValueError, match="refiner_enqueue_or_get_job refuses"):
+            refiner_enqueue_or_get_job(
+                s,
+                dedupe_key="s",
+                job_kind="subber.supplied_cue_timeline.constraints_check.v1",
+            )
 
 
 def test_refiner_enqueue_rejects_unprefixed_job_kind(session_factory) -> None:
@@ -103,6 +116,13 @@ def test_fetcher_enqueue_rejects_refiner_trimmer_subber_prefix(session_factory) 
     with session_factory() as s:
         with pytest.raises(ValueError, match="fetcher_enqueue_or_get_job refuses"):
             fetcher_enqueue_or_get_job(s, dedupe_key="t", job_kind="trimmer.x.v1")
+    with session_factory() as s:
+        with pytest.raises(ValueError, match="fetcher_enqueue_or_get_job refuses"):
+            fetcher_enqueue_or_get_job(
+                s,
+                dedupe_key="s",
+                job_kind="subber.supplied_cue_timeline.constraints_check.v1",
+            )
 
 
 def test_validate_refiner_worker_handler_registry_rejects_foreign_lane_keys() -> None:
@@ -112,6 +132,10 @@ def test_validate_refiner_worker_handler_registry_rejects_foreign_lane_keys() ->
         )
     with pytest.raises(ValueError, match="Refiner worker handler registry"):
         validate_refiner_worker_handler_registry({"trimmer.x": lambda _c: None})
+    with pytest.raises(ValueError, match="Refiner worker handler registry"):
+        validate_refiner_worker_handler_registry(
+            {"subber.supplied_cue_timeline.constraints_check.v1": lambda _c: None},
+        )
 
 
 def test_validate_refiner_worker_handler_registry_rejects_unprefixed_keys() -> None:
@@ -213,7 +237,7 @@ def test_process_one_refiner_job_rejects_unprefixed_job_kind_row(session_factory
         assert "refiner.* prefix" in row.last_error
 
 
-def test_trimmer_enqueue_rejects_refiner_and_fetcher_namespaces(session_factory) -> None:
+def test_trimmer_enqueue_rejects_refiner_fetcher_subber_namespaces(session_factory) -> None:
     with session_factory() as s:
         with pytest.raises(ValueError, match="trimmer_enqueue_or_get_job refuses"):
             trimmer_enqueue_or_get_job(s, dedupe_key="x", job_kind="refiner.compact.v1")
@@ -223,6 +247,13 @@ def test_trimmer_enqueue_rejects_refiner_and_fetcher_namespaces(session_factory)
                 s,
                 dedupe_key="y",
                 job_kind=FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
+            )
+    with session_factory() as s:
+        with pytest.raises(ValueError, match="trimmer_enqueue_or_get_job refuses"):
+            trimmer_enqueue_or_get_job(
+                s,
+                dedupe_key="z",
+                job_kind="subber.supplied_cue_timeline.constraints_check.v1",
             )
 
 
@@ -239,6 +270,10 @@ def test_validate_trimmer_worker_handler_registry_rejects_foreign_lane_keys() ->
         )
     with pytest.raises(ValueError, match="Trimmer worker handler registry"):
         validate_trimmer_worker_handler_registry({"refiner.x.v1": lambda _c: None})
+    with pytest.raises(ValueError, match="Trimmer worker handler registry"):
+        validate_trimmer_worker_handler_registry(
+            {"subber.supplied_cue_timeline.constraints_check.v1": lambda _c: None},
+        )
 
 
 def test_validate_trimmer_worker_handler_registry_rejects_unprefixed_keys() -> None:
@@ -304,3 +339,80 @@ def test_process_one_fetcher_job_fails_claimed_row_with_refiner_prefix(
         assert row.status == FetcherJobStatus.PENDING.value
         assert row.last_error is not None
         assert "fetcher worker refused" in row.last_error
+
+
+def test_subber_enqueue_rejects_refiner_trimmer_fetcher_namespaces(session_factory) -> None:
+    with session_factory() as s:
+        with pytest.raises(ValueError, match="subber_enqueue_or_get_job refuses"):
+            subber_enqueue_or_get_job(s, dedupe_key="x", job_kind="refiner.compact.v1")
+    with session_factory() as s:
+        with pytest.raises(ValueError, match="subber_enqueue_or_get_job refuses"):
+            subber_enqueue_or_get_job(s, dedupe_key="t", job_kind="trimmer.trim_plan.constraints_check.v1")
+    with session_factory() as s:
+        with pytest.raises(ValueError, match="subber_enqueue_or_get_job refuses"):
+            subber_enqueue_or_get_job(
+                s,
+                dedupe_key="f",
+                job_kind=FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
+            )
+
+
+def test_subber_enqueue_rejects_unprefixed_job_kind(session_factory) -> None:
+    with session_factory() as s:
+        with pytest.raises(ValueError, match="subber_enqueue_or_get_job requires job_kind"):
+            subber_enqueue_or_get_job(s, dedupe_key="u", job_kind="bare.kind")
+
+
+def test_validate_subber_worker_handler_registry_rejects_foreign_lane_keys() -> None:
+    with pytest.raises(ValueError, match="Subber worker handler registry"):
+        validate_subber_worker_handler_registry(
+            {FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE: lambda _c: None},
+        )
+    with pytest.raises(ValueError, match="Subber worker handler registry"):
+        validate_subber_worker_handler_registry({"refiner.x.v1": lambda _c: None})
+    with pytest.raises(ValueError, match="Subber worker handler registry"):
+        validate_subber_worker_handler_registry({"trimmer.x.v1": lambda _c: None})
+
+
+def test_validate_subber_worker_handler_registry_rejects_unprefixed_keys() -> None:
+    with pytest.raises(ValueError, match="Subber worker handler registry"):
+        validate_subber_worker_handler_registry({"bare.kind": lambda _c: None})
+
+
+def test_validate_subber_worker_handler_registry_accepts_subber_prefixed_keys() -> None:
+    validate_subber_worker_handler_registry(
+        {"subber.supplied_cue_timeline.constraints_check.v1": lambda _c: None},
+    )
+
+
+def test_process_one_subber_job_fails_claimed_row_with_foreign_lane_job_kind(
+    session_factory,
+) -> None:
+    """Mis-placed ``subber_jobs`` rows stamped with another module's prefix must not execute."""
+
+    t0 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=timezone.utc)
+    with session_factory() as s:
+        s.add(
+            SubberJob(
+                dedupe_key="legacy-subber",
+                job_kind="refiner.leaked_on_subber.v1",
+                status=SubberJobStatus.PENDING.value,
+            ),
+        )
+        s.commit()
+
+    handlers = build_subber_job_handlers(session_factory)
+    out = process_one_subber_job(
+        session_factory,
+        lease_owner="t",
+        job_handlers=handlers,
+        now=t0,
+        lease_seconds=3600,
+    )
+    assert out == "processed"
+    with session_factory() as s:
+        row = s.scalars(select(SubberJob)).first()
+        assert row is not None
+        assert row.status == SubberJobStatus.PENDING.value
+        assert row.last_error is not None
+        assert "subber worker refused" in row.last_error

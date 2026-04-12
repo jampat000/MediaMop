@@ -90,7 +90,7 @@ MediaMop is **SQLite-first**: one writer per database. Durable background work m
 
 ---
 
-## Subber lane (stub — implement when first durable job exists)
+## Subber lane (implemented)
 
 | Artifact | Exact name |
 |----------|------------|
@@ -101,11 +101,13 @@ MediaMop is **SQLite-first**: one writer per database. Durable background work m
 | Claim | `claim_next_eligible_subber_job` |
 | Worker starter | `start_subber_worker_background_tasks` |
 | Worker count env | **`MEDIAMOP_SUBBER_WORKER_COUNT`** |
-| `job_kind` prefix | **`subber.`** (e.g. `subber.align_cues.batch.v1`) |
+| `job_kind` prefix | **`subber.`** |
+
+**Shipped durable family (P3):** `subber.supplied_cue_timeline.constraints_check.v1` — manual enqueue only; validates supplied cue display-interval JSON on a notional media clock (no OCR, no subtitle download/sync/mux, no file I/O). HTTP: `POST /api/v1/subber/jobs/cue-timeline-constraints-check/enqueue`.
 
 **Package directory:** `apps/backend/src/mediamop/modules/subber/`
 
-**Lifespan:** same independence pattern as Trimmer.
+**Lifespan:** `start_subber_worker_background_tasks` runs **independently** of other module worker counts.
 
 ---
 

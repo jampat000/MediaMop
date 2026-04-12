@@ -63,15 +63,19 @@ Shipped today:
 
 - **`trimmer.trim_plan.constraints_check.v1`** — **manual enqueue only** in this pass: no periodic schedule, no shared last-run row with Fetcher or Refiner. Constraint evaluation is process-local to the handler.
 
-### Subber (future durable jobs)
+### Subber (shipped durable family)
 
-Any new durable `job_kind` on `subber_jobs` **must** ship with:
+- **`subber.supplied_cue_timeline.constraints_check.v1`** — **manual enqueue only** in this pass: no periodic schedule, no shared last-run row with other modules. Constraint evaluation is process-local to the handler.
+
+### Future Subber durable families
+
+Any additional durable `job_kind` on `subber_jobs` **must** ship with:
 
 - Its own persisted timing and audit fields (or namespaced columns), **or** strictly separate tables if the product demands it — never one shared “last run” or “retry” column for unrelated families.
 - Its own env-backed settings in `MediaMopSettings` (or a module-local settings object loaded at startup) for every operator-controlled interval/schedule/cooldown/retry that applies to that family.
 - Documentation in the module package and enforcement tests when behavior is non-obvious.
 
-Trimmer and Subber packages point to ADR-0007 for lane ownership; **this ADR** is the timing addendum for scheduled/cooled families (Trimmer’s first shipped family is manual-only; Subber remains stub until a durable `subber.*` job ships).
+Trimmer and Subber packages point to ADR-0007 for lane ownership; **this ADR** is the timing addendum for scheduled/cooled families (each module’s first shipped constraint-check families here are manual-only).
 
 ### Compliance notes (audit snapshot)
 
@@ -81,7 +85,7 @@ Trimmer and Subber packages point to ADR-0007 for lane ownership; **this ADR** i
 | Fetcher Arr search four lanes | Yes | Per-lane settings in `MediaMopSettings`, per-lane `(app, action, …)` cooldown log, per-lane prune in `prune_fetcher_arr_action_log`, four last-run columns, four periodic enqueue tasks. |
 | Refiner durable families (supplied payload evaluation vs candidate gate) | Yes | Separate job kinds, handlers, and enqueue paths; supplied payload evaluation has its own optional schedule env + interval only for that family; candidate gate has no periodic contract in this pass (manual jobs only). No shared last-run or cooldown between the two. |
 | Trimmer durable families (trim plan constraint check) | Yes (manual-only) | Single shipped family; operator POST enqueue only — no Trimmer periodic task shares timing state with other modules. |
-| Subber | N/A / pending | Stubs only; **SubberTimingContract** task: same rule when first `subber.*` jobs ship. |
+| Subber durable families (cue timeline constraint check) | Yes (manual-only) | Single shipped family; operator POST enqueue only — no Subber periodic task shares timing state with other modules. |
 
 ### Soft spot (configuration, not runtime coupling)
 
