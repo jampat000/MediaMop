@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+import sqlalchemy as sa
 from alembic import command
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
@@ -21,6 +22,17 @@ def test_ensure_database_at_application_head_ok_on_migrated_db() -> None:
     settings = MediaMopSettings.load()
     engine = create_db_engine(settings)
     ensure_database_at_application_head(engine)
+
+
+def test_head_schema_includes_refiner_path_settings_table() -> None:
+    settings = MediaMopSettings.load()
+    engine = create_db_engine(settings)
+    insp = sa.inspect(engine)
+    assert insp.has_table("refiner_path_settings")
+    names = {c["name"] for c in insp.get_columns("refiner_path_settings")}
+    assert "refiner_watched_folder" in names
+    assert "refiner_work_folder" in names
+    assert "refiner_output_folder" in names
 
 
 def test_api_startup_fails_without_migrations(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

@@ -1,4 +1,4 @@
-"""Safe resolution of operator-supplied media paths under ``MEDIAMOP_REFINER_REMUX_MEDIA_ROOT``."""
+"""Safe resolution of operator-supplied media paths under the saved Refiner watched folder."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ def resolve_media_file_under_refiner_root(*, media_root: str, relative_path: str
 
     root = Path(media_root).expanduser().resolve()
     if not root.is_dir():
-        msg = "MEDIAMOP_REFINER_REMUX_MEDIA_ROOT must be an existing directory"
+        msg = "Refiner watched folder (saved settings) must be an existing directory"
         raise ValueError(msg)
     rel = (relative_path or "").strip().replace("\\", "/").lstrip("/")
     if not rel:
@@ -24,6 +24,6 @@ def resolve_media_file_under_refiner_root(*, media_root: str, relative_path: str
     try:
         candidate.relative_to(root)
     except ValueError as exc:
-        msg = "resolved file path escapes MEDIAMOP_REFINER_REMUX_MEDIA_ROOT"
+        msg = "resolved file path escapes the saved Refiner watched folder"
         raise ValueError(msg) from exc
     return candidate

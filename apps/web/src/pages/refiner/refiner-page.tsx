@@ -1,3 +1,4 @@
+import { RefinerPathSettingsSection } from "./refiner-path-settings-section";
 import { RefinerRuntimeSettingsSection } from "./refiner-runtime-settings-section";
 
 /** Refiner module home — honest scope for shipped durable ``refiner_jobs`` families. */
@@ -22,6 +23,8 @@ export function RefinerPage() {
       </header>
 
       <RefinerRuntimeSettingsSection />
+
+      <RefinerPathSettingsSection />
 
       <section
         className="mt-4 max-w-2xl space-y-3 text-sm leading-relaxed text-[var(--mm-text2)]"
@@ -59,14 +62,16 @@ export function RefinerPage() {
                 refiner.file.remux_pass.v1
               </code>
             </strong>{" "}
-            — one file under{" "}
-            <code className="font-mono text-[0.85em]">MEDIAMOP_REFINER_REMUX_MEDIA_ROOT</code>:{" "}
-            <strong>ffprobe</strong> plus remux <strong>planning</strong> (audio/subtitle selection). Manual enqueue
-            defaults to <strong>dry run</strong> (no ffmpeg output, no source moves). Live remux requires{" "}
-            <code className="font-mono text-[0.85em]">dry_run: false</code> and ffmpeg/ffprobe available; output goes
-            under <code className="font-mono text-[0.85em]">MEDIAMOP_HOME/refiner/remux_output/</code>. Finished passes
-            write a structured summary to the Activity feed (Overview → Activity) with dry-run vs live outcome, the
-            inspected file path, plan summary, before/after track lines, and skip or error reasons when applicable.
+            — one file path relative to the saved <strong>Refiner watched folder</strong>: <strong>ffprobe</strong>{" "}
+            plus remux <strong>planning</strong> (audio/subtitle selection). Path settings may be saved without a watched
+            folder, but <strong>enqueue is rejected</strong> until a watched folder is configured (same requirement at
+            worker run if a job were queued by other means). Manual enqueue defaults to <strong>dry run</strong> (no
+            ffmpeg output, no source deletion). Live remux requires{" "}
+            <code className="font-mono text-[0.85em]">dry_run: false</code>, a saved output folder, ffmpeg/ffprobe
+            available, remux temp on the saved work/temp folder, and final output
+            under the saved output folder with relative folders preserved. Finished passes write a structured summary to
+            the Activity feed (Overview → Activity), including when an existing output file was replaced and whether the
+            source file under the watched folder was removed after success.
           </li>
         </ul>
       </section>

@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class RefinerFileRemuxPassManualEnqueueIn(BaseModel):
-    """Per-file remux pass under ``MEDIAMOP_REFINER_REMUX_MEDIA_ROOT``; ``dry_run`` defaults to safe preview."""
+    """Manual ``refiner.file.remux_pass.v1`` enqueue — requires a saved Refiner watched folder before this POST succeeds."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -14,11 +14,17 @@ class RefinerFileRemuxPassManualEnqueueIn(BaseModel):
     relative_media_path: str = Field(
         ...,
         min_length=1,
-        description="Path relative to MEDIAMOP_REFINER_REMUX_MEDIA_ROOT (no .. segments).",
+        description=(
+            "Path relative to the saved Refiner watched folder (no .. segments). "
+            "The watched folder is not required when saving path settings alone, but it must be configured before enqueue."
+        ),
     )
     dry_run: bool = Field(
         default=True,
-        description="When true (default), runs ffprobe + planning only — no ffmpeg output file and no source moves.",
+        description=(
+            "When true (default), runs ffprobe + planning only — no ffmpeg output file, no source deletion, "
+            "and no requirement for a saved output folder."
+        ),
     )
 
 

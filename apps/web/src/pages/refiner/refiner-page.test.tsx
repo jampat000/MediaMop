@@ -3,9 +3,22 @@ import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import { refinerRuntimeSettingsQueryKey } from "../../lib/refiner/queries";
-import type { RefinerRuntimeSettingsOut } from "../../lib/refiner/types";
+import type { UserPublic } from "../../lib/api/types";
+import { qk } from "../../lib/auth/queries";
+import { refinerPathSettingsQueryKey, refinerRuntimeSettingsQueryKey } from "../../lib/refiner/queries";
+import type { RefinerPathSettingsOut, RefinerRuntimeSettingsOut } from "../../lib/refiner/types";
 import { RefinerPage } from "./refiner-page";
+
+const operatorMe: UserPublic = { id: 1, username: "alice", role: "operator" };
+
+const minimalRefinerPathSettings: RefinerPathSettingsOut = {
+  refiner_watched_folder: null,
+  refiner_work_folder: null,
+  refiner_output_folder: "",
+  resolved_default_work_folder: "/tmp/mm-default-refiner-work",
+  effective_work_folder: "/tmp/mm-default-refiner-work",
+  updated_at: "2026-04-11T00:00:00Z",
+};
 
 const minimalRefinerRuntimeSettings: RefinerRuntimeSettingsOut = {
   in_process_refiner_worker_count: 0,
@@ -28,6 +41,8 @@ function wrap(ui: ReactNode, client: QueryClient) {
 function renderRefinerPage() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   qc.setQueryData(refinerRuntimeSettingsQueryKey, minimalRefinerRuntimeSettings);
+  qc.setQueryData(refinerPathSettingsQueryKey, minimalRefinerPathSettings);
+  qc.setQueryData(qk.me, operatorMe);
   return render(wrap(<RefinerPage />, qc));
 }
 
@@ -70,7 +85,8 @@ describe("RefinerPage (hero compression)", () => {
     const text = li.textContent ?? "";
     expect(text).toMatch(/dry run/i);
     expect(text).toMatch(/ffprobe/i);
-    expect(text).toMatch(/MEDIAMOP_REFINER_REMUX_MEDIA_ROOT/);
+    expect(text).toMatch(/saved.*watched folder/i);
+    expect(text).toMatch(/enqueue is rejected/i);
     expect(text).toMatch(/Activity feed/i);
   });
 

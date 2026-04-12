@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.refiner_file_remux_pass_activity import record_refiner_file_remux_pass_completed
 from mediamop.modules.refiner.refiner_file_remux_pass_run import run_refiner_file_remux_pass
+from mediamop.modules.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
 from mediamop.modules.refiner.refiner_file_remux_pass_visibility import (
     REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
     remux_pass_activity_title,
@@ -100,8 +101,28 @@ def make_refiner_file_remux_pass_handler(
             )
             return
 
+        with session_factory() as session:
+            path_runtime, path_err = resolve_refiner_path_runtime_for_remux(
+                session,
+                settings,
+                dry_run=bool(dry_run),
+            )
+        if path_err is not None:
+            _record(
+                session_factory,
+                payload={
+                    "job_id": ctx.id,
+                    "ok": False,
+                    "outcome": REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
+                    "reason": path_err,
+                    "relative_media_path": rel.strip(),
+                },
+            )
+            return
+
         result = run_refiner_file_remux_pass(
             settings=settings,
+            path_runtime=path_runtime,
             relative_media_path=rel.strip(),
             dry_run=bool(dry_run),
         )

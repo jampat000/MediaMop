@@ -10,6 +10,7 @@ from starlette import status
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
+from mediamop.modules.refiner.refiner_path_settings_service import ensure_refiner_path_settings_row
 from mediamop.modules.refiner.refiner_file_remux_pass_job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.schemas_file_remux_pass_manual import (
     RefinerFileRemuxPassManualEnqueueIn,
@@ -44,6 +45,17 @@ def post_refiner_file_remux_pass_enqueue(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired CSRF token.",
+        )
+
+    row = ensure_refiner_path_settings_row(db)
+    if not (row.refiner_watched_folder or "").strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Refiner watched folder is not set in saved path settings. "
+                "Manual refiner.file.remux_pass.v1 jobs require it to resolve relative_media_path and for bounded source cleanup. "
+                "Saving Refiner path settings does not require a watched folder, but you must configure it before enqueueing this job kind."
+            ),
         )
 
     payload = {

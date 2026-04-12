@@ -53,7 +53,7 @@ MediaMop is **SQLite-first**: one writer per database. Durable background work m
 | Worker count env | `MEDIAMOP_REFINER_WORKER_COUNT` |
 | Reserved `job_kind` prefix (new durable Refiner work) | **`refiner.`** |
 
-**Refiner today:** shipped production durable kinds use **`refiner.*`** only on ``refiner_jobs`` (including ``refiner.file.remux_pass.v1`` for per-file ffprobe + remux planning / optional ffmpeg). Tests may still use short synthetic kinds where the worker loop’s unprefixed-row guard is under test. Per-file remux enqueue: ``POST /api/v1/refiner/jobs/file-remux-pass/enqueue``; operator media root: ``MEDIAMOP_REFINER_REMUX_MEDIA_ROOT``. Read-only worker snapshot for operators: ``GET /api/v1/refiner/runtime-settings`` (maps ``MEDIAMOP_REFINER_WORKER_COUNT`` after clamp; Refiner-only; not a cross-lane control).
+**Refiner today:** shipped production durable kinds use **`refiner.*`** only on ``refiner_jobs`` (including ``refiner.file.remux_pass.v1`` for per-file ffprobe + remux planning / optional ffmpeg). Tests may still use short synthetic kinds where the worker loop’s unprefixed-row guard is under test. Per-file remux enqueue: ``POST /api/v1/refiner/jobs/file-remux-pass/enqueue``; watched/work/output roots: persisted Refiner path settings (``GET/PUT /api/v1/refiner/path-settings`` on singleton ``refiner_path_settings``). Read-only worker snapshot for operators: ``GET /api/v1/refiner/runtime-settings`` (maps ``MEDIAMOP_REFINER_WORKER_COUNT`` after clamp; Refiner-only; not a cross-lane control).
 
 **Suggested file map (Refiner)**
 
