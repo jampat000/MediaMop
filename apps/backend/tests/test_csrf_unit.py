@@ -95,8 +95,8 @@ def _csrf_settings(**overrides: object) -> MediaMopSettings:
         fetcher_sonarr_upgrade_search_schedule_interval_seconds=3600,
         fetcher_radarr_missing_search_schedule_interval_seconds=3600,
         fetcher_radarr_upgrade_search_schedule_interval_seconds=3600,
-        refiner_library_audit_pass_schedule_enabled=False,
-        refiner_library_audit_pass_schedule_interval_seconds=3600,
+        refiner_supplied_payload_evaluation_schedule_enabled=False,
+        refiner_supplied_payload_evaluation_schedule_interval_seconds=3600,
     )
     base.update(overrides)
     return MediaMopSettings(**base)  # type: ignore[arg-type]

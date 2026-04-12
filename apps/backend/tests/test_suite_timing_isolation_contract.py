@@ -37,9 +37,9 @@ def test_fetcher_arr_search_has_four_distinct_lane_timing_surfaces() -> None:
     assert "fetcher_sonarr_search_missing_enabled" not in names
 
 
-def test_refiner_library_audit_pass_has_distinct_schedule_surface_on_settings() -> None:
-    """ADR-0009 Refiner row: library audit pass owns its own schedule flags on the aggregate."""
+def test_refiner_supplied_payload_evaluation_has_distinct_schedule_surface_on_settings() -> None:
+    """ADR-0009 Refiner row: supplied payload evaluation owns its own schedule flags on the aggregate."""
 
     names = _field_names()
-    assert "refiner_library_audit_pass_schedule_enabled" in names
-    assert "refiner_library_audit_pass_schedule_interval_seconds" in names
+    assert "refiner_supplied_payload_evaluation_schedule_enabled" in names
+    assert "refiner_supplied_payload_evaluation_schedule_interval_seconds" in names

@@ -15,20 +15,49 @@ describe("RefinerPage (hero compression)", () => {
     expect(screen.queryByTestId("fetcher-failed-imports-status-filter")).toBeNull();
   });
 
-  it("hero describes Refiner only — no Fetcher, *arr, roadmap, or contrast language", () => {
+  it("hero and shipped-family copy stay Refiner-scoped (no Fetcher lane language)", () => {
     const { container } = render(
       <MemoryRouter>
         <RefinerPage />
       </MemoryRouter>,
     );
-    const hero = container.querySelector(".mm-page__intro");
-    expect(hero).toBeTruthy();
-    const t = hero!.textContent ?? "";
+    const page = container.querySelector(".mm-page");
+    expect(page).toBeTruthy();
+    const t = page!.textContent ?? "";
     expect(t).toMatch(/Refin/i);
-    expect(t).toMatch(/movies|TV/i);
-    expect(t).not.toMatch(/Fetcher/i);
-    expect(t).not.toMatch(/Radarr|Sonarr/i);
-    expect(t).not.toMatch(/\blater\b|separate from|not about|queue/i);
+    // Strip SQL table name so we do not false-positive on the substring "fetcher" inside ``fetcher_jobs``.
+    expect(t.replace(/fetcher_jobs/gi, "")).not.toMatch(/Fetcher/i);
+    expect(t).toMatch(/refiner_jobs/);
+    expect(t).toMatch(/fetcher_jobs/);
+    expect(t).toMatch(/refiner\.supplied_payload_evaluation\.v1/);
+    expect(t).toMatch(/refiner\.candidate_gate\.v1/);
+  });
+
+  it("documents supplied payload evaluation without overstating library or disk work", () => {
+    render(
+      <MemoryRouter>
+        <RefinerPage />
+      </MemoryRouter>,
+    );
+    const li = screen.getByTestId("refiner-family-supplied-payload-evaluation");
+    const t = li.textContent ?? "";
+    expect(t).toMatch(/does not.*call Radarr or Sonarr/i);
+    expect(t).toMatch(/library-wide audit/i);
+    expect(t).toMatch(/filesystem sweep/i);
+    expect(t).toMatch(/rows/);
+  });
+
+  it("documents candidate gate live queue behavior honestly", () => {
+    render(
+      <MemoryRouter>
+        <RefinerPage />
+      </MemoryRouter>,
+    );
+    const li = screen.getByTestId("refiner-family-candidate-gate");
+    const t = li.textContent ?? "";
+    expect(t).toMatch(/Radarr/i);
+    expect(t).toMatch(/Sonarr/i);
+    expect(t).toMatch(/download queue/i);
   });
 
   it("has no Fetcher link on the page", () => {

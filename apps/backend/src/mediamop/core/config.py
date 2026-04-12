@@ -95,9 +95,9 @@ class MediaMopSettings:
     fetcher_worker_count: int
     # 0 = no in-process Refiner workers (Refiner-owned refiner_jobs only); >0 when Refiner queues durable work.
     refiner_worker_count: int
-    # Refiner library audit pass (``refiner.library.audit_pass.v1``) — Refiner-only schedule (not Fetcher).
-    refiner_library_audit_pass_schedule_enabled: bool
-    refiner_library_audit_pass_schedule_interval_seconds: int
+    # Refiner supplied payload evaluation (``refiner.supplied_payload_evaluation.v1``) — Refiner-only schedule.
+    refiner_supplied_payload_evaluation_schedule_enabled: bool
+    refiner_supplied_payload_evaluation_schedule_interval_seconds: int
     # Radarr/Sonarr HTTP for Fetcher-owned live failed-import cleanup drives (env: MEDIAMOP_FETCHER_*).
     fetcher_radarr_base_url: str | None
     fetcher_radarr_api_key: str | None
@@ -240,10 +240,26 @@ class MediaMopSettings:
         failed_import_cleanup = load_failed_import_cleanup_settings_bundle()
         fetcher_workers = clamp_fetcher_worker_count(_env_int("MEDIAMOP_FETCHER_WORKER_COUNT", 1))
         refiner_workers = clamp_refiner_worker_count(_env_int("MEDIAMOP_REFINER_WORKER_COUNT", 0))
-        refiner_lib_audit_on = _env_bool("MEDIAMOP_REFINER_LIBRARY_AUDIT_PASS_SCHEDULE_ENABLED", False)
-        refiner_lib_audit_iv = clamp_refiner_schedule_interval_seconds(
-            _env_int("MEDIAMOP_REFINER_LIBRARY_AUDIT_PASS_SCHEDULE_INTERVAL_SECONDS", 3600),
-        )
+        def _refiner_supplied_payload_eval_schedule_enabled() -> bool:
+            new_k = "MEDIAMOP_REFINER_SUPPLIED_PAYLOAD_EVALUATION_SCHEDULE_ENABLED"
+            old_k = "MEDIAMOP_REFINER_LIBRARY_AUDIT_PASS_SCHEDULE_ENABLED"
+            if new_k in os.environ:
+                return _env_bool(new_k, False)
+            if old_k in os.environ:
+                return _env_bool(old_k, False)
+            return False
+
+        def _refiner_supplied_payload_eval_schedule_interval_seconds() -> int:
+            new_k = "MEDIAMOP_REFINER_SUPPLIED_PAYLOAD_EVALUATION_SCHEDULE_INTERVAL_SECONDS"
+            old_k = "MEDIAMOP_REFINER_LIBRARY_AUDIT_PASS_SCHEDULE_INTERVAL_SECONDS"
+            if new_k in os.environ:
+                return clamp_refiner_schedule_interval_seconds(_env_int(new_k, 3600))
+            if old_k in os.environ:
+                return clamp_refiner_schedule_interval_seconds(_env_int(old_k, 3600))
+            return clamp_refiner_schedule_interval_seconds(3600)
+
+        refiner_payload_eval_on = _refiner_supplied_payload_eval_schedule_enabled()
+        refiner_payload_eval_iv = _refiner_supplied_payload_eval_schedule_interval_seconds()
         radarr_base = (os.environ.get("MEDIAMOP_FETCHER_RADARR_BASE_URL") or "").strip()
         if radarr_base and not radarr_base.startswith(("http://", "https://")):
             radarr_base = ""
@@ -448,8 +464,8 @@ class MediaMopSettings:
             failed_import_cleanup_env=failed_import_cleanup,
             fetcher_worker_count=fetcher_workers,
             refiner_worker_count=refiner_workers,
-            refiner_library_audit_pass_schedule_enabled=refiner_lib_audit_on,
-            refiner_library_audit_pass_schedule_interval_seconds=refiner_lib_audit_iv,
+            refiner_supplied_payload_evaluation_schedule_enabled=refiner_payload_eval_on,
+            refiner_supplied_payload_evaluation_schedule_interval_seconds=refiner_payload_eval_iv,
             fetcher_radarr_base_url=radarr_base or None,
             fetcher_radarr_api_key=radarr_key or None,
             fetcher_sonarr_base_url=sonarr_base or None,

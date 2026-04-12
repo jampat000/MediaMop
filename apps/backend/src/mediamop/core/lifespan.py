@@ -35,9 +35,9 @@ from mediamop.modules.fetcher.periodic_failed_import_cleanup_enqueue import (
     stop_fetcher_failed_import_cleanup_drive_enqueue_tasks,
 )
 from mediamop.modules.refiner.refiner_job_handlers import build_refiner_job_handlers
-from mediamop.modules.refiner.refiner_library_audit_pass_periodic_enqueue import (
-    start_refiner_library_audit_pass_enqueue_tasks,
-    stop_refiner_library_audit_pass_enqueue_tasks,
+from mediamop.modules.refiner.refiner_supplied_payload_evaluation_periodic_enqueue import (
+    start_refiner_supplied_payload_evaluation_enqueue_tasks,
+    stop_refiner_supplied_payload_evaluation_enqueue_tasks,
 )
 from mediamop.modules.refiner.worker_loop import (
     start_refiner_worker_background_tasks,
@@ -88,7 +88,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         stop_event=stop,
         settings=settings,
     )
-    refiner_library_audit_tasks = start_refiner_library_audit_pass_enqueue_tasks(
+    refiner_supplied_payload_eval_tasks = start_refiner_supplied_payload_evaluation_enqueue_tasks(
         session_factory,
         stop_event=stop,
         settings=settings,
@@ -111,7 +111,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     finally:
         stop.set()
         await stop_fetcher_arr_search_enqueue_tasks(fetcher_arr_search_tasks)
-        await stop_refiner_library_audit_pass_enqueue_tasks(refiner_library_audit_tasks)
+        await stop_refiner_supplied_payload_evaluation_enqueue_tasks(refiner_supplied_payload_eval_tasks)
         await stop_fetcher_failed_import_cleanup_drive_enqueue_tasks(fetcher_schedule_tasks)
         await stop_fetcher_worker_background_tasks(fetcher_stop, fetcher_worker_tasks)
         await stop_refiner_worker_background_tasks(refiner_stop, refiner_worker_tasks)

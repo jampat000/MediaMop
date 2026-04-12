@@ -56,7 +56,7 @@ Refiner owns ``refiner_jobs`` and in-process Refiner workers. **Each** durable `
 
 Shipped today:
 
-- **`refiner.library.audit_pass.v1`** — optional periodic enqueue via ``MEDIAMOP_REFINER_LIBRARY_AUDIT_PASS_SCHEDULE_*`` and ``refiner_library_audit_pass_schedule_interval_seconds`` on ``MediaMopSettings``; failure backoff is local to that enqueue module (process-internal per ADR-0009 “Out of scope”, not shared with Fetcher).
+- **`refiner.supplied_payload_evaluation.v1`** — optional periodic enqueue via ``MEDIAMOP_REFINER_SUPPLIED_PAYLOAD_EVALUATION_SCHEDULE_*`` (legacy ``MEDIAMOP_REFINER_LIBRARY_AUDIT_PASS_SCHEDULE_*`` still read when the new keys are absent) and ``refiner_supplied_payload_evaluation_schedule_enabled`` / ``refiner_supplied_payload_evaluation_schedule_interval_seconds`` on ``MediaMopSettings``; failure backoff is local to that enqueue module (process-internal per ADR-0009 “Out of scope”, not shared with Fetcher).
 - **`refiner.candidate_gate.v1`** — manual enqueue only in this product pass; **no** shared schedule/cooldown/last-run row with other Refiner families or with Fetcher.
 
 ### Trimmer, Subber (future durable jobs)
@@ -75,7 +75,7 @@ Trimmer and Subber packages point to ADR-0007 for lane ownership; **this ADR** i
 |------|-----------|-----|
 | Fetcher failed-import Radarr vs Sonarr | Yes | Separate `MEDIAMOP_FAILED_IMPORT_*` intervals, separate periodic tasks, separate dedupe keys. |
 | Fetcher Arr search four lanes | Yes | Per-lane settings in `MediaMopSettings`, per-lane `(app, action, …)` cooldown log, per-lane prune in `prune_fetcher_arr_action_log`, four last-run columns, four periodic enqueue tasks. |
-| Refiner durable families (library audit pass vs candidate gate) | Yes | Separate job kinds, handlers, and enqueue paths; library audit has its own optional schedule env + interval only for that family; candidate gate has no periodic contract in this pass (manual jobs only). No shared last-run or cooldown between the two. |
+| Refiner durable families (supplied payload evaluation vs candidate gate) | Yes | Separate job kinds, handlers, and enqueue paths; supplied payload evaluation has its own optional schedule env + interval only for that family; candidate gate has no periodic contract in this pass (manual jobs only). No shared last-run or cooldown between the two. |
 | Trimmer / Subber | N/A / pending | Stubs only; **TrimmerTimingContract** / **SubberTimingContract** tasks: same rule when first `trimmer.*` / `subber.*` jobs ship. |
 
 ### Soft spot (configuration, not runtime coupling)

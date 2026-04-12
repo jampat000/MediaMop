@@ -1,4 +1,4 @@
-"""Periodic asyncio enqueue for ``refiner.library.audit_pass.v1`` (Refiner-only timer constants)."""
+"""Periodic asyncio enqueue for ``refiner.supplied_payload_evaluation.v1`` (Refiner-only timer)."""
 
 from __future__ import annotations
 
@@ -8,40 +8,40 @@ import logging
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.refiner_library_audit_pass_enqueue import (
-    enqueue_refiner_library_audit_pass_job,
+from mediamop.modules.refiner.refiner_supplied_payload_evaluation_enqueue import (
+    enqueue_refiner_supplied_payload_evaluation_job,
 )
 
 logger = logging.getLogger(__name__)
 
-REFINER_LIBRARY_AUDIT_PASS_ENQUEUE_FAILURE_COOLDOWN_SECONDS = 2.0
+REFINER_SUPPLIED_PAYLOAD_EVALUATION_ENQUEUE_FAILURE_COOLDOWN_SECONDS = 2.0
 
 
-def start_refiner_library_audit_pass_enqueue_tasks(
+def start_refiner_supplied_payload_evaluation_enqueue_tasks(
     session_factory: sessionmaker[Session],
     *,
     stop_event: asyncio.Event,
     settings: MediaMopSettings,
 ) -> list[asyncio.Task[None]]:
-    """Background enqueue tick for the library audit pass family only (no Fetcher coupling)."""
+    """Background enqueue tick for the supplied-payload evaluation family only (no Fetcher coupling)."""
 
-    if not settings.refiner_library_audit_pass_schedule_enabled:
+    if not settings.refiner_supplied_payload_evaluation_schedule_enabled:
         return []
-    interval = float(settings.refiner_library_audit_pass_schedule_interval_seconds)
+    interval = float(settings.refiner_supplied_payload_evaluation_schedule_interval_seconds)
     if interval <= 0:
         return []
     task = asyncio.create_task(
-        _run_periodic_library_audit_pass_enqueue(
+        _run_periodic_supplied_payload_evaluation_enqueue(
             session_factory,
             stop_event=stop_event,
             interval_seconds=interval,
         ),
-        name="refiner-library-audit-pass-enqueue",
+        name="refiner-supplied-payload-evaluation-enqueue",
     )
     return [task]
 
 
-async def _run_periodic_library_audit_pass_enqueue(
+async def _run_periodic_supplied_payload_evaluation_enqueue(
     session_factory: sessionmaker[Session],
     *,
     stop_event: asyncio.Event,
@@ -52,7 +52,7 @@ async def _run_periodic_library_audit_pass_enqueue(
 
         def _once() -> None:
             with session_factory() as session:
-                enqueue_refiner_library_audit_pass_job(session)
+                enqueue_refiner_supplied_payload_evaluation_job(session)
                 session.commit()
 
         try:
@@ -60,10 +60,10 @@ async def _run_periodic_library_audit_pass_enqueue(
         except asyncio.CancelledError:
             raise
         except Exception:
-            logger.exception("Refiner library audit pass periodic enqueue failed")
+            logger.exception("Refiner supplied payload evaluation periodic enqueue failed")
             if stop_event.is_set():
                 break
-            fail_deadline = loop.time() + REFINER_LIBRARY_AUDIT_PASS_ENQUEUE_FAILURE_COOLDOWN_SECONDS
+            fail_deadline = loop.time() + REFINER_SUPPLIED_PAYLOAD_EVALUATION_ENQUEUE_FAILURE_COOLDOWN_SECONDS
             while loop.time() < fail_deadline and not stop_event.is_set():
                 remaining = fail_deadline - loop.time()
                 if remaining <= 0:
@@ -81,7 +81,7 @@ async def _run_periodic_library_audit_pass_enqueue(
             await asyncio.sleep(min(0.25, remaining))
 
 
-async def stop_refiner_library_audit_pass_enqueue_tasks(tasks: list[asyncio.Task[None]]) -> None:
+async def stop_refiner_supplied_payload_evaluation_enqueue_tasks(tasks: list[asyncio.Task[None]]) -> None:
     for t in tasks:
         if not t.done():
             t.cancel()

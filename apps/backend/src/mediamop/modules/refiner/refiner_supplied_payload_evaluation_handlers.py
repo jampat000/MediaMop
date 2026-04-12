@@ -1,4 +1,4 @@
-"""In-process Refiner worker handler for ``refiner.library.audit_pass.v1``."""
+"""In-process Refiner worker handler for ``refiner.supplied_payload_evaluation.v1``."""
 
 from __future__ import annotations
 
@@ -14,8 +14,8 @@ from mediamop.modules.refiner.domain import (
     file_is_owned_by_queue,
     should_block_for_upstream,
 )
-from mediamop.modules.refiner.refiner_library_audit_pass_activity import (
-    record_refiner_library_audit_pass_completed,
+from mediamop.modules.refiner.refiner_supplied_payload_evaluation_activity import (
+    record_refiner_supplied_payload_evaluation_completed,
 )
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
 
@@ -36,7 +36,7 @@ def _parse_payload(payload_json: str | None) -> tuple[list[RefinerQueueRowView],
         return [], None
     data = json.loads(payload_json)
     if not isinstance(data, dict):
-        msg = "library audit pass payload must be a JSON object"
+        msg = "supplied payload evaluation job payload must be a JSON object"
         raise ValueError(msg)
     rows_raw = data.get("rows")
     rows: list[RefinerQueueRowView] = []
@@ -54,10 +54,10 @@ def _parse_payload(payload_json: str | None) -> tuple[list[RefinerQueueRowView],
     return rows, file_candidate
 
 
-def make_refiner_library_audit_pass_handler(
+def make_refiner_supplied_payload_evaluation_handler(
     session_factory: sessionmaker[Session],
 ) -> Callable[[RefinerJobWorkContext], None]:
-    """Run anchor ownership / upstream blocking checks (optional JSON payload) and record activity."""
+    """Apply Refiner domain rules to optional JSON ``rows`` + ``file`` only (no *arr or disk I/O)."""
 
     def _run(ctx: RefinerJobWorkContext) -> None:
         rows, file_candidate = _parse_payload(ctx.payload_json)
@@ -72,6 +72,6 @@ def make_refiner_library_audit_pass_handler(
         detail = json.dumps(detail_obj, separators=(",", ":"))[:10_000]
         with session_factory() as session:
             with session.begin():
-                record_refiner_library_audit_pass_completed(session, detail=detail)
+                record_refiner_supplied_payload_evaluation_completed(session, detail=detail)
 
     return _run
