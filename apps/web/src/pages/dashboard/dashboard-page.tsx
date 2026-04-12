@@ -3,6 +3,7 @@ import { useActivityStreamInvalidation } from "../../lib/activity/use-activity-s
 import type { ActivityEventItem } from "../../lib/api/types";
 import { useMeQuery } from "../../lib/auth/queries";
 import { dashboardStatusKey, useDashboardStatusQuery } from "../../lib/dashboard/queries";
+import { useSuiteSettingsQuery } from "../../lib/suite/queries";
 import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
 
 function formatEventTs(iso: string): string {
@@ -36,6 +37,7 @@ export function DashboardPage() {
   useActivityStreamInvalidation(dashboardStatusKey);
   const me = useMeQuery();
   const dash = useDashboardStatusQuery();
+  const suite = useSuiteSettingsQuery();
 
   if (dash.isPending) {
     return <PageLoading label="Loading dashboard" />;
@@ -85,6 +87,18 @@ export function DashboardPage() {
           . {scope_note}
         </p>
       </header>
+
+      {suite.data?.signed_in_home_notice?.trim() ? (
+        <section
+          className="mm-card mb-4 max-w-3xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)]"
+          aria-label="Home notice from settings"
+          data-testid="suite-home-notice"
+        >
+          <p className="mm-card__body whitespace-pre-wrap text-sm leading-relaxed text-[var(--mm-text)]">
+            {suite.data.signed_in_home_notice.trim()}
+          </p>
+        </section>
+      ) : null}
 
       <div className="mm-dash-grid" data-testid="shell-ready">
         <section className="mm-card mm-dash-card" aria-labelledby="mm-dash-system-heading">

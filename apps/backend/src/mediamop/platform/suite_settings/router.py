@@ -1,0 +1,71 @@
+"""Suite-wide settings (Global) and read-only security overview — not Fetcher/Sonarr/Radarr."""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, HTTPException, Request
+from starlette import status
+
+from mediamop.api.deps import DbSessionDep, SettingsDep
+from mediamop.platform.auth.authorization import RequireOperatorDep
+from mediamop.platform.auth.csrf import (
+    require_session_secret,
+    validate_browser_post_origin,
+    verify_csrf_token,
+)
+from mediamop.platform.auth.deps_auth import UserPublicDep
+from mediamop.platform.suite_settings.schemas import (
+    SuiteSecurityOverviewOut,
+    SuiteSettingsOut,
+    SuiteSettingsPutIn,
+)
+from mediamop.platform.suite_settings.security_overview import build_suite_security_overview
+from mediamop.platform.suite_settings.service import apply_suite_settings_put, build_suite_settings_out, ensure_suite_settings_row
+
+router = APIRouter(tags=["suite"])
+
+
+@router.get("/suite/settings", response_model=SuiteSettingsOut)
+def get_suite_settings(_user: UserPublicDep, db: DbSessionDep) -> SuiteSettingsOut:
+    """Names and notices stored in the app database (any signed-in user may read)."""
+
+    row = ensure_suite_settings_row(db)
+    return build_suite_settings_out(row)
+
+
+@router.put("/suite/settings", response_model=SuiteSettingsOut)
+def put_suite_settings(
+    body: SuiteSettingsPutIn,
+    request: Request,
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+) -> SuiteSettingsOut:
+    """Update suite display text — operators and admins only."""
+
+    validate_browser_post_origin(request, settings)
+    secret = require_session_secret(settings)
+    if not verify_csrf_token(secret, body.csrf_token):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Your confirmation token expired. Refresh the page and try again.",
+        )
+    try:
+        out = apply_suite_settings_put(
+            db,
+            product_display_name=body.product_display_name,
+            signed_in_home_notice=body.signed_in_home_notice,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    db.commit()
+    return out
+
+
+@router.get("/suite/security-overview", response_model=SuiteSecurityOverviewOut)
+def get_suite_security_overview(
+    _user: UserPublicDep,
+    settings: SettingsDep,
+) -> SuiteSecurityOverviewOut:
+    """Read-only snapshot of sign-in protection (from startup configuration, not the database)."""
+
+    return build_suite_security_overview(settings)

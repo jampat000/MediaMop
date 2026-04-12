@@ -35,6 +35,16 @@ def test_head_schema_includes_refiner_path_settings_table() -> None:
     assert "refiner_output_folder" in names
 
 
+def test_head_schema_includes_suite_settings_table() -> None:
+    settings = MediaMopSettings.load()
+    engine = create_db_engine(settings)
+    insp = sa.inspect(engine)
+    assert insp.has_table("suite_settings")
+    names = {c["name"] for c in insp.get_columns("suite_settings")}
+    assert "product_display_name" in names
+    assert "signed_in_home_notice" in names
+
+
 def test_api_startup_fails_without_migrations(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("MEDIAMOP_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
     isolated = tmp_path / "nodb"

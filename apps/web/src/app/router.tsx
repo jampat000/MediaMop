@@ -6,7 +6,7 @@ import { FetcherPage } from "../pages/fetcher/fetcher-page";
 import { LoginPage } from "../pages/auth/login-page";
 import { RefinerPage } from "../pages/refiner/refiner-page";
 import { RootEntry } from "../pages/root-entry";
-import { SettingsPlaceholder } from "../pages/settings/settings-placeholder";
+import { SettingsPage } from "../pages/settings/settings-page";
 import { SetupPage } from "../pages/setup/setup-page";
 import { SubberPage } from "../pages/subber/subber-page";
 import { TrimmerPage } from "../pages/trimmer/trimmer-page";
@@ -29,7 +29,7 @@ const router = createBrowserRouter([
           { path: "refiner", element: <RefinerPage /> },
           { path: "trimmer", element: <TrimmerPage /> },
           { path: "subber", element: <SubberPage /> },
-          { path: "settings", element: <SettingsPlaceholder /> },
+          { path: "settings", element: <SettingsPage /> },
         ],
       },
     ],

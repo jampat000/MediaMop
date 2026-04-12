@@ -11,6 +11,7 @@ import {
 } from "../components/shell/nav-icons";
 import { WEB_APP_VERSION } from "../lib/app-meta";
 import { useLogoutMutation } from "../lib/auth/queries";
+import { useSuiteSettingsQuery } from "../lib/suite/queries";
 
 function sidebarNavClass({ isActive }: { isActive: boolean }) {
   return isActive ? "mm-sidebar-link active" : "mm-sidebar-link";
@@ -19,11 +20,13 @@ function sidebarNavClass({ isActive }: { isActive: boolean }) {
 export function AppShell() {
   const navigate = useNavigate();
   const logout = useLogoutMutation();
+  const suite = useSuiteSettingsQuery();
+  const productTitle = (suite.data?.product_display_name ?? "MediaMop").trim() || "MediaMop";
 
   return (
     <div className="mm-app-layout">
       <aside className="mm-sidebar" aria-label="Product">
-        <BrandHeaderLink to="/app" />
+        <BrandHeaderLink to="/app" productTitle={productTitle} />
         <nav className="mm-sidebar-nav" aria-label="Primary">
           <p className="mm-sidebar-section-label">Overview</p>
           <NavLink to="/app" end className={sidebarNavClass}>
@@ -75,7 +78,7 @@ export function AppShell() {
         </nav>
         <div className="mm-sidebar-footer">
           <div className="mm-sidebar-footer-panel">
-            <div className="mm-sidebar-meta">MediaMop</div>
+            <div className="mm-sidebar-meta">{productTitle}</div>
             <div className="mm-sidebar-version" title="Web shell version (package.json)">
               Web {WEB_APP_VERSION}
             </div>

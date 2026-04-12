@@ -20,6 +20,7 @@ from mediamop.modules.subber.router import router as subber_router
 from mediamop.modules.trimmer.router import router as trimmer_router
 from mediamop.platform.activity.router import router as activity_router
 from mediamop.platform.auth.router import router as auth_router
+from mediamop.platform.suite_settings.router import router as suite_settings_router
 
 API_V1_PREFIX = "/api/v1"
 
@@ -28,6 +29,7 @@ def build_v1_router() -> APIRouter:
     """Version 1 API — auth boundary under ``/api/v1/auth`` (Phase 5)."""
     router = APIRouter(prefix=API_V1_PREFIX)
     router.include_router(auth_router)
+    router.include_router(suite_settings_router)
     router.include_router(dashboard_router)
     router.include_router(fetcher_router)
     router.include_router(activity_router)

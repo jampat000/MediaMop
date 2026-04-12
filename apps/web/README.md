@@ -48,7 +48,7 @@ Then set in this app:
 | `/setup` | First-run admin creation (`POST /api/v1/auth/bootstrap`) while allowed; otherwise redirects |
 | `/login` | Session login (`POST /api/v1/auth/login`) |
 | `/app` | Dashboard placeholder (authenticated shell) |
-| `/app/settings` | Honest settings placeholder (no real settings product yet) |
+| `/app/settings` | Suite settings: Global (saved in-app) and Security (read-only startup snapshot) |
 
 ## API usage
 

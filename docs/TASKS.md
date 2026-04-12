@@ -41,7 +41,36 @@ Single canonical backlog for shipped milestones and the next honest slice of wor
 
 - [x] **Done** — `refiner_watched_folder_remux_scan_dispatch_enqueue.py`, `refiner_watched_folder_remux_scan_dispatch_periodic_enqueue.py`, `lifespan.py` wiring, `MediaMopSettings` + `.env.example`, runtime API + web Refiner sections, ADR-0007/0009 alignment, tests.
 
-## Active / next (after item 7)
+## Roadmap item 8 — Central Settings UI (suite: Global + Security only)
 
+**Scope (explicit):** The **central** `/app/settings` page owns **MediaMop suite** presentation and **read-only security posture** — not Fetcher, not Sonarr/Radarr, not Refiner/Trimmer/Subber module config.
+
+**Completion criteria (must all be true to tick):**
+
+1. **Global:** Operators and admins can edit **product display name** and **optional signed-in home dashboard notice** in the UI; values persist in the **`suite_settings`** SQLite singleton (Alembic migration), via `GET`/`PUT /api/v1/suite/settings` (CSRF + operator auth on write). Viewers can read but not save.
+2. **Security:** All signed-in roles see a **read-only** overview from **startup-loaded** `MediaMopSettings` (`GET /api/v1/suite/security-overview`) with plain-language fields and an explicit note that **configuration file + restart** are required to change those values — no fake “saved” behavior for env-only settings.
+3. **Honesty:** Global saves apply immediately for the running app (database-backed). Security values are **not** presented as live-editable in the browser. No duplicate editing surface for Refiner paths, Fetcher failed-import settings, or other module-owned truth.
+4. **Central page purity:** The central Settings route **does not** surface Sonarr, Radarr, Fetcher cleanup toggles, or Fetcher schedules (asserted in tests / copy).
+5. **Product wiring:** Saved **product display name** appears in the signed-in shell (sidebar); optional **home notice** appears on the dashboard when set.
+6. **Tests:** Backend API + migration head + security overview builder; frontend settings page (no Sonarr/Radarr strings, viewer cannot save).
+
+### 8 — status
+
+- [x] **Done** — `suite_settings` table + model/service/schemas, `GET`/`PUT /api/v1/suite/settings`, `GET /api/v1/suite/security-overview`, web Settings page (Global / Security tabs), shell + dashboard wiring, `docs/TASKS.md` split for Fetcher milestone below, tests.
+
+## Roadmap item 9 — Fetcher integration settings UI (future)
+
+**Not part of item 8.** Dedicated Fetcher module work when prioritized:
+
+- Sonarr/Radarr (and shared ARR) connection and search/cleanup schedule surfaces that belong **on Fetcher** (or clearly Fetcher-owned routes), not the central suite Settings page.
+- Honest separation from suite Global/Security and from Refiner-owned path/runtime settings.
+
+### 9 — status
+
+- [ ] **Not started** — backlog only.
+
+## Active / next (after item 8)
+
+- [ ] Roadmap item 9 (Fetcher integration settings UI) when prioritized.
 - [ ] Richer Activity rendering for watched-folder scan summaries if plain `detail` text is not enough.
 - [ ] Other product milestones as prioritized (no duplicate task file).
