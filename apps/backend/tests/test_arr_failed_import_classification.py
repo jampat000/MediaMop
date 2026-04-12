@@ -78,6 +78,16 @@ def test_terminal_quality_beats_waiting_in_same_blob() -> None:
     assert classify_failed_import_message(blob) == FailedImportOutcome.QUALITY
 
 
+def test_radarr_waiting_plus_manual_import_id_match_blob_is_unmatched() -> None:
+    """Issue 3: terminal ``manual import required`` beats waiting text in one blob."""
+    blob = (
+        "Downloaded - Waiting to Import. "
+        "Found matching movie via grab history, but release was matched to movie by ID. "
+        "Manual Import required."
+    )
+    assert classify_failed_import_message(blob) == FailedImportOutcome.UNMATCHED
+
+
 def test_terminal_corrupt_beats_waiting_in_same_blob() -> None:
     blob = "Import pending; file is corrupt"
     assert classify_failed_import_message(blob) == FailedImportOutcome.CORRUPT

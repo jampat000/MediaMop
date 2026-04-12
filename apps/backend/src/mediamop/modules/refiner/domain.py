@@ -162,6 +162,9 @@ def normalize_titleish(raw: str) -> str:
     s = raw.lower().strip()
     s = s.replace("blu-ray", "bluray")
     s = s.replace("web-dl", "webdl")
+    # Multi-token indexer / group suffixes (fold before ``[^a-z0-9]+``) so they cannot
+    # veto title+year anchor equality; do not strip bare ``am`` (e.g. "I Am Legend").
+    s = re.sub(r"\byts[\s.\-]+am\b", " ", s)
     s = re.sub(r"[^a-z0-9]+", " ", s)
     return re.sub(r"\s+", " ", s).strip()
 

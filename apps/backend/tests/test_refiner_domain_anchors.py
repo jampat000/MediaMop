@@ -25,6 +25,14 @@ def test_helper_same_title_year_different_technical_token_order_matches() -> Non
     assert title_year_anchors_match(a, b)
 
 
+def test_helper_locked_example_yts_am_suffix_does_not_veto_anchor() -> None:
+    """Issue 2: packaging + indexer phrase order must not break title+year match."""
+    a = extract_title_year_anchor("the towering inferno 1974 bluray 1080p")
+    b = extract_title_year_anchor("the towering inferno 1974 1080p bluray x264 yts am")
+    assert a is not None and b is not None
+    assert title_year_anchors_match(a, b)
+
+
 def test_helper_title_year_match_with_codec_source_group_noise() -> None:
     q = extract_title_year_anchor("The Godfather 1972 WEB-DL 1080p x265-NTb")
     f = extract_title_year_anchor("The.Godfather.1972.1080p.BluRay.x264.YIFY")
