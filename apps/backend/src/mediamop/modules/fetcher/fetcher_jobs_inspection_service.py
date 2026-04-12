@@ -1,4 +1,4 @@
-"""Read-only listing of persisted ``fetcher_jobs`` rows (Fetcher failed-imports inspection)."""
+"""Read-only listing of persisted ``fetcher_jobs`` rows (module-wide Fetcher lane inspection)."""
 
 from __future__ import annotations
 

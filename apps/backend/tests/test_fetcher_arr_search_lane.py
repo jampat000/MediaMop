@@ -239,7 +239,7 @@ def test_enqueue_scheduled_allowed_when_worker_would_skip_outside_window(lane_sf
         base,
         fetcher_sonarr_base_url="http://sonarr.test",
         fetcher_sonarr_api_key="k",
-        fetcher_sonarr_search_missing_enabled=True,
+        fetcher_sonarr_missing_search_enabled=True,
         fetcher_sonarr_missing_search_schedule_enabled=True,
     )
     with lane_sf() as s:
@@ -300,7 +300,7 @@ def test_scheduled_missing_zero_pool_no_activity_row(lane_sf, monkeypatch: pytes
         base,
         fetcher_sonarr_base_url="http://sonarr.test",
         fetcher_sonarr_api_key="k",
-        fetcher_sonarr_search_missing_enabled=True,
+        fetcher_sonarr_missing_search_enabled=True,
         fetcher_sonarr_missing_search_schedule_enabled=False,
     )
     with lane_sf() as s:
@@ -351,7 +351,7 @@ def test_manual_missing_zero_emits_zero_manual_activity(lane_sf, monkeypatch: py
         base,
         fetcher_sonarr_base_url="http://sonarr.test",
         fetcher_sonarr_api_key="k",
-        fetcher_sonarr_search_missing_enabled=True,
+        fetcher_sonarr_missing_search_enabled=True,
         fetcher_sonarr_missing_search_schedule_enabled=False,
     )
     with lane_sf() as s:
@@ -430,7 +430,7 @@ def test_sonarr_missing_handler_dispatches_episode_search_command(lane_sf, monke
         base,
         fetcher_sonarr_base_url="http://sonarr.test",
         fetcher_sonarr_api_key="k",
-        fetcher_sonarr_search_missing_enabled=True,
+        fetcher_sonarr_missing_search_enabled=True,
         fetcher_sonarr_missing_search_schedule_enabled=False,
         fetcher_sonarr_missing_search_retry_delay_minutes=1,
     )
@@ -494,7 +494,7 @@ def test_process_one_fetcher_runs_search_handler(
         base,
         fetcher_radarr_base_url="http://radarr.test",
         fetcher_radarr_api_key="rk",
-        fetcher_radarr_search_missing_enabled=True,
+        fetcher_radarr_missing_search_enabled=True,
         fetcher_radarr_missing_search_schedule_enabled=False,
         fetcher_radarr_missing_search_retry_delay_minutes=1,
     )
@@ -560,7 +560,7 @@ def test_upgrade_handler_uses_wanted_cutoff_pagination(lane_sf, monkeypatch: pyt
         base,
         fetcher_radarr_base_url="http://radarr.test",
         fetcher_radarr_api_key="rk",
-        fetcher_radarr_search_upgrade_enabled=True,
+        fetcher_radarr_upgrade_search_enabled=True,
         fetcher_radarr_upgrade_search_schedule_enabled=False,
         fetcher_radarr_upgrade_search_retry_delay_minutes=1,
     )

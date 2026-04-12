@@ -84,7 +84,7 @@ def arr_search_schedule_specs(settings: MediaMopSettings) -> list[tuple[str, flo
     out: list[tuple[str, float, Callable[[Session], None]]] = []
     son_ok = bool(settings.fetcher_sonarr_base_url and settings.fetcher_sonarr_api_key)
     rad_ok = bool(settings.fetcher_radarr_base_url and settings.fetcher_radarr_api_key)
-    if son_ok and settings.fetcher_sonarr_search_missing_enabled:
+    if son_ok and settings.fetcher_sonarr_missing_search_enabled:
         out.append(
             (
                 "sonarr_missing_search",
@@ -92,7 +92,7 @@ def arr_search_schedule_specs(settings: MediaMopSettings) -> list[tuple[str, flo
                 enqueue_scheduled_sonarr_missing_search_job,
             ),
         )
-    if son_ok and settings.fetcher_sonarr_search_upgrade_enabled:
+    if son_ok and settings.fetcher_sonarr_upgrade_search_enabled:
         out.append(
             (
                 "sonarr_upgrade_search",
@@ -100,7 +100,7 @@ def arr_search_schedule_specs(settings: MediaMopSettings) -> list[tuple[str, flo
                 enqueue_scheduled_sonarr_upgrade_search_job,
             ),
         )
-    if rad_ok and settings.fetcher_radarr_search_missing_enabled:
+    if rad_ok and settings.fetcher_radarr_missing_search_enabled:
         out.append(
             (
                 "radarr_missing_search",
@@ -108,7 +108,7 @@ def arr_search_schedule_specs(settings: MediaMopSettings) -> list[tuple[str, flo
                 enqueue_scheduled_radarr_missing_search_job,
             ),
         )
-    if rad_ok and settings.fetcher_radarr_search_upgrade_enabled:
+    if rad_ok and settings.fetcher_radarr_upgrade_search_enabled:
         out.append(
             (
                 "radarr_upgrade_search",

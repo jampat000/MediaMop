@@ -1,7 +1,7 @@
 /** Copy for the Fetcher failed-imports section only. */
 
 export const FETCHER_FI_SECTION_INTRO_PRIMARY =
-  "Failed imports in Radarr and Sonarr: history below, automation in the card, manual checks if you have access.";
+  "Radarr and Sonarr on the Fetcher lane: failed-import passes below, automation in the card, manual checks if you have access. The history table lists every persisted Fetcher job row—including Arr missing/upgrade search—not only failed-import drives.";
 
 export const FETCHER_FI_RUNTIME_CARD_TITLE = "Automation";
 export const FETCHER_FI_RUNTIME_CARD_SUBTITLE = "Saved when this loaded—not live status.";
@@ -26,10 +26,10 @@ export const FETCHER_FI_MANUAL_ERR_TV = "Could not start the TV check.";
 export const FETCHER_FI_MANUAL_RESULT_MOVIES_PREFIX = "Movies (Radarr):";
 export const FETCHER_FI_MANUAL_RESULT_TV_PREFIX = "TV (Sonarr):";
 
-export const FETCHER_FI_PAGE_LOADING_TASKS = "Loading history…";
-export const FETCHER_FI_PAGE_ERR_LOAD_TASKS = "Could not load this list.";
+export const FETCHER_FI_PAGE_LOADING_TASKS = "Loading Fetcher jobs…";
+export const FETCHER_FI_PAGE_ERR_LOAD_TASKS = "Could not load Fetcher jobs.";
 
-export const FETCHER_FI_TASKS_SECTION_TITLE = "History";
+export const FETCHER_FI_TASKS_SECTION_TITLE = "Fetcher jobs history";
 
 export const FETCHER_FI_FILTER_DEFAULT_HELP = "Default: finished outcomes only.";
 export const FETCHER_FI_FILTER_SINGLE_STATUS_HELP = "One outcome — see Status for the exact value.";

@@ -8,9 +8,9 @@ import type { FetcherOperationalOverview, UserPublic } from "../../lib/api/types
 import type { FetcherFailedImportAutomationSummary } from "../../lib/fetcher/failed-imports/types";
 import {
   failedImportAutomationSummaryQueryKey,
-  failedImportInspectionQueryKey,
   failedImportSettingsQueryKey,
 } from "../../lib/fetcher/failed-imports/queries";
+import { fetcherJobsInspectionQueryKey } from "../../lib/fetcher/jobs-inspection/queries";
 import { fetcherOverviewKey } from "../../lib/fetcher/queries";
 import { FetcherPage } from "./fetcher-page";
 
@@ -80,7 +80,7 @@ function renderFetcherPage() {
   qc.setQueryData(fetcherOverviewKey, minimalOverview);
   qc.setQueryData(failedImportSettingsQueryKey, minimalFiSettings);
   qc.setQueryData(failedImportAutomationSummaryQueryKey, minimalAutomationSummary);
-  qc.setQueryData(failedImportInspectionQueryKey("terminal"), { jobs: [], default_terminal_only: true });
+  qc.setQueryData(fetcherJobsInspectionQueryKey("terminal"), { jobs: [], default_terminal_only: true });
   return render(wrap(<FetcherPage />, qc));
 }
 
@@ -99,7 +99,8 @@ describe("FetcherPage (hero compression)", () => {
     expect(t).toMatch(/Fetcher/i);
     expect(t).toMatch(/Radarr/i);
     expect(t).toMatch(/Sonarr/i);
-    expect(t).toMatch(/failed import/i);
+    expect(t).toMatch(/failed-import|failed import/i);
+    expect(t).toMatch(/Arr|search/i);
     expect(t).toMatch(/service|answered|checks/i);
     expect(t).not.toMatch(/Refiner/i);
   });
@@ -114,7 +115,7 @@ describe("FetcherPage (hero compression)", () => {
   it("shows read-only automation summary for movies and TV with no fake liveness copy", () => {
     const { container } = renderFetcherPage();
     expect(screen.getByTestId("fetcher-automation-summary")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Automation summary" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Failed-import automation summary" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Movies" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "TV shows" })).toBeInTheDocument();
     const t = container.textContent ?? "";

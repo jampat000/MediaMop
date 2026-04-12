@@ -1,25 +1,5 @@
 /** Shapes for Fetcher failed-import queue workflow APIs (JSON field names follow backend Pydantic models). */
 
-export type FailedImportTaskRow = {
-  id: number;
-  dedupe_key: string;
-  job_kind: string;
-  status: string;
-  attempt_count: number;
-  max_attempts: number;
-  lease_owner: string | null;
-  lease_expires_at: string | null;
-  last_error: string | null;
-  payload_json: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-export type FailedImportTasksInspectionOut = {
-  jobs: FailedImportTaskRow[];
-  default_terminal_only: boolean;
-};
-
 /** GET /api/v1/fetcher/failed-imports/settings — settings snapshot from loaded config (not liveness). */
 export type FailedImportFetcherSettingsOut = {
   background_job_worker_count: number;

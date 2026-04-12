@@ -1,15 +1,13 @@
-"""Fetcher-owned HTTP API for Radarr/Sonarr download-queue failed-import task workflow.
+"""Fetcher HTTP for Radarr/Sonarr download-queue failed-import workflow (policy, runtime, drives, recovery).
 
-Persistence uses ``fetcher_jobs`` and Fetcher in-process workers; planning and live-queue drives live
-under ``mediamop.modules.fetcher`` with shared classification/policy in ``mediamop.modules.arr_failed_import``.
-This module is the product-facing boundary only.
+Arr search manual enqueue lives in ``fetcher_arr_search_api``; persisted ``fetcher_jobs`` inspection lives in
+``fetcher_jobs_api``. Shared classification/policy for the download queue remains in
+``mediamop.modules.arr_failed_import``.
 """
 
 from __future__ import annotations
 
-from typing import Annotated
-
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Request
 from starlette import status
 from sqlalchemy.orm import Session
 
@@ -26,14 +24,8 @@ from mediamop.modules.fetcher.failed_import_activity import (
     record_fetcher_failed_import_pass_queued,
     record_fetcher_failed_import_recovered,
 )
-from mediamop.modules.fetcher.fetcher_jobs_inspection_service import (
-    DEFAULT_TERMINAL_STATUSES,
-    list_fetcher_jobs_for_inspection,
-    validate_inspection_statuses,
-)
 from mediamop.modules.fetcher.fetcher_jobs_model import FetcherJob, FetcherJobStatus
 from mediamop.modules.fetcher.fetcher_jobs_ops import recover_handler_ok_finalize_failed_to_completed
-from mediamop.modules.fetcher.fetcher_arr_search_enqueue import enqueue_manual_arr_search_job
 from mediamop.modules.fetcher.manual_cleanup_drive_enqueue import (
     manual_enqueue_radarr_cleanup_drive,
     manual_enqueue_sonarr_cleanup_drive,
@@ -44,14 +36,9 @@ from mediamop.modules.fetcher.schemas_cleanup_policy import (
     FetcherFailedImportCleanupPolicyOut,
     FetcherFailedImportCleanupPolicyPutIn,
 )
-from mediamop.modules.fetcher.schemas_fetcher_jobs_inspection import FetcherJobsInspectionOut
 from mediamop.modules.fetcher.schemas_manual_cleanup_enqueue import (
     ManualCleanupDriveEnqueueIn,
     ManualCleanupDriveEnqueueOut,
-)
-from mediamop.modules.fetcher.schemas_arr_search_manual import (
-    FetcherArrSearchManualEnqueueIn,
-    FetcherArrSearchManualEnqueueOut,
 )
 from mediamop.modules.arr_failed_import.env_settings import AppFailedImportCleanupPolicySettings
 from mediamop.modules.fetcher.failed_import_runtime_visibility import (
@@ -161,75 +148,6 @@ def get_fetcher_failed_imports_settings(
     """
 
     return failed_import_runtime_visibility_from_settings(settings)
-
-
-@router.get("/fetcher/failed-imports/inspection", response_model=FetcherJobsInspectionOut)
-def get_fetcher_failed_imports_inspection(
-    _user: UserPublicDep,
-    db: DbSessionDep,
-    limit: Annotated[int, Query(ge=1, le=100, description="Max rows to return.")] = 50,
-    statuses: Annotated[
-        list[str] | None,
-        Query(
-            alias="status",
-            description=(
-                "Filter by persisted status (repeat param). "
-                "Omit to return only terminal rows: completed, failed, handler_ok_finalize_failed."
-            ),
-        ),
-    ] = None,
-) -> FetcherJobsInspectionOut:
-    """Fetcher: read-only persisted rows for the failed-import queue workflow."""
-
-    if statuses:
-        try:
-            st = validate_inspection_statuses(tuple(statuses))
-        except ValueError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail=str(exc),
-            ) from exc
-        return list_fetcher_jobs_for_inspection(
-            db,
-            limit=limit,
-            statuses=st,
-            default_terminal_only=False,
-        )
-    return list_fetcher_jobs_for_inspection(
-        db,
-        limit=limit,
-        statuses=DEFAULT_TERMINAL_STATUSES,
-        default_terminal_only=True,
-    )
-
-
-@router.post(
-    "/fetcher/arr-search/enqueue",
-    response_model=FetcherArrSearchManualEnqueueOut,
-)
-def post_fetcher_arr_search_enqueue(
-    body: FetcherArrSearchManualEnqueueIn,
-    request: Request,
-    _user: RequireOperatorDep,
-    db: DbSessionDep,
-    settings: SettingsDep,
-) -> FetcherArrSearchManualEnqueueOut:
-    """Fetcher: enqueue one manual Sonarr/Radarr missing or upgrade search job (``fetcher_jobs`` only)."""
-
-    validate_browser_post_origin(request, settings)
-    secret = require_session_secret(settings)
-    if not verify_csrf_token(secret, body.csrf_token):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired CSRF token.",
-        )
-
-    job = enqueue_manual_arr_search_job(db, scope=body.scope)
-    return FetcherArrSearchManualEnqueueOut(
-        job_id=job.id,
-        dedupe_key=job.dedupe_key,
-        job_kind=job.job_kind,
-    )
 
 
 @router.post(

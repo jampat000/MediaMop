@@ -1,6 +1,6 @@
 # MediaMop — local development (backend + web)
 
-This **MediaMop** repository contains **`apps/backend`** (FastAPI, **SQLite**, cookie sessions) and **`apps/web`** (React/Vite). It does **not** include the Fetcher app or Fetcher’s Docker stack.
+This **MediaMop** repository contains **`apps/backend`** (FastAPI, **SQLite**, cookie sessions) and **`apps/web`** (React/Vite). It does **not** include the legacy external **Fetcher** application or that product’s Docker stack; it **does** include the first-party **Fetcher module and UI** inside MediaMop (`mediamop.modules.fetcher`, Fetcher routes under `/api/v1/fetcher/...`, and the Fetcher dashboard in the web app).
 
 **Local web/API ports** are versioned in **`scripts/dev-ports.json`**; the policy is summarized in **[`docs/ports.md`](ports.md)**.
 

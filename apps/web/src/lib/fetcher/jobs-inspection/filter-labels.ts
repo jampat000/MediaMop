@@ -1,7 +1,7 @@
-import type { FailedImportInspectionFilter } from "./queries";
+import type { FetcherJobsInspectionFilter } from "./queries";
 
-/** Filter labels for the history table — plain language first, storage value only where it disambiguates. */
-export const FAILED_IMPORT_INSPECTION_FILTER_OPTIONS: { value: FailedImportInspectionFilter; label: string }[] = [
+/** Filter labels for the Fetcher jobs history table — plain language first. */
+export const FETCHER_JOBS_INSPECTION_FILTER_OPTIONS: { value: FetcherJobsInspectionFilter; label: string }[] = [
   {
     value: "terminal",
     label: "Finished (default): done, stopped with errors, or needs your OK to close",

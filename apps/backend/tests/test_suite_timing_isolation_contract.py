@@ -33,3 +33,5 @@ def test_fetcher_arr_search_has_four_distinct_lane_timing_surfaces() -> None:
     assert not missing, f"MediaMopSettings missing ADR-0009 fields: {sorted(missing)}"
     assert "fetcher_sonarr_search_retry_delay_minutes" not in names
     assert "fetcher_radarr_search_retry_delay_minutes" not in names
+    assert "fetcher_sonarr_missing_search_enabled" in names
+    assert "fetcher_sonarr_search_missing_enabled" not in names

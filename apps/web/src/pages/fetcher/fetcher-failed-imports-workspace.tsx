@@ -9,21 +9,26 @@ import {
   showFailedImportRecoverControl,
 } from "../../lib/fetcher/failed-imports/eligibility";
 import { FetcherFailedImportsCleanupPolicySection } from "./fetcher-failed-imports-cleanup-policy";
-import { FAILED_IMPORT_INSPECTION_FILTER_OPTIONS } from "../../lib/fetcher/failed-imports/inspection-filter-labels";
-import type { FailedImportInspectionFilter } from "../../lib/fetcher/failed-imports/queries";
+import {
+  fetcherJobDedupeKeyOperatorLabel,
+  fetcherJobKindOperatorLabel,
+} from "../../lib/fetcher/fetcher-job-operator-labels";
+import { FETCHER_JOBS_INSPECTION_FILTER_OPTIONS } from "../../lib/fetcher/jobs-inspection/filter-labels";
+import type { FetcherJobsInspectionFilter } from "../../lib/fetcher/jobs-inspection/queries";
+import { useFetcherJobsInspectionQuery } from "../../lib/fetcher/jobs-inspection/queries";
 import {
   useFailedImportFetcherSettingsQuery,
   useFailedImportRadarrEnqueueMutation,
   useFailedImportRecoverMutation,
   useFailedImportSonarrEnqueueMutation,
-  useFailedImportTasksInspectionQuery,
 } from "../../lib/fetcher/failed-imports/queries";
 import { formatScheduleIntervalSeconds } from "../../lib/fetcher/failed-imports/schedule-format";
 import {
   failedImportTaskStatusPrimaryLabel,
   isHandlerOkFinalizeFailedStatus,
 } from "../../lib/fetcher/failed-imports/task-status-labels";
-import type { FailedImportFetcherSettingsOut, FailedImportTaskRow } from "../../lib/fetcher/failed-imports/types";
+import type { FailedImportFetcherSettingsOut } from "../../lib/fetcher/failed-imports/types";
+import type { FetcherJobInspectionRow } from "../../lib/fetcher/jobs-inspection/types";
 import {
   FETCHER_FI_FILTER_DEFAULT_HELP,
   FETCHER_FI_FILTER_SINGLE_STATUS_HELP,
@@ -52,10 +57,6 @@ import {
   FETCHER_FI_TECHNICAL_SUMMARY_LABEL,
 } from "../../lib/fetcher/failed-imports/user-copy";
 import type { FailedImportRecoverFinalizeResult } from "../../lib/fetcher/failed-imports/recover-api";
-import {
-  failedImportDriveJobKindOperatorLabel,
-  failedImportDriveStableKeyOperatorLabel,
-} from "../../lib/fetcher/failed-imports/drive-job-operator-display";
 
 function formatUpdated(iso: string): string {
   try {
@@ -250,7 +251,7 @@ function TaskRow({
   role,
   recoverMutation,
 }: {
-  job: FailedImportTaskRow;
+  job: FetcherJobInspectionRow;
   role: string | undefined;
   recoverMutation: UseMutationResult<FailedImportRecoverFinalizeResult, Error, number, unknown>;
 }) {
@@ -258,7 +259,7 @@ function TaskRow({
   const showRecover = showFailedImportRecoverControl(role, job.status);
   return (
     <tr
-      data-testid="fetcher-failed-imports-inspection-row"
+      data-testid="fetcher-jobs-inspection-row"
       data-job-status={job.status}
       data-recover-visible={showRecover ? "true" : "false"}
       className={
@@ -274,14 +275,14 @@ function TaskRow({
         <code className="mm-dash-code mt-0.5 block text-xs text-[var(--mm-text3)]">{job.status}</code>
       </td>
       <td className="mm-fetcher-fi-inspection__cell align-top py-2 pr-3 text-sm text-[var(--mm-text)]">
-        <span data-testid="fetcher-failed-imports-inspection-job-kind-label">
-          {failedImportDriveJobKindOperatorLabel(job.job_kind)}
+        <span data-testid="fetcher-jobs-inspection-job-kind-label">
+          {fetcherJobKindOperatorLabel(job.job_kind)}
         </span>
         <span className="sr-only"> Technical job kind: {job.job_kind}.</span>
       </td>
       <td className="mm-fetcher-fi-inspection__cell align-top py-2 pr-3 text-sm text-[var(--mm-text)] break-words">
-        <span data-testid="fetcher-failed-imports-inspection-stable-key-label">
-          {failedImportDriveStableKeyOperatorLabel(job.dedupe_key, job.job_kind)}
+        <span data-testid="fetcher-jobs-inspection-stable-key-label">
+          {fetcherJobDedupeKeyOperatorLabel(job.dedupe_key, job.job_kind)}
         </span>
         <span className="sr-only"> Technical stable key: {job.dedupe_key}.</span>
       </td>
@@ -313,12 +314,12 @@ function TaskRow({
   );
 }
 
-/** Fetcher page section: Radarr/Sonarr download-queue failed-import list, settings snapshot, and manual starts. */
+/** Fetcher page section: failed-import automation plus persisted ``fetcher_jobs`` history (all kinds on this lane). */
 export function FetcherFailedImportsWorkspace() {
-  const [filter, setFilter] = useState<FailedImportInspectionFilter>("terminal");
+  const [filter, setFilter] = useState<FetcherJobsInspectionFilter>("terminal");
   const me = useMeQuery();
   const rv = useFailedImportFetcherSettingsQuery();
-  const q = useFailedImportTasksInspectionQuery(filter);
+  const q = useFetcherJobsInspectionQuery(filter);
   const recoverMutation = useFailedImportRecoverMutation();
 
   useEffect(() => {
@@ -392,9 +393,9 @@ export function FetcherFailedImportsWorkspace() {
             data-testid="fetcher-failed-imports-status-filter"
             className="mm-fetcher-fi-inspection__select mt-1 w-full max-w-xl rounded border border-[var(--mm-border)] bg-[var(--mm-slate)] px-2 py-1.5 text-sm text-[var(--mm-text)]"
             value={filter}
-            onChange={(e) => setFilter(e.target.value as FailedImportInspectionFilter)}
+            onChange={(e) => setFilter(e.target.value as FetcherJobsInspectionFilter)}
           >
-            {FAILED_IMPORT_INSPECTION_FILTER_OPTIONS.map((o) => (
+            {FETCHER_JOBS_INSPECTION_FILTER_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>
@@ -427,7 +428,7 @@ export function FetcherFailedImportsWorkspace() {
           </p>
         ) : null}
         {isEmpty ? (
-          <p className="mm-card__body" data-testid="fetcher-failed-imports-inspection-empty">
+          <p className="mm-card__body" data-testid="fetcher-jobs-inspection-empty">
             {FETCHER_FI_LIST_EMPTY}
           </p>
         ) : (

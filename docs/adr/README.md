@@ -15,5 +15,5 @@ ADRs in this folder capture **locked** structural and platform choices for this 
 | [ADR-0005](ADR-0005-reserved-number.md) | Reserved number (no document) |
 | [ADR-0006](ADR-0006-reserved-number.md) | Reserved number (no document) |
 | [ADR-0007](ADR-0007-module-owned-worker-lanes.md) | Module-owned worker lanes (SQLite) |
-| [ADR-0008](ADR-0008-mediomop-settings-aggregate-runtime-config.md) | `MediaMopSettings` aggregate for runtime configuration |
+| [ADR-0008](ADR-0008-mediamop-settings-aggregate-runtime-config.md) | `MediaMopSettings` aggregate for runtime configuration |
 | [ADR-0009](ADR-0009-suite-wide-timing-isolation.md) | Suite-wide timing isolation (durable work) |

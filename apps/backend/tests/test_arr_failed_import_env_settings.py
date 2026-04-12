@@ -78,7 +78,7 @@ def test_pending_unknown_remain_non_destructive_via_resolved_radarr_policy() -> 
     assert decide_failed_import_cleanup_eligibility("no known phrases", p).cleanup_eligible is False
 
 
-def test_mediomop_settings_radarr_and_sonarr_policies_delegate_to_bundle() -> None:
+def test_failed_import_cleanup_policies_delegate_through_media_mop_settings() -> None:
     base = MediaMopSettings.load()
     bundle = FailedImportCleanupSettingsBundle(
         radarr=AppFailedImportCleanupPolicySettings(remove_quality_rejections=True),

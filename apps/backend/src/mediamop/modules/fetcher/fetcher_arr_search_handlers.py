@@ -73,7 +73,7 @@ def build_fetcher_arr_search_job_handlers(
     """Handlers keyed by :data:`FETCHER_ARR_SEARCH_JOB_KINDS`."""
 
     def _missing_sonarr(ctx: FetcherJobWorkContext) -> None:
-        if not settings.fetcher_sonarr_search_missing_enabled:
+        if not settings.fetcher_sonarr_missing_search_enabled:
             return
         manual = _parse_manual(ctx.payload_json)
         now = utc_now()
@@ -137,7 +137,7 @@ def build_fetcher_arr_search_job_handlers(
             logger.warning("%s", " | ".join(warnings))
 
     def _missing_radarr(ctx: FetcherJobWorkContext) -> None:
-        if not settings.fetcher_radarr_search_missing_enabled:
+        if not settings.fetcher_radarr_missing_search_enabled:
             return
         manual = _parse_manual(ctx.payload_json)
         now = utc_now()
@@ -201,7 +201,7 @@ def build_fetcher_arr_search_job_handlers(
             logger.warning("%s", " | ".join(warnings))
 
     def _upgrade_sonarr(ctx: FetcherJobWorkContext) -> None:
-        if not settings.fetcher_sonarr_search_upgrade_enabled:
+        if not settings.fetcher_sonarr_upgrade_search_enabled:
             return
         manual = _parse_manual(ctx.payload_json)
         now = utc_now()
@@ -264,7 +264,7 @@ def build_fetcher_arr_search_job_handlers(
             logger.warning("%s", " | ".join(warnings))
 
     def _upgrade_radarr(ctx: FetcherJobWorkContext) -> None:
-        if not settings.fetcher_radarr_search_upgrade_enabled:
+        if not settings.fetcher_radarr_upgrade_search_enabled:
             return
         manual = _parse_manual(ctx.payload_json)
         now = utc_now()

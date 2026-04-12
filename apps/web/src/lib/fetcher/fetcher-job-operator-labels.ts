@@ -1,18 +1,18 @@
 /**
- * Operator-facing copy for failed-import drive inspection (must stay aligned with
- * ``mediamop.modules.fetcher.failed_import_drive_job_kinds`` on the backend).
+ * Operator-facing labels for persisted ``fetcher_jobs`` rows (failed-import drives, Arr search, and any
+ * future kinds). Keep string constants aligned with backend ``job_kind`` / dedupe contracts.
  */
 
 export const FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE = "failed_import.radarr.cleanup_drive.v1" as const;
 export const FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE = "failed_import.sonarr.cleanup_drive.v1" as const;
 
-/** Arr search ``job_kind`` values (Fetcher lane; aligned with ``fetcher_search_job_kinds``). */
+/** Arr search ``job_kind`` values (Fetcher lane). */
 export const FETCHER_ARR_SEARCH_JOB_KIND_SONARR_MISSING = "missing_search.sonarr.monitored_episodes.v1" as const;
 export const FETCHER_ARR_SEARCH_JOB_KIND_RADARR_MISSING = "missing_search.radarr.monitored_movies.v1" as const;
 export const FETCHER_ARR_SEARCH_JOB_KIND_SONARR_UPGRADE = "upgrade_search.sonarr.cutoff_unmet.v1" as const;
 export const FETCHER_ARR_SEARCH_JOB_KIND_RADARR_UPGRADE = "upgrade_search.radarr.cutoff_unmet.v1" as const;
 
-/** Canonical drive ``job_kind`` values surfaced on the Fetcher failed-imports page. */
+/** Canonical failed-import cleanup drive ``job_kind`` values. */
 export const FETCHER_FAILED_IMPORT_DRIVE_JOB_KINDS = [
   FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE,
   FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE,
@@ -32,7 +32,7 @@ const OPERATOR_LABEL_BY_ARR_SEARCH_JOB_KIND: Record<string, string> = {
   [FETCHER_ARR_SEARCH_JOB_KIND_RADARR_UPGRADE]: "Radarr upgrade search",
 };
 
-/** Dedupe keys for the long-lived drive rows (aligned with enqueue modules). */
+/** Dedupe keys for the long-lived failed-import drive rows (aligned with enqueue modules). */
 export const FAILED_IMPORT_DRIVE_DEDUPE_KEY_RADARR = "failed_import.radarr.cleanup_drive:v1" as const;
 export const FAILED_IMPORT_DRIVE_DEDUPE_KEY_SONARR = "failed_import.sonarr.cleanup_drive:v1" as const;
 
@@ -62,7 +62,7 @@ const OPERATOR_LABEL_BY_DRIVE_DEDUPE_KEY: Record<string, string> = {
   ],
 };
 
-export function failedImportDriveJobKindOperatorLabel(jobKind: string): string {
+export function fetcherJobKindOperatorLabel(jobKind: string): string {
   if (jobKind === FAILED_IMPORT_JOB_KIND_RADARR_CLEANUP_DRIVE || jobKind === FAILED_IMPORT_JOB_KIND_SONARR_CLEANUP_DRIVE) {
     return OPERATOR_LABEL_BY_FAILED_IMPORT_DRIVE_JOB_KIND[jobKind];
   }
@@ -74,14 +74,13 @@ export function failedImportDriveJobKindOperatorLabel(jobKind: string): string {
 }
 
 /**
- * Primary label for the stable dedupe column. Known production keys map to the same
- * operator labels as drive job kinds; otherwise fall back to the work-type label so
- * the default table view does not emphasize internal identifiers.
+ * Primary label for the stable dedupe column. Known production keys map to friendly labels;
+ * otherwise fall back to the job-kind label so the default table view does not emphasize internal ids.
  */
-export function failedImportDriveStableKeyOperatorLabel(dedupeKey: string, jobKind: string): string {
+export function fetcherJobDedupeKeyOperatorLabel(dedupeKey: string, jobKind: string): string {
   const mapped = OPERATOR_LABEL_BY_DRIVE_DEDUPE_KEY[dedupeKey];
   if (mapped) {
     return mapped;
   }
-  return failedImportDriveJobKindOperatorLabel(jobKind);
+  return fetcherJobKindOperatorLabel(jobKind);
 }

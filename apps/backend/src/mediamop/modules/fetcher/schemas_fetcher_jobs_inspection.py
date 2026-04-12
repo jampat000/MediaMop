@@ -1,4 +1,4 @@
-"""Pydantic shapes for read-only ``fetcher_jobs`` listings (failed-import inspection API)."""
+"""Pydantic shapes for read-only ``fetcher_jobs`` listings (Fetcher jobs inspection API)."""
 
 from __future__ import annotations
 

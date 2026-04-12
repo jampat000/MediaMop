@@ -1,7 +1,8 @@
 """Shared *arr download-queue failed-import rules (classification, policy, env toggles).
 
 Neutral between Refiner and Fetcher so neither module imports the other for this domain.
-Fetcher owns orchestration and HTTP-facing surfaces; Refiner runs queued jobs using ports.
+Fetcher owns ``fetcher_jobs`` orchestration and the operator HTTP surfaces for failed-import drives;
+Refiner may consume these rules via narrow ports without owning the Fetcher job table.
 """
 
 from __future__ import annotations

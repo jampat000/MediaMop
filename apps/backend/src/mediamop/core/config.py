@@ -103,11 +103,11 @@ class MediaMopSettings:
     failed_import_radarr_cleanup_drive_schedule_interval_seconds: int
     failed_import_sonarr_cleanup_drive_schedule_enabled: bool
     failed_import_sonarr_cleanup_drive_schedule_interval_seconds: int
-    # Fetcher Arr search (missing / upgrade) — env ``MEDIAMOP_FETCHER_*`` (not Refiner).
-    fetcher_sonarr_search_missing_enabled: bool
-    fetcher_sonarr_search_upgrade_enabled: bool
-    fetcher_radarr_search_missing_enabled: bool
-    fetcher_radarr_search_upgrade_enabled: bool
+    # Fetcher Arr search (missing / upgrade) — env ``MEDIAMOP_FETCHER_*_{MISSING|UPGRADE}_SEARCH_ENABLED`` (not Refiner).
+    fetcher_sonarr_missing_search_enabled: bool
+    fetcher_sonarr_upgrade_search_enabled: bool
+    fetcher_radarr_missing_search_enabled: bool
+    fetcher_radarr_upgrade_search_enabled: bool
     # Four independent lanes: ``missing_search.{sonarr,radarr}.*`` and ``upgrade_search.{sonarr,radarr}.*``.
     # Each has its own batch limit, retry/cooldown minutes, and schedule window (no cross-lane coupling).
     fetcher_sonarr_missing_search_max_items_per_run: int
@@ -224,10 +224,35 @@ class MediaMopSettings:
         def _clamp_search_iv(n: int) -> int:
             return _clamp_failed_import_cleanup_drive_schedule_interval_seconds(n)
 
-        son_miss_on = _env_bool("MEDIAMOP_FETCHER_SONARR_SEARCH_MISSING_ENABLED", True)
-        son_up_on = _env_bool("MEDIAMOP_FETCHER_SONARR_SEARCH_UPGRADE_ENABLED", True)
-        rad_miss_on = _env_bool("MEDIAMOP_FETCHER_RADARR_SEARCH_MISSING_ENABLED", True)
-        rad_up_on = _env_bool("MEDIAMOP_FETCHER_RADARR_SEARCH_UPGRADE_ENABLED", True)
+        def _arr_search_lane_enabled(primary: str, legacy: str, default: bool) -> bool:
+            """Prefer lane-prefixed env; accept legacy ``*_SEARCH_{MISSING|UPGRADE}_*`` spelling for migration."""
+
+            if primary in os.environ:
+                return _env_bool(primary, default)
+            if legacy in os.environ:
+                return _env_bool(legacy, default)
+            return default
+
+        son_miss_on = _arr_search_lane_enabled(
+            "MEDIAMOP_FETCHER_SONARR_MISSING_SEARCH_ENABLED",
+            "MEDIAMOP_FETCHER_SONARR_SEARCH_MISSING_ENABLED",
+            True,
+        )
+        son_up_on = _arr_search_lane_enabled(
+            "MEDIAMOP_FETCHER_SONARR_UPGRADE_SEARCH_ENABLED",
+            "MEDIAMOP_FETCHER_SONARR_SEARCH_UPGRADE_ENABLED",
+            True,
+        )
+        rad_miss_on = _arr_search_lane_enabled(
+            "MEDIAMOP_FETCHER_RADARR_MISSING_SEARCH_ENABLED",
+            "MEDIAMOP_FETCHER_RADARR_SEARCH_MISSING_ENABLED",
+            True,
+        )
+        rad_up_on = _arr_search_lane_enabled(
+            "MEDIAMOP_FETCHER_RADARR_UPGRADE_SEARCH_ENABLED",
+            "MEDIAMOP_FETCHER_RADARR_SEARCH_UPGRADE_ENABLED",
+            True,
+        )
 
         _retry_cap = 365 * 24 * 60
         _items_cap = 1000
@@ -383,10 +408,10 @@ class MediaMopSettings:
             failed_import_radarr_cleanup_drive_schedule_interval_seconds=radarr_sched_iv,
             failed_import_sonarr_cleanup_drive_schedule_enabled=sonarr_sched_on,
             failed_import_sonarr_cleanup_drive_schedule_interval_seconds=sonarr_sched_iv,
-            fetcher_sonarr_search_missing_enabled=son_miss_on,
-            fetcher_sonarr_search_upgrade_enabled=son_up_on,
-            fetcher_radarr_search_missing_enabled=rad_miss_on,
-            fetcher_radarr_search_upgrade_enabled=rad_up_on,
+            fetcher_sonarr_missing_search_enabled=son_miss_on,
+            fetcher_sonarr_upgrade_search_enabled=son_up_on,
+            fetcher_radarr_missing_search_enabled=rad_miss_on,
+            fetcher_radarr_upgrade_search_enabled=rad_up_on,
             fetcher_sonarr_missing_search_max_items_per_run=son_miss_max,
             fetcher_sonarr_missing_search_retry_delay_minutes=son_miss_retry,
             fetcher_sonarr_missing_search_schedule_enabled=son_miss_win_on,

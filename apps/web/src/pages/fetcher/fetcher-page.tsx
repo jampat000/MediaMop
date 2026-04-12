@@ -24,8 +24,9 @@ export function FetcherPage() {
         <p className="mm-page__eyebrow">MediaMop</p>
         <h1 className="mm-page__title">Fetcher</h1>
         <p className="mm-page__subtitle">
-          Fetcher handles failed imports in <strong>Radarr</strong> and <strong>Sonarr</strong> and shows whether your
-          Fetcher service answered on recent checks.
+          Fetcher in this app runs <strong>Radarr</strong> and <strong>Sonarr</strong> work on the Fetcher lane:
+          download-queue failed-import cleanup drives, Arr missing/upgrade search jobs (same persisted job list), and
+          reachability checks against your configured Fetcher service URL.
         </p>
       </header>
 

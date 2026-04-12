@@ -22,7 +22,7 @@ The **MediaMop** product in this monorepo includes the FastAPI backend and the V
 
 5. **Worker lanes and durable jobs** follow [ADR-0007 — Module-owned worker lanes](ADR-0007-module-owned-worker-lanes.md) (SQLite, per-module tables and pools).
 
-6. **Process-wide env and `MediaMopSettings`** remain a deliberate aggregate at current scale; see [ADR-0008 — `MediaMopSettings` aggregate](ADR-0008-mediomop-settings-aggregate-runtime-config.md).
+6. **Process-wide env and `MediaMopSettings`** remain a deliberate aggregate at current scale; see [ADR-0008 — `MediaMopSettings` aggregate](ADR-0008-mediamop-settings-aggregate-runtime-config.md).
 
 ## Consequences
 

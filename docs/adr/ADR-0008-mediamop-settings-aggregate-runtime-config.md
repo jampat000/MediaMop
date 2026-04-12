@@ -32,8 +32,9 @@ Module-owned worker lanes (see [ADR-0007](ADR-0007-module-owned-worker-lanes.md)
    - ADR-0007 owns **where durable jobs live** and **which worker pool** runs them. `MediaMopSettings` owns **how many Fetcher/Refiner workers** the process starts and **which ARR endpoints** those workers call. That is orthogonal composition: lanes are data-plane tables; settings are control-plane env.
 
 6. **Fetcher Arr search keys on `MediaMopSettings`**
-   - Missing/upgrade search for Sonarr and Radarr use **four distinct field groups** on the aggregate (`fetcher_*_{missing|upgrade}_search_*` for max batch, retry delay minutes, schedule window fields).
-   - Legacy `MEDIAMOP_FETCHER_SONARR_SEARCH_*` / `MEDIAMOP_FETCHER_RADARR_SEARCH_*` environment variables are read **only** inside `MediaMopSettings.load()` when a lane-specific env key is absent. They supply **defaults** at load time; they do **not** create one shared dataclass field serving two lanes at runtime.
+   - Missing/upgrade search for Sonarr and Radarr use **four distinct field groups** on the aggregate (`fetcher_*_{missing|upgrade}_search_*` for enable flags, max batch, retry delay minutes, schedule window fields).
+   - Lane-prefixed enable env is `MEDIAMOP_FETCHER_{SONARR|RADARR}_{MISSING|UPGRADE}_SEARCH_ENABLED`. Legacy `MEDIAMOP_FETCHER_{SONARR|RADARR}_SEARCH_{MISSING|UPGRADE}_ENABLED` is still read when the lane-prefixed key is absent.
+   - Other legacy `MEDIAMOP_FETCHER_SONARR_SEARCH_*` / `MEDIAMOP_FETCHER_RADARR_SEARCH_*` environment variables are read **only** inside `MediaMopSettings.load()` when a lane-specific env key is absent. They supply **defaults** at load time; they do **not** create one shared dataclass field serving two lanes at runtime.
    - Cross-lane timing contracts (no shared cooldowns, schedules, or pruning between families) are **locked in [ADR-0009](ADR-0009-suite-wide-timing-isolation.md)**.
 
 7. **Why `platform/settings` is not the owner of module-specific runtime config today**

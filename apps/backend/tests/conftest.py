@@ -58,6 +58,6 @@ def client_with_viewer() -> TestClient:
 
 @pytest.fixture
 def failed_import_queue_worker_runtime_bundle():
-    """Production Fetcher ports for Refiner failed-import handlers (tests that build production handlers)."""
+    """Production ``FailedImportQueueWorkerPorts`` bundle for tests that wire the Fetcher worker registry."""
 
     return build_failed_import_queue_worker_runtime_bundle()

@@ -47,10 +47,10 @@ export function FetcherAutomationSummaryStrip() {
       <section
         className="mm-card mm-dash-card mm-fetcher-module-surface mt-6"
         aria-busy="true"
-        aria-label="Automation summary"
+        aria-label="Failed-import automation summary"
         data-testid="fetcher-automation-summary"
       >
-        <p className="mm-card__body text-sm text-[var(--mm-text3)]">Loading automation summary…</p>
+        <p className="mm-card__body text-sm text-[var(--mm-text3)]">Loading failed-import automation summary…</p>
       </section>
     );
   }
@@ -59,10 +59,12 @@ export function FetcherAutomationSummaryStrip() {
     return (
       <section
         className="mm-card mm-dash-card mm-fetcher-module-surface mt-6 border-amber-600/40"
-        aria-label="Automation summary"
+        aria-label="Failed-import automation summary"
         data-testid="fetcher-automation-summary"
       >
-        <p className="mm-card__body text-sm text-[var(--mm-text2)]">Could not load automation summary.</p>
+        <p className="mm-card__body text-sm text-[var(--mm-text2)]">
+          Could not load failed-import automation summary.
+        </p>
       </section>
     );
   }
@@ -76,7 +78,7 @@ export function FetcherAutomationSummaryStrip() {
       data-testid="fetcher-automation-summary"
     >
       <h2 id="fetcher-automation-summary-heading" className="mm-card__title text-lg">
-        Automation summary
+        Failed-import automation summary
       </h2>
       <p className="mm-card__body mm-card__body--tight text-sm text-[var(--mm-text3)]">{d.scope_note}</p>
       {d.automation_slots_note ? (

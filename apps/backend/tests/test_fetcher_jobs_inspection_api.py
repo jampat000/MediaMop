@@ -1,4 +1,4 @@
-"""Authenticated read-only ``GET /api/v1/fetcher/failed-imports/inspection``."""
+"""Authenticated read-only ``GET /api/v1/fetcher/jobs/inspection`` (all ``fetcher_jobs`` kinds)."""
 
 from __future__ import annotations
 
@@ -94,17 +94,25 @@ def _seed_mixed_status_rows() -> None:
         db.commit()
 
 
-def test_fetcher_failed_imports_inspection_requires_auth(client_with_admin: TestClient) -> None:
-    r = client_with_admin.get("/api/v1/fetcher/failed-imports/inspection")
+def test_fetcher_jobs_inspection_requires_auth(client_with_admin: TestClient) -> None:
+    r = client_with_admin.get("/api/v1/fetcher/jobs/inspection")
     assert r.status_code == 401
 
 
-def test_fetcher_failed_imports_inspection_default_returns_only_terminal_states(
+def test_fetcher_failed_imports_inspection_legacy_route_returns_404(client_with_admin: TestClient) -> None:
+    """Old path implied failed-import-only scope; it must not answer after the neutral move."""
+
+    _login(client_with_admin)
+    r = client_with_admin.get("/api/v1/fetcher/failed-imports/inspection")
+    assert r.status_code == 404
+
+
+def test_fetcher_jobs_inspection_default_returns_only_terminal_states(
     client_with_admin: TestClient,
 ) -> None:
     _seed_mixed_status_rows()
     _login(client_with_admin)
-    r = client_with_admin.get("/api/v1/fetcher/failed-imports/inspection?limit=20")
+    r = client_with_admin.get("/api/v1/fetcher/jobs/inspection?limit=20")
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["default_terminal_only"] is True
@@ -131,10 +139,10 @@ def test_fetcher_failed_imports_inspection_default_returns_only_terminal_states(
         assert "updated_at" in j
 
 
-def test_fetcher_failed_imports_inspection_status_filter_includes_pending(client_with_admin: TestClient) -> None:
+def test_fetcher_jobs_inspection_status_filter_includes_pending(client_with_admin: TestClient) -> None:
     _seed_mixed_status_rows()
     _login(client_with_admin)
-    r = client_with_admin.get("/api/v1/fetcher/failed-imports/inspection?status=pending&limit=10")
+    r = client_with_admin.get("/api/v1/fetcher/jobs/inspection?status=pending&limit=10")
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["default_terminal_only"] is False
@@ -142,7 +150,7 @@ def test_fetcher_failed_imports_inspection_status_filter_includes_pending(client
     assert all(j["status"] == FetcherJobStatus.PENDING.value for j in body["jobs"])
 
 
-def test_fetcher_failed_imports_inspection_invalid_status_422(client_with_admin: TestClient) -> None:
+def test_fetcher_jobs_inspection_invalid_status_422(client_with_admin: TestClient) -> None:
     _login(client_with_admin)
-    r = client_with_admin.get("/api/v1/fetcher/failed-imports/inspection?status=not_a_real_status")
+    r = client_with_admin.get("/api/v1/fetcher/jobs/inspection?status=not_a_real_status")
     assert r.status_code == 422

@@ -81,4 +81,4 @@ If an operator leaves lane-specific env unset, **legacy fallback env** may popul
 ## Related
 
 - [ADR-0007](ADR-0007-module-owned-worker-lanes.md) — module-owned queues and `job_kind` prefixes.
-- [ADR-0008](ADR-0008-mediomop-settings-aggregate-runtime-config.md) — where lane-specific env maps into `MediaMopSettings`.
+- [ADR-0008](ADR-0008-mediamop-settings-aggregate-runtime-config.md) — where lane-specific env maps into `MediaMopSettings`.
