@@ -88,7 +88,14 @@ export function AppShell() {
               className="mm-sidebar-signout"
               disabled={logout.isPending}
               onClick={() => {
-                void logout.mutateAsync().then(() => navigate("/login", { replace: true }));
+                void logout
+                  .mutateAsync()
+                  .catch(() => {
+                    // Always return to login even if API logout fails.
+                  })
+                  .finally(() => {
+                    navigate("/login", { replace: true });
+                  });
               }}
             >
               {logout.isPending ? "Signing out…" : "Sign out"}
