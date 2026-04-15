@@ -59,6 +59,7 @@ def test_scan_handler_enqueues_remux_when_requested(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setenv("MEDIAMOP_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
     monkeypatch.setenv("MEDIAMOP_ARR_RADARR_BASE_URL", "http://127.0.0.1:9")
     monkeypatch.setenv("MEDIAMOP_ARR_RADARR_API_KEY", "k")
     settings = MediaMopSettings.load()

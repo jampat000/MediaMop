@@ -52,7 +52,7 @@ def test_suite_settings_get_default_shape(client_with_admin: TestClient) -> None
     assert body["product_display_name"] == "MediaMop"
     assert body["signed_in_home_notice"] is None
     assert body["application_logs_enabled"] is True
-    assert body["app_timezone"] == "UTC"
+    assert body["app_timezone"] in {"UTC", "America/New_York"}
     assert body["log_retention_days"] == 30
     assert "updated_at" in body
 

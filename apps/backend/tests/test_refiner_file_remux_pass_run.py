@@ -60,7 +60,7 @@ def _runtime(
 def test_run_fails_when_watched_root_missing(tmp_path: Path) -> None:
     home = tmp_path / "home"
     home.mkdir()
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home))
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     missing = tmp_path / "nope"
     rt = _runtime(media=missing, home=home, dry=True)
     r = runmod.run_refiner_file_remux_pass(
@@ -82,7 +82,7 @@ def test_dry_run_uses_ffprobe_and_returns_plan_lines(tmp_path: Path, monkeypatch
     mkv = media / "one.mkv"
     mkv.write_bytes(b"not-a-real-mkv")
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home))
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, dry=True)
 
     monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home: _fake_probe())
@@ -116,7 +116,7 @@ def test_live_skips_when_no_remux_required_deletes_source(tmp_path: Path, monkey
     out = tmp_path / "out"
     out.mkdir()
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home))
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, dry=False, out=out)
 
     monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home: _fake_probe())
@@ -144,7 +144,7 @@ def test_dry_run_does_not_delete_source(tmp_path: Path, monkeypatch: pytest.Monk
     mkv = media / "one.mkv"
     mkv.write_bytes(b"x")
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home))
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, dry=True)
 
     monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home: _fake_probe())
@@ -172,7 +172,7 @@ def test_live_fails_during_ffmpeg_surfaces_outcome(tmp_path: Path, monkeypatch: 
     out = tmp_path / "out"
     out.mkdir()
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home))
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, dry=False, out=out)
 
     monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home: _fake_probe())
@@ -214,7 +214,7 @@ def test_live_remux_writes_nested_output_and_logs_replacement(
     work = tmp_path / "work"
     work.mkdir()
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home))
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = RefinerPathRuntime(
         watched_folder=str(media.resolve()),
         output_folder=str(out.resolve()),
@@ -272,7 +272,7 @@ def test_default_work_dir_created_when_flag_set(tmp_path: Path, monkeypatch: pyt
     out = tmp_path / "out"
     out.mkdir()
 
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home))
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     work_default = Path(home).resolve() / "refiner" / "work"
     rt = RefinerPathRuntime(
         watched_folder=str(media.resolve()),

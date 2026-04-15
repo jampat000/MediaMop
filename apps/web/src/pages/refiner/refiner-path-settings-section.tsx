@@ -46,6 +46,8 @@ export function RefinerPathSettingsSection() {
     (tvWatched !== (q.data.refiner_tv_watched_folder ?? "") ||
       tvWork !== (q.data.refiner_tv_work_folder ?? "") ||
       tvOutput !== (q.data.refiner_tv_output_folder ?? ""));
+  const tvNeedsOutput = tvWatched.trim().length > 0;
+  const tvOutputMissing = tvNeedsOutput && tvOutput.trim().length === 0;
 
   if (q.isPending || me.isPending) {
     return <PageLoading label="Loading Refiner path settings" />;
@@ -117,7 +119,7 @@ export function RefinerPathSettingsSection() {
                 value={tvWatched}
                 disabled={!editable || save.isPending}
                 onChange={(e) => setTvWatched(e.target.value)}
-                placeholder="Leave blank until you run TV checks or one-file runs"
+                placeholder=""
               />
             </label>
             <label className="block">
@@ -142,17 +144,22 @@ export function RefinerPathSettingsSection() {
                 value={tvOutput}
                 disabled={!editable || save.isPending}
                 onChange={(e) => setTvOutput(e.target.value)}
-                placeholder="Required when TV watched folder is set"
+                placeholder=""
               />
             </label>
+            {tvOutputMissing ? (
+              <p className="text-xs text-amber-200/90">
+                Add a TV output folder before saving while TV watched folder is set.
+              </p>
+            ) : null}
             <div className="pt-2">
               <button
                 type="button"
                 className={mmActionButtonClass({
                   variant: "primary",
-                  disabled: !editable || !tvDirty || save.isPending,
+                  disabled: !editable || !tvDirty || save.isPending || tvOutputMissing,
                 })}
-                disabled={!editable || !tvDirty || save.isPending}
+                disabled={!editable || !tvDirty || save.isPending || tvOutputMissing}
                 onClick={() =>
                   save.mutate({
                     refiner_watched_folder: (q.data?.refiner_watched_folder ?? "").trim()
@@ -188,7 +195,7 @@ export function RefinerPathSettingsSection() {
                 value={watched}
                 disabled={!editable || save.isPending}
                 onChange={(e) => setWatched(e.target.value)}
-                placeholder="Leave blank until you run Movies checks or one-file runs"
+                placeholder=""
               />
             </label>
             <label className="block">
@@ -206,14 +213,14 @@ export function RefinerPathSettingsSection() {
             </label>
             <label className="block">
               <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-                Output folder <span className="text-red-300">(required)</span>
+                Output folder
               </span>
               <input
                 className={mmEditableTextFieldClass}
                 value={output}
                 disabled={!editable || save.isPending}
                 onChange={(e) => setOutput(e.target.value)}
-                placeholder="Existing directory"
+                placeholder=""
                 required
               />
             </label>
@@ -256,7 +263,7 @@ export function RefinerPathSettingsSection() {
         </p>
       ) : null}
 
-      {save.isSuccess && !dirty ? (
+      {save.isSuccess && !moviesDirty && !tvDirty ? (
         <p className="mt-3 text-xs text-[var(--mm-text3)]" data-testid="refiner-path-settings-saved-hint">
           Saved.
         </p>
