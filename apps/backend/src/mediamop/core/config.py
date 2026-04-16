@@ -122,6 +122,8 @@ class MediaMopSettings:
     refiner_watched_folder_min_file_age_seconds: int
     # Refiner Pass 3a — Movies output-folder cleanup minimum age (env at process start; not the watched-folder scan gate).
     refiner_movie_output_cleanup_min_age_seconds: int
+    # Refiner Pass 3b — TV output-folder cleanup minimum age (direct-child episode media; env at process start).
+    refiner_tv_output_cleanup_min_age_seconds: int
     # Refiner work/temp stale sweep (``refiner.work_temp_stale_sweep.v1``) — per-scope periodic enqueue.
     refiner_work_temp_stale_sweep_movie_schedule_enabled: bool
     refiner_work_temp_stale_sweep_movie_schedule_interval_seconds: int
@@ -316,6 +318,10 @@ class MediaMopSettings:
         refiner_movie_output_min_age = max(
             3600,
             min(30 * 24 * 3600, _env_int("MEDIAMOP_REFINER_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS", 48 * 3600)),
+        )
+        refiner_tv_output_min_age = max(
+            3600,
+            min(30 * 24 * 3600, _env_int("MEDIAMOP_REFINER_TV_OUTPUT_CLEANUP_MIN_AGE_SECONDS", 48 * 3600)),
         )
         _legacy_temp_sweep_sched_env = "MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_SCHEDULE_ENABLED"
         _legacy_temp_sweep_iv_env = "MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_SCHEDULE_INTERVAL_SECONDS"
@@ -576,6 +582,7 @@ class MediaMopSettings:
             refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run=refiner_wf_scan_periodic_remux_dry,
             refiner_watched_folder_min_file_age_seconds=refiner_min_file_age,
             refiner_movie_output_cleanup_min_age_seconds=refiner_movie_output_min_age,
+            refiner_tv_output_cleanup_min_age_seconds=refiner_tv_output_min_age,
             refiner_work_temp_stale_sweep_movie_schedule_enabled=refiner_temp_sweep_movie_on,
             refiner_work_temp_stale_sweep_movie_schedule_interval_seconds=refiner_temp_sweep_movie_iv,
             refiner_work_temp_stale_sweep_tv_schedule_enabled=refiner_temp_sweep_tv_on,

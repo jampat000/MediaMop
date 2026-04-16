@@ -41,6 +41,8 @@ def test_refiner_runtime_settings_operator_shape(client_with_admin: TestClient) 
     assert "refiner_watched_folder_min_file_age_seconds" in body
     assert "refiner_movie_output_cleanup_min_age_seconds" in body
     assert "movie_output_cleanup_configuration_note" in body
+    assert "refiner_tv_output_cleanup_min_age_seconds" in body
+    assert "tv_output_cleanup_configuration_note" in body
     assert "refiner_work_temp_stale_sweep_movie_schedule_enabled" in body
     assert "refiner_work_temp_stale_sweep_movie_schedule_interval_seconds" in body
     assert "refiner_work_temp_stale_sweep_tv_schedule_enabled" in body

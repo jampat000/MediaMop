@@ -79,6 +79,22 @@ export function RefinerRuntimeSettingsSection() {
         <p className="mt-2 text-xs text-[var(--mm-text3)]">{d.movie_output_cleanup_configuration_note}</p>
       </details>
 
+      <h3 className="mt-7 text-sm font-semibold text-[var(--mm-text)]">TV output folder cleanup</h3>
+      <p className="mt-1 text-[var(--mm-text3)]">
+        After a successful TV remux pass, Refiner may delete the whole season folder under your TV output library when
+        Sonarr confirms no kept episode file still lives in that folder, direct-child episode media is old enough, and
+        no other TV remux pass is active for the same season output path. Movies output cleanup is separate.
+      </p>
+      <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-[var(--mm-text2)]">
+        <li>Minimum direct-child episode freshness gate: {d.refiner_tv_output_cleanup_min_age_seconds} seconds</li>
+      </ul>
+      <details className="mt-4 rounded-md border border-[var(--mm-border)] bg-black/10 p-3">
+        <summary className="cursor-pointer text-sm font-medium text-[var(--mm-text1)]">
+          Advanced TV output cleanup configuration
+        </summary>
+        <p className="mt-2 text-xs text-[var(--mm-text3)]">{d.tv_output_cleanup_configuration_note}</p>
+      </details>
+
       <h3 className="mt-7 text-sm font-semibold text-[var(--mm-text)]">Work folder temp cleanup</h3>
       <p className="mt-1 text-[var(--mm-text3)]">
         Optional periodic jobs remove stale Refiner temp files under your saved Movies and TV work folders only (never
@@ -119,6 +135,10 @@ export function RefinerRuntimeSettingsSection() {
           <li>
             Movies output folder cleanup: after a Movies remux, may remove the per-title output folder when Radarr library
             paths, age, and active-job gates allow it (never TV).
+          </li>
+          <li>
+            TV output folder cleanup: after a TV remux, may remove the per-season output folder when Sonarr episode file
+            paths, direct-child episode age, and active TV remux gates allow it (never Movies).
           </li>
         </ul>
       </details>

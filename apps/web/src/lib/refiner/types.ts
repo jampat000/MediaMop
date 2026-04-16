@@ -50,6 +50,8 @@ export type RefinerRuntimeSettingsOut = {
   refiner_watched_folder_min_file_age_seconds: number;
   refiner_movie_output_cleanup_min_age_seconds: number;
   movie_output_cleanup_configuration_note: string;
+  refiner_tv_output_cleanup_min_age_seconds: number;
+  tv_output_cleanup_configuration_note: string;
   watched_folder_scan_periodic_configuration_note: string;
   refiner_work_temp_stale_sweep_movie_schedule_enabled: boolean;
   refiner_work_temp_stale_sweep_movie_schedule_interval_seconds: number;

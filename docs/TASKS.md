@@ -12,6 +12,7 @@ Single canonical backlog for shipped milestones and the next honest slice of wor
 - [x] Refiner path model shipped (persisted watched / work / output; containment and lifecycle rules locked).
 - [x] Refiner work/temp stale sweep (Pass 2 + 13b): per-scope periodic ``refiner.work_temp_stale_sweep.v1`` (Movies vs TV independent gates, dedupe, schedule, reporting; shared-root fail-safe; shared min-stale-age only as documented exception).
 - [x] Refiner Pass 3a (Movies output-folder cleanup): after successful Movies remux, optional full per-title output folder delete when Radarr library has no ``movieFile`` path inside that folder, age + active Movies remux gates pass; cascade bounded to output root; ``refiner_movie_output_cleanup.py``.
+- [x] Refiner Pass 3b (TV output-folder cleanup): after successful TV remux, optional full season output folder delete when Sonarr episode-file library paths, age (direct-child episode media only), and active TV remux gates pass; show-folder cascade bounded to TV output root; ``refiner_tv_output_cleanup.py``.
 - [x] Refiner watched-folder scanning family shipped: `refiner.watched_folder.remux_scan_dispatch.v1` (manual trigger, media scan, gate-equivalent ownership/blocking, optional remux enqueue, duplicate guard, activity summary, Refiner page UI + POST enqueue API).
 - [x] Refiner jobs inspection / operator control surface: `GET …/refiner/jobs/inspection`, Refiner page queue table, `POST …/refiner/jobs/{id}/cancel-pending` (pending-only; operators); finished outcomes remain on Activity.
 - [x] Refiner watched-folder periodic scanning: optional Refiner-only asyncio enqueue loop for `refiner.watched_folder.remux_scan_dispatch.v1` (separate env enable/interval + periodic remux flags from supplied payload evaluation); scan-level idle guard; `scan_trigger` in activity summary; runtime settings snapshot + UI honesty (restart required).
@@ -220,6 +221,27 @@ Single canonical backlog for shipped milestones and the next honest slice of wor
 ### 14 — status
 
 - [x] **Pass 3a shipped** — ``refiner_movie_output_cleanup.py`` (Radarr ``GET /api/v3/movie`` truth gate, min-age env, same-``relative_media_path`` active Movies remux gate, dry-run + lock handling, output-root-bounded cascade), ``refiner_file_remux_pass_run.py`` post-success hook, ``MediaMopSettings`` + runtime snapshot + web Workers copy, ``test_refiner_movie_output_cleanup.py``.
+
+## Roadmap item 15 — Refiner Pass 3b (TV output-folder season / show cleanup)
+
+**Scope (explicit):** **TV only** (``media_scope=tv``). Deletes the **immediate parent folder of the written episode file** (the **season output folder**) under the resolved **TV output root** when all gates pass, then cascades empty parents up to but not including the TV output root. **No** Movies output cleanup, **no** watched-folder Pass 1/1b, **no** work/temp Pass 2, **no** change to Pass 3a.
+
+**Completion criteria (must all be true to tick):**
+
+1. **Non-TV abort:** If ``media_scope`` is not ``tv``, this pass does not run; plain skip reason; **never** calls Sonarr or touches TV output paths.
+2. **Root bounds:** Season folder must be strictly under resolved TV output root; never delete the output root; never delete outside the root (``Path.relative_to``).
+3. **Sonarr library truth (mandatory):** Before delete, load Sonarr episode files (``GET /api/v3/episodefile``). If **any** episode file ``path`` resolves **inside** the candidate season output folder, **skip** deletion (kept library). Queue membership is **not** the gate. If Sonarr is unreachable or the list cannot be read, **skip** (fail safe).
+4. **Minimum age:** Eligible only when the **newest** ``st_mtime`` among **direct-child** Refiner media candidate files in the season folder is older than ``refiner_tv_output_cleanup_min_age_seconds`` (default 48h, env at process start). Do **not** recurse into subfolders for this age decision set.
+5. **Active TV remux gate:** Pending/leased ``refiner.file.remux_pass.v1`` with ``media_scope=tv`` whose **expected TV output file path** maps to the **same season output folder** as this pass blocks cleanup (exclude current job id). **Movies** (or missing scope) jobs **never** block TV output cleanup.
+6. **Dry run:** When the **remux pass** is dry-run only, Pass 3b does not run at all (no Sonarr read, no output-folder inspection, no delete/cascade); activity fields record an honest skip.
+7. **Locks:** ``rmtree`` / ``rmdir`` ``OSError`` — skip folder, log, continue without crashing.
+8. **Activity / result:** ``tv_output_season_folder_deleted``, ``tv_output_season_folder_path``, ``tv_output_season_folder_skip_reason``, ``tv_output_truth_check``, ``tv_output_truth_note``, ``tv_output_age_seconds``, ``tv_output_cascade_folders_deleted``, ``tv_output_dry_run``.
+9. **Invocation:** Runs **after successful TV remux pass completion** (same outcomes as Pass 3a hook: dry-run planned, live written, live skipped-not-required) from ``run_refiner_file_remux_pass`` — not a separate periodic job.
+10. **Tests** cover truth pass/block, Sonarr down, age (direct-child only), active TV job, Movies job non-block, cascade, root==season skip, lock, remux dry-run early exit, out-of-root guard, activity keys, episode set definition.
+
+### 15 — status
+
+- [x] **Pass 3b shipped** — ``refiner_tv_output_cleanup.py`` (Sonarr ``GET /api/v3/episodefile`` truth gate, min-age env on direct-child episode media, same-season-output active **TV** remux gate, remux dry-run early exit, output-root-bounded cascade), ``refiner_file_remux_pass_run.py`` post-success hook after Pass 3a, ``MediaMopSettings`` + runtime snapshot + web Workers copy, ``test_refiner_tv_output_cleanup.py``.
 
 ## Active / next (ordered)
 

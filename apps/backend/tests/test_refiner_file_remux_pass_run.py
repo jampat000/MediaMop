@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import time
 from dataclasses import replace
 from pathlib import Path
 
@@ -293,6 +295,16 @@ def test_tv_live_skips_movie_folder_cleanup_deletes_season_folder_when_gates_pas
         "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_radarr_and_sonarr_queue_rows_for_scan",
         lambda _s, _settings: ([], [], None, None),
     )
+    monkeypatch.setattr(
+        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_sonarr_http_credentials",
+        lambda _s, _st: ("http://127.0.0.1:9", "k"),
+    )
+    monkeypatch.setattr(
+        "mediamop.modules.refiner.refiner_tv_output_cleanup.fetch_sonarr_library_episodefiles",
+        lambda **kwargs: [],
+    )
+    old = time.time() - 200_000
+    os.utime(out_season / "ep.mkv", (old, old))
 
     r = runmod.run_refiner_file_remux_pass(
         settings=settings,
@@ -307,9 +319,11 @@ def test_tv_live_skips_movie_folder_cleanup_deletes_season_folder_when_gates_pas
     assert r.get("source_deleted_after_success") is True
     assert r.get("source_folder_deleted") is not True
     assert r.get("tv_season_folder_deleted") is True
+    assert r.get("tv_output_season_folder_deleted") is True
     assert not mkv.exists()
     assert not season.is_dir()
     assert not (media / "Show").is_dir()
+    assert not out_season.is_dir()
 
 
 def test_movie_live_skips_when_output_smaller_than_one_percent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -516,3 +530,44 @@ def test_default_work_dir_created_when_flag_set(tmp_path: Path, monkeypatch: pyt
     assert work_default.is_dir()
     assert r.get("source_folder_deleted") is True
     assert not mkv.exists()
+
+
+def test_tv_dry_run_skips_tv_output_cleanup_no_sonarr(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _, cleanup_session = _sqlite_session(tmp_path)
+    home = tmp_path / "home"
+    home.mkdir()
+    media = tmp_path / "media"
+    media.mkdir()
+    season = media / "Show" / "S01"
+    season.mkdir(parents=True)
+    mkv = season / "e.mkv"
+    mkv.write_bytes(b"x" * 400)
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    rt = _runtime(media=media, home=home, dry=True)
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home: _fake_probe())
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    calls: list[int] = []
+
+    def _sonarr_fetch(**_kwargs: object) -> list[dict[str, object]]:
+        calls.append(1)
+        return []
+
+    monkeypatch.setattr(
+        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_sonarr_http_credentials",
+        lambda _s, _st: ("http://127.0.0.1:9", "k"),
+    )
+    monkeypatch.setattr(
+        "mediamop.modules.refiner.refiner_tv_output_cleanup.fetch_sonarr_library_episodefiles",
+        _sonarr_fetch,
+    )
+    r = runmod.run_refiner_file_remux_pass(
+        settings=settings,
+        path_runtime=rt,
+        relative_media_path="Show/S01/e.mkv",
+        dry_run=True,
+        media_scope="tv",
+        cleanup_session=cleanup_session,
+    )
+    assert r["ok"] is True
+    assert calls == []
+    assert r.get("tv_output_truth_check") == "skipped"

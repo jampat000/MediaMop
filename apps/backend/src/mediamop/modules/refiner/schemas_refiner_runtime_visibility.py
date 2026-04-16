@@ -55,6 +55,13 @@ class RefinerRuntimeSettingsOut(BaseModel):
     movie_output_cleanup_configuration_note: str = Field(
         description="How operators change Movies output-folder cleanup age gate (restart required).",
     )
+    refiner_tv_output_cleanup_min_age_seconds: int = Field(
+        ge=3600,
+        description="Minimum age (direct-child episode media newest mtime) before Pass 3b may delete a TV season output folder (1h..30d; default 48h).",
+    )
+    tv_output_cleanup_configuration_note: str = Field(
+        description="How operators change TV output-folder cleanup age gate (restart required).",
+    )
     watched_folder_scan_periodic_configuration_note: str = Field(
         description="How operators change periodic scan env (restart required).",
     )
