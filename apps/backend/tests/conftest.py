@@ -26,7 +26,7 @@ def _mediamop_sqlite_runtime(tmp_path_factory: pytest.TempPathFactory) -> Iterat
     # Avoids claiming synthetic ``pending`` rows during API tests (timing-sensitive on CI).
     os.environ["MEDIAMOP_FETCHER_WORKER_COUNT"] = "0"
     os.environ["MEDIAMOP_REFINER_WORKER_COUNT"] = "0"
-    os.environ["MEDIAMOP_TRIMMER_WORKER_COUNT"] = "0"
+    os.environ["MEDIAMOP_PRUNER_WORKER_COUNT"] = "0"
     os.environ["MEDIAMOP_SUBBER_WORKER_COUNT"] = "0"
     backend = Path(__file__).resolve().parents[1]
     cfg = Config(str(backend / "alembic.ini"))

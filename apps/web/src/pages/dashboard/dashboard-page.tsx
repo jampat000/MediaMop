@@ -16,7 +16,7 @@ import {
 import { useFetcherJobsInspectionQuery, fetcherJobsInspectionQueryKey } from "../../lib/fetcher/jobs-inspection/queries";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 
-type ModuleKey = "fetcher" | "refiner" | "trimmer" | "subber";
+type ModuleKey = "fetcher" | "refiner" | "pruner" | "subber";
 type ModuleStatus = "Healthy" | "Attention needed" | "Review needed" | "Active" | "Setup needed";
 
 type ModuleCardData = {
@@ -194,7 +194,7 @@ export function DashboardPage() {
   const moduleCards: ModuleCardData[] = [
     fetcherCard,
     deriveGenericModuleCard("refiner", recentItems),
-    deriveGenericModuleCard("trimmer", recentItems),
+    deriveGenericModuleCard("pruner", recentItems),
     deriveGenericModuleCard("subber", recentItems),
   ];
   const modulesNeedingAttentionTotal = moduleCards.filter(

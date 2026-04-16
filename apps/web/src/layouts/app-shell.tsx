@@ -7,7 +7,7 @@ import {
   NavIconRefiner,
   NavIconSettings,
   NavIconSubber,
-  NavIconTrimmer,
+  NavIconPruner,
 } from "../components/shell/nav-icons";
 import { WEB_APP_VERSION } from "../lib/app-meta";
 import { useLogoutMutation } from "../lib/auth/queries";
@@ -55,11 +55,11 @@ export function AppShell() {
             </span>
             <span className="mm-sidebar-link-label">Refiner</span>
           </NavLink>
-          <NavLink to="/app/trimmer" className={sidebarNavClass}>
+          <NavLink to="/app/pruner" className={sidebarNavClass}>
             <span className="mm-sidebar-link-icon" aria-hidden="true">
-              <NavIconTrimmer />
+              <NavIconPruner />
             </span>
-            <span className="mm-sidebar-link-label">Trimmer</span>
+            <span className="mm-sidebar-link-label">Pruner</span>
           </NavLink>
           <NavLink to="/app/subber" className={sidebarNavClass}>
             <span className="mm-sidebar-link-icon" aria-hidden="true">

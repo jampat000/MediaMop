@@ -1,4 +1,4 @@
-"""Trimmer-local persisted job queue — coordination for in-process Trimmer workers only."""
+"""Pruner-local persisted job queue — coordination for in-process Pruner workers only."""
 
 from __future__ import annotations
 
@@ -11,8 +11,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 from mediamop.core.db import Base
 
 
-class TrimmerJobStatus(str, enum.Enum):
-    """Persisted in ``trimmer_jobs.status`` (VARCHAR)."""
+class PrunerJobStatus(str, enum.Enum):
+    """Persisted in ``pruner_jobs.status`` (VARCHAR)."""
 
     PENDING = "pending"
     LEASED = "leased"
@@ -21,10 +21,10 @@ class TrimmerJobStatus(str, enum.Enum):
     HANDLER_OK_FINALIZE_FAILED = "handler_ok_finalize_failed"
 
 
-class TrimmerJob(Base):
-    """One row of durable Trimmer work — claim/lease before execution."""
+class PrunerJob(Base):
+    """One row of durable Pruner work — claim/lease before execution."""
 
-    __tablename__ = "trimmer_jobs"
+    __tablename__ = "pruner_jobs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     dedupe_key: Mapped[str] = mapped_column(String(512), unique=True, nullable=False)

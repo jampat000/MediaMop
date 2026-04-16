@@ -34,7 +34,7 @@ def _isolated_refiner_jobs_inspection_runtime(
     monkeypatch.setenv("MEDIAMOP_HOME", str(home))
     monkeypatch.setenv("MEDIAMOP_FETCHER_WORKER_COUNT", "0")
     monkeypatch.setenv("MEDIAMOP_REFINER_WORKER_COUNT", "0")
-    monkeypatch.setenv("MEDIAMOP_TRIMMER_WORKER_COUNT", "0")
+    monkeypatch.setenv("MEDIAMOP_PRUNER_WORKER_COUNT", "0")
     monkeypatch.setenv("MEDIAMOP_SUBBER_WORKER_COUNT", "0")
     # Keep all periodic enqueue loops off in this file to ensure deterministic inspection slices.
     monkeypatch.setenv("MEDIAMOP_REFINER_SUPPLIED_PAYLOAD_EVALUATION_SCHEDULE_ENABLED", "0")

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — **four module lanes** are live: ``fetcher_jobs``, ``refiner_jobs``, ``trimmer_jobs``, ``subber_jobs`` (see tables below).
+Accepted — **four module lanes** are live: ``fetcher_jobs``, ``refiner_jobs``, ``pruner_jobs``, ``subber_jobs`` (see tables below).
 
 ## Context
 
@@ -65,28 +65,30 @@ MediaMop is **SQLite-first**: one writer per database. Durable background work m
 - Refiner inspection/recovery HTTP schemas ship only when Refiner exposes operator APIs for `refiner_jobs`.
 - `modules/refiner/router.py` (Refiner-native HTTP only)
 
-**Refiner must not own:** `failed_import.*`, `missing_search.*`, `upgrade_search.*`, `trimmer.*`, `subber.*` (enforced in code).
+**Refiner must not own:** `failed_import.*`, `missing_search.*`, `upgrade_search.*`, `pruner.*`, `subber.*`, or legacy `trimmer.*` (enforced in code).
 
 ---
 
-## Trimmer lane (implemented)
+## Pruner lane (Phase 1 — infrastructure only)
 
 | Artifact | Exact name |
 |----------|------------|
-| SQL table | `trimmer_jobs` |
-| ORM model | `TrimmerJob` |
-| Status enum | `TrimmerJobStatus` |
-| Enqueue | `trimmer_enqueue_or_get_job` |
-| Claim | `claim_next_eligible_trimmer_job` |
-| Worker starter | `start_trimmer_worker_background_tasks` |
-| Worker count env | **`MEDIAMOP_TRIMMER_WORKER_COUNT`** |
-| `job_kind` prefix | **`trimmer.`** |
+| SQL table | `pruner_jobs` |
+| ORM model | `PrunerJob` |
+| Status enum | `PrunerJobStatus` |
+| Enqueue | `pruner_enqueue_or_get_job` |
+| Claim | `claim_next_eligible_pruner_job` |
+| Worker starter | `start_pruner_worker_background_tasks` |
+| Worker count env | **`MEDIAMOP_PRUNER_WORKER_COUNT`** |
+| `job_kind` prefix | **`pruner.`** |
 
-**Shipped durable families:** `trimmer.trim_plan.constraints_check.v1` — manual enqueue only; validates supplied trim segment timing JSON (no transcode, no media file I/O, no *arr). HTTP: `POST /api/v1/trimmer/jobs/trim-plan-constraints-check/enqueue`. `trimmer.supplied_trim_plan.json_file_write.v1` — manual enqueue only; validates the same segment JSON then writes a canonical JSON file under ``<MEDIAMOP_HOME>/trimmer/plan_exports/`` (filesystem write only — no FFmpeg, no container cut, no *arr). HTTP: `POST /api/v1/trimmer/jobs/supplied-trim-plan-json-file-write/enqueue`.
+**Phase 1:** durable queue + workers + cross-lane guards only. **No** shipped Pruner `job_kind` families or product HTTP enqueue routes yet (removal-focused work lands in later phases). The historical ``trimmer_jobs`` table from revision ``0009_trimmer_jobs`` is dropped at head by ``0025_pruner_jobs_drop_trimmer_jobs``; the string prefix ``trimmer.`` is reserved as **legacy/forbidden** on all lanes (see `job_kind_boundaries.py`).
 
-**Package directory:** `apps/backend/src/mediamop/modules/trimmer/` (`trimmer_jobs_model.py`, `trimmer_jobs_ops.py`, `worker_loop.py`, `trimmer_job_handlers.py`, …).
+**Package directory:** `apps/backend/src/mediamop/modules/pruner/` (`pruner_jobs_model.py`, `pruner_jobs_ops.py`, `worker_loop.py`, `pruner_job_handlers.py`, …).
 
-**Lifespan:** `start_trimmer_worker_background_tasks` runs **independently** of Refiner/Fetcher worker counts (no shared timing tables).
+**Lifespan:** `start_pruner_worker_background_tasks` runs **independently** of Refiner/Fetcher worker counts (no shared timing tables).
+
+**Forward design:** ``docs/pruner-forward-design-constraints.md`` — TV vs Movies independence, per media-server-instance ownership (Emby, Jellyfin, Plex as peers), no single global server config.
 
 ---
 
@@ -120,7 +122,7 @@ MediaMop is **SQLite-first**: one writer per database. Durable background work m
 ## Consequences
 
 - Adding a new **function** in Fetcher is a new **`job_kind`** under `failed_import.` / `missing_search.` / `upgrade_search.` — not a new table unless isolation is proven necessary.
-- Adding **Trimmer** or **Subber** is a new **table + worker env + ops names** per this ADR, not new rows in `refiner_jobs`.
+- Adding **Pruner** or **Subber** is a new **table + worker env + ops names** per this ADR, not new rows in `refiner_jobs`.
 - **Cross-lane guards** in `job_kind_boundaries.py` must be extended when a new top-level module gains its own lane (add prefix to forbidden lists on sibling enqueue paths).
 
 ## References

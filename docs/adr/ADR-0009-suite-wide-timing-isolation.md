@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — **hard rule** for Fetcher, Refiner, Trimmer, and Subber.
+Accepted — **hard rule** for Fetcher, Refiner, Pruner, and Subber.
 
 ## Context
 
@@ -33,7 +33,7 @@ These require per-family (and per-module) isolation when operators set expectati
 
 ### Worker count and leases
 
-- **`MEDIAMOP_FETCHER_WORKER_COUNT`**, **`MEDIAMOP_REFINER_WORKER_COUNT`**, **`MEDIAMOP_TRIMMER_WORKER_COUNT`**, and **`MEDIAMOP_SUBBER_WORKER_COUNT`** control **throughput and claim ordering** on their respective lanes. They do **not** replace per-family intervals, cooldowns, or schedules. Increasing worker count must not be the only knob that “fixes” one family waiting on another.
+- **`MEDIAMOP_FETCHER_WORKER_COUNT`**, **`MEDIAMOP_REFINER_WORKER_COUNT`**, **`MEDIAMOP_PRUNER_WORKER_COUNT`**, and **`MEDIAMOP_SUBBER_WORKER_COUNT`** control **throughput and claim ordering** on their respective lanes. They do **not** replace per-family intervals, cooldowns, or schedules. Increasing worker count must not be the only knob that “fixes” one family waiting on another.
 
 ### Process-internal mechanics (out of scope for “shared contracts”)
 
@@ -61,10 +61,9 @@ Shipped today:
 - **`refiner.file.remux_pass.v1`** — manual enqueue only: per-file ffprobe + remux plan (+ optional ffmpeg when ``dry_run`` is false); **no** periodic schedule or shared timing row with other Refiner families or Fetcher. Activity rows carry a structured JSON ``detail`` (outcome, inspected path, plan summary, before/after track lines, ffmpeg argv preview) rendered readably on the Activity page for that event type only.
 - **`refiner.watched_folder.remux_scan_dispatch.v1`** — operator POST manual enqueue **and** optional Refiner-only periodic enqueue via ``MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_*`` plus separate ``PERIODIC_ENQUEUE_REMUX_JOBS`` / ``PERIODIC_REMUX_DRY_RUN`` flags on ``MediaMopSettings`` (not shared with supplied payload evaluation timing). Each run walks the saved watched folder, applies the same ownership/upstream blocking truth as the candidate gate, optionally enqueues remux rows, and writes one activity summary (``scan_trigger``: ``manual`` vs ``periodic``). Periodic tick skips enqueue when a scan job is already ``pending`` or ``leased``.
 
-### Trimmer (shipped durable families)
+### Pruner (Phase 1)
 
-- **`trimmer.trim_plan.constraints_check.v1`** — **manual enqueue only**: no periodic schedule, no shared last-run row with Fetcher or Refiner. Constraint evaluation is process-local to the handler.
-- **`trimmer.supplied_trim_plan.json_file_write.v1`** — **manual enqueue only**: same constraint rules, then a single JSON file write under ``MEDIAMOP_HOME``; no periodic schedule and no shared timing state with other modules or families.
+- **Lane only** — ``pruner_jobs`` and in-process workers; **no** shipped durable ``pruner.*`` families or operator schedules in this pass. Future removal job families must each carry **family-local** timing per this ADR (and per ``docs/pruner-forward-design-constraints.md`` for TV/Movies and per server-instance splits).
 
 ### Subber (shipped durable family)
 
@@ -78,7 +77,7 @@ Any additional durable `job_kind` on `subber_jobs` **must** ship with:
 - Its own env-backed settings in `MediaMopSettings` (or a module-local settings object loaded at startup) for every operator-controlled interval/schedule/cooldown/retry that applies to that family.
 - Documentation in the module package and enforcement tests when behavior is non-obvious.
 
-Trimmer and Subber packages point to ADR-0007 for lane ownership; **this ADR** is the timing addendum for scheduled/cooled families (each module’s first shipped constraint-check families here are manual-only).
+Pruner and Subber packages point to ADR-0007 for lane ownership; **this ADR** is the timing addendum for scheduled/cooled families.
 
 ### Compliance notes (audit snapshot)
 
@@ -87,7 +86,7 @@ Trimmer and Subber packages point to ADR-0007 for lane ownership; **this ADR** i
 | Fetcher failed-import Radarr vs Sonarr | Yes | Separate `MEDIAMOP_FAILED_IMPORT_*` intervals, separate periodic tasks, separate dedupe keys. |
 | Fetcher Arr search four lanes | Yes | Per-lane settings in `MediaMopSettings`, per-lane `(app, action, …)` cooldown log, per-lane prune in `prune_fetcher_arr_action_log`, four last-run columns, four periodic enqueue tasks. |
 | Refiner durable families (supplied payload evaluation, candidate gate, file remux pass, watched-folder remux scan dispatch) | Yes | Separate job kinds, handlers, and enqueue paths; supplied payload evaluation has its own optional schedule env + interval only for that family; watched-folder remux scan dispatch has its **own** optional schedule env + interval (and periodic remux flags), independent of supplied payload evaluation; candidate gate and file remux pass remain manual POST enqueue only. No shared last-run or cooldown row across those families. |
-| Trimmer durable families (trim plan constraint check + supplied trim plan JSON file write) | Yes (manual-only) | All shipped families: operator POST enqueue only — no Trimmer periodic task shares timing state with other modules. |
+| Pruner lane (Phase 1) | Yes (no product families yet) | Queue/worker infrastructure only; no periodic Pruner tasks. |
 | Subber durable families (cue timeline constraint check) | Yes (manual-only) | Single shipped family; operator POST enqueue only — no Subber periodic task shares timing state with other modules. |
 
 ### Soft spot (configuration, not runtime coupling)

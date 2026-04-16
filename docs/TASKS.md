@@ -47,7 +47,7 @@ Single canonical backlog for shipped milestones and the next honest slice of wor
 
 ## Roadmap item 8 — Central Settings UI (suite: Global + Security only)
 
-**Scope (explicit):** The **central** `/app/settings` page owns **MediaMop suite** presentation and **read-only security posture** — not Fetcher, not Sonarr/Radarr, not Refiner/Trimmer/Subber module config.
+**Scope (explicit):** The **central** `/app/settings` page owns **MediaMop suite** presentation and **read-only security posture** — not Fetcher, not Sonarr/Radarr, not Refiner/Pruner/Subber module config.
 
 **Completion criteria (must all be true to tick):**
 
@@ -83,7 +83,7 @@ Single canonical backlog for shipped milestones and the next honest slice of wor
 
 **Relationship to existing Fetcher surfaces:** failed-import **cleanup policy**, **runtime visibility**, **automation summary** (Overview UI label: **Current search setup**), **jobs inspection**, and **manual enqueue** stay on the **Fetcher route** (no new standalone Fetcher settings page). This item does not duplicate their APIs; **IA correction** (below) places *arr* automation and connections into tabs and removes the long stacked settings dump.
 
-**Explicit non-goals:** central suite Settings changes; Refiner/Trimmer/Subber settings; backup/restore; updater; a generic settings framework; persistent “health dashboards” derived from a single test click; a **separate** Fetcher settings route.
+**Explicit non-goals:** central suite Settings changes; Refiner/Pruner/Subber settings; backup/restore; updater; a generic settings framework; persistent “health dashboards” derived from a single test click; a **separate** Fetcher settings route.
 
 **Scope lock — UI correction pass (historical):** An earlier slice locked Fetcher-only web paths. **Current tree:** Connections credentials ship with **backend** migration `0014_fetcher_arr_connection_fields`, resolver + encrypted fields, and web panels under `pages/fetcher/**` / `lib/fetcher/**`. Further item 9 polish still respects “no central Settings / no unrelated modules” unless a later milestone explicitly widens scope.
 
@@ -120,13 +120,13 @@ Single canonical backlog for shipped milestones and the next honest slice of wor
 - [x] **Backend shipped** — migration `0013_fetcher_arr_operator_settings`, prefs + worker/enqueue wiring, `GET`/`PUT /api/v1/fetcher/arr-operator-settings`, `POST …/connection-test`, Activity constants, backend tests; migration **`0014_fetcher_arr_connection_fields`**, encrypted connection keys, `PUT …/arr-connection/{sonarr,radarr}`, resolver (DB → env fallback) across Fetcher/Refiner call sites, backend tests for connection APIs.
 - [ ] **Fetcher web / operator surface — open (same item 9)** — Tabbed shell remains (**Overview / Connections / Sonarr (TV) / Radarr (Movies) / Failed imports**). **Truth pass (web):** Overview **Needs attention** routes connected-but-idle search setups to the correct **Sonarr (TV)** / **Radarr (Movies)** tabs (not only Connections); **Current search setup** shows missing vs upgrade cadence separately when saved lanes differ (no silent pick of one lane). **Independence pass (API + web):** automatic search lanes save via **`PUT …/arr-operator-settings/lanes/{sonarr_missing|sonarr_upgrade|radarr_missing|radarr_upgrade}`** (one lane per request; bulk `PUT …/arr-operator-settings` retained for compatibility); failed-import cleanup saves via **`PUT …/cleanup-policy/tv-shows`** and **`PUT …/cleanup-policy/movies`** with per-card React Query pending; bulk cleanup `PUT` retained for compatibility. **Perfection-gate race fix:** lane refetch after a successful save no longer wipes unsaved draft edits in other lanes; tests cover preserving unsaved lane edits across query refresh. **Shipped in this TV/Movies structure pass:** **Sonarr (TV)** and **Radarr (Movies)** each use **two** bordered bubbles (**missing** + **upgrades**) with locked titles and intro lines; inside each bubble, controls follow **Enable / Disable** (same On/Off switch style as Connections) → **Run interval** → **Schedule** (locked helper + **Limit to these hours** switch + day/time fields) → **Search limit** → **Retry cooldown** → **Save** with locked button labels (**Save missing TV show searches** / **Save TV upgrades** / **Save missing movie searches** / **Save movie upgrades**); per-bubble dirty gating; shared **`FetcherEnableSwitch`** with Connections for visual parity. **Connections truth + UX pass (unchanged):** **`status_headline`**, **`connection_note`**, effective-vs-saved hints, per-panel test pending, backend PUT/headline tests. **This pass added:** clearer save confirmation (accent banner + brief panel highlight, no duplicate “Saved.” in connection status); stronger Fetcher action buttons; aligned Radarr “Missing movies” casing; spacing rhythm tweaks. **Overview correction pass (web):** locked four-section order; **At a glance** inner cards **Connections → Sonarr → Radarr → Failed imports**; **Automation summary** renamed **Current search setup**; **Download queue preview** replaced by **Failed imports that need attention** with locked subtext; paired labels use **Sonarr (TV)** / **Radarr (Movies)**; removed duplicate **Connections & optional service link** block from Overview. **Still in scope:** Failed imports density, cross-tab drafts, accessibility, deep links, backup/restore — item 9 **not** closed.
 
-## Roadmap item 10 — Trimmer first real media execution family
+## Roadmap item 10 — Pruner removal product (library / server integrations)
 
-**Status:** **Open** — not shipped in the current tree. An ffmpeg-on-`trimmer_jobs` segment-extract path was attempted and **rolled back**: remux / ffmpeg-style media execution is **Refiner** territory (`docs/adr/ADR-0007-module-owned-worker-lanes.md`). Trimmer today ships only the two non-media families above (timing check + JSON plan export). A future Trimmer milestone for operator-useful media work is **unsigned** here until explicitly rescoped.
+**Status:** **Open** — Pruner **Phase 1** ships the durable lane only (`pruner_jobs`, `pruner.*` prefix, workers); see `docs/adr/ADR-0007-module-owned-worker-lanes.md` and `docs/pruner-forward-design-constraints.md`. **Phase 2+** covers rule-based removal against **Emby, Jellyfin, and Plex** as peers, with **per server instance** ownership and **independent TV vs Movies** surfaces — not a replay of the old trim-plan experiment or Refiner remux work.
 
 ### 10 — status
 
-- [ ] **Open** — no Trimmer ffmpeg extraction family in-repo; milestone criteria TBD when ownership and slice are chosen.
+- [ ] **Open** — no shipped Pruner removal job families yet; criteria TBD per forward-design doc.
 
 ## Roadmap item 11 — Refiner Movies watched-folder release cleanup (Pass 1)
 

@@ -126,7 +126,7 @@ export function NavIconRefiner({ className = "" }: { className?: string }) {
   );
 }
 
-export function NavIconTrimmer({ className = "" }: { className?: string }) {
+export function NavIconPruner({ className = "" }: { className?: string }) {
   return (
     <svg
       className={className}

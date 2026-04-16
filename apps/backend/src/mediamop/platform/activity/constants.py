@@ -33,9 +33,6 @@ FETCHER_ARR_CONNECTION_TEST_FAILED = "fetcher.arr_connection_test_failed"
 # Refiner durable families (refiner_jobs)
 REFINER_SUPPLIED_PAYLOAD_EVALUATION_COMPLETED = "refiner.supplied_payload_evaluation_completed"
 
-TRIMMER_TRIM_PLAN_CONSTRAINTS_CHECK_COMPLETED = "trimmer.trim_plan_constraints_check_completed"
-TRIMMER_SUPPLIED_TRIM_PLAN_JSON_FILE_WRITE_COMPLETED = "trimmer.supplied_trim_plan_json_file_write_completed"
-
 SUBBER_SUPPLIED_CUE_TIMELINE_CONSTRAINTS_CHECK_COMPLETED = "subber.supplied_cue_timeline_constraints_check_completed"
 REFINER_CANDIDATE_GATE_COMPLETED = "refiner.candidate_gate_completed"
 REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_COMPLETED = "refiner.watched_folder_remux_scan_dispatch_completed"

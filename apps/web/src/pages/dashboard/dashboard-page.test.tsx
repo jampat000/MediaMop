@@ -82,7 +82,7 @@ describe("DashboardPage", () => {
     renderDashboard();
     expect(screen.getByRole("link", { name: "Open Fetcher" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open Refiner" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open Trimmer" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open Pruner" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open Subber" })).toBeInTheDocument();
     expect(screen.getAllByText(/TV:/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Movies:/i).length).toBeGreaterThan(0);

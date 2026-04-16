@@ -9,7 +9,7 @@ import { RootEntry } from "../pages/root-entry";
 import { SettingsPage } from "../pages/settings/settings-page";
 import { SetupPage } from "../pages/setup/setup-page";
 import { SubberPage } from "../pages/subber/subber-page";
-import { TrimmerPage } from "../pages/trimmer/trimmer-page";
+import { PrunerPage } from "../pages/pruner/pruner-page";
 import { RequireAuth } from "./require-auth";
 
 const router = createBrowserRouter([
@@ -27,7 +27,7 @@ const router = createBrowserRouter([
           { path: "activity", element: <ActivityPage /> },
           { path: "fetcher", element: <FetcherPage /> },
           { path: "refiner", element: <RefinerPage /> },
-          { path: "trimmer", element: <TrimmerPage /> },
+          { path: "pruner", element: <PrunerPage /> },
           { path: "subber", element: <SubberPage /> },
           { path: "settings", element: <SettingsPage /> },
         ],

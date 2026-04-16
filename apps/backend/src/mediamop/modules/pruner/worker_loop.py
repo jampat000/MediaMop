@@ -1,4 +1,4 @@
-"""Trimmer-only in-process asyncio worker loop — claims ``trimmer_jobs`` only."""
+"""Pruner-only in-process asyncio worker loop — claims ``pruner_jobs`` only."""
 
 from __future__ import annotations
 
@@ -15,27 +15,27 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.queue_worker.job_kind_boundaries import (
-    TRIMMER_QUEUE_JOB_KIND_PREFIX,
-    job_kind_forbidden_on_trimmer_lane,
-    validate_trimmer_worker_handler_registry,
+    PRUNER_QUEUE_JOB_KIND_PREFIX,
+    job_kind_forbidden_on_pruner_lane,
+    validate_pruner_worker_handler_registry,
 )
-from mediamop.modules.trimmer.trimmer_jobs_ops import (
-    claim_next_eligible_trimmer_job,
-    complete_claimed_trimmer_job,
-    fail_claimed_trimmer_job,
-    fail_leased_trimmer_job_after_complete_failure,
+from mediamop.modules.pruner.pruner_jobs_ops import (
+    claim_next_eligible_pruner_job,
+    complete_claimed_pruner_job,
+    fail_claimed_pruner_job,
+    fail_leased_pruner_job_after_complete_failure,
 )
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_TRIMMER_JOB_LEASE_SECONDS = 300
-TRIMMER_WORKER_IDLE_SLEEP_SECONDS = 5.0
-TRIMMER_WORKER_TICK_ERROR_BACKOFF_SECONDS = 1.0
-TRIMMER_TERMINALIZATION_FAILURE_PREFIX = "trimmer_terminalization_failure: "
+DEFAULT_PRUNER_JOB_LEASE_SECONDS = 300
+PRUNER_WORKER_IDLE_SLEEP_SECONDS = 5.0
+PRUNER_WORKER_TICK_ERROR_BACKOFF_SECONDS = 1.0
+PRUNER_TERMINALIZATION_FAILURE_PREFIX = "pruner_terminalization_failure: "
 
 
 @dataclass(frozen=True, slots=True)
-class TrimmerJobWorkContext:
+class PrunerJobWorkContext:
     """Immutable view passed to job handlers after a successful claim (outside the claim txn)."""
 
     id: int
@@ -44,24 +44,24 @@ class TrimmerJobWorkContext:
     lease_owner: str
 
 
-class TrimmerNoHandlerForJobKind(LookupError):
+class PrunerNoHandlerForJobKind(LookupError):
     """Raised when ``job_kind`` has no registered handler."""
 
     def __init__(self, job_kind: str) -> None:
         self.job_kind = job_kind
-        super().__init__(f"no Trimmer job handler registered for job_kind={job_kind!r}")
+        super().__init__(f"no Pruner job handler registered for job_kind={job_kind!r}")
 
 
-def default_trimmer_job_handler_registry() -> dict[str, Callable[[TrimmerJobWorkContext], None]]:
+def default_pruner_job_handler_registry() -> dict[str, Callable[[PrunerJobWorkContext], None]]:
     return {}
 
 
-def process_one_trimmer_job(
+def process_one_pruner_job(
     session_factory: sessionmaker[Session],
     *,
     lease_owner: str,
-    job_handlers: Mapping[str, Callable[[TrimmerJobWorkContext], None]],
-    lease_seconds: int = DEFAULT_TRIMMER_JOB_LEASE_SECONDS,
+    job_handlers: Mapping[str, Callable[[PrunerJobWorkContext], None]],
+    lease_seconds: int = DEFAULT_PRUNER_JOB_LEASE_SECONDS,
     now: datetime | None = None,
 ) -> Literal["idle", "processed"]:
     when = now if now is not None else datetime.now(timezone.utc)
@@ -69,7 +69,7 @@ def process_one_trimmer_job(
 
     with session_factory() as session:
         with session.begin():
-            job = claim_next_eligible_trimmer_job(
+            job = claim_next_eligible_pruner_job(
                 session,
                 lease_owner=lease_owner,
                 lease_expires_at=lease_until,
@@ -77,22 +77,22 @@ def process_one_trimmer_job(
             )
             if job is None:
                 return "idle"
-            ctx = TrimmerJobWorkContext(
+            ctx = PrunerJobWorkContext(
                 id=job.id,
                 job_kind=job.job_kind,
                 payload_json=job.payload_json,
                 lease_owner=lease_owner,
             )
 
-    if job_kind_forbidden_on_trimmer_lane(ctx.job_kind):
+    if job_kind_forbidden_on_pruner_lane(ctx.job_kind):
         err_text = (
-            "trimmer worker refused job_kind reserved for another module lane: "
+            "pruner worker refused job_kind reserved for another module lane: "
             f"{ctx.job_kind!r} (row id={ctx.id})"
         )[:10_000]
         try:
             with session_factory() as session:
                 with session.begin():
-                    fail_claimed_trimmer_job(
+                    fail_claimed_pruner_job(
                         session,
                         job_id=ctx.id,
                         lease_owner=ctx.lease_owner,
@@ -100,18 +100,18 @@ def process_one_trimmer_job(
                         now=when,
                     )
         except Exception:
-            logger.exception("Trimmer fail_claimed after cross-lane guard job_id=%s", ctx.id)
+            logger.exception("Pruner fail_claimed after cross-lane guard job_id=%s", ctx.id)
         return "processed"
 
-    if not ctx.job_kind.startswith(TRIMMER_QUEUE_JOB_KIND_PREFIX):
+    if not ctx.job_kind.startswith(PRUNER_QUEUE_JOB_KIND_PREFIX):
         err_text = (
-            "trimmer worker refused job_kind missing required trimmer.* prefix: "
+            "pruner worker refused job_kind missing required pruner.* prefix: "
             f"{ctx.job_kind!r} (row id={ctx.id})"
         )[:10_000]
         try:
             with session_factory() as session:
                 with session.begin():
-                    fail_claimed_trimmer_job(
+                    fail_claimed_pruner_job(
                         session,
                         job_id=ctx.id,
                         lease_owner=ctx.lease_owner,
@@ -119,17 +119,17 @@ def process_one_trimmer_job(
                         now=when,
                     )
         except Exception:
-            logger.exception("Trimmer fail_claimed after trimmer.* prefix guard job_id=%s", ctx.id)
+            logger.exception("Pruner fail_claimed after pruner.* prefix guard job_id=%s", ctx.id)
         return "processed"
 
     handler = job_handlers.get(ctx.job_kind)
     if handler is None:
-        exc: BaseException = TrimmerNoHandlerForJobKind(ctx.job_kind)
+        exc: BaseException = PrunerNoHandlerForJobKind(ctx.job_kind)
         err_text = str(exc)[:10_000]
         try:
             with session_factory() as session:
                 with session.begin():
-                    fail_claimed_trimmer_job(
+                    fail_claimed_pruner_job(
                         session,
                         job_id=ctx.id,
                         lease_owner=ctx.lease_owner,
@@ -137,18 +137,18 @@ def process_one_trimmer_job(
                         now=when,
                     )
         except Exception:
-            logger.exception("Trimmer fail_claimed after missing handler job_id=%s", ctx.id)
+            logger.exception("Pruner fail_claimed after missing handler job_id=%s", ctx.id)
         return "processed"
 
     try:
         handler(ctx)
     except Exception as exc:
-        logger.exception("Trimmer job handler failed for job_id=%s kind=%s", ctx.id, ctx.job_kind)
+        logger.exception("Pruner job handler failed for job_id=%s kind=%s", ctx.id, ctx.job_kind)
         err_text = str(exc)[:10_000]
         try:
             with session_factory() as session:
                 with session.begin():
-                    fail_claimed_trimmer_job(
+                    fail_claimed_pruner_job(
                         session,
                         job_id=ctx.id,
                         lease_owner=ctx.lease_owner,
@@ -156,7 +156,7 @@ def process_one_trimmer_job(
                         now=when,
                     )
         except Exception:
-            logger.exception("Trimmer fail_claimed_trimmer_job failed after handler error job_id=%s", ctx.id)
+            logger.exception("Pruner fail_claimed_pruner_job failed after handler error job_id=%s", ctx.id)
         return "processed"
 
     complete_ok = True
@@ -164,7 +164,7 @@ def process_one_trimmer_job(
     try:
         with session_factory() as session:
             with session.begin():
-                ok = complete_claimed_trimmer_job(
+                ok = complete_claimed_pruner_job(
                     session,
                     job_id=ctx.id,
                     lease_owner=ctx.lease_owner,
@@ -172,18 +172,18 @@ def process_one_trimmer_job(
                 )
                 if not ok:
                     complete_ok = False
-                    complete_err = "complete_claimed_trimmer_job refused (lease/state mismatch)"
+                    complete_err = "complete_claimed_pruner_job refused (lease/state mismatch)"
     except Exception as exc:
         complete_ok = False
-        logger.exception("Trimmer complete_claimed_trimmer_job failed job_id=%s", ctx.id)
+        logger.exception("Pruner complete_claimed_pruner_job failed job_id=%s", ctx.id)
         complete_err = str(exc)
 
     if not complete_ok and complete_err is not None:
-        bounded = (TRIMMER_TERMINALIZATION_FAILURE_PREFIX + complete_err)[:10_000]
+        bounded = (PRUNER_TERMINALIZATION_FAILURE_PREFIX + complete_err)[:10_000]
         try:
             with session_factory() as session:
                 with session.begin():
-                    recovered = fail_leased_trimmer_job_after_complete_failure(
+                    recovered = fail_leased_pruner_job_after_complete_failure(
                         session,
                         job_id=ctx.id,
                         lease_owner=ctx.lease_owner,
@@ -192,37 +192,37 @@ def process_one_trimmer_job(
                     )
             if not recovered:
                 logger.warning(
-                    "Trimmer terminalization recovery did not apply job_id=%s owner=%s",
+                    "Pruner terminalization recovery did not apply job_id=%s owner=%s",
                     ctx.id,
                     ctx.lease_owner,
                 )
         except Exception:
             logger.exception(
-                "Trimmer fail_leased_trimmer_job_after_complete_failure failed job_id=%s",
+                "Pruner fail_leased_pruner_job_after_complete_failure failed job_id=%s",
                 ctx.id,
             )
     return "processed"
 
 
 def _lease_owner(worker_index: int) -> str:
-    return f"{socket.gethostname()}-{os.getpid()}-trimmer-w{worker_index}"
+    return f"{socket.gethostname()}-{os.getpid()}-pruner-w{worker_index}"
 
 
-async def trimmer_worker_run_forever(
+async def pruner_worker_run_forever(
     session_factory: sessionmaker[Session],
     *,
     worker_index: int,
     stop_event: asyncio.Event,
-    job_handlers: Mapping[str, Callable[[TrimmerJobWorkContext], None]] | None = None,
-    idle_sleep_seconds: float = TRIMMER_WORKER_IDLE_SLEEP_SECONDS,
-    lease_seconds: int = DEFAULT_TRIMMER_JOB_LEASE_SECONDS,
+    job_handlers: Mapping[str, Callable[[PrunerJobWorkContext], None]] | None = None,
+    idle_sleep_seconds: float = PRUNER_WORKER_IDLE_SLEEP_SECONDS,
+    lease_seconds: int = DEFAULT_PRUNER_JOB_LEASE_SECONDS,
 ) -> None:
     owner = _lease_owner(worker_index)
-    handlers = job_handlers if job_handlers is not None else default_trimmer_job_handler_registry()
+    handlers = job_handlers if job_handlers is not None else default_pruner_job_handler_registry()
     while not stop_event.is_set():
 
         def _tick() -> Literal["idle", "processed"]:
-            return process_one_trimmer_job(
+            return process_one_pruner_job(
                 session_factory,
                 lease_owner=owner,
                 job_handlers=handlers,
@@ -234,8 +234,8 @@ async def trimmer_worker_run_forever(
         except asyncio.CancelledError:
             raise
         except Exception:
-            logger.exception("Trimmer worker tick crashed worker_index=%s", worker_index)
-            await asyncio.sleep(TRIMMER_WORKER_TICK_ERROR_BACKOFF_SECONDS)
+            logger.exception("Pruner worker tick crashed worker_index=%s", worker_index)
+            await asyncio.sleep(PRUNER_WORKER_TICK_ERROR_BACKOFF_SECONDS)
             continue
 
         if stop_event.is_set():
@@ -251,47 +251,47 @@ async def trimmer_worker_run_forever(
                 await asyncio.sleep(min(0.25, remaining))
 
 
-def start_trimmer_worker_background_tasks(
+def start_pruner_worker_background_tasks(
     session_factory: sessionmaker[Session],
     settings: MediaMopSettings,
     *,
-    job_handlers: Mapping[str, Callable[[TrimmerJobWorkContext], None]] | None = None,
+    job_handlers: Mapping[str, Callable[[PrunerJobWorkContext], None]] | None = None,
     stop_event: asyncio.Event | None = None,
 ) -> tuple[asyncio.Event, list[asyncio.Task[None]]]:
-    if settings.trimmer_worker_count > 1:
+    if settings.pruner_worker_count > 1:
         logger.warning(
-            "Trimmer trimmer_worker_count=%s: multi-worker is guarded under SQLite single-writer.",
-            settings.trimmer_worker_count,
+            "Pruner pruner_worker_count=%s: multi-worker is guarded under SQLite single-writer.",
+            settings.pruner_worker_count,
         )
 
-    handlers: Mapping[str, Callable[[TrimmerJobWorkContext], None]]
+    handlers: Mapping[str, Callable[[PrunerJobWorkContext], None]]
     if job_handlers is not None:
         handlers = job_handlers
-    elif settings.trimmer_worker_count == 0:
+    elif settings.pruner_worker_count == 0:
         handlers = {}
     else:
-        msg = "job_handlers is required when trimmer_worker_count > 0"
+        msg = "job_handlers is required when pruner_worker_count > 0"
         raise TypeError(msg)
 
-    validate_trimmer_worker_handler_registry(handlers)
+    validate_pruner_worker_handler_registry(handlers)
 
     stop = stop_event if stop_event is not None else asyncio.Event()
     tasks: list[asyncio.Task[None]] = []
-    for i in range(settings.trimmer_worker_count):
+    for i in range(settings.pruner_worker_count):
         t = asyncio.create_task(
-            trimmer_worker_run_forever(
+            pruner_worker_run_forever(
                 session_factory,
                 worker_index=i,
                 stop_event=stop,
                 job_handlers=handlers,
             ),
-            name=f"trimmer-worker-{i}",
+            name=f"pruner-worker-{i}",
         )
         tasks.append(t)
     return stop, tasks
 
 
-async def stop_trimmer_worker_background_tasks(
+async def stop_pruner_worker_background_tasks(
     stop: asyncio.Event,
     tasks: list[asyncio.Task[None]],
 ) -> None:

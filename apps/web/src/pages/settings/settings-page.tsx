@@ -134,7 +134,7 @@ export function SettingsPage() {
         <p className="mm-page__eyebrow">System</p>
         <h1 className="mm-page__title">Settings</h1>
         <p className="mm-page__lead">
-          MediaMop-wide choices that are not part of Fetcher, Refiner, Trimmer, or Subber. Integration details stay on
+          MediaMop-wide choices that are not part of Fetcher, Refiner, Pruner, or Subber. Integration details stay on
           their module pages.
         </p>
       </header>
@@ -171,7 +171,7 @@ export function SettingsPage() {
               Global
             </h2>
             <p className="mm-card__body">
-              Suite-wide settings only. Saving applies right away. Module controls for Fetcher, Refiner, Trimmer, and
+              Suite-wide settings only. Saving applies right away. Module controls for Fetcher, Refiner, Pruner, and
               Subber stay on their module pages.
             </p>
             {!editable ? (

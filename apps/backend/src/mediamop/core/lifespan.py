@@ -38,7 +38,7 @@ from mediamop.modules.refiner.refiner_failure_cleanup_periodic_enqueue import (
     stop_refiner_failure_cleanup_enqueue_tasks,
 )
 from mediamop.modules.subber.subber_job_handlers import build_subber_job_handlers
-from mediamop.modules.trimmer.trimmer_job_handlers import build_trimmer_job_handlers
+from mediamop.modules.pruner.pruner_job_handlers import build_pruner_job_handlers
 from mediamop.modules.refiner.refiner_supplied_payload_evaluation_periodic_enqueue import (
     start_refiner_supplied_payload_evaluation_enqueue_tasks,
     stop_refiner_supplied_payload_evaluation_enqueue_tasks,
@@ -59,9 +59,9 @@ from mediamop.modules.subber.worker_loop import (
     start_subber_worker_background_tasks,
     stop_subber_worker_background_tasks,
 )
-from mediamop.modules.trimmer.worker_loop import (
-    start_trimmer_worker_background_tasks,
-    stop_trimmer_worker_background_tasks,
+from mediamop.modules.pruner.worker_loop import (
+    start_pruner_worker_background_tasks,
+    stop_pruner_worker_background_tasks,
 )
 from mediamop.platform.auth.rate_limit import SlidingWindowLimiter
 
@@ -146,12 +146,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         job_handlers=refiner_handlers,
         max_concurrent_files_getter=_refiner_max_concurrent_files,
     )
-    trimmer_handlers = build_trimmer_job_handlers(settings, session_factory)
-    trimmer_stop, trimmer_worker_tasks = start_trimmer_worker_background_tasks(
+    pruner_handlers = build_pruner_job_handlers(settings, session_factory)
+    pruner_stop, pruner_worker_tasks = start_pruner_worker_background_tasks(
         session_factory,
         settings,
         stop_event=stop,
-        job_handlers=trimmer_handlers,
+        job_handlers=pruner_handlers,
     )
     subber_handlers = build_subber_job_handlers(session_factory)
     subber_stop, subber_worker_tasks = start_subber_worker_background_tasks(
@@ -171,7 +171,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await stop_refiner_failure_cleanup_enqueue_tasks(refiner_failure_cleanup_tasks)
         await stop_fetcher_failed_import_cleanup_drive_enqueue_tasks(fetcher_schedule_tasks)
         await stop_subber_worker_background_tasks(subber_stop, subber_worker_tasks)
-        await stop_trimmer_worker_background_tasks(trimmer_stop, trimmer_worker_tasks)
+        await stop_pruner_worker_background_tasks(pruner_stop, pruner_worker_tasks)
         await stop_refiner_worker_background_tasks(refiner_stop, refiner_worker_tasks)
         await stop_fetcher_worker_background_tasks(fetcher_stop, fetcher_worker_tasks)
         dispose_engine(app.state.engine)

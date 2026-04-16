@@ -22,29 +22,40 @@ FETCHER_QUEUE_JOB_KIND_PREFIXES: tuple[str, ...] = (
 # --- Refiner lane (`refiner_jobs`): Refiner-owned durable work -----------------------------------
 REFINER_QUEUE_JOB_KIND_PREFIX = "refiner."
 
-# --- Trimmer / Subber sibling lanes (reserved on sibling queues; must never appear on Fetcher/Refiner) ---
-TRIMMER_QUEUE_JOB_KIND_PREFIX = "trimmer."
+# --- Pruner / Subber sibling lanes (reserved on sibling queues; must never appear on Fetcher/Refiner) ---
+PRUNER_QUEUE_JOB_KIND_PREFIX = "pruner."
 SUBBER_QUEUE_JOB_KIND_PREFIX = "subber."
+
+# Legacy Trimmer lane prefix — no longer a valid lane; rejected on every queue (abandoned prefix).
+LEGACY_TRIMMER_QUEUE_JOB_KIND_PREFIX = "trimmer."
+
+
+def _legacy_or_foreign_prefixes() -> tuple[str, ...]:
+    return (LEGACY_TRIMMER_QUEUE_JOB_KIND_PREFIX,)
+
 
 # Prefixes that must never be enqueued or executed on ``refiner_jobs`` / Refiner workers.
 _FORBIDDEN_ON_REFINER_LANE: tuple[str, ...] = (
     *FETCHER_QUEUE_JOB_KIND_PREFIXES,
-    TRIMMER_QUEUE_JOB_KIND_PREFIX,
+    PRUNER_QUEUE_JOB_KIND_PREFIX,
     SUBBER_QUEUE_JOB_KIND_PREFIX,
+    *_legacy_or_foreign_prefixes(),
 )
 
 # Prefixes that must never be enqueued on ``fetcher_jobs`` (other modules' lanes).
 _FORBIDDEN_ON_FETCHER_ENQUEUE_PREFIXES: tuple[str, ...] = (
     REFINER_QUEUE_JOB_KIND_PREFIX,
-    TRIMMER_QUEUE_JOB_KIND_PREFIX,
+    PRUNER_QUEUE_JOB_KIND_PREFIX,
     SUBBER_QUEUE_JOB_KIND_PREFIX,
+    *_legacy_or_foreign_prefixes(),
 )
 
 # Prefixes that must never run on Fetcher workers (mis-placed rows); tests may use unprefixed kinds.
 _FORBIDDEN_ON_FETCHER_WORKER_PREFIXES: tuple[str, ...] = (
     REFINER_QUEUE_JOB_KIND_PREFIX,
-    TRIMMER_QUEUE_JOB_KIND_PREFIX,
+    PRUNER_QUEUE_JOB_KIND_PREFIX,
     SUBBER_QUEUE_JOB_KIND_PREFIX,
+    *_legacy_or_foreign_prefixes(),
 )
 
 
@@ -79,7 +90,7 @@ def job_kind_forbidden_on_fetcher_worker(job_kind: str) -> bool:
 
 
 def validate_refiner_enqueue_job_kind(job_kind: str) -> None:
-    """Refiner queue rows must use the Refiner lane only (not Fetcher/Trimmer/Subber namespaces)."""
+    """Refiner queue rows must use the Refiner lane only (not Fetcher/Pruner/Subber namespaces)."""
 
     if job_kind_forbidden_on_refiner_lane(job_kind):
         msg = (
@@ -118,7 +129,7 @@ def validate_refiner_worker_handler_registry(
 
 
 def validate_fetcher_enqueue_job_kind(job_kind: str) -> None:
-    """``fetcher_jobs`` rows must not use Refiner/Trimmer/Subber reserved prefixes."""
+    """``fetcher_jobs`` rows must not use Refiner/Pruner/Subber reserved prefixes."""
 
     if job_kind_forbidden_on_fetcher_enqueue(job_kind):
         msg = (
@@ -128,54 +139,55 @@ def validate_fetcher_enqueue_job_kind(job_kind: str) -> None:
         raise ValueError(msg)
 
 
-# Prefixes that must never be enqueued or executed on ``trimmer_jobs`` / Trimmer workers.
-_FORBIDDEN_ON_TRIMMER_LANE: tuple[str, ...] = (
+# Prefixes that must never be enqueued or executed on ``pruner_jobs`` / Pruner workers.
+_FORBIDDEN_ON_PRUNER_LANE: tuple[str, ...] = (
     *FETCHER_QUEUE_JOB_KIND_PREFIXES,
     REFINER_QUEUE_JOB_KIND_PREFIX,
     SUBBER_QUEUE_JOB_KIND_PREFIX,
+    *_legacy_or_foreign_prefixes(),
 )
 
 
-def job_kind_forbidden_on_trimmer_lane(job_kind: str) -> bool:
+def job_kind_forbidden_on_pruner_lane(job_kind: str) -> bool:
     """True when ``job_kind`` is reserved for another module's table or lane."""
 
-    return any(job_kind.startswith(p) for p in _FORBIDDEN_ON_TRIMMER_LANE)
+    return any(job_kind.startswith(p) for p in _FORBIDDEN_ON_PRUNER_LANE)
 
 
-def validate_trimmer_enqueue_job_kind(job_kind: str) -> None:
-    """Trimmer queue rows must use the Trimmer lane only (not Fetcher/Refiner/Subber namespaces)."""
+def validate_pruner_enqueue_job_kind(job_kind: str) -> None:
+    """Pruner queue rows must use the Pruner lane only (not Fetcher/Refiner/Subber namespaces)."""
 
-    if job_kind_forbidden_on_trimmer_lane(job_kind):
+    if job_kind_forbidden_on_pruner_lane(job_kind):
         msg = (
-            "trimmer_enqueue_or_get_job refuses job_kind reserved for another module lane "
+            "pruner_enqueue_or_get_job refuses job_kind reserved for another module lane "
             f"(got {job_kind!r}); use that module's table + enqueue function"
         )
         raise ValueError(msg)
-    if not job_kind.startswith(TRIMMER_QUEUE_JOB_KIND_PREFIX):
+    if not job_kind.startswith(PRUNER_QUEUE_JOB_KIND_PREFIX):
         msg = (
-            "trimmer_enqueue_or_get_job requires job_kind to start with "
-            f"{TRIMMER_QUEUE_JOB_KIND_PREFIX!r} (got {job_kind!r}); production durable Trimmer "
-            "families use trimmer.* kinds on trimmer_jobs only"
+            "pruner_enqueue_or_get_job requires job_kind to start with "
+            f"{PRUNER_QUEUE_JOB_KIND_PREFIX!r} (got {job_kind!r}); production durable Pruner "
+            "families use pruner.* kinds on pruner_jobs only"
         )
         raise ValueError(msg)
 
 
-def validate_trimmer_worker_handler_registry(
+def validate_pruner_worker_handler_registry(
     job_handlers: Mapping[str, object],
 ) -> None:
-    """Trimmer workers must register handlers only under the ``trimmer.*`` namespace."""
+    """Pruner workers must register handlers only under the ``pruner.*`` namespace."""
 
     bad = sorted(
         {
             k
             for k in job_handlers
-            if job_kind_forbidden_on_trimmer_lane(k) or not k.startswith(TRIMMER_QUEUE_JOB_KIND_PREFIX)
+            if job_kind_forbidden_on_pruner_lane(k) or not k.startswith(PRUNER_QUEUE_JOB_KIND_PREFIX)
         },
     )
     if bad:
         msg = (
-            "Trimmer worker handler registry keys must start with "
-            f"{TRIMMER_QUEUE_JOB_KIND_PREFIX!r} and must not use another module's reserved "
+            "Pruner worker handler registry keys must start with "
+            f"{PRUNER_QUEUE_JOB_KIND_PREFIX!r} and must not use another module's reserved "
             f"prefixes (offending keys: {bad!r})"
         )
         raise ValueError(msg)
@@ -185,7 +197,8 @@ def validate_trimmer_worker_handler_registry(
 _FORBIDDEN_ON_SUBBER_LANE: tuple[str, ...] = (
     *FETCHER_QUEUE_JOB_KIND_PREFIXES,
     REFINER_QUEUE_JOB_KIND_PREFIX,
-    TRIMMER_QUEUE_JOB_KIND_PREFIX,
+    PRUNER_QUEUE_JOB_KIND_PREFIX,
+    *_legacy_or_foreign_prefixes(),
 )
 
 
@@ -196,7 +209,7 @@ def job_kind_forbidden_on_subber_lane(job_kind: str) -> bool:
 
 
 def validate_subber_enqueue_job_kind(job_kind: str) -> None:
-    """Subber queue rows must use the Subber lane only (not Fetcher/Refiner/Trimmer namespaces)."""
+    """Subber queue rows must use the Subber lane only (not Fetcher/Refiner/Pruner namespaces)."""
 
     if job_kind_forbidden_on_subber_lane(job_kind):
         msg = (

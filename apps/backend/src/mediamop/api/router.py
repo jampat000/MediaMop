@@ -6,7 +6,7 @@ Convention (locked in Phase 3):
 - **Product JSON API**: browser- and integration-facing JSON routes under **``/api/v1``**
   (mounted via :func:`build_v1_router`). Do not add unversioned product paths at root.
 
-Module routers (dashboard, auth, fetcher, refiner, trimmer, subber, activity, …) are composed under ``/api/v1`` here — not in the nested ``mediamop/`` Jinja app.
+Module routers (dashboard, auth, fetcher, refiner, pruner, subber, activity, …) are composed under ``/api/v1`` here — not in the nested ``mediamop/`` Jinja app.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from mediamop.modules.dashboard.router import router as dashboard_router
 from mediamop.modules.fetcher.router import router as fetcher_router
 from mediamop.modules.refiner.router import router as refiner_router
 from mediamop.modules.subber.router import router as subber_router
-from mediamop.modules.trimmer.router import router as trimmer_router
+from mediamop.modules.pruner.router import router as pruner_router
 from mediamop.platform.activity.router import router as activity_router
 from mediamop.platform.auth.router import router as auth_router
 from mediamop.platform.suite_settings.router import router as suite_settings_router
@@ -34,6 +34,6 @@ def build_v1_router() -> APIRouter:
     router.include_router(fetcher_router)
     router.include_router(activity_router)
     router.include_router(refiner_router)
-    router.include_router(trimmer_router)
+    router.include_router(pruner_router)
     router.include_router(subber_router)
     return router

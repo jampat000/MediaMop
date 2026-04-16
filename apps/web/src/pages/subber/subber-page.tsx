@@ -10,7 +10,7 @@ export function SubberPage() {
           <code className="rounded bg-black/25 px-1 py-0.5 font-mono text-[0.85em] text-[var(--mm-text)]">
             subber_jobs
           </code>{" "}
-          queue, separate from Fetcher, Refiner, and Trimmer. What ships today is a narrow, manual check — not a full
+          queue, separate from Fetcher, Refiner, and Pruner. What ships today is a narrow, manual check — not a full
           subtitle pipeline.
         </p>
       </header>
