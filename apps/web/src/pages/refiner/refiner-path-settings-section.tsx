@@ -120,6 +120,10 @@ export function RefinerPathSettingsSection() {
           <strong className="text-[var(--mm-text2)]">Movies</strong> (including when a folder scan queues that work). Other
           Refiner jobs follow different rules.
         </p>
+        <p>
+          Dry run never deletes files. Watched-folder cleanup checks may still run as preview logic, while output library
+          cleanup is skipped entirely on dry-run remux passes.
+        </p>
         <div className="mt-3 space-y-2.5">
           <p>
             <span className="font-semibold text-[var(--mm-text2)]">Watched folder.</span> Refiner walks it recursively. It
@@ -127,7 +131,9 @@ export function RefinerPathSettingsSection() {
             <span className={mmTechnicalMonoSmallClass}>.mkv</span>, <span className={mmTechnicalMonoSmallClass}>.mp4</span>,{" "}
             <span className={mmTechnicalMonoSmallClass}>.m4v</span>, <span className={mmTechnicalMonoSmallClass}>.webm</span>, and{" "}
             <span className={mmTechnicalMonoSmallClass}>.avi</span> as media. Subtitles, <span className={mmTechnicalMonoSmallClass}>.nfo</span>,{" "}
-            <span className={mmTechnicalMonoSmallClass}>.par2</span>, and other files are left alone for this path.
+            <span className={mmTechnicalMonoSmallClass}>.par2</span>, and other files are not treated as media candidates
+            for this step. Whole-folder cleanup rules below can still remove them when a season or release folder is
+            removed.
           </p>
           <p>
             <span className="font-semibold text-[var(--mm-text2)]">Work / temp.</span> When Refiner runs ffmpeg, it writes
