@@ -62,7 +62,7 @@ def _put_refiner_path_settings(
     assert r.status_code == 200, r.text
 
 
-def test_refiner_file_remux_pass_enqueue_defaults_dry_run_true(client_with_admin: TestClient, tmp_path: Path) -> None:
+def test_refiner_file_remux_pass_enqueue_writes_live_payload(client_with_admin: TestClient, tmp_path: Path) -> None:
     _clear_refiner_jobs()
     _login_admin(client_with_admin)
     watch = tmp_path / "remux_watch"
@@ -92,7 +92,8 @@ def test_refiner_file_remux_pass_enqueue_defaults_dry_run_true(client_with_admin
         row = db.scalars(select(RefinerJob).where(RefinerJob.id == body["job_id"])).first()
         assert row is not None
         assert row.job_kind == REFINER_FILE_REMUX_PASS_JOB_KIND
-        assert '"dry_run":true' in (row.payload_json or "")
+        assert '"dry_run"' not in (row.payload_json or "")
+        assert '"relative_media_path":"movies/sample.mkv"' in (row.payload_json or "")
 
 
 def test_refiner_file_remux_pass_enqueue_rejects_missing_watched_folder(

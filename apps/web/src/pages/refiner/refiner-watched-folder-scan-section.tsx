@@ -32,7 +32,6 @@ export function RefinerWatchedFolderScanSection() {
 
   const [mediaScope, setMediaScope] = useState<RefinerWatchedFolderRemuxScanDispatchEnqueueBody["media_scope"]>("movie");
   const [alsoEnqueueRemux, setAlsoEnqueueRemux] = useState(false);
-  const [remuxDryRun, setRemuxDryRun] = useState(true);
   const [maxConcurrentFiles, setMaxConcurrentFiles] = useState("1");
   const [minFileAgeSeconds, setMinFileAgeSeconds] = useState("60");
 
@@ -51,8 +50,7 @@ export function RefinerWatchedFolderScanSection() {
   const tvOutputSet = Boolean((paths.data?.refiner_tv_output_folder ?? "").trim());
   const watchedSet = mediaScope === "movie" ? movieWatchedSet : tvWatchedSet;
   const outputSet = mediaScope === "movie" ? movieOutputSet : tvOutputSet;
-  const liveRemuxRequested = alsoEnqueueRemux && !remuxDryRun;
-  const missingLivePrereq = liveRemuxRequested && !outputSet;
+  const missingLivePrereq = alsoEnqueueRemux && !outputSet;
 
   if (paths.isPending || me.isPending || operatorSettings.isPending) {
     return <PageLoading label="Loading Refiner path settings" />;
@@ -166,8 +164,8 @@ export function RefinerWatchedFolderScanSection() {
         <p className="mt-2">
           Interval scans (when enabled) enqueue TV and Movies separately once those watched folders are saved. You can
           optionally queue per-file passes for eligible media; they follow your saved{" "}
-          <strong className="text-[var(--mm-text)]">Audio & subtitles</strong> and stay dry run until you clear that checkbox.
-          Live passes need a saved output folder for that scope. Duplicate guards use scope plus relative path.
+          <strong className="text-[var(--mm-text)]">Audio & subtitles</strong>. Per-file passes are always live and need
+          a saved output folder for that scope. Duplicate guards use scope plus relative path.
         </p>
       </details>
 
@@ -219,21 +217,6 @@ export function RefinerWatchedFolderScanSection() {
             Also queue file passes for eligible media (ownership OK, not blocked by active upstream work).
           </span>
         </label>
-        {alsoEnqueueRemux ? (
-          <label className="ml-1 flex cursor-pointer items-start gap-3 border-l border-[var(--mm-border)] pl-4">
-            <input
-              type="checkbox"
-              className={mmCheckboxControlClass}
-              checked={remuxDryRun}
-              disabled={!canTrigger || enqueueScan.isPending || !watchedSet}
-              onChange={(e) => setRemuxDryRun(e.target.checked)}
-            />
-            <span className="text-sm text-[var(--mm-text2)]">
-              File passes are <strong className="text-[var(--mm-text)]">dry run</strong>. Uncheck for a live pass—needs
-              a saved output folder for this scope; same file-handling rules as the Audio & subtitles tab.
-            </span>
-          </label>
-        ) : null}
       </div>
 
       {missingLivePrereq ? (
@@ -266,7 +249,6 @@ export function RefinerWatchedFolderScanSection() {
           onClick={() =>
             enqueueScan.mutate({
               enqueue_remux_jobs: alsoEnqueueRemux,
-              remux_dry_run: remuxDryRun,
               media_scope: mediaScope,
             })
           }

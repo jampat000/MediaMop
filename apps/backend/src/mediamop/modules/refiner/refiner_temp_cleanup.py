@@ -98,7 +98,7 @@ def run_refiner_work_temp_stale_sweep_for_scope(
     session: Session,
     settings: MediaMopSettings,
     media_scope: str,
-    dry_run: bool,
+    dry_run: bool | None = None,
 ) -> dict[str, Any]:
     """Sweep **one** scope's effective work root; never the other scope's folder.
 
@@ -113,7 +113,7 @@ def run_refiner_work_temp_stale_sweep_for_scope(
     label = "TV" if ms == "tv" else "Movies"
     out: dict[str, Any] = {
         "media_scope": ms,
-        "temp_cleanup_dry_run": bool(dry_run),
+        "temp_cleanup_dry_run": False,
         "temp_cleanup_root_paths": [str(root)],
         "temp_cleanup_candidates_found": 0,
         "temp_cleanup_files_deleted": [],
@@ -179,11 +179,6 @@ def run_refiner_work_temp_stale_sweep_for_scope(
         if age_s < stale_after:
             out["temp_cleanup_files_skipped"].append(
                 f"{path} — not stale enough yet (must be unchanged for at least {stale_after}s).",
-            )
-            continue
-        if dry_run:
-            out["temp_cleanup_files_skipped"].append(
-                f"{path} — dry run only; this stale Refiner temp file would be removed.",
             )
             continue
         try:

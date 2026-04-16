@@ -525,7 +525,7 @@ def test_rmtree_lock_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> N
     assert "could not remove" in (out.get("movie_output_folder_skip_reason") or "").lower()
 
 
-def test_dry_run_deletes_nothing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_live_cleanup_runs_even_when_legacy_dry_run_flag_passed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     radarr_calls: list[int] = []
 
@@ -573,13 +573,9 @@ def test_dry_run_deletes_nothing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
         media_scope="movie",
         out=out,
     )
-    assert title.exists()
-    assert out["movie_output_dry_run"] is True
-    assert out["movie_output_truth_check"] == "skipped"
-    assert radarr_calls == []
-    skip = out.get("movie_output_folder_skip_reason") or ""
-    assert "dry run" in skip.lower()
-    assert "radarr" in skip.lower()
+    assert out["movie_output_dry_run"] is False
+    assert out["movie_output_truth_check"] == "passed"
+    assert radarr_calls == [1]
 
 
 def test_expected_output_outside_output_root_skips(tmp_path: Path) -> None:
@@ -634,7 +630,6 @@ def test_activity_keys_initialized_on_skip(tmp_path: Path) -> None:
         output_folder="",
         work_folder_effective=str(tmp_path / "work"),
         work_folder_is_default=True,
-        preview_output_folder=None,
     )
     out: dict = {}
     maybe_run_movie_output_folder_cleanup_after_remux(
@@ -644,7 +639,7 @@ def test_activity_keys_initialized_on_skip(tmp_path: Path) -> None:
         watched_root=watched,
         src=src,
         final_output_file=None,
-        dry_run=True,
+        dry_run=False,
         relative_media_path="a.mkv",
         current_job_id=1,
         media_scope="movie",

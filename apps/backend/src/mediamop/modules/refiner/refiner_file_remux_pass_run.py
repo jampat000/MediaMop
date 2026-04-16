@@ -13,7 +13,6 @@ from sqlalchemy.orm import Session
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.refiner_file_remux_pass_paths import resolve_media_file_under_refiner_root
 from mediamop.modules.refiner.refiner_file_remux_pass_visibility import (
-    REMUX_PASS_OUTCOME_DRY_RUN_PLANNED,
     REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
     REMUX_PASS_OUTCOME_FAILED_DURING_EXECUTION,
     REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN,
@@ -121,42 +120,10 @@ def _check_output_file_completeness(*, output_file: Path, source_file: Path) -> 
     }
 
 
-def _preview_cascade_folders_after_movie_folder_removed(
-    *,
-    movie_folder: Path,
-    watched_root: Path,
-) -> list[str]:
-    """Predict which empty parents would be removed after ``movie_folder`` is deleted (read-only)."""
-
-    out_paths: list[str] = []
-    root = watched_root.resolve()
-    cur = movie_folder.resolve()
-    while True:
-        parent = cur.parent.resolve()
-        if parent == root:
-            break
-        try:
-            parent.relative_to(root)
-        except ValueError:
-            break
-        try:
-            entries = list(parent.iterdir())
-        except OSError:
-            break
-        if len(entries) != 1:
-            break
-        if entries[0].resolve() != cur:
-            break
-        out_paths.append(str(parent))
-        cur = parent
-    return out_paths
-
-
 def _cascade_delete_empty_parents(
     *,
     first_parent: Path,
     watched_root: Path,
-    dry_run: bool,
     cascade_folders_deleted: list[str],
 ) -> None:
     """Remove empty parents up to but not including watched_root (strictly under root)."""
@@ -179,10 +146,6 @@ def _cascade_delete_empty_parents(
                 break
         except OSError:
             break
-        if dry_run:
-            cascade_folders_deleted.append(str(cur))
-            cur = cur.parent
-            continue
         try:
             cur.rmdir()
             cascade_folders_deleted.append(str(cur))
@@ -199,12 +162,9 @@ def _cascade_delete_empty_parents(
 def _delete_movie_folder_contents_then_dir(
     *,
     movie_folder: Path,
-    dry_run: bool,
 ) -> tuple[bool, str | None, str | None]:
     """Delete everything under movie_folder then the folder itself. Returns (ok, skip_reason, locked_path)."""
 
-    if dry_run:
-        return True, None, None
     try:
         shutil.rmtree(movie_folder)
     except OSError as exc:
@@ -237,7 +197,6 @@ def _handle_refiner_cleanup_after_success(
     src: Path,
     watched_root: Path,
     out: dict[str, Any],
-    dry_run: bool,
     media_scope: str | None,
     path_runtime: RefinerPathRuntime,
     final_output_file: Path | None,
@@ -267,7 +226,6 @@ def _handle_refiner_cleanup_after_success(
             src=src,
             watched_root=watched_root,
             out=out,
-            dry_run=dry_run,
             min_file_age_seconds=min_file_age_seconds,
             current_job_id=current_job_id,
             remux_context=dict(out),
@@ -284,10 +242,7 @@ def _handle_refiner_cleanup_after_success(
     except ValueError:
         out["source_folder_skip_reason"] = "The video file is not under the saved watched folder, so nothing was removed."
         logger.warning("Refiner Movies cleanup: source not under watched root (%s).", src_resolved)
-        if dry_run:
-            out["source_deleted_after_success"] = False
-        else:
-            out["source_deleted_after_success"] = False
+        out["source_deleted_after_success"] = False
         return
 
     movie_folder = src_resolved.parent
@@ -298,10 +253,7 @@ def _handle_refiner_cleanup_after_success(
             "The release folder would sit outside the watched folder, so Refiner did not change it."
         )
         logger.warning("Refiner Movies cleanup: movie folder outside watched root (%s).", movie_folder)
-        if dry_run:
-            out["source_deleted_after_success"] = False
-        else:
-            out["source_deleted_after_success"] = False
+        out["source_deleted_after_success"] = False
         return
 
     if movie_folder == watched_resolved:
@@ -309,60 +261,11 @@ def _handle_refiner_cleanup_after_success(
             "The video file sits directly in the watched folder root, so Refiner does not remove a release folder here."
         )
         logger.warning("Refiner Movies cleanup: immediate parent is watched root (%s).", watched_resolved)
-        if dry_run:
-            out["source_deleted_after_success"] = False
-        else:
-            out["source_deleted_after_success"] = False
+        out["source_deleted_after_success"] = False
         return
 
     out["source_folder_path"] = str(movie_folder)
     cascade: list[str] = out["cascade_folders_deleted"]  # type: ignore[assignment]
-
-    if dry_run:
-        out["source_folder_deleted"] = False
-        out["source_deleted_after_success"] = False
-        preview_out_root = (path_runtime.preview_output_folder or "").strip()
-        if not preview_out_root:
-            out["output_completeness_check"] = "skipped"
-            out["output_completeness_note"] = "No output folder is saved for Movies, so Refiner would not remove the release folder."
-            out["source_folder_skip_reason"] = out["output_completeness_note"]
-            logger.info(
-                "Refiner Movies cleanup (dry run): would skip — no saved output folder. Release folder: %s",
-                movie_folder,
-            )
-            return
-        expected_output = Path(preview_out_root).resolve() / src_resolved.relative_to(watched_resolved)
-        check = _check_output_file_completeness(output_file=expected_output, source_file=src_resolved)
-        out["output_completeness_check"] = check["output_completeness_check"]
-        out["output_size_bytes"] = check["output_size_bytes"]
-        out["source_size_bytes"] = check["source_size_bytes"]
-        if check.get("output_completeness_note"):
-            out["output_completeness_note"] = check["output_completeness_note"]
-        if check["output_completeness_check"] != "passed":
-            out["source_folder_skip_reason"] = (
-                check.get("output_completeness_note")
-                or "The output file did not pass the safety check, so the release folder would not be removed."
-            )
-            logger.info(
-                "Refiner Movies cleanup (dry run): would skip after output check (%s). Release folder: %s",
-                out["source_folder_skip_reason"],
-                movie_folder,
-            )
-            return
-        out["source_folder_skip_reason"] = None
-        logger.info(
-            "Refiner Movies cleanup (dry run): would remove release folder %s and then empty parents up to (not "
-            "including) the watched folder, after output check passed (%s).",
-            movie_folder,
-            expected_output,
-        )
-        cascade.extend(
-            _preview_cascade_folders_after_movie_folder_removed(
-                movie_folder=movie_folder,
-                watched_root=watched_resolved,
-            ),
-        )
-        return
 
     out_dir = Path(path_runtime.output_folder).resolve()
     if not str(path_runtime.output_folder).strip():
@@ -393,7 +296,7 @@ def _handle_refiner_cleanup_after_success(
         logger.warning("Refiner Movies cleanup: skipped — %s", out["source_folder_skip_reason"])
         return
 
-    ok, skip_reason, _locked_path = _delete_movie_folder_contents_then_dir(movie_folder=movie_folder, dry_run=False)
+    ok, skip_reason, _locked_path = _delete_movie_folder_contents_then_dir(movie_folder=movie_folder)
     if not ok:
         out["source_folder_skip_reason"] = skip_reason or "The release folder could not be removed."
         out["source_deleted_after_success"] = False
@@ -406,7 +309,6 @@ def _handle_refiner_cleanup_after_success(
     _cascade_delete_empty_parents(
         first_parent=movie_folder.parent,
         watched_root=watched_resolved,
-        dry_run=False,
         cascade_folders_deleted=cascade,
     )
 
@@ -416,17 +318,13 @@ def run_refiner_file_remux_pass(
     settings: MediaMopSettings,
     path_runtime: RefinerPathRuntime,
     relative_media_path: str,
-    dry_run: bool,
     rules_config: RefinerRulesConfig | None = None,
     min_file_age_seconds: int | None = None,
     media_scope: str | None = "movie",
     cleanup_session: Session | None = None,
     current_job_id: int | None = None,
 ) -> dict[str, Any]:
-    """Run one pass: probe, plan, operator lines, optional remux.
-
-    ``dry_run`` when True runs ffprobe and planning only (no ffmpeg output write, no filesystem cleanup).
-    Live passes use saved Refiner work/temp and output folders from ``path_runtime`` (no fixed home subpaths).
+    """Run one pass: probe, plan, optional ffmpeg remux, and post-success cleanup.
 
     ``media_scope`` controls post-success watched-folder cleanup: Movies may remove a whole release folder; TV may remove
     a whole season folder when gates pass (requires ``cleanup_session`` for queue and history checks).
@@ -492,15 +390,14 @@ def run_refiner_file_remux_pass(
 
     _, ffmpeg_bin = resolve_ffprobe_ffmpeg(mediamop_home=settings.mediamop_home)
     work_dir = Path(path_runtime.work_folder_effective)
-    dst_placeholder = work_dir / "dry-run-ffmpeg-destination-placeholder.mkv"
+    dst_placeholder = work_dir / "planned-ffmpeg-destination-placeholder.mkv"
     argv = build_ffmpeg_argv(ffmpeg_bin=ffmpeg_bin, src=src, dst=dst_placeholder, plan=plan)
 
     watched_root = Path(path_runtime.watched_folder).resolve()
 
     out: dict[str, Any] = {
         "ok": True,
-        "outcome": REMUX_PASS_OUTCOME_DRY_RUN_PLANNED,
-        "dry_run": dry_run,
+        "outcome": REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN,
         "relative_media_path": relative_media_path,
         "inspected_source_path": inspected,
         "refiner_watched_folder_resolved": str(watched_root),
@@ -510,17 +407,14 @@ def run_refiner_file_remux_pass(
         "audio_after": after_a,
         "subs_before": before_s,
         "subs_after": after_s,
-        "after_track_lines_meaning": (
-            "Planned output layout only (dry run) — source file not modified; "
-            "\"after\" lines show the selection the live pass would apply."
-        ),
+        "after_track_lines_meaning": "Planned output layout for this live pass.",
         "remux_required": remux_needed,
         "ffmpeg_argv": [str(x) for x in argv],
         "audio_selection_notes": list(plan.audio_selection_notes),
         "media_scope": scope,
     }
 
-    def _run_scope_output_cleanup(*, final_output_file: Path | None, dry_run_value: bool) -> None:
+    def _run_scope_output_cleanup(*, final_output_file: Path | None) -> None:
         if scope == "tv":
             maybe_run_tv_output_season_folder_cleanup_after_remux(
                 session=cleanup_session,
@@ -529,7 +423,6 @@ def run_refiner_file_remux_pass(
                 watched_root=watched_root,
                 src=src,
                 final_output_file=final_output_file,
-                dry_run=dry_run_value,
                 relative_media_path=relative_media_path,
                 current_job_id=current_job_id,
                 media_scope=scope,
@@ -543,31 +436,12 @@ def run_refiner_file_remux_pass(
             watched_root=watched_root,
             src=src,
             final_output_file=final_output_file,
-            dry_run=dry_run_value,
             relative_media_path=relative_media_path,
             current_job_id=current_job_id,
             media_scope=scope,
             out=out,
         )
 
-    if dry_run:
-        _handle_refiner_cleanup_after_success(
-            src=src,
-            watched_root=watched_root,
-            out=out,
-            dry_run=True,
-            media_scope=media_scope,
-            path_runtime=path_runtime,
-            final_output_file=None,
-            cleanup_session=cleanup_session,
-            settings=settings,
-            min_file_age_seconds=min_age,
-            current_job_id=current_job_id,
-        )
-        _run_scope_output_cleanup(final_output_file=None, dry_run_value=True)
-        return out
-
-    out["outcome"] = REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN
     out.pop("after_track_lines_meaning", None)
     out_dir = Path(path_runtime.output_folder).resolve()
 
@@ -598,7 +472,6 @@ def run_refiner_file_remux_pass(
             src=src,
             watched_root=watched_root,
             out=out,
-            dry_run=False,
             media_scope=media_scope,
             path_runtime=path_runtime,
             final_output_file=final_skip,
@@ -607,7 +480,7 @@ def run_refiner_file_remux_pass(
             min_file_age_seconds=min_age,
             current_job_id=current_job_id,
         )
-        _run_scope_output_cleanup(final_output_file=final_skip, dry_run_value=False)
+        _run_scope_output_cleanup(final_output_file=final_skip)
         return out
 
     try:
@@ -625,7 +498,6 @@ def run_refiner_file_remux_pass(
             "ok": False,
             "outcome": REMUX_PASS_OUTCOME_FAILED_DURING_EXECUTION,
             "reason": str(exc),
-            "dry_run": False,
             "relative_media_path": relative_media_path,
             "inspected_source_path": inspected,
             "refiner_watched_folder_resolved": str(watched_root),
@@ -658,7 +530,6 @@ def run_refiner_file_remux_pass(
         src=src,
         watched_root=watched_root,
         out=out,
-        dry_run=False,
         media_scope=media_scope,
         path_runtime=path_runtime,
         final_output_file=final,
@@ -667,7 +538,7 @@ def run_refiner_file_remux_pass(
         min_file_age_seconds=min_age,
         current_job_id=current_job_id,
     )
-    _run_scope_output_cleanup(final_output_file=final, dry_run_value=False)
+    _run_scope_output_cleanup(final_output_file=final)
     return out
 
 

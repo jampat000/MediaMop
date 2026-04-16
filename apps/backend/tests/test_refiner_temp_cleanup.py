@@ -79,7 +79,6 @@ def test_stale_refiner_temp_deleted_movie_scope_when_old_enough(tmp_path: Path) 
             session=session,
             settings=settings,
             media_scope="movie",
-            dry_run=False,
         )
     assert out["media_scope"] == "movie"
     assert out["temp_cleanup_ran"] is True
@@ -105,7 +104,6 @@ def test_movie_sweep_does_not_touch_tv_work_folder(tmp_path: Path) -> None:
             session=session,
             settings=settings,
             media_scope="movie",
-            dry_run=False,
         )
     assert tv_stale.exists()
     assert out["temp_cleanup_candidates_found"] == 0
@@ -126,7 +124,6 @@ def test_fresh_refiner_temp_not_deleted_per_scope(tmp_path: Path) -> None:
             session=session,
             settings=settings,
             media_scope="movie",
-            dry_run=False,
         )
     assert fresh.exists()
     assert out["temp_cleanup_candidates_found"] == 1
@@ -148,7 +145,6 @@ def test_non_refiner_file_in_work_root_not_deleted(tmp_path: Path) -> None:
             session=session,
             settings=settings,
             media_scope="movie",
-            dry_run=False,
         )
     assert other.exists()
     assert out["temp_cleanup_candidates_found"] == 0
@@ -172,7 +168,7 @@ def test_movie_remux_blocks_movie_sweep_only_tv_still_deletes(tmp_path: Path) ->
             dedupe_key="remux-movie",
             job_kind=REFINER_FILE_REMUX_PASS_JOB_KIND,
             payload_json=json.dumps(
-                {"relative_media_path": "a.mkv", "dry_run": False, "media_scope": "movie"},
+                {"relative_media_path": "a.mkv", "media_scope": "movie"},
             ),
             status=RefinerJobStatus.PENDING.value,
             max_attempts=3,
@@ -185,13 +181,11 @@ def test_movie_remux_blocks_movie_sweep_only_tv_still_deletes(tmp_path: Path) ->
             session=session,
             settings=settings,
             media_scope="movie",
-            dry_run=False,
         )
         out_t = run_refiner_work_temp_stale_sweep_for_scope(
             session=session,
             settings=settings,
             media_scope="tv",
-            dry_run=False,
         )
     assert out_m["temp_cleanup_ran"] is False
     assert out_m["temp_cleanup_skipped_reason"]
@@ -219,7 +213,7 @@ def test_tv_remux_blocks_tv_sweep_only_movie_still_deletes(tmp_path: Path) -> No
             dedupe_key="remux-tv",
             job_kind=REFINER_FILE_REMUX_PASS_JOB_KIND,
             payload_json=json.dumps(
-                {"relative_media_path": "s01e01.mkv", "dry_run": False, "media_scope": "tv"},
+                {"relative_media_path": "s01e01.mkv", "media_scope": "tv"},
             ),
             status=RefinerJobStatus.PENDING.value,
             max_attempts=3,
@@ -232,13 +226,11 @@ def test_tv_remux_blocks_tv_sweep_only_movie_still_deletes(tmp_path: Path) -> No
             session=session,
             settings=settings,
             media_scope="movie",
-            dry_run=False,
         )
         out_t = run_refiner_work_temp_stale_sweep_for_scope(
             session=session,
             settings=settings,
             media_scope="tv",
-            dry_run=False,
         )
     assert out_t["temp_cleanup_ran"] is False
     assert ft.exists()
@@ -254,7 +246,7 @@ def test_active_scope_detection_legacy_payload_treated_as_movie(tmp_path: Path) 
         RefinerJob(
             dedupe_key="r1",
             job_kind=REFINER_FILE_REMUX_PASS_JOB_KIND,
-            payload_json=json.dumps({"relative_media_path": "x.mkv", "dry_run": True}),
+            payload_json=json.dumps({"relative_media_path": "x.mkv"}),
             status=RefinerJobStatus.PENDING.value,
             max_attempts=3,
         ),
@@ -281,13 +273,11 @@ def test_shared_resolved_work_root_blocks_deletes_both_scopes(tmp_path: Path) ->
             session=session,
             settings=settings,
             media_scope="movie",
-            dry_run=False,
         )
         out_t = run_refiner_work_temp_stale_sweep_for_scope(
             session=session,
             settings=settings,
             media_scope="tv",
-            dry_run=False,
         )
     assert f.exists()
     assert out_m["temp_cleanup_shared_work_root_conflict"] is True
@@ -298,7 +288,7 @@ def test_shared_resolved_work_root_blocks_deletes_both_scopes(tmp_path: Path) ->
     assert out_t["temp_cleanup_skipped_reason"]
 
 
-def test_dry_run_deletes_nothing_movie_scope(tmp_path: Path) -> None:
+def test_stale_temp_deletes_when_not_blocked_movie_scope(tmp_path: Path) -> None:
     _, session = _session(tmp_path)
     w_m = tmp_path / "m"
     w_t = tmp_path / "t"
@@ -314,12 +304,12 @@ def test_dry_run_deletes_nothing_movie_scope(tmp_path: Path) -> None:
             session=session,
             settings=settings,
             media_scope="movie",
-            dry_run=True,
         )
-    assert f.exists()
-    assert out["temp_cleanup_dry_run"] is True
-    assert out["temp_cleanup_files_deleted"] == []
+    assert not f.exists()
+    assert out["temp_cleanup_dry_run"] is False
     assert out["temp_cleanup_candidates_found"] == 1
+    assert str(f.resolve()) in out["temp_cleanup_files_deleted"]
+    assert not f.exists()
 
 
 def test_file_lock_skip_continues_movie_scope(tmp_path: Path) -> None:
@@ -349,7 +339,6 @@ def test_file_lock_skip_continues_movie_scope(tmp_path: Path) -> None:
                 session=session,
                 settings=settings,
                 media_scope="movie",
-                dry_run=False,
             )
     assert f1.exists()
     assert not f2.exists()
@@ -368,7 +357,6 @@ def test_activity_field_keys_include_scope_and_conflict_flag(tmp_path: Path) -> 
             session=session,
             settings=settings,
             media_scope="tv",
-            dry_run=False,
         )
     for k in (
         "media_scope",
@@ -412,7 +400,6 @@ def test_shared_min_stale_age_used_for_both_scopes(tmp_path: Path) -> None:
             session=session,
             settings=settings,
             media_scope="tv",
-            dry_run=False,
         )
     assert f.exists()
     assert out["temp_cleanup_candidates_found"] == 1

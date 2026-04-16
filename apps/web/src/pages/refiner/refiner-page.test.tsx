@@ -74,7 +74,6 @@ const minimalRefinerRuntimeSettings: RefinerRuntimeSettingsOut = {
   refiner_watched_folder_remux_scan_dispatch_schedule_enabled: false,
   refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds: 3600,
   refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs: false,
-  refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run: true,
   refiner_watched_folder_min_file_age_seconds: 300,
   refiner_movie_output_cleanup_min_age_seconds: 172_800,
   movie_output_cleanup_configuration_note: "MEDIAMOP_REFINER_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS note for tests.",

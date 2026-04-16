@@ -37,7 +37,7 @@ def post_refiner_file_remux_pass_enqueue(
     db: DbSessionDep,
     settings: SettingsDep,
 ) -> RefinerFileRemuxPassManualEnqueueOut:
-    """Enqueue one ffprobe + remux-plan pass; ``dry_run`` defaults true (no ffmpeg write unless opted out)."""
+    """Enqueue one live ffprobe + remux-plan + optional ffmpeg pass."""
 
     validate_browser_post_origin(request, settings)
     secret = require_session_secret(settings)
@@ -65,7 +65,6 @@ def post_refiner_file_remux_pass_enqueue(
 
     payload = {
         "relative_media_path": body.relative_media_path.strip(),
-        "dry_run": body.dry_run,
         "media_scope": scope,
     }
     dedupe_key = f"{REFINER_FILE_REMUX_PASS_JOB_KIND}:{uuid4().hex}"

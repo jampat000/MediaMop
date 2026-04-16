@@ -50,7 +50,6 @@ export function RefinerRuntimeSettingsSection() {
         <li>Enabled: {d.refiner_watched_folder_remux_scan_dispatch_schedule_enabled ? "Yes" : "No"}</li>
         <li>Check interval: every {d.refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds} seconds</li>
         <li>Periodic file passes: {d.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs ? "Yes" : "No"}</li>
-        <li>Periodic pass mode: {d.refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run ? "Dry run" : "Live"}</li>
         <li>
           File readiness guardrail: skip files newer than {d.refiner_watched_folder_min_file_age_seconds} seconds for
           watched-folder scans; the same limit applies in TV season cleanup for episodes Refiner never successfully

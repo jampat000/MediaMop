@@ -133,7 +133,6 @@ class RefinerPathRuntime:
     output_folder: str
     work_folder_effective: str
     work_folder_is_default: bool
-    #: Movies only: normalized output path string for dry-run cleanup preview text (no write path uses ``output_folder``).
     preview_output_folder: str | None = None
 
 
@@ -148,7 +147,7 @@ def resolve_refiner_path_runtime_for_remux(
     session: Session,
     settings: MediaMopSettings,
     *,
-    dry_run: bool,
+    dry_run: bool | None = None,
     media_scope: str | None = "movie",
 ) -> tuple[RefinerPathRuntime | None, str | None]:
     """Build runtime paths; on error return ``(None, reason)``."""
@@ -180,23 +179,6 @@ def resolve_refiner_path_runtime_for_remux(
         work_str, work_is_default = effective_work_folder(row=row, mediamop_home=settings.mediamop_home)
     work_path = _norm_dir_path(work_str)
 
-    if dry_run:
-        preview_out: str | None = None
-        if scope == "movie":
-            out_preview_raw = (row.refiner_output_folder or "").strip()
-            if out_preview_raw:
-                preview_out = str(_norm_dir_path(out_preview_raw))
-        return (
-            RefinerPathRuntime(
-                watched_folder=str(watched_path),
-                output_folder="",
-                work_folder_effective=str(work_path),
-                work_folder_is_default=work_is_default,
-                preview_output_folder=preview_out,
-            ),
-            None,
-        )
-
     if scope == "tv":
         out_raw = (row.refiner_tv_output_folder or "").strip()
     else:
@@ -224,7 +206,6 @@ def resolve_refiner_path_runtime_for_remux(
             output_folder=str(output_path),
             work_folder_effective=str(work_path),
             work_folder_is_default=work_is_default,
-            preview_output_folder=str(output_path),
         ),
         None,
     )

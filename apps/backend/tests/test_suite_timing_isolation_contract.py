@@ -52,7 +52,6 @@ def test_refiner_watched_folder_scan_dispatch_has_distinct_schedule_surface_on_s
     assert "refiner_watched_folder_remux_scan_dispatch_schedule_enabled" in names
     assert "refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds" in names
     assert "refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs" in names
-    assert "refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run" in names
 
 
 def test_refiner_movie_output_cleanup_has_distinct_age_surface_on_settings() -> None:

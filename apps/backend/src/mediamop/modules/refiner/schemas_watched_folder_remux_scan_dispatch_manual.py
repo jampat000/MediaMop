@@ -20,13 +20,6 @@ class RefinerWatchedFolderRemuxScanDispatchManualEnqueueIn(BaseModel):
             "no remux jobs are queued. When true, eligible files (verdict proceed) also enqueue remux jobs."
         ),
     )
-    remux_dry_run: bool = Field(
-        default=True,
-        description=(
-            "Forwarded to each enqueued ``refiner.file.remux_pass.v1`` payload as ``dry_run``. "
-            "Ignored when enqueue_remux_jobs is false. When false, a saved output folder is required."
-        ),
-    )
     media_scope: Literal["movie", "tv"] = Field(
         default="movie",
         description="Which saved watched/output tree this scan uses (Movies vs TV path settings).",

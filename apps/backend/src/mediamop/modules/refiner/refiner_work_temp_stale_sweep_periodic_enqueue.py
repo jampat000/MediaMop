@@ -70,7 +70,7 @@ async def _run_periodic_scope_enqueue(
 
         def _once() -> None:
             with session_factory() as session:
-                enqueue_refiner_work_temp_stale_sweep_job(session, media_scope=media_scope, dry_run=False)
+                enqueue_refiner_work_temp_stale_sweep_job(session, media_scope=media_scope)
                 session.commit()
 
         try:

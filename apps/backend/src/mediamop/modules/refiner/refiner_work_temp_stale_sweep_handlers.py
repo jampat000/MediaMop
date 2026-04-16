@@ -19,7 +19,7 @@ from mediamop.modules.refiner.refiner_work_temp_stale_sweep_activity import (
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
 
 
-def _parse_work_temp_stale_sweep_payload(payload_json: str | None) -> tuple[bool, str]:
+def _parse_work_temp_stale_sweep_payload(payload_json: str | None) -> str:
     if not payload_json or not payload_json.strip():
         msg = "work temp stale sweep payload is required (media_scope + optional dry_run)"
         raise ValueError(msg)
@@ -27,13 +27,12 @@ def _parse_work_temp_stale_sweep_payload(payload_json: str | None) -> tuple[bool
     if not isinstance(data, dict):
         msg = "work temp stale sweep payload must be a JSON object"
         raise ValueError(msg)
-    dry_run = bool(data.get("dry_run"))
     raw_scope = data.get("media_scope")
     if raw_scope is None or not str(raw_scope).strip():
         msg = "work temp stale sweep payload must include media_scope (movie or tv)"
         raise ValueError(msg)
     media_scope = normalize_work_temp_sweep_media_scope(str(raw_scope))
-    return dry_run, media_scope
+    return media_scope
 
 
 def make_refiner_work_temp_stale_sweep_handler(
@@ -43,14 +42,13 @@ def make_refiner_work_temp_stale_sweep_handler(
     """Remove (or preview removal of) stale Refiner temp files under one scope's saved work folder."""
 
     def _run(ctx: RefinerJobWorkContext) -> None:
-        dry_run, media_scope = _parse_work_temp_stale_sweep_payload(ctx.payload_json)
+        media_scope = _parse_work_temp_stale_sweep_payload(ctx.payload_json)
         with session_factory() as session:
             with session.begin():
                 result: dict[str, Any] = run_refiner_work_temp_stale_sweep_for_scope(
                     session=session,
                     settings=settings,
                     media_scope=media_scope,
-                    dry_run=dry_run,
                 )
                 result["job_id"] = ctx.id
                 detail = json.dumps(result, separators=(",", ":"), ensure_ascii=True)[:10_000]

@@ -129,7 +129,7 @@ def test_refiner_path_settings_put_save_without_watched_folder_succeeds(
 
 
 def test_resolve_refiner_path_runtime_fails_without_watched_folder(client_with_admin: TestClient) -> None:
-    """Manual remux (dry or live) requires a saved watched folder — distinct from optional-at-save."""
+    """Manual remux requires a saved watched folder — distinct from optional-at-save."""
     _login_admin(client_with_admin)
     settings = MediaMopSettings.load()
     fac = create_session_factory(create_db_engine(settings))

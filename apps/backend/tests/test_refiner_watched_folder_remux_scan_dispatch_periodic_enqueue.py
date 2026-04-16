@@ -38,7 +38,6 @@ def _settings_on() -> MediaMopSettings:
         refiner_watched_folder_remux_scan_dispatch_schedule_enabled=True,
         refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds=3600,
         refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs=False,
-        refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run=True,
     )
 
 

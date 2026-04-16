@@ -16,8 +16,7 @@ from mediamop.modules.refiner.refiner_failure_cleanup_activity import (
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
 
 
-def _parse_payload(payload_json: str | None, *, default_scope: str) -> tuple[str, bool]:
-    dry_run = False
+def _parse_payload(payload_json: str | None, *, default_scope: str) -> str:
     media_scope = default_scope
     if payload_json and payload_json.strip():
         data = json.loads(payload_json)
@@ -26,8 +25,7 @@ def _parse_payload(payload_json: str | None, *, default_scope: str) -> tuple[str
                 media_scope = "tv"
             else:
                 media_scope = "movie"
-            dry_run = bool(data.get("dry_run"))
-    return media_scope, dry_run
+    return media_scope
 
 
 def make_refiner_failure_cleanup_handler(
@@ -37,14 +35,13 @@ def make_refiner_failure_cleanup_handler(
     default_scope: str,
 ) -> Callable[[RefinerJobWorkContext], None]:
     def _run(ctx: RefinerJobWorkContext) -> None:
-        media_scope, dry_run = _parse_payload(ctx.payload_json, default_scope=default_scope)
+        media_scope = _parse_payload(ctx.payload_json, default_scope=default_scope)
         with session_factory() as session:
             with session.begin():
                 result: dict[str, Any] = run_refiner_failure_cleanup_sweep_for_scope(
                     session=session,
                     settings=settings,
                     media_scope=media_scope,
-                    dry_run=dry_run,
                 )
                 result["job_id"] = ctx.id
                 detail = json.dumps(result, separators=(",", ":"), ensure_ascii=True)[:10_000]

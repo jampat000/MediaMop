@@ -39,10 +39,7 @@ class RefinerRuntimeSettingsOut(BaseModel):
         description="Seconds between periodic enqueue attempts (clamped 60..7d); restart required to change.",
     )
     refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs: bool = Field(
-        description="When true, periodic scans may enqueue ``refiner.file.remux_pass.v1`` (still subject to dry_run).",
-    )
-    refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run: bool = Field(
-        description="Forwarded as ``dry_run`` on enqueued remux passes when periodic enqueue_remux is on.",
+        description="When true, periodic scans may enqueue ``refiner.file.remux_pass.v1``.",
     )
     refiner_watched_folder_min_file_age_seconds: int = Field(
         ge=0,

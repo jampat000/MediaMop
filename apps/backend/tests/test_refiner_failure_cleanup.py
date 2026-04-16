@@ -51,10 +51,7 @@ def _add_failed(session: Session, *, rel: str, scope: str, dry_run: bool = False
         dedupe_key=f"x:{scope}:{rel}",
         job_kind=REFINER_FILE_REMUX_PASS_JOB_KIND,
         status=RefinerJobStatus.FAILED.value,
-        payload_json=json.dumps(
-            {"relative_media_path": rel, "media_scope": scope, "dry_run": dry_run},
-            separators=(",", ":"),
-        ),
+        payload_json=json.dumps({"relative_media_path": rel, "media_scope": scope, "dry_run": dry_run}, separators=(",", ":")),
     )
     session.add(row)
     session.flush()
@@ -102,9 +99,7 @@ def test_failed_movie_older_than_grace_cleans_source_output_and_temp(tmp_path: P
         ),
         patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
     ):
-        result = run_refiner_failure_cleanup_sweep_for_scope(
-            session=session, settings=settings, media_scope="movie", dry_run=False
-        )
+        result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=settings, media_scope="movie")
     job = result["jobs"][0]
     assert job["movie_failure_cleanup_ran"] is True
     assert job["movie_failure_cleanup_queue_check"] == "passed_not_in_queue"
@@ -138,9 +133,7 @@ def test_failed_movie_in_radarr_queue_skips(tmp_path: Path) -> None:
             return_value=[{"outputPath": str(src.resolve())}],
         ),
     ):
-        result = run_refiner_failure_cleanup_sweep_for_scope(
-            session=session, settings=settings, media_scope="movie", dry_run=False
-        )
+        result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=settings, media_scope="movie")
     job = result["jobs"][0]
     assert job["movie_failure_cleanup_ran"] is False
     assert job["movie_failure_cleanup_queue_check"] == "blocked_in_queue"
@@ -153,12 +146,10 @@ def test_failed_movie_dry_run_job_skips_entirely(tmp_path: Path) -> None:
         (root / p).mkdir(parents=True, exist_ok=True)
     _seed_paths(session, mw=root / "mw", mo=root / "mo", tw=root / "tw", to=root / "to")
     _add_failed(session, rel="Title/Film.mkv", scope="movie", dry_run=True)
-    result = run_refiner_failure_cleanup_sweep_for_scope(
-        session=session, settings=_settings(), media_scope="movie", dry_run=False
-    )
+    result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="movie")
     job = result["jobs"][0]
     assert job["movie_failure_cleanup_dry_run"] is True
-    assert "dry-run only" in job["movie_failure_cleanup_skip_reason"]
+    assert "legacy dry_run" in job["movie_failure_cleanup_skip_reason"]
 
 
 def test_tv_cleanup_skips_when_any_direct_child_episode_still_in_queue(tmp_path: Path) -> None:
@@ -187,9 +178,7 @@ def test_tv_cleanup_skips_when_any_direct_child_episode_still_in_queue(tmp_path:
             return_value=[{"outputPath": str(ep2.resolve())}],
         ),
     ):
-        result = run_refiner_failure_cleanup_sweep_for_scope(
-            session=session, settings=_settings(), media_scope="tv", dry_run=False
-        )
+        result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="tv")
     job = result["jobs"][0]
     assert job["tv_failure_cleanup_ran"] is False
     assert job["tv_failure_cleanup_queue_check"] == "blocked_in_queue_or_active_job"
@@ -199,9 +188,7 @@ def test_missing_path_settings_skip_cleanly(tmp_path: Path) -> None:
     session = _session(tmp_path)
     session.add(RefinerPathSettingsRow(id=1, refiner_watched_folder=None, refiner_output_folder=""))
     session.commit()
-    result = run_refiner_failure_cleanup_sweep_for_scope(
-        session=session, settings=_settings(), media_scope="movie", dry_run=False
-    )
+    result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="movie")
     assert "not configured" in result["skip_reason"]
 
 
@@ -216,9 +203,7 @@ def test_failed_movie_radarr_unreachable_skips(tmp_path: Path) -> None:
         "mediamop.modules.refiner.refiner_failure_cleanup.resolve_radarr_http_credentials",
         return_value=(None, None),
     ):
-        result = run_refiner_failure_cleanup_sweep_for_scope(
-            session=session, settings=_settings(), media_scope="movie", dry_run=False
-        )
+        result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="movie")
     job = result["jobs"][0]
     assert job["movie_failure_cleanup_ran"] is False
     assert "ARR queue check was unavailable" in job["movie_failure_cleanup_skip_reason"]
@@ -241,9 +226,7 @@ def test_failed_movie_root_bounds_prevent_root_delete(tmp_path: Path) -> None:
         ),
         patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
     ):
-        result = run_refiner_failure_cleanup_sweep_for_scope(
-            session=session, settings=_settings(), media_scope="movie", dry_run=False
-        )
+        result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="movie")
     job = result["jobs"][0]
     assert job["movie_failure_cleanup_source_folder_deleted"] is False
     assert Path(job["movie_failure_cleanup_source_folder_path"]).resolve() == (root / "mw").resolve()
@@ -270,9 +253,7 @@ def test_tv_pending_or_leased_job_blocks_season_delete(tmp_path: Path) -> None:
         ),
         patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
     ):
-        result = run_refiner_failure_cleanup_sweep_for_scope(
-            session=session, settings=_settings(), media_scope="tv", dry_run=False
-        )
+        result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="tv")
     job = result["jobs"][0]
     assert job["tv_failure_cleanup_ran"] is False
     assert job["tv_failure_cleanup_queue_check"] == "blocked_in_queue_or_active_job"
@@ -298,9 +279,7 @@ def test_tv_season_delete_requires_terminal_failed_for_every_direct_child_episod
         ),
         patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
     ):
-        result = run_refiner_failure_cleanup_sweep_for_scope(
-            session=session, settings=_settings(), media_scope="tv", dry_run=False
-        )
+        result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="tv")
     job = result["jobs"][0]
     assert job["tv_failure_cleanup_ran"] is False
     assert "terminal failed TV remux outcome" in job["tv_failure_cleanup_skip_reason"]
@@ -313,12 +292,10 @@ def test_tv_failed_job_dry_run_skips_entirely(tmp_path: Path) -> None:
         (root / p).mkdir(parents=True, exist_ok=True)
     _seed_paths(session, mw=root / "mw", mo=root / "mo", tw=root / "tw", to=root / "to")
     _add_failed(session, rel="Show/Season 1/S01E01.mkv", scope="tv", dry_run=True)
-    result = run_refiner_failure_cleanup_sweep_for_scope(
-        session=session, settings=_settings(), media_scope="tv", dry_run=False
-    )
+    result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="tv")
     job = result["jobs"][0]
     assert job["tv_failure_cleanup_dry_run"] is True
-    assert "dry-run only" in job["tv_failure_cleanup_skip_reason"]
+    assert "legacy dry_run" in job["tv_failure_cleanup_skip_reason"]
 
 
 def test_movies_scope_does_not_process_tv_failed_rows(tmp_path: Path) -> None:
@@ -335,9 +312,7 @@ def test_movies_scope_does_not_process_tv_failed_rows(tmp_path: Path) -> None:
         ),
         patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
     ):
-        result = run_refiner_failure_cleanup_sweep_for_scope(
-            session=session, settings=_settings(), media_scope="movie", dry_run=False
-        )
+        result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="movie")
     assert result["eligible_failed_jobs"] == 0
 
 
@@ -355,9 +330,7 @@ def test_tv_scope_does_not_process_movie_failed_rows(tmp_path: Path) -> None:
         ),
         patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
     ):
-        result = run_refiner_failure_cleanup_sweep_for_scope(
-            session=session, settings=_settings(), media_scope="tv", dry_run=False
-        )
+        result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="tv")
     assert result["eligible_failed_jobs"] == 0
 
 
@@ -383,9 +356,7 @@ def test_lock_failures_non_fatal(tmp_path: Path) -> None:
         patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
         patch("mediamop.modules.refiner.refiner_failure_cleanup.shutil.rmtree", side_effect=PermissionError("locked")),
     ):
-        result = run_refiner_failure_cleanup_sweep_for_scope(
-            session=session, settings=_settings(), media_scope="movie", dry_run=False
-        )
+        result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="movie")
     job = result["jobs"][0]
     assert job["movie_failure_cleanup_ran"] is True
     assert job["movie_failure_cleanup_source_folder_deleted"] is False
@@ -419,12 +390,8 @@ def test_per_scope_grace_settings_are_independent(tmp_path: Path) -> None:
         ),
         patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
     ):
-        movie_res = run_refiner_failure_cleanup_sweep_for_scope(
-            session=session, settings=settings, media_scope="movie", dry_run=True
-        )
-        tv_res = run_refiner_failure_cleanup_sweep_for_scope(
-            session=session, settings=settings, media_scope="tv", dry_run=True
-        )
+        movie_res = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=settings, media_scope="movie")
+        tv_res = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=settings, media_scope="tv")
     assert movie_res["eligible_failed_jobs"] == 1
     assert tv_res["eligible_failed_jobs"] == 0
 

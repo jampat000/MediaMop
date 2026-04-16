@@ -64,7 +64,7 @@ def test_watched_folder_scan_enqueue_ok(client_with_admin: TestClient, tmp_path:
     r = auth_post(
         client_with_admin,
         "/api/v1/refiner/jobs/watched-folder-remux-scan-dispatch/enqueue",
-        json={"csrf_token": tok, "enqueue_remux_jobs": False, "remux_dry_run": True},
+        json={"csrf_token": tok, "enqueue_remux_jobs": False},
     )
     assert r.status_code == 200, r.text
     body = r.json()

@@ -22,12 +22,11 @@ def enqueue_refiner_failure_cleanup_sweep_job(
     session: Session,
     *,
     media_scope: RefinerFailureCleanupScope,
-    dry_run: bool = False,
 ) -> None:
     ms = "tv" if str(media_scope).strip().lower() == "tv" else "movie"
     job_kind = REFINER_TV_FAILURE_CLEANUP_SWEEP_JOB_KIND if ms == "tv" else REFINER_MOVIE_FAILURE_CLEANUP_SWEEP_JOB_KIND
     dedupe = REFINER_TV_FAILURE_CLEANUP_SWEEP_DEDUPE_KEY if ms == "tv" else REFINER_MOVIE_FAILURE_CLEANUP_SWEEP_DEDUPE_KEY
-    payload_json = json.dumps({"media_scope": ms, "dry_run": bool(dry_run)}, separators=(",", ":"))
+    payload_json = json.dumps({"media_scope": ms}, separators=(",", ":"))
     refiner_enqueue_or_get_job(
         session,
         dedupe_key=dedupe,

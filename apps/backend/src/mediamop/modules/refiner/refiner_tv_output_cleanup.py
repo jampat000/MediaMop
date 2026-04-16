@@ -210,7 +210,6 @@ def _cascade_delete_empty_parents_under_tv_output_root(
     *,
     first_parent: Path,
     output_root: Path,
-    dry_run: bool,
     cascade_folders_deleted: list[str],
 ) -> None:
     """Remove empty parents up to but not including ``output_root``."""
@@ -233,10 +232,6 @@ def _cascade_delete_empty_parents_under_tv_output_root(
                 break
         except OSError:
             break
-        if dry_run:
-            cascade_folders_deleted.append(str(cur))
-            cur = cur.parent
-            continue
         try:
             cur.rmdir()
             cascade_folders_deleted.append(str(cur))
@@ -258,7 +253,7 @@ def maybe_run_tv_output_season_folder_cleanup_after_remux(
     watched_root: Path,
     src: Path,
     final_output_file: Path | None,
-    dry_run: bool,
+    dry_run: bool | None = None,
     relative_media_path: str,
     current_job_id: int | None,
     media_scope: str | None,
@@ -267,21 +262,12 @@ def maybe_run_tv_output_season_folder_cleanup_after_remux(
     """Populate ``tv_output_*`` fields; may delete the TV season output folder when all gates pass."""
 
     init_tv_output_cleanup_activity_fields(out)
-    out["tv_output_dry_run"] = bool(dry_run)
+    out["tv_output_dry_run"] = False
 
     scope = _normalize_media_scope(media_scope)
     if scope != "tv":
         out["tv_output_season_folder_skip_reason"] = (
             "This cleanup step applies only to TV. Movies output-folder cleanup is separate and was not run here."
-        )
-        out["tv_output_truth_check"] = "skipped"
-        out["tv_output_truth_note"] = out["tv_output_season_folder_skip_reason"]
-        return
-
-    if dry_run:
-        out["tv_output_season_folder_skip_reason"] = (
-            "This remux pass was a dry run only, so Refiner skipped TV output-folder cleanup entirely. "
-            "Nothing was checked under your TV output library — no Sonarr library read, no folder age check, and no folder removal."
         )
         out["tv_output_truth_check"] = "skipped"
         out["tv_output_truth_note"] = out["tv_output_season_folder_skip_reason"]
@@ -474,6 +460,5 @@ def maybe_run_tv_output_season_folder_cleanup_after_remux(
     _cascade_delete_empty_parents_under_tv_output_root(
         first_parent=output_season_folder.parent,
         output_root=output_root,
-        dry_run=False,
         cascade_folders_deleted=cascade,
     )

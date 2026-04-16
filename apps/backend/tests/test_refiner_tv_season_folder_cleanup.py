@@ -227,7 +227,7 @@ def test_tv_cleanup_not_blocked_by_movie_scope_job_same_path(tmp_path: Path, mon
     assert not sdir.exists()
 
 
-def test_tv_cleanup_dry_run_no_deletes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_tv_cleanup_legacy_dry_run_flag_does_not_block_cleanup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _sqlite_session(tmp_path)
     home = tmp_path / "h"
     home.mkdir()
@@ -268,8 +268,8 @@ def test_tv_cleanup_dry_run_no_deletes(tmp_path: Path, monkeypatch: pytest.Monke
         },
         final_output_file=None,
     )
-    assert outd["tv_season_folder_deleted"] is False
-    assert ep.exists()
+    assert outd["tv_season_folder_deleted"] is True
+    assert not ep.exists()
 
 
 def test_tv_cleanup_season_equals_watched_root_skipped(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

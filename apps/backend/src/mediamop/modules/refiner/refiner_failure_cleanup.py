@@ -195,7 +195,7 @@ def run_refiner_failure_cleanup_sweep_for_scope(
     session: Session,
     settings: MediaMopSettings,
     media_scope: str,
-    dry_run: bool,
+    dry_run: bool | None = None,
 ) -> dict[str, Any]:
     ms = _scope(media_scope)
     now = datetime.now(UTC)
@@ -259,16 +259,16 @@ def run_refiner_failure_cleanup_sweep_for_scope(
             "relative_media_path": rel_norm,
             f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_ran": False,
             f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_skip_reason": None,
-            f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_dry_run": bool(job_dry_run or dry_run),
+            f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_dry_run": bool(job_dry_run),
             f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_queue_check": "skipped",
             f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_temp_files_deleted": [],
             f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_cascade_folders_deleted": [],
         }
         out["processed_failed_jobs"] += 1
         out["jobs"].append(detail)
-        if job_dry_run or dry_run:
+        if job_dry_run:
             detail[f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_skip_reason"] = (
-                "This failed remux job was dry-run only, so Refiner skipped failure cleanup."
+                "This failed remux job used legacy dry_run, so Refiner skipped failure cleanup."
             )
             continue
         if queue_unreachable:

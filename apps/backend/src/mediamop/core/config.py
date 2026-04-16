@@ -118,7 +118,6 @@ class MediaMopSettings:
     refiner_watched_folder_remux_scan_dispatch_schedule_enabled: bool
     refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds: int
     refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs: bool
-    refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run: bool
     refiner_watched_folder_min_file_age_seconds: int
     # Refiner Pass 3a — Movies output-folder cleanup minimum age (env at process start; not the watched-folder scan gate).
     refiner_movie_output_cleanup_min_age_seconds: int
@@ -314,10 +313,6 @@ class MediaMopSettings:
         refiner_wf_scan_periodic_remux_enq = _env_bool(
             "MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS",
             False,
-        )
-        refiner_wf_scan_periodic_remux_dry = _env_bool(
-            "MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_REMUX_DRY_RUN",
-            True,
         )
         refiner_min_file_age = clamp_refiner_min_file_age_seconds(
             _env_int("MEDIAMOP_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", 300),
@@ -608,7 +603,6 @@ class MediaMopSettings:
             refiner_watched_folder_remux_scan_dispatch_schedule_enabled=refiner_wf_scan_dispatch_on,
             refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds=refiner_wf_scan_dispatch_iv,
             refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs=refiner_wf_scan_periodic_remux_enq,
-            refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run=refiner_wf_scan_periodic_remux_dry,
             refiner_watched_folder_min_file_age_seconds=refiner_min_file_age,
             refiner_movie_output_cleanup_min_age_seconds=refiner_movie_output_min_age,
             refiner_tv_output_cleanup_min_age_seconds=refiner_tv_output_min_age,

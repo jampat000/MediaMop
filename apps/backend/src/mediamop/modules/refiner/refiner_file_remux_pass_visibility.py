@@ -9,7 +9,6 @@ from typing import Any
 from mediamop.modules.refiner.refiner_remux_rules import RemuxPlan
 
 # Persisted on activity detail JSON — keep aligned with web ``REFINER_FILE_REMUX_PASS_EVENT_TYPE`` consumers.
-REMUX_PASS_OUTCOME_DRY_RUN_PLANNED = "dry_run_planned"
 REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN = "live_output_written"
 REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED = "live_skipped_not_required"
 REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION = "failed_before_execution"
@@ -48,8 +47,6 @@ def remux_pass_activity_title(payload: dict[str, Any]) -> str:
     rel = payload.get("relative_media_path")
     name = Path(str(rel)).name if isinstance(rel, str) and rel.strip() else "unknown file"
     outcome = payload.get("outcome")
-    if outcome == REMUX_PASS_OUTCOME_DRY_RUN_PLANNED:
-        return f"Refiner remux (dry run, planned only): {name}"
     if outcome == REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN:
         return f"Refiner remux (live, output written): {name}"
     if outcome == REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED:

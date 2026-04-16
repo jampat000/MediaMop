@@ -67,6 +67,8 @@ def test_scan_handler_enqueues_remux_when_requested(
 
     watch = tmp_path / "watch"
     watch.mkdir()
+    out = tmp_path / "out"
+    out.mkdir()
     mkv = watch / "Gate Test 2001.mkv"
     mkv.write_bytes(b"x")
 
@@ -89,13 +91,13 @@ def test_scan_handler_enqueues_remux_when_requested(
                 id=1,
                 refiner_watched_folder=str(watch.resolve()),
                 refiner_work_folder=None,
-                refiner_output_folder="",
+                    refiner_output_folder=str(out.resolve()),
             ),
         )
         s.merge(RefinerOperatorSettingsRow(id=1, min_file_age_seconds=0))
         s.commit()
 
-    payload = {"enqueue_remux_jobs": True, "remux_dry_run": True}
+    payload = {"enqueue_remux_jobs": True}
     with session_factory() as s:
         refiner_enqueue_or_get_job(
             s,
@@ -131,7 +133,7 @@ def test_scan_handler_enqueues_remux_when_requested(
         assert remux[0].status == RefinerJobStatus.PENDING.value
         body = json.loads(remux[0].payload_json or "{}")
         assert body.get("relative_media_path") == "Gate Test 2001.mkv"
-        assert body.get("dry_run") is True
+        assert "dry_run" not in body
 
         ev = s.scalars(
             select(ActivityEvent).where(

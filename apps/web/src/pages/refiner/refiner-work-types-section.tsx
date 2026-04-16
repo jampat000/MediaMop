@@ -60,8 +60,8 @@ export function RefinerWorkTypesSection() {
           <p className="mt-1.5 text-sm text-[var(--mm-text2)]">
             One path under the saved watched folder: ffprobe, plan, optional ffmpeg write. Saved defaults and manual
             queue live on <strong className="text-[var(--mm-text)]">Audio & subtitles</strong>. Enqueue is rejected until a
-            watched folder exists. Default is dry run; live needs output folder, tools on disk, and workers. Results
-            appear on <strong className="text-[var(--mm-text)]">Activity</strong>.
+            watched and output folder exist. Live runs need tools on disk and workers. Results appear on{" "}
+            <strong className="text-[var(--mm-text)]">Activity</strong>.
           </p>
           <p className="mt-2 font-mono text-[0.65rem] text-[var(--mm-text3)]">refiner.file.remux_pass.v1</p>
         </article>

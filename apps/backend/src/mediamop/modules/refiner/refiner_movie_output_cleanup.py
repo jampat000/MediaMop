@@ -171,7 +171,6 @@ def _cascade_delete_empty_parents_under_output_root(
     *,
     first_parent: Path,
     output_root: Path,
-    dry_run: bool,
     cascade_folders_deleted: list[str],
 ) -> None:
     """Remove empty parents up to but not including ``output_root``."""
@@ -194,10 +193,6 @@ def _cascade_delete_empty_parents_under_output_root(
                 break
         except OSError:
             break
-        if dry_run:
-            cascade_folders_deleted.append(str(cur))
-            cur = cur.parent
-            continue
         try:
             cur.rmdir()
             cascade_folders_deleted.append(str(cur))
@@ -219,7 +214,7 @@ def maybe_run_movie_output_folder_cleanup_after_remux(
     watched_root: Path,
     src: Path,
     final_output_file: Path | None,
-    dry_run: bool,
+    dry_run: bool | None = None,
     relative_media_path: str,
     current_job_id: int | None,
     media_scope: str | None,
@@ -228,21 +223,12 @@ def maybe_run_movie_output_folder_cleanup_after_remux(
     """Populate ``movie_output_*`` fields; may delete the movie output folder when all gates pass."""
 
     init_movie_output_cleanup_activity_fields(out)
-    out["movie_output_dry_run"] = bool(dry_run)
+    out["movie_output_dry_run"] = False
 
     scope = _normalize_media_scope(media_scope)
     if scope != "movie":
         out["movie_output_folder_skip_reason"] = (
             "This cleanup step applies only to Movies. TV output cleanup is separate and was not run here."
-        )
-        out["movie_output_truth_check"] = "skipped"
-        out["movie_output_truth_note"] = out["movie_output_folder_skip_reason"]
-        return
-
-    if dry_run:
-        out["movie_output_folder_skip_reason"] = (
-            "This remux pass was a dry run only, so Refiner skipped Movies output-folder cleanup entirely. "
-            "Nothing was checked under your output library — no Radarr library read, no folder age check, and no preview of what would be removed."
         )
         out["movie_output_truth_check"] = "skipped"
         out["movie_output_truth_note"] = out["movie_output_folder_skip_reason"]
@@ -420,6 +406,5 @@ def maybe_run_movie_output_folder_cleanup_after_remux(
     _cascade_delete_empty_parents_under_output_root(
         first_parent=output_movie_folder.parent,
         output_root=output_root,
-        dry_run=False,
         cascade_folders_deleted=cascade,
     )

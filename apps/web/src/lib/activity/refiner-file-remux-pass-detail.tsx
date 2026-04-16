@@ -4,7 +4,6 @@ export const REFINER_FILE_REMUX_PASS_COMPLETED_EVENT = "refiner.file_remux_pass_
 type RemuxDetail = {
   outcome?: string;
   ok?: boolean;
-  dry_run?: boolean;
   media_scope?: string;
   relative_media_path?: string;
   inspected_source_path?: string;
@@ -35,8 +34,6 @@ type RemuxDetail = {
 
 function outcomeLabel(outcome: string | undefined): string {
   switch (outcome) {
-    case "dry_run_planned":
-      return "Dry run — planned only (no ffmpeg write, source unchanged)";
     case "live_output_written":
       return "Live — remux wrote an output file";
     case "live_skipped_not_required":
@@ -73,7 +70,6 @@ export function RefinerFileRemuxPassActivityDetail({ detail }: { detail: string 
   const rows: { k: string; v: string | undefined | null | false | 0 }[] = [
     { k: "Outcome", v: outcomeLabel(parsed.outcome) },
     { k: "Scope", v: parsed.media_scope },
-    { k: "Dry run", v: parsed.dry_run === undefined ? "—" : parsed.dry_run ? "yes" : "no" },
     { k: "Relative path", v: parsed.relative_media_path },
     { k: "Inspected file", v: parsed.inspected_source_path },
   ];

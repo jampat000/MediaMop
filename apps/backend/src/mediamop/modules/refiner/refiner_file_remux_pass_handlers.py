@@ -34,7 +34,7 @@ def make_refiner_file_remux_pass_handler(
     settings: MediaMopSettings,
     session_factory: sessionmaker[Session],
 ) -> Callable[[RefinerJobWorkContext], None]:
-    """One per-file probe/plan/remux pass; ``dry_run`` defaults in payload (see manual enqueue schema)."""
+    """One per-file probe/plan/remux pass (live-only contract)."""
 
     def _run(ctx: RefinerJobWorkContext) -> None:
         raw = (ctx.payload_json or "").strip()
@@ -89,15 +89,18 @@ def make_refiner_file_remux_pass_handler(
             )
             return
 
-        dry_run = data.get("dry_run", True)
-        if not isinstance(dry_run, bool):
+        legacy_dry_run = data.get("dry_run", None)
+        if legacy_dry_run is not None:
             _record(
                 session_factory,
                 payload={
                     "job_id": ctx.id,
                     "ok": False,
                     "outcome": REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
-                    "reason": "dry_run must be a boolean when present",
+                    "reason": (
+                        "This job payload uses legacy Refiner dry_run, which is no longer supported. "
+                        "Re-enqueue without dry_run."
+                    ),
                     "relative_media_path": rel.strip(),
                 },
             )
@@ -113,7 +116,6 @@ def make_refiner_file_remux_pass_handler(
             path_runtime, path_err = resolve_refiner_path_runtime_for_remux(
                 session,
                 settings,
-                dry_run=bool(dry_run),
                 media_scope=media_scope,
             )
             if path_err is not None:
@@ -133,7 +135,6 @@ def make_refiner_file_remux_pass_handler(
                 settings=settings,
                 path_runtime=path_runtime,
                 relative_media_path=rel.strip(),
-                dry_run=bool(dry_run),
                 rules_config=rules_cfg,
                 min_file_age_seconds=op_settings.min_file_age_seconds,
                 media_scope=media_scope,

@@ -120,10 +120,6 @@ export function RefinerPathSettingsSection() {
           <strong className="text-[var(--mm-text2)]">Movies</strong> (including when a folder scan queues that work). Other
           Refiner jobs follow different rules.
         </p>
-        <p>
-          Dry run never deletes files. Watched-folder cleanup checks may still run as preview logic, while output library
-          cleanup is skipped entirely on dry-run remux passes.
-        </p>
         <div className="mt-3 space-y-2.5">
           <p>
             <span className="font-semibold text-[var(--mm-text2)]">Watched folder.</span> Refiner walks it recursively. It
@@ -152,9 +148,9 @@ export function RefinerPathSettingsSection() {
           </p>
           <p>
             <span className="font-semibold text-[var(--mm-text2)]">Output library cleanup.</span> After a successful{" "}
-            <strong className="text-[var(--mm-text2)]">live</strong> remux, Refiner may optionally remove the whole output
+            remux, Refiner may optionally remove the whole output
             folder that held the file — per title for Movies, per season for TV — only when library checks and other safety
-            gates pass. <strong className="text-[var(--mm-text2)]">Dry-run</strong> remux passes skip that step entirely.
+            gates pass.
           </p>
           <p>
             <span className="font-semibold text-[var(--mm-text2)]">TV after a successful live pass.</span> When every
@@ -178,7 +174,7 @@ export function RefinerPathSettingsSection() {
             that happens after that. Separately from this one-file flow, Refiner can run periodic failed-job cleanup for
             terminal failed remux jobs after a per-scope grace period. That later sweep may remove failed source/output
             leftovers and matching Refiner temp files only when safety gates pass. If Radarr/Sonarr is unavailable or still
-            shows the file/season in queue, Refiner skips cleanup. Dry-run failed jobs never delete anything.
+            shows the file/season in queue, Refiner skips cleanup.
           </p>
         </div>
       </details>

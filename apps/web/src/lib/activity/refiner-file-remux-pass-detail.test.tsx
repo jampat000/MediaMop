@@ -5,9 +5,8 @@ import { RefinerFileRemuxPassActivityDetail } from "./refiner-file-remux-pass-de
 describe("RefinerFileRemuxPassActivityDetail", () => {
   it("renders structured remux fields from JSON detail", () => {
     const detail = JSON.stringify({
-      outcome: "dry_run_planned",
+      outcome: "live_output_written",
       ok: true,
-      dry_run: true,
       relative_media_path: "movies/a.mkv",
       inspected_source_path: "/data/movies/a.mkv",
       stream_counts: { video: 1, audio: 2, subtitle: 0 },
@@ -22,7 +21,7 @@ describe("RefinerFileRemuxPassActivityDetail", () => {
     });
     render(<RefinerFileRemuxPassActivityDetail detail={detail} />);
     expect(screen.getByTestId("refiner-remux-activity-detail")).toBeInTheDocument();
-    expect(screen.getByText(/Dry run — planned only/i)).toBeInTheDocument();
+    expect(screen.getByText(/Live — remux wrote an output file/i)).toBeInTheDocument();
     expect(screen.getByText("movies/a.mkv")).toBeInTheDocument();
     expect(screen.getByText("A before")).toBeInTheDocument();
     expect(screen.getByText(/ffmpeg command line/i)).toBeInTheDocument();

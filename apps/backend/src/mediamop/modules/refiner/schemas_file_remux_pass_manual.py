@@ -21,13 +21,6 @@ class RefinerFileRemuxPassManualEnqueueIn(BaseModel):
             "The watched folder is not required when saving path settings alone, but it must be configured before enqueue."
         ),
     )
-    dry_run: bool = Field(
-        default=True,
-        description=(
-            "When true (default), runs ffprobe + planning only — no ffmpeg output file, no source deletion, "
-            "and no requirement for a saved output folder."
-        ),
-    )
     media_scope: Literal["movie", "tv"] = Field(
         default="movie",
         description="Which saved watched/output tree resolves ``relative_media_path``.",

@@ -50,11 +50,9 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
     def _run(ctx: RefinerJobWorkContext) -> None:
         body = _parse_job_payload(ctx.payload_json)
         enqueue_remux_jobs = bool(body.get("enqueue_remux_jobs", False))
-        remux_dry_run = bool(body.get("remux_dry_run", True))
         scan_trigger = body.get("scan_trigger", "manual")
         if scan_trigger not in ("manual", "periodic"):
             scan_trigger = "manual"
-        need_live_paths = enqueue_remux_jobs and not remux_dry_run
         media_scope_raw = body.get("media_scope", "movie")
         media_scope = media_scope_raw if media_scope_raw in ("movie", "tv") else "movie"
 
@@ -63,7 +61,6 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
             rt, path_err = resolve_refiner_path_runtime_for_remux(
                 session,
                 settings,
-                dry_run=not need_live_paths,
                 media_scope=media_scope,
             )
         if path_err is not None or rt is None:
@@ -86,7 +83,6 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
             "media_scope": media_scope,
             "watched_folder_resolved": watched_root,
             "enqueue_remux_jobs": enqueue_remux_jobs,
-            "remux_dry_run": remux_dry_run,
             "min_file_age_seconds": op_settings.min_file_age_seconds,
             "radarr_queue_row_count": len(rad_rows),
             "sonarr_queue_row_count": len(son_rows),
@@ -140,7 +136,6 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                     payload = json.dumps(
                         {
                             "relative_media_path": rel,
-                            "dry_run": remux_dry_run,
                             "media_scope": media_scope,
                         },
                         separators=(",", ":"),

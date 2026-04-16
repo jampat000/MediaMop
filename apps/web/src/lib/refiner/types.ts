@@ -46,7 +46,6 @@ export type RefinerRuntimeSettingsOut = {
   refiner_watched_folder_remux_scan_dispatch_schedule_enabled: boolean;
   refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds: number;
   refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs: boolean;
-  refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run: boolean;
   refiner_watched_folder_min_file_age_seconds: number;
   refiner_movie_output_cleanup_min_age_seconds: number;
   movie_output_cleanup_configuration_note: string;
@@ -117,7 +116,6 @@ export type RefinerOperatorSettingsPutBody = {
 
 export type RefinerWatchedFolderRemuxScanDispatchEnqueueBody = {
   enqueue_remux_jobs: boolean;
-  remux_dry_run: boolean;
   media_scope: "movie" | "tv";
 };
 
@@ -157,7 +155,6 @@ export type RefinerRemuxRulesSettingsPutBody = RefinerRemuxRulesScopeSettings & 
 
 export type RefinerFileRemuxPassManualEnqueueBody = {
   relative_media_path: string;
-  dry_run: boolean;
   media_scope: "movie" | "tv";
 };
 

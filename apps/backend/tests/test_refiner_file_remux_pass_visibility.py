@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from mediamop.modules.refiner.refiner_file_remux_pass_visibility import (
-    REMUX_PASS_OUTCOME_DRY_RUN_PLANNED,
     REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN,
     REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED,
     clip_remux_pass_payload_for_activity,
@@ -37,7 +36,6 @@ def test_summarize_remux_plan_includes_streams() -> None:
 
 def test_activity_title_per_outcome() -> None:
     base = {"relative_media_path": "movies/foo.mkv"}
-    assert "dry run" in remux_pass_activity_title({**base, "outcome": REMUX_PASS_OUTCOME_DRY_RUN_PLANNED}).lower()
     assert "output written" in remux_pass_activity_title(
         {**base, "outcome": REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN},
     ).lower()
@@ -55,6 +53,6 @@ def test_clip_argv_for_activity_truncates_long_lists() -> None:
 
 def test_remux_pass_result_to_activity_detail_is_valid_json() -> None:
     detail = remux_pass_result_to_activity_detail(
-        {"ok": True, "outcome": REMUX_PASS_OUTCOME_DRY_RUN_PLANNED, "relative_media_path": "x.mkv"},
+        {"ok": True, "outcome": REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN, "relative_media_path": "x.mkv"},
     )
-    assert '"outcome":"dry_run_planned"' in detail
+    assert '"outcome":"live_output_written"' in detail

@@ -48,7 +48,6 @@ def post_refiner_watched_folder_remux_scan_dispatch_enqueue(
     ok, err = validate_watched_folder_scan_dispatch_prerequisites(
         db,
         enqueue_remux_jobs=body.enqueue_remux_jobs,
-        remux_dry_run=body.remux_dry_run,
         media_scope=body.media_scope,
     )
     if not ok:
@@ -66,8 +65,7 @@ def post_refiner_watched_folder_remux_scan_dispatch_enqueue(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
-                    "enqueue_remux_jobs with remux_dry_run false requires a saved output folder "
-                    "for this media scope (live remux passes need it)."
+                    "enqueue_remux_jobs requires a saved output folder for this media scope."
                 ),
             )
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid scan prerequisites.")
@@ -75,7 +73,6 @@ def post_refiner_watched_folder_remux_scan_dispatch_enqueue(
     job = enqueue_watched_folder_remux_scan_dispatch_job(
         db,
         enqueue_remux_jobs=body.enqueue_remux_jobs,
-        remux_dry_run=body.remux_dry_run,
         scan_trigger="manual",
         media_scope=body.media_scope,
     )

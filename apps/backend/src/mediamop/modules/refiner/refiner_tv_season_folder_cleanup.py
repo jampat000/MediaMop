@@ -165,7 +165,6 @@ def _tv_cascade_delete_empty_parents(
     *,
     first_parent: Path,
     watched_root: Path,
-    dry_run: bool,
     cascade_folders_deleted: list[str],
 ) -> None:
     """Remove empty parents up to but not including watched_root (TV watched root is never deleted)."""
@@ -185,10 +184,6 @@ def _tv_cascade_delete_empty_parents(
                 break
         except OSError:
             break
-        if dry_run:
-            cascade_folders_deleted.append(str(cur))
-            cur = cur.parent
-            continue
         try:
             cur.rmdir()
             cascade_folders_deleted.append(str(cur))
@@ -206,7 +201,7 @@ def handle_tv_cleanup_after_success(
     src: Path,
     watched_root: Path,
     out: dict[str, Any],
-    dry_run: bool,
+    dry_run: bool | None = None,
     min_file_age_seconds: int,
     current_job_id: int | None,
     remux_context: dict[str, Any],
@@ -378,23 +373,6 @@ def handle_tv_cleanup_after_success(
 
         summary.append(" ".join(line_parts))
 
-    if dry_run:
-        out["tv_season_folder_deleted"] = False
-        out["source_deleted_after_success"] = False
-        out["tv_season_folder_skip_reason"] = None
-        summary.append(
-            f"Dry run only — Refiner would remove the whole season folder and everything inside it: {season_folder}"
-        )
-        first_parent = season_folder.resolve().parent
-        _tv_cascade_delete_empty_parents(
-            first_parent=first_parent,
-            watched_root=watched_resolved,
-            dry_run=True,
-            cascade_folders_deleted=cascade,
-        )
-        logger.info("Refiner TV cleanup (dry run): would delete season folder %s", season_folder)
-        return
-
     try:
         shutil.rmtree(season_folder)
     except OSError as exc:
@@ -416,7 +394,6 @@ def handle_tv_cleanup_after_success(
     _tv_cascade_delete_empty_parents(
         first_parent=season_folder.resolve().parent,
         watched_root=watched_resolved,
-        dry_run=False,
         cascade_folders_deleted=cascade,
     )
 

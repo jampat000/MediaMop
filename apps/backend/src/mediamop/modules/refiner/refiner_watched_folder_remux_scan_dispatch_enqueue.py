@@ -66,7 +66,6 @@ def validate_watched_folder_scan_dispatch_prerequisites(
     session: Session,
     *,
     enqueue_remux_jobs: bool,
-    remux_dry_run: bool,
     media_scope: str = "movie",
 ) -> tuple[bool, str | None]:
     """Shared checks for manual HTTP and periodic enqueue (path row; watched; live remux output)."""
@@ -76,12 +75,12 @@ def validate_watched_folder_scan_dispatch_prerequisites(
     if scope == "tv":
         if not (row.refiner_tv_watched_folder or "").strip():
             return False, "no_saved_watched_folder"
-        if enqueue_remux_jobs and not remux_dry_run and not (row.refiner_tv_output_folder or "").strip():
+        if enqueue_remux_jobs and not (row.refiner_tv_output_folder or "").strip():
             return False, "missing_output_for_live_remux"
         return True, None
     if not (row.refiner_watched_folder or "").strip():
         return False, "no_saved_watched_folder"
-    if enqueue_remux_jobs and not remux_dry_run and not (row.refiner_output_folder or "").strip():
+    if enqueue_remux_jobs and not (row.refiner_output_folder or "").strip():
         return False, "missing_output_for_live_remux"
     return True, None
 
@@ -90,7 +89,6 @@ def enqueue_watched_folder_remux_scan_dispatch_job(
     session: Session,
     *,
     enqueue_remux_jobs: bool,
-    remux_dry_run: bool,
     scan_trigger: str,
     media_scope: str = "movie",
 ) -> RefinerJob:
@@ -98,7 +96,6 @@ def enqueue_watched_folder_remux_scan_dispatch_job(
 
     payload = {
         "enqueue_remux_jobs": enqueue_remux_jobs,
-        "remux_dry_run": remux_dry_run,
         "scan_trigger": scan_trigger,
         "media_scope": (media_scope or "movie").strip().lower(),
     }
@@ -149,7 +146,6 @@ def try_enqueue_periodic_watched_folder_remux_scan_dispatch(
     ok, err = validate_watched_folder_scan_dispatch_prerequisites(
         session,
         enqueue_remux_jobs=settings.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs,
-        remux_dry_run=settings.refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run,
         media_scope=scope,
     )
     if not ok:
@@ -157,7 +153,6 @@ def try_enqueue_periodic_watched_folder_remux_scan_dispatch(
     enqueue_watched_folder_remux_scan_dispatch_job(
         session,
         enqueue_remux_jobs=settings.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs,
-        remux_dry_run=settings.refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run,
         scan_trigger="periodic",
         media_scope=scope,
     )

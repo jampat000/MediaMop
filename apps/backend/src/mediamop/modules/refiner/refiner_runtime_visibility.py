@@ -68,8 +68,7 @@ _WATCHED_FOLDER_SCAN_PERIODIC_NOTE = (
     "independently: when a scope has no pending/leased scan for that scope and its watched folder is saved, "
     "one periodic scan job is enqueued for that scope (still not a filesystem watcher). "
     "File-pass options for periodic ticks: "
-    "MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS and "
-    "MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_REMUX_DRY_RUN. "
+    "MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS. "
     "Restart the API after changing any of these — values are read at process start only."
 )
 
@@ -111,9 +110,6 @@ def refiner_runtime_settings_from_settings(settings: MediaMopSettings) -> Refine
         ),
         refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs=(
             settings.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs
-        ),
-        refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run=(
-            settings.refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run
         ),
         refiner_watched_folder_min_file_age_seconds=settings.refiner_watched_folder_min_file_age_seconds,
         refiner_movie_output_cleanup_min_age_seconds=settings.refiner_movie_output_cleanup_min_age_seconds,
