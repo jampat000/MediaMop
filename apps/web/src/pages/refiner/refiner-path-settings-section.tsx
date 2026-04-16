@@ -133,14 +133,22 @@ export function RefinerPathSettingsSection() {
             <span className="font-semibold text-[var(--mm-text2)]">Work / temp.</span> When Refiner runs ffmpeg, it writes
             a temp file here, checks it, then moves it into your output folder. The default work folder is created if it
             is missing; a custom work folder must already exist. If ffmpeg or the check right after fails, Refiner
-            removes that temp file when it can. Nothing else runs on a schedule to clean up stray temps. If the move into
-            output fails later, a temp file can be left behind.
+            removes that temp file when it can. Separately, Refiner can also run periodic cleanup of its own stale temp
+            files under each scope&apos;s work folder — that is different from this one-file flow; see{" "}
+            <strong className="text-[var(--mm-text2)]">Workers</strong> on the Refiner page for timers and details. If the
+            move into output fails later, a temp file can be left behind.
           </p>
           <p>
             <span className="font-semibold text-[var(--mm-text2)]">Output.</span> Finished files use the same folder
             layout under output as under the watched folder. If something is already there, Refiner deletes it, then
             moves the new file in. If the move fails after that delete, you can lose the old file there without the new
             one in place. Refiner does not keep older copies or sweep stale outputs.
+          </p>
+          <p>
+            <span className="font-semibold text-[var(--mm-text2)]">Output library cleanup.</span> After a successful{" "}
+            <strong className="text-[var(--mm-text2)]">live</strong> remux, Refiner may optionally remove the whole output
+            folder that held the file — per title for Movies, per season for TV — only when library checks and other safety
+            gates pass. <strong className="text-[var(--mm-text2)]">Dry-run</strong> remux passes skip that step entirely.
           </p>
           <p>
             <span className="font-semibold text-[var(--mm-text2)]">TV after a successful live pass.</span> When every

@@ -45,8 +45,8 @@ _TV_OUTPUT_CLEANUP_NOTE = (
     "TV output-folder cleanup (Pass 3b) after a successful TV remux uses "
     "MEDIAMOP_REFINER_TV_OUTPUT_CLEANUP_MIN_AGE_SECONDS in apps/backend/.env (default 48 hours, clamped 1h..30d). "
     "The age gate looks at direct-child episode media files in the season output folder only. "
-    "Sonarr episode file paths are read live from Sonarr (GET /api/v3/episodefile) before any delete. "
-    "Restart the API after changing this value."
+    "Before any delete, Refiner reads Sonarr's saved episode file locations and skips removal if any kept library file "
+    "still maps under that season output folder. Restart the API after changing this value."
 )
 
 _WATCHED_FOLDER_SCAN_PERIODIC_NOTE = (
