@@ -5,6 +5,7 @@ type RemuxDetail = {
   outcome?: string;
   ok?: boolean;
   dry_run?: boolean;
+  media_scope?: string;
   relative_media_path?: string;
   inspected_source_path?: string;
   stream_counts?: { video?: number; audio?: number; subtitle?: number };
@@ -20,6 +21,16 @@ type RemuxDetail = {
   reason?: string;
   job_id?: number;
   ffmpeg_argv_truncated?: boolean;
+  source_folder_deleted?: boolean;
+  source_folder_skip_reason?: string;
+  tv_season_folder_deleted?: boolean;
+  tv_season_folder_skip_reason?: string;
+  movie_output_folder_deleted?: boolean;
+  movie_output_folder_skip_reason?: string;
+  movie_output_truth_check?: string;
+  tv_output_season_folder_deleted?: boolean;
+  tv_output_season_folder_skip_reason?: string;
+  tv_output_truth_check?: string;
 };
 
 function outcomeLabel(outcome: string | undefined): string {
@@ -61,6 +72,7 @@ export function RefinerFileRemuxPassActivityDetail({ detail }: { detail: string 
 
   const rows: { k: string; v: string | undefined | null | false | 0 }[] = [
     { k: "Outcome", v: outcomeLabel(parsed.outcome) },
+    { k: "Scope", v: parsed.media_scope },
     { k: "Dry run", v: parsed.dry_run === undefined ? "—" : parsed.dry_run ? "yes" : "no" },
     { k: "Relative path", v: parsed.relative_media_path },
     { k: "Inspected file", v: parsed.inspected_source_path },
@@ -83,6 +95,40 @@ export function RefinerFileRemuxPassActivityDetail({ detail }: { detail: string 
     { k: "Output file", v: parsed.output_file },
     { k: "Note / error", v: parsed.reason },
   );
+
+  if (parsed.media_scope === "movie") {
+    rows.push(
+      {
+        k: "Movies watched-folder cleanup",
+        v: parsed.source_folder_deleted
+          ? "removed source release folder"
+          : parsed.source_folder_skip_reason || "not removed",
+      },
+      {
+        k: "Movies output-folder cleanup",
+        v: parsed.movie_output_folder_deleted
+          ? "removed output title folder"
+          : parsed.movie_output_folder_skip_reason ||
+            (parsed.movie_output_truth_check ? `not removed (${parsed.movie_output_truth_check})` : undefined),
+      },
+    );
+  } else if (parsed.media_scope === "tv") {
+    rows.push(
+      {
+        k: "TV watched-folder cleanup",
+        v: parsed.tv_season_folder_deleted
+          ? "removed watched season folder"
+          : parsed.tv_season_folder_skip_reason || "not removed",
+      },
+      {
+        k: "TV output-folder cleanup",
+        v: parsed.tv_output_season_folder_deleted
+          ? "removed output season folder"
+          : parsed.tv_output_season_folder_skip_reason ||
+            (parsed.tv_output_truth_check ? `not removed (${parsed.tv_output_truth_check})` : undefined),
+      },
+    );
+  }
 
   const argv = (parsed as { ffmpeg_argv?: string[] }).ffmpeg_argv;
 

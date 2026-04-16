@@ -320,6 +320,8 @@ def test_tv_live_skips_movie_folder_cleanup_deletes_season_folder_when_gates_pas
     assert r.get("source_folder_deleted") is not True
     assert r.get("tv_season_folder_deleted") is True
     assert r.get("tv_output_season_folder_deleted") is True
+    assert "movie_output_folder_deleted" not in r
+    assert "movie_output_truth_check" not in r
     assert not mkv.exists()
     assert not season.is_dir()
     assert not (media / "Show").is_dir()
@@ -358,6 +360,8 @@ def test_movie_live_skips_when_output_smaller_than_one_percent(tmp_path: Path, m
     assert mkv.exists()
     assert r.get("output_completeness_check") == "failed"
     assert "tv_season_folder_deleted" not in r
+    assert "tv_output_season_folder_deleted" not in r
+    assert "tv_output_truth_check" not in r
 
 
 def test_movie_live_skips_when_video_sits_directly_under_watched_root(
@@ -571,3 +575,4 @@ def test_tv_dry_run_skips_tv_output_cleanup_no_sonarr(tmp_path: Path, monkeypatc
     assert r["ok"] is True
     assert calls == []
     assert r.get("tv_output_truth_check") == "skipped"
+    assert "movie_output_truth_check" not in r

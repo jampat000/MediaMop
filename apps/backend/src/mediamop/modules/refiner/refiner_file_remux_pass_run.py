@@ -432,6 +432,7 @@ def run_refiner_file_remux_pass(
     a whole season folder when gates pass (requires ``cleanup_session`` for queue and history checks).
     """
 
+    scope = _normalize_media_scope_for_cleanup(media_scope)
     root = path_runtime.watched_folder
     try:
         src = resolve_media_file_under_refiner_root(media_root=root, relative_path=relative_media_path)
@@ -516,8 +517,38 @@ def run_refiner_file_remux_pass(
         "remux_required": remux_needed,
         "ffmpeg_argv": [str(x) for x in argv],
         "audio_selection_notes": list(plan.audio_selection_notes),
-        "media_scope": _normalize_media_scope_for_cleanup(media_scope),
+        "media_scope": scope,
     }
+
+    def _run_scope_output_cleanup(*, final_output_file: Path | None, dry_run_value: bool) -> None:
+        if scope == "tv":
+            maybe_run_tv_output_season_folder_cleanup_after_remux(
+                session=cleanup_session,
+                settings=settings,
+                path_runtime=path_runtime,
+                watched_root=watched_root,
+                src=src,
+                final_output_file=final_output_file,
+                dry_run=dry_run_value,
+                relative_media_path=relative_media_path,
+                current_job_id=current_job_id,
+                media_scope=scope,
+                out=out,
+            )
+            return
+        maybe_run_movie_output_folder_cleanup_after_remux(
+            session=cleanup_session,
+            settings=settings,
+            path_runtime=path_runtime,
+            watched_root=watched_root,
+            src=src,
+            final_output_file=final_output_file,
+            dry_run=dry_run_value,
+            relative_media_path=relative_media_path,
+            current_job_id=current_job_id,
+            media_scope=scope,
+            out=out,
+        )
 
     if dry_run:
         _handle_refiner_cleanup_after_success(
@@ -533,32 +564,7 @@ def run_refiner_file_remux_pass(
             min_file_age_seconds=min_age,
             current_job_id=current_job_id,
         )
-        maybe_run_movie_output_folder_cleanup_after_remux(
-            session=cleanup_session,
-            settings=settings,
-            path_runtime=path_runtime,
-            watched_root=watched_root,
-            src=src,
-            final_output_file=None,
-            dry_run=True,
-            relative_media_path=relative_media_path,
-            current_job_id=current_job_id,
-            media_scope=media_scope,
-            out=out,
-        )
-        maybe_run_tv_output_season_folder_cleanup_after_remux(
-            session=cleanup_session,
-            settings=settings,
-            path_runtime=path_runtime,
-            watched_root=watched_root,
-            src=src,
-            final_output_file=None,
-            dry_run=True,
-            relative_media_path=relative_media_path,
-            current_job_id=current_job_id,
-            media_scope=media_scope,
-            out=out,
-        )
+        _run_scope_output_cleanup(final_output_file=None, dry_run_value=True)
         return out
 
     out["outcome"] = REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN
@@ -601,32 +607,7 @@ def run_refiner_file_remux_pass(
             min_file_age_seconds=min_age,
             current_job_id=current_job_id,
         )
-        maybe_run_movie_output_folder_cleanup_after_remux(
-            session=cleanup_session,
-            settings=settings,
-            path_runtime=path_runtime,
-            watched_root=watched_root,
-            src=src,
-            final_output_file=final_skip,
-            dry_run=False,
-            relative_media_path=relative_media_path,
-            current_job_id=current_job_id,
-            media_scope=media_scope,
-            out=out,
-        )
-        maybe_run_tv_output_season_folder_cleanup_after_remux(
-            session=cleanup_session,
-            settings=settings,
-            path_runtime=path_runtime,
-            watched_root=watched_root,
-            src=src,
-            final_output_file=final_skip,
-            dry_run=False,
-            relative_media_path=relative_media_path,
-            current_job_id=current_job_id,
-            media_scope=media_scope,
-            out=out,
-        )
+        _run_scope_output_cleanup(final_output_file=final_skip, dry_run_value=False)
         return out
 
     try:
@@ -686,32 +667,7 @@ def run_refiner_file_remux_pass(
         min_file_age_seconds=min_age,
         current_job_id=current_job_id,
     )
-    maybe_run_movie_output_folder_cleanup_after_remux(
-        session=cleanup_session,
-        settings=settings,
-        path_runtime=path_runtime,
-        watched_root=watched_root,
-        src=src,
-        final_output_file=final,
-        dry_run=False,
-        relative_media_path=relative_media_path,
-        current_job_id=current_job_id,
-        media_scope=media_scope,
-        out=out,
-    )
-    maybe_run_tv_output_season_folder_cleanup_after_remux(
-        session=cleanup_session,
-        settings=settings,
-        path_runtime=path_runtime,
-        watched_root=watched_root,
-        src=src,
-        final_output_file=final,
-        dry_run=False,
-        relative_media_path=relative_media_path,
-        current_job_id=current_job_id,
-        media_scope=media_scope,
-        out=out,
-    )
+    _run_scope_output_cleanup(final_output_file=final, dry_run_value=False)
     return out
 
 
