@@ -116,29 +116,31 @@ def make_refiner_file_remux_pass_handler(
                 dry_run=bool(dry_run),
                 media_scope=media_scope,
             )
-        if path_err is not None:
-            _record(
-                session_factory,
-                payload={
-                    "job_id": ctx.id,
-                    "ok": False,
-                    "outcome": REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
-                    "reason": path_err,
-                    "relative_media_path": rel.strip(),
-                },
-            )
-            return
+            if path_err is not None:
+                _record(
+                    session_factory,
+                    payload={
+                        "job_id": ctx.id,
+                        "ok": False,
+                        "outcome": REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
+                        "reason": path_err,
+                        "relative_media_path": rel.strip(),
+                    },
+                )
+                return
 
-        result = run_refiner_file_remux_pass(
-            settings=settings,
-            path_runtime=path_runtime,
-            relative_media_path=rel.strip(),
-            dry_run=bool(dry_run),
-            rules_config=rules_cfg,
-            min_file_age_seconds=op_settings.min_file_age_seconds,
-            media_scope=media_scope,
-        )
-        result["job_id"] = ctx.id
+            result = run_refiner_file_remux_pass(
+                settings=settings,
+                path_runtime=path_runtime,
+                relative_media_path=rel.strip(),
+                dry_run=bool(dry_run),
+                rules_config=rules_cfg,
+                min_file_age_seconds=op_settings.min_file_age_seconds,
+                media_scope=media_scope,
+                cleanup_session=session,
+                current_job_id=ctx.id,
+            )
+            result["job_id"] = ctx.id
         _record(session_factory, payload=result)
 
     return _run

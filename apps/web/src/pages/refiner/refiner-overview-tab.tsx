@@ -243,7 +243,7 @@ export function RefinerOverviewTab({
           <span className="font-medium text-[var(--mm-text2)]">Folder checks:</span> TV every{" "}
           {pathSettings.data.tv_watched_folder_check_interval_seconds}s · Movies every{" "}
           {pathSettings.data.movie_watched_folder_check_interval_seconds}s (under Libraries). Files must sit unchanged at
-          least {operatorSettings.data.min_file_age_seconds}s before processing.
+          least {operatorSettings.data.min_file_age_seconds}s before watched-folder scans enqueue them. The same minimum also applies when TV season cleanup checks episodes Refiner never finished and Sonarr is not tracking in its queue.
         </p>
       </div>
     </div>

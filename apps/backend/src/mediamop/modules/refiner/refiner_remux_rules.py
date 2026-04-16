@@ -84,7 +84,7 @@ def is_refiner_media_candidate(path: Path) -> bool:
     ffprobe, or output copies from this pass.
 
     Live ``refiner.file.remux_pass.v1`` runs may delete watched-folder material after
-    success when bounded by configured paths (Movies: release folder + TV: single file);
+    success when bounded by configured paths (Movies: release folder + TV: whole season folder when gates pass);
     dry runs and failures do not delete
     sources. This helper does not itself perform directory or sidecar cleanup.
     """

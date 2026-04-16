@@ -50,6 +50,7 @@ def refiner_active_remux_pass_exists_for_relative_path(
     *,
     relative_posix: str,
     media_scope: str = "movie",
+    exclude_job_id: int | None = None,
 ) -> bool:
     """True when a pending or leased ``refiner.file.remux_pass.v1`` row already carries this relative path + scope."""
 
@@ -66,6 +67,8 @@ def refiner_active_remux_pass_exists_for_relative_path(
         ),
     ).all()
     for job in rows:
+        if exclude_job_id is not None and int(job.id) == int(exclude_job_id):
+            continue
         raw = (job.payload_json or "").strip()
         if not raw:
             continue

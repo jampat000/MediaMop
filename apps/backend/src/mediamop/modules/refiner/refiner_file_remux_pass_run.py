@@ -8,6 +8,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy.orm import Session
+
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.refiner_file_remux_pass_paths import resolve_media_file_under_refiner_root
 from mediamop.modules.refiner.refiner_file_remux_pass_visibility import (
@@ -20,6 +22,10 @@ from mediamop.modules.refiner.refiner_file_remux_pass_visibility import (
     summarize_remux_plan,
 )
 from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
+from mediamop.modules.refiner.refiner_tv_season_folder_cleanup import (
+    handle_tv_cleanup_after_success,
+    init_tv_season_cleanup_activity_fields,
+)
 from mediamop.modules.refiner.refiner_remux_mux import (
     build_ffmpeg_argv,
     ffprobe_json,
@@ -59,36 +65,9 @@ def _fail_before(
     }
 
 
-def _source_file_eligible_for_automatic_delete(*, src: Path, watched_root: Path) -> bool:
-    """TV-only path: only delete the operator-resolved file when it sits under the configured watched folder."""
-
-    try:
-        src.resolve().relative_to(watched_root.resolve())
-    except ValueError:
-        return False
-    return src.is_file()
-
-
 def _normalize_media_scope_for_cleanup(raw: str | None) -> str:
     s = (raw or "movie").strip().lower()
     return "tv" if s == "tv" else "movie"
-
-
-def _maybe_delete_source_file_after_success_tv(*, src: Path, watched_root: Path, out: dict[str, Any]) -> None:
-    """TV: legacy single-file removal only (Movies use folder cleanup)."""
-
-    if not _source_file_eligible_for_automatic_delete(src=src, watched_root=watched_root):
-        out["source_deleted_after_success"] = False
-        out["source_cleanup_note"] = (
-            "Source file was not deleted because it did not resolve under the saved Refiner watched folder."
-        )
-        return
-    try:
-        src.unlink()
-        out["source_deleted_after_success"] = True
-    except OSError as exc:
-        out["source_deleted_after_success"] = False
-        out["source_cleanup_note"] = f"Source deletion was skipped after success due to an OS error: {exc}"
 
 
 def _check_output_file_completeness(*, output_file: Path, source_file: Path) -> dict[str, Any]:
@@ -256,24 +235,41 @@ def _handle_refiner_cleanup_after_success(
     media_scope: str | None,
     path_runtime: RefinerPathRuntime,
     final_output_file: Path | None,
+    cleanup_session: Session | None,
+    settings: MediaMopSettings,
+    min_file_age_seconds: int,
+    current_job_id: int | None,
 ) -> None:
-    """Movies: optional full release-folder removal + cascade. TV: single-file delete only."""
+    """Movies: optional full release-folder removal + cascade. TV: season-folder cleanup (Pass 1b) or skip."""
 
     scope = _normalize_media_scope_for_cleanup(media_scope)
-    _init_folder_cleanup_activity_fields(out)
 
     if scope != "movie":
-        out["source_folder_deleted"] = False
-        out["source_folder_skip_reason"] = (
-            "TV library passes do not use Movies release-folder removal. Only the video file may be removed."
-        )
-        out["output_completeness_check"] = "skipped"
-        out["output_completeness_note"] = "Not checked for TV passes."
-        if dry_run:
-            out["source_deleted_after_success"] = False
+        if scope != "tv":
             return
-        _maybe_delete_source_file_after_success_tv(src=src, watched_root=watched_root, out=out)
+        if cleanup_session is None:
+            init_tv_season_cleanup_activity_fields(out)
+            out["tv_season_folder_skip_reason"] = (
+                "TV season cleanup needs a database session (internal error). Nothing was removed under the TV watched folder."
+            )
+            out["tv_episode_check_summary"] = [out["tv_season_folder_skip_reason"]]
+            return
+        handle_tv_cleanup_after_success(
+            session=cleanup_session,
+            settings=settings,
+            path_runtime=path_runtime,
+            src=src,
+            watched_root=watched_root,
+            out=out,
+            dry_run=dry_run,
+            min_file_age_seconds=min_file_age_seconds,
+            current_job_id=current_job_id,
+            remux_context=dict(out),
+            final_output_file=final_output_file,
+        )
         return
+
+    _init_folder_cleanup_activity_fields(out)
 
     watched_resolved = watched_root.resolve()
     src_resolved = src.resolve()
@@ -418,14 +414,16 @@ def run_refiner_file_remux_pass(
     rules_config: RefinerRulesConfig | None = None,
     min_file_age_seconds: int | None = None,
     media_scope: str | None = "movie",
+    cleanup_session: Session | None = None,
+    current_job_id: int | None = None,
 ) -> dict[str, Any]:
     """Run one pass: probe, plan, operator lines, optional remux.
 
     ``dry_run`` when True runs ffprobe and planning only (no ffmpeg output write, no filesystem cleanup).
     Live passes use saved Refiner work/temp and output folders from ``path_runtime`` (no fixed home subpaths).
 
-    ``media_scope`` controls post-success watched-folder cleanup: Movies may remove a whole release folder; TV keeps
-    single-file removal only.
+    ``media_scope`` controls post-success watched-folder cleanup: Movies may remove a whole release folder; TV may remove
+    a whole season folder when gates pass (requires ``cleanup_session`` for queue and history checks).
     """
 
     root = path_runtime.watched_folder
@@ -512,6 +510,7 @@ def run_refiner_file_remux_pass(
         "remux_required": remux_needed,
         "ffmpeg_argv": [str(x) for x in argv],
         "audio_selection_notes": list(plan.audio_selection_notes),
+        "media_scope": _normalize_media_scope_for_cleanup(media_scope),
     }
 
     if dry_run:
@@ -523,6 +522,10 @@ def run_refiner_file_remux_pass(
             media_scope=media_scope,
             path_runtime=path_runtime,
             final_output_file=None,
+            cleanup_session=cleanup_session,
+            settings=settings,
+            min_file_age_seconds=min_age,
+            current_job_id=current_job_id,
         )
         return out
 
@@ -561,6 +564,10 @@ def run_refiner_file_remux_pass(
             media_scope=media_scope,
             path_runtime=path_runtime,
             final_output_file=final_skip,
+            cleanup_session=cleanup_session,
+            settings=settings,
+            min_file_age_seconds=min_age,
+            current_job_id=current_job_id,
         )
         return out
 
@@ -616,6 +623,10 @@ def run_refiner_file_remux_pass(
         media_scope=media_scope,
         path_runtime=path_runtime,
         final_output_file=final,
+        cleanup_session=cleanup_session,
+        settings=settings,
+        min_file_age_seconds=min_age,
+        current_job_id=current_job_id,
     )
     return out
 

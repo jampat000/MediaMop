@@ -141,7 +141,27 @@ Single canonical backlog for shipped milestones and the next honest slice of wor
 
 ### 11 — status
 
-- [x] **Pass 1 done (Movies watched-folder release folder + gates)** — `refiner_file_remux_pass_run.py` (+ path runtime preview for dry-run copy), `refiner_file_remux_pass_handlers.py`, `refiner_path_settings_service.py`, `refiner_remux_rules.py` docstring; tests in `test_refiner_file_remux_pass_run.py`. **TV cleanup (Pass 2+)** remains a separate milestone.
+- [x] **Pass 1 done (Movies watched-folder release folder + gates)** — `refiner_file_remux_pass_run.py` (+ path runtime preview for dry-run copy), `refiner_file_remux_pass_handlers.py`, `refiner_path_settings_service.py`, `refiner_remux_rules.py` docstring; tests in `test_refiner_file_remux_pass_run.py`.
+
+## Roadmap item 12 — Refiner TV watched-folder season cleanup (Pass 1b)
+
+**Scope (explicit):** **TV (`media_scope=tv`) only.** After a successful live `refiner.file.remux_pass.v1`, optionally remove the **entire season folder** (immediate parent of the episode file) when **every** direct-child episode media file passes the four-check gate (Sonarr queue, active TV remux jobs, Refiner-processed output verification, or never-processed minimum age). Optional **show-folder cascade** removes empty parents up to but not including the TV watched root. **Movies** Pass 1 behavior stays separate — no shared cleanup implementation.
+
+**Completion criteria (must all be true to tick):**
+
+1. **Scope guard:** Non-`tv` scopes never run TV season cleanup; Movies code paths are unchanged.
+2. **Episode set:** Only **direct children** of the season folder matching `is_refiner_media_candidate` — no recursive subfolder episode discovery.
+3. **Four-check gate:** All episodes must pass Sonarr queue check, active TV remux job check (path + `media_scope=tv`, excluding the current job), processed-output verification (Activity-backed successful live TV outcomes + output size gate), or never-processed + minimum age — any failure blocks the whole season.
+4. **Sonarr unreachable:** If Sonarr queue data cannot be loaded, skip the entire season cleanup and log — no deletions.
+5. **Never delete the TV watched root** and never delete outside it (`Path.relative_to`); if the season folder **is** the watched root, skip and log.
+6. **Dry run:** Zero filesystem mutations; plain-language summary of what would happen.
+7. **File locks:** `PermissionError` / `OSError` on season delete skip the season, log, job still succeeds.
+8. **Activity JSON** includes `tv_season_folder_deleted`, `tv_season_folder_path`, `tv_season_folder_skip_reason`, `tv_episode_check_summary`, `tv_output_completeness_check`, `tv_cascade_folders_deleted`, `tv_sonarr_unreachable`.
+9. **Tests** cover deletes, blocks (queue, active job, output, age, Sonarr down, dry run, cascade, scope guard, cross-scope jobs, direct-child episode set).
+
+### 12 — status
+
+- [x] **Pass 1b done (TV season folder + cascade)** — `refiner_tv_season_folder_cleanup.py`, `refiner_file_remux_pass_run.py` / handlers wiring, Libraries disclosure copy, `test_refiner_tv_season_folder_cleanup.py` + TV remux integration in `test_refiner_file_remux_pass_run.py`.
 
 ## Active / next (ordered)
 

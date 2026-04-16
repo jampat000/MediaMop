@@ -17,6 +17,8 @@ from mediamop.modules.refiner.refiner_file_remux_pass_visibility import (
     REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED,
 )
 
+from .test_refiner_tv_season_folder_cleanup import _sqlite_session
+
 
 def _fake_probe() -> dict:
     return {
@@ -263,42 +265,51 @@ def test_live_remux_writes_nested_output_and_logs_replacement(
     assert r.get("source_folder_deleted") is True
 
 
-def test_tv_live_skips_movie_folder_cleanup_deletes_only_media_file(
+def test_tv_live_skips_movie_folder_cleanup_deletes_season_folder_when_gates_pass(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    _, cleanup_session = _sqlite_session(tmp_path)
     home = tmp_path / "home"
     home.mkdir()
     media = tmp_path / "media"
     media.mkdir()
-    show = media / "Show"
-    show.mkdir()
-    mkv = show / "ep.mkv"
+    season = media / "Show" / "S01"
+    season.mkdir(parents=True)
+    mkv = season / "ep.mkv"
     mkv.write_bytes(b"a" * 400)
     out = tmp_path / "out"
     out.mkdir()
-    out_show = out / "Show"
-    out_show.mkdir()
-    (out_show / "ep.mkv").write_bytes(b"b" * 80)
+    out_season = out / "Show" / "S01"
+    out_season.mkdir(parents=True)
+    (out_season / "ep.mkv").write_bytes(b"b" * 80)
 
     settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, dry=False, out=out)
     monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home: _fake_probe())
     monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
+    monkeypatch.setattr(
+        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_radarr_and_sonarr_queue_rows_for_scan",
+        lambda _s, _settings: ([], [], None, None),
+    )
 
     r = runmod.run_refiner_file_remux_pass(
         settings=settings,
         path_runtime=rt,
-        relative_media_path="Show/ep.mkv",
+        relative_media_path="Show/S01/ep.mkv",
         dry_run=False,
         media_scope="tv",
+        cleanup_session=cleanup_session,
+        current_job_id=1,
     )
     assert r["ok"] is True
     assert r.get("source_deleted_after_success") is True
-    assert r.get("source_folder_deleted") is False
+    assert r.get("source_folder_deleted") is not True
+    assert r.get("tv_season_folder_deleted") is True
     assert not mkv.exists()
-    assert show.is_dir()
+    assert not season.is_dir()
+    assert not (media / "Show").is_dir()
 
 
 def test_movie_live_skips_when_output_smaller_than_one_percent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -332,6 +343,7 @@ def test_movie_live_skips_when_output_smaller_than_one_percent(tmp_path: Path, m
     assert r.get("source_folder_deleted") is False
     assert mkv.exists()
     assert r.get("output_completeness_check") == "failed"
+    assert "tv_season_folder_deleted" not in r
 
 
 def test_movie_live_skips_when_video_sits_directly_under_watched_root(
@@ -445,14 +457,15 @@ def test_movie_dry_run_records_cascade_preview(tmp_path: Path, monkeypatch: pyte
     assert str(a.resolve()) in cascade or str(b.resolve()) in cascade
 
 
-def test_source_file_not_eligible_for_delete_outside_watched_root(tmp_path: Path) -> None:
+def test_source_file_outside_watched_root_fails_relative_to_guard(tmp_path: Path) -> None:
     watched = tmp_path / "w_root"
     watched.mkdir()
     outside = tmp_path / "outside"
     outside.mkdir()
     f = outside / "x.mkv"
     f.write_bytes(b"1")
-    assert not runmod._source_file_eligible_for_automatic_delete(src=f, watched_root=watched.resolve())
+    with pytest.raises(ValueError):
+        f.resolve().relative_to(watched.resolve())
 
 
 def test_default_work_dir_created_when_flag_set(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

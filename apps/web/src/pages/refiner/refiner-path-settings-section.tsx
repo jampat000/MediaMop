@@ -143,10 +143,12 @@ export function RefinerPathSettingsSection() {
             one in place. Refiner does not keep older copies or sweep stale outputs.
           </p>
           <p>
-            <span className="font-semibold text-[var(--mm-text2)]">TV after a successful live pass.</span> Refiner may
-            remove only the single video file it was working on, and only if that file still sits under your TV watched
-            folder. TV does not remove the surrounding folder, sidecars, or other files in that directory. Folder-level
-            cleanup is not part of the TV pass.
+            <span className="font-semibold text-[var(--mm-text2)]">TV after a successful live pass.</span> When every
+            episode media file directly in the same season folder passes Refiner's safety checks (including Sonarr
+            queue status, whether another TV remux job is already running, finished output checks for files Refiner already
+            processed, and minimum file age for files Refiner never touched), Refiner may remove the whole season folder
+            under your TV watched folder — that removes episodes, subtitles, artwork, and subfolders together. If any
+            check fails, nothing in that season folder is removed. Refiner never removes your TV watched folder itself.
           </p>
           <p>
             <span className="font-semibold text-[var(--mm-text2)]">Movies after a successful live pass.</span> Refiner may
