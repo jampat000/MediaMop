@@ -40,3 +40,4 @@ SUBBER_SUPPLIED_CUE_TIMELINE_CONSTRAINTS_CHECK_COMPLETED = "subber.supplied_cue_
 REFINER_CANDIDATE_GATE_COMPLETED = "refiner.candidate_gate_completed"
 REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_COMPLETED = "refiner.watched_folder_remux_scan_dispatch_completed"
 REFINER_FILE_REMUX_PASS_COMPLETED = "refiner.file_remux_pass_completed"
+REFINER_WORK_TEMP_STALE_SWEEP_COMPLETED = "refiner.work_temp_stale_sweep_completed"

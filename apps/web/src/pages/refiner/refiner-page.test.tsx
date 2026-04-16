@@ -78,6 +78,12 @@ const minimalRefinerRuntimeSettings: RefinerRuntimeSettingsOut = {
   refiner_watched_folder_min_file_age_seconds: 300,
   watched_folder_scan_periodic_configuration_note:
     "MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED long env note for tests.",
+  refiner_work_temp_stale_sweep_movie_schedule_enabled: false,
+  refiner_work_temp_stale_sweep_movie_schedule_interval_seconds: 3600,
+  refiner_work_temp_stale_sweep_tv_schedule_enabled: false,
+  refiner_work_temp_stale_sweep_tv_schedule_interval_seconds: 3600,
+  refiner_work_temp_stale_sweep_min_stale_age_seconds: 86_400,
+  work_temp_stale_sweep_periodic_configuration_note: "MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_* env note for tests.",
 };
 
 function wrap(ui: ReactNode, client: QueryClient) {

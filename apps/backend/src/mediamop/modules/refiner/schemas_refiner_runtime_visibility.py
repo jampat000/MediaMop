@@ -51,3 +51,25 @@ class RefinerRuntimeSettingsOut(BaseModel):
     watched_folder_scan_periodic_configuration_note: str = Field(
         description="How operators change periodic scan env (restart required).",
     )
+    refiner_work_temp_stale_sweep_movie_schedule_enabled: bool = Field(
+        description="``MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED`` at process start.",
+    )
+    refiner_work_temp_stale_sweep_movie_schedule_interval_seconds: int = Field(
+        ge=60,
+        description="Seconds between Movies-only periodic stale temp sweep enqueue ticks (clamped 60..7d).",
+    )
+    refiner_work_temp_stale_sweep_tv_schedule_enabled: bool = Field(
+        description="``MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_ENABLED`` at process start.",
+    )
+    refiner_work_temp_stale_sweep_tv_schedule_interval_seconds: int = Field(
+        ge=60,
+        description="Seconds between TV-only periodic stale temp sweep enqueue ticks (clamped 60..7d).",
+    )
+    refiner_work_temp_stale_sweep_min_stale_age_seconds: int = Field(
+        ge=60,
+        description="Minimum file age before Refiner removes its own stale temp work files (60s..30d). "
+        "Shared for both scopes (narrow exception: same temp filename semantics).",
+    )
+    work_temp_stale_sweep_periodic_configuration_note: str = Field(
+        description="How operators change work/temp stale sweep env (restart required).",
+    )

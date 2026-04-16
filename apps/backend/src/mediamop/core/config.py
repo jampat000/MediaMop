@@ -120,6 +120,13 @@ class MediaMopSettings:
     refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs: bool
     refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run: bool
     refiner_watched_folder_min_file_age_seconds: int
+    # Refiner work/temp stale sweep (``refiner.work_temp_stale_sweep.v1``) — per-scope periodic enqueue.
+    refiner_work_temp_stale_sweep_movie_schedule_enabled: bool
+    refiner_work_temp_stale_sweep_movie_schedule_interval_seconds: int
+    refiner_work_temp_stale_sweep_tv_schedule_enabled: bool
+    refiner_work_temp_stale_sweep_tv_schedule_interval_seconds: int
+    # Narrow exception: same minimum age applies to both scopes (same temp filename semantics).
+    refiner_work_temp_stale_sweep_min_stale_age_seconds: int
     # Legacy env read for compatibility only; remux path resolution uses saved Refiner path settings (SQLite).
     refiner_remux_media_root: str | None
     # Radarr/Sonarr HTTP for Fetcher-owned live failed-import cleanup drives (env: MEDIAMOP_FETCHER_*).
@@ -303,6 +310,49 @@ class MediaMopSettings:
         )
         refiner_min_file_age = clamp_refiner_min_file_age_seconds(
             _env_int("MEDIAMOP_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", 300),
+        )
+        _legacy_temp_sweep_sched_env = "MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_SCHEDULE_ENABLED"
+        _legacy_temp_sweep_iv_env = "MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_SCHEDULE_INTERVAL_SECONDS"
+
+        def _temp_sweep_movie_schedule_enabled() -> bool:
+            k = "MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED"
+            if k in os.environ:
+                return _env_bool(k, False)
+            if _legacy_temp_sweep_sched_env in os.environ:
+                return _env_bool(_legacy_temp_sweep_sched_env, False)
+            return False
+
+        def _temp_sweep_tv_schedule_enabled() -> bool:
+            k = "MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_ENABLED"
+            if k in os.environ:
+                return _env_bool(k, False)
+            if _legacy_temp_sweep_sched_env in os.environ:
+                return _env_bool(_legacy_temp_sweep_sched_env, False)
+            return False
+
+        def _temp_sweep_movie_schedule_interval_seconds() -> int:
+            k = "MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_INTERVAL_SECONDS"
+            if k in os.environ:
+                return clamp_refiner_schedule_interval_seconds(_env_int(k, 3600))
+            if _legacy_temp_sweep_iv_env in os.environ:
+                return clamp_refiner_schedule_interval_seconds(_env_int(_legacy_temp_sweep_iv_env, 3600))
+            return clamp_refiner_schedule_interval_seconds(3600)
+
+        def _temp_sweep_tv_schedule_interval_seconds() -> int:
+            k = "MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_INTERVAL_SECONDS"
+            if k in os.environ:
+                return clamp_refiner_schedule_interval_seconds(_env_int(k, 3600))
+            if _legacy_temp_sweep_iv_env in os.environ:
+                return clamp_refiner_schedule_interval_seconds(_env_int(_legacy_temp_sweep_iv_env, 3600))
+            return clamp_refiner_schedule_interval_seconds(3600)
+
+        refiner_temp_sweep_movie_on = _temp_sweep_movie_schedule_enabled()
+        refiner_temp_sweep_movie_iv = _temp_sweep_movie_schedule_interval_seconds()
+        refiner_temp_sweep_tv_on = _temp_sweep_tv_schedule_enabled()
+        refiner_temp_sweep_tv_iv = _temp_sweep_tv_schedule_interval_seconds()
+        refiner_temp_sweep_min_stale = max(
+            60,
+            min(30 * 24 * 3600, _env_int("MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_MIN_STALE_AGE_SECONDS", 86_400)),
         )
         refiner_remux_root = (os.environ.get("MEDIAMOP_REFINER_REMUX_MEDIA_ROOT") or "").strip()
         refiner_remux_media_root = str(Path(refiner_remux_root).expanduser()) if refiner_remux_root else None
@@ -519,6 +569,11 @@ class MediaMopSettings:
             refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs=refiner_wf_scan_periodic_remux_enq,
             refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run=refiner_wf_scan_periodic_remux_dry,
             refiner_watched_folder_min_file_age_seconds=refiner_min_file_age,
+            refiner_work_temp_stale_sweep_movie_schedule_enabled=refiner_temp_sweep_movie_on,
+            refiner_work_temp_stale_sweep_movie_schedule_interval_seconds=refiner_temp_sweep_movie_iv,
+            refiner_work_temp_stale_sweep_tv_schedule_enabled=refiner_temp_sweep_tv_on,
+            refiner_work_temp_stale_sweep_tv_schedule_interval_seconds=refiner_temp_sweep_tv_iv,
+            refiner_work_temp_stale_sweep_min_stale_age_seconds=refiner_temp_sweep_min_stale,
             refiner_remux_media_root=refiner_remux_media_root,
             fetcher_radarr_base_url=radarr_base or None,
             fetcher_radarr_api_key=radarr_key or None,

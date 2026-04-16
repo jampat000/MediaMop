@@ -63,6 +63,32 @@ export function RefinerRuntimeSettingsSection() {
         <p className="mt-2 text-xs text-[var(--mm-text3)]">{d.watched_folder_scan_periodic_configuration_note}</p>
       </details>
 
+      <h3 className="mt-7 text-sm font-semibold text-[var(--mm-text)]">Work folder temp cleanup</h3>
+      <p className="mt-1 text-[var(--mm-text3)]">
+        Optional periodic jobs remove stale Refiner temp files under your saved Movies and TV work folders only (never
+        watched or output libraries). Movies and TV use separate timers and queue rows; a Movies remux pass blocks
+        Movies temp cleanup only, and a TV remux pass blocks TV temp cleanup only. If both scopes point at the same work
+        folder on disk, automatic deletion is turned off until you use separate folders (see advanced note).
+      </p>
+      <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-[var(--mm-text2)]">
+        <li>
+          Movies temp cleanup enabled: {d.refiner_work_temp_stale_sweep_movie_schedule_enabled ? "Yes" : "No"} — every{" "}
+          {d.refiner_work_temp_stale_sweep_movie_schedule_interval_seconds} seconds
+        </li>
+        <li>
+          TV temp cleanup enabled: {d.refiner_work_temp_stale_sweep_tv_schedule_enabled ? "Yes" : "No"} — every{" "}
+          {d.refiner_work_temp_stale_sweep_tv_schedule_interval_seconds} seconds
+        </li>
+        <li>
+          Minimum temp file age before removal (both scopes): {d.refiner_work_temp_stale_sweep_min_stale_age_seconds}{" "}
+          seconds
+        </li>
+      </ul>
+      <details className="mt-4 rounded-md border border-[var(--mm-border)] bg-black/10 p-3">
+        <summary className="cursor-pointer text-sm font-medium text-[var(--mm-text1)]">Advanced work/temp cleanup configuration</summary>
+        <p className="mt-2 text-xs text-[var(--mm-text3)]">{d.work_temp_stale_sweep_periodic_configuration_note}</p>
+      </details>
+
       <details className="mt-4 rounded-md border border-[var(--mm-border)] bg-black/10 p-3">
         <summary className="cursor-pointer text-sm font-medium text-[var(--mm-text1)]">What each Refiner job does</summary>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-[var(--mm-text2)]">
@@ -70,6 +96,10 @@ export function RefinerRuntimeSettingsSection() {
           <li>Download queue check: checks one release against live Radarr/Sonarr queue rows.</li>
           <li>Library check: scans watched folders and can queue eligible file runs.</li>
           <li>Run one file: probes/plans/remuxes one file under a watched folder path.</li>
+          <li>
+            Work folder temp cleanup: removes stale Refiner temp files under the saved Movies or TV work folder for that
+            scope when safe (per-scope gate and timers).
+          </li>
         </ul>
       </details>
     </section>

@@ -53,3 +53,14 @@ def test_refiner_watched_folder_scan_dispatch_has_distinct_schedule_surface_on_s
     assert "refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds" in names
     assert "refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs" in names
     assert "refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run" in names
+
+
+def test_refiner_work_temp_stale_sweep_has_distinct_schedule_surface_on_settings() -> None:
+    """Work/temp stale sweep must not reuse watched-folder scan or supplied-payload schedule fields."""
+
+    names = _field_names()
+    assert "refiner_work_temp_stale_sweep_movie_schedule_enabled" in names
+    assert "refiner_work_temp_stale_sweep_movie_schedule_interval_seconds" in names
+    assert "refiner_work_temp_stale_sweep_tv_schedule_enabled" in names
+    assert "refiner_work_temp_stale_sweep_tv_schedule_interval_seconds" in names
+    assert "refiner_work_temp_stale_sweep_min_stale_age_seconds" in names

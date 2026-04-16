@@ -24,6 +24,12 @@ from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_handler
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_job_kinds import (
     REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
 )
+from mediamop.modules.refiner.refiner_work_temp_stale_sweep_handlers import (
+    make_refiner_work_temp_stale_sweep_handler,
+)
+from mediamop.modules.refiner.refiner_work_temp_stale_sweep_job_kinds import (
+    REFINER_WORK_TEMP_STALE_SWEEP_JOB_KIND,
+)
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
 
 
@@ -43,6 +49,7 @@ def build_refiner_job_handlers(
             settings,
             session_factory,
         ),
+        REFINER_WORK_TEMP_STALE_SWEEP_JOB_KIND: make_refiner_work_temp_stale_sweep_handler(settings, session_factory),
     }
     validate_refiner_worker_handler_registry(reg)
     return reg

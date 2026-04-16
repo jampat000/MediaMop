@@ -23,6 +23,9 @@ from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_job_kin
 from mediamop.modules.refiner.refiner_supplied_payload_evaluation_job_kinds import (
     REFINER_SUPPLIED_PAYLOAD_EVALUATION_JOB_KIND,
 )
+from mediamop.modules.refiner.refiner_work_temp_stale_sweep_job_kinds import (
+    REFINER_WORK_TEMP_STALE_SWEEP_JOB_KIND,
+)
 from mediamop.modules.refiner.worker_loop import process_one_refiner_job
 from mediamop.platform.activity import constants as C
 from mediamop.platform.activity.models import ActivityEvent
@@ -64,6 +67,7 @@ def test_build_refiner_job_handlers_registry_is_refiner_prefixed_only(session_fa
         REFINER_CANDIDATE_GATE_JOB_KIND,
         REFINER_FILE_REMUX_PASS_JOB_KIND,
         REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
+        REFINER_WORK_TEMP_STALE_SWEEP_JOB_KIND,
     }
     assert all(k.startswith("refiner.") for k in reg)
 

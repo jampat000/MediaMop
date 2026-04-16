@@ -10,6 +10,7 @@ Single canonical backlog for shipped milestones and the next honest slice of wor
 - [x] Refiner remux pass operator visibility (activity / structured results) shipped for current scope.
 - [x] Refiner in-process worker concurrency surfaced to operators (`runtime-settings` + env honesty).
 - [x] Refiner path model shipped (persisted watched / work / output; containment and lifecycle rules locked).
+- [x] Refiner work/temp stale sweep (Pass 2 + 13b): per-scope periodic ``refiner.work_temp_stale_sweep.v1`` (Movies vs TV independent gates, dedupe, schedule, reporting; shared-root fail-safe; shared min-stale-age only as documented exception).
 - [x] Refiner watched-folder scanning family shipped: `refiner.watched_folder.remux_scan_dispatch.v1` (manual trigger, media scan, gate-equivalent ownership/blocking, optional remux enqueue, duplicate guard, activity summary, Refiner page UI + POST enqueue API).
 - [x] Refiner jobs inspection / operator control surface: `GET …/refiner/jobs/inspection`, Refiner page queue table, `POST …/refiner/jobs/{id}/cancel-pending` (pending-only; operators); finished outcomes remain on Activity.
 - [x] Refiner watched-folder periodic scanning: optional Refiner-only asyncio enqueue loop for `refiner.watched_folder.remux_scan_dispatch.v1` (separate env enable/interval + periodic remux flags from supplied payload evaluation); scan-level idle guard; `scan_trigger` in activity summary; runtime settings snapshot + UI honesty (restart required).
@@ -162,6 +163,41 @@ Single canonical backlog for shipped milestones and the next honest slice of wor
 ### 12 — status
 
 - [x] **Pass 1b done (TV season folder + cascade)** — `refiner_tv_season_folder_cleanup.py`, `refiner_file_remux_pass_run.py` / handlers wiring, Libraries disclosure copy, `test_refiner_tv_season_folder_cleanup.py` + TV remux integration in `test_refiner_file_remux_pass_run.py`.
+
+## Roadmap item 13 — Refiner work/temp stale cleanup (Pass 2)
+
+**Scope (explicit):** **Refiner work/temp folders only.** Periodic (or manually enqueued) sweep removes **stale, Refiner-owned** temp files (e.g. ``*.refiner.*`` from ``remux_to_temp_file``, dry-run placeholder) under resolved Movies and TV **effective** work roots. **No** watched-folder source/output deletion; **no** Arr APIs; **no** change to Pass 1 / Pass 1b watched-folder cleanup.
+
+### 13b — Pass 2 separation correction (Movies / TV independence)
+
+**Problem:** Initial Pass 2 used a **global** remux gate, **one** deduped sweep job, **merged** reporting, **shared** schedule knobs, and **deduped** identical work roots — cross-scope blocking and merged operator truth.
+
+**Completion criteria (must all be true to tick separation correction):**
+
+1. **Per-scope roots:** Movies sweep reads only the Movies effective work root; TV sweep only the TV effective work root — never the other scope’s path.
+2. **Same physical root:** If resolved Movies work == resolved TV work, **no automatic deletes** in either scope’s job (fail-safe); plain ``temp_cleanup_skipped_reason`` + ``temp_cleanup_shared_work_root_conflict: true``; no silent merge pretending independence.
+3. **Per-scope active gate:** A pending/leased ``refiner.file.remux_pass.v1`` job blocks **only** the sweep whose payload ``media_scope`` matches (legacy payloads without ``media_scope`` treated as Movies).
+4. **Per-scope scheduling:** Separate periodic enqueue / dedupe rows for Movies vs TV (same job kind allowed with scope in payload + distinct dedupe keys).
+5. **Per-scope reporting:** Each sweep run’s structured result includes ``media_scope`` and scope-local ``temp_cleanup_*`` fields (one scope per job completion / Activity row).
+6. **Stale age:** Either split per scope **or** one shared ``min_stale_age`` documented as a **narrow exception** (same temp artifact semantics).
+7. **Dry run / locks / candidates:** Unchanged product rules (zero FS mutation on dry run; lock-safe skip; Refiner-owned filename rules only).
+8. **Tests** prove cross-scope non-blocking, per-scope dedupe, shared-root policy, and reporting.
+
+**Completion criteria (original Pass 2 — still required):**
+
+1. **Candidates:** Only artifacts Refiner creates by name/pattern in code (no broad “old file” sweeps).
+2. **Roots:** Sweep bounded to the effective work root for **that** job’s ``media_scope`` only; never paths outside that root.
+3. **Active-job gate:** Per-scope only (see 13b).
+4. **Stale age:** As in 13b.
+5. **Dry run:** Payload ``dry_run: true`` — zero filesystem deletes; result lists what would be removed.
+6. **Locks:** ``OSError``/``PermissionError`` on delete — skip file, log, continue; job does not crash.
+7. **Activity / structured result:** Per-scope ``temp_cleanup_*`` plus ``media_scope`` (and shared-root conflict flag when applicable).
+8. **Tests** cover delete/stale/fresh, non-candidate untouched, per-scope active gate, both scopes independently, custom roots, lock skip, dry run, bounded roots, shared-root block.
+9. **Refiner-only** module layout (``refiner_temp_cleanup.py`` + job kind + periodic enqueue + lifespan wiring).
+
+### 13 — status
+
+- [x] **Pass 2 + 13b separation correction shipped** — Per-scope ``refiner.work_temp_stale_sweep.v1`` (payload ``media_scope`` + dedupe keys ``…:movie`` / ``…:tv``), per-scope remux gate (payload ``media_scope``; legacy remux payloads count as Movies), shared-root fail-safe (no deletes, plain skip reason + ``temp_cleanup_shared_work_root_conflict``), per-scope schedule env + runtime/UI, shared ``MIN_STALE_AGE`` documented narrow exception, ``test_refiner_temp_cleanup.py``.
 
 ## Active / next (ordered)
 

@@ -49,6 +49,12 @@ export type RefinerRuntimeSettingsOut = {
   refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run: boolean;
   refiner_watched_folder_min_file_age_seconds: number;
   watched_folder_scan_periodic_configuration_note: string;
+  refiner_work_temp_stale_sweep_movie_schedule_enabled: boolean;
+  refiner_work_temp_stale_sweep_movie_schedule_interval_seconds: number;
+  refiner_work_temp_stale_sweep_tv_schedule_enabled: boolean;
+  refiner_work_temp_stale_sweep_tv_schedule_interval_seconds: number;
+  refiner_work_temp_stale_sweep_min_stale_age_seconds: number;
+  work_temp_stale_sweep_periodic_configuration_note: string;
 };
 
 export type RefinerOverviewStatsOut = {
