@@ -68,7 +68,7 @@ export function RefinerJobsInspectionSection() {
 
   return (
     <section
-      className="mm-fetcher-module-surface w-full min-w-0 rounded border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 text-sm leading-relaxed text-[var(--mm-text2)] sm:p-6"
+      className="mm-fetcher-module-surface w-full min-w-0 rounded border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-6 text-sm leading-relaxed text-[var(--mm-text2)] sm:p-7"
       aria-labelledby="refiner-jobs-inspection-heading"
       data-testid="refiner-jobs-inspection-section"
     >
@@ -76,21 +76,21 @@ export function RefinerJobsInspectionSection() {
         Jobs
       </h2>
       <p className="mt-2 max-w-3xl text-[var(--mm-text3)]">
-        Use this queue view to see what Refiner is waiting on, processing now, or recently finished on this server. Open{" "}
-        <strong className="text-[var(--mm-text)]">Activity</strong> for full run detail once a job completes.
+        Pending, running, and finished Refiner work on this server. When a job completes, check{" "}
+        <strong className="text-[var(--mm-text)]">Activity</strong> for the outcome.
       </p>
-      <p className="mt-2 text-xs text-[var(--mm-text3)]">
-        Operators and admins: <strong className="text-[var(--mm-text)]">Cancel pending</strong> only (not leased or
-        terminal rows).
+      <p className="mt-2 max-w-3xl text-xs text-[var(--mm-text3)]">
+        Operators and admins can <strong className="text-[var(--mm-text)]">Cancel pending</strong> only — not work that is
+        already running or finished.
       </p>
 
-      <div className="mt-5 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/60 px-4 py-3">
-        <label className="block">
+      <div className="mt-7 flex flex-col gap-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-5 sm:py-4">
+        <label className="block min-w-0 flex-1">
           <span id={filterLabelId} className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-            Filter
+            Show jobs
           </span>
           <MmListboxPicker
-            className="mt-2 max-w-md"
+            className="mt-2 max-w-xl"
             data-testid="refiner-jobs-inspection-filter"
             ariaLabelledBy={filterLabelId}
             placeholder="Select filter"
@@ -99,6 +99,9 @@ export function RefinerJobsInspectionSection() {
             onChange={(v) => setFilter(v as RefinerJobsInspectionFilter)}
           />
         </label>
+        <p className="text-[0.7rem] leading-snug text-[var(--mm-text3)] sm:max-w-[14rem] sm:text-right">
+          {jobs.length} row{jobs.length === 1 ? "" : "s"} for this filter.
+        </p>
       </div>
 
       {cancel.isError ? (
@@ -109,18 +112,21 @@ export function RefinerJobsInspectionSection() {
 
       {jobs.length === 0 ? (
         <div
-          className="mt-4 rounded-md border border-[var(--mm-border)] bg-black/10 px-4 py-5 text-sm text-[var(--mm-text3)]"
+          className="mt-6 rounded-md border border-[var(--mm-border)] bg-black/10 px-5 py-8 text-center sm:px-8"
           data-testid="refiner-jobs-inspection-empty"
         >
-          <p className="font-medium text-[var(--mm-text2)]">No rows for this filter.</p>
-          <p className="mt-1 text-xs">Try a broader filter to review queue activity.</p>
+          <p className="text-sm font-semibold text-[var(--mm-text1)]">No jobs match this view</p>
+          <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-[var(--mm-text3)]">
+            Nothing matches this filter yet. Try <strong className="text-[var(--mm-text2)]">Recent (all statuses)</strong>{" "}
+            for the latest rows, or check <strong className="text-[var(--mm-text2)]">Activity</strong> after a run finishes.
+          </p>
         </div>
       ) : (
-        <div className="mt-4 w-full min-w-0 overflow-x-auto rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/50 p-2">
+        <div className="mt-6 w-full min-w-0 overflow-x-auto rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-1 sm:p-2">
           <table className="w-full min-w-[44rem] border-collapse text-left text-xs">
             <thead>
-              <tr className="border-b border-[var(--mm-border)] text-[var(--mm-text3)]">
-                <th className="py-2 pr-2 font-semibold">ID</th>
+              <tr className="border-b border-[var(--mm-border)] bg-black/10 text-[var(--mm-text3)]">
+                <th className="rounded-tl-md py-2.5 pr-2 pl-2 font-semibold">ID</th>
                 <th className="py-2 pr-2 font-semibold">Status</th>
                 <th className="py-2 pr-2 font-semibold">Kind</th>
                 <th className="py-2 pr-2 font-semibold">Updated</th>

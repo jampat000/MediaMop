@@ -83,9 +83,9 @@ def is_refiner_media_candidate(path: Path) -> bool:
     non-allowlisted files—are ignored for processing: no activity rows, readiness,
     ffprobe, or output copies from this pass.
 
-    Live ``refiner.file.remux_pass.v1`` runs may delete **only** the resolved source
-    media file after success when it still sits under the configured watched folder
-    (see ``_maybe_delete_source_after_success``); dry runs and failures do not delete
+    Live ``refiner.file.remux_pass.v1`` runs may delete watched-folder material after
+    success when bounded by configured paths (Movies: release folder + TV: single file);
+    dry runs and failures do not delete
     sources. This helper does not itself perform directory or sidecar cleanup.
     """
     try:

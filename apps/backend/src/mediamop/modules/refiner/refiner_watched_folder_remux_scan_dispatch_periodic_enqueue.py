@@ -8,6 +8,11 @@ import logging
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
+from mediamop.modules.refiner.refiner_operator_settings_service import (
+    ensure_refiner_operator_settings_row,
+    refiner_periodic_scope_in_schedule_window,
+)
+from mediamop.modules.refiner.refiner_path_settings_service import ensure_refiner_path_settings_row
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_enqueue import (
     try_enqueue_periodic_watched_folder_remux_scan_dispatch,
 )
@@ -24,17 +29,10 @@ def start_refiner_watched_folder_remux_scan_dispatch_enqueue_tasks(
     settings: MediaMopSettings,
 ) -> list[asyncio.Task[None]]:
     """Background enqueue tick for the watched-folder remux scan dispatch family only (no Fetcher coupling)."""
-
-    if not settings.refiner_watched_folder_remux_scan_dispatch_schedule_enabled:
-        return []
-    interval = float(settings.refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds)
-    if interval <= 0:
-        return []
     task = asyncio.create_task(
         _run_periodic_watched_folder_scan_dispatch_enqueue(
             session_factory,
             stop_event=stop_event,
-            interval_seconds=interval,
             settings=settings,
         ),
         name="refiner-watched-folder-remux-scan-dispatch-enqueue",
@@ -46,19 +44,45 @@ async def _run_periodic_watched_folder_scan_dispatch_enqueue(
     session_factory: sessionmaker[Session],
     *,
     stop_event: asyncio.Event,
-    interval_seconds: float,
     settings: MediaMopSettings,
 ) -> None:
     loop = asyncio.get_running_loop()
+    next_run_movie = loop.time()
+    next_run_tv = loop.time()
     while not stop_event.is_set():
 
-        def _once() -> None:
+        def _once(now_loop: float) -> tuple[float, float, float]:
             with session_factory() as session:
-                try_enqueue_periodic_watched_folder_remux_scan_dispatch(session, settings)
+                row = ensure_refiner_operator_settings_row(session)
+                path_row = ensure_refiner_path_settings_row(session)
+                next_movie = next_run_movie
+                next_tv = next_run_tv
+                if (
+                    bool(row.movie_schedule_enabled)
+                    and now_loop >= next_run_movie
+                    and refiner_periodic_scope_in_schedule_window(session, row, media_scope="movie")
+                ):
+                    try_enqueue_periodic_watched_folder_remux_scan_dispatch(session, settings, media_scope="movie")
+                    next_movie = now_loop + max(10.0, float(row.movie_schedule_interval_seconds))
+                if (
+                    bool(row.tv_schedule_enabled)
+                    and now_loop >= next_run_tv
+                    and refiner_periodic_scope_in_schedule_window(session, row, media_scope="tv")
+                ):
+                    try_enqueue_periodic_watched_folder_remux_scan_dispatch(session, settings, media_scope="tv")
+                    next_tv = now_loop + max(10.0, float(row.tv_schedule_interval_seconds))
                 session.commit()
+                poll_movie = max(1.0, min(300.0, float(path_row.movie_watched_folder_check_interval_seconds)))
+                poll_tv = max(1.0, min(300.0, float(path_row.tv_watched_folder_check_interval_seconds)))
+                poll_s = min(poll_movie, poll_tv)
+                return next_movie, next_tv, poll_s
 
         try:
-            await asyncio.to_thread(_once)
+            now_loop = loop.time()
+            next_vals = await asyncio.to_thread(_once, now_loop)
+            poll_seconds = 1.0
+            if next_vals is not None:
+                next_run_movie, next_run_tv, poll_seconds = next_vals
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -75,7 +99,7 @@ async def _run_periodic_watched_folder_scan_dispatch_enqueue(
 
         if stop_event.is_set():
             break
-        deadline = loop.time() + interval_seconds
+        deadline = loop.time() + poll_seconds
         while loop.time() < deadline and not stop_event.is_set():
             remaining = deadline - loop.time()
             if remaining <= 0:

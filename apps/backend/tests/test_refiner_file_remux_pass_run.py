@@ -54,6 +54,7 @@ def _runtime(
         output_folder=out_s,
         work_folder_effective=str(work.resolve()),
         work_folder_is_default=work_is_default,
+        preview_output_folder=out_s if out_s else None,
     )
 
 
@@ -106,15 +107,20 @@ def test_dry_run_uses_ffprobe_and_returns_plan_lines(tmp_path: Path, monkeypatch
     assert mkv.exists()
 
 
-def test_live_skips_when_no_remux_required_deletes_source(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_live_skips_when_no_remux_required_deletes_release_folder(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     home = tmp_path / "home"
     home.mkdir()
     media = tmp_path / "media"
     media.mkdir()
-    mkv = media / "one.mkv"
-    mkv.write_bytes(b"x")
+    release = media / "ReleaseTitle"
+    release.mkdir()
+    mkv = release / "one.mkv"
+    mkv.write_bytes(b"x" * 2000)
     out = tmp_path / "out"
     out.mkdir()
+    out_rel = out / "ReleaseTitle"
+    out_rel.mkdir()
+    (out_rel / "one.mkv").write_bytes(b"y" * 500)
 
     settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, dry=False, out=out)
@@ -126,14 +132,16 @@ def test_live_skips_when_no_remux_required_deletes_source(tmp_path: Path, monkey
     r = runmod.run_refiner_file_remux_pass(
         settings=settings,
         path_runtime=rt,
-        relative_media_path="one.mkv",
+        relative_media_path="ReleaseTitle/one.mkv",
         dry_run=False,
     )
     assert r["ok"] is True
     assert r["outcome"] == REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED
     assert r.get("live_mutations_skipped") is True
     assert r.get("source_deleted_after_success") is True
+    assert r.get("source_folder_deleted") is True
     assert not mkv.exists()
+    assert not release.exists()
 
 
 def test_dry_run_does_not_delete_source(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -159,7 +167,8 @@ def test_dry_run_does_not_delete_source(tmp_path: Path, monkeypatch: pytest.Monk
     )
     assert r["ok"] is True
     assert mkv.exists()
-    assert "source_deleted_after_success" not in r
+    assert r.get("source_deleted_after_success") is False
+    assert r.get("source_folder_deleted") is False
 
 
 def test_live_fails_during_ffmpeg_surfaces_outcome(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -220,6 +229,7 @@ def test_live_remux_writes_nested_output_and_logs_replacement(
         output_folder=str(out.resolve()),
         work_folder_effective=str(work.resolve()),
         work_folder_is_default=False,
+        preview_output_folder=str(out.resolve()),
     )
 
     monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home: _fake_probe())
@@ -250,6 +260,189 @@ def test_live_remux_writes_nested_output_and_logs_replacement(
     assert Path(r["output_file"]).resolve() == final.resolve()
     assert not mkv.exists()
     assert r.get("source_deleted_after_success") is True
+    assert r.get("source_folder_deleted") is True
+
+
+def test_tv_live_skips_movie_folder_cleanup_deletes_only_media_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    media = tmp_path / "media"
+    media.mkdir()
+    show = media / "Show"
+    show.mkdir()
+    mkv = show / "ep.mkv"
+    mkv.write_bytes(b"a" * 400)
+    out = tmp_path / "out"
+    out.mkdir()
+    out_show = out / "Show"
+    out_show.mkdir()
+    (out_show / "ep.mkv").write_bytes(b"b" * 80)
+
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    rt = _runtime(media=media, home=home, dry=False, out=out)
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home: _fake_probe())
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
+
+    r = runmod.run_refiner_file_remux_pass(
+        settings=settings,
+        path_runtime=rt,
+        relative_media_path="Show/ep.mkv",
+        dry_run=False,
+        media_scope="tv",
+    )
+    assert r["ok"] is True
+    assert r.get("source_deleted_after_success") is True
+    assert r.get("source_folder_deleted") is False
+    assert not mkv.exists()
+    assert show.is_dir()
+
+
+def test_movie_live_skips_when_output_smaller_than_one_percent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    media = tmp_path / "media"
+    media.mkdir()
+    rel = media / "M"
+    rel.mkdir()
+    mkv = rel / "a.mkv"
+    mkv.write_bytes(b"x" * 10_000)
+    out = tmp_path / "out"
+    out.mkdir()
+    out_m = out / "M"
+    out_m.mkdir()
+    (out_m / "a.mkv").write_bytes(b"tiny")
+
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    rt = _runtime(media=media, home=home, dry=False, out=out)
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home: _fake_probe())
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
+
+    r = runmod.run_refiner_file_remux_pass(
+        settings=settings,
+        path_runtime=rt,
+        relative_media_path="M/a.mkv",
+        dry_run=False,
+    )
+    assert r["ok"] is True
+    assert r.get("source_folder_deleted") is False
+    assert mkv.exists()
+    assert r.get("output_completeness_check") == "failed"
+
+
+def test_movie_live_skips_when_video_sits_directly_under_watched_root(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    media = tmp_path / "media"
+    media.mkdir()
+    mkv = media / "root.mkv"
+    mkv.write_bytes(b"x" * 500)
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "root.mkv").write_bytes(b"y" * 100)
+
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    rt = _runtime(media=media, home=home, dry=False, out=out)
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home: _fake_probe())
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
+
+    r = runmod.run_refiner_file_remux_pass(
+        settings=settings,
+        path_runtime=rt,
+        relative_media_path="root.mkv",
+        dry_run=False,
+    )
+    assert r["ok"] is True
+    assert r.get("source_folder_deleted") is False
+    assert mkv.exists()
+
+
+def test_movie_live_folder_delete_skips_when_rmtree_raises(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    media = tmp_path / "media"
+    media.mkdir()
+    rel = media / "X"
+    rel.mkdir()
+    mkv = rel / "a.mkv"
+    mkv.write_bytes(b"x" * 600)
+    out = tmp_path / "out"
+    out.mkdir()
+    out_x = out / "X"
+    out_x.mkdir()
+    (out_x / "a.mkv").write_bytes(b"y" * 120)
+
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    rt = _runtime(media=media, home=home, dry=False, out=out)
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home: _fake_probe())
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
+
+    def _boom(path: str | Path, *a: object, **k: object) -> None:
+        raise PermissionError(13, "locked", str(path))
+
+    monkeypatch.setattr(runmod.shutil, "rmtree", _boom)
+
+    r = runmod.run_refiner_file_remux_pass(
+        settings=settings,
+        path_runtime=rt,
+        relative_media_path="X/a.mkv",
+        dry_run=False,
+    )
+    assert r["ok"] is True
+    assert r.get("source_folder_deleted") is False
+    assert mkv.exists()
+
+
+def test_movie_dry_run_records_cascade_preview(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    media = tmp_path / "media"
+    media.mkdir()
+    a = media / "A"
+    a.mkdir()
+    b = a / "B"
+    b.mkdir()
+    mkv = b / "m.mkv"
+    mkv.write_bytes(b"x" * 400)
+    out = tmp_path / "out"
+    out.mkdir()
+    oa = out / "A"
+    oa.mkdir()
+    ob = oa / "B"
+    ob.mkdir()
+    (ob / "m.mkv").write_bytes(b"y" * 80)
+
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    rt = _runtime(media=media, home=home, dry=True)
+    rt = replace(rt, preview_output_folder=str(out.resolve()))
+
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home: _fake_probe())
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
+
+    r = runmod.run_refiner_file_remux_pass(
+        settings=settings,
+        path_runtime=rt,
+        relative_media_path="A/B/m.mkv",
+        dry_run=True,
+    )
+    assert r["ok"] is True
+    assert mkv.exists()
+    assert r.get("output_completeness_check") == "passed"
+    cascade = r.get("cascade_folders_deleted") or []
+    assert str(a.resolve()) in cascade or str(b.resolve()) in cascade
 
 
 def test_source_file_not_eligible_for_delete_outside_watched_root(tmp_path: Path) -> None:
@@ -267,10 +460,15 @@ def test_default_work_dir_created_when_flag_set(tmp_path: Path, monkeypatch: pyt
     home.mkdir()
     media = tmp_path / "media"
     media.mkdir()
-    mkv = media / "one.mkv"
-    mkv.write_bytes(b"x")
+    rel = media / "R"
+    rel.mkdir()
+    mkv = rel / "one.mkv"
+    mkv.write_bytes(b"x" * 800)
     out = tmp_path / "out"
     out.mkdir()
+    out_r = out / "R"
+    out_r.mkdir()
+    (out_r / "one.mkv").write_bytes(b"z" * 100)
 
     settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     work_default = Path(home).resolve() / "refiner" / "work"
@@ -279,6 +477,7 @@ def test_default_work_dir_created_when_flag_set(tmp_path: Path, monkeypatch: pyt
         output_folder=str(out.resolve()),
         work_folder_effective=str(work_default),
         work_folder_is_default=True,
+        preview_output_folder=str(out.resolve()),
     )
 
     monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home: _fake_probe())
@@ -289,7 +488,7 @@ def test_default_work_dir_created_when_flag_set(tmp_path: Path, monkeypatch: pyt
 
     def _fake_remux(*, work_dir: Path, **_kwargs: object) -> Path:
         work_dir.mkdir(parents=True, exist_ok=True)
-        tmp_file.write_bytes(b"t")
+        tmp_file.write_bytes(b"t" * 200)
         return tmp_file
 
     monkeypatch.setattr(runmod, "remux_to_temp_file", _fake_remux)
@@ -297,8 +496,10 @@ def test_default_work_dir_created_when_flag_set(tmp_path: Path, monkeypatch: pyt
     r = runmod.run_refiner_file_remux_pass(
         settings=settings,
         path_runtime=rt,
-        relative_media_path="one.mkv",
+        relative_media_path="R/one.mkv",
         dry_run=False,
     )
     assert r["ok"] is True
     assert work_default.is_dir()
+    assert r.get("source_folder_deleted") is True
+    assert not mkv.exists()

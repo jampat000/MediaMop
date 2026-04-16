@@ -38,6 +38,14 @@
   --mm-font: "Outfit", system-ui, -apple-system, sans-serif;
   --mm-shadow-card: 0 16px 48px rgba(0, 0, 0, 0.45);
   --mm-shadow-card-inner: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  /* Inset field wells — slightly below card plane; tuned for quiet premium (not deep black wells). */
+  --mm-input-bg: rgba(22, 25, 31, 0.92);
+  --mm-input-bg-hover: rgba(28, 31, 38, 0.94);
+  --mm-input-border: rgba(231, 231, 234, 0.09);
+  --mm-input-border-hover: rgba(231, 231, 234, 0.14);
+  --mm-input-border-focus: rgba(227, 199, 122, 0.4);
+  /* Focus halo for `.mm-input` / picker triggers — calmer than global `--mm-accent-soft` fills. */
+  --mm-input-focus-ring: rgba(212, 175, 55, 0.18);
   --mm-font-feature: "cv11", "ss01";
   --mm-eyebrow-color: var(--mm-stone-muted);
 }

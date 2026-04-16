@@ -32,6 +32,7 @@ from mediamop.modules.fetcher.periodic_failed_import_cleanup_enqueue import (
     stop_fetcher_failed_import_cleanup_drive_enqueue_tasks,
 )
 from mediamop.modules.refiner.refiner_job_handlers import build_refiner_job_handlers
+from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
 from mediamop.modules.subber.subber_job_handlers import build_subber_job_handlers
 from mediamop.modules.trimmer.trimmer_job_handlers import build_trimmer_job_handlers
 from mediamop.modules.refiner.refiner_supplied_payload_evaluation_periodic_enqueue import (
@@ -115,11 +116,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         job_handlers=fetcher_job_handlers,
     )
     refiner_handlers = build_refiner_job_handlers(settings, session_factory)
+    def _refiner_max_concurrent_files() -> int:
+        with session_factory() as session:
+            row = ensure_refiner_operator_settings_row(session)
+            return max(1, min(8, int(row.max_concurrent_files)))
+
     refiner_stop, refiner_worker_tasks = start_refiner_worker_background_tasks(
         session_factory,
         settings,
         stop_event=stop,
         job_handlers=refiner_handlers,
+        max_concurrent_files_getter=_refiner_max_concurrent_files,
     )
     trimmer_handlers = build_trimmer_job_handlers(settings, session_factory)
     trimmer_stop, trimmer_worker_tasks = start_trimmer_worker_background_tasks(

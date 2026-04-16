@@ -27,6 +27,7 @@ def test_refiner_overview_stats_shape(client_with_admin: TestClient) -> None:
     body = r.json()
     assert body["window_days"] == 30
     assert "files_processed" in body
+    assert "files_failed" in body
+    assert isinstance(body["files_failed"], int)
     assert "success_rate_percent" in body
-    assert "space_saved_available" in body
-    assert "space_saved_note" in body
+    assert "space_saved_available" not in body

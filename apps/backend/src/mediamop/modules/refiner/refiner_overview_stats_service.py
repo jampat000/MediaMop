@@ -46,5 +46,6 @@ def build_refiner_overview_stats(db: Session, *, window_days: int = 30) -> Refin
     return RefinerOverviewStatsOut(
         window_days=30,
         files_processed=completed,
+        files_failed=failed,
         success_rate_percent=rate,
     )

@@ -7,6 +7,7 @@ import type { UserPublic } from "../../lib/api/types";
 import { qk } from "../../lib/auth/queries";
 import { refinerJobsInspectionQueryKey } from "../../lib/refiner/jobs-inspection/queries";
 import {
+  refinerOperatorSettingsQueryKey,
   refinerOverviewStatsQueryKey,
   refinerPathSettingsQueryKey,
   refinerRemuxRulesSettingsQueryKey,
@@ -17,17 +18,20 @@ import { RefinerPage } from "./refiner-page";
 
 const operatorMe: UserPublic = { id: 1, username: "alice", role: "operator" };
 
+/** Seeded path API shape — matches Windows product defaults from the backend. */
 const minimalRefinerPathSettings: RefinerPathSettingsOut = {
   refiner_watched_folder: null,
   refiner_work_folder: null,
   refiner_output_folder: "",
-  resolved_default_work_folder: "/tmp/mm-default-refiner-work",
-  effective_work_folder: "/tmp/mm-default-refiner-work",
+  resolved_default_work_folder: "C:\\ProgramData\\Media\\refiner-movie-work",
+  effective_work_folder: "C:\\ProgramData\\Media\\refiner-movie-work",
   refiner_tv_watched_folder: null,
   refiner_tv_work_folder: null,
   refiner_tv_output_folder: null,
-  resolved_default_tv_work_folder: "/tmp/mm-default-refiner-tv-work",
-  effective_tv_work_folder: "/tmp/mm-default-refiner-tv-work",
+  resolved_default_tv_work_folder: "C:\\ProgramData\\MediaMop\\refiner-tv-work",
+  effective_tv_work_folder: "C:\\ProgramData\\MediaMop\\refiner-tv-work",
+  movie_watched_folder_check_interval_seconds: 300,
+  tv_watched_folder_check_interval_seconds: 300,
   updated_at: "2026-04-11T00:00:00Z",
 };
 
@@ -89,12 +93,28 @@ function seedRefinerQueries(qc: QueryClient) {
   qc.setQueryData(refinerOverviewStatsQueryKey, {
     window_days: 30,
     files_processed: 42,
-    success_rate_percent: 88.5,
-    space_saved_gb: null,
-    space_saved_available: false,
-    space_saved_note: "not available",
+    files_failed: 1,
+    success_rate_percent: 97.7,
   });
   qc.setQueryData(refinerPathSettingsQueryKey, minimalRefinerPathSettings);
+  qc.setQueryData(refinerOperatorSettingsQueryKey, {
+    max_concurrent_files: 1,
+    min_file_age_seconds: 60,
+    movie_schedule_enabled: true,
+    movie_schedule_interval_seconds: 300,
+    movie_schedule_hours_limited: false,
+    movie_schedule_days: "",
+    movie_schedule_start: "00:00",
+    movie_schedule_end: "23:59",
+    tv_schedule_enabled: true,
+    tv_schedule_interval_seconds: 300,
+    tv_schedule_hours_limited: false,
+    tv_schedule_days: "",
+    tv_schedule_start: "00:00",
+    tv_schedule_end: "23:59",
+    schedule_timezone: "UTC",
+    updated_at: "2026-04-11T00:00:00Z",
+  });
   qc.setQueryData(refinerRemuxRulesSettingsQueryKey, minimalRefinerRemuxRules);
   qc.setQueryData(refinerJobsInspectionQueryKey("recent"), { jobs: [], default_recent_slice: true });
   qc.setQueryData(refinerJobsInspectionQueryKey("pending"), { jobs: [] });
@@ -144,11 +164,14 @@ describe("RefinerPage", () => {
   it("Overview shows last-30-day stats card", () => {
     renderRefinerPage();
     const panel = screen.getByTestId("refiner-overview-at-a-glance");
+    const last30 = screen.getByTestId("refiner-overview-last-30-days");
     expect(panel.textContent).toMatch(/Last 30 days/i);
-    expect(panel.textContent).toMatch(/Files processed/i);
-    expect(panel.textContent).toMatch(/42/i);
-    expect(panel.textContent).toMatch(/Success rate/i);
-    expect(panel.textContent).toMatch(/88.5%/i);
+    expect(last30.textContent).toMatch(/Done/i);
+    expect(last30.textContent).toMatch(/42/);
+    expect(last30.textContent).toMatch(/Failed/i);
+    expect(last30.textContent).toMatch(/Success/i);
+    expect(last30.textContent).toMatch(/97.7%/);
+    expect(panel.textContent).toMatch(/Throughput & safety/i);
   });
 
   it("Jobs tab shows Refiner jobs inspection with honest split from Activity", () => {
@@ -156,24 +179,24 @@ describe("RefinerPage", () => {
     openTab("Jobs");
     const block = screen.getByTestId("refiner-jobs-inspection-section");
     expect(block.textContent).toMatch(/Activity/i);
-    expect(block.textContent).toMatch(/queue view/i);
+    expect(block.textContent).toMatch(/Pending, running, and finished/i);
   });
 
-  it("Libraries tab folder-check copy stays explicit about not being a filesystem watcher", () => {
+  it("Libraries tab shows processing settings controls", () => {
     renderRefinerPage();
     openTab("Libraries");
-    const section = screen.getByTestId("refiner-watched-folder-scan-section");
-    expect(section.textContent).toMatch(/not.*filesystem watcher/i);
+    const section = screen.getByText("Processing settings");
+    expect(section).toBeInTheDocument();
   });
 
-  it("Workers tab explains timed scan interval and job-type purpose in plain language", () => {
+  it("Libraries tab exposes process controls for concurrency and file-age guardrail", () => {
     renderRefinerPage();
-    openTab("Workers");
-    const block = screen.getByTestId("refiner-runtime-settings");
-    const text = block.textContent ?? "";
-    expect(text).toMatch(/every 3600 seconds/i);
-    expect(text).toMatch(/not live filesystem watching/i);
-    expect(text).toMatch(/What each Refiner job does/i);
+    openTab("Libraries");
+    const block = screen.getByText("Processing settings").closest("section");
+    expect(block).not.toBeNull();
+    const text = block?.textContent ?? "";
+    expect(text).toMatch(/Files at once/i);
+    expect(text).toMatch(/Minimum file age/i);
   });
 
   it("has no Fetcher link on the page", () => {
@@ -181,13 +204,24 @@ describe("RefinerPage", () => {
     expect(screen.queryByRole("link", { name: "Fetcher" })).toBeNull();
   });
 
-  it("Workers tab still surfaces full server configuration including env keys for operators who need them", () => {
+  it("top-level tabs no longer include Workers", () => {
     renderRefinerPage();
-    openTab("Workers");
-    const block = screen.getByTestId("refiner-runtime-settings");
-    expect(block).toBeInTheDocument();
-    expect(block.textContent).toMatch(/MEDIAMOP_REFINER_WORKER_COUNT/i);
-    expect(block.textContent).toMatch(/0/);
-    expect(block.textContent?.toLowerCase()).toMatch(/sqlite/);
+    expect(screen.queryByRole("tab", { name: "Workers" })).toBeNull();
+  });
+
+  it("top-level tabs include Schedules", () => {
+    renderRefinerPage();
+    expect(screen.getByRole("tab", { name: "Schedules" })).toBeInTheDocument();
+  });
+
+  it("lists Jobs tab after Schedules", () => {
+    renderRefinerPage();
+    const tabs = screen.getAllByRole("tab");
+    const labels = tabs.map((t) => t.textContent?.trim() ?? "");
+    const idxSched = labels.indexOf("Schedules");
+    const idxJobs = labels.indexOf("Jobs");
+    expect(idxSched).toBeGreaterThan(-1);
+    expect(idxJobs).toBeGreaterThan(-1);
+    expect(idxJobs).toBeGreaterThan(idxSched);
   });
 });

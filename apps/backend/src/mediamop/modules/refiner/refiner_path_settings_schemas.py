@@ -18,6 +18,8 @@ class RefinerPathSettingsOut(BaseModel):
     refiner_tv_output_folder: str | None
     resolved_default_tv_work_folder: str
     effective_tv_work_folder: str
+    movie_watched_folder_check_interval_seconds: int = Field(ge=10, le=7 * 24 * 3600)
+    tv_watched_folder_check_interval_seconds: int = Field(ge=10, le=7 * 24 * 3600)
     updated_at: datetime
 
 
@@ -35,4 +37,12 @@ class RefinerPathSettingsPutIn(BaseModel):
     refiner_tv_watched_folder: str | None = None
     refiner_tv_work_folder: str | None = None
     refiner_tv_output_folder: str | None = None
+    movie_watched_folder_check_interval_seconds: int | None = Field(
+        default=None,
+        description="When set, updates Movies watched-folder poll interval (seconds, 10–604800). Omit to leave unchanged.",
+    )
+    tv_watched_folder_check_interval_seconds: int | None = Field(
+        default=None,
+        description="When set, updates TV watched-folder poll interval (seconds, 10–604800). Omit to leave unchanged.",
+    )
     csrf_token: str = Field(..., min_length=1)

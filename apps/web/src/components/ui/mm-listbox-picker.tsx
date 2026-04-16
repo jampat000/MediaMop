@@ -75,8 +75,10 @@ export function MmListboxPicker({
   const triggerLabel = selected?.label ?? placeholder;
   const triggerSurface = [
     mmPickerTriggerClass,
-    "flex items-center justify-between gap-2",
-    open && !disabled ? "border-[rgba(212,175,55,0.45)] bg-[var(--mm-accent-soft)]/20 shadow-sm" : "",
+    "flex min-h-[2.5rem] items-center justify-between gap-2",
+    open && !disabled
+      ? "border-[var(--mm-input-border-focus)] !shadow-[inset_0_1px_3px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.04),0_0_0_2px_var(--mm-input-focus-ring)]"
+      : "",
   ]
     .filter(Boolean)
     .join(" ");

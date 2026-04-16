@@ -11,6 +11,10 @@ export type RefinerPathSettingsOut = {
   refiner_tv_output_folder: string | null;
   resolved_default_tv_work_folder: string;
   effective_tv_work_folder: string;
+  /** How often the server re-evaluates periodic Movies scans vs this library (10–604800 seconds). */
+  movie_watched_folder_check_interval_seconds: number;
+  /** How often the server re-evaluates periodic TV scans vs this library (10–604800 seconds). */
+  tv_watched_folder_check_interval_seconds: number;
   updated_at: string;
 };
 
@@ -23,6 +27,10 @@ export type RefinerPathSettingsPutBody = {
   refiner_tv_watched_folder: string | null;
   refiner_tv_work_folder: string | null;
   refiner_tv_output_folder: string | null;
+  /** Send current Movies value on every save (Movies or TV card). */
+  movie_watched_folder_check_interval_seconds: number;
+  /** Send current TV value on every save (Movies or TV card). */
+  tv_watched_folder_check_interval_seconds: number;
 };
 
 /** GET /api/v1/refiner/runtime-settings — read-only Refiner in-process worker snapshot. */
@@ -46,10 +54,46 @@ export type RefinerRuntimeSettingsOut = {
 export type RefinerOverviewStatsOut = {
   window_days: number;
   files_processed: number;
+  files_failed: number;
   success_rate_percent: number;
-  space_saved_gb: number | null;
-  space_saved_available: boolean;
-  space_saved_note: string;
+};
+
+export type RefinerOperatorSettingsOut = {
+  max_concurrent_files: number;
+  min_file_age_seconds: number;
+  movie_schedule_enabled: boolean;
+  movie_schedule_interval_seconds: number;
+  movie_schedule_hours_limited: boolean;
+  movie_schedule_days: string;
+  movie_schedule_start: string;
+  movie_schedule_end: string;
+  tv_schedule_enabled: boolean;
+  tv_schedule_interval_seconds: number;
+  tv_schedule_hours_limited: boolean;
+  tv_schedule_days: string;
+  tv_schedule_start: string;
+  tv_schedule_end: string;
+  /** IANA id from suite settings (read-only; same clock reference as Fetcher). */
+  schedule_timezone: string;
+  updated_at: string;
+};
+
+/** Partial PUT: include only fields to change (per-scope schedule saves omit the other scope). */
+export type RefinerOperatorSettingsPutBody = {
+  max_concurrent_files?: number;
+  min_file_age_seconds?: number;
+  movie_schedule_enabled?: boolean;
+  movie_schedule_interval_seconds?: number;
+  movie_schedule_hours_limited?: boolean;
+  movie_schedule_days?: string;
+  movie_schedule_start?: string;
+  movie_schedule_end?: string;
+  tv_schedule_enabled?: boolean;
+  tv_schedule_interval_seconds?: number;
+  tv_schedule_hours_limited?: boolean;
+  tv_schedule_days?: string;
+  tv_schedule_start?: string;
+  tv_schedule_end?: string;
 };
 
 /** POST /api/v1/refiner/jobs/watched-folder-remux-scan-dispatch/enqueue */

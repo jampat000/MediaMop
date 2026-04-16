@@ -124,6 +124,25 @@ Single canonical backlog for shipped milestones and the next honest slice of wor
 
 - [ ] **Open** — no Trimmer ffmpeg extraction family in-repo; milestone criteria TBD when ownership and slice are chosen.
 
+## Roadmap item 11 — Refiner Movies watched-folder release cleanup (Pass 1)
+
+**Scope (explicit):** **Movies (`media_scope=movie`) only.** After a successful live `refiner.file.remux_pass.v1`, optionally remove the **entire release folder** (immediate parent of the media file) under the saved Movies watched folder, with output completeness checks, file-lock tolerance, and cascade removal of empty parents **up to but not including** the watched root. **TV** keeps the existing single-file delete only; no shared cleanup code path.
+
+**Completion criteria (must all be true to tick):**
+
+1. **Scope guard:** If `media_scope` is not `movie`, Movies folder cleanup does not run; TV behavior remains single-file deletion only; logs / activity state this plainly.
+2. **Never delete the watched root** and **never delete outside the watched root** (verified with `Path.relative_to`); if the media file’s immediate parent **is** the watched root, cleanup is skipped and logged.
+3. **Output gate:** Before any watched-side deletion for Movies, the expected output file must exist, be non-zero size, and be at least 1% of the source file size; otherwise skip deletion and log (minimum safety gate, not a full integrity check).
+4. **Dry run:** Zero filesystem mutations for cleanup; activity / logs describe what would happen for Movies when applicable.
+5. **Locks:** Permission or OS errors during folder removal are non-fatal: log which path failed, skip that folder removal, job still succeeds.
+6. **Cascade:** After removing the release folder, remove empty parents until a non-empty folder or the watched root is reached; never remove the watched root.
+7. **Activity JSON** includes the agreed operator-facing fields (`source_folder_deleted`, `source_folder_path`, `source_folder_skip_reason`, `output_completeness_check`, sizes, `cascade_folders_deleted`, etc.).
+8. **Tests** cover Movies success (folder + cascade), skips (root parent, missing/small output, locks), dry-run preview, TV unchanged path, and scope guard.
+
+### 11 — status
+
+- [x] **Pass 1 done (Movies watched-folder release folder + gates)** — `refiner_file_remux_pass_run.py` (+ path runtime preview for dry-run copy), `refiner_file_remux_pass_handlers.py`, `refiner_path_settings_service.py`, `refiner_remux_rules.py` docstring; tests in `test_refiner_file_remux_pass_run.py`. **TV cleanup (Pass 2+)** remains a separate milestone.
+
 ## Active / next (ordered)
 
 1. **Fetcher operator surface (item 9 web, continued)** — Iterate tabbed Fetcher UX and copy per open bullets above; keep central Settings pure; extend tests as slices land.

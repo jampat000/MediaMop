@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -13,17 +14,33 @@ from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSett
 
 RefinerMediaScope = Literal["movie", "tv"]
 
+# Windows product defaults (fixed paths; not under MEDIAMOP_HOME).
+_REFINER_DEFAULT_WINDOWS_MOVIE_WORK = Path(r"C:\ProgramData\Media\refiner-movie-work")
+_REFINER_DEFAULT_WINDOWS_TV_WORK = Path(r"C:\ProgramData\MediaMop\refiner-tv-work")
+
 
 def resolved_default_refiner_work_folder(*, mediamop_home: str) -> str:
-    """Canonical default work/temp directory under ``MEDIAMOP_HOME`` (runtime data, not the repo)."""
+    """Default Movies work/temp directory.
 
-    return str((Path(mediamop_home).expanduser().resolve() / "refiner" / "work"))
+    On Windows: ``C:\\ProgramData\\Media\\refiner-movie-work``.
+    Elsewhere: ``<MEDIAMOP_HOME>/refiner/refiner-movie-work`` (portable dev/CI).
+    """
+
+    if sys.platform == "win32":
+        return str(_REFINER_DEFAULT_WINDOWS_MOVIE_WORK)
+    return str(Path(mediamop_home).expanduser().resolve() / "refiner" / "refiner-movie-work")
 
 
 def resolved_default_refiner_tv_work_folder(*, mediamop_home: str) -> str:
-    """Default TV work/temp directory (separate tree from movie work)."""
+    """Default TV work/temp directory (separate from Movies).
 
-    return str((Path(mediamop_home).expanduser().resolve() / "refiner" / "tv-work"))
+    On Windows: ``C:\\ProgramData\\MediaMop\\refiner-tv-work``.
+    Elsewhere: ``<MEDIAMOP_HOME>/refiner/refiner-tv-work``.
+    """
+
+    if sys.platform == "win32":
+        return str(_REFINER_DEFAULT_WINDOWS_TV_WORK)
+    return str(Path(mediamop_home).expanduser().resolve() / "refiner" / "refiner-tv-work")
 
 
 def _norm_dir_path(raw: str) -> Path:
@@ -58,6 +75,12 @@ def _validate_path_separation(*, watched: Path | None, work: Path, output: Path)
     if _is_same_or_nested(watched, work):
         msg = "Refiner watched folder and work/temp folder must be separate (no overlap or containment)."
         raise ValueError(msg)
+
+
+def _clamp_watched_folder_poll_interval_seconds(raw: int) -> int:
+    """How often the in-process scheduler re-checks periodic scan timing for a scope (10s–7d)."""
+
+    return max(10, min(int(raw), 7 * 24 * 3600))
 
 
 def _validate_cross_family_paths(paths: list[Path]) -> None:
@@ -110,6 +133,8 @@ class RefinerPathRuntime:
     output_folder: str
     work_folder_effective: str
     work_folder_is_default: bool
+    #: Movies only: normalized output path string for dry-run cleanup preview text (no write path uses ``output_folder``).
+    preview_output_folder: str | None = None
 
 
 def _normalize_media_scope(raw: str | None) -> RefinerMediaScope:
@@ -156,12 +181,18 @@ def resolve_refiner_path_runtime_for_remux(
     work_path = _norm_dir_path(work_str)
 
     if dry_run:
+        preview_out: str | None = None
+        if scope == "movie":
+            out_preview_raw = (row.refiner_output_folder or "").strip()
+            if out_preview_raw:
+                preview_out = str(_norm_dir_path(out_preview_raw))
         return (
             RefinerPathRuntime(
                 watched_folder=str(watched_path),
                 output_folder="",
                 work_folder_effective=str(work_path),
                 work_folder_is_default=work_is_default,
+                preview_output_folder=preview_out,
             ),
             None,
         )
@@ -193,6 +224,7 @@ def resolve_refiner_path_runtime_for_remux(
             output_folder=str(output_path),
             work_folder_effective=str(work_path),
             work_folder_is_default=work_is_default,
+            preview_output_folder=str(output_path),
         ),
         None,
     )
@@ -214,6 +246,12 @@ def build_refiner_path_settings_get_out(*, row: RefinerPathSettingsRow, settings
         "refiner_tv_output_folder": row.refiner_tv_output_folder,
         "resolved_default_tv_work_folder": default_tv_work,
         "effective_tv_work_folder": tv_work_eff,
+        "movie_watched_folder_check_interval_seconds": _clamp_watched_folder_poll_interval_seconds(
+            int(row.movie_watched_folder_check_interval_seconds)
+        ),
+        "tv_watched_folder_check_interval_seconds": _clamp_watched_folder_poll_interval_seconds(
+            int(row.tv_watched_folder_check_interval_seconds)
+        ),
         "updated_at": row.updated_at,
     }
 
@@ -250,6 +288,8 @@ def apply_refiner_path_settings_put(
     tv_watched_folder: str | None = None,
     tv_work_folder: str | None = None,
     tv_output_folder: str | None = None,
+    movie_watched_folder_check_interval_seconds: int | None = None,
+    tv_watched_folder_check_interval_seconds: int | None = None,
 ) -> RefinerPathSettingsRow:
     """Validate and persist path settings (hard-block invalid overlap on save)."""
 
@@ -350,6 +390,14 @@ def apply_refiner_path_settings_put(
     row.refiner_watched_folder = watched_store
     row.refiner_work_folder = stored_work
     row.refiner_output_folder = str(output_path)
+    if movie_watched_folder_check_interval_seconds is not None:
+        row.movie_watched_folder_check_interval_seconds = _clamp_watched_folder_poll_interval_seconds(
+            movie_watched_folder_check_interval_seconds
+        )
+    if tv_watched_folder_check_interval_seconds is not None:
+        row.tv_watched_folder_check_interval_seconds = _clamp_watched_folder_poll_interval_seconds(
+            tv_watched_folder_check_interval_seconds
+        )
     session.add(row)
     session.flush()
     return row

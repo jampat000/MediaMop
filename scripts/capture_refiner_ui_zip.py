@@ -228,11 +228,11 @@ def _capture_zip() -> Path:
             ("01-overview", "Overview"),
             ("02-libraries", "Libraries"),
             ("03-audio-subtitles", "Audio & subtitles"),
-            ("04-jobs", "Jobs"),
-            ("05-workers", "Workers"),
+            ("04-schedules", "Schedules"),
+            ("05-jobs", "Jobs"),
         ]
 
-        print(f"Capturing {len(tabs)} tabs → {shot_dir}", flush=True)
+        print(f"Capturing {len(tabs)} tabs -> {shot_dir}", flush=True)
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             try:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pytest
@@ -9,6 +10,7 @@ import pytest
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.refiner_path_settings_service import (
     _validate_path_separation,
+    resolved_default_refiner_tv_work_folder,
     resolved_default_refiner_work_folder,
 )
 
@@ -20,7 +22,24 @@ def test_resolved_default_work_under_home(tmp_path: Path, monkeypatch: pytest.Mo
     monkeypatch.setenv("MEDIAMOP_HOME", str(h))
     s = MediaMopSettings.load()
     got = resolved_default_refiner_work_folder(mediamop_home=s.mediamop_home)
-    assert got.endswith(str(Path("refiner") / "work"))
+    if sys.platform == "win32":
+        assert got == str(Path(r"C:\ProgramData\Media\refiner-movie-work"))
+    else:
+        assert got.endswith(str(Path("refiner") / "refiner-movie-work"))
+    assert Path(got).is_absolute()
+
+
+def test_resolved_default_tv_work_under_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MEDIAMOP_SESSION_SECRET", "pytest-session-secret-32-chars-min!!")
+    h = tmp_path / "home_tv"
+    h.mkdir()
+    monkeypatch.setenv("MEDIAMOP_HOME", str(h))
+    s = MediaMopSettings.load()
+    got = resolved_default_refiner_tv_work_folder(mediamop_home=s.mediamop_home)
+    if sys.platform == "win32":
+        assert got == str(Path(r"C:\ProgramData\MediaMop\refiner-tv-work"))
+    else:
+        assert got.endswith(str(Path("refiner") / "refiner-tv-work"))
     assert Path(got).is_absolute()
 
 

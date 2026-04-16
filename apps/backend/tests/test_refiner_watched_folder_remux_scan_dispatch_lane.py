@@ -16,6 +16,7 @@ from mediamop.core.db import Base
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.refiner_job_handlers import build_refiner_job_handlers
+from mediamop.modules.refiner.refiner_operator_settings_model import RefinerOperatorSettingsRow
 from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_job_kinds import (
     REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
@@ -91,6 +92,7 @@ def test_scan_handler_enqueues_remux_when_requested(
                 refiner_output_folder="",
             ),
         )
+        s.merge(RefinerOperatorSettingsRow(id=1, min_file_age_seconds=0))
         s.commit()
 
     payload = {"enqueue_remux_jobs": True, "remux_dry_run": True}

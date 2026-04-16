@@ -14,6 +14,7 @@ from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.refiner_file_remux_pass_job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
+from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_activity import (
     record_refiner_watched_folder_remux_scan_dispatch_completed,
 )
@@ -58,6 +59,7 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
         media_scope = media_scope_raw if media_scope_raw in ("movie", "tv") else "movie"
 
         with session_factory() as session:
+            op_settings = ensure_refiner_operator_settings_row(session)
             rt, path_err = resolve_refiner_path_runtime_for_remux(
                 session,
                 settings,
@@ -74,7 +76,7 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
         watched_path = Path(watched_root)
         files = iter_watched_folder_media_candidate_files(
             watched_path,
-            min_file_age_seconds=settings.refiner_watched_folder_min_file_age_seconds,
+            min_file_age_seconds=op_settings.min_file_age_seconds,
         )
 
         sample_paths: list[str] = []
@@ -85,7 +87,7 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
             "watched_folder_resolved": watched_root,
             "enqueue_remux_jobs": enqueue_remux_jobs,
             "remux_dry_run": remux_dry_run,
-            "min_file_age_seconds": settings.refiner_watched_folder_min_file_age_seconds,
+            "min_file_age_seconds": op_settings.min_file_age_seconds,
             "radarr_queue_row_count": len(rad_rows),
             "sonarr_queue_row_count": len(son_rows),
             "radarr_queue_fetch_error": rad_err,

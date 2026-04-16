@@ -62,6 +62,8 @@ def test_refiner_path_settings_get_shape(client_with_admin: TestClient) -> None:
     assert "refiner_tv_output_folder" in body
     assert "resolved_default_tv_work_folder" in body
     assert "effective_tv_work_folder" in body
+    assert body["movie_watched_folder_check_interval_seconds"] >= 10
+    assert body["tv_watched_folder_check_interval_seconds"] >= 10
     assert "updated_at" in body
     settings = MediaMopSettings.load()
     assert body["resolved_default_work_folder"] == resolved_default_refiner_work_folder(

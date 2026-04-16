@@ -43,7 +43,7 @@ export function RefinerRuntimeSettingsSection() {
 
       <h3 className="mt-7 text-sm font-semibold text-[var(--mm-text)]">Timed folder scans</h3>
       <p className="mt-1 text-[var(--mm-text3)]">
-        Refiner can check Movies and TV watched folders on a timer. Each scope is evaluated independently and this is
+        Refiner can check TV and Movies watched folders on a timer. Each scope is evaluated independently and this is
         not live filesystem watching.
       </p>
       <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-[var(--mm-text2)]">

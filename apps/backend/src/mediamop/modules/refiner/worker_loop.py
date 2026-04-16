@@ -239,6 +239,7 @@ async def refiner_worker_run_forever(
     worker_index: int,
     stop_event: asyncio.Event,
     job_handlers: Mapping[str, Callable[[RefinerJobWorkContext], None]] | None = None,
+    max_concurrent_files_getter: Callable[[], int] | None = None,
     idle_sleep_seconds: float = REFINER_WORKER_IDLE_SLEEP_SECONDS,
     lease_seconds: int = DEFAULT_REFINER_JOB_LEASE_SECONDS,
 ) -> None:
@@ -247,6 +248,20 @@ async def refiner_worker_run_forever(
     owner = _lease_owner(worker_index)
     handlers = job_handlers if job_handlers is not None else default_refiner_job_handler_registry()
     while not stop_event.is_set():
+        if max_concurrent_files_getter is not None:
+            try:
+                max_concurrent = max(1, min(8, int(max_concurrent_files_getter())))
+            except Exception:
+                max_concurrent = 1
+            if worker_index >= max_concurrent:
+                loop = asyncio.get_running_loop()
+                deadline = loop.time() + idle_sleep_seconds
+                while loop.time() < deadline and not stop_event.is_set():
+                    remaining = deadline - loop.time()
+                    if remaining <= 0:
+                        break
+                    await asyncio.sleep(min(0.25, remaining))
+                continue
 
         def _tick() -> Literal["idle", "processed"]:
             return process_one_refiner_job(
@@ -284,6 +299,7 @@ def start_refiner_worker_background_tasks(
     settings: MediaMopSettings,
     *,
     job_handlers: Mapping[str, Callable[[RefinerJobWorkContext], None]] | None = None,
+    max_concurrent_files_getter: Callable[[], int] | None = None,
     stop_event: asyncio.Event | None = None,
 ) -> tuple[asyncio.Event, list[asyncio.Task[None]]]:
     """Create one asyncio task per configured Refiner worker (``refiner_worker_count`` from settings).
@@ -320,13 +336,18 @@ def start_refiner_worker_background_tasks(
 
     stop = stop_event if stop_event is not None else asyncio.Event()
     tasks: list[asyncio.Task[None]] = []
-    for i in range(settings.refiner_worker_count):
+    if settings.refiner_worker_count == 0 and job_handlers is None:
+        worker_slots = 0
+    else:
+        worker_slots = max(8, settings.refiner_worker_count)
+    for i in range(worker_slots):
         t = asyncio.create_task(
             refiner_worker_run_forever(
                 session_factory,
                 worker_index=i,
                 stop_event=stop,
                 job_handlers=handlers,
+                max_concurrent_files_getter=max_concurrent_files_getter,
             ),
             name=f"refiner-worker-{i}",
         )

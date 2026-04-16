@@ -19,20 +19,21 @@ const tertiaryBase =
  * Default class for ordinary editable text inputs (paths, titles, CSV tokens, etc.).
  * Use the UI body font — not monospace unless the value is truly technical read-only display.
  */
-export const mmEditableTextFieldClass = "mm-input w-full min-w-0 text-sm text-[var(--mm-text)]";
+export const mmEditableTextFieldClass = "mm-input w-full min-w-0";
 
-/** Shared chrome for native ``<select>`` and picker triggers (Fetcher-style field surfaces). */
+/**
+ * Shared layout/interaction for native selects and anchored listbox triggers.
+ * Visual chrome (inset, border, height, padding, focus) lives on `.mm-input` in `mediamop-shell.css`.
+ */
 const mmNativeFieldShell =
-  "mm-input w-full min-w-0 rounded border border-[var(--mm-border)] bg-[var(--mm-input-bg)] px-2.5 py-2 text-sm text-[var(--mm-text)] " +
-  "transition-[border-color,background-color,box-shadow] duration-150 " +
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mm-accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mm-card-bg)] " +
-  "disabled:cursor-not-allowed disabled:opacity-60";
+  "mm-input w-full min-w-0 text-sm text-[var(--mm-text)] transition-[border-color,background-color,box-shadow] duration-150 " +
+  "focus-visible:outline-none disabled:cursor-not-allowed";
 
 /** Native dropdown / listbox-style ``<select>`` — use under a field label (includes top spacing). */
-export const mmSelectFieldClass = `${mmNativeFieldShell} mt-1 cursor-pointer hover:bg-[var(--mm-card-bg)]/35`;
+export const mmSelectFieldClass = `${mmNativeFieldShell} mt-1 cursor-pointer`;
 
 /** Anchored picker button (custom listbox) — visually aligned with {@link mmSelectFieldClass}. */
-export const mmPickerTriggerClass = `${mmNativeFieldShell} mt-1 cursor-pointer text-left hover:bg-[var(--mm-card-bg)]/35`;
+export const mmPickerTriggerClass = `${mmNativeFieldShell} mt-1 cursor-pointer text-left`;
 
 /** Checkbox control — matches ``MmMultiOptionRows`` / Fetcher multi-option styling. */
 export const mmCheckboxControlClass =

@@ -76,6 +76,8 @@ def put_refiner_path_settings(
             tv_watched_folder=body.refiner_tv_watched_folder,
             tv_work_folder=body.refiner_tv_work_folder,
             tv_output_folder=body.refiner_tv_output_folder,
+            movie_watched_folder_check_interval_seconds=body.movie_watched_folder_check_interval_seconds,
+            tv_watched_folder_check_interval_seconds=body.tv_watched_folder_check_interval_seconds,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

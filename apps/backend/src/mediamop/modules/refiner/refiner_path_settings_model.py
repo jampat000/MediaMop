@@ -25,6 +25,10 @@ class RefinerPathSettingsRow(Base):
     refiner_tv_watched_folder: Mapped[str | None] = mapped_column(Text, nullable=True)
     refiner_tv_work_folder: Mapped[str | None] = mapped_column(Text, nullable=True)
     refiner_tv_output_folder: Mapped[str | None] = mapped_column(Text, nullable=True)
+    movie_watched_folder_check_interval_seconds: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="300"
+    )
+    tv_watched_folder_check_interval_seconds: Mapped[int] = mapped_column(Integer, nullable=False, server_default="300")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

@@ -114,40 +114,51 @@ def enqueue_watched_folder_remux_scan_dispatch_job(
 def try_enqueue_periodic_watched_folder_remux_scan_dispatch(
     session: Session,
     settings: MediaMopSettings,
+    *,
+    media_scope: str | None = None,
 ) -> tuple[bool, str | None]:
-    """Periodic tick: enqueue up to one scan per Movies and per TV when idle and prerequisites pass.
+    """Periodic tick enqueue helper.
 
-    Returns ``(inserted_any, skip_reason)`` where ``skip_reason`` is the last scope-specific skip token when nothing
-    was enqueued, or ``None`` on success.
+    When ``media_scope`` is provided, evaluates one scope only (Movies or TV). When omitted, preserves the original
+    behavior and evaluates both scopes.
     """
+    if media_scope is None:
+        if not settings.refiner_watched_folder_remux_scan_dispatch_schedule_enabled:
+            return False, "schedule_disabled"
+        inserted_any = False
+        last_skip: str | None = None
+        for scope_name in ("movie", "tv"):
+            inserted, skip = try_enqueue_periodic_watched_folder_remux_scan_dispatch(
+                session,
+                settings,
+                media_scope=scope_name,
+            )
+            if inserted:
+                inserted_any = True
+            elif skip:
+                last_skip = skip
+        if inserted_any:
+            return True, None
+        return False, last_skip
 
-    if not settings.refiner_watched_folder_remux_scan_dispatch_schedule_enabled:
-        return False, "schedule_disabled"
-
-    inserted_any = False
-    last_skip: str | None = None
-    for scope in ("movie", "tv"):
-        if refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan(session, media_scope=scope):
-            last_skip = f"active_scan_already_queued_{scope}"
-            continue
-        ok, err = validate_watched_folder_scan_dispatch_prerequisites(
-            session,
-            enqueue_remux_jobs=settings.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs,
-            remux_dry_run=settings.refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run,
-            media_scope=scope,
-        )
-        if not ok:
-            last_skip = err
-            continue
-        enqueue_watched_folder_remux_scan_dispatch_job(
-            session,
-            enqueue_remux_jobs=settings.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs,
-            remux_dry_run=settings.refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run,
-            scan_trigger="periodic",
-            media_scope=scope,
-        )
-        inserted_any = True
-
-    if inserted_any:
-        return True, None
-    return False, last_skip
+    scope = (media_scope or "movie").strip().lower()
+    if scope not in ("movie", "tv"):
+        scope = "movie"
+    if refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan(session, media_scope=scope):
+        return False, f"active_scan_already_queued_{scope}"
+    ok, err = validate_watched_folder_scan_dispatch_prerequisites(
+        session,
+        enqueue_remux_jobs=settings.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs,
+        remux_dry_run=settings.refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run,
+        media_scope=scope,
+    )
+    if not ok:
+        return False, err
+    enqueue_watched_folder_remux_scan_dispatch_job(
+        session,
+        enqueue_remux_jobs=settings.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs,
+        remux_dry_run=settings.refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run,
+        scan_trigger="periodic",
+        media_scope=scope,
+    )
+    return True, None

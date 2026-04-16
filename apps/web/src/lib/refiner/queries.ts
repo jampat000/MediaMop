@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { postRefinerFileRemuxPassEnqueue } from "./file-remux-pass-api";
+import { fetchRefinerOperatorSettings, putRefinerOperatorSettings } from "./operator-settings-api";
 import { fetchRefinerOverviewStats } from "./overview-stats-api";
 import { fetchRefinerPathSettings, putRefinerPathSettings } from "./path-settings-api";
 import { fetchRefinerRemuxRulesSettings, putRefinerRemuxRulesSettings } from "./remux-rules-settings-api";
@@ -7,6 +8,7 @@ import { fetchRefinerRuntimeSettings } from "./runtime-settings-api";
 import { postRefinerWatchedFolderRemuxScanDispatchEnqueue } from "./watched-folder-scan-api";
 import type {
   RefinerFileRemuxPassManualEnqueueBody,
+  RefinerOperatorSettingsPutBody,
   RefinerPathSettingsPutBody,
   RefinerRemuxRulesSettingsPutBody,
   RefinerWatchedFolderRemuxScanDispatchEnqueueBody,
@@ -14,12 +16,32 @@ import type {
 
 export const refinerPathSettingsQueryKey = ["refiner", "path-settings"] as const;
 export const refinerOverviewStatsQueryKey = ["refiner", "overview-stats"] as const;
+export const refinerOperatorSettingsQueryKey = ["refiner", "operator-settings"] as const;
 
 export function useRefinerOverviewStatsQuery() {
   return useQuery({
     queryKey: refinerOverviewStatsQueryKey,
     queryFn: () => fetchRefinerOverviewStats(),
     staleTime: 30_000,
+  });
+}
+
+export function useRefinerOperatorSettingsQuery() {
+  return useQuery({
+    queryKey: refinerOperatorSettingsQueryKey,
+    queryFn: () => fetchRefinerOperatorSettings(),
+    staleTime: 30_000,
+  });
+}
+
+export function useRefinerOperatorSettingsSaveMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: RefinerOperatorSettingsPutBody) => putRefinerOperatorSettings(body),
+    onSuccess: (data) => {
+      qc.setQueryData(refinerOperatorSettingsQueryKey, data);
+      void qc.invalidateQueries({ queryKey: refinerRuntimeSettingsQueryKey });
+    },
   });
 }
 

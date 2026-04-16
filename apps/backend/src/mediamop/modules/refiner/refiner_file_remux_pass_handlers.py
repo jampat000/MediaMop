@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.refiner_file_remux_pass_activity import record_refiner_file_remux_pass_completed
 from mediamop.modules.refiner.refiner_file_remux_pass_run import run_refiner_file_remux_pass
+from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
 from mediamop.modules.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
 from mediamop.modules.refiner.refiner_remux_rules_settings_service import load_refiner_remux_rules_config
 from mediamop.modules.refiner.refiner_file_remux_pass_visibility import (
@@ -107,6 +108,7 @@ def make_refiner_file_remux_pass_handler(
             media_scope = "movie"
 
         with session_factory() as session:
+            op_settings = ensure_refiner_operator_settings_row(session)
             rules_cfg = load_refiner_remux_rules_config(session, media_scope=media_scope)
             path_runtime, path_err = resolve_refiner_path_runtime_for_remux(
                 session,
@@ -133,6 +135,8 @@ def make_refiner_file_remux_pass_handler(
             relative_media_path=rel.strip(),
             dry_run=bool(dry_run),
             rules_config=rules_cfg,
+            min_file_age_seconds=op_settings.min_file_age_seconds,
+            media_scope=media_scope,
         )
         result["job_id"] = ctx.id
         _record(session_factory, payload=result)
