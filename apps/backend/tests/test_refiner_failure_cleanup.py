@@ -149,7 +149,7 @@ def test_failed_movie_dry_run_job_skips_entirely(tmp_path: Path) -> None:
     result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="movie")
     job = result["jobs"][0]
     assert job["movie_failure_cleanup_dry_run"] is True
-    assert "legacy dry_run" in job["movie_failure_cleanup_skip_reason"]
+    assert "compatibility" in job["movie_failure_cleanup_skip_reason"]
 
 
 def test_tv_cleanup_skips_when_any_direct_child_episode_still_in_queue(tmp_path: Path) -> None:
@@ -295,7 +295,7 @@ def test_tv_failed_job_dry_run_skips_entirely(tmp_path: Path) -> None:
     result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="tv")
     job = result["jobs"][0]
     assert job["tv_failure_cleanup_dry_run"] is True
-    assert "legacy dry_run" in job["tv_failure_cleanup_skip_reason"]
+    assert "compatibility" in job["tv_failure_cleanup_skip_reason"]
 
 
 def test_movies_scope_does_not_process_tv_failed_rows(tmp_path: Path) -> None:

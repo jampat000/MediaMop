@@ -55,6 +55,7 @@ def _parse_payload(payload_json: str | None) -> tuple[str, Scope, bool]:
     rel = data.get("relative_media_path")
     if not isinstance(rel, str) or not rel.strip():
         raise ValueError("payload missing relative_media_path")
+    # Compatibility only: tolerate historic payloads that still carried dry_run.
     return _norm_rel(rel), _scope(data.get("media_scope")), bool(data.get("dry_run"))
 
 
@@ -163,12 +164,12 @@ def _failed_jobs_for_scope(
         if row_updated >= older_than:
             continue
         try:
-            rel, scope, dry_run = _parse_payload(row.payload_json)
+            rel, scope, legacy_dry_run = _parse_payload(row.payload_json)
         except (ValueError, json.JSONDecodeError):
             continue
         if scope != media_scope:
             continue
-        out.append((row, rel, dry_run))
+        out.append((row, rel, legacy_dry_run))
     return out
 
 
@@ -195,7 +196,6 @@ def run_refiner_failure_cleanup_sweep_for_scope(
     session: Session,
     settings: MediaMopSettings,
     media_scope: str,
-    dry_run: bool | None = None,
 ) -> dict[str, Any]:
     ms = _scope(media_scope)
     now = datetime.now(UTC)
@@ -253,22 +253,23 @@ def run_refiner_failure_cleanup_sweep_for_scope(
             except RuntimeError as exc:
                 queue_unreachable = str(exc)
 
-    for job, rel_norm, job_dry_run in failed_rows:
+    for job, rel_norm, legacy_dry_run in failed_rows:
         detail: dict[str, Any] = {
             "job_id": int(job.id),
             "relative_media_path": rel_norm,
             f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_ran": False,
             f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_skip_reason": None,
-            f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_dry_run": bool(job_dry_run),
+            f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_dry_run": bool(legacy_dry_run),
             f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_queue_check": "skipped",
             f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_temp_files_deleted": [],
             f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_cascade_folders_deleted": [],
         }
         out["processed_failed_jobs"] += 1
         out["jobs"].append(detail)
-        if job_dry_run:
+        if legacy_dry_run:
             detail[f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_skip_reason"] = (
-                "This failed remux job used legacy dry_run, so Refiner skipped failure cleanup."
+                "Skipped for compatibility: this failed remux row uses legacy dry_run payload format, "
+                "which is not a current Refiner mode."
             )
             continue
         if queue_unreachable:

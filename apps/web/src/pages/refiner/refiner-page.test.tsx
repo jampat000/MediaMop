@@ -11,9 +11,8 @@ import {
   refinerOverviewStatsQueryKey,
   refinerPathSettingsQueryKey,
   refinerRemuxRulesSettingsQueryKey,
-  refinerRuntimeSettingsQueryKey,
 } from "../../lib/refiner/queries";
-import type { RefinerPathSettingsOut, RefinerRemuxRulesSettingsOut, RefinerRuntimeSettingsOut } from "../../lib/refiner/types";
+import type { RefinerPathSettingsOut, RefinerRemuxRulesSettingsOut } from "../../lib/refiner/types";
 import { RefinerPage } from "./refiner-page";
 
 const operatorMe: UserPublic = { id: 1, username: "alice", role: "operator" };
@@ -63,39 +62,6 @@ const minimalRefinerRemuxRules: RefinerRemuxRulesSettingsOut = {
   updated_at: "2026-04-11T00:00:00Z",
 };
 
-const minimalRefinerRuntimeSettings: RefinerRuntimeSettingsOut = {
-  in_process_refiner_worker_count: 0,
-  in_process_workers_disabled: true,
-  in_process_workers_enabled: false,
-  worker_mode_summary: "In-process Refiner workers are off (0).",
-  sqlite_throughput_note: "SQLite note for tests.",
-  configuration_note: "Change MEDIAMOP_REFINER_WORKER_COUNT in apps/backend/.env, then restart.",
-  visibility_note: "Snapshot note for tests.",
-  refiner_watched_folder_remux_scan_dispatch_schedule_enabled: false,
-  refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds: 3600,
-  refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs: false,
-  refiner_watched_folder_min_file_age_seconds: 300,
-  refiner_movie_output_cleanup_min_age_seconds: 172_800,
-  movie_output_cleanup_configuration_note: "MEDIAMOP_REFINER_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS note for tests.",
-  refiner_tv_output_cleanup_min_age_seconds: 172_800,
-  tv_output_cleanup_configuration_note: "MEDIAMOP_REFINER_TV_OUTPUT_CLEANUP_MIN_AGE_SECONDS note for tests.",
-  watched_folder_scan_periodic_configuration_note:
-    "MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED long env note for tests.",
-  refiner_work_temp_stale_sweep_movie_schedule_enabled: false,
-  refiner_work_temp_stale_sweep_movie_schedule_interval_seconds: 3600,
-  refiner_work_temp_stale_sweep_tv_schedule_enabled: false,
-  refiner_work_temp_stale_sweep_tv_schedule_interval_seconds: 3600,
-  refiner_work_temp_stale_sweep_min_stale_age_seconds: 86_400,
-  refiner_movie_failure_cleanup_schedule_enabled: false,
-  refiner_movie_failure_cleanup_schedule_interval_seconds: 3600,
-  refiner_tv_failure_cleanup_schedule_enabled: false,
-  refiner_tv_failure_cleanup_schedule_interval_seconds: 3600,
-  refiner_movie_failure_cleanup_grace_period_seconds: 1800,
-  refiner_tv_failure_cleanup_grace_period_seconds: 1800,
-  failure_cleanup_configuration_note: "MEDIAMOP_REFINER_*_FAILURE_CLEANUP_* note for tests.",
-  work_temp_stale_sweep_periodic_configuration_note: "MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_* env note for tests.",
-};
-
 function wrap(ui: ReactNode, client: QueryClient) {
   return (
     <QueryClientProvider client={client}>
@@ -105,7 +71,6 @@ function wrap(ui: ReactNode, client: QueryClient) {
 }
 
 function seedRefinerQueries(qc: QueryClient) {
-  qc.setQueryData(refinerRuntimeSettingsQueryKey, minimalRefinerRuntimeSettings);
   qc.setQueryData(refinerOverviewStatsQueryKey, {
     window_days: 30,
     files_processed: 42,
@@ -225,6 +190,11 @@ describe("RefinerPage", () => {
     expect(screen.queryByRole("tab", { name: "Workers" })).toBeNull();
   });
 
+  it("top-level tabs no longer include Operations", () => {
+    renderRefinerPage();
+    expect(screen.queryByRole("tab", { name: "Operations" })).toBeNull();
+  });
+
   it("top-level tabs include Schedules", () => {
     renderRefinerPage();
     expect(screen.getByRole("tab", { name: "Schedules" })).toBeInTheDocument();
@@ -239,5 +209,12 @@ describe("RefinerPage", () => {
     expect(idxSched).toBeGreaterThan(-1);
     expect(idxJobs).toBeGreaterThan(-1);
     expect(idxJobs).toBeGreaterThan(idxSched);
+  });
+
+  it("Schedules includes independent TV and Movies scan-now actions", () => {
+    renderRefinerPage();
+    openTab("Schedules");
+    expect(screen.getByRole("button", { name: "Run TV scan now" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run Movies scan now" })).toBeInTheDocument();
   });
 });

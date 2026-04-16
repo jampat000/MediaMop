@@ -136,9 +136,9 @@ export function RefinerPathSettingsSection() {
             a temp file here, checks it, then moves it into your output folder. The default work folder is created if it
             is missing; a custom work folder must already exist. If ffmpeg or the check right after fails, Refiner
             removes that temp file when it can. Separately, Refiner can also run periodic cleanup of its own stale temp
-            files under each scope&apos;s work folder — that is different from this one-file flow; see{" "}
-            <strong className="text-[var(--mm-text2)]">Workers</strong> on the Refiner page for timers and details. If the
-            move into output fails later, a temp file can be left behind.
+            files under each scope&apos;s work folder — that is different from this one-file flow; schedule timers and
+            manual scan controls are under <strong className="text-[var(--mm-text2)]">Schedules</strong>. If the move into
+            output fails later, a temp file can be left behind.
           </p>
           <p>
             <span className="font-semibold text-[var(--mm-text2)]">Output.</span> Finished files use the same folder
