@@ -48,6 +48,13 @@ class RefinerRuntimeSettingsOut(BaseModel):
         ge=0,
         description="Minimum file age before watched-folder scan or one-file pass touches media.",
     )
+    refiner_movie_output_cleanup_min_age_seconds: int = Field(
+        ge=3600,
+        description="Minimum age (newest file mtime under the folder) before Pass 3a may delete a Movies output folder (1h..30d; default 48h).",
+    )
+    movie_output_cleanup_configuration_note: str = Field(
+        description="How operators change Movies output-folder cleanup age gate (restart required).",
+    )
     watched_folder_scan_periodic_configuration_note: str = Field(
         description="How operators change periodic scan env (restart required).",
     )

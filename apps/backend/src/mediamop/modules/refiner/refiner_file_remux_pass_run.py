@@ -22,6 +22,9 @@ from mediamop.modules.refiner.refiner_file_remux_pass_visibility import (
     summarize_remux_plan,
 )
 from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
+from mediamop.modules.refiner.refiner_movie_output_cleanup import (
+    maybe_run_movie_output_folder_cleanup_after_remux,
+)
 from mediamop.modules.refiner.refiner_tv_season_folder_cleanup import (
     handle_tv_cleanup_after_success,
     init_tv_season_cleanup_activity_fields,
@@ -527,6 +530,19 @@ def run_refiner_file_remux_pass(
             min_file_age_seconds=min_age,
             current_job_id=current_job_id,
         )
+        maybe_run_movie_output_folder_cleanup_after_remux(
+            session=cleanup_session,
+            settings=settings,
+            path_runtime=path_runtime,
+            watched_root=watched_root,
+            src=src,
+            final_output_file=None,
+            dry_run=True,
+            relative_media_path=relative_media_path,
+            current_job_id=current_job_id,
+            media_scope=media_scope,
+            out=out,
+        )
         return out
 
     out["outcome"] = REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN
@@ -568,6 +584,19 @@ def run_refiner_file_remux_pass(
             settings=settings,
             min_file_age_seconds=min_age,
             current_job_id=current_job_id,
+        )
+        maybe_run_movie_output_folder_cleanup_after_remux(
+            session=cleanup_session,
+            settings=settings,
+            path_runtime=path_runtime,
+            watched_root=watched_root,
+            src=src,
+            final_output_file=final_skip,
+            dry_run=False,
+            relative_media_path=relative_media_path,
+            current_job_id=current_job_id,
+            media_scope=media_scope,
+            out=out,
         )
         return out
 
@@ -627,6 +656,19 @@ def run_refiner_file_remux_pass(
         settings=settings,
         min_file_age_seconds=min_age,
         current_job_id=current_job_id,
+    )
+    maybe_run_movie_output_folder_cleanup_after_remux(
+        session=cleanup_session,
+        settings=settings,
+        path_runtime=path_runtime,
+        watched_root=watched_root,
+        src=src,
+        final_output_file=final,
+        dry_run=False,
+        relative_media_path=relative_media_path,
+        current_job_id=current_job_id,
+        media_scope=media_scope,
+        out=out,
     )
     return out
 

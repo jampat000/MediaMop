@@ -63,6 +63,22 @@ export function RefinerRuntimeSettingsSection() {
         <p className="mt-2 text-xs text-[var(--mm-text3)]">{d.watched_folder_scan_periodic_configuration_note}</p>
       </details>
 
+      <h3 className="mt-7 text-sm font-semibold text-[var(--mm-text)]">Movies output folder cleanup</h3>
+      <p className="mt-1 text-[var(--mm-text3)]">
+        After a successful Movies remux pass, Refiner may delete the whole per-title folder under your Movies output
+        library when Radarr confirms nothing in that folder is still a kept library file, the folder is old enough, and
+        no other Movies remux pass is active for the same source path. TV is never touched here.
+      </p>
+      <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-[var(--mm-text2)]">
+        <li>Minimum folder freshness gate: {d.refiner_movie_output_cleanup_min_age_seconds} seconds</li>
+      </ul>
+      <details className="mt-4 rounded-md border border-[var(--mm-border)] bg-black/10 p-3">
+        <summary className="cursor-pointer text-sm font-medium text-[var(--mm-text1)]">
+          Advanced Movies output cleanup configuration
+        </summary>
+        <p className="mt-2 text-xs text-[var(--mm-text3)]">{d.movie_output_cleanup_configuration_note}</p>
+      </details>
+
       <h3 className="mt-7 text-sm font-semibold text-[var(--mm-text)]">Work folder temp cleanup</h3>
       <p className="mt-1 text-[var(--mm-text3)]">
         Optional periodic jobs remove stale Refiner temp files under your saved Movies and TV work folders only (never
@@ -99,6 +115,10 @@ export function RefinerRuntimeSettingsSection() {
           <li>
             Work folder temp cleanup: removes stale Refiner temp files under the saved Movies or TV work folder for that
             scope when safe (per-scope gate and timers).
+          </li>
+          <li>
+            Movies output folder cleanup: after a Movies remux, may remove the per-title output folder when Radarr library
+            paths, age, and active-job gates allow it (never TV).
           </li>
         </ul>
       </details>

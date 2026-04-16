@@ -11,6 +11,7 @@ Single canonical backlog for shipped milestones and the next honest slice of wor
 - [x] Refiner in-process worker concurrency surfaced to operators (`runtime-settings` + env honesty).
 - [x] Refiner path model shipped (persisted watched / work / output; containment and lifecycle rules locked).
 - [x] Refiner work/temp stale sweep (Pass 2 + 13b): per-scope periodic ``refiner.work_temp_stale_sweep.v1`` (Movies vs TV independent gates, dedupe, schedule, reporting; shared-root fail-safe; shared min-stale-age only as documented exception).
+- [x] Refiner Pass 3a (Movies output-folder cleanup): after successful Movies remux, optional full per-title output folder delete when Radarr library has no ``movieFile`` path inside that folder, age + active Movies remux gates pass; cascade bounded to output root; ``refiner_movie_output_cleanup.py``.
 - [x] Refiner watched-folder scanning family shipped: `refiner.watched_folder.remux_scan_dispatch.v1` (manual trigger, media scan, gate-equivalent ownership/blocking, optional remux enqueue, duplicate guard, activity summary, Refiner page UI + POST enqueue API).
 - [x] Refiner jobs inspection / operator control surface: `GET …/refiner/jobs/inspection`, Refiner page queue table, `POST …/refiner/jobs/{id}/cancel-pending` (pending-only; operators); finished outcomes remain on Activity.
 - [x] Refiner watched-folder periodic scanning: optional Refiner-only asyncio enqueue loop for `refiner.watched_folder.remux_scan_dispatch.v1` (separate env enable/interval + periodic remux flags from supplied payload evaluation); scan-level idle guard; `scan_trigger` in activity summary; runtime settings snapshot + UI honesty (restart required).
@@ -198,6 +199,27 @@ Single canonical backlog for shipped milestones and the next honest slice of wor
 ### 13 — status
 
 - [x] **Pass 2 + 13b separation correction shipped** — Per-scope ``refiner.work_temp_stale_sweep.v1`` (payload ``media_scope`` + dedupe keys ``…:movie`` / ``…:tv``), per-scope remux gate (payload ``media_scope``; legacy remux payloads count as Movies), shared-root fail-safe (no deletes, plain skip reason + ``temp_cleanup_shared_work_root_conflict``), per-scope schedule env + runtime/UI, shared ``MIN_STALE_AGE`` documented narrow exception, ``test_refiner_temp_cleanup.py``.
+
+## Roadmap item 14 — Refiner Pass 3a (Movies output-folder cleanup)
+
+**Scope (explicit):** **Movies only** (``media_scope=movie``). Deletes the **immediate parent folder of the written movie file** under the resolved **Movies output root** (full tree delete + cascade of empty parents up to, but not including, the output root). **No** watched-folder changes, **no** work/temp sweep, **no** TV output cleanup, **no** Pass 1/1b/2 behavior changes.
+
+**Completion criteria (must all be true to tick):**
+
+1. **Non-movie abort:** If ``media_scope`` is not ``movie``, output-folder cleanup does not run; plain skip reason if invoked incorrectly.
+2. **Root bounds:** Target folder must be strictly under resolved Movies output root; never delete the output root; never delete outside output root (``Path.relative_to``).
+3. **Radarr library truth (mandatory):** Before delete, load Radarr library (``GET /api/v3/movie``) and block if **any** ``movieFile.path`` resolves **inside** the candidate output folder. Queue membership is **not** the gate. If Radarr is unreachable or the library list cannot be read, **skip** deletion (fail safe).
+4. **Minimum age:** Candidate folder is eligible only if the **newest** mtime among files under that folder is older than ``refiner_movie_output_cleanup_min_age_seconds`` (default 48h, env at process start).
+5. **Active Movies remux gate:** Pending/leased ``refiner.file.remux_pass.v1`` with **Movies** scope (``media_scope`` missing counts as movie) and the **same normalized** ``relative_media_path`` as this pass blocks cleanup (exclude current job id). **TV** remux jobs never block this pass.
+6. **Dry run:** When the **remux pass** is dry-run only, Pass 3a does not run at all (no Radarr read, no output-folder inspection or age gate, no delete/cascade); activity fields record an honest skip. Live Movies remux paths still perform no filesystem mutations until all gates pass, then delete when allowed.
+7. **Locks:** ``rmtree`` / ``rmdir`` ``OSError`` — skip folder, log, continue without crashing.
+8. **Activity / result:** ``movie_output_folder_deleted``, ``movie_output_folder_path``, ``movie_output_folder_skip_reason``, ``movie_output_truth_check`` (``passed`` / ``failed`` / ``skipped``), ``movie_output_truth_note``, ``movie_output_age_seconds``, ``movie_output_cascade_folders_deleted``, ``movie_output_dry_run``.
+9. **Invocation:** Runs **after successful Movies remux pass completion** (dry-run planned, live written, or live skipped-not-required) from ``run_refiner_file_remux_pass`` — not a separate periodic job (output cleanup is tied to the file that was just processed).
+10. **Tests** cover truth pass/block, Radarr down, age, active job, TV job non-block, cascade, root==folder skip, lock, remux dry-run early exit (no Radarr), out-of-root guard, activity keys.
+
+### 14 — status
+
+- [x] **Pass 3a shipped** — ``refiner_movie_output_cleanup.py`` (Radarr ``GET /api/v3/movie`` truth gate, min-age env, same-``relative_media_path`` active Movies remux gate, dry-run + lock handling, output-root-bounded cascade), ``refiner_file_remux_pass_run.py`` post-success hook, ``MediaMopSettings`` + runtime snapshot + web Workers copy, ``test_refiner_movie_output_cleanup.py``.
 
 ## Active / next (ordered)
 

@@ -55,6 +55,13 @@ def test_refiner_watched_folder_scan_dispatch_has_distinct_schedule_surface_on_s
     assert "refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run" in names
 
 
+def test_refiner_movie_output_cleanup_has_distinct_age_surface_on_settings() -> None:
+    """Movies output-folder cleanup age gate must not reuse watched-folder min-age or work/temp stale fields."""
+
+    names = _field_names()
+    assert "refiner_movie_output_cleanup_min_age_seconds" in names
+
+
 def test_refiner_work_temp_stale_sweep_has_distinct_schedule_surface_on_settings() -> None:
     """Work/temp stale sweep must not reuse watched-folder scan or supplied-payload schedule fields."""
 

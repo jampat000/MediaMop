@@ -35,6 +35,12 @@ _WORK_TEMP_STALE_SWEEP_PERIODIC_NOTE = (
     "(default one day). Restart the API after changing any of these — values are read at process start only."
 )
 
+_MOVIE_OUTPUT_CLEANUP_NOTE = (
+    "Movies output-folder cleanup (Pass 3a) after a successful Movies remux uses "
+    "MEDIAMOP_REFINER_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS in apps/backend/.env (default 48 hours, clamped 1h..30d). "
+    "Radarr library paths are read live from Radarr before any delete. Restart the API after changing this value."
+)
+
 _WATCHED_FOLDER_SCAN_PERIODIC_NOTE = (
     "Optional periodic enqueue for refiner.watched_folder.remux_scan_dispatch.v1 uses "
     "MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED and "
@@ -91,6 +97,8 @@ def refiner_runtime_settings_from_settings(settings: MediaMopSettings) -> Refine
             settings.refiner_watched_folder_remux_scan_dispatch_periodic_remux_dry_run
         ),
         refiner_watched_folder_min_file_age_seconds=settings.refiner_watched_folder_min_file_age_seconds,
+        refiner_movie_output_cleanup_min_age_seconds=settings.refiner_movie_output_cleanup_min_age_seconds,
+        movie_output_cleanup_configuration_note=_MOVIE_OUTPUT_CLEANUP_NOTE,
         watched_folder_scan_periodic_configuration_note=_WATCHED_FOLDER_SCAN_PERIODIC_NOTE,
         refiner_work_temp_stale_sweep_movie_schedule_enabled=settings.refiner_work_temp_stale_sweep_movie_schedule_enabled,
         refiner_work_temp_stale_sweep_movie_schedule_interval_seconds=(
