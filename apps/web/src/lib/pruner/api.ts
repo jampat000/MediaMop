@@ -193,6 +193,47 @@ export async function fetchPrunerInstance(id: number): Promise<PrunerServerInsta
   return readJson<PrunerServerInstance>(r);
 }
 
+export async function postPrunerInstance(body: {
+  provider: "emby" | "jellyfin" | "plex";
+  display_name: string;
+  base_url: string;
+  credentials: Record<string, string>;
+}): Promise<PrunerServerInstance> {
+  const csrf_token = await fetchCsrfToken();
+  const r = await apiFetch("/api/v1/pruner/instances", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...body, csrf_token }),
+  });
+  if (!r.ok) {
+    const errBody = (await readJson<{ detail?: unknown }>(r).catch(() => ({}))) as { detail?: unknown };
+    throw new Error(apiErrorDetailToString(errBody.detail) || `Pruner instance create: ${r.status}`);
+  }
+  return readJson<PrunerServerInstance>(r);
+}
+
+export async function patchPrunerInstance(
+  instanceId: number,
+  body: {
+    display_name?: string;
+    base_url?: string;
+    enabled?: boolean;
+    credentials?: Record<string, string>;
+  },
+): Promise<PrunerServerInstance> {
+  const csrf_token = await fetchCsrfToken();
+  const r = await apiFetch(`/api/v1/pruner/instances/${instanceId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...body, csrf_token }),
+  });
+  if (!r.ok) {
+    const errBody = (await readJson<{ detail?: unknown }>(r).catch(() => ({}))) as { detail?: unknown };
+    throw new Error(apiErrorDetailToString(errBody.detail) || `Pruner instance patch: ${r.status}`);
+  }
+  return readJson<PrunerServerInstance>(r);
+}
+
 export async function fetchPrunerPreviewRun(
   instanceId: number,
   previewRunId: string,
