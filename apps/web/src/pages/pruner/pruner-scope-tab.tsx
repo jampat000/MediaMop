@@ -32,7 +32,7 @@ function canApplyFromPreviewSnapshot(
   return provider === "plex" && row.rule_family_id === RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED;
 }
 
-export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?: Ctx }) {
+export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?: Ctx; disabledMode?: boolean }) {
   const outletCtx = useOutletContext<Ctx>();
   const { instanceId, instance } = props.contextOverride ?? outletCtx;
   const me = useMeQuery();
@@ -70,7 +70,10 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
   const [studioMsg, setStudioMsg] = useState<string | null>(null);
   const [collectionText, setCollectionText] = useState("");
   const [collectionMsg, setCollectionMsg] = useState<string | null>(null);
+  const [previewMaxItems, setPreviewMaxItems] = useState(500);
+  const [previewMaxItemsMsg, setPreviewMaxItemsMsg] = useState<string | null>(null);
   const canOperate = me.data?.role === "admin" || me.data?.role === "operator";
+  const showInteractiveControls = canOperate || Boolean(props.disabledMode);
 
   const scopeRow = instance?.scopes.find((s) => s.media_scope === props.scope);
   const label = props.scope === "tv" ? "TV (episodes)" : "Movies (one row per movie item)";
@@ -128,6 +131,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
     setYearMaxStr(scopeRow.preview_year_max != null ? String(scopeRow.preview_year_max) : "");
     setStudioText((scopeRow.preview_include_studios ?? []).join(", "));
     setCollectionText((scopeRow.preview_include_collections ?? []).join(", "));
+    setPreviewMaxItems(scopeRow.preview_max_items);
   }, [
     scopeRow?.scheduled_preview_enabled,
     scopeRow?.scheduled_preview_interval_seconds,
@@ -147,6 +151,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
     scopeRow?.preview_year_max,
     scopeRow?.preview_include_studios,
     scopeRow?.preview_include_collections,
+    scopeRow?.preview_max_items,
     scopeRow?.media_scope,
     instanceId,
   ]);
@@ -165,6 +170,26 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
       });
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
       setSchedMsg("Saved. This schedule applies only to this server and this tab (TV or Movies).");
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function savePreviewMaxItemsSettings() {
+    setPreviewMaxItemsMsg(null);
+    setErr(null);
+    setBusy(true);
+    try {
+      const csrf_token = await fetchCsrfToken();
+      const v = Math.max(1, Math.min(5000, Number(previewMaxItems) || 500));
+      await patchPrunerScope(instanceId, props.scope, {
+        preview_max_items: v,
+        csrf_token,
+      });
+      await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+      setPreviewMaxItemsMsg("Saved scan cap for this scope.");
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -603,9 +628,55 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
 
   return (
     <section className="max-w-3xl space-y-3" aria-labelledby="pruner-scope-heading">
+      <fieldset disabled={Boolean(props.disabledMode)} className="space-y-3">
       <h2 id="pruner-scope-heading" className="text-base font-semibold text-[var(--mm-text)]">
         {label}
       </h2>
+      {props.disabledMode ? (
+        <p className="rounded-md border border-dashed border-[var(--mm-border)] bg-[var(--mm-surface2)]/35 px-3 py-2 text-xs text-[var(--mm-text2)]">
+          Save this provider connection first. These are the real deletion/removal controls and become active after
+          connection is saved.
+        </p>
+      ) : null}
+      <div
+        className="space-y-2 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text)]"
+        data-testid="pruner-run-limits-panel"
+      >
+        <p className="text-sm font-semibold text-[var(--mm-text)]">Run limits</p>
+        <p className="text-xs text-[var(--mm-text2)]">
+          Scan cap per run is supported on this scope. Apply delete cap per run is not currently exposed by the Pruner
+          backend contract, so deletes remain snapshot-bound and rule-driven.
+        </p>
+        {showInteractiveControls ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="text-xs text-[var(--mm-text2)]">
+              Scan cap per run (1-5000)
+              <input
+                type="number"
+                min={1}
+                max={5000}
+                value={previewMaxItems}
+                disabled={busy}
+                onChange={(e) => setPreviewMaxItems(Math.max(1, Math.min(5000, Number(e.target.value) || 500)))}
+                className="ml-2 w-24 rounded border border-[var(--mm-border)] bg-[var(--mm-surface2)] px-2 py-1 text-sm text-[var(--mm-text)]"
+              />
+            </label>
+            <button
+              type="button"
+              className="rounded-md border border-[var(--mm-border)] px-3 py-1 text-sm font-medium text-[var(--mm-text)] disabled:opacity-50"
+              disabled={busy}
+              onClick={() => void savePreviewMaxItemsSettings()}
+            >
+              Save run limits
+            </button>
+            {previewMaxItemsMsg ? <p className="text-xs text-green-600">{previewMaxItemsMsg}</p> : null}
+          </div>
+        ) : (
+          <p className="text-xs text-[var(--mm-text2)]">
+            Scan cap: <strong>{scopeRow?.preview_max_items ?? "—"}</strong>. Sign in as an operator to edit.
+          </p>
+        )}
+      </div>
       <div
         className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-surface2)]/40 px-4 py-3 text-xs text-[var(--mm-text2)] sm:text-sm"
         data-testid="pruner-scope-trust-banner"
@@ -684,7 +755,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
               Matching uses Genre tags on each <code className="text-[0.85em]">allLeaves</code> leaf only.
             </p>
           ) : null}
-          {canOperate ? (
+          {showInteractiveControls ? (
             <div className="space-y-2">
               <input
                 type="text"
@@ -736,7 +807,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
               saved (MediaMop requests explicit Fields). Applies to every preview rule on this tab.
             </p>
           )}
-          {canOperate ? (
+          {showInteractiveControls ? (
             <div className="space-y-2">
               <input
                 type="text"
@@ -782,7 +853,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
             it on <code className="text-[0.85em]">allLeaves</code> rows (missing-primary and movie rules on the Movies
             tab). Inclusive {1900}–{2100}.
           </p>
-          {canOperate ? (
+          {showInteractiveControls ? (
             <div className="flex flex-wrap items-end gap-2">
               <label className="text-xs text-[var(--mm-text2)]">
                 Min year
@@ -842,7 +913,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
             movie rows. This is <strong>not</strong> a separate “network” filter; only provider-native studio fields are
             used.
           </p>
-          {canOperate ? (
+          {showInteractiveControls ? (
             <div className="space-y-2">
               <input
                 type="text"
@@ -889,7 +960,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
             this tab). Jellyfin/Emby previews do <strong>not</strong> apply this list (no honest per-item collection field
             on the Items path used here).
           </p>
-          {canOperate ? (
+          {showInteractiveControls ? (
             <div className="space-y-2">
               <input
                 type="text"
@@ -962,7 +1033,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
             Apply (when enabled) removes those library entries via the provider API for the frozen preview list only —
             MediaMop does not claim whether underlying media files are deleted; that is provider behavior.
           </p>
-          {canOperate ? (
+          {showInteractiveControls ? (
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -1033,7 +1104,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
               Preview is the dry run; apply uses the frozen list only. Removal goes through the provider library API —
               MediaMop does not claim whether media files on disk are removed.
             </p>
-            {canOperate ? (
+            {showInteractiveControls ? (
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm">
                   <input
@@ -1121,7 +1192,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
                 Preview is the dry run; apply uses the frozen list only. Removal goes through the provider library API —
                 MediaMop does not claim whether media files on disk are removed.
               </p>
-              {canOperate ? (
+              {showInteractiveControls ? (
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 text-sm">
                     <input
@@ -1187,7 +1258,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
                   </>
                 )}
               </p>
-              {canOperate ? (
+              {showInteractiveControls ? (
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 text-sm">
                     <input
@@ -1270,7 +1341,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
                   </>
                 )}
               </p>
-              {canOperate ? (
+              {showInteractiveControls ? (
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 text-sm">
                     <input
@@ -1363,7 +1434,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
           candidates, filtered-out runs, and unsupported outcomes.
         </p>
       </div>
-      {canOperate ? (
+      {showInteractiveControls ? (
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -1396,7 +1467,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
           preview buttons. Scheduled runs use the <strong>missing primary art</strong> rule only; stale never-played
           previews are on-demand.
         </p>
-        {canOperate ? (
+        {showInteractiveControls ? (
           <>
             <label className="flex items-center gap-2 text-sm text-[var(--mm-text)]">
               <input
@@ -1638,6 +1709,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
           {jsonPreview}
         </pre>
       ) : null}
+      </fieldset>
     </section>
   );
 }

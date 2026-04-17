@@ -44,39 +44,49 @@ function providerCredentialLabel(provider: ProviderTab): string {
   return provider === "plex" ? "Token" : "API key";
 }
 
-function DisabledScopeSection({ scope }: { scope: "tv" | "movies" }) {
-  const scopeLabel = scope === "tv" ? "TV configuration" : "Movies configuration";
-  return (
-    <section
-      className="space-y-2 rounded-md border border-dashed border-[var(--mm-border)] bg-[var(--mm-surface2)]/35 px-4 py-3 opacity-75"
-      data-testid={`pruner-provider-config-disabled-${scope}`}
-    >
-      <h4 className="text-sm font-semibold text-[var(--mm-text1)]">{scopeLabel}</h4>
-      <p className="text-xs text-[var(--mm-text2)]">
-        These controls are visible now and activate after the provider connection is saved.
-      </p>
-      <label className="flex items-center gap-2 text-sm text-[var(--mm-text2)]">
-        <input type="checkbox" disabled />
-        Enable missing primary media rule
-      </label>
-      <label className="flex items-center gap-2 text-sm text-[var(--mm-text2)]">
-        <input type="checkbox" disabled />
-        Enable watched/stale cleanup rule
-      </label>
-      <label className="text-xs text-[var(--mm-text2)]">
-        Preview filter token list
-        <input
-          type="text"
-          disabled
-          placeholder="e.g. Drama, Jane Doe"
-          className="mt-1 w-full rounded border border-[var(--mm-border)] bg-[var(--mm-surface2)] px-2 py-1 text-sm"
-        />
-      </label>
-      <button type="button" disabled className="rounded-md border border-[var(--mm-border)] px-3 py-1 text-xs">
-        Save {scope === "tv" ? "TV" : "Movies"} settings
-      </button>
-    </section>
-  );
+function defaultScope(scope: "tv" | "movies") {
+  return {
+    media_scope: scope,
+    missing_primary_media_reported_enabled: true,
+    never_played_stale_reported_enabled: false,
+    never_played_min_age_days: 90,
+    watched_tv_reported_enabled: scope === "tv",
+    watched_movies_reported_enabled: scope === "movies",
+    watched_movie_low_rating_reported_enabled: false,
+    watched_movie_low_rating_max_jellyfin_emby_community_rating: 4,
+    watched_movie_low_rating_max_plex_audience_rating: 4,
+    unwatched_movie_stale_reported_enabled: false,
+    unwatched_movie_stale_min_age_days: 90,
+    preview_max_items: 500,
+    preview_include_genres: [],
+    preview_include_people: [],
+    preview_year_min: null,
+    preview_year_max: null,
+    preview_include_studios: [],
+    preview_include_collections: [],
+    scheduled_preview_enabled: false,
+    scheduled_preview_interval_seconds: 3600,
+    last_scheduled_preview_enqueued_at: null,
+    last_preview_run_uuid: null,
+    last_preview_at: null,
+    last_preview_candidate_count: null,
+    last_preview_outcome: null,
+    last_preview_error: null,
+  };
+}
+
+function providerDisabledInstance(provider: ProviderTab): PrunerServerInstance {
+  return {
+    id: 0,
+    provider,
+    display_name: `${providerLabel(provider)} (not yet connected)`,
+    base_url: "",
+    enabled: false,
+    last_connection_test_at: null,
+    last_connection_test_ok: null,
+    last_connection_test_detail: null,
+    scopes: [defaultScope("tv"), defaultScope("movies")],
+  };
 }
 
 function ProviderWorkspace({ provider, allInstances }: { provider: ProviderTab; allInstances: PrunerServerInstance[] }) {
@@ -275,14 +285,22 @@ function ProviderWorkspace({ provider, allInstances }: { provider: ProviderTab; 
             {selectedInstance ? (
               <PrunerScopeTab scope="tv" contextOverride={{ instanceId: selectedInstance.id, instance: selectedInstance }} />
             ) : (
-              <DisabledScopeSection scope="tv" />
+              <PrunerScopeTab
+                scope="tv"
+                disabledMode
+                contextOverride={{ instanceId: 0, instance: providerDisabledInstance(provider) }}
+              />
             )}
           </div>
           <div>
             {selectedInstance ? (
               <PrunerScopeTab scope="movies" contextOverride={{ instanceId: selectedInstance.id, instance: selectedInstance }} />
             ) : (
-              <DisabledScopeSection scope="movies" />
+              <PrunerScopeTab
+                scope="movies"
+                disabledMode
+                contextOverride={{ instanceId: 0, instance: providerDisabledInstance(provider) }}
+              />
             )}
           </div>
         </div>

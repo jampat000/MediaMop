@@ -61,10 +61,11 @@ describe("PrunerInstancesListPage", () => {
     expect(screen.getByLabelText(/Server URL/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/API key/i)).toBeInTheDocument();
     expect(screen.getByTestId("pruner-provider-configuration-emby")).toBeInTheDocument();
-    expect(screen.getByTestId("pruner-provider-config-disabled-tv")).toBeInTheDocument();
-    expect(screen.getByTestId("pruner-provider-config-disabled-movies")).toBeInTheDocument();
-    const disabledInput = screen.getByTestId("pruner-provider-config-disabled-tv").querySelector("input");
-    expect(disabledInput?.hasAttribute("disabled")).toBe(true);
+    expect(screen.getByText(/TV \(episodes\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Movies \(one row per movie item\)/i)).toBeInTheDocument();
+    expect(screen.getAllByTestId("pruner-run-limits-panel").length).toBe(2);
+    const disabledFieldsets = screen.getByTestId("pruner-provider-configuration-emby").querySelectorAll("fieldset[disabled]");
+    expect(disabledFieldsets.length).toBe(2);
     expect(screen.queryByTestId("pruner-provider-sections-emby")).not.toBeInTheDocument();
   });
 
@@ -190,7 +191,9 @@ describe("PrunerInstancesListPage", () => {
     await waitFor(() => expect(screen.getByTestId("pruner-provider-tab-emby")).toBeInTheDocument());
     expect(screen.getByText(/TV \(episodes\)/i)).toBeInTheDocument();
     expect(screen.getByText(/Movies \(one row per movie item\)/i)).toBeInTheDocument();
-    expect(screen.queryByTestId("pruner-provider-config-disabled-tv")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("pruner-run-limits-panel").length).toBe(2);
+    const disabledFieldsets = screen.getByTestId("pruner-provider-configuration-emby").querySelectorAll("fieldset[disabled]");
+    expect(disabledFieldsets.length).toBe(0);
     expect(screen.queryByTestId("pruner-provider-sections-emby")).not.toBeInTheDocument();
   });
 });
