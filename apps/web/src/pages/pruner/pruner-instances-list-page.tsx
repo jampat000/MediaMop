@@ -263,53 +263,57 @@ function ProviderWorkspace({ provider, allInstances }: { provider: ProviderTab; 
         {err ? <p className="text-sm text-red-600">{err}</p> : null}
         {msg ? <p className="text-sm text-[var(--mm-text)]">{msg}</p> : null}
       </section>
-      <section className="space-y-3" data-testid={`pruner-provider-configuration-${provider}`}>
-        <h3 className="text-base font-semibold text-[var(--mm-text)]">Cleanup rules</h3>
+      <div className="space-y-6" data-testid={`pruner-provider-sections-${provider}`}>
         {!selectedInstance ? (
-          <p className="text-xs text-[var(--mm-text2)]">
-            Controls stay visible but disabled until a connection is saved.
+          <p className="text-xs text-[var(--mm-text2)]" data-testid="pruner-provider-config-disabled-hint">
+            Save a connection first to enable these settings.
           </p>
         ) : null}
         {provider === "plex" ? (
           <p className="text-xs text-[var(--mm-text2)]" data-testid="pruner-provider-plex-unsupported-note">
-            Plex remains truthful: unsupported rules stay explicitly marked in each scope section; token wording is used throughout.
+            Plex: unsupported rules are labeled in place; connection uses a token.
           </p>
         ) : null}
-        <div className="grid gap-4 xl:grid-cols-2">
-          <div>
+        <div
+          className="grid gap-4 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-4 xl:grid-cols-2"
+          data-testid={`pruner-provider-configuration-${provider}`}
+        >
+          <section className="space-y-3" data-testid={`pruner-provider-tv-config-${provider}`}>
+            <h3 className="text-base font-semibold text-[var(--mm-text1)]">TV configuration</h3>
             {selectedInstance ? (
               <PrunerScopeTab
                 scope="tv"
-                compactMode
+                variant="provider"
                 contextOverride={{ instanceId: selectedInstance.id, instance: selectedInstance }}
               />
             ) : (
               <PrunerScopeTab
                 scope="tv"
                 disabledMode
-                compactMode
+                variant="provider"
                 contextOverride={{ instanceId: 0, instance: providerDisabledInstance(provider) }}
               />
             )}
-          </div>
-          <div>
+          </section>
+          <section className="space-y-3 xl:border-l xl:border-[var(--mm-border)] xl:pl-4" data-testid={`pruner-provider-movies-config-${provider}`}>
+            <h3 className="text-base font-semibold text-[var(--mm-text1)]">Movies configuration</h3>
             {selectedInstance ? (
               <PrunerScopeTab
                 scope="movies"
-                compactMode
+                variant="provider"
                 contextOverride={{ instanceId: selectedInstance.id, instance: selectedInstance }}
               />
             ) : (
               <PrunerScopeTab
                 scope="movies"
                 disabledMode
-                compactMode
+                variant="provider"
                 contextOverride={{ instanceId: 0, instance: providerDisabledInstance(provider) }}
               />
             )}
-          </div>
+          </section>
         </div>
-      </section>
+      </div>
     </section>
   );
 }
