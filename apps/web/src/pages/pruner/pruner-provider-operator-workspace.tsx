@@ -538,7 +538,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
                 />
                 <label className="block text-sm text-[var(--mm-text1)]">
                   <span className="mb-1 block text-xs text-[var(--mm-text3)]">
-                    Delete TV shows not watched in the last N days (never started)
+                    Delete TV shows not watched in the last N days
                   </span>
                   <input
                     type="number"

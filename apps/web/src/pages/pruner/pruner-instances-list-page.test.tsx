@@ -477,8 +477,10 @@ describe("PrunerInstancesListPage", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Schedules" }));
     await waitFor(() => expect(screen.getByTestId("pruner-schedules-empty-state")).toBeInTheDocument());
     expect(
-      screen.getByText(/Add a server under each provider tab to set up automatic scans/i),
+      screen.getByText(/Add a server under each provider tab to enable automatic scans/i),
     ).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId("pruner-schedule-row-emby-tv")).toBeInTheDocument());
+    expect(screen.getByTestId("pruner-schedule-row-plex-movies")).toBeInTheDocument();
   });
 
   it("Schedules tab renders six schedule rows grouped by provider when instances exist", async () => {

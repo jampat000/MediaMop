@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
+import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 import { fetcherMenuButtonClass, fetcherSectionTabClass } from "../fetcher/fetcher-menu-button";
 import { fetchCsrfToken } from "../../lib/api/auth-api";
 import type { PrunerJobsInspectionRow, PrunerServerInstance } from "../../lib/pruner/api";
@@ -728,6 +729,7 @@ function PrunerGlobalScheduleRow({
 
   const pLabel = providerLabel(provider);
   const missing = !instance;
+  const locked = missing || !canOperate;
   const testId = `pruner-schedule-row-${provider}-${scope}`;
 
   const scopeHeading = scope === "tv" ? "TV shows" : "Movies";
@@ -743,66 +745,60 @@ function PrunerGlobalScheduleRow({
       ) : (
         <p className="mt-1 text-xs text-[var(--mm-text3)]">No {pLabel} server saved yet.</p>
       )}
-      <div className={`mt-5 space-y-6 ${missing || !canOperate ? "pointer-events-none opacity-45" : ""}`}>
-        {scopeRow && instance ? (
-          <>
-            <MmOnOffSwitch
-              id={`pruner-sched-${provider}-${scope}-en`}
-              label="Enable automatic scans"
-              enabled={schedEnabled}
-              disabled={busy || missing || !canOperate}
-              onChange={setSchedEnabled}
-            />
-            <div>
-              <span className="text-sm font-medium text-[var(--mm-text1)]">Run every (seconds)</span>
-              <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">Between 60 seconds and 24 hours</p>
-              <input
-                type="number"
-                min={60}
-                max={86400}
-                className="mm-input mt-2 w-full max-w-xs"
-                value={schedInterval}
-                disabled={busy || missing || !canOperate}
-                onChange={(e) => setSchedInterval(parseInt(e.target.value, 10) || 3600)}
-                aria-label="Run every seconds"
-              />
-            </div>
-            <div>
-              <span className="text-sm font-medium text-[var(--mm-text1)]">Items to scan per run</span>
-              <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">Maximum items checked each automatic scan</p>
-              <input
-                type="number"
-                min={1}
-                max={5000}
-                className="mm-input mt-2 w-full max-w-xs"
-                value={previewCap}
-                disabled={busy || missing || !canOperate}
-                onChange={(e) => setPreviewCap(Math.max(1, Math.min(5000, Number(e.target.value) || 500)))}
-                aria-label="Items to scan per run"
-              />
-            </div>
-            <p className="text-xs text-[var(--mm-text2)]">
-              <span className="text-[var(--mm-text3)]">Last automatic scan:</span>{" "}
-              <span className="font-medium text-[var(--mm-text1)]">
-                {scopeRow.last_scheduled_preview_enqueued_at
-                  ? formatPrunerDateTime(scopeRow.last_scheduled_preview_enqueued_at)
-                  : "Never run"}
-              </span>
-            </p>
-            {canOperate ? (
-              <button
-                type="button"
-                className={fetcherMenuButtonClass({ variant: "primary", disabled: busy })}
-                disabled={busy}
-                onClick={() => void saveRow()}
-              >
-                {busy ? "Saving…" : saveScheduleLabel}
-              </button>
-            ) : null}
-          </>
-        ) : (
-          <p className="text-xs text-[var(--mm-text3)]">Save a {pLabel} server on that provider’s Connection tab to edit this schedule.</p>
-        )}
+      <div className={`mt-5 space-y-6 ${locked ? "opacity-45" : ""}`}>
+        <MmOnOffSwitch
+          id={`pruner-sched-${provider}-${scope}-en`}
+          label="Enable automatic scans"
+          enabled={schedEnabled}
+          disabled={busy || locked}
+          onChange={setSchedEnabled}
+        />
+        <div>
+          <span className="text-sm font-medium text-[var(--mm-text1)]">Run every (seconds)</span>
+          <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">Between 60 seconds and 24 hours</p>
+          <input
+            type="number"
+            min={60}
+            max={86400}
+            className="mm-input mt-2 w-full max-w-xs"
+            value={Number.isFinite(schedInterval) ? schedInterval : 3600}
+            disabled={busy || locked}
+            onChange={(e) => setSchedInterval(parseInt(e.target.value, 10) || 3600)}
+            aria-label="Run every seconds"
+          />
+        </div>
+        <div>
+          <span className="text-sm font-medium text-[var(--mm-text1)]">Items to scan per run</span>
+          <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">Maximum items checked each automatic scan</p>
+          <input
+            type="number"
+            min={1}
+            max={5000}
+            className="mm-input mt-2 w-full max-w-xs"
+            value={previewCap}
+            disabled={busy || locked}
+            onChange={(e) => setPreviewCap(Math.max(1, Math.min(5000, Number(e.target.value) || 500)))}
+            aria-label="Items to scan per run"
+          />
+        </div>
+        <p className="text-xs text-[var(--mm-text2)]">
+          <span className="text-[var(--mm-text3)]">Last automatic scan:</span>{" "}
+          <span className="font-medium text-[var(--mm-text1)]">
+            {scopeRow?.last_scheduled_preview_enqueued_at
+              ? formatPrunerDateTime(scopeRow.last_scheduled_preview_enqueued_at)
+              : "Never run"}
+          </span>
+        </p>
+        {canOperate ? (
+          <button
+            type="button"
+            className={mmActionButtonClass({ variant: "primary", disabled: busy || locked })}
+            disabled={busy || locked}
+            onClick={() => void saveRow()}
+          >
+            {busy ? "Saving…" : saveScheduleLabel}
+          </button>
+        ) : null}
         {msg ? <p className="text-xs text-green-600">{msg}</p> : null}
         {err ? (
           <p className="text-xs text-red-500" role="alert">
@@ -815,6 +811,7 @@ function PrunerGlobalScheduleRow({
 }
 
 function TopLevelSchedules({ instances }: { instances: PrunerServerInstance[] }) {
+  const noInstances = instances.length === 0;
   return (
     <section className="space-y-5" data-testid="pruner-top-schedules-tab">
       <header className="max-w-3xl">
@@ -823,62 +820,41 @@ function TopLevelSchedules({ instances }: { instances: PrunerServerInstance[] })
           Turn on timed library checks per provider and library type. Each card saves on its own.
         </p>
       </header>
-      {instances.length === 0 ? (
+      {noInstances ? (
         <p
           className="rounded-md border border-dashed border-[var(--mm-border)] bg-[var(--mm-surface2)]/35 px-4 py-3 text-sm text-[var(--mm-text2)]"
           data-testid="pruner-schedules-empty-state"
         >
-          Add a server under each provider tab to set up automatic scans.
+          Add a server under each provider tab to enable automatic scans.
         </p>
-      ) : (
-        <div className="space-y-8">
-          <div>
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--mm-text2)]">Emby</h3>
-            <div className="grid gap-4 md:grid-cols-2">
-              <PrunerGlobalScheduleRow
-                provider="emby"
-                scope="tv"
-                instance={instances.find((i) => i.provider === "emby")}
-              />
-              <PrunerGlobalScheduleRow
-                provider="emby"
-                scope="movies"
-                instance={instances.find((i) => i.provider === "emby")}
-              />
-            </div>
-          </div>
-          <div>
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--mm-text2)]">Jellyfin</h3>
-            <div className="grid gap-4 md:grid-cols-2">
-              <PrunerGlobalScheduleRow
-                provider="jellyfin"
-                scope="tv"
-                instance={instances.find((i) => i.provider === "jellyfin")}
-              />
-              <PrunerGlobalScheduleRow
-                provider="jellyfin"
-                scope="movies"
-                instance={instances.find((i) => i.provider === "jellyfin")}
-              />
-            </div>
-          </div>
-          <div>
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--mm-text2)]">Plex</h3>
-            <div className="grid gap-4 md:grid-cols-2">
-              <PrunerGlobalScheduleRow
-                provider="plex"
-                scope="tv"
-                instance={instances.find((i) => i.provider === "plex")}
-              />
-              <PrunerGlobalScheduleRow
-                provider="plex"
-                scope="movies"
-                instance={instances.find((i) => i.provider === "plex")}
-              />
-            </div>
+      ) : null}
+      <div className="space-y-8">
+        <div>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--mm-text2)]">Emby</h3>
+          <div className="grid gap-4 md:grid-cols-2">
+            <PrunerGlobalScheduleRow provider="emby" scope="tv" instance={instances.find((i) => i.provider === "emby")} />
+            <PrunerGlobalScheduleRow provider="emby" scope="movies" instance={instances.find((i) => i.provider === "emby")} />
           </div>
         </div>
-      )}
+        <div>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--mm-text2)]">Jellyfin</h3>
+          <div className="grid gap-4 md:grid-cols-2">
+            <PrunerGlobalScheduleRow provider="jellyfin" scope="tv" instance={instances.find((i) => i.provider === "jellyfin")} />
+            <PrunerGlobalScheduleRow
+              provider="jellyfin"
+              scope="movies"
+              instance={instances.find((i) => i.provider === "jellyfin")}
+            />
+          </div>
+        </div>
+        <div>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--mm-text2)]">Plex</h3>
+          <div className="grid gap-4 md:grid-cols-2">
+            <PrunerGlobalScheduleRow provider="plex" scope="tv" instance={instances.find((i) => i.provider === "plex")} />
+            <PrunerGlobalScheduleRow provider="plex" scope="movies" instance={instances.find((i) => i.provider === "plex")} />
+          </div>
+        </div>
+      </div>
     </section>
   );
 }

@@ -1,5 +1,6 @@
 /**
  * Hard-coded genre pick list for Pruner Rules (matches common Jellyfin / Emby / Plex genre strings).
+ * Pills use the same pressed / unpressed styling as weekday chips in Fetcher ARR schedules (MmScheduleDayChips).
  */
 
 export const PRUNER_RULE_GENRE_OPTIONS = [
@@ -22,6 +23,15 @@ export const PRUNER_RULE_GENRE_OPTIONS = [
   "War",
   "Western",
 ] as const;
+
+const GENRE_PILL_CLASS = (on: boolean, disabled: boolean) =>
+  [
+    "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+    on
+      ? "border-[rgba(212,175,55,0.45)] bg-[var(--mm-accent-soft)] text-[var(--mm-text1)]"
+      : "border-[var(--mm-border)] bg-transparent text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)]/60",
+    disabled ? "cursor-not-allowed opacity-50" : "",
+  ].join(" ");
 
 /** Map saved API genres onto canonical list entries (case-insensitive). */
 export function prunerGenresFromApi(api: string[] | undefined | null): string[] {
@@ -67,38 +77,22 @@ export function PrunerGenreMultiSelect({
       <p className="text-xs text-[var(--mm-text3)]">
         Leave none selected to include every genre. Pick one or more to limit scans to those genres only.
       </p>
-      <div
-        className="max-h-36 overflow-y-auto rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-1"
-        role="listbox"
-        aria-multiselectable
-        aria-label="Genres"
-      >
-        <div className="flex flex-col gap-1">
-          {PRUNER_RULE_GENRE_OPTIONS.map((g) => {
-            const selected = value.some((x) => x.toLowerCase() === g.toLowerCase());
-            return (
-              <label
-                key={g}
-                className={[
-                  "flex cursor-pointer items-center gap-2.5 rounded-md border px-2.5 py-2 text-left text-sm transition-colors",
-                  selected
-                    ? "border-[var(--mm-accent)]/55 bg-[var(--mm-accent-soft)]/40 font-medium text-[var(--mm-text1)] shadow-sm"
-                    : "border-transparent bg-[var(--mm-surface2)]/25 text-[var(--mm-text2)] hover:border-[var(--mm-border)] hover:bg-[var(--mm-surface2)]/50",
-                  disabled ? "cursor-not-allowed opacity-50" : "",
-                ].join(" ")}
-              >
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 shrink-0 accent-[var(--mm-accent)]"
-                  checked={selected}
-                  disabled={disabled}
-                  onChange={() => toggle(g)}
-                />
-                <span className="select-none">{g}</span>
-              </label>
-            );
-          })}
-        </div>
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Genres">
+        {PRUNER_RULE_GENRE_OPTIONS.map((g) => {
+          const selected = value.some((x) => x.toLowerCase() === g.toLowerCase());
+          return (
+            <button
+              key={g}
+              type="button"
+              disabled={disabled}
+              aria-pressed={selected}
+              onClick={() => toggle(g)}
+              className={GENRE_PILL_CLASS(selected, disabled)}
+            >
+              {g}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

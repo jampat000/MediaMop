@@ -1307,10 +1307,7 @@ export function PrunerScopeTab(props: {
         ) : null}
       </div>
       {scopeRow ? (
-        <div
-          className="space-y-2 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text)]"
-          data-testid="pruner-genre-filters-panel"
-        >
+        <div className="space-y-2 text-sm text-[var(--mm-text)]" data-testid="pruner-genre-filters-panel">
           <p className="text-sm font-semibold text-[var(--mm-text)]">
             Optional genres (this {libraryTabPhrase} only)
           </p>
@@ -1352,10 +1349,7 @@ export function PrunerScopeTab(props: {
         </div>
       ) : null}
       {scopeRow ? (
-        <div
-          className="space-y-2 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text)]"
-          data-testid="pruner-people-filters-panel"
-        >
+        <div className="space-y-2 text-sm text-[var(--mm-text)]" data-testid="pruner-people-filters-panel">
           <p className="text-sm font-semibold text-[var(--mm-text)]">
             Optional cast and crew names (this {libraryTabPhrase} only)
           </p>
@@ -1571,7 +1565,7 @@ export function PrunerScopeTab(props: {
         >
           <p className="text-sm font-semibold text-[var(--mm-text)]">
             {props.scope === "tv"
-              ? "Delete TV shows not watched in the last N days (never started) — Jellyfin / Emby"
+              ? "Delete TV shows not watched in the last N days — Jellyfin / Emby"
               : "Delete TV or movies never started and older than N days — Jellyfin / Emby"}
           </p>
           <p className="text-xs text-[var(--mm-text2)]">Only titles with no play time and older than this age.</p>

@@ -1,4 +1,6 @@
 /** Wire tokens stored per scope (API + backend). */
+import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
+
 export const PRUNER_PEOPLE_ROLE_IDS = ["cast", "director", "writer", "producer", "guest_star"] as const;
 export type PrunerPeopleRoleId = (typeof PRUNER_PEOPLE_ROLE_IDS)[number];
 
@@ -31,6 +33,12 @@ export function peopleRolesForPlexPersist(roles: readonly PrunerPeopleRoleId[]):
   return roles.filter((r) => !PLEX_UNAVAILABLE.has(r));
 }
 
+function persistableRolesEmpty(roles: readonly PrunerPeopleRoleId[], variant: "emby-jellyfin" | "plex"): boolean {
+  const persistable =
+    variant === "plex" ? roles.filter((r) => !PLEX_UNAVAILABLE.has(r)) : [...roles];
+  return persistable.length === 0;
+}
+
 type PrunerPeopleRoleCheckboxesProps = {
   value: PrunerPeopleRoleId[];
   onChange: (next: PrunerPeopleRoleId[]) => void;
@@ -54,13 +62,20 @@ export function PrunerPeopleRoleCheckboxes({
   testId,
 }: PrunerPeopleRoleCheckboxesProps) {
   const isPlex = variant === "plex";
+  const baseTestId = testId ?? "pruner-people-role-toggles";
 
-  function toggle(id: PrunerPeopleRoleId) {
+  function setRoleEnabled(id: PrunerPeopleRoleId, enabled: boolean) {
     onClearCoerceMsg();
     if (isPlex && PLEX_UNAVAILABLE.has(id)) return;
-    const has = value.includes(id);
-    const next = has ? value.filter((x) => x !== id) : [...value, id];
-    if (next.length === 0) {
+
+    let next: PrunerPeopleRoleId[];
+    if (enabled) {
+      next = value.includes(id) ? value : [...value, id];
+    } else {
+      next = value.filter((x) => x !== id);
+    }
+
+    if (persistableRolesEmpty(next, variant)) {
       onCoercedToCast?.();
       onChange([...DEFAULT_PRUNER_PEOPLE_ROLES]);
       return;
@@ -74,11 +89,10 @@ export function PrunerPeopleRoleCheckboxes({
       : "Only people matching the selected roles will be used. Uses cast when nothing is selected.";
 
   return (
-    <div className="space-y-2" data-testid={testId ?? "pruner-people-role-checkboxes"}>
+    <div className="space-y-4" data-testid={baseTestId}>
       <p className="text-xs font-medium text-[var(--mm-text2)]">Match people in these credit roles</p>
-      <div className="flex flex-col gap-2">
+      <div className="space-y-5">
         {PRUNER_PEOPLE_ROLE_IDS.map((id) => {
-          const checked = value.includes(id);
           const grey = isPlex && PLEX_UNAVAILABLE.has(id);
           const label =
             id === "producer" && grey
@@ -86,28 +100,16 @@ export function PrunerPeopleRoleCheckboxes({
               : id === "guest_star" && grey
                 ? "Guest stars (not available on Plex)"
                 : ROLE_LABELS[id];
+          const roleOn = value.includes(id);
           return (
-            <label
+            <MmOnOffSwitch
               key={id}
-              className={[
-                "flex cursor-pointer items-start gap-2 rounded-md border px-2.5 py-2 text-sm transition-colors",
-                grey
-                  ? "cursor-not-allowed border-[var(--mm-border)]/60 bg-[var(--mm-surface2)]/20 text-[var(--mm-text3)]"
-                  : checked
-                    ? "border-[var(--mm-accent)]/50 bg-[var(--mm-accent-soft)]/35 text-[var(--mm-text1)]"
-                    : "border-[var(--mm-border)] bg-[var(--mm-card-bg)] text-[var(--mm-text2)] hover:border-[var(--mm-text3)]/40",
-                disabled || grey ? "pointer-events-none opacity-80" : "",
-              ].join(" ")}
-            >
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--mm-accent)]"
-                checked={checked}
-                disabled={disabled || grey}
-                onChange={() => toggle(id)}
-              />
-              <span className={checked && !grey ? "font-medium" : ""}>{label}</span>
-            </label>
+              id={`${baseTestId}-${id}`}
+              label={label}
+              enabled={grey ? false : roleOn}
+              disabled={disabled || grey}
+              onChange={(v) => setRoleEnabled(id, v)}
+            />
           );
         })}
       </div>
