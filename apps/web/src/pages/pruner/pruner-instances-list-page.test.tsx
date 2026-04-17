@@ -42,7 +42,7 @@ describe("PrunerInstancesListPage", () => {
     expect(tabs.textContent).toMatch(/Jobs/);
   });
 
-  it("each provider tab exposes Connection, Rules, People, and Schedule sub-tabs with a credential panel on Connection", async () => {
+  it("each provider tab exposes Connection, Cleanup, and Schedule sub-tabs with a credential panel on Connection", async () => {
     const client = new QueryClient();
     vi.spyOn(prunerApi, "fetchPrunerInstances").mockResolvedValue([]);
     vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({ jobs: [], default_recent_slice: true });
@@ -56,8 +56,7 @@ describe("PrunerInstancesListPage", () => {
       await waitFor(() => expect(screen.getByTestId(`pruner-provider-tab-${name.toLowerCase()}`)).toBeInTheDocument());
       const sub = screen.getByTestId(`pruner-provider-subnav-${name.toLowerCase()}`);
       expect(within(sub).getByRole("button", { name: "Connection" })).toBeInTheDocument();
-      expect(within(sub).getByRole("button", { name: "Rules" })).toBeInTheDocument();
-      expect(within(sub).getByRole("button", { name: "People" })).toBeInTheDocument();
+      expect(within(sub).getByRole("button", { name: "Cleanup" })).toBeInTheDocument();
       expect(within(sub).getByRole("button", { name: "Schedule" })).toBeInTheDocument();
       expect(screen.getByTestId(`pruner-connection-panel-${name.toLowerCase()}`)).toBeInTheDocument();
       expect(screen.getByLabelText(/^Base URL$/i)).toBeInTheDocument();
@@ -78,7 +77,7 @@ describe("PrunerInstancesListPage", () => {
     expect(within(plexPanel).queryByLabelText(/^API key$/i)).not.toBeInTheDocument();
   });
 
-  it("Emby tab shows Rules sub-navigation, TV/Movies columns, and no nested top-level tabs inside the workspace", async () => {
+  it("Emby tab shows Cleanup sub-navigation, TV/Movies columns, and no nested top-level tabs inside the workspace", async () => {
     const client = new QueryClient();
     client.setQueryData(qk.me, adminUser);
     const scope = (media_scope: "tv" | "movies") => ({
@@ -131,10 +130,9 @@ describe("PrunerInstancesListPage", () => {
     await waitFor(() => expect(screen.getByTestId("pruner-provider-tab-emby")).toBeInTheDocument());
     expect(screen.getByTestId("pruner-provider-subnav-emby")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Connection" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Rules" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cleanup" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Filters" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "People" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Rules" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cleanup" }));
     await waitFor(() => expect(screen.getByTestId("pruner-provider-configuration-emby")).toBeInTheDocument());
     const rulesCard = screen.getByTestId("pruner-provider-configuration-emby");
     expect(within(screen.getByTestId("pruner-provider-tab-emby")).queryByRole("heading", { level: 2, name: /^Emby$/ })).not.toBeInTheDocument();
@@ -143,13 +141,13 @@ describe("PrunerInstancesListPage", () => {
     expect(rulesCard).toBeInTheDocument();
     expect(within(rulesCard).queryByRole("tab")).toBeNull();
     expect(screen.queryByRole("button", { name: /Save watched TV rule/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save TV rules" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save Movies rules" })).toBeInTheDocument();
-    expect(screen.getByTestId("pruner-rules-dry-run-tv-btn")).toBeInTheDocument();
-    expect(screen.getByTestId("pruner-rules-dry-run-movies-btn")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save TV criteria" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save Movies criteria" })).toBeInTheDocument();
+    expect(screen.getByTestId("pruner-cleanup-run-tv-btn")).toBeInTheDocument();
+    expect(screen.getByTestId("pruner-cleanup-run-movies-btn")).toBeInTheDocument();
   });
 
-  it("People sub-tab shows TV and Movies name textareas and dry run buttons", async () => {
+  it("Cleanup tab shows TV and Movies people fields and run controls", async () => {
     const client = new QueryClient();
     client.setQueryData(qk.me, adminUser);
     const scope = (media_scope: "tv" | "movies") => ({
@@ -200,14 +198,14 @@ describe("PrunerInstancesListPage", () => {
     await waitFor(() => expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument());
     fireEvent.click(screen.getByRole("tab", { name: "Emby" }));
     await waitFor(() => expect(screen.getByTestId("pruner-provider-tab-emby")).toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: "People" }));
-    await waitFor(() => expect(screen.getByTestId("pruner-provider-people-card-emby")).toBeInTheDocument());
-    const peopleWrap = screen.getByTestId("pruner-provider-people-wrap");
-    expect(within(peopleWrap).queryByTestId("pruner-provider-inline-connection-status")).not.toBeInTheDocument();
-    const peopleCard = screen.getByTestId("pruner-provider-people-card-emby");
-    expect(within(peopleCard).getAllByPlaceholderText(/Alex Carter/i)).toHaveLength(2);
-    expect(screen.getByTestId("pruner-people-dry-run-tv-btn")).toBeInTheDocument();
-    expect(screen.getByTestId("pruner-people-dry-run-movies-btn")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cleanup" }));
+    await waitFor(() => expect(screen.getByTestId("pruner-provider-configuration-emby")).toBeInTheDocument());
+    const cleanupWrap = screen.getByTestId("pruner-provider-cleanup-wrap");
+    expect(within(cleanupWrap).queryByTestId("pruner-provider-inline-connection-status")).not.toBeInTheDocument();
+    const card = screen.getByTestId("pruner-provider-configuration-emby");
+    expect(within(card).getAllByPlaceholderText(/Alex Carter/i)).toHaveLength(2);
+    expect(screen.getByTestId("pruner-cleanup-run-tv-btn")).toBeInTheDocument();
+    expect(screen.getByTestId("pruner-cleanup-run-movies-btn")).toBeInTheDocument();
   });
 
   it("Connection sub-tab shows Connected in status when last Emby test passed", async () => {
@@ -266,7 +264,7 @@ describe("PrunerInstancesListPage", () => {
     expect(within(statusBox).getByText("Connected")).toBeInTheDocument();
   });
 
-  it("pre-connection Emby Rules tab is editable without connection banner", async () => {
+  it("pre-connection Emby Cleanup tab is editable without connection banner", async () => {
     const client = new QueryClient();
     client.setQueryData(qk.me, adminUser);
     vi.spyOn(prunerApi, "fetchPrunerInstances").mockResolvedValue([]);
@@ -276,7 +274,7 @@ describe("PrunerInstancesListPage", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: "Emby" }));
     await waitFor(() => expect(screen.getByTestId("pruner-provider-tab-emby")).toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: "Rules" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cleanup" }));
     await waitFor(() => expect(screen.getByTestId("pruner-provider-configuration-emby")).toBeInTheDocument());
     expect(screen.queryByTestId("pruner-provider-inline-connection-status")).not.toBeInTheDocument();
     expect(screen.queryByText(/Save a connection first to enable these settings/i)).not.toBeInTheDocument();
@@ -285,7 +283,7 @@ describe("PrunerInstancesListPage", () => {
     expect(screen.getByText(/Delete TV episodes you have already watched/i)).toBeInTheDocument();
   });
 
-  it("Plex Rules tab shows only supported controls: TV missing-primary + filters + names; Movies without missing-primary toggle", async () => {
+  it("Plex Cleanup tab shows only supported controls: TV missing-primary + filters + people; Movies without missing-primary toggle", async () => {
     const client = new QueryClient();
     vi.spyOn(prunerApi, "fetchPrunerInstances").mockResolvedValue([
       {
@@ -363,7 +361,7 @@ describe("PrunerInstancesListPage", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: "Plex" }));
     await waitFor(() => expect(screen.getByTestId("pruner-provider-tab-plex")).toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: "Rules" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cleanup" }));
     await waitFor(() => expect(screen.getByTestId("pruner-provider-configuration-plex")).toBeInTheDocument());
     const plexTvNote = screen.getByTestId("pruner-plex-tv-rules-scope-note");
     expect(plexTvNote).toHaveTextContent(/Plex TV — limited options/i);
@@ -373,13 +371,13 @@ describe("PrunerInstancesListPage", () => {
     expect(screen.queryByTestId("pruner-plex-other-rules-note")).not.toBeInTheDocument();
     const tvSection = screen.getByTestId("pruner-provider-tv-config-plex");
     expect(within(tvSection).queryByText(/Delete TV episodes you have already watched/i)).not.toBeInTheDocument();
-    expect(within(tvSection).getByTestId("pruner-plex-rules-tv-names")).toBeInTheDocument();
+    expect(within(tvSection).getByTestId("pruner-provider-tv-people-plex")).toBeInTheDocument();
     const moviesSection = screen.getByTestId("pruner-provider-movies-config-plex");
     expect(within(moviesSection).getByText(/Plex audience rating/i)).toBeInTheDocument();
     expect(within(moviesSection).queryByText(/Delete movies missing a main poster/i)).not.toBeInTheDocument();
   });
 
-  it("Plex People sub-tab shows Cast, Directors, and Writers only", async () => {
+  it("Plex Cleanup tab TV people roles show Cast, Directors, and Writers only", async () => {
     const client = new QueryClient();
     client.setQueryData(qk.me, adminUser);
     const scope = (media_scope: "tv" | "movies") => ({
@@ -431,9 +429,9 @@ describe("PrunerInstancesListPage", () => {
     await waitFor(() => expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument());
     fireEvent.click(screen.getByRole("tab", { name: "Plex" }));
     await waitFor(() => expect(screen.getByTestId("pruner-provider-tab-plex")).toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: "People" }));
-    await waitFor(() => expect(screen.getByTestId("pruner-provider-people-card-plex")).toBeInTheDocument());
-    const card = screen.getByTestId("pruner-provider-people-card-plex");
+    fireEvent.click(screen.getByRole("button", { name: "Cleanup" }));
+    await waitFor(() => expect(screen.getByTestId("pruner-provider-configuration-plex")).toBeInTheDocument());
+    const card = screen.getByTestId("pruner-provider-configuration-plex");
     expect(within(card).getAllByText("Cast (actors)")).toHaveLength(2);
     const tvRoles = within(card).getByTestId("pruner-provider-tv-people-roles-plex");
     expect(within(tvRoles).getByText("Directors")).toBeInTheDocument();
@@ -521,7 +519,7 @@ describe("PrunerInstancesListPage", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: "Emby" }));
     await waitFor(() => expect(screen.getByTestId("pruner-provider-tab-emby")).toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: "Rules" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cleanup" }));
     await waitFor(() => expect(screen.getByTestId("pruner-provider-movies-config-emby")).toBeInTheDocument());
     const movies = screen.getByTestId("pruner-provider-movies-config-emby");
     expect(within(movies).getByText(/community rating/i)).toBeInTheDocument();
@@ -544,6 +542,9 @@ describe("PrunerInstancesListPage", () => {
     expect(screen.getAllByText(/Enter a number of seconds/i).length).toBeGreaterThanOrEqual(2);
     await waitFor(() => expect(screen.getByTestId("pruner-schedule-row-emby-tv")).toBeInTheDocument());
     expect(screen.getByTestId("pruner-schedule-row-emby-movies")).toBeInTheDocument();
+    const tvCard = screen.getByTestId("pruner-schedule-row-emby-tv");
+    expect(within(tvCard).getByText("TV automatic cleanup")).toBeInTheDocument();
+    expect(within(tvCard).getByText(/saved criteria from the Cleanup tab/i)).toBeInTheDocument();
   });
 
   it("each provider Schedule sub-tab renders TV and Movies schedule rows when instances exist", async () => {

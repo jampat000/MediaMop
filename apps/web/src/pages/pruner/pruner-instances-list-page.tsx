@@ -10,7 +10,7 @@ import type { PrunerJobsInspectionRow, PrunerServerInstance } from "../../lib/pr
 import { patchPrunerInstance, patchPrunerScope, postPrunerConnectionTest, postPrunerInstance } from "../../lib/pruner/api";
 import { useMeQuery } from "../../lib/auth/queries";
 import { usePrunerInstancesQuery, usePrunerJobsInspectionQuery } from "../../lib/pruner/queries";
-import { PrunerProviderPeopleCard, PrunerProviderRulesCard } from "./pruner-provider-operator-workspace";
+import { PrunerProviderRulesCard } from "./pruner-provider-operator-workspace";
 import { formatPrunerDateTime, prunerJobKindOperatorLabel } from "./pruner-ui-utils";
 
 type TopTab = "overview" | "emby" | "jellyfin" | "plex" | "jobs";
@@ -143,7 +143,7 @@ function PrunerConnectionCredentialPanel({
 }: {
   provider: ProviderTab;
   allInstances: PrunerServerInstance[];
-  /** When set, instance row is chosen by the parent (e.g. provider workspace) so Connection matches Rules/People. */
+  /** When set, instance row is chosen by the parent (e.g. provider workspace) so Connection matches Cleanup. */
   instanceSelection?: {
     selectedId: number | null;
     onSelectedIdChange: (id: number | null) => void;
@@ -426,7 +426,7 @@ function PrunerConnectionCredentialPanel({
   );
 }
 
-type ProviderWorkspaceSection = "connection" | "rules" | "people" | "schedule";
+type ProviderWorkspaceSection = "connection" | "cleanup" | "schedule";
 
 function ProviderConfigurationWorkspace({ provider, allInstances }: { provider: ProviderTab; allInstances: PrunerServerInstance[] }) {
   const providerName = providerLabel(provider);
@@ -479,8 +479,7 @@ function ProviderConfigurationWorkspace({ provider, allInstances }: { provider: 
         {(
           [
             ["connection", "Connection"],
-            ["rules", "Rules"],
-            ["people", "People"],
+            ["cleanup", "Cleanup"],
             ["schedule", "Schedule"],
           ] as const
         ).map(([id, label]) => (
@@ -501,19 +500,9 @@ function ProviderConfigurationWorkspace({ provider, allInstances }: { provider: 
           <PrunerConnectionCredentialPanel provider={provider} allInstances={allInstances} instanceSelection={instanceSelection} />
         ) : null}
 
-        {providerSection === "rules" ? (
-          <div data-testid="pruner-provider-rules-wrap">
+        {providerSection === "cleanup" ? (
+          <div data-testid="pruner-provider-cleanup-wrap">
             <PrunerProviderRulesCard
-              provider={provider}
-              instanceId={selectedInstance?.id ?? 0}
-              instance={selectedInstance ?? disabledCtx.instance}
-            />
-          </div>
-        ) : null}
-
-        {providerSection === "people" ? (
-          <div data-testid="pruner-provider-people-wrap">
-            <PrunerProviderPeopleCard
               provider={provider}
               instanceId={selectedInstance?.id ?? 0}
               instance={selectedInstance ?? disabledCtx.instance}
@@ -694,16 +683,20 @@ function PrunerGlobalScheduleRow({
   const saveDisabled = busy || !canOperate || missing;
   const testId = `pruner-schedule-row-${provider}-${scope}`;
 
-  const cardTitle = scope === "tv" ? "TV" : "Movies";
+  const cardTitle = scope === "tv" ? "TV automatic cleanup" : "Movies automatic cleanup";
   const saveScheduleLabel = scope === "tv" ? "Save TV schedule" : "Save Movies schedule";
 
   return (
     <section className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-6" data-testid={testId}>
       <h3 className="text-sm font-semibold text-[var(--mm-text1)]">{cardTitle}</h3>
+      <p className="mt-2 text-xs leading-relaxed text-[var(--mm-text3)]">
+        The schedule runs your saved criteria from the Cleanup tab automatically. If dry run is on in the Cleanup tab,
+        scheduled runs also only scan — they never delete automatically.
+      </p>
       {instance ? (
-        <p className="mt-1 text-xs text-[var(--mm-text3)]">{instance.display_name}</p>
+        <p className="mt-2 text-xs text-[var(--mm-text3)]">{instance.display_name}</p>
       ) : (
-        <p className="mt-1 text-xs text-[var(--mm-text3)]">No {pLabel} server saved yet.</p>
+        <p className="mt-2 text-xs text-[var(--mm-text3)]">No {pLabel} server saved yet.</p>
       )}
       <div className="mt-5 space-y-6">
         <MmOnOffSwitch
@@ -845,8 +838,8 @@ export function PrunerInstancesListPage() {
         <p className="mm-page__subtitle max-w-3xl">
           Library cleanup for <strong className="text-[var(--mm-text)]">Emby</strong>,{" "}
           <strong className="text-[var(--mm-text)]">Jellyfin</strong>, and{" "}
-          <strong className="text-[var(--mm-text)]">Plex</strong>. Each provider tab has Connection, Rules, People, and
-          Schedule for that server.
+          <strong className="text-[var(--mm-text)]">Plex</strong>. Each provider tab has Connection, Cleanup, and Schedule
+          for that server.
         </p>
       </header>
 

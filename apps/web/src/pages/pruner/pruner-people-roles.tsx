@@ -57,6 +57,10 @@ type PrunerPeopleRoleCheckboxesProps = {
   onClearCoerceMsg: () => void;
   onCoercedToCast?: () => void;
   testId?: string;
+  /** Overrides the default section title above role toggles. */
+  rolesHeading?: string;
+  /** Extra helper line (e.g. scope-specific copy). */
+  footerHelper?: string | null;
 };
 
 export function PrunerPeopleRoleCheckboxes({
@@ -68,6 +72,8 @@ export function PrunerPeopleRoleCheckboxes({
   onClearCoerceMsg,
   onCoercedToCast,
   testId,
+  rolesHeading,
+  footerHelper,
 }: PrunerPeopleRoleCheckboxesProps) {
   const isPlex = variant === "plex";
   const baseTestId = testId ?? "pruner-people-role-toggles";
@@ -96,9 +102,10 @@ export function PrunerPeopleRoleCheckboxes({
       ? "Only people matching the selected roles will be used."
       : "Only people matching the selected roles will be used. Uses cast when nothing is selected.";
 
+  const heading = rolesHeading ?? "Match people in these credit roles";
   return (
     <div className="space-y-4" data-testid={baseTestId}>
-      <p className="text-xs font-medium text-[var(--mm-text2)]">Match people in these credit roles</p>
+      <p className="text-xs font-medium text-[var(--mm-text2)]">{heading}</p>
       <div className="space-y-4">
         {roleIds.map((id) => {
           const label = ROLE_LABELS[id];
@@ -117,6 +124,7 @@ export function PrunerPeopleRoleCheckboxes({
         })}
       </div>
       <p className="text-xs text-[var(--mm-text3)]">{helper}</p>
+      {footerHelper ? <p className="text-xs text-[var(--mm-text3)]">{footerHelper}</p> : null}
       {coerceCastMsg ? (
         <p className="text-xs text-amber-600/95" role="status">
           {coerceCastMsg}

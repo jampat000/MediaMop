@@ -101,10 +101,8 @@ async function clickProviderSub(page, provider, label) {
     const p = provider.charAt(0).toUpperCase() + provider.slice(1);
     await clickTopTab(page, p);
     await shot(page, `${String(n++).padStart(2, "0")}-${provider}-connection.png`);
-    await clickProviderSub(page, provider, "Rules");
-    await shot(page, `${String(n++).padStart(2, "0")}-${provider}-rules.png`);
-    await clickProviderSub(page, provider, "People");
-    await shot(page, `${String(n++).padStart(2, "0")}-${provider}-people.png`);
+    await clickProviderSub(page, provider, "Cleanup");
+    await shot(page, `${String(n++).padStart(2, "0")}-${provider}-cleanup.png`);
     await clickProviderSub(page, provider, "Schedule");
     await shot(page, `${String(n++).padStart(2, "0")}-${provider}-schedule.png`);
   }

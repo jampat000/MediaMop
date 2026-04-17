@@ -54,16 +54,50 @@ function parseYear(raw: string): number | null | "bad" {
   return n;
 }
 
-type DryRunControlsProps = {
+type CleanupRunBlockProps = {
   instanceId: number;
   mediaScope: "tv" | "movies";
   testIdPrefix: string;
-  /** When true, dry run auto-saves this tab's scope patches before scanning. */
   ensureSaved: () => Promise<void>;
+  dryRunEnabled: boolean;
+  onDryRunEnabledChange: (enabled: boolean) => void;
+  runDisabled: boolean;
+  controlsDisabled: boolean;
 };
 
-function PrunerDryRunControls(props: DryRunControlsProps) {
-  const { instanceId, mediaScope, testIdPrefix, ensureSaved } = props;
+async function evaluateEligibilityForSnapshots(
+  instanceId: number,
+  mediaScope: "tv" | "movies",
+  snaps: PreviewSnapshot[],
+): Promise<{ elig: Record<string, boolean>; reasons: Record<string, string[]> }> {
+  const elig: Record<string, boolean> = {};
+  const reasons: Record<string, string[]> = {};
+  for (const s of snaps) {
+    if (s.outcome !== "success" || s.rows.length === 0) continue;
+    try {
+      const r = await fetchPrunerApplyEligibility(instanceId, mediaScope, s.previewRunId);
+      elig[s.previewRunId] = r.eligible;
+      reasons[s.previewRunId] = r.reasons;
+    } catch {
+      elig[s.previewRunId] = false;
+      reasons[s.previewRunId] = ["Could not confirm whether these items can be deleted safely."];
+    }
+  }
+  return { elig, reasons };
+}
+
+/** Dry-run toggle, run button, and scan/delete results for one media column. */
+function PrunerCleanupRunBlock(props: CleanupRunBlockProps) {
+  const {
+    instanceId,
+    mediaScope,
+    testIdPrefix,
+    ensureSaved,
+    dryRunEnabled,
+    onDryRunEnabledChange,
+    runDisabled,
+    controlsDisabled,
+  } = props;
   const qc = useQueryClient();
   const [phase, setPhase] = useState<"idle" | "scanning" | "results" | "deleting">("idle");
   const [err, setErr] = useState<string | null>(null);
@@ -81,36 +115,16 @@ function PrunerDryRunControls(props: DryRunControlsProps) {
   }, [snapshots]);
 
   const totalCount = allRows.length;
-  const anyEligible = useMemo(
-    () => snapshots.some((s) => s.outcome === "success" && s.rows.length > 0 && deleteEligible[s.previewRunId]),
-    [snapshots, deleteEligible],
-  );
+  const [emptyBecauseNoRules, setEmptyBecauseNoRules] = useState(false);
 
-  async function evaluateEligibility(snaps: PreviewSnapshot[]) {
-    const elig: Record<string, boolean> = {};
-    const reasons: Record<string, string[]> = {};
-    for (const s of snaps) {
-      if (s.outcome !== "success" || s.rows.length === 0) continue;
-      try {
-        const r = await fetchPrunerApplyEligibility(instanceId, mediaScope, s.previewRunId);
-        elig[s.previewRunId] = r.eligible;
-        reasons[s.previewRunId] = r.reasons;
-      } catch {
-        elig[s.previewRunId] = false;
-        reasons[s.previewRunId] = ["Could not confirm whether these items can be deleted safely."];
-      }
-    }
-    setDeleteEligible(elig);
-    setDeleteReasons(reasons);
-  }
-
-  async function runScan() {
+  async function runCleanupNow() {
     setErr(null);
     setApplySummary(null);
     setSnapshots([]);
     setDeleteEligible({});
     setDeleteReasons({});
     setPhase("scanning");
+    setEmptyBecauseNoRules(false);
     try {
       await ensureSaved();
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
@@ -121,12 +135,11 @@ function PrunerDryRunControls(props: DryRunControlsProps) {
         throw new Error("TV and movie settings for this server are missing. Try reloading the page.");
       }
       const families =
-        mediaScope === "tv"
-          ? tvRuleFamiliesToScan(fresh.provider, tv)
-          : moviesRuleFamiliesToScan(movies);
+        mediaScope === "tv" ? tvRuleFamiliesToScan(fresh.provider, tv) : moviesRuleFamiliesToScan(movies);
       if (families.length === 0) {
-        setPhase("results");
         setSnapshots([]);
+        setEmptyBecauseNoRules(true);
+        setPhase("results");
         return;
       }
       const collected: PreviewSnapshot[] = [];
@@ -138,7 +151,7 @@ function PrunerDryRunControls(props: DryRunControlsProps) {
             pollMs: PRUNER_SCAN_POLL_MS,
             timeoutMs: PRUNER_SCAN_TIMEOUT_MS,
           });
-        } catch (e) {
+        } catch {
           setErr("Scan is taking longer than expected. Check Activity for results.");
           setPhase("idle");
           return;
@@ -172,29 +185,48 @@ function PrunerDryRunControls(props: DryRunControlsProps) {
           outcome: run.outcome,
         });
       }
-      setSnapshots(collected);
-      setPhase("results");
-      await evaluateEligibility(collected);
-      await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
-    } catch (e) {
-      setErr((e as Error).message);
-      setPhase("idle");
-    }
-  }
 
-  async function runDelete() {
-    if (!anyEligible) return;
-    if (!window.confirm("Delete these library items? This cannot be undone.")) return;
-    setErr(null);
-    setApplySummary(null);
-    setPhase("deleting");
-    try {
+      const { elig, reasons } = await evaluateEligibilityForSnapshots(instanceId, mediaScope, collected);
+      setSnapshots(collected);
+      setDeleteEligible(elig);
+      setDeleteReasons(reasons);
+
+      const rowsCount = collected.reduce((acc, s) => acc + s.rows.length, 0);
+      const eligibleAny = collected.some(
+        (s) => s.outcome === "success" && s.rows.length > 0 && elig[s.previewRunId] === true,
+      );
+
+      if (dryRunEnabled) {
+        setPhase("results");
+        await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+        return;
+      }
+
+      if (rowsCount === 0) {
+        setPhase("results");
+        await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+        return;
+      }
+
+      if (!eligibleAny) {
+        setPhase("results");
+        await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+        return;
+      }
+
+      if (!window.confirm("This will delete matching items from your library. This cannot be undone. Continue?")) {
+        setPhase("results");
+        await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+        return;
+      }
+
+      setPhase("deleting");
       let removed = 0;
       let skipped = 0;
       let failed = 0;
-      for (const s of snapshots) {
+      for (const s of collected) {
         if (s.outcome !== "success" || s.rows.length === 0) continue;
-        if (!deleteEligible[s.previewRunId]) continue;
+        if (!elig[s.previewRunId]) continue;
         const { pruner_job_id } = await postPrunerApplyFromPreview(instanceId, mediaScope, s.previewRunId);
         try {
           await waitForPrunerJobTerminal(pruner_job_id, {
@@ -206,6 +238,8 @@ function PrunerDryRunControls(props: DryRunControlsProps) {
             "Delete is taking longer than expected. Check Activity — your server may still be processing items.",
           );
           setPhase("results");
+          await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+          await qc.invalidateQueries({ queryKey: ["activity"] });
           return;
         }
         const parsed = await waitForApplyActivity(s.previewRunId, {
@@ -218,36 +252,53 @@ function PrunerDryRunControls(props: DryRunControlsProps) {
           failed += parsed.failed;
         }
       }
+      setSnapshots([]);
+      setDeleteEligible({});
+      setDeleteReasons({});
       setApplySummary(`Deleted ${removed} items. Skipped ${skipped}. Failed ${failed}.`);
       setPhase("results");
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
       await qc.invalidateQueries({ queryKey: ["activity"] });
     } catch (e) {
       setErr((e as Error).message);
-      setPhase("results");
+      setPhase("idle");
     }
   }
 
-  const label = mediaScope === "tv" ? "TV" : "Movies";
+  const runLabel = mediaScope === "tv" ? "Run TV cleanup now" : "Run Movies cleanup now";
+  const runBusy = phase === "scanning" || phase === "deleting";
+  const runBtnDisabled = runDisabled || controlsDisabled || runBusy;
 
   return (
-    <div className="mt-8 border-t border-[var(--mm-border)] pt-6" data-testid={`${testIdPrefix}-dry-run-${mediaScope}`}>
-      <div className="flex flex-wrap items-center gap-3">
+    <div className="mt-6 space-y-4 border-t border-[var(--mm-border)] pt-6" data-testid={`${testIdPrefix}-run-${mediaScope}`}>
+      <MmOnOffSwitch
+        id={`${testIdPrefix}-dry-run-${mediaScope}`}
+        label="Dry run"
+        enabled={dryRunEnabled}
+        disabled={controlsDisabled}
+        onChange={onDryRunEnabledChange}
+      />
+      <p className="text-xs text-[var(--mm-text3)]">
+        {dryRunEnabled
+          ? "Dry run is ON — clicking Run will show you what matches your criteria. Nothing will be deleted."
+          : "Dry run is OFF — clicking Run will delete matching items immediately. Use dry run first if you are unsure."}
+      </p>
+      <div>
         <button
           type="button"
           className={fetcherMenuButtonClass({
-            variant: "secondary",
-            disabled: phase === "scanning" || phase === "deleting",
+            variant: "primary",
+            disabled: runBtnDisabled,
           })}
-          disabled={phase === "scanning" || phase === "deleting"}
-          data-testid={`${testIdPrefix}-dry-run-${mediaScope}-btn`}
-          onClick={() => void runScan()}
+          disabled={runBtnDisabled}
+          data-testid={`${testIdPrefix}-run-${mediaScope}-btn`}
+          onClick={() => void runCleanupNow()}
         >
-          {phase === "scanning" ? "Scanning your library…" : `Scan ${label} library (no deletions yet)`}
+          {phase === "scanning" ? "Scanning…" : runLabel}
         </button>
       </div>
       {err ? (
-        <p className="mt-3 text-sm text-red-500" role="alert">
+        <p className="text-sm text-red-500" role="alert">
           {err}
         </p>
       ) : null}
@@ -256,59 +307,58 @@ function PrunerDryRunControls(props: DryRunControlsProps) {
           {phase === "deleting" ? (
             <p className="text-sm font-medium text-[var(--mm-text1)]">Deleting…</p>
           ) : null}
-          {snapshots.length === 0 && phase === "results" && !err ? (
-            <p className="text-sm text-[var(--mm-text2)]">No cleanup rules are turned on for this tab, so there is nothing to scan.</p>
-          ) : null}
-          {snapshots.map((s) => (
-            <div key={s.previewRunId} className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-surface2)]/30 p-3">
-              <p className="text-sm font-medium text-[var(--mm-text1)]">
-                {s.ruleLabel}
-                {s.outcome === "unsupported" ? (
-                  <span className="ml-2 text-xs font-normal text-[var(--mm-text3)]"> — not available for this scan</span>
-                ) : null}
-              </p>
-              {s.outcome === "unsupported" && s.unsupportedDetail ? (
-                <p className="mt-1 text-xs text-[var(--mm-text3)]">{s.unsupportedDetail}</p>
-              ) : null}
-              {s.outcome === "failed" && s.errorMessage ? (
-                <p className="mt-1 text-xs text-red-400">{s.errorMessage}</p>
-              ) : null}
-              {s.outcome === "success" ? (
-                <p className="mt-1 text-xs text-[var(--mm-text2)]">
-                  {s.rows.length} item{s.rows.length === 1 ? "" : "s"} matched
-                  {s.truncated ? " (list stopped at your scan limit — more may exist on the server)" : ""}
-                </p>
-              ) : null}
-            </div>
-          ))}
-          {totalCount > 0 ? (
-            <p className="text-sm text-[var(--mm-text1)]">
-              <span className="font-semibold">{totalCount}</span> item{totalCount === 1 ? "" : "s"} matched across the
-              rules you ran.
+          {snapshots.length === 0 && phase === "results" && !err && emptyBecauseNoRules ? (
+            <p className="text-sm text-[var(--mm-text2)]">
+              No cleanup rules are turned on for this column, so there is nothing to scan.
             </p>
           ) : null}
-          {totalCount > 0 ? (
-            <ul className="max-h-64 divide-y divide-[var(--mm-border)] overflow-y-auto rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] text-sm">
-              {allRows.map((r) => (
-                <li key={r.key} className="flex flex-col gap-0.5 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-                  <span className="text-[var(--mm-text1)]">{r.title}</span>
-                  <span className="text-xs text-[var(--mm-text3)]">{r.ruleLabel}</span>
-                </li>
-              ))}
-            </ul>
+          {!dryRunEnabled && phase === "results" && snapshots.length > 0 && totalCount === 0 ? (
+            <p className="text-sm text-[var(--mm-text2)]">No items matched your criteria.</p>
           ) : null}
-          {anyEligible ? (
-            <button
-              type="button"
-              className={fetcherMenuButtonClass({ variant: "primary", disabled: phase === "deleting" })}
-              disabled={phase === "deleting"}
-              data-testid={`${testIdPrefix}-delete-these-${mediaScope}`}
-              onClick={() => void runDelete()}
-            >
-              Delete these
-            </button>
+          {(dryRunEnabled || !applySummary) &&
+            snapshots.map((s) => (
+              <div key={s.previewRunId} className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-surface2)]/30 p-3">
+                <p className="text-sm font-medium text-[var(--mm-text1)]">
+                  {s.ruleLabel}
+                  {s.outcome === "unsupported" ? (
+                    <span className="ml-2 text-xs font-normal text-[var(--mm-text3)]"> — not available for this scan</span>
+                  ) : null}
+                </p>
+                {s.outcome === "unsupported" && s.unsupportedDetail ? (
+                  <p className="mt-1 text-xs text-[var(--mm-text3)]">{s.unsupportedDetail}</p>
+                ) : null}
+                {s.outcome === "failed" && s.errorMessage ? (
+                  <p className="mt-1 text-xs text-red-400">{s.errorMessage}</p>
+                ) : null}
+                {s.outcome === "success" ? (
+                  <p className="mt-1 text-xs text-[var(--mm-text2)]">
+                    {s.rows.length} item{s.rows.length === 1 ? "" : "s"} matched
+                    {s.truncated ? " (list stopped at your scan limit — more may exist on the server)" : ""}
+                  </p>
+                ) : null}
+              </div>
+            ))}
+          {dryRunEnabled && phase === "results" && snapshots.length > 0 ? (
+            totalCount > 0 ? (
+              <>
+                <p className="text-sm text-[var(--mm-text1)]">
+                  <span className="font-semibold">{totalCount}</span> item{totalCount === 1 ? "" : "s"} matched your
+                  criteria.
+                </p>
+                <ul className="max-h-64 divide-y divide-[var(--mm-border)] overflow-y-auto rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] text-sm">
+                  {allRows.map((r) => (
+                    <li key={r.key} className="flex flex-col gap-0.5 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                      <span className="text-[var(--mm-text1)]">{r.title}</span>
+                      <span className="text-xs text-[var(--mm-text3)]">{r.ruleLabel}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p className="text-sm text-[var(--mm-text2)]">No items matched your criteria.</p>
+            )
           ) : null}
-          {snapshots.some((s) => s.outcome === "success" && s.rows.length > 0 && deleteEligible[s.previewRunId] === false) ? (
+          {!dryRunEnabled && snapshots.some((s) => s.outcome === "success" && s.rows.length > 0 && deleteEligible[s.previewRunId] === false) ? (
             <div className="text-xs text-[var(--mm-text3)]">
               {snapshots.map((s) => {
                 if (s.outcome !== "success" || s.rows.length === 0 || deleteEligible[s.previewRunId] !== false) return null;
@@ -321,13 +371,29 @@ function PrunerDryRunControls(props: DryRunControlsProps) {
               })}
             </div>
           ) : null}
-          {applySummary ? <p className="text-sm text-[var(--mm-text1)]">{applySummary}</p> : null}
-          <p className="text-xs text-[var(--mm-text3)]">
-            Full audit trail:{" "}
-            <Link to="/app/activity" className="font-medium text-[var(--mm-accent)] underline-offset-2 hover:underline">
-              Activity
-            </Link>
-          </p>
+          {applySummary ? (
+            <p className="text-sm text-[var(--mm-text1)]">
+              {applySummary.includes("taking longer") ? (
+                applySummary
+              ) : (
+                <>
+                  {applySummary}{" "}
+                  <Link to="/app/activity" className="font-semibold text-[var(--mm-accent)] underline-offset-2 hover:underline">
+                    Activity log
+                  </Link>{" "}
+                  has full detail.
+                </>
+              )}
+            </p>
+          ) : null}
+          {dryRunEnabled && phase === "results" && totalCount > 0 ? (
+            <p className="text-xs text-[var(--mm-text3)]">
+              Full detail:{" "}
+              <Link to="/app/activity" className="font-medium text-[var(--mm-accent)] underline-offset-2 hover:underline">
+                Activity log
+              </Link>
+            </p>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -355,8 +421,9 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
   const [yearMinTv, setYearMinTv] = useState("");
   const [yearMaxTv, setYearMaxTv] = useState("");
   const [studioTv, setStudioTv] = useState("");
-  /** Plex TV rules: name filter for missing-primary previews (same scope field as People tab). */
-  const [plexTvPeopleLines, setPlexTvPeopleLines] = useState("");
+  const [tvPeople, setTvPeople] = useState("");
+  const [tvRoles, setTvRoles] = useState<PrunerPeopleRoleId[]>([...DEFAULT_PRUNER_PEOPLE_ROLES]);
+  const [tvRolesCoerceMsg, setTvRolesCoerceMsg] = useState<string | null>(null);
 
   const [missingPrimaryMovies, setMissingPrimaryMovies] = useState(true);
   const [watchedMovies, setWatchedMovies] = useState(false);
@@ -366,10 +433,20 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
   const [yearMinMovies, setYearMinMovies] = useState("");
   const [yearMaxMovies, setYearMaxMovies] = useState("");
   const [studioMovies, setStudioMovies] = useState("");
+  const [moviesPeople, setMoviesPeople] = useState("");
+  const [moviesRoles, setMoviesRoles] = useState<PrunerPeopleRoleId[]>([...DEFAULT_PRUNER_PEOPLE_ROLES]);
+  const [moviesRolesCoerceMsg, setMoviesRolesCoerceMsg] = useState<string | null>(null);
+  const [moviesCollections, setMoviesCollections] = useState("");
 
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-  const [err, setErr] = useState<string | null>(null);
+  const [busyTv, setBusyTv] = useState(false);
+  const [busyMovies, setBusyMovies] = useState(false);
+  const [msgTv, setMsgTv] = useState<string | null>(null);
+  const [msgMovies, setMsgMovies] = useState<string | null>(null);
+  const [errTv, setErrTv] = useState<string | null>(null);
+  const [errMovies, setErrMovies] = useState<string | null>(null);
+
+  const [dryRunTv, setDryRunTv] = useState(true);
+  const [dryRunMovies, setDryRunMovies] = useState(true);
 
   useEffect(() => {
     if (!tv) return;
@@ -380,9 +457,8 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
     setYearMinTv(tv.preview_year_min != null ? String(tv.preview_year_min) : "");
     setYearMaxTv(tv.preview_year_max != null ? String(tv.preview_year_max) : "");
     setStudioTv((tv.preview_include_studios ?? []).join(", "));
-    if (isPlex) {
-      setPlexTvPeopleLines(((tv.preview_include_people ?? []) as string[]).join("\n"));
-    }
+    setTvPeople(((tv.preview_include_people ?? []) as string[]).join("\n"));
+    setTvRoles(isPlex ? peopleRolesForPlexUiState(tv.preview_include_people_roles) : normalizePeopleRolesFromApi(tv.preview_include_people_roles));
   }, [tv, isPlex]);
 
   useEffect(() => {
@@ -403,6 +479,11 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
     setYearMinMovies(movies.preview_year_min != null ? String(movies.preview_year_min) : "");
     setYearMaxMovies(movies.preview_year_max != null ? String(movies.preview_year_max) : "");
     setStudioMovies((movies.preview_include_studios ?? []).join(", "));
+    setMoviesPeople(((movies.preview_include_people ?? []) as string[]).join("\n"));
+    setMoviesRoles(
+      isPlex ? peopleRolesForPlexUiState(movies.preview_include_people_roles) : normalizePeopleRolesFromApi(movies.preview_include_people_roles),
+    );
+    setMoviesCollections((movies.preview_include_collections ?? []).join(", "));
   }, [movies, isPlex]);
 
   function buildFilterPatch(
@@ -411,6 +492,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
     yMinStr: string,
     yMaxStrStr: string,
     studioText: string,
+    collectionsText?: string,
   ) {
     const yMin = parseYear(yMinStr);
     const yMax = parseYear(yMaxStrStr);
@@ -425,7 +507,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
       preview_year_min: yMinStr.trim() ? yMin : null,
       preview_year_max: yMaxStrStr.trim() ? yMax : null,
       preview_include_studios: parseCommaTokens(studioText),
-      ...(isPlex && scope === "movies" ? { preview_include_collections: movies?.preview_include_collections ?? [] } : {}),
+      ...(isPlex && scope === "movies" ? { preview_include_collections: parseCommaTokens(collectionsText ?? "") } : {}),
     };
   }
 
@@ -436,13 +518,15 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
     const neverOn = !isPlex && Number.isFinite(raw) && raw >= 7;
     const neverDays = neverOn ? Math.max(7, Math.min(3650, raw)) : 90;
     const filters = buildFilterPatch("tv", genreTv, yearMinTv, yearMaxTv, studioTv);
+    const rolesPersist = isPlex ? peopleRolesForPlexPersist(tvRoles) : [...tvRoles];
     await patchPrunerScope(instanceId, "tv", {
       missing_primary_media_reported_enabled: missingPrimaryTv,
       watched_tv_reported_enabled: watchedTv,
       never_played_stale_reported_enabled: neverOn,
       never_played_min_age_days: neverDays,
       ...filters,
-      ...(isPlex ? { preview_include_people: parsePeopleLines(plexTvPeopleLines) } : {}),
+      preview_include_people: parsePeopleLines(tvPeople),
+      preview_include_people_roles: rolesPersist,
       csrf_token,
     });
     await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
@@ -457,7 +541,8 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
     const uwRaw = parseInt(unwatchedDays.trim(), 10);
     const uwOn = Number.isFinite(uwRaw) && uwRaw >= 7;
     const uwDays = uwOn ? Math.max(7, Math.min(3650, uwRaw)) : 90;
-    const filters = buildFilterPatch("movies", genreMovies, yearMinMovies, yearMaxMovies, studioMovies);
+    const filters = buildFilterPatch("movies", genreMovies, yearMinMovies, yearMaxMovies, studioMovies, moviesCollections);
+    const rolesPersist = isPlex ? peopleRolesForPlexPersist(moviesRoles) : [...moviesRoles];
     await patchPrunerScope(instanceId, "movies", {
       missing_primary_media_reported_enabled: missingPrimaryMovies,
       watched_movies_reported_enabled: watchedMovies,
@@ -467,6 +552,8 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
         : { watched_movie_low_rating_max_jellyfin_emby_community_rating: cap }),
       unwatched_movie_stale_reported_enabled: uwOn,
       unwatched_movie_stale_min_age_days: uwDays,
+      preview_include_people: parsePeopleLines(moviesPeople),
+      preview_include_people_roles: rolesPersist,
       ...filters,
       csrf_token,
     });
@@ -475,54 +562,65 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
 
   async function saveTv() {
     if (!tv) return;
-    setErr(null);
-    setMsg(null);
-    setBusy(true);
+    setErrTv(null);
+    setMsgTv(null);
+    setBusyTv(true);
     try {
       await persistTv();
-      setMsg("Saved TV cleanup settings.");
+      setTvRolesCoerceMsg(null);
+      setMsgTv("Saved TV criteria.");
     } catch (e) {
-      setErr((e as Error).message);
+      setErrTv((e as Error).message);
     } finally {
-      setBusy(false);
+      setBusyTv(false);
     }
   }
 
   async function saveMovies() {
     if (!movies) return;
-    setErr(null);
-    setMsg(null);
-    setBusy(true);
+    setErrMovies(null);
+    setMsgMovies(null);
+    setBusyMovies(true);
     try {
       await persistMovies();
-      setMsg("Saved movie cleanup settings.");
+      setMoviesRolesCoerceMsg(null);
+      setMsgMovies("Saved Movies criteria.");
     } catch (e) {
-      setErr((e as Error).message);
+      setErrMovies((e as Error).message);
     } finally {
-      setBusy(false);
+      setBusyMovies(false);
     }
   }
 
-  async function ensureRulesSavedForDryRun() {
+  async function ensureTvSaved() {
     await persistTv();
+  }
+
+  async function ensureMoviesSaved() {
     await persistMovies();
   }
 
-  const controlsDisabled = !canOperate || busy;
-  const saveDisabled = busy || !canOperate || instanceId <= 0;
+  const tvControlsDisabled = !canOperate || busyTv || busyMovies;
+  const moviesControlsDisabled = !canOperate || busyTv || busyMovies;
+  const saveDisabledTv = busyTv || !canOperate || instanceId <= 0;
+  const saveDisabledMovies = busyMovies || !canOperate || instanceId <= 0;
+  const runDisabled = instanceId <= 0;
+
+  const narrowingLabelClass = "text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]";
 
   return (
     <div
       className="mm-card mm-dash-card border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 sm:p-6"
       data-testid={`pruner-provider-configuration-${provider}`}
-      data-provider-section="rules"
+      data-provider-section="cleanup"
     >
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-10">
-        <fieldset disabled={controlsDisabled} className="min-w-0 border-0 p-0">
+        <fieldset disabled={tvControlsDisabled} className="min-w-0 border-0 p-0">
           <div className="min-w-0 space-y-5" data-testid={`pruner-provider-tv-config-${provider}`}>
             <div className="space-y-1 border-b border-[var(--mm-border)] pb-2">
               <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">TV</span>
             </div>
+            <p className={narrowingLabelClass}>Rules</p>
             {isPlex ? (
               <div
                 className="rounded-md border border-amber-600/40 bg-amber-950/20 px-4 py-3 text-sm text-[var(--mm-text)]"
@@ -543,7 +641,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
                   id={`pruner-op-tv-watched-${provider}`}
                   label="Delete TV episodes you have already watched"
                   enabled={watchedTv}
-                  disabled={controlsDisabled}
+                  disabled={tvControlsDisabled}
                   onChange={setWatchedTv}
                 />
                 <label className="block text-sm text-[var(--mm-text1)]">
@@ -557,7 +655,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
                     className="mm-input w-full max-w-xs"
                     value={neverTvDays}
                     onChange={(e) => setNeverTvDays(e.target.value)}
-                    disabled={controlsDisabled}
+                    disabled={tvControlsDisabled}
                   />
                 </label>
               </>
@@ -566,64 +664,110 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
               id={`pruner-op-tv-missing-${provider}`}
               label="Delete TV items missing a main poster or episode image"
               enabled={missingPrimaryTv}
-              disabled={controlsDisabled}
+              disabled={tvControlsDisabled}
               onChange={setMissingPrimaryTv}
             />
+
+            <p className={`${narrowingLabelClass} pt-1`}>Optional: narrow by</p>
             <div className="space-y-1">
-              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Genres</span>
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Only these genres</span>
               <PrunerGenreMultiSelect
                 value={genreTv}
                 onChange={setGenreTv}
-                disabled={controlsDisabled}
+                disabled={tvControlsDisabled}
                 testId={`pruner-rules-genre-tv-${provider}`}
+                filterHelperText="Pick genres to limit this cleanup to those genres only."
+                pickerPlaceholder="All genres (no filter)"
               />
             </div>
-            <YearRange min={yearMinTv} max={yearMaxTv} onMin={setYearMinTv} onMax={setYearMaxTv} disabled={controlsDisabled} />
+            <label className="block text-sm text-[var(--mm-text2)]" data-testid={`pruner-provider-tv-people-${provider}`}>
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Only these people</span>
+              <textarea
+                className="mm-input min-h-[6rem] w-full font-sans text-sm"
+                rows={5}
+                placeholder="e.g. Alex Carter, Jordan Lee (comma or one per line)"
+                value={tvPeople}
+                disabled={tvControlsDisabled}
+                onChange={(e) => setTvPeople(e.target.value)}
+              />
+              <span className="mt-1 block text-xs text-[var(--mm-text3)]">Leave blank to include all people.</span>
+            </label>
+            <PrunerPeopleRoleCheckboxes
+              value={tvRoles}
+              onChange={setTvRoles}
+              disabled={tvControlsDisabled}
+              variant={isPlex ? "plex" : "emby-jellyfin"}
+              coerceCastMsg={tvRolesCoerceMsg}
+              onClearCoerceMsg={() => setTvRolesCoerceMsg(null)}
+              onCoercedToCast={() =>
+                setTvRolesCoerceMsg("At least one role must be selected — defaulting to cast.")
+              }
+              testId={`pruner-provider-tv-people-roles-${provider}`}
+              rolesHeading="Match names against these credits"
+              footerHelper="Only applies when names are entered above."
+            />
             <CommaField
-              label="Studio"
+              label="Only these studios"
               placeholder="e.g. Warner Bros., BBC"
-              helper="Leave blank for all studios"
+              helper="Leave blank for all studios."
               value={studioTv}
               onChange={setStudioTv}
-              disabled={controlsDisabled}
+              disabled={tvControlsDisabled}
             />
-            {isPlex ? (
-              <label className="block text-sm text-[var(--mm-text2)]" data-testid="pruner-plex-rules-tv-names">
-                <span className="mb-1 block text-xs text-[var(--mm-text3)]">Names</span>
-                <textarea
-                  className="mm-input min-h-[6rem] w-full font-sans text-sm"
-                  rows={4}
-                  placeholder="e.g. Alex Carter, Jordan Lee (comma or one per line)"
-                  value={plexTvPeopleLines}
-                  disabled={controlsDisabled}
-                  onChange={(e) => setPlexTvPeopleLines(e.target.value)}
-                />
-                <span className="mt-1 block text-xs text-[var(--mm-text3)]">Leave blank to use no name filter.</span>
-              </label>
-            ) : null}
+            <YearRange
+              min={yearMinTv}
+              max={yearMaxTv}
+              onMin={setYearMinTv}
+              onMax={setYearMaxTv}
+              disabled={tvControlsDisabled}
+              helperText="Leave blank for all years."
+            />
+
+            <PrunerCleanupRunBlock
+              instanceId={instanceId}
+              mediaScope="tv"
+              testIdPrefix="pruner-cleanup"
+              ensureSaved={ensureTvSaved}
+              dryRunEnabled={dryRunTv}
+              onDryRunEnabledChange={setDryRunTv}
+              runDisabled={runDisabled}
+              controlsDisabled={tvControlsDisabled}
+            />
+
             {canOperate ? (
               <button
                 type="button"
-                className={fetcherMenuButtonClass({ variant: "primary", disabled: saveDisabled })}
-                disabled={saveDisabled}
+                className={fetcherMenuButtonClass({ variant: "primary", disabled: saveDisabledTv })}
+                disabled={saveDisabledTv}
                 onClick={() => void saveTv()}
               >
-                {busy ? "Saving…" : "Save TV rules"}
+                {busyTv ? "Saving…" : "Save TV criteria"}
               </button>
+            ) : null}
+            {msgTv ? (
+              <p className="text-sm text-green-600" role="status">
+                {msgTv}
+              </p>
+            ) : null}
+            {errTv ? (
+              <p className="text-sm text-red-500" role="alert">
+                {errTv}
+              </p>
             ) : null}
           </div>
         </fieldset>
 
-        <fieldset disabled={controlsDisabled} className="min-w-0 border-0 p-0 lg:border-l lg:border-[var(--mm-border)] lg:pl-8">
+        <fieldset disabled={moviesControlsDisabled} className="min-w-0 border-0 p-0 lg:border-l lg:border-[var(--mm-border)] lg:pl-8">
           <div className="min-w-0 space-y-5" data-testid={`pruner-provider-movies-config-${provider}`}>
             <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">
               <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">Movies</span>
             </div>
+            <p className={narrowingLabelClass}>Rules</p>
             <MmOnOffSwitch
               id={`pruner-op-mov-watched-${provider}`}
               label="Delete movies you have already watched"
               enabled={watchedMovies}
-              disabled={controlsDisabled}
+              disabled={moviesControlsDisabled}
               onChange={setWatchedMovies}
             />
             <label className="block text-sm text-[var(--mm-text1)]" htmlFor={`pruner-op-mov-lowrating-${provider}`}>
@@ -641,7 +785,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
                 className="mm-input w-full max-w-xs"
                 value={lowRatingMovies}
                 onChange={(e) => setLowRatingMovies(e.target.value)}
-                disabled={controlsDisabled}
+                disabled={moviesControlsDisabled}
               />
             </label>
             <label className="block text-sm text-[var(--mm-text2)]">
@@ -655,7 +799,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
                 className="mm-input w-full max-w-xs"
                 value={unwatchedDays}
                 onChange={(e) => setUnwatchedDays(e.target.value)}
-                disabled={controlsDisabled}
+                disabled={moviesControlsDisabled}
               />
             </label>
             {!isPlex ? (
@@ -663,75 +807,110 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
                 id={`pruner-op-mov-missing-${provider}`}
                 label="Delete movies missing a main poster"
                 enabled={missingPrimaryMovies}
-                disabled={controlsDisabled}
+                disabled={moviesControlsDisabled}
                 onChange={setMissingPrimaryMovies}
               />
             ) : null}
+
+            <p className={`${narrowingLabelClass} pt-1`}>Optional: narrow by</p>
             <div className="space-y-1">
-              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Genres</span>
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Only these genres</span>
               <PrunerGenreMultiSelect
                 value={genreMovies}
                 onChange={setGenreMovies}
-                disabled={controlsDisabled}
+                disabled={moviesControlsDisabled}
                 testId={`pruner-rules-genre-movies-${provider}`}
+                filterHelperText="Pick genres to limit this cleanup to those genres only."
+                pickerPlaceholder="All genres (no filter)"
               />
             </div>
+            <label className="block text-sm text-[var(--mm-text2)]" data-testid={`pruner-provider-movies-people-${provider}`}>
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Only these people</span>
+              <textarea
+                className="mm-input min-h-[6rem] w-full font-sans text-sm"
+                rows={5}
+                placeholder="e.g. Alex Carter, Jordan Lee (comma or one per line)"
+                value={moviesPeople}
+                disabled={moviesControlsDisabled}
+                onChange={(e) => setMoviesPeople(e.target.value)}
+              />
+              <span className="mt-1 block text-xs text-[var(--mm-text3)]">Leave blank to include all people.</span>
+            </label>
+            <PrunerPeopleRoleCheckboxes
+              value={moviesRoles}
+              onChange={setMoviesRoles}
+              disabled={moviesControlsDisabled}
+              variant={isPlex ? "plex" : "emby-jellyfin"}
+              coerceCastMsg={moviesRolesCoerceMsg}
+              onClearCoerceMsg={() => setMoviesRolesCoerceMsg(null)}
+              onCoercedToCast={() =>
+                setMoviesRolesCoerceMsg("At least one role must be selected — defaulting to cast.")
+              }
+              testId={`pruner-provider-movies-people-roles-${provider}`}
+              rolesHeading="Match names against these credits"
+              footerHelper="Only applies when names are entered above."
+            />
+            <CommaField
+              label="Only these studios"
+              placeholder="e.g. Warner Bros., BBC"
+              helper="Leave blank for all studios."
+              value={studioMovies}
+              onChange={setStudioMovies}
+              disabled={moviesControlsDisabled}
+            />
+            {isPlex ? (
+              <CommaField
+                label="Only these collections"
+                placeholder="e.g. MCU, Pixar"
+                helper="Leave blank for all collections."
+                value={moviesCollections}
+                onChange={setMoviesCollections}
+                disabled={moviesControlsDisabled}
+              />
+            ) : null}
             <YearRange
               min={yearMinMovies}
               max={yearMaxMovies}
               onMin={setYearMinMovies}
               onMax={setYearMaxMovies}
-              disabled={controlsDisabled}
+              disabled={moviesControlsDisabled}
+              helperText="Leave blank for all years."
             />
-            <CommaField
-              label="Studio"
-              placeholder="e.g. Warner Bros., BBC"
-              helper="Leave blank for all studios"
-              value={studioMovies}
-              onChange={setStudioMovies}
-              disabled={controlsDisabled}
+
+            <PrunerCleanupRunBlock
+              instanceId={instanceId}
+              mediaScope="movies"
+              testIdPrefix="pruner-cleanup"
+              ensureSaved={ensureMoviesSaved}
+              dryRunEnabled={dryRunMovies}
+              onDryRunEnabledChange={setDryRunMovies}
+              runDisabled={runDisabled}
+              controlsDisabled={moviesControlsDisabled}
             />
+
             {canOperate ? (
               <button
                 type="button"
-                className={fetcherMenuButtonClass({ variant: "primary", disabled: saveDisabled })}
-                disabled={saveDisabled}
+                className={fetcherMenuButtonClass({ variant: "primary", disabled: saveDisabledMovies })}
+                disabled={saveDisabledMovies}
                 onClick={() => void saveMovies()}
               >
-                {busy ? "Saving…" : "Save Movies rules"}
+                {busyMovies ? "Saving…" : "Save Movies criteria"}
               </button>
+            ) : null}
+            {msgMovies ? (
+              <p className="text-sm text-green-600" role="status">
+                {msgMovies}
+              </p>
+            ) : null}
+            {errMovies ? (
+              <p className="text-sm text-red-500" role="alert">
+                {errMovies}
+              </p>
             ) : null}
           </div>
         </fieldset>
       </div>
-
-      {instanceId > 0 ? (
-        <>
-          <PrunerDryRunControls
-            instanceId={instanceId}
-            mediaScope="tv"
-            testIdPrefix="pruner-rules"
-            ensureSaved={ensureRulesSavedForDryRun}
-          />
-          <PrunerDryRunControls
-            instanceId={instanceId}
-            mediaScope="movies"
-            testIdPrefix="pruner-rules"
-            ensureSaved={ensureRulesSavedForDryRun}
-          />
-        </>
-      ) : null}
-
-      {msg ? (
-        <p className="mt-4 text-sm text-green-600" role="status">
-          {msg}
-        </p>
-      ) : null}
-      {err ? (
-        <p className="mt-2 text-sm text-red-500" role="alert">
-          {err}
-        </p>
-      ) : null}
     </div>
   );
 }
@@ -773,16 +952,18 @@ function YearRange({
   onMin,
   onMax,
   disabled,
+  helperText,
 }: {
   min: string;
   max: string;
   onMin: (v: string) => void;
   onMax: (v: string) => void;
   disabled: boolean;
+  helperText?: string;
 }) {
   return (
     <div className="space-y-1">
-      <span className="text-xs font-medium text-[var(--mm-text3)]">Year range</span>
+      <span className="text-xs font-medium text-[var(--mm-text3)]">Only these years</span>
       <div className="flex flex-wrap items-end gap-3">
         <label className="text-sm text-[var(--mm-text2)]">
           Min year
@@ -793,232 +974,7 @@ function YearRange({
           <input type="text" inputMode="numeric" className="mm-input ml-2 w-28" value={max} disabled={disabled} onChange={(e) => onMax(e.target.value)} />
         </label>
       </div>
-      <p className="text-xs text-[var(--mm-text3)]">Leave blank for open-ended.</p>
-    </div>
-  );
-}
-
-type PeopleCardProps = {
-  provider: ProviderKey;
-  instanceId: number;
-  instance: PrunerServerInstance;
-};
-
-export function PrunerProviderPeopleCard({ provider, instanceId, instance }: PeopleCardProps) {
-  const qc = useQueryClient();
-  const me = useMeQuery();
-  const canOperate = me.data?.role === "admin" || me.data?.role === "operator";
-  const isPlex = provider === "plex";
-  const tv = scopeRow(instance, "tv");
-  const movies = scopeRow(instance, "movies");
-  const [tvPeople, setTvPeople] = useState("");
-  const [moviesPeople, setMoviesPeople] = useState("");
-  const [tvRoles, setTvRoles] = useState<PrunerPeopleRoleId[]>([...DEFAULT_PRUNER_PEOPLE_ROLES]);
-  const [moviesRoles, setMoviesRoles] = useState<PrunerPeopleRoleId[]>([...DEFAULT_PRUNER_PEOPLE_ROLES]);
-  const [tvRolesCoerceMsg, setTvRolesCoerceMsg] = useState<string | null>(null);
-  const [moviesRolesCoerceMsg, setMoviesRolesCoerceMsg] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-
-  useEffect(() => {
-    setTvPeople(((tv?.preview_include_people ?? []) as string[]).join("\n"));
-  }, [tv?.preview_include_people]);
-
-  useEffect(() => {
-    setMoviesPeople(((movies?.preview_include_people ?? []) as string[]).join("\n"));
-  }, [movies?.preview_include_people]);
-
-  useEffect(() => {
-    setTvRoles(isPlex ? peopleRolesForPlexUiState(tv?.preview_include_people_roles) : normalizePeopleRolesFromApi(tv?.preview_include_people_roles));
-  }, [isPlex, tv?.preview_include_people_roles]);
-
-  useEffect(() => {
-    setMoviesRoles(
-      isPlex ? peopleRolesForPlexUiState(movies?.preview_include_people_roles) : normalizePeopleRolesFromApi(movies?.preview_include_people_roles),
-    );
-  }, [isPlex, movies?.preview_include_people_roles]);
-
-  async function persistTvPeople(): Promise<void> {
-    if (!tv) return;
-    const csrf_token = await fetchCsrfToken();
-    const rolesPersist = isPlex ? peopleRolesForPlexPersist(tvRoles) : [...tvRoles];
-    await patchPrunerScope(instanceId, "tv", {
-      preview_include_people: parsePeopleLines(tvPeople),
-      preview_include_people_roles: rolesPersist,
-      csrf_token,
-    });
-    await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
-  }
-
-  async function persistMoviesPeople(): Promise<void> {
-    if (!movies) return;
-    const csrf_token = await fetchCsrfToken();
-    const rolesPersist = isPlex ? peopleRolesForPlexPersist(moviesRoles) : [...moviesRoles];
-    await patchPrunerScope(instanceId, "movies", {
-      preview_include_people: parsePeopleLines(moviesPeople),
-      preview_include_people_roles: rolesPersist,
-      csrf_token,
-    });
-    await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
-  }
-
-  async function saveTvPeople() {
-    if (!tv) return;
-    setBusy(true);
-    setErr(null);
-    setMsg(null);
-    try {
-      await persistTvPeople();
-      setTvRolesCoerceMsg(null);
-      setMsg("Saved TV people.");
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function saveMoviesPeople() {
-    if (!movies) return;
-    setBusy(true);
-    setErr(null);
-    setMsg(null);
-    try {
-      await persistMoviesPeople();
-      setMoviesRolesCoerceMsg(null);
-      setMsg("Saved Movies people.");
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function ensurePeopleSavedForDryRun() {
-    await persistTvPeople();
-    await persistMoviesPeople();
-  }
-
-  const controlsDisabled = !canOperate || busy;
-  const saveDisabled = busy || !canOperate || instanceId <= 0;
-
-  return (
-    <div
-      className="mm-card mm-dash-card border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 sm:p-6"
-      data-testid={`pruner-provider-people-card-${provider}`}
-      data-provider-section="people"
-    >
-      <div className="grid gap-8 lg:grid-cols-2 lg:gap-10">
-        <fieldset disabled={controlsDisabled} className="min-w-0 border-0 p-0">
-          <div className="min-w-0 space-y-3" data-testid={`pruner-provider-tv-people-${provider}`}>
-            <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">
-              <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">TV</span>
-            </div>
-            <label className="block text-sm text-[var(--mm-text2)]">
-              <span className="mb-1 block text-xs text-[var(--mm-text3)]">Names</span>
-              <textarea
-                className="mm-input min-h-[7rem] w-full font-sans text-sm"
-                rows={5}
-                placeholder="e.g. Alex Carter, Jordan Lee (comma or one per line)"
-                value={tvPeople}
-                disabled={controlsDisabled}
-                onChange={(e) => setTvPeople(e.target.value)}
-              />
-            </label>
-            <p className="text-xs text-[var(--mm-text3)]">Leave blank to use no name filter.</p>
-            <PrunerPeopleRoleCheckboxes
-              value={tvRoles}
-              onChange={setTvRoles}
-              disabled={controlsDisabled}
-              variant={isPlex ? "plex" : "emby-jellyfin"}
-              coerceCastMsg={tvRolesCoerceMsg}
-              onClearCoerceMsg={() => setTvRolesCoerceMsg(null)}
-              onCoercedToCast={() =>
-                setTvRolesCoerceMsg("At least one role must be selected — defaulting to cast.")
-              }
-              testId={`pruner-provider-tv-people-roles-${provider}`}
-            />
-            {canOperate ? (
-              <button
-                type="button"
-                className={fetcherMenuButtonClass({ variant: "primary", disabled: saveDisabled })}
-                disabled={saveDisabled}
-                onClick={() => void saveTvPeople()}
-              >
-                {busy ? "Saving…" : "Save TV people"}
-              </button>
-            ) : null}
-          </div>
-        </fieldset>
-        <fieldset disabled={controlsDisabled} className="min-w-0 border-0 p-0 lg:border-l lg:border-[var(--mm-border)] lg:pl-8">
-          <div className="min-w-0 space-y-3" data-testid={`pruner-provider-movies-people-${provider}`}>
-            <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">
-              <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">Movies</span>
-            </div>
-            <label className="block text-sm text-[var(--mm-text2)]">
-              <span className="mb-1 block text-xs text-[var(--mm-text3)]">Names</span>
-              <textarea
-                className="mm-input min-h-[7rem] w-full font-sans text-sm"
-                rows={5}
-                placeholder="e.g. Alex Carter, Jordan Lee (comma or one per line)"
-                value={moviesPeople}
-                disabled={controlsDisabled}
-                onChange={(e) => setMoviesPeople(e.target.value)}
-              />
-            </label>
-            <p className="text-xs text-[var(--mm-text3)]">Leave blank to use no name filter.</p>
-            <PrunerPeopleRoleCheckboxes
-              value={moviesRoles}
-              onChange={setMoviesRoles}
-              disabled={controlsDisabled}
-              variant={isPlex ? "plex" : "emby-jellyfin"}
-              coerceCastMsg={moviesRolesCoerceMsg}
-              onClearCoerceMsg={() => setMoviesRolesCoerceMsg(null)}
-              onCoercedToCast={() =>
-                setMoviesRolesCoerceMsg("At least one role must be selected — defaulting to cast.")
-              }
-              testId={`pruner-provider-movies-people-roles-${provider}`}
-            />
-            {canOperate ? (
-              <button
-                type="button"
-                className={fetcherMenuButtonClass({ variant: "primary", disabled: saveDisabled })}
-                disabled={saveDisabled}
-                onClick={() => void saveMoviesPeople()}
-              >
-                {busy ? "Saving…" : "Save Movies people"}
-              </button>
-            ) : null}
-          </div>
-        </fieldset>
-      </div>
-      {instanceId > 0 ? (
-        <>
-          <PrunerDryRunControls
-            instanceId={instanceId}
-            mediaScope="tv"
-            testIdPrefix="pruner-people"
-            ensureSaved={ensurePeopleSavedForDryRun}
-          />
-          <PrunerDryRunControls
-            instanceId={instanceId}
-            mediaScope="movies"
-            testIdPrefix="pruner-people"
-            ensureSaved={ensurePeopleSavedForDryRun}
-          />
-        </>
-      ) : null}
-      {msg ? (
-        <p className="mt-4 text-sm text-green-600" role="status">
-          {msg}
-        </p>
-      ) : null}
-      {err ? (
-        <p className="mt-2 text-sm text-red-500" role="alert">
-          {err}
-        </p>
-      ) : null}
+      <p className="text-xs text-[var(--mm-text3)]">{helperText ?? "Leave blank for open-ended."}</p>
     </div>
   );
 }

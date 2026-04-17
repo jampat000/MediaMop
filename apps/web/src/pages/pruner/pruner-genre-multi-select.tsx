@@ -54,28 +54,36 @@ export function PrunerGenreMultiSelect({
   onChange,
   disabled,
   testId,
+  filterHelperText,
+  pickerPlaceholder,
 }: {
   value: string[];
   onChange: (next: string[]) => void;
   disabled: boolean;
   testId?: string;
+  /** When set, replaces the default genre filter helper paragraph. */
+  filterHelperText?: string;
+  /** Trigger / picker placeholder (e.g. "All genres (no filter)"). */
+  pickerPlaceholder?: string;
 }) {
   const summary = genreTriggerSummary(value);
+  const helper =
+    filterHelperText ??
+    "Leave none selected to include every genre. Pick one or more to limit scans to those genres only.";
+  const placeholder = pickerPlaceholder ?? "All genres";
 
   return (
     <div className="space-y-2" data-testid={testId ?? "pruner-genre-multiselect"}>
       <span className="sr-only" data-testid="pruner-genre-multiselect-summary">
         {summary}
       </span>
-      <p className="text-xs text-[var(--mm-text3)]">
-        Leave none selected to include every genre. Pick one or more to limit scans to those genres only.
-      </p>
+      <p className="text-xs text-[var(--mm-text3)]">{helper}</p>
       <MmMultiListboxPicker
         options={GENRE_LISTBOX_OPTIONS}
         values={value}
         onChange={onChange}
         disabled={disabled}
-        placeholder="All genres"
+        placeholder={placeholder}
         summaryText={summary}
         data-testid={testId ? `${testId}-picker` : "pruner-genre-multiselect-picker"}
       />
