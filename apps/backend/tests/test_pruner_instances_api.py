@@ -22,6 +22,11 @@ from mediamop.modules.pruner.pruner_job_kinds import (
 from mediamop.modules.pruner.pruner_jobs_model import PrunerJob
 from mediamop.modules.pruner.pruner_scope_settings_model import PrunerScopeSettings
 from mediamop.modules.pruner.pruner_server_instance_model import PrunerServerInstance
+from tests.integration_app_runtime_quiesce import (
+    integration_test_quiesce_in_process_workers,
+    integration_test_quiesce_periodic_enqueue,
+    integration_test_set_home,
+)
 from tests.integration_helpers import auth_post, csrf as fetch_csrf, seed_admin_user, seed_viewer_user
 
 import mediamop.modules.pruner.pruner_jobs_model  # noqa: F401
@@ -34,25 +39,9 @@ import mediamop.platform.auth.models  # noqa: F401
 
 @pytest.fixture(autouse=True)
 def _isolated_pruner_instances_api_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    home = tmp_path / "mmhome_pruner_api"
-    home.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setenv("MEDIAMOP_HOME", str(home))
-    monkeypatch.setenv("MEDIAMOP_FETCHER_WORKER_COUNT", "0")
-    monkeypatch.setenv("MEDIAMOP_REFINER_WORKER_COUNT", "0")
-    monkeypatch.setenv("MEDIAMOP_PRUNER_WORKER_COUNT", "0")
-    monkeypatch.setenv("MEDIAMOP_SUBBER_WORKER_COUNT", "0")
-    monkeypatch.setenv("MEDIAMOP_REFINER_SUPPLIED_PAYLOAD_EVALUATION_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_REFINER_MOVIE_FAILURE_CLEANUP_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_REFINER_TV_FAILURE_CLEANUP_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_FAILED_IMPORT_RADARR_CLEANUP_DRIVE_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_FAILED_IMPORT_SONARR_CLEANUP_DRIVE_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_FETCHER_SONARR_MISSING_SEARCH_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_FETCHER_SONARR_UPGRADE_SEARCH_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_FETCHER_RADARR_MISSING_SEARCH_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_FETCHER_RADARR_UPGRADE_SEARCH_SCHEDULE_ENABLED", "0")
+    integration_test_set_home(tmp_path, monkeypatch, "mmhome_pruner_api")
+    integration_test_quiesce_in_process_workers(monkeypatch)
+    integration_test_quiesce_periodic_enqueue(monkeypatch)
 
     backend = Path(__file__).resolve().parents[1]
     cfg = Config(str(backend / "alembic.ini"))

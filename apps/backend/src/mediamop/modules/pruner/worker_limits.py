@@ -2,7 +2,7 @@
 
 - **0** — in-process Pruner asyncio workers disabled.
 - **1** — supported default for SQLite-first deployments.
-- **2..8** — guarded only (same posture as Refiner under single-writer SQLite).
+- **2..8** — guarded only (same single-writer SQLite posture as other worker lanes).
 """
 
 

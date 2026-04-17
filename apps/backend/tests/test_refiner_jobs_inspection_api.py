@@ -15,6 +15,11 @@ from mediamop.api.factory import create_app
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from tests.integration_app_runtime_quiesce import (
+    integration_test_quiesce_in_process_workers,
+    integration_test_quiesce_periodic_enqueue,
+    integration_test_set_home,
+)
 from tests.integration_helpers import auth_post, csrf as fetch_csrf, seed_admin_user, seed_viewer_user
 
 import mediamop.modules.refiner.jobs_model  # noqa: F401
@@ -29,26 +34,10 @@ def _isolated_refiner_jobs_inspection_runtime(
 ) -> None:
     """Use a per-test MEDIAMOP_HOME so jobs rows cannot race with other tests/apps."""
 
-    home = tmp_path / "mediamop_home"
-    home.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setenv("MEDIAMOP_HOME", str(home))
-    monkeypatch.setenv("MEDIAMOP_FETCHER_WORKER_COUNT", "0")
-    monkeypatch.setenv("MEDIAMOP_REFINER_WORKER_COUNT", "0")
-    monkeypatch.setenv("MEDIAMOP_PRUNER_WORKER_COUNT", "0")
-    monkeypatch.setenv("MEDIAMOP_SUBBER_WORKER_COUNT", "0")
+    integration_test_set_home(tmp_path, monkeypatch, "mediamop_home")
+    integration_test_quiesce_in_process_workers(monkeypatch)
     # Keep all periodic enqueue loops off in this file to ensure deterministic inspection slices.
-    monkeypatch.setenv("MEDIAMOP_REFINER_SUPPLIED_PAYLOAD_EVALUATION_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_REFINER_MOVIE_FAILURE_CLEANUP_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_REFINER_TV_FAILURE_CLEANUP_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_FAILED_IMPORT_RADARR_CLEANUP_DRIVE_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_FAILED_IMPORT_SONARR_CLEANUP_DRIVE_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_FETCHER_SONARR_MISSING_SEARCH_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_FETCHER_SONARR_UPGRADE_SEARCH_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_FETCHER_RADARR_MISSING_SEARCH_SCHEDULE_ENABLED", "0")
-    monkeypatch.setenv("MEDIAMOP_FETCHER_RADARR_UPGRADE_SEARCH_SCHEDULE_ENABLED", "0")
+    integration_test_quiesce_periodic_enqueue(monkeypatch)
 
     backend = Path(__file__).resolve().parents[1]
     cfg = Config(str(backend / "alembic.ini"))
