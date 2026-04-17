@@ -32,7 +32,12 @@ function canApplyFromPreviewSnapshot(
   return provider === "plex" && row.rule_family_id === RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED;
 }
 
-export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?: Ctx; disabledMode?: boolean }) {
+export function PrunerScopeTab(props: {
+  scope: "tv" | "movies";
+  contextOverride?: Ctx;
+  disabledMode?: boolean;
+  compactMode?: boolean;
+}) {
   const outletCtx = useOutletContext<Ctx>();
   const { instanceId, instance } = props.contextOverride ?? outletCtx;
   const me = useMeQuery();
@@ -72,12 +77,14 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
   const [collectionMsg, setCollectionMsg] = useState<string | null>(null);
   const [previewMaxItems, setPreviewMaxItems] = useState(500);
   const [previewMaxItemsMsg, setPreviewMaxItemsMsg] = useState<string | null>(null);
+  const compactMode = Boolean(props.compactMode);
   const canOperate = me.data?.role === "admin" || me.data?.role === "operator";
   const showInteractiveControls = canOperate || Boolean(props.disabledMode);
 
   const scopeRow = instance?.scopes.find((s) => s.media_scope === props.scope);
   const label = props.scope === "tv" ? "TV (episodes)" : "Movies (one row per movie item)";
   const isPlex = instance?.provider === "plex";
+  const sectionWord = compactMode ? "scope" : "tab";
 
   function ruleFamilyColumnLabel(id: string): string {
     if (id === RULE_FAMILY_WATCHED_TV_REPORTED) return "Watched TV (episodes)";
@@ -93,7 +100,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
   const runsQuery = useQuery({
     queryKey: previewRunsQueryKey,
     queryFn: () => fetchPrunerPreviewRuns(instanceId, { media_scope: props.scope, limit: 25 }),
-    enabled: Boolean(instanceId),
+    enabled: !compactMode && Boolean(instanceId),
   });
 
   const applyEligQuery = useQuery({
@@ -632,17 +639,9 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
       <h2 id="pruner-scope-heading" className="text-base font-semibold text-[var(--mm-text)]">
         {label}
       </h2>
-      <div
-        className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-surface2)]/30 px-3 py-2 text-xs text-[var(--mm-text2)]"
-        data-testid={`pruner-scope-legacy-grouping-${props.scope}`}
-      >
-        <strong className="text-[var(--mm-text1)]">Legacy Trimmer pattern on this scope:</strong> Schedule & limits,
-        rule families, and people/genre filtering are grouped below on one flat page section.
-      </div>
       {props.disabledMode ? (
         <p className="rounded-md border border-dashed border-[var(--mm-border)] bg-[var(--mm-surface2)]/35 px-3 py-2 text-xs text-[var(--mm-text2)]">
-          Save this provider connection first. These are the real deletion/removal controls and become active after
-          connection is saved.
+          Save this provider connection first to activate these controls.
         </p>
       ) : null}
       <div
@@ -692,16 +691,16 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
           <strong className="text-[var(--mm-text)]">Previews</strong> collect candidates you can inspect (including JSON).
           <strong className="text-[var(--mm-text)]"> Apply</strong> always uses the{" "}
           <strong className="text-[var(--mm-text)]">selected preview snapshot only</strong>. It does not re-scan the
-          library, widen the list, or re-run narrowing filters from this tab.
+          library, widen the list, or re-run narrowing filters from this {sectionWord}.
         </p>
       </div>
-      {!isPlex ? (
+      {!compactMode && !isPlex ? (
         <p className="text-sm text-[var(--mm-text2)]">
           {props.scope === "tv"
             ? "Previews list episodes missing a primary image (episode-level rows only), or episodes that are unplayed for the MediaMop token and older than your age threshold by library DateCreated — each rule has its own preview queue."
             : "Previews list movie items missing a primary image (one row per movie), movies the server marks watched for the MediaMop token, or movies that are unplayed and older than your age threshold by library DateCreated — each rule has its own preview queue."}
         </p>
-      ) : (
+      ) : !compactMode ? (
         <p className="text-sm text-[var(--mm-text2)]">
           For <strong>Remove broken library entries</strong>, Plex uses the same{" "}
           <strong>preview → inspect JSON → apply</strong> flow as Jellyfin and Emby on this tab. Missing-primary preview
@@ -715,7 +714,12 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
           counts it as skipped. MediaMop does not claim whether Plex removes only metadata or also media files — that
           depends on your Plex server.
         </p>
-      )}
+      ) : null}
+      {compactMode ? (
+        <p className="text-xs text-[var(--mm-text2)]">
+          Queue preview to collect a frozen candidate snapshot for this scope, then apply from that snapshot only.
+        </p>
+      ) : null}
       {isPlex && scopeRow ? (
         <p className="text-xs text-[var(--mm-text2)]" data-testid="pruner-plex-preview-cap-note">
           Missing-primary Plex previews collect at most{" "}
@@ -732,7 +736,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
           Preview narrowing filters
         </h3>
         <p className="text-xs text-[var(--mm-text2)]">
-          These filters narrow preview collection for this {props.scope === "tv" ? "TV" : "Movies"} tab only. Apply
+          These filters narrow preview collection for this {props.scope === "tv" ? "TV" : "Movies"} {sectionWord} only. Apply
           still uses only the selected preview snapshot.
         </p>
       </div>
@@ -741,7 +745,9 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
           className="space-y-2 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text)]"
           data-testid="pruner-genre-filters-panel"
         >
-          <p className="text-sm font-semibold text-[var(--mm-text)]">Optional preview genre include (this tab only)</p>
+          <p className="text-sm font-semibold text-[var(--mm-text)]">
+            Optional preview genre include (this {sectionWord} only)
+          </p>
           <p className="text-xs text-[var(--mm-text2)]">
             Comma-separated names. When set, preview jobs on this tab only return items whose server-reported genres
             include a case-insensitive match for at least one listed name. This narrows preview collection only — apply
@@ -749,8 +755,8 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
           </p>
           <p className="text-xs text-[var(--mm-text2)]">
             {isPlex
-              ? "Plex: genre filters apply to every preview on this tab that reads allLeaves (missing-primary, watched movies, low-rating, unwatched stale) using Genre tags on each leaf."
-              : "Jellyfin / Emby: uses each item’s Genres field from the Items API for every preview rule on this tab."}
+              ? "Plex: genre filters apply to every preview on this scope that reads allLeaves (missing-primary, watched movies, low-rating, unwatched stale) using Genre tags on each leaf."
+              : "Jellyfin / Emby: uses each item’s Genres field from the Items API for every preview rule on this scope."}
           </p>
           {isPlex ? (
             <p
@@ -796,7 +802,9 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
           className="space-y-2 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text)]"
           data-testid="pruner-people-filters-panel"
         >
-          <p className="text-sm font-semibold text-[var(--mm-text)]">Optional preview people include (this tab only)</p>
+          <p className="text-sm font-semibold text-[var(--mm-text)]">
+            Optional preview people include (this {sectionWord} only)
+          </p>
           <p className="text-xs text-[var(--mm-text2)]">
             Comma-separated <strong>person names</strong> (one full name per entry). Preview keeps only items where at
             least one server-reported name matches one entry, using exact case-insensitive equality after trimming. This
@@ -804,14 +812,14 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
           </p>
           {isPlex ? (
             <p className="text-xs text-[var(--mm-text2)]" data-testid="pruner-people-plex-note">
-              Plex: applies to previews that read <code className="text-[0.85em]">allLeaves</code> on this tab (missing
+              Plex: applies to previews that read <code className="text-[0.85em]">allLeaves</code> on this scope (missing
               primary art, watched movies, low-rating, unwatched stale). Names come from <strong>Role</strong>,{" "}
               <strong>Writer</strong>, and <strong>Director</strong> tag strings on each leaf (no separate metadata fetch).
             </p>
           ) : (
             <p className="text-xs text-[var(--mm-text2)]" data-testid="pruner-people-jf-emby-note">
               Jellyfin / Emby: uses each item&apos;s <strong>People</strong> list from the Items API when filters are
-              saved (MediaMop requests explicit Fields). Applies to every preview rule on this tab.
+              saved (MediaMop requests explicit Fields). Applies to every preview rule on this scope.
             </p>
           )}
           {showInteractiveControls ? (
@@ -852,7 +860,9 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
           className="space-y-2 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text)]"
           data-testid="pruner-year-filters-panel"
         >
-          <p className="text-sm font-semibold text-[var(--mm-text)]">Optional preview year range (this tab only)</p>
+          <p className="text-sm font-semibold text-[var(--mm-text)]">
+            Optional preview year range (this {sectionWord} only)
+          </p>
           <p className="text-xs text-[var(--mm-text2)]">
             Leave a box empty to leave that side open. When either bound is set, items with <strong>no</strong>{" "}
             provider-reported year never match. Jellyfin/Emby use <code className="text-[0.85em]">ProductionYear</code>{" "}
@@ -912,7 +922,9 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
           className="space-y-2 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text)]"
           data-testid="pruner-studio-preview-panel"
         >
-          <p className="text-sm font-semibold text-[var(--mm-text)]">Optional preview studio include (this tab only)</p>
+          <p className="text-sm font-semibold text-[var(--mm-text)]">
+            Optional preview studio include (this {sectionWord} only)
+          </p>
           <p className="text-xs text-[var(--mm-text2)]">
             Comma-separated studio names — exact case-insensitive match against Jellyfin/Emby{" "}
             <code className="text-[0.85em]">Studios</code> or Plex <code className="text-[0.85em]">Studio</code> tags (and
@@ -1006,7 +1018,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
           role="status"
           data-testid="pruner-plex-other-rules-note"
         >
-          <p className="font-medium text-amber-100">Other Pruner rules on Plex (this tab)</p>
+          <p className="font-medium text-amber-100">Other Pruner rules on Plex (this scope)</p>
           <p className="mt-1 text-xs text-[var(--mm-text2)]">
             {props.scope === "movies" ? (
               <>
@@ -1054,8 +1066,8 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
                   onChange={(e) => setStaleNeverEnabled(e.target.checked)}
                 />
                 {props.scope === "tv"
-                  ? "Enable never-played TV older-than rule for this tab"
-                  : "Enable never-played older-than rule for this tab"}
+                  ? "Enable never-played TV older-than rule for this scope"
+                  : "Enable never-played older-than rule for this scope"}
               </label>
               <div className="flex flex-wrap items-center gap-2">
                 <label className="text-sm text-[var(--mm-text2)]">
@@ -1109,7 +1121,9 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
             className="space-y-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text)]"
             data-testid="pruner-watched-tv-panel"
           >
-            <p className="text-sm font-semibold text-[var(--mm-text)]">Watched TV (Jellyfin / Emby, TV tab only)</p>
+            <p className="text-sm font-semibold text-[var(--mm-text)]">
+              Watched TV (Jellyfin / Emby, TV scope only)
+            </p>
             <p className="text-xs text-[var(--mm-text2)]">
               Candidates are <strong>episodes</strong> the server reports as <strong>watched</strong> for the MediaMop
               library user (same API token as other Pruner rules). Movies are not in this pass — use the Movies tab for
@@ -1128,7 +1142,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
                     disabled={busy}
                     onChange={(e) => setWatchedTvEnabled(e.target.checked)}
                   />
-                  Enable watched TV rule for this TV tab
+                  Enable watched TV rule for this TV scope
                 </label>
                 <button
                   type="button"
@@ -1185,7 +1199,9 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
               data-testid="pruner-watched-movies-panel"
             >
               <p className="text-sm font-semibold text-[var(--mm-text)]">
-                {isPlex ? "Watched movies (Plex, Movies tab only)" : "Watched movies (Jellyfin / Emby, Movies tab only)"}
+                {isPlex
+                  ? "Watched movies (Plex, Movies scope only)"
+                  : "Watched movies (Jellyfin / Emby, Movies scope only)"}
               </p>
               <p className="text-xs text-[var(--mm-text2)]">
                 {isPlex ? (
@@ -1216,7 +1232,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
                       disabled={busy}
                       onChange={(e) => setWatchedMoviesEnabled(e.target.checked)}
                     />
-                    Enable watched movies rule for this Movies tab
+                    Enable watched movies rule for this Movies scope
                   </label>
                   <button
                     type="button"
@@ -1252,8 +1268,8 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
             >
               <p className="text-sm font-semibold text-[var(--mm-text)]">
                 {isPlex
-                  ? "Watched low-rating movies (Plex, Movies tab only)"
-                  : "Watched low-rating movies (Jellyfin / Emby, Movies tab only)"}
+                  ? "Watched low-rating movies (Plex, Movies scope only)"
+                  : "Watched low-rating movies (Jellyfin / Emby, Movies scope only)"}
               </p>
               <p className="text-xs text-[var(--mm-text2)]">
                 {isPlex ? (
@@ -1282,7 +1298,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
                       disabled={busy}
                       onChange={(e) => setLowRatingEnabled(e.target.checked)}
                     />
-                    Enable watched low-rating movies rule for this Movies tab
+                    Enable watched low-rating movies rule for this Movies scope
                   </label>
                   <label className="flex flex-wrap items-center gap-2 text-sm text-[var(--mm-text2)]">
                     {isPlex
@@ -1337,8 +1353,8 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
             >
               <p className="text-sm font-semibold text-[var(--mm-text)]">
                 {isPlex
-                  ? "Unwatched stale movies (Plex, Movies tab only)"
-                  : "Unwatched stale movies (Jellyfin / Emby, Movies tab only)"}
+                  ? "Unwatched stale movies (Plex, Movies scope only)"
+                  : "Unwatched stale movies (Jellyfin / Emby, Movies scope only)"}
               </p>
               <p className="text-xs text-[var(--mm-text2)]">
                 {isPlex ? (
@@ -1365,7 +1381,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
                       disabled={busy}
                       onChange={(e) => setUnwatchedStaleEnabled(e.target.checked)}
                     />
-                    Enable unwatched stale movies rule for this Movies tab
+                    Enable unwatched stale movies rule for this Movies scope
                   </label>
                   <label className="flex flex-wrap items-center gap-2 text-sm text-[var(--mm-text2)]">
                     Minimum age (days, 7–3650)
@@ -1409,7 +1425,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
             </div>
           </>
         ) : null}
-      {scopeRow ? (
+      {!compactMode && scopeRow ? (
         <div
           className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text2)]"
           data-testid="pruner-scope-latest-preview-summary"
@@ -1442,12 +1458,14 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
       ) : null}
       <div className="mt-1">
         <h3 className="text-sm font-semibold text-[var(--mm-text)]" data-testid="pruner-actions-history-heading">
-          Preview and apply actions
+          {compactMode ? "Preview actions" : "Preview and apply actions"}
         </h3>
-        <p className="text-xs text-[var(--mm-text2)]">
-          Queue previews, inspect rows/JSON, then apply from one selected snapshot. The history table explains no
-          candidates, filtered-out runs, and unsupported outcomes.
-        </p>
+        {compactMode ? null : (
+          <p className="text-xs text-[var(--mm-text2)]">
+            Queue previews, inspect rows/JSON, then apply from one selected snapshot. The history table explains no
+            candidates, filtered-out runs, and unsupported outcomes.
+          </p>
+        )}
       </div>
       {showInteractiveControls ? (
         <div className="flex flex-wrap gap-2">
@@ -1465,12 +1483,23 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
             disabled={busy || !scopeRow?.last_preview_run_uuid}
             onClick={() => void loadJsonFor(scopeRow?.last_preview_run_uuid)}
           >
-            Load candidates JSON (latest summary)
+            Load latest snapshot JSON
           </button>
+          {compactMode && scopeRow?.last_preview_run_uuid ? (
+            <button
+              type="button"
+              className="rounded-md border border-red-900/50 bg-red-950/30 px-3 py-1.5 text-sm font-medium text-red-100 disabled:opacity-50"
+              disabled={busy}
+              onClick={() => openApplyModal(scopeRow.last_preview_run_uuid!)}
+            >
+              Apply latest snapshot
+            </button>
+          ) : null}
         </div>
       ) : (
         <p className="text-sm text-[var(--mm-text2)]">Sign in as an operator to queue previews.</p>
       )}
+      {!compactMode ? (
       <div
         className="space-y-2 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3"
         data-testid="pruner-scope-scheduled-preview"
@@ -1536,6 +1565,8 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
             : "—"}
         </p>
       </div>
+      ) : null}
+      {!compactMode ? (
       <div className="space-y-2" data-testid="pruner-preview-runs-history">
         <h3 className="text-sm font-semibold text-[var(--mm-text)]">Recent preview runs ({props.scope})</h3>
         {runsQuery.isLoading ? (
@@ -1620,6 +1651,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
           </p>
         )}
       </div>
+      ) : null}
       {applyModalRunId ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"

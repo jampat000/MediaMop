@@ -64,12 +64,15 @@ describe("PrunerInstancesListPage", () => {
     expect(screen.getByText(/TV \(episodes\)/i)).toBeInTheDocument();
     expect(screen.getByText(/Movies \(one row per movie item\)/i)).toBeInTheDocument();
     expect(screen.getAllByTestId("pruner-run-limits-panel").length).toBe(2);
-    expect(screen.getByText(/Enable watched TV rule for this TV tab/i)).toBeInTheDocument();
-    expect(screen.getByText(/Enable never-played TV older-than rule for this tab/i)).toBeInTheDocument();
-    expect(screen.getByText(/Enable watched movies rule for this Movies tab/i)).toBeInTheDocument();
-    expect(screen.getByText(/Enable unwatched stale movies rule for this Movies tab/i)).toBeInTheDocument();
+    expect(screen.getByText(/Enable watched TV rule for this TV scope/i)).toBeInTheDocument();
+    expect(screen.getByText(/Enable never-played TV older-than rule for this scope/i)).toBeInTheDocument();
+    expect(screen.getByText(/Enable watched movies rule for this Movies scope/i)).toBeInTheDocument();
+    expect(screen.getByText(/Enable unwatched stale movies rule for this Movies scope/i)).toBeInTheDocument();
     const disabledFieldsets = screen.getByTestId("pruner-provider-configuration-emby").querySelectorAll("fieldset[disabled]");
     expect(disabledFieldsets.length).toBe(2);
+    expect(screen.queryByText(/Scheduled preview/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Recent preview runs/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Latest preview job/i)).not.toBeInTheDocument();
     expect(screen.queryByTestId("pruner-provider-sections-emby")).not.toBeInTheDocument();
   });
 
@@ -198,6 +201,9 @@ describe("PrunerInstancesListPage", () => {
     expect(screen.getAllByTestId("pruner-run-limits-panel").length).toBe(2);
     const disabledFieldsets = screen.getByTestId("pruner-provider-configuration-emby").querySelectorAll("fieldset[disabled]");
     expect(disabledFieldsets.length).toBe(0);
+    expect(screen.queryByText(/Scheduled preview/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Recent preview runs/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Latest preview job/i)).not.toBeInTheDocument();
     expect(screen.queryByTestId("pruner-provider-sections-emby")).not.toBeInTheDocument();
   });
 });
