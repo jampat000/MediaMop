@@ -82,7 +82,7 @@ describe("PrunerInstancesListPage", () => {
     expect(within(plexPanel).queryByLabelText(/^API key$/i)).not.toBeInTheDocument();
   });
 
-  it("Emby tab shows TV and Movies configuration sections; no nested tabs inside provider workspace", async () => {
+  it("Emby tab shows Rules sub-navigation, TV/Movies columns, and no nested top-level tabs inside the workspace", async () => {
     const client = new QueryClient();
     vi.spyOn(prunerApi, "fetchPrunerInstances").mockResolvedValue([]);
     vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({ jobs: [], default_recent_slice: true });
@@ -92,10 +92,19 @@ describe("PrunerInstancesListPage", () => {
     await waitFor(() => expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument());
     fireEvent.click(screen.getByRole("tab", { name: "Emby" }));
     await waitFor(() => expect(screen.getByTestId("pruner-provider-tab-emby")).toBeInTheDocument());
-    expect(screen.getByText(/TV configuration/i)).toBeInTheDocument();
-    expect(screen.getByText(/Movies configuration/i)).toBeInTheDocument();
-    expect(screen.getByTestId("pruner-provider-configuration-emby")).toBeInTheDocument();
-    expect(within(screen.getByTestId("pruner-provider-configuration-emby")).queryByRole("tab")).toBeNull();
+    expect(screen.getByTestId("pruner-provider-subnav-emby")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Rules" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Filters" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Schedule & limits" })).toBeInTheDocument();
+    const rulesCard = screen.getByTestId("pruner-provider-configuration-emby");
+    expect(within(rulesCard).getByRole("heading", { level: 3, name: /^Rules$/i })).toBeInTheDocument();
+    expect(within(rulesCard).getAllByText(/^TV$/).length).toBeGreaterThanOrEqual(1);
+    expect(within(rulesCard).getAllByText(/^Movies$/).length).toBeGreaterThanOrEqual(1);
+    expect(rulesCard).toBeInTheDocument();
+    expect(within(rulesCard).queryByRole("tab")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Save watched TV rule/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save TV rules" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save Movies rules" })).toBeInTheDocument();
   });
 
   it("pre-connection Emby tab shows disabled configuration controls, not missing", async () => {
@@ -110,7 +119,7 @@ describe("PrunerInstancesListPage", () => {
     expect(screen.getByText(/Save a connection first to enable these settings/i)).toBeInTheDocument();
     const disabledFieldsets = screen.getByTestId("pruner-provider-configuration-emby").querySelectorAll("fieldset[disabled]");
     expect(disabledFieldsets.length).toBe(2);
-    expect(screen.getByText(/Enable watched TV rule for this TV scope/i)).toBeInTheDocument();
+    expect(screen.getByText(/Enable watched TV rule/i)).toBeInTheDocument();
   });
 
   it("Plex provider tab shows TV and Movies sections with unsupported rules and missing-primary filter scope note", async () => {
@@ -193,8 +202,10 @@ describe("PrunerInstancesListPage", () => {
     await waitFor(() => expect(screen.getByTestId("pruner-provider-tab-plex")).toBeInTheDocument());
     expect(screen.getByTestId("pruner-provider-plex-tv-unsupported-rules")).toBeInTheDocument();
     expect(screen.getAllByText(/Not supported for Plex/i).length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByTestId("pruner-plex-tv-filters-scope-note")).toBeInTheDocument();
-    expect(screen.getAllByTestId("pruner-plex-other-rules-note").length).toBe(2);
+    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
+    await waitFor(() => expect(screen.getByTestId("pruner-plex-tv-filters-scope-note")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Rules" }));
+    expect(screen.getAllByTestId("pruner-plex-other-rules-note").length).toBeGreaterThanOrEqual(1);
     const moviesSection = screen.getByTestId("pruner-provider-movies-config-plex");
     expect(within(moviesSection).getByText(/Plex audienceRating/i)).toBeInTheDocument();
   });

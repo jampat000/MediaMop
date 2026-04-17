@@ -2,7 +2,12 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { fetcherSectionTabClass } from "../fetcher/fetcher-menu-button";
+import {
+  FETCHER_TAB_PANEL_BLURB_CLASS,
+  FETCHER_TAB_PANEL_INTRO_CLASS,
+  FETCHER_TAB_PANEL_TITLE_CLASS,
+} from "../fetcher/fetcher-tab-panel-intro";
+import { fetcherMenuButtonClass, fetcherSectionTabClass } from "../fetcher/fetcher-menu-button";
 import type { PrunerJobsInspectionRow, PrunerServerInstance } from "../../lib/pruner/api";
 import { patchPrunerInstance, postPrunerConnectionTest, postPrunerInstance } from "../../lib/pruner/api";
 import { useMeQuery } from "../../lib/auth/queries";
@@ -43,6 +48,23 @@ function activeRuleCount(scope: PrunerServerInstance["scopes"][number]): number 
 
 function providerCredentialLabel(provider: ProviderTab): string {
   return provider === "plex" ? "Token" : "API key";
+}
+
+/** Placeholder when a key is stored server-side (empty field = unchanged). */
+const API_KEY_SAVED_PLACEHOLDER = "\u2022".repeat(10);
+
+function prunerConnectionDirty(
+  hasInstance: boolean,
+  savedUrl: string,
+  urlDraft: string,
+  credentialDraft: string,
+): boolean {
+  const u = urlDraft.trim();
+  const saved = (savedUrl ?? "").trim();
+  if (hasInstance) {
+    return u !== saved || credentialDraft.trim() !== "";
+  }
+  return u !== "" && credentialDraft.trim() !== "";
 }
 
 function defaultScope(scope: "tv" | "movies") {
@@ -110,6 +132,11 @@ function PrunerAtGlanceCard({
   );
 }
 
+function prunerConnectionPlaceholderUrl(provider: ProviderTab): string {
+  if (provider === "plex") return "http://localhost:32400";
+  return "http://localhost:8096";
+}
+
 function PrunerConnectionCredentialPanel({
   provider,
   allInstances,
@@ -127,9 +154,30 @@ function PrunerConnectionCredentialPanel({
   const hasInstance = Boolean(selectedInstance);
   const [baseUrlDraft, setBaseUrlDraft] = useState("");
   const [credentialDraft, setCredentialDraft] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [showCredential, setShowCredential] = useState(false);
+  const [savePending, setSavePending] = useState(false);
+  const [testPending, setTestPending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [saveJustSucceeded, setSaveJustSucceeded] = useState(false);
+  const [testJustSucceeded, setTestJustSucceeded] = useState(false);
+
+  const savedUrl = selectedInstance?.base_url ?? "";
+  const dirty = prunerConnectionDirty(hasInstance, savedUrl, baseUrlDraft, credentialDraft);
+  const panelBusy = savePending || testPending;
+  const credentialPlaceholder =
+    hasInstance && credentialDraft === ""
+      ? API_KEY_SAVED_PLACEHOLDER
+      : provider === "plex"
+        ? "Enter token"
+        : "Enter API key";
+
+  const statusHeadline = !selectedInstance
+    ? "Not connected yet"
+    : selectedInstance.last_connection_test_ok === true
+      ? "Connection status: OK"
+      : selectedInstance.last_connection_test_ok === false
+        ? "Connection status: Failed"
+        : "Connection status: Not tested yet";
 
   useEffect(() => {
     setSelectedInstanceId(providerInstances[0]?.id ?? null);
@@ -138,12 +186,30 @@ function PrunerConnectionCredentialPanel({
   useEffect(() => {
     setBaseUrlDraft(selectedInstance?.base_url ?? "");
     setCredentialDraft("");
+    setShowCredential(false);
   }, [selectedInstance?.id, selectedInstance?.base_url]);
 
+  useEffect(() => {
+    if (!saveJustSucceeded) {
+      return;
+    }
+    const t = window.setTimeout(() => setSaveJustSucceeded(false), 2400);
+    return () => clearTimeout(t);
+  }, [saveJustSucceeded]);
+
+  useEffect(() => {
+    if (!testJustSucceeded) {
+      return;
+    }
+    const t = window.setTimeout(() => setTestJustSucceeded(false), 2400);
+    return () => clearTimeout(t);
+  }, [testJustSucceeded]);
+
   async function saveConnection() {
-    setBusy(true);
+    setSavePending(true);
     setErr(null);
-    setMsg(null);
+    setSaveJustSucceeded(false);
+    setTestJustSucceeded(false);
     try {
       const trimmedUrl = baseUrlDraft.trim();
       if (!trimmedUrl) throw new Error("Base URL is required.");
@@ -166,48 +232,59 @@ function PrunerConnectionCredentialPanel({
         });
       }
       await q.invalidateQueries({ queryKey: ["pruner", "instances"] });
-      setMsg(hasInstance ? "Saved." : `${providerName} connection saved.`);
       setCredentialDraft("");
+      setShowCredential(false);
+      setSaveJustSucceeded(true);
     } catch (e) {
       setErr((e as Error).message);
     } finally {
-      setBusy(false);
+      setSavePending(false);
     }
   }
 
   async function runConnectionTest() {
     if (!selectedInstance) return;
-    setBusy(true);
+    setTestPending(true);
     setErr(null);
-    setMsg(null);
+    setSaveJustSucceeded(false);
+    setTestJustSucceeded(false);
     try {
-      const res = await postPrunerConnectionTest(selectedInstance.id);
+      await postPrunerConnectionTest(selectedInstance.id);
       await q.invalidateQueries({ queryKey: ["pruner", "instances"] });
-      setMsg(`Queued connection test job #${res.pruner_job_id}.`);
+      setTestJustSucceeded(true);
+      setShowCredential(false);
     } catch (e) {
       setErr((e as Error).message);
     } finally {
-      setBusy(false);
+      setTestPending(false);
     }
   }
 
+  const saveLabel = `Save ${providerName}`;
+  const testLabel = `Test ${providerName}`;
+
   return (
     <section
-      className="space-y-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-4"
+      className={[
+        "mm-card mm-dash-card flex h-full min-h-0 min-w-0 flex-col gap-7 transition-shadow duration-200",
+        saveJustSucceeded
+          ? "ring-2 ring-[var(--mm-accent-ring)] ring-offset-2 ring-offset-[var(--mm-bg-main)] shadow-[0_0_0_1px_rgba(212,175,55,0.12)]"
+          : "",
+      ].join(" ")}
       data-testid={`pruner-connection-panel-${provider}`}
     >
       <h3 className="text-base font-semibold text-[var(--mm-text1)]">{providerName}</h3>
-      <p className="text-xs text-[var(--mm-text2)]">
+      <p className="text-xs leading-relaxed text-[var(--mm-text2)]">
         {provider === "plex" ? "Plex server URL and token." : `${providerName} server URL and API key.`}
       </p>
       {providerInstances.length > 1 ? (
-        <label className="text-xs text-[var(--mm-text2)]">
-          Instance
+        <label className="block text-sm text-[var(--mm-text2)]">
+          <span className="mb-1 block text-xs text-[var(--mm-text3)]">Instance</span>
           <select
-            className="mt-1 w-full rounded border border-[var(--mm-border)] bg-[var(--mm-surface2)] px-2 py-1 text-sm text-[var(--mm-text)]"
+            className="mm-input mt-1 w-full"
             value={selectedInstance?.id ?? ""}
             onChange={(e) => setSelectedInstanceId(Number(e.target.value))}
-            disabled={busy}
+            disabled={panelBusy || !canOperate}
           >
             {providerInstances.map((inst) => (
               <option key={inst.id} value={inst.id}>
@@ -217,61 +294,129 @@ function PrunerConnectionCredentialPanel({
           </select>
         </label>
       ) : null}
-      <label className="block text-xs text-[var(--mm-text2)]">
-        Base URL
+      <label className="block text-sm text-[var(--mm-text2)]">
+        <span className="mb-1 block text-xs text-[var(--mm-text3)]">Base URL</span>
         <input
           type="url"
+          autoComplete="off"
           value={baseUrlDraft}
           onChange={(e) => setBaseUrlDraft(e.target.value)}
-          disabled={busy || !canOperate}
-          placeholder="http://server:8096"
-          className="mt-1 w-full rounded border border-[var(--mm-border)] bg-[var(--mm-surface2)] px-2 py-1 text-sm text-[var(--mm-text)]"
+          disabled={panelBusy || !canOperate}
+          placeholder={prunerConnectionPlaceholderUrl(provider)}
+          className="mm-input w-full"
         />
       </label>
-      <label className="block text-xs text-[var(--mm-text2)]">
-        {providerCredentialLabel(provider)}
-        <input
-          type="password"
-          value={credentialDraft}
-          onChange={(e) => setCredentialDraft(e.target.value)}
-          disabled={busy || !canOperate}
-          placeholder={provider === "plex" ? "Plex token" : `${providerName} API key`}
-          className="mt-1 w-full rounded border border-[var(--mm-border)] bg-[var(--mm-surface2)] px-2 py-1 text-sm text-[var(--mm-text)]"
-        />
-      </label>
-      <div className="flex flex-wrap gap-2">
+
+      <div className="space-y-1">
+        <label className="block text-sm text-[var(--mm-text2)]" htmlFor={`pruner-conn-key-${provider}`}>
+          <span className="mb-1 block text-xs text-[var(--mm-text3)]">{providerCredentialLabel(provider)}</span>
+        </label>
+        <div className="flex flex-wrap gap-2">
+          <input
+            id={`pruner-conn-key-${provider}`}
+            type={showCredential ? "text" : "password"}
+            autoComplete="new-password"
+            placeholder={credentialPlaceholder}
+            className="mm-input min-w-[12rem] flex-1 text-sm tracking-normal text-[var(--mm-text)]"
+            disabled={panelBusy || !canOperate}
+            value={credentialDraft}
+            aria-describedby={hasInstance ? `pruner-conn-key-hint-${provider}` : undefined}
+            onChange={(e) => {
+              const next = e.target.value;
+              setCredentialDraft(next);
+              if (next.trim() === "") {
+                setShowCredential(false);
+              }
+            }}
+          />
+          <button
+            type="button"
+            className={fetcherMenuButtonClass({
+              variant: "tertiary",
+              disabled: !canOperate || panelBusy,
+            })}
+            disabled={!canOperate || panelBusy}
+            onClick={() => setShowCredential((v) => !v)}
+          >
+            {showCredential ? "Hide" : "Show"}
+          </button>
+        </div>
+        {hasInstance ? (
+          <p id={`pruner-conn-key-hint-${provider}`} className="text-xs text-[var(--mm-text3)]">
+            Leave blank to keep your saved {provider === "plex" ? "token" : "key"}, or type a new one to replace it.
+          </p>
+        ) : null}
+      </div>
+
+      {saveJustSucceeded ? (
+        <p
+          className="rounded-md border border-[rgba(212,175,55,0.45)] bg-[var(--mm-accent-soft)] px-3 py-2 text-sm font-medium text-[var(--mm-text1)]"
+          role="status"
+          data-testid={`pruner-connection-save-ok-${provider}`}
+        >
+          Saved.
+        </p>
+      ) : null}
+
+      {testJustSucceeded ? (
+        <p
+          className="rounded-md border border-[rgba(212,175,55,0.45)] bg-[var(--mm-accent-soft)] px-3 py-2 text-sm font-medium text-[var(--mm-text1)]"
+          role="status"
+          data-testid={`pruner-connection-test-ok-${provider}`}
+        >
+          Test queued — results appear below when the job finishes.
+        </p>
+      ) : null}
+
+      <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
-          className="rounded-md bg-[var(--mm-accent)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-          disabled={busy || !canOperate}
+          className={fetcherMenuButtonClass({
+            variant: "primary",
+            disabled: !canOperate || !dirty || panelBusy,
+          })}
+          disabled={!canOperate || !dirty || panelBusy}
           onClick={() => void saveConnection()}
         >
-          Save
+          {savePending ? "Saving…" : saveLabel}
         </button>
         <button
           type="button"
-          className="rounded-md border border-[var(--mm-border)] px-3 py-1.5 text-sm font-medium text-[var(--mm-text)] disabled:opacity-50"
-          disabled={busy || !canOperate || !selectedInstance}
+          className={fetcherMenuButtonClass({
+            variant: "secondary",
+            disabled: !canOperate || panelBusy || !selectedInstance,
+          })}
+          disabled={!canOperate || panelBusy || !selectedInstance}
           onClick={() => void runConnectionTest()}
         >
-          Test connection
+          {testPending ? "Testing…" : testLabel}
         </button>
       </div>
-      <div className="rounded border border-[var(--mm-border)] bg-[var(--mm-surface2)]/40 px-3 py-2 text-xs text-[var(--mm-text2)]">
-        <p>
-          Last test:{" "}
-          <strong className="text-[var(--mm-text1)]">{formatPrunerDateTime(selectedInstance?.last_connection_test_at ?? null)}</strong>
+
+      <div
+        className="mt-auto rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-3.5 text-sm text-[var(--mm-text2)]"
+        data-testid={`pruner-connection-status-${provider}`}
+      >
+        <p className="font-medium text-[var(--mm-text1)]">{statusHeadline}</p>
+        <p className="mt-1 text-xs text-[var(--mm-text3)]">
+          Last completed check: {formatPrunerDateTime(selectedInstance?.last_connection_test_at ?? null)}
         </p>
-        <p>
-          Status:{" "}
-          <strong className="text-[var(--mm-text1)]">
-            {selectedInstance?.last_connection_test_ok == null ? "No result yet" : selectedInstance.last_connection_test_ok ? "OK" : "Failed"}
-          </strong>
+        {selectedInstance?.last_connection_test_detail && statusHeadline !== "Connection status: OK" ? (
+          <p className="mt-1 text-xs text-[var(--mm-text3)]">{selectedInstance.last_connection_test_detail}</p>
+        ) : null}
+        {err ? (
+          <p className="mt-2 text-sm text-red-400" role="alert">
+            {err}
+          </p>
+        ) : null}
+        <p className="mt-2 text-xs text-[var(--mm-text3)]">
+          Each test also adds a line to{" "}
+          <Link to="/app/activity" className="text-[var(--mm-accent)] underline-offset-2 hover:underline">
+            Activity
+          </Link>{" "}
+          for your records.
         </p>
-        <p>Detail: {selectedInstance?.last_connection_test_detail ?? "Save and run a test to populate status."}</p>
       </div>
-      {err ? <p className="text-sm text-red-600">{err}</p> : null}
-      {msg ? <p className="text-sm text-[var(--mm-text)]">{msg}</p> : null}
     </section>
   );
 }
@@ -279,14 +424,14 @@ function PrunerConnectionCredentialPanel({
 function ConnectionsTabPanel({ allInstances }: { allInstances: PrunerServerInstance[] }) {
   const providers: ProviderTab[] = ["emby", "jellyfin", "plex"];
   return (
-    <section className="space-y-4" data-testid="pruner-connections-tab">
-      <div>
-        <h2 className="text-base font-semibold text-[var(--mm-text1)]">Connections</h2>
-        <p className="mt-1 max-w-3xl text-sm text-[var(--mm-text2)]">
+    <section className="mm-fetcher-module-surface mb-6" data-testid="pruner-connections-tab">
+      <header className={FETCHER_TAB_PANEL_INTRO_CLASS}>
+        <h2 className={FETCHER_TAB_PANEL_TITLE_CLASS}>Connections</h2>
+        <p className={FETCHER_TAB_PANEL_BLURB_CLASS}>
           Credentials only. Configure cleanup rules on each provider tab (Emby, Jellyfin, Plex).
         </p>
-      </div>
-      <div className="grid gap-4 lg:grid-cols-3">
+      </header>
+      <div className="mm-dash-grid gap-x-5 gap-y-6" data-testid="pruner-connection-panels-grid">
         {providers.map((p) => (
           <PrunerConnectionCredentialPanel key={p} provider={p} allInstances={allInstances} />
         ))}
@@ -295,30 +440,43 @@ function ConnectionsTabPanel({ allInstances }: { allInstances: PrunerServerInsta
   );
 }
 
+type ProviderWorkspaceSection = "rules" | "filters" | "schedule";
+
 function ProviderConfigurationWorkspace({ provider, allInstances }: { provider: ProviderTab; allInstances: PrunerServerInstance[] }) {
   const providerName = providerLabel(provider);
   const providerInstances = useMemo(() => allInstances.filter((x) => x.provider === provider), [allInstances, provider]);
   const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(providerInstances[0]?.id ?? null);
+  const [providerSection, setProviderSection] = useState<ProviderWorkspaceSection>("rules");
   const selectedInstance = providerInstances.find((x) => x.id === selectedInstanceId) ?? providerInstances[0];
+  const hasInstance = Boolean(selectedInstance);
 
   useEffect(() => {
     setSelectedInstanceId(providerInstances[0]?.id ?? null);
   }, [providerInstances.length, provider]);
 
+  useEffect(() => {
+    setProviderSection("rules");
+  }, [provider, selectedInstance?.id]);
+
+  const disabledCtx = { instanceId: 0, instance: providerDisabledInstance(provider) } as const;
+  const activeCtx = selectedInstance
+    ? { instanceId: selectedInstance.id, instance: selectedInstance }
+    : disabledCtx;
+
   return (
-    <section className="space-y-4" data-testid={`pruner-provider-tab-${provider}`}>
+    <section className="space-y-5" data-testid={`pruner-provider-tab-${provider}`}>
       <div>
         <h2 className="text-base font-semibold text-[var(--mm-text1)]">{providerName}</h2>
-        <p className="mt-1 max-w-3xl text-xs text-[var(--mm-text2)]">
-          TV and Movies on one page — no nested tabs. Save credentials under{" "}
-          <strong className="text-[var(--mm-text)]">Connections</strong>.
+        <p className="mt-1 max-w-3xl text-sm leading-snug text-[var(--mm-text2)]">
+          Save credentials under <strong className="text-[var(--mm-text)]">Connections</strong>, then use Rules,
+          Filters, and Schedule below.
         </p>
       </div>
       {providerInstances.length > 1 ? (
-        <label className="text-xs text-[var(--mm-text2)]">
-          Instance
+        <label className="block max-w-md text-sm text-[var(--mm-text2)]">
+          <span className="mb-1 block text-xs text-[var(--mm-text3)]">Instance</span>
           <select
-            className="mt-1 w-full max-w-md rounded border border-[var(--mm-border)] bg-[var(--mm-surface2)] px-2 py-1 text-sm text-[var(--mm-text)]"
+            className="mm-input mt-1 w-full"
             value={selectedInstance?.id ?? ""}
             onChange={(e) => setSelectedInstanceId(Number(e.target.value))}
           >
@@ -330,56 +488,174 @@ function ProviderConfigurationWorkspace({ provider, allInstances }: { provider: 
           </select>
         </label>
       ) : null}
-      <div className="space-y-6" data-testid={`pruner-provider-sections-${provider}`}>
-        {!selectedInstance ? (
-          <p className="text-xs text-[var(--mm-text2)]" data-testid="pruner-provider-config-disabled-hint">
-            Save a connection first to enable these settings.
-          </p>
+
+      <nav
+        className="flex flex-wrap gap-2 border-b border-[var(--mm-border)] pb-3"
+        aria-label={`${providerName} configuration sections`}
+        data-testid={`pruner-provider-subnav-${provider}`}
+      >
+        {(
+          [
+            ["rules", "Rules"],
+            ["filters", "Filters"],
+            ["schedule", "Schedule & limits"],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            className={fetcherSectionTabClass(providerSection === id)}
+            aria-current={providerSection === id ? "page" : undefined}
+            onClick={() => setProviderSection(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+
+      <div data-testid={`pruner-provider-sections-${provider}`}>
+        {providerSection === "rules" ? (
+          <div
+            className="mm-card mm-dash-card border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 sm:p-6"
+            data-testid={`pruner-provider-configuration-${provider}`}
+            data-provider-section="rules"
+          >
+            <h3 className="text-base font-semibold text-[var(--mm-text1)]">Rules</h3>
+            <p className="mt-1 text-sm leading-relaxed text-[var(--mm-text3)]">
+              Deletion rules by medium. One save per column saves every rule in that column.
+            </p>
+            {!hasInstance ? (
+              <p
+                className="mt-4 rounded-md border border-dashed border-[var(--mm-border)] bg-[var(--mm-surface2)]/40 px-3 py-2 text-sm text-[var(--mm-text2)]"
+                data-testid="pruner-provider-config-disabled-hint"
+              >
+                Save a connection first to enable these settings.
+              </p>
+            ) : null}
+            <div
+              className={`mt-6 grid gap-8 lg:grid-cols-2 lg:gap-10 ${!hasInstance ? "pointer-events-none opacity-45" : ""}`}
+            >
+              <div className="min-h-0 space-y-4" data-testid={`pruner-provider-tv-config-${provider}`}>
+                <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">
+                  <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">TV</span>
+                </div>
+                <PrunerScopeTab
+                  scope="tv"
+                  variant="provider"
+                  providerSubSection="rules"
+                  disabledMode={!hasInstance}
+                  contextOverride={activeCtx}
+                />
+              </div>
+              <div className="min-h-0 space-y-4 lg:border-l lg:border-[var(--mm-border)] lg:pl-8" data-testid={`pruner-provider-movies-config-${provider}`}>
+                <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">
+                  <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">Movies</span>
+                </div>
+                <PrunerScopeTab
+                  scope="movies"
+                  variant="provider"
+                  providerSubSection="rules"
+                  disabledMode={!hasInstance}
+                  contextOverride={activeCtx}
+                />
+              </div>
+            </div>
+          </div>
         ) : null}
-        {provider === "plex" ? (
-          <p className="text-xs text-[var(--mm-text2)]" data-testid="pruner-provider-plex-unsupported-note">
-            Plex: unsupported rules are labeled in place; connection uses a token.
-          </p>
+
+        {providerSection === "filters" ? (
+          <div
+            className="mm-card mm-dash-card border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 sm:p-6"
+            data-testid={`pruner-provider-configuration-${provider}`}
+            data-provider-section="filters"
+          >
+            <h3 className="text-base font-semibold text-[var(--mm-text1)]">Filters</h3>
+            <p className="mt-1 text-sm leading-relaxed text-[var(--mm-text3)]">
+              Optional preview narrowing. One save per column writes every filter in that column.
+            </p>
+            {!hasInstance ? (
+              <p
+                className="mt-4 rounded-md border border-dashed border-[var(--mm-border)] bg-[var(--mm-surface2)]/40 px-3 py-2 text-sm text-[var(--mm-text2)]"
+                data-testid="pruner-provider-config-disabled-hint-filters"
+              >
+                Save a connection first to enable these settings.
+              </p>
+            ) : null}
+            <div
+              className={`mt-6 grid gap-8 lg:grid-cols-2 lg:gap-10 ${!hasInstance ? "pointer-events-none opacity-45" : ""}`}
+            >
+              <div className="min-h-0 space-y-4" data-testid={`pruner-provider-tv-filters-${provider}`}>
+                <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">
+                  <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">TV</span>
+                </div>
+                <PrunerScopeTab
+                  scope="tv"
+                  variant="provider"
+                  providerSubSection="filters"
+                  disabledMode={!hasInstance}
+                  contextOverride={activeCtx}
+                />
+              </div>
+              <div className="min-h-0 space-y-4 lg:border-l lg:border-[var(--mm-border)] lg:pl-8" data-testid={`pruner-provider-movies-filters-${provider}`}>
+                <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">
+                  <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">Movies</span>
+                </div>
+                <PrunerScopeTab
+                  scope="movies"
+                  variant="provider"
+                  providerSubSection="filters"
+                  disabledMode={!hasInstance}
+                  contextOverride={activeCtx}
+                />
+              </div>
+            </div>
+          </div>
         ) : null}
-        <div
-          className="grid gap-4 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-4 xl:grid-cols-2"
-          data-testid={`pruner-provider-configuration-${provider}`}
-        >
-          <section className="space-y-3" data-testid={`pruner-provider-tv-config-${provider}`}>
-            <h3 className="text-base font-semibold text-[var(--mm-text1)]">TV configuration</h3>
-            {selectedInstance ? (
-              <PrunerScopeTab
-                scope="tv"
-                variant="provider"
-                contextOverride={{ instanceId: selectedInstance.id, instance: selectedInstance }}
-              />
-            ) : (
-              <PrunerScopeTab
-                scope="tv"
-                disabledMode
-                variant="provider"
-                contextOverride={{ instanceId: 0, instance: providerDisabledInstance(provider) }}
-              />
-            )}
-          </section>
-          <section className="space-y-3 xl:border-l xl:border-[var(--mm-border)] xl:pl-4" data-testid={`pruner-provider-movies-config-${provider}`}>
-            <h3 className="text-base font-semibold text-[var(--mm-text1)]">Movies configuration</h3>
-            {selectedInstance ? (
-              <PrunerScopeTab
-                scope="movies"
-                variant="provider"
-                contextOverride={{ instanceId: selectedInstance.id, instance: selectedInstance }}
-              />
-            ) : (
-              <PrunerScopeTab
-                scope="movies"
-                disabledMode
-                variant="provider"
-                contextOverride={{ instanceId: 0, instance: providerDisabledInstance(provider) }}
-              />
-            )}
-          </section>
-        </div>
+
+        {providerSection === "schedule" ? (
+          <div className="space-y-5" data-testid={`pruner-provider-configuration-${provider}`} data-provider-section="schedule">
+            <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
+              <div className="mm-card mm-dash-card flex min-h-[12rem] flex-col border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 sm:p-6">
+                <h3 className="text-base font-semibold text-[var(--mm-text1)]">TV schedule & limits</h3>
+                <p className="mt-1 text-sm text-[var(--mm-text3)]">Preview cap, scheduled previews, and manual previews for TV.</p>
+                {!hasInstance ? (
+                  <p className="mt-3 rounded-md border border-dashed border-[var(--mm-border)] bg-[var(--mm-surface2)]/40 px-3 py-2 text-sm text-[var(--mm-text2)]">
+                    Save a connection first to enable these settings.
+                  </p>
+                ) : null}
+                <div className={`mt-4 flex min-h-0 flex-1 flex-col ${!hasInstance ? "pointer-events-none opacity-45" : ""}`}>
+                  <PrunerScopeTab
+                    scope="tv"
+                    variant="provider"
+                    providerSubSection="schedule"
+                    disabledMode={!hasInstance}
+                    contextOverride={activeCtx}
+                  />
+                </div>
+              </div>
+              <div className="mm-card mm-dash-card flex min-h-[12rem] flex-col border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 sm:p-6">
+                <h3 className="text-base font-semibold text-[var(--mm-text1)]">Movies schedule & limits</h3>
+                <p className="mt-1 text-sm text-[var(--mm-text3)]">
+                  Preview cap, scheduled previews, and manual previews for Movies.
+                </p>
+                {!hasInstance ? (
+                  <p className="mt-3 rounded-md border border-dashed border-[var(--mm-border)] bg-[var(--mm-surface2)]/40 px-3 py-2 text-sm text-[var(--mm-text2)]">
+                    Save a connection first to enable these settings.
+                  </p>
+                ) : null}
+                <div className={`mt-4 flex min-h-0 flex-1 flex-col ${!hasInstance ? "pointer-events-none opacity-45" : ""}`}>
+                  <PrunerScopeTab
+                    scope="movies"
+                    variant="provider"
+                    providerSubSection="schedule"
+                    disabledMode={!hasInstance}
+                    contextOverride={activeCtx}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </section>
   );
