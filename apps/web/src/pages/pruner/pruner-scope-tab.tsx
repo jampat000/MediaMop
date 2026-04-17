@@ -728,8 +728,8 @@ export function PrunerScopeTab(props: {
           &quot;truncated&quot;, Plex had more matches than that cap — the snapshot is never silently widened.
         </p>
       ) : null}
-      <div className="mt-1">
-        <h3 className="text-sm font-semibold text-[var(--mm-text)]" data-testid="pruner-filters-section-heading">
+      <div>
+        <h3 className="text-base font-semibold text-[var(--mm-text)]" data-testid="pruner-filters-section-heading">
           Preview narrowing filters
         </h3>
         <p className="text-xs text-[var(--mm-text2)]">
@@ -1145,8 +1145,8 @@ export function PrunerScopeTab(props: {
           <code className="text-[0.85em]">addedAt</code> age, not <code className="text-[0.85em]">DateCreated</code>.
         </p>
       ) : null}
-      <div className="mt-1">
-        <h3 className="text-sm font-semibold text-[var(--mm-text)]" data-testid="pruner-rules-section-heading">
+      <div>
+        <h3 className="text-base font-semibold text-[var(--mm-text)]" data-testid="pruner-rules-section-heading">
           Cleanup rules
         </h3>
         <p className="text-xs text-[var(--mm-text2)]">Enable, save, then queue preview.</p>
@@ -1370,8 +1370,8 @@ export function PrunerScopeTab(props: {
           </dl>
         </div>
       ) : null}
-      <div className="mt-1">
-        <h3 className="text-sm font-semibold text-[var(--mm-text)]" data-testid="pruner-actions-history-heading">
+      <div>
+        <h3 className="text-base font-semibold text-[var(--mm-text)]" data-testid="pruner-actions-history-heading">
           {compactMode ? "Preview actions" : "Preview and apply actions"}
         </h3>
         {compactMode ? null : (

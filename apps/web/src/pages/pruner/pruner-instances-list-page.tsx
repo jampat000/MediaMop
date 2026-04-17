@@ -170,11 +170,9 @@ function ProviderWorkspace({ provider, allInstances }: { provider: ProviderTab; 
 
   return (
     <section className="space-y-4" data-testid={`pruner-provider-tab-${provider}`}>
-      <header className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3">
-        <h2 className="text-base font-semibold text-[var(--mm-text1)]">{providerName}</h2>
-      </header>
+      <h2 className="text-base font-semibold text-[var(--mm-text1)]">{providerName}</h2>
       <section className="space-y-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-4" data-testid={`pruner-provider-connection-${provider}`}>
-        <h3 className="text-sm font-semibold text-[var(--mm-text)]">Connection</h3>
+        <h3 className="text-base font-semibold text-[var(--mm-text)]">Connection</h3>
         <p className="text-xs text-[var(--mm-text2)]">
           {provider === "plex"
             ? "Use a Plex token."
@@ -266,7 +264,7 @@ function ProviderWorkspace({ provider, allInstances }: { provider: ProviderTab; 
         {msg ? <p className="text-sm text-[var(--mm-text)]">{msg}</p> : null}
       </section>
       <section className="space-y-3" data-testid={`pruner-provider-configuration-${provider}`}>
-        <h3 className="text-sm font-semibold text-[var(--mm-text)]">Configuration</h3>
+        <h3 className="text-base font-semibold text-[var(--mm-text)]">Cleanup rules</h3>
         {!selectedInstance ? (
           <p className="text-xs text-[var(--mm-text2)]">
             Controls stay visible but disabled until a connection is saved.
