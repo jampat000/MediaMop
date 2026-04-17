@@ -19,11 +19,26 @@ from mediamop.modules.pruner.pruner_constants import (
 from mediamop.modules.pruner.pruner_instances_service import get_scope_settings, get_server_instance
 from mediamop.modules.pruner.pruner_schemas import PrunerPlexLiveEligibilityOut
 
+# Must match the per-scope ceiling applied in ``pruner_preview_job_handler`` before the Plex branch.
+_PLEX_MISSING_PRIMARY_PREVIEW_SCOPE_CEILING = 5000
 
-def effective_plex_live_cap(settings: MediaMopSettings, scope_preview_max_items: int) -> int:
-    """Legacy helper retained for tests and API field shape; not used for any live removal path."""
 
-    return max(0, min(int(scope_preview_max_items), int(settings.pruner_plex_live_abs_max_items)))
+def plex_missing_primary_effective_max_items(settings: MediaMopSettings, scope_preview_max_items: int) -> int:
+    """Maximum Plex leaf rows collected for ``missing_primary_media_reported`` preview jobs.
+
+    This intentionally matches the retired ``pruner.candidate_removal.plex_live.v1`` contract:
+    ``min(per-scope preview_max_items, MEDIAMOP_PRUNER_PLEX_LIVE_ABS_MAX_ITEMS)``, with the same 5k scope clamp used
+    for all preview kinds. Detection itself is ``list_plex_missing_thumb_candidates`` (unchanged from the live path).
+    """
+
+    return max(
+        1,
+        min(
+            int(scope_preview_max_items),
+            _PLEX_MISSING_PRIMARY_PREVIEW_SCOPE_CEILING,
+            int(settings.pruner_plex_live_abs_max_items),
+        ),
+    )
 
 
 def compute_plex_live_eligibility(
@@ -82,7 +97,7 @@ def compute_plex_live_eligibility(
                 "The missing-primary rule is disabled for this scope — enable it before preview/apply.",
             )
 
-    cap = effective_plex_live_cap(settings, preview_max) if sc is not None else 0
+    cap = plex_missing_primary_effective_max_items(settings, preview_max) if sc is not None else 0
 
     return PrunerPlexLiveEligibilityOut(
         eligible=False,

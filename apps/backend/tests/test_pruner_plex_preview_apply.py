@@ -26,9 +26,12 @@ from mediamop.modules.pruner.pruner_constants import (
     MEDIA_SCOPE_TV,
     RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
 )
-from mediamop.modules.pruner.pruner_instances_service import create_server_instance
+from mediamop.modules.pruner.pruner_instances_service import create_server_instance, get_scope_settings
 from mediamop.modules.pruner.pruner_job_handlers import build_pruner_job_handlers
-from mediamop.modules.pruner.pruner_job_kinds import PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND
+from mediamop.modules.pruner.pruner_job_kinds import (
+    PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
+    PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
+)
 from mediamop.modules.pruner.pruner_jobs_model import PrunerJob, PrunerJobStatus
 from mediamop.modules.pruner.pruner_preview_service import insert_preview_run
 from mediamop.modules.pruner.worker_loop import PrunerJobWorkContext
@@ -87,6 +90,10 @@ def test_plex_apply_does_not_call_candidate_collector(
 
     monkeypatch.setattr(
         "mediamop.modules.pruner.pruner_plex_live_candidates.list_plex_missing_thumb_candidates",
+        _boom,
+    )
+    monkeypatch.setattr(
+        "mediamop.modules.pruner.pruner_media_library.list_plex_missing_thumb_candidates",
         _boom,
     )
 
@@ -343,3 +350,64 @@ def test_candidates_json_cap_does_not_widen_apply_set(
         ),
     )
     assert deleted == ["0", "1"]
+
+
+def test_plex_missing_primary_effective_max_items_matches_retired_live_contract(
+    _session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MEDIAMOP_PRUNER_PLEX_LIVE_ABS_MAX_ITEMS", "7")
+    settings = MediaMopSettings.load()
+    from mediamop.modules.pruner.pruner_plex_live_eligibility import plex_missing_primary_effective_max_items
+
+    assert plex_missing_primary_effective_max_items(settings, 500) == 7
+    assert plex_missing_primary_effective_max_items(settings, 3) == 3
+
+
+def test_plex_preview_job_passes_effective_cap_to_collector(
+    session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Preview must pass the same capped max_items the retired live job used (min scope, ABS max, 5k)."""
+
+    monkeypatch.setenv("MEDIAMOP_PRUNER_PLEX_LIVE_ABS_MAX_ITEMS", "3")
+    settings = MediaMopSettings.load()  # after env: picks up ABS max for handler + eligibility math
+    captured: dict[str, int] = {}
+
+    def _spy(*, max_items: int, **_kw: object) -> tuple[list[dict[str, object]], bool]:
+        captured["max_items"] = int(max_items)
+        return [], False
+
+    monkeypatch.setattr(
+        "mediamop.modules.pruner.pruner_media_library.list_plex_missing_thumb_candidates",
+        _spy,
+    )
+
+    sid = _plex_instance(session_factory)
+    with session_factory() as s:
+        sc = get_scope_settings(s, server_instance_id=sid, media_scope=MEDIA_SCOPE_TV)
+        assert sc is not None
+        sc.preview_max_items = 500
+        s.commit()
+
+    with session_factory() as s:
+        with s.begin():
+            job_row = PrunerJob(
+                dedupe_key="plex-cap-preview",
+                job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
+                status=PrunerJobStatus.COMPLETED.value,
+            )
+            s.add(job_row)
+            s.flush()
+            job_id = int(job_row.id)
+
+    handlers = build_pruner_job_handlers(settings, session_factory)
+    handlers[PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND](
+        PrunerJobWorkContext(
+            id=job_id,
+            job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
+            payload_json=json.dumps({"server_instance_id": sid, "media_scope": MEDIA_SCOPE_TV}),
+            lease_owner="pytest",
+        ),
+    )
+    assert captured.get("max_items") == 3

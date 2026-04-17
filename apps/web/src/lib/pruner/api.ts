@@ -79,60 +79,6 @@ export function prunerApplyLabelForRuleFamily(ruleFamilyId: string): string {
   return PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL;
 }
 
-export type PrunerPlexLiveEligibility = {
-  eligible: boolean;
-  reasons: string[];
-  apply_feature_enabled: boolean;
-  plex_live_feature_enabled: boolean;
-  server_instance_id: number;
-  media_scope: string;
-  provider: string;
-  display_name: string;
-  rule_family_id: string;
-  rule_enabled: boolean;
-  live_max_items_cap: number;
-  required_confirmation_phrase: string;
-};
-
-export function prunerPlexLiveEligibilityPath(
-  instanceId: number,
-  media_scope: "tv" | "movies",
-): string {
-  return `/api/v1/pruner/instances/${instanceId}/scopes/${media_scope}/plex-live-removal-eligibility`;
-}
-
-export async function fetchPrunerPlexLiveEligibility(
-  instanceId: number,
-  media_scope: "tv" | "movies",
-): Promise<PrunerPlexLiveEligibility> {
-  const r = await apiFetch(prunerPlexLiveEligibilityPath(instanceId, media_scope));
-  if (!r.ok) {
-    throw new Error(`Plex live eligibility: ${r.status}`);
-  }
-  return readJson<PrunerPlexLiveEligibility>(r);
-}
-
-export async function postPrunerPlexLiveRemoval(
-  instanceId: number,
-  media_scope: "tv" | "movies",
-  body: { live_removal_confirmation: string },
-): Promise<{ pruner_job_id: number }> {
-  const csrf_token = await fetchCsrfToken();
-  const r = await apiFetch(
-    `/api/v1/pruner/instances/${instanceId}/scopes/${media_scope}/plex-live-removal`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...body, csrf_token }),
-    },
-  );
-  if (!r.ok) {
-    const detail = (await readJson<{ detail?: unknown }>(r).catch(() => ({}))) as { detail?: unknown };
-    throw new Error(apiErrorDetailToString(detail.detail) || `plex live removal: ${r.status}`);
-  }
-  return readJson<{ pruner_job_id: number }>(r);
-}
-
 export type PrunerPreviewRunSummary = {
   preview_run_id: string;
   server_instance_id: number;

@@ -103,6 +103,8 @@ def test_plex_preview_missing_primary_records_success_activity(
         detail = json.loads(evt.detail or "{}")
         assert detail.get("trigger") == "manual"
         assert detail.get("candidate_count") == 1
+        assert int(detail.get("plex_missing_primary_item_cap") or 0) >= 1
+        assert "plex_missing_primary_cap_note" in detail
 
         row = s.scalars(select(PrunerPreviewRun).where(PrunerPreviewRun.server_instance_id == sid)).first()
         assert row is not None

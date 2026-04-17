@@ -19,6 +19,7 @@ from mediamop.modules.pruner.pruner_constants import (
 )
 from mediamop.modules.pruner.pruner_credentials_envelope import decrypt_and_parse_envelope
 from mediamop.modules.pruner.pruner_instances_service import get_scope_settings, get_server_instance
+from mediamop.modules.pruner.pruner_plex_live_eligibility import plex_missing_primary_effective_max_items
 from mediamop.modules.pruner.pruner_media_library import preview_payload_json, serialize_candidates
 from mediamop.modules.pruner.pruner_preview_service import insert_preview_run
 from mediamop.modules.pruner.worker_loop import PrunerJobWorkContext
@@ -93,6 +94,8 @@ def make_pruner_candidate_removal_preview_handler(
             secrets: dict[str, str] = env["secrets"]
             base_url = inst.base_url
             display_name = inst.display_name
+            if provider == "plex" and rule_family_id == RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
+                max_items = plex_missing_primary_effective_max_items(settings, int(sc.preview_max_items))
 
         try:
             outcome, unsup, cands, trunc = preview_payload_json(
@@ -155,6 +158,13 @@ def make_pruner_candidate_removal_preview_handler(
                     "rule_family_id": rule_family_id,
                     "trigger": "scheduled" if is_scheduled else "manual",
                 }
+                if provider == "plex" and rule_family_id == RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
+                    detail_obj["plex_missing_primary_item_cap"] = max_items
+                    detail_obj["plex_missing_primary_cap_note"] = (
+                        "Plex missing-primary preview collects at most this many rows per run "
+                        "(min per-scope preview cap, MEDIAMOP_PRUNER_PLEX_LIVE_ABS_MAX_ITEMS, and 5000 ceiling). "
+                        "truncated=true means more matches existed upstream than this cap."
+                    )
                 if outcome == "unsupported" and unsup:
                     detail_obj["unsupported_detail"] = unsup[:2000]
                 if err:

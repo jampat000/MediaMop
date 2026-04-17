@@ -207,13 +207,14 @@ class PrunerPlexLiveEligibilityOut(BaseModel):
     display_name: str
     rule_family_id: str
     rule_enabled: bool
-    live_max_items_cap: int
+    live_max_items_cap: int = Field(
+        ...,
+        description=(
+            "Historical field name: Plex missing-primary preview collects at most this many leaf rows per run "
+            "(min per-scope preview cap, process ceiling MEDIAMOP_PRUNER_PLEX_LIVE_ABS_MAX_ITEMS, and 5k clamp)."
+        ),
+    )
     required_confirmation_phrase: str
-
-
-class PrunerPlexLiveRemovalHttpIn(BaseModel):
-    csrf_token: str = Field(..., min_length=1)
-    live_removal_confirmation: str = Field(..., min_length=1, max_length=250)
 
 
 class PrunerPreviewRunListItemOut(BaseModel):

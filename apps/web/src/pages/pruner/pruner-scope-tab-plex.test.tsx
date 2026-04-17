@@ -6,7 +6,10 @@ import { qk } from "../../lib/auth/queries";
 import * as prunerApi from "../../lib/pruner/api";
 import type { UserPublic } from "../../lib/api/types";
 import type { PrunerServerInstance } from "../../lib/pruner/api";
-import { RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED } from "../../lib/pruner/api";
+import {
+  RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+  RULE_FAMILY_WATCHED_TV_REPORTED,
+} from "../../lib/pruner/api";
 import { PrunerInstanceShell } from "./pruner-instance-shell";
 import { PrunerScopeTab } from "./pruner-scope-tab";
 
@@ -143,11 +146,12 @@ describe("PrunerScopeTab (Plex)", () => {
     }
   });
 
-  it("does not offer apply for Plex unsupported-rule preview rows", async () => {
-    const runId = "bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee";
+  it("Plex: never_played_stale_reported and watched_tv_reported preview rows stay unsupported (no apply)", async () => {
+    const neverId = "bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee";
+    const watchedId = "cccccccc-bbbb-cccc-dddd-eeeeeeeeeeee";
     const spy = vi.spyOn(prunerApi, "fetchPrunerPreviewRuns").mockResolvedValue([
       {
-        preview_run_id: runId,
+        preview_run_id: neverId,
         server_instance_id: 9,
         media_scope: "tv",
         rule_family_id: "never_played_stale_reported",
@@ -155,7 +159,22 @@ describe("PrunerScopeTab (Plex)", () => {
         candidate_count: 0,
         truncated: false,
         outcome: "unsupported",
-        unsupported_detail: "Plex: never-played …",
+        unsupported_detail:
+          "Plex: never-played stale library candidacy is not implemented on MediaMop (Jellyfin/Emby only for this rule).",
+        error_message: null,
+        created_at: new Date().toISOString(),
+      },
+      {
+        preview_run_id: watchedId,
+        server_instance_id: 9,
+        media_scope: "tv",
+        rule_family_id: RULE_FAMILY_WATCHED_TV_REPORTED,
+        pruner_job_id: 3,
+        candidate_count: 0,
+        truncated: false,
+        outcome: "unsupported",
+        unsupported_detail:
+          "Plex: watched TV preview is not implemented on MediaMop in this release (Jellyfin/Emby only).",
         error_message: null,
         created_at: new Date().toISOString(),
       },
@@ -184,7 +203,47 @@ describe("PrunerScopeTab (Plex)", () => {
       );
 
       await waitFor(() => expect(screen.getByText("Stale never-played")).toBeInTheDocument());
-      expect(screen.queryByTestId(`pruner-apply-open-${runId}`)).not.toBeInTheDocument();
+      await waitFor(() => expect(screen.getByText("Watched TV (episodes)")).toBeInTheDocument());
+      expect(screen.getByText(/never-played stale library candidacy is not implemented/i)).toBeInTheDocument();
+      expect(screen.getByText(/watched TV preview is not implemented/i)).toBeInTheDocument();
+      expect(screen.queryByTestId(`pruner-apply-open-${neverId}`)).not.toBeInTheDocument();
+      expect(screen.queryByTestId(`pruner-apply-open-${watchedId}`)).not.toBeInTheDocument();
+    } finally {
+      spy.mockRestore();
+      spyInst.mockRestore();
+    }
+  });
+
+  it("shows Plex missing-primary preview cap note for operators", async () => {
+    const spy = vi.spyOn(prunerApi, "fetchPrunerPreviewRuns").mockResolvedValue([]);
+    const spyInst = vi.spyOn(prunerApi, "fetchPrunerInstance").mockResolvedValue(plexInstance);
+    try {
+      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      qc.setQueryData(qk.me, operator);
+      qc.setQueryData(["pruner", "instances", 9], plexInstance);
+
+      const router = createMemoryRouter(
+        [
+          {
+            path: "/instances/:instanceId",
+            element: <PrunerInstanceShell />,
+            children: [{ path: "tv", element: <PrunerScopeTab scope="tv" /> }],
+          },
+        ],
+        { initialEntries: ["/instances/9/tv"] },
+      );
+
+      render(
+        <QueryClientProvider client={qc}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() => expect(screen.getByTestId("pruner-plex-preview-cap-note")).toBeInTheDocument());
+      const note = screen.getByTestId("pruner-plex-preview-cap-note").textContent ?? "";
+      expect(note).toMatch(/MEDIAMOP_PRUNER_PLEX_LIVE_ABS_MAX_ITEMS/);
+      expect(note).toMatch(/500/);
+      expect(note).toMatch(/truncated/i);
     } finally {
       spy.mockRestore();
       spyInst.mockRestore();

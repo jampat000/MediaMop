@@ -121,7 +121,7 @@ def test_plex_live_post_rejects_jellyfin_instance(session_factory: sessionmaker[
         r = auth_post(
             client,
             f"/api/v1/pruner/instances/{sid}/scopes/tv/plex-live-removal",
-            json={"csrf_token": tok, "live_removal_confirmation": PRUNER_PLEX_LIVE_CONFIRMATION_PHRASE},
+            json={"csrf_token": tok},
             headers={"Content-Type": "application/json"},
         )
         assert r.status_code == 422, r.text
@@ -139,7 +139,7 @@ def test_plex_live_post_plex_always_422_retired(session_factory: sessionmaker[Se
         r = auth_post(
             client,
             f"/api/v1/pruner/instances/{sid}/scopes/tv/plex-live-removal",
-            json={"csrf_token": tok, "live_removal_confirmation": "wrong-phrase"},
+            json={"csrf_token": tok},
             headers={"Content-Type": "application/json"},
         )
         assert r.status_code == 422, r.text

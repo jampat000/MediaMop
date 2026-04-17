@@ -116,7 +116,8 @@ class MediaMopSettings:
     # Deprecated: legacy ``MEDIAMOP_PRUNER_PLEX_LIVE_REMOVAL_ENABLED`` (Plex used to enqueue ``plex_live.v1``). Plex
     # missing-primary removal now uses preview snapshots + apply only; this flag is loaded for API visibility only.
     pruner_plex_live_removal_enabled: bool
-    # Legacy ceiling field retained for eligibility JSON shape; not used to widen any apply path.
+    # Caps Plex ``missing_primary_media_reported`` preview collection (with per-scope ``preview_max_items`` and a 5k
+    # clamp); same contract as the retired ``plex_live.v1`` scan. Loaded from MEDIAMOP_PRUNER_PLEX_LIVE_ABS_MAX_ITEMS.
     pruner_plex_live_abs_max_items: int
     # 0 = no in-process Subber workers (Subber-owned subber_jobs only); >0 when Subber queues durable work.
     subber_worker_count: int

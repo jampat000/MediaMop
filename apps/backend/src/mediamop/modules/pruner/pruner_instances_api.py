@@ -44,7 +44,6 @@ from mediamop.modules.pruner.pruner_schemas import (
     PrunerConnectionTestIn,
     PrunerEnqueueOut,
     PrunerPlexLiveEligibilityOut,
-    PrunerPlexLiveRemovalHttpIn,
     PrunerPreviewEnqueueIn,
     PrunerPreviewRunListItemOut,
     PrunerPreviewRunOut,
@@ -437,7 +436,7 @@ def get_pruner_plex_live_removal_eligibility(
 def post_pruner_plex_live_removal(
     instance_id: Annotated[int, Path(ge=1)],
     media_scope: Annotated[str, Path()],
-    body: PrunerPlexLiveRemovalHttpIn,
+    body: PrunerApplyHttpIn,
     request: Request,
     _user: RequireOperatorDep,
     db: DbSessionDep,

@@ -288,6 +288,17 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
           depends on your Plex server.
         </p>
       )}
+      {isPlex && scopeRow ? (
+        <p className="text-xs text-[var(--mm-text2)]" data-testid="pruner-plex-preview-cap-note">
+          Missing-primary Plex previews collect at most{" "}
+          <strong>
+            min(per-tab item cap {scopeRow.preview_max_items}, MEDIAMOP_PRUNER_PLEX_LIVE_ABS_MAX_ITEMS)
+          </strong>{" "}
+          matching leaves per run (also clamped to 5000 like other preview kinds). Successful preview activity includes{" "}
+          <code className="text-[0.85em]">plex_missing_primary_item_cap</code> and a short cap note. When a run shows
+          &quot;truncated&quot;, Plex had more matches than that cap — the snapshot is never silently widened.
+        </p>
+      ) : null}
       {isPlex ? (
         <div
           className="rounded-md border border-amber-600/40 bg-amber-950/20 px-3 py-2 text-sm text-[var(--mm-text)]"

@@ -477,6 +477,9 @@ def preview_payload_json(
             if not token:
                 msg = "plex auth token missing in credentials envelope"
                 raise ValueError(msg)
+            # Detector parity: same ``list_plex_missing_thumb_candidates`` implementation the retired
+            # ``pruner.candidate_removal.plex_live.v1`` job called (empty/missing ``thumb`` on episode/movie leaves).
+            # Item cap is enforced in ``pruner_preview_job_handler`` via ``plex_missing_primary_effective_max_items``.
             cands, trunc = list_plex_missing_thumb_candidates(
                 base_url=base_url,
                 auth_token=token,
