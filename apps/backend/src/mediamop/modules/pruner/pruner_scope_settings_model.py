@@ -27,6 +27,16 @@ class PrunerScopeSettings(Base):
         nullable=False,
         server_default=text("1"),
     )
+    never_played_stale_reported_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default=text("0"),
+    )
+    never_played_min_age_days: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        server_default=text("90"),
+    )
     preview_max_items: Mapped[int] = mapped_column(
         Integer,
         nullable=False,

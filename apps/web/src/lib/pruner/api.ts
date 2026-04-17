@@ -4,6 +4,8 @@ import { fetchCsrfToken } from "../api/auth-api";
 export type PrunerScopeSummary = {
   media_scope: string;
   missing_primary_media_reported_enabled: boolean;
+  never_played_stale_reported_enabled: boolean;
+  never_played_min_age_days: number;
   preview_max_items: number;
   scheduled_preview_enabled: boolean;
   scheduled_preview_interval_seconds: number;
@@ -55,9 +57,75 @@ export type PrunerApplyEligibility = {
   candidate_count: number;
   preview_outcome: string;
   rule_family_id: string;
+  apply_operator_label: string;
 };
 
+export const RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED = "missing_primary_media_reported";
+export const RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED = "never_played_stale_reported";
+
 export const PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL = "Remove broken library entries";
+export const PRUNER_REMOVE_STALE_NEVER_PLAYED_LIBRARY_ENTRIES_LABEL = "Remove stale never-played library entries";
+
+export function prunerApplyLabelForRuleFamily(ruleFamilyId: string): string {
+  if (ruleFamilyId === RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED) {
+    return PRUNER_REMOVE_STALE_NEVER_PLAYED_LIBRARY_ENTRIES_LABEL;
+  }
+  return PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL;
+}
+
+export type PrunerPlexLiveEligibility = {
+  eligible: boolean;
+  reasons: string[];
+  apply_feature_enabled: boolean;
+  plex_live_feature_enabled: boolean;
+  server_instance_id: number;
+  media_scope: string;
+  provider: string;
+  display_name: string;
+  rule_family_id: string;
+  rule_enabled: boolean;
+  live_max_items_cap: number;
+  required_confirmation_phrase: string;
+};
+
+export function prunerPlexLiveEligibilityPath(
+  instanceId: number,
+  media_scope: "tv" | "movies",
+): string {
+  return `/api/v1/pruner/instances/${instanceId}/scopes/${media_scope}/plex-live-removal-eligibility`;
+}
+
+export async function fetchPrunerPlexLiveEligibility(
+  instanceId: number,
+  media_scope: "tv" | "movies",
+): Promise<PrunerPlexLiveEligibility> {
+  const r = await apiFetch(prunerPlexLiveEligibilityPath(instanceId, media_scope));
+  if (!r.ok) {
+    throw new Error(`Plex live eligibility: ${r.status}`);
+  }
+  return readJson<PrunerPlexLiveEligibility>(r);
+}
+
+export async function postPrunerPlexLiveRemoval(
+  instanceId: number,
+  media_scope: "tv" | "movies",
+  body: { live_removal_confirmation: string },
+): Promise<{ pruner_job_id: number }> {
+  const csrf_token = await fetchCsrfToken();
+  const r = await apiFetch(
+    `/api/v1/pruner/instances/${instanceId}/scopes/${media_scope}/plex-live-removal`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...body, csrf_token }),
+    },
+  );
+  if (!r.ok) {
+    const detail = (await readJson<{ detail?: unknown }>(r).catch(() => ({}))) as { detail?: unknown };
+    throw new Error(apiErrorDetailToString(detail.detail) || `plex live removal: ${r.status}`);
+  }
+  return readJson<{ pruner_job_id: number }>(r);
+}
 
 export type PrunerPreviewRunSummary = {
   preview_run_id: string;
@@ -161,6 +229,8 @@ export async function patchPrunerScope(
   media_scope: "tv" | "movies",
   body: {
     missing_primary_media_reported_enabled?: boolean;
+    never_played_stale_reported_enabled?: boolean;
+    never_played_min_age_days?: number;
     preview_max_items?: number;
     scheduled_preview_enabled?: boolean;
     scheduled_preview_interval_seconds?: number;
@@ -203,12 +273,17 @@ export async function postPrunerApplyFromPreview(
 export async function postPrunerPreview(
   instanceId: number,
   media_scope: "tv" | "movies",
+  opts?: { rule_family_id?: string },
 ): Promise<{ pruner_job_id: number }> {
   const csrf_token = await fetchCsrfToken();
+  const payload: Record<string, string> = { media_scope, csrf_token };
+  if (opts?.rule_family_id) {
+    payload.rule_family_id = opts.rule_family_id;
+  }
   const r = await apiFetch(`/api/v1/pruner/instances/${instanceId}/previews`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ media_scope, csrf_token }),
+    body: JSON.stringify(payload),
   });
   if (!r.ok) {
     const body = (await readJson<{ detail?: unknown }>(r).catch(() => ({}))) as { detail?: unknown };

@@ -141,6 +141,6 @@ def test_scheduled_preview_activity_title_and_detail_trigger(session_factory: se
             .order_by(ActivityEvent.id.desc()),
         ).first()
         assert evt is not None
-        assert evt.title.startswith("Scheduled Pruner preview:")
+        assert evt.title.startswith("Scheduled Pruner preview (missing primary):")
         detail = json.loads(evt.detail or "{}")
         assert detail.get("trigger") == "scheduled"

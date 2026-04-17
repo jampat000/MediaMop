@@ -10,9 +10,10 @@ export function PrunerInstancesListPage() {
         <p className="mm-page__eyebrow">Module</p>
         <h1 className="mm-page__title">Pruner</h1>
         <p className="mm-page__lede max-w-3xl text-[var(--mm-text2)]">
-          Rule-based removal from Emby, Jellyfin, and Plex libraries — one row per server instance, with separate TV and
-          Movies scopes. TV previews report missing primary art at episode granularity; movies at one row per library
-          item.
+          Rule-based library cleanup — one server instance per row, with separate TV and Movies scopes.{" "}
+          <strong>Jellyfin and Emby:</strong> preview then apply for missing primary art (TV = episodes, Movies = one row
+          per movie item). <strong>Plex:</strong> the same rule family is <strong>live-only</strong> (no preview/dry run)
+          on this screen; paths differ by design.
         </p>
       </header>
 
@@ -57,8 +58,10 @@ export function PrunerInstancesListPage() {
 
       <p className="mt-6 max-w-3xl text-xs text-[var(--mm-text2)]">
         Durable work uses <code className="text-[0.85em]">pruner_jobs</code> (see{" "}
-        <code className="text-[0.85em]">MEDIAMOP_PRUNER_WORKER_COUNT</code>). Connection tests and previews enqueue jobs;
-        <code className="text-[0.85em]"> pruner_preview_runs</code> is the source of truth for preview candidates.
+        <code className="text-[0.85em]">MEDIAMOP_PRUNER_WORKER_COUNT</code>). Connection tests and preview jobs enqueue
+        rows; <code className="text-[0.85em]">pruner_preview_runs</code> stores Jellyfin/Emby preview candidate snapshots
+        (and Plex &quot;unsupported&quot; outcomes where preview does not apply). Plex live removal does not use that
+        table.
       </p>
     </div>
   );

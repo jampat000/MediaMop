@@ -1,12 +1,18 @@
-"""Emby / Jellyfin / Plex library probes for Pruner (connection test + missing-primary preview)."""
+"""Emby / Jellyfin / Plex library probes for Pruner (connection test + rule-family previews)."""
 
 from __future__ import annotations
 
 import json
 import urllib.error
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from mediamop.modules.pruner.pruner_constants import MEDIA_SCOPE_MOVIES, MEDIA_SCOPE_TV
+from mediamop.modules.pruner.pruner_constants import (
+    MEDIA_SCOPE_MOVIES,
+    MEDIA_SCOPE_TV,
+    RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+    RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
+)
 from mediamop.modules.pruner.pruner_http import http_get_json, http_get_text, join_base_path
 
 
@@ -56,6 +62,18 @@ def test_plex_connection(*, base_url: str, auth_token: str | None) -> tuple[bool
     return True, "Plex identity OK"
 
 
+def _items_query(*, base_url: str, api_key: str, params: dict[str, str]) -> dict[str, Any] | None:
+    url = join_base_path(base_url, "Items", params)
+    status, data = http_get_json(url, headers=_emby_style_headers(api_key))
+    if status != 200:
+        msg = f"Items query failed HTTP {status}"
+        raise RuntimeError(msg)
+    if not isinstance(data, dict):
+        msg = "Items query returned non-object JSON"
+        raise RuntimeError(msg)
+    return data
+
+
 def _items_page(
     *,
     base_url: str,
@@ -73,15 +91,7 @@ def _items_page(
     }
     if use_has_primary_image:
         params["HasPrimaryImage"] = "false"
-    url = join_base_path(base_url, "Items", params)
-    status, data = http_get_json(url, headers=_emby_style_headers(api_key))
-    if status != 200:
-        msg = f"Items query failed HTTP {status}"
-        raise RuntimeError(msg)
-    if not isinstance(data, dict):
-        msg = "Items query returned non-object JSON"
-        raise RuntimeError(msg)
-    return data
+    return _items_query(base_url=base_url, api_key=api_key, params=params)
 
 
 def _item_missing_primary(item: dict[str, Any]) -> bool:
@@ -136,6 +146,7 @@ def list_missing_primary_candidates(
                 total_hits = None
                 continue
             raise
+        assert data is not None
         items = data.get("Items")
         if not isinstance(items, list):
             break
@@ -184,10 +195,157 @@ def list_missing_primary_candidates(
     return candidates, truncated
 
 
+def _parse_item_date_created(raw: object) -> datetime | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, str):
+        return None
+    s = raw.strip()
+    if not s:
+        return None
+    if s.endswith("Z"):
+        s = s[:-1] + "+00:00"
+    try:
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    except ValueError:
+        return None
+
+
+def _item_unplayed_by_userdata(item: dict[str, Any]) -> bool:
+    ud = item.get("UserData")
+    if isinstance(ud, dict):
+        if ud.get("Played") is True:
+            return False
+        pc = ud.get("PlayCount")
+        if isinstance(pc, int) and pc > 0:
+            return False
+    return True
+
+
+def list_never_played_stale_candidates(
+    *,
+    base_url: str,
+    api_key: str,
+    media_scope: str,
+    max_items: int,
+    min_age_days: int,
+) -> tuple[list[dict[str, Any]], bool]:
+    """Unplayed episodes or movies whose library ``DateCreated`` is older than ``min_age_days`` (UTC).
+
+    Uses Jellyfin/Emby ``GET /Items`` with ``IsPlayed=false`` when accepted; otherwise pages without that filter and
+    applies unplayed + age checks client-side. Play state is **the library user's view for this API token** — not a
+    global household aggregate.
+    """
+
+    if media_scope == MEDIA_SCOPE_TV:
+        include_types = "Episode"
+    elif media_scope == MEDIA_SCOPE_MOVIES:
+        include_types = "Movie"
+    else:
+        msg = f"unsupported media_scope: {media_scope!r}"
+        raise ValueError(msg)
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=max(1, int(min_age_days)))
+    candidates: list[dict[str, Any]] = []
+    start = 0
+    page = min(100, max(1, max_items * 3))
+    use_is_played_filter = True
+    total_hits: int | None = None
+    truncated = False
+
+    while len(candidates) < max_items:
+        params: dict[str, str] = {
+            "Recursive": "true",
+            "IncludeItemTypes": include_types,
+            "StartIndex": str(start),
+            "Limit": str(page),
+        }
+        if use_is_played_filter:
+            params["IsPlayed"] = "false"
+        try:
+            data = _items_query(base_url=base_url, api_key=api_key, params=params)
+        except urllib.error.HTTPError as e:
+            if e.code == 400 and use_is_played_filter:
+                use_is_played_filter = False
+                start = 0
+                candidates.clear()
+                total_hits = None
+                continue
+            raise
+        assert data is not None
+        items = data.get("Items")
+        if not isinstance(items, list):
+            break
+        if "TotalRecordCount" in data and isinstance(data["TotalRecordCount"], int):
+            total_hits = int(data["TotalRecordCount"])
+
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            if not _item_unplayed_by_userdata(it):
+                continue
+            created = _parse_item_date_created(it.get("DateCreated"))
+            if created is None or created > cutoff:
+                continue
+            iid = str(it.get("Id", "")).strip()
+            if not iid:
+                continue
+            if media_scope == MEDIA_SCOPE_TV:
+                candidates.append(
+                    {
+                        "granularity": "episode",
+                        "item_id": iid,
+                        "series_name": it.get("SeriesName") or it.get("Album") or "",
+                        "season_number": it.get("ParentIndexNumber"),
+                        "episode_number": it.get("IndexNumber"),
+                        "episode_title": it.get("Name") or "",
+                        "date_created": it.get("DateCreated"),
+                        "min_age_days_threshold": int(min_age_days),
+                    },
+                )
+            else:
+                candidates.append(
+                    {
+                        "granularity": "movie_item",
+                        "item_id": iid,
+                        "title": it.get("Name") or "",
+                        "year": it.get("ProductionYear"),
+                        "date_created": it.get("DateCreated"),
+                        "min_age_days_threshold": int(min_age_days),
+                    },
+                )
+            if len(candidates) >= max_items:
+                break
+
+        fetched = len(items)
+        start += fetched
+        if fetched == 0:
+            break
+        if len(candidates) >= max_items:
+            if total_hits is not None and start < total_hits:
+                truncated = True
+            elif fetched >= page:
+                truncated = True
+            break
+
+    return candidates[:max_items], truncated
+
+
 def plex_preview_unsupported_detail() -> str:
     return (
-        "Plex: candidate preview for missing primary art is not implemented in this release "
-        "(connection test is supported). TV scope elsewhere is episode-level only."
+        "Plex: this rule family has no candidate preview on MediaMop — removal is live-only when enabled in the UI "
+        "(scheduled preview jobs still record this outcome; use Connection for a real Plex ping). "
+        "TV scope remains episode-level elsewhere (Jellyfin/Emby)."
+    )
+
+
+def plex_never_played_preview_unsupported_detail() -> str:
+    return (
+        "Plex: never-played stale library candidacy is not implemented on MediaMop (Jellyfin/Emby only for this rule). "
+        "Use Connection for a Plex ping."
     )
 
 
@@ -198,19 +356,38 @@ def preview_payload_json(
     media_scope: str,
     secrets: dict[str, str],
     max_items: int,
+    rule_family_id: str,
+    never_played_min_age_days: int | None = None,
 ) -> tuple[str, str, list[dict[str, Any]], bool]:
     """Returns ``(outcome, unsupported_detail_or_empty, candidates, truncated)``."""
 
     if provider == "plex":
+        if rule_family_id == RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED:
+            return "unsupported", plex_never_played_preview_unsupported_detail(), [], False
         return "unsupported", plex_preview_unsupported_detail(), [], False
     api_key = secrets.get("api_key", "")
-    cands, trunc = list_missing_primary_candidates(
-        base_url=base_url,
-        api_key=api_key,
-        media_scope=media_scope,
-        max_items=max_items,
-    )
-    return "success", "", cands, trunc
+    if rule_family_id == RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
+        cands, trunc = list_missing_primary_candidates(
+            base_url=base_url,
+            api_key=api_key,
+            media_scope=media_scope,
+            max_items=max_items,
+        )
+        return "success", "", cands, trunc
+    if rule_family_id == RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED:
+        if never_played_min_age_days is None:
+            msg = "never_played_min_age_days is required for never_played_stale_reported preview"
+            raise ValueError(msg)
+        cands, trunc = list_never_played_stale_candidates(
+            base_url=base_url,
+            api_key=api_key,
+            media_scope=media_scope,
+            max_items=max_items,
+            min_age_days=int(never_played_min_age_days),
+        )
+        return "success", "", cands, trunc
+    msg = f"unsupported rule_family_id for preview: {rule_family_id!r}"
+    raise ValueError(msg)
 
 
 def serialize_candidates(candidates: list[dict[str, Any]]) -> str:

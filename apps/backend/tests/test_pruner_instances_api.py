@@ -20,6 +20,7 @@ from mediamop.modules.pruner.pruner_constants import (
     MEDIA_SCOPE_MOVIES,
     MEDIA_SCOPE_TV,
     RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+    RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
 )
 from mediamop.modules.pruner.pruner_job_kinds import (
     PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
@@ -158,6 +159,8 @@ def test_post_pruner_instances_creates_row_seeds_scopes_and_hides_secrets(client
     for s in body["scopes"]:
         assert s["preview_max_items"] == 500
         assert s["missing_primary_media_reported_enabled"] is True
+        assert s["never_played_stale_reported_enabled"] is False
+        assert s["never_played_min_age_days"] == 90
 
     raw = json.dumps(body)
     assert secret_key not in raw
@@ -239,8 +242,49 @@ def test_post_pruner_preview_enqueue_payload_is_per_instance_and_scope(client_wi
         by_id = {p["server_instance_id"]: p for p in (p0, p1)}
         assert by_id[iid_a]["media_scope"] == "tv"
         assert by_id[iid_b]["media_scope"] == "movies"
-        assert "media_scope" in by_id[iid_a] and len(by_id[iid_a]) == 2
-        assert set(by_id[iid_a]) == {"server_instance_id", "media_scope"}
+        assert set(by_id[iid_a]) == {"server_instance_id", "media_scope", "rule_family_id"}
+        assert by_id[iid_a]["rule_family_id"] == RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED
+        assert by_id[iid_b]["rule_family_id"] == RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED
+
+
+def test_post_pruner_preview_never_played_rule_in_job_payload(client_with_admin: TestClient) -> None:
+    _login_admin(client_with_admin)
+    tok = fetch_csrf(client_with_admin)
+    r0 = auth_post(
+        client_with_admin,
+        "/api/v1/pruner/instances",
+        json={
+            "provider": "jellyfin",
+            "display_name": "JF-never",
+            "base_url": "http://jf-never.test",
+            "credentials": {"api_key": "k"},
+            "csrf_token": tok,
+        },
+        headers={"Content-Type": "application/json"},
+    )
+    assert r0.status_code == 200, r0.text
+    iid = int(r0.json()["id"])
+    tok = fetch_csrf(client_with_admin)
+    rp = auth_post(
+        client_with_admin,
+        f"/api/v1/pruner/instances/{iid}/previews",
+        json={
+            "media_scope": MEDIA_SCOPE_TV,
+            "csrf_token": tok,
+            "rule_family_id": RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
+        },
+        headers={"Content-Type": "application/json"},
+    )
+    assert rp.status_code == 200, rp.text
+    fac = _fac()
+    with fac() as db:
+        job = db.scalars(
+            select(PrunerJob).where(PrunerJob.job_kind == PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND),
+        ).one()
+        payload = json.loads(job.payload_json or "{}")
+        assert payload["server_instance_id"] == iid
+        assert payload["media_scope"] == MEDIA_SCOPE_TV
+        assert payload["rule_family_id"] == RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED
 
 
 def test_post_pruner_connection_test_enqueue_job_kind_and_instance_payload(client_with_admin: TestClient) -> None:

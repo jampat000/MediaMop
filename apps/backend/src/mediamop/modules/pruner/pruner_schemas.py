@@ -13,6 +13,8 @@ PrunerProviderWire = Literal["emby", "jellyfin", "plex"]
 class PrunerScopeSummaryOut(BaseModel):
     media_scope: str
     missing_primary_media_reported_enabled: bool
+    never_played_stale_reported_enabled: bool = False
+    never_played_min_age_days: int = 90
     preview_max_items: int
     scheduled_preview_enabled: bool = False
     scheduled_preview_interval_seconds: int = 3600
@@ -55,6 +57,8 @@ class PrunerServerInstancePatchIn(BaseModel):
 
 class PrunerScopePatchIn(BaseModel):
     missing_primary_media_reported_enabled: bool | None = None
+    never_played_stale_reported_enabled: bool | None = None
+    never_played_min_age_days: int | None = Field(None, ge=7, le=3650)
     preview_max_items: int | None = Field(None, ge=1, le=5000)
     scheduled_preview_enabled: bool | None = None
     scheduled_preview_interval_seconds: int | None = Field(None, ge=60, le=86_400)
@@ -64,8 +68,12 @@ class PrunerEnqueueOut(BaseModel):
     pruner_job_id: int
 
 
+PrunerPreviewRuleFamilyWire = Literal["missing_primary_media_reported", "never_played_stale_reported"]
+
+
 class PrunerPreviewEnqueueIn(BaseModel):
     media_scope: Literal["tv", "movies"]
+    rule_family_id: PrunerPreviewRuleFamilyWire = "missing_primary_media_reported"
     csrf_token: str = Field(..., min_length=1)
 
 
@@ -100,13 +108,16 @@ class PrunerScopePatchHttpIn(PrunerScopePatchIn):
     def _at_least_one_scope_field(self) -> PrunerScopePatchHttpIn:
         if (
             self.missing_primary_media_reported_enabled is None
+            and self.never_played_stale_reported_enabled is None
+            and self.never_played_min_age_days is None
             and self.preview_max_items is None
             and self.scheduled_preview_enabled is None
             and self.scheduled_preview_interval_seconds is None
         ):
             msg = (
-                "At least one of missing_primary_media_reported_enabled, preview_max_items, "
-                "scheduled_preview_enabled, or scheduled_preview_interval_seconds must be provided."
+                "At least one of missing_primary_media_reported_enabled, never_played_stale_reported_enabled, "
+                "never_played_min_age_days, preview_max_items, scheduled_preview_enabled, "
+                "or scheduled_preview_interval_seconds must be provided."
             )
             raise ValueError(msg)
         return self
@@ -160,10 +171,33 @@ class PrunerApplyEligibilityOut(BaseModel):
     candidate_count: int = 0
     preview_outcome: str = ""
     rule_family_id: str = ""
+    apply_operator_label: str = ""
 
 
 class PrunerApplyHttpIn(BaseModel):
     csrf_token: str = Field(..., min_length=1)
+
+
+class PrunerPlexLiveEligibilityOut(BaseModel):
+    """Read-only: whether Plex live removal can be enqueued for this instance + scope (no preview)."""
+
+    eligible: bool
+    reasons: list[str] = Field(default_factory=list)
+    apply_feature_enabled: bool
+    plex_live_feature_enabled: bool
+    server_instance_id: int
+    media_scope: str
+    provider: str
+    display_name: str
+    rule_family_id: str
+    rule_enabled: bool
+    live_max_items_cap: int
+    required_confirmation_phrase: str
+
+
+class PrunerPlexLiveRemovalHttpIn(BaseModel):
+    csrf_token: str = Field(..., min_length=1)
+    live_removal_confirmation: str = Field(..., min_length=1, max_length=250)
 
 
 class PrunerPreviewRunListItemOut(BaseModel):

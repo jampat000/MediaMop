@@ -1,4 +1,4 @@
-"""Handler for ``pruner.candidate_removal.preview.v1`` (missing primary media reported)."""
+"""Handler for ``pruner.candidate_removal.preview.v1`` (per-scope rule family previews)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,12 @@ from typing import Any
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.pruner.pruner_constants import RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED
+from mediamop.modules.pruner.pruner_constants import (
+    RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+    RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
+    clamp_never_played_min_age_days,
+    pruner_preview_rule_families_jf_emby,
+)
 from mediamop.modules.pruner.pruner_credentials_envelope import decrypt_and_parse_envelope
 from mediamop.modules.pruner.pruner_instances_service import get_scope_settings, get_server_instance
 from mediamop.modules.pruner.pruner_media_library import preview_payload_json, serialize_candidates
@@ -41,11 +46,19 @@ def make_pruner_candidate_removal_preview_handler(
         scope = body.get("media_scope")
         trigger_raw = body.get("trigger")
         is_scheduled = trigger_raw == "scheduled"
+        rule_raw = body.get("rule_family_id", RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED)
+        rule_family_id = str(rule_raw)
         if not isinstance(sid, int):
             msg = "payload.server_instance_id must be an integer"
             raise ValueError(msg)
         if not isinstance(scope, str) or scope not in ("tv", "movies"):
             msg = "payload.media_scope must be 'tv' or 'movies'"
+            raise ValueError(msg)
+        if rule_family_id not in pruner_preview_rule_families_jf_emby():
+            msg = "payload.rule_family_id is not supported for preview in this slice"
+            raise ValueError(msg)
+        if is_scheduled and rule_family_id != RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
+            msg = "scheduled preview may only target missing_primary_media_reported"
             raise ValueError(msg)
 
         with session_factory() as session:
@@ -57,7 +70,16 @@ def make_pruner_candidate_removal_preview_handler(
             if sc is None:
                 msg = "scope settings row missing"
                 raise RuntimeError(msg)
+            if rule_family_id == RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
+                if not bool(sc.missing_primary_media_reported_enabled):
+                    msg = "missing_primary_media_reported_enabled is false for this scope"
+                    raise ValueError(msg)
+            elif rule_family_id == RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED:
+                if not bool(sc.never_played_stale_reported_enabled):
+                    msg = "never_played_stale_reported_enabled is false for this scope"
+                    raise ValueError(msg)
             max_items = max(1, min(int(sc.preview_max_items), 5000))
+            age_days = clamp_never_played_min_age_days(int(sc.never_played_min_age_days))
             env = decrypt_and_parse_envelope(settings, inst.credentials_ciphertext)
             if env is None:
                 msg = "cannot decrypt credentials (session secret missing or ciphertext invalid)"
@@ -74,6 +96,8 @@ def make_pruner_candidate_removal_preview_handler(
                 media_scope=scope,
                 secrets=secrets,
                 max_items=max_items,
+                rule_family_id=rule_family_id,
+                never_played_min_age_days=age_days if rule_family_id == RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED else None,
             )
             cand_json = serialize_candidates(cands)
             err: str | None = None
@@ -87,10 +111,11 @@ def make_pruner_candidate_removal_preview_handler(
 
         run_uuid = str(uuid.uuid4())
         label_scope = "TV (episodes)" if scope == "tv" else "Movies (one row per movie item)"
+        rule_tag = "missing primary" if rule_family_id == RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED else "never-played stale"
         title = (
-            f"Scheduled Pruner preview: {display_name} ({provider}) — {label_scope}"
+            f"Scheduled Pruner preview ({rule_tag}): {display_name} ({provider}) — {label_scope}"
             if is_scheduled
-            else f"Pruner preview: {display_name} ({provider}) — {label_scope}"
+            else f"Pruner preview ({rule_tag}): {display_name} ({provider}) — {label_scope}"
         )
 
         with session_factory() as session:
@@ -100,7 +125,7 @@ def make_pruner_candidate_removal_preview_handler(
                     preview_run_uuid=run_uuid,
                     server_instance_id=sid,
                     media_scope=scope,
-                    rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+                    rule_family_id=rule_family_id,
                     pruner_job_id=int(ctx.id),
                     candidate_count=len(cands),
                     candidates_json=cand_json,
@@ -114,7 +139,7 @@ def make_pruner_candidate_removal_preview_handler(
                     "outcome": outcome,
                     "candidate_count": len(cands),
                     "truncated": trunc,
-                    "rule_family_id": RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+                    "rule_family_id": rule_family_id,
                     "trigger": "scheduled" if is_scheduled else "manual",
                 }
                 if outcome == "unsupported" and unsup:

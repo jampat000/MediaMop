@@ -1,12 +1,15 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { qk } from "../../lib/auth/queries";
 import type { UserPublic } from "../../lib/api/types";
 import * as prunerApi from "../../lib/pruner/api";
 import type { PrunerPreviewRunSummary, PrunerServerInstance } from "../../lib/pruner/api";
-import { PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL } from "../../lib/pruner/api";
+import {
+  PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL,
+  PRUNER_REMOVE_STALE_NEVER_PLAYED_LIBRARY_ENTRIES_LABEL,
+} from "../../lib/pruner/api";
 import { PrunerInstanceShell } from "./pruner-instance-shell";
 import { PrunerScopeTab } from "./pruner-scope-tab";
 
@@ -27,6 +30,8 @@ const jellyfinInstance: PrunerServerInstance = {
     {
       media_scope: "tv",
       missing_primary_media_reported_enabled: true,
+      never_played_stale_reported_enabled: false,
+      never_played_min_age_days: 90,
       preview_max_items: 500,
       scheduled_preview_enabled: false,
       scheduled_preview_interval_seconds: 3600,
@@ -40,6 +45,8 @@ const jellyfinInstance: PrunerServerInstance = {
     {
       media_scope: "movies",
       missing_primary_media_reported_enabled: true,
+      never_played_stale_reported_enabled: false,
+      never_played_min_age_days: 90,
       preview_max_items: 500,
       scheduled_preview_enabled: false,
       scheduled_preview_interval_seconds: 3600,
@@ -75,7 +82,7 @@ const embyInstance: PrunerServerInstance = {
   base_url: "http://em:8096",
 };
 
-describe("PrunerScopeTab apply (Jellyfin + Emby parity)", () => {
+describe("PrunerScopeTab apply (Jellyfin + Emby preview → apply)", () => {
   it("exposes Remove broken library entries only on preview history for Jellyfin success rows", async () => {
     const spyElig = vi.spyOn(prunerApi, "fetchPrunerApplyEligibility").mockResolvedValue({
       eligible: true,
@@ -90,6 +97,7 @@ describe("PrunerScopeTab apply (Jellyfin + Emby parity)", () => {
       candidate_count: 2,
       preview_outcome: "success",
       rule_family_id: "missing_primary_media_reported",
+      apply_operator_label: PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL,
     });
     try {
       const qc = new QueryClient({
@@ -131,8 +139,11 @@ describe("PrunerScopeTab apply (Jellyfin + Emby parity)", () => {
 
       fireEvent.click(openBtn);
 
+      const modal = await screen.findByTestId("pruner-apply-modal");
       await waitFor(() => {
-        expect(screen.getByTestId("pruner-apply-modal")).toBeInTheDocument();
+        expect(within(modal).getByRole("heading", { level: 3 })).toHaveTextContent(
+          PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL,
+        );
       });
 
       const titles = screen.getAllByText(PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL);
@@ -156,6 +167,7 @@ describe("PrunerScopeTab apply (Jellyfin + Emby parity)", () => {
       candidate_count: 2,
       preview_outcome: "success",
       rule_family_id: "missing_primary_media_reported",
+      apply_operator_label: PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL,
     });
     try {
       const qc = new QueryClient({
@@ -196,6 +208,79 @@ describe("PrunerScopeTab apply (Jellyfin + Emby parity)", () => {
     }
   });
 
+  it("uses Remove stale never-played library entries for never-played preview rows", async () => {
+    const neverRunId = "22222222-2222-4222-8222-222222222222";
+    const spyElig = vi.spyOn(prunerApi, "fetchPrunerApplyEligibility").mockResolvedValue({
+      eligible: true,
+      reasons: [],
+      apply_feature_enabled: true,
+      preview_run_id: neverRunId,
+      server_instance_id: 2,
+      media_scope: "tv",
+      provider: "jellyfin",
+      display_name: "JF Home",
+      preview_created_at: previewRun.created_at,
+      candidate_count: 1,
+      preview_outcome: "success",
+      rule_family_id: "never_played_stale_reported",
+      apply_operator_label: PRUNER_REMOVE_STALE_NEVER_PLAYED_LIBRARY_ENTRIES_LABEL,
+    });
+    try {
+      const qc = new QueryClient({
+        defaultOptions: { queries: { retry: false, staleTime: 60_000, refetchOnMount: false } },
+      });
+      qc.setQueryData(qk.me, operator);
+      await qc.prefetchQuery({
+        queryKey: ["pruner", "instances", 2],
+        queryFn: async () => jellyfinInstance,
+      });
+      await qc.prefetchQuery({
+        queryKey: ["pruner", "preview-runs", 2, "tv"],
+        queryFn: async () => [
+          previewRun,
+          {
+            ...previewRun,
+            preview_run_id: neverRunId,
+            rule_family_id: "never_played_stale_reported",
+            candidate_count: 1,
+          },
+        ],
+      });
+
+      const router = createMemoryRouter(
+        [
+          {
+            path: "/instances/:instanceId",
+            element: <PrunerInstanceShell />,
+            children: [{ path: "tv", element: <PrunerScopeTab scope="tv" /> }],
+          },
+        ],
+        { initialEntries: ["/instances/2/tv"] },
+      );
+
+      render(
+        <QueryClientProvider client={qc}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId(`pruner-apply-open-${neverRunId}`)).toBeInTheDocument();
+      });
+      const openBtn = screen.getByTestId(`pruner-apply-open-${neverRunId}`);
+      expect(openBtn.textContent).toBe(PRUNER_REMOVE_STALE_NEVER_PLAYED_LIBRARY_ENTRIES_LABEL);
+      fireEvent.click(openBtn);
+      const modal = await screen.findByTestId("pruner-apply-modal");
+      await waitFor(() => {
+        expect(within(modal).getByRole("heading", { level: 3 })).toHaveTextContent(
+          PRUNER_REMOVE_STALE_NEVER_PLAYED_LIBRARY_ENTRIES_LABEL,
+        );
+      });
+    } finally {
+      spyElig.mockRestore();
+    }
+  });
+
   it("does not show apply on Plex preview rows", async () => {
     const plexInstance: PrunerServerInstance = {
       id: 4,
@@ -210,6 +295,8 @@ describe("PrunerScopeTab apply (Jellyfin + Emby parity)", () => {
         {
           media_scope: "tv",
           missing_primary_media_reported_enabled: true,
+          never_played_stale_reported_enabled: false,
+          never_played_min_age_days: 90,
           preview_max_items: 500,
           scheduled_preview_enabled: false,
           scheduled_preview_interval_seconds: 3600,
@@ -223,6 +310,8 @@ describe("PrunerScopeTab apply (Jellyfin + Emby parity)", () => {
         {
           media_scope: "movies",
           missing_primary_media_reported_enabled: true,
+          never_played_stale_reported_enabled: false,
+          never_played_min_age_days: 90,
           preview_max_items: 500,
           scheduled_preview_enabled: false,
           scheduled_preview_interval_seconds: 3600,

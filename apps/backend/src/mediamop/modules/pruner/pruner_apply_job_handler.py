@@ -10,7 +10,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.pruner.pruner_constants import RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED
+from mediamop.modules.pruner.pruner_constants import (
+    RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+    RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
+    pruner_apply_operator_label,
+)
 from mediamop.modules.pruner.pruner_credentials_envelope import decrypt_and_parse_envelope
 from mediamop.modules.pruner.pruner_instances_service import get_server_instance
 from mediamop.modules.pruner.pruner_emby_library_delete import emby_delete_library_item
@@ -20,7 +24,12 @@ from mediamop.modules.pruner.worker_loop import PrunerJobWorkContext
 from mediamop.platform.activity import constants as C
 from mediamop.platform.activity.service import record_activity_event
 
-_APPLY_TITLE_PREFIX = "Remove broken library entries"
+_APPLY_SUPPORTED = frozenset(
+    {
+        RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+        RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
+    },
+)
 
 
 def _parse_payload(payload_json: str | None) -> dict[str, Any]:
@@ -61,8 +70,9 @@ def make_pruner_candidate_removal_apply_handler(
         if not isinstance(scope, str) or scope not in ("tv", "movies"):
             msg = "payload.media_scope must be 'tv' or 'movies'"
             raise ValueError(msg)
-        if str(rule_family_id or "") != RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
-            msg = "payload.rule_family_id must match missing_primary_media_reported for this slice"
+        rid = str(rule_family_id or "")
+        if rid not in _APPLY_SUPPORTED:
+            msg = "payload.rule_family_id is not supported for apply in this slice"
             raise ValueError(msg)
 
         with session_factory() as session:
@@ -86,7 +96,11 @@ def make_pruner_candidate_removal_apply_handler(
             if str(run.media_scope) != scope:
                 msg = "preview snapshot media_scope does not match payload"
                 raise ValueError(msg)
-            if str(run.rule_family_id) != RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
+            snap_rule = str(run.rule_family_id)
+            if snap_rule != rid:
+                msg = "payload.rule_family_id must match preview snapshot rule_family_id"
+                raise ValueError(msg)
+            if snap_rule not in _APPLY_SUPPORTED:
                 msg = "preview snapshot rule_family_id is not eligible for apply"
                 raise ValueError(msg)
             if str(run.outcome) != "success":
@@ -120,6 +134,8 @@ def make_pruner_candidate_removal_apply_handler(
             msg = "no candidates in preview snapshot"
             raise ValueError(msg)
 
+        action_label = pruner_apply_operator_label(rid)
+
         removed = 0
         skipped = 0
         failed = 0
@@ -148,14 +164,14 @@ def make_pruner_candidate_removal_apply_handler(
                 failed += 1
 
         label = _scope_label(scope)
-        title = f"{_APPLY_TITLE_PREFIX}: {display_name} ({provider_for_delete}) — {label} — from preview snapshot"
+        title = f"{action_label}: {display_name} ({provider_for_delete}) — {label} — from preview snapshot"
         detail_obj: dict[str, object] = {
-            "action": _APPLY_TITLE_PREFIX,
+            "action": action_label,
             "preview_run_id": preview_run_uuid,
             "server_instance_id": sid,
             "provider": provider_for_delete,
             "media_scope": scope,
-            "rule_family_id": RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+            "rule_family_id": rid,
             "removed": removed,
             "skipped": skipped,
             "failed": failed,

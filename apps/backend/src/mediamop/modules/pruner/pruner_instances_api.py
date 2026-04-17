@@ -17,7 +17,9 @@ from mediamop.modules.pruner.pruner_apply_eligibility import compute_apply_eligi
 from mediamop.modules.pruner.pruner_constants import (
     MEDIA_SCOPE_MOVIES,
     MEDIA_SCOPE_TV,
+    PRUNER_PLEX_LIVE_CONFIRMATION_PHRASE,
     RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+    clamp_never_played_min_age_days,
     clamp_pruner_scheduled_preview_interval_seconds,
 )
 from mediamop.modules.pruner.pruner_credentials_envelope import (
@@ -32,16 +34,20 @@ from mediamop.modules.pruner.pruner_instances_service import (
 )
 from mediamop.modules.pruner.pruner_job_kinds import (
     PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
+    PRUNER_CANDIDATE_REMOVAL_PLEX_LIVE_JOB_KIND,
     PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
     PRUNER_SERVER_CONNECTION_TEST_JOB_KIND,
 )
 from mediamop.modules.pruner.pruner_jobs_ops import pruner_enqueue_or_get_job
 from mediamop.modules.pruner.pruner_preview_run_model import PrunerPreviewRun
+from mediamop.modules.pruner.pruner_plex_live_eligibility import compute_plex_live_eligibility
 from mediamop.modules.pruner.pruner_schemas import (
     PrunerApplyEligibilityOut,
     PrunerApplyHttpIn,
     PrunerConnectionTestIn,
     PrunerEnqueueOut,
+    PrunerPlexLiveEligibilityOut,
+    PrunerPlexLiveRemovalHttpIn,
     PrunerPreviewEnqueueIn,
     PrunerPreviewRunListItemOut,
     PrunerPreviewRunOut,
@@ -73,6 +79,8 @@ def _scope_row_out(session: Session, row: PrunerScopeSettings) -> PrunerScopeSum
     return PrunerScopeSummaryOut(
         media_scope=row.media_scope,
         missing_primary_media_reported_enabled=bool(row.missing_primary_media_reported_enabled),
+        never_played_stale_reported_enabled=bool(row.never_played_stale_reported_enabled),
+        never_played_min_age_days=int(row.never_played_min_age_days),
         preview_max_items=int(row.preview_max_items),
         scheduled_preview_enabled=bool(row.scheduled_preview_enabled),
         scheduled_preview_interval_seconds=clamp_pruner_scheduled_preview_interval_seconds(
@@ -207,8 +215,9 @@ def patch_pruner_instance(
     response_model=PrunerScopeSummaryOut,
     summary="Per-scope Pruner settings (TV episodes vs movie items)",
     description=(
-        "TV scope uses **episode-level** candidates for missing primary art in previews. "
-        "Movies scope uses **one row per movie library item**."
+        "Jellyfin/Emby: TV scope uses **episode-level** candidates for missing primary art in previews; Movies uses **one "
+        "row per movie library item**. Plex does not ship preview for this rule — use the Plex live removal API/UI when "
+        "enabled."
     ),
 )
 def get_pruner_scope(
@@ -246,6 +255,10 @@ def patch_pruner_scope(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scope not found.")
     if body.missing_primary_media_reported_enabled is not None:
         sc.missing_primary_media_reported_enabled = bool(body.missing_primary_media_reported_enabled)
+    if body.never_played_stale_reported_enabled is not None:
+        sc.never_played_stale_reported_enabled = bool(body.never_played_stale_reported_enabled)
+    if body.never_played_min_age_days is not None:
+        sc.never_played_min_age_days = clamp_never_played_min_age_days(int(body.never_played_min_age_days))
     if body.preview_max_items is not None:
         sc.preview_max_items = int(body.preview_max_items)
     if body.scheduled_preview_enabled is not None:
@@ -314,7 +327,7 @@ def get_pruner_preview_run(
 @router.get(
     "/pruner/instances/{instance_id}/scopes/{media_scope}/preview-runs/{preview_run_uuid}/apply-eligibility",
     response_model=PrunerApplyEligibilityOut,
-    summary="Whether Remove broken library entries can be enqueued for this preview snapshot",
+    summary="Whether live apply from this preview snapshot can be enqueued (Jellyfin/Emby)",
     description=(
         "Read-only gate check for the Jellyfin/Emby apply slice. This is **not** a preview/dry run — "
         "it only reports whether the snapshot is eligible given instance, scope, outcome, and feature flag."
@@ -344,7 +357,7 @@ def get_pruner_apply_eligibility(
 @router.post(
     "/pruner/instances/{instance_id}/scopes/{media_scope}/preview-runs/{preview_run_uuid}/apply",
     response_model=PrunerEnqueueOut,
-    summary="Enqueue Remove broken library entries from one preview snapshot (Jellyfin or Emby)",
+    summary="Enqueue live library removal from one Jellyfin/Emby preview snapshot (rule family from snapshot)",
 )
 def post_pruner_apply_from_preview(
     instance_id: Annotated[int, Path(ge=1)],
@@ -380,13 +393,90 @@ def post_pruner_apply_from_preview(
         "preview_run_uuid": preview_run_uuid,
         "server_instance_id": instance_id,
         "media_scope": media_scope,
-        "rule_family_id": RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+        "rule_family_id": elig.rule_family_id,
     }
     dedupe = f"pruner:apply:v1:{preview_run_uuid}:{uuid.uuid4()}"
     jid = _enqueue(
         db,
         dedupe_key=dedupe,
         job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
+        payload=payload,
+    )
+    return PrunerEnqueueOut(pruner_job_id=jid)
+
+
+@router.get(
+    "/pruner/instances/{instance_id}/scopes/{media_scope}/plex-live-removal-eligibility",
+    response_model=PrunerPlexLiveEligibilityOut,
+    summary="Plex-only: whether live Remove broken library entries can be enqueued (no preview)",
+)
+def get_pruner_plex_live_removal_eligibility(
+    instance_id: Annotated[int, Path(ge=1)],
+    media_scope: Annotated[str, Path(description="`tv` or `movies`")],
+    _user: UserPublicDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+) -> PrunerPlexLiveEligibilityOut:
+    if media_scope not in (MEDIA_SCOPE_TV, MEDIA_SCOPE_MOVIES):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="media_scope must be tv or movies.")
+    if get_server_instance(db, instance_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found.")
+    return compute_plex_live_eligibility(
+        db,
+        settings,
+        instance_id=instance_id,
+        media_scope=media_scope,
+    )
+
+
+@router.post(
+    "/pruner/instances/{instance_id}/scopes/{media_scope}/plex-live-removal",
+    response_model=PrunerEnqueueOut,
+    summary="Plex-only: enqueue live Remove broken library entries (no preview snapshot)",
+)
+def post_pruner_plex_live_removal(
+    instance_id: Annotated[int, Path(ge=1)],
+    media_scope: Annotated[str, Path()],
+    body: PrunerPlexLiveRemovalHttpIn,
+    request: Request,
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+) -> PrunerEnqueueOut:
+    validate_browser_post_origin(request, settings)
+    secret = require_session_secret(settings)
+    if not verify_csrf_token(secret, body.csrf_token):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
+    if media_scope not in (MEDIA_SCOPE_TV, MEDIA_SCOPE_MOVIES):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="media_scope must be tv or movies.")
+    if get_server_instance(db, instance_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found.")
+    if body.live_removal_confirmation.strip() != PRUNER_PLEX_LIVE_CONFIRMATION_PHRASE:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={"reasons": ["Typed confirmation phrase does not match the required phrase for Plex live removal."]},
+        )
+    elig = compute_plex_live_eligibility(
+        db,
+        settings,
+        instance_id=instance_id,
+        media_scope=media_scope,
+    )
+    if not elig.eligible:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={"reasons": elig.reasons},
+        )
+    payload = {
+        "server_instance_id": instance_id,
+        "media_scope": media_scope,
+        "rule_family_id": RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+    }
+    dedupe = f"pruner:plex-live:v1:{instance_id}:{media_scope}:{uuid.uuid4()}"
+    jid = _enqueue(
+        db,
+        dedupe_key=dedupe,
+        job_kind=PRUNER_CANDIDATE_REMOVAL_PLEX_LIVE_JOB_KIND,
         payload=payload,
     )
     return PrunerEnqueueOut(pruner_job_id=jid)
@@ -448,11 +538,15 @@ def post_pruner_preview(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     if get_server_instance(db, instance_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found.")
-    dedupe = f"pruner:preview:v1:{instance_id}:{body.media_scope}:{uuid.uuid4()}"
+    dedupe = f"pruner:preview:v1:{instance_id}:{body.media_scope}:{body.rule_family_id}:{uuid.uuid4()}"
     jid = _enqueue(
         db,
         dedupe_key=dedupe,
         job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
-        payload={"server_instance_id": instance_id, "media_scope": body.media_scope},
+        payload={
+            "server_instance_id": instance_id,
+            "media_scope": body.media_scope,
+            "rule_family_id": body.rule_family_id,
+        },
     )
     return PrunerEnqueueOut(pruner_job_id=jid)

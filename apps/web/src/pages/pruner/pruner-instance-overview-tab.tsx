@@ -19,16 +19,22 @@ export function PrunerInstanceOverviewTab() {
         Scopes (summary)
       </h2>
       <p className="text-sm text-[var(--mm-text2)]">
-        Latest preview numbers below are denormalized for quick reads. Full candidate JSON lives in{" "}
-        <code className="text-[0.85em]">pruner_preview_runs</code> (see TV / Movies tabs).
+        Latest preview numbers below are denormalized for quick reads (Jellyfin/Emby preview snapshots). Full candidate
+        JSON for those providers lives in <code className="text-[0.85em]">pruner_preview_runs</code> (see TV / Movies
+        tabs). Plex uses the live path on scope tabs when enabled — it does not consume preview snapshots.
       </p>
       <ul className="space-y-2 text-sm">
         {instance.scopes.map((s) => (
           <li key={s.media_scope} className="rounded border border-[var(--mm-border)] px-3 py-2">
             <div className="font-medium capitalize text-[var(--mm-text)]">{s.media_scope}</div>
             <div className="text-xs text-[var(--mm-text2)]">
-              Rule enabled: {s.missing_primary_media_reported_enabled ? "yes" : "no"} · preview cap{" "}
-              {s.preview_max_items}
+              Missing primary art rule: {s.missing_primary_media_reported_enabled ? "on" : "off"} · stale never-played
+              rule: {s.never_played_stale_reported_enabled ? "on" : "off"} (min age {s.never_played_min_age_days} days) ·
+              per-scope item cap {s.preview_max_items}{" "}
+              <span className="text-[var(--mm-text3)]">
+                (Jellyfin/Emby: preview list max. Plex: same number caps live removals together with the env absolute
+                ceiling.)
+              </span>
             </div>
             <div className="mt-1 text-xs text-[var(--mm-text2)]">
               Last preview:{" "}

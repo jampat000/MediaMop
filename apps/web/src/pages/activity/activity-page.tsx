@@ -60,10 +60,11 @@ export function ActivityPage() {
           Persisted platform events, newest first. Snapshot-backed view with live freshness updates.
         </p>
         <p className="mm-page__lead">
-          Read-only: no filters, export, or actions.           Records sign-in outcomes, setup, sign-out, failed bootstrap
-          attempts, throttled Fetcher health checks, Fetcher failed-import queue/run activity (queued passes,
-          run start, outcomes), Refiner file remux pass results, and Refiner watched-folder scan summaries when you run
-          them — not every page load.
+          Read-only: no filters, export, or actions. Records sign-in outcomes, setup, sign-out, failed bootstrap
+          attempts, throttled Fetcher health checks, Fetcher failed-import queue/run activity (queued passes, run start,
+          outcomes), Refiner file remux pass results, Refiner watched-folder scan summaries when you run them, and Pruner
+          connection tests, preview outcomes, Jellyfin/Emby apply-from-preview completions, and Plex live removal
+          summaries — not every page load.
         </p>
       </header>
 

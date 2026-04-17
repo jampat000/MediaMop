@@ -6,10 +6,21 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.pruner.pruner_constants import RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED
-from mediamop.modules.pruner.pruner_instances_service import get_server_instance
+from mediamop.modules.pruner.pruner_constants import (
+    RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+    RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
+    pruner_apply_operator_label,
+)
+from mediamop.modules.pruner.pruner_instances_service import get_scope_settings, get_server_instance
 from mediamop.modules.pruner.pruner_preview_run_model import PrunerPreviewRun
 from mediamop.modules.pruner.pruner_schemas import PrunerApplyEligibilityOut
+
+_APPLY_SUPPORTED_RULES = frozenset(
+    {
+        RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+        RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
+    },
+)
 
 
 def compute_apply_eligibility(
@@ -41,12 +52,13 @@ def compute_apply_eligibility(
             candidate_count=0,
             preview_outcome="",
             rule_family_id="",
+            apply_operator_label="",
         )
 
     prov = str(inst.provider)
     if prov not in ("jellyfin", "emby"):
         reasons.append(
-            "Remove broken library entries is available for Jellyfin and Emby instances only in this release.",
+            "Applying from preview snapshots is available for Jellyfin and Emby instances only in this release.",
         )
 
     run = db.scalars(
@@ -70,13 +82,29 @@ def compute_apply_eligibility(
             candidate_count=0,
             preview_outcome="",
             rule_family_id="",
+            apply_operator_label="",
         )
+
+    rid = str(run.rule_family_id)
+    apply_label = pruner_apply_operator_label(rid)
 
     if str(run.media_scope) != media_scope:
         reasons.append("This preview snapshot belongs to a different TV/Movies tab than the current URL.")
 
-    if str(run.rule_family_id) != RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
-        reasons.append("This preview snapshot is not eligible for Remove broken library entries.")
+    if rid not in _APPLY_SUPPORTED_RULES:
+        reasons.append("This preview snapshot's rule family is not supported for apply in this release.")
+    else:
+        sc = get_scope_settings(db, server_instance_id=instance_id, media_scope=media_scope)
+        if sc is None:
+            reasons.append("Scope settings row missing.")
+        elif rid == RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED and not bool(sc.missing_primary_media_reported_enabled):
+            reasons.append(
+                f"{apply_label} is not enabled for this scope (missing-primary rule toggle).",
+            )
+        elif rid == RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED and not bool(sc.never_played_stale_reported_enabled):
+            reasons.append(
+                f"{apply_label} is not enabled for this scope (never-played stale rule toggle).",
+            )
 
     if str(run.outcome) != "success":
         reasons.append("Preview outcome must be success before applying this snapshot.")
@@ -97,5 +125,6 @@ def compute_apply_eligibility(
         preview_created_at=run.created_at,
         candidate_count=int(run.candidate_count),
         preview_outcome=str(run.outcome),
-        rule_family_id=str(run.rule_family_id),
+        rule_family_id=rid,
+        apply_operator_label=apply_label if rid in _APPLY_SUPPORTED_RULES else "",
     )
