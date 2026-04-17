@@ -8,10 +8,12 @@ MEDIA_SCOPE_MOVIES = "movies"
 RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED = "missing_primary_media_reported"
 RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED = "never_played_stale_reported"
 RULE_FAMILY_WATCHED_TV_REPORTED = "watched_tv_reported"
+RULE_FAMILY_WATCHED_MOVIES_REPORTED = "watched_movies_reported"
 
 PRUNER_APPLY_LABEL_MISSING_PRIMARY = "Remove broken library entries"
 PRUNER_APPLY_LABEL_NEVER_PLAYED_STALE = "Remove stale never-played library entries"
 PRUNER_APPLY_LABEL_WATCHED_TV = "Remove watched TV entries"
+PRUNER_APPLY_LABEL_WATCHED_MOVIES = "Remove watched movie entries"
 
 PRUNER_DEFAULT_NEVER_PLAYED_MIN_AGE_DAYS = 90
 PRUNER_NEVER_PLAYED_MIN_AGE_DAYS_MIN = 7
@@ -39,6 +41,8 @@ def pruner_apply_operator_label(rule_family_id: str) -> str:
 
     if rule_family_id == RULE_FAMILY_WATCHED_TV_REPORTED:
         return PRUNER_APPLY_LABEL_WATCHED_TV
+    if rule_family_id == RULE_FAMILY_WATCHED_MOVIES_REPORTED:
+        return PRUNER_APPLY_LABEL_WATCHED_MOVIES
     if rule_family_id == RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED:
         return PRUNER_APPLY_LABEL_NEVER_PLAYED_STALE
     return PRUNER_APPLY_LABEL_MISSING_PRIMARY
@@ -52,6 +56,7 @@ def pruner_preview_rule_families_jf_emby() -> frozenset[str]:
             RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
             RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
             RULE_FAMILY_WATCHED_TV_REPORTED,
+            RULE_FAMILY_WATCHED_MOVIES_REPORTED,
         },
     )
 

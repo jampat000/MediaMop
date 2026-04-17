@@ -18,6 +18,7 @@ function scopeRow(media_scope: "tv" | "movies") {
     never_played_stale_reported_enabled: false,
     never_played_min_age_days: 90,
     watched_tv_reported_enabled: false,
+    watched_movies_reported_enabled: false,
     preview_max_items: 500,
     scheduled_preview_enabled: false,
     scheduled_preview_interval_seconds: 3600,

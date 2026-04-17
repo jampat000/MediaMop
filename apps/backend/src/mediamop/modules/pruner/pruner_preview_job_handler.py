@@ -11,8 +11,10 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.pruner.pruner_constants import (
+    MEDIA_SCOPE_MOVIES,
     RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
     RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
+    RULE_FAMILY_WATCHED_MOVIES_REPORTED,
     RULE_FAMILY_WATCHED_TV_REPORTED,
     clamp_never_played_min_age_days,
     pruner_preview_rule_families_jf_emby,
@@ -62,6 +64,9 @@ def make_pruner_candidate_removal_preview_handler(
         if is_scheduled and rule_family_id != RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
             msg = "scheduled preview may only target missing_primary_media_reported"
             raise ValueError(msg)
+        if rule_family_id == RULE_FAMILY_WATCHED_MOVIES_REPORTED and scope != MEDIA_SCOPE_MOVIES:
+            msg = "watched_movies_reported preview requires media_scope=movies"
+            raise ValueError(msg)
 
         with session_factory() as session:
             inst = get_server_instance(session, sid)
@@ -83,6 +88,10 @@ def make_pruner_candidate_removal_preview_handler(
             elif rule_family_id == RULE_FAMILY_WATCHED_TV_REPORTED:
                 if not bool(sc.watched_tv_reported_enabled):
                     msg = "watched_tv_reported_enabled is false for this scope"
+                    raise ValueError(msg)
+            elif rule_family_id == RULE_FAMILY_WATCHED_MOVIES_REPORTED:
+                if not bool(sc.watched_movies_reported_enabled):
+                    msg = "watched_movies_reported_enabled is false for this scope"
                     raise ValueError(msg)
             max_items = max(1, min(int(sc.preview_max_items), 5000))
             age_days = clamp_never_played_min_age_days(int(sc.never_played_min_age_days))
@@ -125,6 +134,8 @@ def make_pruner_candidate_removal_preview_handler(
             rule_tag = "never-played stale"
         elif rule_family_id == RULE_FAMILY_WATCHED_TV_REPORTED:
             rule_tag = "watched TV"
+        elif rule_family_id == RULE_FAMILY_WATCHED_MOVIES_REPORTED:
+            rule_tag = "watched movies"
         else:
             rule_tag = str(rule_family_id)
         title = (

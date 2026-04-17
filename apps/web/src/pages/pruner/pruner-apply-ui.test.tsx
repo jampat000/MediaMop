@@ -9,7 +9,9 @@ import type { PrunerPreviewRunSummary, PrunerServerInstance } from "../../lib/pr
 import {
   PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL,
   PRUNER_REMOVE_STALE_NEVER_PLAYED_LIBRARY_ENTRIES_LABEL,
+  PRUNER_REMOVE_WATCHED_MOVIES_ENTRIES_LABEL,
   PRUNER_REMOVE_WATCHED_TV_ENTRIES_LABEL,
+  RULE_FAMILY_WATCHED_MOVIES_REPORTED,
   RULE_FAMILY_WATCHED_TV_REPORTED,
 } from "../../lib/pruner/api";
 import { PrunerInstanceShell } from "./pruner-instance-shell";
@@ -35,6 +37,7 @@ const jellyfinInstance: PrunerServerInstance = {
       never_played_stale_reported_enabled: false,
       never_played_min_age_days: 90,
       watched_tv_reported_enabled: false,
+      watched_movies_reported_enabled: false,
       preview_max_items: 500,
       scheduled_preview_enabled: false,
       scheduled_preview_interval_seconds: 3600,
@@ -51,6 +54,7 @@ const jellyfinInstance: PrunerServerInstance = {
       never_played_stale_reported_enabled: false,
       never_played_min_age_days: 90,
       watched_tv_reported_enabled: false,
+      watched_movies_reported_enabled: false,
       preview_max_items: 500,
       scheduled_preview_enabled: false,
       scheduled_preview_interval_seconds: 3600,
@@ -358,6 +362,79 @@ describe("PrunerScopeTab apply (preview → apply)", () => {
     }
   });
 
+  it("uses Remove watched movie entries for watched movies preview rows (Movies tab)", async () => {
+    const moviesRunId = "44444444-4444-4444-8444-444444444444";
+    const spyElig = vi.spyOn(prunerApi, "fetchPrunerApplyEligibility").mockResolvedValue({
+      eligible: true,
+      reasons: [],
+      apply_feature_enabled: true,
+      preview_run_id: moviesRunId,
+      server_instance_id: 2,
+      media_scope: "movies",
+      provider: "jellyfin",
+      display_name: "JF Home",
+      preview_created_at: previewRun.created_at,
+      candidate_count: 1,
+      preview_outcome: "success",
+      rule_family_id: RULE_FAMILY_WATCHED_MOVIES_REPORTED,
+      apply_operator_label: PRUNER_REMOVE_WATCHED_MOVIES_ENTRIES_LABEL,
+    });
+    try {
+      const qc = new QueryClient({
+        defaultOptions: { queries: { retry: false, staleTime: 60_000, refetchOnMount: false } },
+      });
+      qc.setQueryData(qk.me, operator);
+      await qc.prefetchQuery({
+        queryKey: ["pruner", "instances", 2],
+        queryFn: async () => jellyfinInstance,
+      });
+      await qc.prefetchQuery({
+        queryKey: ["pruner", "preview-runs", 2, "movies"],
+        queryFn: async () => [
+          {
+            ...previewRun,
+            preview_run_id: moviesRunId,
+            media_scope: "movies",
+            rule_family_id: RULE_FAMILY_WATCHED_MOVIES_REPORTED,
+            candidate_count: 1,
+          },
+        ],
+      });
+
+      const router = createMemoryRouter(
+        [
+          {
+            path: "/instances/:instanceId",
+            element: <PrunerInstanceShell />,
+            children: [{ path: "movies", element: <PrunerScopeTab scope="movies" /> }],
+          },
+        ],
+        { initialEntries: ["/instances/2/movies"] },
+      );
+
+      render(
+        <QueryClientProvider client={qc}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId(`pruner-apply-open-${moviesRunId}`)).toBeInTheDocument();
+      });
+      const openBtn = screen.getByTestId(`pruner-apply-open-${moviesRunId}`);
+      expect(openBtn.textContent).toBe(PRUNER_REMOVE_WATCHED_MOVIES_ENTRIES_LABEL);
+      fireEvent.click(openBtn);
+      const modal = await screen.findByTestId("pruner-apply-modal");
+      await waitFor(() => {
+        expect(within(modal).getByRole("heading", { level: 3 })).toHaveTextContent(
+          PRUNER_REMOVE_WATCHED_MOVIES_ENTRIES_LABEL,
+        );
+      });
+    } finally {
+      spyElig.mockRestore();
+    }
+  });
+
   it("does not show apply on Plex rows for unsupported rule families", async () => {
     const plexInstance: PrunerServerInstance = {
       id: 4,
@@ -375,6 +452,7 @@ describe("PrunerScopeTab apply (preview → apply)", () => {
           never_played_stale_reported_enabled: false,
           never_played_min_age_days: 90,
           watched_tv_reported_enabled: false,
+          watched_movies_reported_enabled: false,
           preview_max_items: 500,
           scheduled_preview_enabled: false,
           scheduled_preview_interval_seconds: 3600,
@@ -391,6 +469,7 @@ describe("PrunerScopeTab apply (preview → apply)", () => {
           never_played_stale_reported_enabled: false,
           never_played_min_age_days: 90,
           watched_tv_reported_enabled: false,
+          watched_movies_reported_enabled: false,
           preview_max_items: 500,
           scheduled_preview_enabled: false,
           scheduled_preview_interval_seconds: 3600,

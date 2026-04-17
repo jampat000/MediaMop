@@ -7,9 +7,11 @@ from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.pruner.pruner_constants import (
+    MEDIA_SCOPE_MOVIES,
     MEDIA_SCOPE_TV,
     RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
     RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
+    RULE_FAMILY_WATCHED_MOVIES_REPORTED,
     RULE_FAMILY_WATCHED_TV_REPORTED,
     pruner_apply_operator_label,
 )
@@ -22,6 +24,7 @@ _APPLY_SUPPORTED_RULES = frozenset(
         RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
         RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
         RULE_FAMILY_WATCHED_TV_REPORTED,
+        RULE_FAMILY_WATCHED_MOVIES_REPORTED,
     },
 )
 
@@ -97,6 +100,9 @@ def compute_apply_eligibility(
     if rid == RULE_FAMILY_WATCHED_TV_REPORTED and str(run.media_scope) != MEDIA_SCOPE_TV:
         reasons.append("Watched TV apply is only defined for TV (episodes) preview snapshots.")
 
+    if rid == RULE_FAMILY_WATCHED_MOVIES_REPORTED and str(run.media_scope) != MEDIA_SCOPE_MOVIES:
+        reasons.append("Watched movies apply is only defined for Movies preview snapshots.")
+
     if rid not in _APPLY_SUPPORTED_RULES:
         reasons.append("This preview snapshot's rule family is not supported for apply in this release.")
     else:
@@ -114,6 +120,10 @@ def compute_apply_eligibility(
         elif rid == RULE_FAMILY_WATCHED_TV_REPORTED and not bool(sc.watched_tv_reported_enabled):
             reasons.append(
                 f"{apply_label} is not enabled for this scope (watched TV rule toggle).",
+            )
+        elif rid == RULE_FAMILY_WATCHED_MOVIES_REPORTED and not bool(sc.watched_movies_reported_enabled):
+            reasons.append(
+                f"{apply_label} is not enabled for this scope (watched movies rule toggle).",
             )
 
     if str(run.outcome) != "success":

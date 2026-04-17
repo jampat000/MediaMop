@@ -1,0 +1,21 @@
+MediaMop — Canonical Handoff Journal v2 (Pruner excerpt)
+Cursor resource: file_00000000791471fa897d476a88a58001
+
+=== Pruner / Plex (current truth) ===
+
+- missing_primary_media_reported: Plex supports preview plus snapshot-bound apply (not live-only). Apply consumes stored preview item identity (ratingKey) only and does not rediscover or re-evaluate eligibility at apply time.
+
+- Retired: GET/POST …/plex-live-removal* compatibility remains boxed off and retired; operators use preview → apply for Plex missing-primary.
+
+- never_played_stale_reported: remains unsupported on Plex (Jellyfin/Emby only).
+
+- watched_tv_reported: remains unsupported on Plex (Jellyfin/Emby only).
+
+- Plex missing-primary preview/apply work is complete as of commit 41ea350, with follow-up hardening/finalization in 878d0dd (cap alignment, activity/UI disclosure, no-widening tests, unsupported messaging cleanup).
+
+- watched_movies_reported: Jellyfin and Emby — preview plus snapshot-bound apply using the same Items/UserData watched signal family as watched TV, Movies scope only. Plex — unsupported in the current slice (no clean user-scoped watched-movie signal integrated on MediaMop; queueing preview records an explicit unsupported outcome).
+
+=== Active Pruner workstream ===
+
+- watched_movies_reported: shipped in the slice that added this section (Jellyfin/Emby preview + snapshot apply; Plex unsupported with explicit preview outcome).
+- Next: follow product backlog (update this excerpt when a new primary Pruner thread starts).

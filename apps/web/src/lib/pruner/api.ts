@@ -7,6 +7,7 @@ export type PrunerScopeSummary = {
   never_played_stale_reported_enabled: boolean;
   never_played_min_age_days: number;
   watched_tv_reported_enabled: boolean;
+  watched_movies_reported_enabled: boolean;
   preview_max_items: number;
   scheduled_preview_enabled: boolean;
   scheduled_preview_interval_seconds: number;
@@ -64,14 +65,19 @@ export type PrunerApplyEligibility = {
 export const RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED = "missing_primary_media_reported";
 export const RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED = "never_played_stale_reported";
 export const RULE_FAMILY_WATCHED_TV_REPORTED = "watched_tv_reported";
+export const RULE_FAMILY_WATCHED_MOVIES_REPORTED = "watched_movies_reported";
 
 export const PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL = "Remove broken library entries";
 export const PRUNER_REMOVE_STALE_NEVER_PLAYED_LIBRARY_ENTRIES_LABEL = "Remove stale never-played library entries";
 export const PRUNER_REMOVE_WATCHED_TV_ENTRIES_LABEL = "Remove watched TV entries";
+export const PRUNER_REMOVE_WATCHED_MOVIES_ENTRIES_LABEL = "Remove watched movie entries";
 
 export function prunerApplyLabelForRuleFamily(ruleFamilyId: string): string {
   if (ruleFamilyId === RULE_FAMILY_WATCHED_TV_REPORTED) {
     return PRUNER_REMOVE_WATCHED_TV_ENTRIES_LABEL;
+  }
+  if (ruleFamilyId === RULE_FAMILY_WATCHED_MOVIES_REPORTED) {
+    return PRUNER_REMOVE_WATCHED_MOVIES_ENTRIES_LABEL;
   }
   if (ruleFamilyId === RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED) {
     return PRUNER_REMOVE_STALE_NEVER_PLAYED_LIBRARY_ENTRIES_LABEL;
@@ -184,6 +190,7 @@ export async function patchPrunerScope(
     never_played_stale_reported_enabled?: boolean;
     never_played_min_age_days?: number;
     watched_tv_reported_enabled?: boolean;
+    watched_movies_reported_enabled?: boolean;
     preview_max_items?: number;
     scheduled_preview_enabled?: boolean;
     scheduled_preview_interval_seconds?: number;

@@ -11,9 +11,11 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.pruner.pruner_constants import (
+    MEDIA_SCOPE_MOVIES,
     MEDIA_SCOPE_TV,
     RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
     RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
+    RULE_FAMILY_WATCHED_MOVIES_REPORTED,
     RULE_FAMILY_WATCHED_TV_REPORTED,
     pruner_apply_operator_label,
 )
@@ -32,6 +34,7 @@ _APPLY_SUPPORTED = frozenset(
         RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
         RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
         RULE_FAMILY_WATCHED_TV_REPORTED,
+        RULE_FAMILY_WATCHED_MOVIES_REPORTED,
     },
 )
 
@@ -103,6 +106,9 @@ def make_pruner_candidate_removal_apply_handler(
             snap_rule = str(run.rule_family_id)
             if snap_rule == RULE_FAMILY_WATCHED_TV_REPORTED and str(run.media_scope) != MEDIA_SCOPE_TV:
                 msg = "watched_tv_reported apply requires a TV scope preview snapshot"
+                raise ValueError(msg)
+            if snap_rule == RULE_FAMILY_WATCHED_MOVIES_REPORTED and str(run.media_scope) != MEDIA_SCOPE_MOVIES:
+                msg = "watched_movies_reported apply requires a Movies scope preview snapshot"
                 raise ValueError(msg)
             if snap_rule != rid:
                 msg = "payload.rule_family_id must match preview snapshot rule_family_id"

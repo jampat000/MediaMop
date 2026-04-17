@@ -19,9 +19,9 @@ export function PrunerInstanceOverviewTab() {
         Scopes (summary)
       </h2>
       <p className="text-sm text-[var(--mm-text2)]">
-        Latest preview numbers below are denormalized for quick reads (Jellyfin/Emby preview snapshots). Full candidate
-        JSON for those providers lives in <code className="text-[0.85em]">pruner_preview_runs</code> (see TV / Movies
-        tabs). Plex uses the live path on scope tabs when enabled — it does not consume preview snapshots.
+        Latest preview numbers below are denormalized for quick reads. Full candidate JSON lives in{" "}
+        <code className="text-[0.85em]">pruner_preview_runs</code> (see TV / Movies tabs). Jellyfin, Emby, and Plex
+        (missing-primary rule) all use stored preview snapshots for apply-from-preview.
       </p>
       <ul className="space-y-2 text-sm">
         {instance.scopes.map((s) => (
@@ -34,6 +34,12 @@ export function PrunerInstanceOverviewTab() {
                 <>
                   {" "}
                   · watched TV (episodes) rule: {s.watched_tv_reported_enabled ? "on" : "off"}
+                </>
+              ) : null}
+              {s.media_scope === "movies" ? (
+                <>
+                  {" "}
+                  · watched movies rule: {s.watched_movies_reported_enabled ? "on" : "off"}
                 </>
               ) : null}{" "}
               · per-scope item cap {s.preview_max_items}{" "}
