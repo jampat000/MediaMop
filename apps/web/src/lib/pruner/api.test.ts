@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { prunerPreviewRunsListPath } from "./api";
+import { prunerApplyEligibilityPath, prunerPreviewRunsListPath } from "./api";
+
+describe("prunerApplyEligibilityPath", () => {
+  it("scopes apply eligibility under instance + media_scope + preview id", () => {
+    expect(prunerApplyEligibilityPath(5, "movies", "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee")).toBe(
+      "/api/v1/pruner/instances/5/scopes/movies/preview-runs/aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee/apply-eligibility",
+    );
+  });
+});
 
 describe("prunerPreviewRunsListPath", () => {
   it("builds the list URL and optional query string", () => {

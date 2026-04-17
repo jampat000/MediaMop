@@ -145,6 +145,27 @@ class PrunerPreviewRunOut(BaseModel):
     candidates_json: str
 
 
+class PrunerApplyEligibilityOut(BaseModel):
+    """Read-only: whether apply can be enqueued for this snapshot (not a second dry run)."""
+
+    eligible: bool
+    reasons: list[str] = Field(default_factory=list)
+    apply_feature_enabled: bool
+    preview_run_id: str
+    server_instance_id: int
+    media_scope: str
+    provider: str
+    display_name: str
+    preview_created_at: datetime | None = None
+    candidate_count: int = 0
+    preview_outcome: str = ""
+    rule_family_id: str = ""
+
+
+class PrunerApplyHttpIn(BaseModel):
+    csrf_token: str = Field(..., min_length=1)
+
+
 class PrunerPreviewRunListItemOut(BaseModel):
     """Preview run metadata without ``candidates_json`` (list endpoint for operator history)."""
 

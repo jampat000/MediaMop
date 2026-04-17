@@ -111,6 +111,8 @@ class MediaMopSettings:
     # Pruner per-scope scheduled preview enqueue loop (reads ``pruner_scope_settings``; independent of worker count).
     pruner_preview_schedule_enqueue_enabled: bool
     pruner_preview_schedule_scan_interval_seconds: int
+    # Jellyfin-only Phase 3: enqueue ``pruner.candidate_removal.apply.v1`` (default off).
+    pruner_apply_enabled: bool
     # 0 = no in-process Subber workers (Subber-owned subber_jobs only); >0 when Subber queues durable work.
     subber_worker_count: int
     # Refiner supplied payload evaluation (``refiner.supplied_payload_evaluation.v1``) — Refiner-only schedule.
@@ -290,6 +292,7 @@ class MediaMopSettings:
             10,
             min(300, _env_int("MEDIAMOP_PRUNER_PREVIEW_SCHEDULE_SCAN_INTERVAL_SECONDS", 45)),
         )
+        pruner_apply_on = _env_bool("MEDIAMOP_PRUNER_APPLY_ENABLED", False)
         subber_workers = clamp_subber_worker_count(_env_int("MEDIAMOP_SUBBER_WORKER_COUNT", 0))
         def _refiner_supplied_payload_eval_schedule_enabled() -> bool:
             new_k = "MEDIAMOP_REFINER_SUPPLIED_PAYLOAD_EVALUATION_SCHEDULE_ENABLED"
@@ -607,6 +610,7 @@ class MediaMopSettings:
             pruner_worker_count=pruner_workers,
             pruner_preview_schedule_enqueue_enabled=pruner_preview_sched_enq,
             pruner_preview_schedule_scan_interval_seconds=pruner_preview_sched_scan_iv,
+            pruner_apply_enabled=pruner_apply_on,
             subber_worker_count=subber_workers,
             refiner_supplied_payload_evaluation_schedule_enabled=refiner_payload_eval_on,
             refiner_supplied_payload_evaluation_schedule_interval_seconds=refiner_payload_eval_iv,

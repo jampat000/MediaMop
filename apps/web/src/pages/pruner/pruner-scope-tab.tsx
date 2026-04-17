@@ -4,9 +4,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchCsrfToken } from "../../lib/api/auth-api";
 import { useMeQuery } from "../../lib/auth/queries";
 import {
+  PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL,
+  fetchPrunerApplyEligibility,
   fetchPrunerPreviewRun,
   fetchPrunerPreviewRuns,
   patchPrunerScope,
+  postPrunerApplyFromPreview,
   postPrunerPreview,
 } from "../../lib/pruner/api";
 import type { PrunerServerInstance } from "../../lib/pruner/api";
@@ -24,17 +27,26 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
   const [schedEnabled, setSchedEnabled] = useState(false);
   const [schedInterval, setSchedInterval] = useState(3600);
   const [schedMsg, setSchedMsg] = useState<string | null>(null);
+  const [applyModalRunId, setApplyModalRunId] = useState<string | null>(null);
+  const [applySnapshotConfirmed, setApplySnapshotConfirmed] = useState(false);
   const canOperate = me.data?.role === "admin" || me.data?.role === "operator";
 
   const scopeRow = instance?.scopes.find((s) => s.media_scope === props.scope);
   const label = props.scope === "tv" ? "TV (episodes)" : "Movies (one row per movie item)";
   const isPlex = instance?.provider === "plex";
+  const isJellyfin = instance?.provider === "jellyfin";
 
   const previewRunsQueryKey = ["pruner", "preview-runs", instanceId, props.scope] as const;
   const runsQuery = useQuery({
     queryKey: previewRunsQueryKey,
     queryFn: () => fetchPrunerPreviewRuns(instanceId, { media_scope: props.scope, limit: 25 }),
     enabled: Boolean(instanceId),
+  });
+
+  const applyEligQuery = useQuery({
+    queryKey: ["pruner", "apply-eligibility", instanceId, props.scope, applyModalRunId] as const,
+    queryFn: () => fetchPrunerApplyEligibility(instanceId, props.scope, applyModalRunId!),
+    enabled: Boolean(instanceId && applyModalRunId),
   });
 
   useEffect(() => {
@@ -79,6 +91,36 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
       await qc.invalidateQueries({ queryKey: previewRunsQueryKey });
       setPreview(
         `Queued preview job #${pruner_job_id}. When the worker finishes, the summary above and the recent-run table update automatically (this scope only).`,
+      );
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function openApplyModal(runUuid: string) {
+    setApplySnapshotConfirmed(false);
+    setApplyModalRunId(runUuid);
+  }
+
+  function closeApplyModal() {
+    setApplyModalRunId(null);
+    setApplySnapshotConfirmed(false);
+  }
+
+  async function confirmApplyFromSnapshot() {
+    if (!applyModalRunId) return;
+    const runId = applyModalRunId;
+    setErr(null);
+    setBusy(true);
+    try {
+      const { pruner_job_id } = await postPrunerApplyFromPreview(instanceId, props.scope, runId);
+      await qc.invalidateQueries({ queryKey: previewRunsQueryKey });
+      await qc.invalidateQueries({ queryKey: ["activity"] });
+      closeApplyModal();
+      setPreview(
+        `Queued ${PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL.toLowerCase()} job #${pruner_job_id} for preview snapshot ${runId.slice(0, 8)}… (this preview only; worker runs separately).`,
       );
     } catch (e) {
       setErr((e as Error).message);
@@ -260,7 +302,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
                       {row.candidate_count}
                       {row.truncated ? " (truncated)" : ""}
                     </td>
-                    <td className="px-2 py-2">
+                    <td className="px-2 py-2 space-y-1">
                       <button
                         type="button"
                         className="rounded border border-[var(--mm-border)] px-2 py-1 text-xs font-medium text-[var(--mm-text)] disabled:opacity-50"
@@ -269,6 +311,19 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
                       >
                         JSON
                       </button>
+                      {canOperate && isJellyfin && row.outcome === "success" && row.candidate_count > 0 ? (
+                        <div>
+                          <button
+                            type="button"
+                            className="mt-1 block w-full rounded border border-red-900/50 bg-red-950/30 px-2 py-1 text-left text-xs font-medium text-red-100 disabled:opacity-50"
+                            data-testid={`pruner-apply-open-${row.preview_run_id}`}
+                            disabled={busy}
+                            onClick={() => openApplyModal(row.preview_run_id)}
+                          >
+                            {PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL}
+                          </button>
+                        </div>
+                      ) : null}
                     </td>
                   </tr>
                 ))}
@@ -279,6 +334,99 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
           <p className="text-sm text-[var(--mm-text2)]">No preview runs recorded for this scope yet.</p>
         )}
       </div>
+      {applyModalRunId ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pruner-apply-modal-title"
+          data-testid="pruner-apply-modal"
+        >
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-4 shadow-xl">
+            <h3 id="pruner-apply-modal-title" className="text-base font-semibold text-[var(--mm-text)]">
+              {PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL}
+            </h3>
+            <p className="mt-2 text-sm text-[var(--mm-text2)]">
+              This live action uses <strong>only</strong> the frozen candidate list from one preview snapshot. It does
+              not re-run preview and does not widen the candidate set.
+            </p>
+            {applyEligQuery.isLoading ? (
+              <p className="mt-3 text-sm text-[var(--mm-text2)]">Checking eligibility…</p>
+            ) : applyEligQuery.isError ? (
+              <p className="mt-3 text-sm text-red-600" role="alert">
+                {(applyEligQuery.error as Error).message}
+              </p>
+            ) : applyEligQuery.data ? (
+              <ul className="mt-3 list-inside list-disc space-y-1 text-sm text-[var(--mm-text)]">
+                <li>
+                  Server: <strong>{applyEligQuery.data.display_name}</strong> ({applyEligQuery.data.provider})
+                </li>
+                <li>
+                  Scope: <strong>{applyEligQuery.data.media_scope === "tv" ? "TV" : "Movies"}</strong>
+                </li>
+                <li>
+                  Preview time:{" "}
+                  {applyEligQuery.data.preview_created_at
+                    ? new Date(applyEligQuery.data.preview_created_at).toLocaleString()
+                    : "—"}
+                </li>
+                <li>
+                  Snapshot id: <span className="font-mono text-xs">{applyEligQuery.data.preview_run_id}</span>
+                </li>
+                <li>
+                  Candidates in snapshot: <strong>{applyEligQuery.data.candidate_count}</strong>
+                </li>
+              </ul>
+            ) : null}
+            {applyEligQuery.data && !applyEligQuery.data.eligible ? (
+              <p className="mt-3 text-sm text-amber-700" role="status">
+                {applyEligQuery.data.reasons.length
+                  ? applyEligQuery.data.reasons.join(" ")
+                  : "This snapshot cannot be applied right now."}
+              </p>
+            ) : null}
+            {applyEligQuery.data?.eligible ? (
+              <label className="mt-4 flex cursor-pointer items-start gap-2 text-sm text-[var(--mm-text)]">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={applySnapshotConfirmed}
+                  onChange={(e) => setApplySnapshotConfirmed(e.target.checked)}
+                />
+                <span>
+                  I confirm <strong>{PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL}</strong> for this exact preview
+                  snapshot only ({applyModalRunId.slice(0, 8)}…), with at most {applyEligQuery.data.candidate_count}{" "}
+                  library entries.
+                </span>
+              </label>
+            ) : null}
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className="rounded-md border border-[var(--mm-border)] px-3 py-1.5 text-sm font-medium text-[var(--mm-text)]"
+                onClick={() => closeApplyModal()}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="rounded-md bg-red-800 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                data-testid="pruner-apply-confirm"
+                disabled={
+                  busy ||
+                  !applyEligQuery.data?.eligible ||
+                  !applySnapshotConfirmed ||
+                  applyEligQuery.isLoading ||
+                  applyEligQuery.isError
+                }
+                onClick={() => void confirmApplyFromSnapshot()}
+              >
+                {PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {err ? (
         <p className="text-sm text-red-600" role="alert">
           {err}

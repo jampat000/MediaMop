@@ -42,6 +42,29 @@ def http_get_text(
     return status, raw
 
 
+def http_delete(
+    url: str,
+    *,
+    headers: dict[str, str] | None = None,
+    timeout_sec: float = DEFAULT_TIMEOUT_SEC,
+) -> tuple[int, str | None]:
+    """DELETE; returns ``(status, body_or_none)``. Treats HTTP error responses as status + optional body."""
+
+    req = urllib.request.Request(url, headers=headers or {}, method="DELETE")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout_sec) as resp:  # noqa: S310
+            status = int(resp.status)
+            raw = resp.read().decode("utf-8", errors="replace").strip()
+            return status, raw if raw else None
+    except urllib.error.HTTPError as e:
+        raw = ""
+        try:
+            raw = e.read().decode("utf-8", errors="replace").strip()
+        except Exception:
+            pass
+        return int(e.code), raw if raw else None
+
+
 def join_base_path(base_url: str, path: str, params: dict[str, str] | None = None) -> str:
     root = base_url.rstrip("/") + "/"
     rel = path.lstrip("/")

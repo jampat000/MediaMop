@@ -28,6 +28,7 @@ def _mediamop_sqlite_runtime(tmp_path_factory: pytest.TempPathFactory) -> Iterat
     os.environ["MEDIAMOP_REFINER_WORKER_COUNT"] = "0"
     os.environ["MEDIAMOP_PRUNER_WORKER_COUNT"] = "0"
     os.environ["MEDIAMOP_PRUNER_PREVIEW_SCHEDULE_ENQUEUE_ENABLED"] = "0"
+    os.environ["MEDIAMOP_PRUNER_APPLY_ENABLED"] = "0"
     os.environ["MEDIAMOP_SUBBER_WORKER_COUNT"] = "0"
     backend = Path(__file__).resolve().parents[1]
     cfg = Config(str(backend / "alembic.ini"))

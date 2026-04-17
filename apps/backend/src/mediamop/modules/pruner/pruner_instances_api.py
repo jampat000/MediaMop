@@ -13,9 +13,11 @@ from starlette import status
 from starlette.requests import Request
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
+from mediamop.modules.pruner.pruner_apply_eligibility import compute_apply_eligibility
 from mediamop.modules.pruner.pruner_constants import (
     MEDIA_SCOPE_MOVIES,
     MEDIA_SCOPE_TV,
+    RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
     clamp_pruner_scheduled_preview_interval_seconds,
 )
 from mediamop.modules.pruner.pruner_credentials_envelope import (
@@ -29,12 +31,15 @@ from mediamop.modules.pruner.pruner_instances_service import (
     get_server_instance,
 )
 from mediamop.modules.pruner.pruner_job_kinds import (
+    PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
     PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
     PRUNER_SERVER_CONNECTION_TEST_JOB_KIND,
 )
 from mediamop.modules.pruner.pruner_jobs_ops import pruner_enqueue_or_get_job
 from mediamop.modules.pruner.pruner_preview_run_model import PrunerPreviewRun
 from mediamop.modules.pruner.pruner_schemas import (
+    PrunerApplyEligibilityOut,
+    PrunerApplyHttpIn,
     PrunerConnectionTestIn,
     PrunerEnqueueOut,
     PrunerPreviewEnqueueIn,
@@ -304,6 +309,87 @@ def get_pruner_preview_run(
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Preview run not found.")
     return PrunerPreviewRunOut.model_validate(row)
+
+
+@router.get(
+    "/pruner/instances/{instance_id}/scopes/{media_scope}/preview-runs/{preview_run_uuid}/apply-eligibility",
+    response_model=PrunerApplyEligibilityOut,
+    summary="Whether Remove broken library entries can be enqueued for this preview snapshot",
+    description=(
+        "Read-only gate check for the Jellyfin-only apply slice. This is **not** a preview/dry run — "
+        "it only reports whether the snapshot is eligible given instance, scope, outcome, and feature flag."
+    ),
+)
+def get_pruner_apply_eligibility(
+    instance_id: Annotated[int, Path(ge=1)],
+    media_scope: Annotated[str, Path(description="`tv` or `movies`")],
+    preview_run_uuid: Annotated[str, Path(min_length=36, max_length=36)],
+    _user: UserPublicDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+) -> PrunerApplyEligibilityOut:
+    if media_scope not in (MEDIA_SCOPE_TV, MEDIA_SCOPE_MOVIES):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="media_scope must be tv or movies.")
+    if get_server_instance(db, instance_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found.")
+    return compute_apply_eligibility(
+        db,
+        settings,
+        instance_id=instance_id,
+        media_scope=media_scope,
+        preview_run_uuid=preview_run_uuid,
+    )
+
+
+@router.post(
+    "/pruner/instances/{instance_id}/scopes/{media_scope}/preview-runs/{preview_run_uuid}/apply",
+    response_model=PrunerEnqueueOut,
+    summary="Enqueue Remove broken library entries from one preview snapshot (Jellyfin only)",
+)
+def post_pruner_apply_from_preview(
+    instance_id: Annotated[int, Path(ge=1)],
+    media_scope: Annotated[str, Path()],
+    preview_run_uuid: Annotated[str, Path(min_length=36, max_length=36)],
+    body: PrunerApplyHttpIn,
+    request: Request,
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+) -> PrunerEnqueueOut:
+    validate_browser_post_origin(request, settings)
+    secret = require_session_secret(settings)
+    if not verify_csrf_token(secret, body.csrf_token):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
+    if media_scope not in (MEDIA_SCOPE_TV, MEDIA_SCOPE_MOVIES):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="media_scope must be tv or movies.")
+    if get_server_instance(db, instance_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found.")
+    elig = compute_apply_eligibility(
+        db,
+        settings,
+        instance_id=instance_id,
+        media_scope=media_scope,
+        preview_run_uuid=preview_run_uuid,
+    )
+    if not elig.eligible:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={"reasons": elig.reasons},
+        )
+    payload = {
+        "preview_run_uuid": preview_run_uuid,
+        "server_instance_id": instance_id,
+        "media_scope": media_scope,
+        "rule_family_id": RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+    }
+    dedupe = f"pruner:apply:v1:{preview_run_uuid}:{uuid.uuid4()}"
+    jid = _enqueue(
+        db,
+        dedupe_key=dedupe,
+        job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
+        payload=payload,
+    )
+    return PrunerEnqueueOut(pruner_job_id=jid)
 
 
 def _enqueue(

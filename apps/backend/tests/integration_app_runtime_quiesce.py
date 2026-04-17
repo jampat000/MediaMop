@@ -27,6 +27,7 @@ def integration_test_quiesce_in_process_workers(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setenv("MEDIAMOP_PRUNER_WORKER_COUNT", "0")
     monkeypatch.setenv("MEDIAMOP_SUBBER_WORKER_COUNT", "0")
     monkeypatch.setenv("MEDIAMOP_PRUNER_PREVIEW_SCHEDULE_ENQUEUE_ENABLED", "0")
+    monkeypatch.setenv("MEDIAMOP_PRUNER_APPLY_ENABLED", "0")
 
 
 def integration_test_quiesce_periodic_enqueue(monkeypatch: pytest.MonkeyPatch) -> None:

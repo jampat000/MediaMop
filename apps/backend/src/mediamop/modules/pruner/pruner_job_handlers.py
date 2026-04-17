@@ -9,7 +9,9 @@ from sqlalchemy.orm import Session, sessionmaker
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.queue_worker.job_kind_boundaries import validate_pruner_worker_handler_registry
 from mediamop.modules.pruner.pruner_connection_job_handler import make_pruner_server_connection_test_handler
+from mediamop.modules.pruner.pruner_apply_job_handler import make_pruner_candidate_removal_apply_handler
 from mediamop.modules.pruner.pruner_job_kinds import (
+    PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
     PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
     PRUNER_SERVER_CONNECTION_TEST_JOB_KIND,
 )
@@ -29,6 +31,10 @@ def build_pruner_job_handlers(
             session_factory,
         ),
         PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND: make_pruner_candidate_removal_preview_handler(
+            settings,
+            session_factory,
+        ),
+        PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND: make_pruner_candidate_removal_apply_handler(
             settings,
             session_factory,
         ),

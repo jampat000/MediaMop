@@ -42,6 +42,23 @@ export type PrunerPreviewRun = {
 };
 
 /** Row from ``GET …/preview-runs`` (no embedded candidate JSON). */
+export type PrunerApplyEligibility = {
+  eligible: boolean;
+  reasons: string[];
+  apply_feature_enabled: boolean;
+  preview_run_id: string;
+  server_instance_id: number;
+  media_scope: string;
+  provider: string;
+  display_name: string;
+  preview_created_at: string | null;
+  candidate_count: number;
+  preview_outcome: string;
+  rule_family_id: string;
+};
+
+export const PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL = "Remove broken library entries";
+
 export type PrunerPreviewRunSummary = {
   preview_run_id: string;
   server_instance_id: number;
@@ -55,6 +72,26 @@ export type PrunerPreviewRunSummary = {
   error_message: string | null;
   created_at: string;
 };
+
+export function prunerApplyEligibilityPath(
+  instanceId: number,
+  media_scope: "tv" | "movies",
+  previewRunId: string,
+): string {
+  return `/api/v1/pruner/instances/${instanceId}/scopes/${media_scope}/preview-runs/${previewRunId}/apply-eligibility`;
+}
+
+export async function fetchPrunerApplyEligibility(
+  instanceId: number,
+  media_scope: "tv" | "movies",
+  previewRunId: string,
+): Promise<PrunerApplyEligibility> {
+  const r = await apiFetch(prunerApplyEligibilityPath(instanceId, media_scope, previewRunId));
+  if (!r.ok) {
+    throw new Error(`Pruner apply eligibility: ${r.status}`);
+  }
+  return readJson<PrunerApplyEligibility>(r);
+}
 
 export function prunerPreviewRunsListPath(
   instanceId: number,
@@ -140,6 +177,27 @@ export async function patchPrunerScope(
     throw new Error(apiErrorDetailToString(errBody.detail) || `Pruner scope: ${r.status}`);
   }
   return readJson<PrunerScopeSummary>(r);
+}
+
+export async function postPrunerApplyFromPreview(
+  instanceId: number,
+  media_scope: "tv" | "movies",
+  previewRunId: string,
+): Promise<{ pruner_job_id: number }> {
+  const csrf_token = await fetchCsrfToken();
+  const r = await apiFetch(
+    `/api/v1/pruner/instances/${instanceId}/scopes/${media_scope}/preview-runs/${previewRunId}/apply`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ csrf_token }),
+    },
+  );
+  if (!r.ok) {
+    const body = (await readJson<{ detail?: unknown }>(r).catch(() => ({}))) as { detail?: unknown };
+    throw new Error(apiErrorDetailToString(body.detail) || `apply: ${r.status}`);
+  }
+  return readJson<{ pruner_job_id: number }>(r);
 }
 
 export async function postPrunerPreview(
