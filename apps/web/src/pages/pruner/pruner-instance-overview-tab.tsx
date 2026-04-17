@@ -151,8 +151,9 @@ function ScopeWorkspaceCard({
   );
 }
 
-export function PrunerInstanceOverviewTab() {
-  const { instanceId, instance } = useOutletContext<Ctx>();
+export function PrunerInstanceOverviewTab(props: { contextOverride?: Ctx }) {
+  const outletCtx = useOutletContext<Ctx>();
+  const { instanceId, instance } = props.contextOverride ?? outletCtx;
 
   if (!instance) {
     return null;

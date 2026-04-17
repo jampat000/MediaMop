@@ -32,8 +32,9 @@ function canApplyFromPreviewSnapshot(
   return provider === "plex" && row.rule_family_id === RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED;
 }
 
-export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
-  const { instanceId, instance } = useOutletContext<Ctx>();
+export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?: Ctx }) {
+  const outletCtx = useOutletContext<Ctx>();
+  const { instanceId, instance } = props.contextOverride ?? outletCtx;
   const me = useMeQuery();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);

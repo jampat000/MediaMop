@@ -8,8 +8,9 @@ import { formatPrunerDateTime } from "./pruner-ui-utils";
 
 type Ctx = { instanceId: number; instance: PrunerServerInstance | undefined };
 
-export function PrunerConnectionTab() {
-  const { instanceId, instance } = useOutletContext<Ctx>();
+export function PrunerConnectionTab(props: { contextOverride?: Ctx }) {
+  const outletCtx = useOutletContext<Ctx>();
+  const { instanceId, instance } = props.contextOverride ?? outletCtx;
   const me = useMeQuery();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);

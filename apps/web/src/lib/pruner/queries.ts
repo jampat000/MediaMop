@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchPrunerInstance, fetchPrunerInstances } from "./api";
+import { fetchPrunerInstance, fetchPrunerInstances, fetchPrunerJobsInspection } from "./api";
 
 export function usePrunerInstancesQuery() {
   return useQuery({
@@ -13,5 +13,12 @@ export function usePrunerInstanceQuery(instanceId: number) {
     queryKey: ["pruner", "instances", instanceId],
     queryFn: () => fetchPrunerInstance(instanceId),
     enabled: Number.isFinite(instanceId) && instanceId > 0,
+  });
+}
+
+export function usePrunerJobsInspectionQuery(limit = 50) {
+  return useQuery({
+    queryKey: ["pruner", "jobs-inspection", limit],
+    queryFn: () => fetchPrunerJobsInspection(limit),
   });
 }

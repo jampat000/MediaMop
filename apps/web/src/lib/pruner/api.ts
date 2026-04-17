@@ -120,6 +120,21 @@ export type PrunerPreviewRunSummary = {
   created_at: string;
 };
 
+export type PrunerJobsInspectionRow = {
+  id: number;
+  dedupe_key: string;
+  job_kind: string;
+  status: string;
+  payload_json: string | null;
+  last_error: string | null;
+  updated_at: string;
+};
+
+export type PrunerJobsInspectionOut = {
+  jobs: PrunerJobsInspectionRow[];
+  default_recent_slice: boolean;
+};
+
 export function prunerApplyEligibilityPath(
   instanceId: number,
   media_scope: "tv" | "movies",
@@ -282,4 +297,13 @@ export async function postPrunerPreview(
     throw new Error(apiErrorDetailToString(body.detail) || `preview: ${r.status}`);
   }
   return readJson<{ pruner_job_id: number }>(r);
+}
+
+export async function fetchPrunerJobsInspection(limit = 50): Promise<PrunerJobsInspectionOut> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  const r = await apiFetch(`/api/v1/pruner/jobs/inspection?${params.toString()}`);
+  if (!r.ok) {
+    throw new Error(`Pruner jobs inspection: ${r.status}`);
+  }
+  return readJson<PrunerJobsInspectionOut>(r);
 }
