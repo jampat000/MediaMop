@@ -21,6 +21,7 @@ function scopeRow(media_scope: "tv" | "movies") {
     watched_movies_reported_enabled: false,
     preview_max_items: 500,
     preview_include_genres: [],
+    preview_include_people: [],
     scheduled_preview_enabled: false,
     scheduled_preview_interval_seconds: 3600,
     last_scheduled_preview_enqueued_at: null,

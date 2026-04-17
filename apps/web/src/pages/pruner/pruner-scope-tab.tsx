@@ -51,6 +51,8 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
   const [watchedMoviesMsg, setWatchedMoviesMsg] = useState<string | null>(null);
   const [genreText, setGenreText] = useState("");
   const [genreMsg, setGenreMsg] = useState<string | null>(null);
+  const [peopleText, setPeopleText] = useState("");
+  const [peopleMsg, setPeopleMsg] = useState<string | null>(null);
   const canOperate = me.data?.role === "admin" || me.data?.role === "operator";
 
   const scopeRow = instance?.scopes.find((s) => s.media_scope === props.scope);
@@ -92,6 +94,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
     setWatchedTvEnabled(scopeRow.watched_tv_reported_enabled);
     setWatchedMoviesEnabled(scopeRow.watched_movies_reported_enabled);
     setGenreText((scopeRow.preview_include_genres ?? []).join(", "));
+    setPeopleText((scopeRow.preview_include_people ?? []).join(", "));
   }, [
     scopeRow?.scheduled_preview_enabled,
     scopeRow?.scheduled_preview_interval_seconds,
@@ -100,6 +103,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
     scopeRow?.watched_tv_reported_enabled,
     scopeRow?.watched_movies_reported_enabled,
     scopeRow?.preview_include_genres,
+    scopeRow?.preview_include_people,
     scopeRow?.media_scope,
     instanceId,
   ]);
@@ -165,6 +169,33 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
         tokens.length
           ? "Saved genre include list for this tab only (previews use it; apply still uses the frozen snapshot only)."
           : "Cleared genre filters for this tab.",
+      );
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function savePeopleFilters() {
+    setPeopleMsg(null);
+    setErr(null);
+    setBusy(true);
+    try {
+      const csrf_token = await fetchCsrfToken();
+      const tokens = peopleText
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      await patchPrunerScope(instanceId, props.scope, {
+        preview_include_people: tokens,
+        csrf_token,
+      });
+      await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+      setPeopleMsg(
+        tokens.length
+          ? "Saved people include list for this tab only (previews only; apply still uses the frozen snapshot)."
+          : "Cleared people filters for this tab.",
       );
     } catch (e) {
       setErr((e as Error).message);
@@ -425,6 +456,62 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
             <p className="text-xs text-[var(--mm-text2)]">
               Current filters:{" "}
               <strong>{(scopeRow.preview_include_genres ?? []).length ? scopeRow.preview_include_genres.join(", ") : "none"}</strong>
+              . Sign in as an operator to edit.
+            </p>
+          )}
+        </div>
+      ) : null}
+      {scopeRow ? (
+        <div
+          className="space-y-2 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text)]"
+          data-testid="pruner-people-filters-panel"
+        >
+          <p className="text-sm font-semibold text-[var(--mm-text)]">Optional preview people include (this tab only)</p>
+          <p className="text-xs text-[var(--mm-text2)]">
+            Comma-separated <strong>person names</strong> (one full name per entry). Preview keeps only items where at
+            least one server-reported name matches one entry, using exact case-insensitive equality after trimming. This
+            narrows preview collection only — apply still deletes exactly the IDs in the saved snapshot.
+          </p>
+          {isPlex ? (
+            <p className="text-xs text-[var(--mm-text2)]" data-testid="pruner-people-plex-note">
+              Plex: applies only to <strong>missing primary art</strong> previews on this tab. Names come from{" "}
+              <strong>Role</strong>, <strong>Writer</strong>, and <strong>Director</strong> tag strings on each{" "}
+              <code className="text-[0.85em]">allLeaves</code> leaf (no separate metadata fetch).
+            </p>
+          ) : (
+            <p className="text-xs text-[var(--mm-text2)]" data-testid="pruner-people-jf-emby-note">
+              Jellyfin / Emby: uses each item&apos;s <strong>People</strong> list from the Items API when filters are
+              saved (MediaMop requests explicit Fields). Applies to every preview rule on this tab.
+            </p>
+          )}
+          {canOperate ? (
+            <div className="space-y-2">
+              <input
+                type="text"
+                className="w-full rounded border border-[var(--mm-border)] bg-[var(--mm-surface2)] px-2 py-1 text-sm text-[var(--mm-text)]"
+                placeholder="e.g. Jane Doe, Alan Smithee"
+                value={peopleText}
+                disabled={busy}
+                onChange={(e) => setPeopleText(e.target.value)}
+              />
+              <button
+                type="button"
+                className="rounded-md border border-[var(--mm-border)] px-3 py-1 text-sm font-medium text-[var(--mm-text)] disabled:opacity-50"
+                disabled={busy}
+                onClick={() => void savePeopleFilters()}
+              >
+                Save people filters
+              </button>
+              {peopleMsg ? <p className="text-xs text-green-600">{peopleMsg}</p> : null}
+            </div>
+          ) : (
+            <p className="text-xs text-[var(--mm-text2)]">
+              Current people filters:{" "}
+              <strong>
+                {(scopeRow.preview_include_people ?? []).length
+                  ? scopeRow.preview_include_people.join(", ")
+                  : "none"}
+              </strong>
               . Sign in as an operator to edit.
             </p>
           )}

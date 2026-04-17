@@ -57,6 +57,11 @@ class PrunerScopeSettings(Base):
         nullable=False,
         server_default=text("'[]'"),
     )
+    preview_include_people_json: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        server_default=text("'[]'"),
+    )
     last_preview_run_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("pruner_preview_runs.id", ondelete="SET NULL"),

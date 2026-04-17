@@ -21,6 +21,7 @@ from mediamop.modules.pruner.pruner_constants import (
 )
 from mediamop.modules.pruner.pruner_credentials_envelope import decrypt_and_parse_envelope
 from mediamop.modules.pruner.pruner_genre_filters import preview_genre_filters_from_db_column
+from mediamop.modules.pruner.pruner_people_filters import preview_people_filters_from_db_column
 from mediamop.modules.pruner.pruner_instances_service import get_scope_settings, get_server_instance
 from mediamop.modules.pruner.pruner_plex_live_eligibility import plex_missing_primary_effective_max_items
 from mediamop.modules.pruner.pruner_media_library import preview_payload_json, serialize_candidates
@@ -107,6 +108,7 @@ def make_pruner_candidate_removal_preview_handler(
             if provider == "plex" and rule_family_id == RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
                 max_items = plex_missing_primary_effective_max_items(settings, int(sc.preview_max_items))
             preview_genres = preview_genre_filters_from_db_column(str(sc.preview_include_genres_json))
+            preview_people = preview_people_filters_from_db_column(str(sc.preview_include_people_json))
 
         try:
             outcome, unsup, cands, trunc = preview_payload_json(
@@ -118,6 +120,7 @@ def make_pruner_candidate_removal_preview_handler(
                 rule_family_id=rule_family_id,
                 never_played_min_age_days=age_days if rule_family_id == RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED else None,
                 preview_include_genres=preview_genres,
+                preview_include_people=preview_people,
             )
             cand_json = serialize_candidates(cands)
             err: str | None = None
@@ -174,6 +177,8 @@ def make_pruner_candidate_removal_preview_handler(
                 }
                 if preview_genres:
                     detail_obj["preview_include_genres"] = list(preview_genres)
+                if preview_people:
+                    detail_obj["preview_include_people"] = list(preview_people)
                 if outcome == "success" and preview_genres and len(cands) == 0:
                     if provider == "plex" and rule_family_id == RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
                         detail_obj["preview_genre_filter_zero_candidates_note"] = (
@@ -187,6 +192,21 @@ def make_pruner_candidate_removal_preview_handler(
                             "Zero preview rows with genre filters active: filters narrowed this preview. "
                             "That does not mean the library is clean — widen genres or raise the per-tab cap if you "
                             "expected matches."
+                        )
+                if outcome == "success" and preview_people and len(cands) == 0:
+                    if provider == "plex" and rule_family_id == RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
+                        detail_obj["preview_people_filter_zero_candidates_note"] = (
+                            "Zero preview rows with people filters active: filters narrowed this preview. "
+                            "That does not mean the library is clean — widen names or raise the per-tab cap if you "
+                            "expected matches. Plex uses tag strings from Role, Writer, and Director on each "
+                            "allLeaves leaf only (exact normalized name match)."
+                        )
+                    else:
+                        detail_obj["preview_people_filter_zero_candidates_note"] = (
+                            "Zero preview rows with people filters active: filters narrowed this preview. "
+                            "That does not mean the library is clean — widen names or raise the per-tab cap if you "
+                            "expected matches. Jellyfin/Emby use the People list on each Items row (exact normalized "
+                            "name match; role types are not filtered in this release)."
                         )
                 if provider == "plex" and rule_family_id == RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
                     detail_obj["plex_missing_primary_item_cap"] = max_items

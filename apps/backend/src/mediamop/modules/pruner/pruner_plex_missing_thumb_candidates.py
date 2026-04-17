@@ -8,6 +8,9 @@ that snapshot.
 ``Video`` rows where the Plex JSON object has **no non-empty ``thumb``** on that leaf. This is **not** the same
 signal as Jellyfin/Emby ``HasPrimaryImage=false`` + primary tag checks; operator copy must not equate them.
 
+Optional **people** filters (preview-only) match **Role**, **Writer**, and **Director** ``tag`` strings on each leaf
+metadata object returned by ``allLeaves`` — no richer credit graph in this slice.
+
 Read-only calls: ``GET /library/sections`` and paged ``GET /library/sections/{key}/allLeaves``.
 """
 
@@ -18,6 +21,10 @@ from typing import Any
 
 from mediamop.modules.pruner.pruner_constants import MEDIA_SCOPE_MOVIES, MEDIA_SCOPE_TV
 from mediamop.modules.pruner.pruner_genre_filters import item_matches_genre_include_filter, plex_leaf_genre_tags
+from mediamop.modules.pruner.pruner_people_filters import (
+    item_matches_people_include_filter,
+    plex_leaf_person_tags,
+)
 from mediamop.modules.pruner.pruner_http import http_get_json, join_base_path
 
 
@@ -82,6 +89,7 @@ def list_plex_missing_thumb_candidates(
     media_scope: str,
     max_items: int,
     preview_include_genres: Sequence[str] | None = None,
+    preview_include_people: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     """Return up to ``max_items`` Plex leaf metadata dicts (``ratingKey`` as ``item_id``) plus ``truncated``.
 
@@ -97,6 +105,7 @@ def list_plex_missing_thumb_candidates(
         return [], False
 
     gf = list(preview_include_genres or [])
+    pf = list(preview_include_people or [])
 
     sections_url = join_base_path(base_url, "library/sections")
     status, data = http_get_json(sections_url, headers=_plex_headers(auth_token))
@@ -151,6 +160,10 @@ def list_plex_missing_thumb_candidates(
                 if not _plex_leaf_missing_thumb(m):
                     continue
                 if gf and not item_matches_genre_include_filter(plex_leaf_genre_tags(m), gf):
+                    page_skipped_thumb_ok_for_genre = True
+                    any_skipped_thumb_ok_for_genre = True
+                    continue
+                if pf and not item_matches_people_include_filter(plex_leaf_person_tags(m), pf):
                     page_skipped_thumb_ok_for_genre = True
                     any_skipped_thumb_ok_for_genre = True
                     continue

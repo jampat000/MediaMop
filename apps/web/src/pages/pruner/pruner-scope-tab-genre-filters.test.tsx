@@ -31,6 +31,7 @@ const jf: PrunerServerInstance = {
       watched_movies_reported_enabled: false,
       preview_max_items: 500,
       preview_include_genres: ["Drama"],
+      preview_include_people: [],
       scheduled_preview_enabled: false,
       scheduled_preview_interval_seconds: 3600,
       last_scheduled_preview_enqueued_at: null,
@@ -49,6 +50,7 @@ const jf: PrunerServerInstance = {
       watched_movies_reported_enabled: false,
       preview_max_items: 500,
       preview_include_genres: [],
+      preview_include_people: [],
       scheduled_preview_enabled: false,
       scheduled_preview_interval_seconds: 3600,
       last_scheduled_preview_enqueued_at: null,
@@ -69,6 +71,7 @@ describe("PrunerScopeTab genre filters", () => {
     const spyPatch = vi.spyOn(prunerApi, "patchPrunerScope").mockResolvedValue({
       ...jf.scopes[0],
       preview_include_genres: ["Drama", "Noir"],
+      preview_include_people: [],
     });
     try {
       const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });

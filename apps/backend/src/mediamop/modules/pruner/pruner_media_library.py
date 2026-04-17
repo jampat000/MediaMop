@@ -20,8 +20,18 @@ from mediamop.modules.pruner.pruner_genre_filters import (
     item_matches_genre_include_filter,
     jellyfin_emby_item_genres,
 )
+from mediamop.modules.pruner.pruner_people_filters import (
+    item_matches_people_include_filter,
+    jellyfin_emby_item_people_names,
+)
 from mediamop.modules.pruner.pruner_plex_missing_thumb_candidates import list_plex_missing_thumb_candidates
 from mediamop.modules.pruner.pruner_http import http_get_json, http_get_text, join_base_path
+
+# Jellyfin/Emby: when ``Fields`` is sent, only listed fields are returned — include everything Pruner reads here.
+_JF_EMBY_ITEMS_FIELDS_FOR_PEOPLE_FILTER = (
+    "Genres,People,ImageTags,PrimaryImageItemId,UserData,DateCreated,"
+    "SeriesName,ParentIndexNumber,IndexNumber,ProductionYear,Name,Id"
+)
 
 
 def _emby_style_headers(api_key: str) -> dict[str, str]:
@@ -90,6 +100,7 @@ def _items_page(
     start_index: int,
     page_limit: int,
     use_has_primary_image: bool,
+    preview_include_people: Sequence[str] | None = None,
 ) -> dict[str, Any] | None:
     params: dict[str, str] = {
         "Recursive": "true",
@@ -99,6 +110,8 @@ def _items_page(
     }
     if use_has_primary_image:
         params["HasPrimaryImage"] = "false"
+    if preview_include_people:
+        params["Fields"] = _JF_EMBY_ITEMS_FIELDS_FOR_PEOPLE_FILTER
     return _items_query(base_url=base_url, api_key=api_key, params=params)
 
 
@@ -117,6 +130,7 @@ def list_missing_primary_candidates(
     media_scope: str,
     max_items: int,
     preview_include_genres: Sequence[str] | None = None,
+    preview_include_people: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     """Return candidate dicts for TV (episodes) or Movies (movie items), newest-first pages.
 
@@ -137,6 +151,7 @@ def list_missing_primary_candidates(
     page = min(100, max(1, max_items))
     total_hits: int | None = None
     gf = list(preview_include_genres or [])
+    pf = list(preview_include_people or [])
 
     while len(candidates) < max_items:
         try:
@@ -147,6 +162,7 @@ def list_missing_primary_candidates(
                 start_index=start,
                 page_limit=page,
                 use_has_primary_image=use_filter,
+                preview_include_people=pf,
             )
         except urllib.error.HTTPError as e:
             if e.code == 400 and use_filter:
@@ -169,6 +185,8 @@ def list_missing_primary_candidates(
             if not use_filter and not _item_missing_primary(it):
                 continue
             if not item_matches_genre_include_filter(jellyfin_emby_item_genres(it), gf):
+                continue
+            if not item_matches_people_include_filter(jellyfin_emby_item_people_names(it), pf):
                 continue
             if media_scope == MEDIA_SCOPE_TV:
                 candidates.append(
@@ -257,6 +275,7 @@ def list_watched_tv_episode_candidates(
     media_scope: str,
     max_items: int,
     preview_include_genres: Sequence[str] | None = None,
+    preview_include_people: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     """Episodes the server reports as watched for this API user (``UserData`` / optional ``IsPlayed`` filter).
 
@@ -275,6 +294,7 @@ def list_watched_tv_episode_candidates(
     total_hits: int | None = None
     truncated = False
     gf = list(preview_include_genres or [])
+    pf = list(preview_include_people or [])
 
     while len(candidates) < max_items:
         params: dict[str, str] = {
@@ -285,6 +305,8 @@ def list_watched_tv_episode_candidates(
         }
         if use_is_played_filter:
             params["IsPlayed"] = "true"
+        if pf:
+            params["Fields"] = _JF_EMBY_ITEMS_FIELDS_FOR_PEOPLE_FILTER
         try:
             data = _items_query(base_url=base_url, api_key=api_key, params=params)
         except urllib.error.HTTPError as e:
@@ -308,6 +330,8 @@ def list_watched_tv_episode_candidates(
             if not use_is_played_filter and not _item_watched_by_userdata(it):
                 continue
             if not item_matches_genre_include_filter(jellyfin_emby_item_genres(it), gf):
+                continue
+            if not item_matches_people_include_filter(jellyfin_emby_item_people_names(it), pf):
                 continue
             iid = str(it.get("Id", "")).strip()
             if not iid:
@@ -346,6 +370,7 @@ def list_watched_movie_candidates(
     media_scope: str,
     max_items: int,
     preview_include_genres: Sequence[str] | None = None,
+    preview_include_people: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     """Movie library items the server reports as watched for this API user (``UserData`` / optional ``IsPlayed`` filter).
 
@@ -364,6 +389,7 @@ def list_watched_movie_candidates(
     total_hits: int | None = None
     truncated = False
     gf = list(preview_include_genres or [])
+    pf = list(preview_include_people or [])
 
     while len(candidates) < max_items:
         params: dict[str, str] = {
@@ -374,6 +400,8 @@ def list_watched_movie_candidates(
         }
         if use_is_played_filter:
             params["IsPlayed"] = "true"
+        if pf:
+            params["Fields"] = _JF_EMBY_ITEMS_FIELDS_FOR_PEOPLE_FILTER
         try:
             data = _items_query(base_url=base_url, api_key=api_key, params=params)
         except urllib.error.HTTPError as e:
@@ -397,6 +425,8 @@ def list_watched_movie_candidates(
             if not use_is_played_filter and not _item_watched_by_userdata(it):
                 continue
             if not item_matches_genre_include_filter(jellyfin_emby_item_genres(it), gf):
+                continue
+            if not item_matches_people_include_filter(jellyfin_emby_item_people_names(it), pf):
                 continue
             iid = str(it.get("Id", "")).strip()
             if not iid:
@@ -434,6 +464,7 @@ def list_never_played_stale_candidates(
     max_items: int,
     min_age_days: int,
     preview_include_genres: Sequence[str] | None = None,
+    preview_include_people: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     """Unplayed episodes or movies whose library ``DateCreated`` is older than ``min_age_days`` (UTC).
 
@@ -458,6 +489,7 @@ def list_never_played_stale_candidates(
     total_hits: int | None = None
     truncated = False
     gf = list(preview_include_genres or [])
+    pf = list(preview_include_people or [])
 
     while len(candidates) < max_items:
         params: dict[str, str] = {
@@ -468,6 +500,8 @@ def list_never_played_stale_candidates(
         }
         if use_is_played_filter:
             params["IsPlayed"] = "false"
+        if pf:
+            params["Fields"] = _JF_EMBY_ITEMS_FIELDS_FOR_PEOPLE_FILTER
         try:
             data = _items_query(base_url=base_url, api_key=api_key, params=params)
         except urllib.error.HTTPError as e:
@@ -491,6 +525,8 @@ def list_never_played_stale_candidates(
             if not _item_unplayed_by_userdata(it):
                 continue
             if not item_matches_genre_include_filter(jellyfin_emby_item_genres(it), gf):
+                continue
+            if not item_matches_people_include_filter(jellyfin_emby_item_people_names(it), pf):
                 continue
             created = _parse_item_date_created(it.get("DateCreated"))
             if created is None or created > cutoff:
@@ -578,6 +614,7 @@ def preview_payload_json(
     rule_family_id: str,
     never_played_min_age_days: int | None = None,
     preview_include_genres: Sequence[str] | None = None,
+    preview_include_people: Sequence[str] | None = None,
 ) -> tuple[str, str, list[dict[str, Any]], bool]:
     """Returns ``(outcome, unsupported_detail_or_empty, candidates, truncated)``."""
 
@@ -602,6 +639,7 @@ def preview_payload_json(
                 media_scope=media_scope,
                 max_items=max_items,
                 preview_include_genres=preview_include_genres,
+                preview_include_people=preview_include_people,
             )
             return "success", "", cands, trunc
         return "unsupported", plex_preview_unsupported_detail(), [], False
@@ -613,6 +651,7 @@ def preview_payload_json(
             media_scope=media_scope,
             max_items=max_items,
             preview_include_genres=preview_include_genres,
+            preview_include_people=preview_include_people,
         )
         return "success", "", cands, trunc
     if rule_family_id == RULE_FAMILY_WATCHED_TV_REPORTED:
@@ -629,6 +668,7 @@ def preview_payload_json(
             media_scope=media_scope,
             max_items=max_items,
             preview_include_genres=preview_include_genres,
+            preview_include_people=preview_include_people,
         )
         return "success", "", cands, trunc
     if rule_family_id == RULE_FAMILY_WATCHED_MOVIES_REPORTED:
@@ -645,6 +685,7 @@ def preview_payload_json(
             media_scope=media_scope,
             max_items=max_items,
             preview_include_genres=preview_include_genres,
+            preview_include_people=preview_include_people,
         )
         return "success", "", cands, trunc
     if rule_family_id == RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED:
@@ -658,6 +699,7 @@ def preview_payload_json(
             max_items=max_items,
             min_age_days=int(never_played_min_age_days),
             preview_include_genres=preview_include_genres,
+            preview_include_people=preview_include_people,
         )
         return "success", "", cands, trunc
     msg = f"unsupported rule_family_id for preview: {rule_family_id!r}"

@@ -10,6 +10,7 @@ export type PrunerScopeSummary = {
   watched_movies_reported_enabled: boolean;
   preview_max_items: number;
   preview_include_genres: string[];
+  preview_include_people: string[];
   scheduled_preview_enabled: boolean;
   scheduled_preview_interval_seconds: number;
   last_scheduled_preview_enqueued_at: string | null;
@@ -194,6 +195,7 @@ export async function patchPrunerScope(
     watched_movies_reported_enabled?: boolean;
     preview_max_items?: number;
     preview_include_genres?: string[];
+    preview_include_people?: string[];
     scheduled_preview_enabled?: boolean;
     scheduled_preview_interval_seconds?: number;
     csrf_token: string;

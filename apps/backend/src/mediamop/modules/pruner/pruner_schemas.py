@@ -14,6 +14,7 @@ from mediamop.modules.pruner.pruner_constants import (
     RULE_FAMILY_WATCHED_TV_REPORTED,
 )
 from mediamop.modules.pruner.pruner_genre_filters import normalized_genre_filter_tokens
+from mediamop.modules.pruner.pruner_people_filters import normalized_people_filter_tokens
 
 PrunerProviderWire = Literal["emby", "jellyfin", "plex"]
 
@@ -32,6 +33,14 @@ class PrunerScopeSummaryOut(BaseModel):
             "Optional genre names (per tab) that narrow preview collection only. Empty means no filter. "
             "A successful preview with zero candidates can mean no items matched the rule plus filters — "
             "not necessarily a clean library."
+        ),
+    )
+    preview_include_people: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Optional person display names (per tab) that narrow preview collection only — full-name tokens, "
+            "case-insensitive exact match against provider-reported names. Empty means no filter. "
+            "Apply still uses only the frozen snapshot; it does not re-apply people filters."
         ),
     )
     scheduled_preview_enabled: bool = False
@@ -84,6 +93,10 @@ class PrunerScopePatchIn(BaseModel):
         default=None,
         description="Replace per-tab genre include list; omit field to leave unchanged.",
     )
+    preview_include_people: list[str] | None = Field(
+        default=None,
+        description="Replace per-tab people-name include list; omit field to leave unchanged.",
+    )
     scheduled_preview_enabled: bool | None = None
     scheduled_preview_interval_seconds: int | None = Field(None, ge=60, le=86_400)
 
@@ -96,6 +109,16 @@ class PrunerScopePatchIn(BaseModel):
             msg = "preview_include_genres must be a list of strings or null"
             raise ValueError(msg)
         return normalized_genre_filter_tokens([str(x) for x in v if x is not None])
+
+    @field_validator("preview_include_people", mode="before")
+    @classmethod
+    def _validate_preview_people(cls, v: object) -> list[str] | None:
+        if v is None:
+            return None
+        if not isinstance(v, list):
+            msg = "preview_include_people must be a list of strings or null"
+            raise ValueError(msg)
+        return normalized_people_filter_tokens([str(x) for x in v if x is not None])
 
 
 class PrunerEnqueueOut(BaseModel):
@@ -163,13 +186,14 @@ class PrunerScopePatchHttpIn(PrunerScopePatchIn):
             and self.watched_movies_reported_enabled is None
             and self.preview_max_items is None
             and self.preview_include_genres is None
+            and self.preview_include_people is None
             and self.scheduled_preview_enabled is None
             and self.scheduled_preview_interval_seconds is None
         ):
             msg = (
                 "At least one of missing_primary_media_reported_enabled, never_played_stale_reported_enabled, "
                 "never_played_min_age_days, watched_tv_reported_enabled, watched_movies_reported_enabled, "
-                "preview_max_items, preview_include_genres, scheduled_preview_enabled, "
+                "preview_max_items, preview_include_genres, preview_include_people, scheduled_preview_enabled, "
                 "or scheduled_preview_interval_seconds must be provided."
             )
             raise ValueError(msg)
