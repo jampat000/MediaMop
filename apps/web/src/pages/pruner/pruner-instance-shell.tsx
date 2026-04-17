@@ -1,14 +1,6 @@
 import { NavLink, Outlet, useParams } from "react-router-dom";
+import { fetcherSectionTabClass } from "../fetcher/fetcher-menu-button";
 import { usePrunerInstanceQuery } from "../../lib/pruner/queries";
-
-function tabClass(active: boolean): string {
-  return [
-    "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-    active
-      ? "bg-[var(--mm-surface2)] text-[var(--mm-text)]"
-      : "text-[var(--mm-text2)] hover:bg-[var(--mm-surface2)] hover:text-[var(--mm-text)]",
-  ].join(" ");
-}
 
 export function PrunerInstanceShell() {
   const { instanceId } = useParams();
@@ -26,15 +18,19 @@ export function PrunerInstanceShell() {
   const base = `/app/pruner/instances/${id}`;
 
   return (
-    <div className="mm-page" data-testid="pruner-instance-shell">
-      <header className="mm-page__header">
-        <p className="mm-page__eyebrow">Pruner</p>
-        {q.isLoading ? <h1 className="mm-page__title">Loading…</h1> : null}
+    <div className="mm-page w-full min-w-0" data-testid="pruner-instance-shell">
+      <header className="mm-page__intro !mb-0">
+        <p className="mm-page__eyebrow">MediaMop</p>
+        {q.isLoading ? <h1 className="mm-page__title">Pruner — loading…</h1> : null}
         {q.data ? (
           <>
-            <h1 className="mm-page__title">{q.data.display_name}</h1>
-            <p className="mm-page__lede max-w-3xl text-[var(--mm-text2)]">
-              {q.data.provider} · {q.data.base_url}
+            <h1 className="mm-page__title">Pruner — {q.data.display_name}</h1>
+            <p className="mm-page__subtitle max-w-3xl">
+              This workspace is for <strong className="text-[var(--mm-text)]">one</strong>{" "}
+              <strong className="text-[var(--mm-text)]">{q.data.provider}</strong> server (
+              <span className="font-mono text-[0.9em]">{q.data.base_url}</span>). Use{" "}
+              <strong className="text-[var(--mm-text)]">Movies</strong> and <strong className="text-[var(--mm-text)]">TV</strong>{" "}
+              tabs for per-scope rules, previews, and apply — settings do not cross instances or providers.
             </p>
           </>
         ) : null}
@@ -45,22 +41,26 @@ export function PrunerInstanceShell() {
         ) : null}
       </header>
 
-      <nav className="mt-4 flex flex-wrap gap-2" aria-label="Instance sections">
-        <NavLink to={`${base}/overview`} className={({ isActive }) => tabClass(isActive)} end>
+      <nav
+        className="mt-3 flex flex-wrap gap-2.5 border-b border-[var(--mm-border)] pb-3.5 sm:mt-4"
+        aria-label="Pruner instance sections"
+        data-testid="pruner-instance-section-tabs"
+      >
+        <NavLink to={`${base}/overview`} className={({ isActive }) => fetcherSectionTabClass(isActive)} end>
           Overview
         </NavLink>
-        <NavLink to={`${base}/tv`} className={({ isActive }) => tabClass(isActive)}>
-          TV
-        </NavLink>
-        <NavLink to={`${base}/movies`} className={({ isActive }) => tabClass(isActive)}>
+        <NavLink to={`${base}/movies`} className={({ isActive }) => fetcherSectionTabClass(isActive)}>
           Movies
         </NavLink>
-        <NavLink to={`${base}/connection`} className={({ isActive }) => tabClass(isActive)}>
+        <NavLink to={`${base}/tv`} className={({ isActive }) => fetcherSectionTabClass(isActive)}>
+          TV
+        </NavLink>
+        <NavLink to={`${base}/connection`} className={({ isActive }) => fetcherSectionTabClass(isActive)}>
           Connection
         </NavLink>
       </nav>
 
-      <div className="mt-6">
+      <div className="mt-6 w-full min-w-0 sm:mt-7" role="tabpanel">
         <Outlet context={{ instanceId: id, instance: q.data }} />
       </div>
     </div>

@@ -1,9 +1,10 @@
+import { Link, useOutletContext } from "react-router-dom";
 import { useState } from "react";
-import { useOutletContext } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMeQuery } from "../../lib/auth/queries";
 import { postPrunerConnectionTest } from "../../lib/pruner/api";
 import type { PrunerServerInstance } from "../../lib/pruner/api";
+import { formatPrunerDateTime } from "./pruner-ui-utils";
 
 type Ctx = { instanceId: number; instance: PrunerServerInstance | undefined };
 
@@ -23,7 +24,7 @@ export function PrunerConnectionTab() {
     try {
       const { pruner_job_id } = await postPrunerConnectionTest(instanceId);
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
-      setMsg(`Queued connection test job #${pruner_job_id}.`);
+      setMsg(`Queued connection test job #${pruner_job_id}. When it completes, this panel and Activity update for this instance only.`);
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -32,21 +33,48 @@ export function PrunerConnectionTab() {
   }
 
   return (
-    <section className="max-w-3xl space-y-3" aria-labelledby="pruner-conn-heading">
-      <h2 id="pruner-conn-heading" className="text-base font-semibold text-[var(--mm-text)]">
-        Connection test
-      </h2>
-      <p className="text-sm text-[var(--mm-text2)]">
-        Emby/Jellyfin: minimal <code className="text-[0.85em]">System/Info/Public</code> ping. Plex:{" "}
-        <code className="text-[0.85em]">GET /identity</code> with optional token.
-      </p>
-      {instance ? (
-        <div className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text2)]">
-          <div>Last test: {instance.last_connection_test_at ?? "never"}</div>
-          <div>OK: {instance.last_connection_test_ok === null ? "—" : instance.last_connection_test_ok ? "yes" : "no"}</div>
-          <div>Detail: {instance.last_connection_test_detail ?? "—"}</div>
-        </div>
-      ) : null}
+    <div className="max-w-3xl space-y-5" data-testid="pruner-connection-tab">
+      <header className="mm-page__intro !mb-0 border-0 p-0 shadow-none">
+        <p className="mm-page__eyebrow">This server</p>
+        <h2 className="mm-page__title text-xl sm:text-2xl">Connection</h2>
+        <p className="mm-page__subtitle max-w-3xl">
+          Verify reachability for <strong className="text-[var(--mm-text)]">this</strong> Pruner instance only. Jellyfin
+          and Emby use a lightweight public info ping; Plex uses <code className="text-[0.85em]">GET /identity</code> with
+          your stored token when present.
+        </p>
+      </header>
+
+      <section
+        className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-4 text-sm text-[var(--mm-text2)]"
+        aria-labelledby="pruner-conn-status"
+      >
+        <h3 id="pruner-conn-status" className="text-sm font-semibold text-[var(--mm-text1)]">
+          Last completed test
+        </h3>
+        {instance ? (
+          <dl className="mt-3 space-y-2 text-xs sm:text-sm">
+            <div className="flex flex-wrap gap-x-2">
+              <dt className="text-[var(--mm-text3)]">When</dt>
+              <dd className="font-medium text-[var(--mm-text1)]">
+                {formatPrunerDateTime(instance.last_connection_test_at)}
+              </dd>
+            </div>
+            <div className="flex flex-wrap gap-x-2">
+              <dt className="text-[var(--mm-text3)]">OK</dt>
+              <dd className="font-medium text-[var(--mm-text1)]">
+                {instance.last_connection_test_ok === null ? "—" : instance.last_connection_test_ok ? "Yes" : "No"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[var(--mm-text3)]">Detail</dt>
+              <dd className="mt-0.5 text-[var(--mm-text2)]">{instance.last_connection_test_detail ?? "—"}</dd>
+            </div>
+          </dl>
+        ) : (
+          <p className="mt-2 text-xs text-[var(--mm-text2)]">Loading instance…</p>
+        )}
+      </section>
+
       {canOperate ? (
         <button
           type="button"
@@ -65,6 +93,13 @@ export function PrunerConnectionTab() {
         </p>
       ) : null}
       {msg ? <p className="text-sm text-[var(--mm-text)]">{msg}</p> : null}
-    </section>
+
+      <p className="text-xs text-[var(--mm-text2)]">
+        Job outcomes:{" "}
+        <Link className="font-semibold text-[var(--mm-accent)] underline-offset-2 hover:underline" to="/app/activity">
+          Activity
+        </Link>
+      </p>
+    </div>
   );
 }

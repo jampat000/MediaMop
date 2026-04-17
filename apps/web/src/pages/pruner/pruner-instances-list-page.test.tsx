@@ -36,6 +36,7 @@ describe("PrunerInstancesListPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Home")).toBeInTheDocument();
     });
-    expect(screen.getByTestId("pruner-scope-page").textContent ?? "").toMatch(/pruner_preview_runs/);
+    expect(screen.getByRole("link", { name: /open workspace/i })).toHaveAttribute("href", "/app/pruner/instances/2/overview");
+    expect(screen.getByTestId("pruner-instances-list")).toBeInTheDocument();
   });
 });

@@ -19,6 +19,7 @@ import {
   prunerApplyLabelForRuleFamily,
 } from "../../lib/pruner/api";
 import type { PrunerServerInstance } from "../../lib/pruner/api";
+import { formatPrunerDateTime, previewRunRowCaption } from "./pruner-ui-utils";
 
 type Ctx = { instanceId: number; instance: PrunerServerInstance | undefined };
 
@@ -604,6 +605,17 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
       <h2 id="pruner-scope-heading" className="text-base font-semibold text-[var(--mm-text)]">
         {label}
       </h2>
+      <div
+        className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-surface2)]/40 px-4 py-3 text-xs text-[var(--mm-text2)] sm:text-sm"
+        data-testid="pruner-scope-trust-banner"
+      >
+        <p>
+          <strong className="text-[var(--mm-text)]">Previews</strong> collect candidates you can inspect (including JSON).
+          <strong className="text-[var(--mm-text)]"> Apply</strong> always uses the{" "}
+          <strong className="text-[var(--mm-text)]">selected preview snapshot only</strong>. It does not re-scan the
+          library, widen the list, or re-run narrowing filters from this tab.
+        </p>
+      </div>
       {!isPlex ? (
         <p className="text-sm text-[var(--mm-text2)]">
           {props.scope === "tv"
@@ -1293,10 +1305,34 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
           </>
         ) : null}
       {scopeRow ? (
-        <div className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text2)]">
-          <div>Last outcome: {scopeRow.last_preview_outcome ?? "—"}</div>
-          <div>Last candidate count: {scopeRow.last_preview_candidate_count ?? "—"}</div>
-          <div>Last error: {scopeRow.last_preview_error ?? "—"}</div>
+        <div
+          className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text2)]"
+          data-testid="pruner-scope-latest-preview-summary"
+        >
+          <h3 className="text-sm font-semibold text-[var(--mm-text)]">Latest preview job (this tab)</h3>
+          <p className="mt-1 text-xs text-[var(--mm-text2)]">
+            Denormalized from the last finished preview for quick orientation — see the history table for older runs.
+          </p>
+          <dl className="mt-2 space-y-1 text-xs sm:text-sm">
+            <div>
+              <dt className="inline text-[var(--mm-text3)]">When</dt>{" "}
+              <dd className="inline font-medium text-[var(--mm-text1)]">
+                {formatPrunerDateTime(scopeRow.last_preview_at)}
+              </dd>
+            </div>
+            <div>
+              <dt className="inline text-[var(--mm-text3)]">Outcome</dt>{" "}
+              <dd className="inline font-medium text-[var(--mm-text1)]">{scopeRow.last_preview_outcome ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="inline text-[var(--mm-text3)]">Candidates</dt>{" "}
+              <dd className="inline font-medium text-[var(--mm-text1)]">{scopeRow.last_preview_candidate_count ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="inline text-[var(--mm-text3)]">Error detail</dt>{" "}
+              <dd className="inline text-[var(--mm-text1)]">{scopeRow.last_preview_error ?? "—"}</dd>
+            </div>
+          </dl>
         </div>
       ) : null}
       {canOperate ? (
@@ -1403,6 +1439,7 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
                   <th className="px-2 py-2">Rule</th>
                   <th className="px-2 py-2">When</th>
                   <th className="px-2 py-2">Outcome</th>
+                  <th className="px-2 py-2">What it means</th>
                   <th className="px-2 py-2">Candidates</th>
                   <th className="px-2 py-2"> </th>
                 </tr>
@@ -1423,6 +1460,12 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
                       {row.error_message ? (
                         <div className="mt-1 text-red-600">{row.error_message}</div>
                       ) : null}
+                    </td>
+                    <td
+                      className="px-2 py-2 align-top text-[0.7rem] leading-snug text-[var(--mm-text2)]"
+                      data-testid={`pruner-preview-run-caption-${row.preview_run_id}`}
+                    >
+                      {previewRunRowCaption(row)}
                     </td>
                     <td className="px-2 py-2 text-xs">
                       {row.candidate_count}
@@ -1457,7 +1500,10 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
             </table>
           </div>
         ) : (
-          <p className="text-sm text-[var(--mm-text2)]">No preview runs recorded for this scope yet.</p>
+          <p className="text-sm text-[var(--mm-text2)]" data-testid="pruner-preview-runs-empty">
+            No preview runs for this tab yet. Queue a preview from a rule panel above; when the worker finishes, rows
+            appear here with outcome, candidate count, and a short explanation (including unsupported rules on Plex).
+          </p>
         )}
       </div>
       {applyModalRunId ? (
@@ -1474,7 +1520,8 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
             </h3>
             <p className="mt-2 text-sm text-[var(--mm-text2)]">
               This live action uses <strong>only</strong> the frozen candidate list from one preview snapshot. It does
-              not re-run preview and does not widen the candidate set.
+              not re-run preview and does not widen the candidate set. Entries already removed at the provider are
+              typically counted as skipped; successful removals follow the provider library API.
             </p>
             {applyEligQuery.isLoading ? (
               <p className="mt-3 text-sm text-[var(--mm-text2)]">Checking eligibility…</p>

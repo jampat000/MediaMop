@@ -178,9 +178,65 @@ describe("PrunerScopeTab apply (preview → apply)", () => {
 
       const titles = screen.getAllByText(PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL);
       expect(titles.length).toBeGreaterThanOrEqual(2);
+      expect(modal.textContent).toMatch(/frozen candidate list/i);
+      expect(modal.textContent).toMatch(/this exact preview snapshot only/i);
     } finally {
       spyElig.mockRestore();
     }
+  });
+
+  it("preview history shows explanations for unsupported and zero-candidate success runs", async () => {
+    const unsupportedRun: PrunerPreviewRunSummary = {
+      ...previewRun,
+      preview_run_id: "660e8400-e29b-41d4-a716-446655440001",
+      outcome: "unsupported",
+      unsupported_detail: "Plex: never-played stale library candidacy is not implemented on MediaMop",
+      candidate_count: 0,
+    };
+    const emptyOk: PrunerPreviewRunSummary = {
+      ...previewRun,
+      preview_run_id: "770e8400-e29b-41d4-a716-446655440002",
+      outcome: "success",
+      candidate_count: 0,
+      unsupported_detail: null,
+    };
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 60_000, refetchOnMount: false } },
+    });
+    qc.setQueryData(qk.me, operator);
+    await qc.prefetchQuery({
+      queryKey: ["pruner", "instances", 2],
+      queryFn: async () => jellyfinInstance,
+    });
+    await qc.prefetchQuery({
+      queryKey: ["pruner", "preview-runs", 2, "tv"],
+      queryFn: async () => [unsupportedRun, emptyOk],
+    });
+
+    const router = createMemoryRouter(
+      [
+        {
+          path: "/instances/:instanceId",
+          element: <PrunerInstanceShell />,
+          children: [{ path: "tv", element: <PrunerScopeTab scope="tv" /> }],
+        },
+      ],
+      { initialEntries: ["/instances/2/tv"] },
+    );
+
+    render(
+      <QueryClientProvider client={qc}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("pruner-preview-runs-history")).toBeInTheDocument());
+    expect(screen.getByTestId(`pruner-preview-run-caption-${unsupportedRun.preview_run_id}`).textContent).toMatch(
+      /Unsupported for this server/i,
+    );
+    expect(screen.getByTestId(`pruner-preview-run-caption-${emptyOk.preview_run_id}`).textContent).toMatch(
+      /zero rows/i,
+    );
   });
 
   it("exposes Remove broken library entries for eligible Emby preview history rows", async () => {

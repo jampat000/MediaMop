@@ -114,6 +114,7 @@ describe("PrunerScopeTab (Plex)", () => {
       await waitFor(() => {
         expect(screen.getByTestId("pruner-watched-movies-panel")).toBeInTheDocument();
       });
+      expect(screen.getByTestId("pruner-scope-trust-banner")).toBeInTheDocument();
       expect(screen.getByTestId("pruner-watched-low-rating-panel")).toBeInTheDocument();
       expect(screen.getByTestId("pruner-unwatched-stale-panel")).toBeInTheDocument();
       expect(screen.getByTestId("pruner-watched-low-rating-panel").textContent ?? "").toMatch(/audienceRating/i);
@@ -270,8 +271,10 @@ describe("PrunerScopeTab (Plex)", () => {
 
       await waitFor(() => expect(screen.getByText("Stale never-played")).toBeInTheDocument());
       await waitFor(() => expect(screen.getByText("Watched TV (episodes)")).toBeInTheDocument());
-      expect(screen.getByText(/never-played stale library candidacy is not implemented/i)).toBeInTheDocument();
-      expect(screen.getByText(/watched TV preview is not implemented/i)).toBeInTheDocument();
+      expect(
+        screen.getAllByText(/never-played stale library candidacy is not implemented/i).length,
+      ).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/watched TV preview is not implemented/i).length).toBeGreaterThanOrEqual(1);
       expect(screen.queryByTestId(`pruner-apply-open-${neverId}`)).not.toBeInTheDocument();
       expect(screen.queryByTestId(`pruner-apply-open-${watchedId}`)).not.toBeInTheDocument();
     } finally {
