@@ -502,19 +502,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
       data-testid={`pruner-provider-configuration-${provider}`}
       data-provider-section="rules"
     >
-      <h3 className="text-base font-semibold text-[var(--mm-text1)]">Rules</h3>
-      <p className="mt-1 text-sm text-[var(--mm-text3)]">
-        Library cleanup rules and filters. Save each column before leaving the page.
-      </p>
-      {disabled ? (
-        <p
-          className="mt-4 rounded-md border border-dashed border-[var(--mm-border)] bg-[var(--mm-surface2)]/40 px-3 py-2 text-sm text-[var(--mm-text2)]"
-          data-testid="pruner-provider-config-disabled-hint"
-        >
-          Save a connection first to enable these settings.
-        </p>
-      ) : null}
-      <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:gap-10">
+      <div className="grid gap-8 lg:grid-cols-2 lg:gap-10">
         <fieldset disabled={fieldDisabled || disabled} className="min-w-0 border-0 p-0">
           <div className="min-w-0 space-y-5" data-testid={`pruner-provider-tv-config-${provider}`}>
             <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">
@@ -522,20 +510,17 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
             </div>
             {isPlex ? (
               <div
-                className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-surface2)]/25 px-3 py-2 text-sm text-[var(--mm-text2)]"
+                className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-surface2)]/25 px-3 py-2 text-xs text-[var(--mm-text3)]"
                 data-testid="pruner-provider-plex-tv-unsupported-rules"
               >
-                <p className="font-medium text-[var(--mm-text1)]">Never-played TV older than N days</p>
-                <p className="text-xs text-[var(--mm-text3)]">Not supported for Plex</p>
-                <p className="mt-2 font-medium text-[var(--mm-text1)]">Watched TV removal</p>
-                <p className="text-xs text-[var(--mm-text3)]">Not supported for Plex</p>
+                <p>Never-played TV older than N days — not supported for Plex.</p>
+                <p className="mt-2">Watched TV removal — not supported for Plex.</p>
               </div>
             ) : (
               <>
-                <MmOnOffSwitchLarge
+                <MmOnOffSwitch
                   id={`pruner-op-tv-watched-${provider}`}
-                  label="Watched TV removal"
-                  description="Delete items marked watched for this user"
+                  label="Watched TV removal — Delete items marked watched for this user"
                   enabled={watchedTv}
                   disabled={fieldDisabled || disabled}
                   onChange={setWatchedTv}
@@ -555,10 +540,9 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
                 <p className="text-xs text-[var(--mm-text3)]">Set 0 to disable.</p>
               </>
             )}
-            <MmOnOffSwitchLarge
+            <MmOnOffSwitch
               id={`pruner-op-tv-missing-${provider}`}
-              label="Remove items missing primary artwork"
-              description="Broken or missing poster / episode image"
+              label="Remove items missing primary artwork — Broken or missing poster / episode image"
               enabled={missingPrimaryTv}
               disabled={fieldDisabled || disabled}
               onChange={setMissingPrimaryTv}
@@ -603,10 +587,9 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
             <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">
               <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">Movies</span>
             </div>
-            <MmOnOffSwitchLarge
+            <MmOnOffSwitch
               id={`pruner-op-mov-watched-${provider}`}
-              label="Watched movies removal"
-              description="Delete items marked watched for this user"
+              label="Watched movies removal — Delete items marked watched for this user"
               enabled={watchedMovies}
               disabled={fieldDisabled || disabled}
               onChange={setWatchedMovies}
@@ -638,10 +621,9 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
               />
             </label>
             <p className="text-xs text-[var(--mm-text3)]">Set 0 to disable.</p>
-            <MmOnOffSwitchLarge
+            <MmOnOffSwitch
               id={`pruner-op-mov-missing-${provider}`}
-              label="Remove items missing primary artwork"
-              description="Broken or missing movie poster"
+              label="Remove items missing primary artwork — Broken or missing movie poster"
               enabled={missingPrimaryMovies}
               disabled={fieldDisabled || disabled}
               onChange={setMissingPrimaryMovies}
@@ -715,34 +697,6 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
           {err}
         </p>
       ) : null}
-    </div>
-  );
-}
-
-function MmOnOffSwitchLarge({
-  id,
-  label,
-  description,
-  enabled,
-  disabled,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  description: string;
-  enabled: boolean;
-  disabled: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <div className="space-y-3 rounded-lg border border-[var(--mm-border)] bg-[var(--mm-surface2)]/20 px-4 py-4">
-      <MmOnOffSwitch
-        id={id}
-        label={`${label} — ${description}`}
-        enabled={enabled}
-        disabled={disabled}
-        onChange={onChange}
-      />
     </div>
   );
 }
@@ -899,19 +853,7 @@ export function PrunerProviderPeopleCard({ provider, instanceId, instance, disab
       data-testid={`pruner-provider-people-card-${provider}`}
       data-provider-section="people"
     >
-      <h3 className="text-base font-semibold text-[var(--mm-text1)]">People</h3>
-      <p className="mt-1 text-sm text-[var(--mm-text3)]">
-        Names narrow which items appear in a library scan. Use commas or one name per line.
-      </p>
-      {disabled ? (
-        <p
-          className="mt-4 rounded-md border border-dashed border-[var(--mm-border)] bg-[var(--mm-surface2)]/40 px-3 py-2 text-sm text-[var(--mm-text2)]"
-          data-testid="pruner-provider-config-disabled-hint-people"
-        >
-          Save a connection first to enable these settings.
-        </p>
-      ) : null}
-      <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:gap-10">
+      <div className="grid gap-8 lg:grid-cols-2 lg:gap-10">
         <fieldset disabled={fieldDisabled || disabled} className="min-w-0 border-0 p-0">
           <div className="min-w-0 space-y-3" data-testid={`pruner-provider-tv-people-${provider}`}>
             <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">

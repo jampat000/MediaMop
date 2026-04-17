@@ -2,11 +2,6 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  FETCHER_TAB_PANEL_BLURB_CLASS,
-  FETCHER_TAB_PANEL_INTRO_CLASS,
-  FETCHER_TAB_PANEL_TITLE_CLASS,
-} from "../fetcher/fetcher-tab-panel-intro";
 import { FetcherEnableSwitch } from "../fetcher/fetcher-enable-switch";
 import { fetcherMenuButtonClass, fetcherSectionTabClass } from "../fetcher/fetcher-menu-button";
 import { fetchCsrfToken } from "../../lib/api/auth-api";
@@ -17,7 +12,7 @@ import { usePrunerInstancesQuery, usePrunerJobsInspectionQuery } from "../../lib
 import { PrunerProviderPeopleCard, PrunerProviderRulesCard } from "./pruner-provider-operator-workspace";
 import { formatPrunerDateTime } from "./pruner-ui-utils";
 
-type TopTab = "overview" | "connections" | "emby" | "jellyfin" | "plex" | "schedules" | "jobs";
+type TopTab = "overview" | "emby" | "jellyfin" | "plex" | "schedules" | "jobs";
 type ProviderTab = "emby" | "jellyfin" | "plex";
 
 function providerLabel(p: ProviderTab): string {
@@ -142,16 +137,25 @@ function prunerConnectionPlaceholderUrl(provider: ProviderTab): string {
 function PrunerConnectionCredentialPanel({
   provider,
   allInstances,
+  instanceSelection,
 }: {
   provider: ProviderTab;
   allInstances: PrunerServerInstance[];
+  /** When set, instance row is chosen by the parent (e.g. provider workspace) so Connection matches Rules/People. */
+  instanceSelection?: {
+    selectedId: number | null;
+    onSelectedIdChange: (id: number | null) => void;
+  };
 }) {
   const me = useMeQuery();
   const q = useQueryClient();
   const canOperate = me.data?.role === "admin" || me.data?.role === "operator";
   const providerName = providerLabel(provider);
   const providerInstances = useMemo(() => allInstances.filter((x) => x.provider === provider), [allInstances, provider]);
-  const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(providerInstances[0]?.id ?? null);
+  const [internalSelectedInstanceId, setInternalSelectedInstanceId] = useState<number | null>(providerInstances[0]?.id ?? null);
+  const controlled = Boolean(instanceSelection);
+  const selectedInstanceId = controlled ? instanceSelection!.selectedId : internalSelectedInstanceId;
+  const setSelectedInstanceId = controlled ? instanceSelection!.onSelectedIdChange : setInternalSelectedInstanceId;
   const selectedInstance = providerInstances.find((x) => x.id === selectedInstanceId) ?? providerInstances[0];
   const hasInstance = Boolean(selectedInstance);
   const [baseUrlDraft, setBaseUrlDraft] = useState("");
@@ -173,17 +177,18 @@ function PrunerConnectionCredentialPanel({
         ? "Enter token"
         : "Enter API key";
 
-  const statusHeadline = !selectedInstance
+  const connectionStatusMain = !selectedInstance
     ? "Not connected yet"
     : selectedInstance.last_connection_test_ok === true
-      ? "Connection status: OK"
+      ? "Connected"
       : selectedInstance.last_connection_test_ok === false
-        ? "Connection status: Failed"
-        : "Connection status: Not tested yet";
+        ? "Last test failed"
+        : "Not tested yet";
 
   useEffect(() => {
-    setSelectedInstanceId(providerInstances[0]?.id ?? null);
-  }, [providerInstances.length, provider]);
+    if (controlled) return;
+    setInternalSelectedInstanceId(providerInstances[0]?.id ?? null);
+  }, [controlled, providerInstances.length, provider]);
 
   useEffect(() => {
     setBaseUrlDraft(selectedInstance?.base_url ?? "");
@@ -268,18 +273,14 @@ function PrunerConnectionCredentialPanel({
   return (
     <section
       className={[
-        "mm-card mm-dash-card flex h-full min-h-0 min-w-0 flex-col gap-7 transition-shadow duration-200",
+        "mm-card mm-dash-card flex h-full min-h-0 min-w-0 flex-col gap-6 transition-shadow duration-200",
         saveJustSucceeded
           ? "ring-2 ring-[var(--mm-accent-ring)] ring-offset-2 ring-offset-[var(--mm-bg-main)] shadow-[0_0_0_1px_rgba(212,175,55,0.12)]"
           : "",
       ].join(" ")}
       data-testid={`pruner-connection-panel-${provider}`}
     >
-      <h3 className="text-base font-semibold text-[var(--mm-text1)]">{providerName}</h3>
-      <p className="text-xs leading-relaxed text-[var(--mm-text2)]">
-        {provider === "plex" ? "Plex server URL and token." : `${providerName} server URL and API key.`}
-      </p>
-      {providerInstances.length > 1 ? (
+      {!controlled && providerInstances.length > 1 ? (
         <label className="block text-sm text-[var(--mm-text2)]">
           <span className="mb-1 block text-xs text-[var(--mm-text3)]">Instance</span>
           <select
@@ -399,11 +400,11 @@ function PrunerConnectionCredentialPanel({
         className="mt-auto rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-3.5 text-sm text-[var(--mm-text2)]"
         data-testid={`pruner-connection-status-${provider}`}
       >
-        <p className="font-medium text-[var(--mm-text1)]">{statusHeadline}</p>
+        <p className="text-sm font-medium text-[var(--mm-text1)]">{connectionStatusMain}</p>
         <p className="mt-1 text-xs text-[var(--mm-text3)]">
           Last completed check: {formatPrunerDateTime(selectedInstance?.last_connection_test_at ?? null)}
         </p>
-        {selectedInstance?.last_connection_test_detail && statusHeadline !== "Connection status: OK" ? (
+        {selectedInstance?.last_connection_test_detail && selectedInstance.last_connection_test_ok !== true ? (
           <p className="mt-1 text-xs text-[var(--mm-text3)]">{selectedInstance.last_connection_test_detail}</p>
         ) : null}
         {err ? (
@@ -412,7 +413,7 @@ function PrunerConnectionCredentialPanel({
           </p>
         ) : null}
         <p className="mt-2 text-xs text-[var(--mm-text3)]">
-          Each test also adds a line to{" "}
+          Each test adds a line to{" "}
           <Link to="/app/activity" className="text-[var(--mm-accent)] underline-offset-2 hover:underline">
             Activity
           </Link>{" "}
@@ -423,59 +424,67 @@ function PrunerConnectionCredentialPanel({
   );
 }
 
-function ConnectionsTabPanel({ allInstances }: { allInstances: PrunerServerInstance[] }) {
-  const providers: ProviderTab[] = ["emby", "jellyfin", "plex"];
+function PrunerProviderRulesPeopleConnectionLine({
+  providerName,
+  instance,
+  onGoToConnection,
+}: {
+  providerName: string;
+  instance: PrunerServerInstance | undefined;
+  onGoToConnection: () => void;
+}) {
+  const ok = instance != null && instance.last_connection_test_ok === true;
+  if (ok) {
+    return (
+      <p className="mb-3 text-xs font-medium text-green-600" data-testid="pruner-provider-inline-connection-status">
+        {providerName}: Connected
+      </p>
+    );
+  }
   return (
-    <section className="mm-fetcher-module-surface mb-6" data-testid="pruner-connections-tab">
-      <header className={FETCHER_TAB_PANEL_INTRO_CLASS}>
-        <h2 className={FETCHER_TAB_PANEL_TITLE_CLASS}>Connections</h2>
-        <p className={FETCHER_TAB_PANEL_BLURB_CLASS}>
-          Credentials only. Configure cleanup rules on each provider tab (Emby, Jellyfin, Plex).
-        </p>
-      </header>
-      <div
-        className="grid min-w-0 grid-cols-1 gap-5 gap-y-6 min-[1100px]:grid-cols-3 min-[1100px]:gap-x-5"
-        data-testid="pruner-connection-panels-grid"
+    <p className="mb-3 text-xs text-[var(--mm-text3)]" data-testid="pruner-provider-inline-connection-status">
+      <span className="text-[var(--mm-text2)]">{providerName}:</span> Not connected — go to{" "}
+      <button
+        type="button"
+        className="text-[var(--mm-accent)] underline underline-offset-2 hover:opacity-90"
+        onClick={onGoToConnection}
       >
-        {providers.map((p) => (
-          <div key={p} className="min-w-0">
-            <PrunerConnectionCredentialPanel provider={p} allInstances={allInstances} />
-          </div>
-        ))}
-      </div>
-    </section>
+        Connection
+      </button>{" "}
+      tab to set up
+    </p>
   );
 }
 
-type ProviderWorkspaceSection = "rules" | "people";
+type ProviderWorkspaceSection = "connection" | "rules" | "people";
 
 function ProviderConfigurationWorkspace({ provider, allInstances }: { provider: ProviderTab; allInstances: PrunerServerInstance[] }) {
   const providerName = providerLabel(provider);
   const providerInstances = useMemo(() => allInstances.filter((x) => x.provider === provider), [allInstances, provider]);
   const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(providerInstances[0]?.id ?? null);
-  const [providerSection, setProviderSection] = useState<ProviderWorkspaceSection>("rules");
+  const [providerSection, setProviderSection] = useState<ProviderWorkspaceSection>("connection");
   const selectedInstance = providerInstances.find((x) => x.id === selectedInstanceId) ?? providerInstances[0];
   const hasInstance = Boolean(selectedInstance);
 
   useEffect(() => {
-    setSelectedInstanceId(providerInstances[0]?.id ?? null);
-  }, [providerInstances.length, provider]);
+    setSelectedInstanceId((prev) => {
+      if (prev != null && providerInstances.some((x) => x.id === prev)) return prev;
+      return providerInstances[0]?.id ?? null;
+    });
+  }, [provider, providerInstances]);
 
   useEffect(() => {
-    setProviderSection("rules");
-  }, [provider, selectedInstance?.id]);
+    setProviderSection("connection");
+  }, [provider]);
 
   const disabledCtx = { instanceId: 0, instance: providerDisabledInstance(provider) } as const;
+  const instanceSelection = {
+    selectedId: selectedInstanceId,
+    onSelectedIdChange: setSelectedInstanceId,
+  };
 
   return (
     <section className="space-y-5" data-testid={`pruner-provider-tab-${provider}`}>
-      <div>
-        <h2 className="text-base font-semibold text-[var(--mm-text1)]">{providerName}</h2>
-        <p className="mt-1 max-w-3xl text-sm leading-snug text-[var(--mm-text2)]">
-          Save credentials under <strong className="text-[var(--mm-text)]">Connections</strong>, then use Rules and
-          People below. Schedules for all providers are on the <strong className="text-[var(--mm-text)]">Schedules</strong> tab.
-        </p>
-      </div>
       {providerInstances.length > 1 ? (
         <label className="block max-w-md text-sm text-[var(--mm-text2)]">
           <span className="mb-1 block text-xs text-[var(--mm-text3)]">Instance</span>
@@ -500,6 +509,7 @@ function ProviderConfigurationWorkspace({ provider, allInstances }: { provider: 
       >
         {(
           [
+            ["connection", "Connection"],
             ["rules", "Rules"],
             ["people", "People"],
           ] as const
@@ -517,23 +527,41 @@ function ProviderConfigurationWorkspace({ provider, allInstances }: { provider: 
       </nav>
 
       <div data-testid={`pruner-provider-sections-${provider}`}>
+        {providerSection === "connection" ? (
+          <PrunerConnectionCredentialPanel provider={provider} allInstances={allInstances} instanceSelection={instanceSelection} />
+        ) : null}
+
         {providerSection === "rules" ? (
-          <div className={`${!hasInstance ? "opacity-50" : ""}`} data-testid="pruner-provider-rules-wrap">
-            {selectedInstance ? (
-              <PrunerProviderRulesCard provider={provider} instanceId={selectedInstance.id} instance={selectedInstance} disabled={false} />
-            ) : (
-              <PrunerProviderRulesCard provider={provider} instanceId={0} instance={disabledCtx.instance} disabled />
-            )}
+          <div data-testid="pruner-provider-rules-wrap">
+            <PrunerProviderRulesPeopleConnectionLine
+              providerName={providerName}
+              instance={selectedInstance}
+              onGoToConnection={() => setProviderSection("connection")}
+            />
+            <div className={!hasInstance ? "opacity-40" : ""}>
+              {selectedInstance ? (
+                <PrunerProviderRulesCard provider={provider} instanceId={selectedInstance.id} instance={selectedInstance} disabled={false} />
+              ) : (
+                <PrunerProviderRulesCard provider={provider} instanceId={0} instance={disabledCtx.instance} disabled />
+              )}
+            </div>
           </div>
         ) : null}
 
         {providerSection === "people" ? (
-          <div className={`${!hasInstance ? "opacity-50" : ""}`} data-testid="pruner-provider-people-wrap">
-            {selectedInstance ? (
-              <PrunerProviderPeopleCard provider={provider} instanceId={selectedInstance.id} instance={selectedInstance} disabled={false} />
-            ) : (
-              <PrunerProviderPeopleCard provider={provider} instanceId={0} instance={disabledCtx.instance} disabled />
-            )}
+          <div data-testid="pruner-provider-people-wrap">
+            <PrunerProviderRulesPeopleConnectionLine
+              providerName={providerName}
+              instance={selectedInstance}
+              onGoToConnection={() => setProviderSection("connection")}
+            />
+            <div className={!hasInstance ? "opacity-40" : ""}>
+              {selectedInstance ? (
+                <PrunerProviderPeopleCard provider={provider} instanceId={selectedInstance.id} instance={selectedInstance} disabled={false} />
+              ) : (
+                <PrunerProviderPeopleCard provider={provider} instanceId={0} instance={disabledCtx.instance} disabled />
+              )}
+            </div>
           </div>
         ) : null}
       </div>
@@ -566,8 +594,7 @@ function TopLevelOverview({ instances }: { instances: PrunerServerInstance[] }) 
       <header className="max-w-3xl">
         <h2 className="text-base font-semibold text-[var(--mm-text1)]">Overview</h2>
         <p className="mt-1 text-sm text-[var(--mm-text2)]">
-          Use <strong className="text-[var(--mm-text)]">Connections</strong> for credentials and each provider tab for
-          TV and Movies cleanup rules.
+          Open each provider tab for credentials (Connection sub-tab), TV and Movies rules, and people filters.
         </p>
       </header>
 
@@ -610,7 +637,7 @@ function TopLevelOverview({ instances }: { instances: PrunerServerInstance[] }) 
                 </p>
               </div>
             ) : (
-              <p className="text-[var(--mm-text2)]">No instance registered. Add credentials under Connections.</p>
+              <p className="text-[var(--mm-text2)]">No instance registered. Add credentials on that provider’s Connection sub-tab.</p>
             );
             return <PrunerAtGlanceCard key={card.provider} glanceOrder={order} title={providerLabel(card.provider)} body={body} />;
           })}
@@ -623,7 +650,7 @@ function TopLevelOverview({ instances }: { instances: PrunerServerInstance[] }) 
           data-testid="pruner-empty-state"
         >
           <p className="font-semibold text-[var(--mm-text1)]">No Emby, Jellyfin, or Plex instances registered yet.</p>
-          <p className="mt-1">Open the Connections tab to add a server URL and API key or token.</p>
+          <p className="mt-1">Open Emby, Jellyfin, or Plex and use the Connection sub-tab to add a server URL and API key or token.</p>
           <p className="mt-2 text-xs">Nothing is shared across providers or across instance rows.</p>
         </div>
       ) : null}
@@ -792,7 +819,7 @@ function TopLevelSchedules({ instances }: { instances: PrunerServerInstance[] })
           className="rounded-md border border-dashed border-[var(--mm-border)] bg-[var(--mm-surface2)]/35 px-4 py-3 text-sm text-[var(--mm-text2)]"
           data-testid="pruner-schedules-empty-state"
         >
-          Register a provider under Connections to enable schedules.
+          Register a provider (Emby, Jellyfin, or Plex tab → Connection) to enable schedules.
         </p>
       ) : (
         <div className="space-y-8">
@@ -917,9 +944,8 @@ export function PrunerInstancesListPage() {
         <p className="mm-page__subtitle max-w-3xl">
           Library cleanup for <strong className="text-[var(--mm-text)]">Emby</strong>,{" "}
           <strong className="text-[var(--mm-text)]">Jellyfin</strong>, and{" "}
-          <strong className="text-[var(--mm-text)]">Plex</strong>. Use{" "}
-          <strong className="text-[var(--mm-text)]">Connections</strong> for sign-in, then each provider tab for TV and
-          Movies rules.
+          <strong className="text-[var(--mm-text)]">Plex</strong>. Each provider tab has Connection, Rules, and People
+          for that server.
         </p>
       </header>
 
@@ -930,7 +956,6 @@ export function PrunerInstancesListPage() {
       >
         {([
           ["overview", "Overview"],
-          ["connections", "Connections"],
           ["emby", "Emby"],
           ["jellyfin", "Jellyfin"],
           ["plex", "Plex"],
@@ -954,7 +979,6 @@ export function PrunerInstancesListPage() {
         (
           {
             overview: "Overview",
-            connections: "Connections",
             emby: "Emby",
             jellyfin: "Jellyfin",
             plex: "Plex",
@@ -968,8 +992,6 @@ export function PrunerInstancesListPage() {
         {!q.isLoading && !q.isError ? (
           topTab === "overview" ? (
             <TopLevelOverview instances={instances} />
-          ) : topTab === "connections" ? (
-            <ConnectionsTabPanel allInstances={instances} />
           ) : topTab === "schedules" ? (
             <TopLevelSchedules instances={instances} />
           ) : topTab === "jobs" ? (
