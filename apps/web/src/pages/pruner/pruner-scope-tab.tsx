@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMeQuery } from "../../lib/auth/queries";
-import { fetchPrunerPreviewRun, postPrunerPreview } from "../../lib/pruner/api";
+import { fetchPrunerPreviewRun, fetchPrunerPreviewRuns, postPrunerPreview } from "../../lib/pruner/api";
 import type { PrunerServerInstance } from "../../lib/pruner/api";
 
 type Ctx = { instanceId: number; instance: PrunerServerInstance | undefined };
@@ -21,6 +21,13 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
   const label = props.scope === "tv" ? "TV (episodes)" : "Movies (one row per movie item)";
   const isPlex = instance?.provider === "plex";
 
+  const previewRunsQueryKey = ["pruner", "preview-runs", instanceId, props.scope] as const;
+  const runsQuery = useQuery({
+    queryKey: previewRunsQueryKey,
+    queryFn: () => fetchPrunerPreviewRuns(instanceId, { media_scope: props.scope, limit: 25 }),
+    enabled: Boolean(instanceId),
+  });
+
   async function runPreview() {
     setErr(null);
     setBusy(true);
@@ -28,8 +35,9 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
     try {
       const { pruner_job_id } = await postPrunerPreview(instanceId, props.scope);
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+      await qc.invalidateQueries({ queryKey: previewRunsQueryKey });
       setPreview(
-        `Queued preview job #${pruner_job_id}. When the worker finishes, refresh this page — scope summary reads from denormalized fields; full candidates stay in pruner_preview_runs.`,
+        `Queued preview job #${pruner_job_id}. When the worker finishes, the summary above and the recent-run table update automatically (this scope only).`,
       );
     } catch (e) {
       setErr((e as Error).message);
@@ -38,10 +46,10 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
     }
   }
 
-  async function loadJson() {
-    const uuid = scopeRow?.last_preview_run_uuid;
+  async function loadJsonFor(runUuid?: string | null) {
+    const uuid = runUuid ?? scopeRow?.last_preview_run_uuid;
     if (!uuid) {
-      setErr("No preview UUID yet for this scope.");
+      setErr("No preview run selected.");
       return;
     }
     setErr(null);
@@ -99,14 +107,73 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
             type="button"
             className="rounded-md border border-[var(--mm-border)] px-3 py-1.5 text-sm font-medium text-[var(--mm-text)] disabled:opacity-50"
             disabled={busy || !scopeRow?.last_preview_run_uuid}
-            onClick={() => void loadJson()}
+            onClick={() => void loadJsonFor(scopeRow?.last_preview_run_uuid)}
           >
-            Load candidates JSON
+            Load candidates JSON (latest summary)
           </button>
         </div>
       ) : (
         <p className="text-sm text-[var(--mm-text2)]">Sign in as an operator to queue previews.</p>
       )}
+      <div className="space-y-2" data-testid="pruner-preview-runs-history">
+        <h3 className="text-sm font-semibold text-[var(--mm-text)]">Recent preview runs ({props.scope})</h3>
+        {runsQuery.isLoading ? (
+          <p className="text-sm text-[var(--mm-text2)]">Loading history…</p>
+        ) : runsQuery.isError ? (
+          <p className="text-sm text-red-600" role="alert">
+            {(runsQuery.error as Error).message}
+          </p>
+        ) : runsQuery.data?.length ? (
+          <div className="overflow-x-auto rounded-md border border-[var(--mm-border)]">
+            <table className="w-full min-w-[32rem] border-collapse text-left text-sm text-[var(--mm-text)]">
+              <thead className="border-b border-[var(--mm-border)] bg-[var(--mm-surface2)] text-xs uppercase text-[var(--mm-text2)]">
+                <tr>
+                  <th className="px-2 py-2">Run</th>
+                  <th className="px-2 py-2">When</th>
+                  <th className="px-2 py-2">Outcome</th>
+                  <th className="px-2 py-2">Candidates</th>
+                  <th className="px-2 py-2"> </th>
+                </tr>
+              </thead>
+              <tbody>
+                {runsQuery.data.map((row) => (
+                  <tr key={row.preview_run_id} className="border-b border-[var(--mm-border)] align-top">
+                    <td className="px-2 py-2 font-mono text-xs">{row.preview_run_id.slice(0, 8)}…</td>
+                    <td className="px-2 py-2 text-xs text-[var(--mm-text2)]">
+                      {new Date(row.created_at).toLocaleString()}
+                    </td>
+                    <td className="px-2 py-2 text-xs">
+                      <span className="font-medium">{row.outcome}</span>
+                      {row.unsupported_detail ? (
+                        <div className="mt-1 text-[var(--mm-text2)]">{row.unsupported_detail}</div>
+                      ) : null}
+                      {row.error_message ? (
+                        <div className="mt-1 text-red-600">{row.error_message}</div>
+                      ) : null}
+                    </td>
+                    <td className="px-2 py-2 text-xs">
+                      {row.candidate_count}
+                      {row.truncated ? " (truncated)" : ""}
+                    </td>
+                    <td className="px-2 py-2">
+                      <button
+                        type="button"
+                        className="rounded border border-[var(--mm-border)] px-2 py-1 text-xs font-medium text-[var(--mm-text)] disabled:opacity-50"
+                        disabled={busy}
+                        onClick={() => void loadJsonFor(row.preview_run_id)}
+                      >
+                        JSON
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--mm-text2)]">No preview runs recorded for this scope yet.</p>
+        )}
+      </div>
       {err ? (
         <p className="text-sm text-red-600" role="alert">
           {err}

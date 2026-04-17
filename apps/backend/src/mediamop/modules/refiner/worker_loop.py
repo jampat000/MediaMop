@@ -336,10 +336,10 @@ def start_refiner_worker_background_tasks(
 
     stop = stop_event if stop_event is not None else asyncio.Event()
     tasks: list[asyncio.Task[None]] = []
-    if settings.refiner_worker_count == 0 and job_handlers is None:
-        worker_slots = 0
-    else:
-        worker_slots = max(8, settings.refiner_worker_count)
+    # ``refiner_worker_count`` is already clamped to 0..8 on :class:`MediaMopSettings`. When it is
+    # 0, spawn **no** asyncio worker tasks even if callers pass a non-``None`` ``job_handlers`` map
+    # (the application root always builds handlers before calling this — workers must still stay off).
+    worker_slots = int(settings.refiner_worker_count)
     for i in range(worker_slots):
         t = asyncio.create_task(
             refiner_worker_run_forever(

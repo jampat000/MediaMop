@@ -130,3 +130,21 @@ class PrunerPreviewRunOut(BaseModel):
     error_message: str | None
     created_at: datetime
     candidates_json: str
+
+
+class PrunerPreviewRunListItemOut(BaseModel):
+    """Preview run metadata without ``candidates_json`` (list endpoint for operator history)."""
+
+    model_config = {"from_attributes": True}
+
+    preview_run_id: str
+    server_instance_id: int
+    media_scope: str
+    rule_family_id: str
+    pruner_job_id: int | None = None
+    candidate_count: int
+    truncated: bool
+    outcome: str
+    unsupported_detail: str | None
+    error_message: str | None
+    created_at: datetime

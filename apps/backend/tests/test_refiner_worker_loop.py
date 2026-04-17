@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import replace
 from datetime import datetime, timezone
 from unittest.mock import patch
 
@@ -73,6 +74,34 @@ def test_clamp_refiner_worker_count_unit() -> None:
     assert clamp_refiner_worker_count(1) == 1
     assert clamp_refiner_worker_count(8) == 8
     assert clamp_refiner_worker_count(9) == 8
+
+
+def test_start_refiner_worker_background_tasks_zero_spawns_no_tasks_even_with_handlers(
+    session_factory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Lifespan passes a handler map while ``refiner_worker_count`` is 0 — still no asyncio workers."""
+
+    monkeypatch.setattr(
+        refiner_worker_loop_mod,
+        "REFINER_WORKER_IDLE_SLEEP_SECONDS",
+        0.05,
+    )
+    base = MediaMopSettings.load()
+    settings = replace(base, refiner_worker_count=0)
+    dummy_handlers = {"refiner.candidate_gate.v1": lambda ctx: None}
+
+    async def _run() -> None:
+        stop, tasks = start_refiner_worker_background_tasks(
+            session_factory,
+            settings,
+            job_handlers=dummy_handlers,
+        )
+        assert tasks == []
+        stop.set()
+        await stop_refiner_worker_background_tasks(stop, tasks)
+
+    asyncio.run(_run())
 
 
 def test_process_one_idle_when_no_jobs(session_factory) -> None:

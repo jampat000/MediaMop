@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import uuid
 from pathlib import Path
 
 import pytest
@@ -14,13 +15,18 @@ from starlette.testclient import TestClient
 from mediamop.api.factory import create_app
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.pruner.pruner_constants import MEDIA_SCOPE_MOVIES, MEDIA_SCOPE_TV
+from mediamop.modules.pruner.pruner_constants import (
+    MEDIA_SCOPE_MOVIES,
+    MEDIA_SCOPE_TV,
+    RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+)
 from mediamop.modules.pruner.pruner_job_kinds import (
     PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
     PRUNER_SERVER_CONNECTION_TEST_JOB_KIND,
 )
 from mediamop.modules.pruner.pruner_jobs_model import PrunerJob
 from mediamop.modules.pruner.pruner_scope_settings_model import PrunerScopeSettings
+from mediamop.modules.pruner.pruner_preview_service import insert_preview_run
 from mediamop.modules.pruner.pruner_server_instance_model import PrunerServerInstance
 from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_in_process_workers,
@@ -299,3 +305,79 @@ def test_get_pruner_instances_lists_two_emby_without_shared_state(client_with_ad
         for s in x["scopes"]:
             assert s["last_preview_outcome"] is None
             assert s["last_preview_run_uuid"] is None
+
+
+def test_get_pruner_preview_runs_list_scoped_and_omits_candidates_json(client_with_admin: TestClient) -> None:
+    """``GET …/preview-runs`` — per-instance history; optional ``media_scope``; no candidate payloads in list."""
+
+    _login_admin(client_with_admin)
+    tok = fetch_csrf(client_with_admin)
+    r0 = auth_post(
+        client_with_admin,
+        "/api/v1/pruner/instances",
+        json={
+            "provider": "emby",
+            "display_name": "Preview-List",
+            "base_url": "http://preview-list.test",
+            "credentials": {"api_key": "k"},
+            "csrf_token": tok,
+        },
+        headers={"Content-Type": "application/json"},
+    )
+    assert r0.status_code == 200, r0.text
+    iid = int(r0.json()["id"])
+    uid_tv = str(uuid.uuid4())
+    uid_movies = str(uuid.uuid4())
+    fac = _fac()
+    with fac() as db:
+        insert_preview_run(
+            db,
+            preview_run_uuid=uid_tv,
+            server_instance_id=iid,
+            media_scope=MEDIA_SCOPE_TV,
+            rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+            pruner_job_id=None,
+            candidate_count=2,
+            candidates_json='[{"x":1}]',
+            truncated=False,
+            outcome="ok",
+            unsupported_detail=None,
+            error_message=None,
+        )
+        insert_preview_run(
+            db,
+            preview_run_uuid=uid_movies,
+            server_instance_id=iid,
+            media_scope=MEDIA_SCOPE_MOVIES,
+            rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+            pruner_job_id=None,
+            candidate_count=0,
+            candidates_json="[]",
+            truncated=False,
+            outcome="unsupported",
+            unsupported_detail="plex only",
+            error_message=None,
+        )
+        db.commit()
+
+    r_tv = client_with_admin.get(f"/api/v1/pruner/instances/{iid}/preview-runs?media_scope=tv&limit=10")
+    assert r_tv.status_code == 200, r_tv.text
+    tv_rows = r_tv.json()
+    assert len(tv_rows) == 1
+    assert tv_rows[0]["preview_run_id"] == uid_tv
+    assert tv_rows[0]["media_scope"] == MEDIA_SCOPE_TV
+    assert tv_rows[0]["candidate_count"] == 2
+    assert "candidates_json" not in tv_rows[0]
+
+    r_all = client_with_admin.get(f"/api/v1/pruner/instances/{iid}/preview-runs?limit=10")
+    assert r_all.status_code == 200, r_all.text
+    all_rows = r_all.json()
+    assert len(all_rows) == 2
+    assert all_rows[0]["preview_run_id"] == uid_movies
+    assert all_rows[1]["preview_run_id"] == uid_tv
+
+    r_bad = client_with_admin.get(f"/api/v1/pruner/instances/{iid}/preview-runs?media_scope=radio")
+    assert r_bad.status_code == 422
+
+    r_404 = client_with_admin.get("/api/v1/pruner/instances/99999/preview-runs")
+    assert r_404.status_code == 404

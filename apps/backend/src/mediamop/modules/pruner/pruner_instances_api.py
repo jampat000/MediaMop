@@ -6,7 +6,7 @@ import json
 import uuid
 from typing import Annotated, cast
 
-from fastapi import APIRouter, HTTPException, Path
+from fastapi import APIRouter, HTTPException, Path, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 from starlette import status
@@ -34,6 +34,7 @@ from mediamop.modules.pruner.pruner_schemas import (
     PrunerConnectionTestIn,
     PrunerEnqueueOut,
     PrunerPreviewEnqueueIn,
+    PrunerPreviewRunListItemOut,
     PrunerPreviewRunOut,
     PrunerScopePatchHttpIn,
     PrunerScopeSummaryOut,
@@ -235,6 +236,37 @@ def patch_pruner_scope(
         sc.preview_max_items = int(body.preview_max_items)
     db.flush()
     return _scope_row_out(db, sc)
+
+
+@router.get(
+    "/pruner/instances/{instance_id}/preview-runs",
+    response_model=list[PrunerPreviewRunListItemOut],
+    summary="List recent preview runs for this instance (metadata only)",
+    description=(
+        "Returns newest preview runs first. Optional ``media_scope`` filters to one axis "
+        "(``tv`` vs ``movies``). Candidate payloads are omitted; fetch a single run for JSON."
+    ),
+)
+def list_pruner_preview_runs(
+    instance_id: Annotated[int, Path(ge=1)],
+    _user: UserPublicDep,
+    db: DbSessionDep,
+    media_scope: Annotated[str | None, Query(description="`tv` or `movies`; omit for all scopes on this instance.")] = None,
+    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+) -> list[PrunerPreviewRunListItemOut]:
+    if get_server_instance(db, instance_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found.")
+    if media_scope is not None and media_scope not in (MEDIA_SCOPE_TV, MEDIA_SCOPE_MOVIES):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="media_scope query must be tv or movies.",
+        )
+    stmt = select(PrunerPreviewRun).where(PrunerPreviewRun.server_instance_id == instance_id)
+    if media_scope is not None:
+        stmt = stmt.where(PrunerPreviewRun.media_scope == media_scope)
+    stmt = stmt.order_by(PrunerPreviewRun.created_at.desc(), PrunerPreviewRun.id.desc()).limit(limit)
+    rows = db.scalars(stmt).all()
+    return [PrunerPreviewRunListItemOut.model_validate(r) for r in rows]
 
 
 @router.get(

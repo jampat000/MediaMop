@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { qk } from "../../lib/auth/queries";
+import * as prunerApi from "../../lib/pruner/api";
 import type { UserPublic } from "../../lib/api/types";
 import type { PrunerServerInstance } from "../../lib/pruner/api";
 import { PrunerInstanceShell } from "./pruner-instance-shell";
@@ -45,32 +46,37 @@ const plexInstance: PrunerServerInstance = {
 
 describe("PrunerScopeTab (Plex)", () => {
   it("shows explicit unsupported messaging and disables preview queue", async () => {
-    const qc = new QueryClient();
-    qc.setQueryData(qk.me, operator);
-    qc.setQueryData(["pruner", "instances", 9], plexInstance);
+    const spy = vi.spyOn(prunerApi, "fetchPrunerPreviewRuns").mockResolvedValue([]);
+    try {
+      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      qc.setQueryData(qk.me, operator);
+      qc.setQueryData(["pruner", "instances", 9], plexInstance);
 
-    const router = createMemoryRouter(
-      [
-        {
-          path: "/instances/:instanceId",
-          element: <PrunerInstanceShell />,
-          children: [{ path: "tv", element: <PrunerScopeTab scope="tv" /> }],
-        },
-      ],
-      { initialEntries: ["/instances/9/tv"] },
-    );
+      const router = createMemoryRouter(
+        [
+          {
+            path: "/instances/:instanceId",
+            element: <PrunerInstanceShell />,
+            children: [{ path: "tv", element: <PrunerScopeTab scope="tv" /> }],
+          },
+        ],
+        { initialEntries: ["/instances/9/tv"] },
+      );
 
-    render(
-      <QueryClientProvider client={qc}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>,
-    );
+      render(
+        <QueryClientProvider client={qc}>
+          <RouterProvider router={router} />
+        </QueryClientProvider>,
+      );
 
-    await waitFor(() => {
-      expect(screen.getByRole("status")).toBeInTheDocument();
-    });
-    expect(screen.getByRole("status").textContent).toMatch(/not supported/i);
-    const btn = screen.getByRole("button", { name: /queue preview job/i });
-    expect(btn).toBeDisabled();
+      await waitFor(() => {
+        expect(screen.getByRole("status")).toBeInTheDocument();
+      });
+      expect(screen.getByRole("status").textContent).toMatch(/not supported/i);
+      const btn = screen.getByRole("button", { name: /queue preview job/i });
+      expect(btn).toBeDisabled();
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

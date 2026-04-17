@@ -38,6 +38,43 @@ export type PrunerPreviewRun = {
   candidates_json: string;
 };
 
+/** Row from ``GET …/preview-runs`` (no embedded candidate JSON). */
+export type PrunerPreviewRunSummary = {
+  preview_run_id: string;
+  server_instance_id: number;
+  media_scope: string;
+  rule_family_id: string;
+  pruner_job_id: number | null;
+  candidate_count: number;
+  truncated: boolean;
+  outcome: string;
+  unsupported_detail: string | null;
+  error_message: string | null;
+  created_at: string;
+};
+
+export function prunerPreviewRunsListPath(
+  instanceId: number,
+  opts?: { media_scope?: "tv" | "movies"; limit?: number },
+): string {
+  const params = new URLSearchParams();
+  if (opts?.media_scope) params.set("media_scope", opts.media_scope);
+  if (opts?.limit != null) params.set("limit", String(opts.limit));
+  const q = params.toString();
+  return `/api/v1/pruner/instances/${instanceId}/preview-runs${q ? `?${q}` : ""}`;
+}
+
+export async function fetchPrunerPreviewRuns(
+  instanceId: number,
+  opts?: { media_scope?: "tv" | "movies"; limit?: number },
+): Promise<PrunerPreviewRunSummary[]> {
+  const r = await apiFetch(prunerPreviewRunsListPath(instanceId, opts));
+  if (!r.ok) {
+    throw new Error(`Pruner preview runs: ${r.status}`);
+  }
+  return readJson<PrunerPreviewRunSummary[]>(r);
+}
+
 export async function fetchPrunerInstances(): Promise<PrunerServerInstance[]> {
   const r = await apiFetch("/api/v1/pruner/instances");
   if (!r.ok) {
