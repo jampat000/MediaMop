@@ -15,6 +15,10 @@ export type PrunerScopeSummary = {
   preview_max_items: number;
   preview_include_genres: string[];
   preview_include_people: string[];
+  preview_year_min: number | null;
+  preview_year_max: number | null;
+  preview_include_studios: string[];
+  preview_include_collections: string[];
   scheduled_preview_enabled: boolean;
   scheduled_preview_interval_seconds: number;
   last_scheduled_preview_enqueued_at: string | null;
@@ -214,6 +218,10 @@ export async function patchPrunerScope(
     preview_max_items?: number;
     preview_include_genres?: string[];
     preview_include_people?: string[];
+    preview_year_min?: number | null;
+    preview_year_max?: number | null;
+    preview_include_studios?: string[];
+    preview_include_collections?: string[];
     scheduled_preview_enabled?: boolean;
     scheduled_preview_interval_seconds?: number;
     csrf_token: string;

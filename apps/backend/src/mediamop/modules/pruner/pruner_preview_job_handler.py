@@ -19,12 +19,17 @@ from mediamop.modules.pruner.pruner_constants import (
     RULE_FAMILY_WATCHED_MOVIES_REPORTED,
     RULE_FAMILY_WATCHED_TV_REPORTED,
     clamp_never_played_min_age_days,
+    clamp_preview_year_bound,
     clamp_watched_movie_low_rating_max_community_rating,
     pruner_preview_rule_families_jf_emby,
 )
 from mediamop.modules.pruner.pruner_credentials_envelope import decrypt_and_parse_envelope
 from mediamop.modules.pruner.pruner_genre_filters import preview_genre_filters_from_db_column
 from mediamop.modules.pruner.pruner_people_filters import preview_people_filters_from_db_column
+from mediamop.modules.pruner.pruner_studio_collection_filters import (
+    preview_collection_filters_from_db_column,
+    preview_studio_filters_from_db_column,
+)
 from mediamop.modules.pruner.pruner_instances_service import get_scope_settings, get_server_instance
 from mediamop.modules.pruner.pruner_plex_live_eligibility import plex_missing_primary_effective_max_items
 from mediamop.modules.pruner.pruner_media_library import preview_payload_json, serialize_candidates
@@ -130,6 +135,14 @@ def make_pruner_candidate_removal_preview_handler(
                 max_items = plex_missing_primary_effective_max_items(settings, int(sc.preview_max_items))
             preview_genres = preview_genre_filters_from_db_column(str(sc.preview_include_genres_json))
             preview_people = preview_people_filters_from_db_column(str(sc.preview_include_people_json))
+            preview_studios = preview_studio_filters_from_db_column(str(sc.preview_include_studios_json))
+            preview_collections = preview_collection_filters_from_db_column(str(sc.preview_include_collections_json))
+            preview_year_min = clamp_preview_year_bound(sc.preview_year_min)
+            preview_year_max = clamp_preview_year_bound(sc.preview_year_max)
+            if preview_year_min is not None and preview_year_max is not None and preview_year_min > preview_year_max:
+                msg = "preview_year_min is greater than preview_year_max for this scope"
+                raise ValueError(msg)
+            preview_collections_for_rule = preview_collections if provider == "plex" else []
 
         try:
             outcome, unsup, cands, trunc = preview_payload_json(
@@ -148,6 +161,10 @@ def make_pruner_candidate_removal_preview_handler(
                 unwatched_movie_stale_min_age_days=unwatched_stale_days
                 if rule_family_id == RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED
                 else None,
+                preview_year_min=preview_year_min,
+                preview_year_max=preview_year_max,
+                preview_include_studios=preview_studios,
+                preview_include_collections=preview_collections_for_rule,
             )
             cand_json = serialize_candidates(cands)
             err: str | None = None
@@ -210,6 +227,19 @@ def make_pruner_candidate_removal_preview_handler(
                     detail_obj["preview_include_genres"] = list(preview_genres)
                 if preview_people:
                     detail_obj["preview_include_people"] = list(preview_people)
+                if preview_year_min is not None or preview_year_max is not None:
+                    detail_obj["preview_year_min"] = preview_year_min
+                    detail_obj["preview_year_max"] = preview_year_max
+                if preview_studios:
+                    detail_obj["preview_include_studios"] = list(preview_studios)
+                if preview_collections and provider == "plex":
+                    detail_obj["preview_include_collections"] = list(preview_collections)
+                elif preview_collections and provider in ("jellyfin", "emby"):
+                    detail_obj["preview_collections_ignored_note"] = (
+                        "Collection include tokens are stored for this scope but not applied on Jellyfin/Emby previews "
+                        "in this slice — the Items API path does not expose per-item library collection membership "
+                        "without extra calls."
+                    )
                 if outcome == "success" and preview_genres and len(cands) == 0:
                     if provider == "plex" and rule_family_id == RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
                         detail_obj["preview_genre_filter_zero_candidates_note"] = (

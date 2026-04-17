@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Self
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from mediamop.modules.pruner.pruner_constants import (
     MEDIA_SCOPE_MOVIES,
     MEDIA_SCOPE_TV,
+    PRUNER_PREVIEW_YEAR_FILTER_MAX,
+    PRUNER_PREVIEW_YEAR_FILTER_MIN,
     RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED,
     RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
     RULE_FAMILY_WATCHED_MOVIES_REPORTED,
@@ -47,6 +49,37 @@ class PrunerScopeSummaryOut(BaseModel):
             "Optional person display names (per tab) that narrow preview collection only — full-name tokens, "
             "case-insensitive exact match against provider-reported names. Empty means no filter. "
             "Apply still uses only the frozen snapshot; it does not re-apply people filters."
+        ),
+    )
+    preview_year_min: int | None = Field(
+        default=None,
+        description=(
+            "Optional inclusive minimum **production / release year** for preview narrowing only "
+            f"({PRUNER_PREVIEW_YEAR_FILTER_MIN}–{PRUNER_PREVIEW_YEAR_FILTER_MAX}). "
+            "Jellyfin/Emby use Items ``ProductionYear``; Plex missing-primary uses leaf ``year`` when present. "
+            "Items with no year never match when any year bound is set."
+        ),
+    )
+    preview_year_max: int | None = Field(
+        default=None,
+        description=(
+            "Optional inclusive maximum year for preview narrowing (same semantics as ``preview_year_min``)."
+        ),
+    )
+    preview_include_studios: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Optional studio name tokens (per tab) that narrow preview only — exact normalized match against "
+            "Jellyfin/Emby ``Studios`` names or Plex ``Studio`` tags on the same leaf rows as other preview filters. "
+            "This is **not** a separate “network” filter."
+        ),
+    )
+    preview_include_collections: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Optional collection name tokens for preview narrowing. **Plex missing-primary only** in this slice "
+            "(``Collection`` tags on ``allLeaves`` metadata). Jellyfin/Emby Items rows used here do not expose "
+            "library collection membership without extra API calls, so this list is ignored on those providers."
         ),
     )
     scheduled_preview_enabled: bool = False
@@ -107,6 +140,24 @@ class PrunerScopePatchIn(BaseModel):
         default=None,
         description="Replace per-tab people-name include list; omit field to leave unchanged.",
     )
+    preview_year_min: int | None = Field(
+        default=None,
+        ge=PRUNER_PREVIEW_YEAR_FILTER_MIN,
+        le=PRUNER_PREVIEW_YEAR_FILTER_MAX,
+    )
+    preview_year_max: int | None = Field(
+        default=None,
+        ge=PRUNER_PREVIEW_YEAR_FILTER_MIN,
+        le=PRUNER_PREVIEW_YEAR_FILTER_MAX,
+    )
+    preview_include_studios: list[str] | None = Field(
+        default=None,
+        description="Replace per-tab studio include list; omit field to leave unchanged.",
+    )
+    preview_include_collections: list[str] | None = Field(
+        default=None,
+        description="Replace per-tab collection include list (Plex missing-primary only); omit to leave unchanged.",
+    )
     scheduled_preview_enabled: bool | None = None
     scheduled_preview_interval_seconds: int | None = Field(None, ge=60, le=86_400)
 
@@ -129,6 +180,34 @@ class PrunerScopePatchIn(BaseModel):
             msg = "preview_include_people must be a list of strings or null"
             raise ValueError(msg)
         return normalized_people_filter_tokens([str(x) for x in v if x is not None])
+
+    @field_validator("preview_include_studios", mode="before")
+    @classmethod
+    def _validate_preview_studios(cls, v: object) -> list[str] | None:
+        if v is None:
+            return None
+        if not isinstance(v, list):
+            msg = "preview_include_studios must be a list of strings or null"
+            raise ValueError(msg)
+        return normalized_genre_filter_tokens([str(x) for x in v if x is not None])
+
+    @field_validator("preview_include_collections", mode="before")
+    @classmethod
+    def _validate_preview_collections(cls, v: object) -> list[str] | None:
+        if v is None:
+            return None
+        if not isinstance(v, list):
+            msg = "preview_include_collections must be a list of strings or null"
+            raise ValueError(msg)
+        return normalized_genre_filter_tokens([str(x) for x in v if x is not None])
+
+    @model_validator(mode="after")
+    def _preview_year_bounds_order(self) -> Self:
+        if self.preview_year_min is not None and self.preview_year_max is not None:
+            if self.preview_year_min > self.preview_year_max:
+                msg = "preview_year_min must be less than or equal to preview_year_max when both are set."
+                raise ValueError(msg)
+        return self
 
 
 class PrunerEnqueueOut(BaseModel):
@@ -215,6 +294,10 @@ class PrunerScopePatchHttpIn(PrunerScopePatchIn):
             and self.preview_max_items is None
             and self.preview_include_genres is None
             and self.preview_include_people is None
+            and self.preview_year_min is None
+            and self.preview_year_max is None
+            and self.preview_include_studios is None
+            and self.preview_include_collections is None
             and self.scheduled_preview_enabled is None
             and self.scheduled_preview_interval_seconds is None
         ):
@@ -223,7 +306,8 @@ class PrunerScopePatchHttpIn(PrunerScopePatchIn):
                 "never_played_min_age_days, watched_tv_reported_enabled, watched_movies_reported_enabled, "
                 "watched_movie_low_rating_reported_enabled, watched_movie_low_rating_max_community_rating, "
                 "unwatched_movie_stale_reported_enabled, unwatched_movie_stale_min_age_days, "
-                "preview_max_items, preview_include_genres, preview_include_people, scheduled_preview_enabled, "
+                "preview_max_items, preview_include_genres, preview_include_people, preview_year_min, "
+                "preview_year_max, preview_include_studios, preview_include_collections, scheduled_preview_enabled, "
                 "or scheduled_preview_interval_seconds must be provided."
             )
             raise ValueError(msg)

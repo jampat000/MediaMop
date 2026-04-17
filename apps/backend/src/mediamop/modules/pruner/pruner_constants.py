@@ -35,6 +35,21 @@ PRUNER_PLEX_LIVE_CONFIRMATION_PHRASE = "PLEX BROKEN LIBRARY LIVE CONFIRM"
 PRUNER_SCHEDULED_PREVIEW_INTERVAL_MIN_SECONDS = 60
 PRUNER_SCHEDULED_PREVIEW_INTERVAL_MAX_SECONDS = 86_400
 
+# Preview-only production/release year bounds (inclusive) — Jellyfin/Emby ``ProductionYear``, Plex leaf ``year``.
+PRUNER_PREVIEW_YEAR_FILTER_MIN = 1900
+PRUNER_PREVIEW_YEAR_FILTER_MAX = 2100
+
+
+def clamp_preview_year_bound(raw: int | None) -> int | None:
+    """Clamp a single year bound to the preview filter range; ``None`` stays unset."""
+
+    if raw is None:
+        return None
+    return max(
+        PRUNER_PREVIEW_YEAR_FILTER_MIN,
+        min(PRUNER_PREVIEW_YEAR_FILTER_MAX, int(raw)),
+    )
+
 
 def clamp_never_played_min_age_days(raw: int) -> int:
     """Clamp per-scope ``never_played_min_age_days`` (library DateCreated age gate)."""

@@ -18,12 +18,19 @@ from mediamop.modules.pruner.pruner_constants import (
     MEDIA_SCOPE_MOVIES,
     MEDIA_SCOPE_TV,
     clamp_never_played_min_age_days,
+    clamp_preview_year_bound,
     clamp_pruner_scheduled_preview_interval_seconds,
     clamp_watched_movie_low_rating_max_community_rating,
 )
 from mediamop.modules.pruner.pruner_genre_filters import (
     preview_genre_filters_from_db_column,
     preview_genre_filters_to_db_column,
+)
+from mediamop.modules.pruner.pruner_studio_collection_filters import (
+    preview_collection_filters_from_db_column,
+    preview_collection_filters_to_db_column,
+    preview_studio_filters_from_db_column,
+    preview_studio_filters_to_db_column,
 )
 from mediamop.modules.pruner.pruner_people_filters import (
     preview_people_filters_from_db_column,
@@ -97,6 +104,10 @@ def _scope_row_out(session: Session, row: PrunerScopeSettings) -> PrunerScopeSum
         preview_max_items=int(row.preview_max_items),
         preview_include_genres=preview_genre_filters_from_db_column(str(row.preview_include_genres_json)),
         preview_include_people=preview_people_filters_from_db_column(str(row.preview_include_people_json)),
+        preview_year_min=clamp_preview_year_bound(row.preview_year_min),
+        preview_year_max=clamp_preview_year_bound(row.preview_year_max),
+        preview_include_studios=preview_studio_filters_from_db_column(str(row.preview_include_studios_json)),
+        preview_include_collections=preview_collection_filters_from_db_column(str(row.preview_include_collections_json)),
         scheduled_preview_enabled=bool(row.scheduled_preview_enabled),
         scheduled_preview_interval_seconds=clamp_pruner_scheduled_preview_interval_seconds(
             int(row.scheduled_preview_interval_seconds),
@@ -294,11 +305,26 @@ def patch_pruner_scope(
         sc.preview_include_genres_json = preview_genre_filters_to_db_column(body.preview_include_genres)
     if body.preview_include_people is not None:
         sc.preview_include_people_json = preview_people_filters_to_db_column(body.preview_include_people)
+    if "preview_year_min" in body.model_fields_set:
+        sc.preview_year_min = clamp_preview_year_bound(body.preview_year_min)
+    if "preview_year_max" in body.model_fields_set:
+        sc.preview_year_max = clamp_preview_year_bound(body.preview_year_max)
+    if body.preview_include_studios is not None:
+        sc.preview_include_studios_json = preview_studio_filters_to_db_column(body.preview_include_studios)
+    if body.preview_include_collections is not None:
+        sc.preview_include_collections_json = preview_collection_filters_to_db_column(body.preview_include_collections)
     if body.scheduled_preview_enabled is not None:
         sc.scheduled_preview_enabled = bool(body.scheduled_preview_enabled)
     if body.scheduled_preview_interval_seconds is not None:
         sc.scheduled_preview_interval_seconds = clamp_pruner_scheduled_preview_interval_seconds(
             int(body.scheduled_preview_interval_seconds),
+        )
+    ym = sc.preview_year_min
+    yx = sc.preview_year_max
+    if ym is not None and yx is not None and ym > yx:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="preview_year_min must be less than or equal to preview_year_max when both are set.",
         )
     db.flush()
     return _scope_row_out(db, sc)

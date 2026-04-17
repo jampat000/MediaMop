@@ -20,7 +20,13 @@ from collections.abc import Sequence
 from typing import Any
 
 from mediamop.modules.pruner.pruner_constants import MEDIA_SCOPE_MOVIES, MEDIA_SCOPE_TV
-from mediamop.modules.pruner.pruner_genre_filters import item_matches_genre_include_filter, plex_leaf_genre_tags
+from mediamop.modules.pruner.pruner_genre_filters import (
+    item_matches_genre_include_filter,
+    plex_leaf_collection_tags,
+    plex_leaf_genre_tags,
+    plex_leaf_studio_tags,
+)
+from mediamop.modules.pruner.pruner_preview_year_filters import item_matches_preview_year_filter, plex_leaf_release_year_int
 from mediamop.modules.pruner.pruner_people_filters import (
     item_matches_people_include_filter,
     plex_leaf_person_tags,
@@ -90,6 +96,10 @@ def list_plex_missing_thumb_candidates(
     max_items: int,
     preview_include_genres: Sequence[str] | None = None,
     preview_include_people: Sequence[str] | None = None,
+    preview_year_min: int | None = None,
+    preview_year_max: int | None = None,
+    preview_include_studios: Sequence[str] | None = None,
+    preview_include_collections: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     """Return up to ``max_items`` Plex leaf metadata dicts (``ratingKey`` as ``item_id``) plus ``truncated``.
 
@@ -106,6 +116,8 @@ def list_plex_missing_thumb_candidates(
 
     gf = list(preview_include_genres or [])
     pf = list(preview_include_people or [])
+    sf = list(preview_include_studios or [])
+    cf = list(preview_include_collections or [])
 
     sections_url = join_base_path(base_url, "library/sections")
     status, data = http_get_json(sections_url, headers=_plex_headers(auth_token))
@@ -164,6 +176,22 @@ def list_plex_missing_thumb_candidates(
                     any_skipped_thumb_ok_for_genre = True
                     continue
                 if pf and not item_matches_people_include_filter(plex_leaf_person_tags(m), pf):
+                    page_skipped_thumb_ok_for_genre = True
+                    any_skipped_thumb_ok_for_genre = True
+                    continue
+                if not item_matches_preview_year_filter(
+                    plex_leaf_release_year_int(m),
+                    preview_year_min,
+                    preview_year_max,
+                ):
+                    page_skipped_thumb_ok_for_genre = True
+                    any_skipped_thumb_ok_for_genre = True
+                    continue
+                if sf and not item_matches_genre_include_filter(plex_leaf_studio_tags(m), sf):
+                    page_skipped_thumb_ok_for_genre = True
+                    any_skipped_thumb_ok_for_genre = True
+                    continue
+                if cf and not item_matches_genre_include_filter(plex_leaf_collection_tags(m), cf):
                     page_skipped_thumb_ok_for_genre = True
                     any_skipped_thumb_ok_for_genre = True
                     continue

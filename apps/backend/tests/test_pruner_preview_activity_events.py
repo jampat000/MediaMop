@@ -238,3 +238,65 @@ def test_plex_preview_zero_candidates_with_genres_records_operator_note(
         note = str(detail.get("preview_genre_filter_zero_candidates_note") or "")
         assert "Zero preview rows" in note
         assert "allLeaves" in note
+
+
+def test_jellyfin_preview_activity_collection_ignored_note_when_tokens_stored(
+    session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = MediaMopSettings.load()
+    with session_factory() as s:
+        with s.begin():
+            inst = create_server_instance(
+                s,
+                settings,
+                provider="jellyfin",
+                display_name="JF Coll Note",
+                base_url="http://jf-coll-note.test",
+                credentials_secrets={"api_key": "k"},
+            )
+            sid = int(inst.id)
+            row = s.scalars(
+                select(PrunerScopeSettings).where(
+                    PrunerScopeSettings.server_instance_id == sid,
+                    PrunerScopeSettings.media_scope == "movies",
+                ),
+            ).one()
+            row.preview_include_collections_json = '["MCU"]'
+
+    monkeypatch.setattr(
+        "mediamop.modules.pruner.pruner_preview_job_handler.preview_payload_json",
+        lambda **kwargs: ("success", "", [], False),
+    )
+
+    with session_factory() as s:
+        with s.begin():
+            job_row = PrunerJob(
+                dedupe_key="preview-activity-jf-coll-ignored",
+                job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
+                status=PrunerJobStatus.COMPLETED.value,
+            )
+            s.add(job_row)
+            s.flush()
+            job_id = int(job_row.id)
+
+    handlers = build_pruner_job_handlers(settings, session_factory)
+    fn = handlers[PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND]
+    fn(
+        PrunerJobWorkContext(
+            id=job_id,
+            job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
+            payload_json=json.dumps({"server_instance_id": sid, "media_scope": "movies"}),
+            lease_owner="pytest",
+        ),
+    )
+
+    with session_factory() as s:
+        evt = s.scalars(
+            select(ActivityEvent)
+            .where(ActivityEvent.module == "pruner")
+            .order_by(ActivityEvent.id.desc()),
+        ).first()
+        assert evt is not None
+        detail = json.loads(evt.detail or "{}")
+        assert "preview_collections_ignored_note" in detail

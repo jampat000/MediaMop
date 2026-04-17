@@ -69,11 +69,11 @@ def jellyfin_emby_item_genres(item: dict[str, Any]) -> list[str]:
     return []
 
 
-def plex_leaf_genre_tags(meta: dict[str, Any]) -> list[str]:
-    """Genre tags from Plex ``Metadata`` JSON (``Genre`` list of ``{tag: ...}`` or strings)."""
+def plex_leaf_named_tag_list(meta: dict[str, Any], key: str) -> list[str]:
+    """Plex ``Metadata`` tag-shaped list or string for ``key`` (e.g. ``Genre``, ``Studio``, ``Collection``)."""
 
     out: list[str] = []
-    raw = meta.get("Genre")
+    raw = meta.get(key)
     if raw is None:
         return out
     if isinstance(raw, list):
@@ -91,6 +91,24 @@ def plex_leaf_genre_tags(meta: dict[str, Any]) -> list[str]:
     elif isinstance(raw, str) and raw.strip():
         out.append(raw.strip())
     return out
+
+
+def plex_leaf_genre_tags(meta: dict[str, Any]) -> list[str]:
+    """Genre tags from Plex ``Metadata`` JSON (``Genre`` list of ``{tag: ...}`` or strings)."""
+
+    return plex_leaf_named_tag_list(meta, "Genre")
+
+
+def plex_leaf_studio_tags(meta: dict[str, Any]) -> list[str]:
+    """Studio tags from Plex leaf ``Metadata`` ``Studio`` list (same tag shape as ``Genre``)."""
+
+    return plex_leaf_named_tag_list(meta, "Studio")
+
+
+def plex_leaf_collection_tags(meta: dict[str, Any]) -> list[str]:
+    """Collection tags from Plex leaf ``Metadata`` ``Collection`` list when the server exposes it."""
+
+    return plex_leaf_named_tag_list(meta, "Collection")
 
 
 def item_matches_genre_include_filter(

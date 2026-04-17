@@ -61,6 +61,13 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
   const [genreMsg, setGenreMsg] = useState<string | null>(null);
   const [peopleText, setPeopleText] = useState("");
   const [peopleMsg, setPeopleMsg] = useState<string | null>(null);
+  const [yearMinStr, setYearMinStr] = useState("");
+  const [yearMaxStr, setYearMaxStr] = useState("");
+  const [yearMsg, setYearMsg] = useState<string | null>(null);
+  const [studioText, setStudioText] = useState("");
+  const [studioMsg, setStudioMsg] = useState<string | null>(null);
+  const [collectionText, setCollectionText] = useState("");
+  const [collectionMsg, setCollectionMsg] = useState<string | null>(null);
   const canOperate = me.data?.role === "admin" || me.data?.role === "operator";
 
   const scopeRow = instance?.scopes.find((s) => s.media_scope === props.scope);
@@ -109,6 +116,10 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
     setUnwatchedStaleDays(scopeRow.unwatched_movie_stale_min_age_days);
     setGenreText((scopeRow.preview_include_genres ?? []).join(", "));
     setPeopleText((scopeRow.preview_include_people ?? []).join(", "));
+    setYearMinStr(scopeRow.preview_year_min != null ? String(scopeRow.preview_year_min) : "");
+    setYearMaxStr(scopeRow.preview_year_max != null ? String(scopeRow.preview_year_max) : "");
+    setStudioText((scopeRow.preview_include_studios ?? []).join(", "));
+    setCollectionText((scopeRow.preview_include_collections ?? []).join(", "));
   }, [
     scopeRow?.scheduled_preview_enabled,
     scopeRow?.scheduled_preview_interval_seconds,
@@ -122,6 +133,10 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
     scopeRow?.unwatched_movie_stale_min_age_days,
     scopeRow?.preview_include_genres,
     scopeRow?.preview_include_people,
+    scopeRow?.preview_year_min,
+    scopeRow?.preview_year_max,
+    scopeRow?.preview_include_studios,
+    scopeRow?.preview_include_collections,
     scopeRow?.media_scope,
     instanceId,
   ]);
@@ -214,6 +229,99 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
         tokens.length
           ? "Saved people include list for this tab only (previews only; apply still uses the frozen snapshot)."
           : "Cleared people filters for this tab.",
+      );
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function savePreviewYearBounds() {
+    setYearMsg(null);
+    setErr(null);
+    setBusy(true);
+    try {
+      const csrf_token = await fetchCsrfToken();
+      const parseBound = (raw: string): number | null | "bad" => {
+        const t = raw.trim();
+        if (!t) return null;
+        const n = Number(t);
+        if (!Number.isInteger(n) || n < 1900 || n > 2100) return "bad";
+        return n;
+      };
+      const yMin = parseBound(yearMinStr);
+      const yMax = parseBound(yearMaxStr);
+      if (yMin === "bad" || yMax === "bad") {
+        setErr("Each year must be a whole number between 1900 and 2100, or left empty.");
+        return;
+      }
+      if (yMin != null && yMax != null && yMin > yMax) {
+        setErr("Minimum year must be less than or equal to maximum year.");
+        return;
+      }
+      await patchPrunerScope(instanceId, props.scope, {
+        preview_year_min: yearMinStr.trim() ? yMin : null,
+        preview_year_max: yearMaxStr.trim() ? yMax : null,
+        csrf_token,
+      });
+      await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+      setYearMsg(
+        "Saved preview year bounds for this tab (Jellyfin/Emby: ProductionYear; Plex missing-primary: leaf year when present).",
+      );
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveStudioPreviewFilters() {
+    setStudioMsg(null);
+    setErr(null);
+    setBusy(true);
+    try {
+      const csrf_token = await fetchCsrfToken();
+      const tokens = studioText
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      await patchPrunerScope(instanceId, props.scope, {
+        preview_include_studios: tokens,
+        csrf_token,
+      });
+      await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+      setStudioMsg(
+        tokens.length
+          ? "Saved studio include list for this tab (Jellyfin/Emby: Studios on Items; Plex: Studio tags on missing-primary leaves)."
+          : "Cleared studio preview filters for this tab.",
+      );
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveCollectionPreviewFilters() {
+    setCollectionMsg(null);
+    setErr(null);
+    setBusy(true);
+    try {
+      const csrf_token = await fetchCsrfToken();
+      const tokens = collectionText
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      await patchPrunerScope(instanceId, props.scope, {
+        preview_include_collections: tokens,
+        csrf_token,
+      });
+      await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+      setCollectionMsg(
+        tokens.length
+          ? "Saved collection include list (Plex missing-primary previews only in this release)."
+          : "Cleared collection preview filters for this tab.",
       );
     } catch (e) {
       setErr((e as Error).message);
@@ -615,6 +723,156 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
                   : "none"}
               </strong>
               . Sign in as an operator to edit.
+            </p>
+          )}
+        </div>
+      ) : null}
+      {scopeRow ? (
+        <div
+          className="space-y-2 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text)]"
+          data-testid="pruner-year-filters-panel"
+        >
+          <p className="text-sm font-semibold text-[var(--mm-text)]">Optional preview year range (this tab only)</p>
+          <p className="text-xs text-[var(--mm-text2)]">
+            Leave a box empty to leave that side open. When either bound is set, items with <strong>no</strong>{" "}
+            provider-reported year never match. Jellyfin/Emby use <code className="text-[0.85em]">ProductionYear</code>{" "}
+            on Items; Plex applies only to <strong>missing-primary</strong> previews and uses each leaf&apos;s{" "}
+            <code className="text-[0.85em]">year</code> when the server sends it. Inclusive {1900}–{2100}.
+          </p>
+          {canOperate ? (
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="text-xs text-[var(--mm-text2)]">
+                Min year
+                <input
+                  type="number"
+                  min={1900}
+                  max={2100}
+                  className="ml-1 w-24 rounded border border-[var(--mm-border)] bg-[var(--mm-surface2)] px-2 py-1 text-sm text-[var(--mm-text)]"
+                  value={yearMinStr}
+                  disabled={busy}
+                  onChange={(e) => setYearMinStr(e.target.value)}
+                />
+              </label>
+              <label className="text-xs text-[var(--mm-text2)]">
+                Max year
+                <input
+                  type="number"
+                  min={1900}
+                  max={2100}
+                  className="ml-1 w-24 rounded border border-[var(--mm-border)] bg-[var(--mm-surface2)] px-2 py-1 text-sm text-[var(--mm-text)]"
+                  value={yearMaxStr}
+                  disabled={busy}
+                  onChange={(e) => setYearMaxStr(e.target.value)}
+                />
+              </label>
+              <button
+                type="button"
+                className="rounded-md border border-[var(--mm-border)] px-3 py-1 text-sm font-medium text-[var(--mm-text)] disabled:opacity-50"
+                disabled={busy}
+                onClick={() => void savePreviewYearBounds()}
+              >
+                Save year bounds
+              </button>
+              {yearMsg ? <p className="w-full text-xs text-green-600">{yearMsg}</p> : null}
+            </div>
+          ) : (
+            <p className="text-xs text-[var(--mm-text2)]">
+              Current bounds:{" "}
+              <strong>
+                {scopeRow.preview_year_min ?? "—"} to {scopeRow.preview_year_max ?? "—"}
+              </strong>
+              . Sign in as an operator to edit.
+            </p>
+          )}
+        </div>
+      ) : null}
+      {scopeRow ? (
+        <div
+          className="space-y-2 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text)]"
+          data-testid="pruner-studio-preview-panel"
+        >
+          <p className="text-sm font-semibold text-[var(--mm-text)]">Optional preview studio include (this tab only)</p>
+          <p className="text-xs text-[var(--mm-text2)]">
+            Comma-separated studio names — exact case-insensitive match against Jellyfin/Emby{" "}
+            <code className="text-[0.85em]">Studios</code> or Plex <code className="text-[0.85em]">Studio</code> tags on
+            missing-primary leaves. This is <strong>not</strong> a separate “network” filter; only provider-native studio
+            tags are used.
+          </p>
+          {canOperate ? (
+            <div className="space-y-2">
+              <input
+                type="text"
+                className="w-full rounded border border-[var(--mm-border)] bg-[var(--mm-surface2)] px-2 py-1 text-sm text-[var(--mm-text)]"
+                placeholder="e.g. Warner Bros., BBC"
+                value={studioText}
+                disabled={busy}
+                onChange={(e) => setStudioText(e.target.value)}
+              />
+              <button
+                type="button"
+                className="rounded-md border border-[var(--mm-border)] px-3 py-1 text-sm font-medium text-[var(--mm-text)] disabled:opacity-50"
+                disabled={busy}
+                onClick={() => void saveStudioPreviewFilters()}
+              >
+                Save studio filters
+              </button>
+              {studioMsg ? <p className="text-xs text-green-600">{studioMsg}</p> : null}
+            </div>
+          ) : (
+            <p className="text-xs text-[var(--mm-text2)]">
+              Current studio filters:{" "}
+              <strong>
+                {(scopeRow.preview_include_studios ?? []).length
+                  ? scopeRow.preview_include_studios.join(", ")
+                  : "none"}
+              </strong>
+              .
+            </p>
+          )}
+        </div>
+      ) : null}
+      {scopeRow && isPlex ? (
+        <div
+          className="space-y-2 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text)]"
+          data-testid="pruner-collection-preview-panel"
+        >
+          <p className="text-sm font-semibold text-[var(--mm-text)]">
+            Optional preview collection include (Plex missing-primary only)
+          </p>
+          <p className="text-xs text-[var(--mm-text2)]">
+            Comma-separated collection names — exact match against <code className="text-[0.85em]">Collection</code>{" "}
+            tags on each <code className="text-[0.85em]">allLeaves</code> row. Jellyfin/Emby previews do{" "}
+            <strong>not</strong> apply this list (no honest per-item collection field on the Items path used here).
+          </p>
+          {canOperate ? (
+            <div className="space-y-2">
+              <input
+                type="text"
+                className="w-full rounded border border-[var(--mm-border)] bg-[var(--mm-surface2)] px-2 py-1 text-sm text-[var(--mm-text)]"
+                placeholder="e.g. Marvel Cinematic Universe"
+                value={collectionText}
+                disabled={busy}
+                onChange={(e) => setCollectionText(e.target.value)}
+              />
+              <button
+                type="button"
+                className="rounded-md border border-[var(--mm-border)] px-3 py-1 text-sm font-medium text-[var(--mm-text)] disabled:opacity-50"
+                disabled={busy}
+                onClick={() => void saveCollectionPreviewFilters()}
+              >
+                Save collection filters
+              </button>
+              {collectionMsg ? <p className="text-xs text-green-600">{collectionMsg}</p> : null}
+            </div>
+          ) : (
+            <p className="text-xs text-[var(--mm-text2)]">
+              Current collection filters:{" "}
+              <strong>
+                {(scopeRow.preview_include_collections ?? []).length
+                  ? scopeRow.preview_include_collections.join(", ")
+                  : "none"}
+              </strong>
+              .
             </p>
           )}
         </div>

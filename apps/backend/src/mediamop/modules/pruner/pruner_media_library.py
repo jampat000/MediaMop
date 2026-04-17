@@ -18,14 +18,7 @@ from mediamop.modules.pruner.pruner_constants import (
     RULE_FAMILY_WATCHED_MOVIES_REPORTED,
     RULE_FAMILY_WATCHED_TV_REPORTED,
 )
-from mediamop.modules.pruner.pruner_genre_filters import (
-    item_matches_genre_include_filter,
-    jellyfin_emby_item_genres,
-)
-from mediamop.modules.pruner.pruner_people_filters import (
-    item_matches_people_include_filter,
-    jellyfin_emby_item_people_names,
-)
+from mediamop.modules.pruner.pruner_preview_item_filters import jf_emby_item_passes_preview_filters
 from mediamop.modules.pruner.pruner_plex_missing_thumb_candidates import list_plex_missing_thumb_candidates
 from mediamop.modules.pruner.pruner_http import http_get_json, http_get_text, join_base_path
 
@@ -33,9 +26,9 @@ def jf_emby_pruner_preview_items_fields_csv() -> str:
     """Comma-separated Jellyfin/Emby ``Fields`` for **all** Pruner preview ``Items`` queries in this module.
 
     Jellyfin and Emby only return top-level keys listed in ``Fields``. **People filters** require ``People`` on each
-    row; **watched low-rating** requires ``CommunityRating`` (0–10 on that field for Jellyfin/Emby). Any new preview
-    collector that reads additional Item properties **must** extend this union — do not add ad hoc ``Fields`` strings
-    per call site or people/rating filters will silently see empty data.
+    row; **watched low-rating** requires ``CommunityRating`` (0–10 on that field for Jellyfin/Emby); **studio**
+    preview includes require ``Studios``. Any new preview collector that reads additional Item properties **must**
+    extend this union — do not add ad hoc ``Fields`` strings per call site or filters will silently see empty data.
     """
 
     return ",".join(
@@ -52,6 +45,7 @@ def jf_emby_pruner_preview_items_fields_csv() -> str:
             "PrimaryImageItemId",
             "ProductionYear",
             "SeriesName",
+            "Studios",
             "UserData",
         ),
     )
@@ -156,6 +150,9 @@ def list_missing_primary_candidates(
     max_items: int,
     preview_include_genres: Sequence[str] | None = None,
     preview_include_people: Sequence[str] | None = None,
+    preview_year_min: int | None = None,
+    preview_year_max: int | None = None,
+    preview_include_studios: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     """Return candidate dicts for TV (episodes) or Movies (movie items), newest-first pages.
 
@@ -177,6 +174,7 @@ def list_missing_primary_candidates(
     total_hits: int | None = None
     gf = list(preview_include_genres or [])
     pf = list(preview_include_people or [])
+    sf = list(preview_include_studios or [])
 
     while len(candidates) < max_items:
         try:
@@ -208,9 +206,14 @@ def list_missing_primary_candidates(
                 continue
             if not use_filter and not _item_missing_primary(it):
                 continue
-            if not item_matches_genre_include_filter(jellyfin_emby_item_genres(it), gf):
-                continue
-            if not item_matches_people_include_filter(jellyfin_emby_item_people_names(it), pf):
+            if not jf_emby_item_passes_preview_filters(
+                it,
+                preview_include_genres=gf,
+                preview_include_people=pf,
+                preview_year_min=preview_year_min,
+                preview_year_max=preview_year_max,
+                preview_include_studios=sf,
+            ):
                 continue
             if media_scope == MEDIA_SCOPE_TV:
                 candidates.append(
@@ -311,6 +314,9 @@ def list_watched_tv_episode_candidates(
     max_items: int,
     preview_include_genres: Sequence[str] | None = None,
     preview_include_people: Sequence[str] | None = None,
+    preview_year_min: int | None = None,
+    preview_year_max: int | None = None,
+    preview_include_studios: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     """Episodes the server reports as watched for this API user (``UserData`` / optional ``IsPlayed`` filter).
 
@@ -330,6 +336,7 @@ def list_watched_tv_episode_candidates(
     truncated = False
     gf = list(preview_include_genres or [])
     pf = list(preview_include_people or [])
+    sf = list(preview_include_studios or [])
 
     while len(candidates) < max_items:
         params: dict[str, str] = {
@@ -363,9 +370,14 @@ def list_watched_tv_episode_candidates(
                 continue
             if not use_is_played_filter and not _item_watched_by_userdata(it):
                 continue
-            if not item_matches_genre_include_filter(jellyfin_emby_item_genres(it), gf):
-                continue
-            if not item_matches_people_include_filter(jellyfin_emby_item_people_names(it), pf):
+            if not jf_emby_item_passes_preview_filters(
+                it,
+                preview_include_genres=gf,
+                preview_include_people=pf,
+                preview_year_min=preview_year_min,
+                preview_year_max=preview_year_max,
+                preview_include_studios=sf,
+            ):
                 continue
             iid = str(it.get("Id", "")).strip()
             if not iid:
@@ -405,6 +417,9 @@ def list_watched_movie_candidates(
     max_items: int,
     preview_include_genres: Sequence[str] | None = None,
     preview_include_people: Sequence[str] | None = None,
+    preview_year_min: int | None = None,
+    preview_year_max: int | None = None,
+    preview_include_studios: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     """Movie library items the server reports as watched for this API user (``UserData`` / optional ``IsPlayed`` filter).
 
@@ -424,6 +439,7 @@ def list_watched_movie_candidates(
     truncated = False
     gf = list(preview_include_genres or [])
     pf = list(preview_include_people or [])
+    sf = list(preview_include_studios or [])
 
     while len(candidates) < max_items:
         params: dict[str, str] = {
@@ -457,9 +473,14 @@ def list_watched_movie_candidates(
                 continue
             if not use_is_played_filter and not _item_watched_by_userdata(it):
                 continue
-            if not item_matches_genre_include_filter(jellyfin_emby_item_genres(it), gf):
-                continue
-            if not item_matches_people_include_filter(jellyfin_emby_item_people_names(it), pf):
+            if not jf_emby_item_passes_preview_filters(
+                it,
+                preview_include_genres=gf,
+                preview_include_people=pf,
+                preview_year_min=preview_year_min,
+                preview_year_max=preview_year_max,
+                preview_include_studios=sf,
+            ):
                 continue
             iid = str(it.get("Id", "")).strip()
             if not iid:
@@ -498,6 +519,9 @@ def list_watched_movie_low_rating_candidates(
     community_rating_max_inclusive: float,
     preview_include_genres: Sequence[str] | None = None,
     preview_include_people: Sequence[str] | None = None,
+    preview_year_min: int | None = None,
+    preview_year_max: int | None = None,
+    preview_include_studios: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     """Watched **movie** items with Jellyfin/Emby ``CommunityRating`` at or below ``community_rating_max_inclusive``.
 
@@ -522,6 +546,7 @@ def list_watched_movie_low_rating_candidates(
     truncated = False
     gf = list(preview_include_genres or [])
     pf = list(preview_include_people or [])
+    sf = list(preview_include_studios or [])
 
     while len(candidates) < max_items:
         params: dict[str, str] = {
@@ -555,9 +580,14 @@ def list_watched_movie_low_rating_candidates(
                 continue
             if not use_is_played_filter and not _item_watched_by_userdata(it):
                 continue
-            if not item_matches_genre_include_filter(jellyfin_emby_item_genres(it), gf):
-                continue
-            if not item_matches_people_include_filter(jellyfin_emby_item_people_names(it), pf):
+            if not jf_emby_item_passes_preview_filters(
+                it,
+                preview_include_genres=gf,
+                preview_include_people=pf,
+                preview_year_min=preview_year_min,
+                preview_year_max=preview_year_max,
+                preview_include_studios=sf,
+            ):
                 continue
             rating = jellyfin_emby_item_community_rating(it)
             if rating is None or rating > cap:
@@ -601,6 +631,9 @@ def list_unwatched_movie_stale_candidates(
     min_age_days: int,
     preview_include_genres: Sequence[str] | None = None,
     preview_include_people: Sequence[str] | None = None,
+    preview_year_min: int | None = None,
+    preview_year_max: int | None = None,
+    preview_include_studios: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     """Unwatched **movie** items whose library ``DateCreated`` is older than ``min_age_days`` (UTC).
 
@@ -624,6 +657,7 @@ def list_unwatched_movie_stale_candidates(
     truncated = False
     gf = list(preview_include_genres or [])
     pf = list(preview_include_people or [])
+    sf = list(preview_include_studios or [])
 
     while len(candidates) < max_items:
         params: dict[str, str] = {
@@ -657,9 +691,14 @@ def list_unwatched_movie_stale_candidates(
                 continue
             if not _item_unplayed_by_userdata(it):
                 continue
-            if not item_matches_genre_include_filter(jellyfin_emby_item_genres(it), gf):
-                continue
-            if not item_matches_people_include_filter(jellyfin_emby_item_people_names(it), pf):
+            if not jf_emby_item_passes_preview_filters(
+                it,
+                preview_include_genres=gf,
+                preview_include_people=pf,
+                preview_year_min=preview_year_min,
+                preview_year_max=preview_year_max,
+                preview_include_studios=sf,
+            ):
                 continue
             created = _parse_item_date_created(it.get("DateCreated"))
             if created is None or created > cutoff:
@@ -703,6 +742,9 @@ def list_never_played_stale_candidates(
     min_age_days: int,
     preview_include_genres: Sequence[str] | None = None,
     preview_include_people: Sequence[str] | None = None,
+    preview_year_min: int | None = None,
+    preview_year_max: int | None = None,
+    preview_include_studios: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     """Unplayed episodes or movies whose library ``DateCreated`` is older than ``min_age_days`` (UTC).
 
@@ -728,6 +770,7 @@ def list_never_played_stale_candidates(
     truncated = False
     gf = list(preview_include_genres or [])
     pf = list(preview_include_people or [])
+    sf = list(preview_include_studios or [])
 
     while len(candidates) < max_items:
         params: dict[str, str] = {
@@ -761,9 +804,14 @@ def list_never_played_stale_candidates(
                 continue
             if not _item_unplayed_by_userdata(it):
                 continue
-            if not item_matches_genre_include_filter(jellyfin_emby_item_genres(it), gf):
-                continue
-            if not item_matches_people_include_filter(jellyfin_emby_item_people_names(it), pf):
+            if not jf_emby_item_passes_preview_filters(
+                it,
+                preview_include_genres=gf,
+                preview_include_people=pf,
+                preview_year_min=preview_year_min,
+                preview_year_max=preview_year_max,
+                preview_include_studios=sf,
+            ):
                 continue
             created = _parse_item_date_created(it.get("DateCreated"))
             if created is None or created > cutoff:
@@ -868,6 +916,10 @@ def preview_payload_json(
     preview_include_people: Sequence[str] | None = None,
     watched_movie_low_rating_max_community_rating: float | None = None,
     unwatched_movie_stale_min_age_days: int | None = None,
+    preview_year_min: int | None = None,
+    preview_year_max: int | None = None,
+    preview_include_studios: Sequence[str] | None = None,
+    preview_include_collections: Sequence[str] | None = None,
 ) -> tuple[str, str, list[dict[str, Any]], bool]:
     """Returns ``(outcome, unsupported_detail_or_empty, candidates, truncated)``."""
 
@@ -897,6 +949,10 @@ def preview_payload_json(
                 max_items=max_items,
                 preview_include_genres=preview_include_genres,
                 preview_include_people=preview_include_people,
+                preview_year_min=preview_year_min,
+                preview_year_max=preview_year_max,
+                preview_include_studios=preview_include_studios,
+                preview_include_collections=preview_include_collections,
             )
             return "success", "", cands, trunc
         return "unsupported", plex_preview_unsupported_detail(), [], False
@@ -909,6 +965,9 @@ def preview_payload_json(
             max_items=max_items,
             preview_include_genres=preview_include_genres,
             preview_include_people=preview_include_people,
+            preview_year_min=preview_year_min,
+            preview_year_max=preview_year_max,
+            preview_include_studios=preview_include_studios,
         )
         return "success", "", cands, trunc
     if rule_family_id == RULE_FAMILY_WATCHED_TV_REPORTED:
@@ -926,6 +985,9 @@ def preview_payload_json(
             max_items=max_items,
             preview_include_genres=preview_include_genres,
             preview_include_people=preview_include_people,
+            preview_year_min=preview_year_min,
+            preview_year_max=preview_year_max,
+            preview_include_studios=preview_include_studios,
         )
         return "success", "", cands, trunc
     if rule_family_id == RULE_FAMILY_WATCHED_MOVIES_REPORTED:
@@ -943,6 +1005,9 @@ def preview_payload_json(
             max_items=max_items,
             preview_include_genres=preview_include_genres,
             preview_include_people=preview_include_people,
+            preview_year_min=preview_year_min,
+            preview_year_max=preview_year_max,
+            preview_include_studios=preview_include_studios,
         )
         return "success", "", cands, trunc
     if rule_family_id == RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED:
@@ -957,6 +1022,9 @@ def preview_payload_json(
             min_age_days=int(never_played_min_age_days),
             preview_include_genres=preview_include_genres,
             preview_include_people=preview_include_people,
+            preview_year_min=preview_year_min,
+            preview_year_max=preview_year_max,
+            preview_include_studios=preview_include_studios,
         )
         return "success", "", cands, trunc
     if rule_family_id == RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED:
@@ -978,6 +1046,9 @@ def preview_payload_json(
             community_rating_max_inclusive=float(watched_movie_low_rating_max_community_rating),
             preview_include_genres=preview_include_genres,
             preview_include_people=preview_include_people,
+            preview_year_min=preview_year_min,
+            preview_year_max=preview_year_max,
+            preview_include_studios=preview_include_studios,
         )
         return "success", "", cands, trunc
     if rule_family_id == RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED:
@@ -999,6 +1070,9 @@ def preview_payload_json(
             min_age_days=int(unwatched_movie_stale_min_age_days),
             preview_include_genres=preview_include_genres,
             preview_include_people=preview_include_people,
+            preview_year_min=preview_year_min,
+            preview_year_max=preview_year_max,
+            preview_include_studios=preview_include_studios,
         )
         return "success", "", cands, trunc
     msg = f"unsupported rule_family_id for preview: {rule_family_id!r}"

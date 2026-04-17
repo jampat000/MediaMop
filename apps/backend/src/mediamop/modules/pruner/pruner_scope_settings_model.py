@@ -62,6 +62,18 @@ class PrunerScopeSettings(Base):
         nullable=False,
         server_default=text("'[]'"),
     )
+    preview_year_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    preview_year_max: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    preview_include_studios_json: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        server_default=text("'[]'"),
+    )
+    preview_include_collections_json: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        server_default=text("'[]'"),
+    )
     watched_movie_low_rating_reported_enabled: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,

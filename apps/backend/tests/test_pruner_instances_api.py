@@ -169,6 +169,10 @@ def test_post_pruner_instances_creates_row_seeds_scopes_and_hides_secrets(client
         assert s["unwatched_movie_stale_min_age_days"] == 90
         assert s["preview_include_genres"] == []
         assert s["preview_include_people"] == []
+        assert s["preview_year_min"] is None
+        assert s["preview_year_max"] is None
+        assert s["preview_include_studios"] == []
+        assert s["preview_include_collections"] == []
 
     raw = json.dumps(body)
     assert secret_key not in raw
@@ -542,3 +546,95 @@ def test_patch_pruner_scope_scheduled_fields_are_per_scope(client_with_admin: Te
     r_get_tv = client_with_admin.get(f"/api/v1/pruner/instances/{iid}/scopes/tv")
     assert r_get_tv.status_code == 200, r_get_tv.text
     assert r_get_tv.json()["scheduled_preview_interval_seconds"] == 120
+
+
+def test_patch_pruner_scope_preview_year_studio_collection_fields(client_with_admin: TestClient) -> None:
+    _login_admin(client_with_admin)
+    tok = fetch_csrf(client_with_admin)
+    r0 = auth_post(
+        client_with_admin,
+        "/api/v1/pruner/instances",
+        json={
+            "provider": "jellyfin",
+            "display_name": "YSC",
+            "base_url": "http://ysc.test",
+            "credentials": {"api_key": "k"},
+            "csrf_token": tok,
+        },
+        headers={"Content-Type": "application/json"},
+    )
+    assert r0.status_code == 200, r0.text
+    iid = int(r0.json()["id"])
+    tok2 = fetch_csrf(client_with_admin)
+    rpatch = auth_patch(
+        client_with_admin,
+        f"/api/v1/pruner/instances/{iid}/scopes/movies",
+        json={
+            "preview_year_min": 2010,
+            "preview_year_max": 2020,
+            "preview_include_studios": ["  Acme Pictures ", "Acme Pictures"],
+            "preview_include_collections": ["MCU"],
+            "csrf_token": tok2,
+        },
+        headers={"Content-Type": "application/json"},
+    )
+    assert rpatch.status_code == 200, rpatch.text
+    body = rpatch.json()
+    assert body["preview_year_min"] == 2010
+    assert body["preview_year_max"] == 2020
+    assert body["preview_include_studios"] == ["Acme Pictures"]
+    assert body["preview_include_collections"] == ["MCU"]
+
+
+def test_patch_pruner_scope_preview_year_out_of_range_rejected(client_with_admin: TestClient) -> None:
+    _login_admin(client_with_admin)
+    tok = fetch_csrf(client_with_admin)
+    r0 = auth_post(
+        client_with_admin,
+        "/api/v1/pruner/instances",
+        json={
+            "provider": "emby",
+            "display_name": "YBad",
+            "base_url": "http://ybad.test",
+            "credentials": {"api_key": "k"},
+            "csrf_token": tok,
+        },
+        headers={"Content-Type": "application/json"},
+    )
+    assert r0.status_code == 200, r0.text
+    iid = int(r0.json()["id"])
+    tok2 = fetch_csrf(client_with_admin)
+    rpatch = auth_patch(
+        client_with_admin,
+        f"/api/v1/pruner/instances/{iid}/scopes/tv",
+        json={"preview_year_min": 1899, "csrf_token": tok2},
+        headers={"Content-Type": "application/json"},
+    )
+    assert rpatch.status_code == 422, rpatch.text
+
+
+def test_patch_pruner_scope_preview_year_inverted_rejected(client_with_admin: TestClient) -> None:
+    _login_admin(client_with_admin)
+    tok = fetch_csrf(client_with_admin)
+    r0 = auth_post(
+        client_with_admin,
+        "/api/v1/pruner/instances",
+        json={
+            "provider": "emby",
+            "display_name": "YInv",
+            "base_url": "http://yinv.test",
+            "credentials": {"api_key": "k"},
+            "csrf_token": tok,
+        },
+        headers={"Content-Type": "application/json"},
+    )
+    assert r0.status_code == 200, r0.text
+    iid = int(r0.json()["id"])
+    tok2 = fetch_csrf(client_with_admin)
+    rpatch = auth_patch(
+        client_with_admin,
+        f"/api/v1/pruner/instances/{iid}/scopes/tv",
+        json={"preview_year_min": 2020, "preview_year_max": 2010, "csrf_token": tok2},
+        headers={"Content-Type": "application/json"},
+    )
+    assert rpatch.status_code == 422, rpatch.text

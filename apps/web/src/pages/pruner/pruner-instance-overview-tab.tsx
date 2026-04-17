@@ -54,6 +54,27 @@ export function PrunerInstanceOverviewTab() {
               </span>
             </div>
             <div className="mt-1 text-xs text-[var(--mm-text2)]">
+              Preview-only narrowing: year{" "}
+              {s.preview_year_min != null || s.preview_year_max != null ? (
+                <>
+                  {s.preview_year_min ?? "—"}–{s.preview_year_max ?? "—"} (inclusive; missing years never match when a
+                  bound is set)
+                </>
+              ) : (
+                "none set"
+              )}
+              {" · "}
+              studio include tokens: {(s.preview_include_studios ?? []).length}
+              {" · "}
+              collection include tokens: {(s.preview_include_collections ?? []).length}
+              {instance.provider !== "plex" ? (
+                <span className="text-[var(--mm-text3)]">
+                  {" "}
+                  (collection tokens apply on Plex missing-primary previews only; stored here for operator reference)
+                </span>
+              ) : null}
+            </div>
+            <div className="mt-1 text-xs text-[var(--mm-text2)]">
               Last preview:{" "}
               {s.last_preview_outcome
                 ? `${s.last_preview_outcome} (${s.last_preview_candidate_count ?? 0} candidates)`
