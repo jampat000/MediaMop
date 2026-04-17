@@ -426,38 +426,6 @@ function PrunerConnectionCredentialPanel({
   );
 }
 
-function PrunerProviderRulesPeopleConnectionLine({
-  providerName,
-  instance,
-  onGoToConnection,
-}: {
-  providerName: string;
-  instance: PrunerServerInstance | undefined;
-  onGoToConnection: () => void;
-}) {
-  const ok = instance != null && instance.last_connection_test_ok === true;
-  if (ok) {
-    return (
-      <p className="mb-3 text-xs font-medium text-green-600" data-testid="pruner-provider-inline-connection-status">
-        {providerName}: Connected
-      </p>
-    );
-  }
-  return (
-    <p className="mb-3 text-xs text-[var(--mm-text3)]" data-testid="pruner-provider-inline-connection-status">
-      <span className="text-[var(--mm-text2)]">{providerName}:</span> Not connected — go to{" "}
-      <button
-        type="button"
-        className="text-[var(--mm-accent)] underline underline-offset-2 hover:opacity-90"
-        onClick={onGoToConnection}
-      >
-        Connection
-      </button>{" "}
-      tab to set up
-    </p>
-  );
-}
-
 type ProviderWorkspaceSection = "connection" | "rules" | "people" | "schedule";
 
 function ProviderConfigurationWorkspace({ provider, allInstances }: { provider: ProviderTab; allInstances: PrunerServerInstance[] }) {
@@ -466,7 +434,6 @@ function ProviderConfigurationWorkspace({ provider, allInstances }: { provider: 
   const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(providerInstances[0]?.id ?? null);
   const [providerSection, setProviderSection] = useState<ProviderWorkspaceSection>("connection");
   const selectedInstance = providerInstances.find((x) => x.id === selectedInstanceId) ?? providerInstances[0];
-  const hasInstance = Boolean(selectedInstance);
 
   useEffect(() => {
     setSelectedInstanceId((prev) => {
@@ -536,47 +503,28 @@ function ProviderConfigurationWorkspace({ provider, allInstances }: { provider: 
 
         {providerSection === "rules" ? (
           <div data-testid="pruner-provider-rules-wrap">
-            <PrunerProviderRulesPeopleConnectionLine
-              providerName={providerName}
-              instance={selectedInstance}
-              onGoToConnection={() => setProviderSection("connection")}
+            <PrunerProviderRulesCard
+              provider={provider}
+              instanceId={selectedInstance?.id ?? 0}
+              instance={selectedInstance ?? disabledCtx.instance}
             />
-            <div className={!hasInstance ? "opacity-40" : ""}>
-              {selectedInstance ? (
-                <PrunerProviderRulesCard provider={provider} instanceId={selectedInstance.id} instance={selectedInstance} disabled={false} />
-              ) : (
-                <PrunerProviderRulesCard provider={provider} instanceId={0} instance={disabledCtx.instance} disabled />
-              )}
-            </div>
           </div>
         ) : null}
 
         {providerSection === "people" ? (
           <div data-testid="pruner-provider-people-wrap">
-            <PrunerProviderRulesPeopleConnectionLine
-              providerName={providerName}
-              instance={selectedInstance}
-              onGoToConnection={() => setProviderSection("connection")}
+            <PrunerProviderPeopleCard
+              provider={provider}
+              instanceId={selectedInstance?.id ?? 0}
+              instance={selectedInstance ?? disabledCtx.instance}
             />
-            <div className={!hasInstance ? "opacity-40" : ""}>
-              {selectedInstance ? (
-                <PrunerProviderPeopleCard provider={provider} instanceId={selectedInstance.id} instance={selectedInstance} disabled={false} />
-              ) : (
-                <PrunerProviderPeopleCard provider={provider} instanceId={0} instance={disabledCtx.instance} disabled />
-              )}
-            </div>
           </div>
         ) : null}
 
         {providerSection === "schedule" ? (
-          <div className="space-y-4" data-testid="pruner-provider-schedule-wrap">
-            <p className="text-xs text-[var(--mm-text3)]" data-testid="pruner-provider-schedule-hint">
-              Add a server under Connection to enable automatic scans.
-            </p>
-            <div className={`grid gap-4 md:grid-cols-2 ${!hasInstance ? "opacity-40" : ""}`}>
-              <PrunerGlobalScheduleRow provider={provider} scope="tv" instance={selectedInstance} />
-              <PrunerGlobalScheduleRow provider={provider} scope="movies" instance={selectedInstance} />
-            </div>
+          <div className="grid gap-4 md:grid-cols-2" data-testid="pruner-provider-schedule-wrap">
+            <PrunerGlobalScheduleRow provider={provider} scope="tv" instance={selectedInstance} />
+            <PrunerGlobalScheduleRow provider={provider} scope="movies" instance={selectedInstance} />
           </div>
         ) : null}
       </div>
@@ -742,7 +690,8 @@ function PrunerGlobalScheduleRow({
 
   const pLabel = providerLabel(provider);
   const missing = !instance;
-  const locked = missing || !canOperate;
+  const controlsDisabled = !canOperate || busy;
+  const saveDisabled = busy || !canOperate || missing;
   const testId = `pruner-schedule-row-${provider}-${scope}`;
 
   const cardTitle = scope === "tv" ? "TV" : "Movies";
@@ -756,38 +705,42 @@ function PrunerGlobalScheduleRow({
       ) : (
         <p className="mt-1 text-xs text-[var(--mm-text3)]">No {pLabel} server saved yet.</p>
       )}
-      <div className={`mt-5 space-y-6 ${locked ? "opacity-45" : ""}`}>
+      <div className="mt-5 space-y-6">
         <MmOnOffSwitch
           id={`pruner-sched-${provider}-${scope}-en`}
           label="Enable automatic scans"
           enabled={schedEnabled}
-          disabled={busy || locked}
+          disabled={controlsDisabled}
           onChange={setSchedEnabled}
         />
         <div>
-          <span className="text-sm font-medium text-[var(--mm-text1)]">Run every (seconds)</span>
-          <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">Between 60 seconds and 24 hours</p>
+          <span className="text-sm font-medium text-[var(--mm-text1)]">Run every</span>
+          <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
+            Enter a number of seconds. 3600 = 1 hour, 86400 = 24 hours. Minimum 60 seconds.
+          </p>
           <input
             type="number"
             min={60}
             max={86400}
             className="mm-input mt-2 w-full max-w-xs"
             value={Number.isFinite(schedInterval) ? schedInterval : 3600}
-            disabled={busy || locked}
+            disabled={controlsDisabled}
             onChange={(e) => setSchedInterval(parseInt(e.target.value, 10) || 3600)}
-            aria-label="Run every seconds"
+            aria-label="Run every interval in seconds"
           />
         </div>
         <div>
           <span className="text-sm font-medium text-[var(--mm-text1)]">Items to scan per run</span>
-          <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">Maximum items checked each automatic scan</p>
+          <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
+            How many items to check each time the scan runs. Higher numbers take longer. Maximum 5,000.
+          </p>
           <input
             type="number"
             min={1}
             max={5000}
             className="mm-input mt-2 w-full max-w-xs"
             value={previewCap}
-            disabled={busy || locked}
+            disabled={controlsDisabled}
             onChange={(e) => setPreviewCap(Math.max(1, Math.min(5000, Number(e.target.value) || 500)))}
             aria-label="Items to scan per run"
           />
@@ -803,8 +756,8 @@ function PrunerGlobalScheduleRow({
         {canOperate ? (
           <button
             type="button"
-            className={mmActionButtonClass({ variant: "primary", disabled: busy || locked })}
-            disabled={busy || locked}
+            className={mmActionButtonClass({ variant: "primary", disabled: saveDisabled })}
+            disabled={saveDisabled}
             onClick={() => void saveRow()}
           >
             {busy ? "Saving…" : saveScheduleLabel}
@@ -870,9 +823,9 @@ function TopLevelJobs({ instances }: { instances: PrunerServerInstance[] }) {
         </p>
       ) : null}
       <p className="text-xs text-[var(--mm-text2)]">
-        Apply removed/skipped/failed details are in{" "}
+        Full detail on what was deleted, skipped, or failed is in the{" "}
         <Link to="/app/activity" className="font-semibold text-[var(--mm-accent)] underline-offset-2 hover:underline">
-          Activity
+          Activity log
         </Link>
         .
       </p>

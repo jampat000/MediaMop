@@ -338,10 +338,9 @@ type RulesCardProps = {
   provider: ProviderKey;
   instanceId: number;
   instance: PrunerServerInstance;
-  disabled: boolean;
 };
 
-export function PrunerProviderRulesCard({ provider, instanceId, instance, disabled }: RulesCardProps) {
+export function PrunerProviderRulesCard({ provider, instanceId, instance }: RulesCardProps) {
   const qc = useQueryClient();
   const me = useMeQuery();
   const canOperate = me.data?.role === "admin" || me.data?.role === "operator";
@@ -509,7 +508,8 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
     await persistMovies();
   }
 
-  const fieldDisabled = disabled || !canOperate || busy;
+  const controlsDisabled = !canOperate || busy;
+  const saveDisabled = busy || !canOperate || instanceId <= 0;
 
   return (
     <div
@@ -518,28 +518,37 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
       data-provider-section="rules"
     >
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-10">
-        <fieldset disabled={fieldDisabled || disabled} className="min-w-0 border-0 p-0">
+        <fieldset disabled={controlsDisabled} className="min-w-0 border-0 p-0">
           <div className="min-w-0 space-y-5" data-testid={`pruner-provider-tv-config-${provider}`}>
             <div className="space-y-1 border-b border-[var(--mm-border)] pb-2">
               <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">TV</span>
-              {isPlex ? (
-                <p className="text-xs text-[var(--mm-text3)]" data-testid="pruner-plex-tv-rules-scope-note">
-                  On Plex TV you can only find broken posters and episode images here.
-                </p>
-              ) : null}
             </div>
+            {isPlex ? (
+              <div
+                className="rounded-md border border-amber-600/40 bg-amber-950/20 px-4 py-3 text-sm text-[var(--mm-text)]"
+                data-testid="pruner-plex-tv-rules-scope-note"
+                role="note"
+              >
+                <p className="font-semibold text-amber-100">Plex TV — limited options</p>
+                <p className="mt-2 text-sm text-[var(--mm-text2)]">
+                  {
+                    "Plex doesn't provide a watched signal for TV shows, so only the missing poster rule is available here. Watched TV cleanup is not supported on Plex."
+                  }
+                </p>
+              </div>
+            ) : null}
             {!isPlex ? (
               <>
                 <MmOnOffSwitch
                   id={`pruner-op-tv-watched-${provider}`}
                   label="Delete TV episodes you have already watched"
                   enabled={watchedTv}
-                  disabled={fieldDisabled || disabled}
+                  disabled={controlsDisabled}
                   onChange={setWatchedTv}
                 />
                 <label className="block text-sm text-[var(--mm-text1)]">
                   <span className="mb-1 block text-xs text-[var(--mm-text3)]">
-                    Delete TV shows not watched in the last N days
+                    Delete TV shows not watched in the last ___ days (0 = off)
                   </span>
                   <input
                     type="number"
@@ -548,17 +557,16 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
                     className="mm-input w-full max-w-xs"
                     value={neverTvDays}
                     onChange={(e) => setNeverTvDays(e.target.value)}
-                    disabled={fieldDisabled || disabled}
+                    disabled={controlsDisabled}
                   />
                 </label>
-                <p className="text-xs text-[var(--mm-text3)]">Use 0 to turn this off.</p>
               </>
             ) : null}
             <MmOnOffSwitch
               id={`pruner-op-tv-missing-${provider}`}
               label="Delete TV items missing a main poster or episode image"
               enabled={missingPrimaryTv}
-              disabled={fieldDisabled || disabled}
+              disabled={controlsDisabled}
               onChange={setMissingPrimaryTv}
             />
             <div className="space-y-1">
@@ -566,18 +574,18 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
               <PrunerGenreMultiSelect
                 value={genreTv}
                 onChange={setGenreTv}
-                disabled={fieldDisabled || disabled}
+                disabled={controlsDisabled}
                 testId={`pruner-rules-genre-tv-${provider}`}
               />
             </div>
-            <YearRange min={yearMinTv} max={yearMaxTv} onMin={setYearMinTv} onMax={setYearMaxTv} disabled={fieldDisabled || disabled} />
+            <YearRange min={yearMinTv} max={yearMaxTv} onMin={setYearMinTv} onMax={setYearMaxTv} disabled={controlsDisabled} />
             <CommaField
               label="Studio"
               placeholder="e.g. Warner Bros., BBC"
               helper="Leave blank for all studios"
               value={studioTv}
               onChange={setStudioTv}
-              disabled={fieldDisabled || disabled}
+              disabled={controlsDisabled}
             />
             {isPlex ? (
               <label className="block text-sm text-[var(--mm-text2)]" data-testid="pruner-plex-rules-tv-names">
@@ -587,7 +595,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
                   rows={4}
                   placeholder="e.g. Alex Carter, Jordan Lee (comma or one per line)"
                   value={plexTvPeopleLines}
-                  disabled={fieldDisabled || disabled}
+                  disabled={controlsDisabled}
                   onChange={(e) => setPlexTvPeopleLines(e.target.value)}
                 />
                 <span className="mt-1 block text-xs text-[var(--mm-text3)]">Leave blank to use no name filter.</span>
@@ -596,8 +604,8 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
             {canOperate ? (
               <button
                 type="button"
-                className={fetcherMenuButtonClass({ variant: "primary", disabled: busy || disabled })}
-                disabled={busy || disabled}
+                className={fetcherMenuButtonClass({ variant: "primary", disabled: saveDisabled })}
+                disabled={saveDisabled}
                 onClick={() => void saveTv()}
               >
                 {busy ? "Saving…" : "Save TV rules"}
@@ -606,7 +614,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
           </div>
         </fieldset>
 
-        <fieldset disabled={fieldDisabled || disabled} className="min-w-0 border-0 p-0 lg:border-l lg:border-[var(--mm-border)] lg:pl-8">
+        <fieldset disabled={controlsDisabled} className="min-w-0 border-0 p-0 lg:border-l lg:border-[var(--mm-border)] lg:pl-8">
           <div className="min-w-0 space-y-5" data-testid={`pruner-provider-movies-config-${provider}`}>
             <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">
               <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">Movies</span>
@@ -615,14 +623,14 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
               id={`pruner-op-mov-watched-${provider}`}
               label="Delete movies you have already watched"
               enabled={watchedMovies}
-              disabled={fieldDisabled || disabled}
+              disabled={controlsDisabled}
               onChange={setWatchedMovies}
             />
             <label className="block text-sm text-[var(--mm-text1)]" htmlFor={`pruner-op-mov-lowrating-${provider}`}>
               <span className="mb-1 block text-xs text-[var(--mm-text3)]">
                 {isPlex
-                  ? "Delete watched movies rated below this score (0–10) — uses Plex audience rating"
-                  : "Delete watched movies rated below this score (0–10) — uses your server’s community rating"}
+                  ? "Delete watched movies rated below this score — uses Plex audience rating (0–10, 0 = off)"
+                  : "Delete watched movies rated below this score — uses your server’s community rating (0–10, 0 = off)"}
               </span>
               <input
                 id={`pruner-op-mov-lowrating-${provider}`}
@@ -633,13 +641,12 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
                 className="mm-input w-full max-w-xs"
                 value={lowRatingMovies}
                 onChange={(e) => setLowRatingMovies(e.target.value)}
-                disabled={fieldDisabled || disabled}
+                disabled={controlsDisabled}
               />
             </label>
-            <p className="text-xs text-[var(--mm-text3)]">Use 0 to turn off low-score cleanup.</p>
             <label className="block text-sm text-[var(--mm-text2)]">
               <span className="mb-1 block text-xs text-[var(--mm-text3)]">
-                Delete movies you have not watched that are older than N days
+                Delete movies you have not watched that are older than ___ days (0 = off)
               </span>
               <input
                 type="number"
@@ -648,16 +655,15 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
                 className="mm-input w-full max-w-xs"
                 value={unwatchedDays}
                 onChange={(e) => setUnwatchedDays(e.target.value)}
-                disabled={fieldDisabled || disabled}
+                disabled={controlsDisabled}
               />
             </label>
-            <p className="text-xs text-[var(--mm-text3)]">Use 0 to turn this off.</p>
             {!isPlex ? (
               <MmOnOffSwitch
                 id={`pruner-op-mov-missing-${provider}`}
                 label="Delete movies missing a main poster"
                 enabled={missingPrimaryMovies}
-                disabled={fieldDisabled || disabled}
+                disabled={controlsDisabled}
                 onChange={setMissingPrimaryMovies}
               />
             ) : null}
@@ -666,7 +672,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
               <PrunerGenreMultiSelect
                 value={genreMovies}
                 onChange={setGenreMovies}
-                disabled={fieldDisabled || disabled}
+                disabled={controlsDisabled}
                 testId={`pruner-rules-genre-movies-${provider}`}
               />
             </div>
@@ -675,7 +681,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
               max={yearMaxMovies}
               onMin={setYearMinMovies}
               onMax={setYearMaxMovies}
-              disabled={fieldDisabled || disabled}
+              disabled={controlsDisabled}
             />
             <CommaField
               label="Studio"
@@ -683,13 +689,13 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
               helper="Leave blank for all studios"
               value={studioMovies}
               onChange={setStudioMovies}
-              disabled={fieldDisabled || disabled}
+              disabled={controlsDisabled}
             />
             {canOperate ? (
               <button
                 type="button"
-                className={fetcherMenuButtonClass({ variant: "primary", disabled: busy || disabled })}
-                disabled={busy || disabled}
+                className={fetcherMenuButtonClass({ variant: "primary", disabled: saveDisabled })}
+                disabled={saveDisabled}
                 onClick={() => void saveMovies()}
               >
                 {busy ? "Saving…" : "Save Movies rules"}
@@ -699,7 +705,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
         </fieldset>
       </div>
 
-      {!disabled ? (
+      {instanceId > 0 ? (
         <>
           <PrunerDryRunControls
             instanceId={instanceId}
@@ -796,10 +802,9 @@ type PeopleCardProps = {
   provider: ProviderKey;
   instanceId: number;
   instance: PrunerServerInstance;
-  disabled: boolean;
 };
 
-export function PrunerProviderPeopleCard({ provider, instanceId, instance, disabled }: PeopleCardProps) {
+export function PrunerProviderPeopleCard({ provider, instanceId, instance }: PeopleCardProps) {
   const qc = useQueryClient();
   const me = useMeQuery();
   const canOperate = me.data?.role === "admin" || me.data?.role === "operator";
@@ -895,7 +900,8 @@ export function PrunerProviderPeopleCard({ provider, instanceId, instance, disab
     await persistMoviesPeople();
   }
 
-  const fieldDisabled = disabled || !canOperate || busy;
+  const controlsDisabled = !canOperate || busy;
+  const saveDisabled = busy || !canOperate || instanceId <= 0;
 
   return (
     <div
@@ -904,7 +910,7 @@ export function PrunerProviderPeopleCard({ provider, instanceId, instance, disab
       data-provider-section="people"
     >
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-10">
-        <fieldset disabled={fieldDisabled || disabled} className="min-w-0 border-0 p-0">
+        <fieldset disabled={controlsDisabled} className="min-w-0 border-0 p-0">
           <div className="min-w-0 space-y-3" data-testid={`pruner-provider-tv-people-${provider}`}>
             <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">
               <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">TV</span>
@@ -916,7 +922,7 @@ export function PrunerProviderPeopleCard({ provider, instanceId, instance, disab
                 rows={5}
                 placeholder="e.g. Alex Carter, Jordan Lee (comma or one per line)"
                 value={tvPeople}
-                disabled={fieldDisabled || disabled}
+                disabled={controlsDisabled}
                 onChange={(e) => setTvPeople(e.target.value)}
               />
             </label>
@@ -924,7 +930,7 @@ export function PrunerProviderPeopleCard({ provider, instanceId, instance, disab
             <PrunerPeopleRoleCheckboxes
               value={tvRoles}
               onChange={setTvRoles}
-              disabled={fieldDisabled || disabled}
+              disabled={controlsDisabled}
               variant={isPlex ? "plex" : "emby-jellyfin"}
               coerceCastMsg={tvRolesCoerceMsg}
               onClearCoerceMsg={() => setTvRolesCoerceMsg(null)}
@@ -936,8 +942,8 @@ export function PrunerProviderPeopleCard({ provider, instanceId, instance, disab
             {canOperate ? (
               <button
                 type="button"
-                className={fetcherMenuButtonClass({ variant: "primary", disabled: busy || disabled })}
-                disabled={busy || disabled}
+                className={fetcherMenuButtonClass({ variant: "primary", disabled: saveDisabled })}
+                disabled={saveDisabled}
                 onClick={() => void saveTvPeople()}
               >
                 {busy ? "Saving…" : "Save TV people"}
@@ -945,7 +951,7 @@ export function PrunerProviderPeopleCard({ provider, instanceId, instance, disab
             ) : null}
           </div>
         </fieldset>
-        <fieldset disabled={fieldDisabled || disabled} className="min-w-0 border-0 p-0 lg:border-l lg:border-[var(--mm-border)] lg:pl-8">
+        <fieldset disabled={controlsDisabled} className="min-w-0 border-0 p-0 lg:border-l lg:border-[var(--mm-border)] lg:pl-8">
           <div className="min-w-0 space-y-3" data-testid={`pruner-provider-movies-people-${provider}`}>
             <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">
               <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">Movies</span>
@@ -957,7 +963,7 @@ export function PrunerProviderPeopleCard({ provider, instanceId, instance, disab
                 rows={5}
                 placeholder="e.g. Alex Carter, Jordan Lee (comma or one per line)"
                 value={moviesPeople}
-                disabled={fieldDisabled || disabled}
+                disabled={controlsDisabled}
                 onChange={(e) => setMoviesPeople(e.target.value)}
               />
             </label>
@@ -965,7 +971,7 @@ export function PrunerProviderPeopleCard({ provider, instanceId, instance, disab
             <PrunerPeopleRoleCheckboxes
               value={moviesRoles}
               onChange={setMoviesRoles}
-              disabled={fieldDisabled || disabled}
+              disabled={controlsDisabled}
               variant={isPlex ? "plex" : "emby-jellyfin"}
               coerceCastMsg={moviesRolesCoerceMsg}
               onClearCoerceMsg={() => setMoviesRolesCoerceMsg(null)}
@@ -977,8 +983,8 @@ export function PrunerProviderPeopleCard({ provider, instanceId, instance, disab
             {canOperate ? (
               <button
                 type="button"
-                className={fetcherMenuButtonClass({ variant: "primary", disabled: busy || disabled })}
-                disabled={busy || disabled}
+                className={fetcherMenuButtonClass({ variant: "primary", disabled: saveDisabled })}
+                disabled={saveDisabled}
                 onClick={() => void saveMoviesPeople()}
               >
                 {busy ? "Saving…" : "Save Movies people"}
@@ -987,7 +993,7 @@ export function PrunerProviderPeopleCard({ provider, instanceId, instance, disab
           </div>
         </fieldset>
       </div>
-      {!disabled ? (
+      {instanceId > 0 ? (
         <>
           <PrunerDryRunControls
             instanceId={instanceId}

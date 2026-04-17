@@ -203,14 +203,14 @@ describe("PrunerInstancesListPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "People" }));
     await waitFor(() => expect(screen.getByTestId("pruner-provider-people-card-emby")).toBeInTheDocument());
     const peopleWrap = screen.getByTestId("pruner-provider-people-wrap");
-    expect(within(peopleWrap).getByTestId("pruner-provider-inline-connection-status")).toBeInTheDocument();
+    expect(within(peopleWrap).queryByTestId("pruner-provider-inline-connection-status")).not.toBeInTheDocument();
     const peopleCard = screen.getByTestId("pruner-provider-people-card-emby");
     expect(within(peopleCard).getAllByPlaceholderText(/Alex Carter/i)).toHaveLength(2);
     expect(screen.getByTestId("pruner-people-dry-run-tv-btn")).toBeInTheDocument();
     expect(screen.getByTestId("pruner-people-dry-run-movies-btn")).toBeInTheDocument();
   });
 
-  it("Rules sub-tab shows green inline connection line when last test passed", async () => {
+  it("Connection sub-tab shows Connected in status when last Emby test passed", async () => {
     const client = new QueryClient();
     client.setQueryData(qk.me, adminUser);
     const scope = (media_scope: "tv" | "movies") => ({
@@ -260,15 +260,15 @@ describe("PrunerInstancesListPage", () => {
 
     await waitFor(() => expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument());
     fireEvent.click(screen.getByRole("tab", { name: "Emby" }));
-    fireEvent.click(screen.getByRole("button", { name: "Rules" }));
-    await waitFor(() => expect(screen.getByTestId("pruner-provider-configuration-emby")).toBeInTheDocument());
-    const status = screen.getByTestId("pruner-provider-inline-connection-status");
-    expect(status).toHaveTextContent("Emby: Connected");
-    expect(status).toHaveClass("text-green-600");
+    fireEvent.click(screen.getByRole("button", { name: "Connection" }));
+    await waitFor(() => expect(screen.getByTestId("pruner-connection-panel-emby")).toBeInTheDocument());
+    const statusBox = screen.getByTestId("pruner-connection-status-emby");
+    expect(within(statusBox).getByText("Connected")).toBeInTheDocument();
   });
 
-  it("pre-connection Emby Rules tab greys rules, shows inline connection hint, no dashed disabled banner", async () => {
+  it("pre-connection Emby Rules tab is editable without connection banner", async () => {
     const client = new QueryClient();
+    client.setQueryData(qk.me, adminUser);
     vi.spyOn(prunerApi, "fetchPrunerInstances").mockResolvedValue([]);
     vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({ jobs: [], default_recent_slice: true });
 
@@ -278,11 +278,10 @@ describe("PrunerInstancesListPage", () => {
     await waitFor(() => expect(screen.getByTestId("pruner-provider-tab-emby")).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "Rules" }));
     await waitFor(() => expect(screen.getByTestId("pruner-provider-configuration-emby")).toBeInTheDocument());
-    expect(screen.getByTestId("pruner-provider-inline-connection-status")).toHaveTextContent(/Emby:/);
-    expect(screen.getByTestId("pruner-provider-inline-connection-status")).toHaveTextContent(/Not connected/);
+    expect(screen.queryByTestId("pruner-provider-inline-connection-status")).not.toBeInTheDocument();
     expect(screen.queryByText(/Save a connection first to enable these settings/i)).not.toBeInTheDocument();
     const disabledFieldsets = screen.getByTestId("pruner-provider-configuration-emby").querySelectorAll("fieldset[disabled]");
-    expect(disabledFieldsets.length).toBe(2);
+    expect(disabledFieldsets.length).toBe(0);
     expect(screen.getByText(/Delete TV episodes you have already watched/i)).toBeInTheDocument();
   });
 
@@ -366,9 +365,9 @@ describe("PrunerInstancesListPage", () => {
     await waitFor(() => expect(screen.getByTestId("pruner-provider-tab-plex")).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "Rules" }));
     await waitFor(() => expect(screen.getByTestId("pruner-provider-configuration-plex")).toBeInTheDocument());
-    expect(screen.getByTestId("pruner-plex-tv-rules-scope-note")).toHaveTextContent(
-      /broken posters and episode images/i,
-    );
+    const plexTvNote = screen.getByTestId("pruner-plex-tv-rules-scope-note");
+    expect(plexTvNote).toHaveTextContent(/Plex TV — limited options/i);
+    expect(plexTvNote).toHaveTextContent(/missing poster rule is available here/i);
     expect(screen.queryByTestId("pruner-provider-plex-tv-unsupported-rules")).not.toBeInTheDocument();
     expect(screen.queryByTestId("pruner-plex-tv-filters-scope-note")).not.toBeInTheDocument();
     expect(screen.queryByTestId("pruner-plex-other-rules-note")).not.toBeInTheDocument();
@@ -529,7 +528,7 @@ describe("PrunerInstancesListPage", () => {
     expect(within(movies).queryByText(/Plex audienceRating/i)).not.toBeInTheDocument();
   });
 
-  it("Emby Schedule sub-tab shows hint and TV/Movies schedule cards when no instances exist", async () => {
+  it("Emby Schedule sub-tab shows TV/Movies schedule cards when no instances exist", async () => {
     const client = new QueryClient();
     client.setQueryData(qk.me, adminUser);
     vi.spyOn(prunerApi, "fetchPrunerInstances").mockResolvedValue([]);
@@ -541,9 +540,8 @@ describe("PrunerInstancesListPage", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Emby" }));
     fireEvent.click(screen.getByRole("button", { name: "Schedule" }));
     await waitFor(() => expect(screen.getByTestId("pruner-provider-schedule-wrap")).toBeInTheDocument());
-    expect(screen.getByTestId("pruner-provider-schedule-hint")).toHaveTextContent(
-      /Add a server under Connection to enable automatic scans/i,
-    );
+    expect(screen.queryByTestId("pruner-provider-schedule-hint")).not.toBeInTheDocument();
+    expect(screen.getAllByText(/Enter a number of seconds/i).length).toBeGreaterThanOrEqual(2);
     await waitFor(() => expect(screen.getByTestId("pruner-schedule-row-emby-tv")).toBeInTheDocument());
     expect(screen.getByTestId("pruner-schedule-row-emby-movies")).toBeInTheDocument();
   });
@@ -707,7 +705,7 @@ describe("PrunerInstancesListPage", () => {
 
     const embyTv = screen.getByTestId("pruner-schedule-row-emby-tv");
     fireEvent.click(within(embyTv).getByRole("radio", { name: "On" }));
-    fireEvent.change(within(embyTv).getByLabelText("Run every seconds"), { target: { value: "120" } });
+    fireEvent.change(within(embyTv).getByLabelText("Run every interval in seconds"), { target: { value: "120" } });
     fireEvent.click(within(embyTv).getByRole("button", { name: /Save TV schedule/i }));
 
     await waitFor(() => {
