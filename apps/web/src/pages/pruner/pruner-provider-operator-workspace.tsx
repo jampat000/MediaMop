@@ -347,6 +347,8 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
   const [yearMinTv, setYearMinTv] = useState("");
   const [yearMaxTv, setYearMaxTv] = useState("");
   const [studioTv, setStudioTv] = useState("");
+  /** Plex TV rules: name filter for missing-primary previews (same scope field as People tab). */
+  const [plexTvPeopleLines, setPlexTvPeopleLines] = useState("");
 
   const [missingPrimaryMovies, setMissingPrimaryMovies] = useState(true);
   const [watchedMovies, setWatchedMovies] = useState(false);
@@ -370,7 +372,10 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
     setYearMinTv(tv.preview_year_min != null ? String(tv.preview_year_min) : "");
     setYearMaxTv(tv.preview_year_max != null ? String(tv.preview_year_max) : "");
     setStudioTv((tv.preview_include_studios ?? []).join(", "));
-  }, [tv]);
+    if (isPlex) {
+      setPlexTvPeopleLines(((tv.preview_include_people ?? []) as string[]).join("\n"));
+    }
+  }, [tv, isPlex]);
 
   useEffect(() => {
     if (!movies) return;
@@ -429,6 +434,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
       never_played_stale_reported_enabled: neverOn,
       never_played_min_age_days: neverDays,
       ...filters,
+      ...(isPlex ? { preview_include_people: parsePeopleLines(plexTvPeopleLines) } : {}),
       csrf_token,
     });
     await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
@@ -505,18 +511,15 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-10">
         <fieldset disabled={fieldDisabled || disabled} className="min-w-0 border-0 p-0">
           <div className="min-w-0 space-y-5" data-testid={`pruner-provider-tv-config-${provider}`}>
-            <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">
+            <div className="space-y-1 border-b border-[var(--mm-border)] pb-2">
               <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">TV</span>
+              {isPlex ? (
+                <p className="text-xs text-[var(--mm-text3)]" data-testid="pruner-plex-tv-rules-scope-note">
+                  Plex TV supports missing primary art only
+                </p>
+              ) : null}
             </div>
-            {isPlex ? (
-              <div
-                className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-surface2)]/25 px-3 py-2 text-xs text-[var(--mm-text3)]"
-                data-testid="pruner-provider-plex-tv-unsupported-rules"
-              >
-                <p>Never-played TV older than N days — not supported for Plex.</p>
-                <p className="mt-2">Watched TV removal — not supported for Plex.</p>
-              </div>
-            ) : (
+            {!isPlex ? (
               <>
                 <MmOnOffSwitch
                   id={`pruner-op-tv-watched-${provider}`}
@@ -539,7 +542,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
                 </label>
                 <p className="text-xs text-[var(--mm-text3)]">Set 0 to disable.</p>
               </>
-            )}
+            ) : null}
             <MmOnOffSwitch
               id={`pruner-op-tv-missing-${provider}`}
               label="Remove items missing primary artwork — Broken or missing poster / episode image"
@@ -547,11 +550,6 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
               disabled={fieldDisabled || disabled}
               onChange={setMissingPrimaryTv}
             />
-            {isPlex ? (
-              <p className="text-xs text-[var(--mm-text3)]" data-testid="pruner-plex-tv-filters-scope-note">
-                Genre, year, and studio filters apply to missing-artwork scans on this tab.
-              </p>
-            ) : null}
             <CommaField
               label="Genre"
               placeholder="e.g. Drama, Science Fiction"
@@ -569,6 +567,20 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
               onChange={setStudioTv}
               disabled={fieldDisabled || disabled}
             />
+            {isPlex ? (
+              <label className="block text-sm text-[var(--mm-text2)]" data-testid="pruner-plex-rules-tv-names">
+                <span className="mb-1 block text-xs text-[var(--mm-text3)]">Names</span>
+                <textarea
+                  className="mm-input min-h-[6rem] w-full font-sans text-sm"
+                  rows={4}
+                  placeholder="e.g. Alex Carter, Jordan Lee (comma or one per line)"
+                  value={plexTvPeopleLines}
+                  disabled={fieldDisabled || disabled}
+                  onChange={(e) => setPlexTvPeopleLines(e.target.value)}
+                />
+                <span className="mt-1 block text-xs text-[var(--mm-text3)]">Leave blank to use no name filter.</span>
+              </label>
+            ) : null}
             {canOperate ? (
               <button
                 type="button"
@@ -594,14 +606,17 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
               disabled={fieldDisabled || disabled}
               onChange={setWatchedMovies}
             />
-            <label className="block text-sm text-[var(--mm-text1)]">
-              {isPlex ? "Plex audienceRating max (0–10)" : "Jellyfin/Emby CommunityRating max (0–10)"}
+            <label className="block text-sm text-[var(--mm-text1)]" htmlFor={`pruner-op-mov-lowrating-${provider}`}>
+              <span className="mb-1 block text-xs text-[var(--mm-text3)]">
+                {isPlex ? "Plex audienceRating max (0–10)" : "Jellyfin/Emby CommunityRating max (0–10)"}
+              </span>
               <input
+                id={`pruner-op-mov-lowrating-${provider}`}
                 type="number"
                 min={0}
                 max={10}
                 step={0.1}
-                className="mm-input mt-1 w-full max-w-xs"
+                className="mm-input w-full max-w-xs"
                 value={lowRatingMovies}
                 onChange={(e) => setLowRatingMovies(e.target.value)}
                 disabled={fieldDisabled || disabled}
@@ -621,17 +636,14 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance, disabl
               />
             </label>
             <p className="text-xs text-[var(--mm-text3)]">Set 0 to disable.</p>
-            <MmOnOffSwitch
-              id={`pruner-op-mov-missing-${provider}`}
-              label="Remove items missing primary artwork — Broken or missing movie poster"
-              enabled={missingPrimaryMovies}
-              disabled={fieldDisabled || disabled}
-              onChange={setMissingPrimaryMovies}
-            />
-            {isPlex ? (
-              <p className="text-xs text-[var(--mm-text3)]" data-testid="pruner-plex-other-rules-note">
-                Plex scans use your server metadata; large libraries may return capped lists.
-              </p>
+            {!isPlex ? (
+              <MmOnOffSwitch
+                id={`pruner-op-mov-missing-${provider}`}
+                label="Remove items missing primary artwork — Broken or missing movie poster"
+                enabled={missingPrimaryMovies}
+                disabled={fieldDisabled || disabled}
+                onChange={setMissingPrimaryMovies}
+              />
             ) : null}
             <CommaField
               label="Genre"

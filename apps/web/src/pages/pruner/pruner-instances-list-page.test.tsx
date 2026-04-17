@@ -285,7 +285,7 @@ describe("PrunerInstancesListPage", () => {
     expect(screen.getByText(/Watched TV removal/i)).toBeInTheDocument();
   });
 
-  it("Plex provider tab shows TV and Movies sections with unsupported rules and missing-primary filter scope note", async () => {
+  it("Plex Rules tab shows only supported controls: TV missing-primary + filters + names; Movies without missing-primary toggle", async () => {
     const client = new QueryClient();
     vi.spyOn(prunerApi, "fetchPrunerInstances").mockResolvedValue([
       {
@@ -365,12 +365,16 @@ describe("PrunerInstancesListPage", () => {
     await waitFor(() => expect(screen.getByTestId("pruner-provider-tab-plex")).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "Rules" }));
     await waitFor(() => expect(screen.getByTestId("pruner-provider-configuration-plex")).toBeInTheDocument());
-    expect(screen.getByTestId("pruner-provider-plex-tv-unsupported-rules")).toBeInTheDocument();
-    expect(screen.getAllByText(/not supported for Plex/i).length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByTestId("pruner-plex-tv-filters-scope-note")).toBeInTheDocument();
-    expect(screen.getAllByTestId("pruner-plex-other-rules-note").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByTestId("pruner-plex-tv-rules-scope-note")).toHaveTextContent(/Plex TV supports missing primary art only/i);
+    expect(screen.queryByTestId("pruner-provider-plex-tv-unsupported-rules")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("pruner-plex-tv-filters-scope-note")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("pruner-plex-other-rules-note")).not.toBeInTheDocument();
+    const tvSection = screen.getByTestId("pruner-provider-tv-config-plex");
+    expect(within(tvSection).queryByText(/Watched TV removal/i)).not.toBeInTheDocument();
+    expect(within(tvSection).getByTestId("pruner-plex-rules-tv-names")).toBeInTheDocument();
     const moviesSection = screen.getByTestId("pruner-provider-movies-config-plex");
-    expect(within(moviesSection).getByText(/Plex audienceRating/i)).toBeInTheDocument();
+    expect(within(moviesSection).getByText("Plex audienceRating max (0–10)")).toBeInTheDocument();
+    expect(within(moviesSection).queryByText(/Remove items missing primary artwork/i)).not.toBeInTheDocument();
   });
 
   it("Emby movies section shows Jellyfin/Emby CommunityRating label when instance exists", async () => {
