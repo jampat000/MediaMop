@@ -65,7 +65,7 @@ describe("PrunerInstancesListPage", () => {
     expect(screen.getByText(/Movies \(one row per movie item\)/i)).toBeInTheDocument();
     expect(screen.getAllByTestId("pruner-run-limits-panel").length).toBe(2);
     expect(screen.getByText(/Enable watched TV rule for this TV tab/i)).toBeInTheDocument();
-    expect(screen.getByText(/Enable unwatched TV older-than rule for this tab/i)).toBeInTheDocument();
+    expect(screen.getByText(/Enable never-played TV older-than rule for this tab/i)).toBeInTheDocument();
     expect(screen.getByText(/Enable watched movies rule for this Movies tab/i)).toBeInTheDocument();
     expect(screen.getByText(/Enable unwatched stale movies rule for this Movies tab/i)).toBeInTheDocument();
     const disabledFieldsets = screen.getByTestId("pruner-provider-configuration-emby").querySelectorAll("fieldset[disabled]");

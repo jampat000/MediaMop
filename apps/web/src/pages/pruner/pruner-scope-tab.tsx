@@ -651,8 +651,8 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
       >
         <p className="text-sm font-semibold text-[var(--mm-text)]">Run limits</p>
         <p className="text-xs text-[var(--mm-text2)]">
-          Scan cap per run is supported on this scope. Apply delete cap per run is not currently exposed by the Pruner
-          backend contract, so deletes remain snapshot-bound and rule-driven.
+          Scan cap per run is configurable for this scope. A per-scope delete-cap control is not exposed by the current
+          Pruner backend contract; apply remains snapshot-bound and rule-driven.
         </p>
         {showInteractiveControls ? (
           <div className="flex flex-wrap items-center gap-2">
@@ -1032,8 +1032,8 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
         >
           <p className="text-sm font-semibold text-[var(--mm-text)]">
             {props.scope === "tv"
-              ? "Unwatched TV older than N days (Jellyfin / Emby)"
-              : "Unwatched entries older than N days (Jellyfin / Emby)"}
+              ? "Never-played TV older than N days (Jellyfin / Emby)"
+              : "Never-played entries older than N days (Jellyfin / Emby)"}
           </p>
           <p className="text-xs text-[var(--mm-text2)]">
             Candidates are library items with <strong>no play state</strong> for the MediaMop server user (Jellyfin /
@@ -1054,8 +1054,8 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
                   onChange={(e) => setStaleNeverEnabled(e.target.checked)}
                 />
                 {props.scope === "tv"
-                  ? "Enable unwatched TV older-than rule for this tab"
-                  : "Enable unwatched older-than rule for this tab"}
+                  ? "Enable never-played TV older-than rule for this tab"
+                  : "Enable never-played older-than rule for this tab"}
               </label>
               <div className="flex flex-wrap items-center gap-2">
                 <label className="text-sm text-[var(--mm-text2)]">
@@ -1087,7 +1087,9 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies"; contextOverride?
                 title={!staleNeverEnabled ? "Enable the rule and save before queueing a preview for it." : undefined}
                 onClick={() => void runStaleNeverPreview()}
               >
-                {props.scope === "tv" ? "Queue preview (unwatched TV older than N days)" : "Queue preview (unwatched older than N days)"}
+                {props.scope === "tv"
+                  ? "Queue preview (never-played TV older than N days)"
+                  : "Queue preview (never-played older than N days)"}
               </button>
             </div>
           ) : (
