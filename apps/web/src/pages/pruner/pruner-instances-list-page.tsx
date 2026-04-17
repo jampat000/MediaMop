@@ -14,7 +14,7 @@ import type { PrunerJobsInspectionRow, PrunerServerInstance } from "../../lib/pr
 import { patchPrunerInstance, patchPrunerScope, postPrunerConnectionTest, postPrunerInstance } from "../../lib/pruner/api";
 import { useMeQuery } from "../../lib/auth/queries";
 import { usePrunerInstancesQuery, usePrunerJobsInspectionQuery } from "../../lib/pruner/queries";
-import { PrunerScopeTab } from "./pruner-scope-tab";
+import { PrunerProviderPeopleCard, PrunerProviderRulesCard } from "./pruner-provider-operator-workspace";
 import { formatPrunerDateTime } from "./pruner-ui-utils";
 
 type TopTab = "overview" | "connections" | "emby" | "jellyfin" | "plex" | "schedules" | "jobs";
@@ -447,7 +447,7 @@ function ConnectionsTabPanel({ allInstances }: { allInstances: PrunerServerInsta
   );
 }
 
-type ProviderWorkspaceSection = "rules" | "filters" | "people";
+type ProviderWorkspaceSection = "rules" | "people";
 
 function ProviderConfigurationWorkspace({ provider, allInstances }: { provider: ProviderTab; allInstances: PrunerServerInstance[] }) {
   const providerName = providerLabel(provider);
@@ -466,17 +466,14 @@ function ProviderConfigurationWorkspace({ provider, allInstances }: { provider: 
   }, [provider, selectedInstance?.id]);
 
   const disabledCtx = { instanceId: 0, instance: providerDisabledInstance(provider) } as const;
-  const activeCtx = selectedInstance
-    ? { instanceId: selectedInstance.id, instance: selectedInstance }
-    : disabledCtx;
 
   return (
     <section className="space-y-5" data-testid={`pruner-provider-tab-${provider}`}>
       <div>
         <h2 className="text-base font-semibold text-[var(--mm-text1)]">{providerName}</h2>
         <p className="mt-1 max-w-3xl text-sm leading-snug text-[var(--mm-text2)]">
-          Save credentials under <strong className="text-[var(--mm-text)]">Connections</strong>, then use Rules,
-          Filters, and People below. Schedules for all providers are on the <strong className="text-[var(--mm-text)]">Schedules</strong> tab.
+          Save credentials under <strong className="text-[var(--mm-text)]">Connections</strong>, then use Rules and
+          People below. Schedules for all providers are on the <strong className="text-[var(--mm-text)]">Schedules</strong> tab.
         </p>
       </div>
       {providerInstances.length > 1 ? (
@@ -504,7 +501,6 @@ function ProviderConfigurationWorkspace({ provider, allInstances }: { provider: 
         {(
           [
             ["rules", "Rules"],
-            ["filters", "Filters"],
             ["people", "People"],
           ] as const
         ).map(([id, label]) => (
@@ -522,152 +518,22 @@ function ProviderConfigurationWorkspace({ provider, allInstances }: { provider: 
 
       <div data-testid={`pruner-provider-sections-${provider}`}>
         {providerSection === "rules" ? (
-          <div
-            className="mm-card mm-dash-card border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 sm:p-6"
-            data-testid={`pruner-provider-configuration-${provider}`}
-            data-provider-section="rules"
-          >
-            <h3 className="text-base font-semibold text-[var(--mm-text1)]">Rules</h3>
-            <p className="mt-1 text-sm leading-relaxed text-[var(--mm-text3)]">
-              Deletion rules by medium. One save per column saves every rule in that column.
-            </p>
-            {!hasInstance ? (
-              <p
-                className="mt-4 rounded-md border border-dashed border-[var(--mm-border)] bg-[var(--mm-surface2)]/40 px-3 py-2 text-sm text-[var(--mm-text2)]"
-                data-testid="pruner-provider-config-disabled-hint"
-              >
-                Save a connection first to enable these settings.
-              </p>
-            ) : null}
-            <div
-              className={`mt-6 grid gap-8 lg:grid-cols-2 lg:gap-10 ${!hasInstance ? "pointer-events-none opacity-45" : ""}`}
-            >
-              <div className="min-h-0 space-y-4" data-testid={`pruner-provider-tv-config-${provider}`}>
-                <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">
-                  <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">TV</span>
-                </div>
-                <PrunerScopeTab
-                  scope="tv"
-                  variant="provider"
-                  providerSubSection="rules"
-                  disabledMode={!hasInstance}
-                  contextOverride={activeCtx}
-                />
-              </div>
-              <div className="min-h-0 space-y-4 lg:border-l lg:border-[var(--mm-border)] lg:pl-8" data-testid={`pruner-provider-movies-config-${provider}`}>
-                <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">
-                  <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">Movies</span>
-                </div>
-                <PrunerScopeTab
-                  scope="movies"
-                  variant="provider"
-                  providerSubSection="rules"
-                  disabledMode={!hasInstance}
-                  contextOverride={activeCtx}
-                />
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {providerSection === "filters" ? (
-          <div
-            className="mm-card mm-dash-card border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 sm:p-6"
-            data-testid={`pruner-provider-configuration-${provider}`}
-            data-provider-section="filters"
-          >
-            <h3 className="text-base font-semibold text-[var(--mm-text1)]">Filters</h3>
-            <p className="mt-2 text-xs leading-relaxed text-[var(--mm-text3)]">
-              Filters narrow which items appear in previews. They do not affect apply behavior.
-            </p>
-            <p className="mt-1 text-sm leading-relaxed text-[var(--mm-text3)]">
-              One save per column writes genre, year, and studio filters for that column.
-            </p>
-            {!hasInstance ? (
-              <p
-                className="mt-4 rounded-md border border-dashed border-[var(--mm-border)] bg-[var(--mm-surface2)]/40 px-3 py-2 text-sm text-[var(--mm-text2)]"
-                data-testid="pruner-provider-config-disabled-hint-filters"
-              >
-                Save a connection first to enable these settings.
-              </p>
-            ) : null}
-            <div
-              className={`mt-6 grid gap-8 lg:grid-cols-2 lg:gap-10 ${!hasInstance ? "pointer-events-none opacity-45" : ""}`}
-            >
-              <div className="min-h-0 space-y-4" data-testid={`pruner-provider-tv-filters-${provider}`}>
-                <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">
-                  <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">TV</span>
-                </div>
-                <PrunerScopeTab
-                  scope="tv"
-                  variant="provider"
-                  providerSubSection="filters"
-                  disabledMode={!hasInstance}
-                  contextOverride={activeCtx}
-                />
-              </div>
-              <div className="min-h-0 space-y-4 lg:border-l lg:border-[var(--mm-border)] lg:pl-8" data-testid={`pruner-provider-movies-filters-${provider}`}>
-                <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">
-                  <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">Movies</span>
-                </div>
-                <PrunerScopeTab
-                  scope="movies"
-                  variant="provider"
-                  providerSubSection="filters"
-                  disabledMode={!hasInstance}
-                  contextOverride={activeCtx}
-                />
-              </div>
-            </div>
+          <div className={`${!hasInstance ? "opacity-50" : ""}`} data-testid="pruner-provider-rules-wrap">
+            {selectedInstance ? (
+              <PrunerProviderRulesCard provider={provider} instanceId={selectedInstance.id} instance={selectedInstance} disabled={false} />
+            ) : (
+              <PrunerProviderRulesCard provider={provider} instanceId={0} instance={disabledCtx.instance} disabled />
+            )}
           </div>
         ) : null}
 
         {providerSection === "people" ? (
-          <div
-            className="mm-card mm-dash-card border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 sm:p-6"
-            data-testid={`pruner-provider-configuration-${provider}`}
-            data-provider-section="people"
-          >
-            <h3 className="text-base font-semibold text-[var(--mm-text1)]">People</h3>
-            <p className="mt-1 text-sm leading-relaxed text-[var(--mm-text3)]">
-              Match library titles by credited names in previews. One save per column.
-            </p>
-            {!hasInstance ? (
-              <p
-                className="mt-4 rounded-md border border-dashed border-[var(--mm-border)] bg-[var(--mm-surface2)]/40 px-3 py-2 text-sm text-[var(--mm-text2)]"
-                data-testid="pruner-provider-config-disabled-hint-people"
-              >
-                Save a connection first to enable these settings.
-              </p>
-            ) : null}
-            <div
-              className={`mt-6 grid gap-8 lg:grid-cols-2 lg:gap-10 ${!hasInstance ? "pointer-events-none opacity-45" : ""}`}
-            >
-              <div className="min-h-0 space-y-4" data-testid={`pruner-provider-tv-people-${provider}`}>
-                <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">
-                  <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">TV</span>
-                </div>
-                <PrunerScopeTab
-                  scope="tv"
-                  variant="provider"
-                  providerSubSection="people"
-                  disabledMode={!hasInstance}
-                  contextOverride={activeCtx}
-                />
-              </div>
-              <div className="min-h-0 space-y-4 lg:border-l lg:border-[var(--mm-border)] lg:pl-8" data-testid={`pruner-provider-movies-people-${provider}`}>
-                <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">
-                  <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">Movies</span>
-                </div>
-                <PrunerScopeTab
-                  scope="movies"
-                  variant="provider"
-                  providerSubSection="people"
-                  disabledMode={!hasInstance}
-                  contextOverride={activeCtx}
-                />
-              </div>
-            </div>
+          <div className={`${!hasInstance ? "opacity-50" : ""}`} data-testid="pruner-provider-people-wrap">
+            {selectedInstance ? (
+              <PrunerProviderPeopleCard provider={provider} instanceId={selectedInstance.id} instance={selectedInstance} disabled={false} />
+            ) : (
+              <PrunerProviderPeopleCard provider={provider} instanceId={0} instance={disabledCtx.instance} disabled />
+            )}
           </div>
         ) : null}
       </div>
@@ -848,7 +714,7 @@ function PrunerGlobalScheduleRow({
           <>
             <FetcherEnableSwitch
               id={`pruner-sched-${provider}-${scope}-en`}
-              label="Scheduled previews"
+              label="Enable scheduled previews"
               enabled={schedEnabled}
               disabled={busy || missing || !canOperate}
               onChange={setSchedEnabled}
@@ -894,7 +760,7 @@ function PrunerGlobalScheduleRow({
                 disabled={busy}
                 onClick={() => void saveRow()}
               >
-                {busy ? "Saving…" : `Save ${pLabel} ${scopeLabel}`}
+                {busy ? "Saving…" : "Save"}
               </button>
             ) : null}
           </>
