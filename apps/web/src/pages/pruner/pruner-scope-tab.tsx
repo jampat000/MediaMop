@@ -6,6 +6,8 @@ import { useMeQuery } from "../../lib/auth/queries";
 import {
   RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
   RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
+  RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED,
+  RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
   RULE_FAMILY_WATCHED_MOVIES_REPORTED,
   RULE_FAMILY_WATCHED_TV_REPORTED,
   fetchPrunerApplyEligibility,
@@ -49,6 +51,12 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
   const [watchedTvMsg, setWatchedTvMsg] = useState<string | null>(null);
   const [watchedMoviesEnabled, setWatchedMoviesEnabled] = useState(false);
   const [watchedMoviesMsg, setWatchedMoviesMsg] = useState<string | null>(null);
+  const [lowRatingEnabled, setLowRatingEnabled] = useState(false);
+  const [lowRatingMax, setLowRatingMax] = useState("4");
+  const [lowRatingMsg, setLowRatingMsg] = useState<string | null>(null);
+  const [unwatchedStaleEnabled, setUnwatchedStaleEnabled] = useState(false);
+  const [unwatchedStaleDays, setUnwatchedStaleDays] = useState(90);
+  const [unwatchedStaleMsg, setUnwatchedStaleMsg] = useState<string | null>(null);
   const [genreText, setGenreText] = useState("");
   const [genreMsg, setGenreMsg] = useState<string | null>(null);
   const [peopleText, setPeopleText] = useState("");
@@ -62,6 +70,8 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
   function ruleFamilyColumnLabel(id: string): string {
     if (id === RULE_FAMILY_WATCHED_TV_REPORTED) return "Watched TV (episodes)";
     if (id === RULE_FAMILY_WATCHED_MOVIES_REPORTED) return "Watched movies";
+    if (id === RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED) return "Watched low-rating movies";
+    if (id === RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED) return "Unwatched stale movies";
     if (id === RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED) return "Stale never-played";
     if (id === RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED) return "Missing primary art";
     return id;
@@ -93,6 +103,10 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
     setStaleNeverDays(scopeRow.never_played_min_age_days);
     setWatchedTvEnabled(scopeRow.watched_tv_reported_enabled);
     setWatchedMoviesEnabled(scopeRow.watched_movies_reported_enabled);
+    setLowRatingEnabled(scopeRow.watched_movie_low_rating_reported_enabled);
+    setLowRatingMax(String(scopeRow.watched_movie_low_rating_max_community_rating));
+    setUnwatchedStaleEnabled(scopeRow.unwatched_movie_stale_reported_enabled);
+    setUnwatchedStaleDays(scopeRow.unwatched_movie_stale_min_age_days);
     setGenreText((scopeRow.preview_include_genres ?? []).join(", "));
     setPeopleText((scopeRow.preview_include_people ?? []).join(", "));
   }, [
@@ -102,6 +116,10 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
     scopeRow?.never_played_min_age_days,
     scopeRow?.watched_tv_reported_enabled,
     scopeRow?.watched_movies_reported_enabled,
+    scopeRow?.watched_movie_low_rating_reported_enabled,
+    scopeRow?.watched_movie_low_rating_max_community_rating,
+    scopeRow?.unwatched_movie_stale_reported_enabled,
+    scopeRow?.unwatched_movie_stale_min_age_days,
     scopeRow?.preview_include_genres,
     scopeRow?.preview_include_people,
     scopeRow?.media_scope,
@@ -223,6 +241,50 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
     }
   }
 
+  async function saveLowRatingMovieSettings() {
+    setLowRatingMsg(null);
+    setErr(null);
+    setBusy(true);
+    try {
+      const csrf_token = await fetchCsrfToken();
+      const cap = Math.max(0, Math.min(10, Number.parseFloat(lowRatingMax) || 4));
+      await patchPrunerScope(instanceId, props.scope, {
+        watched_movie_low_rating_reported_enabled: lowRatingEnabled,
+        watched_movie_low_rating_max_community_rating: cap,
+        csrf_token,
+      });
+      await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+      setLowRatingMsg(
+        "Saved watched low-rating movies rule for this Movies tab (Jellyfin/Emby CommunityRating 0–10 ceiling).",
+      );
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveUnwatchedStaleMovieSettings() {
+    setUnwatchedStaleMsg(null);
+    setErr(null);
+    setBusy(true);
+    try {
+      const csrf_token = await fetchCsrfToken();
+      const d = Math.max(7, Math.min(3650, Number(unwatchedStaleDays) || 90));
+      await patchPrunerScope(instanceId, props.scope, {
+        unwatched_movie_stale_reported_enabled: unwatchedStaleEnabled,
+        unwatched_movie_stale_min_age_days: d,
+        csrf_token,
+      });
+      await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+      setUnwatchedStaleMsg("Saved unwatched stale movies rule for this Movies tab (library DateCreated age).");
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function saveWatchedTvSettings() {
     setWatchedTvMsg(null);
     setErr(null);
@@ -292,6 +354,46 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
       await qc.invalidateQueries({ queryKey: previewRunsQueryKey });
       setPreview(
         `Queued watched movies preview job #${pruner_job_id}. When the worker finishes, the table below updates (this Movies tab and instance only).`,
+      );
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runLowRatingMoviesPreview() {
+    setErr(null);
+    setBusy(true);
+    setPreview(null);
+    try {
+      const { pruner_job_id } = await postPrunerPreview(instanceId, props.scope, {
+        rule_family_id: RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
+      });
+      await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+      await qc.invalidateQueries({ queryKey: previewRunsQueryKey });
+      setPreview(
+        `Queued watched low-rating movies preview job #${pruner_job_id}. When the worker finishes, the table below updates (this Movies tab and instance only).`,
+      );
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runUnwatchedStaleMoviesPreview() {
+    setErr(null);
+    setBusy(true);
+    setPreview(null);
+    try {
+      const { pruner_job_id } = await postPrunerPreview(instanceId, props.scope, {
+        rule_family_id: RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED,
+      });
+      await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+      await qc.invalidateQueries({ queryKey: previewRunsQueryKey });
+      setPreview(
+        `Queued unwatched stale movies preview job #${pruner_job_id}. When the worker finishes, the table below updates (this Movies tab and instance only).`,
       );
     } catch (e) {
       setErr((e as Error).message);
@@ -525,9 +627,10 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
         >
           <p className="font-medium text-amber-100">Other Pruner rules on Plex (this tab)</p>
           <p className="mt-1 text-xs text-[var(--mm-text2)]">
-            Stale never-played, watched-TV, and watched-movies previews are <strong>not</strong> implemented for Plex
-            here — those panels stay on Jellyfin/Emby instances only. Queueing those previews on Plex still records an
-            explicit unsupported outcome for traceability.
+            Stale never-played, watched-TV, watched-movies, watched low-rating movies, and unwatched stale movies
+            previews are <strong>not</strong> implemented for Plex here — those controls stay on Jellyfin/Emby instances
+            only. Queueing unsupported rule previews on Plex still records an explicit unsupported outcome for
+            traceability.
           </p>
         </div>
       ) : null}
@@ -657,59 +760,192 @@ export function PrunerScopeTab(props: { scope: "tv" | "movies" }) {
           </div>
         ) : null}
         {props.scope === "movies" ? (
-          <div
-            className="space-y-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text)]"
-            data-testid="pruner-watched-movies-panel"
-          >
-            <p className="text-sm font-semibold text-[var(--mm-text)]">Watched movies (Jellyfin / Emby, Movies tab only)</p>
-            <p className="text-xs text-[var(--mm-text2)]">
-              Candidates are <strong>movie library items</strong> the server reports as <strong>watched</strong> for the
-              MediaMop library user (same API token as other Pruner rules). TV episodes are not in this pass — use the TV
-              tab for watched TV. This server instance only.
-            </p>
-            <p className="text-xs text-[var(--mm-text2)]">
-              Preview is the dry run; apply uses the frozen list only. Removal goes through the provider library API —
-              MediaMop does not claim whether media files on disk are removed.
-            </p>
-            {canOperate ? (
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={watchedMoviesEnabled}
-                    disabled={busy}
-                    onChange={(e) => setWatchedMoviesEnabled(e.target.checked)}
-                  />
-                  Enable watched movies rule for this Movies tab
-                </label>
-                <button
-                  type="button"
-                  className="rounded-md border border-[var(--mm-border)] px-3 py-1 text-sm font-medium text-[var(--mm-text)] disabled:opacity-50"
-                  disabled={busy}
-                  onClick={() => void saveWatchedMoviesSettings()}
-                >
-                  Save watched movies rule
-                </button>
-                {watchedMoviesMsg ? <p className="text-xs text-green-600">{watchedMoviesMsg}</p> : null}
-                <button
-                  type="button"
-                  className="rounded-md bg-[var(--mm-surface2)] px-3 py-1.5 text-sm font-medium text-[var(--mm-text)] ring-1 ring-[var(--mm-border)] disabled:opacity-50"
-                  disabled={busy || !watchedMoviesEnabled}
-                  title={
-                    !watchedMoviesEnabled ? "Enable the rule and save before queueing a preview for it." : undefined
-                  }
-                  onClick={() => void runWatchedMoviesPreview()}
-                >
-                  Queue preview (watched movies)
-                </button>
-              </div>
-            ) : (
-              <p className="text-xs text-[var(--mm-text2)]">
-                Watched movies rule is <strong>{scopeRow?.watched_movies_reported_enabled ? "on" : "off"}</strong> for this
-                tab. Sign in as an operator to change it.
+          <>
+            <div
+              className="space-y-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text)]"
+              data-testid="pruner-watched-movies-panel"
+            >
+              <p className="text-sm font-semibold text-[var(--mm-text)]">
+                Watched movies (Jellyfin / Emby, Movies tab only)
               </p>
-            )}
-          </div>
+              <p className="text-xs text-[var(--mm-text2)]">
+                Candidates are <strong>movie library items</strong> the server reports as <strong>watched</strong> for the
+                MediaMop library user (same API token as other Pruner rules). TV episodes are not in this pass — use the
+                TV tab for watched TV. This server instance only.
+              </p>
+              <p className="text-xs text-[var(--mm-text2)]">
+                Preview is the dry run; apply uses the frozen list only. Removal goes through the provider library API —
+                MediaMop does not claim whether media files on disk are removed.
+              </p>
+              {canOperate ? (
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={watchedMoviesEnabled}
+                      disabled={busy}
+                      onChange={(e) => setWatchedMoviesEnabled(e.target.checked)}
+                    />
+                    Enable watched movies rule for this Movies tab
+                  </label>
+                  <button
+                    type="button"
+                    className="rounded-md border border-[var(--mm-border)] px-3 py-1 text-sm font-medium text-[var(--mm-text)] disabled:opacity-50"
+                    disabled={busy}
+                    onClick={() => void saveWatchedMoviesSettings()}
+                  >
+                    Save watched movies rule
+                  </button>
+                  {watchedMoviesMsg ? <p className="text-xs text-green-600">{watchedMoviesMsg}</p> : null}
+                  <button
+                    type="button"
+                    className="rounded-md bg-[var(--mm-surface2)] px-3 py-1.5 text-sm font-medium text-[var(--mm-text)] ring-1 ring-[var(--mm-border)] disabled:opacity-50"
+                    disabled={busy || !watchedMoviesEnabled}
+                    title={
+                      !watchedMoviesEnabled ? "Enable the rule and save before queueing a preview for it." : undefined
+                    }
+                    onClick={() => void runWatchedMoviesPreview()}
+                  >
+                    Queue preview (watched movies)
+                  </button>
+                </div>
+              ) : (
+                <p className="text-xs text-[var(--mm-text2)]">
+                  Watched movies rule is <strong>{scopeRow?.watched_movies_reported_enabled ? "on" : "off"}</strong> for
+                  this tab. Sign in as an operator to change it.
+                </p>
+              )}
+            </div>
+            <div
+              className="space-y-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text)]"
+              data-testid="pruner-watched-low-rating-panel"
+            >
+              <p className="text-sm font-semibold text-[var(--mm-text)]">
+                Watched low-rating movies (Jellyfin / Emby, Movies tab only)
+              </p>
+              <p className="text-xs text-[var(--mm-text2)]">
+                Candidates are <strong>watched</strong> movie library items whose Jellyfin/Emby{" "}
+                <strong>CommunityRating</strong> is at or below your ceiling. The server exposes that field on a{" "}
+                <strong>0–10</strong> scale for this slice — MediaMop does not remap it to stars or another scale. Items
+                with no rating are skipped. Genre and people filters narrow previews only (AND when both are set).
+              </p>
+              {canOperate ? (
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={lowRatingEnabled}
+                      disabled={busy}
+                      onChange={(e) => setLowRatingEnabled(e.target.checked)}
+                    />
+                    Enable watched low-rating movies rule for this Movies tab
+                  </label>
+                  <label className="flex flex-wrap items-center gap-2 text-sm text-[var(--mm-text2)]">
+                    Max CommunityRating (0–10 inclusive)
+                    <input
+                      type="number"
+                      min={0}
+                      max={10}
+                      step="0.1"
+                      className="w-24 rounded border border-[var(--mm-border)] bg-[var(--mm-surface2)] px-2 py-1 text-sm text-[var(--mm-text)]"
+                      value={lowRatingMax}
+                      disabled={busy}
+                      onChange={(e) => setLowRatingMax(e.target.value)}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="rounded-md border border-[var(--mm-border)] px-3 py-1 text-sm font-medium text-[var(--mm-text)] disabled:opacity-50"
+                    disabled={busy}
+                    onClick={() => void saveLowRatingMovieSettings()}
+                  >
+                    Save low-rating rule
+                  </button>
+                  {lowRatingMsg ? <p className="text-xs text-green-600">{lowRatingMsg}</p> : null}
+                  <button
+                    type="button"
+                    className="rounded-md bg-[var(--mm-surface2)] px-3 py-1.5 text-sm font-medium text-[var(--mm-text)] ring-1 ring-[var(--mm-border)] disabled:opacity-50"
+                    disabled={busy || !lowRatingEnabled}
+                    title={
+                      !lowRatingEnabled ? "Enable the rule and save before queueing a preview for it." : undefined
+                    }
+                    onClick={() => void runLowRatingMoviesPreview()}
+                  >
+                    Queue preview (watched low-rating movies)
+                  </button>
+                </div>
+              ) : (
+                <p className="text-xs text-[var(--mm-text2)]">
+                  Watched low-rating rule is{" "}
+                  <strong>{scopeRow?.watched_movie_low_rating_reported_enabled ? "on" : "off"}</strong> (ceiling{" "}
+                  {scopeRow?.watched_movie_low_rating_max_community_rating}). Sign in as an operator to change it.
+                </p>
+              )}
+            </div>
+            <div
+              className="space-y-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text)]"
+              data-testid="pruner-unwatched-stale-panel"
+            >
+              <p className="text-sm font-semibold text-[var(--mm-text)]">
+                Unwatched stale movies (Jellyfin / Emby, Movies tab only)
+              </p>
+              <p className="text-xs text-[var(--mm-text2)]">
+                Candidates are <strong>unwatched</strong> movie items (user play state for this API token) whose library{" "}
+                <strong>DateCreated</strong> is older than the minimum age. This is not “not recently watched” — only
+                items with no watched/play state. Genre and people filters narrow previews only.
+              </p>
+              {canOperate ? (
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={unwatchedStaleEnabled}
+                      disabled={busy}
+                      onChange={(e) => setUnwatchedStaleEnabled(e.target.checked)}
+                    />
+                    Enable unwatched stale movies rule for this Movies tab
+                  </label>
+                  <label className="flex flex-wrap items-center gap-2 text-sm text-[var(--mm-text2)]">
+                    Minimum age (days, 7–3650)
+                    <input
+                      type="number"
+                      min={7}
+                      max={3650}
+                      className="w-24 rounded border border-[var(--mm-border)] bg-[var(--mm-surface2)] px-2 py-1 text-sm text-[var(--mm-text)]"
+                      value={unwatchedStaleDays}
+                      disabled={busy}
+                      onChange={(e) => setUnwatchedStaleDays(parseInt(e.target.value, 10) || 90)}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="rounded-md border border-[var(--mm-border)] px-3 py-1 text-sm font-medium text-[var(--mm-text)] disabled:opacity-50"
+                    disabled={busy}
+                    onClick={() => void saveUnwatchedStaleMovieSettings()}
+                  >
+                    Save unwatched stale rule
+                  </button>
+                  {unwatchedStaleMsg ? <p className="text-xs text-green-600">{unwatchedStaleMsg}</p> : null}
+                  <button
+                    type="button"
+                    className="rounded-md bg-[var(--mm-surface2)] px-3 py-1.5 text-sm font-medium text-[var(--mm-text)] ring-1 ring-[var(--mm-border)] disabled:opacity-50"
+                    disabled={busy || !unwatchedStaleEnabled}
+                    title={
+                      !unwatchedStaleEnabled ? "Enable the rule and save before queueing a preview for it." : undefined
+                    }
+                    onClick={() => void runUnwatchedStaleMoviesPreview()}
+                  >
+                    Queue preview (unwatched stale movies)
+                  </button>
+                </div>
+              ) : (
+                <p className="text-xs text-[var(--mm-text2)]">
+                  Unwatched stale rule is <strong>{scopeRow?.unwatched_movie_stale_reported_enabled ? "on" : "off"}</strong>{" "}
+                  (min age {scopeRow?.unwatched_movie_stale_min_age_days} days). Sign in as an operator to change it.
+                </p>
+              )}
+            </div>
+          </>
         ) : null}
         </Fragment>
       ) : null}

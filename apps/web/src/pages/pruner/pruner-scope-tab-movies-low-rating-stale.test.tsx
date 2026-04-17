@@ -6,14 +6,17 @@ import { qk } from "../../lib/auth/queries";
 import * as prunerApi from "../../lib/pruner/api";
 import type { UserPublic } from "../../lib/api/types";
 import type { PrunerServerInstance } from "../../lib/pruner/api";
-import { RULE_FAMILY_WATCHED_MOVIES_REPORTED } from "../../lib/pruner/api";
+import {
+  RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED,
+  RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
+} from "../../lib/pruner/api";
 import { PrunerInstanceShell } from "./pruner-instance-shell";
 import { PrunerScopeTab } from "./pruner-scope-tab";
 
 const operator: UserPublic = { id: 1, username: "alice", role: "admin" };
 
 const jellyfinMovies: PrunerServerInstance = {
-  id: 22,
+  id: 44,
   provider: "jellyfin",
   display_name: "JF",
   base_url: "http://jf:8096",
@@ -51,10 +54,10 @@ const jellyfinMovies: PrunerServerInstance = {
       never_played_stale_reported_enabled: false,
       never_played_min_age_days: 90,
       watched_tv_reported_enabled: false,
-      watched_movies_reported_enabled: true,
-      watched_movie_low_rating_reported_enabled: false,
+      watched_movies_reported_enabled: false,
+      watched_movie_low_rating_reported_enabled: true,
       watched_movie_low_rating_max_community_rating: 4,
-      unwatched_movie_stale_reported_enabled: false,
+      unwatched_movie_stale_reported_enabled: true,
       unwatched_movie_stale_min_age_days: 90,
       preview_max_items: 500,
       preview_include_genres: [],
@@ -71,15 +74,15 @@ const jellyfinMovies: PrunerServerInstance = {
   ],
 };
 
-describe("PrunerScopeTab Movies / watched movies", () => {
-  it("shows Jellyfin/Emby watched-movies panel and queues preview with watched_movies_reported", async () => {
+describe("PrunerScopeTab Movies / low-rating and unwatched stale", () => {
+  it("queues previews with watched_movie_low_rating_reported and unwatched_movie_stale_reported", async () => {
     const spyRuns = vi.spyOn(prunerApi, "fetchPrunerPreviewRuns").mockResolvedValue([]);
     const spyInst = vi.spyOn(prunerApi, "fetchPrunerInstance").mockResolvedValue(jellyfinMovies);
-    const spyPreview = vi.spyOn(prunerApi, "postPrunerPreview").mockResolvedValue({ pruner_job_id: 901 });
+    const spyPreview = vi.spyOn(prunerApi, "postPrunerPreview").mockResolvedValue({ pruner_job_id: 902 });
     try {
       const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
       qc.setQueryData(qk.me, operator);
-      qc.setQueryData(["pruner", "instances", 22], jellyfinMovies);
+      qc.setQueryData(["pruner", "instances", 44], jellyfinMovies);
 
       const router = createMemoryRouter(
         [
@@ -89,7 +92,7 @@ describe("PrunerScopeTab Movies / watched movies", () => {
             children: [{ path: "movies", element: <PrunerScopeTab scope="movies" /> }],
           },
         ],
-        { initialEntries: ["/instances/22/movies"] },
+        { initialEntries: ["/instances/44/movies"] },
       );
 
       render(
@@ -98,11 +101,17 @@ describe("PrunerScopeTab Movies / watched movies", () => {
         </QueryClientProvider>,
       );
 
-      await waitFor(() => expect(screen.getByTestId("pruner-watched-movies-panel")).toBeInTheDocument());
-      fireEvent.click(screen.getByRole("button", { name: /queue preview \(watched movies\)/i }));
+      await waitFor(() => expect(screen.getByTestId("pruner-watched-low-rating-panel")).toBeInTheDocument());
+      fireEvent.click(screen.getByRole("button", { name: /queue preview \(watched low-rating movies\)/i }));
       await waitFor(() => {
-        expect(spyPreview).toHaveBeenCalledWith(22, "movies", {
-          rule_family_id: RULE_FAMILY_WATCHED_MOVIES_REPORTED,
+        expect(spyPreview).toHaveBeenCalledWith(44, "movies", {
+          rule_family_id: RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
+        });
+      });
+      fireEvent.click(screen.getByRole("button", { name: /queue preview \(unwatched stale movies\)/i }));
+      await waitFor(() => {
+        expect(spyPreview).toHaveBeenCalledWith(44, "movies", {
+          rule_family_id: RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED,
         });
       });
     } finally {

@@ -88,6 +88,8 @@ def test_preview_payload_jellyfin_missing_primary_respects_people_filter() -> No
     def fake_get_json(url: str, headers: dict[str, str]) -> tuple[int, dict]:  # noqa: ARG001
         q = parse_qs(urlparse(url).query)
         assert "Fields" in q, "People filters must request explicit Items Fields"
+        fields_val = q["Fields"][0]
+        assert "People" in fields_val and "UserData" in fields_val
         si = int(q.get("StartIndex", ["0"])[0])
         if si > 0:
             return 200, {"Items": [], "TotalRecordCount": 2}
@@ -134,6 +136,8 @@ def test_preview_payload_jellyfin_missing_primary_genre_and_people_and_semantics
     def fake_get_json(url: str, headers: dict[str, str]) -> tuple[int, dict]:  # noqa: ARG001
         q = parse_qs(urlparse(url).query)
         assert "Fields" in q
+        fields_val = q["Fields"][0]
+        assert "People" in fields_val and "UserData" in fields_val
         si = int(q.get("StartIndex", ["0"])[0])
         if si > 0:
             return 200, {"Items": [], "TotalRecordCount": 2}

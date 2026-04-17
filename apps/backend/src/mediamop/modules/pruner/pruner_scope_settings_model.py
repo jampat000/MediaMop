@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func, text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from mediamop.core.db import Base
@@ -61,6 +61,26 @@ class PrunerScopeSettings(Base):
         Text,
         nullable=False,
         server_default=text("'[]'"),
+    )
+    watched_movie_low_rating_reported_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default=text("0"),
+    )
+    watched_movie_low_rating_max_community_rating: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+        server_default=text("4.0"),
+    )
+    unwatched_movie_stale_reported_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default=text("0"),
+    )
+    unwatched_movie_stale_min_age_days: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        server_default=text("90"),
     )
     last_preview_run_id: Mapped[int | None] = mapped_column(
         Integer,

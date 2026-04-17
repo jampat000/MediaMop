@@ -13,6 +13,8 @@ from mediamop.modules.pruner.pruner_constants import (
     MEDIA_SCOPE_TV,
     RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
     RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
+    RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED,
+    RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
     RULE_FAMILY_WATCHED_MOVIES_REPORTED,
     RULE_FAMILY_WATCHED_TV_REPORTED,
 )
@@ -27,11 +29,36 @@ from mediamop.modules.pruner.pruner_people_filters import (
 from mediamop.modules.pruner.pruner_plex_missing_thumb_candidates import list_plex_missing_thumb_candidates
 from mediamop.modules.pruner.pruner_http import http_get_json, http_get_text, join_base_path
 
-# Jellyfin/Emby: when ``Fields`` is sent, only listed fields are returned — include everything Pruner reads here.
-_JF_EMBY_ITEMS_FIELDS_FOR_PEOPLE_FILTER = (
-    "Genres,People,ImageTags,PrimaryImageItemId,UserData,DateCreated,"
-    "SeriesName,ParentIndexNumber,IndexNumber,ProductionYear,Name,Id"
-)
+def jf_emby_pruner_preview_items_fields_csv() -> str:
+    """Comma-separated Jellyfin/Emby ``Fields`` for **all** Pruner preview ``Items`` queries in this module.
+
+    Jellyfin and Emby only return top-level keys listed in ``Fields``. **People filters** require ``People`` on each
+    row; **watched low-rating** requires ``CommunityRating`` (0–10 on that field for Jellyfin/Emby). Any new preview
+    collector that reads additional Item properties **must** extend this union — do not add ad hoc ``Fields`` strings
+    per call site or people/rating filters will silently see empty data.
+    """
+
+    return ",".join(
+        (
+            "CommunityRating",
+            "DateCreated",
+            "Genres",
+            "Id",
+            "ImageTags",
+            "IndexNumber",
+            "Name",
+            "ParentIndexNumber",
+            "People",
+            "PrimaryImageItemId",
+            "ProductionYear",
+            "SeriesName",
+            "UserData",
+        ),
+    )
+
+
+def _jf_emby_items_params_attach_preview_fields(params: dict[str, str]) -> None:
+    params["Fields"] = jf_emby_pruner_preview_items_fields_csv()
 
 
 def _emby_style_headers(api_key: str) -> dict[str, str]:
@@ -100,7 +127,6 @@ def _items_page(
     start_index: int,
     page_limit: int,
     use_has_primary_image: bool,
-    preview_include_people: Sequence[str] | None = None,
 ) -> dict[str, Any] | None:
     params: dict[str, str] = {
         "Recursive": "true",
@@ -110,8 +136,7 @@ def _items_page(
     }
     if use_has_primary_image:
         params["HasPrimaryImage"] = "false"
-    if preview_include_people:
-        params["Fields"] = _JF_EMBY_ITEMS_FIELDS_FOR_PEOPLE_FILTER
+    _jf_emby_items_params_attach_preview_fields(params)
     return _items_query(base_url=base_url, api_key=api_key, params=params)
 
 
@@ -162,7 +187,6 @@ def list_missing_primary_candidates(
                 start_index=start,
                 page_limit=page,
                 use_has_primary_image=use_filter,
-                preview_include_people=pf,
             )
         except urllib.error.HTTPError as e:
             if e.code == 400 and use_filter:
@@ -268,6 +292,17 @@ def _item_watched_by_userdata(item: dict[str, Any]) -> bool:
     return False
 
 
+def jellyfin_emby_item_community_rating(item: dict[str, Any]) -> float | None:
+    """Jellyfin/Emby ``CommunityRating`` on Items (documented 0–10 scale for this field — not remapped)."""
+
+    r = item.get("CommunityRating")
+    if isinstance(r, bool):
+        return None
+    if isinstance(r, (int, float)):
+        return float(r)
+    return None
+
+
 def list_watched_tv_episode_candidates(
     *,
     base_url: str,
@@ -305,8 +340,7 @@ def list_watched_tv_episode_candidates(
         }
         if use_is_played_filter:
             params["IsPlayed"] = "true"
-        if pf:
-            params["Fields"] = _JF_EMBY_ITEMS_FIELDS_FOR_PEOPLE_FILTER
+        _jf_emby_items_params_attach_preview_fields(params)
         try:
             data = _items_query(base_url=base_url, api_key=api_key, params=params)
         except urllib.error.HTTPError as e:
@@ -400,8 +434,7 @@ def list_watched_movie_candidates(
         }
         if use_is_played_filter:
             params["IsPlayed"] = "true"
-        if pf:
-            params["Fields"] = _JF_EMBY_ITEMS_FIELDS_FOR_PEOPLE_FILTER
+        _jf_emby_items_params_attach_preview_fields(params)
         try:
             data = _items_query(base_url=base_url, api_key=api_key, params=params)
         except urllib.error.HTTPError as e:
@@ -437,6 +470,211 @@ def list_watched_movie_candidates(
                     "item_id": iid,
                     "title": it.get("Name") or "",
                     "year": it.get("ProductionYear"),
+                },
+            )
+            if len(candidates) >= max_items:
+                break
+
+        fetched = len(items)
+        start += fetched
+        if fetched == 0:
+            break
+        if len(candidates) >= max_items:
+            if total_hits is not None and start < total_hits:
+                truncated = True
+            elif fetched >= page:
+                truncated = True
+            break
+
+    return candidates[:max_items], truncated
+
+
+def list_watched_movie_low_rating_candidates(
+    *,
+    base_url: str,
+    api_key: str,
+    media_scope: str,
+    max_items: int,
+    community_rating_max_inclusive: float,
+    preview_include_genres: Sequence[str] | None = None,
+    preview_include_people: Sequence[str] | None = None,
+) -> tuple[list[dict[str, Any]], bool]:
+    """Watched **movie** items with Jellyfin/Emby ``CommunityRating`` at or below ``community_rating_max_inclusive``.
+
+    Uses the same watched signal as ``list_watched_movie_candidates`` (``UserData`` / ``IsPlayed``). The rating gate
+    uses the provider's ``CommunityRating`` field only (0–10 on that field in this slice — not remapped to another
+    scale). Items with no numeric ``CommunityRating`` are skipped.
+
+    **Movies scope only.**
+    """
+
+    if media_scope != MEDIA_SCOPE_MOVIES:
+        msg = f"watched_movie_low_rating_reported requires media_scope={MEDIA_SCOPE_MOVIES!r}, got {media_scope!r}"
+        raise ValueError(msg)
+
+    cap = float(community_rating_max_inclusive)
+    include_types = "Movie"
+    candidates: list[dict[str, Any]] = []
+    start = 0
+    page = min(100, max(1, max_items * 3))
+    use_is_played_filter = True
+    total_hits: int | None = None
+    truncated = False
+    gf = list(preview_include_genres or [])
+    pf = list(preview_include_people or [])
+
+    while len(candidates) < max_items:
+        params: dict[str, str] = {
+            "Recursive": "true",
+            "IncludeItemTypes": include_types,
+            "StartIndex": str(start),
+            "Limit": str(page),
+        }
+        if use_is_played_filter:
+            params["IsPlayed"] = "true"
+        _jf_emby_items_params_attach_preview_fields(params)
+        try:
+            data = _items_query(base_url=base_url, api_key=api_key, params=params)
+        except urllib.error.HTTPError as e:
+            if e.code == 400 and use_is_played_filter:
+                use_is_played_filter = False
+                start = 0
+                candidates.clear()
+                total_hits = None
+                continue
+            raise
+        assert data is not None
+        items = data.get("Items")
+        if not isinstance(items, list):
+            break
+        if "TotalRecordCount" in data and isinstance(data["TotalRecordCount"], int):
+            total_hits = int(data["TotalRecordCount"])
+
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            if not use_is_played_filter and not _item_watched_by_userdata(it):
+                continue
+            if not item_matches_genre_include_filter(jellyfin_emby_item_genres(it), gf):
+                continue
+            if not item_matches_people_include_filter(jellyfin_emby_item_people_names(it), pf):
+                continue
+            rating = jellyfin_emby_item_community_rating(it)
+            if rating is None or rating > cap:
+                continue
+            iid = str(it.get("Id", "")).strip()
+            if not iid:
+                continue
+            candidates.append(
+                {
+                    "granularity": "movie_item",
+                    "item_id": iid,
+                    "title": it.get("Name") or "",
+                    "year": it.get("ProductionYear"),
+                    "community_rating": rating,
+                    "watched_movie_low_rating_max_community_rating": cap,
+                },
+            )
+            if len(candidates) >= max_items:
+                break
+
+        fetched = len(items)
+        start += fetched
+        if fetched == 0:
+            break
+        if len(candidates) >= max_items:
+            if total_hits is not None and start < total_hits:
+                truncated = True
+            elif fetched >= page:
+                truncated = True
+            break
+
+    return candidates[:max_items], truncated
+
+
+def list_unwatched_movie_stale_candidates(
+    *,
+    base_url: str,
+    api_key: str,
+    media_scope: str,
+    max_items: int,
+    min_age_days: int,
+    preview_include_genres: Sequence[str] | None = None,
+    preview_include_people: Sequence[str] | None = None,
+) -> tuple[list[dict[str, Any]], bool]:
+    """Unwatched **movie** items whose library ``DateCreated`` is older than ``min_age_days`` (UTC).
+
+    Same unplayed + ``DateCreated`` semantics as ``list_never_played_stale_candidates`` for movies, but as its own
+    rule family with a separate per-scope age setting.
+
+    **Movies scope only.**
+    """
+
+    if media_scope != MEDIA_SCOPE_MOVIES:
+        msg = f"unwatched_movie_stale_reported requires media_scope={MEDIA_SCOPE_MOVIES!r}, got {media_scope!r}"
+        raise ValueError(msg)
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=max(1, int(min_age_days)))
+    include_types = "Movie"
+    candidates: list[dict[str, Any]] = []
+    start = 0
+    page = min(100, max(1, max_items * 3))
+    use_is_played_filter = True
+    total_hits: int | None = None
+    truncated = False
+    gf = list(preview_include_genres or [])
+    pf = list(preview_include_people or [])
+
+    while len(candidates) < max_items:
+        params: dict[str, str] = {
+            "Recursive": "true",
+            "IncludeItemTypes": include_types,
+            "StartIndex": str(start),
+            "Limit": str(page),
+        }
+        if use_is_played_filter:
+            params["IsPlayed"] = "false"
+        _jf_emby_items_params_attach_preview_fields(params)
+        try:
+            data = _items_query(base_url=base_url, api_key=api_key, params=params)
+        except urllib.error.HTTPError as e:
+            if e.code == 400 and use_is_played_filter:
+                use_is_played_filter = False
+                start = 0
+                candidates.clear()
+                total_hits = None
+                continue
+            raise
+        assert data is not None
+        items = data.get("Items")
+        if not isinstance(items, list):
+            break
+        if "TotalRecordCount" in data and isinstance(data["TotalRecordCount"], int):
+            total_hits = int(data["TotalRecordCount"])
+
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            if not _item_unplayed_by_userdata(it):
+                continue
+            if not item_matches_genre_include_filter(jellyfin_emby_item_genres(it), gf):
+                continue
+            if not item_matches_people_include_filter(jellyfin_emby_item_people_names(it), pf):
+                continue
+            created = _parse_item_date_created(it.get("DateCreated"))
+            if created is None or created > cutoff:
+                continue
+            iid = str(it.get("Id", "")).strip()
+            if not iid:
+                continue
+            candidates.append(
+                {
+                    "granularity": "movie_item",
+                    "item_id": iid,
+                    "title": it.get("Name") or "",
+                    "year": it.get("ProductionYear"),
+                    "date_created": it.get("DateCreated"),
+                    "unwatched_movie_stale_min_age_days": int(min_age_days),
                 },
             )
             if len(candidates) >= max_items:
@@ -500,8 +738,7 @@ def list_never_played_stale_candidates(
         }
         if use_is_played_filter:
             params["IsPlayed"] = "false"
-        if pf:
-            params["Fields"] = _JF_EMBY_ITEMS_FIELDS_FOR_PEOPLE_FILTER
+        _jf_emby_items_params_attach_preview_fields(params)
         try:
             data = _items_query(base_url=base_url, api_key=api_key, params=params)
         except urllib.error.HTTPError as e:
@@ -604,6 +841,20 @@ def plex_watched_movies_preview_unsupported_detail() -> str:
     )
 
 
+def plex_watched_movie_low_rating_preview_unsupported_detail() -> str:
+    return (
+        "Plex: watched low-rating movie preview is not implemented on MediaMop in this release. "
+        "Jellyfin/Emby use Items ``UserData`` for watched state and ``CommunityRating`` (0–10 on that field only)."
+    )
+
+
+def plex_unwatched_movie_stale_preview_unsupported_detail() -> str:
+    return (
+        "Plex: unwatched stale movie preview is not implemented on MediaMop in this release. "
+        "Jellyfin/Emby use the same user-scoped unplayed checks and library ``DateCreated`` as other Pruner movie rules."
+    )
+
+
 def preview_payload_json(
     *,
     provider: str,
@@ -615,6 +866,8 @@ def preview_payload_json(
     never_played_min_age_days: int | None = None,
     preview_include_genres: Sequence[str] | None = None,
     preview_include_people: Sequence[str] | None = None,
+    watched_movie_low_rating_max_community_rating: float | None = None,
+    unwatched_movie_stale_min_age_days: int | None = None,
 ) -> tuple[str, str, list[dict[str, Any]], bool]:
     """Returns ``(outcome, unsupported_detail_or_empty, candidates, truncated)``."""
 
@@ -623,6 +876,10 @@ def preview_payload_json(
             return "unsupported", plex_watched_tv_preview_unsupported_detail(), [], False
         if rule_family_id == RULE_FAMILY_WATCHED_MOVIES_REPORTED:
             return "unsupported", plex_watched_movies_preview_unsupported_detail(), [], False
+        if rule_family_id == RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED:
+            return "unsupported", plex_watched_movie_low_rating_preview_unsupported_detail(), [], False
+        if rule_family_id == RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED:
+            return "unsupported", plex_unwatched_movie_stale_preview_unsupported_detail(), [], False
         if rule_family_id == RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED:
             return "unsupported", plex_never_played_preview_unsupported_detail(), [], False
         if rule_family_id == RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
@@ -698,6 +955,48 @@ def preview_payload_json(
             media_scope=media_scope,
             max_items=max_items,
             min_age_days=int(never_played_min_age_days),
+            preview_include_genres=preview_include_genres,
+            preview_include_people=preview_include_people,
+        )
+        return "success", "", cands, trunc
+    if rule_family_id == RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED:
+        if media_scope != MEDIA_SCOPE_MOVIES:
+            return (
+                "unsupported",
+                "watched_movie_low_rating_reported applies to the Movies tab only (TV is out of scope for this rule pass).",
+                [],
+                False,
+            )
+        if watched_movie_low_rating_max_community_rating is None:
+            msg = "watched_movie_low_rating_max_community_rating is required for watched_movie_low_rating_reported preview"
+            raise ValueError(msg)
+        cands, trunc = list_watched_movie_low_rating_candidates(
+            base_url=base_url,
+            api_key=api_key,
+            media_scope=media_scope,
+            max_items=max_items,
+            community_rating_max_inclusive=float(watched_movie_low_rating_max_community_rating),
+            preview_include_genres=preview_include_genres,
+            preview_include_people=preview_include_people,
+        )
+        return "success", "", cands, trunc
+    if rule_family_id == RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED:
+        if media_scope != MEDIA_SCOPE_MOVIES:
+            return (
+                "unsupported",
+                "unwatched_movie_stale_reported applies to the Movies tab only (TV is out of scope for this rule pass).",
+                [],
+                False,
+            )
+        if unwatched_movie_stale_min_age_days is None:
+            msg = "unwatched_movie_stale_min_age_days is required for unwatched_movie_stale_reported preview"
+            raise ValueError(msg)
+        cands, trunc = list_unwatched_movie_stale_candidates(
+            base_url=base_url,
+            api_key=api_key,
+            media_scope=media_scope,
+            max_items=max_items,
+            min_age_days=int(unwatched_movie_stale_min_age_days),
             preview_include_genres=preview_include_genres,
             preview_include_people=preview_include_people,
         )

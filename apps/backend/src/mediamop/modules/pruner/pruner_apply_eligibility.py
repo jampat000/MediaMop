@@ -11,6 +11,8 @@ from mediamop.modules.pruner.pruner_constants import (
     MEDIA_SCOPE_TV,
     RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
     RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
+    RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED,
+    RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
     RULE_FAMILY_WATCHED_MOVIES_REPORTED,
     RULE_FAMILY_WATCHED_TV_REPORTED,
     pruner_apply_operator_label,
@@ -25,6 +27,8 @@ _APPLY_SUPPORTED_RULES = frozenset(
         RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
         RULE_FAMILY_WATCHED_TV_REPORTED,
         RULE_FAMILY_WATCHED_MOVIES_REPORTED,
+        RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
+        RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED,
     },
 )
 
@@ -103,6 +107,12 @@ def compute_apply_eligibility(
     if rid == RULE_FAMILY_WATCHED_MOVIES_REPORTED and str(run.media_scope) != MEDIA_SCOPE_MOVIES:
         reasons.append("Watched movies apply is only defined for Movies preview snapshots.")
 
+    if rid == RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED and str(run.media_scope) != MEDIA_SCOPE_MOVIES:
+        reasons.append("Watched low-rating movies apply is only defined for Movies preview snapshots.")
+
+    if rid == RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED and str(run.media_scope) != MEDIA_SCOPE_MOVIES:
+        reasons.append("Unwatched stale movies apply is only defined for Movies preview snapshots.")
+
     if rid not in _APPLY_SUPPORTED_RULES:
         reasons.append("This preview snapshot's rule family is not supported for apply in this release.")
     else:
@@ -124,6 +134,14 @@ def compute_apply_eligibility(
         elif rid == RULE_FAMILY_WATCHED_MOVIES_REPORTED and not bool(sc.watched_movies_reported_enabled):
             reasons.append(
                 f"{apply_label} is not enabled for this scope (watched movies rule toggle).",
+            )
+        elif rid == RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED and not bool(sc.watched_movie_low_rating_reported_enabled):
+            reasons.append(
+                f"{apply_label} is not enabled for this scope (watched low-rating movies rule toggle).",
+            )
+        elif rid == RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED and not bool(sc.unwatched_movie_stale_reported_enabled):
+            reasons.append(
+                f"{apply_label} is not enabled for this scope (unwatched stale movies rule toggle).",
             )
 
     if str(run.outcome) != "success":

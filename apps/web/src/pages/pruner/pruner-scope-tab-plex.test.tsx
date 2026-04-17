@@ -32,6 +32,10 @@ const plexInstance: PrunerServerInstance = {
       never_played_min_age_days: 90,
       watched_tv_reported_enabled: false,
       watched_movies_reported_enabled: false,
+      watched_movie_low_rating_reported_enabled: false,
+      watched_movie_low_rating_max_community_rating: 4,
+      unwatched_movie_stale_reported_enabled: false,
+      unwatched_movie_stale_min_age_days: 90,
       preview_max_items: 500,
       preview_include_genres: [],
       preview_include_people: [],
@@ -51,6 +55,10 @@ const plexInstance: PrunerServerInstance = {
       never_played_min_age_days: 90,
       watched_tv_reported_enabled: false,
       watched_movies_reported_enabled: false,
+      watched_movie_low_rating_reported_enabled: false,
+      watched_movie_low_rating_max_community_rating: 4,
+      unwatched_movie_stale_reported_enabled: false,
+      unwatched_movie_stale_min_age_days: 90,
       preview_max_items: 500,
       preview_include_genres: [],
       preview_include_people: [],
@@ -98,7 +106,9 @@ describe("PrunerScopeTab (Plex)", () => {
       expect(screen.queryByTestId("pruner-plex-live-surface")).not.toBeInTheDocument();
       expect(screen.getByTestId("pruner-plex-genre-empty-preview-note")).toBeInTheDocument();
       expect(screen.getByTestId("pruner-plex-genre-empty-preview-note").textContent).toMatch(/zero rows/i);
-      expect(screen.getByTestId("pruner-plex-other-rules-note").textContent).toMatch(/never-played|watched/i);
+      expect(screen.getByTestId("pruner-plex-other-rules-note").textContent).toMatch(
+        /never-played|watched|low-rating|unwatched stale/i,
+      );
       const btn = screen.getByRole("button", { name: /queue preview \(missing primary art\)/i });
       expect(btn).not.toBeDisabled();
     } finally {

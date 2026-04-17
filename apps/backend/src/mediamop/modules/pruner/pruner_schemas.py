@@ -10,6 +10,8 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from mediamop.modules.pruner.pruner_constants import (
     MEDIA_SCOPE_MOVIES,
     MEDIA_SCOPE_TV,
+    RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED,
+    RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
     RULE_FAMILY_WATCHED_MOVIES_REPORTED,
     RULE_FAMILY_WATCHED_TV_REPORTED,
 )
@@ -26,6 +28,10 @@ class PrunerScopeSummaryOut(BaseModel):
     never_played_min_age_days: int = 90
     watched_tv_reported_enabled: bool = False
     watched_movies_reported_enabled: bool = False
+    watched_movie_low_rating_reported_enabled: bool = False
+    watched_movie_low_rating_max_community_rating: float = 4.0
+    unwatched_movie_stale_reported_enabled: bool = False
+    unwatched_movie_stale_min_age_days: int = 90
     preview_max_items: int
     preview_include_genres: list[str] = Field(
         default_factory=list,
@@ -88,6 +94,10 @@ class PrunerScopePatchIn(BaseModel):
     never_played_min_age_days: int | None = Field(None, ge=7, le=3650)
     watched_tv_reported_enabled: bool | None = None
     watched_movies_reported_enabled: bool | None = None
+    watched_movie_low_rating_reported_enabled: bool | None = None
+    watched_movie_low_rating_max_community_rating: float | None = Field(None, ge=0, le=10)
+    unwatched_movie_stale_reported_enabled: bool | None = None
+    unwatched_movie_stale_min_age_days: int | None = Field(None, ge=7, le=3650)
     preview_max_items: int | None = Field(None, ge=1, le=5000)
     preview_include_genres: list[str] | None = Field(
         default=None,
@@ -130,6 +140,8 @@ PrunerPreviewRuleFamilyWire = Literal[
     "never_played_stale_reported",
     "watched_tv_reported",
     "watched_movies_reported",
+    "watched_movie_low_rating_reported",
+    "unwatched_movie_stale_reported",
 ]
 
 
@@ -145,6 +157,18 @@ class PrunerPreviewEnqueueIn(BaseModel):
             raise ValueError(msg)
         if self.rule_family_id == RULE_FAMILY_WATCHED_MOVIES_REPORTED and self.media_scope != MEDIA_SCOPE_MOVIES:
             msg = "watched_movies_reported preview is only available for the Movies tab (media_scope must be movies)."
+            raise ValueError(msg)
+        if self.rule_family_id == RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED and self.media_scope != MEDIA_SCOPE_MOVIES:
+            msg = (
+                "watched_movie_low_rating_reported preview is only available for the Movies tab "
+                "(media_scope must be movies)."
+            )
+            raise ValueError(msg)
+        if self.rule_family_id == RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED and self.media_scope != MEDIA_SCOPE_MOVIES:
+            msg = (
+                "unwatched_movie_stale_reported preview is only available for the Movies tab "
+                "(media_scope must be movies)."
+            )
             raise ValueError(msg)
         return self
 
@@ -184,6 +208,10 @@ class PrunerScopePatchHttpIn(PrunerScopePatchIn):
             and self.never_played_min_age_days is None
             and self.watched_tv_reported_enabled is None
             and self.watched_movies_reported_enabled is None
+            and self.watched_movie_low_rating_reported_enabled is None
+            and self.watched_movie_low_rating_max_community_rating is None
+            and self.unwatched_movie_stale_reported_enabled is None
+            and self.unwatched_movie_stale_min_age_days is None
             and self.preview_max_items is None
             and self.preview_include_genres is None
             and self.preview_include_people is None
@@ -193,6 +221,8 @@ class PrunerScopePatchHttpIn(PrunerScopePatchIn):
             msg = (
                 "At least one of missing_primary_media_reported_enabled, never_played_stale_reported_enabled, "
                 "never_played_min_age_days, watched_tv_reported_enabled, watched_movies_reported_enabled, "
+                "watched_movie_low_rating_reported_enabled, watched_movie_low_rating_max_community_rating, "
+                "unwatched_movie_stale_reported_enabled, unwatched_movie_stale_min_age_days, "
                 "preview_max_items, preview_include_genres, preview_include_people, scheduled_preview_enabled, "
                 "or scheduled_preview_interval_seconds must be provided."
             )

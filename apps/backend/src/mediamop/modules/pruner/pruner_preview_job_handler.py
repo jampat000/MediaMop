@@ -14,9 +14,12 @@ from mediamop.modules.pruner.pruner_constants import (
     MEDIA_SCOPE_MOVIES,
     RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
     RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
+    RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED,
+    RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
     RULE_FAMILY_WATCHED_MOVIES_REPORTED,
     RULE_FAMILY_WATCHED_TV_REPORTED,
     clamp_never_played_min_age_days,
+    clamp_watched_movie_low_rating_max_community_rating,
     pruner_preview_rule_families_jf_emby,
 )
 from mediamop.modules.pruner.pruner_credentials_envelope import decrypt_and_parse_envelope
@@ -69,6 +72,12 @@ def make_pruner_candidate_removal_preview_handler(
         if rule_family_id == RULE_FAMILY_WATCHED_MOVIES_REPORTED and scope != MEDIA_SCOPE_MOVIES:
             msg = "watched_movies_reported preview requires media_scope=movies"
             raise ValueError(msg)
+        if rule_family_id in (
+            RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
+            RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED,
+        ) and scope != MEDIA_SCOPE_MOVIES:
+            msg = f"{rule_family_id} preview requires media_scope=movies"
+            raise ValueError(msg)
 
         with session_factory() as session:
             inst = get_server_instance(session, sid)
@@ -95,8 +104,20 @@ def make_pruner_candidate_removal_preview_handler(
                 if not bool(sc.watched_movies_reported_enabled):
                     msg = "watched_movies_reported_enabled is false for this scope"
                     raise ValueError(msg)
+            elif rule_family_id == RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED:
+                if not bool(sc.watched_movie_low_rating_reported_enabled):
+                    msg = "watched_movie_low_rating_reported_enabled is false for this scope"
+                    raise ValueError(msg)
+            elif rule_family_id == RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED:
+                if not bool(sc.unwatched_movie_stale_reported_enabled):
+                    msg = "unwatched_movie_stale_reported_enabled is false for this scope"
+                    raise ValueError(msg)
             max_items = max(1, min(int(sc.preview_max_items), 5000))
             age_days = clamp_never_played_min_age_days(int(sc.never_played_min_age_days))
+            unwatched_stale_days = clamp_never_played_min_age_days(int(sc.unwatched_movie_stale_min_age_days))
+            low_rating_max = clamp_watched_movie_low_rating_max_community_rating(
+                float(sc.watched_movie_low_rating_max_community_rating),
+            )
             env = decrypt_and_parse_envelope(settings, inst.credentials_ciphertext)
             if env is None:
                 msg = "cannot decrypt credentials (session secret missing or ciphertext invalid)"
@@ -121,6 +142,12 @@ def make_pruner_candidate_removal_preview_handler(
                 never_played_min_age_days=age_days if rule_family_id == RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED else None,
                 preview_include_genres=preview_genres,
                 preview_include_people=preview_people,
+                watched_movie_low_rating_max_community_rating=low_rating_max
+                if rule_family_id == RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED
+                else None,
+                unwatched_movie_stale_min_age_days=unwatched_stale_days
+                if rule_family_id == RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED
+                else None,
             )
             cand_json = serialize_candidates(cands)
             err: str | None = None
@@ -142,6 +169,10 @@ def make_pruner_candidate_removal_preview_handler(
             rule_tag = "watched TV"
         elif rule_family_id == RULE_FAMILY_WATCHED_MOVIES_REPORTED:
             rule_tag = "watched movies"
+        elif rule_family_id == RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED:
+            rule_tag = "watched low-rating movies"
+        elif rule_family_id == RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED:
+            rule_tag = "unwatched stale movies"
         else:
             rule_tag = str(rule_family_id)
         title = (

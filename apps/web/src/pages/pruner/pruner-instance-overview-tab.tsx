@@ -40,6 +40,12 @@ export function PrunerInstanceOverviewTab() {
                 <>
                   {" "}
                   · watched movies rule: {s.watched_movies_reported_enabled ? "on" : "off"}
+                  {" "}
+                  · watched low-rating movies: {s.watched_movie_low_rating_reported_enabled ? "on" : "off"} (≤{" "}
+                  {s.watched_movie_low_rating_max_community_rating} CommunityRating)
+                  {" "}
+                  · unwatched stale movies: {s.unwatched_movie_stale_reported_enabled ? "on" : "off"} (≥{" "}
+                  {s.unwatched_movie_stale_min_age_days} days)
                 </>
               ) : null}{" "}
               · per-scope item cap {s.preview_max_items}{" "}
