@@ -97,7 +97,7 @@ export function PrunerPeopleRoleCheckboxes({
     onChange(next);
   }
 
-  const helper = "Roles only apply when names are entered above. If no roles are selected, cast is used as the default.";
+  const helper = "Only applies when names are entered above. Cast is used by default if no roles are selected.";
 
   const heading = rolesHeading ?? "Match people in these credit roles";
   return (

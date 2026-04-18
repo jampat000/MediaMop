@@ -61,15 +61,17 @@ export function PrunerGenreMultiSelect({
   onChange: (next: string[]) => void;
   disabled: boolean;
   testId?: string;
-  /** When set, replaces the default genre filter helper paragraph. */
+  /** When set, replaces the default genre filter helper paragraph. Pass "" to hide the helper. */
   filterHelperText?: string;
   /** Trigger / picker placeholder (e.g. "All genres"). */
   pickerPlaceholder?: string;
 }) {
   const summary = genreTriggerSummary(value);
   const helper =
-    filterHelperText ??
-    "Select genres to limit this cleanup to those genres only. Leave empty to apply your rules to all genres.";
+    filterHelperText === ""
+      ? null
+      : (filterHelperText ??
+        "Select genres to limit this cleanup to those genres only. Leave empty to apply your rules to all genres.");
   const placeholder = pickerPlaceholder ?? "All genres";
 
   return (
@@ -77,7 +79,7 @@ export function PrunerGenreMultiSelect({
       <span className="sr-only" data-testid="pruner-genre-multiselect-summary">
         {summary}
       </span>
-      <p className="text-xs text-[var(--mm-text3)]">{helper}</p>
+      {helper ? <p className="text-xs text-[var(--mm-text3)]">{helper}</p> : null}
       <MmMultiListboxPicker
         options={GENRE_LISTBOX_OPTIONS}
         values={value}

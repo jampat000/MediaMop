@@ -149,8 +149,8 @@ describe("PrunerInstancesListPage", () => {
     expect(rulesCard).toBeInTheDocument();
     expect(within(rulesCard).queryByRole("tab")).toBeNull();
     expect(screen.queryByRole("button", { name: /Save watched TV rule/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save TV criteria" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save Movies criteria" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save TV settings" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save Movies settings" })).toBeInTheDocument();
     expect(screen.getByTestId("pruner-cleanup-run-tv-btn")).toBeInTheDocument();
     expect(screen.getByTestId("pruner-cleanup-run-movies-btn")).toBeInTheDocument();
   });

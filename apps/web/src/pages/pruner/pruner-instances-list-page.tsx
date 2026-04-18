@@ -756,7 +756,7 @@ function PrunerGlobalScheduleRow({
         <div>
           <span className="text-sm font-medium text-[var(--mm-text1)]">Run interval (minutes)</span>
           <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-            Minutes between automatic cleanup runs for this library.
+            Minutes between automatic cleanup runs.
           </p>
           <input
             type="number"
@@ -779,7 +779,7 @@ function PrunerGlobalScheduleRow({
           <div>
             <span className="text-sm font-medium text-[var(--mm-text1)]">Time window</span>
             <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-              When limiting is on, automatic runs only start inside this window.
+              When limiting is on, automatic cleanup only runs inside this window.
             </p>
           </div>
           <div className="space-y-4">
