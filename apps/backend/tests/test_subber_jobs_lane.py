@@ -10,19 +10,26 @@ import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
 from mediamop.modules.queue_worker.job_kind_boundaries import validate_subber_worker_handler_registry
 from mediamop.modules.subber.subber_job_handlers import build_subber_job_handlers
+from mediamop.modules.subber.subber_job_kinds import (
+    ALL_SUBBER_PRODUCTION_JOB_KINDS,
+    SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV,
+    SUBBER_JOB_KIND_WEBHOOK_IMPORT_TV,
+)
 from mediamop.modules.subber.subber_jobs_model import SubberJob, SubberJobStatus
 from mediamop.modules.subber.subber_jobs_ops import subber_enqueue_or_get_job
-from mediamop.modules.subber.subber_supplied_cue_timeline_constraints_check_job_kinds import (
-    SUBBER_SUPPLIED_CUE_TIMELINE_CONSTRAINTS_CHECK_JOB_KIND,
-)
+from mediamop.modules.subber.subber_settings_service import ensure_subber_settings_row
+from mediamop.modules.subber.subber_subtitle_state_model import SubberSubtitleState
 from mediamop.modules.subber.worker_loop import process_one_subber_job
 from mediamop.platform.activity import constants as C
 from mediamop.platform.activity.models import ActivityEvent
 
 import mediamop.modules.subber.subber_jobs_model  # noqa: F401
+import mediamop.modules.subber.subber_settings_model  # noqa: F401
+import mediamop.modules.subber.subber_subtitle_state_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
 
@@ -51,26 +58,43 @@ def session_factory(jobs_engine):
     )
 
 
-def test_build_subber_job_handlers_registry_is_subber_prefixed_only(session_factory) -> None:
-    reg = build_subber_job_handlers(session_factory)
-    assert set(reg) == {SUBBER_SUPPLIED_CUE_TIMELINE_CONSTRAINTS_CHECK_JOB_KIND}
+def test_build_subber_job_handlers_registry_matches_production_kinds(session_factory) -> None:
+    settings = MediaMopSettings.load()
+    reg = build_subber_job_handlers(settings, session_factory)
+    assert set(reg) == ALL_SUBBER_PRODUCTION_JOB_KINDS
     assert all(k.startswith("subber.") for k in reg)
     validate_subber_worker_handler_registry(reg)
 
 
-def test_cue_timeline_constraints_check_runs_on_subber_lane_records_activity(session_factory) -> None:
+def test_webhook_import_tv_runs_on_subber_lane_records_activity(session_factory) -> None:
     t0 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=timezone.utc)
-    payload = {"cues": [{"start_sec": 0, "end_sec": 30}], "source_duration_sec": 120}
+    settings = MediaMopSettings.load()
+    payload = {
+        "file_path": "/media/tv/Pilot.mkv",
+        "media_scope": "tv",
+        "title": "Breaking Bad",
+        "year": None,
+        "show_title": "Breaking Bad",
+        "season_number": 1,
+        "episode_number": 1,
+        "episode_title": "Pilot",
+        "sonarr_episode_id": 42,
+        "radarr_movie_id": None,
+    }
+    with session_factory() as s:
+        row = ensure_subber_settings_row(s)
+        row.enabled = True
+        s.commit()
     with session_factory() as s:
         subber_enqueue_or_get_job(
             s,
-            dedupe_key="test:subber:lane:1",
-            job_kind=SUBBER_SUPPLIED_CUE_TIMELINE_CONSTRAINTS_CHECK_JOB_KIND,
+            dedupe_key="test:subber:lane:wh1",
+            job_kind=SUBBER_JOB_KIND_WEBHOOK_IMPORT_TV,
             payload_json=json.dumps(payload),
         )
         s.commit()
 
-    handlers = build_subber_job_handlers(session_factory)
+    handlers = build_subber_job_handlers(settings, session_factory)
     assert (
         process_one_subber_job(
             session_factory,
@@ -83,15 +107,17 @@ def test_cue_timeline_constraints_check_runs_on_subber_lane_records_activity(ses
     )
 
     with session_factory() as s:
-        job = s.get(SubberJob, 1)
-        assert job is not None
-        assert job.status == SubberJobStatus.COMPLETED.value
+        jobs = list(s.scalars(select(SubberJob).order_by(SubberJob.id.asc())).all())
+        assert len(jobs) == 2
+        assert jobs[0].job_kind == SUBBER_JOB_KIND_WEBHOOK_IMPORT_TV
+        assert jobs[0].status == SubberJobStatus.COMPLETED.value
+        assert jobs[1].job_kind == SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV
+        assert jobs[1].status == SubberJobStatus.PENDING.value
+        states = list(s.scalars(select(SubberSubtitleState)).all())
+        assert len(states) == 1
+        assert states[0].language_code == "en"
         ev = s.scalars(
-            select(ActivityEvent).where(
-                ActivityEvent.event_type == C.SUBBER_SUPPLIED_CUE_TIMELINE_CONSTRAINTS_CHECK_COMPLETED,
-            ),
+            select(ActivityEvent).where(ActivityEvent.event_type == C.SUBBER_WEBHOOK_IMPORT_ENQUEUED),
         ).first()
         assert ev is not None
         assert ev.module == "subber"
-        body = json.loads(ev.detail or "{}")
-        assert body.get("ok") is True

@@ -35,6 +35,7 @@ from mediamop.modules.refiner.worker_loop import (
     process_one_refiner_job,
 )
 from mediamop.modules.subber.subber_job_handlers import build_subber_job_handlers
+from mediamop.modules.subber.subber_job_kinds import SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV
 from mediamop.modules.subber.subber_jobs_model import SubberJob, SubberJobStatus
 from mediamop.modules.subber.subber_jobs_ops import subber_enqueue_or_get_job
 from mediamop.modules.subber.worker_loop import process_one_subber_job
@@ -103,7 +104,7 @@ def test_refiner_enqueue_rejects_fetcher_pruner_subber_namespaces(session_factor
             refiner_enqueue_or_get_job(
                 s,
                 dedupe_key="s",
-                job_kind="subber.supplied_cue_timeline.constraints_check.v1",
+                job_kind=SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV,
             )
 
 
@@ -128,7 +129,7 @@ def test_fetcher_enqueue_rejects_refiner_pruner_subber_prefix(session_factory) -
             fetcher_enqueue_or_get_job(
                 s,
                 dedupe_key="s",
-                job_kind="subber.supplied_cue_timeline.constraints_check.v1",
+                job_kind=SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV,
             )
 
 
@@ -141,7 +142,7 @@ def test_validate_refiner_worker_handler_registry_rejects_foreign_lane_keys() ->
         validate_refiner_worker_handler_registry({"pruner.x": lambda _c: None})
     with pytest.raises(ValueError, match="Refiner worker handler registry"):
         validate_refiner_worker_handler_registry(
-            {"subber.supplied_cue_timeline.constraints_check.v1": lambda _c: None},
+            {SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV: lambda _c: None},
         )
 
 
@@ -260,7 +261,7 @@ def test_pruner_enqueue_rejects_refiner_fetcher_subber_namespaces(session_factor
             pruner_enqueue_or_get_job(
                 s,
                 dedupe_key="z",
-                job_kind="subber.supplied_cue_timeline.constraints_check.v1",
+                job_kind=SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV,
             )
     with session_factory() as s:
         with pytest.raises(ValueError, match="pruner_enqueue_or_get_job refuses"):
@@ -282,7 +283,7 @@ def test_validate_pruner_worker_handler_registry_rejects_foreign_lane_keys() -> 
         validate_pruner_worker_handler_registry({"refiner.x.v1": lambda _c: None})
     with pytest.raises(ValueError, match="Pruner worker handler registry"):
         validate_pruner_worker_handler_registry(
-            {"subber.supplied_cue_timeline.constraints_check.v1": lambda _c: None},
+            {SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV: lambda _c: None},
         )
 
 
@@ -428,7 +429,7 @@ def test_validate_subber_worker_handler_registry_rejects_unprefixed_keys() -> No
 
 def test_validate_subber_worker_handler_registry_accepts_subber_prefixed_keys() -> None:
     validate_subber_worker_handler_registry(
-        {"subber.supplied_cue_timeline.constraints_check.v1": lambda _c: None},
+        {SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV: lambda _c: None},
     )
 
 
@@ -448,7 +449,7 @@ def test_process_one_subber_job_fails_claimed_row_with_foreign_lane_job_kind(
         )
         s.commit()
 
-    handlers = build_subber_job_handlers(session_factory)
+    handlers = build_subber_job_handlers(MediaMopSettings.load(), session_factory)
     out = process_one_subber_job(
         session_factory,
         lease_owner="t",
@@ -479,7 +480,7 @@ def test_process_one_subber_job_rejects_unprefixed_job_kind_row(session_factory)
         )
         s.commit()
 
-    handlers = build_subber_job_handlers(session_factory)
+    handlers = build_subber_job_handlers(MediaMopSettings.load(), session_factory)
     out = process_one_subber_job(
         session_factory,
         lease_owner="t",

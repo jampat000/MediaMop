@@ -105,7 +105,7 @@ MediaMop is **SQLite-first**: one writer per database. Durable background work m
 | Worker count env | **`MEDIAMOP_SUBBER_WORKER_COUNT`** |
 | `job_kind` prefix | **`subber.`** |
 
-**Shipped durable family (P3):** `subber.supplied_cue_timeline.constraints_check.v1` — manual enqueue only; validates supplied cue display-interval JSON on a notional media clock (no OCR, no subtitle download/sync/mux, no file I/O). HTTP: `POST /api/v1/subber/jobs/cue-timeline-constraints-check/enqueue`.
+**Shipped durable families (Subber v1):** `subber.subtitle_search.{tv,movies}.v1`, `subber.library_scan.{tv,movies}.v1`, `subber.webhook_import.{tv,movies}.v1` — OpenSubtitles-backed SRT download and *arr webhook import; TV and Movies are independent job streams and DB state. HTTP surface: `/api/v1/subber/*` (see module router).
 
 **Package directory:** `apps/backend/src/mediamop/modules/subber/`
 

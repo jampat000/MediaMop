@@ -122,6 +122,9 @@ class MediaMopSettings:
     pruner_plex_live_abs_max_items: int
     # 0 = no in-process Subber workers (Subber-owned subber_jobs only); >0 when Subber queues durable work.
     subber_worker_count: int
+    # Subber library scan periodic enqueue (reads ``subber_settings``; independent of worker count).
+    subber_library_scan_schedule_enqueue_enabled: bool
+    subber_library_scan_schedule_scan_interval_seconds: int
     # Refiner supplied payload evaluation (``refiner.supplied_payload_evaluation.v1``) — Refiner-only schedule.
     refiner_supplied_payload_evaluation_schedule_enabled: bool
     refiner_supplied_payload_evaluation_schedule_interval_seconds: int
@@ -303,6 +306,11 @@ class MediaMopSettings:
         pruner_plex_live_on = _env_bool("MEDIAMOP_PRUNER_PLEX_LIVE_REMOVAL_ENABLED", False)
         pruner_plex_live_abs_max = max(1, min(5000, _env_int("MEDIAMOP_PRUNER_PLEX_LIVE_ABS_MAX_ITEMS", 150)))
         subber_workers = clamp_subber_worker_count(_env_int("MEDIAMOP_SUBBER_WORKER_COUNT", 0))
+        subber_lib_scan_sched_enq = _env_bool("MEDIAMOP_SUBBER_LIBRARY_SCAN_SCHEDULE_ENQUEUE_ENABLED", True)
+        subber_lib_scan_sched_scan_iv = max(
+            10,
+            min(300, _env_int("MEDIAMOP_SUBBER_LIBRARY_SCAN_SCHEDULE_SCAN_INTERVAL_SECONDS", 45)),
+        )
         def _refiner_supplied_payload_eval_schedule_enabled() -> bool:
             new_k = "MEDIAMOP_REFINER_SUPPLIED_PAYLOAD_EVALUATION_SCHEDULE_ENABLED"
             old_k = "MEDIAMOP_REFINER_LIBRARY_AUDIT_PASS_SCHEDULE_ENABLED"
@@ -623,6 +631,8 @@ class MediaMopSettings:
             pruner_plex_live_removal_enabled=pruner_plex_live_on,
             pruner_plex_live_abs_max_items=pruner_plex_live_abs_max,
             subber_worker_count=subber_workers,
+            subber_library_scan_schedule_enqueue_enabled=subber_lib_scan_sched_enq,
+            subber_library_scan_schedule_scan_interval_seconds=subber_lib_scan_sched_scan_iv,
             refiner_supplied_payload_evaluation_schedule_enabled=refiner_payload_eval_on,
             refiner_supplied_payload_evaluation_schedule_interval_seconds=refiner_payload_eval_iv,
             refiner_watched_folder_remux_scan_dispatch_schedule_enabled=refiner_wf_scan_dispatch_on,

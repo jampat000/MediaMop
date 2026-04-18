@@ -38,6 +38,10 @@ from mediamop.modules.refiner.refiner_failure_cleanup_periodic_enqueue import (
     stop_refiner_failure_cleanup_enqueue_tasks,
 )
 from mediamop.modules.subber.subber_job_handlers import build_subber_job_handlers
+from mediamop.modules.subber.subber_schedule_enqueue import (
+    start_subber_library_scan_schedule_enqueue_tasks,
+    stop_subber_library_scan_schedule_enqueue_tasks,
+)
 from mediamop.modules.pruner.pruner_job_handlers import build_pruner_job_handlers
 from mediamop.modules.refiner.refiner_supplied_payload_evaluation_periodic_enqueue import (
     start_refiner_supplied_payload_evaluation_enqueue_tasks,
@@ -162,7 +166,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         stop_event=stop,
         job_handlers=pruner_handlers,
     )
-    subber_handlers = build_subber_job_handlers(session_factory)
+    subber_handlers = build_subber_job_handlers(settings, session_factory)
+    subber_library_scan_schedule_tasks = start_subber_library_scan_schedule_enqueue_tasks(
+        session_factory,
+        stop_event=stop,
+        settings=settings,
+    )
     subber_stop, subber_worker_tasks = start_subber_worker_background_tasks(
         session_factory,
         settings,
@@ -179,6 +188,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await stop_refiner_work_temp_stale_sweep_enqueue_tasks(refiner_work_temp_stale_sweep_tasks)
         await stop_refiner_failure_cleanup_enqueue_tasks(refiner_failure_cleanup_tasks)
         await stop_fetcher_failed_import_cleanup_drive_enqueue_tasks(fetcher_schedule_tasks)
+        await stop_subber_library_scan_schedule_enqueue_tasks(subber_library_scan_schedule_tasks)
         await stop_subber_worker_background_tasks(subber_stop, subber_worker_tasks)
         await stop_pruner_preview_schedule_enqueue_tasks(pruner_preview_schedule_tasks)
         await stop_pruner_worker_background_tasks(pruner_stop, pruner_worker_tasks)

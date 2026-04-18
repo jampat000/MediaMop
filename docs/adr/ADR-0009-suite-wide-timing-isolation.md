@@ -65,17 +65,11 @@ Shipped today:
 
 - **Lane only** — ``pruner_jobs`` and in-process workers; **no** shipped durable ``pruner.*`` families or operator schedules in this pass. Future removal job families must each carry **family-local** timing per this ADR (and per ``docs/pruner-forward-design-constraints.md`` for TV/Movies and per server-instance splits).
 
-### Subber (shipped durable family)
+### Subber (Subber v1)
 
-- **`subber.supplied_cue_timeline.constraints_check.v1`** — **manual enqueue only** in this pass: no periodic schedule, no shared last-run row with other modules. Constraint evaluation is process-local to the handler.
-
-### Future Subber durable families
-
-Any additional durable `job_kind` on `subber_jobs` **must** ship with:
-
-- Its own persisted timing and audit fields (or namespaced columns), **or** strictly separate tables if the product demands it — never one shared “last run” or “retry” column for unrelated families.
-- Its own env-backed settings in `MediaMopSettings` (or a module-local settings object loaded at startup) for every operator-controlled interval/schedule/cooldown/retry that applies to that family.
-- Documentation in the module package and enforcement tests when behavior is non-obvious.
+- **Lane only** — ``subber_jobs`` and in-process workers; **TV vs Movies** use separate job kinds and separate ``subber_subtitle_state`` rows (never cross-updating scopes).
+- **Webhook + manual search** — immediate ``subber.subtitle_search.*.v1`` jobs; no shared timing with other modules.
+- **Library scan schedule** — optional periodic enqueue reads ``subber_settings`` (per-scope enable, interval, and optional wall-clock window) plus ``MEDIAMOP_SUBBER_LIBRARY_SCAN_SCHEDULE_*`` on ``MediaMopSettings`` for the asyncio tick cadence only — not shared with Fetcher/Refiner/Pruner schedules.
 
 Pruner and Subber packages point to ADR-0007 for lane ownership; **this ADR** is the timing addendum for scheduled/cooled families.
 
