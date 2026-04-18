@@ -995,6 +995,7 @@ export function PrunerScopeTab(props: {
               onChange={setGenreSelection}
               disabled={busy}
               testId={`pruner-genre-multiselect-provider-${instanceId}-${props.scope}`}
+              filterHelperText=""
             />
           ) : (
             <p className="text-xs text-[var(--mm-text2)]">
@@ -1363,6 +1364,7 @@ export function PrunerScopeTab(props: {
                 onChange={setGenreSelection}
                 disabled={busy}
                 testId={`pruner-genre-multiselect-${instanceId}-${props.scope}`}
+                filterHelperText=""
               />
               <button
                 type="button"

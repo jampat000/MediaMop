@@ -613,8 +613,6 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
   const saveDisabledMovies = busyMovies || !canOperate || instanceId <= 0;
 
   const narrowingLabelClass = "text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]";
-  const narrowDownIntro =
-    "All fields are optional. Leave everything empty to apply your cleanup rules to your entire library.";
 
   return (
     <div
@@ -676,22 +674,17 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               onChange={setMissingPrimaryTv}
             />
 
-            <div className="space-y-2 pt-1">
-              <p className={narrowingLabelClass}>Narrow down (optional)</p>
-              <p className="text-xs leading-relaxed text-[var(--mm-text3)]">{narrowDownIntro}</p>
-            </div>
             <div className="space-y-1">
-              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Only delete content in these genres</span>
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Genres</span>
               <PrunerGenreMultiSelect
                 value={genreTv}
                 onChange={setGenreTv}
                 disabled={tvControlsDisabled}
                 testId={`pruner-rules-genre-tv-${provider}`}
-                filterHelperText=""
               />
             </div>
             <label className="block text-sm text-[var(--mm-text2)]" data-testid={`pruner-provider-tv-people-${provider}`}>
-              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Only delete content involving these people</span>
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">People</span>
               <textarea
                 className="mm-input min-h-[6rem] w-full font-sans text-sm"
                 rows={5}
@@ -716,7 +709,7 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               rolesHeading="Check these credits when matching names"
             />
             <div className="space-y-1">
-              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Only delete content from these studios</span>
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Studios</span>
               <PrunerStudioMultiSelect
                 value={studioTv}
                 onChange={setStudioTv}
@@ -732,7 +725,7 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               onMin={setYearMinTv}
               onMax={setYearMaxTv}
               disabled={tvControlsDisabled}
-              title="Only delete content released in these years"
+              title="Release year range"
               helperText="Leave blank for all years."
             />
 
@@ -817,22 +810,17 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               />
             ) : null}
 
-            <div className="space-y-2 pt-1">
-              <p className={narrowingLabelClass}>Narrow down (optional)</p>
-              <p className="text-xs leading-relaxed text-[var(--mm-text3)]">{narrowDownIntro}</p>
-            </div>
             <div className="space-y-1">
-              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Only delete content in these genres</span>
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Genres</span>
               <PrunerGenreMultiSelect
                 value={genreMovies}
                 onChange={setGenreMovies}
                 disabled={moviesControlsDisabled}
                 testId={`pruner-rules-genre-movies-${provider}`}
-                filterHelperText=""
               />
             </div>
             <label className="block text-sm text-[var(--mm-text2)]" data-testid={`pruner-provider-movies-people-${provider}`}>
-              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Only delete content involving these people</span>
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">People</span>
               <textarea
                 className="mm-input min-h-[6rem] w-full font-sans text-sm"
                 rows={5}
@@ -857,7 +845,7 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               rolesHeading="Check these credits when matching names"
             />
             <div className="space-y-1">
-              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Only delete content from these studios</span>
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Studios</span>
               <PrunerStudioMultiSelect
                 value={studioMovies}
                 onChange={setStudioMovies}
@@ -873,12 +861,12 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               onMin={setYearMinMovies}
               onMax={setYearMaxMovies}
               disabled={moviesControlsDisabled}
-              title="Only delete content released in these years"
+              title="Release year range"
               helperText="Leave blank for all years."
             />
             {isPlex ? (
               <CommaField
-                label="Only delete content in these collections"
+                label="Collections"
                 placeholder="e.g. MCU, Pixar"
                 helper="Select collections to limit this cleanup to content in those collections. Leave empty to apply your rules to all collections."
                 value={moviesCollections}

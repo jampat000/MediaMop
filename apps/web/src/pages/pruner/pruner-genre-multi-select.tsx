@@ -41,7 +41,7 @@ export function prunerGenresFromApi(api: string[] | undefined | null): string[] 
 }
 
 function genreTriggerSummary(values: string[]): string {
-  if (values.length === 0) return "All genres — no restriction";
+  if (values.length === 0) return "All genres — no filter applied";
   if (values.length <= 3) {
     const lower = new Set(values.map((v) => v.toLowerCase()));
     return PRUNER_RULE_GENRE_OPTIONS.filter((g) => lower.has(g.toLowerCase())).join(", ");
@@ -61,25 +61,23 @@ export function PrunerGenreMultiSelect({
   onChange: (next: string[]) => void;
   disabled: boolean;
   testId?: string;
-  /** When set, replaces the default genre filter helper paragraph. Pass "" to hide the helper. */
+  /** When set, replaces the default helper below the picker. Pass "" to hide the helper. */
   filterHelperText?: string;
-  /** Trigger / picker placeholder (e.g. "All genres — no restriction"). */
+  /** Trigger / picker placeholder (e.g. "All genres — no filter applied"). */
   pickerPlaceholder?: string;
 }) {
   const summary = genreTriggerSummary(value);
   const helper =
     filterHelperText === ""
       ? null
-      : (filterHelperText ??
-        "Select genres to limit this cleanup to those genres only. Leave empty to apply your rules to all genres.");
-  const placeholder = pickerPlaceholder ?? "All genres — no restriction";
+      : (filterHelperText ?? "Select genres to limit this cleanup to those genres only.");
+  const placeholder = pickerPlaceholder ?? "All genres — no filter applied";
 
   return (
     <div className="space-y-2" data-testid={testId ?? "pruner-genre-multiselect"}>
       <span className="sr-only" data-testid="pruner-genre-multiselect-summary">
         {summary}
       </span>
-      {helper ? <p className="text-xs text-[var(--mm-text3)]">{helper}</p> : null}
       <MmMultiListboxPicker
         options={GENRE_LISTBOX_OPTIONS}
         values={value}
@@ -89,6 +87,7 @@ export function PrunerGenreMultiSelect({
         summaryText={summary}
         data-testid={testId ? `${testId}-picker` : "pruner-genre-multiselect-picker"}
       />
+      {helper ? <p className="text-xs text-[var(--mm-text3)]">{helper}</p> : null}
     </div>
   );
 }

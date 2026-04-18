@@ -8,7 +8,7 @@ import { mmPickerTriggerClass } from "../../lib/ui/mm-control-roles";
 import { usePrunerStudiosQuery } from "../../lib/pruner/queries";
 
 function studioTriggerSummary(values: string[]): string {
-  if (values.length === 0) return "All studios — no restriction";
+  if (values.length === 0) return "All studios — no filter applied";
   if (values.length <= 3) return values.join(", ");
   return `${values.length} studios selected`;
 }
@@ -54,15 +54,16 @@ export function PrunerStudioMultiSelect({
   const options = mergeOptionsFromLibrary(studios, value);
   const baseTestId = testId ?? "pruner-studio-multiselect";
 
+  const helperBelow = (
+    <p className="text-xs text-[var(--mm-text3)]">Select studios to limit this cleanup to those studios only.</p>
+  );
+
   if (loading) {
     return (
       <div className="space-y-2" data-testid={baseTestId}>
         <span className="sr-only" data-testid={`${baseTestId}-summary`}>
           {summary}
         </span>
-        <p className="text-xs text-[var(--mm-text3)]">
-          Select studios to limit this cleanup to content from those studios only. Leave empty to apply your rules to all studios.
-        </p>
         <div
           className={`${mmPickerTriggerClass} opacity-70 cursor-not-allowed`}
           data-testid={`${baseTestId}-loading`}
@@ -70,6 +71,7 @@ export function PrunerStudioMultiSelect({
         >
           Loading studios…
         </div>
+        {helperBelow}
       </div>
     );
   }
@@ -80,13 +82,11 @@ export function PrunerStudioMultiSelect({
         <span className="sr-only" data-testid={`${baseTestId}-summary`}>
           {summary}
         </span>
-        <p className="text-xs text-[var(--mm-text3)]">
-          Select studios to limit this cleanup to content from those studios only. Leave empty to apply your rules to all studios.
-        </p>
         <select className="mm-input w-full cursor-not-allowed opacity-70" disabled value="__none__" data-testid={`${baseTestId}-empty`}>
           <option value="__none__">No studios found</option>
         </select>
         <p className="text-xs text-[var(--mm-text3)]">No studios found in your library for this scope.</p>
+        {helperBelow}
       </div>
     );
   }
@@ -96,18 +96,16 @@ export function PrunerStudioMultiSelect({
       <span className="sr-only" data-testid={`${baseTestId}-summary`}>
         {summary}
       </span>
-      <p className="text-xs text-[var(--mm-text3)]">
-        Select studios to limit this cleanup to content from those studios only. Leave empty to apply your rules to all studios.
-      </p>
       <MmMultiListboxPicker
         options={options}
         values={value}
         onChange={onChange}
         disabled={disabled}
-        placeholder="All studios — no restriction"
+        placeholder="All studios — no filter applied"
         summaryText={summary}
         data-testid={testId ? `${testId}-picker` : `${baseTestId}-picker`}
       />
+      {helperBelow}
     </div>
   );
 }
