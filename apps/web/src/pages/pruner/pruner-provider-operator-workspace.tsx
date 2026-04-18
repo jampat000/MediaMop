@@ -675,7 +675,7 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
             />
 
             <div className="border-t border-[var(--mm-border)] pt-4 mt-1">
-              <p className="text-xs text-[var(--mm-text3)]">Selection-based — only runs when something is selected</p>
+              <p className="text-xs text-[var(--mm-text3)]">Optional rules — select to activate</p>
             </div>
 
             <div className="space-y-1">
@@ -697,7 +697,7 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
                 disabled={tvControlsDisabled}
                 onChange={(e) => setTvPeople(e.target.value)}
               />
-              <span className="mt-1 block text-xs text-[var(--mm-text3)]">Leave blank to skip the people rule.</span>
+              <span className="mt-1 block text-xs text-[var(--mm-text3)]">Leave empty to skip this rule.</span>
             </label>
             <PrunerPeopleRoleCheckboxes
               value={tvRoles}
@@ -730,7 +730,7 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               onMax={setYearMaxTv}
               disabled={tvControlsDisabled}
               title="Release year range"
-              helperText="Leave both blank to skip the year-range rule."
+              helperText="Leave empty to skip this rule."
             />
 
             <div className="border-t border-[var(--mm-border)] pt-4 mt-1" role="separator" />
@@ -815,7 +815,7 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
             ) : null}
 
             <div className="border-t border-[var(--mm-border)] pt-4 mt-1">
-              <p className="text-xs text-[var(--mm-text3)]">Selection-based — only runs when something is selected</p>
+              <p className="text-xs text-[var(--mm-text3)]">Optional rules — select to activate</p>
             </div>
 
             <div className="space-y-1">
@@ -837,7 +837,7 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
                 disabled={moviesControlsDisabled}
                 onChange={(e) => setMoviesPeople(e.target.value)}
               />
-              <span className="mt-1 block text-xs text-[var(--mm-text3)]">Leave blank to skip the people rule.</span>
+              <span className="mt-1 block text-xs text-[var(--mm-text3)]">Leave empty to skip this rule.</span>
             </label>
             <PrunerPeopleRoleCheckboxes
               value={moviesRoles}
@@ -870,7 +870,7 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               onMax={setYearMaxMovies}
               disabled={moviesControlsDisabled}
               title="Release year range"
-              helperText="Leave both blank to skip the year-range rule."
+              helperText="Leave empty to skip this rule."
             />
             {isPlex ? (
               <CommaField
