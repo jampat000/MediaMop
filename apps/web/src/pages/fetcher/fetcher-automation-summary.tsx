@@ -150,7 +150,7 @@ function SearchSetupAxisCard({
           ),
         )}
         {row(
-          "Schedule",
+          "Time window",
           splitRowBody(
             missingLabel,
             upgradeLabel,
@@ -160,7 +160,7 @@ function SearchSetupAxisCard({
           ),
         )}
         {row(
-          "Search limit",
+          "Items per run",
           splitRowBody(
             missingLabel,
             upgradeLabel,

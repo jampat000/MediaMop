@@ -92,7 +92,7 @@ function RefinerScopeScheduleCard({
         <div>
           <span className="text-sm font-medium text-[var(--mm-text1)]">Run interval (minutes)</span>
           <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-            Minutes between timed scans for this library. Folder checks use the interval set under Libraries.
+            How often this runs automatically.
           </p>
           <input
             type="number"
@@ -114,8 +114,7 @@ function RefinerScopeScheduleCard({
           <div>
             <span className="text-sm font-medium text-[var(--mm-text1)]">Time window</span>
             <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-              When limiting is on, timed scans only enqueue inside this window. Uses the suite time zone above — not
-              Fetcher search times.
+              When limiting is on, this only runs inside the window you set below.
             </p>
           </div>
           <div className="space-y-4">
@@ -398,9 +397,9 @@ export function RefinerSchedulesSection() {
         />
       </div>
       <section className="mt-7 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5">
-        <h3 className="text-sm font-semibold text-[var(--mm-text)]">Manual scan now</h3>
+        <h3 className="text-sm font-semibold text-[var(--mm-text)]">Run now</h3>
         <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-          Queue one watched-folder scan on demand. TV and Movies are independent actions and queue separate jobs.
+          Run a scan immediately without waiting for the schedule.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div className="rounded-md border border-[var(--mm-border)] bg-black/10 p-4">

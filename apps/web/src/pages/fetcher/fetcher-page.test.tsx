@@ -442,17 +442,19 @@ describe("FetcherPage (tabbed IA)", () => {
     expect(screen.getByRole("heading", { name: "TV upgrades" })).toBeInTheDocument();
     expect(screen.getByText("Set up searches for missing TV shows.")).toBeInTheDocument();
     expect(screen.getByText("Set up searches for better quality TV episodes.")).toBeInTheDocument();
-    expect(screen.getAllByText("Choose how often this search runs.").length).toBe(2);
-    expect(screen.getAllByText("This search will only run during this schedule.").length).toBe(2);
-    expect(screen.getAllByText("Choose how many items this search can look for each time it runs.").length).toBe(2);
-    expect(screen.getAllByText("Choose how long to wait before the same item can be searched again.").length).toBe(2);
+    expect(screen.getAllByText("How often this search runs automatically.").length).toBe(2);
+    expect(
+      screen.getAllByText("When limiting is on, this search only runs inside the window you set below.").length,
+    ).toBe(2);
+    expect(screen.getAllByText("How many items this search will look for each time it runs.").length).toBe(2);
+    expect(screen.getAllByText("How long to wait before searching the same item again.").length).toBe(2);
     const missing = screen.getByTestId("fetcher-tv-lane-missing");
     const h = missing.innerHTML;
     const idx = (s: string) => h.indexOf(s);
-    expect(idx("Enable / Disable")).toBeLessThan(idx("Run interval"));
-    expect(idx("Run interval")).toBeLessThan(idx("Schedule"));
-    expect(idx("Schedule")).toBeLessThan(idx("Search limit"));
-    expect(idx("Search limit")).toBeLessThan(idx("Retry cooldown"));
+    expect(idx("Enable timed scans")).toBeLessThan(idx("Run interval"));
+    expect(idx("Run interval")).toBeLessThan(idx("Time window"));
+    expect(idx("Time window")).toBeLessThan(idx("Items per run"));
+    expect(idx("Items per run")).toBeLessThan(idx("Retry cooldown"));
     expect(idx("Retry cooldown")).toBeLessThan(idx("Save missing TV show searches"));
   });
 
@@ -481,10 +483,10 @@ describe("FetcherPage (tabbed IA)", () => {
     const missing = screen.getByTestId("fetcher-movies-lane-missing");
     const h = missing.innerHTML;
     const idx = (s: string) => h.indexOf(s);
-    expect(idx("Enable / Disable")).toBeLessThan(idx("Run interval"));
-    expect(idx("Run interval")).toBeLessThan(idx("Schedule"));
-    expect(idx("Schedule")).toBeLessThan(idx("Search limit"));
-    expect(idx("Search limit")).toBeLessThan(idx("Retry cooldown"));
+    expect(idx("Enable timed scans")).toBeLessThan(idx("Run interval"));
+    expect(idx("Run interval")).toBeLessThan(idx("Time window"));
+    expect(idx("Time window")).toBeLessThan(idx("Items per run"));
+    expect(idx("Items per run")).toBeLessThan(idx("Retry cooldown"));
     expect(idx("Retry cooldown")).toBeLessThan(idx("Save missing movie searches"));
   });
 

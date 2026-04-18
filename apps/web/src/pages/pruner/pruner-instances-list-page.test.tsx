@@ -151,11 +151,13 @@ describe("PrunerInstancesListPage", () => {
     expect(screen.queryByRole("button", { name: /Save watched TV rule/i })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save TV settings" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save Movies settings" })).toBeInTheDocument();
-    expect(screen.getByTestId("pruner-cleanup-run-tv-btn")).toBeInTheDocument();
-    expect(screen.getByTestId("pruner-cleanup-run-movies-btn")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Schedule" }));
+    await waitFor(() => expect(screen.getByTestId("pruner-provider-schedule-wrap")).toBeInTheDocument());
+    expect(screen.getByTestId("pruner-schedule-emby-run-tv-btn")).toBeInTheDocument();
+    expect(screen.getByTestId("pruner-schedule-emby-run-movies-btn")).toBeInTheDocument();
   });
 
-  it("Cleanup tab shows TV and Movies people fields and run controls", async () => {
+  it("Cleanup tab shows TV and Movies people fields; Schedule tab shows run controls", async () => {
     const client = new QueryClient();
     client.setQueryData(qk.me, adminUser);
     const scope = (media_scope: "tv" | "movies") => ({
@@ -216,8 +218,10 @@ describe("PrunerInstancesListPage", () => {
     expect(within(cleanupWrap).queryByTestId("pruner-provider-inline-connection-status")).not.toBeInTheDocument();
     const card = screen.getByTestId("pruner-provider-configuration-emby");
     expect(within(card).getAllByPlaceholderText(/Alex Carter/i)).toHaveLength(2);
-    expect(screen.getByTestId("pruner-cleanup-run-tv-btn")).toBeInTheDocument();
-    expect(screen.getByTestId("pruner-cleanup-run-movies-btn")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Schedule" }));
+    await waitFor(() => expect(screen.getByTestId("pruner-provider-schedule-wrap")).toBeInTheDocument());
+    expect(screen.getByTestId("pruner-schedule-emby-run-tv-btn")).toBeInTheDocument();
+    expect(screen.getByTestId("pruner-schedule-emby-run-movies-btn")).toBeInTheDocument();
   });
 
   it("Connection sub-tab shows Connected in status when last Emby test passed", async () => {

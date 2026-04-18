@@ -434,7 +434,7 @@ function SearchLaneBubble({
 
       <FetcherEnableSwitch
         id={`${idPrefix}-lane-enable`}
-        label="Enable / Disable"
+        label="Enable timed scans"
         enabled={lane.enabled}
         disabled={disabled}
         onChange={(v) => onLaneChange({ ...lane, enabled: v })}
@@ -442,7 +442,7 @@ function SearchLaneBubble({
 
       <div>
         <span className="text-sm font-medium text-[var(--mm-text1)]">Run interval (minutes)</span>
-        <p className="mt-1 text-xs text-[var(--mm-text3)]">Choose how often this search runs.</p>
+        <p className="mt-1 text-xs text-[var(--mm-text3)]">How often this search runs automatically.</p>
         <input
           type="number"
           min={SEARCH_RUN_INTERVAL_MIN_MINUTES}
@@ -458,9 +458,9 @@ function SearchLaneBubble({
 
       <div className="space-y-3">
         <div>
-          <span className="text-sm font-medium text-[var(--mm-text1)]">Schedule</span>
+          <span className="text-sm font-medium text-[var(--mm-text1)]">Time window</span>
           <p className="mt-1 text-xs text-[var(--mm-text3)]">
-            This search will only run during this schedule.
+            When limiting is on, this search only runs inside the window you set below.
           </p>
         </div>
         <div className="space-y-4">
@@ -491,9 +491,9 @@ function SearchLaneBubble({
       </div>
 
       <div>
-        <span className="text-sm font-medium text-[var(--mm-text1)]">Search limit</span>
+        <span className="text-sm font-medium text-[var(--mm-text1)]">Items per run</span>
         <p className="mt-1 text-xs text-[var(--mm-text3)]">
-          Choose how many items this search can look for each time it runs.
+          How many items this search will look for each time it runs.
         </p>
         <input
           type="number"
@@ -511,7 +511,7 @@ function SearchLaneBubble({
       <div>
         <span className="text-sm font-medium text-[var(--mm-text1)]">Retry cooldown (minutes)</span>
         <p className="mt-1 text-xs text-[var(--mm-text3)]">
-          Choose how long to wait before the same item can be searched again.
+          How long to wait before searching the same item again.
         </p>
         <input
           type="number"

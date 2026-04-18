@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { fetchCsrfToken } from "../../lib/api/auth-api";
@@ -90,7 +90,7 @@ async function evaluateEligibilityForSnapshots(
 }
 
 /** Dry-run toggle, run button, and scan/delete results for one media column. */
-function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
+export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
   const {
     instanceId,
     mediaScope,
@@ -405,7 +405,13 @@ type RulesCardProps = {
   instance: PrunerServerInstance;
 };
 
-export function PrunerProviderRulesCard({ provider, instanceId, instance }: RulesCardProps) {
+export type PrunerProviderRulesCardHandle = {
+  ensureTvSaved: () => Promise<void>;
+  ensureMoviesSaved: () => Promise<void>;
+};
+
+export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle, RulesCardProps>(
+  function PrunerProviderRulesCard({ provider, instanceId, instance }, ref) {
   const qc = useQueryClient();
   const me = useMeQuery();
   const canOperate = me.data?.role === "admin" || me.data?.role === "operator";
@@ -443,9 +449,6 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
   const [msgMovies, setMsgMovies] = useState<string | null>(null);
   const [errTv, setErrTv] = useState<string | null>(null);
   const [errMovies, setErrMovies] = useState<string | null>(null);
-
-  const [tvDryRun, setTvDryRun] = useState(true);
-  const [moviesDryRun, setMoviesDryRun] = useState(true);
 
   useEffect(() => {
     if (!tv) return;
@@ -591,19 +594,23 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
     }
   }
 
-  async function ensureTvSaved() {
-    await persistTv();
-  }
-
-  async function ensureMoviesSaved() {
-    await persistMovies();
-  }
+  const persistTvRef = useRef(persistTv);
+  persistTvRef.current = persistTv;
+  const persistMoviesRef = useRef(persistMovies);
+  persistMoviesRef.current = persistMovies;
+  useImperativeHandle(
+    ref,
+    () => ({
+      ensureTvSaved: () => persistTvRef.current(),
+      ensureMoviesSaved: () => persistMoviesRef.current(),
+    }),
+    [],
+  );
 
   const tvControlsDisabled = !canOperate || busyTv || busyMovies;
   const moviesControlsDisabled = !canOperate || busyTv || busyMovies;
   const saveDisabledTv = busyTv || !canOperate || instanceId <= 0;
   const saveDisabledMovies = busyMovies || !canOperate || instanceId <= 0;
-  const runDisabled = instanceId <= 0;
 
   const narrowingLabelClass = "text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]";
   const narrowDownIntro =
@@ -730,40 +737,28 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
             />
 
             <div className="border-t border-[var(--mm-border)] pt-4 mt-1" role="separator" />
-            <PrunerDryRunControls
-              instanceId={instanceId}
-              mediaScope="tv"
-              testIdPrefix="pruner-cleanup"
-              ensureSaved={ensureTvSaved}
-              dryRunEnabled={tvDryRun}
-              onDryRunEnabledChange={setTvDryRun}
-              runDisabled={runDisabled}
-              controlsDisabled={tvControlsDisabled}
-              afterRunSlot={
-                <>
-                  {canOperate ? (
-                    <button
-                      type="button"
-                      className={fetcherMenuButtonClass({ variant: "primary", disabled: saveDisabledTv })}
-                      disabled={saveDisabledTv}
-                      onClick={() => void saveTv()}
-                    >
-                      {busyTv ? "Saving…" : "Save TV settings"}
-                    </button>
-                  ) : null}
-                  {msgTv ? (
-                    <p className="text-sm text-green-600" role="status">
-                      {msgTv}
-                    </p>
-                  ) : null}
-                  {errTv ? (
-                    <p className="text-sm text-red-500" role="alert">
-                      {errTv}
-                    </p>
-                  ) : null}
-                </>
-              }
-            />
+            <div className="space-y-3">
+              {canOperate ? (
+                <button
+                  type="button"
+                  className={fetcherMenuButtonClass({ variant: "primary", disabled: saveDisabledTv })}
+                  disabled={saveDisabledTv}
+                  onClick={() => void saveTv()}
+                >
+                  {busyTv ? "Saving…" : "Save TV settings"}
+                </button>
+              ) : null}
+              {msgTv ? (
+                <p className="text-sm text-green-600" role="status">
+                  {msgTv}
+                </p>
+              ) : null}
+              {errTv ? (
+                <p className="text-sm text-red-500" role="alert">
+                  {errTv}
+                </p>
+              ) : null}
+            </div>
           </div>
         </fieldset>
 
@@ -893,46 +888,35 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
             ) : null}
 
             <div className="border-t border-[var(--mm-border)] pt-4 mt-1" role="separator" />
-            <PrunerDryRunControls
-              instanceId={instanceId}
-              mediaScope="movies"
-              testIdPrefix="pruner-cleanup"
-              ensureSaved={ensureMoviesSaved}
-              dryRunEnabled={moviesDryRun}
-              onDryRunEnabledChange={setMoviesDryRun}
-              runDisabled={runDisabled}
-              controlsDisabled={moviesControlsDisabled}
-              afterRunSlot={
-                <>
-                  {canOperate ? (
-                    <button
-                      type="button"
-                      className={fetcherMenuButtonClass({ variant: "primary", disabled: saveDisabledMovies })}
-                      disabled={saveDisabledMovies}
-                      onClick={() => void saveMovies()}
-                    >
-                      {busyMovies ? "Saving…" : "Save Movies settings"}
-                    </button>
-                  ) : null}
-                  {msgMovies ? (
-                    <p className="text-sm text-green-600" role="status">
-                      {msgMovies}
-                    </p>
-                  ) : null}
-                  {errMovies ? (
-                    <p className="text-sm text-red-500" role="alert">
-                      {errMovies}
-                    </p>
-                  ) : null}
-                </>
-              }
-            />
+            <div className="space-y-3">
+              {canOperate ? (
+                <button
+                  type="button"
+                  className={fetcherMenuButtonClass({ variant: "primary", disabled: saveDisabledMovies })}
+                  disabled={saveDisabledMovies}
+                  onClick={() => void saveMovies()}
+                >
+                  {busyMovies ? "Saving…" : "Save Movies settings"}
+                </button>
+              ) : null}
+              {msgMovies ? (
+                <p className="text-sm text-green-600" role="status">
+                  {msgMovies}
+                </p>
+              ) : null}
+              {errMovies ? (
+                <p className="text-sm text-red-500" role="alert">
+                  {errMovies}
+                </p>
+              ) : null}
+            </div>
           </div>
         </fieldset>
       </div>
     </div>
   );
-}
+  },
+);
 
 /**
  * People controls were merged into {@link PrunerProviderRulesCard}. Kept as a no-op export for compatibility with

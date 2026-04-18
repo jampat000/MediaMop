@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
@@ -11,7 +11,11 @@ import type { PrunerJobsInspectionRow, PrunerServerInstance } from "../../lib/pr
 import { patchPrunerInstance, patchPrunerScope, postPrunerConnectionTest, postPrunerInstance } from "../../lib/pruner/api";
 import { useMeQuery } from "../../lib/auth/queries";
 import { usePrunerInstancesQuery, usePrunerJobsInspectionQuery } from "../../lib/pruner/queries";
-import { PrunerProviderRulesCard } from "./pruner-provider-operator-workspace";
+import {
+  PrunerDryRunControls,
+  PrunerProviderRulesCard,
+  type PrunerProviderRulesCardHandle,
+} from "./pruner-provider-operator-workspace";
 import { formatPrunerDateTime, prunerJobKindOperatorLabel } from "./pruner-ui-utils";
 import {
   committedPrunerRunIntervalMinutes,
@@ -445,6 +449,7 @@ function ProviderConfigurationWorkspace({ provider, allInstances }: { provider: 
   const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(providerInstances[0]?.id ?? null);
   const [providerSection, setProviderSection] = useState<ProviderWorkspaceSection>("connection");
   const selectedInstance = providerInstances.find((x) => x.id === selectedInstanceId) ?? providerInstances[0];
+  const rulesCardRef = useRef<PrunerProviderRulesCardHandle>(null);
 
   useEffect(() => {
     setSelectedInstanceId((prev) => {
@@ -511,9 +516,14 @@ function ProviderConfigurationWorkspace({ provider, allInstances }: { provider: 
           <PrunerConnectionCredentialPanel provider={provider} allInstances={allInstances} instanceSelection={instanceSelection} />
         ) : null}
 
-        {providerSection === "cleanup" ? (
-          <div data-testid="pruner-provider-cleanup-wrap">
+        {providerSection === "cleanup" || providerSection === "schedule" ? (
+          <div
+            className={providerSection !== "cleanup" ? "hidden" : undefined}
+            data-testid={providerSection === "cleanup" ? "pruner-provider-cleanup-wrap" : undefined}
+            aria-hidden={providerSection !== "cleanup"}
+          >
             <PrunerProviderRulesCard
+              ref={rulesCardRef}
               provider={provider}
               instanceId={selectedInstance?.id ?? 0}
               instance={selectedInstance ?? disabledCtx.instance}
@@ -523,8 +533,22 @@ function ProviderConfigurationWorkspace({ provider, allInstances }: { provider: 
 
         {providerSection === "schedule" ? (
           <div className="grid gap-4 md:grid-cols-2" data-testid="pruner-provider-schedule-wrap">
-            <PrunerGlobalScheduleRow provider={provider} scope="tv" instance={selectedInstance} />
-            <PrunerGlobalScheduleRow provider={provider} scope="movies" instance={selectedInstance} />
+            <PrunerGlobalScheduleRow
+              provider={provider}
+              scope="tv"
+              instance={selectedInstance}
+              ensureScopeSaved={async () => {
+                await rulesCardRef.current?.ensureTvSaved();
+              }}
+            />
+            <PrunerGlobalScheduleRow
+              provider={provider}
+              scope="movies"
+              instance={selectedInstance}
+              ensureScopeSaved={async () => {
+                await rulesCardRef.current?.ensureMoviesSaved();
+              }}
+            />
           </div>
         ) : null}
       </div>
@@ -636,10 +660,12 @@ function PrunerGlobalScheduleRow({
   provider,
   scope,
   instance,
+  ensureScopeSaved,
 }: {
   provider: ProviderTab;
   scope: "tv" | "movies";
   instance: PrunerServerInstance | undefined;
+  ensureScopeSaved: () => Promise<void>;
 }) {
   const qc = useQueryClient();
   const me = useMeQuery();
@@ -656,6 +682,7 @@ function PrunerGlobalScheduleRow({
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [dryRunEnabled, setDryRunEnabled] = useState(true);
 
   useEffect(() => {
     if (!scopeRow) {
@@ -737,8 +764,8 @@ function PrunerGlobalScheduleRow({
     <section className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-6" data-testid={testId}>
       <h3 className="text-sm font-semibold text-[var(--mm-text1)]">{cardTitle}</h3>
       <p className="mt-2 text-xs leading-relaxed text-[var(--mm-text3)]">
-        The schedule runs your saved criteria from the Cleanup tab automatically. If dry run is on in the Cleanup tab,
-        scheduled runs also only scan — they never delete automatically.
+        The schedule runs your saved criteria from the Cleanup tab automatically. When dry run is on in Run now below,
+        scheduled runs only scan — they never delete automatically.
       </p>
       {instance ? (
         <p className="mt-2 text-xs text-[var(--mm-text3)]">{instance.display_name}</p>
@@ -756,7 +783,7 @@ function PrunerGlobalScheduleRow({
         <div>
           <span className="text-sm font-medium text-[var(--mm-text1)]">Run interval (minutes)</span>
           <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-            Minutes between automatic cleanup runs.
+            How often this runs automatically.
           </p>
           <input
             type="number"
@@ -779,7 +806,7 @@ function PrunerGlobalScheduleRow({
           <div>
             <span className="text-sm font-medium text-[var(--mm-text1)]">Time window</span>
             <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-              When limiting is on, automatic cleanup only runs inside this window.
+              When limiting is on, this only runs inside the window you set below.
             </p>
           </div>
           <div className="space-y-4">
@@ -844,6 +871,25 @@ function PrunerGlobalScheduleRow({
             {err}
           </p>
         ) : null}
+
+        <div className="mt-6 border-t border-[var(--mm-border)] pt-6">
+          <h4 className="text-sm font-semibold text-[var(--mm-text1)]">Run now</h4>
+          <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
+            Run your saved cleanup criteria immediately without waiting for the schedule.
+          </p>
+          <div className="mt-4">
+            <PrunerDryRunControls
+              instanceId={instance?.id ?? 0}
+              mediaScope={scope}
+              testIdPrefix={`pruner-schedule-${provider}`}
+              ensureSaved={ensureScopeSaved}
+              dryRunEnabled={dryRunEnabled}
+              onDryRunEnabledChange={setDryRunEnabled}
+              runDisabled={!instance || instance.id <= 0}
+              controlsDisabled={controlsDisabled}
+            />
+          </div>
+        </div>
       </div>
     </section>
   );
