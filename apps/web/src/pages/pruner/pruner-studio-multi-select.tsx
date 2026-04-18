@@ -8,7 +8,7 @@ import { mmPickerTriggerClass } from "../../lib/ui/mm-control-roles";
 import { usePrunerStudiosQuery } from "../../lib/pruner/queries";
 
 function studioTriggerSummary(values: string[]): string {
-  if (values.length === 0) return "All studios";
+  if (values.length === 0) return "No studios selected — rule inactive";
   if (values.length <= 3) return values.join(", ");
   return `${values.length} studios selected`;
 }
@@ -55,7 +55,7 @@ export function PrunerStudioMultiSelect({
   const baseTestId = testId ?? "pruner-studio-multiselect";
 
   const helperBelow = (
-    <p className="text-xs text-[var(--mm-text3)]">Pick one or more studios. Leave empty to skip this rule.</p>
+    <p className="text-xs text-[var(--mm-text3)]">Select studios to activate this rule.</p>
   );
 
   if (loading) {
@@ -101,7 +101,7 @@ export function PrunerStudioMultiSelect({
         values={value}
         onChange={onChange}
         disabled={disabled}
-        placeholder="All studios"
+        placeholder="No studios selected — rule inactive"
         summaryText={summary}
         data-testid={testId ? `${testId}-picker` : `${baseTestId}-picker`}
       />

@@ -41,7 +41,7 @@ export function prunerGenresFromApi(api: string[] | undefined | null): string[] 
 }
 
 function genreTriggerSummary(values: string[]): string {
-  if (values.length === 0) return "All genres";
+  if (values.length === 0) return "No genres selected — rule inactive";
   if (values.length <= 3) {
     const lower = new Set(values.map((v) => v.toLowerCase()));
     return PRUNER_RULE_GENRE_OPTIONS.filter((g) => lower.has(g.toLowerCase())).join(", ");
@@ -63,15 +63,15 @@ export function PrunerGenreMultiSelect({
   testId?: string;
   /** When set, replaces the default helper below the picker. Pass "" to hide the helper. */
   filterHelperText?: string;
-  /** Trigger / picker placeholder (e.g. "All genres"). */
+  /** Trigger / picker placeholder (e.g. "No genres selected — rule inactive"). */
   pickerPlaceholder?: string;
 }) {
   const summary = genreTriggerSummary(value);
   const helper =
     filterHelperText === ""
       ? null
-      : (filterHelperText ?? "Pick one or more genres. Leave empty to skip this rule.");
-  const placeholder = pickerPlaceholder ?? "All genres";
+      : (filterHelperText ?? "Select genres to activate this rule.");
+  const placeholder = pickerPlaceholder ?? "No genres selected — rule inactive";
 
   return (
     <div className="space-y-2" data-testid={testId ?? "pruner-genre-multiselect"}>

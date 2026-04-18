@@ -674,12 +674,10 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               onChange={setMissingPrimaryTv}
             />
 
-            <div className="border-t border-[var(--mm-border)] pt-4 mt-1">
-              <p className="text-xs text-[var(--mm-text3)]">Optional rules — select to activate</p>
-            </div>
+            <div className="border-t border-[var(--mm-border)] pt-4 mt-1" aria-hidden="true" />
 
             <div className="space-y-1">
-              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Genres</span>
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Delete content in these genres</span>
               <PrunerGenreMultiSelect
                 value={genreTv}
                 onChange={setGenreTv}
@@ -688,7 +686,7 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               />
             </div>
             <label className="block text-sm text-[var(--mm-text2)]" data-testid={`pruner-provider-tv-people-${provider}`}>
-              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">People</span>
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Delete content involving these people</span>
               <textarea
                 className="mm-input min-h-[6rem] w-full font-sans text-sm"
                 rows={5}
@@ -697,7 +695,7 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
                 disabled={tvControlsDisabled}
                 onChange={(e) => setTvPeople(e.target.value)}
               />
-              <span className="mt-1 block text-xs text-[var(--mm-text3)]">Leave empty to skip this rule.</span>
+              <span className="mt-1 block text-xs text-[var(--mm-text3)]">Leave empty — rule inactive.</span>
             </label>
             <PrunerPeopleRoleCheckboxes
               value={tvRoles}
@@ -713,7 +711,7 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               rolesHeading="Check these credits when matching names"
             />
             <div className="space-y-1">
-              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Studios</span>
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Delete content from these studios</span>
               <PrunerStudioMultiSelect
                 value={studioTv}
                 onChange={setStudioTv}
@@ -729,8 +727,8 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               onMin={setYearMinTv}
               onMax={setYearMaxTv}
               disabled={tvControlsDisabled}
-              title="Release year range"
-              helperText="Leave empty to skip this rule."
+              title="Delete content released in these years"
+              helperText="Leave empty — rule inactive."
             />
 
             <div className="border-t border-[var(--mm-border)] pt-4 mt-1" role="separator" />
@@ -814,12 +812,10 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               />
             ) : null}
 
-            <div className="border-t border-[var(--mm-border)] pt-4 mt-1">
-              <p className="text-xs text-[var(--mm-text3)]">Optional rules — select to activate</p>
-            </div>
+            <div className="border-t border-[var(--mm-border)] pt-4 mt-1" aria-hidden="true" />
 
             <div className="space-y-1">
-              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Genres</span>
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Delete content in these genres</span>
               <PrunerGenreMultiSelect
                 value={genreMovies}
                 onChange={setGenreMovies}
@@ -828,7 +824,7 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               />
             </div>
             <label className="block text-sm text-[var(--mm-text2)]" data-testid={`pruner-provider-movies-people-${provider}`}>
-              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">People</span>
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Delete content involving these people</span>
               <textarea
                 className="mm-input min-h-[6rem] w-full font-sans text-sm"
                 rows={5}
@@ -837,7 +833,7 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
                 disabled={moviesControlsDisabled}
                 onChange={(e) => setMoviesPeople(e.target.value)}
               />
-              <span className="mt-1 block text-xs text-[var(--mm-text3)]">Leave empty to skip this rule.</span>
+              <span className="mt-1 block text-xs text-[var(--mm-text3)]">Leave empty — rule inactive.</span>
             </label>
             <PrunerPeopleRoleCheckboxes
               value={moviesRoles}
@@ -853,7 +849,7 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               rolesHeading="Check these credits when matching names"
             />
             <div className="space-y-1">
-              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Studios</span>
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Delete content from these studios</span>
               <PrunerStudioMultiSelect
                 value={studioMovies}
                 onChange={setStudioMovies}
@@ -869,14 +865,14 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               onMin={setYearMinMovies}
               onMax={setYearMaxMovies}
               disabled={moviesControlsDisabled}
-              title="Release year range"
-              helperText="Leave empty to skip this rule."
+              title="Delete content released in these years"
+              helperText="Leave empty — rule inactive."
             />
             {isPlex ? (
               <CommaField
-                label="Collections"
+                label="Delete content in these collections"
                 placeholder="e.g. MCU, Pixar"
-                helper="Optional scope metadata — no preview rule reads collections in this release."
+                helper="Leave empty — rule inactive."
                 value={moviesCollections}
                 onChange={setMoviesCollections}
                 disabled={moviesControlsDisabled}
