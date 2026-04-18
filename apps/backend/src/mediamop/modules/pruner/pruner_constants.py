@@ -11,6 +11,10 @@ RULE_FAMILY_WATCHED_TV_REPORTED = "watched_tv_reported"
 RULE_FAMILY_WATCHED_MOVIES_REPORTED = "watched_movies_reported"
 RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED = "watched_movie_low_rating_reported"
 RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED = "unwatched_movie_stale_reported"
+RULE_FAMILY_GENRE_MATCH_REPORTED = "genre_match_reported"
+RULE_FAMILY_STUDIO_MATCH_REPORTED = "studio_match_reported"
+RULE_FAMILY_PEOPLE_MATCH_REPORTED = "people_match_reported"
+RULE_FAMILY_YEAR_RANGE_MATCH_REPORTED = "year_range_match_reported"
 
 PRUNER_APPLY_LABEL_MISSING_PRIMARY = "Remove broken library entries"
 PRUNER_APPLY_LABEL_NEVER_PLAYED_STALE = "Remove stale never-played library entries"
@@ -18,6 +22,10 @@ PRUNER_APPLY_LABEL_WATCHED_TV = "Remove watched TV entries"
 PRUNER_APPLY_LABEL_WATCHED_MOVIES = "Remove watched movie entries"
 PRUNER_APPLY_LABEL_WATCHED_MOVIE_LOW_RATING = "Remove watched low-rated movie entries"
 PRUNER_APPLY_LABEL_UNWATCHED_MOVIE_STALE = "Remove stale unwatched movie entries"
+PRUNER_APPLY_LABEL_GENRE_MATCH = "Remove items matching selected genres"
+PRUNER_APPLY_LABEL_STUDIO_MATCH = "Remove items from selected studios"
+PRUNER_APPLY_LABEL_PEOPLE_MATCH = "Remove items involving selected people"
+PRUNER_APPLY_LABEL_YEAR_RANGE_MATCH = "Remove items from selected year range"
 
 PRUNER_DEFAULT_NEVER_PLAYED_MIN_AGE_DAYS = 90
 PRUNER_NEVER_PLAYED_MIN_AGE_DAYS_MIN = 7
@@ -93,6 +101,14 @@ def pruner_apply_operator_label(rule_family_id: str) -> str:
         return PRUNER_APPLY_LABEL_UNWATCHED_MOVIE_STALE
     if rule_family_id == RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED:
         return PRUNER_APPLY_LABEL_NEVER_PLAYED_STALE
+    if rule_family_id == RULE_FAMILY_GENRE_MATCH_REPORTED:
+        return PRUNER_APPLY_LABEL_GENRE_MATCH
+    if rule_family_id == RULE_FAMILY_STUDIO_MATCH_REPORTED:
+        return PRUNER_APPLY_LABEL_STUDIO_MATCH
+    if rule_family_id == RULE_FAMILY_PEOPLE_MATCH_REPORTED:
+        return PRUNER_APPLY_LABEL_PEOPLE_MATCH
+    if rule_family_id == RULE_FAMILY_YEAR_RANGE_MATCH_REPORTED:
+        return PRUNER_APPLY_LABEL_YEAR_RANGE_MATCH
     return PRUNER_APPLY_LABEL_MISSING_PRIMARY
 
 
@@ -107,6 +123,10 @@ def pruner_preview_rule_families_jf_emby() -> frozenset[str]:
             RULE_FAMILY_WATCHED_MOVIES_REPORTED,
             RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
             RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED,
+            RULE_FAMILY_GENRE_MATCH_REPORTED,
+            RULE_FAMILY_STUDIO_MATCH_REPORTED,
+            RULE_FAMILY_PEOPLE_MATCH_REPORTED,
+            RULE_FAMILY_YEAR_RANGE_MATCH_REPORTED,
         },
     )
 

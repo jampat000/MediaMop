@@ -262,6 +262,10 @@ PrunerPreviewRuleFamilyWire = Literal[
     "watched_movies_reported",
     "watched_movie_low_rating_reported",
     "unwatched_movie_stale_reported",
+    "genre_match_reported",
+    "studio_match_reported",
+    "people_match_reported",
+    "year_range_match_reported",
 ]
 
 

@@ -90,7 +90,7 @@ def _assert_items_fields_include_preview_union(url: str) -> None:
     assert got == want
 
 
-def test_preview_payload_jellyfin_low_rating_requests_union_fields_and_filters() -> None:
+def test_preview_payload_jellyfin_low_rating_requests_union_fields() -> None:
     def fake_get_json(url: str, headers: dict[str, str]) -> tuple[int, dict]:  # noqa: ARG001
         _assert_items_fields_include_preview_union(url)
         si = int(parse_qs(urlparse(url).query).get("StartIndex", ["0"])[0])
@@ -130,8 +130,6 @@ def test_preview_payload_jellyfin_low_rating_requests_union_fields_and_filters()
             rule_family_id=RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
             watched_movie_low_rating_max_jellyfin_emby_community_rating=4.0,
             watched_movie_low_rating_max_plex_audience_rating=4.0,
-            preview_include_genres=["drama"],
-            preview_include_people=["pat"],
         )
     assert out == "success" and detail == ""
     assert not trunc

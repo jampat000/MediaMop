@@ -11,14 +11,27 @@ from typing import Any
 from mediamop.modules.pruner.pruner_constants import (
     MEDIA_SCOPE_MOVIES,
     MEDIA_SCOPE_TV,
+    RULE_FAMILY_GENRE_MATCH_REPORTED,
     RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
     RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
+    RULE_FAMILY_PEOPLE_MATCH_REPORTED,
+    RULE_FAMILY_STUDIO_MATCH_REPORTED,
     RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED,
     RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
     RULE_FAMILY_WATCHED_MOVIES_REPORTED,
     RULE_FAMILY_WATCHED_TV_REPORTED,
+    RULE_FAMILY_YEAR_RANGE_MATCH_REPORTED,
 )
-from mediamop.modules.pruner.pruner_preview_item_filters import jf_emby_item_passes_preview_filters
+from mediamop.modules.pruner.pruner_independent_rule_candidates import (
+    list_jf_emby_genre_match_candidates,
+    list_jf_emby_people_match_candidates,
+    list_jf_emby_studio_match_candidates,
+    list_jf_emby_year_range_match_candidates,
+    list_plex_genre_match_candidates,
+    list_plex_people_match_candidates,
+    list_plex_studio_match_candidates,
+    list_plex_year_range_match_candidates,
+)
 from mediamop.modules.pruner.pruner_plex_missing_thumb_candidates import list_plex_missing_thumb_candidates
 from mediamop.modules.pruner.pruner_plex_movie_rule_candidates import (
     list_plex_unwatched_movie_stale_candidates,
@@ -153,12 +166,6 @@ def list_missing_primary_candidates(
     api_key: str,
     media_scope: str,
     max_items: int,
-    preview_include_genres: Sequence[str] | None = None,
-    preview_include_people: Sequence[str] | None = None,
-    preview_include_people_roles: Sequence[str] | None = None,
-    preview_year_min: int | None = None,
-    preview_year_max: int | None = None,
-    preview_include_studios: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     """Return candidate dicts for TV (episodes) or Movies (movie items), newest-first pages.
 
@@ -178,10 +185,6 @@ def list_missing_primary_candidates(
     start = 0
     page = min(100, max(1, max_items))
     total_hits: int | None = None
-    gf = list(preview_include_genres or [])
-    pf = list(preview_include_people or [])
-    pr = list(preview_include_people_roles) if preview_include_people_roles is not None else None
-    sf = list(preview_include_studios or [])
 
     while len(candidates) < max_items:
         try:
@@ -212,16 +215,6 @@ def list_missing_primary_candidates(
             if not isinstance(it, dict):
                 continue
             if not use_filter and not _item_missing_primary(it):
-                continue
-            if not jf_emby_item_passes_preview_filters(
-                it,
-                preview_include_genres=gf,
-                preview_include_people=pf,
-                preview_include_people_roles=pr,
-                preview_year_min=preview_year_min,
-                preview_year_max=preview_year_max,
-                preview_include_studios=sf,
-            ):
                 continue
             if media_scope == MEDIA_SCOPE_TV:
                 candidates.append(
@@ -320,12 +313,6 @@ def list_watched_tv_episode_candidates(
     api_key: str,
     media_scope: str,
     max_items: int,
-    preview_include_genres: Sequence[str] | None = None,
-    preview_include_people: Sequence[str] | None = None,
-    preview_include_people_roles: Sequence[str] | None = None,
-    preview_year_min: int | None = None,
-    preview_year_max: int | None = None,
-    preview_include_studios: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     """Episodes the server reports as watched for this API user (``UserData`` / optional ``IsPlayed`` filter).
 
@@ -343,10 +330,6 @@ def list_watched_tv_episode_candidates(
     use_is_played_filter = True
     total_hits: int | None = None
     truncated = False
-    gf = list(preview_include_genres or [])
-    pf = list(preview_include_people or [])
-    pr = list(preview_include_people_roles) if preview_include_people_roles is not None else None
-    sf = list(preview_include_studios or [])
 
     while len(candidates) < max_items:
         params: dict[str, str] = {
@@ -379,16 +362,6 @@ def list_watched_tv_episode_candidates(
             if not isinstance(it, dict):
                 continue
             if not use_is_played_filter and not _item_watched_by_userdata(it):
-                continue
-            if not jf_emby_item_passes_preview_filters(
-                it,
-                preview_include_genres=gf,
-                preview_include_people=pf,
-                preview_include_people_roles=pr,
-                preview_year_min=preview_year_min,
-                preview_year_max=preview_year_max,
-                preview_include_studios=sf,
-            ):
                 continue
             iid = str(it.get("Id", "")).strip()
             if not iid:
@@ -426,12 +399,6 @@ def list_watched_movie_candidates(
     api_key: str,
     media_scope: str,
     max_items: int,
-    preview_include_genres: Sequence[str] | None = None,
-    preview_include_people: Sequence[str] | None = None,
-    preview_include_people_roles: Sequence[str] | None = None,
-    preview_year_min: int | None = None,
-    preview_year_max: int | None = None,
-    preview_include_studios: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     """Movie library items the server reports as watched for this API user (``UserData`` / optional ``IsPlayed`` filter).
 
@@ -449,10 +416,6 @@ def list_watched_movie_candidates(
     use_is_played_filter = True
     total_hits: int | None = None
     truncated = False
-    gf = list(preview_include_genres or [])
-    pf = list(preview_include_people or [])
-    pr = list(preview_include_people_roles) if preview_include_people_roles is not None else None
-    sf = list(preview_include_studios or [])
 
     while len(candidates) < max_items:
         params: dict[str, str] = {
@@ -485,16 +448,6 @@ def list_watched_movie_candidates(
             if not isinstance(it, dict):
                 continue
             if not use_is_played_filter and not _item_watched_by_userdata(it):
-                continue
-            if not jf_emby_item_passes_preview_filters(
-                it,
-                preview_include_genres=gf,
-                preview_include_people=pf,
-                preview_include_people_roles=pr,
-                preview_year_min=preview_year_min,
-                preview_year_max=preview_year_max,
-                preview_include_studios=sf,
-            ):
                 continue
             iid = str(it.get("Id", "")).strip()
             if not iid:
@@ -531,12 +484,6 @@ def list_watched_movie_low_rating_candidates(
     media_scope: str,
     max_items: int,
     community_rating_max_inclusive: float,
-    preview_include_genres: Sequence[str] | None = None,
-    preview_include_people: Sequence[str] | None = None,
-    preview_include_people_roles: Sequence[str] | None = None,
-    preview_year_min: int | None = None,
-    preview_year_max: int | None = None,
-    preview_include_studios: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     """Watched **movie** items with Jellyfin/Emby ``CommunityRating`` at or below ``community_rating_max_inclusive``.
 
@@ -559,10 +506,6 @@ def list_watched_movie_low_rating_candidates(
     use_is_played_filter = True
     total_hits: int | None = None
     truncated = False
-    gf = list(preview_include_genres or [])
-    pf = list(preview_include_people or [])
-    pr = list(preview_include_people_roles) if preview_include_people_roles is not None else None
-    sf = list(preview_include_studios or [])
 
     while len(candidates) < max_items:
         params: dict[str, str] = {
@@ -595,16 +538,6 @@ def list_watched_movie_low_rating_candidates(
             if not isinstance(it, dict):
                 continue
             if not use_is_played_filter and not _item_watched_by_userdata(it):
-                continue
-            if not jf_emby_item_passes_preview_filters(
-                it,
-                preview_include_genres=gf,
-                preview_include_people=pf,
-                preview_include_people_roles=pr,
-                preview_year_min=preview_year_min,
-                preview_year_max=preview_year_max,
-                preview_include_studios=sf,
-            ):
                 continue
             rating = jellyfin_emby_item_community_rating(it)
             if rating is None or rating > cap:
@@ -646,12 +579,6 @@ def list_unwatched_movie_stale_candidates(
     media_scope: str,
     max_items: int,
     min_age_days: int,
-    preview_include_genres: Sequence[str] | None = None,
-    preview_include_people: Sequence[str] | None = None,
-    preview_include_people_roles: Sequence[str] | None = None,
-    preview_year_min: int | None = None,
-    preview_year_max: int | None = None,
-    preview_include_studios: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     """Unwatched **movie** items whose library ``DateCreated`` is older than ``min_age_days`` (UTC).
 
@@ -673,10 +600,6 @@ def list_unwatched_movie_stale_candidates(
     use_is_played_filter = True
     total_hits: int | None = None
     truncated = False
-    gf = list(preview_include_genres or [])
-    pf = list(preview_include_people or [])
-    pr = list(preview_include_people_roles) if preview_include_people_roles is not None else None
-    sf = list(preview_include_studios or [])
 
     while len(candidates) < max_items:
         params: dict[str, str] = {
@@ -709,16 +632,6 @@ def list_unwatched_movie_stale_candidates(
             if not isinstance(it, dict):
                 continue
             if not _item_unplayed_by_userdata(it):
-                continue
-            if not jf_emby_item_passes_preview_filters(
-                it,
-                preview_include_genres=gf,
-                preview_include_people=pf,
-                preview_include_people_roles=pr,
-                preview_year_min=preview_year_min,
-                preview_year_max=preview_year_max,
-                preview_include_studios=sf,
-            ):
                 continue
             created = _parse_item_date_created(it.get("DateCreated"))
             if created is None or created > cutoff:
@@ -760,12 +673,6 @@ def list_never_played_stale_candidates(
     media_scope: str,
     max_items: int,
     min_age_days: int,
-    preview_include_genres: Sequence[str] | None = None,
-    preview_include_people: Sequence[str] | None = None,
-    preview_include_people_roles: Sequence[str] | None = None,
-    preview_year_min: int | None = None,
-    preview_year_max: int | None = None,
-    preview_include_studios: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     """Unplayed episodes or movies whose library ``DateCreated`` is older than ``min_age_days`` (UTC).
 
@@ -789,10 +696,6 @@ def list_never_played_stale_candidates(
     use_is_played_filter = True
     total_hits: int | None = None
     truncated = False
-    gf = list(preview_include_genres or [])
-    pf = list(preview_include_people or [])
-    pr = list(preview_include_people_roles) if preview_include_people_roles is not None else None
-    sf = list(preview_include_studios or [])
 
     while len(candidates) < max_items:
         params: dict[str, str] = {
@@ -825,16 +728,6 @@ def list_never_played_stale_candidates(
             if not isinstance(it, dict):
                 continue
             if not _item_unplayed_by_userdata(it):
-                continue
-            if not jf_emby_item_passes_preview_filters(
-                it,
-                preview_include_genres=gf,
-                preview_include_people=pf,
-                preview_include_people_roles=pr,
-                preview_year_min=preview_year_min,
-                preview_year_max=preview_year_max,
-                preview_include_studios=sf,
-            ):
                 continue
             created = _parse_item_date_created(it.get("DateCreated"))
             if created is None or created > cutoff:
@@ -924,7 +817,6 @@ def preview_payload_json(
     preview_year_min: int | None = None,
     preview_year_max: int | None = None,
     preview_include_studios: Sequence[str] | None = None,
-    preview_include_collections: Sequence[str] | None = None,
 ) -> tuple[str, str, list[dict[str, Any]], bool]:
     """Returns ``(outcome, unsupported_detail_or_empty, candidates, truncated)``."""
 
@@ -942,6 +834,10 @@ def preview_payload_json(
                 raise ValueError(msg)
             return token
 
+        preview_genres = list(preview_include_genres or [])
+        preview_studios = list(preview_include_studios or [])
+        preview_people = list(preview_include_people or [])
+
         if rule_family_id == RULE_FAMILY_WATCHED_MOVIES_REPORTED:
             if media_scope != MEDIA_SCOPE_MOVIES:
                 return (
@@ -954,13 +850,6 @@ def preview_payload_json(
                 base_url=base_url,
                 auth_token=_require_plex_token(),
                 max_items=max_items,
-                preview_include_genres=preview_include_genres,
-                preview_include_people=preview_include_people,
-                preview_include_people_roles=preview_include_people_roles,
-                preview_year_min=preview_year_min,
-                preview_year_max=preview_year_max,
-                preview_include_studios=preview_include_studios,
-                preview_include_collections=preview_include_collections,
             )
             return "success", "", cands, trunc
         if rule_family_id == RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED:
@@ -982,13 +871,6 @@ def preview_payload_json(
                 auth_token=_require_plex_token(),
                 max_items=max_items,
                 audience_rating_max_inclusive=float(watched_movie_low_rating_max_plex_audience_rating),
-                preview_include_genres=preview_include_genres,
-                preview_include_people=preview_include_people,
-                preview_include_people_roles=preview_include_people_roles,
-                preview_year_min=preview_year_min,
-                preview_year_max=preview_year_max,
-                preview_include_studios=preview_include_studios,
-                preview_include_collections=preview_include_collections,
             )
             return "success", "", cands, trunc
         if rule_family_id == RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED:
@@ -1007,13 +889,6 @@ def preview_payload_json(
                 auth_token=_require_plex_token(),
                 max_items=max_items,
                 min_age_days=int(unwatched_movie_stale_min_age_days),
-                preview_include_genres=preview_include_genres,
-                preview_include_people=preview_include_people,
-                preview_include_people_roles=preview_include_people_roles,
-                preview_year_min=preview_year_min,
-                preview_year_max=preview_year_max,
-                preview_include_studios=preview_include_studios,
-                preview_include_collections=preview_include_collections,
             )
             return "success", "", cands, trunc
         if rule_family_id == RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
@@ -1028,29 +903,85 @@ def preview_payload_json(
                 auth_token=token,
                 media_scope=media_scope,
                 max_items=max_items,
-                preview_include_genres=preview_include_genres,
-                preview_include_people=preview_include_people,
+            )
+            return "success", "", cands, trunc
+        if rule_family_id == RULE_FAMILY_GENRE_MATCH_REPORTED:
+            if not preview_genres:
+                return (
+                    "unsupported",
+                    "No genres selected — select at least one genre to use this rule.",
+                    [],
+                    False,
+                )
+            cands, trunc = list_plex_genre_match_candidates(
+                base_url=base_url,
+                auth_token=_require_plex_token(),
+                media_scope=media_scope,
+                max_items=max_items,
+                preview_include_genres=preview_genres,
+            )
+            return "success", "", cands, trunc
+        if rule_family_id == RULE_FAMILY_STUDIO_MATCH_REPORTED:
+            if not preview_studios:
+                return (
+                    "unsupported",
+                    "No studios selected — select at least one studio to use this rule.",
+                    [],
+                    False,
+                )
+            cands, trunc = list_plex_studio_match_candidates(
+                base_url=base_url,
+                auth_token=_require_plex_token(),
+                media_scope=media_scope,
+                max_items=max_items,
+                preview_include_studios=preview_studios,
+            )
+            return "success", "", cands, trunc
+        if rule_family_id == RULE_FAMILY_PEOPLE_MATCH_REPORTED:
+            if not preview_people:
+                return (
+                    "unsupported",
+                    "No people entered — enter at least one name to use this rule.",
+                    [],
+                    False,
+                )
+            cands, trunc = list_plex_people_match_candidates(
+                base_url=base_url,
+                auth_token=_require_plex_token(),
+                media_scope=media_scope,
+                max_items=max_items,
+                preview_include_people=preview_people,
                 preview_include_people_roles=preview_include_people_roles,
+            )
+            return "success", "", cands, trunc
+        if rule_family_id == RULE_FAMILY_YEAR_RANGE_MATCH_REPORTED:
+            if preview_year_min is None and preview_year_max is None:
+                return (
+                    "unsupported",
+                    "No year range set — set at least one year bound to use this rule.",
+                    [],
+                    False,
+                )
+            cands, trunc = list_plex_year_range_match_candidates(
+                base_url=base_url,
+                auth_token=_require_plex_token(),
+                media_scope=media_scope,
+                max_items=max_items,
                 preview_year_min=preview_year_min,
                 preview_year_max=preview_year_max,
-                preview_include_studios=preview_include_studios,
-                preview_include_collections=preview_include_collections,
             )
             return "success", "", cands, trunc
         return "unsupported", plex_preview_unsupported_detail(), [], False
     api_key = secrets.get("api_key", "")
+    preview_genres = list(preview_include_genres or [])
+    preview_studios = list(preview_include_studios or [])
+    preview_people = list(preview_include_people or [])
     if rule_family_id == RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
         cands, trunc = list_missing_primary_candidates(
             base_url=base_url,
             api_key=api_key,
             media_scope=media_scope,
             max_items=max_items,
-            preview_include_genres=preview_include_genres,
-            preview_include_people=preview_include_people,
-            preview_include_people_roles=preview_include_people_roles,
-            preview_year_min=preview_year_min,
-            preview_year_max=preview_year_max,
-            preview_include_studios=preview_include_studios,
         )
         return "success", "", cands, trunc
     if rule_family_id == RULE_FAMILY_WATCHED_TV_REPORTED:
@@ -1066,12 +997,6 @@ def preview_payload_json(
             api_key=api_key,
             media_scope=media_scope,
             max_items=max_items,
-            preview_include_genres=preview_include_genres,
-            preview_include_people=preview_include_people,
-            preview_include_people_roles=preview_include_people_roles,
-            preview_year_min=preview_year_min,
-            preview_year_max=preview_year_max,
-            preview_include_studios=preview_include_studios,
         )
         return "success", "", cands, trunc
     if rule_family_id == RULE_FAMILY_WATCHED_MOVIES_REPORTED:
@@ -1087,12 +1012,6 @@ def preview_payload_json(
             api_key=api_key,
             media_scope=media_scope,
             max_items=max_items,
-            preview_include_genres=preview_include_genres,
-            preview_include_people=preview_include_people,
-            preview_include_people_roles=preview_include_people_roles,
-            preview_year_min=preview_year_min,
-            preview_year_max=preview_year_max,
-            preview_include_studios=preview_include_studios,
         )
         return "success", "", cands, trunc
     if rule_family_id == RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED:
@@ -1105,12 +1024,6 @@ def preview_payload_json(
             media_scope=media_scope,
             max_items=max_items,
             min_age_days=int(never_played_min_age_days),
-            preview_include_genres=preview_include_genres,
-            preview_include_people=preview_include_people,
-            preview_include_people_roles=preview_include_people_roles,
-            preview_year_min=preview_year_min,
-            preview_year_max=preview_year_max,
-            preview_include_studios=preview_include_studios,
         )
         return "success", "", cands, trunc
     if rule_family_id == RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED:
@@ -1133,12 +1046,6 @@ def preview_payload_json(
             media_scope=media_scope,
             max_items=max_items,
             community_rating_max_inclusive=float(watched_movie_low_rating_max_jellyfin_emby_community_rating),
-            preview_include_genres=preview_include_genres,
-            preview_include_people=preview_include_people,
-            preview_include_people_roles=preview_include_people_roles,
-            preview_year_min=preview_year_min,
-            preview_year_max=preview_year_max,
-            preview_include_studios=preview_include_studios,
         )
         return "success", "", cands, trunc
     if rule_family_id == RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED:
@@ -1158,12 +1065,72 @@ def preview_payload_json(
             media_scope=media_scope,
             max_items=max_items,
             min_age_days=int(unwatched_movie_stale_min_age_days),
-            preview_include_genres=preview_include_genres,
-            preview_include_people=preview_include_people,
+        )
+        return "success", "", cands, trunc
+    if rule_family_id == RULE_FAMILY_GENRE_MATCH_REPORTED:
+        if not preview_genres:
+            return (
+                "unsupported",
+                "No genres selected — select at least one genre to use this rule.",
+                [],
+                False,
+            )
+        cands, trunc = list_jf_emby_genre_match_candidates(
+            base_url=base_url,
+            api_key=api_key,
+            media_scope=media_scope,
+            max_items=max_items,
+            preview_include_genres=preview_genres,
+        )
+        return "success", "", cands, trunc
+    if rule_family_id == RULE_FAMILY_STUDIO_MATCH_REPORTED:
+        if not preview_studios:
+            return (
+                "unsupported",
+                "No studios selected — select at least one studio to use this rule.",
+                [],
+                False,
+            )
+        cands, trunc = list_jf_emby_studio_match_candidates(
+            base_url=base_url,
+            api_key=api_key,
+            media_scope=media_scope,
+            max_items=max_items,
+            preview_include_studios=preview_studios,
+        )
+        return "success", "", cands, trunc
+    if rule_family_id == RULE_FAMILY_PEOPLE_MATCH_REPORTED:
+        if not preview_people:
+            return (
+                "unsupported",
+                "No people entered — enter at least one name to use this rule.",
+                [],
+                False,
+            )
+        cands, trunc = list_jf_emby_people_match_candidates(
+            base_url=base_url,
+            api_key=api_key,
+            media_scope=media_scope,
+            max_items=max_items,
+            preview_include_people=preview_people,
             preview_include_people_roles=preview_include_people_roles,
+        )
+        return "success", "", cands, trunc
+    if rule_family_id == RULE_FAMILY_YEAR_RANGE_MATCH_REPORTED:
+        if preview_year_min is None and preview_year_max is None:
+            return (
+                "unsupported",
+                "No year range set — set at least one year bound to use this rule.",
+                [],
+                False,
+            )
+        cands, trunc = list_jf_emby_year_range_match_candidates(
+            base_url=base_url,
+            api_key=api_key,
+            media_scope=media_scope,
+            max_items=max_items,
             preview_year_min=preview_year_min,
             preview_year_max=preview_year_max,
-            preview_include_studios=preview_include_studios,
         )
         return "success", "", cands, trunc
     msg = f"unsupported rule_family_id for preview: {rule_family_id!r}"

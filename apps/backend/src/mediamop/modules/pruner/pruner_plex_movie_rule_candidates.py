@@ -12,31 +12,16 @@ Supported rule families (Movies scope only):
 * ``unwatched_movie_stale_reported`` — not watched by the watched test above, plus ``addedAt`` library age at or
   above the configured minimum. ``addedAt`` is interpreted as Unix epoch seconds; values above 10 billion are treated
   as milliseconds.
-
-Preview narrowing (genre, people, year, studio, collection) reuses the same leaf tag / field helpers as other Plex
-``allLeaves`` previews.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from mediamop.modules.pruner.pruner_constants import MEDIA_SCOPE_MOVIES
-from mediamop.modules.pruner.pruner_genre_filters import (
-    item_matches_genre_include_filter,
-    plex_leaf_collection_tags,
-    plex_leaf_genre_tags,
-    plex_leaf_studio_tags,
-)
 from mediamop.modules.pruner.pruner_http import http_get_json, join_base_path
-from mediamop.modules.pruner.pruner_people_filters import (
-    DEFAULT_PREVIEW_PEOPLE_ROLES,
-    item_matches_people_include_filter,
-    plex_leaf_person_tags_for_roles,
-)
-from mediamop.modules.pruner.pruner_preview_year_filters import item_matches_preview_year_filter, plex_leaf_release_year_int
 from mediamop.modules.pruner.pruner_plex_missing_thumb_candidates import (
     _as_list,
     _media_container,
@@ -111,34 +96,6 @@ def _leaf_is_movie(meta: dict[str, Any]) -> bool:
     return str(meta.get("type", "")).strip().lower() == "movie"
 
 
-def _plex_movie_passes_preview_narrowing(
-    m: dict[str, Any],
-    *,
-    gf: list[str],
-    pf: list[str],
-    pr: list[str],
-    preview_year_min: int | None,
-    preview_year_max: int | None,
-    sf: list[str],
-    cf: list[str],
-) -> bool:
-    if gf and not item_matches_genre_include_filter(plex_leaf_genre_tags(m), gf):
-        return False
-    if pf and not item_matches_people_include_filter(plex_leaf_person_tags_for_roles(m, pr), pf):
-        return False
-    if not item_matches_preview_year_filter(
-        plex_leaf_release_year_int(m),
-        preview_year_min,
-        preview_year_max,
-    ):
-        return False
-    if sf and not item_matches_genre_include_filter(plex_leaf_studio_tags(m), sf):
-        return False
-    if cf and not item_matches_genre_include_filter(plex_leaf_collection_tags(m), cf):
-        return False
-    return True
-
-
 def _plex_collect_movie_rows(
     *,
     base_url: str,
@@ -146,21 +103,9 @@ def _plex_collect_movie_rows(
     max_items: int,
     row_predicate: Callable[[dict[str, Any]], bool],
     build_row: Callable[[dict[str, Any], str], dict[str, Any]],
-    preview_include_genres: Sequence[str] | None,
-    preview_include_people: Sequence[str] | None,
-    preview_include_people_roles: Sequence[str] | None,
-    preview_year_min: int | None,
-    preview_year_max: int | None,
-    preview_include_studios: Sequence[str] | None,
-    preview_include_collections: Sequence[str] | None,
 ) -> tuple[list[dict[str, Any]], bool]:
     if max_items < 1:
         return [], False
-    gf = list(preview_include_genres or [])
-    pf = list(preview_include_people or [])
-    pr = list(preview_include_people_roles) if preview_include_people_roles is not None else list(DEFAULT_PREVIEW_PEOPLE_ROLES)
-    sf = list(preview_include_studios or [])
-    cf = list(preview_include_collections or [])
     cap = max(0, int(max_items))
     if cap == 0:
         return [], False
@@ -217,18 +162,6 @@ def _plex_collect_movie_rows(
                 if not row_predicate(m):
                     page_had_skipped_potential = True
                     continue
-                if not _plex_movie_passes_preview_narrowing(
-                    m,
-                    gf=gf,
-                    pf=pf,
-                    pr=pr,
-                    preview_year_min=preview_year_min,
-                    preview_year_max=preview_year_max,
-                    sf=sf,
-                    cf=cf,
-                ):
-                    page_had_skipped_potential = True
-                    continue
                 rk = _rating_key(m)
                 if not rk:
                     continue
@@ -263,13 +196,6 @@ def list_plex_watched_movie_candidates(
     base_url: str,
     auth_token: str,
     max_items: int,
-    preview_include_genres: Sequence[str] | None = None,
-    preview_include_people: Sequence[str] | None = None,
-    preview_include_people_roles: Sequence[str] | None = None,
-    preview_year_min: int | None = None,
-    preview_year_max: int | None = None,
-    preview_include_studios: Sequence[str] | None = None,
-    preview_include_collections: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     def build(m: dict[str, Any], rk: str) -> dict[str, Any]:
         return {
@@ -285,13 +211,6 @@ def list_plex_watched_movie_candidates(
         max_items=max_items,
         row_predicate=plex_movie_leaf_watched_for_token,
         build_row=build,
-        preview_include_genres=preview_include_genres,
-        preview_include_people=preview_include_people,
-        preview_include_people_roles=preview_include_people_roles,
-        preview_year_min=preview_year_min,
-        preview_year_max=preview_year_max,
-        preview_include_studios=preview_include_studios,
-        preview_include_collections=preview_include_collections,
     )
 
 
@@ -301,13 +220,6 @@ def list_plex_watched_movie_low_rating_candidates(
     auth_token: str,
     max_items: int,
     audience_rating_max_inclusive: float,
-    preview_include_genres: Sequence[str] | None = None,
-    preview_include_people: Sequence[str] | None = None,
-    preview_include_people_roles: Sequence[str] | None = None,
-    preview_year_min: int | None = None,
-    preview_year_max: int | None = None,
-    preview_include_studios: Sequence[str] | None = None,
-    preview_include_collections: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     cap = float(audience_rating_max_inclusive)
 
@@ -336,13 +248,6 @@ def list_plex_watched_movie_low_rating_candidates(
         max_items=max_items,
         row_predicate=pred,
         build_row=build,
-        preview_include_genres=preview_include_genres,
-        preview_include_people=preview_include_people,
-        preview_include_people_roles=preview_include_people_roles,
-        preview_year_min=preview_year_min,
-        preview_year_max=preview_year_max,
-        preview_include_studios=preview_include_studios,
-        preview_include_collections=preview_include_collections,
     )
 
 
@@ -352,13 +257,6 @@ def list_plex_unwatched_movie_stale_candidates(
     auth_token: str,
     max_items: int,
     min_age_days: int,
-    preview_include_genres: Sequence[str] | None = None,
-    preview_include_people: Sequence[str] | None = None,
-    preview_include_people_roles: Sequence[str] | None = None,
-    preview_year_min: int | None = None,
-    preview_year_max: int | None = None,
-    preview_include_studios: Sequence[str] | None = None,
-    preview_include_collections: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     age = max(1, int(min_age_days))
     cutoff = datetime.now(timezone.utc) - timedelta(days=age)
@@ -387,11 +285,4 @@ def list_plex_unwatched_movie_stale_candidates(
         max_items=max_items,
         row_predicate=pred,
         build_row=build,
-        preview_include_genres=preview_include_genres,
-        preview_include_people=preview_include_people,
-        preview_include_people_roles=preview_include_people_roles,
-        preview_year_min=preview_year_min,
-        preview_year_max=preview_year_max,
-        preview_include_studios=preview_include_studios,
-        preview_include_collections=preview_include_collections,
     )

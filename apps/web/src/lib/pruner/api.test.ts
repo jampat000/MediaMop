@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   PRUNER_REMOVE_UNWATCHED_STALE_MOVIE_ENTRIES_LABEL,
   PRUNER_REMOVE_WATCHED_LOW_RATING_MOVIE_ENTRIES_LABEL,
+  RULE_FAMILY_GENRE_MATCH_REPORTED,
+  RULE_FAMILY_PEOPLE_MATCH_REPORTED,
+  RULE_FAMILY_STUDIO_MATCH_REPORTED,
   RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED,
   RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
+  RULE_FAMILY_YEAR_RANGE_MATCH_REPORTED,
   prunerApplyEligibilityPath,
   prunerApplyLabelForRuleFamily,
   prunerPreviewRunsListPath,
@@ -24,6 +28,12 @@ describe("prunerApplyLabelForRuleFamily", () => {
     );
     expect(prunerApplyLabelForRuleFamily(RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED)).toBe(
       PRUNER_REMOVE_UNWATCHED_STALE_MOVIE_ENTRIES_LABEL,
+    );
+    expect(prunerApplyLabelForRuleFamily(RULE_FAMILY_GENRE_MATCH_REPORTED)).toBe("Remove items matching selected genres");
+    expect(prunerApplyLabelForRuleFamily(RULE_FAMILY_STUDIO_MATCH_REPORTED)).toBe("Remove items from selected studios");
+    expect(prunerApplyLabelForRuleFamily(RULE_FAMILY_PEOPLE_MATCH_REPORTED)).toBe("Remove items involving selected people");
+    expect(prunerApplyLabelForRuleFamily(RULE_FAMILY_YEAR_RANGE_MATCH_REPORTED)).toBe(
+      "Remove items from selected year range",
     );
   });
 });

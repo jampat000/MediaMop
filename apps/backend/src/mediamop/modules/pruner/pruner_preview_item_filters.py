@@ -31,7 +31,11 @@ def jf_emby_item_passes_preview_filters(
     preview_year_max: int | None,
     preview_include_studios: Sequence[str],
 ) -> bool:
-    """AND across active preview-only include filters (missing year fails when year filter active)."""
+    """No longer used by any active rule family. Each independent rule calls its own filter helper directly.
+
+    Kept for test compatibility. Historically this ANDed genre, people, year, and studio include filters on
+    Jellyfin/Emby ``Items`` rows.
+    """
 
     if not item_matches_genre_include_filter(jellyfin_emby_item_genres(it), preview_include_genres):
         return False

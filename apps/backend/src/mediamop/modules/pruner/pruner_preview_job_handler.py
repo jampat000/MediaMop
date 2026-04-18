@@ -12,12 +12,16 @@ from sqlalchemy.orm import Session, sessionmaker
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.pruner.pruner_constants import (
     MEDIA_SCOPE_MOVIES,
+    RULE_FAMILY_GENRE_MATCH_REPORTED,
     RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
     RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
+    RULE_FAMILY_PEOPLE_MATCH_REPORTED,
+    RULE_FAMILY_STUDIO_MATCH_REPORTED,
     RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED,
     RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
     RULE_FAMILY_WATCHED_MOVIES_REPORTED,
     RULE_FAMILY_WATCHED_TV_REPORTED,
+    RULE_FAMILY_YEAR_RANGE_MATCH_REPORTED,
     clamp_never_played_min_age_days,
     clamp_preview_year_bound,
     clamp_watched_movie_low_rating_max_jellyfin_emby_community_rating,
@@ -74,9 +78,6 @@ def make_pruner_candidate_removal_preview_handler(
             raise ValueError(msg)
         if rule_family_id not in pruner_preview_rule_families_jf_emby():
             msg = "payload.rule_family_id is not supported for preview in this slice"
-            raise ValueError(msg)
-        if is_scheduled and rule_family_id != RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
-            msg = "scheduled preview may only target missing_primary_media_reported"
             raise ValueError(msg)
         if rule_family_id == RULE_FAMILY_WATCHED_MOVIES_REPORTED and scope != MEDIA_SCOPE_MOVIES:
             msg = "watched_movies_reported preview requires media_scope=movies"
@@ -150,7 +151,6 @@ def make_pruner_candidate_removal_preview_handler(
             if preview_year_min is not None and preview_year_max is not None and preview_year_min > preview_year_max:
                 msg = "preview_year_min is greater than preview_year_max for this scope"
                 raise ValueError(msg)
-            preview_collections_for_rule = preview_collections if provider == "plex" else []
 
         try:
             outcome, unsup, cands, trunc = preview_payload_json(
@@ -176,7 +176,6 @@ def make_pruner_candidate_removal_preview_handler(
                 preview_year_min=preview_year_min,
                 preview_year_max=preview_year_max,
                 preview_include_studios=preview_studios,
-                preview_include_collections=preview_collections_for_rule,
             )
             cand_json = serialize_candidates(cands)
             err: str | None = None
@@ -202,6 +201,14 @@ def make_pruner_candidate_removal_preview_handler(
             rule_tag = "watched low-rating movies"
         elif rule_family_id == RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED:
             rule_tag = "unwatched stale movies"
+        elif rule_family_id == RULE_FAMILY_GENRE_MATCH_REPORTED:
+            rule_tag = "genre match"
+        elif rule_family_id == RULE_FAMILY_STUDIO_MATCH_REPORTED:
+            rule_tag = "studio match"
+        elif rule_family_id == RULE_FAMILY_PEOPLE_MATCH_REPORTED:
+            rule_tag = "people match"
+        elif rule_family_id == RULE_FAMILY_YEAR_RANGE_MATCH_REPORTED:
+            rule_tag = "year range match"
         else:
             rule_tag = str(rule_family_id)
         title = (
@@ -252,35 +259,16 @@ def make_pruner_candidate_removal_preview_handler(
                         "in this slice — the Items API path does not expose per-item library collection membership "
                         "without extra calls."
                     )
-                if outcome == "success" and preview_genres and len(cands) == 0:
-                    if provider == "plex" and rule_family_id == RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
-                        detail_obj["preview_genre_filter_zero_candidates_note"] = (
-                            "Zero preview rows with genre filters active: filters narrowed this preview. "
-                            "That does not mean the library is clean — widen genres or raise the per-tab cap if you "
-                            "expected matches. Plex missing-primary uses Genre tags on each allLeaves leaf; leaves "
-                            "without a matching tag are skipped."
-                        )
-                    else:
-                        detail_obj["preview_genre_filter_zero_candidates_note"] = (
-                            "Zero preview rows with genre filters active: filters narrowed this preview. "
-                            "That does not mean the library is clean — widen genres or raise the per-tab cap if you "
-                            "expected matches."
-                        )
-                if outcome == "success" and preview_people and len(cands) == 0:
-                    if provider == "plex" and rule_family_id == RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
-                        detail_obj["preview_people_filter_zero_candidates_note"] = (
-                            "Zero preview rows with people filters active: filters narrowed this preview. "
-                            "That does not mean the library is clean — widen names or raise the per-tab cap if you "
-                            "expected matches. Plex uses tag strings from Role, Writer, and Director on each "
-                            "allLeaves leaf only (exact normalized name match)."
-                        )
-                    else:
-                        detail_obj["preview_people_filter_zero_candidates_note"] = (
-                            "Zero preview rows with people filters active: filters narrowed this preview. "
-                            "That does not mean the library is clean — widen names or raise the per-tab cap if you "
-                            "expected matches. Jellyfin/Emby use the People list on each Items row (exact normalized "
-                            "name match; role types are not filtered in this release)."
-                        )
+                if outcome == "success" and rule_family_id == RULE_FAMILY_GENRE_MATCH_REPORTED and preview_genres and len(cands) == 0:
+                    detail_obj["preview_genre_rule_zero_candidates_note"] = (
+                        "Zero rows matched your selected genres under the preview cap — the library may still contain "
+                        "other genres, or matches may sit beyond the cap (try raising per-tab preview max)."
+                    )
+                if outcome == "success" and rule_family_id == RULE_FAMILY_PEOPLE_MATCH_REPORTED and preview_people and len(cands) == 0:
+                    detail_obj["preview_people_rule_zero_candidates_note"] = (
+                        "Zero rows matched your entered names under the preview cap — widen names, adjust roles "
+                        "(Jellyfin/Emby), or raise the per-tab preview max if you expected matches."
+                    )
                 if provider == "plex" and rule_family_id == RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
                     detail_obj["plex_missing_primary_item_cap"] = max_items
                     detail_obj["plex_missing_primary_cap_note"] = (

@@ -1,11 +1,15 @@
 import { fetchActivityRecent } from "../../lib/api/activity-api";
 import {
+  RULE_FAMILY_GENRE_MATCH_REPORTED,
   RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
   RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
+  RULE_FAMILY_PEOPLE_MATCH_REPORTED,
+  RULE_FAMILY_STUDIO_MATCH_REPORTED,
   RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED,
   RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
   RULE_FAMILY_WATCHED_MOVIES_REPORTED,
   RULE_FAMILY_WATCHED_TV_REPORTED,
+  RULE_FAMILY_YEAR_RANGE_MATCH_REPORTED,
   fetchPrunerJobsInspection,
   fetchPrunerPreviewRuns,
 } from "../../lib/pruner/api";
@@ -32,6 +36,14 @@ export function ruleFamilyOperatorLabel(ruleFamilyId: string): string {
       return "Delete movies you have not watched that are older than the age you set";
     case RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED:
       return "Delete items missing a main poster or episode image";
+    case RULE_FAMILY_GENRE_MATCH_REPORTED:
+      return "Delete items matching your selected genres";
+    case RULE_FAMILY_STUDIO_MATCH_REPORTED:
+      return "Delete items from your selected studios";
+    case RULE_FAMILY_PEOPLE_MATCH_REPORTED:
+      return "Delete items involving your selected people";
+    case RULE_FAMILY_YEAR_RANGE_MATCH_REPORTED:
+      return "Delete items from your selected year range";
     default:
       return "This cleanup type";
   }
@@ -190,6 +202,18 @@ export function tvRuleFamiliesToScan(
       out.push(RULE_FAMILY_WATCHED_TV_REPORTED);
     }
   }
+  if ((tv.preview_include_genres as string[] | undefined)?.length) {
+    out.push(RULE_FAMILY_GENRE_MATCH_REPORTED);
+  }
+  if ((tv.preview_include_studios as string[] | undefined)?.length) {
+    out.push(RULE_FAMILY_STUDIO_MATCH_REPORTED);
+  }
+  if ((tv.preview_include_people as string[] | undefined)?.length) {
+    out.push(RULE_FAMILY_PEOPLE_MATCH_REPORTED);
+  }
+  if (tv.preview_year_min != null || tv.preview_year_max != null) {
+    out.push(RULE_FAMILY_YEAR_RANGE_MATCH_REPORTED);
+  }
   return out;
 }
 
@@ -208,6 +232,18 @@ export function moviesRuleFamiliesToScan(
   }
   if (movies.unwatched_movie_stale_reported_enabled && movies.unwatched_movie_stale_min_age_days >= 7) {
     out.push(RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED);
+  }
+  if ((movies.preview_include_genres as string[] | undefined)?.length) {
+    out.push(RULE_FAMILY_GENRE_MATCH_REPORTED);
+  }
+  if ((movies.preview_include_studios as string[] | undefined)?.length) {
+    out.push(RULE_FAMILY_STUDIO_MATCH_REPORTED);
+  }
+  if ((movies.preview_include_people as string[] | undefined)?.length) {
+    out.push(RULE_FAMILY_PEOPLE_MATCH_REPORTED);
+  }
+  if (movies.preview_year_min != null || movies.preview_year_max != null) {
+    out.push(RULE_FAMILY_YEAR_RANGE_MATCH_REPORTED);
   }
   return out;
 }

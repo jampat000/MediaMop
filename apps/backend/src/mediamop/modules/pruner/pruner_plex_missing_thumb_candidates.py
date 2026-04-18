@@ -8,30 +8,14 @@ that snapshot.
 ``Video`` rows where the Plex JSON object has **no non-empty ``thumb``** on that leaf. This is **not** the same
 signal as Jellyfin/Emby ``HasPrimaryImage=false`` + primary tag checks; operator copy must not equate them.
 
-Optional **people** filters (preview-only) match **Role**, **Writer**, and **Director** ``tag`` strings on each leaf
-metadata object returned by ``allLeaves`` — no richer credit graph in this slice.
-
 Read-only calls: ``GET /library/sections`` and paged ``GET /library/sections/{key}/allLeaves``.
 """
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import Any
 
 from mediamop.modules.pruner.pruner_constants import MEDIA_SCOPE_MOVIES, MEDIA_SCOPE_TV
-from mediamop.modules.pruner.pruner_genre_filters import (
-    item_matches_genre_include_filter,
-    plex_leaf_collection_tags,
-    plex_leaf_genre_tags,
-    plex_leaf_studio_tags,
-)
-from mediamop.modules.pruner.pruner_preview_year_filters import item_matches_preview_year_filter, plex_leaf_release_year_int
-from mediamop.modules.pruner.pruner_people_filters import (
-    DEFAULT_PREVIEW_PEOPLE_ROLES,
-    item_matches_people_include_filter,
-    plex_leaf_person_tags_for_roles,
-)
 from mediamop.modules.pruner.pruner_http import http_get_json, join_base_path
 
 
@@ -95,13 +79,6 @@ def list_plex_missing_thumb_candidates(
     auth_token: str,
     media_scope: str,
     max_items: int,
-    preview_include_genres: Sequence[str] | None = None,
-    preview_include_people: Sequence[str] | None = None,
-    preview_include_people_roles: Sequence[str] | None = None,
-    preview_year_min: int | None = None,
-    preview_year_max: int | None = None,
-    preview_include_studios: Sequence[str] | None = None,
-    preview_include_collections: Sequence[str] | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
     """Return up to ``max_items`` Plex leaf metadata dicts (``ratingKey`` as ``item_id``) plus ``truncated``.
 
@@ -115,12 +92,6 @@ def list_plex_missing_thumb_candidates(
     cap = max(0, int(max_items))
     if cap == 0:
         return [], False
-
-    gf = list(preview_include_genres or [])
-    pf = list(preview_include_people or [])
-    pr = list(preview_include_people_roles) if preview_include_people_roles is not None else list(DEFAULT_PREVIEW_PEOPLE_ROLES)
-    sf = list(preview_include_studios or [])
-    cf = list(preview_include_collections or [])
 
     sections_url = join_base_path(base_url, "library/sections")
     status, data = http_get_json(sections_url, headers=_plex_headers(auth_token))
@@ -145,7 +116,6 @@ def list_plex_missing_thumb_candidates(
 
     out: list[dict[str, Any]] = []
     truncated = False
-    any_skipped_thumb_ok_for_genre = False
     page_size = min(200, max(1, cap))
     for sec_idx, sec_key in enumerate(section_keys):
         if len(out) >= cap:
@@ -166,37 +136,12 @@ def list_plex_missing_thumb_candidates(
             if not metas:
                 break
             stop_after_page = False
-            page_skipped_thumb_ok_for_genre = False
             for meta_idx, m in enumerate(metas):
                 if not isinstance(m, dict):
                     continue
                 if not _leaf_type_matches(m, media_scope):
                     continue
                 if not _plex_leaf_missing_thumb(m):
-                    continue
-                if gf and not item_matches_genre_include_filter(plex_leaf_genre_tags(m), gf):
-                    page_skipped_thumb_ok_for_genre = True
-                    any_skipped_thumb_ok_for_genre = True
-                    continue
-                if pf and not item_matches_people_include_filter(plex_leaf_person_tags_for_roles(m, pr), pf):
-                    page_skipped_thumb_ok_for_genre = True
-                    any_skipped_thumb_ok_for_genre = True
-                    continue
-                if not item_matches_preview_year_filter(
-                    plex_leaf_release_year_int(m),
-                    preview_year_min,
-                    preview_year_max,
-                ):
-                    page_skipped_thumb_ok_for_genre = True
-                    any_skipped_thumb_ok_for_genre = True
-                    continue
-                if sf and not item_matches_genre_include_filter(plex_leaf_studio_tags(m), sf):
-                    page_skipped_thumb_ok_for_genre = True
-                    any_skipped_thumb_ok_for_genre = True
-                    continue
-                if cf and not item_matches_genre_include_filter(plex_leaf_collection_tags(m), cf):
-                    page_skipped_thumb_ok_for_genre = True
-                    any_skipped_thumb_ok_for_genre = True
                     continue
                 rk = _rating_key(m)
                 if not rk:
@@ -222,7 +167,7 @@ def list_plex_missing_thumb_candidates(
                         },
                     )
                 if len(out) >= cap:
-                    if meta_idx < len(metas) - 1 or page_skipped_thumb_ok_for_genre:
+                    if meta_idx < len(metas) - 1:
                         truncated = True
                     stop_after_page = True
                     break
@@ -236,8 +181,6 @@ def list_plex_missing_thumb_candidates(
                 if start < total_i:
                     truncated = True
                 elif sec_idx < len(section_keys) - 1:
-                    truncated = True
-                elif any_skipped_thumb_ok_for_genre:
                     truncated = True
                 break
             if start >= total_i or len(metas) == 0:

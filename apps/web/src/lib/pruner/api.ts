@@ -86,6 +86,10 @@ export const RULE_FAMILY_WATCHED_TV_REPORTED = "watched_tv_reported";
 export const RULE_FAMILY_WATCHED_MOVIES_REPORTED = "watched_movies_reported";
 export const RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED = "watched_movie_low_rating_reported";
 export const RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED = "unwatched_movie_stale_reported";
+export const RULE_FAMILY_GENRE_MATCH_REPORTED = "genre_match_reported";
+export const RULE_FAMILY_STUDIO_MATCH_REPORTED = "studio_match_reported";
+export const RULE_FAMILY_PEOPLE_MATCH_REPORTED = "people_match_reported";
+export const RULE_FAMILY_YEAR_RANGE_MATCH_REPORTED = "year_range_match_reported";
 
 export const PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL = "Delete items missing a main poster or episode image";
 export const PRUNER_REMOVE_STALE_NEVER_PLAYED_LIBRARY_ENTRIES_LABEL =
@@ -110,6 +114,18 @@ export function prunerApplyLabelForRuleFamily(ruleFamilyId: string): string {
   }
   if (ruleFamilyId === RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED) {
     return PRUNER_REMOVE_STALE_NEVER_PLAYED_LIBRARY_ENTRIES_LABEL;
+  }
+  if (ruleFamilyId === RULE_FAMILY_GENRE_MATCH_REPORTED) {
+    return "Remove items matching selected genres";
+  }
+  if (ruleFamilyId === RULE_FAMILY_STUDIO_MATCH_REPORTED) {
+    return "Remove items from selected studios";
+  }
+  if (ruleFamilyId === RULE_FAMILY_PEOPLE_MATCH_REPORTED) {
+    return "Remove items involving selected people";
+  }
+  if (ruleFamilyId === RULE_FAMILY_YEAR_RANGE_MATCH_REPORTED) {
+    return "Remove items from selected year range";
   }
   return PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL;
 }

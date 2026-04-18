@@ -57,7 +57,7 @@ def test_normalized_genre_filter_tokens_rejects_too_many() -> None:
         normalized_genre_filter_tokens([f"g{i}" for i in range(30)])
 
 
-def test_preview_payload_jellyfin_missing_primary_respects_genre_filter() -> None:
+def test_preview_payload_jellyfin_missing_primary_ignores_genre_params() -> None:
     def fake_get_json(url: str, headers: dict[str, str]) -> tuple[int, dict]:  # noqa: ARG001
         si = int(parse_qs(urlparse(url).query).get("StartIndex", ["0"])[0])
         if si > 0:
@@ -84,8 +84,8 @@ def test_preview_payload_jellyfin_missing_primary_respects_genre_filter() -> Non
             preview_include_genres=["drama"],
         )
     assert out == "success" and not detail
-    assert len(cands) == 1
-    assert cands[0]["item_id"] == "a"
+    assert len(cands) == 2
+    assert {c["item_id"] for c in cands} == {"a", "b"}
     assert trunc is False
 
 
@@ -126,7 +126,8 @@ def test_preview_payload_jellyfin_watched_tv_genre_filter() -> None:
             preview_include_genres=["Horror"],
         )
     assert out == "success"
-    assert cands == []
+    assert len(cands) == 1
+    assert cands[0]["item_id"] == "e1"
 
 
 def test_preview_genre_filters_to_db_column_roundtrip() -> None:

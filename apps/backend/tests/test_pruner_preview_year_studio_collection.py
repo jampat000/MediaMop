@@ -114,7 +114,7 @@ def test_jf_emby_pruner_preview_items_fields_csv_includes_production_year_and_st
     assert "Studios" in csv
 
 
-def test_preview_payload_jellyfin_missing_primary_year_and_studio_narrowing() -> None:
+def test_preview_payload_jellyfin_missing_primary_ignores_year_and_studio_params() -> None:
     captured: list[str] = []
 
     def fake_get_json(url: str, headers: dict[str, str]) -> tuple[int, dict]:  # noqa: ARG001
@@ -164,8 +164,8 @@ def test_preview_payload_jellyfin_missing_primary_year_and_studio_narrowing() ->
             preview_include_studios=["acme"],
         )
     assert out == "success" and not detail
-    assert len(cands) == 1
-    assert cands[0]["item_id"] == "a"
+    assert len(cands) == 2
+    assert {c["item_id"] for c in cands} == {"a", "b"}
     assert trunc is False
 
 
@@ -179,9 +179,9 @@ def test_plex_leaf_studio_tags_reads_studio_key() -> None:
     assert plex_leaf_studio_tags(meta) == ["Acme"]
 
 
-def test_preview_payload_plex_missing_primary_delegates_collection_tokens() -> None:
+def test_preview_payload_plex_missing_primary_ignores_collection_params() -> None:
     def fake_list(**kwargs: object) -> tuple[list[dict], bool]:
-        assert kwargs["preview_include_collections"] == ["MCU"]
+        assert "preview_include_collections" not in kwargs
         return ([{"granularity": "movie_item", "item_id": "9", "title": "X", "year": 2015}], False)
 
     with patch(
@@ -195,7 +195,6 @@ def test_preview_payload_plex_missing_primary_delegates_collection_tokens() -> N
             secrets={"auth_token": "t"},
             max_items=50,
             rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
-            preview_include_collections=["MCU"],
         )
     assert out == "success" and not detail
     assert cands[0]["item_id"] == "9"

@@ -674,6 +674,10 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               onChange={setMissingPrimaryTv}
             />
 
+            <div className="border-t border-[var(--mm-border)] pt-4 mt-1">
+              <p className="text-xs text-[var(--mm-text3)]">Selection-based — only runs when something is selected</p>
+            </div>
+
             <div className="space-y-1">
               <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Genres</span>
               <PrunerGenreMultiSelect
@@ -693,7 +697,7 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
                 disabled={tvControlsDisabled}
                 onChange={(e) => setTvPeople(e.target.value)}
               />
-              <span className="mt-1 block text-xs text-[var(--mm-text3)]">Leave blank to target everyone.</span>
+              <span className="mt-1 block text-xs text-[var(--mm-text3)]">Leave blank to skip the people rule.</span>
             </label>
             <PrunerPeopleRoleCheckboxes
               value={tvRoles}
@@ -726,7 +730,7 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               onMax={setYearMaxTv}
               disabled={tvControlsDisabled}
               title="Release year range"
-              helperText="Leave blank for all years."
+              helperText="Leave both blank to skip the year-range rule."
             />
 
             <div className="border-t border-[var(--mm-border)] pt-4 mt-1" role="separator" />
@@ -810,6 +814,10 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               />
             ) : null}
 
+            <div className="border-t border-[var(--mm-border)] pt-4 mt-1">
+              <p className="text-xs text-[var(--mm-text3)]">Selection-based — only runs when something is selected</p>
+            </div>
+
             <div className="space-y-1">
               <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Genres</span>
               <PrunerGenreMultiSelect
@@ -829,7 +837,7 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
                 disabled={moviesControlsDisabled}
                 onChange={(e) => setMoviesPeople(e.target.value)}
               />
-              <span className="mt-1 block text-xs text-[var(--mm-text3)]">Leave blank to target everyone.</span>
+              <span className="mt-1 block text-xs text-[var(--mm-text3)]">Leave blank to skip the people rule.</span>
             </label>
             <PrunerPeopleRoleCheckboxes
               value={moviesRoles}
@@ -862,13 +870,13 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               onMax={setYearMaxMovies}
               disabled={moviesControlsDisabled}
               title="Release year range"
-              helperText="Leave blank for all years."
+              helperText="Leave both blank to skip the year-range rule."
             />
             {isPlex ? (
               <CommaField
                 label="Collections"
                 placeholder="e.g. MCU, Pixar"
-                helper="Select collections to limit this cleanup to content in those collections. Leave empty to apply your rules to all collections."
+                helper="Optional scope metadata — no preview rule reads collections in this release."
                 value={moviesCollections}
                 onChange={setMoviesCollections}
                 disabled={moviesControlsDisabled}

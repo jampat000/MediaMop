@@ -19,6 +19,7 @@ import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
+from mediamop.modules.pruner.pruner_constants import MEDIA_SCOPE_MOVIES, RULE_FAMILY_WATCHED_MOVIES_REPORTED
 from mediamop.modules.pruner.pruner_genre_filters import preview_genre_filters_to_db_column
 from mediamop.modules.pruner.pruner_instances_service import create_server_instance
 from mediamop.modules.pruner.pruner_job_handlers import build_pruner_job_handlers
@@ -173,6 +174,77 @@ def test_scheduled_preview_activity_title_and_detail_trigger(
         assert detail.get("trigger") == "scheduled"
 
 
+def test_scheduled_preview_accepts_non_missing_primary_rule_family(
+    session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = MediaMopSettings.load()
+    with session_factory() as s:
+        with s.begin():
+            inst = create_server_instance(
+                s,
+                settings,
+                provider="jellyfin",
+                display_name="JF Sched",
+                base_url="http://jf-sched.test",
+                credentials_secrets={"api_key": "k"},
+            )
+            sid = int(inst.id)
+            row_m = s.scalars(
+                select(PrunerScopeSettings).where(
+                    PrunerScopeSettings.server_instance_id == sid,
+                    PrunerScopeSettings.media_scope == MEDIA_SCOPE_MOVIES,
+                ),
+            ).one()
+            row_m.watched_movies_reported_enabled = True
+
+    monkeypatch.setattr(
+        "mediamop.modules.pruner.pruner_preview_job_handler.preview_payload_json",
+        lambda **kwargs: ("success", "", [{"granularity": "movie_item", "item_id": "9"}], False),
+    )
+
+    with session_factory() as s:
+        with s.begin():
+            job_row = PrunerJob(
+                dedupe_key="preview-activity-scheduled-watched-movies",
+                job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
+                status=PrunerJobStatus.COMPLETED.value,
+            )
+            s.add(job_row)
+            s.flush()
+            job_id = int(job_row.id)
+
+    handlers = build_pruner_job_handlers(settings, session_factory)
+    fn = handlers[PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND]
+    fn(
+        PrunerJobWorkContext(
+            id=job_id,
+            job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
+            payload_json=json.dumps(
+                {
+                    "server_instance_id": sid,
+                    "media_scope": "movies",
+                    "trigger": "scheduled",
+                    "rule_family_id": RULE_FAMILY_WATCHED_MOVIES_REPORTED,
+                },
+            ),
+            lease_owner="pytest",
+        ),
+    )
+
+    with session_factory() as s:
+        evt = s.scalars(
+            select(ActivityEvent)
+            .where(ActivityEvent.module == "pruner")
+            .order_by(ActivityEvent.id.desc()),
+        ).first()
+        assert evt is not None
+        assert evt.title.startswith("Scheduled Pruner preview (watched movies):")
+        detail = json.loads(evt.detail or "{}")
+        assert detail.get("trigger") == "scheduled"
+        assert detail.get("rule_family_id") == RULE_FAMILY_WATCHED_MOVIES_REPORTED
+
+
 def test_plex_preview_zero_candidates_with_genres_records_operator_note(
     session_factory: sessionmaker[Session],
     monkeypatch: pytest.MonkeyPatch,
@@ -235,9 +307,8 @@ def test_plex_preview_zero_candidates_with_genres_records_operator_note(
         detail = json.loads(evt.detail or "{}")
         assert detail.get("candidate_count") == 0
         assert detail.get("preview_include_genres") == ["Drama"]
-        note = str(detail.get("preview_genre_filter_zero_candidates_note") or "")
-        assert "Zero preview rows" in note
-        assert "allLeaves" in note
+        assert "preview_genre_filter_zero_candidates_note" not in detail
+        assert "preview_genre_rule_zero_candidates_note" not in detail
 
 
 def test_jellyfin_preview_activity_collection_ignored_note_when_tokens_stored(

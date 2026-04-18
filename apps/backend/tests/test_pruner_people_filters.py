@@ -1,4 +1,4 @@
-"""Pruner people filters: normalization, persistence, preview narrowing, apply isolation."""
+"""Pruner people filters: normalization, persistence, preview routing, apply isolation."""
 
 from __future__ import annotations
 
@@ -155,7 +155,7 @@ def test_validate_preview_people_roles_list_rejects_invalid() -> None:
         validate_preview_people_roles_list(["cast", "nope"])
 
 
-def test_preview_payload_jellyfin_missing_primary_respects_people_filter() -> None:
+def test_preview_payload_jellyfin_missing_primary_ignores_people_params() -> None:
     def fake_get_json(url: str, headers: dict[str, str]) -> tuple[int, dict]:  # noqa: ARG001
         q = parse_qs(urlparse(url).query)
         assert "Fields" in q, "People filters must request explicit Items Fields"
@@ -198,8 +198,8 @@ def test_preview_payload_jellyfin_missing_primary_respects_people_filter() -> No
             preview_include_people=["pat smith"],
         )
     assert out == "success" and not detail
-    assert len(cands) == 1
-    assert cands[0]["item_id"] == "a"
+    assert len(cands) == 2
+    assert {c["item_id"] for c in cands} == {"a", "b"}
     assert trunc is False
 
 
@@ -247,8 +247,8 @@ def test_preview_payload_jellyfin_missing_primary_genre_and_people_and_semantics
             preview_include_people=["pat"],
         )
     assert out == "success"
-    assert len(cands) == 1
-    assert cands[0]["item_id"] == "x"
+    assert len(cands) == 2
+    assert {c["item_id"] for c in cands} == {"x", "y"}
 
 
 @pytest.fixture(autouse=True)
