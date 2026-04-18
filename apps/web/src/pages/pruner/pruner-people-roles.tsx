@@ -97,10 +97,7 @@ export function PrunerPeopleRoleCheckboxes({
     onChange(next);
   }
 
-  const helper =
-    variant === "plex"
-      ? "Only people matching the selected roles will be used."
-      : "Only people matching the selected roles will be used. Uses cast when nothing is selected.";
+  const helper = "Roles only apply when names are entered above. If no roles are selected, cast is used as the default.";
 
   const heading = rolesHeading ?? "Match people in these credit roles";
   return (

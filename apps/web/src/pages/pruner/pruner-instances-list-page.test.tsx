@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserPublic } from "../../lib/api/types";
 import * as authApi from "../../lib/api/auth-api";
 import { qk } from "../../lib/auth/queries";
@@ -20,6 +20,10 @@ function wrap(ui: ReactNode, client: QueryClient) {
 }
 
 describe("PrunerInstancesListPage", () => {
+  beforeEach(() => {
+    vi.spyOn(prunerApi, "fetchPrunerStudios").mockResolvedValue({ studios: ["Acme Studio", "Beta Pictures"] });
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });

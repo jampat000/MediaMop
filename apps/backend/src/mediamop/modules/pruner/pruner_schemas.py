@@ -118,6 +118,10 @@ class PrunerServerInstanceOut(BaseModel):
     scopes: list[PrunerScopeSummaryOut] = Field(default_factory=list)
 
 
+class PrunerStudiosOut(BaseModel):
+    studios: list[str] = Field(default_factory=list)
+
+
 class PrunerServerInstanceCreateIn(BaseModel):
     provider: PrunerProviderWire
     display_name: str = Field(..., min_length=1, max_length=200)

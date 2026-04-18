@@ -640,3 +640,53 @@ def test_patch_pruner_scope_preview_year_inverted_rejected(client_with_admin: Te
         headers={"Content-Type": "application/json"},
     )
     assert rpatch.status_code == 422, rpatch.text
+
+
+def test_get_pruner_instance_studios_requires_auth(client_with_admin: TestClient) -> None:
+    r = client_with_admin.get("/api/v1/pruner/instances/1/studios?scope=tv")
+    assert r.status_code == 401
+
+
+def test_get_pruner_instance_studios_requires_operator(client_with_viewer: TestClient) -> None:
+    _login_viewer(client_with_viewer)
+    r = client_with_viewer.get("/api/v1/pruner/instances/1/studios?scope=tv")
+    assert r.status_code == 403
+
+
+def test_get_pruner_instance_studios_bad_scope(client_with_admin: TestClient) -> None:
+    _login_admin(client_with_admin)
+    r = client_with_admin.get("/api/v1/pruner/instances/1/studios?scope=radio")
+    assert r.status_code == 422
+
+
+def test_get_pruner_instance_studios_not_found(client_with_admin: TestClient) -> None:
+    _login_admin(client_with_admin)
+    r = client_with_admin.get("/api/v1/pruner/instances/99999/studios?scope=tv")
+    assert r.status_code == 404
+
+
+def test_get_pruner_instance_studios_returns_list(client_with_admin: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    _login_admin(client_with_admin)
+    tok = fetch_csrf(client_with_admin)
+    r0 = auth_post(
+        client_with_admin,
+        "/api/v1/pruner/instances",
+        json={
+            "provider": "jellyfin",
+            "display_name": "JF-Studios",
+            "base_url": "http://jf-studios.test",
+            "credentials": {"api_key": "k"},
+            "csrf_token": tok,
+        },
+        headers={"Content-Type": "application/json"},
+    )
+    assert r0.status_code == 200, r0.text
+    iid = int(r0.json()["id"])
+
+    monkeypatch.setattr(
+        "mediamop.modules.pruner.pruner_instances_api.list_distinct_studios",
+        lambda **_: ["Beta", "alpha"],
+    )
+    r = client_with_admin.get(f"/api/v1/pruner/instances/{iid}/studios?scope=movies")
+    assert r.status_code == 200, r.text
+    assert r.json() == {"studios": ["Beta", "alpha"]}

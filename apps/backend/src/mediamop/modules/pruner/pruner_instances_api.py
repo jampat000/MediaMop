@@ -41,6 +41,7 @@ from mediamop.modules.pruner.pruner_people_filters import (
 )
 from mediamop.modules.pruner.pruner_credentials_envelope import (
     PrunerProvider,
+    decrypt_and_parse_envelope,
     encrypt_envelope,
     envelope_secrets_for_provider,
 )
@@ -71,7 +72,9 @@ from mediamop.modules.pruner.pruner_schemas import (
     PrunerServerInstanceCreateHttpIn,
     PrunerServerInstanceOut,
     PrunerServerInstancePatchHttpIn,
+    PrunerStudiosOut,
 )
+from mediamop.modules.pruner.pruner_studio_list import list_distinct_studios
 from mediamop.modules.pruner.pruner_scope_settings_model import PrunerScopeSettings
 from mediamop.modules.pruner.pruner_server_instance_model import PrunerServerInstance
 from mediamop.platform.auth.authorization import RequireOperatorDep
@@ -201,6 +204,42 @@ def get_pruner_instance(
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found.")
     return _instance_out(db, row)
+
+
+@router.get(
+    "/pruner/instances/{instance_id}/studios",
+    response_model=PrunerStudiosOut,
+    summary="Distinct studio names from the live library (UI dropdown)",
+)
+def get_pruner_instance_studios(
+    instance_id: Annotated[int, Path(ge=1)],
+    scope: Annotated[str, Query(description="`tv` or `movies`")],
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+) -> PrunerStudiosOut:
+    if scope not in (MEDIA_SCOPE_TV, MEDIA_SCOPE_MOVIES):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="scope must be tv or movies.",
+        )
+    row = db.scalars(select(PrunerServerInstance).where(PrunerServerInstance.id == instance_id)).first()
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found.")
+    env = decrypt_and_parse_envelope(settings, row.credentials_ciphertext)
+    if env is None:
+        return PrunerStudiosOut(studios=[])
+    secrets_any = env.get("secrets")
+    secrets = secrets_any if isinstance(secrets_any, dict) else {}
+    secrets_str = {str(k): str(v) for k, v in secrets.items()}
+    studios = list_distinct_studios(
+        provider=str(row.provider),
+        base_url=str(row.base_url),
+        secrets=secrets_str,
+        media_scope=scope,
+        max_studios=500,
+    )
+    return PrunerStudiosOut(studios=studios)
 
 
 @router.patch("/pruner/instances/{instance_id}", response_model=PrunerServerInstanceOut)

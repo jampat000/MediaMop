@@ -196,6 +196,21 @@ export async function fetchPrunerInstance(id: number): Promise<PrunerServerInsta
   return readJson<PrunerServerInstance>(r);
 }
 
+export type PrunerStudiosResponse = { studios: string[] };
+
+/** Read-only studio list for Cleanup UI; returns an empty list on any failure (never throws). */
+export async function fetchPrunerStudios(instanceId: number, scope: "tv" | "movies"): Promise<PrunerStudiosResponse> {
+  try {
+    const r = await apiFetch(`/api/v1/pruner/instances/${instanceId}/studios?scope=${encodeURIComponent(scope)}`);
+    if (!r.ok) {
+      return { studios: [] };
+    }
+    return readJson<PrunerStudiosResponse>(r);
+  } catch {
+    return { studios: [] };
+  }
+}
+
 export async function postPrunerInstance(body: {
   provider: "emby" | "jellyfin" | "plex";
   display_name: string;

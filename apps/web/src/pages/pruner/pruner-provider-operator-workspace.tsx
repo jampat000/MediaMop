@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { fetchCsrfToken } from "../../lib/api/auth-api";
@@ -15,6 +15,7 @@ import type { PrunerServerInstance } from "../../lib/pruner/api";
 import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
 import { fetcherMenuButtonClass } from "../fetcher/fetcher-menu-button";
 import { PrunerGenreMultiSelect, prunerGenresFromApi } from "./pruner-genre-multi-select";
+import { PrunerStudioMultiSelect } from "./pruner-studio-multi-select";
 import {
   DEFAULT_PRUNER_PEOPLE_ROLES,
   PrunerPeopleRoleCheckboxes,
@@ -63,6 +64,8 @@ type CleanupRunBlockProps = {
   onDryRunEnabledChange: (enabled: boolean) => void;
   runDisabled: boolean;
   controlsDisabled: boolean;
+  /** Rendered after the Run button (e.g. Save + status) and before scan/delete results. */
+  afterRunSlot?: ReactNode;
 };
 
 async function evaluateEligibilityForSnapshots(
@@ -97,6 +100,7 @@ function PrunerCleanupRunBlock(props: CleanupRunBlockProps) {
     onDryRunEnabledChange,
     runDisabled,
     controlsDisabled,
+    afterRunSlot,
   } = props;
   const qc = useQueryClient();
   const [phase, setPhase] = useState<"idle" | "scanning" | "results" | "deleting">("idle");
@@ -280,8 +284,8 @@ function PrunerCleanupRunBlock(props: CleanupRunBlockProps) {
       />
       <p className="text-xs text-[var(--mm-text3)]">
         {dryRunEnabled
-          ? "Dry run is ON — clicking Run will show you what matches your criteria. Nothing will be deleted."
-          : "Dry run is OFF — clicking Run will delete matching items immediately. Use dry run first if you are unsure."}
+          ? "Dry run is ON — Run will scan your library and show you exactly what would be deleted. Nothing is deleted until you turn dry run off and run again."
+          : "Dry run is OFF — Run will permanently delete all matching items immediately. We strongly recommend doing a dry run first."}
       </p>
       <div>
         <button
@@ -297,6 +301,7 @@ function PrunerCleanupRunBlock(props: CleanupRunBlockProps) {
           {phase === "scanning" ? "Scanning…" : runLabel}
         </button>
       </div>
+      {afterRunSlot ? <div className="space-y-3">{afterRunSlot}</div> : null}
       {err ? (
         <p className="text-sm text-red-500" role="alert">
           {err}
@@ -420,7 +425,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
   const [genreTv, setGenreTv] = useState<string[]>([]);
   const [yearMinTv, setYearMinTv] = useState("");
   const [yearMaxTv, setYearMaxTv] = useState("");
-  const [studioTv, setStudioTv] = useState("");
+  const [studioTv, setStudioTv] = useState<string[]>([]);
   const [tvPeople, setTvPeople] = useState("");
   const [tvRoles, setTvRoles] = useState<PrunerPeopleRoleId[]>([...DEFAULT_PRUNER_PEOPLE_ROLES]);
   const [tvRolesCoerceMsg, setTvRolesCoerceMsg] = useState<string | null>(null);
@@ -432,7 +437,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
   const [genreMovies, setGenreMovies] = useState<string[]>([]);
   const [yearMinMovies, setYearMinMovies] = useState("");
   const [yearMaxMovies, setYearMaxMovies] = useState("");
-  const [studioMovies, setStudioMovies] = useState("");
+  const [studioMovies, setStudioMovies] = useState<string[]>([]);
   const [moviesPeople, setMoviesPeople] = useState("");
   const [moviesRoles, setMoviesRoles] = useState<PrunerPeopleRoleId[]>([...DEFAULT_PRUNER_PEOPLE_ROLES]);
   const [moviesRolesCoerceMsg, setMoviesRolesCoerceMsg] = useState<string | null>(null);
@@ -456,7 +461,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
     setGenreTv(prunerGenresFromApi(tv.preview_include_genres));
     setYearMinTv(tv.preview_year_min != null ? String(tv.preview_year_min) : "");
     setYearMaxTv(tv.preview_year_max != null ? String(tv.preview_year_max) : "");
-    setStudioTv((tv.preview_include_studios ?? []).join(", "));
+    setStudioTv([...(tv.preview_include_studios ?? [])]);
     setTvPeople(((tv.preview_include_people ?? []) as string[]).join("\n"));
     setTvRoles(isPlex ? peopleRolesForPlexUiState(tv.preview_include_people_roles) : normalizePeopleRolesFromApi(tv.preview_include_people_roles));
   }, [tv, isPlex]);
@@ -478,7 +483,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
     setGenreMovies(prunerGenresFromApi(movies.preview_include_genres));
     setYearMinMovies(movies.preview_year_min != null ? String(movies.preview_year_min) : "");
     setYearMaxMovies(movies.preview_year_max != null ? String(movies.preview_year_max) : "");
-    setStudioMovies((movies.preview_include_studios ?? []).join(", "));
+    setStudioMovies([...(movies.preview_include_studios ?? [])]);
     setMoviesPeople(((movies.preview_include_people ?? []) as string[]).join("\n"));
     setMoviesRoles(
       isPlex ? peopleRolesForPlexUiState(movies.preview_include_people_roles) : normalizePeopleRolesFromApi(movies.preview_include_people_roles),
@@ -491,7 +496,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
     genres: string[],
     yMinStr: string,
     yMaxStrStr: string,
-    studioText: string,
+    studios: string[],
     collectionsText?: string,
   ) {
     const yMin = parseYear(yMinStr);
@@ -506,7 +511,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
       preview_include_genres: [...genres],
       preview_year_min: yMinStr.trim() ? yMin : null,
       preview_year_max: yMaxStrStr.trim() ? yMax : null,
-      preview_include_studios: parseCommaTokens(studioText),
+      preview_include_studios: [...studios],
       ...(isPlex && scope === "movies" ? { preview_include_collections: parseCommaTokens(collectionsText ?? "") } : {}),
     };
   }
@@ -668,7 +673,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
               onChange={setMissingPrimaryTv}
             />
 
-            <p className={`${narrowingLabelClass} pt-1`}>Optional: narrow by</p>
+            <p className={`${narrowingLabelClass} pt-1`}>Optional: only delete from…</p>
             <div className="space-y-1">
               <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Only these genres</span>
               <PrunerGenreMultiSelect
@@ -676,8 +681,6 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
                 onChange={setGenreTv}
                 disabled={tvControlsDisabled}
                 testId={`pruner-rules-genre-tv-${provider}`}
-                filterHelperText="Pick genres to limit this cleanup to those genres only."
-                pickerPlaceholder="All genres (no filter)"
               />
             </div>
             <label className="block text-sm text-[var(--mm-text2)]" data-testid={`pruner-provider-tv-people-${provider}`}>
@@ -690,7 +693,9 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
                 disabled={tvControlsDisabled}
                 onChange={(e) => setTvPeople(e.target.value)}
               />
-              <span className="mt-1 block text-xs text-[var(--mm-text3)]">Leave blank to include all people.</span>
+              <span className="mt-1 block text-xs text-[var(--mm-text3)]">
+                Only items involving these people will be deleted. Leave blank to delete regardless of who is involved.
+              </span>
             </label>
             <PrunerPeopleRoleCheckboxes
               value={tvRoles}
@@ -703,24 +708,26 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
                 setTvRolesCoerceMsg("At least one role must be selected — defaulting to cast.")
               }
               testId={`pruner-provider-tv-people-roles-${provider}`}
-              rolesHeading="Match names against these credits"
-              footerHelper="Only applies when names are entered above."
+              rolesHeading="Check these credits when matching names"
             />
-            <CommaField
-              label="Only these studios"
-              placeholder="e.g. Warner Bros., BBC"
-              helper="Leave blank for all studios."
-              value={studioTv}
-              onChange={setStudioTv}
-              disabled={tvControlsDisabled}
-            />
+            <div className="space-y-1">
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Only these studios</span>
+              <PrunerStudioMultiSelect
+                value={studioTv}
+                onChange={setStudioTv}
+                disabled={tvControlsDisabled}
+                instanceId={instanceId}
+                scope="tv"
+                testId={`pruner-rules-studio-tv-${provider}`}
+              />
+            </div>
             <YearRange
               min={yearMinTv}
               max={yearMaxTv}
               onMin={setYearMinTv}
               onMax={setYearMaxTv}
               disabled={tvControlsDisabled}
-              helperText="Leave blank for all years."
+              helperText="Only items released in this range will be deleted. Leave both fields empty to delete regardless of release year."
             />
 
             <PrunerCleanupRunBlock
@@ -732,28 +739,31 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
               onDryRunEnabledChange={setDryRunTv}
               runDisabled={runDisabled}
               controlsDisabled={tvControlsDisabled}
+              afterRunSlot={
+                <>
+                  {canOperate ? (
+                    <button
+                      type="button"
+                      className={fetcherMenuButtonClass({ variant: "primary", disabled: saveDisabledTv })}
+                      disabled={saveDisabledTv}
+                      onClick={() => void saveTv()}
+                    >
+                      {busyTv ? "Saving…" : "Save TV criteria"}
+                    </button>
+                  ) : null}
+                  {msgTv ? (
+                    <p className="text-sm text-green-600" role="status">
+                      {msgTv}
+                    </p>
+                  ) : null}
+                  {errTv ? (
+                    <p className="text-sm text-red-500" role="alert">
+                      {errTv}
+                    </p>
+                  ) : null}
+                </>
+              }
             />
-
-            {canOperate ? (
-              <button
-                type="button"
-                className={fetcherMenuButtonClass({ variant: "primary", disabled: saveDisabledTv })}
-                disabled={saveDisabledTv}
-                onClick={() => void saveTv()}
-              >
-                {busyTv ? "Saving…" : "Save TV criteria"}
-              </button>
-            ) : null}
-            {msgTv ? (
-              <p className="text-sm text-green-600" role="status">
-                {msgTv}
-              </p>
-            ) : null}
-            {errTv ? (
-              <p className="text-sm text-red-500" role="alert">
-                {errTv}
-              </p>
-            ) : null}
           </div>
         </fieldset>
 
@@ -812,7 +822,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
               />
             ) : null}
 
-            <p className={`${narrowingLabelClass} pt-1`}>Optional: narrow by</p>
+            <p className={`${narrowingLabelClass} pt-1`}>Optional: only delete from…</p>
             <div className="space-y-1">
               <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Only these genres</span>
               <PrunerGenreMultiSelect
@@ -820,8 +830,6 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
                 onChange={setGenreMovies}
                 disabled={moviesControlsDisabled}
                 testId={`pruner-rules-genre-movies-${provider}`}
-                filterHelperText="Pick genres to limit this cleanup to those genres only."
-                pickerPlaceholder="All genres (no filter)"
               />
             </div>
             <label className="block text-sm text-[var(--mm-text2)]" data-testid={`pruner-provider-movies-people-${provider}`}>
@@ -834,7 +842,9 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
                 disabled={moviesControlsDisabled}
                 onChange={(e) => setMoviesPeople(e.target.value)}
               />
-              <span className="mt-1 block text-xs text-[var(--mm-text3)]">Leave blank to include all people.</span>
+              <span className="mt-1 block text-xs text-[var(--mm-text3)]">
+                Only items involving these people will be deleted. Leave blank to delete regardless of who is involved.
+              </span>
             </label>
             <PrunerPeopleRoleCheckboxes
               value={moviesRoles}
@@ -847,17 +857,19 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
                 setMoviesRolesCoerceMsg("At least one role must be selected — defaulting to cast.")
               }
               testId={`pruner-provider-movies-people-roles-${provider}`}
-              rolesHeading="Match names against these credits"
-              footerHelper="Only applies when names are entered above."
+              rolesHeading="Check these credits when matching names"
             />
-            <CommaField
-              label="Only these studios"
-              placeholder="e.g. Warner Bros., BBC"
-              helper="Leave blank for all studios."
-              value={studioMovies}
-              onChange={setStudioMovies}
-              disabled={moviesControlsDisabled}
-            />
+            <div className="space-y-1">
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Only these studios</span>
+              <PrunerStudioMultiSelect
+                value={studioMovies}
+                onChange={setStudioMovies}
+                disabled={moviesControlsDisabled}
+                instanceId={instanceId}
+                scope="movies"
+                testId={`pruner-rules-studio-movies-${provider}`}
+              />
+            </div>
             {isPlex ? (
               <CommaField
                 label="Only these collections"
@@ -874,7 +886,7 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
               onMin={setYearMinMovies}
               onMax={setYearMaxMovies}
               disabled={moviesControlsDisabled}
-              helperText="Leave blank for all years."
+              helperText="Only items released in this range will be deleted. Leave both fields empty to delete regardless of release year."
             />
 
             <PrunerCleanupRunBlock
@@ -886,28 +898,31 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
               onDryRunEnabledChange={setDryRunMovies}
               runDisabled={runDisabled}
               controlsDisabled={moviesControlsDisabled}
+              afterRunSlot={
+                <>
+                  {canOperate ? (
+                    <button
+                      type="button"
+                      className={fetcherMenuButtonClass({ variant: "primary", disabled: saveDisabledMovies })}
+                      disabled={saveDisabledMovies}
+                      onClick={() => void saveMovies()}
+                    >
+                      {busyMovies ? "Saving…" : "Save Movies criteria"}
+                    </button>
+                  ) : null}
+                  {msgMovies ? (
+                    <p className="text-sm text-green-600" role="status">
+                      {msgMovies}
+                    </p>
+                  ) : null}
+                  {errMovies ? (
+                    <p className="text-sm text-red-500" role="alert">
+                      {errMovies}
+                    </p>
+                  ) : null}
+                </>
+              }
             />
-
-            {canOperate ? (
-              <button
-                type="button"
-                className={fetcherMenuButtonClass({ variant: "primary", disabled: saveDisabledMovies })}
-                disabled={saveDisabledMovies}
-                onClick={() => void saveMovies()}
-              >
-                {busyMovies ? "Saving…" : "Save Movies criteria"}
-              </button>
-            ) : null}
-            {msgMovies ? (
-              <p className="text-sm text-green-600" role="status">
-                {msgMovies}
-              </p>
-            ) : null}
-            {errMovies ? (
-              <p className="text-sm text-red-500" role="alert">
-                {errMovies}
-              </p>
-            ) : null}
           </div>
         </fieldset>
       </div>
