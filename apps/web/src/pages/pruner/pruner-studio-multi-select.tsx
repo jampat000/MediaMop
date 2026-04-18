@@ -61,7 +61,7 @@ export function PrunerStudioMultiSelect({
           {summary}
         </span>
         <p className="text-xs text-[var(--mm-text3)]">
-          Only items from the selected studios will be deleted. Leave empty to delete from all studios.
+          Select studios to limit this cleanup to content from those studios only. Leave empty to apply your rules to all studios.
         </p>
         <div
           className={`${mmPickerTriggerClass} opacity-70 cursor-not-allowed`}
@@ -81,7 +81,7 @@ export function PrunerStudioMultiSelect({
           {summary}
         </span>
         <p className="text-xs text-[var(--mm-text3)]">
-          Only items from the selected studios will be deleted. Leave empty to delete from all studios.
+          Select studios to limit this cleanup to content from those studios only. Leave empty to apply your rules to all studios.
         </p>
         <select className="mm-input w-full cursor-not-allowed opacity-70" disabled value="__none__" data-testid={`${baseTestId}-empty`}>
           <option value="__none__">No studios found</option>
@@ -97,7 +97,7 @@ export function PrunerStudioMultiSelect({
         {summary}
       </span>
       <p className="text-xs text-[var(--mm-text3)]">
-        Only items from the selected studios will be deleted. Leave empty to delete from all studios.
+        Select studios to limit this cleanup to content from those studios only. Leave empty to apply your rules to all studios.
       </p>
       <MmMultiListboxPicker
         options={options}

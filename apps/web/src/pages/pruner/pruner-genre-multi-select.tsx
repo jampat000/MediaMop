@@ -41,7 +41,7 @@ export function prunerGenresFromApi(api: string[] | undefined | null): string[] 
 }
 
 function genreTriggerSummary(values: string[]): string {
-  if (values.length === 0) return "All genres (no filter)";
+  if (values.length === 0) return "All genres";
   if (values.length <= 3) {
     const lower = new Set(values.map((v) => v.toLowerCase()));
     return PRUNER_RULE_GENRE_OPTIONS.filter((g) => lower.has(g.toLowerCase())).join(", ");
@@ -63,14 +63,14 @@ export function PrunerGenreMultiSelect({
   testId?: string;
   /** When set, replaces the default genre filter helper paragraph. */
   filterHelperText?: string;
-  /** Trigger / picker placeholder (e.g. "All genres (no filter)"). */
+  /** Trigger / picker placeholder (e.g. "All genres"). */
   pickerPlaceholder?: string;
 }) {
   const summary = genreTriggerSummary(value);
   const helper =
     filterHelperText ??
-    "Only items in the selected genres will be deleted. Leave empty to delete from all genres.";
-  const placeholder = pickerPlaceholder ?? "All genres (no filter)";
+    "Select genres to limit this cleanup to those genres only. Leave empty to apply your rules to all genres.";
+  const placeholder = pickerPlaceholder ?? "All genres";
 
   return (
     <div className="space-y-2" data-testid={testId ?? "pruner-genre-multiselect"}>
