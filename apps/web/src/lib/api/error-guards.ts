@@ -37,3 +37,16 @@ export function httpStatusFromApiError(error: unknown): number | null {
   const m = error.message.match(_API_HTTP_ERR);
   return m ? Number(m[2]) : null;
 }
+
+/**
+ * In `vite dev`, proxied `/api/*` requests that cannot reach the backend (ECONNREFUSED) still
+ * produce an HTTP response — the dev server typically returns **500** with an empty/plain body.
+ * The real API avoids 500 on guest-first routes (e.g. bootstrap uses 503 for DB issues), so
+ * 500 + relative API URLs in development is almost always "API process not listening".
+ */
+export function isLikelyViteProxyUpstreamDown(error: unknown): boolean {
+  if (!import.meta.env.DEV || import.meta.env.VITE_API_BASE_URL?.trim()) {
+    return false;
+  }
+  return isHttpErrorFromApi(error) && httpStatusFromApiError(error) === 500;
+}

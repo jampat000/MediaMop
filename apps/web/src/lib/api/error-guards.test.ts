@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { httpStatusFromApiError, isHttpErrorFromApi, isLikelyNetworkFailure } from "./error-guards";
+import {
+  httpStatusFromApiError,
+  isHttpErrorFromApi,
+  isLikelyNetworkFailure,
+  isLikelyViteProxyUpstreamDown,
+} from "./error-guards";
 
 describe("error-guards", () => {
   it("treats TypeError as network", () => {
@@ -31,5 +36,16 @@ describe("error-guards", () => {
     expect(httpStatusFromApiError(new Error("dashboard status: 401"))).toBe(401);
     expect(httpStatusFromApiError(new Error("activity recent: 500"))).toBe(500);
     expect(httpStatusFromApiError(new Error("nope"))).toBe(null);
+  });
+
+  it("treats bootstrap/me HTTP 500 in Vite dev without API base URL as proxy upstream down", () => {
+    const expectProxyDown = Boolean(import.meta.env.DEV && !import.meta.env.VITE_API_BASE_URL?.trim());
+    expect(isLikelyViteProxyUpstreamDown(new Error("bootstrap status: 500"))).toBe(expectProxyDown);
+    expect(isLikelyViteProxyUpstreamDown(new Error("me: 500"))).toBe(expectProxyDown);
+  });
+
+  it("does not treat non-500 API HTTP errors as Vite proxy upstream down", () => {
+    expect(isLikelyViteProxyUpstreamDown(new Error("bootstrap status: 503"))).toBe(false);
+    expect(isLikelyViteProxyUpstreamDown(new Error("me: 401"))).toBe(false);
   });
 });

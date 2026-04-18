@@ -2,6 +2,7 @@ import {
   httpStatusFromApiError,
   isHttpErrorFromApi,
   isLikelyNetworkFailure,
+  isLikelyViteProxyUpstreamDown,
 } from "../../lib/api/error-guards";
 
 /**
@@ -9,10 +10,17 @@ import {
  * Network failures ≠ HTTP 503 from a live API (e.g. database not configured).
  */
 export function ApiEntryError({ error }: { error: unknown }) {
-  if (isLikelyNetworkFailure(error)) {
+  if (isLikelyNetworkFailure(error) || isLikelyViteProxyUpstreamDown(error)) {
     return (
       <>
         <h1 className="mm-auth-title mm-auth-title--alert">Cannot reach the API</h1>
+        {isLikelyViteProxyUpstreamDown(error) ? (
+          <p className="mm-auth-lead">
+            If only the Vite dev server is running, the browser may still get{" "}
+            <strong>HTTP 500</strong> on <code className="text-[0.85em]">/api</code> — that usually
+            means the API port is not accepting connections, not a bug inside the API handler.
+          </p>
+        ) : null}
         <p className="mm-auth-lead">
           Start the MediaMop backend from the <strong>repository root</strong> (e.g.{" "}
           <code className="rounded bg-[rgba(0,0,0,0.35)] px-1.5 py-0.5 text-[0.85em] text-[var(--mm-text)]">
