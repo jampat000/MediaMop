@@ -18,7 +18,7 @@ npm ci
 npm run dev
 ```
 
-**`npm run dev`** starts **both** the FastAPI process (same as `../../scripts/dev-backend.ps1`) and Vite in one terminal via `scripts/run-dev-stack.mjs` (no reliance on `node_modules/.bin` shims, which some Windows setups omit). Use **`npm run dev:web`** for Vite only (e.g. when the API is already running elsewhere).
+**`npm run dev`** starts **both** the FastAPI process (same as `../../scripts/dev-backend.ps1`) and Vite in one terminal via `scripts/run-dev-stack.mjs` (no reliance on `node_modules/.bin` shims, which some Windows setups omit). The stack **waits for `GET /health` on the API port before starting Vite**, so the browser is not served until the backend has finished lifespan (including Alembic). Override wait with **`MEDIAMOP_DEV_STACK_API_WAIT_MS`** (default `120000`). Use **`npm run dev:web`** for Vite only (e.g. when the API is already running elsewhere).
 
 **`package-lock.json`** is committed; use **`npm ci`** for reproducible installs (CI uses **`npm ci`**).
 
