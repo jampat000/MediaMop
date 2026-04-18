@@ -18,10 +18,12 @@ npm ci
 npm run dev
 ```
 
+**`npm run dev`** starts **both** the FastAPI process (same as `../../scripts/dev-backend.ps1`) and Vite in one terminal, so the `/api` proxy always has a backend. Use **`npm run dev:web`** for Vite only (e.g. when the API is already running elsewhere).
+
 **`package-lock.json`** is committed; use **`npm ci`** for reproducible installs (CI uses **`npm ci`**).
 
 - **Frontend:** **`http://127.0.0.1:8782`** (locked in **`../../scripts/dev-ports.json`**; see **`../../docs/ports.md`**)
-- **Backend:** **`../../scripts/dev-backend.ps1`** or uvicorn on the **API** host/port from the same JSON file.
+- **Backend (standalone):** **`../../scripts/dev-backend.ps1`** or uvicorn on the **API** host/port from the same JSON file.
 
 Vite **`server`** and **`preview`** proxy **`/api`** to that API origin (override with `VITE_DEV_API_PROXY_TARGET`). The browser uses one origin for the page and `/api/*`, so **HttpOnly** cookies work in dev and **`npm run preview`** (E2E uses ephemeral ports).
 
