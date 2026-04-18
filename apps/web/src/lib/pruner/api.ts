@@ -24,6 +24,11 @@ export type PrunerScopeSummary = {
   preview_include_collections: string[];
   scheduled_preview_enabled: boolean;
   scheduled_preview_interval_seconds: number;
+  /** Omitted on older API responses; treat as unlimited / defaults when absent. */
+  scheduled_preview_hours_limited?: boolean;
+  scheduled_preview_days?: string;
+  scheduled_preview_start?: string;
+  scheduled_preview_end?: string;
   last_scheduled_preview_enqueued_at: string | null;
   last_preview_run_uuid: string | null;
   last_preview_at: string | null;
@@ -301,6 +306,10 @@ export async function patchPrunerScope(
     preview_include_collections?: string[];
     scheduled_preview_enabled?: boolean;
     scheduled_preview_interval_seconds?: number;
+    scheduled_preview_hours_limited?: boolean;
+    scheduled_preview_days?: string;
+    scheduled_preview_start?: string;
+    scheduled_preview_end?: string;
     csrf_token: string;
   },
 ): Promise<PrunerScopeSummary> {

@@ -20,6 +20,14 @@ import {
   prunerApplyLabelForRuleFamily,
 } from "../../lib/pruner/api";
 import type { PrunerServerInstance } from "../../lib/pruner/api";
+import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
+import { MmScheduleDayChips, MmScheduleTimeFields } from "../../components/ui/mm-schedule-window-controls";
+import {
+  committedPrunerRunIntervalMinutes,
+  finalizePrunerRunIntervalMinutesDraft,
+  PRUNER_RUN_INTERVAL_MAX_MINUTES,
+  PRUNER_RUN_INTERVAL_MIN_MINUTES,
+} from "../../lib/ui/pruner-schedule-interval";
 import { FetcherEnableSwitch } from "../fetcher/fetcher-enable-switch";
 import { fetcherMenuButtonClass } from "../fetcher/fetcher-menu-button";
 import { PrunerGenreMultiSelect, prunerGenresFromApi } from "./pruner-genre-multi-select";
@@ -62,7 +70,12 @@ export function PrunerScopeTab(props: {
   const [preview, setPreview] = useState<string | null>(null);
   const [jsonPreview, setJsonPreview] = useState<string | null>(null);
   const [schedEnabled, setSchedEnabled] = useState(false);
-  const [schedInterval, setSchedInterval] = useState(3600);
+  const [schedIntervalSec, setSchedIntervalSec] = useState(3600);
+  const [schedIntervalMinDraft, setSchedIntervalMinDraft] = useState<string | null>(null);
+  const [schedHoursLimited, setSchedHoursLimited] = useState(false);
+  const [schedDays, setSchedDays] = useState("");
+  const [schedStart, setSchedStart] = useState("00:00");
+  const [schedEnd, setSchedEnd] = useState("23:59");
   const [schedMsg, setSchedMsg] = useState<string | null>(null);
   const [applyModalRunId, setApplyModalRunId] = useState<string | null>(null);
   const [applySnapshotConfirmed, setApplySnapshotConfirmed] = useState(false);
@@ -140,7 +153,12 @@ export function PrunerScopeTab(props: {
   useEffect(() => {
     if (!scopeRow) return;
     setSchedEnabled(scopeRow.scheduled_preview_enabled);
-    setSchedInterval(scopeRow.scheduled_preview_interval_seconds);
+    setSchedIntervalSec(scopeRow.scheduled_preview_interval_seconds);
+    setSchedIntervalMinDraft(null);
+    setSchedHoursLimited(scopeRow.scheduled_preview_hours_limited ?? false);
+    setSchedDays(scopeRow.scheduled_preview_days ?? "");
+    setSchedStart(scopeRow.scheduled_preview_start ?? "00:00");
+    setSchedEnd(scopeRow.scheduled_preview_end ?? "23:59");
     setStaleNeverEnabled(scopeRow.never_played_stale_reported_enabled);
     setStaleNeverDays(scopeRow.never_played_min_age_days);
     setWatchedTvEnabled(scopeRow.watched_tv_reported_enabled);
@@ -187,6 +205,10 @@ export function PrunerScopeTab(props: {
   }, [
     scopeRow?.scheduled_preview_enabled,
     scopeRow?.scheduled_preview_interval_seconds,
+    scopeRow?.scheduled_preview_hours_limited,
+    scopeRow?.scheduled_preview_days,
+    scopeRow?.scheduled_preview_start,
+    scopeRow?.scheduled_preview_end,
     scopeRow?.never_played_stale_reported_enabled,
     scopeRow?.never_played_min_age_days,
     scopeRow?.watched_tv_reported_enabled,
@@ -216,12 +238,22 @@ export function PrunerScopeTab(props: {
     setBusy(true);
     try {
       const csrf_token = await fetchCsrfToken();
-      const iv = Math.max(60, Math.min(86400, Number(schedInterval) || 3600));
+      const resolvedSec =
+        schedIntervalMinDraft !== null
+          ? finalizePrunerRunIntervalMinutesDraft(schedIntervalMinDraft, schedIntervalSec)
+          : schedIntervalSec;
+      const iv = Math.max(60, Math.min(86400, resolvedSec));
       await patchPrunerScope(instanceId, props.scope, {
         scheduled_preview_enabled: schedEnabled,
         scheduled_preview_interval_seconds: iv,
+        scheduled_preview_hours_limited: schedHoursLimited,
+        scheduled_preview_days: schedDays,
+        scheduled_preview_start: schedStart,
+        scheduled_preview_end: schedEnd,
         csrf_token,
       });
+      setSchedIntervalMinDraft(null);
+      setSchedIntervalSec(iv);
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
       setSchedMsg(`Saved. Automatic scans use this server’s ${libraryTabPhrase} only.`);
     } catch (e) {
@@ -1956,51 +1988,85 @@ export function PrunerScopeTab(props: {
         <p className="text-sm text-[var(--mm-text2)]">Sign in as an operator to run scans.</p>
       )}
       <div
-        className="space-y-2 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3"
+        className="space-y-4 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3"
         data-testid="pruner-scope-scheduled-preview"
       >
         <h3 className="text-sm font-semibold text-[var(--mm-text)]">
           Automatic scans ({props.scope === "tv" ? "TV shows" : "Movies"})
         </h3>
         <p className="text-xs text-[var(--mm-text2)]">
-          Each saved server keeps separate TV and movie timers. Wait time can be 60 seconds to 24 hours. The time below
-          changes only when the timer runs a scan for this {libraryTabPhrase}, not when you press the manual scan buttons.
-          Timed runs only check broken posters and images; other cleanup types stay manual.
+          The schedule runs your saved criteria from the Cleanup tab automatically. If dry run is on in the Cleanup tab,
+          scheduled runs also only scan — they never delete automatically. Timed runs only check broken posters and
+          images; other cleanup types stay manual.
         </p>
         {showInteractiveControls ? (
           <>
-            <label className="flex items-center gap-2 text-sm text-[var(--mm-text)]">
+            <MmOnOffSwitch
+              id={`pruner-scope-${instanceId}-${props.scope}-timed`}
+              label="Enable timed scans"
+              enabled={schedEnabled}
+              disabled={busy}
+              onChange={setSchedEnabled}
+            />
+            <div>
+              <span className="text-sm font-medium text-[var(--mm-text1)]">Run interval (minutes)</span>
+              <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
+                Minutes between automatic cleanup runs for this library.
+              </p>
               <input
-                type="checkbox"
-                checked={schedEnabled}
+                type="number"
+                min={PRUNER_RUN_INTERVAL_MIN_MINUTES}
+                max={PRUNER_RUN_INTERVAL_MAX_MINUTES}
+                className="mm-input mt-2 w-full max-w-xs"
+                value={
+                  schedIntervalMinDraft !== null
+                    ? schedIntervalMinDraft
+                    : committedPrunerRunIntervalMinutes(schedIntervalSec)
+                }
+                onFocus={() => setSchedIntervalMinDraft(committedPrunerRunIntervalMinutes(schedIntervalSec))}
+                onChange={(e) => setSchedIntervalMinDraft(e.target.value)}
+                onBlur={() => setSchedIntervalMinDraft(null)}
                 disabled={busy}
-                onChange={(e) => setSchedEnabled(e.target.checked)}
+                aria-label="Run interval in minutes"
               />
-              Enable automatic scans for this {libraryTabPhrase}
-            </label>
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="text-sm text-[var(--mm-text2)]">
-                Every{" "}
-                <input
-                  type="number"
-                  min={60}
-                  max={86400}
-                  className="w-28 rounded border border-[var(--mm-border)] bg-[var(--mm-surface2)] px-2 py-1 text-sm text-[var(--mm-text)]"
-                  value={schedInterval}
-                  disabled={busy}
-                  onChange={(e) => setSchedInterval(parseInt(e.target.value, 10) || 3600)}
-                />{" "}
-                seconds
-              </label>
-              <button
-                type="button"
-                className="rounded-md bg-[var(--mm-accent)] px-3 py-1 text-sm font-medium text-white disabled:opacity-50"
-                disabled={busy}
-                onClick={() => void saveSchedule()}
-              >
-                Save schedule
-              </button>
             </div>
+            <div className="space-y-3">
+              <div>
+                <span className="text-sm font-medium text-[var(--mm-text1)]">Time window</span>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
+                  When limiting is on, automatic runs only start inside this window.
+                </p>
+              </div>
+              <div className="space-y-4">
+                <MmOnOffSwitch
+                  id={`pruner-scope-${instanceId}-${props.scope}-hours`}
+                  label="Limit to these hours"
+                  enabled={schedHoursLimited}
+                  disabled={busy}
+                  onChange={setSchedHoursLimited}
+                />
+                <div className="space-y-2">
+                  <span className="text-sm font-medium text-[var(--mm-text1)]">Days</span>
+                  <MmScheduleDayChips scheduleDaysCsv={schedDays} disabled={busy} onChangeCsv={setSchedDays} />
+                </div>
+                <MmScheduleTimeFields
+                  idPrefix={`pruner-scope-${instanceId}-${props.scope}`}
+                  start={schedStart}
+                  end={schedEnd}
+                  disabled={busy}
+                  onStart={setSchedStart}
+                  onEnd={setSchedEnd}
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              className={fetcherMenuButtonClass({ variant: "primary", disabled: busy })}
+              disabled={busy}
+              onClick={() => void saveSchedule()}
+            >
+              {props.scope === "tv" ? "Save TV schedule" : "Save Movies schedule"}
+            </button>
             {schedMsg ? <p className="text-xs text-green-600">{schedMsg}</p> : null}
           </>
         ) : (
@@ -2009,7 +2075,8 @@ export function PrunerScopeTab(props: {
             {scopeRow ? (
               <>
                 {" "}
-                (every {scopeRow.scheduled_preview_interval_seconds} seconds). Sign in as an operator to change it.
+                (every {committedPrunerRunIntervalMinutes(scopeRow.scheduled_preview_interval_seconds)} minutes). Sign in
+                as an operator to change it.
               </>
             ) : null}
           </p>

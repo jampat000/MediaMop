@@ -123,6 +123,26 @@ class PrunerScopeSettings(Base):
         nullable=False,
         server_default=text("3600"),
     )
+    scheduled_preview_hours_limited: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default=text("0"),
+    )
+    scheduled_preview_days: Mapped[str] = mapped_column(
+        String(200),
+        nullable=False,
+        server_default=text("''"),
+    )
+    scheduled_preview_start: Mapped[str] = mapped_column(
+        String(5),
+        nullable=False,
+        server_default=text("'00:00'"),
+    )
+    scheduled_preview_end: Mapped[str] = mapped_column(
+        String(5),
+        nullable=False,
+        server_default=text("'23:59'"),
+    )
     last_scheduled_preview_enqueued_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,

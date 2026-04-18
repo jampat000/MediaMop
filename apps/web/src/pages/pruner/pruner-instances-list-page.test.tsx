@@ -105,6 +105,10 @@ describe("PrunerInstancesListPage", () => {
       preview_include_collections: [],
       scheduled_preview_enabled: false,
       scheduled_preview_interval_seconds: 3600,
+      scheduled_preview_hours_limited: false,
+      scheduled_preview_days: "",
+      scheduled_preview_start: "00:00",
+      scheduled_preview_end: "23:59",
       last_scheduled_preview_enqueued_at: null,
       last_preview_run_uuid: null,
       last_preview_at: null,
@@ -175,6 +179,10 @@ describe("PrunerInstancesListPage", () => {
       preview_include_collections: [],
       scheduled_preview_enabled: false,
       scheduled_preview_interval_seconds: 3600,
+      scheduled_preview_hours_limited: false,
+      scheduled_preview_days: "",
+      scheduled_preview_start: "00:00",
+      scheduled_preview_end: "23:59",
       last_scheduled_preview_enqueued_at: null,
       last_preview_run_uuid: null,
       last_preview_at: null,
@@ -236,6 +244,10 @@ describe("PrunerInstancesListPage", () => {
       preview_include_collections: [],
       scheduled_preview_enabled: false,
       scheduled_preview_interval_seconds: 3600,
+      scheduled_preview_hours_limited: false,
+      scheduled_preview_days: "",
+      scheduled_preview_start: "00:00",
+      scheduled_preview_end: "23:59",
       last_scheduled_preview_enqueued_at: null,
       last_preview_run_uuid: null,
       last_preview_at: null,
@@ -321,6 +333,10 @@ describe("PrunerInstancesListPage", () => {
             preview_include_collections: [],
             scheduled_preview_enabled: false,
             scheduled_preview_interval_seconds: 3600,
+            scheduled_preview_hours_limited: false,
+            scheduled_preview_days: "",
+            scheduled_preview_start: "00:00",
+            scheduled_preview_end: "23:59",
             last_scheduled_preview_enqueued_at: null,
             last_preview_run_uuid: null,
             last_preview_at: null,
@@ -349,6 +365,10 @@ describe("PrunerInstancesListPage", () => {
             preview_include_collections: [],
             scheduled_preview_enabled: false,
             scheduled_preview_interval_seconds: 3600,
+            scheduled_preview_hours_limited: false,
+            scheduled_preview_days: "",
+            scheduled_preview_start: "00:00",
+            scheduled_preview_end: "23:59",
             last_scheduled_preview_enqueued_at: null,
             last_preview_run_uuid: null,
             last_preview_at: null,
@@ -406,6 +426,10 @@ describe("PrunerInstancesListPage", () => {
       preview_include_collections: [],
       scheduled_preview_enabled: false,
       scheduled_preview_interval_seconds: 3600,
+      scheduled_preview_hours_limited: false,
+      scheduled_preview_days: "",
+      scheduled_preview_start: "00:00",
+      scheduled_preview_end: "23:59",
       last_scheduled_preview_enqueued_at: null,
       last_preview_run_uuid: null,
       last_preview_at: null,
@@ -478,6 +502,10 @@ describe("PrunerInstancesListPage", () => {
             preview_include_collections: [],
             scheduled_preview_enabled: false,
             scheduled_preview_interval_seconds: 3600,
+            scheduled_preview_hours_limited: false,
+            scheduled_preview_days: "",
+            scheduled_preview_start: "00:00",
+            scheduled_preview_end: "23:59",
             last_scheduled_preview_enqueued_at: null,
             last_preview_run_uuid: null,
             last_preview_at: null,
@@ -506,6 +534,10 @@ describe("PrunerInstancesListPage", () => {
             preview_include_collections: [],
             scheduled_preview_enabled: false,
             scheduled_preview_interval_seconds: 3600,
+            scheduled_preview_hours_limited: false,
+            scheduled_preview_days: "",
+            scheduled_preview_start: "00:00",
+            scheduled_preview_end: "23:59",
             last_scheduled_preview_enqueued_at: null,
             last_preview_run_uuid: null,
             last_preview_at: null,
@@ -543,7 +575,7 @@ describe("PrunerInstancesListPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Schedule" }));
     await waitFor(() => expect(screen.getByTestId("pruner-provider-schedule-wrap")).toBeInTheDocument());
     expect(screen.queryByTestId("pruner-provider-schedule-hint")).not.toBeInTheDocument();
-    expect(screen.getAllByText(/Enter a number of seconds/i).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByLabelText(/Run interval in minutes/i).length).toBeGreaterThanOrEqual(2);
     await waitFor(() => expect(screen.getByTestId("pruner-schedule-row-emby-tv")).toBeInTheDocument());
     expect(screen.getByTestId("pruner-schedule-row-emby-movies")).toBeInTheDocument();
     const tvCard = screen.getByTestId("pruner-schedule-row-emby-tv");
@@ -575,6 +607,10 @@ describe("PrunerInstancesListPage", () => {
       preview_include_collections: [],
       scheduled_preview_enabled: false,
       scheduled_preview_interval_seconds: 3600,
+      scheduled_preview_hours_limited: false,
+      scheduled_preview_days: "",
+      scheduled_preview_start: "00:00",
+      scheduled_preview_end: "23:59",
       last_scheduled_preview_enqueued_at: null,
       last_preview_run_uuid: null,
       last_preview_at: null,
@@ -657,6 +693,10 @@ describe("PrunerInstancesListPage", () => {
       preview_include_collections: [],
       scheduled_preview_enabled: false,
       scheduled_preview_interval_seconds: 3600,
+      scheduled_preview_hours_limited: false,
+      scheduled_preview_days: "",
+      scheduled_preview_start: "00:00",
+      scheduled_preview_end: "23:59",
       last_scheduled_preview_enqueued_at: null,
       last_preview_run_uuid: null,
       last_preview_at: null,
@@ -709,8 +749,9 @@ describe("PrunerInstancesListPage", () => {
     await waitFor(() => expect(screen.getByTestId("pruner-schedule-row-emby-tv")).toBeInTheDocument());
 
     const embyTv = screen.getByTestId("pruner-schedule-row-emby-tv");
-    fireEvent.click(within(embyTv).getByRole("radio", { name: "On" }));
-    fireEvent.change(within(embyTv).getByLabelText("Run every interval in seconds"), { target: { value: "120" } });
+    const timedScansGroup = within(embyTv).getByRole("radiogroup", { name: /Enable timed scans/i });
+    fireEvent.click(within(timedScansGroup).getByRole("radio", { name: "On" }));
+    fireEvent.change(within(embyTv).getByLabelText("Run interval in minutes"), { target: { value: "2" } });
     fireEvent.click(within(embyTv).getByRole("button", { name: /Save TV schedule/i }));
 
     await waitFor(() => {
@@ -720,6 +761,10 @@ describe("PrunerInstancesListPage", () => {
         expect.objectContaining({
           scheduled_preview_enabled: true,
           scheduled_preview_interval_seconds: 120,
+          scheduled_preview_hours_limited: false,
+          scheduled_preview_days: "",
+          scheduled_preview_start: "00:00",
+          scheduled_preview_end: "23:59",
           preview_max_items: 500,
           csrf_token: "csrf-test",
         }),

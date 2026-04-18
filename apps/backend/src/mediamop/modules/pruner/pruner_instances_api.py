@@ -74,6 +74,10 @@ from mediamop.modules.pruner.pruner_schemas import (
     PrunerServerInstancePatchHttpIn,
     PrunerStudiosOut,
 )
+from mediamop.modules.fetcher.fetcher_arr_operator_settings_prefs import (
+    normalize_hhmm,
+    validate_schedule_days_csv,
+)
 from mediamop.modules.pruner.pruner_studio_list import list_distinct_studios
 from mediamop.modules.pruner.pruner_scope_settings_model import PrunerScopeSettings
 from mediamop.modules.pruner.pruner_server_instance_model import PrunerServerInstance
@@ -122,6 +126,10 @@ def _scope_row_out(session: Session, row: PrunerScopeSettings) -> PrunerScopeSum
         scheduled_preview_interval_seconds=clamp_pruner_scheduled_preview_interval_seconds(
             int(row.scheduled_preview_interval_seconds),
         ),
+        scheduled_preview_hours_limited=bool(row.scheduled_preview_hours_limited),
+        scheduled_preview_days=str(row.scheduled_preview_days or ""),
+        scheduled_preview_start=str(row.scheduled_preview_start or "00:00"),
+        scheduled_preview_end=str(row.scheduled_preview_end or "23:59"),
         last_scheduled_preview_enqueued_at=row.last_scheduled_preview_enqueued_at,
         last_preview_run_uuid=str(run_uuid) if run_uuid else None,
         last_preview_at=row.last_preview_at,
@@ -373,6 +381,23 @@ def patch_pruner_scope(
         sc.scheduled_preview_interval_seconds = clamp_pruner_scheduled_preview_interval_seconds(
             int(body.scheduled_preview_interval_seconds),
         )
+    if body.scheduled_preview_hours_limited is not None:
+        sc.scheduled_preview_hours_limited = bool(body.scheduled_preview_hours_limited)
+    if body.scheduled_preview_days is not None:
+        try:
+            sc.scheduled_preview_days = validate_schedule_days_csv(body.scheduled_preview_days)
+        except ValueError as e:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e)) from e
+    if body.scheduled_preview_start is not None:
+        try:
+            sc.scheduled_preview_start = normalize_hhmm(body.scheduled_preview_start, fallback="00:00")
+        except ValueError as e:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e)) from e
+    if body.scheduled_preview_end is not None:
+        try:
+            sc.scheduled_preview_end = normalize_hhmm(body.scheduled_preview_end, fallback="23:59")
+        except ValueError as e:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e)) from e
     ym = sc.preview_year_min
     yx = sc.preview_year_max
     if ym is not None and yx is not None and ym > yx:

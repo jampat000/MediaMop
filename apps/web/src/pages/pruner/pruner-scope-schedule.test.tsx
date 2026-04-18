@@ -33,6 +33,10 @@ function scopeRow(media_scope: "tv" | "movies") {
     preview_include_collections: [],
     scheduled_preview_enabled: false,
     scheduled_preview_interval_seconds: 3600,
+    scheduled_preview_hours_limited: false,
+    scheduled_preview_days: "",
+    scheduled_preview_start: "00:00",
+    scheduled_preview_end: "23:59",
     last_scheduled_preview_enqueued_at: null,
     last_preview_run_uuid: null,
     last_preview_at: null,
@@ -83,9 +87,9 @@ describe("PrunerScopeTab scheduled preview", () => {
         expect(screen.getByTestId("pruner-scope-scheduled-preview")).toBeInTheDocument();
       });
       const block = screen.getByTestId("pruner-scope-scheduled-preview");
-      expect(block.textContent).toMatch(/TV tab/i);
+      expect(block.textContent).toMatch(/TV shows/i);
       expect(block.textContent).not.toMatch(/both scopes/i);
-      expect(screen.getByRole("button", { name: /save schedule/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /save tv schedule/i })).toBeInTheDocument();
     } finally {
       spyRuns.mockRestore();
       spyInst.mockRestore();

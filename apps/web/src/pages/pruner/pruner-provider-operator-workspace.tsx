@@ -55,7 +55,7 @@ function parseYear(raw: string): number | null | "bad" {
   return n;
 }
 
-type CleanupRunBlockProps = {
+type PrunerDryRunControlsProps = {
   instanceId: number;
   mediaScope: "tv" | "movies";
   testIdPrefix: string;
@@ -90,7 +90,7 @@ async function evaluateEligibilityForSnapshots(
 }
 
 /** Dry-run toggle, run button, and scan/delete results for one media column. */
-function PrunerCleanupRunBlock(props: CleanupRunBlockProps) {
+function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
   const {
     instanceId,
     mediaScope,
@@ -274,7 +274,7 @@ function PrunerCleanupRunBlock(props: CleanupRunBlockProps) {
   const runBtnDisabled = runDisabled || controlsDisabled || runBusy;
 
   return (
-    <div className="mt-6 space-y-4 border-t border-[var(--mm-border)] pt-6" data-testid={`${testIdPrefix}-run-${mediaScope}`}>
+    <div className="min-w-0 space-y-4" data-testid={`${testIdPrefix}-run-${mediaScope}`}>
       <MmOnOffSwitch
         id={`${testIdPrefix}-dry-run-${mediaScope}`}
         label="Dry run"
@@ -450,8 +450,8 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
   const [errTv, setErrTv] = useState<string | null>(null);
   const [errMovies, setErrMovies] = useState<string | null>(null);
 
-  const [dryRunTv, setDryRunTv] = useState(true);
-  const [dryRunMovies, setDryRunMovies] = useState(true);
+  const [tvDryRun, setTvDryRun] = useState(true);
+  const [moviesDryRun, setMoviesDryRun] = useState(true);
 
   useEffect(() => {
     if (!tv) return;
@@ -730,13 +730,14 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
               helperText="Only items released in this range will be deleted. Leave both fields empty to delete regardless of release year."
             />
 
-            <PrunerCleanupRunBlock
+            <div className="border-t border-[var(--mm-border)] pt-4 mt-1" role="separator" />
+            <PrunerDryRunControls
               instanceId={instanceId}
               mediaScope="tv"
               testIdPrefix="pruner-cleanup"
               ensureSaved={ensureTvSaved}
-              dryRunEnabled={dryRunTv}
-              onDryRunEnabledChange={setDryRunTv}
+              dryRunEnabled={tvDryRun}
+              onDryRunEnabledChange={setTvDryRun}
               runDisabled={runDisabled}
               controlsDisabled={tvControlsDisabled}
               afterRunSlot={
@@ -889,13 +890,14 @@ export function PrunerProviderRulesCard({ provider, instanceId, instance }: Rule
               helperText="Only items released in this range will be deleted. Leave both fields empty to delete regardless of release year."
             />
 
-            <PrunerCleanupRunBlock
+            <div className="border-t border-[var(--mm-border)] pt-4 mt-1" role="separator" />
+            <PrunerDryRunControls
               instanceId={instanceId}
               mediaScope="movies"
               testIdPrefix="pruner-cleanup"
               ensureSaved={ensureMoviesSaved}
-              dryRunEnabled={dryRunMovies}
-              onDryRunEnabledChange={setDryRunMovies}
+              dryRunEnabled={moviesDryRun}
+              onDryRunEnabledChange={setMoviesDryRun}
               runDisabled={runDisabled}
               controlsDisabled={moviesControlsDisabled}
               afterRunSlot={

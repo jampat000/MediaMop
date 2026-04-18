@@ -20,12 +20,35 @@ from mediamop.core.config import MediaMopSettings
 from mediamop.modules.pruner.pruner_constants import clamp_pruner_scheduled_preview_interval_seconds
 from mediamop.modules.pruner.pruner_job_kinds import PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND
 from mediamop.modules.pruner.pruner_jobs_ops import pruner_enqueue_or_get_job
+from mediamop.modules.fetcher.fetcher_arr_search_schedule_window import DAY_NAMES, fetcher_arr_search_schedule_in_window
 from mediamop.modules.pruner.pruner_scope_settings_model import PrunerScopeSettings
 from mediamop.modules.pruner.pruner_server_instance_model import PrunerServerInstance
+from mediamop.platform.suite_settings.service import ensure_suite_settings_row
 
 logger = logging.getLogger(__name__)
 
 PRUNER_PREVIEW_SCHEDULE_ENQUEUE_FAILURE_COOLDOWN_SECONDS = 2.0
+
+
+def _scope_row_in_schedule_window(session: Session, sc: PrunerScopeSettings, *, when: datetime) -> bool:
+    """When hours limiting is off, always True. Otherwise wall-clock must fall inside days + time window."""
+
+    if not bool(sc.scheduled_preview_hours_limited):
+        return True
+    suite = ensure_suite_settings_row(session)
+    tz_name = (suite.app_timezone or "UTC").strip() or "UTC"
+    days_raw = (sc.scheduled_preview_days or "").strip()
+    days_csv = days_raw if days_raw else ",".join(DAY_NAMES)
+    start_s = (sc.scheduled_preview_start or "00:00").strip() or "00:00"
+    end_s = (sc.scheduled_preview_end or "23:59").strip() or "23:59"
+    return fetcher_arr_search_schedule_in_window(
+        schedule_enabled=True,
+        schedule_days=days_csv,
+        schedule_start=start_s,
+        schedule_end=end_s,
+        timezone_name=tz_name,
+        now=when,
+    )
 
 
 def _scope_row_due(sc: PrunerScopeSettings, *, now: datetime) -> bool:
@@ -69,6 +92,8 @@ def enqueue_due_scheduled_pruner_previews(session: Session, *, now: datetime) ->
     enqueued = 0
     for sc in rows:
         if not _scope_row_due(sc, now=when):
+            continue
+        if not _scope_row_in_schedule_window(session, sc, when=when):
             continue
         sid = int(sc.server_instance_id)
         scope = str(sc.media_scope)

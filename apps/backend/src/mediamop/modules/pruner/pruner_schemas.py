@@ -98,6 +98,10 @@ class PrunerScopeSummaryOut(BaseModel):
     )
     scheduled_preview_enabled: bool = False
     scheduled_preview_interval_seconds: int = 3600
+    scheduled_preview_hours_limited: bool = False
+    scheduled_preview_days: str = ""
+    scheduled_preview_start: str = "00:00"
+    scheduled_preview_end: str = "23:59"
     last_scheduled_preview_enqueued_at: datetime | None = None
     last_preview_run_uuid: str | None = None
     last_preview_at: datetime | None = None
@@ -183,6 +187,10 @@ class PrunerScopePatchIn(BaseModel):
     )
     scheduled_preview_enabled: bool | None = None
     scheduled_preview_interval_seconds: int | None = Field(None, ge=60, le=86_400)
+    scheduled_preview_hours_limited: bool | None = None
+    scheduled_preview_days: str | None = Field(default=None, max_length=200)
+    scheduled_preview_start: str | None = Field(default=None, max_length=5)
+    scheduled_preview_end: str | None = Field(default=None, max_length=5)
 
     @field_validator("preview_include_genres", mode="before")
     @classmethod
@@ -335,6 +343,10 @@ class PrunerScopePatchHttpIn(PrunerScopePatchIn):
             and self.preview_include_collections is None
             and self.scheduled_preview_enabled is None
             and self.scheduled_preview_interval_seconds is None
+            and self.scheduled_preview_hours_limited is None
+            and self.scheduled_preview_days is None
+            and self.scheduled_preview_start is None
+            and self.scheduled_preview_end is None
         ):
             msg = (
                 "At least one of missing_primary_media_reported_enabled, never_played_stale_reported_enabled, "
@@ -345,7 +357,8 @@ class PrunerScopePatchHttpIn(PrunerScopePatchIn):
                 "preview_max_items, preview_include_genres, preview_include_people, preview_include_people_roles, "
                 "preview_year_min, "
                 "preview_year_max, preview_include_studios, preview_include_collections, scheduled_preview_enabled, "
-                "or scheduled_preview_interval_seconds must be provided."
+                "scheduled_preview_interval_seconds, scheduled_preview_hours_limited, scheduled_preview_days, "
+                "scheduled_preview_start, or scheduled_preview_end must be provided."
             )
             raise ValueError(msg)
         return self
