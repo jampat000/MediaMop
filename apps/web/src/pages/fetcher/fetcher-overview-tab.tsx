@@ -11,13 +11,10 @@ import { useFetcherOverviewStatsQuery } from "../../lib/fetcher/queries";
 import type {
   FailedImportCleanupPolicyAxis,
   FetcherFailedImportCleanupPolicyOut,
-  FetcherFailedImportQueueAttentionAxis,
   FetcherFailedImportQueueAttentionSnapshot,
 } from "../../lib/fetcher/failed-imports/types";
-import { FetcherCurrentSearchSetupSection } from "./fetcher-automation-summary";
+import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 import {
-  FETCHER_CONNECTION_PANEL_RADARR,
-  FETCHER_CONNECTION_PANEL_SONARR,
   FETCHER_TAB_RADARR_LABEL,
   FETCHER_TAB_SONARR_LABEL,
 } from "./fetcher-display-names";
@@ -37,18 +34,21 @@ function AtGlanceCard({
   title,
   body,
   glanceOrder,
+  footer,
 }: {
   title: string;
   body: ReactNode;
-  glanceOrder: "1" | "2" | "3" | "4" | "5";
+  glanceOrder: "1" | "2" | "3";
+  footer?: ReactNode;
 }) {
   return (
     <div
-      className="flex h-full flex-col gap-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 text-sm"
+      className="flex h-full min-h-0 flex-col gap-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 text-sm"
       data-at-glance-order={glanceOrder}
     >
       <h3 className="text-sm font-semibold text-[var(--mm-text1)]">{title}</h3>
       <div className="min-h-0 flex-1 text-[var(--mm-text2)]">{body}</div>
+      {footer ? <div className="mt-auto shrink-0 border-t border-[var(--mm-border)] pt-4">{footer}</div> : null}
     </div>
   );
 }
@@ -77,27 +77,55 @@ function atGlanceFailedImportCleanupSummary(axis: FailedImportCleanupPolicyAxis)
   return `${n} classes with actions`;
 }
 
-function glanceSearchLine(configured: boolean, enabled: boolean): string {
-  return configured ? (enabled ? "On" : "Off") : "Not set up yet";
+function onOff(enabled: boolean): string {
+  return enabled ? "On" : "Off";
 }
 
-function formatLastChecked(iso: string | null): string | null {
-  if (!iso) {
-    return null;
-  }
-  const d = new Date(iso);
-  if (Number.isNaN(d.valueOf())) {
-    return null;
-  }
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(d);
+function FetcherOverviewLast30Tiles({
+  sonarrSearches,
+  radarrSearches,
+  failedJobs,
+}: {
+  sonarrSearches: number;
+  radarrSearches: number;
+  failedJobs: number;
+}) {
+  return (
+    <div>
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
+          <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Sonarr</span>
+          <span className="mt-0.5 block text-[0.6rem] font-medium tracking-wide text-[var(--mm-text3)]">(searches)</span>
+          <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">{sonarrSearches}</span>
+        </div>
+        <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
+          <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Radarr</span>
+          <span className="mt-0.5 block text-[0.6rem] font-medium tracking-wide text-[var(--mm-text3)]">(searches)</span>
+          <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">{radarrSearches}</span>
+        </div>
+        <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
+          <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Failed</span>
+          <span className="mt-0.5 block text-[0.6rem] font-medium tracking-wide text-[var(--mm-text3)]">(jobs)</span>
+          <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">{failedJobs}</span>
+        </div>
+      </div>
+      <p className="mt-4 text-[0.7rem] leading-snug text-[var(--mm-text3)]">
+        Missing and upgrade searches combined · last 30 days
+      </p>
+    </div>
+  );
 }
 
 function FetcherOverviewAtAGlance({
   arr,
   policy,
+  attention,
+  onOpenSection,
 }: {
   arr: FetcherArrOperatorSettingsOut;
   policy: FetcherFailedImportCleanupPolicyOut;
+  attention: FetcherFailedImportQueueAttentionSnapshot;
+  onOpenSection?: (target: FetcherOverviewOpenSection) => void;
 }) {
   const statsQ = useFetcherOverviewStatsQuery();
 
@@ -107,87 +135,76 @@ function FetcherOverviewAtAGlance({
     ) : statsQ.isError ? (
       <p className="text-red-400">{(statsQ.error as Error).message}</p>
     ) : statsQ.data ? (
-      <div className="space-y-1.5">
-        <p>
-          <span className="text-[var(--mm-text3)]">Sonarr searches:</span>{" "}
-          <span className="font-medium text-[var(--mm-text1)]">
-            {statsQ.data.sonarr_missing_searches} missing · {statsQ.data.sonarr_upgrade_searches} upgrades
-          </span>
-        </p>
-        <p>
-          <span className="text-[var(--mm-text3)]">Radarr searches:</span>{" "}
-          <span className="font-medium text-[var(--mm-text1)]">
-            {statsQ.data.radarr_missing_searches} missing · {statsQ.data.radarr_upgrade_searches} upgrades
-          </span>
-        </p>
-        <p>
-          <span className="text-[var(--mm-text3)]">Total:</span>{" "}
-          <span className="font-medium text-[var(--mm-text1)]">{statsQ.data.total_searches} searches</span>
-        </p>
-        <p>
-          <span className="text-[var(--mm-text3)]">Failed jobs:</span>{" "}
-          <span className="font-medium text-[var(--mm-text1)]">
-            {statsQ.data.failed_jobs === 0 ? "None" : String(statsQ.data.failed_jobs)}
-          </span>
-        </p>
-      </div>
+      <FetcherOverviewLast30Tiles
+        sonarrSearches={statsQ.data.sonarr_missing_searches + statsQ.data.sonarr_upgrade_searches}
+        radarrSearches={statsQ.data.radarr_missing_searches + statsQ.data.radarr_upgrade_searches}
+        failedJobs={statsQ.data.failed_jobs}
+      />
     ) : (
       <p className="text-[var(--mm-text3)]">—</p>
     );
 
-  const sonarrBody = (
-    <div className="space-y-1.5">
-      <p>
-        <span className="text-[var(--mm-text3)]">TV searches:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">
-          {glanceSearchLine(arr.sonarr_server_configured, arr.sonarr_missing.enabled)}
-        </span>
-      </p>
-      <p>
-        <span className="text-[var(--mm-text3)]">Upgrades:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">
-          {glanceSearchLine(arr.sonarr_server_configured, arr.sonarr_upgrade.enabled)}
-        </span>
-      </p>
-    </div>
-  );
-
-  const radarrBody = (
-    <div className="space-y-1.5">
-      <p>
-        <span className="text-[var(--mm-text3)]">Movie searches:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">
-          {glanceSearchLine(arr.radarr_server_configured, arr.radarr_missing.enabled)}
-        </span>
-      </p>
-      <p>
-        <span className="text-[var(--mm-text3)]">Upgrades:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">
-          {glanceSearchLine(arr.radarr_server_configured, arr.radarr_upgrade.enabled)}
-        </span>
-      </p>
-    </div>
-  );
-
   const connBody = (
-    <div className="space-y-1.5">
-      <p>
-        <span className="text-[var(--mm-text3)]">{FETCHER_CONNECTION_PANEL_SONARR}:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">
-          {arr.sonarr_server_configured ? "Connected" : "Not set up yet"}
-        </span>
-      </p>
-      <p>
-        <span className="text-[var(--mm-text3)]">{FETCHER_CONNECTION_PANEL_RADARR}:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">
-          {arr.radarr_server_configured ? "Connected" : "Not set up yet"}
-        </span>
-      </p>
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Sonarr</p>
+        {arr.sonarr_server_configured ? (
+          <div className="space-y-1.5">
+            <p className="font-medium text-[var(--mm-text1)]">Connected</p>
+            <p>
+              <span className="text-[var(--mm-text3)]">Searches:</span>{" "}
+              <span className="font-medium text-[var(--mm-text1)]">{onOff(arr.sonarr_missing.enabled)}</span>
+            </p>
+            <p>
+              <span className="text-[var(--mm-text3)]">Upgrades:</span>{" "}
+              <span className="font-medium text-[var(--mm-text1)]">{onOff(arr.sonarr_upgrade.enabled)}</span>
+            </p>
+          </div>
+        ) : (
+          <p className="font-medium text-[var(--mm-text1)]">Not set up yet</p>
+        )}
+      </div>
+      <div className="border-t border-[var(--mm-border)] pt-4">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Radarr</p>
+          {arr.radarr_server_configured ? (
+            <div className="space-y-1.5">
+              <p className="font-medium text-[var(--mm-text1)]">Connected</p>
+              <p>
+                <span className="text-[var(--mm-text3)]">Searches:</span>{" "}
+                <span className="font-medium text-[var(--mm-text1)]">{onOff(arr.radarr_missing.enabled)}</span>
+              </p>
+              <p>
+                <span className="text-[var(--mm-text3)]">Upgrades:</span>{" "}
+                <span className="font-medium text-[var(--mm-text1)]">{onOff(arr.radarr_upgrade.enabled)}</span>
+              </p>
+            </div>
+          ) : (
+            <p className="font-medium text-[var(--mm-text1)]">Not set up yet</p>
+          )}
+        </div>
+      </div>
     </div>
   );
+
+  const tvN = attention.tv_shows.needs_attention_count;
+  const movN = attention.movies.needs_attention_count;
+  const tvNeeds =
+    arr.sonarr_server_configured && tvN !== null && tvN > 0 ? (
+      <p className="text-sm font-medium text-amber-500/95">
+        {tvN === 1 ? "1 Sonarr item needs attention" : `${tvN} Sonarr items need attention`}
+      </p>
+    ) : null;
+  const movNeeds =
+    arr.radarr_server_configured && movN !== null && movN > 0 ? (
+      <p className="text-sm font-medium text-amber-500/95">
+        {movN === 1 ? "1 Radarr item needs attention" : `${movN} Radarr items need attention`}
+      </p>
+    ) : null;
+  const anyNeedsLine = Boolean(tvNeeds || movNeeds);
 
   const fiBody = (
-    <div className="space-y-1.5">
+    <div className="space-y-4">
       <p>
         <span className="text-[var(--mm-text3)]">Sonarr (TV):</span>{" "}
         <span className="font-medium text-[var(--mm-text1)]">{atGlanceFailedImportCleanupSummary(policy.tv_shows)}</span>
@@ -196,6 +213,17 @@ function FetcherOverviewAtAGlance({
         <span className="text-[var(--mm-text3)]">Radarr (Movies):</span>{" "}
         <span className="font-medium text-[var(--mm-text1)]">{atGlanceFailedImportCleanupSummary(policy.movies)}</span>
       </p>
+      <div className="space-y-2 border-t border-[var(--mm-border)] pt-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Needs attention</p>
+        {anyNeedsLine ? (
+          <div className="space-y-1">
+            {tvNeeds}
+            {movNeeds}
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--mm-text1)]">No items need attention</p>
+        )}
+      </div>
     </div>
   );
 
@@ -209,12 +237,40 @@ function FetcherOverviewAtAGlance({
       <h2 id="fetcher-overview-at-a-glance-heading" className="mm-card__title text-lg">
         At a glance
       </h2>
-      <div className="mm-card__body mt-5 grid gap-4 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-5 xl:grid-cols-5 xl:gap-x-5 xl:gap-y-5">
+      <div className="mm-card__body mt-5 grid grid-cols-1 gap-4 sm:gap-x-5 sm:gap-y-5 lg:grid-cols-3 lg:gap-x-5 lg:gap-y-5">
         <AtGlanceCard glanceOrder="1" title="Last 30 days" body={last30Body} />
-        <AtGlanceCard glanceOrder="2" title="Connections" body={connBody} />
-        <AtGlanceCard glanceOrder="3" title={FETCHER_CONNECTION_PANEL_SONARR} body={sonarrBody} />
-        <AtGlanceCard glanceOrder="4" title={FETCHER_CONNECTION_PANEL_RADARR} body={radarrBody} />
-        <AtGlanceCard glanceOrder="5" title="Failed imports" body={fiBody} />
+        <AtGlanceCard
+          glanceOrder="2"
+          title="Connections"
+          body={connBody}
+          footer={
+            onOpenSection ? (
+              <button
+                type="button"
+                className={mmActionButtonClass({ variant: "secondary" })}
+                onClick={() => onOpenSection("connections")}
+              >
+                Open Connections
+              </button>
+            ) : undefined
+          }
+        />
+        <AtGlanceCard
+          glanceOrder="3"
+          title="Failed imports"
+          body={fiBody}
+          footer={
+            onOpenSection ? (
+              <button
+                type="button"
+                className={mmActionButtonClass({ variant: "secondary" })}
+                onClick={() => onOpenSection("failed-imports")}
+              >
+                Open Failed imports
+              </button>
+            ) : undefined
+          }
+        />
       </div>
     </section>
   );
@@ -337,122 +393,38 @@ function FetcherOverviewNeedsAttention({
   );
 }
 
-export const FETCHER_OVERVIEW_FI_NEEDS_ATTENTION_SUBTEXT =
-  "Same count as on Failed imports: queue rows that match a known failure class and have a non–leave-alone action saved for that app (not proof that a cleanup run already failed).";
+const NEXT_STEPS_BODY =
+  "Use Connections to set up Sonarr and Radarr, Sonarr (TV) and Radarr (Movies) to configure search settings, Failed imports to manage import cleanup, and Activity for a full history.";
 
-function failedImportAttentionStatusLine(
-  configured: boolean,
-  cleanupEnabledCount: number,
-  axis: FetcherFailedImportQueueAttentionAxis,
-): string {
-  if (!configured) {
-    return "Not set up yet";
-  }
-  if (axis.needs_attention_count === null) {
-    return "Can't check right now";
-  }
-  const n = axis.needs_attention_count;
-  if (n > 0) {
-    return n === 1 ? "1 failed import still needs attention" : `${n} failed imports still need attention`;
-  }
-  if (cleanupEnabledCount === 0) {
-    return "No classes configured for queue actions";
-  }
-  return "No failed imports need attention";
-}
-
-function FailedImportAttentionCard({
-  title,
-  configured,
-  axis,
-  policyAxis,
-}: {
-  title: string;
-  configured: boolean;
-  axis: FetcherFailedImportQueueAttentionAxis;
-  policyAxis: FailedImportCleanupPolicyAxis;
-}) {
-  const enabledLabels = CLEANUP_OPTION_ROWS.filter(({ key }) => policyAxis[key] !== "leave_alone").map(
-    (r) => r.label,
-  );
-  const cleanupEnabledCount = enabledLabels.length;
-  const last = formatLastChecked(axis.last_checked_at);
-  const statusLine = failedImportAttentionStatusLine(configured, cleanupEnabledCount, axis);
-
-  return (
-    <div className="flex h-full min-h-[1px] flex-col rounded-md border border-[var(--mm-border)] bg-[var(--mm-surface2)]/40 p-5 text-sm">
-      <h3 className="text-sm font-semibold text-[var(--mm-text1)]">{title}</h3>
-      <div className="flex min-h-0 flex-1 flex-col pt-4">
-        <div className="shrink-0 space-y-5">
-          <div className="space-y-1">
-            <p className="text-xs font-medium tracking-wide text-[var(--mm-text3)]">Classes with an action</p>
-            {cleanupEnabledCount === 0 ? (
-              <p className="text-sm font-semibold text-[var(--mm-text1)]">None</p>
-            ) : (
-              <ul className="space-y-1.5 text-sm font-semibold text-[var(--mm-text1)]">
-                {enabledLabels.map((label) => (
-                  <li key={label} className="leading-snug">
-                    {label}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <div className="space-y-1">
-            <p className="text-xs font-medium tracking-wide text-[var(--mm-text3)]">Status</p>
-            <p className="text-sm font-semibold leading-snug text-[var(--mm-text1)]">{statusLine}</p>
-          </div>
-        </div>
-        <div className="mt-5 flex min-h-0 flex-1 flex-col justify-end">
-          {last ? (
-            <div className="space-y-1 border-t border-[var(--mm-border)]/80 pt-4">
-              <p className="text-xs font-medium tracking-wide text-[var(--mm-text3)]">Last checked</p>
-              <p className="text-sm font-semibold text-[var(--mm-text1)]">{last}</p>
-            </div>
-          ) : (
-            <div className="min-h-0 flex-1" aria-hidden />
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FetcherOverviewFailedImportsThatNeedAttention({
-  arr,
-  attention,
-  policy,
-}: {
-  arr: FetcherArrOperatorSettingsOut;
-  attention: FetcherFailedImportQueueAttentionSnapshot;
-  policy: FetcherFailedImportCleanupPolicyOut;
-}) {
+function FetcherOverviewNextSteps({ onOpenSection }: { onOpenSection?: (target: FetcherOverviewOpenSection) => void }) {
   return (
     <section
       className="mm-card mm-dash-card mm-fetcher-module-surface"
-      aria-labelledby="fetcher-overview-fi-needs-attention-heading"
-      data-testid="fetcher-overview-fi-needs-attention"
-      data-overview-order="4"
+      aria-labelledby="fetcher-overview-next-steps-heading"
+      data-testid="fetcher-overview-next-steps"
+      data-overview-order="3"
     >
-      <h2 id="fetcher-overview-fi-needs-attention-heading" className="mm-card__title text-lg">
-        Failed imports that need attention
+      <h2 id="fetcher-overview-next-steps-heading" className="mm-card__title text-lg">
+        Next steps
       </h2>
-      <div className="mm-card__body space-y-3 text-sm">
-        <p className="mm-card__body--tight leading-relaxed text-[var(--mm-text3)]">{FETCHER_OVERVIEW_FI_NEEDS_ATTENTION_SUBTEXT}</p>
-        <div className="mt-5 grid items-stretch gap-4 md:grid-cols-2 md:gap-x-5 md:gap-y-4">
-          <FailedImportAttentionCard
-            title={FETCHER_TAB_SONARR_LABEL}
-            configured={arr.sonarr_server_configured}
-            axis={attention.tv_shows}
-            policyAxis={policy.tv_shows}
-          />
-          <FailedImportAttentionCard
-            title={FETCHER_TAB_RADARR_LABEL}
-            configured={arr.radarr_server_configured}
-            axis={attention.movies}
-            policyAxis={policy.movies}
-          />
-        </div>
+      <div className="mm-card__body mt-5 space-y-5 text-sm text-[var(--mm-text2)]">
+        <p className="leading-relaxed">{NEXT_STEPS_BODY}</p>
+        {onOpenSection ? (
+          <div className="flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">
+            <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onOpenSection("connections")}>
+              Connections
+            </button>
+            <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onOpenSection("sonarr")}>
+              {FETCHER_TAB_SONARR_LABEL}
+            </button>
+            <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onOpenSection("radarr")}>
+              {FETCHER_TAB_RADARR_LABEL}
+            </button>
+            <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onOpenSection("failed-imports")}>
+              Failed imports
+            </button>
+          </div>
+        ) : null}
       </div>
     </section>
   );
@@ -475,7 +447,7 @@ function FetcherOverviewLoadError({ err }: { err: unknown }) {
   );
 }
 
-/** Overview tab — At a glance → Needs attention → Current search setup → Failed imports that need attention. */
+/** Overview tab — At a glance → Needs attention → Next steps. */
 export function FetcherOverviewTab({
   onOpenSection,
 }: {
@@ -501,10 +473,14 @@ export function FetcherOverviewTab({
 
   return (
     <div data-testid="fetcher-overview-panel" className="space-y-6 sm:space-y-7">
-      <FetcherOverviewAtAGlance arr={arr.data} policy={cleanupPolicy.data} />
+      <FetcherOverviewAtAGlance
+        arr={arr.data}
+        policy={cleanupPolicy.data}
+        attention={attention.data}
+        onOpenSection={onOpenSection}
+      />
       <FetcherOverviewNeedsAttention arr={arr.data} attention={attention.data} onOpenSection={onOpenSection} />
-      <FetcherCurrentSearchSetupSection arr={arr.data} />
-      <FetcherOverviewFailedImportsThatNeedAttention arr={arr.data} attention={attention.data} policy={cleanupPolicy.data} />
+      <FetcherOverviewNextSteps onOpenSection={onOpenSection} />
     </div>
   );
 }

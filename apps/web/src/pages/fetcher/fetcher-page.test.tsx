@@ -26,7 +26,6 @@ import type {
 import { fetcherJobsInspectionQueryKey } from "../../lib/fetcher/jobs-inspection/queries";
 import { MM_SCHEDULE_TIME_WINDOW_HELPER } from "../../components/ui/mm-schedule-window-controls";
 import { FETCHER_TAB_RADARR_LABEL, FETCHER_TAB_SONARR_LABEL } from "./fetcher-display-names";
-import { FETCHER_OVERVIEW_FI_NEEDS_ATTENTION_SUBTEXT } from "./fetcher-overview-tab";
 import { FetcherPage } from "./fetcher-page";
 
 function wrap(ui: ReactNode, client: QueryClient) {
@@ -172,39 +171,38 @@ describe("FetcherPage (tabbed IA)", () => {
     vi.restoreAllMocks();
   });
 
-  it("defaults to Overview with the four-section landing path, not the failed-import workspace", () => {
+  it("defaults to Overview with the three-section landing path, not the failed-import workspace", () => {
     renderFetcherPage();
     expect(screen.getByRole("tab", { name: "Overview" })).toHaveAttribute("aria-selected", "true");
     expect(screen.queryByTestId("fetcher-failed-imports-workspace")).not.toBeInTheDocument();
     const panel = screen.getByTestId("fetcher-overview-panel");
-    expect(overviewSectionOrders(panel)).toEqual(["1", "2", "3", "4"]);
+    expect(overviewSectionOrders(panel)).toEqual(["1", "2", "3"]);
     expect(screen.getByTestId("fetcher-overview-at-a-glance")).toBeInTheDocument();
     expect(screen.getByTestId("fetcher-overview-needs-attention")).toBeInTheDocument();
-    expect(screen.getByTestId("fetcher-automation-summary")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Current search setup" })).toBeInTheDocument();
-    expect(screen.getByTestId("fetcher-overview-fi-needs-attention")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Failed imports that need attention" })).toBeInTheDocument();
-    expect(screen.getByText(FETCHER_OVERVIEW_FI_NEEDS_ATTENTION_SUBTEXT)).toBeInTheDocument();
-    const fiOverview = screen.getByTestId("fetcher-overview-fi-needs-attention");
-    expect(fiOverview.textContent?.toLowerCase() ?? "").not.toContain("last finished");
-    expect(fiOverview.textContent?.toLowerCase() ?? "").not.toContain("last outcome");
-    expect(fiOverview.textContent ?? "").toMatch(/Classes with an action/i);
-    expect(fiOverview.textContent ?? "").toContain("Status");
+    expect(screen.getByTestId("fetcher-overview-next-steps")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Next steps" })).toBeInTheDocument();
+    expect(screen.queryByTestId("fetcher-automation-summary")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Current search setup" })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("fetcher-overview-fi-needs-attention")).not.toBeInTheDocument();
+    const glance = screen.getByTestId("fetcher-overview-at-a-glance");
+    expect(glance.textContent ?? "").toMatch(/Sonarr \(TV\):/i);
+    expect(glance.textContent ?? "").toMatch(/All leave alone/i);
+    expect(glance.textContent ?? "").toMatch(/No items need attention/i);
     expect(screen.queryByTestId("fetcher-overview-fi-preview")).not.toBeInTheDocument();
     expect(screen.queryByTestId("fetcher-overview-connections-service")).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Download queue preview" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Connections & optional service link" })).not.toBeInTheDocument();
   });
 
-  it("orders At a glance inner cards: Last 30 days, Connections, Sonarr, Radarr, Failed imports", () => {
+  it("orders At a glance inner cards: Last 30 days, Connections, Failed imports", () => {
     renderFetcherPage();
     const glance = screen.getByTestId("fetcher-overview-at-a-glance");
     const order = Array.from(glance.querySelectorAll("[data-at-glance-order]")).map(
       (el) => el.getAttribute("data-at-glance-order") ?? "",
     );
-    expect(order).toEqual(["1", "2", "3", "4", "5"]);
+    expect(order).toEqual(["1", "2", "3"]);
     const h3 = within(glance).getAllByRole("heading", { level: 3 });
-    expect(h3.map((h) => h.textContent)).toEqual(["Last 30 days", "Connections", "Sonarr", "Radarr", "Failed imports"]);
+    expect(h3.map((h) => h.textContent)).toEqual(["Last 30 days", "Connections", "Failed imports"]);
   });
 
   it("summarizes At a glance failed imports from saved cleanup policy (not queue attention)", () => {
@@ -216,15 +214,14 @@ describe("FetcherPage (tabbed IA)", () => {
     expect(t).toMatch(/All leave alone/i);
   });
 
-  it("lists Sonarr (TV) before Radarr (Movies) in Current search setup and in Failed imports that need attention", () => {
+  it("lists Sonarr (TV) before Radarr (Movies) in At a glance Failed imports card", () => {
     renderFetcherPage();
-    const auto = screen.getByTestId("fetcher-automation-summary");
-    const h3auto = within(auto).getAllByRole("heading", { level: 3 });
-    expect(h3auto.map((h) => h.textContent)).toEqual([FETCHER_TAB_SONARR_LABEL, FETCHER_TAB_RADARR_LABEL]);
-
-    const fiSection = screen.getByTestId("fetcher-overview-fi-needs-attention");
-    const h3fi = within(fiSection).getAllByRole("heading", { level: 3 });
-    expect(h3fi.map((h) => h.textContent)).toEqual([FETCHER_TAB_SONARR_LABEL, FETCHER_TAB_RADARR_LABEL]);
+    const glance = screen.getByTestId("fetcher-overview-at-a-glance");
+    const fiHeading = within(glance).getByRole("heading", { name: "Failed imports" });
+    const card = fiHeading.parentElement;
+    expect(card).toBeTruthy();
+    const t = (card as HTMLElement).textContent ?? "";
+    expect(t.indexOf("Sonarr (TV):")).toBeLessThan(t.indexOf("Radarr (Movies):"));
   });
 
   it("routes Needs attention to Sonarr and Radarr tabs when apps are connected but searches are off", () => {
@@ -415,14 +412,13 @@ describe("FetcherPage (tabbed IA)", () => {
     expect(t).not.toMatch(/Refiner/i);
   });
 
-  it("shows Current search setup as saved search preferences, not failed-import pass history", () => {
+  it("keeps library search tabs focused on saved lane preferences, not failed-import pass history", () => {
     renderFetcherPage();
-    const summary = screen.getByTestId("fetcher-automation-summary");
-    const t = summary.textContent ?? "";
-    expect(t).toMatch(/This shows your current TV and movie search settings/i);
-    expect(t).toMatch(/Missing searches/i);
-    expect(t).toMatch(/Upgrades/i);
-    expect(t).toMatch(/Run interval/i);
+    fireEvent.click(screen.getByRole("tab", { name: FETCHER_TAB_SONARR_LABEL }));
+    const arrPanel = screen.getByTestId("fetcher-arr-operator-settings");
+    const t = arrPanel.textContent ?? "";
+    expect(t).toMatch(/Missing TV shows/i);
+    expect(t).toMatch(/TV upgrades/i);
     expect(t.toLowerCase()).not.toContain("last finished");
     expect(t.toLowerCase()).not.toContain("last outcome");
   });
