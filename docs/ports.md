@@ -7,10 +7,12 @@ Vite reads it from [`apps/web/vite.config.ts`](../apps/web/vite.config.ts). Powe
 
 | Role | Host | Port | URL example |
 |------|------|------|-------------|
-| Web shell (Vite **dev** and **preview**) | `127.0.0.1` | **8782** | `http://127.0.0.1:8782` |
-| API (uvicorn per `scripts/dev-backend.ps1`) | `127.0.0.1` | **8788** | `http://127.0.0.1:8788` |
+| Web shell (Vite **dev** and **preview**) | all interfaces (`host: true` in `vite.config.ts`) | **8782** | `http://127.0.0.1:8782` or `http://localhost:8782` |
+| API (uvicorn per `scripts/dev-backend.ps1`) | `127.0.0.1` (from `dev-ports.json`) | **8788** | `http://127.0.0.1:8788` |
 
 The browser should use the **web** URL. `/api` is proxied to the API origin above (same-origin cookies).
+
+**Windows / `ERR_CONNECTION_REFUSED`:** Vite listens on **all interfaces** so both **`127.0.0.1`** and **`localhost`** work. If `localhost` resolved to IPv6 (`::1`) while Vite listened only on IPv4, the browser showed connection refused; that mismatch is what the `host: true` dev bind fixes.
 
 **Overrides (temporary):**
 

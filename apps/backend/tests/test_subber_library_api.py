@@ -218,6 +218,31 @@ def test_get_library_movies_ok(client_admin: TestClient) -> None:
     data = r.json()
     assert "movies" in data
     assert len(data["movies"]) >= 1
+    assert data.get("total", 0) >= 1
+
+
+def test_get_library_movies_pagination(client_admin: TestClient) -> None:
+    fac = create_session_factory(create_db_engine(client_admin.app.state.settings))
+    with fac() as db:
+        for i in range(3):
+            db.add(
+                SubberSubtitleState(
+                    media_scope="movies",
+                    file_path=f"/m/pag{i}.mkv",
+                    language_code="en",
+                    status="missing",
+                    movie_title=f"Pag Movie {i}",
+                ),
+            )
+        db.commit()
+    _login_admin(client_admin)
+    r0 = client_admin.get("/api/v1/subber/library/movies", params={"limit": 1, "offset": 0, "search": "Pag"})
+    assert r0.status_code == 200
+    j0 = r0.json()
+    assert j0["total"] == 3
+    assert len(j0["movies"]) == 1
+    r1 = client_admin.get("/api/v1/subber/library/movies", params={"limit": 1, "offset": 1, "search": "Pag"})
+    assert r1.json()["movies"][0]["file_path"] != j0["movies"][0]["file_path"]
 
 
 def test_get_library_movies_requires_auth(client_admin: TestClient) -> None:

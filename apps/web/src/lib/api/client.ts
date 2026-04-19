@@ -6,6 +6,13 @@
 const API_PREFIX = "/api/v1";
 
 function baseUrl(): string {
+  // In ``vite dev``, always use same-origin ``/api`` so the dev proxy applies (including
+  // ``MEDIAMOP_DEV_STACK_API_PROXY_TARGET`` when the API moved to a fallback port). A pinned
+  // ``VITE_API_BASE_URL=http://127.0.0.1:8788`` in ``.env`` would otherwise bypass the proxy and
+  // keep talking to an old uvicorn on 8788 while the new API listens on 8789 — Subber sync 404s.
+  if (import.meta.env.DEV) {
+    return "";
+  }
   const raw = import.meta.env.VITE_API_BASE_URL?.trim();
   return raw ? raw.replace(/\/$/, "") : "";
 }

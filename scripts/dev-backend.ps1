@@ -26,6 +26,14 @@ if ($env:MEDIAMOP_DEV_API_PORT -and $env:MEDIAMOP_DEV_API_PORT.Trim()) {
     $apiPort = [int]$env:MEDIAMOP_DEV_API_PORT.Trim()
 }
 
+$busyApi = Get-NetTCPConnection -LocalPort $apiPort -State Listen -ErrorAction SilentlyContinue
+if ($busyApi) {
+    Write-Error (
+        "Port $apiPort is already in use. Stop the other API or set MEDIAMOP_DEV_API_PORT. " +
+        "Vite's /api proxy will fail until the correct API is listening here."
+    )
+}
+
 $env:PYTHONPATH = "src"
 Set-Location $backend
 

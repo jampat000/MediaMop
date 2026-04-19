@@ -38,7 +38,7 @@ For **non-proxied** setups (e.g. static hosting on another port), set on the bac
 
 Then set in this app:
 
-- `VITE_API_BASE_URL` — split-origin dev/production API origin (no trailing slash); not needed when using the Vite `/api` proxy
+- `VITE_API_BASE_URL` — split-origin **production** (or `vite preview`) API origin (no trailing slash); **ignored in `vite dev`** so `/api` always goes through the dev proxy
 
 **Production (split origins):** use **HTTPS** end-to-end; set **`MEDIAMOP_CORS_ORIGINS`** / **`MEDIAMOP_TRUSTED_BROWSER_ORIGINS`** to the real web origin; set **`VITE_API_BASE_URL`** here to the API origin (no trailing slash). Session cookies on the API host generally need **`SameSite=None; Secure`** so credentialed `fetch` from the web origin works. The backend’s cookie flags are env-driven — see ADR-0003 and **`../../docs/local-development.md`**.
 

@@ -37,6 +37,7 @@ describe("SubberMoviesTab", () => {
             languages: [{ state_id: 2, language_code: "en", status: "missing", subtitle_path: null, last_searched_at: null, search_count: 0, source: null }],
           },
         ],
+        total: 1,
       },
       isLoading: false,
       isError: false,
@@ -61,7 +62,7 @@ describe("SubberMoviesTab", () => {
 
   it("shows empty state", async () => {
     vi.spyOn(subberQueries, "useSubberLibraryMoviesQuery").mockReturnValue({
-      data: { movies: [] },
+      data: { movies: [], total: 0 },
       isLoading: false,
       isError: false,
     } as unknown as ReturnType<typeof subberQueries.useSubberLibraryMoviesQuery>);

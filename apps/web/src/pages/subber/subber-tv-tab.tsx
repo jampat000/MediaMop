@@ -1,6 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
-import { subberLanguageLabel } from "../../lib/subber/subber-languages";
 import type { SubberTvEpisode } from "../../lib/subber/subber-api";
 import {
   useSubberLibraryTvQuery,
@@ -8,6 +7,17 @@ import {
   useSubberSearchNowMutation,
   useSubberSettingsQuery,
 } from "../../lib/subber/subber-queries";
+import {
+  SubberDetailsChevron,
+  SubberLanguageTracksDetails,
+  SubberMediaFilePathBlock,
+} from "./subber-library-details";
+import {
+  SubberLibraryPager,
+  readSubberLibraryPageSize,
+  writeSubberLibraryPageSize,
+  type SubberLibraryPageSize,
+} from "./subber-library-pager";
 
 function langBadge(status: string, code: string) {
   const ok = status === "found";
@@ -22,18 +32,6 @@ function langBadge(status: string, code: string) {
       {ok ? " ✓" : " ✗"}
     </span>
   );
-}
-
-function subberProviderLabel(key: string | null | undefined): string {
-  if (!key) return "—";
-  const labels: Record<string, string> = {
-    opensubtitles_org: "OpenSubtitles.org",
-    opensubtitles_com: "OpenSubtitles.com",
-    podnapisi: "Podnapisi",
-    subscene: "Subscene",
-    addic7ed: "Addic7ed",
-  };
-  return labels[key] ?? key;
 }
 
 function pickSearchStateId(ep: SubberTvEpisode, prefs: string[]): number | null {
@@ -51,60 +49,105 @@ export function SubberTvTab({ canOperate }: { canOperate: boolean }) {
   const [status, setStatus] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [language, setLanguage] = useState("");
+  const [pageSize, setPageSizeState] = useState<SubberLibraryPageSize>(() => readSubberLibraryPageSize());
+  const [page, setPage] = useState(0);
+
   const filters = useMemo(
     () => ({
       status: status === "all" ? undefined : status,
       search: search.trim() || undefined,
       language: language.trim() || undefined,
+      limit: pageSize,
+      offset: page * pageSize,
     }),
-    [status, search, language],
+    [status, search, language, pageSize, page],
   );
   const libQ = useSubberLibraryTvQuery(filters);
   const searchNow = useSubberSearchNowMutation();
   const searchAll = useSubberSearchAllMissingTvMutation();
 
+  const total = libQ.data?.total ?? 0;
+  const hasActiveFilters = status !== "all" || Boolean(search.trim()) || Boolean(language.trim());
+
+  useEffect(() => {
+    setPage(0);
+  }, [status, search, language]);
+
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(total / pageSize) - 1);
+    if (page > maxPage) {
+      setPage(maxPage);
+    }
+  }, [total, pageSize, page]);
+
+  const setPageSize = (n: SubberLibraryPageSize) => {
+    writeSubberLibraryPageSize(n);
+    setPageSizeState(n);
+    setPage(0);
+  };
+
   return (
     <div className="space-y-4" data-testid="subber-tv-tab">
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-1 text-xs text-[var(--mm-text2)]">
-          Search
-          <input
-            className="mm-input min-w-[12rem]"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by title"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-[var(--mm-text2)]">
-          Status
-          <select className="mm-input" value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option value="all">All</option>
-            <option value="missing">Missing</option>
-            <option value="complete">Complete</option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-[var(--mm-text2)]">
-          Language
-          <input className="mm-input w-28" value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="All languages" />
-        </label>
-        {canOperate ? (
-          <button
-            type="button"
-            className={mmActionButtonClass({ variant: "primary" })}
-            disabled={searchAll.isPending}
-            onClick={() => searchAll.mutate()}
-            data-testid="subber-tv-search-all-missing"
-          >
-            Search all missing TV
-          </button>
-        ) : null}
+      <div className="rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/30 p-4">
+        <p className="mb-3 text-xs font-medium uppercase tracking-wide text-[var(--mm-text2)]">Filters</p>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1 text-xs text-[var(--mm-text2)]">
+            Search
+            <input
+              className="mm-input min-w-[12rem]"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Show, episode, or path"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-[var(--mm-text2)]">
+            Subtitles
+            <select className="mm-input min-w-[11rem]" value={status} onChange={(e) => setStatus(e.target.value)}>
+              <option value="all">All episodes</option>
+              <option value="missing">Missing subtitles</option>
+              <option value="complete">All preferred languages found</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-[var(--mm-text2)]">
+            Language code
+            <input
+              className="mm-input w-28"
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              placeholder="e.g. en"
+            />
+          </label>
+          {canOperate ? (
+            <button
+              type="button"
+              className={mmActionButtonClass({ variant: "primary" })}
+              disabled={searchAll.isPending}
+              onClick={() => searchAll.mutate()}
+              data-testid="subber-tv-search-all-missing"
+            >
+              Search all missing TV
+            </button>
+          ) : null}
+        </div>
       </div>
       {libQ.isLoading ? <p className="text-sm text-[var(--mm-text2)]">Loading TV library…</p> : null}
       {libQ.isError ? <p className="text-sm text-red-600">{(libQ.error as Error).message}</p> : null}
-      {libQ.data && !libQ.data.shows.length ? (
+      {!libQ.isLoading && !libQ.isError && total === 0 ? (
         <p className="text-sm text-[var(--mm-text2)]" data-testid="subber-tv-empty">
-          No TV episodes tracked yet. Go to Settings and use the Sync TV library button to import your Sonarr library, or Subber will populate this automatically when Sonarr imports a new file.
+          {hasActiveFilters
+            ? "No episodes match the current filters. Try All episodes or clear search."
+            : "No TV episodes tracked yet. Go to Settings and use the Sync TV library button to import your Sonarr library, or Subber will populate this automatically when Sonarr imports a new file."}
         </p>
+      ) : null}
+      {!libQ.isLoading && !libQ.isError && total > 0 ? (
+        <SubberLibraryPager
+          total={total}
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          itemLabel="episodes"
+        />
       ) : null}
       {libQ.data?.shows.map((show) => (
         <section key={show.show_title} className="rounded-lg border border-[var(--mm-border)] bg-black/10 p-3">
@@ -118,57 +161,42 @@ export function SubberTvTab({ canOperate }: { canOperate: boolean }) {
                     const sid = pickSearchStateId(ep, prefs);
                     const hasMissing = ep.languages.some((l) => l.status !== "found");
                     return (
-                      <li key={ep.file_path} className="rounded border border-[var(--mm-border)] bg-black/10 p-2 text-sm">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-[var(--mm-text)]">
-                            S{String(season.season_number ?? 0).padStart(2, "0")}E{String(ep.episode_number ?? 0).padStart(2, "0")} ·{" "}
-                            {ep.episode_title ?? "Episode"}
-                          </span>
-                          <span className="flex flex-wrap gap-1">
-                            {ep.languages.map((l) => langBadge(l.status, l.language_code))}
-                          </span>
+                      <li
+                        key={ep.file_path}
+                        className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/35 p-3 text-sm shadow-sm"
+                      >
+                        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                          <div className="min-w-0 flex-1 space-y-2">
+                            <h4 className="text-sm font-semibold leading-snug text-[var(--mm-text)]">
+                              S{String(season.season_number ?? 0).padStart(2, "0")}E{String(ep.episode_number ?? 0).padStart(2, "0")}
+                              <span className="font-normal text-[var(--mm-text2)]"> · </span>
+                              {ep.episode_title ?? "Episode"}
+                            </h4>
+                            <div className="flex flex-wrap gap-1">{ep.languages.map((l) => langBadge(l.status, l.language_code))}</div>
+                          </div>
                           {canOperate && hasMissing && sid != null ? (
-                            <button
-                              type="button"
-                              className={mmActionButtonClass({ variant: "secondary" })}
-                              disabled={searchNow.isPending}
-                              data-testid="subber-tv-search-now"
-                              onClick={() => searchNow.mutate(sid)}
-                            >
-                              Search now
-                            </button>
+                            <div className="flex shrink-0">
+                              <button
+                                type="button"
+                                className={mmActionButtonClass({ variant: "secondary" })}
+                                disabled={searchNow.isPending}
+                                data-testid="subber-tv-search-now"
+                                onClick={() => searchNow.mutate(sid)}
+                              >
+                                Search now
+                              </button>
+                            </div>
                           ) : null}
                         </div>
-                        <details className="mt-2 text-xs text-[var(--mm-text2)]">
-                          <summary className="cursor-pointer text-[var(--mm-text)]">Details</summary>
-                          <dl className="mt-2 grid gap-1 sm:grid-cols-2">
-                            <div>
-                              <dt className="text-[var(--mm-text2)]">File</dt>
-                              <dd className="break-all font-mono">{ep.file_path}</dd>
-                            </div>
-                            <div>
-                              <dt className="text-[var(--mm-text2)]">Subtitle paths</dt>
-                              <dd className="break-all">
-                                {ep.languages
-                                  .map((l) => l.subtitle_path)
-                                  .filter(Boolean)
-                                  .join(" · ") || "—"}
-                              </dd>
-                            </div>
-                            {ep.languages.map((l) => (
-                              <div key={l.state_id} className="sm:col-span-2">
-                                <dt className="text-[var(--mm-text2)]">
-                                  {subberLanguageLabel(l.language_code)} ({l.language_code})
-                                </dt>
-                                <dd>
-                                  Last searched: {l.last_searched_at ?? "—"} · Count: {l.search_count} · Source: {l.source ?? "—"}
-                                  <br />
-                                  Found via: {subberProviderLabel(l.provider_key)} · Upgraded:{" "}
-                                  {(l.upgrade_count ?? 0) > 0 ? `${l.upgrade_count} times` : "Never upgraded"}
-                                </dd>
-                              </div>
-                            ))}
-                          </dl>
+                        <details className="group mt-2.5 rounded-lg border border-[var(--mm-border)] open:border-[var(--mm-accent)]/25 open:bg-black/10">
+                          <summary className="flex cursor-pointer list-none items-center gap-2 px-2.5 py-2 text-sm font-medium text-[var(--mm-text)] outline-none marker:hidden hover:bg-black/[0.08] [&::-webkit-details-marker]:hidden">
+                            <SubberDetailsChevron />
+                            Path & subtitle details
+                          </summary>
+                          <div className="space-y-4 border-t border-[var(--mm-border)] px-2.5 pb-3.5 pt-3.5">
+                            <SubberMediaFilePathBlock path={ep.file_path} />
+                            <SubberLanguageTracksDetails languages={ep.languages} />
+                          </div>
                         </details>
                       </li>
                     );

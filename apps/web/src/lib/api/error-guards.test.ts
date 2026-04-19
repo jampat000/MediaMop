@@ -38,8 +38,8 @@ describe("error-guards", () => {
     expect(httpStatusFromApiError(new Error("nope"))).toBe(null);
   });
 
-  it("treats bootstrap/me HTTP 500 in Vite dev without API base URL as proxy upstream down", () => {
-    const expectProxyDown = Boolean(import.meta.env.DEV && !import.meta.env.VITE_API_BASE_URL?.trim());
+  it("treats bootstrap/me HTTP 500 in Vite dev as proxy upstream down", () => {
+    const expectProxyDown = Boolean(import.meta.env.DEV);
     expect(isLikelyViteProxyUpstreamDown(new Error("bootstrap status: 500"))).toBe(expectProxyDown);
     expect(isLikelyViteProxyUpstreamDown(new Error("me: 500"))).toBe(expectProxyDown);
   });

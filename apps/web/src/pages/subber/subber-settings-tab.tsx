@@ -141,6 +141,53 @@ function SaveFeedback({ ok, err }: { ok: boolean; err: string | null }) {
   return null;
 }
 
+function SubberSettingsSection({
+  eyebrow,
+  title,
+  description,
+  children,
+  "data-testid": dataTestId,
+}: {
+  eyebrow?: string;
+  title: string;
+  description?: ReactNode;
+  children: ReactNode;
+  "data-testid"?: string;
+}) {
+  return (
+    <section
+      className="overflow-hidden rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] shadow-sm"
+      data-testid={dataTestId}
+    >
+      <header className="border-b border-[var(--mm-border)] bg-black/10 px-5 py-4">
+        {eyebrow ? (
+          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text2)]">{eyebrow}</p>
+        ) : null}
+        <h2
+          className={
+            eyebrow
+              ? "mt-1 text-lg font-semibold tracking-tight text-[var(--mm-text)]"
+              : "text-lg font-semibold tracking-tight text-[var(--mm-text)]"
+          }
+        >
+          {title}
+        </h2>
+        {description ? <div className="mt-2 text-sm leading-relaxed text-[var(--mm-text2)]">{description}</div> : null}
+      </header>
+      <div className="space-y-5 px-5 py-5">{children}</div>
+    </section>
+  );
+}
+
+function SubberSettingsSubsection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="rounded-md border border-[var(--mm-border)] bg-black/[0.06] p-4">
+      <h3 className="mb-3 text-sm font-semibold text-[var(--mm-text)]">{title}</h3>
+      <div className="space-y-3">{children}</div>
+    </div>
+  );
+}
+
 export function SubberSettingsTab({ canOperate }: { canOperate: boolean }) {
   const q = useSubberSettingsQuery();
   const pq = useSubberProvidersQuery();
@@ -174,6 +221,8 @@ export function SubberSettingsTab({ canOperate }: { canOperate: boolean }) {
 
   const [tvSyncOk, setTvSyncOk] = useState(false);
   const [moviesSyncOk, setMoviesSyncOk] = useState(false);
+  const [tvSyncErr, setTvSyncErr] = useState<string | null>(null);
+  const [moviesSyncErr, setMoviesSyncErr] = useState<string | null>(null);
 
   const [excludeHi, setExcludeHi] = useState(false);
   const [adaptEn, setAdaptEn] = useState(true);
@@ -199,7 +248,8 @@ export function SubberSettingsTab({ canOperate }: { canOperate: boolean }) {
   const [saveLang, setSaveLang] = useState({ ok: false, err: null as string | null });
   const [savePrefs, setSavePrefs] = useState({ ok: false, err: null as string | null });
   const [saveFreq, setSaveFreq] = useState({ ok: false, err: null as string | null });
-  const [saveMap, setSaveMap] = useState({ ok: false, err: null as string | null });
+  const [saveSonMap, setSaveSonMap] = useState({ ok: false, err: null as string | null });
+  const [saveRadMap, setSaveRadMap] = useState({ ok: false, err: null as string | null });
   const [expandedProviderKey, setExpandedProviderKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -336,8 +386,8 @@ export function SubberSettingsTab({ canOperate }: { canOperate: boolean }) {
     }
   }
 
-  async function savePathMapping() {
-    setSaveMap({ ok: false, err: null });
+  async function saveSonarrPathMapping() {
+    setSaveSonMap({ ok: false, err: null });
     try {
       const csrf_token = await fetchCsrfToken();
       await put.mutateAsync({
@@ -345,13 +395,26 @@ export function SubberSettingsTab({ canOperate }: { canOperate: boolean }) {
         sonarr_path_mapping_enabled: sonMapEn,
         sonarr_path_sonarr: sonArr.trim(),
         sonarr_path_subber: sonSub.trim(),
+      });
+      flashSave(setSaveSonMap);
+    } catch (e) {
+      setSaveSonMap({ ok: false, err: (e as Error).message });
+    }
+  }
+
+  async function saveRadarrPathMapping() {
+    setSaveRadMap({ ok: false, err: null });
+    try {
+      const csrf_token = await fetchCsrfToken();
+      await put.mutateAsync({
+        csrf_token,
         radarr_path_mapping_enabled: radMapEn,
         radarr_path_radarr: radArr.trim(),
         radarr_path_subber: radSub.trim(),
       });
-      flashSave(setSaveMap);
+      flashSave(setSaveRadMap);
     } catch (e) {
-      setSaveMap({ ok: false, err: (e as Error).message });
+      setSaveRadMap({ ok: false, err: (e as Error).message });
     }
   }
 
@@ -439,17 +502,28 @@ export function SubberSettingsTab({ canOperate }: { canOperate: boolean }) {
 
   return (
     <div className="space-y-8" data-testid="subber-settings-tab">
-      {/* Card 1 — OpenSubtitles */}
-      <section className="space-y-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5">
-        <h2 className="text-base font-semibold text-[var(--mm-text)]">OpenSubtitles</h2>
-        <label className="block text-sm text-[var(--mm-text2)]">
-          Username
-          <input className="mm-input mt-1 w-full max-w-md" value={osUser} disabled={dis} onChange={(e) => setOsUser(e.target.value)} />
-        </label>
-        <label className="block text-sm text-[var(--mm-text2)]">
-          Password {q.data?.opensubtitles_password_set ? <span className="text-xs">(leave blank to keep saved)</span> : null}
+      <SubberSettingsSection
+        eyebrow="Subtitles account"
+        title="OpenSubtitles"
+        description="Sign up at opensubtitles.com for a free account and API key. Subber shows your remaining download quota when you test the connection."
+      >
+        <SubberSettingsSubsection title="Credentials">
+          <label className="block text-sm font-medium text-[var(--mm-text)]" htmlFor="subber-os-user">
+            Username
+          </label>
+          <input
+            id="subber-os-user"
+            className="mm-input mt-1 w-full max-w-md"
+            value={osUser}
+            disabled={dis}
+            onChange={(e) => setOsUser(e.target.value)}
+          />
+          <label className="mt-3 block text-sm font-medium text-[var(--mm-text)]" htmlFor="subber-os-pass">
+            Password {q.data?.opensubtitles_password_set ? <span className="text-xs font-normal text-[var(--mm-text2)]">(leave blank to keep)</span> : null}
+          </label>
           <div className="mt-1 flex max-w-md gap-2">
             <input
+              id="subber-os-pass"
               className="mm-input flex-1"
               type={showOsPass ? "text" : "password"}
               value={osPass}
@@ -461,11 +535,12 @@ export function SubberSettingsTab({ canOperate }: { canOperate: boolean }) {
               {showOsPass ? "Hide" : "Show"}
             </button>
           </div>
-        </label>
-        <label className="block text-sm text-[var(--mm-text2)]">
-          API key
+          <label className="mt-3 block text-sm font-medium text-[var(--mm-text)]" htmlFor="subber-os-key">
+            API key
+          </label>
           <div className="mt-1 flex max-w-md gap-2">
             <input
+              id="subber-os-key"
               className="mm-input flex-1"
               type={showOsKey ? "text" : "password"}
               value={osKey}
@@ -477,52 +552,64 @@ export function SubberSettingsTab({ canOperate }: { canOperate: boolean }) {
               {showOsKey ? "Hide" : "Show"}
             </button>
           </div>
-        </label>
-        <p className="text-xs text-[var(--mm-text2)]">
-          Get your free account and API key at opensubtitles.com. Your account includes a daily download quota — Subber shows your remaining quota when you test the connection.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            className={mmActionButtonClass({ variant: "primary", disabled: dis })}
-            disabled={dis}
-            onClick={() => void saveOpenSubtitles()}
-            data-testid="subber-save-opensubtitles"
-          >
-            Save OpenSubtitles
-          </button>
-          <button
-            type="button"
-            className={mmActionButtonClass({ variant: "secondary", disabled: dis || testOs.isPending })}
-            disabled={dis || testOs.isPending}
-            onClick={() => void runTestOs()}
-            data-testid="subber-test-opensubtitles"
-          >
-            Test connection
-          </button>
-        </div>
-        <SaveFeedback ok={saveOs.ok} err={saveOs.err} />
-        <ConnectionStatusPanel
-          check={osCheck}
-          idleHelper="Run a test to verify your credentials and see your remaining download quota."
-        />
-      </section>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={mmActionButtonClass({ variant: "primary", disabled: dis })}
+              disabled={dis}
+              onClick={() => void saveOpenSubtitles()}
+              data-testid="subber-save-opensubtitles"
+            >
+              Save OpenSubtitles
+            </button>
+            <button
+              type="button"
+              className={mmActionButtonClass({ variant: "secondary", disabled: dis || testOs.isPending })}
+              disabled={dis || testOs.isPending}
+              onClick={() => void runTestOs()}
+              data-testid="subber-test-opensubtitles"
+            >
+              Test connection
+            </button>
+          </div>
+          <SaveFeedback ok={saveOs.ok} err={saveOs.err} />
+          <ConnectionStatusPanel
+            check={osCheck}
+            idleHelper="Run a test to verify your credentials and see your remaining download quota."
+          />
+        </SubberSettingsSubsection>
+      </SubberSettingsSection>
 
-      {/* Card 2 — Sonarr */}
-      <section className="space-y-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5">
-        <h2 className="text-base font-semibold text-[var(--mm-text)]">Sonarr</h2>
-        {sonHint ? (
-          <p className="text-sm text-[var(--mm-text2)]">Your Fetcher Sonarr URL is {sonHint} — you can use the same one.</p>
-        ) : null}
-        <label className="block text-sm text-[var(--mm-text2)]">
-          Sonarr base URL
-          <input className="mm-input mt-1 w-full max-w-xl" value={sonUrl} disabled={dis} onChange={(e) => setSonUrl(e.target.value)} />
-        </label>
-        <label className="block text-sm text-[var(--mm-text2)]">
-          Sonarr API key
+      <SubberSettingsSection
+        eyebrow="TV library"
+        title="Sonarr"
+        description="Connect Sonarr so Subber can read your TV library, react to imports, and map file paths when MediaMop runs in a different container or host."
+        data-testid="subber-settings-sonarr"
+      >
+        <SubberSettingsSubsection title="Connection">
+          {sonHint ? (
+            <p className="text-sm text-[var(--mm-text2)]">
+              Fetcher already uses <span className="font-mono text-[var(--mm-text)]">{sonHint}</span> — you can paste the same base URL here.
+            </p>
+          ) : null}
+          <label className="block text-sm font-medium text-[var(--mm-text)]" htmlFor="subber-son-url">
+            Base URL
+          </label>
+          <input
+            id="subber-son-url"
+            className="mm-input mt-1 w-full max-w-xl font-mono text-sm"
+            value={sonUrl}
+            disabled={dis}
+            onChange={(e) => setSonUrl(e.target.value)}
+            placeholder="http://127.0.0.1:8989"
+          />
+          <label className="mt-3 block text-sm font-medium text-[var(--mm-text)]" htmlFor="subber-son-key">
+            API key
+          </label>
           <div className="mt-1 flex max-w-xl gap-2">
             <input
-              className="mm-input min-w-0 flex-1"
+              id="subber-son-key"
+              className="mm-input min-w-0 flex-1 font-mono text-sm"
               type={showSonKey ? "text" : "password"}
               value={sonKey}
               placeholder={q.data?.sonarr_api_key_set ? MASK : ""}
@@ -533,43 +620,50 @@ export function SubberSettingsTab({ canOperate }: { canOperate: boolean }) {
               {showSonKey ? "Hide" : "Show"}
             </button>
           </div>
-        </label>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            className={mmActionButtonClass({ variant: "primary", disabled: dis })}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={mmActionButtonClass({ variant: "primary", disabled: dis })}
+              disabled={dis}
+              onClick={() => void saveSonarr()}
+              data-testid="subber-save-sonarr"
+            >
+              Save connection
+            </button>
+            <button
+              type="button"
+              className={mmActionButtonClass({ variant: "secondary", disabled: dis || testSon.isPending })}
+              disabled={dis || testSon.isPending}
+              onClick={() => void runTestSon()}
+              data-testid="subber-test-sonarr"
+            >
+              Test Sonarr
+            </button>
+          </div>
+          <SaveFeedback ok={saveSon.ok} err={saveSon.err} />
+          <ConnectionStatusPanel check={sonCheck} idleHelper="Save your URL and API key, then run a test to confirm Sonarr is reachable." />
+        </SubberSettingsSubsection>
+
+        <SubberSettingsSubsection title="Webhook">
+          <WebhookUrlField
+            id="subber-webhook-sonarr"
+            helper="In Sonarr: Settings → Connect → Webhook. Trigger: On Download. Subber searches as soon as Sonarr imports a file."
+            value={sonHook}
             disabled={dis}
-            onClick={() => void saveSonarr()}
-            data-testid="subber-save-sonarr"
-          >
-            Save Sonarr
-          </button>
-          <button
-            type="button"
-            className={mmActionButtonClass({ variant: "secondary", disabled: dis || testSon.isPending })}
-            disabled={dis || testSon.isPending}
-            onClick={() => void runTestSon()}
-          >
-            Test Sonarr
-          </button>
-        </div>
-        <SaveFeedback ok={saveSon.ok} err={saveSon.err} />
-        <ConnectionStatusPanel check={sonCheck} idleHelper="Save your URL and API key, then run a test to confirm Sonarr is reachable." />
-        <WebhookUrlField
-          id="subber-webhook-sonarr"
-          helper="Add this in Sonarr under Settings → Connect → Webhook. Set the trigger to On Download. Subber searches for subtitles immediately when Sonarr imports a file."
-          value={sonHook}
-          disabled={dis}
-        />
-        <div className="mt-4 space-y-1">
+          />
+        </SubberSettingsSubsection>
+
+        <SubberSettingsSubsection title="Library sync">
           <button
             type="button"
             className={mmActionButtonClass({ variant: "secondary", disabled: dis || syncTv.isPending })}
             disabled={dis || syncTv.isPending}
             onClick={() => {
               setTvSyncOk(false);
+              setTvSyncErr(null);
               void syncTv.mutate(undefined, {
                 onSuccess: () => setTvSyncOk(true),
+                onError: (e) => setTvSyncErr((e as Error).message),
               });
             }}
             data-testid="subber-sync-tv-library"
@@ -577,31 +671,80 @@ export function SubberSettingsTab({ canOperate }: { canOperate: boolean }) {
             {syncTv.isPending ? "Syncing…" : "Sync TV library from Sonarr"}
           </button>
           <p className="text-xs text-[var(--mm-text2)]">
-            Pulls your full Sonarr library and checks which episodes already have subtitles. Run once after connecting.
+            One-time pull of your Sonarr library so the TV tab shows coverage. Check the Jobs tab for progress.
           </p>
           {tvSyncOk ? (
             <p className="text-xs text-[var(--mm-text)]">
               TV library sync started — your TV tab will populate shortly. Check the Jobs tab for progress.
             </p>
           ) : null}
-        </div>
-      </section>
+          {tvSyncErr ? (
+            <p className="text-xs text-red-400" role="alert">
+              {tvSyncErr}
+            </p>
+          ) : null}
+        </SubberSettingsSubsection>
 
-      {/* Card 3 — Radarr */}
-      <section className="space-y-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5">
-        <h2 className="text-base font-semibold text-[var(--mm-text)]">Radarr</h2>
-        {radHint ? (
-          <p className="text-sm text-[var(--mm-text2)]">Your Fetcher Radarr URL is {radHint} — you can use the same one.</p>
-        ) : null}
-        <label className="block text-sm text-[var(--mm-text2)]">
-          Radarr base URL
-          <input className="mm-input mt-1 w-full max-w-xl" value={radUrl} disabled={dis} onChange={(e) => setRadUrl(e.target.value)} />
-        </label>
-        <label className="block text-sm text-[var(--mm-text2)]">
-          Radarr API key
+        <SubberSettingsSubsection title="Path mapping">
+          <p className="text-xs text-[var(--mm-text2)]">
+            Only if Sonarr and MediaMop see different paths (for example Docker bind mounts). Leave off when everything runs on one machine.
+          </p>
+          <MmOnOffSwitch id="subber-son-map" label="Enable Sonarr path mapping" enabled={sonMapEn} disabled={dis} onChange={setSonMapEn} />
+          {sonMapEn ? (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <label className="block min-w-0 flex-1 text-sm text-[var(--mm-text2)]">
+                Path as Sonarr reports it
+                <input className="mm-input mt-1 w-full font-mono text-sm" value={sonArr} disabled={dis} onChange={(e) => setSonArr(e.target.value)} />
+              </label>
+              <label className="block min-w-0 flex-1 text-sm text-[var(--mm-text2)]">
+                Path as MediaMop sees it
+                <input className="mm-input mt-1 w-full font-mono text-sm" value={sonSub} disabled={dis} onChange={(e) => setSonSub(e.target.value)} />
+              </label>
+            </div>
+          ) : null}
+          <button
+            type="button"
+            className={mmActionButtonClass({ variant: "primary", disabled: dis })}
+            disabled={dis}
+            onClick={() => void saveSonarrPathMapping()}
+            data-testid="subber-save-sonarr-path-mapping"
+          >
+            Save Sonarr path mapping
+          </button>
+          <SaveFeedback ok={saveSonMap.ok} err={saveSonMap.err} />
+        </SubberSettingsSubsection>
+      </SubberSettingsSection>
+
+      <SubberSettingsSection
+        eyebrow="Movies library"
+        title="Radarr"
+        description="Connect Radarr for movie imports, webhooks, and optional path translation when Subber does not share the same filesystem view as Radarr."
+        data-testid="subber-settings-radarr"
+      >
+        <SubberSettingsSubsection title="Connection">
+          {radHint ? (
+            <p className="text-sm text-[var(--mm-text2)]">
+              Fetcher already uses <span className="font-mono text-[var(--mm-text)]">{radHint}</span> — you can paste the same base URL here.
+            </p>
+          ) : null}
+          <label className="block text-sm font-medium text-[var(--mm-text)]" htmlFor="subber-rad-url">
+            Base URL
+          </label>
+          <input
+            id="subber-rad-url"
+            className="mm-input mt-1 w-full max-w-xl font-mono text-sm"
+            value={radUrl}
+            disabled={dis}
+            onChange={(e) => setRadUrl(e.target.value)}
+            placeholder="http://127.0.0.1:7878"
+          />
+          <label className="mt-3 block text-sm font-medium text-[var(--mm-text)]" htmlFor="subber-rad-key">
+            API key
+          </label>
           <div className="mt-1 flex max-w-xl gap-2">
             <input
-              className="mm-input min-w-0 flex-1"
+              id="subber-rad-key"
+              className="mm-input min-w-0 flex-1 font-mono text-sm"
               type={showRadKey ? "text" : "password"}
               value={radKey}
               placeholder={q.data?.radarr_api_key_set ? MASK : ""}
@@ -612,43 +755,50 @@ export function SubberSettingsTab({ canOperate }: { canOperate: boolean }) {
               {showRadKey ? "Hide" : "Show"}
             </button>
           </div>
-        </label>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            className={mmActionButtonClass({ variant: "primary", disabled: dis })}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={mmActionButtonClass({ variant: "primary", disabled: dis })}
+              disabled={dis}
+              onClick={() => void saveRadarr()}
+              data-testid="subber-save-radarr"
+            >
+              Save connection
+            </button>
+            <button
+              type="button"
+              className={mmActionButtonClass({ variant: "secondary", disabled: dis || testRad.isPending })}
+              disabled={dis || testRad.isPending}
+              onClick={() => void runTestRad()}
+              data-testid="subber-test-radarr"
+            >
+              Test Radarr
+            </button>
+          </div>
+          <SaveFeedback ok={saveRad.ok} err={saveRad.err} />
+          <ConnectionStatusPanel check={radCheck} idleHelper="Save your URL and API key, then run a test to confirm Radarr is reachable." />
+        </SubberSettingsSubsection>
+
+        <SubberSettingsSubsection title="Webhook">
+          <WebhookUrlField
+            id="subber-webhook-radarr"
+            helper="In Radarr: Settings → Connect → Webhook. Trigger: On Download. Subber searches as soon as Radarr imports a file."
+            value={radHook}
             disabled={dis}
-            onClick={() => void saveRadarr()}
-            data-testid="subber-save-radarr"
-          >
-            Save Radarr
-          </button>
-          <button
-            type="button"
-            className={mmActionButtonClass({ variant: "secondary", disabled: dis || testRad.isPending })}
-            disabled={dis || testRad.isPending}
-            onClick={() => void runTestRad()}
-          >
-            Test Radarr
-          </button>
-        </div>
-        <SaveFeedback ok={saveRad.ok} err={saveRad.err} />
-        <ConnectionStatusPanel check={radCheck} idleHelper="Save your URL and API key, then run a test to confirm Radarr is reachable." />
-        <WebhookUrlField
-          id="subber-webhook-radarr"
-          helper="Add this in Radarr under Settings → Connect → Webhook. Set the trigger to On Download. Subber searches for subtitles immediately when Radarr imports a file."
-          value={radHook}
-          disabled={dis}
-        />
-        <div className="mt-4 space-y-1">
+          />
+        </SubberSettingsSubsection>
+
+        <SubberSettingsSubsection title="Library sync">
           <button
             type="button"
             className={mmActionButtonClass({ variant: "secondary", disabled: dis || syncMovies.isPending })}
             disabled={dis || syncMovies.isPending}
             onClick={() => {
               setMoviesSyncOk(false);
+              setMoviesSyncErr(null);
               void syncMovies.mutate(undefined, {
                 onSuccess: () => setMoviesSyncOk(true),
+                onError: (e) => setMoviesSyncErr((e as Error).message),
               });
             }}
             data-testid="subber-sync-movies-library"
@@ -656,22 +806,55 @@ export function SubberSettingsTab({ canOperate }: { canOperate: boolean }) {
             {syncMovies.isPending ? "Syncing…" : "Sync Movies library from Radarr"}
           </button>
           <p className="text-xs text-[var(--mm-text2)]">
-            Pulls your full Radarr library and checks which movies already have subtitles. Run once after connecting.
+            One-time pull of your Radarr library so the Movies tab shows coverage. Check the Jobs tab for progress.
           </p>
           {moviesSyncOk ? (
             <p className="text-xs text-[var(--mm-text)]">
               Movies library sync started — your Movies tab will populate shortly. Check the Jobs tab for progress.
             </p>
           ) : null}
-        </div>
-      </section>
+          {moviesSyncErr ? (
+            <p className="text-xs text-red-400" role="alert">
+              {moviesSyncErr}
+            </p>
+          ) : null}
+        </SubberSettingsSubsection>
 
-      {/* Card 4 — Languages */}
-      <section className="space-y-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5">
-        <h2 className="text-base font-semibold text-[var(--mm-text)]">Languages</h2>
-        <p className="text-sm text-[var(--mm-text2)]">
-          Subber tries languages in this order. If the first is not found it tries the next automatically.
-        </p>
+        <SubberSettingsSubsection title="Path mapping">
+          <p className="text-xs text-[var(--mm-text2)]">
+            Only if Radarr and MediaMop see different paths. Leave off when everything runs on one machine.
+          </p>
+          <MmOnOffSwitch id="subber-rad-map" label="Enable Radarr path mapping" enabled={radMapEn} disabled={dis} onChange={setRadMapEn} />
+          {radMapEn ? (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <label className="block min-w-0 flex-1 text-sm text-[var(--mm-text2)]">
+                Path as Radarr reports it
+                <input className="mm-input mt-1 w-full font-mono text-sm" value={radArr} disabled={dis} onChange={(e) => setRadArr(e.target.value)} />
+              </label>
+              <label className="block min-w-0 flex-1 text-sm text-[var(--mm-text2)]">
+                Path as MediaMop sees it
+                <input className="mm-input mt-1 w-full font-mono text-sm" value={radSub} disabled={dis} onChange={(e) => setRadSub(e.target.value)} />
+              </label>
+            </div>
+          ) : null}
+          <button
+            type="button"
+            className={mmActionButtonClass({ variant: "primary", disabled: dis })}
+            disabled={dis}
+            onClick={() => void saveRadarrPathMapping()}
+            data-testid="subber-save-radarr-path-mapping"
+          >
+            Save Radarr path mapping
+          </button>
+          <SaveFeedback ok={saveRadMap.ok} err={saveRadMap.err} />
+        </SubberSettingsSubsection>
+      </SubberSettingsSection>
+
+      <SubberSettingsSection
+        eyebrow="Search order"
+        title="Subtitle languages"
+        description="Subber tries languages in this order. If the first is not found it tries the next automatically."
+      >
         <div className="flex flex-wrap items-center gap-2">
           {langs.map((code, idx) => (
             <span
@@ -750,11 +933,13 @@ export function SubberSettingsTab({ canOperate }: { canOperate: boolean }) {
           Save languages
         </button>
         <SaveFeedback ok={saveLang.ok} err={saveLang.err} />
-      </section>
+      </SubberSettingsSection>
 
-      {/* Card 5 — Preferences (subtitle folder + hearing impaired + enable) */}
-      <section className="space-y-4 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5">
-        <h2 className="text-base font-semibold text-[var(--mm-text)]">Preferences</h2>
+      <SubberSettingsSection
+        eyebrow="Files & behavior"
+        title="Preferences"
+        description="Where subtitles are written, optional filtering, and the master switch for automatic searches."
+      >
         <div>
           <label className="block text-sm font-medium text-[var(--mm-text)]" htmlFor="subber-subtitle-folder">
             Subtitle folder
@@ -803,15 +988,14 @@ export function SubberSettingsTab({ canOperate }: { canOperate: boolean }) {
           Save preferences
         </button>
         <SaveFeedback ok={savePrefs.ok} err={savePrefs.err} />
-      </section>
+      </SubberSettingsSection>
 
-      {/* Card 6 — Search frequency */}
-      <section className="space-y-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5">
-        <h2 className="text-base font-semibold text-[var(--mm-text)]">Search frequency</h2>
+      <SubberSettingsSection
+        eyebrow="Automation"
+        title="Adaptive searching"
+        description="Back off automatically when subtitles are not found so repeated searches do not burn through your daily download quota."
+      >
         <MmOnOffSwitch id="subber-adapt" label="Enable adaptive searching" enabled={adaptEn} disabled={dis} onChange={setAdaptEn} />
-        <p className="text-xs text-[var(--mm-text2)]">
-          When on, Subber automatically searches less often for files that repeatedly return no results. This protects your daily download quota.
-        </p>
         {adaptEn ? (
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -856,17 +1040,17 @@ export function SubberSettingsTab({ canOperate }: { canOperate: boolean }) {
           </div>
         ) : null}
         <button type="button" className={mmActionButtonClass({ variant: "primary", disabled: dis })} disabled={dis} onClick={() => void saveSearchFrequency()}>
-          Save search frequency
+          Save adaptive settings
         </button>
         <SaveFeedback ok={saveFreq.ok} err={saveFreq.err} />
-      </section>
+      </SubberSettingsSection>
 
-      {/* Card 7 — Subtitle providers (compact list + accordion) */}
-      <section className="space-y-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5" data-testid="subber-providers-section">
-        <h2 className="text-base font-semibold text-[var(--mm-text)]">Subtitle providers</h2>
-        <p className="text-sm text-[var(--mm-text2)]">
-          Subber searches providers in order until a subtitle is found. Lower number = searched first. Enable at least one.
-        </p>
+      <SubberSettingsSection
+        eyebrow="Sources"
+        title="Subtitle providers"
+        description="Subber walks this list in order until a subtitle is found. Lower number = searched first. Keep at least one provider enabled."
+        data-testid="subber-providers-section"
+      >
         {pq.isLoading ? <p className="text-sm text-[var(--mm-text2)]">Loading providers…</p> : null}
         <ul className="divide-y divide-[var(--mm-border)] rounded-md border border-[var(--mm-border)] bg-black/10">
           {sorted.map((p) => {
@@ -1030,46 +1214,7 @@ export function SubberSettingsTab({ canOperate }: { canOperate: boolean }) {
             );
           })}
         </ul>
-      </section>
-
-      {/* Card 8 — Path mapping */}
-      <section className="space-y-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5">
-        <h2 className="text-base font-semibold text-[var(--mm-text)]">Path mapping</h2>
-        <p className="text-sm text-[var(--mm-text2)]">
-          Only needed if MediaMop and Sonarr/Radarr run on different machines or Docker containers.
-        </p>
-        <MmOnOffSwitch id="subber-son-map" label="Enable Sonarr path mapping" enabled={sonMapEn} disabled={dis} onChange={setSonMapEn} />
-        {sonMapEn ? (
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-            <label className="block min-w-0 flex-1 text-sm text-[var(--mm-text2)]">
-              Path that Sonarr uses
-              <input className="mm-input mt-1 w-full font-mono text-sm" value={sonArr} disabled={dis} onChange={(e) => setSonArr(e.target.value)} />
-            </label>
-            <label className="block min-w-0 flex-1 text-sm text-[var(--mm-text2)]">
-              Path that MediaMop uses
-              <input className="mm-input mt-1 w-full font-mono text-sm" value={sonSub} disabled={dis} onChange={(e) => setSonSub(e.target.value)} />
-            </label>
-          </div>
-        ) : null}
-        <MmOnOffSwitch id="subber-rad-map" label="Enable Radarr path mapping" enabled={radMapEn} disabled={dis} onChange={setRadMapEn} />
-        {radMapEn ? (
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-            <label className="block min-w-0 flex-1 text-sm text-[var(--mm-text2)]">
-              Path that Radarr uses
-              <input className="mm-input mt-1 w-full font-mono text-sm" value={radArr} disabled={dis} onChange={(e) => setRadArr(e.target.value)} />
-            </label>
-            <label className="block min-w-0 flex-1 text-sm text-[var(--mm-text2)]">
-              Path that MediaMop uses
-              <input className="mm-input mt-1 w-full font-mono text-sm" value={radSub} disabled={dis} onChange={(e) => setRadSub(e.target.value)} />
-            </label>
-          </div>
-        ) : null}
-        <p className="text-xs text-[var(--mm-text2)]">Leave mapping off if everything runs on the same machine.</p>
-        <button type="button" className={mmActionButtonClass({ variant: "primary", disabled: dis })} disabled={dis} onClick={() => void savePathMapping()}>
-          Save path mapping
-        </button>
-        <SaveFeedback ok={saveMap.ok} err={saveMap.err} />
-      </section>
+      </SubberSettingsSection>
     </div>
   );
 }

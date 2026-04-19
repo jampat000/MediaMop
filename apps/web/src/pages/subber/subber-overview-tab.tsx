@@ -1,13 +1,20 @@
 import { PageLoading } from "../../components/shared/page-loading";
-import { OverviewAtGlanceCard } from "../../components/overview/overview-at-glance-card";
+import {
+  MmAtGlanceCard,
+  MmAtGlanceGrid,
+  MmNeedsAttentionList,
+  MmNextStepsButton,
+  MmOverviewSection,
+  MmStatCaption,
+  MmStatTile,
+  MmStatTileRow,
+} from "../../components/overview/mm-overview-cards";
 import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
 import {
   useSubberOverviewQuery,
   useSubberProvidersQuery,
   useSubberSettingsQuery,
 } from "../../lib/subber/subber-queries";
-import { fetcherMenuButtonClass } from "../fetcher/fetcher-menu-button";
-
 function formatWhen(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -20,42 +27,29 @@ type AttentionTarget = "settings" | "tv" | "movies";
 type SubberOverviewNavTab = "settings" | "tv" | "movies" | "schedule" | "jobs";
 
 const SUBBER_NEXT_STEPS_BODY =
-  "Use Settings to connect OpenSubtitles, Sonarr, and Radarr. Check TV and Movies to see your library and search for missing subtitles. Use Schedule to automate searches.";
+  "Use Settings to connect OpenSubtitles, Sonarr, and Radarr. Check TV and Movies to see your library and search for missing subtitles. Use Schedule to automate searches and Jobs for recent activity.";
 
 function SubberOverviewNextSteps({ onOpenTab }: { onOpenTab?: (tab: SubberOverviewNavTab) => void }) {
   return (
-    <section
-      className="mm-card mm-dash-card mm-fetcher-module-surface"
-      aria-labelledby="subber-overview-next-steps-heading"
+    <MmOverviewSection
+      headingId="subber-overview-next-steps-heading"
+      heading="Next steps"
       data-testid="subber-overview-next-steps"
       data-overview-order="3"
     >
-      <h2 id="subber-overview-next-steps-heading" className="mm-card__title text-lg">
-        Next steps
-      </h2>
-      <div className="mm-card__body mt-5 space-y-5">
+      <div className="space-y-5">
         <p className="leading-relaxed">{SUBBER_NEXT_STEPS_BODY}</p>
         {onOpenTab ? (
           <div className="flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">
-            <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onOpenTab("settings")}>
-              Settings
-            </button>
-            <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onOpenTab("tv")}>
-              TV
-            </button>
-            <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onOpenTab("movies")}>
-              Movies
-            </button>
-            <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onOpenTab("schedule")}>
-              Schedule
-            </button>
-            <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onOpenTab("jobs")}>
-              Jobs
-            </button>
+            <MmNextStepsButton label="Settings" onClick={() => onOpenTab("settings")} />
+            <MmNextStepsButton label="TV" onClick={() => onOpenTab("tv")} />
+            <MmNextStepsButton label="Movies" onClick={() => onOpenTab("movies")} />
+            <MmNextStepsButton label="Schedule" onClick={() => onOpenTab("schedule")} />
+            <MmNextStepsButton label="Jobs" onClick={() => onOpenTab("jobs")} />
           </div>
         ) : null}
       </div>
-    </section>
+    </MmOverviewSection>
   );
 }
 
@@ -132,14 +126,6 @@ function buildSubberNeedsAttention(args: {
   return items.slice(0, 8);
 }
 
-const ATTENTION_ACTION_ORDER: AttentionTarget[] = ["settings", "tv", "movies"];
-
-function attentionActionLabel(t: AttentionTarget): string {
-  if (t === "settings") return "Open Settings";
-  if (t === "tv") return "Open TV";
-  return "Open Movies";
-}
-
 function SubberOverviewLoadError({ err }: { err: unknown }) {
   return (
     <div className="mm-page__intro" data-testid="subber-overview-load-error">
@@ -188,26 +174,25 @@ export function SubberOverviewTab({
   const plist = providersQ.data;
   const st = overviewQ.data;
 
-  const osConnected = Boolean(s.opensubtitles_password_set && s.opensubtitles_api_key_set);
   const sonConnected = Boolean(s.sonarr_base_url?.trim() && s.sonarr_api_key_set);
   const radConnected = Boolean(s.radarr_base_url?.trim() && s.radarr_api_key_set);
   const enabledProviders = plist.filter((p) => p.enabled).length;
   const providerTotal = plist.length;
+  const enabledProviderList = plist.filter((p) => p.enabled);
 
   const attentionItems = buildSubberNeedsAttention({ settings: s, providers: plist, stats: st });
-  const emptyAttention = attentionItems.length === 0;
-  const actionTargets = ATTENTION_ACTION_ORDER.filter((t) => attentionItems.some((row) => row.target === t));
 
-  const openSubtitlesBody = (
+  const providersGlanceBody = (
     <div className="space-y-1.5">
-      <p>
-        <span className="text-[var(--mm-text3)]">Status:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">{osConnected ? "Connected" : "Not connected"}</span>
-      </p>
-      <p>
-        <span className="text-[var(--mm-text3)]">Last checked:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">—</span>
-      </p>
+      {enabledProviderList.length > 0 ? (
+        enabledProviderList.map((p) => (
+          <p key={p.provider_key} className="text-[var(--mm-text1)]">
+            {p.display_name}
+          </p>
+        ))
+      ) : (
+        <p className="text-[var(--mm-text3)]">No providers enabled</p>
+      )}
       <p>
         <span className="text-[var(--mm-text3)]">Enabled:</span>{" "}
         <span className="font-medium text-[var(--mm-text1)]">
@@ -253,98 +238,78 @@ export function SubberOverviewTab({
 
   const last30Body = (
     <div>
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
-          <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Downloaded</span>
-          <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">
-            {st.subtitles_downloaded}
-          </span>
-        </div>
-        <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
-          <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Searches</span>
-          <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">
-            {st.searches_last_30_days}
-          </span>
-        </div>
-        <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
-          <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Not found</span>
-          <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">
-            {st.not_found_last_30_days}
-          </span>
-        </div>
-      </div>
-      <p className="mt-4 text-[0.7rem] leading-snug text-[var(--mm-text3)]">
+      <MmStatTileRow>
+        <MmStatTile label="Downloaded" value={st.subtitles_downloaded} />
+        <MmStatTile label="Searches" value={st.searches_last_30_days} />
+        <MmStatTile label="Not found" value={st.not_found_last_30_days} />
+      </MmStatTileRow>
+      <MmStatCaption>
         {st.upgrades_last_30_days === 1 ? "1 upgrade" : `${st.upgrades_last_30_days} upgrades`} downloaded · last 30 days
-      </p>
-      <div className="mt-3 space-y-1 border-t border-[var(--mm-border)] pt-3 text-[var(--mm-text2)]">
-        <p>
-          <span className="font-medium text-[var(--mm-text1)]">TV:</span> {st.tv_tracked} tracked · {st.tv_found} found · {st.tv_missing} missing
-        </p>
-        <p>
-          <span className="font-medium text-[var(--mm-text1)]">Movies:</span> {st.movies_tracked} tracked · {st.movies_found} found · {st.movies_missing} missing
-        </p>
-      </div>
+      </MmStatCaption>
     </div>
   );
 
   return (
-    <div data-testid="subber-overview-tab" className="space-y-6 sm:space-y-7">
-      <section
-        className="mm-card mm-dash-card mm-fetcher-module-surface"
-        aria-labelledby="subber-overview-at-a-glance-heading"
+    <div data-testid="subber-overview-tab" className="w-full min-w-0 space-y-6 sm:space-y-7">
+      <MmOverviewSection
+        headingId="subber-overview-at-a-glance-heading"
+        heading="At a glance"
         data-testid="subber-overview-at-a-glance"
         data-overview-order="1"
       >
-        <h2 id="subber-overview-at-a-glance-heading" className="mm-card__title text-lg">
-          At a glance
-        </h2>
-        <div className="mm-card__body mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-5 lg:grid-cols-12 lg:gap-x-5 lg:gap-y-6">
-          <OverviewAtGlanceCard glanceOrder="1" title="Last 30 days" body={last30Body} gridClassName="lg:col-span-5" />
-          <OverviewAtGlanceCard glanceOrder="2" title="OpenSubtitles" body={openSubtitlesBody} gridClassName="lg:col-span-3" />
-          <OverviewAtGlanceCard glanceOrder="3" title="Sonarr" body={sonarrBody} gridClassName="lg:col-span-2" />
-          <OverviewAtGlanceCard glanceOrder="4" title="Radarr" body={radarrBody} gridClassName="lg:col-span-2" />
-        </div>
-      </section>
+        <MmAtGlanceGrid className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-5 lg:grid-cols-12 lg:gap-x-5 lg:gap-y-6">
+          <MmAtGlanceCard
+            glanceOrder="1"
+            title="Last 30 days"
+            emphasis
+            body={last30Body}
+            gridClassName="lg:col-span-4"
+          />
+          <MmAtGlanceCard
+            glanceOrder="2"
+            title="Sonarr"
+            body={sonarrBody}
+            gridClassName="lg:col-span-4"
+            footer={
+              onOpenTab ? <MmNextStepsButton label="Settings" onClick={() => onOpenTab("settings")} /> : undefined
+            }
+          />
+          <MmAtGlanceCard
+            glanceOrder="3"
+            title="Radarr"
+            body={radarrBody}
+            gridClassName="lg:col-span-4"
+            footer={
+              onOpenTab ? <MmNextStepsButton label="Settings" onClick={() => onOpenTab("settings")} /> : undefined
+            }
+          />
+          <MmAtGlanceCard
+            glanceOrder="4"
+            title="Providers"
+            body={providersGlanceBody}
+            gridClassName="sm:col-span-2 lg:col-span-12"
+            footer={
+              onOpenTab ? <MmNextStepsButton label="Open Settings" onClick={() => onOpenTab("settings")} /> : undefined
+            }
+          />
+        </MmAtGlanceGrid>
+      </MmOverviewSection>
 
-      <section
-        className="mm-card mm-dash-card mm-fetcher-module-surface"
-        aria-labelledby="subber-overview-needs-attention-heading"
+      <MmOverviewSection
+        headingId="subber-overview-needs-attention-heading"
+        heading="Needs attention"
         data-testid="subber-overview-needs-attention"
         data-overview-order="2"
       >
-        <h2 id="subber-overview-needs-attention-heading" className="mm-card__title text-lg">
-          Needs attention
-        </h2>
-        <div className="mm-card__body mt-5">
-          {emptyAttention ? (
-            <p className="text-[var(--mm-text1)]">Everything looks good.</p>
-          ) : (
-            <>
-              <ul className="list-none space-y-3 border-l-2 border-[var(--mm-border)] pl-3.5">
-                {attentionItems.map((row, i) => (
-                  <li key={`${row.text}-${i}`} className="leading-snug text-[var(--mm-text1)]">
-                    {row.text}
-                  </li>
-                ))}
-              </ul>
-              {onOpenTab && actionTargets.length > 0 ? (
-                <div className="mt-5 flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">
-                  {actionTargets.map((target) => (
-                    <button
-                      key={target}
-                      type="button"
-                      className={fetcherMenuButtonClass({ variant: "secondary" })}
-                      onClick={() => onOpenTab(target)}
-                    >
-                      {attentionActionLabel(target)}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </>
-          )}
-        </div>
-      </section>
+        <MmNeedsAttentionList
+          items={attentionItems.map((row) => row.text)}
+          actions={
+            onOpenTab && attentionItems.length > 0 ? (
+              <MmNextStepsButton label="Open Settings" onClick={() => onOpenTab("settings")} />
+            ) : undefined
+          }
+        />
+      </MmOverviewSection>
 
       <SubberOverviewNextSteps onOpenTab={onOpenTab} />
     </div>

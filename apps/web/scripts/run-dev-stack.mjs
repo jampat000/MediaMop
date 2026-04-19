@@ -8,10 +8,20 @@
  * with a healthy ``/health``, we **reuse** it and only start Vite — otherwise ``npm run dev``
  * spawns a second API, bind fails, and the web UI never comes up on 8782.
  * Set ``MEDIAMOP_DEV_STACK_ALWAYS_SPAWN_API=1`` to force spawning the API child anyway.
+ *
+ * If ``GET /api/v1/subber/library/sync/movies`` returns **404** while ``/health`` works, the
+ * default port usually holds an **older** MediaMop build (current code answers **405**). We then
+ * start this repo's API on the **next free TCP port** and set ``MEDIAMOP_DEV_STACK_API_PROXY_TARGET``
+ * for Vite so the UI still works without manually killing the stale process.
+ *
+ * If the **web** port from ``dev-ports.json`` is busy (leftover Vite), the next free port is used
+ * and ``MEDIAMOP_DEV_WEB_PORT`` is set for Vite (see ``vite.config.ts``). Run ``npm run dev:stop-web``
+ * to free the default port, or use the URL printed in the log.
  */
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import http from "node:http";
+import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -56,6 +66,94 @@ function probeApiAlreadyServing(apiHost, apiPort) {
     });
     req.end();
   });
+}
+
+/**
+ * POST-only Subber route: a **current** FastAPI app responds with **405** to GET; an older
+ * build without the route returns **404**. Used to avoid reusing a stale uvicorn on the dev port.
+ */
+function probeSubberLibrarySyncMoviesRouteNotStale(apiHost, apiPort) {
+  const { hostname, port } = apiConnectTarget(apiHost, apiPort);
+  return new Promise((resolve) => {
+    const req = http.request(
+      {
+        hostname,
+        port,
+        path: "/api/v1/subber/library/sync/movies",
+        method: "GET",
+        timeout: 3000,
+      },
+      (res) => {
+        res.resume();
+        if (res.statusCode === 404) {
+          resolve(false);
+          return;
+        }
+        resolve(true);
+      },
+    );
+    req.on("error", () => {
+      console.error(
+        "[dev-stack] Could not probe Subber library sync route (network error) — assuming API is OK.",
+      );
+      resolve(true);
+    });
+    req.on("timeout", () => {
+      req.destroy();
+      console.error(
+        "[dev-stack] Timed out probing Subber library sync route — assuming API is OK.",
+      );
+      resolve(true);
+    });
+    req.end();
+  });
+}
+
+/**
+ * First port in ``[startPort, inclusiveMax]`` with nothing answering ``/health`` like our API
+ * probe (frees the slot for a new uvicorn).
+ */
+async function findFirstTcpPortWithoutHealthyApi(apiHost, startPort, inclusiveMax) {
+  for (let p = startPort; p <= inclusiveMax; p += 1) {
+    if (!(await probeApiAlreadyServing(apiHost, p))) {
+      return p;
+    }
+  }
+  return null;
+}
+
+/** True if nothing is listening (we can bind a dev server). */
+function canBindHostPort(hostname, port) {
+  return new Promise((resolve) => {
+    const srv = net.createServer();
+    const finish = (ok) => {
+      srv.removeAllListeners("error");
+      srv.close(() => resolve(ok));
+    };
+    srv.once("error", () => finish(false));
+    srv.listen(port, hostname, () => finish(true));
+  });
+}
+
+async function resolveDevWebPort(webHost, configuredPort) {
+  const { hostname } = apiConnectTarget(webHost, configuredPort);
+  const max = Math.min(configuredPort + 40, 65535);
+  for (let p = configuredPort; p <= max; p += 1) {
+    if (await canBindHostPort(hostname, p)) {
+      if (p !== configuredPort) {
+        console.error(
+          `[dev-stack] Web port ${configuredPort} is already in use — starting Vite on ${p}. ` +
+            `Open http://127.0.0.1:${p}/ (or run \`npm run dev:stop-web\` and use ${configuredPort}).`,
+        );
+      }
+      return p;
+    }
+  }
+  console.error(
+    `[dev-stack] No free TCP port for Vite between ${configuredPort} and ${max}. ` +
+      `From apps/web run:  npm run dev:stop-web`,
+  );
+  process.exit(1);
 }
 
 /**
@@ -172,7 +270,7 @@ async function waitForWebHttpReady(webChild, apiChild, { webHost, webPort, timeo
 }
 
 const node = process.execPath;
-const { apiHost, apiPort: portFromFile, webHost, webPort } = readDevPorts();
+const { apiHost, apiPort: portFromFile, webHost, webPort: configuredWebPort } = readDevPorts();
 const apiPort = process.env.MEDIAMOP_DEV_API_PORT?.trim()
   ? Number(process.env.MEDIAMOP_DEV_API_PORT.trim())
   : Number(portFromFile);
@@ -225,7 +323,40 @@ const webWaitMs = Number(process.env.MEDIAMOP_DEV_STACK_WEB_WAIT_MS || 120000);
 
 async function main() {
   const forceSpawn = (process.env.MEDIAMOP_DEV_STACK_ALWAYS_SPAWN_API || "").trim() === "1";
-  const canReuse = !forceSpawn && (await probeApiAlreadyServing(apiHost, apiPort));
+  const healthOk = await probeApiAlreadyServing(apiHost, apiPort);
+  let subberRoutesOk = true;
+  if (healthOk) {
+    subberRoutesOk = await probeSubberLibrarySyncMoviesRouteNotStale(apiHost, apiPort);
+  }
+  /** Stale build on the configured port: would make Subber library sync POST return 404. */
+  const staleDefaultApi = healthOk && !subberRoutesOk;
+
+  let bindPort = apiPort;
+  /** When set, Vite must proxy ``/api`` here (see ``vite.config.ts``). */
+  let viteProxyOverride = "";
+
+  if (staleDefaultApi) {
+    const { hostname, port: stalePort } = apiConnectTarget(apiHost, apiPort);
+    const maxPort = Math.min(apiPort + 40, 65535);
+    const found = await findFirstTcpPortWithoutHealthyApi(apiHost, apiPort + 1, maxPort);
+    if (found == null) {
+      console.error(
+        `[dev-stack] http://${hostname}:${stalePort} is an outdated MediaMop API (Subber sync route missing). ` +
+          `No free port found between ${apiPort + 1} and ${maxPort} for a new API.\n` +
+          `[dev-stack] Free a port or stop the old process, then run npm run dev again.`,
+      );
+      process.exit(1);
+    }
+    bindPort = found;
+    const { hostname: bindHost, port: bindProbePort } = apiConnectTarget(apiHost, bindPort);
+    viteProxyOverride = `http://${bindHost}:${bindProbePort}`;
+    console.error(
+      `[dev-stack] Port ${stalePort} has an older MediaMop API build. Starting this repo's API on ` +
+        `${bindProbePort} and proxying /api there (close the old terminal when convenient).`,
+    );
+  }
+
+  const canReuse = !forceSpawn && healthOk && subberRoutesOk;
 
   if (canReuse) {
     const { hostname, port } = apiConnectTarget(apiHost, apiPort);
@@ -238,22 +369,33 @@ async function main() {
     api = spawn(node, [apiScript], {
       cwd: webDir,
       stdio: "inherit",
-      env: { ...process.env },
+      env: { ...process.env, MEDIAMOP_DEV_API_PORT: String(bindPort) },
     });
 
-    await waitForApiHttpReady(api, { apiHost, apiPort, timeoutMs: waitMs });
+    await waitForApiHttpReady(api, { apiHost, apiPort: bindPort, timeoutMs: waitMs });
   }
+
+  const viteEnv =
+    viteProxyOverride.trim().length > 0
+      ? { ...process.env, MEDIAMOP_DEV_STACK_API_PROXY_TARGET: viteProxyOverride.trim() }
+      : { ...process.env };
+
+  const chosenWebPort = await resolveDevWebPort(webHost, configuredWebPort);
+  const viteEnvWithPort = { ...viteEnv, MEDIAMOP_DEV_WEB_PORT: String(chosenWebPort) };
 
   web = spawn(node, [viteEntry], {
     cwd: webDir,
     stdio: "inherit",
-    env: { ...process.env },
+    env: viteEnvWithPort,
   });
 
-  await waitForWebHttpReady(web, api, { webHost, webPort, timeoutMs: webWaitMs });
+  await waitForWebHttpReady(web, api, { webHost, webPort: chosenWebPort, timeoutMs: webWaitMs });
 
-  console.error(`[dev-stack] Web UI (open when ready): http://127.0.0.1:${webPort}/`);
-  console.error(`[dev-stack] Same UI via localhost:     http://localhost:${webPort}/`);
+  console.error(`[dev-stack] Web UI (open when ready): http://127.0.0.1:${chosenWebPort}/`);
+  console.error(`[dev-stack] Same UI via localhost:     http://localhost:${chosenWebPort}/`);
+  if (viteProxyOverride.trim().length > 0) {
+    console.error(`[dev-stack] Vite /api → ${viteProxyOverride.trim()} (default port still has an old API).`);
+  }
 
   if (api) {
     wireExit("api", api, web);

@@ -45,7 +45,13 @@ export function useSubberOverviewQuery() {
   });
 }
 
-export function useSubberLibraryTvQuery(filters: { status?: string; search?: string; language?: string }) {
+export function useSubberLibraryTvQuery(filters: {
+  status?: string;
+  search?: string;
+  language?: string;
+  limit?: number;
+  offset?: number;
+}) {
   return useQuery({
     queryKey: ["subber", "library", "tv", filters],
     queryFn: () => fetchSubberLibraryTv(filters),
@@ -53,7 +59,13 @@ export function useSubberLibraryTvQuery(filters: { status?: string; search?: str
   });
 }
 
-export function useSubberLibraryMoviesQuery(filters: { status?: string; search?: string; language?: string }) {
+export function useSubberLibraryMoviesQuery(filters: {
+  status?: string;
+  search?: string;
+  language?: string;
+  limit?: number;
+  offset?: number;
+}) {
   return useQuery({
     queryKey: ["subber", "library", "movies", filters],
     queryFn: () => fetchSubberLibraryMovies(filters),

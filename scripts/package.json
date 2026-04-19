@@ -1,0 +1,8 @@
+{
+  "name": "mediamop-scripts",
+  "private": true,
+  "description": "Optional tooling deps for maintainer scripts (e.g. Playwright screenshots).",
+  "dependencies": {
+    "playwright": "1.49.1"
+  }
+}

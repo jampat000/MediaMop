@@ -48,11 +48,7 @@ export function ApiEntryError({ error }: { error: unknown }) {
           in <code className="text-[0.85em]">apps/web</code> for Vite only.
         </p>
         <p className="mm-auth-lead">
-          With same-origin dev, leave{" "}
-          <code className="rounded bg-[rgba(0,0,0,0.35)] px-1.5 py-0.5 text-[0.85em] text-[var(--mm-text)]">
-            VITE_API_BASE_URL
-          </code>{" "}
-          unset so the browser uses relative{" "}
+          During <code className="text-[0.85em]">vite dev</code>, the app always uses relative{" "}
           <code className="rounded bg-[rgba(0,0,0,0.35)] px-1.5 py-0.5 text-[0.85em] text-[var(--mm-text)]">
             /api/v1
           </code>{" "}

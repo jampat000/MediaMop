@@ -1,5 +1,13 @@
 import type { ReactNode } from "react";
-import { OverviewAtGlanceCard } from "../../components/overview/overview-at-glance-card";
+import {
+  MmAtGlanceCard,
+  MmAtGlanceGrid,
+  MmNeedsAttentionList,
+  MmOverviewSection,
+  MmStatCaption,
+  MmStatTile,
+  MmStatTileRow,
+} from "../../components/overview/mm-overview-cards";
 import { PageLoading } from "../../components/shared/page-loading";
 import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
 import { useRefinerJobsInspectionQuery } from "../../lib/refiner/jobs-inspection/queries";
@@ -102,48 +110,35 @@ function RefinerOverviewNeedsAttention({
   items: { text: string; target?: RefinerOverviewOpenTab }[];
   onOpenTab?: (t: RefinerOverviewOpenTab) => void;
 }) {
-  const empty = items.length === 0;
   const actionTargets = NEEDS_ATTENTION_ORDER.filter((t) => items.some((row) => row.target === t));
 
   return (
-    <section
-      className="mm-card mm-dash-card mm-fetcher-module-surface"
-      aria-labelledby="refiner-overview-needs-attention-heading"
+    <MmOverviewSection
+      headingId="refiner-overview-needs-attention-heading"
+      heading="Needs attention"
       data-testid="refiner-overview-needs-attention"
     >
-      <h2 id="refiner-overview-needs-attention-heading" className="mm-card__title text-lg">
-        Needs attention
-      </h2>
-      <div className="mm-card__body mt-5">
-        {empty ? (
-          <p>Nothing stands out right now.</p>
-        ) : (
-          <>
-            <ul className="list-none space-y-3 border-l-2 border-[var(--mm-border)] pl-3.5">
-              {items.map((row, i) => (
-                <li key={`${row.text}-${i}`} className="leading-snug text-[var(--mm-text1)]">
-                  {row.text}
-                </li>
+      <MmNeedsAttentionList
+        items={items.map((row) => row.text)}
+        emptyMessage="Nothing stands out right now."
+        actions={
+          onOpenTab && actionTargets.length > 0 ? (
+            <>
+              {actionTargets.map((target) => (
+                <button
+                  key={target}
+                  type="button"
+                  className={mmActionButtonClass({ variant: "secondary" })}
+                  onClick={() => onOpenTab(target)}
+                >
+                  {tabActionLabel(target)}
+                </button>
               ))}
-            </ul>
-            {onOpenTab && actionTargets.length > 0 ? (
-              <div className="mt-5 flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">
-                {actionTargets.map((target) => (
-                  <button
-                    key={target}
-                    type="button"
-                    className={mmActionButtonClass({ variant: "secondary" })}
-                    onClick={() => onOpenTab(target)}
-                  >
-                    {tabActionLabel(target)}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </>
-        )}
-      </div>
-    </section>
+            </>
+          ) : undefined
+        }
+      />
+    </MmOverviewSection>
   );
 }
 
@@ -320,29 +315,12 @@ export function RefinerOverviewTab({
       <p className="text-[var(--mm-text3)]">Loading…</p>
     ) : (
       <div>
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
-            <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Done</span>
-            <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">
-              {overviewStats.data.files_processed}
-            </span>
-          </div>
-          <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
-            <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Failed</span>
-            <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">
-              {overviewStats.data.files_failed}
-            </span>
-          </div>
-          <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
-            <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Success</span>
-            <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">
-              {overviewStats.data.success_rate_percent}%
-            </span>
-          </div>
-        </div>
-        <p className="mt-4 text-[0.7rem] leading-snug text-[var(--mm-text3)]">
-          Counts remux jobs on this server. Success rate = completed ÷ (completed + failed).
-        </p>
+        <MmStatTileRow>
+          <MmStatTile label="Done" value={overviewStats.data.files_processed} />
+          <MmStatTile label="Failed" value={overviewStats.data.files_failed} />
+          <MmStatTile label="Success" value={`${overviewStats.data.success_rate_percent}%`} />
+        </MmStatTileRow>
+        <MmStatCaption>Counts remux jobs on this server. Success rate = completed ÷ (completed + failed).</MmStatCaption>
       </div>
     );
 
@@ -353,16 +331,13 @@ export function RefinerOverviewTab({
 
   return (
     <div data-testid="refiner-overview-panel" className="w-full min-w-0 space-y-6 sm:space-y-7">
-      <section
-        className="mm-card mm-dash-card mm-fetcher-module-surface"
-        aria-labelledby="refiner-overview-at-a-glance-heading"
+      <MmOverviewSection
+        headingId="refiner-overview-at-a-glance-heading"
+        heading="At a glance"
         data-testid="refiner-overview-at-a-glance"
       >
-        <h2 id="refiner-overview-at-a-glance-heading" className="mm-card__title text-lg">
-          At a glance
-        </h2>
-        <div className="mm-card__body mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-5 lg:grid-cols-12 lg:gap-x-5 lg:gap-y-6">
-          <OverviewAtGlanceCard
+        <MmAtGlanceGrid className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-5 lg:grid-cols-12 lg:gap-x-5 lg:gap-y-6">
+          <MmAtGlanceCard
             glanceOrder="1"
             title="Last 30 days"
             emphasis
@@ -370,9 +345,9 @@ export function RefinerOverviewTab({
             data-testid="refiner-overview-last-30-days"
             gridClassName="lg:col-span-4"
           />
-          <OverviewAtGlanceCard glanceOrder="2" title="Libraries" body={foldersBody} gridClassName="lg:col-span-4" />
-          <OverviewAtGlanceCard glanceOrder="3" title="Job queue" body={queueBody} gridClassName="lg:col-span-4" />
-          <OverviewAtGlanceCard
+          <MmAtGlanceCard glanceOrder="2" title="Libraries" body={foldersBody} gridClassName="lg:col-span-4" />
+          <MmAtGlanceCard glanceOrder="3" title="Job queue" body={queueBody} gridClassName="lg:col-span-4" />
+          <MmAtGlanceCard
             glanceOrder="4"
             title="Throughput & safety"
             body={workerBody}
@@ -386,7 +361,7 @@ export function RefinerOverviewTab({
               ) : undefined
             }
           />
-          <OverviewAtGlanceCard
+          <MmAtGlanceCard
             glanceOrder="5"
             title="Audio & subtitles"
             body={remuxBody}
@@ -405,26 +380,20 @@ export function RefinerOverviewTab({
             }
             data-testid="refiner-overview-audio-subtitles-glance"
           />
-        </div>
-      </section>
+        </MmAtGlanceGrid>
+      </MmOverviewSection>
 
       <RefinerOverviewNeedsAttention items={attentionItems} onOpenTab={onOpenTab} />
 
-      <section
-        className="mm-card mm-dash-card mm-fetcher-module-surface"
-        aria-labelledby="refiner-overview-next-heading"
+      <MmOverviewSection
+        headingId="refiner-overview-next-heading"
+        heading="Next steps"
         data-testid="refiner-overview-go-deeper"
       >
-        <h2 id="refiner-overview-next-heading" className="mm-card__title text-lg">
-          Next steps
-        </h2>
-        <div className="mm-card__body mt-5 space-y-5">
+        <div className="space-y-5">
           <p className="leading-relaxed">
-            Finished work is summarized on <strong className="text-[var(--mm-text1)]">Activity</strong>. Use{" "}
-            <strong className="text-[var(--mm-text1)]">Libraries</strong> for folders and limits,{" "}
-            <strong className="text-[var(--mm-text1)]">Schedules</strong> for timed scans,{" "}
-            <strong className="text-[var(--mm-text1)]">Audio & subtitles</strong> for defaults, and{" "}
-            <strong className="text-[var(--mm-text1)]">Jobs</strong> for the queue on this server.
+            Finished work is summarized on Activity. Use Libraries for folders and limits, Schedules for timed scans, Audio & subtitles
+            for defaults, and Jobs for the queue on this server.
           </p>
           {onOpenTab ? (
             <div className="flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">
@@ -447,7 +416,7 @@ export function RefinerOverviewTab({
             </div>
           ) : null}
         </div>
-      </section>
+      </MmOverviewSection>
     </div>
   );
 }

@@ -41,11 +41,21 @@ def get_subber_library_tv(
     status: Annotated[str | None, Query()] = None,
     search: Annotated[str | None, Query()] = None,
     language: Annotated[str | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> SubberTvLibraryOut:
     row = ensure_subber_settings_row(db)
     prefs = language_preferences_list(row)
     rows = get_all_for_scope(db, "tv")
-    return build_tv_library(rows, prefs=prefs, status=status, search=search, lang_filter=language)
+    return build_tv_library(
+        rows,
+        prefs=prefs,
+        status=status,
+        search=search,
+        lang_filter=language,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get("/library/movies", response_model=SubberMoviesLibraryOut)
@@ -55,11 +65,21 @@ def get_subber_library_movies(
     status: Annotated[str | None, Query()] = None,
     search: Annotated[str | None, Query()] = None,
     language: Annotated[str | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> SubberMoviesLibraryOut:
     row = ensure_subber_settings_row(db)
     prefs = language_preferences_list(row)
     rows = get_all_for_scope(db, "movies")
-    return build_movies_library(rows, prefs=prefs, status=status, search=search, lang_filter=language)
+    return build_movies_library(
+        rows,
+        prefs=prefs,
+        status=status,
+        search=search,
+        lang_filter=language,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.post("/library/{state_id}/search-now")

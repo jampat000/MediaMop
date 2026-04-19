@@ -24,6 +24,20 @@ function Ensure-NodeOnPath {
 
 Ensure-NodeOnPath
 
+$portsPath = Join-Path $PSScriptRoot "dev-ports.json"
+if (Test-Path $portsPath) {
+    $ports = Get-Content $portsPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $webPort = [int]$ports.development.webPort
+    $busy = Get-NetTCPConnection -LocalPort $webPort -State Listen -ErrorAction SilentlyContinue
+    if ($busy) {
+        Write-Error (
+            "Port $webPort is already in use (another dev server?). " +
+            "Stop it or change scripts/dev-ports.json. " +
+            "Otherwise the browser shows ERR_CONNECTION_REFUSED or Vite exits immediately."
+        )
+    }
+}
+
 $npm = Get-Command npm -ErrorAction SilentlyContinue
 if (-not $npm) {
     Write-Error "npm not on PATH. Install Node.js LTS (winget install OpenJS.NodeJS.LTS), then open a new PowerShell window."

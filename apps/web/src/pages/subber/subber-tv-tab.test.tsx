@@ -50,6 +50,7 @@ describe("SubberTvTab", () => {
             ],
           },
         ],
+        total: 1,
       },
       isLoading: false,
       isError: false,
@@ -74,7 +75,7 @@ describe("SubberTvTab", () => {
 
   it("shows empty state when no shows", async () => {
     vi.spyOn(subberQueries, "useSubberLibraryTvQuery").mockReturnValue({
-      data: { shows: [] },
+      data: { shows: [], total: 0 },
       isLoading: false,
       isError: false,
     } as unknown as ReturnType<typeof subberQueries.useSubberLibraryTvQuery>);

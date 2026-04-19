@@ -45,7 +45,7 @@ export function httpStatusFromApiError(error: unknown): number | null {
  * 500 + relative API URLs in development is almost always "API process not listening".
  */
 export function isLikelyViteProxyUpstreamDown(error: unknown): boolean {
-  if (!import.meta.env.DEV || import.meta.env.VITE_API_BASE_URL?.trim()) {
+  if (!import.meta.env.DEV) {
     return false;
   }
   return isHttpErrorFromApi(error) && httpStatusFromApiError(error) === 500;

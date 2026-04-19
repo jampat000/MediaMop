@@ -1,4 +1,13 @@
-import { OverviewAtGlanceCard } from "../../components/overview/overview-at-glance-card";
+import {
+  MmAtGlanceCard,
+  MmAtGlanceGrid,
+  MmNeedsAttentionList,
+  MmNextStepsButton,
+  MmOverviewSection,
+  MmStatCaption,
+  MmStatTile,
+  MmStatTileRow,
+} from "../../components/overview/mm-overview-cards";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,7 +31,7 @@ import {
   type PrunerProviderRulesCardHandle,
 } from "./pruner-provider-operator-workspace";
 import { formatPrunerDateTime, prunerJobKindOperatorLabel } from "./pruner-ui-utils";
-type TopTab = "overview" | "emby" | "jellyfin" | "plex" | "jobs";
+type TopTab = "overview" | "emby" | "jellyfin" | "plex" | "jobs" | "schedule";
 type ProviderTab = "emby" | "jellyfin" | "plex";
 
 function providerLabel(p: ProviderTab): string {
@@ -421,11 +430,19 @@ function PrunerConnectionCredentialPanel({
 
 type ProviderWorkspaceSection = "connection" | "cleanup" | "schedule";
 
-function ProviderConfigurationWorkspace({ provider, allInstances }: { provider: ProviderTab; allInstances: PrunerServerInstance[] }) {
+function ProviderConfigurationWorkspace({
+  provider,
+  allInstances,
+  initialSection = "connection",
+}: {
+  provider: ProviderTab;
+  allInstances: PrunerServerInstance[];
+  initialSection?: ProviderWorkspaceSection;
+}) {
   const providerName = providerLabel(provider);
   const providerInstances = useMemo(() => allInstances.filter((x) => x.provider === provider), [allInstances, provider]);
   const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(providerInstances[0]?.id ?? null);
-  const [providerSection, setProviderSection] = useState<ProviderWorkspaceSection>("connection");
+  const [providerSection, setProviderSection] = useState<ProviderWorkspaceSection>(initialSection);
   const selectedInstance = providerInstances.find((x) => x.id === selectedInstanceId) ?? providerInstances[0];
   const rulesCardRef = useRef<PrunerProviderRulesCardHandle>(null);
 
@@ -437,8 +454,8 @@ function ProviderConfigurationWorkspace({ provider, allInstances }: { provider: 
   }, [provider, providerInstances]);
 
   useEffect(() => {
-    setProviderSection("connection");
-  }, [provider]);
+    setProviderSection(initialSection);
+  }, [provider, initialSection]);
 
   const disabledCtx = { instanceId: 0, instance: providerDisabledInstance(provider) } as const;
   const instanceSelection = {
@@ -588,57 +605,38 @@ function PrunerLast30StatsTiles({
 }) {
   return (
     <div>
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
-          <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Removed</span>
-          <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">{itemsRemoved}</span>
-        </div>
-        <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
-          <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Preview</span>
-          <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">{previewRuns}</span>
-        </div>
-        <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
-          <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Failed</span>
-          <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">{failedApplies}</span>
-        </div>
-      </div>
-      <p className="mt-4 text-[0.7rem] leading-snug text-[var(--mm-text3)]">Library cleanup activity · last 30 days</p>
+      <MmStatTileRow>
+        <MmStatTile label="Removed" value={itemsRemoved} />
+        <MmStatTile label="Preview" value={previewRuns} />
+        <MmStatTile label="Failed" value={failedApplies} />
+      </MmStatTileRow>
+      <MmStatCaption>Library cleanup activity · last 30 days</MmStatCaption>
     </div>
   );
 }
 
 const PRUNER_NEXT_STEPS_BODY =
-  "Use Emby, Jellyfin, or Plex to connect your media server and configure cleanup rules. Check Jobs for recent activity and Activity for a full history.";
+  "Use Emby, Jellyfin, or Plex to connect your media server and configure cleanup rules. Check Jobs for recent activity and Schedule to set up timed runs.";
 
 function PrunerOverviewNextSteps({ onNavigate }: { onNavigate: (tab: TopTab) => void }) {
   return (
-    <section
-      className="mm-card mm-dash-card mm-fetcher-module-surface"
-      aria-labelledby="pruner-overview-next-steps-heading"
+    <MmOverviewSection
+      headingId="pruner-overview-next-steps-heading"
+      heading="Next steps"
       data-testid="pruner-overview-next-steps"
       data-overview-order="3"
     >
-      <h2 id="pruner-overview-next-steps-heading" className="mm-card__title text-lg">
-        Next steps
-      </h2>
-      <div className="mm-card__body mt-5 space-y-5">
+      <div className="space-y-5">
         <p className="leading-relaxed">{PRUNER_NEXT_STEPS_BODY}</p>
         <div className="flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">
-          <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onNavigate("emby")}>
-            Emby
-          </button>
-          <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onNavigate("jellyfin")}>
-            Jellyfin
-          </button>
-          <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onNavigate("plex")}>
-            Plex
-          </button>
-          <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onNavigate("jobs")}>
-            Jobs
-          </button>
+          <MmNextStepsButton label="Emby" onClick={() => onNavigate("emby")} />
+          <MmNextStepsButton label="Jellyfin" onClick={() => onNavigate("jellyfin")} />
+          <MmNextStepsButton label="Plex" onClick={() => onNavigate("plex")} />
+          <MmNextStepsButton label="Jobs" onClick={() => onNavigate("jobs")} />
+          <MmNextStepsButton label="Schedule" onClick={() => onNavigate("schedule")} />
         </div>
       </div>
-    </section>
+    </MmOverviewSection>
   );
 }
 
@@ -649,48 +647,27 @@ function PrunerOverviewNeedsAttention({
   items: { text: string; tab: ProviderTab }[];
   onOpenProviderTab: (tab: ProviderTab) => void;
 }) {
-  const empty = items.length === 0;
   const actionTabs = PRUNER_ATTENTION_TAB_ORDER.filter((t) => items.some((row) => row.tab === t));
   return (
-    <section
-      className="mm-card mm-dash-card mm-fetcher-module-surface"
-      aria-labelledby="pruner-overview-needs-attention-heading"
+    <MmOverviewSection
+      headingId="pruner-overview-needs-attention-heading"
+      heading="Needs attention"
       data-testid="pruner-overview-needs-attention"
       data-overview-order="2"
     >
-      <h2 id="pruner-overview-needs-attention-heading" className="mm-card__title text-lg">
-        Needs attention
-      </h2>
-      <div className="mm-card__body mt-5">
-        {empty ? (
-          <p className="text-[var(--mm-text1)]">Everything looks good.</p>
-        ) : (
-          <>
-            <ul className="list-none space-y-3 border-l-2 border-[var(--mm-border)] pl-3.5">
-              {items.map((row, i) => (
-                <li key={`${row.text}-${i}`} className="leading-snug text-[var(--mm-text1)]">
-                  {row.text}
-                </li>
+      <MmNeedsAttentionList
+        items={items.map((row) => row.text)}
+        actions={
+          actionTabs.length > 0 ? (
+            <>
+              {actionTabs.map((tab) => (
+                <MmNextStepsButton key={tab} label={prunerAttentionOpenLabel(tab)} onClick={() => onOpenProviderTab(tab)} />
               ))}
-            </ul>
-            {actionTabs.length > 0 ? (
-              <div className="mt-5 flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">
-                {actionTabs.map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    className={fetcherMenuButtonClass({ variant: "secondary" })}
-                    onClick={() => onOpenProviderTab(tab)}
-                  >
-                    {prunerAttentionOpenLabel(tab)}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </>
-        )}
-      </div>
-    </section>
+            </>
+          ) : undefined
+        }
+      />
+    </MmOverviewSection>
   );
 }
 
@@ -741,19 +718,24 @@ function TopLevelOverview({
 
   return (
     <section className="space-y-6" data-testid="pruner-top-overview-tab">
-      <section
-        className="mm-card mm-dash-card mm-fetcher-module-surface"
-        aria-labelledby="pruner-overview-at-a-glance-heading"
+      <MmOverviewSection
+        headingId="pruner-overview-at-a-glance-heading"
+        heading="At a glance"
         data-testid="pruner-overview-at-a-glance"
         data-overview-order="1"
       >
-        <h2 id="pruner-overview-at-a-glance-heading" className="mm-card__title text-lg">
-          At a glance
-        </h2>
-        <div className="mm-card__body mt-5 grid gap-4 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-5 lg:grid-cols-4 lg:gap-x-5 lg:gap-y-5">
-          <OverviewAtGlanceCard glanceOrder="1" title="Last 30 days" body={last30Body} />
+        <MmAtGlanceGrid className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-5 lg:grid-cols-12 lg:gap-x-5 lg:gap-y-6">
+          <MmAtGlanceCard
+            glanceOrder="1"
+            title="Last 30 days"
+            emphasis
+            body={last30Body}
+            gridClassName="lg:col-span-4"
+          />
           {providerCards.map((card, i) => {
             const order = String(i + 2) as "2" | "3" | "4";
+            const providerGridClass =
+              i === 2 ? "sm:col-span-2 lg:col-span-12" : "lg:col-span-4";
             const body = card.first ? (
               <div className="space-y-1.5">
                 <p>
@@ -787,11 +769,26 @@ function TopLevelOverview({
               <p className="text-[var(--mm-text2)]">No server saved yet. Add the address and key on that provider’s Connection tab.</p>
             );
             return (
-              <OverviewAtGlanceCard key={card.provider} glanceOrder={order} title={providerLabel(card.provider)} body={body} />
+              <MmAtGlanceCard
+                key={card.provider}
+                glanceOrder={order}
+                title={providerLabel(card.provider)}
+                body={body}
+                gridClassName={providerGridClass}
+                footer={
+                  card.provider === "emby" ? (
+                    <MmNextStepsButton label="Open Emby" onClick={() => onNavigateTopTab("emby")} />
+                  ) : card.provider === "jellyfin" ? (
+                    <MmNextStepsButton label="Open Jellyfin" onClick={() => onNavigateTopTab("jellyfin")} />
+                  ) : (
+                    <MmNextStepsButton label="Open Plex" onClick={() => onNavigateTopTab("plex")} />
+                  )
+                }
+              />
             );
           })}
-        </div>
-      </section>
+        </MmAtGlanceGrid>
+      </MmOverviewSection>
 
       <PrunerOverviewNeedsAttention items={attentionItems} onOpenProviderTab={onOpenProviderTab} />
 
@@ -1077,8 +1074,8 @@ export function PrunerInstancesListPage() {
             key={id}
             type="button"
             role="tab"
-            aria-selected={topTab === id}
-            className={fetcherSectionTabClass(topTab === id)}
+            aria-selected={topTab === id || (topTab === "schedule" && id === "emby")}
+            className={fetcherSectionTabClass(topTab === id || (topTab === "schedule" && id === "emby"))}
             onClick={() => setTopTab(id)}
           >
             {label}
@@ -1086,17 +1083,22 @@ export function PrunerInstancesListPage() {
         ))}
       </nav>
 
-      <div className="mt-6 sm:mt-7" role="tabpanel" aria-label={
-        (
-          {
-            overview: "Overview",
-            emby: "Emby",
-            jellyfin: "Jellyfin",
-            plex: "Plex",
-            jobs: "Jobs",
-          } as const
-        )[topTab]
-      }>
+      <div
+        className="mt-6 sm:mt-7"
+        role="tabpanel"
+        aria-label={
+          (
+            {
+              overview: "Overview",
+              emby: "Emby",
+              jellyfin: "Jellyfin",
+              plex: "Plex",
+              jobs: "Jobs",
+              schedule: "Emby",
+            } as const
+          )[topTab]
+        }
+      >
         {q.isLoading ? <p className="text-sm text-[var(--mm-text2)]">Loading provider instances…</p> : null}
         {q.isError ? <p className="text-sm text-red-600">{(q.error as Error).message}</p> : null}
         {!q.isLoading && !q.isError ? (
@@ -1108,6 +1110,8 @@ export function PrunerInstancesListPage() {
             />
           ) : topTab === "jobs" ? (
             <TopLevelJobs instances={instances} />
+          ) : topTab === "schedule" ? (
+            <ProviderConfigurationWorkspace provider="emby" allInstances={instances} initialSection="schedule" />
           ) : (
             <ProviderConfigurationWorkspace provider={topTab} allInstances={instances} />
           )

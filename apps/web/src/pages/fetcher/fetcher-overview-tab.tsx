@@ -1,5 +1,14 @@
 import { PageLoading } from "../../components/shared/page-loading";
-import { OverviewAtGlanceCard } from "../../components/overview/overview-at-glance-card";
+import {
+  MmAtGlanceCard,
+  MmAtGlanceGrid,
+  MmNeedsAttentionList,
+  MmNextStepsButton,
+  MmOverviewSection,
+  MmStatCaption,
+  MmStatTile,
+  MmStatTileRow,
+} from "../../components/overview/mm-overview-cards";
 import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
 import { useFetcherArrOperatorSettingsQuery } from "../../lib/fetcher/arr-operator-settings/queries";
 import type { FetcherArrOperatorSettingsOut } from "../../lib/fetcher/arr-operator-settings/types";
@@ -18,8 +27,6 @@ import {
   FETCHER_TAB_RADARR_LABEL,
   FETCHER_TAB_SONARR_LABEL,
 } from "./fetcher-display-names";
-import { fetcherMenuButtonClass } from "./fetcher-menu-button";
-
 export type FetcherOverviewOpenSection = "connections" | "failed-imports" | "sonarr" | "radarr";
 
 function sonarrTvSearchesOn(data: FetcherArrOperatorSettingsOut): boolean {
@@ -69,23 +76,12 @@ function FetcherOverviewLast30Tiles({
 }) {
   return (
     <div>
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
-          <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Sonarr</span>
-          <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">{sonarrSearches}</span>
-        </div>
-        <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
-          <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Radarr</span>
-          <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">{radarrSearches}</span>
-        </div>
-        <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
-          <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Failed</span>
-          <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">{failedJobs}</span>
-        </div>
-      </div>
-      <p className="mt-4 text-[0.7rem] leading-snug text-[var(--mm-text3)]">
-        Missing and upgrade searches combined · last 30 days
-      </p>
+      <MmStatTileRow>
+        <MmStatTile label="Sonarr" value={sonarrSearches} />
+        <MmStatTile label="Radarr" value={radarrSearches} />
+        <MmStatTile label="Failed" value={failedJobs} />
+      </MmStatTileRow>
+      <MmStatCaption>Missing and upgrade searches combined · last 30 days</MmStatCaption>
     </div>
   );
 }
@@ -202,18 +198,15 @@ function FetcherOverviewAtAGlance({
   );
 
   return (
-    <section
-      className="mm-card mm-dash-card mm-fetcher-module-surface"
-      aria-labelledby="fetcher-overview-at-a-glance-heading"
+    <MmOverviewSection
+      headingId="fetcher-overview-at-a-glance-heading"
+      heading="At a glance"
       data-testid="fetcher-overview-at-a-glance"
       data-overview-order="1"
     >
-      <h2 id="fetcher-overview-at-a-glance-heading" className="mm-card__title text-lg">
-        At a glance
-      </h2>
-      <div className="mm-card__body mt-5 grid grid-cols-1 gap-4 sm:gap-x-5 sm:gap-y-5 lg:grid-cols-3 lg:gap-x-5 lg:gap-y-5">
-        <OverviewAtGlanceCard glanceOrder="1" title="Last 30 days" body={last30Body} />
-        <OverviewAtGlanceCard
+      <MmAtGlanceGrid>
+        <MmAtGlanceCard glanceOrder="1" title="Last 30 days" body={last30Body} />
+        <MmAtGlanceCard
           glanceOrder="2"
           title="Connections"
           body={connBody}
@@ -229,7 +222,7 @@ function FetcherOverviewAtAGlance({
             ) : undefined
           }
         />
-        <OverviewAtGlanceCard
+        <MmAtGlanceCard
           glanceOrder="3"
           title="Failed imports"
           body={fiBody}
@@ -245,8 +238,8 @@ function FetcherOverviewAtAGlance({
             ) : undefined
           }
         />
-      </div>
-    </section>
+      </MmAtGlanceGrid>
+    </MmOverviewSection>
   );
 }
 
@@ -321,49 +314,29 @@ function FetcherOverviewNeedsAttention({
   onOpenSection?: (target: FetcherOverviewOpenSection) => void;
 }) {
   const raw = buildNeedsAttentionItems(arr, attention);
-  const empty = raw.length === 0;
   const actionTargets = NEEDS_ATTENTION_ACTION_ORDER.filter((t) => raw.some((row) => row.target === t));
 
   return (
-    <section
-      className="mm-card mm-dash-card mm-fetcher-module-surface"
-      aria-labelledby="fetcher-overview-needs-attention-heading"
+    <MmOverviewSection
+      headingId="fetcher-overview-needs-attention-heading"
+      heading="Needs attention"
       data-testid="fetcher-overview-needs-attention"
       data-overview-order="2"
     >
-      <h2 id="fetcher-overview-needs-attention-heading" className="mm-card__title text-lg">
-        Needs attention
-      </h2>
-      <div className="mm-card__body mt-5">
-        {empty ? (
-          <p>No action needed right now</p>
-        ) : (
-          <>
-            <ul className="list-none space-y-3 border-l-2 border-[var(--mm-border)] pl-3.5">
-              {raw.map((row, i) => (
-                <li key={`${row.text}-${i}`} className="leading-snug text-[var(--mm-text1)]">
-                  {row.text}
-                </li>
+      <MmNeedsAttentionList
+        items={raw.map((row) => row.text)}
+        emptyMessage="No action needed right now"
+        actions={
+          onOpenSection && actionTargets.length > 0 ? (
+            <>
+              {actionTargets.map((target) => (
+                <MmNextStepsButton key={target} label={needsAttentionActionLabel(target)} onClick={() => onOpenSection(target)} />
               ))}
-            </ul>
-            {onOpenSection && actionTargets.length > 0 ? (
-              <div className="mt-5 flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">
-                {actionTargets.map((target) => (
-                  <button
-                    key={target}
-                    type="button"
-                    className={fetcherMenuButtonClass({ variant: "secondary" })}
-                    onClick={() => onOpenSection(target)}
-                  >
-                    {needsAttentionActionLabel(target)}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </>
-        )}
-      </div>
-    </section>
+            </>
+          ) : undefined
+        }
+      />
+    </MmOverviewSection>
   );
 }
 
@@ -372,35 +345,24 @@ const NEXT_STEPS_BODY =
 
 function FetcherOverviewNextSteps({ onOpenSection }: { onOpenSection?: (target: FetcherOverviewOpenSection) => void }) {
   return (
-    <section
-      className="mm-card mm-dash-card mm-fetcher-module-surface"
-      aria-labelledby="fetcher-overview-next-steps-heading"
+    <MmOverviewSection
+      headingId="fetcher-overview-next-steps-heading"
+      heading="Next steps"
       data-testid="fetcher-overview-next-steps"
       data-overview-order="3"
     >
-      <h2 id="fetcher-overview-next-steps-heading" className="mm-card__title text-lg">
-        Next steps
-      </h2>
-      <div className="mm-card__body mt-5 space-y-5">
+      <div className="space-y-5">
         <p className="leading-relaxed">{NEXT_STEPS_BODY}</p>
         {onOpenSection ? (
           <div className="flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">
-            <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onOpenSection("connections")}>
-              Connections
-            </button>
-            <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onOpenSection("sonarr")}>
-              {FETCHER_TAB_SONARR_LABEL}
-            </button>
-            <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onOpenSection("radarr")}>
-              {FETCHER_TAB_RADARR_LABEL}
-            </button>
-            <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onOpenSection("failed-imports")}>
-              Failed imports
-            </button>
+            <MmNextStepsButton label="Connections" onClick={() => onOpenSection("connections")} />
+            <MmNextStepsButton label={FETCHER_TAB_SONARR_LABEL} onClick={() => onOpenSection("sonarr")} />
+            <MmNextStepsButton label={FETCHER_TAB_RADARR_LABEL} onClick={() => onOpenSection("radarr")} />
+            <MmNextStepsButton label="Failed imports" onClick={() => onOpenSection("failed-imports")} />
           </div>
         ) : null}
       </div>
-    </section>
+    </MmOverviewSection>
   );
 }
 
