@@ -262,47 +262,83 @@ export function SubberScheduleTab({ canOperate }: { canOperate: boolean }) {
         onSave={saveMovies}
         busy={put.isPending}
       />
-      <div className="flex flex-col gap-4">
-        <section className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5">
-          <h2 className="text-base font-semibold text-[var(--mm-text)]">Subtitle upgrade</h2>
-          <p className="mt-1 text-sm text-[var(--mm-text2)]">
-            Subber periodically re-searches for better subtitle files for movies and episodes that already have subtitles.
+      <section className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5">
+        <h2 className="text-base font-semibold text-[var(--mm-text)]">Subtitle upgrade</h2>
+        <p className="mt-1 text-sm text-[var(--mm-text2)]">
+          Subber periodically re-searches for better subtitle files for movies and episodes that already have subtitles.
+        </p>
+        <div className="mt-4 space-y-4">
+          <MmOnOffSwitch
+            id="subber-up-en"
+            label="Enable subtitle upgrades"
+            enabled={upEn}
+            disabled={!canOperate || put.isPending}
+            onChange={setUpEn}
+          />
+          <p className="text-xs text-[var(--mm-text2)]">
+            {upEn ? "Subtitle upgrade is on." : "Subtitle upgrade is off. Subtitles already downloaded will not be re-searched."}
           </p>
-          <div className="mt-4">
-            <MmOnOffSwitch id="subber-up-en" label="Enable subtitle upgrades" enabled={upEn} disabled={!canOperate || put.isPending} onChange={setUpEn} />
-            <p className="mt-2 text-xs text-[var(--mm-text2)]">
-              {upEn
-                ? "Subber will re-search on the schedule below when timed scans are enabled."
-                : "Subtitle upgrade is off. Subtitles already downloaded will not be re-searched on a schedule."}
+          <MmOnOffSwitch
+            id="subber-up-sched-en"
+            label="Enable timed upgrade scans"
+            enabled={upSched}
+            disabled={!canOperate || put.isPending}
+            onChange={setUpSched}
+          />
+          <label className="block text-sm text-[var(--mm-text2)]">
+            Run interval (minutes)
+            <p className="mt-1 text-xs text-[var(--mm-text2)]">
+              How often Subber checks for subtitle upgrades. Default is 10080 minutes (1 week).
             </p>
+            <input
+              type="number"
+              min={1}
+              max={525600}
+              className="mm-input mt-1 w-full max-w-xs"
+              value={upMin}
+              disabled={!canOperate || put.isPending}
+              onChange={(e) => setUpMin(Math.max(1, Math.min(525600, Number(e.target.value) || 1)))}
+            />
+          </label>
+          <div className="space-y-3">
+            <div>
+              <span className="text-sm font-medium text-[var(--mm-text)]">{MM_SCHEDULE_TIME_WINDOW_HEADING}</span>
+              <p className="mt-1 text-xs text-[var(--mm-text2)]">{MM_SCHEDULE_TIME_WINDOW_HELPER}</p>
+            </div>
+            <MmOnOffSwitch
+              id="subber-upgrade-sched-hours"
+              label="Limit to these hours"
+              enabled={upHl}
+              disabled={!canOperate || put.isPending}
+              onChange={setUpHl}
+            />
+            <div>
+              <span className="text-sm font-medium text-[var(--mm-text)]">Days</span>
+              <p className="mt-1 text-xs text-[var(--mm-text2)]">{MM_SCHEDULE_DAYS_HELPER}</p>
+              <MmScheduleDayChips scheduleDaysCsv={upDays} disabled={!canOperate || put.isPending} onChangeCsv={setUpDays} />
+            </div>
+            <MmScheduleTimeFields
+              idPrefix="subber-upgrade-sched"
+              start={upStart}
+              end={upEnd}
+              disabled={!canOperate || put.isPending}
+              onStart={setUpStart}
+              onEnd={setUpEnd}
+            />
           </div>
-        </section>
-        <ScheduleCard
-          title="Timed upgrade scans"
-          helper="Same day/time window controls as library scans. Saving applies both the master upgrade toggle above and this schedule."
-          canOperate={canOperate}
-          enabled={upSched}
-          setEnabled={setUpSched}
-          intervalMinutes={upMin}
-          setIntervalMinutes={setUpMin}
-          hoursLimited={upHl}
-          setHoursLimited={setUpHl}
-          daysCsv={upDays}
-          setDaysCsv={setUpDays}
-          start={upStart}
-          setStart={setUpStart}
-          end={upEnd}
-          setEnd={setUpEnd}
-          lastRun={q.data?.upgrade_last_scheduled_at}
-          lastRunLabel="Last upgrade scan"
-          saveLabel="Save upgrade schedule"
-          idPrefix="subber-upgrade-sched"
-          onSave={saveUpgrade}
-          busy={put.isPending}
-          timedSwitchLabel="Enable timed upgrade scans"
-          intervalHelper="How often Subber checks for subtitle upgrades. Default is 10080 minutes (1 week)."
-        />
-      </div>
+          <p className="text-xs text-[var(--mm-text2)]">
+            Last upgrade scan: <span className="font-medium text-[var(--mm-text)]">{fmtTs(q.data?.upgrade_last_scheduled_at)}</span>
+          </p>
+          <button
+            type="button"
+            className={mmActionButtonClass({ variant: "primary", disabled: !canOperate || put.isPending })}
+            disabled={!canOperate || put.isPending}
+            onClick={() => void saveUpgrade()}
+          >
+            Save upgrade schedule
+          </button>
+        </div>
+      </section>
     </div>
   );
 }

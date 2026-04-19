@@ -296,6 +296,28 @@ export async function postSubberSearchAllMissingMovies(): Promise<{ status: stri
   return readJson(r);
 }
 
+export async function postSubberLibrarySyncTv(): Promise<{ status: string }> {
+  const csrf = await fetchCsrfToken();
+  const r = await apiFetch("/api/v1/subber/library/sync/tv", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ csrf_token: csrf }),
+  });
+  if (!r.ok) throw new Error(`Subber TV library sync: ${r.status}`);
+  return readJson(r);
+}
+
+export async function postSubberLibrarySyncMovies(): Promise<{ status: string }> {
+  const csrf = await fetchCsrfToken();
+  const r = await apiFetch("/api/v1/subber/library/sync/movies", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ csrf_token: csrf }),
+  });
+  if (!r.ok) throw new Error(`Subber movies library sync: ${r.status}`);
+  return readJson(r);
+}
+
 export async function fetchSubberProviders(): Promise<SubberProviderOut[]> {
   const r = await apiFetch("/api/v1/subber/providers");
   if (!r.ok) throw new Error(`Subber providers: ${r.status}`);

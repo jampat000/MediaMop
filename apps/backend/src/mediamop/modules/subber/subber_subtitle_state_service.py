@@ -62,8 +62,13 @@ def upsert_subtitle_state(
         session.add(row)
     else:
         row.media_scope = media_scope
-        if status:
-            row.status = status
+        prev = (row.status or "").strip().lower()
+        new_st = (status or "").strip().lower() if status else ""
+        if new_st:
+            if prev == "found" and new_st == "missing":
+                pass
+            else:
+                row.status = status
         if subtitle_path is not None:
             row.subtitle_path = subtitle_path
         if opensubtitles_file_id is not None:

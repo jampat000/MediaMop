@@ -5,6 +5,8 @@ import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 import { SUBBER_LANGUAGE_OPTIONS, subberLanguageLabel } from "../../lib/subber/subber-languages";
 import {
   usePutSubberSettingsMutation,
+  useSubberLibrarySyncMoviesMutation,
+  useSubberLibrarySyncTvMutation,
   useSubberSettingsQuery,
   useSubberTestOpensubtitlesMutation,
   useSubberTestRadarrMutation,
@@ -14,12 +16,58 @@ import { SubberSettingsMoreSections } from "./subber-settings-more";
 
 const MASK = "\u2022".repeat(10);
 
+function WebhookUrlField({
+  id,
+  label,
+  helper,
+  value,
+  disabled,
+}: {
+  id: string;
+  label: string;
+  helper: string;
+  value: string;
+  disabled: boolean;
+}) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* ignore */
+    }
+  }
+  return (
+    <div className="mt-4">
+      <label className="block text-sm font-medium text-[var(--mm-text)]" htmlFor={id}>
+        {label}
+      </label>
+      <p className="mt-1 text-xs text-[var(--mm-text2)]">{helper}</p>
+      <div className="mt-1 flex max-w-3xl flex-wrap gap-2">
+        <input id={id} readOnly className="mm-input min-w-0 flex-1 font-mono text-xs" value={value} />
+        <button
+          type="button"
+          className={mmActionButtonClass({ variant: "secondary", disabled })}
+          disabled={disabled}
+          onClick={() => void copy()}
+        >
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function SubberSettingsTab({ canOperate }: { canOperate: boolean }) {
   const q = useSubberSettingsQuery();
   const put = usePutSubberSettingsMutation();
   const testOs = useSubberTestOpensubtitlesMutation();
   const testSon = useSubberTestSonarrMutation();
   const testRad = useSubberTestRadarrMutation();
+  const syncTv = useSubberLibrarySyncTvMutation();
+  const syncMovies = useSubberLibrarySyncMoviesMutation();
 
   const [osUser, setOsUser] = useState("");
   const [osPass, setOsPass] = useState("");
@@ -34,6 +82,8 @@ export function SubberSettingsTab({ canOperate }: { canOperate: boolean }) {
   const [folder, setFolder] = useState("");
   const [enabled, setEnabled] = useState(false);
   const [osMsg, setOsMsg] = useState<string | null>(null);
+  const [tvSyncOk, setTvSyncOk] = useState(false);
+  const [moviesSyncOk, setMoviesSyncOk] = useState(false);
 
   useEffect(() => {
     const d = q.data;
@@ -180,81 +230,133 @@ export function SubberSettingsTab({ canOperate }: { canOperate: boolean }) {
         {q.data?.fetcher_radarr_base_url_hint ? (
           <p className="text-xs text-[var(--mm-text2)]">Fetcher Radarr URL hint: {q.data.fetcher_radarr_base_url_hint}</p>
         ) : null}
-        <label className="block text-sm text-[var(--mm-text2)]">
-          Sonarr base URL
-          <input className="mm-input mt-1 w-full max-w-xl" value={sonUrl} disabled={dis} onChange={(e) => setSonUrl(e.target.value)} />
-        </label>
-        <label className="block text-sm text-[var(--mm-text2)]">
-          Sonarr API key
-          <input
-            className="mm-input mt-1 w-full max-w-xl"
-            type="password"
-            value={sonKey}
-            placeholder={q.data?.sonarr_api_key_set ? MASK : ""}
+        <div className="space-y-2 border-t border-[var(--mm-border)] pt-4 first:border-t-0 first:pt-0">
+          <h3 className="text-sm font-semibold text-[var(--mm-text)]">Sonarr</h3>
+          <label className="block text-sm text-[var(--mm-text2)]">
+            Sonarr base URL
+            <input className="mm-input mt-1 w-full max-w-xl" value={sonUrl} disabled={dis} onChange={(e) => setSonUrl(e.target.value)} />
+          </label>
+          <label className="block text-sm text-[var(--mm-text2)]">
+            Sonarr API key
+            <input
+              className="mm-input mt-1 w-full max-w-xl"
+              type="password"
+              value={sonKey}
+              placeholder={q.data?.sonarr_api_key_set ? MASK : ""}
+              disabled={dis}
+              onChange={(e) => setSonKey(e.target.value)}
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={mmActionButtonClass({ variant: "primary", disabled: dis })}
+              disabled={dis}
+              onClick={() => void saveSonarr()}
+              data-testid="subber-save-sonarr"
+            >
+              Save Sonarr
+            </button>
+            <button
+              type="button"
+              className={mmActionButtonClass({ variant: "secondary", disabled: dis || testSon.isPending })}
+              disabled={dis || testSon.isPending}
+              onClick={() => void testSon.mutate()}
+            >
+              Test Sonarr
+            </button>
+          </div>
+          <WebhookUrlField
+            id="subber-webhook-sonarr"
+            label="Webhook URL for Sonarr"
+            helper="Add this URL in Sonarr under Settings → Connect → Webhook (trigger on Download). Subber searches for subtitles immediately when Sonarr imports a file."
+            value={sonHook}
             disabled={dis}
-            onChange={(e) => setSonKey(e.target.value)}
           />
-        </label>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            className={mmActionButtonClass({ variant: "primary", disabled: dis })}
-            disabled={dis}
-            onClick={() => void saveSonarr()}
-            data-testid="subber-save-sonarr"
-          >
-            Save Sonarr
-          </button>
-          <button
-            type="button"
-            className={mmActionButtonClass({ variant: "secondary", disabled: dis || testSon.isPending })}
-            disabled={dis || testSon.isPending}
-            onClick={() => void testSon.mutate()}
-          >
-            Test Sonarr
-          </button>
+          <div className="mt-3 space-y-1">
+            <button
+              type="button"
+              className={mmActionButtonClass({ variant: "secondary", disabled: dis || syncTv.isPending })}
+              disabled={dis || syncTv.isPending}
+              onClick={() => {
+                setTvSyncOk(false);
+                void syncTv.mutate(undefined, {
+                  onSuccess: () => setTvSyncOk(true),
+                });
+              }}
+              data-testid="subber-sync-tv-library"
+            >
+              {syncTv.isPending ? "Syncing…" : "Sync TV library from Sonarr"}
+            </button>
+            <p className="text-xs text-[var(--mm-text2)]">
+              Pulls your full Sonarr TV library and checks which episodes already have subtitles. Run this once after connecting to populate your TV tab.
+            </p>
+            {tvSyncOk ? <p className="text-xs text-[var(--mm-text)]">TV sync queued — check the Jobs tab for progress.</p> : null}
+          </div>
         </div>
-        <label className="mt-4 block text-sm text-[var(--mm-text2)]">
-          Radarr base URL
-          <input className="mm-input mt-1 w-full max-w-xl" value={radUrl} disabled={dis} onChange={(e) => setRadUrl(e.target.value)} />
-        </label>
-        <label className="block text-sm text-[var(--mm-text2)]">
-          Radarr API key
-          <input
-            className="mm-input mt-1 w-full max-w-xl"
-            type="password"
-            value={radKey}
-            placeholder={q.data?.radarr_api_key_set ? MASK : ""}
+        <div className="space-y-2 border-t border-[var(--mm-border)] pt-4">
+          <h3 className="text-sm font-semibold text-[var(--mm-text)]">Radarr</h3>
+          <label className="block text-sm text-[var(--mm-text2)]">
+            Radarr base URL
+            <input className="mm-input mt-1 w-full max-w-xl" value={radUrl} disabled={dis} onChange={(e) => setRadUrl(e.target.value)} />
+          </label>
+          <label className="block text-sm text-[var(--mm-text2)]">
+            Radarr API key
+            <input
+              className="mm-input mt-1 w-full max-w-xl"
+              type="password"
+              value={radKey}
+              placeholder={q.data?.radarr_api_key_set ? MASK : ""}
+              disabled={dis}
+              onChange={(e) => setRadKey(e.target.value)}
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={mmActionButtonClass({ variant: "primary", disabled: dis })}
+              disabled={dis}
+              onClick={() => void saveRadarr()}
+              data-testid="subber-save-radarr"
+            >
+              Save Radarr
+            </button>
+            <button
+              type="button"
+              className={mmActionButtonClass({ variant: "secondary", disabled: dis || testRad.isPending })}
+              disabled={dis || testRad.isPending}
+              onClick={() => void testRad.mutate()}
+            >
+              Test Radarr
+            </button>
+          </div>
+          <WebhookUrlField
+            id="subber-webhook-radarr"
+            label="Webhook URL for Radarr"
+            helper="Add this URL in Radarr under Settings → Connect → Webhook (trigger on Download). Subber searches for subtitles immediately when Radarr imports a file."
+            value={radHook}
             disabled={dis}
-            onChange={(e) => setRadKey(e.target.value)}
           />
-        </label>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            className={mmActionButtonClass({ variant: "primary", disabled: dis })}
-            disabled={dis}
-            onClick={() => void saveRadarr()}
-            data-testid="subber-save-radarr"
-          >
-            Save Radarr
-          </button>
-          <button
-            type="button"
-            className={mmActionButtonClass({ variant: "secondary", disabled: dis || testRad.isPending })}
-            disabled={dis || testRad.isPending}
-            onClick={() => void testRad.mutate()}
-          >
-            Test Radarr
-          </button>
-        </div>
-        <div>
-          <p className="text-sm text-[var(--mm-text2)]">Add this to Sonarr under Settings → Connect → Webhook:</p>
-          <input readOnly className="mm-input mt-1 w-full font-mono text-xs" value={sonHook} />
-        </div>
-        <div>
-          <p className="text-sm text-[var(--mm-text2)]">Add this to Radarr under Settings → Connect → Webhook:</p>
-          <input readOnly className="mm-input mt-1 w-full font-mono text-xs" value={radHook} />
+          <div className="mt-3 space-y-1">
+            <button
+              type="button"
+              className={mmActionButtonClass({ variant: "secondary", disabled: dis || syncMovies.isPending })}
+              disabled={dis || syncMovies.isPending}
+              onClick={() => {
+                setMoviesSyncOk(false);
+                void syncMovies.mutate(undefined, {
+                  onSuccess: () => setMoviesSyncOk(true),
+                });
+              }}
+              data-testid="subber-sync-movies-library"
+            >
+              {syncMovies.isPending ? "Syncing…" : "Sync Movies library from Radarr"}
+            </button>
+            <p className="text-xs text-[var(--mm-text2)]">
+              Pulls your full Radarr movie library and checks which movies already have subtitles. Run this once after connecting to populate your Movies tab.
+            </p>
+            {moviesSyncOk ? <p className="text-xs text-[var(--mm-text)]">Movies sync queued — check the Jobs tab for progress.</p> : null}
+          </div>
         </div>
       </section>
 

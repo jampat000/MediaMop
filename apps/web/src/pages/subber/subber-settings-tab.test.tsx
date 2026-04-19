@@ -91,6 +91,16 @@ describe("SubberSettingsTab", () => {
       mutate: vi.fn(),
       isPending: false,
     } as unknown as ReturnType<typeof subberQueries.useSubberTestRadarrMutation>);
+    vi.spyOn(subberQueries, "useSubberLibrarySyncTvMutation").mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn().mockResolvedValue({ status: "queued" }),
+      isPending: false,
+    } as unknown as ReturnType<typeof subberQueries.useSubberLibrarySyncTvMutation>);
+    vi.spyOn(subberQueries, "useSubberLibrarySyncMoviesMutation").mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn().mockResolvedValue({ status: "queued" }),
+      isPending: false,
+    } as unknown as ReturnType<typeof subberQueries.useSubberLibrarySyncMoviesMutation>);
     vi.spyOn(subberQueries, "useSubberProvidersQuery").mockReturnValue({
       data: [
         {

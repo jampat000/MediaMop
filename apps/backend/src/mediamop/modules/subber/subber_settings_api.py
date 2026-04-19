@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import uuid
 import urllib.error
 import urllib.request
 from typing import Annotated
@@ -13,6 +14,8 @@ from pydantic import BaseModel, Field
 from mediamop.api.deps import DbSessionDep, SettingsDep
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.subber.subber_credentials_crypto import decrypt_subber_credentials_json, encrypt_subber_credentials_json
+from mediamop.modules.subber.subber_job_kinds import SUBBER_JOB_KIND_LIBRARY_SYNC_MOVIES, SUBBER_JOB_KIND_LIBRARY_SYNC_TV
+from mediamop.modules.subber.subber_jobs_ops import subber_enqueue_or_get_job
 from mediamop.modules.subber.subber_opensubtitles_client import USER_AGENT
 from mediamop.modules.subber import subber_opensubtitles_client as os_client
 from mediamop.modules.subber.subber_overview_service import build_subber_overview
@@ -181,6 +184,37 @@ def put_subber_settings(
     _apply_sched(row, body)
     _apply_extended_settings(row, body)
     db.flush()
+
+    def _api_key_from_ciphertext(ct: str | None) -> str:
+        raw = decrypt_subber_credentials_json(settings, ct or "") or "{}"
+        try:
+            kd = json.loads(raw)
+        except json.JSONDecodeError:
+            kd = {}
+        sec = kd.get("secrets") if isinstance(kd.get("secrets"), dict) else {}
+        return str(sec.get("api_key") or "").strip()
+
+    son_key = _api_key_from_ciphertext(row.sonarr_credentials_ciphertext)
+    rad_key = _api_key_from_ciphertext(row.radarr_credentials_ciphertext)
+    son_configured = bool((row.sonarr_base_url or "").strip()) and bool(son_key)
+    rad_configured = bool((row.radarr_base_url or "").strip()) and bool(rad_key)
+    if body.sonarr_base_url is not None or (body.sonarr_api_key is not None and body.sonarr_api_key.strip()):
+        if son_configured:
+            subber_enqueue_or_get_job(
+                db,
+                dedupe_key=f"subber:libsync:settings:tv:{uuid.uuid4()}",
+                job_kind=SUBBER_JOB_KIND_LIBRARY_SYNC_TV,
+                payload_json="{}",
+            )
+    if body.radarr_base_url is not None or (body.radarr_api_key is not None and body.radarr_api_key.strip()):
+        if rad_configured:
+            subber_enqueue_or_get_job(
+                db,
+                dedupe_key=f"subber:libsync:settings:movies:{uuid.uuid4()}",
+                job_kind=SUBBER_JOB_KIND_LIBRARY_SYNC_MOVIES,
+                payload_json="{}",
+            )
+
     return _settings_out(db, row, request, settings)
 
 

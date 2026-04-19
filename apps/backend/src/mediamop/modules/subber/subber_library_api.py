@@ -13,6 +13,8 @@ from mediamop.api.deps import DbSessionDep, SettingsDep
 from mediamop.modules.subber.subber_job_kinds import (
     SUBBER_JOB_KIND_LIBRARY_SCAN_MOVIES,
     SUBBER_JOB_KIND_LIBRARY_SCAN_TV,
+    SUBBER_JOB_KIND_LIBRARY_SYNC_MOVIES,
+    SUBBER_JOB_KIND_LIBRARY_SYNC_TV,
     SUBBER_JOB_KIND_SUBTITLE_SEARCH_MOVIES,
     SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV,
 )
@@ -121,5 +123,45 @@ def post_subber_search_all_missing_movies(
         dedupe_key=dedupe,
         job_kind=SUBBER_JOB_KIND_LIBRARY_SCAN_MOVIES,
         payload_json=json.dumps({"media_scope": "movies"}, separators=(",", ":")),
+    )
+    return {"status": "queued"}
+
+
+@router.post("/library/sync/tv")
+def post_subber_library_sync_tv(
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    body: SubberCsrfBody,
+) -> dict[str, str]:
+    secret = settings.session_secret or ""
+    if not verify_csrf_token(secret, body.csrf_token):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
+    dedupe = f"subber:libsync:manual:tv:{uuid.uuid4()}"
+    subber_enqueue_or_get_job(
+        db,
+        dedupe_key=dedupe,
+        job_kind=SUBBER_JOB_KIND_LIBRARY_SYNC_TV,
+        payload_json="{}",
+    )
+    return {"status": "queued"}
+
+
+@router.post("/library/sync/movies")
+def post_subber_library_sync_movies(
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    body: SubberCsrfBody,
+) -> dict[str, str]:
+    secret = settings.session_secret or ""
+    if not verify_csrf_token(secret, body.csrf_token):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
+    dedupe = f"subber:libsync:manual:movies:{uuid.uuid4()}"
+    subber_enqueue_or_get_job(
+        db,
+        dedupe_key=dedupe,
+        job_kind=SUBBER_JOB_KIND_LIBRARY_SYNC_MOVIES,
+        payload_json="{}",
     )
     return {"status": "queued"}

@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 from mediamop.modules.subber.subber_job_kinds import (
     SUBBER_JOB_KIND_LIBRARY_SCAN_MOVIES,
     SUBBER_JOB_KIND_LIBRARY_SCAN_TV,
+    SUBBER_JOB_KIND_LIBRARY_SYNC_MOVIES,
+    SUBBER_JOB_KIND_LIBRARY_SYNC_TV,
     SUBBER_JOB_KIND_SUBTITLE_SEARCH_MOVIES,
     SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV,
     SUBBER_JOB_KIND_WEBHOOK_IMPORT_MOVIES,
@@ -81,12 +83,14 @@ def infer_subber_job_scope(*, job_kind: str, payload_json: str | None) -> str | 
     if job_kind in (
         SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV,
         SUBBER_JOB_KIND_LIBRARY_SCAN_TV,
+        SUBBER_JOB_KIND_LIBRARY_SYNC_TV,
         SUBBER_JOB_KIND_WEBHOOK_IMPORT_TV,
     ):
         return "tv"
     if job_kind in (
         SUBBER_JOB_KIND_SUBTITLE_SEARCH_MOVIES,
         SUBBER_JOB_KIND_LIBRARY_SCAN_MOVIES,
+        SUBBER_JOB_KIND_LIBRARY_SYNC_MOVIES,
         SUBBER_JOB_KIND_WEBHOOK_IMPORT_MOVIES,
     ):
         return "movies"

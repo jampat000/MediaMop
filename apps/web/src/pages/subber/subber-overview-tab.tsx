@@ -45,7 +45,9 @@ export function SubberOverviewTab() {
         <h2 className="text-base font-semibold text-[var(--mm-text)]">How it works</h2>
         <ol className="list-decimal space-y-2 pl-5">
           <li>When Radarr or Sonarr imports a file, Subber searches OpenSubtitles immediately for subtitles in your chosen languages.</li>
-          <li>On a schedule, Subber checks your entire library for files still missing subtitles and searches for them automatically.</li>
+          <li>
+            On a schedule, Subber checks your library for files still missing subtitles and searches for them automatically. You can also sync your full Radarr and Sonarr libraries manually from Settings.
+          </li>
           <li>You can also trigger a search manually from the TV or Movies tab.</li>
           <li>
             Subtitle files are saved next to your media and named to match — for example{" "}

@@ -12,7 +12,12 @@ from starlette.testclient import TestClient
 
 from mediamop.api.factory import create_app
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.subber.subber_job_kinds import SUBBER_JOB_KIND_LIBRARY_SCAN_MOVIES, SUBBER_JOB_KIND_SUBTITLE_SEARCH_MOVIES
+from mediamop.modules.subber.subber_job_kinds import (
+    SUBBER_JOB_KIND_LIBRARY_SCAN_MOVIES,
+    SUBBER_JOB_KIND_LIBRARY_SYNC_MOVIES,
+    SUBBER_JOB_KIND_LIBRARY_SYNC_TV,
+    SUBBER_JOB_KIND_SUBTITLE_SEARCH_MOVIES,
+)
 from mediamop.modules.subber.subber_jobs_model import SubberJob
 from mediamop.modules.subber.subber_subtitle_state_model import SubberSubtitleState
 from tests.integration_app_runtime_quiesce import (
@@ -303,3 +308,46 @@ def test_search_now_unknown_state_404(client_admin: TestClient) -> None:
         headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
     )
     assert r.status_code == 404
+
+
+def test_library_sync_tv_requires_operator(client_viewer: TestClient) -> None:
+    _login_viewer(client_viewer)
+    tok = csrf(client_viewer)
+    r = client_viewer.post(
+        "/api/v1/subber/library/sync/tv",
+        json={"csrf_token": tok},
+        headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
+    )
+    assert r.status_code == 403
+
+
+def test_library_sync_tv_queues_job(client_admin: TestClient) -> None:
+    _login_admin(client_admin)
+    tok = csrf(client_admin)
+    r = client_admin.post(
+        "/api/v1/subber/library/sync/tv",
+        json={"csrf_token": tok},
+        headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
+    )
+    assert r.status_code == 200, r.text
+    fac = create_session_factory(create_db_engine(client_admin.app.state.settings))
+    with fac() as db:
+        j = db.scalars(select(SubberJob).order_by(SubberJob.id.desc())).first()
+        assert j is not None
+        assert j.job_kind == SUBBER_JOB_KIND_LIBRARY_SYNC_TV
+
+
+def test_library_sync_movies_queues_job(client_admin: TestClient) -> None:
+    _login_admin(client_admin)
+    tok = csrf(client_admin)
+    r = client_admin.post(
+        "/api/v1/subber/library/sync/movies",
+        json={"csrf_token": tok},
+        headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
+    )
+    assert r.status_code == 200, r.text
+    fac = create_session_factory(create_db_engine(client_admin.app.state.settings))
+    with fac() as db:
+        j = db.scalars(select(SubberJob).order_by(SubberJob.id.desc())).first()
+        assert j is not None
+        assert j.job_kind == SUBBER_JOB_KIND_LIBRARY_SYNC_MOVIES

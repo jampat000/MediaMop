@@ -107,7 +107,7 @@ export function SubberMoviesTab({ canOperate }: { canOperate: boolean }) {
       {libQ.isError ? <p className="text-sm text-red-600">{(libQ.error as Error).message}</p> : null}
       {!libQ.isLoading && movies.length === 0 ? (
         <p className="text-sm text-[var(--mm-text2)]" data-testid="subber-movies-empty">
-          No movies tracked yet. Subber will start tracking when Radarr imports a file or when a library scan runs.
+          No movies tracked yet. Go to Settings and use the Sync Movies library button to import your Radarr library, or Subber will populate this automatically when Radarr imports a new file.
         </p>
       ) : null}
       <ul className="space-y-2">

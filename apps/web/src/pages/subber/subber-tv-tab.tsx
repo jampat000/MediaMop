@@ -103,7 +103,7 @@ export function SubberTvTab({ canOperate }: { canOperate: boolean }) {
       {libQ.isError ? <p className="text-sm text-red-600">{(libQ.error as Error).message}</p> : null}
       {libQ.data && !libQ.data.shows.length ? (
         <p className="text-sm text-[var(--mm-text2)]" data-testid="subber-tv-empty">
-          No TV episodes tracked yet. Subber will start tracking when Sonarr imports a file or when a library scan runs.
+          No TV episodes tracked yet. Go to Settings and use the Sync TV library button to import your Sonarr library, or Subber will populate this automatically when Sonarr imports a new file.
         </p>
       ) : null}
       {libQ.data?.shows.map((show) => (

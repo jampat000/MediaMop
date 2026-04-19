@@ -126,10 +126,7 @@ export function SubberSettingsMoreSections({ canOperate }: { canOperate: boolean
       <section className="space-y-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5" data-testid="subber-providers-section">
         <h2 className="text-base font-semibold text-[var(--mm-text)]">Subtitle Providers</h2>
         <p className="text-sm text-[var(--mm-text2)]">
-          Subber searches providers in order until a subtitle is found. Use priority (lower = first). Enable at least one provider, or keep using the legacy OpenSubtitles block above.
-        </p>
-        <p className="text-xs text-[var(--mm-text2)]">
-          If the first provider returns results, later providers are not tried for that file. Use the arrows to prefer order.
+          Subber searches providers in order until a subtitle is found. Lower priority number = searched first. Enable at least one provider to start downloading subtitles.
         </p>
         {pq.isLoading ? <p className="text-sm text-[var(--mm-text2)]">Loading providers…</p> : null}
         <ul className="space-y-4">

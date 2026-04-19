@@ -7,6 +7,8 @@ import {
   fetchSubberProviders,
   fetchSubberSettings,
   postSubberProviderTest,
+  postSubberLibrarySyncMovies,
+  postSubberLibrarySyncTv,
   postSubberSearchAllMissingMovies,
   postSubberSearchAllMissingTv,
   postSubberSearchNow,
@@ -122,6 +124,28 @@ export function useSubberSearchAllMissingMoviesMutation() {
     mutationFn: postSubberSearchAllMissingMovies,
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["subber"] });
+    },
+  });
+}
+
+export function useSubberLibrarySyncTvMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: postSubberLibrarySyncTv,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["subber", "jobs"] });
+      void qc.invalidateQueries({ queryKey: ["subber", "library"] });
+    },
+  });
+}
+
+export function useSubberLibrarySyncMoviesMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: postSubberLibrarySyncMovies,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["subber", "jobs"] });
+      void qc.invalidateQueries({ queryKey: ["subber", "library"] });
     },
   });
 }

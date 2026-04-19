@@ -35,6 +35,7 @@ REFINER_SUPPLIED_PAYLOAD_EVALUATION_COMPLETED = "refiner.supplied_payload_evalua
 
 SUBBER_SUBTITLE_SEARCH_COMPLETED = "subber.subtitle_search_completed"
 SUBBER_LIBRARY_SCAN_ENQUEUED = "subber.library_scan_enqueued"
+SUBBER_LIBRARY_SYNC_COMPLETED = "subber.library_sync_completed"
 SUBBER_WEBHOOK_IMPORT_ENQUEUED = "subber.webhook_import_enqueued"
 SUBBER_SUBTITLE_UPGRADE_COMPLETED = "subber.subtitle_upgrade_completed"
 REFINER_CANDIDATE_GATE_COMPLETED = "refiner.candidate_gate_completed"
