@@ -38,6 +38,48 @@ function StatTile({ label, value }: { label: string; value: number }) {
 
 type AttentionTarget = "settings" | "tv" | "movies";
 
+type SubberOverviewNavTab = "settings" | "tv" | "movies" | "schedule" | "jobs";
+
+const SUBBER_NEXT_STEPS_BODY =
+  "Use Settings to connect OpenSubtitles, Sonarr, and Radarr. Check TV and Movies to see your library and search for missing subtitles. Use Schedule to automate searches.";
+
+function SubberOverviewNextSteps({ onOpenTab }: { onOpenTab?: (tab: SubberOverviewNavTab) => void }) {
+  return (
+    <section
+      className="mm-card mm-dash-card mm-fetcher-module-surface"
+      aria-labelledby="subber-overview-next-steps-heading"
+      data-testid="subber-overview-next-steps"
+      data-overview-order="4"
+    >
+      <h2 id="subber-overview-next-steps-heading" className="mm-card__title text-lg">
+        Next steps
+      </h2>
+      <div className="mm-card__body mt-5 space-y-5 text-sm text-[var(--mm-text2)]">
+        <p className="leading-relaxed">{SUBBER_NEXT_STEPS_BODY}</p>
+        {onOpenTab ? (
+          <div className="flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">
+            <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onOpenTab("settings")}>
+              Settings
+            </button>
+            <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onOpenTab("tv")}>
+              TV
+            </button>
+            <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onOpenTab("movies")}>
+              Movies
+            </button>
+            <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onOpenTab("schedule")}>
+              Schedule
+            </button>
+            <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onOpenTab("jobs")}>
+              Jobs
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
 function buildSubberNeedsAttention(args: {
   settings: NonNullable<ReturnType<typeof useSubberSettingsQuery>["data"]>;
   providers: NonNullable<ReturnType<typeof useSubberProvidersQuery>["data"]>;
@@ -137,7 +179,7 @@ function SubberOverviewLoadError({ err }: { err: unknown }) {
 export function SubberOverviewTab({
   onOpenTab,
 }: {
-  onOpenTab?: (tab: "tv" | "movies" | "settings") => void;
+  onOpenTab?: (tab: SubberOverviewNavTab) => void;
 } = {}) {
   const settingsQ = useSubberSettingsQuery();
   const providersQ = useSubberProvidersQuery();
@@ -241,6 +283,7 @@ export function SubberOverviewTab({
         className="mm-card mm-dash-card mm-fetcher-module-surface"
         aria-labelledby="subber-overview-at-a-glance-heading"
         data-testid="subber-overview-at-a-glance"
+        data-overview-order="1"
       >
         <h2 id="subber-overview-at-a-glance-heading" className="mm-card__title text-lg">
           At a glance
@@ -257,6 +300,7 @@ export function SubberOverviewTab({
         className="mm-card mm-dash-card mm-fetcher-module-surface"
         aria-labelledby="subber-overview-needs-attention-heading"
         data-testid="subber-overview-needs-attention"
+        data-overview-order="2"
       >
         <h2 id="subber-overview-needs-attention-heading" className="mm-card__title text-lg">
           Needs attention
@@ -296,6 +340,7 @@ export function SubberOverviewTab({
         className="mm-card mm-dash-card mm-fetcher-module-surface"
         aria-labelledby="subber-overview-last-30-heading"
         data-testid="subber-overview-last-30"
+        data-overview-order="3"
       >
         <h2 id="subber-overview-last-30-heading" className="mm-card__title text-lg">
           Last 30 days
@@ -319,6 +364,8 @@ export function SubberOverviewTab({
           </div>
         </div>
       </section>
+
+      <SubberOverviewNextSteps onOpenTab={onOpenTab} />
     </div>
   );
 }

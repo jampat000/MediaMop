@@ -597,6 +597,74 @@ function prunerAttentionOpenLabel(tab: ProviderTab): string {
   return `Open ${providerLabel(tab)}`;
 }
 
+function PrunerLast30StatsTiles({
+  itemsRemoved,
+  previewRuns,
+  failedApplies,
+}: {
+  itemsRemoved: number;
+  previewRuns: number;
+  failedApplies: number;
+}) {
+  return (
+    <div>
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
+          <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Removed</span>
+          <span className="mt-0.5 block text-[0.6rem] font-medium tracking-wide text-[var(--mm-text3)]">(items)</span>
+          <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">{itemsRemoved}</span>
+        </div>
+        <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
+          <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Preview</span>
+          <span className="mt-0.5 block text-[0.6rem] font-medium tracking-wide text-[var(--mm-text3)]">(scans)</span>
+          <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">{previewRuns}</span>
+        </div>
+        <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
+          <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Failed</span>
+          <span className="mt-0.5 block text-[0.6rem] font-medium tracking-wide text-[var(--mm-text3)]">(applies)</span>
+          <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">{failedApplies}</span>
+        </div>
+      </div>
+      <p className="mt-4 text-[0.7rem] leading-snug text-[var(--mm-text3)]">Library cleanup activity · last 30 days</p>
+    </div>
+  );
+}
+
+const PRUNER_NEXT_STEPS_BODY =
+  "Use Emby, Jellyfin, or Plex to connect your media server and configure cleanup rules. Check Jobs for recent activity and Activity for a full history.";
+
+function PrunerOverviewNextSteps({ onNavigate }: { onNavigate: (tab: TopTab) => void }) {
+  return (
+    <section
+      className="mm-card mm-dash-card rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-5 sm:px-5"
+      aria-labelledby="pruner-overview-next-steps-heading"
+      data-testid="pruner-overview-next-steps"
+      data-overview-order="3"
+    >
+      <h2 id="pruner-overview-next-steps-heading" className="text-lg font-semibold text-[var(--mm-text1)]">
+        Next steps
+      </h2>
+      <div className="mt-5 space-y-5 text-sm text-[var(--mm-text2)]">
+        <p className="leading-relaxed">{PRUNER_NEXT_STEPS_BODY}</p>
+        <div className="flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">
+          <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onNavigate("emby")}>
+            Emby
+          </button>
+          <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onNavigate("jellyfin")}>
+            Jellyfin
+          </button>
+          <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onNavigate("plex")}>
+            Plex
+          </button>
+          <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onNavigate("jobs")}>
+            Jobs
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function PrunerOverviewNeedsAttention({
   items,
   onOpenProviderTab,
@@ -611,6 +679,7 @@ function PrunerOverviewNeedsAttention({
       className="mm-card mm-dash-card rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-5 sm:px-5"
       aria-labelledby="pruner-overview-needs-attention-heading"
       data-testid="pruner-overview-needs-attention"
+      data-overview-order="2"
     >
       <h2 id="pruner-overview-needs-attention-heading" className="text-lg font-semibold text-[var(--mm-text1)]">
         Needs attention
@@ -651,9 +720,11 @@ function PrunerOverviewNeedsAttention({
 function TopLevelOverview({
   instances,
   onOpenProviderTab,
+  onNavigateTopTab,
 }: {
   instances: PrunerServerInstance[];
   onOpenProviderTab: (tab: ProviderTab) => void;
+  onNavigateTopTab: (tab: TopTab) => void;
 }) {
   const jobsQ = usePrunerJobsInspectionQuery(50);
   const statsQ = usePrunerOverviewStatsQuery();
@@ -682,48 +753,27 @@ function TopLevelOverview({
   ) : statsQ.isError ? (
     <p className="text-red-400">{(statsQ.error as Error).message}</p>
   ) : statsQ.data ? (
-    <div className="space-y-1.5">
-      <p>
-        <span className="text-[var(--mm-text3)]">Items removed:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">{statsQ.data.items_removed}</span>
-      </p>
-      <p>
-        <span className="text-[var(--mm-text3)]">Preview scans:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">{statsQ.data.preview_runs}</span>
-      </p>
-      <p>
-        <span className="text-[var(--mm-text3)]">Items skipped:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">{statsQ.data.items_skipped}</span>
-      </p>
-      <p>
-        <span className="text-[var(--mm-text3)]">Failed:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">
-          {statsQ.data.failed_applies === 0 ? "None" : String(statsQ.data.failed_applies)}
-        </span>
-      </p>
-    </div>
+    <PrunerLast30StatsTiles
+      itemsRemoved={statsQ.data.items_removed}
+      previewRuns={statsQ.data.preview_runs}
+      failedApplies={statsQ.data.failed_applies}
+    />
   ) : (
     <p className="text-[var(--mm-text3)]">—</p>
   );
 
   return (
     <section className="space-y-6" data-testid="pruner-top-overview-tab">
-      <header className="max-w-3xl">
-        <h2 className="text-base font-semibold text-[var(--mm-text1)]">Overview</h2>
-        <p className="mt-1 text-sm text-[var(--mm-text2)]">
-          Open Emby, Jellyfin, or Plex to set up your connection, configure what gets cleaned up, and set a schedule.
-        </p>
-      </header>
-
       <section
         className="mm-card mm-dash-card rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-5 sm:px-5"
         aria-labelledby="pruner-overview-at-a-glance-heading"
         data-testid="pruner-overview-at-a-glance"
+        data-overview-order="1"
       >
         <h2 id="pruner-overview-at-a-glance-heading" className="text-lg font-semibold text-[var(--mm-text1)]">
           At a glance
         </h2>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-5 xl:grid-cols-4 xl:gap-x-5 xl:gap-y-5">
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-5 lg:grid-cols-4 lg:gap-x-5 lg:gap-y-5">
           <PrunerAtGlanceCard glanceOrder="1" title="Last 30 days" body={last30Body} />
           {providerCards.map((card, i) => {
             const order = String(i + 2) as "2" | "3" | "4";
@@ -766,16 +816,7 @@ function TopLevelOverview({
 
       <PrunerOverviewNeedsAttention items={attentionItems} onOpenProviderTab={onOpenProviderTab} />
 
-      {instances.length === 0 ? (
-        <div
-          className="rounded-md border border-dashed border-[var(--mm-border)] bg-[var(--mm-surface2)]/35 px-4 py-4 text-sm text-[var(--mm-text2)]"
-          data-testid="pruner-empty-state"
-        >
-          <p className="font-semibold text-[var(--mm-text1)]">No Emby, Jellyfin, or Plex servers saved yet.</p>
-          <p className="mt-1">Open Emby, Jellyfin, or Plex and use the Connection tab to add a server address and API key or token.</p>
-          <p className="mt-2 text-xs">Nothing is shared between providers or between separate saved servers.</p>
-        </div>
-      ) : null}
+      <PrunerOverviewNextSteps onNavigate={onNavigateTopTab} />
     </section>
   );
 }
@@ -1081,7 +1122,11 @@ export function PrunerInstancesListPage() {
         {q.isError ? <p className="text-sm text-red-600">{(q.error as Error).message}</p> : null}
         {!q.isLoading && !q.isError ? (
           topTab === "overview" ? (
-            <TopLevelOverview instances={instances} onOpenProviderTab={(t) => setTopTab(t)} />
+            <TopLevelOverview
+              instances={instances}
+              onOpenProviderTab={(t) => setTopTab(t)}
+              onNavigateTopTab={(t) => setTopTab(t)}
+            />
           ) : topTab === "jobs" ? (
             <TopLevelJobs instances={instances} />
           ) : (
