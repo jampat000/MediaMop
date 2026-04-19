@@ -18,7 +18,7 @@ npm ci
 npm run dev
 ```
 
-**`npm run dev`** starts **both** the FastAPI process (same as `../../scripts/dev-backend.ps1`) and Vite in one terminal via `scripts/run-dev-stack.mjs` (no reliance on `node_modules/.bin` shims, which some Windows setups omit). The stack **waits for `GET /health` on the API port before starting Vite**, so the browser is not served until the backend has finished lifespan (including Alembic). Override wait with **`MEDIAMOP_DEV_STACK_API_WAIT_MS`** (default `120000`). Use **`npm run dev:web`** for Vite only (e.g. when the API is already running elsewhere).
+**`npm run dev`** first runs **`dev:stop-api`** and **`dev:stop-web`** (listeners on the default ports from **`../../scripts/dev-ports.json`**, overridable with **`MEDIAMOP_DEV_API_PORT`** / **`MEDIAMOP_DEV_WEB_PORT`**), then starts **both** the FastAPI process (same as `../../scripts/dev-backend.ps1`) and Vite in one terminal via `scripts/run-dev-stack.mjs` (no reliance on `node_modules/.bin` shims, which some Windows setups omit). The stack **waits for `GET /health` on the API port before starting Vite**, so the browser is not served until the backend has finished lifespan (including Alembic). Override wait with **`MEDIAMOP_DEV_STACK_API_WAIT_MS`** (default `120000`). Use **`npm run dev:quick`** to skip the port-stop step when you know the default ports are free. Use **`npm run dev:web`** for Vite only (e.g. when the API is already running elsewhere). **`npm run dev:fresh`** is the same as **`npm run dev`**.
 
 **`package-lock.json`** is committed; use **`npm ci`** for reproducible installs (CI uses **`npm ci`**).
 
@@ -31,6 +31,8 @@ Do not point the SPA at the raw API port unless CORS and cookie **`SameSite`** /
 
 ### Backend CORS / trusted origins
 
+With **`npm run dev`**, the browser talks to **`/api` on the same origin as the Vite page**, so you normally **do not** need CORS entries for that path. In **`MEDIAMOP_ENV=development`**, the backend also pairs **`http://localhost:<port>`** with **`http://127.0.0.1:<port>`** for any loopback origin you list, so either URL works.
+
 For **non-proxied** setups (e.g. static hosting on another port), set on the backend:
 
 - `MEDIAMOP_CORS_ORIGINS` — include the exact web origin (e.g. `http://127.0.0.1:8782`)
@@ -40,7 +42,7 @@ Then set in this app:
 
 - `VITE_API_BASE_URL` — split-origin **production** (or `vite preview`) API origin (no trailing slash); **ignored in `vite dev`** so `/api` always goes through the dev proxy
 
-**Production (split origins):** use **HTTPS** end-to-end; set **`MEDIAMOP_CORS_ORIGINS`** / **`MEDIAMOP_TRUSTED_BROWSER_ORIGINS`** to the real web origin; set **`VITE_API_BASE_URL`** here to the API origin (no trailing slash). Session cookies on the API host generally need **`SameSite=None; Secure`** so credentialed `fetch` from the web origin works. The backend’s cookie flags are env-driven — see ADR-0003 and **`../../docs/local-development.md`**.
+**Production (split origins):** use **HTTPS** end-to-end; set **`MEDIAMOP_CORS_ORIGINS`** / **`MEDIAMOP_TRUSTED_BROWSER_ORIGINS`** to the **single** public web origin you ship; set **`VITE_API_BASE_URL`** here to the API origin (no trailing slash). Session cookies on the API host generally need **`SameSite=None; Secure`** so credentialed `fetch` from the web origin works. The backend’s cookie flags are env-driven — see ADR-0003 and **`../../docs/local-development.md`**.
 
 ## Routes
 
@@ -69,7 +71,9 @@ All calls use `credentials: 'include'` and the real endpoints:
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Vite dev server + API proxy |
+| `npm run dev` | Stop default dev ports, then API + Vite (same as `dev:fresh`) |
+| `npm run dev:fresh` | Same as `npm run dev` |
+| `npm run dev:quick` | API + Vite without stopping ports first |
 | `npm run build` | Typecheck + production bundle |
 | `npm run preview` | Preview production build |
 | `npm run test` | Vitest |

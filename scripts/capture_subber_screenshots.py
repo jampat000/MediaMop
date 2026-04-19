@@ -3,7 +3,8 @@
 Starts a temporary SQLite home, migrates, seeds ``alice`` / ``test-password-strong``,
 runs API on a free localhost port (default scan from 18788) plus a **dedicated** Vite dev
 server on another free port (default scan from 18880), signs in through the real login form,
-then saves one full-page PNG per Subber tab under ``<repo>/screenshots/subber``.
+then saves one full-page PNG per Subber tab under ``<repo>/screenshots/subber``
+(Overview, TV, Movies, Connections, Providers, Preferences, Schedule, Jobs).
 
 Using a non-default web port avoids the common failure mode where port ``8782`` is already
 taken by a normal ``npm run dev`` session: Vite would exit immediately (``strictPort``) while
@@ -292,7 +293,17 @@ def main() -> int:
         _wait_http(f"{api_origin}/health")
         _wait_http(f"{base}/")
 
-        tabs = ["Overview", "TV", "Movies", "Settings", "Schedule", "Jobs"]
+        # Matches ``SubberPage`` top tabs (role=tab, visible label).
+        tabs = [
+            "Overview",
+            "TV",
+            "Movies",
+            "Connections",
+            "Providers",
+            "Preferences",
+            "Schedule",
+            "Jobs",
+        ]
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
@@ -321,14 +332,17 @@ def main() -> int:
                         "Timed out waiting for authenticated shell. "
                         + _playwright_failure_hint(page, out_dir, "shell-ready"),
                     ) from e
-                page.goto("/app/subber", wait_until="domcontentloaded", timeout=120_000)
+                # Client-side navigation avoids intermittent full ``goto`` hangs on some Windows/Vite setups.
+                page.get_by_role("link", name="Subber", exact=True).click()
                 try:
-                    page.wait_for_selector('[data-testid="subber-scope-page"]', timeout=60_000)
+                    page.wait_for_selector('[data-testid="subber-scope-page"]', timeout=90_000)
                 except PlaywrightTimeoutError as e:
                     raise RuntimeError(
-                        "Timed out waiting for Subber page. "
+                        "Timed out waiting for Subber page after sidebar click. "
                         + _playwright_failure_hint(page, out_dir, "subber-page"),
                     ) from e
+                for stale in out_dir.glob("subber-*.png"):
+                    stale.unlink(missing_ok=True)
                 for label in tabs:
                     page.get_by_role("tab", name=label).click()
                     time.sleep(0.45)

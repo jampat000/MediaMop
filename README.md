@@ -30,10 +30,13 @@ From the **repository root**, in order:
 1. **Backend Python env (one-time)** — `cd apps/backend` → `py -3 -m venv .venv` → `.\.venv\Scripts\Activate.ps1` → `pip install -e .`
 2. **Backend `.env` (one-time)** — `copy .env.example .env` in `apps/backend`, then set **`MEDIAMOP_SESSION_SECRET`**. Optionally set **`MEDIAMOP_HOME`** or **`MEDIAMOP_DB_PATH`**. The API and Alembic **load `apps/backend/.env` automatically**; shell env vars still override.
 3. **Migrations** — From repo root: **`.\scripts\dev-migrate.ps1`**, or manually `alembic upgrade head` from `apps/backend` with **`PYTHONPATH=src`**.
-4. **API** — From repo root: **`.\scripts\dev-backend.ps1`**. Confirm **`GET /health`** on the API port (**`scripts/dev-ports.json`**) returns **200** — that is **liveness only**. **`/api/v1`** needs **`MEDIAMOP_SESSION_SECRET`**, migrations applied, and a writable database path.
-5. **Web** — Second terminal: **`.\scripts\dev-web.ps1`**. Open **`http://127.0.0.1:8782`** or **`http://localhost:8782`** (Vite binds all loopback interfaces so Windows does not refuse `localhost` while only IPv4 was listening). Leave **`VITE_API_BASE_URL`** unset for the Vite **`/api`** proxy.
+4. **Run API + web together (recommended)** — `cd apps/web` → `npm ci` → **`npm run dev`**. That command **stops anything still listening on the default dev API and Vite ports**, then starts this repo’s API and Vite in one terminal and waits until **`/health`** is up before opening the UI. Use the URLs printed in the log (**`http://127.0.0.1:8782`** / **`http://localhost:8782`** — both work in **`MEDIAMOP_ENV=development`** thanks to paired loopback origins on the backend). Leave **`VITE_API_BASE_URL`** unset so the browser uses the Vite **`/api`** proxy (same origin as the page; cookies work).
 
-**Optional:** **`.\scripts\dev.ps1`** opens API + web in two windows (launcher only; run `.env` + **`.\scripts\dev-migrate.ps1`** first). **`.\scripts\verify-local.ps1`** runs unit tests, then (unless **`-SkipLiveChecks`**) checks env, DB + Alembic head, live **`/health`** and **`/api/v1/auth/bootstrap/status`**, and **static** Vite proxy lines in **`vite.config.ts`** (not a live browser/proxy proof).
+**Split terminals (optional):** **`.\scripts\dev-backend.ps1`** and **`.\scripts\dev-web.ps1`** from repo root, or **`.\scripts\dev.ps1`** to open them in new windows. **`npm run dev:quick`** in `apps/web` skips the port-stop step (only when you know the default ports are already free).
+
+**Installing “for real” (end users):** This repo is **source** for developers. A shipped product (installer, container, or hosted deployment) should expose **one** canonical HTTPS web origin and set **`MEDIAMOP_CORS_ORIGINS`** / **`MEDIAMOP_TRUSTED_BROWSER_ORIGINS`** on the API to that origin (and **`MEDIAMOP_ENV=production`**). Operators do not juggle `localhost` vs `127.0.0.1` there — that confusion is specific to local dev.
+
+**Optional:** **`.\scripts\verify-local.ps1`** runs unit tests, then (unless **`-SkipLiveChecks`**) checks env, DB + Alembic head, live **`/health`** and **`/api/v1/auth/bootstrap/status`**, and **static** Vite proxy lines in **`vite.config.ts`** (not a live browser/proxy proof).
 
 Canonical ports: **[`docs/ports.md`](docs/ports.md)**.
 

@@ -18,7 +18,7 @@ if (-not (Test-Path $backendScript) -or -not (Test-Path $webScript)) {
 
 Write-Host "== dev.ps1 (launcher only) ==" -ForegroundColor Cyan
 Write-Host "Opening API + web in new windows. This does not verify migrations or DB readiness." -ForegroundColor DarkGray
-Write-Host "Single-terminal alternative: cd apps\web && npm run dev  (starts API + Vite together)." -ForegroundColor DarkGray
+Write-Host "Single-terminal alternative: cd apps\web && npm run dev  (stops default dev ports, then API + Vite)." -ForegroundColor DarkGray
 
 $issues = 0
 $envFile = Join-Path $backendDir ".env"

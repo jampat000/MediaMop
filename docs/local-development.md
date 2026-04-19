@@ -61,6 +61,8 @@ npm ci
 npm run dev
 ```
 
+**`npm run dev`** clears processes listening on the **default** dev API and web ports from **`scripts/dev-ports.json`**, then starts the API and Vite together (see **`apps/web/scripts/run-dev-stack.mjs`**). Use **`npm run dev:quick`** only when you are sure those ports are already free.
+
 The Vite dev server and **`vite preview`** use **[`scripts/dev-ports.json`](../scripts/dev-ports.json)**. See **[`docs/ports.md`](ports.md)**. To override temporarily, set **`VITE_DEV_API_PROXY_TARGET`** and **`MEDIAMOP_DEV_API_PORT`** together.
 
 ## MediaMop home (product paths)
