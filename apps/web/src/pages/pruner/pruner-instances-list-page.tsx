@@ -611,17 +611,14 @@ function PrunerLast30StatsTiles({
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
           <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Removed</span>
-          <span className="mt-0.5 block text-[0.6rem] font-medium tracking-wide text-[var(--mm-text3)]">(items)</span>
           <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">{itemsRemoved}</span>
         </div>
         <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
           <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Preview</span>
-          <span className="mt-0.5 block text-[0.6rem] font-medium tracking-wide text-[var(--mm-text3)]">(scans)</span>
           <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">{previewRuns}</span>
         </div>
         <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
           <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Failed</span>
-          <span className="mt-0.5 block text-[0.6rem] font-medium tracking-wide text-[var(--mm-text3)]">(applies)</span>
           <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">{failedApplies}</span>
         </div>
       </div>
@@ -641,7 +638,7 @@ function PrunerOverviewNextSteps({ onNavigate }: { onNavigate: (tab: TopTab) => 
       data-testid="pruner-overview-next-steps"
       data-overview-order="3"
     >
-      <h2 id="pruner-overview-next-steps-heading" className="text-lg font-semibold text-[var(--mm-text1)]">
+      <h2 id="pruner-overview-next-steps-heading" className="mm-card__title text-lg">
         Next steps
       </h2>
       <div className="mt-5 space-y-5 text-sm text-[var(--mm-text2)]">
@@ -681,7 +678,7 @@ function PrunerOverviewNeedsAttention({
       data-testid="pruner-overview-needs-attention"
       data-overview-order="2"
     >
-      <h2 id="pruner-overview-needs-attention-heading" className="text-lg font-semibold text-[var(--mm-text1)]">
+      <h2 id="pruner-overview-needs-attention-heading" className="mm-card__title text-lg">
         Needs attention
       </h2>
       <div className="mt-5 text-sm text-[var(--mm-text2)]">
@@ -770,7 +767,7 @@ function TopLevelOverview({
         data-testid="pruner-overview-at-a-glance"
         data-overview-order="1"
       >
-        <h2 id="pruner-overview-at-a-glance-heading" className="text-lg font-semibold text-[var(--mm-text1)]">
+        <h2 id="pruner-overview-at-a-glance-heading" className="mm-card__title text-lg">
           At a glance
         </h2>
         <div className="mt-5 grid gap-4 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-5 lg:grid-cols-4 lg:gap-x-5 lg:gap-y-5">

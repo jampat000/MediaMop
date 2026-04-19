@@ -95,17 +95,14 @@ function FetcherOverviewLast30Tiles({
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
           <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Sonarr</span>
-          <span className="mt-0.5 block text-[0.6rem] font-medium tracking-wide text-[var(--mm-text3)]">(searches)</span>
           <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">{sonarrSearches}</span>
         </div>
         <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
           <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Radarr</span>
-          <span className="mt-0.5 block text-[0.6rem] font-medium tracking-wide text-[var(--mm-text3)]">(searches)</span>
           <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">{radarrSearches}</span>
         </div>
         <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
           <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Failed</span>
-          <span className="mt-0.5 block text-[0.6rem] font-medium tracking-wide text-[var(--mm-text3)]">(jobs)</span>
           <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">{failedJobs}</span>
         </div>
       </div>

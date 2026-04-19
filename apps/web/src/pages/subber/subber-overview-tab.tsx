@@ -27,15 +27,6 @@ function AtGlanceCard({ title, body, glanceOrder }: { title: string; body: React
   );
 }
 
-function StatTile({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-md border border-[var(--mm-border)] bg-black/15 px-3 py-3 text-center sm:px-4">
-      <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">{label}</p>
-      <p className="mt-1 text-2xl font-bold tabular-nums text-[var(--mm-text1)]">{value}</p>
-    </div>
-  );
-}
-
 type AttentionTarget = "settings" | "tv" | "movies";
 
 type SubberOverviewNavTab = "settings" | "tv" | "movies" | "schedule" | "jobs";
@@ -346,11 +337,30 @@ export function SubberOverviewTab({
           Last 30 days
         </h2>
         <div className="mm-card__body mt-5 space-y-5">
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <StatTile label="Subtitles downloaded" value={st.subtitles_downloaded} />
-            <StatTile label="Searches run" value={st.searches_last_30_days} />
-            <StatTile label="Not found" value={st.not_found_last_30_days} />
-            <StatTile label="Upgrades" value={st.upgrades_last_30_days} />
+          <div>
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
+                <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Downloaded</span>
+                <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">
+                  {st.subtitles_downloaded}
+                </span>
+              </div>
+              <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
+                <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Searches</span>
+                <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">
+                  {st.searches_last_30_days}
+                </span>
+              </div>
+              <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
+                <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Not found</span>
+                <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">
+                  {st.not_found_last_30_days}
+                </span>
+              </div>
+            </div>
+            <p className="mt-4 text-[0.7rem] leading-snug text-[var(--mm-text3)]">
+              {st.upgrades_last_30_days === 1 ? "1 upgrade" : `${st.upgrades_last_30_days} upgrades`} downloaded · last 30 days
+            </p>
           </div>
           <div className="space-y-1 text-sm text-[var(--mm-text2)]">
             <p>

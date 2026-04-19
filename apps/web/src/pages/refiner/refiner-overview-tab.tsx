@@ -334,7 +334,7 @@ export function RefinerOverviewTab({
           </div>
           <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
             <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Success</span>
-            <span className="mt-1 block text-xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">
+            <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">
               {overviewStats.data.success_rate_percent}%
             </span>
           </div>
@@ -487,14 +487,7 @@ function AtGlanceCard({
       data-at-glance-order={order}
       data-testid={dataTestId}
     >
-      <h3
-        className={[
-          "font-semibold uppercase tracking-[0.14em] text-[var(--mm-text3)]",
-          large ? "text-[0.7rem] lg:text-[0.75rem]" : "text-[0.7rem]",
-        ].join(" ")}
-      >
-        {title}
-      </h3>
+      <h3 className="text-sm font-semibold text-[var(--mm-text1)]">{title}</h3>
       <div className={["min-h-0 flex-1 text-[var(--mm-text2)]", large ? "mt-1 lg:mt-1.5" : ""].filter(Boolean).join(" ")}>
         {body}
       </div>
