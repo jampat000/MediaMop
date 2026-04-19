@@ -22,6 +22,14 @@ function wrap(ui: ReactNode, client: QueryClient) {
 describe("PrunerInstancesListPage", () => {
   beforeEach(() => {
     vi.spyOn(prunerApi, "fetchPrunerStudios").mockResolvedValue({ studios: ["Acme Studio", "Beta Pictures"] });
+    vi.spyOn(prunerApi, "fetchPrunerOverviewStats").mockResolvedValue({
+      window_days: 30,
+      items_removed: 0,
+      items_skipped: 0,
+      apply_runs: 0,
+      preview_runs: 0,
+      failed_applies: 0,
+    });
   });
 
   afterEach(() => {

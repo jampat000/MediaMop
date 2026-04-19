@@ -15,7 +15,7 @@ import { fetchCsrfToken } from "../../lib/api/auth-api";
 import type { PrunerJobsInspectionRow, PrunerServerInstance } from "../../lib/pruner/api";
 import { patchPrunerInstance, patchPrunerScope, postPrunerConnectionTest, postPrunerInstance } from "../../lib/pruner/api";
 import { useMeQuery } from "../../lib/auth/queries";
-import { usePrunerInstancesQuery, usePrunerJobsInspectionQuery } from "../../lib/pruner/queries";
+import { usePrunerInstancesQuery, usePrunerJobsInspectionQuery, usePrunerOverviewStatsQuery } from "../../lib/pruner/queries";
 import {
   PrunerDryRunControls,
   PrunerProviderRulesCard,
@@ -131,7 +131,7 @@ function PrunerAtGlanceCard({
 }: {
   title: string;
   body: ReactNode;
-  glanceOrder: "1" | "2" | "3";
+  glanceOrder: "1" | "2" | "3" | "4";
 }) {
   return (
     <div
@@ -563,8 +563,100 @@ function scanOutcomeReadable(o: string | null | undefined): string {
   return o;
 }
 
-function TopLevelOverview({ instances }: { instances: PrunerServerInstance[] }) {
+function buildPrunerNeedsAttention(instances: PrunerServerInstance[]): { text: string; tab: ProviderTab }[] {
+  const items: { text: string; tab: ProviderTab }[] = [];
+  if (instances.length === 0) {
+    items.push({
+      text: "No Emby, Jellyfin, or Plex servers connected — add one under Emby, Jellyfin, or Plex.",
+      tab: "emby",
+    });
+    return items;
+  }
+  for (const inst of instances) {
+    if (inst.last_connection_test_ok === false) {
+      const label = providerLabel(inst.provider as ProviderTab);
+      items.push({
+        text: `${label} (${inst.display_name}) connection test failed — check Connection tab.`,
+        tab: inst.provider as ProviderTab,
+      });
+    }
+  }
+  const allRulesZero = instances.every((inst) => inst.scopes.every((sc) => activeRuleCount(sc) === 0));
+  if (allRulesZero) {
+    items.push({
+      text: "No cleanup rules are enabled — turn on rules in the Cleanup tab.",
+      tab: "emby",
+    });
+  }
+  return items.slice(0, 8);
+}
+
+const PRUNER_ATTENTION_TAB_ORDER: ProviderTab[] = ["emby", "jellyfin", "plex"];
+
+function prunerAttentionOpenLabel(tab: ProviderTab): string {
+  return `Open ${providerLabel(tab)}`;
+}
+
+function PrunerOverviewNeedsAttention({
+  items,
+  onOpenProviderTab,
+}: {
+  items: { text: string; tab: ProviderTab }[];
+  onOpenProviderTab: (tab: ProviderTab) => void;
+}) {
+  const empty = items.length === 0;
+  const actionTabs = PRUNER_ATTENTION_TAB_ORDER.filter((t) => items.some((row) => row.tab === t));
+  return (
+    <section
+      className="mm-card mm-dash-card rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-5 sm:px-5"
+      aria-labelledby="pruner-overview-needs-attention-heading"
+      data-testid="pruner-overview-needs-attention"
+    >
+      <h2 id="pruner-overview-needs-attention-heading" className="text-lg font-semibold text-[var(--mm-text1)]">
+        Needs attention
+      </h2>
+      <div className="mt-5 text-sm text-[var(--mm-text2)]">
+        {empty ? (
+          <p className="text-[var(--mm-text1)]">Everything looks good.</p>
+        ) : (
+          <>
+            <ul className="list-none space-y-3 border-l-2 border-[var(--mm-border)] pl-3.5">
+              {items.map((row, i) => (
+                <li key={`${row.text}-${i}`} className="leading-snug text-[var(--mm-text1)]">
+                  {row.text}
+                </li>
+              ))}
+            </ul>
+            {actionTabs.length > 0 ? (
+              <div className="mt-5 flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">
+                {actionTabs.map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    className={fetcherMenuButtonClass({ variant: "secondary" })}
+                    onClick={() => onOpenProviderTab(tab)}
+                  >
+                    {prunerAttentionOpenLabel(tab)}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function TopLevelOverview({
+  instances,
+  onOpenProviderTab,
+}: {
+  instances: PrunerServerInstance[];
+  onOpenProviderTab: (tab: ProviderTab) => void;
+}) {
   const jobsQ = usePrunerJobsInspectionQuery(50);
+  const statsQ = usePrunerOverviewStatsQuery();
   const providers: ProviderTab[] = ["emby", "jellyfin", "plex"];
   const providerCards = providers.map((provider) => {
     const rows = instances.filter((x) => x.provider === provider);
@@ -583,6 +675,37 @@ function TopLevelOverview({ instances }: { instances: PrunerServerInstance[] }) 
     return { provider, rows, first, activeRules, latestPreview, latestJob: latestApplyLike };
   });
 
+  const attentionItems = buildPrunerNeedsAttention(instances);
+
+  const last30Body = statsQ.isPending ? (
+    <p className="text-[var(--mm-text3)]">Loading…</p>
+  ) : statsQ.isError ? (
+    <p className="text-red-400">{(statsQ.error as Error).message}</p>
+  ) : statsQ.data ? (
+    <div className="space-y-1.5">
+      <p>
+        <span className="text-[var(--mm-text3)]">Items removed:</span>{" "}
+        <span className="font-medium text-[var(--mm-text1)]">{statsQ.data.items_removed}</span>
+      </p>
+      <p>
+        <span className="text-[var(--mm-text3)]">Preview scans:</span>{" "}
+        <span className="font-medium text-[var(--mm-text1)]">{statsQ.data.preview_runs}</span>
+      </p>
+      <p>
+        <span className="text-[var(--mm-text3)]">Items skipped:</span>{" "}
+        <span className="font-medium text-[var(--mm-text1)]">{statsQ.data.items_skipped}</span>
+      </p>
+      <p>
+        <span className="text-[var(--mm-text3)]">Failed:</span>{" "}
+        <span className="font-medium text-[var(--mm-text1)]">
+          {statsQ.data.failed_applies === 0 ? "None" : String(statsQ.data.failed_applies)}
+        </span>
+      </p>
+    </div>
+  ) : (
+    <p className="text-[var(--mm-text3)]">—</p>
+  );
+
   return (
     <section className="space-y-6" data-testid="pruner-top-overview-tab">
       <header className="max-w-3xl">
@@ -600,9 +723,10 @@ function TopLevelOverview({ instances }: { instances: PrunerServerInstance[] }) 
         <h2 id="pruner-overview-at-a-glance-heading" className="text-lg font-semibold text-[var(--mm-text1)]">
           At a glance
         </h2>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-5 xl:grid-cols-3 xl:gap-x-5 xl:gap-y-5">
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-5 xl:grid-cols-4 xl:gap-x-5 xl:gap-y-5">
+          <PrunerAtGlanceCard glanceOrder="1" title="Last 30 days" body={last30Body} />
           {providerCards.map((card, i) => {
-            const order = String(i + 1) as "1" | "2" | "3";
+            const order = String(i + 2) as "2" | "3" | "4";
             const body = card.first ? (
               <div className="space-y-1.5">
                 <p>
@@ -639,6 +763,8 @@ function TopLevelOverview({ instances }: { instances: PrunerServerInstance[] }) 
           })}
         </div>
       </section>
+
+      <PrunerOverviewNeedsAttention items={attentionItems} onOpenProviderTab={onOpenProviderTab} />
 
       {instances.length === 0 ? (
         <div
@@ -955,7 +1081,7 @@ export function PrunerInstancesListPage() {
         {q.isError ? <p className="text-sm text-red-600">{(q.error as Error).message}</p> : null}
         {!q.isLoading && !q.isError ? (
           topTab === "overview" ? (
-            <TopLevelOverview instances={instances} />
+            <TopLevelOverview instances={instances} onOpenProviderTab={(t) => setTopTab(t)} />
           ) : topTab === "jobs" ? (
             <TopLevelJobs instances={instances} />
           ) : (

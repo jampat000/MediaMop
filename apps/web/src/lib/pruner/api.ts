@@ -37,6 +37,15 @@ export type PrunerScopeSummary = {
   last_preview_error: string | null;
 };
 
+export type PrunerOverviewStatsOut = {
+  window_days: number;
+  items_removed: number;
+  items_skipped: number;
+  apply_runs: number;
+  preview_runs: number;
+  failed_applies: number;
+};
+
 export type PrunerServerInstance = {
   id: number;
   provider: string;
@@ -199,6 +208,14 @@ export async function fetchPrunerPreviewRuns(
     throw new Error(`Pruner preview runs: ${r.status}`);
   }
   return readJson<PrunerPreviewRunSummary[]>(r);
+}
+
+export async function fetchPrunerOverviewStats(): Promise<PrunerOverviewStatsOut> {
+  const r = await apiFetch("/api/v1/pruner/overview-stats");
+  if (!r.ok) {
+    throw new Error(`Pruner overview stats: ${r.status}`);
+  }
+  return readJson<PrunerOverviewStatsOut>(r);
 }
 
 export async function fetchPrunerInstances(): Promise<PrunerServerInstance[]> {

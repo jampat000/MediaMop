@@ -31,17 +31,38 @@ describe("SubberPage", () => {
     } as unknown as ReturnType<typeof authQueries.useMeQuery>);
     vi.spyOn(subberQueries, "useSubberOverviewQuery").mockReturnValue({
       data: {
-        total_tracked: 0,
-        found: 0,
-        missing: 0,
-        searching: 0,
+        window_days: 30,
+        subtitles_downloaded: 0,
+        still_missing: 0,
         skipped: 0,
-        searches_today: 0,
-        per_language: [],
+        tv_tracked: 0,
+        movies_tracked: 0,
+        tv_found: 0,
+        movies_found: 0,
+        tv_missing: 0,
+        movies_missing: 0,
+        searches_last_30_days: 0,
+        found_last_30_days: 0,
+        not_found_last_30_days: 0,
+        upgrades_last_30_days: 0,
       },
       isLoading: false,
       isError: false,
     } as unknown as ReturnType<typeof subberQueries.useSubberOverviewQuery>);
+    vi.spyOn(subberQueries, "useSubberProvidersQuery").mockReturnValue({
+      data: [
+        {
+          provider_key: "opensubtitles_org",
+          display_name: "OpenSubtitles.org",
+          enabled: true,
+          priority: 0,
+          requires_account: true,
+          has_credentials: false,
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof subberQueries.useSubberProvidersQuery>);
     vi.spyOn(subberQueries, "useSubberSettingsQuery").mockReturnValue({
       data: {
         enabled: false,

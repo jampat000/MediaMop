@@ -48,7 +48,7 @@ export function SubberPage() {
       </nav>
 
       <div className="mt-6 sm:mt-7" role="tabpanel">
-        {tab === "overview" ? <SubberOverviewTab /> : null}
+        {tab === "overview" ? <SubberOverviewTab onOpenTab={(t) => setTab(t)} /> : null}
         {tab === "tv" ? <SubberTvTab canOperate={Boolean(canOperate)} /> : null}
         {tab === "movies" ? <SubberMoviesTab canOperate={Boolean(canOperate)} /> : null}
         {tab === "settings" ? <SubberSettingsTab canOperate={Boolean(canOperate)} /> : null}

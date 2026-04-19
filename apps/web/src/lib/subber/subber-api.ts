@@ -1,4 +1,4 @@
-import { apiFetch, readJson } from "../api/client";
+import { apiErrorDetailToString, apiFetch, readJson } from "../api/client";
 import { fetchCsrfToken } from "../api/auth-api";
 
 export type SubberSubtitleLangState = {
@@ -30,7 +30,7 @@ export type SubberTvShow = {
   seasons: SubberTvSeason[];
 };
 
-export type SubberTvLibraryOut = { shows: SubberTvShow[] };
+export type SubberTvLibraryOut = { shows: SubberTvShow[]; total: number };
 
 export type SubberMovieRow = {
   file_path: string;
@@ -39,8 +39,9 @@ export type SubberMovieRow = {
   languages: SubberSubtitleLangState[];
 };
 
-export type SubberMoviesLibraryOut = { movies: SubberMovieRow[] };
+export type SubberMoviesLibraryOut = { movies: SubberMovieRow[]; total: number };
 
+/** Flat JSON from GET/PUT ``/api/v1/subber/settings``; field groups mirror ``subber_settings_schema_sections`` on the server and the Subber Settings tab UI. */
 export type SubberSettingsOut = {
   enabled: boolean;
   opensubtitles_username: string;
@@ -89,6 +90,7 @@ export type SubberSettingsOut = {
   fetcher_radarr_base_url_hint: string;
 };
 
+/** Partial update body; same flat keys as ``SubberSettingsOut`` where applicable. */
 export type SubberSettingsPutIn = {
   csrf_token: string;
   enabled?: boolean;
@@ -136,14 +138,20 @@ export type SubberSettingsPutIn = {
 export type SubberTestConnectionOut = { ok: boolean; message: string };
 
 export type SubberOverviewOut = {
-  total_tracked: number;
-  found: number;
-  missing: number;
-  searching: number;
+  window_days: number;
+  subtitles_downloaded: number;
+  still_missing: number;
   skipped: number;
-  searches_today: number;
-  upgraded_tracks: number;
-  per_language: { language: string; found: number; missing: number; searching: number; skipped: number; total: number }[];
+  tv_tracked: number;
+  movies_tracked: number;
+  tv_found: number;
+  movies_found: number;
+  tv_missing: number;
+  movies_missing: number;
+  searches_last_30_days: number;
+  found_last_30_days: number;
+  not_found_last_30_days: number;
+  upgrades_last_30_days: number;
 };
 
 export type SubberProviderOut = {
@@ -237,11 +245,15 @@ export async function fetchSubberLibraryTv(params: {
   status?: string;
   search?: string;
   language?: string;
+  limit?: number;
+  offset?: number;
 }): Promise<SubberTvLibraryOut> {
   const q = new URLSearchParams();
   if (params.status) q.set("status", params.status);
   if (params.search) q.set("search", params.search);
   if (params.language) q.set("language", params.language);
+  if (params.limit != null) q.set("limit", String(params.limit));
+  if (params.offset != null) q.set("offset", String(params.offset));
   const qs = q.toString();
   const r = await apiFetch(`/api/v1/subber/library/tv${qs ? `?${qs}` : ""}`);
   if (!r.ok) throw new Error(`Subber TV library: ${r.status}`);
@@ -252,11 +264,15 @@ export async function fetchSubberLibraryMovies(params: {
   status?: string;
   search?: string;
   language?: string;
+  limit?: number;
+  offset?: number;
 }): Promise<SubberMoviesLibraryOut> {
   const q = new URLSearchParams();
   if (params.status) q.set("status", params.status);
   if (params.search) q.set("search", params.search);
   if (params.language) q.set("language", params.language);
+  if (params.limit != null) q.set("limit", String(params.limit));
+  if (params.offset != null) q.set("offset", String(params.offset));
   const qs = q.toString();
   const r = await apiFetch(`/api/v1/subber/library/movies${qs ? `?${qs}` : ""}`);
   if (!r.ok) throw new Error(`Subber movies library: ${r.status}`);
@@ -303,7 +319,17 @@ export async function postSubberLibrarySyncTv(): Promise<{ status: string }> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ csrf_token: csrf }),
   });
-  if (!r.ok) throw new Error(`Subber TV library sync: ${r.status}`);
+  if (!r.ok) {
+    let msg = `TV library sync failed (${r.status}).`;
+    try {
+      const body = await readJson<{ detail?: unknown }>(r);
+      const d = apiErrorDetailToString(body.detail);
+      if (d) msg = r.status === 404 ? `${d} — restart the API from the current repo so this route is registered.` : d;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(msg);
+  }
   return readJson(r);
 }
 
@@ -314,7 +340,17 @@ export async function postSubberLibrarySyncMovies(): Promise<{ status: string }>
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ csrf_token: csrf }),
   });
-  if (!r.ok) throw new Error(`Subber movies library sync: ${r.status}`);
+  if (!r.ok) {
+    let msg = `Movies library sync failed (${r.status}).`;
+    try {
+      const body = await readJson<{ detail?: unknown }>(r);
+      const d = apiErrorDetailToString(body.detail);
+      if (d) msg = r.status === 404 ? `${d} — restart the API from the current repo so this route is registered.` : d;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(msg);
+  }
   return readJson(r);
 }
 

@@ -9,11 +9,13 @@ from mediamop.modules.fetcher.failed_imports_api import router as fetcher_failed
 from mediamop.modules.fetcher.fetcher_arr_operator_settings_api import router as fetcher_arr_operator_settings_router
 from mediamop.modules.fetcher.fetcher_arr_search_api import router as fetcher_arr_search_router
 from mediamop.modules.fetcher.fetcher_jobs_api import router as fetcher_jobs_router
+from mediamop.modules.fetcher.fetcher_overview_stats_api import router as fetcher_overview_stats_router
 from mediamop.modules.fetcher.schemas import FetcherOperationalOverviewOut
 from mediamop.modules.fetcher.service import build_fetcher_operational_overview
 from mediamop.platform.auth.deps_auth import UserPublicDep
 
 router = APIRouter(tags=["fetcher"])
+router.include_router(fetcher_overview_stats_router)
 router.include_router(fetcher_jobs_router)
 router.include_router(fetcher_arr_search_router)
 router.include_router(fetcher_arr_operator_settings_router)

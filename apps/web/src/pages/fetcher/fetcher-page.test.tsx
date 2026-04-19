@@ -2,7 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as fetcherOverviewStatsApi from "../../lib/fetcher/overview-stats-api";
 import { qk } from "../../lib/auth/queries";
 import type { UserPublic } from "../../lib/api/types";
 import type {
@@ -17,6 +18,7 @@ import {
 } from "../../lib/fetcher/failed-imports/queries";
 import type { FetcherFailedImportCleanupPolicyOut } from "../../lib/fetcher/failed-imports/types";
 import { fetcherArrOperatorSettingsQueryKey } from "../../lib/fetcher/arr-operator-settings/queries";
+import { fetcherOverviewStatsQueryKey } from "../../lib/fetcher/queries";
 import type {
   FetcherArrConnectionPanel,
   FetcherArrOperatorSettingsOut,
@@ -137,6 +139,15 @@ function renderFetcherPage() {
   qc.setQueryData(failedImportCleanupPolicyQueryKey, minimalCleanupPolicy);
   qc.setQueryData(fetcherJobsInspectionQueryKey("terminal"), { jobs: [], default_terminal_only: true });
   qc.setQueryData(fetcherArrOperatorSettingsQueryKey, minimalArrOperatorSettings);
+  qc.setQueryData(fetcherOverviewStatsQueryKey, {
+    window_days: 30,
+    sonarr_missing_searches: 0,
+    sonarr_upgrade_searches: 0,
+    radarr_missing_searches: 0,
+    radarr_upgrade_searches: 0,
+    total_searches: 0,
+    failed_jobs: 0,
+  });
   return { qc, ...render(wrap(<FetcherPage />, qc)) };
 }
 
@@ -145,6 +156,22 @@ function overviewSectionOrders(panel: HTMLElement): string[] {
 }
 
 describe("FetcherPage (tabbed IA)", () => {
+  beforeEach(() => {
+    vi.spyOn(fetcherOverviewStatsApi, "fetchFetcherOverviewStats").mockResolvedValue({
+      window_days: 30,
+      sonarr_missing_searches: 0,
+      sonarr_upgrade_searches: 0,
+      radarr_missing_searches: 0,
+      radarr_upgrade_searches: 0,
+      total_searches: 0,
+      failed_jobs: 0,
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("defaults to Overview with the four-section landing path, not the failed-import workspace", () => {
     renderFetcherPage();
     expect(screen.getByRole("tab", { name: "Overview" })).toHaveAttribute("aria-selected", "true");
@@ -169,15 +196,15 @@ describe("FetcherPage (tabbed IA)", () => {
     expect(screen.queryByRole("heading", { name: "Connections & optional service link" })).not.toBeInTheDocument();
   });
 
-  it("orders At a glance inner cards: Connections, Sonarr, Radarr, Failed imports", () => {
+  it("orders At a glance inner cards: Last 30 days, Connections, Sonarr, Radarr, Failed imports", () => {
     renderFetcherPage();
     const glance = screen.getByTestId("fetcher-overview-at-a-glance");
     const order = Array.from(glance.querySelectorAll("[data-at-glance-order]")).map(
       (el) => el.getAttribute("data-at-glance-order") ?? "",
     );
-    expect(order).toEqual(["1", "2", "3", "4"]);
+    expect(order).toEqual(["1", "2", "3", "4", "5"]);
     const h3 = within(glance).getAllByRole("heading", { level: 3 });
-    expect(h3.map((h) => h.textContent)).toEqual(["Connections", "Sonarr", "Radarr", "Failed imports"]);
+    expect(h3.map((h) => h.textContent)).toEqual(["Last 30 days", "Connections", "Sonarr", "Radarr", "Failed imports"]);
   });
 
   it("summarizes At a glance failed imports from saved cleanup policy (not queue attention)", () => {

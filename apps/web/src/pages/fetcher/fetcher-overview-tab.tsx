@@ -7,6 +7,7 @@ import {
   useFailedImportCleanupPolicyQuery,
   useFailedImportQueueAttentionSnapshotQuery,
 } from "../../lib/fetcher/failed-imports/queries";
+import { useFetcherOverviewStatsQuery } from "../../lib/fetcher/queries";
 import type {
   FailedImportCleanupPolicyAxis,
   FetcherFailedImportCleanupPolicyOut,
@@ -39,7 +40,7 @@ function AtGlanceCard({
 }: {
   title: string;
   body: ReactNode;
-  glanceOrder: "1" | "2" | "3" | "4";
+  glanceOrder: "1" | "2" | "3" | "4" | "5";
 }) {
   return (
     <div
@@ -98,6 +99,42 @@ function FetcherOverviewAtAGlance({
   arr: FetcherArrOperatorSettingsOut;
   policy: FetcherFailedImportCleanupPolicyOut;
 }) {
+  const statsQ = useFetcherOverviewStatsQuery();
+
+  const last30Body =
+    statsQ.isPending ? (
+      <p className="text-[var(--mm-text3)]">Loading…</p>
+    ) : statsQ.isError ? (
+      <p className="text-red-400">{(statsQ.error as Error).message}</p>
+    ) : statsQ.data ? (
+      <div className="space-y-1.5">
+        <p>
+          <span className="text-[var(--mm-text3)]">Sonarr searches:</span>{" "}
+          <span className="font-medium text-[var(--mm-text1)]">
+            {statsQ.data.sonarr_missing_searches} missing · {statsQ.data.sonarr_upgrade_searches} upgrades
+          </span>
+        </p>
+        <p>
+          <span className="text-[var(--mm-text3)]">Radarr searches:</span>{" "}
+          <span className="font-medium text-[var(--mm-text1)]">
+            {statsQ.data.radarr_missing_searches} missing · {statsQ.data.radarr_upgrade_searches} upgrades
+          </span>
+        </p>
+        <p>
+          <span className="text-[var(--mm-text3)]">Total:</span>{" "}
+          <span className="font-medium text-[var(--mm-text1)]">{statsQ.data.total_searches} searches</span>
+        </p>
+        <p>
+          <span className="text-[var(--mm-text3)]">Failed jobs:</span>{" "}
+          <span className="font-medium text-[var(--mm-text1)]">
+            {statsQ.data.failed_jobs === 0 ? "None" : String(statsQ.data.failed_jobs)}
+          </span>
+        </p>
+      </div>
+    ) : (
+      <p className="text-[var(--mm-text3)]">—</p>
+    );
+
   const sonarrBody = (
     <div className="space-y-1.5">
       <p>
@@ -172,11 +209,12 @@ function FetcherOverviewAtAGlance({
       <h2 id="fetcher-overview-at-a-glance-heading" className="mm-card__title text-lg">
         At a glance
       </h2>
-      <div className="mm-card__body mt-5 grid gap-4 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-5 xl:grid-cols-4 xl:gap-x-5 xl:gap-y-5">
-        <AtGlanceCard glanceOrder="1" title="Connections" body={connBody} />
-        <AtGlanceCard glanceOrder="2" title={FETCHER_CONNECTION_PANEL_SONARR} body={sonarrBody} />
-        <AtGlanceCard glanceOrder="3" title={FETCHER_CONNECTION_PANEL_RADARR} body={radarrBody} />
-        <AtGlanceCard glanceOrder="4" title="Failed imports" body={fiBody} />
+      <div className="mm-card__body mt-5 grid gap-4 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-5 xl:grid-cols-5 xl:gap-x-5 xl:gap-y-5">
+        <AtGlanceCard glanceOrder="1" title="Last 30 days" body={last30Body} />
+        <AtGlanceCard glanceOrder="2" title="Connections" body={connBody} />
+        <AtGlanceCard glanceOrder="3" title={FETCHER_CONNECTION_PANEL_SONARR} body={sonarrBody} />
+        <AtGlanceCard glanceOrder="4" title={FETCHER_CONNECTION_PANEL_RADARR} body={radarrBody} />
+        <AtGlanceCard glanceOrder="5" title="Failed imports" body={fiBody} />
       </div>
     </section>
   );

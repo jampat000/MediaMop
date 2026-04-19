@@ -1,10 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchPrunerInstance, fetchPrunerInstances, fetchPrunerJobsInspection, fetchPrunerStudios } from "./api";
+import {
+  fetchPrunerInstance,
+  fetchPrunerInstances,
+  fetchPrunerJobsInspection,
+  fetchPrunerOverviewStats,
+  fetchPrunerStudios,
+} from "./api";
 
 export function usePrunerInstancesQuery() {
   return useQuery({
     queryKey: ["pruner", "instances"],
     queryFn: fetchPrunerInstances,
+  });
+}
+
+export function usePrunerOverviewStatsQuery() {
+  return useQuery({
+    queryKey: ["pruner", "overview-stats"],
+    queryFn: fetchPrunerOverviewStats,
+    staleTime: 30_000,
   });
 }
 

@@ -55,19 +55,8 @@ function remuxDefaultsGlanceBody(rem: RefinerRemuxRulesScopeSettings): ReactNode
   );
 }
 
-function buildNeedsAttention(args: {
-  maxConcurrentFiles: number;
-  failedCount: number;
-  watchedSet: boolean;
-}): { text: string; target?: RefinerOverviewOpenTab }[] {
+function buildNeedsAttention(args: { failedCount: number; watchedSet: boolean }): { text: string; target?: RefinerOverviewOpenTab }[] {
   const items: { text: string; target?: RefinerOverviewOpenTab }[] = [];
-  items.push({
-    text:
-      args.maxConcurrentFiles === 1
-        ? "Refiner currently processes 1 file at a time."
-        : `Refiner currently processes up to ${args.maxConcurrentFiles} files at a time.`,
-    target: "libraries",
-  });
   if (args.failedCount > 0) {
     items.push({
       text:
@@ -357,7 +346,6 @@ export function RefinerOverviewTab({
     );
 
   const attentionItems = buildNeedsAttention({
-    maxConcurrentFiles: operatorSettings.data.max_concurrent_files,
     failedCount: failedReady ? failedN : 0,
     watchedSet,
   });

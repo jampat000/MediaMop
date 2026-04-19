@@ -7,6 +7,25 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from mediamop.modules.subber.subber_settings_schema_sections import (
+    SubberSettingsAdaptiveOut,
+    SubberSettingsAdaptivePut,
+    SubberSettingsCoreOut,
+    SubberSettingsCorePut,
+    SubberSettingsMoviesScheduleOut,
+    SubberSettingsMoviesSchedulePut,
+    SubberSettingsOpensubtitlesOut,
+    SubberSettingsOpensubtitlesPut,
+    SubberSettingsRadarrOut,
+    SubberSettingsRadarrPut,
+    SubberSettingsSonarrOut,
+    SubberSettingsSonarrPut,
+    SubberSettingsTvScheduleOut,
+    SubberSettingsTvSchedulePut,
+    SubberSettingsUpgradeOut,
+    SubberSettingsUpgradePut,
+)
+
 
 class SubberJobsInspectionRow(BaseModel):
     id: int
@@ -56,6 +75,7 @@ class SubberTvShowOut(BaseModel):
 
 class SubberTvLibraryOut(BaseModel):
     shows: list[SubberTvShowOut]
+    total: int = Field(0, description="Total episodes matching filters (before limit/offset).")
 
 
 class SubberMovieRowOut(BaseModel):
@@ -67,97 +87,33 @@ class SubberMovieRowOut(BaseModel):
 
 class SubberMoviesLibraryOut(BaseModel):
     movies: list[SubberMovieRowOut]
+    total: int = Field(0, description="Total movies matching filters (before limit/offset).")
 
 
-class SubberSettingsOut(BaseModel):
-    enabled: bool
-    opensubtitles_username: str
-    opensubtitles_password_set: bool
-    opensubtitles_api_key_set: bool
-    sonarr_base_url: str
-    sonarr_api_key_set: bool
-    radarr_base_url: str
-    radarr_api_key_set: bool
-    language_preferences: list[str]
-    subtitle_folder: str
-    tv_schedule_enabled: bool
-    tv_schedule_interval_seconds: int
-    tv_schedule_hours_limited: bool
-    tv_schedule_days: str
-    tv_schedule_start: str
-    tv_schedule_end: str
-    movies_schedule_enabled: bool
-    movies_schedule_interval_seconds: int
-    movies_schedule_hours_limited: bool
-    movies_schedule_days: str
-    movies_schedule_start: str
-    movies_schedule_end: str
-    tv_last_scheduled_scan_enqueued_at: datetime | None = None
-    movies_last_scheduled_scan_enqueued_at: datetime | None = None
-    adaptive_searching_enabled: bool = True
-    adaptive_searching_delay_hours: int = 168
-    adaptive_searching_max_attempts: int = 3
-    permanent_skip_after_attempts: int = 10
-    exclude_hearing_impaired: bool = False
-    upgrade_enabled: bool = False
-    upgrade_schedule_enabled: bool = False
-    upgrade_schedule_interval_seconds: int = 604800
-    upgrade_schedule_hours_limited: bool = False
-    upgrade_schedule_days: str = ""
-    upgrade_schedule_start: str = "00:00"
-    upgrade_schedule_end: str = "23:59"
-    upgrade_last_scheduled_at: datetime | None = None
-    sonarr_path_mapping_enabled: bool = False
-    sonarr_path_sonarr: str = ""
-    sonarr_path_subber: str = ""
-    radarr_path_mapping_enabled: bool = False
-    radarr_path_radarr: str = ""
-    radarr_path_subber: str = ""
-    fetcher_sonarr_base_url_hint: str = ""
-    fetcher_radarr_base_url_hint: str = ""
+class SubberSettingsOut(
+    SubberSettingsCoreOut,
+    SubberSettingsOpensubtitlesOut,
+    SubberSettingsSonarrOut,
+    SubberSettingsRadarrOut,
+    SubberSettingsTvScheduleOut,
+    SubberSettingsMoviesScheduleOut,
+    SubberSettingsAdaptiveOut,
+    SubberSettingsUpgradeOut,
+):
+    """Aggregated Subber settings (flat JSON for ``GET /api/v1/subber/settings``)."""
 
 
-class SubberSettingsPutIn(BaseModel):
-    enabled: bool | None = None
-    opensubtitles_username: str | None = None
-    opensubtitles_password: str | None = None
-    opensubtitles_api_key: str | None = None
-    sonarr_base_url: str | None = None
-    sonarr_api_key: str | None = None
-    radarr_base_url: str | None = None
-    radarr_api_key: str | None = None
-    language_preferences: list[str] | None = None
-    subtitle_folder: str | None = None
-    tv_schedule_enabled: bool | None = None
-    tv_schedule_interval_seconds: int | None = Field(None, ge=60, le=7 * 24 * 3600)
-    tv_schedule_hours_limited: bool | None = None
-    tv_schedule_days: str | None = None
-    tv_schedule_start: str | None = None
-    tv_schedule_end: str | None = None
-    movies_schedule_enabled: bool | None = None
-    movies_schedule_interval_seconds: int | None = Field(None, ge=60, le=7 * 24 * 3600)
-    movies_schedule_hours_limited: bool | None = None
-    movies_schedule_days: str | None = None
-    movies_schedule_start: str | None = None
-    movies_schedule_end: str | None = None
-    adaptive_searching_enabled: bool | None = None
-    adaptive_searching_delay_hours: int | None = Field(None, ge=1, le=24 * 365)
-    adaptive_searching_max_attempts: int | None = Field(None, ge=1, le=1000)
-    permanent_skip_after_attempts: int | None = Field(None, ge=1, le=100_000)
-    exclude_hearing_impaired: bool | None = None
-    upgrade_enabled: bool | None = None
-    upgrade_schedule_enabled: bool | None = None
-    upgrade_schedule_interval_seconds: int | None = Field(None, ge=60, le=365 * 24 * 3600)
-    upgrade_schedule_hours_limited: bool | None = None
-    upgrade_schedule_days: str | None = None
-    upgrade_schedule_start: str | None = None
-    upgrade_schedule_end: str | None = None
-    sonarr_path_mapping_enabled: bool | None = None
-    sonarr_path_sonarr: str | None = None
-    sonarr_path_subber: str | None = None
-    radarr_path_mapping_enabled: bool | None = None
-    radarr_path_radarr: str | None = None
-    radarr_path_subber: str | None = None
+class SubberSettingsPutIn(
+    SubberSettingsCorePut,
+    SubberSettingsOpensubtitlesPut,
+    SubberSettingsSonarrPut,
+    SubberSettingsRadarrPut,
+    SubberSettingsTvSchedulePut,
+    SubberSettingsMoviesSchedulePut,
+    SubberSettingsAdaptivePut,
+    SubberSettingsUpgradePut,
+):
+    """Partial update body for ``PUT /api/v1/subber/settings`` (flat JSON)."""
 
 
 class SubberTestConnectionOut(BaseModel):
@@ -166,14 +122,20 @@ class SubberTestConnectionOut(BaseModel):
 
 
 class SubberOverviewOut(BaseModel):
-    total_tracked: int
-    found: int
-    missing: int
-    searching: int
-    skipped: int
-    searches_today: int
-    upgraded_tracks: int = 0
-    per_language: list[dict[str, int | str]]
+    window_days: int = 30
+    subtitles_downloaded: int = Field(ge=0, description="Rows in subber_subtitle_state with status=found.")
+    still_missing: int = Field(ge=0)
+    skipped: int = Field(ge=0)
+    tv_tracked: int = Field(ge=0, description="Rows with media_scope=tv.")
+    movies_tracked: int = Field(ge=0, description="Rows with media_scope=movies.")
+    tv_found: int = Field(ge=0)
+    movies_found: int = Field(ge=0)
+    tv_missing: int = Field(ge=0)
+    movies_missing: int = Field(ge=0)
+    searches_last_30_days: int = Field(ge=0)
+    found_last_30_days: int = Field(ge=0, description="subtitle_search_completed with detail ok=true.")
+    not_found_last_30_days: int = Field(ge=0, description="subtitle_search_completed with detail ok=false.")
+    upgrades_last_30_days: int = Field(ge=0, description="Sum of upgraded from subtitle_upgrade_completed detail.")
 
 
 class SubberProviderOut(BaseModel):
