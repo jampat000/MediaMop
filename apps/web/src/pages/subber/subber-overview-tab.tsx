@@ -329,7 +329,7 @@ export function SubberOverviewTab({
           At a glance
         </h2>
         <div className="mm-card__body mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-5 lg:grid-cols-12 lg:gap-x-5 lg:gap-y-6">
-          <AtGlanceCard glanceOrder="1" title="Last 30 days" emphasis body={last30Body} gridClassName="lg:col-span-5" />
+          <AtGlanceCard glanceOrder="1" title="Last 30 days" body={last30Body} gridClassName="lg:col-span-5" />
           <AtGlanceCard glanceOrder="2" title="OpenSubtitles" body={openSubtitlesBody} gridClassName="lg:col-span-3" />
           <AtGlanceCard glanceOrder="3" title="Sonarr" body={sonarrBody} gridClassName="lg:col-span-2" />
           <AtGlanceCard glanceOrder="4" title="Radarr" body={radarrBody} gridClassName="lg:col-span-2" />
