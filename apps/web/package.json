@@ -4,10 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node ./scripts/run-dev-stack.mjs",
+    "dev": "npm run dev:stop-api && npm run dev:stop-web && node ./scripts/run-dev-stack.mjs",
     "dev:stop-api": "node ../../scripts/stop-dev-api-port.mjs",
     "dev:stop-web": "node ../../scripts/stop-dev-web-port.mjs",
-    "dev:fresh": "npm run dev:stop-api && npm run dev:stop-web && node ./scripts/run-dev-stack.mjs",
+    "dev:fresh": "npm run dev",
+    "dev:quick": "node ./scripts/run-dev-stack.mjs",
     "dev:web": "node ./node_modules/vite/bin/vite.js",
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "preview": "vite preview",

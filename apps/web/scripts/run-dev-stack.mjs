@@ -5,8 +5,9 @@
  * (which produced HTTP 500 / "Cannot reach the API" on every dev refresh).
  *
  * If something (e.g. a Cursor terminal) already left uvicorn listening on the dev API port
- * with a healthy ``/health``, we **reuse** it and only start Vite — otherwise ``npm run dev``
- * spawns a second API, bind fails, and the web UI never comes up on 8782.
+ * with a healthy ``/health``, we **reuse** it and only start Vite — otherwise a second API
+ * would bind-fail and the web UI would not come up. (``npm run dev`` in ``package.json`` stops
+ * the default API/web ports first so a leftover process is not reused by accident.)
  * Set ``MEDIAMOP_DEV_STACK_ALWAYS_SPAWN_API=1`` to force spawning the API child anyway.
  *
  * If ``GET /api/v1/subber/library/sync/movies`` returns **404** while ``/health`` works, the
@@ -17,6 +18,10 @@
  * If the **web** port from ``dev-ports.json`` is busy (leftover Vite), the next free port is used
  * and ``MEDIAMOP_DEV_WEB_PORT`` is set for Vite (see ``vite.config.ts``). Run ``npm run dev:stop-web``
  * to free the default port, or use the URL printed in the log.
+ *
+ * The API validates browser ``Origin``/``Referer`` against ``MEDIAMOP_TRUSTED_BROWSER_ORIGINS`` or
+ * ``MEDIAMOP_CORS_ORIGINS``. ``localhost`` and ``127.0.0.1`` are different origins, so this script
+ * merges both into the spawned API env to avoid ``403 Origin not allowed`` on login.
  */
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -46,6 +51,46 @@ function apiConnectTarget(apiHost, apiPort) {
   const host =
     apiHost === "0.0.0.0" || apiHost === "::" || apiHost === "[::]" ? "127.0.0.1" : apiHost;
   return { hostname: host, port: apiPort };
+}
+
+/** ``http://127.0.0.1:<port>`` and ``http://localhost:<port>`` (browsers treat these as distinct). */
+function devWebBrowserOrigins(webPort) {
+  return [`http://127.0.0.1:${webPort}`, `http://localhost:${webPort}`];
+}
+
+function mergeCsvUrlEnv(existingCsv, additions) {
+  const seen = new Set();
+  const out = [];
+  const push = (raw) => {
+    const s = String(raw || "").trim();
+    if (!s || seen.has(s)) {
+      return;
+    }
+    seen.add(s);
+    out.push(s);
+  };
+  for (const part of String(existingCsv || "").split(",")) {
+    push(part);
+  }
+  for (const a of additions) {
+    push(a);
+  }
+  return out.join(",");
+}
+
+/**
+ * Ensures the dev UI origin (both hostname spellings) is trusted and allowed by CORS for the
+ * spawned API child process.
+ */
+function buildApiDevOriginEnvPatch(webPort) {
+  const extra = devWebBrowserOrigins(webPort);
+  const cors = mergeCsvUrlEnv(process.env.MEDIAMOP_CORS_ORIGINS, extra);
+  const patch = { MEDIAMOP_CORS_ORIGINS: cors };
+  const trustedRaw = (process.env.MEDIAMOP_TRUSTED_BROWSER_ORIGINS || "").trim();
+  if (trustedRaw.length > 0) {
+    patch.MEDIAMOP_TRUSTED_BROWSER_ORIGINS = mergeCsvUrlEnv(process.env.MEDIAMOP_TRUSTED_BROWSER_ORIGINS, extra);
+  }
+  return patch;
 }
 
 /** One-shot probe: same success rule as the API wait loop (2xx–4xx on ``/health``). */
@@ -356,6 +401,9 @@ async function main() {
     );
   }
 
+  const chosenWebPort = await resolveDevWebPort(webHost, configuredWebPort);
+  const apiOriginEnvPatch = buildApiDevOriginEnvPatch(chosenWebPort);
+
   const canReuse = !forceSpawn && healthOk && subberRoutesOk;
 
   if (canReuse) {
@@ -369,7 +417,7 @@ async function main() {
     api = spawn(node, [apiScript], {
       cwd: webDir,
       stdio: "inherit",
-      env: { ...process.env, MEDIAMOP_DEV_API_PORT: String(bindPort) },
+      env: { ...process.env, ...apiOriginEnvPatch, MEDIAMOP_DEV_API_PORT: String(bindPort) },
     });
 
     await waitForApiHttpReady(api, { apiHost, apiPort: bindPort, timeoutMs: waitMs });
@@ -380,7 +428,6 @@ async function main() {
       ? { ...process.env, MEDIAMOP_DEV_STACK_API_PROXY_TARGET: viteProxyOverride.trim() }
       : { ...process.env };
 
-  const chosenWebPort = await resolveDevWebPort(webHost, configuredWebPort);
   const viteEnvWithPort = { ...viteEnv, MEDIAMOP_DEV_WEB_PORT: String(chosenWebPort) };
 
   web = spawn(node, [viteEntry], {
