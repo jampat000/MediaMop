@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
 import { PageLoading } from "../../components/shared/page-loading";
+import { OverviewAtGlanceCard } from "../../components/overview/overview-at-glance-card";
 import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
 import { useFetcherArrOperatorSettingsQuery } from "../../lib/fetcher/arr-operator-settings/queries";
 import type { FetcherArrOperatorSettingsOut } from "../../lib/fetcher/arr-operator-settings/types";
@@ -28,29 +28,6 @@ function sonarrTvSearchesOn(data: FetcherArrOperatorSettingsOut): boolean {
 
 function radarrMovieSearchesOn(data: FetcherArrOperatorSettingsOut): boolean {
   return data.radarr_missing.enabled || data.radarr_upgrade.enabled;
-}
-
-function AtGlanceCard({
-  title,
-  body,
-  glanceOrder,
-  footer,
-}: {
-  title: string;
-  body: ReactNode;
-  glanceOrder: "1" | "2" | "3";
-  footer?: ReactNode;
-}) {
-  return (
-    <div
-      className="flex h-full min-h-0 flex-col gap-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 text-sm"
-      data-at-glance-order={glanceOrder}
-    >
-      <h3 className="text-sm font-semibold text-[var(--mm-text1)]">{title}</h3>
-      <div className="min-h-0 flex-1 text-[var(--mm-text2)]">{body}</div>
-      {footer ? <div className="mt-auto shrink-0 border-t border-[var(--mm-border)] pt-4">{footer}</div> : null}
-    </div>
-  );
 }
 
 const CLEANUP_OPTION_ROWS: { key: keyof FailedImportCleanupPolicyAxis; label: string }[] = [
@@ -235,8 +212,8 @@ function FetcherOverviewAtAGlance({
         At a glance
       </h2>
       <div className="mm-card__body mt-5 grid grid-cols-1 gap-4 sm:gap-x-5 sm:gap-y-5 lg:grid-cols-3 lg:gap-x-5 lg:gap-y-5">
-        <AtGlanceCard glanceOrder="1" title="Last 30 days" body={last30Body} />
-        <AtGlanceCard
+        <OverviewAtGlanceCard glanceOrder="1" title="Last 30 days" body={last30Body} />
+        <OverviewAtGlanceCard
           glanceOrder="2"
           title="Connections"
           body={connBody}
@@ -252,7 +229,7 @@ function FetcherOverviewAtAGlance({
             ) : undefined
           }
         />
-        <AtGlanceCard
+        <OverviewAtGlanceCard
           glanceOrder="3"
           title="Failed imports"
           body={fiBody}
@@ -357,7 +334,7 @@ function FetcherOverviewNeedsAttention({
       <h2 id="fetcher-overview-needs-attention-heading" className="mm-card__title text-lg">
         Needs attention
       </h2>
-      <div className="mm-card__body mt-5 text-sm text-[var(--mm-text2)]">
+      <div className="mm-card__body mt-5">
         {empty ? (
           <p>No action needed right now</p>
         ) : (
@@ -404,7 +381,7 @@ function FetcherOverviewNextSteps({ onOpenSection }: { onOpenSection?: (target: 
       <h2 id="fetcher-overview-next-steps-heading" className="mm-card__title text-lg">
         Next steps
       </h2>
-      <div className="mm-card__body mt-5 space-y-5 text-sm text-[var(--mm-text2)]">
+      <div className="mm-card__body mt-5 space-y-5">
         <p className="leading-relaxed">{NEXT_STEPS_BODY}</p>
         {onOpenSection ? (
           <div className="flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">

@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
 import { PageLoading } from "../../components/shared/page-loading";
+import { OverviewAtGlanceCard } from "../../components/overview/overview-at-glance-card";
 import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
 import {
   useSubberOverviewQuery,
@@ -13,36 +13,6 @@ function formatWhen(iso: string | null | undefined): string {
   const d = new Date(iso);
   if (Number.isNaN(d.valueOf())) return "—";
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(d);
-}
-
-function AtGlanceCard({
-  title,
-  body,
-  glanceOrder,
-  emphasis,
-  gridClassName,
-}: {
-  title: string;
-  body: ReactNode;
-  glanceOrder: "1" | "2" | "3" | "4" | "5";
-  emphasis?: boolean;
-  gridClassName?: string;
-}) {
-  return (
-    <div
-      className={[
-        "flex h-full min-h-0 flex-col gap-3.5 rounded-md border border-[var(--mm-border)] text-sm lg:gap-4 lg:p-6",
-        emphasis
-          ? "bg-[var(--mm-card-bg)] p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
-          : "bg-[var(--mm-card-bg)]/70 p-5",
-        gridClassName ?? "",
-      ].join(" ")}
-      data-at-glance-order={glanceOrder}
-    >
-      <h3 className="text-sm font-semibold text-[var(--mm-text1)]">{title}</h3>
-      <div className="min-h-0 flex-1 text-[var(--mm-text2)]">{body}</div>
-    </div>
-  );
 }
 
 type AttentionTarget = "settings" | "tv" | "movies";
@@ -63,7 +33,7 @@ function SubberOverviewNextSteps({ onOpenTab }: { onOpenTab?: (tab: SubberOvervi
       <h2 id="subber-overview-next-steps-heading" className="mm-card__title text-lg">
         Next steps
       </h2>
-      <div className="mm-card__body mt-5 space-y-5 text-sm text-[var(--mm-text2)]">
+      <div className="mm-card__body mt-5 space-y-5">
         <p className="leading-relaxed">{SUBBER_NEXT_STEPS_BODY}</p>
         {onOpenTab ? (
           <div className="flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">
@@ -306,7 +276,7 @@ export function SubberOverviewTab({
       <p className="mt-4 text-[0.7rem] leading-snug text-[var(--mm-text3)]">
         {st.upgrades_last_30_days === 1 ? "1 upgrade" : `${st.upgrades_last_30_days} upgrades`} downloaded · last 30 days
       </p>
-      <div className="mt-3 space-y-1 border-t border-[var(--mm-border)] pt-3 text-sm text-[var(--mm-text2)]">
+      <div className="mt-3 space-y-1 border-t border-[var(--mm-border)] pt-3 text-[var(--mm-text2)]">
         <p>
           <span className="font-medium text-[var(--mm-text1)]">TV:</span> {st.tv_tracked} tracked · {st.tv_found} found · {st.tv_missing} missing
         </p>
@@ -329,10 +299,10 @@ export function SubberOverviewTab({
           At a glance
         </h2>
         <div className="mm-card__body mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-5 lg:grid-cols-12 lg:gap-x-5 lg:gap-y-6">
-          <AtGlanceCard glanceOrder="1" title="Last 30 days" body={last30Body} gridClassName="lg:col-span-5" />
-          <AtGlanceCard glanceOrder="2" title="OpenSubtitles" body={openSubtitlesBody} gridClassName="lg:col-span-3" />
-          <AtGlanceCard glanceOrder="3" title="Sonarr" body={sonarrBody} gridClassName="lg:col-span-2" />
-          <AtGlanceCard glanceOrder="4" title="Radarr" body={radarrBody} gridClassName="lg:col-span-2" />
+          <OverviewAtGlanceCard glanceOrder="1" title="Last 30 days" body={last30Body} gridClassName="lg:col-span-5" />
+          <OverviewAtGlanceCard glanceOrder="2" title="OpenSubtitles" body={openSubtitlesBody} gridClassName="lg:col-span-3" />
+          <OverviewAtGlanceCard glanceOrder="3" title="Sonarr" body={sonarrBody} gridClassName="lg:col-span-2" />
+          <OverviewAtGlanceCard glanceOrder="4" title="Radarr" body={radarrBody} gridClassName="lg:col-span-2" />
         </div>
       </section>
 
@@ -345,7 +315,7 @@ export function SubberOverviewTab({
         <h2 id="subber-overview-needs-attention-heading" className="mm-card__title text-lg">
           Needs attention
         </h2>
-        <div className="mm-card__body mt-5 text-sm text-[var(--mm-text2)]">
+        <div className="mm-card__body mt-5">
           {emptyAttention ? (
             <p className="text-[var(--mm-text1)]">Everything looks good.</p>
           ) : (

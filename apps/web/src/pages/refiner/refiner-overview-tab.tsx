@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { OverviewAtGlanceCard } from "../../components/overview/overview-at-glance-card";
 import { PageLoading } from "../../components/shared/page-loading";
 import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
 import { useRefinerJobsInspectionQuery } from "../../lib/refiner/jobs-inspection/queries";
@@ -113,7 +114,7 @@ function RefinerOverviewNeedsAttention({
       <h2 id="refiner-overview-needs-attention-heading" className="mm-card__title text-lg">
         Needs attention
       </h2>
-      <div className="mm-card__body mt-5 text-sm text-[var(--mm-text2)]">
+      <div className="mm-card__body mt-5">
         {empty ? (
           <p>Nothing stands out right now.</p>
         ) : (
@@ -361,18 +362,18 @@ export function RefinerOverviewTab({
           At a glance
         </h2>
         <div className="mm-card__body mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-5 lg:grid-cols-12 lg:gap-x-5 lg:gap-y-6">
-          <AtGlanceCard
-            order="1"
+          <OverviewAtGlanceCard
+            glanceOrder="1"
             title="Last 30 days"
             emphasis
             body={statsBody}
             data-testid="refiner-overview-last-30-days"
             gridClassName="lg:col-span-4"
           />
-          <AtGlanceCard order="2" title="Libraries" body={foldersBody} gridClassName="lg:col-span-4" />
-          <AtGlanceCard order="3" title="Job queue" body={queueBody} gridClassName="lg:col-span-4" />
-          <AtGlanceCard
-            order="4"
+          <OverviewAtGlanceCard glanceOrder="2" title="Libraries" body={foldersBody} gridClassName="lg:col-span-4" />
+          <OverviewAtGlanceCard glanceOrder="3" title="Job queue" body={queueBody} gridClassName="lg:col-span-4" />
+          <OverviewAtGlanceCard
+            glanceOrder="4"
             title="Throughput & safety"
             body={workerBody}
             gridClassName="sm:col-span-2 lg:col-span-6"
@@ -385,8 +386,8 @@ export function RefinerOverviewTab({
               ) : undefined
             }
           />
-          <AtGlanceCard
-            order="5"
+          <OverviewAtGlanceCard
+            glanceOrder="5"
             title="Audio & subtitles"
             body={remuxBody}
             gridClassName="sm:col-span-2 lg:col-span-6"
@@ -417,8 +418,8 @@ export function RefinerOverviewTab({
         <h2 id="refiner-overview-next-heading" className="mm-card__title text-lg">
           Next steps
         </h2>
-        <div className="mm-card__body mt-5 space-y-3 text-sm text-[var(--mm-text2)]">
-          <p>
+        <div className="mm-card__body mt-5 space-y-5">
+          <p className="leading-relaxed">
             Finished work is summarized on <strong className="text-[var(--mm-text1)]">Activity</strong>. Use{" "}
             <strong className="text-[var(--mm-text1)]">Libraries</strong> for folders and limits,{" "}
             <strong className="text-[var(--mm-text1)]">Schedules</strong> for timed scans,{" "}
@@ -426,7 +427,7 @@ export function RefinerOverviewTab({
             <strong className="text-[var(--mm-text1)]">Jobs</strong> for the queue on this server.
           </p>
           {onOpenTab ? (
-            <div className="flex flex-wrap gap-2.5 pt-1">
+            <div className="flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">
               <button type="button" className={mmActionButtonClass({ variant: "secondary" })} onClick={() => onOpenTab("libraries")}>
                 Libraries
               </button>
@@ -447,55 +448,6 @@ export function RefinerOverviewTab({
           ) : null}
         </div>
       </section>
-    </div>
-  );
-}
-
-function AtGlanceCard({
-  title,
-  body,
-  order,
-  emphasis,
-  footer,
-  gridClassName,
-  size = "default",
-  "data-testid": dataTestId,
-}: {
-  title: string;
-  body: ReactNode;
-  order: "1" | "2" | "3" | "4" | "5";
-  emphasis?: boolean;
-  footer?: ReactNode;
-  /** Tailwind grid column classes (e.g. `lg:col-span-6`). */
-  gridClassName?: string;
-  /** `large` — more padding and type rhythm for wide bottom-row cards. */
-  size?: "default" | "large";
-  "data-testid"?: string;
-}) {
-  const large = size === "large";
-  return (
-    <div
-      className={[
-        "flex h-full min-h-0 flex-col rounded-md border border-[var(--mm-border)] text-sm",
-        large ? "gap-4 p-5 lg:gap-5 lg:p-6" : "gap-3.5 p-5 lg:gap-4 lg:p-6",
-        emphasis ? "bg-[var(--mm-card-bg)] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]" : "bg-[var(--mm-card-bg)]/70",
-        large ? "lg:text-[0.9375rem] lg:leading-relaxed" : "",
-        gridClassName ?? "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      data-at-glance-order={order}
-      data-testid={dataTestId}
-    >
-      <h3 className="text-sm font-semibold text-[var(--mm-text1)]">{title}</h3>
-      <div className={["min-h-0 flex-1 text-[var(--mm-text2)]", large ? "mt-1 lg:mt-1.5" : ""].filter(Boolean).join(" ")}>
-        {body}
-      </div>
-      {footer ? (
-        <div className={["mt-auto border-t border-[var(--mm-border)]", large ? "pt-4 lg:pt-5" : "pt-3"].join(" ")}>
-          {footer}
-        </div>
-      ) : null}
     </div>
   );
 }

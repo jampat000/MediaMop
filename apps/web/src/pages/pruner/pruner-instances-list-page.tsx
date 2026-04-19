@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { OverviewAtGlanceCard } from "../../components/overview/overview-at-glance-card";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -122,26 +122,6 @@ function providerDisabledInstance(provider: ProviderTab): PrunerServerInstance {
     last_connection_test_detail: null,
     scopes: [defaultScope("tv"), defaultScope("movies")],
   };
-}
-
-function PrunerAtGlanceCard({
-  title,
-  body,
-  glanceOrder,
-}: {
-  title: string;
-  body: ReactNode;
-  glanceOrder: "1" | "2" | "3" | "4";
-}) {
-  return (
-    <div
-      className="flex h-full flex-col gap-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 text-sm"
-      data-at-glance-order={glanceOrder}
-    >
-      <h3 className="text-sm font-semibold text-[var(--mm-text1)]">{title}</h3>
-      <div className="min-h-0 flex-1 text-[var(--mm-text2)]">{body}</div>
-    </div>
-  );
 }
 
 function prunerConnectionPlaceholderUrl(provider: ProviderTab): string {
@@ -633,7 +613,7 @@ const PRUNER_NEXT_STEPS_BODY =
 function PrunerOverviewNextSteps({ onNavigate }: { onNavigate: (tab: TopTab) => void }) {
   return (
     <section
-      className="mm-card mm-dash-card rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-5 sm:px-5"
+      className="mm-card mm-dash-card mm-fetcher-module-surface"
       aria-labelledby="pruner-overview-next-steps-heading"
       data-testid="pruner-overview-next-steps"
       data-overview-order="3"
@@ -641,7 +621,7 @@ function PrunerOverviewNextSteps({ onNavigate }: { onNavigate: (tab: TopTab) => 
       <h2 id="pruner-overview-next-steps-heading" className="mm-card__title text-lg">
         Next steps
       </h2>
-      <div className="mt-5 space-y-5 text-sm text-[var(--mm-text2)]">
+      <div className="mm-card__body mt-5 space-y-5">
         <p className="leading-relaxed">{PRUNER_NEXT_STEPS_BODY}</p>
         <div className="flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">
           <button type="button" className={fetcherMenuButtonClass({ variant: "secondary" })} onClick={() => onNavigate("emby")}>
@@ -673,7 +653,7 @@ function PrunerOverviewNeedsAttention({
   const actionTabs = PRUNER_ATTENTION_TAB_ORDER.filter((t) => items.some((row) => row.tab === t));
   return (
     <section
-      className="mm-card mm-dash-card rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-5 sm:px-5"
+      className="mm-card mm-dash-card mm-fetcher-module-surface"
       aria-labelledby="pruner-overview-needs-attention-heading"
       data-testid="pruner-overview-needs-attention"
       data-overview-order="2"
@@ -681,7 +661,7 @@ function PrunerOverviewNeedsAttention({
       <h2 id="pruner-overview-needs-attention-heading" className="mm-card__title text-lg">
         Needs attention
       </h2>
-      <div className="mt-5 text-sm text-[var(--mm-text2)]">
+      <div className="mm-card__body mt-5">
         {empty ? (
           <p className="text-[var(--mm-text1)]">Everything looks good.</p>
         ) : (
@@ -762,7 +742,7 @@ function TopLevelOverview({
   return (
     <section className="space-y-6" data-testid="pruner-top-overview-tab">
       <section
-        className="mm-card mm-dash-card rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-5 sm:px-5"
+        className="mm-card mm-dash-card mm-fetcher-module-surface"
         aria-labelledby="pruner-overview-at-a-glance-heading"
         data-testid="pruner-overview-at-a-glance"
         data-overview-order="1"
@@ -770,8 +750,8 @@ function TopLevelOverview({
         <h2 id="pruner-overview-at-a-glance-heading" className="mm-card__title text-lg">
           At a glance
         </h2>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-5 lg:grid-cols-4 lg:gap-x-5 lg:gap-y-5">
-          <PrunerAtGlanceCard glanceOrder="1" title="Last 30 days" body={last30Body} />
+        <div className="mm-card__body mt-5 grid gap-4 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-5 lg:grid-cols-4 lg:gap-x-5 lg:gap-y-5">
+          <OverviewAtGlanceCard glanceOrder="1" title="Last 30 days" body={last30Body} />
           {providerCards.map((card, i) => {
             const order = String(i + 2) as "2" | "3" | "4";
             const body = card.first ? (
@@ -806,7 +786,9 @@ function TopLevelOverview({
             ) : (
               <p className="text-[var(--mm-text2)]">No server saved yet. Add the address and key on that provider’s Connection tab.</p>
             );
-            return <PrunerAtGlanceCard key={card.provider} glanceOrder={order} title={providerLabel(card.provider)} body={body} />;
+            return (
+              <OverviewAtGlanceCard key={card.provider} glanceOrder={order} title={providerLabel(card.provider)} body={body} />
+            );
           })}
         </div>
       </section>
