@@ -15,10 +15,28 @@ function formatWhen(iso: string | null | undefined): string {
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(d);
 }
 
-function AtGlanceCard({ title, body, glanceOrder }: { title: string; body: ReactNode; glanceOrder: "1" | "2" | "3" | "4" }) {
+function AtGlanceCard({
+  title,
+  body,
+  glanceOrder,
+  emphasis,
+  gridClassName,
+}: {
+  title: string;
+  body: ReactNode;
+  glanceOrder: "1" | "2" | "3" | "4" | "5";
+  emphasis?: boolean;
+  gridClassName?: string;
+}) {
   return (
     <div
-      className="flex h-full flex-col gap-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 text-sm"
+      className={[
+        "flex h-full min-h-0 flex-col gap-3.5 rounded-md border border-[var(--mm-border)] text-sm lg:gap-4 lg:p-6",
+        emphasis
+          ? "bg-[var(--mm-card-bg)] p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
+          : "bg-[var(--mm-card-bg)]/70 p-5",
+        gridClassName ?? "",
+      ].join(" ")}
       data-at-glance-order={glanceOrder}
     >
       <h3 className="text-sm font-semibold text-[var(--mm-text1)]">{title}</h3>
@@ -40,7 +58,7 @@ function SubberOverviewNextSteps({ onOpenTab }: { onOpenTab?: (tab: SubberOvervi
       className="mm-card mm-dash-card mm-fetcher-module-surface"
       aria-labelledby="subber-overview-next-steps-heading"
       data-testid="subber-overview-next-steps"
-      data-overview-order="4"
+      data-overview-order="3"
     >
       <h2 id="subber-overview-next-steps-heading" className="mm-card__title text-lg">
         Next steps
@@ -220,6 +238,12 @@ export function SubberOverviewTab({
         <span className="text-[var(--mm-text3)]">Last checked:</span>{" "}
         <span className="font-medium text-[var(--mm-text1)]">—</span>
       </p>
+      <p>
+        <span className="text-[var(--mm-text3)]">Enabled:</span>{" "}
+        <span className="font-medium text-[var(--mm-text1)]">
+          {enabledProviders} of {providerTotal}
+        </span>
+      </p>
     </div>
   );
 
@@ -257,14 +281,39 @@ export function SubberOverviewTab({
     </div>
   );
 
-  const providersBody = (
-    <div className="space-y-1.5">
-      <p>
-        <span className="text-[var(--mm-text3)]">Enabled:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">
-          {enabledProviders} of {providerTotal}
-        </span>
+  const last30Body = (
+    <div>
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
+          <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Downloaded</span>
+          <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">
+            {st.subtitles_downloaded}
+          </span>
+        </div>
+        <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
+          <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Searches</span>
+          <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">
+            {st.searches_last_30_days}
+          </span>
+        </div>
+        <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
+          <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Not found</span>
+          <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">
+            {st.not_found_last_30_days}
+          </span>
+        </div>
+      </div>
+      <p className="mt-4 text-[0.7rem] leading-snug text-[var(--mm-text3)]">
+        {st.upgrades_last_30_days === 1 ? "1 upgrade" : `${st.upgrades_last_30_days} upgrades`} downloaded · last 30 days
       </p>
+      <div className="mt-3 space-y-1 border-t border-[var(--mm-border)] pt-3 text-sm text-[var(--mm-text2)]">
+        <p>
+          <span className="font-medium text-[var(--mm-text1)]">TV:</span> {st.tv_tracked} tracked · {st.tv_found} found · {st.tv_missing} missing
+        </p>
+        <p>
+          <span className="font-medium text-[var(--mm-text1)]">Movies:</span> {st.movies_tracked} tracked · {st.movies_found} found · {st.movies_missing} missing
+        </p>
+      </div>
     </div>
   );
 
@@ -279,11 +328,11 @@ export function SubberOverviewTab({
         <h2 id="subber-overview-at-a-glance-heading" className="mm-card__title text-lg">
           At a glance
         </h2>
-        <div className="mm-card__body mt-5 grid gap-4 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-5 xl:grid-cols-4 xl:gap-x-5 xl:gap-y-5">
-          <AtGlanceCard glanceOrder="1" title="OpenSubtitles" body={openSubtitlesBody} />
-          <AtGlanceCard glanceOrder="2" title="Sonarr" body={sonarrBody} />
-          <AtGlanceCard glanceOrder="3" title="Radarr" body={radarrBody} />
-          <AtGlanceCard glanceOrder="4" title="Providers" body={providersBody} />
+        <div className="mm-card__body mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-5 sm:gap-y-5 lg:grid-cols-12 lg:gap-x-5 lg:gap-y-6">
+          <AtGlanceCard glanceOrder="1" title="Last 30 days" emphasis body={last30Body} gridClassName="lg:col-span-5" />
+          <AtGlanceCard glanceOrder="2" title="OpenSubtitles" body={openSubtitlesBody} gridClassName="lg:col-span-3" />
+          <AtGlanceCard glanceOrder="3" title="Sonarr" body={sonarrBody} gridClassName="lg:col-span-2" />
+          <AtGlanceCard glanceOrder="4" title="Radarr" body={radarrBody} gridClassName="lg:col-span-2" />
         </div>
       </section>
 
@@ -324,61 +373,6 @@ export function SubberOverviewTab({
               ) : null}
             </>
           )}
-        </div>
-      </section>
-
-      <section
-        className="mm-card mm-dash-card mm-fetcher-module-surface"
-        aria-labelledby="subber-overview-last-30-heading"
-        data-testid="subber-overview-last-30"
-        data-overview-order="3"
-      >
-        <h2 id="subber-overview-last-30-heading" className="mm-card__title text-lg">
-          Last 30 days
-        </h2>
-        <div className="mm-card__body mt-5">
-          {/* Same inner shell as Refiner overview `AtGlanceCard` + emphasis (Last 30 days card). */}
-          <div className="flex h-full min-h-0 flex-col gap-3.5 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 text-sm shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] lg:gap-4 lg:p-6">
-            <div className="min-h-0 flex-1 text-[var(--mm-text2)]">
-              <div>
-                <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                  <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
-                    <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Downloaded</span>
-                    <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">
-                      {st.subtitles_downloaded}
-                    </span>
-                  </div>
-                  <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
-                    <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Searches</span>
-                    <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">
-                      {st.searches_last_30_days}
-                    </span>
-                  </div>
-                  <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
-                    <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Not found</span>
-                    <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">
-                      {st.not_found_last_30_days}
-                    </span>
-                  </div>
-                </div>
-                <p className="mt-4 text-[0.7rem] leading-snug text-[var(--mm-text3)]">
-                  Counts subtitle activity on this server for the last 30 days.{" "}
-                  {st.upgrades_last_30_days === 1 ? "1 upgrade" : `${st.upgrades_last_30_days} upgrades`} downloaded in the same
-                  window.
-                </p>
-              </div>
-              <div className="mt-3 space-y-1 text-sm text-[var(--mm-text2)]">
-                <p>
-                  <span className="font-medium text-[var(--mm-text1)]">TV:</span> {st.tv_tracked} tracked · {st.tv_found} found ·{" "}
-                  {st.tv_missing} missing
-                </p>
-                <p>
-                  <span className="font-medium text-[var(--mm-text1)]">Movies:</span> {st.movies_tracked} tracked · {st.movies_found}{" "}
-                  found · {st.movies_missing} missing
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
