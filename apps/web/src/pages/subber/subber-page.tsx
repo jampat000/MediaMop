@@ -29,7 +29,7 @@ export function SubberPage() {
       <header className="mm-page__intro">
         <p className="mm-page__eyebrow">MediaMop</p>
         <h1 className="mm-page__title">Subber</h1>
-        <p className="mm-page__subtitle">OpenSubtitles subtitle management for TV and Movies — independent lanes, webhooks, schedules, and manual search.</p>
+        <p className="mm-page__subtitle">Automatically find and download subtitles for your movies and TV shows.</p>
       </header>
 
       <nav className="mt-4 flex flex-wrap gap-2" data-testid="subber-top-level-tabs" aria-label="Subber sections">

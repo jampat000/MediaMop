@@ -77,7 +77,7 @@ export function SubberMoviesTab({ canOperate }: { canOperate: boolean }) {
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-xs text-[var(--mm-text2)]">
           Search
-          <input className="mm-input min-w-[12rem]" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Title" />
+          <input className="mm-input min-w-[12rem]" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by title" />
         </label>
         <label className="flex flex-col gap-1 text-xs text-[var(--mm-text2)]">
           Status
@@ -89,7 +89,7 @@ export function SubberMoviesTab({ canOperate }: { canOperate: boolean }) {
         </label>
         <label className="flex flex-col gap-1 text-xs text-[var(--mm-text2)]">
           Language
-          <input className="mm-input w-28" value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="ISO code" />
+          <input className="mm-input w-28" value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="All languages" />
         </label>
         {canOperate ? (
           <button

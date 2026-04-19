@@ -72,7 +72,7 @@ export function SubberTvTab({ canOperate }: { canOperate: boolean }) {
             className="mm-input min-w-[12rem]"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Title or path"
+            placeholder="Search by title"
           />
         </label>
         <label className="flex flex-col gap-1 text-xs text-[var(--mm-text2)]">
@@ -85,7 +85,7 @@ export function SubberTvTab({ canOperate }: { canOperate: boolean }) {
         </label>
         <label className="flex flex-col gap-1 text-xs text-[var(--mm-text2)]">
           Language
-          <input className="mm-input w-28" value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="ISO code" />
+          <input className="mm-input w-28" value={language} onChange={(e) => setLanguage(e.target.value)} placeholder="All languages" />
         </label>
         {canOperate ? (
           <button
