@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlparse
 
 from mediamop.core.runtime_paths import (
     assert_sqlite_db_location_usable,
@@ -42,6 +43,45 @@ def _load_backend_dotenv_if_present() -> None:
 def _parse_csv_urls(raw: str) -> tuple[str, ...]:
     parts = [x.strip() for x in raw.split(",")]
     return tuple(p for p in parts if p)
+
+
+def _expand_loopback_browser_origins_in_development(origins: tuple[str, ...]) -> tuple[str, ...]:
+    """For each ``http(s)://localhost`` / ``127.0.0.1`` entry, also allow the other hostname (same port).
+
+    Browsers treat these as different ``Origin`` values; operators constantly switch between them in dev.
+    """
+
+    if not origins:
+        return origins
+    ordered: list[str] = []
+    seen: set[str] = set()
+
+    def add(raw: str) -> None:
+        s = raw.strip().rstrip("/")
+        if not s or s in seen:
+            return
+        seen.add(s)
+        ordered.append(s)
+
+    for o in origins:
+        add(o)
+        parsed = urlparse(o.strip())
+        if parsed.scheme not in ("http", "https"):
+            continue
+        host = (parsed.hostname or "").lower()
+        if host == "localhost":
+            alt_host = "127.0.0.1"
+        elif host == "127.0.0.1":
+            alt_host = "localhost"
+        else:
+            continue
+        if parsed.port is not None:
+            alt = f"{parsed.scheme}://{alt_host}:{parsed.port}"
+        else:
+            alt = f"{parsed.scheme}://{alt_host}"
+        add(alt.rstrip("/"))
+
+    return tuple(ordered)
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -277,6 +317,9 @@ class MediaMopSettings:
         trusted_override = _parse_csv_urls(
             os.environ.get("MEDIAMOP_TRUSTED_BROWSER_ORIGINS") or "",
         )
+        if env == "development":
+            cors = _expand_loopback_browser_origins_in_development(cors)
+            trusted_override = _expand_loopback_browser_origins_in_development(trusted_override)
         login_max = max(1, _env_int("MEDIAMOP_AUTH_LOGIN_RATE_MAX_ATTEMPTS", 30))
         login_win = max(1, _env_int("MEDIAMOP_AUTH_LOGIN_RATE_WINDOW_SECONDS", 60))
         boot_max = max(1, _env_int("MEDIAMOP_BOOTSTRAP_RATE_MAX_ATTEMPTS", 10))

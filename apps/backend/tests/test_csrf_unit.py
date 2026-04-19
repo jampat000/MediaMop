@@ -10,7 +10,10 @@ from starlette.requests import Request
 from starlette.testclient import TestClient
 
 from mediamop.api.factory import create_app
-from mediamop.core.config import MediaMopSettings
+from mediamop.core.config import (
+    MediaMopSettings,
+    _expand_loopback_browser_origins_in_development,
+)
 from mediamop.modules.arr_failed_import.env_settings import (
     default_failed_import_cleanup_settings_bundle,
 )
@@ -153,6 +156,24 @@ def test_origin_skipped_when_no_trusted_list() -> None:
     settings = _csrf_settings(cors_origins=())
     req = _request_with_headers([])
     validate_browser_post_origin(req, settings)  # no-op
+
+
+def test_expand_loopback_browser_origins_pairs_localhost() -> None:
+    out = _expand_loopback_browser_origins_in_development(("http://127.0.0.1:8782",))
+    assert set(out) == {"http://127.0.0.1:8782", "http://localhost:8782"}
+
+
+def test_expand_loopback_browser_origins_idempotent_when_both_present() -> None:
+    out = _expand_loopback_browser_origins_in_development(
+        ("http://localhost:3000", "http://127.0.0.1:3000"),
+    )
+    assert len(out) == 2
+    assert set(out) == {"http://localhost:3000", "http://127.0.0.1:3000"}
+
+
+def test_expand_loopback_browser_origins_leaves_other_hosts() -> None:
+    out = _expand_loopback_browser_origins_in_development(("https://app.example",))
+    assert out == ("https://app.example",)
 
 
 def test_origin_enforced_when_configured() -> None:

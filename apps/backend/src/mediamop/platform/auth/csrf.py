@@ -5,7 +5,10 @@ They are **not** JWTs and are **not** stored in localStorage.
 
 Scope in Phase 5: login, logout, and issuing endpoint ``GET /auth/csrf``. Unsafe browser POSTs
 should also pass :func:`validate_browser_post_origin` when trusted browser origins are configured
-(``MEDIAMOP_TRUSTED_BROWSER_ORIGINS`` if set, otherwise ``MEDIAMOP_CORS_ORIGINS``).
+(``MEDIAMOP_TRUSTED_BROWSER_ORIGINS`` if set, otherwise ``MEDIAMOP_CORS_ORIGINS``). In
+``MEDIAMOP_ENV=development``, each configured ``http(s)://localhost`` / ``127.0.0.1`` origin is
+implicitly paired with the other hostname at the same port so login works regardless of which URL
+you open.
 """
 
 from __future__ import annotations
