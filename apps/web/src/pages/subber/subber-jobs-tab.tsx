@@ -33,10 +33,16 @@ export function SubberJobsTab() {
           </table>
         </div>
       ) : q.data ? (
-        <p className="text-sm text-[var(--mm-text2)]">No recent Subber jobs.</p>
+        <div className="space-y-2">
+          <p className="text-sm text-[var(--mm-text2)]">No recent Subber jobs.</p>
+          <p className="text-xs text-[var(--mm-text2)]">
+            If you have triggered a sync or search and nothing appears here, check that MEDIAMOP_SUBBER_WORKER_COUNT is
+            set to 1 or more in your backend .env file and restart the backend.
+          </p>
+        </div>
       ) : null}
       <p className="text-xs text-[var(--mm-text2)]">
-        Full detail on what was found, skipped, or failed is in the{" "}
+        Full detail on every subtitle search, sync result, and any errors is in the{" "}
         <Link to="/app/activity" className="text-[var(--mm-accent)] underline">
           Activity log
         </Link>

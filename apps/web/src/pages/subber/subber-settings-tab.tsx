@@ -585,7 +585,11 @@ export function SubberSettingsTab({ canOperate }: { canOperate: boolean }) {
           <p className="text-xs text-[var(--mm-text2)]">
             Pulls your full Sonarr library and checks which episodes already have subtitles. Run once after connecting.
           </p>
-          {tvSyncOk ? <p className="text-xs text-[var(--mm-text)]">TV sync queued — check the Jobs tab.</p> : null}
+          {tvSyncOk ? (
+            <p className="text-xs text-[var(--mm-text)]">
+              TV library sync started — your TV tab will populate shortly. Check the Jobs tab for progress.
+            </p>
+          ) : null}
         </div>
       </section>
 
@@ -660,7 +664,11 @@ export function SubberSettingsTab({ canOperate }: { canOperate: boolean }) {
           <p className="text-xs text-[var(--mm-text2)]">
             Pulls your full Radarr library and checks which movies already have subtitles. Run once after connecting.
           </p>
-          {moviesSyncOk ? <p className="text-xs text-[var(--mm-text)]">Movies sync queued — check the Jobs tab.</p> : null}
+          {moviesSyncOk ? (
+            <p className="text-xs text-[var(--mm-text)]">
+              Movies library sync started — your Movies tab will populate shortly. Check the Jobs tab for progress.
+            </p>
+          ) : null}
         </div>
       </section>
 
