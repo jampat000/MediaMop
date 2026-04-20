@@ -36,7 +36,7 @@ function formatChangePasswordMutationError(err: unknown): string {
 
 function tabButtonClass(active: boolean): string {
   return [
-    "rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
+    "shrink-0 whitespace-nowrap rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
     active
       ? "border-[var(--mm-accent)] bg-[var(--mm-accent)]/15 text-[var(--mm-text)]"
       : "border-[var(--mm-border)] bg-transparent text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)]",
@@ -140,7 +140,11 @@ export function SettingsPage() {
       </header>
 
       <div className="mm-page__body max-w-none">
-        <div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Settings sections">
+        <div
+          className="mb-4 flex gap-2 overflow-x-auto sm:flex-wrap sm:overflow-visible"
+          role="tablist"
+          aria-label="Settings sections"
+        >
           <button
             type="button"
             role="tab"

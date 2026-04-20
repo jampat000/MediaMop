@@ -62,7 +62,7 @@ export function SubberJobsTab() {
               onChange={(v) => setStatusFilter(v)}
             />
           </label>
-          <p className="text-[0.7rem] leading-snug text-[var(--mm-text3)] sm:max-w-[14rem] sm:text-right">
+          <p className="w-full text-left text-[0.7rem] leading-snug text-[var(--mm-text3)] sm:w-auto sm:max-w-[14rem] sm:text-right">
             {filtered.length} row{filtered.length === 1 ? "" : "s"} for this filter.
           </p>
         </div>
@@ -85,8 +85,8 @@ export function SubberJobsTab() {
               <tbody>
                 {filtered.map((j) => (
                   <tr key={j.id} className="border-t border-[var(--mm-border)]">
-                    <td className="px-3 py-2">{jobLabel(j.job_kind)}</td>
-                    <td className="px-3 py-2 capitalize text-[var(--mm-text2)]">{j.scope ?? "—"}</td>
+                    <td className="max-w-[14rem] break-words px-3 py-2">{jobLabel(j.job_kind)}</td>
+                    <td className="whitespace-nowrap px-3 py-2 capitalize text-[var(--mm-text2)]">{j.scope ?? "—"}</td>
                     <td className="px-3 py-2">
                       <span
                         className={
@@ -102,7 +102,7 @@ export function SubberJobsTab() {
                         {j.status}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-xs text-[var(--mm-text2)]">{fmt(j.updated_at)}</td>
+                    <td className="whitespace-nowrap px-3 py-2 text-xs text-[var(--mm-text2)]">{fmt(j.updated_at)}</td>
                   </tr>
                 ))}
               </tbody>

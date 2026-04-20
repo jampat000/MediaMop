@@ -45,7 +45,7 @@ export function BrokerJobsTab() {
               onChange={(v) => setStatusFilter(v)}
             />
           </label>
-          <p className="text-[0.7rem] leading-snug text-[var(--mm-text3)] sm:max-w-[14rem] sm:text-right">
+          <p className="w-full text-left text-[0.7rem] leading-snug text-[var(--mm-text3)] sm:w-auto sm:max-w-[14rem] sm:text-right">
             {filtered.length} row{filtered.length === 1 ? "" : "s"} for this filter.
           </p>
         </div>
@@ -56,7 +56,7 @@ export function BrokerJobsTab() {
           <p className="text-sm text-red-600">{(q.error as Error).message}</p>
         ) : filtered.length > 0 ? (
           <div className="overflow-x-auto rounded border border-[var(--mm-border)]">
-            <table className="w-full min-w-[42rem] text-left text-sm">
+            <table className="w-full min-w-[36rem] text-left text-sm">
               <thead className="bg-black/20 text-[var(--mm-text2)]">
                 <tr>
                   <th className="px-3 py-2 font-medium">Job kind</th>
@@ -70,7 +70,7 @@ export function BrokerJobsTab() {
               <tbody>
                 {filtered.map((j) => (
                   <tr key={j.id} className="border-t border-[var(--mm-border)]">
-                    <td className="px-3 py-2 align-top font-mono text-xs text-[var(--mm-text1)]">{j.job_kind}</td>
+                    <td className="max-w-[12rem] px-3 py-2 align-top font-mono text-xs text-[var(--mm-text1)] break-words">{j.job_kind}</td>
                     <td className="px-3 py-2 align-top">
                       <span
                         className={
@@ -87,11 +87,11 @@ export function BrokerJobsTab() {
                       </span>
                     </td>
                     <td className="px-3 py-2 align-top tabular-nums text-[var(--mm-text2)]">{j.attempt_count}</td>
-                    <td className="max-w-[14rem] px-3 py-2 align-top text-xs text-red-400/90">
+                    <td className="max-w-[14rem] break-words px-3 py-2 align-top text-xs text-red-400/90">
                       {j.last_error ?? "—"}
                     </td>
-                    <td className="px-3 py-2 align-top text-xs text-[var(--mm-text2)]">{fmt(j.created_at)}</td>
-                    <td className="px-3 py-2 align-top text-xs text-[var(--mm-text2)]">{fmt(j.updated_at)}</td>
+                    <td className="whitespace-nowrap px-3 py-2 align-top text-xs text-[var(--mm-text2)]">{fmt(j.created_at)}</td>
+                    <td className="whitespace-nowrap px-3 py-2 align-top text-xs text-[var(--mm-text2)]">{fmt(j.updated_at)}</td>
                   </tr>
                 ))}
               </tbody>

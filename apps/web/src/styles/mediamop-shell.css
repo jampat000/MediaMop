@@ -311,7 +311,7 @@ body.mm-body {
 .mm-main {
   flex: 1;
   height: 100vh;
-  padding: 32px 36px 40px;
+  padding: 32px clamp(16px, 3vw, 40px) 40px;
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
@@ -335,12 +335,19 @@ body.mm-body {
 }
 
 .mm-main-inner {
+  width: 100%;
   max-width: var(--mm-main-max);
   margin: 0 auto;
   padding-left: 2px;
   padding-right: 2px;
   position: relative;
   z-index: 1;
+}
+
+.mm-page,
+.mm-card,
+.mm-card__body {
+  min-width: 0;
 }
 
 .mm-page__intro {
@@ -383,21 +390,23 @@ body.mm-body {
 
 .mm-page__subtitle {
   margin: 0 0 0.85rem;
-  max-width: 36rem;
+  max-width: min(100%, 52rem);
   font-size: 0.9375rem;
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
   color: var(--mm-text2);
 }
 
 .mm-page__lead {
   margin: 0;
-  max-width: 42rem;
+  max-width: min(100%, 62rem);
   font-size: 0.9375rem;
   font-weight: 400;
   line-height: 1.62;
   letter-spacing: -0.012em;
+  overflow-wrap: anywhere;
   color: var(--mm-text2);
 }
 
@@ -1164,7 +1173,7 @@ select.mm-input::-ms-expand {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 920px) {
   .mm-app-layout {
     flex-direction: column;
   }
@@ -1213,6 +1222,21 @@ select.mm-input::-ms-expand {
     height: auto;
     min-height: 0;
     flex: 1;
-    padding: var(--mm-space) 18px calc(var(--mm-space) + 8px);
+    padding: var(--mm-space) clamp(12px, 3vw, 18px) calc(var(--mm-space) + 8px);
+  }
+}
+
+@media (max-width: 640px) {
+  .mm-sidebar-nav {
+    gap: 6px;
+    padding-inline: 8px;
+  }
+
+  .mm-sidebar-link {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    min-width: 0;
+    margin: 0;
+    border-radius: var(--mm-radius-sm);
   }
 }

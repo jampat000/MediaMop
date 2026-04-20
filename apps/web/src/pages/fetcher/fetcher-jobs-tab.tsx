@@ -55,7 +55,7 @@ export function FetcherJobsTab() {
               onChange={(v) => setFilter(v as FetcherJobsInspectionFilter)}
             />
           </label>
-          <p className="text-[0.7rem] leading-snug text-[var(--mm-text3)] sm:max-w-[14rem] sm:text-right">
+          <p className="w-full text-left text-[0.7rem] leading-snug text-[var(--mm-text3)] sm:w-auto sm:max-w-[14rem] sm:text-right">
             {jobs.length} row{jobs.length === 1 ? "" : "s"} for this filter.
           </p>
         </div>
@@ -66,7 +66,7 @@ export function FetcherJobsTab() {
           <p className="text-sm text-red-600">{(q.error as Error).message}</p>
         ) : jobs.length > 0 ? (
           <div className="overflow-x-auto rounded border border-[var(--mm-border)]">
-            <table className="w-full min-w-[42rem] text-left text-sm">
+            <table className="w-full min-w-[36rem] text-left text-sm">
               <thead className="bg-black/20 text-[var(--mm-text2)]">
                 <tr>
                   <th className="px-3 py-2 font-medium">Job kind</th>
@@ -80,7 +80,7 @@ export function FetcherJobsTab() {
               <tbody>
                 {jobs.map((j) => (
                   <tr key={j.id} className="border-t border-[var(--mm-border)]">
-                    <td className="px-3 py-2 align-top text-sm text-[var(--mm-text1)]">
+                    <td className="max-w-[12rem] break-words px-3 py-2 align-top text-sm text-[var(--mm-text1)]">
                       {fetcherJobKindOperatorLabel(j.job_kind)}
                     </td>
                     <td className="px-3 py-2 align-top">
@@ -104,8 +104,8 @@ export function FetcherJobsTab() {
                     <td className="max-w-[14rem] px-3 py-2 align-top text-xs text-red-400/90 break-words">
                       {j.last_error ?? "—"}
                     </td>
-                    <td className="px-3 py-2 align-top text-xs text-[var(--mm-text2)]">{fmt(j.created_at)}</td>
-                    <td className="px-3 py-2 align-top text-xs text-[var(--mm-text2)]">{fmt(j.updated_at)}</td>
+                    <td className="whitespace-nowrap px-3 py-2 align-top text-xs text-[var(--mm-text2)]">{fmt(j.created_at)}</td>
+                    <td className="whitespace-nowrap px-3 py-2 align-top text-xs text-[var(--mm-text2)]">{fmt(j.updated_at)}</td>
                   </tr>
                 ))}
               </tbody>

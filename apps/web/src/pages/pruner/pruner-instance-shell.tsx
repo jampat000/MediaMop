@@ -43,7 +43,7 @@ export function PrunerInstanceShell() {
       </header>
 
       <nav
-        className="mt-3 flex flex-wrap gap-2.5 border-b border-[var(--mm-border)] pb-3.5 sm:mt-4"
+        className="mt-3 flex gap-2.5 overflow-x-auto border-b border-[var(--mm-border)] pb-3.5 sm:mt-4 sm:flex-wrap sm:overflow-visible"
         aria-label="Pruner server sections"
         data-testid="pruner-instance-section-tabs"
       >

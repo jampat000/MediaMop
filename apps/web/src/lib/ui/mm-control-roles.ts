@@ -60,7 +60,7 @@ export const mmTechnicalMonoSmallClass = "font-mono text-xs break-all text-[var(
 /** In-page section tabs (e.g. Fetcher Overview / Connections). Not sidebar navigation. */
 export function mmSectionTabClass(active: boolean): string {
   return [
-    "inline-flex min-h-[2.25rem] items-center justify-center rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
+    "inline-flex min-h-[2.25rem] shrink-0 items-center justify-center whitespace-nowrap rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mm-accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mm-bg-main)]",
     active
       ? "border-[var(--mm-gold)] bg-[var(--mm-accent-soft)] text-[var(--mm-text)]"

@@ -35,7 +35,7 @@ export function MmAtGlanceCard({
   return (
     <div
       className={[
-        "flex min-h-0 flex-col rounded-md border border-[var(--mm-border)] text-sm",
+        "flex min-h-0 min-w-0 flex-col rounded-md border border-[var(--mm-border)] text-sm",
         fillRowHeight ? "h-full" : "h-auto self-start w-full",
         large ? "gap-4 p-5 lg:gap-5 lg:p-6" : "gap-3.5 p-5 lg:gap-4 lg:p-6",
         emphasis
@@ -49,10 +49,10 @@ export function MmAtGlanceCard({
       data-at-glance-order={glanceOrder}
       data-testid={dataTestId}
     >
-      <h3 className="text-sm font-semibold text-[var(--mm-text1)]">{title}</h3>
+      <h3 className="break-words text-sm font-semibold text-[var(--mm-text1)]">{title}</h3>
       <div
         className={[
-          "text-[var(--mm-text2)]",
+          "min-w-0 break-words text-[var(--mm-text2)]",
           fillRowHeight ? "min-h-0 flex-1" : "",
           large ? "mt-1 lg:mt-1.5" : "",
         ]
@@ -82,9 +82,9 @@ export function MmStatTile({
   value: ReactNode;
 }) {
   return (
-    <div className="rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
+    <div className="min-w-0 rounded-md bg-black/15 px-2 py-3 text-center sm:px-3">
       <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">{label}</span>
-      <span className="mt-1 block text-2xl font-bold tabular-nums leading-none text-[var(--mm-text1)]">{value}</span>
+      <span className="mt-1 block break-words text-2xl font-bold tabular-nums leading-tight text-[var(--mm-text1)]">{value}</span>
     </div>
   );
 }
@@ -174,7 +174,7 @@ export function MmNeedsAttentionList({
     <div className="text-sm text-[var(--mm-text2)]">
       <ul className="list-none space-y-3 border-l-2 border-[var(--mm-border)] pl-3.5">
         {items.map((text, i) => (
-          <li key={`${text}-${i}`} className="leading-snug text-[var(--mm-text1)]">
+          <li key={`${text}-${i}`} className="break-words leading-snug text-[var(--mm-text1)]">
             {text}
           </li>
         ))}

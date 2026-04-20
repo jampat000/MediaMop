@@ -99,7 +99,7 @@ export function RefinerJobsInspectionSection() {
             onChange={(v) => setFilter(v as RefinerJobsInspectionFilter)}
           />
         </label>
-        <p className="text-[0.7rem] leading-snug text-[var(--mm-text3)] sm:max-w-[14rem] sm:text-right">
+        <p className="w-full text-left text-[0.7rem] leading-snug text-[var(--mm-text3)] sm:w-auto sm:max-w-[14rem] sm:text-right">
           {jobs.length} row{jobs.length === 1 ? "" : "s"} for this filter.
         </p>
       </div>
@@ -123,7 +123,7 @@ export function RefinerJobsInspectionSection() {
         </div>
       ) : (
         <div className="mt-6 w-full min-w-0 overflow-x-auto rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-1 sm:p-2">
-          <table className="w-full min-w-[44rem] border-collapse text-left text-xs">
+          <table className="w-full min-w-[38rem] border-collapse text-left text-xs">
             <thead>
               <tr className="border-b border-[var(--mm-border)] bg-black/10 text-[var(--mm-text3)]">
                 <th className="rounded-tl-md py-2.5 pr-2 pl-2 font-semibold">ID</th>
@@ -159,11 +159,11 @@ function RefinerJobRow({
   const showCancel = canCancel && job.status === "pending";
   return (
     <tr className="border-b border-[var(--mm-border)] align-top text-[var(--mm-text)]" data-testid="refiner-jobs-row">
-      <td className="py-2 pr-2 font-mono">{job.id}</td>
+      <td className="whitespace-nowrap py-2 pr-2 font-mono">{job.id}</td>
       <td className="py-2 pr-2 whitespace-nowrap">{statusLabel(job.status)}</td>
-      <td className="py-2 pr-2 font-mono text-[0.8rem] text-[var(--mm-text2)]">{job.job_kind}</td>
+      <td className="max-w-[16rem] break-words py-2 pr-2 font-mono text-[0.8rem] text-[var(--mm-text2)]">{job.job_kind}</td>
       <td className="py-2 pr-2 whitespace-nowrap text-[var(--mm-text2)]">{job.updated_at}</td>
-      <td className="py-2 pr-2 text-[var(--mm-text2)]">
+      <td className="max-w-[16rem] break-words py-2 pr-2 text-[var(--mm-text2)]">
         {job.lease_owner ? (
           <span title={job.lease_expires_at ?? ""}>
             {job.lease_owner}
