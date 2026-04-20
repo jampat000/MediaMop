@@ -1,8 +1,15 @@
+import { lazy, Suspense } from "react";
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
+import { PageLoading } from "../components/shared/page-loading";
 import { AppShell } from "../layouts/app-shell";
 import { ActivityPage } from "../pages/activity/activity-page";
 import { DashboardPage } from "../pages/dashboard/dashboard-page";
 import { FetcherPage } from "../pages/fetcher/fetcher-page";
+
+const BrokerPage = lazy(async () => {
+  const m = await import("../pages/broker/broker-page");
+  return { default: m.BrokerPage };
+});
 import { LoginPage } from "../pages/auth/login-page";
 import { RefinerPage } from "../pages/refiner/refiner-page";
 import { RootEntry } from "../pages/root-entry";
@@ -29,6 +36,14 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <DashboardPage /> },
           { path: "activity", element: <ActivityPage /> },
+          {
+            path: "broker",
+            element: (
+              <Suspense fallback={<PageLoading />}>
+                <BrokerPage />
+              </Suspense>
+            ),
+          },
           { path: "fetcher", element: <FetcherPage /> },
           { path: "refiner", element: <RefinerPage /> },
           {
