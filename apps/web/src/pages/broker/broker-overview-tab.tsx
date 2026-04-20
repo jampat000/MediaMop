@@ -111,14 +111,14 @@ export function BrokerOverviewTab({ onOpenTab }: { onOpenTab: (tab: BrokerOvervi
   const needs = buildNeedsAttention({ indexers, sonarr, radarr });
 
   return (
-    <div className="space-y-8" data-testid="broker-overview-tab">
+    <div className="w-full min-w-0 space-y-6 sm:space-y-7" data-testid="broker-overview-tab">
       <MmOverviewSection
         id="broker-overview-at-a-glance"
         headingId="broker-overview-at-a-glance-heading"
         heading="At a glance"
         data-overview-order="1"
       >
-        <MmAtGlanceGrid className="grid grid-cols-1 gap-4 sm:gap-x-5 sm:gap-y-5 lg:grid-cols-2">
+        <MmAtGlanceGrid>
           <MmAtGlanceCard
             title="Indexers"
             glanceOrder="1"
