@@ -38,6 +38,11 @@ from mediamop.modules.refiner.refiner_failure_cleanup_periodic_enqueue import (
     start_refiner_failure_cleanup_enqueue_tasks,
     stop_refiner_failure_cleanup_enqueue_tasks,
 )
+from mediamop.modules.broker.broker_job_handlers import build_broker_job_handlers
+from mediamop.modules.broker.broker_worker_loop import (
+    start_broker_worker_background_tasks,
+    stop_broker_worker_background_tasks,
+)
 from mediamop.modules.subber.subber_job_handlers import build_subber_job_handlers
 from mediamop.modules.subber.subber_schedule_enqueue import (
     start_subber_movies_scan_schedule_enqueue_tasks,
@@ -195,6 +200,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         stop_event=stop,
         job_handlers=subber_handlers,
     )
+    broker_handlers = build_broker_job_handlers(settings, session_factory)
+    broker_stop, broker_worker_tasks = start_broker_worker_background_tasks(
+        session_factory,
+        settings,
+        stop_event=stop,
+        job_handlers=broker_handlers,
+    )
     try:
         yield
     finally:
@@ -217,6 +229,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             await stop_subber_upgrade_schedule_enqueue_tasks(subber_upgrade_tasks)
         except Exception:
             _lifespan_log.exception("Subber upgrade schedule enqueue stop failed")
+        await stop_broker_worker_background_tasks(broker_stop, broker_worker_tasks)
         await stop_subber_worker_background_tasks(subber_stop, subber_worker_tasks)
         await stop_pruner_preview_schedule_enqueue_tasks(pruner_preview_schedule_tasks)
         await stop_pruner_worker_background_tasks(pruner_stop, pruner_worker_tasks)

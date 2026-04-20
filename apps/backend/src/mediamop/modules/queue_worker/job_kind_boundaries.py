@@ -25,6 +25,7 @@ REFINER_QUEUE_JOB_KIND_PREFIX = "refiner."
 # --- Pruner / Subber sibling lanes (reserved on sibling queues; must never appear on Fetcher/Refiner) ---
 PRUNER_QUEUE_JOB_KIND_PREFIX = "pruner."
 SUBBER_QUEUE_JOB_KIND_PREFIX = "subber."
+BROKER_QUEUE_JOB_KIND_PREFIX = "broker."
 
 # Legacy Trimmer lane prefix — no longer a valid lane; rejected on every queue (abandoned prefix).
 LEGACY_TRIMMER_QUEUE_JOB_KIND_PREFIX = "trimmer."
@@ -39,6 +40,7 @@ _FORBIDDEN_ON_REFINER_LANE: tuple[str, ...] = (
     *FETCHER_QUEUE_JOB_KIND_PREFIXES,
     PRUNER_QUEUE_JOB_KIND_PREFIX,
     SUBBER_QUEUE_JOB_KIND_PREFIX,
+    BROKER_QUEUE_JOB_KIND_PREFIX,
     *_legacy_or_foreign_prefixes(),
 )
 
@@ -47,6 +49,7 @@ _FORBIDDEN_ON_FETCHER_ENQUEUE_PREFIXES: tuple[str, ...] = (
     REFINER_QUEUE_JOB_KIND_PREFIX,
     PRUNER_QUEUE_JOB_KIND_PREFIX,
     SUBBER_QUEUE_JOB_KIND_PREFIX,
+    BROKER_QUEUE_JOB_KIND_PREFIX,
     *_legacy_or_foreign_prefixes(),
 )
 
@@ -55,6 +58,7 @@ _FORBIDDEN_ON_FETCHER_WORKER_PREFIXES: tuple[str, ...] = (
     REFINER_QUEUE_JOB_KIND_PREFIX,
     PRUNER_QUEUE_JOB_KIND_PREFIX,
     SUBBER_QUEUE_JOB_KIND_PREFIX,
+    BROKER_QUEUE_JOB_KIND_PREFIX,
     *_legacy_or_foreign_prefixes(),
 )
 
@@ -144,6 +148,7 @@ _FORBIDDEN_ON_PRUNER_LANE: tuple[str, ...] = (
     *FETCHER_QUEUE_JOB_KIND_PREFIXES,
     REFINER_QUEUE_JOB_KIND_PREFIX,
     SUBBER_QUEUE_JOB_KIND_PREFIX,
+    BROKER_QUEUE_JOB_KIND_PREFIX,
     *_legacy_or_foreign_prefixes(),
 )
 
@@ -198,6 +203,7 @@ _FORBIDDEN_ON_SUBBER_LANE: tuple[str, ...] = (
     *FETCHER_QUEUE_JOB_KIND_PREFIXES,
     REFINER_QUEUE_JOB_KIND_PREFIX,
     PRUNER_QUEUE_JOB_KIND_PREFIX,
+    BROKER_QUEUE_JOB_KIND_PREFIX,
     *_legacy_or_foreign_prefixes(),
 )
 
@@ -257,5 +263,60 @@ def validate_fetcher_worker_handler_registry_keys(
         msg = (
             "Fetcher worker handler registry keys must start with one of "
             f"{FETCHER_QUEUE_JOB_KIND_PREFIXES!r} (offending keys: {bad!r})"
+        )
+        raise ValueError(msg)
+
+
+# Prefixes that must never be enqueued or executed on ``broker_jobs`` / Broker workers.
+_FORBIDDEN_ON_BROKER_LANE: tuple[str, ...] = (
+    *FETCHER_QUEUE_JOB_KIND_PREFIXES,
+    REFINER_QUEUE_JOB_KIND_PREFIX,
+    PRUNER_QUEUE_JOB_KIND_PREFIX,
+    SUBBER_QUEUE_JOB_KIND_PREFIX,
+    *_legacy_or_foreign_prefixes(),
+)
+
+
+def job_kind_forbidden_on_broker_lane(job_kind: str) -> bool:
+    """True when ``job_kind`` is reserved for another module's table or lane."""
+
+    return any(job_kind.startswith(p) for p in _FORBIDDEN_ON_BROKER_LANE)
+
+
+def validate_broker_enqueue_job_kind(job_kind: str) -> None:
+    """Broker queue rows must use the Broker lane only (not Fetcher/Refiner/Pruner/Subber namespaces)."""
+
+    if job_kind_forbidden_on_broker_lane(job_kind):
+        msg = (
+            "broker_enqueue_or_get_job refuses job_kind reserved for another module lane "
+            f"(got {job_kind!r}); use that module's table + enqueue function"
+        )
+        raise ValueError(msg)
+    if not job_kind.startswith(BROKER_QUEUE_JOB_KIND_PREFIX):
+        msg = (
+            "broker_enqueue_or_get_job requires job_kind to start with "
+            f"{BROKER_QUEUE_JOB_KIND_PREFIX!r} (got {job_kind!r}); production durable Broker "
+            "families use broker.* kinds on broker_jobs only"
+        )
+        raise ValueError(msg)
+
+
+def validate_broker_worker_handler_registry(
+    job_handlers: Mapping[str, object],
+) -> None:
+    """Broker workers must register handlers only under the ``broker.*`` namespace."""
+
+    bad = sorted(
+        {
+            k
+            for k in job_handlers
+            if job_kind_forbidden_on_broker_lane(k) or not k.startswith(BROKER_QUEUE_JOB_KIND_PREFIX)
+        },
+    )
+    if bad:
+        msg = (
+            "Broker worker handler registry keys must start with "
+            f"{BROKER_QUEUE_JOB_KIND_PREFIX!r} and must not use another module's reserved "
+            f"prefixes (offending keys: {bad!r})"
         )
         raise ValueError(msg)

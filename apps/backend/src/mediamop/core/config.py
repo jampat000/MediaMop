@@ -24,6 +24,7 @@ from mediamop.modules.refiner.refiner_family_intervals import (
     clamp_refiner_schedule_interval_seconds,
 )
 from mediamop.modules.refiner.worker_limits import clamp_refiner_worker_count
+from mediamop.modules.broker.broker_worker_limits import clamp_broker_worker_count
 from mediamop.modules.subber.worker_limits import clamp_subber_worker_count
 from mediamop.modules.pruner.worker_limits import clamp_pruner_worker_count
 
@@ -162,6 +163,8 @@ class MediaMopSettings:
     pruner_plex_live_abs_max_items: int
     # 0 = no in-process Subber workers (Subber-owned subber_jobs only); >0 when Subber queues durable work.
     subber_worker_count: int
+    # 0 = no in-process Broker workers (Broker-owned broker_jobs only); >0 when Broker queues durable work.
+    broker_worker_count: int
     # Subber library scan periodic enqueue (reads ``subber_settings``; independent of worker count).
     subber_library_scan_schedule_enqueue_enabled: bool
     subber_library_scan_schedule_scan_interval_seconds: int
@@ -351,6 +354,7 @@ class MediaMopSettings:
         pruner_plex_live_on = _env_bool("MEDIAMOP_PRUNER_PLEX_LIVE_REMOVAL_ENABLED", False)
         pruner_plex_live_abs_max = max(1, min(5000, _env_int("MEDIAMOP_PRUNER_PLEX_LIVE_ABS_MAX_ITEMS", 150)))
         subber_workers = clamp_subber_worker_count(_env_int("MEDIAMOP_SUBBER_WORKER_COUNT", 0))
+        broker_workers = clamp_broker_worker_count(_env_int("MEDIAMOP_BROKER_WORKER_COUNT", 0))
         subber_lib_scan_sched_enq = _env_bool("MEDIAMOP_SUBBER_LIBRARY_SCAN_SCHEDULE_ENQUEUE_ENABLED", True)
         subber_lib_scan_sched_scan_iv = max(
             10,
@@ -677,6 +681,7 @@ class MediaMopSettings:
             pruner_plex_live_removal_enabled=pruner_plex_live_on,
             pruner_plex_live_abs_max_items=pruner_plex_live_abs_max,
             subber_worker_count=subber_workers,
+            broker_worker_count=broker_workers,
             subber_library_scan_schedule_enqueue_enabled=subber_lib_scan_sched_enq,
             subber_library_scan_schedule_scan_interval_seconds=subber_lib_scan_sched_scan_iv,
             subber_upgrade_schedule_enqueue_enabled=subber_upgrade_sched_enq,

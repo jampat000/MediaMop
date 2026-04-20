@@ -98,3 +98,17 @@ def auth_patch(
     if json is not None:
         kw["json"] = json
     return client.patch(path, **kw)
+
+
+def auth_put(
+    client: TestClient,
+    path: str,
+    *,
+    json: dict | None = None,
+    headers: dict[str, str] | None = None,
+):
+    merged = {**trusted_browser_origin_headers(), **(headers or {})}
+    kw: dict[str, object] = {"headers": merged}
+    if json is not None:
+        kw["json"] = json
+    return client.put(path, **kw)

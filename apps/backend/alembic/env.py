@@ -39,6 +39,9 @@ from mediamop.modules.pruner import pruner_jobs_model as _pruner_jobs_orm  # noq
 from mediamop.modules.pruner import pruner_preview_run_model as _pruner_preview_run_orm  # noqa: F401
 from mediamop.modules.pruner import pruner_scope_settings_model as _pruner_scope_settings_orm  # noqa: F401
 from mediamop.modules.pruner import pruner_server_instance_model as _pruner_server_instance_orm  # noqa: F401
+from mediamop.modules.broker import broker_arr_connections_model as _broker_arr_connections_orm  # noqa: F401
+from mediamop.modules.broker import broker_indexers_model as _broker_indexers_orm  # noqa: F401
+from mediamop.modules.broker import broker_jobs_model as _broker_jobs_orm  # noqa: F401
 from mediamop.modules.subber import subber_jobs_model as _subber_jobs_orm  # noqa: F401
 from mediamop.modules.subber import subber_settings_model as _subber_settings_orm  # noqa: F401
 from mediamop.modules.subber import subber_subtitle_state_model as _subber_subtitle_state_orm  # noqa: F401
