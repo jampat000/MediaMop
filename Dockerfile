@@ -6,7 +6,13 @@
 FROM node:20-bookworm-slim AS web
 WORKDIR /src/apps/web
 COPY apps/web/package.json apps/web/package-lock.json ./
-RUN npm ci
+# Resilient installs in CI/buildx (registry flakes, slow links); lockfile must stay in sync with package.json.
+RUN npm config set fund false \
+  && npm config set audit false \
+  && npm config set fetch-retries 10 \
+  && npm config set fetch-retry-mintimeout 20000 \
+  && npm config set fetch-retry-maxtimeout 180000 \
+  && npm ci --no-audit --no-fund
 COPY apps/web .
 COPY scripts/dev-ports.json /src/scripts/dev-ports.json
 RUN npm run build
@@ -21,7 +27,7 @@ RUN apt-get update \
 WORKDIR /opt/mediamop
 COPY apps/backend /opt/mediamop/apps/backend
 RUN pip install --no-cache-dir --upgrade pip \
-  && pip install --no-cache-dir -e "/opt/mediamop/apps/backend"
+  && pip install --no-cache-dir --prefer-binary -e "/opt/mediamop/apps/backend"
 
 COPY --from=web /src/apps/web/dist /opt/mediamop/web-dist
 COPY docker/entrypoint.sh /entrypoint.sh
