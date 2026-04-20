@@ -22,6 +22,8 @@ on:
         default: alpha
         type: string
   push:
+    branches:
+      - "main"
     tags:
       - "v*-alpha*"
 
