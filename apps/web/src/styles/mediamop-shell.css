@@ -413,8 +413,8 @@ body.mm-body {
   }
 }
 
-/* QHD / wide 1080p+ windows: extra step before 4K-class widths. */
-@media (min-width: 1920px) {
+/* Wide desktop (incl. 1440p at 125–150% OS scale where CSS width sits ~1700–2048px). */
+@media (min-width: 1760px) {
   body.mm-body {
     font-size: calc(16.625px * var(--mm-density-font-scale));
     line-height: 1.54;

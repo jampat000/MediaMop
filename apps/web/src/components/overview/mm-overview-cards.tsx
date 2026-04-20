@@ -35,14 +35,14 @@ export function MmAtGlanceCard({
   return (
     <div
       className={[
-        "flex min-h-0 min-w-0 flex-col rounded-md border border-[var(--mm-border)] text-sm 2xl:text-[0.9375rem] 2xl:leading-relaxed min-[1920px]:text-base min-[1920px]:leading-relaxed",
+        "flex min-h-0 min-w-0 flex-col rounded-md border border-[var(--mm-border)] text-sm 2xl:text-[0.9375rem] 2xl:leading-relaxed min-[1760px]:text-base min-[1760px]:leading-relaxed",
         fillRowHeight ? "h-full" : "h-auto self-start w-full",
         large ? "gap-4 p-5 lg:gap-5 lg:p-6 2xl:gap-5 2xl:p-6" : "gap-3.5 p-5 lg:gap-4 lg:p-6 2xl:gap-4 2xl:p-6",
         emphasis
           ? "bg-[var(--mm-card-bg)] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
           : "bg-[var(--mm-card-bg)]/70",
         large
-          ? "lg:text-[0.9375rem] lg:leading-relaxed 2xl:text-base 2xl:leading-relaxed min-[1920px]:text-[1.0625rem] min-[1920px]:leading-relaxed"
+          ? "lg:text-[0.9375rem] lg:leading-relaxed 2xl:text-base 2xl:leading-relaxed min-[1760px]:text-[1.0625rem] min-[1760px]:leading-relaxed"
           : "",
         gridClassName ?? "",
       ]
@@ -51,7 +51,7 @@ export function MmAtGlanceCard({
       data-at-glance-order={glanceOrder}
       data-testid={dataTestId}
     >
-      <h3 className="break-words text-sm font-semibold text-[var(--mm-text1)] 2xl:text-base min-[1920px]:text-lg">
+      <h3 className="break-words text-sm font-semibold text-[var(--mm-text1)] 2xl:text-base min-[1760px]:text-lg">
         {title}
       </h3>
       <div
@@ -86,11 +86,11 @@ export function MmStatTile({
   value: ReactNode;
 }) {
   return (
-    <div className="min-w-0 rounded-md bg-black/15 px-2 py-3 text-center sm:px-3 2xl:px-3.5 2xl:py-3.5 min-[1920px]:py-4">
-      <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)] 2xl:text-[0.7rem] min-[1920px]:text-[0.72rem]">
+    <div className="min-w-0 rounded-md bg-black/15 px-2 py-3 text-center sm:px-3 2xl:px-3.5 2xl:py-3.5 min-[1760px]:py-4">
+      <span className="block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)] 2xl:text-[0.7rem] min-[1760px]:text-[0.72rem]">
         {label}
       </span>
-      <span className="mt-1 block break-words text-2xl font-bold tabular-nums leading-tight text-[var(--mm-text1)] 2xl:text-3xl min-[1920px]:text-4xl">
+      <span className="mt-1 block break-words text-2xl font-bold tabular-nums leading-tight text-[var(--mm-text1)] 2xl:text-3xl min-[1760px]:text-4xl">
         {value}
       </span>
     </div>
@@ -107,7 +107,7 @@ export function MmStatTileRow({ children }: { children: ReactNode }) {
 
 export function MmStatCaption({ children }: { children: ReactNode }) {
   return (
-    <p className="mt-4 text-[0.7rem] leading-snug text-[var(--mm-text3)] 2xl:text-[0.75rem] 2xl:leading-normal min-[1920px]:text-[0.8rem]">
+    <p className="mt-4 text-[0.7rem] leading-snug text-[var(--mm-text3)] 2xl:text-[0.75rem] 2xl:leading-normal min-[1760px]:text-[0.8rem]">
       {children}
     </p>
   );
@@ -138,7 +138,7 @@ export function MmOverviewSection({
       data-testid={dataTestId}
       data-overview-order={dataOverviewOrder}
     >
-      <h2 id={headingId} className="mm-card__title text-lg 2xl:text-xl min-[1920px]:text-2xl">
+      <h2 id={headingId} className="mm-card__title text-lg 2xl:text-xl min-[1760px]:text-2xl">
         {heading}
       </h2>
       <div className="mm-card__body mt-5">{children}</div>
@@ -181,16 +181,16 @@ export function MmNeedsAttentionList({
 }) {
   if (items.length === 0) {
     return (
-      <p className="text-sm text-[var(--mm-text1)] 2xl:text-[0.9375rem] min-[1920px]:text-base">{emptyMessage}</p>
+      <p className="text-sm text-[var(--mm-text1)] 2xl:text-[0.9375rem] min-[1760px]:text-base">{emptyMessage}</p>
     );
   }
   return (
-    <div className="text-sm text-[var(--mm-text2)] 2xl:text-[0.9375rem] min-[1920px]:text-base">
+    <div className="text-sm text-[var(--mm-text2)] 2xl:text-[0.9375rem] min-[1760px]:text-base">
       <ul className="list-none space-y-3 border-l-2 border-[var(--mm-border)] pl-3.5 2xl:space-y-3.5 2xl:pl-4">
         {items.map((text, i) => (
           <li
             key={`${text}-${i}`}
-            className="break-words leading-snug text-[var(--mm-text1)] 2xl:leading-normal min-[1920px]:text-base min-[1920px]:leading-relaxed"
+            className="break-words leading-snug text-[var(--mm-text1)] 2xl:leading-normal min-[1760px]:text-base min-[1760px]:leading-relaxed"
           >
             {text}
           </li>
