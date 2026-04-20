@@ -29,6 +29,7 @@ import {
   MM_SCHEDULE_TIME_WINDOW_HELPER,
 } from "../../components/ui/mm-schedule-window-controls";
 import {
+  FETCHER_TAB_JOBS_LABEL,
   FETCHER_TAB_RADARR_LABEL,
   FETCHER_TAB_SCHEDULES_LABEL,
   FETCHER_TAB_SONARR_LABEL,
@@ -266,7 +267,7 @@ describe("FetcherPage (tabbed IA)", () => {
     renderFetcherPage();
     fireEvent.click(screen.getByRole("tab", { name: FETCHER_TAB_SONARR_LABEL }));
     expect(screen.getByTestId("fetcher-failed-imports-embedded")).toHaveAttribute("data-embedded-axis", "tv");
-    expect(screen.getByRole("heading", { name: "Failed imports" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Failed import actions" })).toBeInTheDocument();
   });
 
   it("embeds failed imports under the Radarr tab", () => {
@@ -275,7 +276,7 @@ describe("FetcherPage (tabbed IA)", () => {
     expect(screen.getByTestId("fetcher-failed-imports-embedded")).toHaveAttribute("data-embedded-axis", "movies");
   });
 
-  it("exposes Connections, Sonarr, Radarr, and Schedules tabs in locked order after Overview", () => {
+  it("exposes Connections, Sonarr, Radarr, Schedules, and Jobs tabs in locked order after Overview", () => {
     renderFetcherPage();
     const tabs = screen.getAllByRole("tab");
     expect(tabs.map((b) => b.textContent)).toEqual([
@@ -284,6 +285,7 @@ describe("FetcherPage (tabbed IA)", () => {
       FETCHER_TAB_SONARR_LABEL,
       FETCHER_TAB_RADARR_LABEL,
       FETCHER_TAB_SCHEDULES_LABEL,
+      FETCHER_TAB_JOBS_LABEL,
     ]);
   });
 
@@ -291,7 +293,6 @@ describe("FetcherPage (tabbed IA)", () => {
     renderFetcherPage();
     fireEvent.click(screen.getByRole("tab", { name: FETCHER_TAB_SONARR_LABEL }));
     expect(screen.getByTestId("fetcher-arr-operator-settings")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: FETCHER_TAB_SONARR_LABEL, level: 2 })).toBeInTheDocument();
     const arrPanel = screen.getByTestId("fetcher-arr-operator-settings");
     expect(arrPanel.textContent).toMatch(/Configure Fetcher search behavior for Sonarr/i);
     expect(within(arrPanel).getByRole("link", { name: "Activity" })).toBeInTheDocument();
@@ -338,7 +339,6 @@ describe("FetcherPage (tabbed IA)", () => {
     renderFetcherPage();
     fireEvent.click(screen.getByRole("tab", { name: "Connections" }));
     expect(screen.getByTestId("fetcher-connections-panels")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Connections" })).toBeInTheDocument();
     expect(screen.getByText(/Manage Sonarr and Radarr connection state/i)).toBeInTheDocument();
     expect(screen.getByText(/Search schedules live on/i)).toBeInTheDocument();
     expect(screen.queryByText(/Library link is active/i)).not.toBeInTheDocument();
@@ -370,7 +370,7 @@ describe("FetcherPage (tabbed IA)", () => {
     expect(testIdx).toBeGreaterThan(saveIdx);
     expect(statusIdx).toBeGreaterThan(testIdx);
     expect(screen.getByTestId("fetcher-connection-status-sonarr")).toHaveTextContent(/Connection status: Not checked yet/i);
-    expect(within(sonPanel).getByText(/Off:/i)).toBeInTheDocument();
+    expect(within(sonPanel).getByRole("radio", { name: "Off" })).toHaveAttribute("aria-checked", "true");
   });
 
   it("toggles API key visibility on Connections", () => {
@@ -437,12 +437,6 @@ describe("FetcherPage (tabbed IA)", () => {
     expect(t.toLowerCase()).not.toContain("how often this search runs automatically");
     expect(t.toLowerCase()).not.toContain("last finished");
     expect(t.toLowerCase()).not.toContain("last outcome");
-  });
-
-  it("shows the server connection note on Connections when the API sends one", () => {
-    renderFetcherPage();
-    fireEvent.click(screen.getByRole("tab", { name: "Connections" }));
-    expect(screen.getByTestId("fetcher-connections-note")).toHaveTextContent("Addresses come from the server file.");
   });
 
   it("uses per-lane save labels on TV and Movies tabs when the operator can edit", () => {

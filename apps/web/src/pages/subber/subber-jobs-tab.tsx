@@ -40,7 +40,7 @@ export function SubberJobsTab() {
 
   return (
     <section
-      className="overflow-hidden rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] shadow-sm"
+      className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] shadow-sm"
       data-testid="subber-jobs-tab"
     >
       <header className="border-b border-[var(--mm-border)] bg-black/10 px-5 py-4">

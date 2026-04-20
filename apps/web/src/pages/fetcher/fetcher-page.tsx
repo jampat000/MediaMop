@@ -6,14 +6,16 @@ import {
 } from "./fetcher-arr-operator-settings";
 import { FetcherFailedImportsEmbedded } from "./fetcher-failed-imports-workspace";
 import {
+  FETCHER_TAB_JOBS_LABEL,
   FETCHER_TAB_RADARR_LABEL,
   FETCHER_TAB_SCHEDULES_LABEL,
   FETCHER_TAB_SONARR_LABEL,
 } from "./fetcher-display-names";
 import { fetcherSectionTabClass } from "./fetcher-menu-button";
+import { FetcherJobsTab } from "./fetcher-jobs-tab";
 import { FetcherOverviewTab } from "./fetcher-overview-tab";
 
-type FetcherPageTabId = "overview" | FetcherArrSettingsTabId;
+type FetcherPageTabId = "overview" | FetcherArrSettingsTabId | "jobs";
 
 export function FetcherPage() {
   const me = useMeQuery();
@@ -25,6 +27,7 @@ export function FetcherPage() {
     { id: "sonarr", label: FETCHER_TAB_SONARR_LABEL },
     { id: "radarr", label: FETCHER_TAB_RADARR_LABEL },
     { id: "schedules", label: FETCHER_TAB_SCHEDULES_LABEL },
+    { id: "jobs", label: FETCHER_TAB_JOBS_LABEL },
   ];
 
   const showArrSection =
@@ -67,6 +70,8 @@ export function FetcherPage() {
 
         {tab === "sonarr" ? <FetcherFailedImportsEmbedded axis="tv" /> : null}
         {tab === "radarr" ? <FetcherFailedImportsEmbedded axis="movies" /> : null}
+
+        {tab === "jobs" ? <FetcherJobsTab /> : null}
       </div>
     </div>
   );

@@ -3,6 +3,7 @@
 export const FETCHER_TAB_SONARR_LABEL = "Sonarr";
 export const FETCHER_TAB_RADARR_LABEL = "Radarr";
 export const FETCHER_TAB_SCHEDULES_LABEL = "Schedules";
+export const FETCHER_TAB_JOBS_LABEL = "Jobs";
 
 /** Main heading on Sonarr / Radarr settings tabs (matches tab labels). */
 export const FETCHER_SECTION_SONARR_HEADING = FETCHER_TAB_SONARR_LABEL;

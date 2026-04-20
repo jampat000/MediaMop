@@ -26,7 +26,6 @@ import { fetcherMenuButtonClass } from "./fetcher-menu-button";
 import {
   FETCHER_TAB_PANEL_BLURB_CLASS,
   FETCHER_TAB_PANEL_INTRO_CLASS,
-  FETCHER_TAB_PANEL_TITLE_CLASS,
 } from "./fetcher-tab-panel-intro";
 
 /** Placeholder when a key is stored server-side (empty field = unchanged). */
@@ -80,12 +79,7 @@ function ConnectionEffectiveNote({
   const eff = (panel.effective_base_url || "").trim();
 
   if (!panel.enabled) {
-    return (
-      <p className="text-xs leading-relaxed text-[var(--mm-text3)]">
-        <strong>Off:</strong> MediaMop does not use {appLabel} from this screen or from the server file for Fetcher
-        work.
-      </p>
-    );
+    return null;
   }
 
   if (saved && eff && saved !== eff) {
@@ -502,25 +496,13 @@ export function FetcherConnectionsPanels({ role }: { role: string | undefined })
       aria-labelledby="mm-fetcher-connections-heading"
       data-testid="fetcher-connections-panels"
     >
-      <header className={FETCHER_TAB_PANEL_INTRO_CLASS}>
-        <h2 id="mm-fetcher-connections-heading" className={FETCHER_TAB_PANEL_TITLE_CLASS}>
-          Connections
-        </h2>
+      <header id="mm-fetcher-connections-heading" className={FETCHER_TAB_PANEL_INTRO_CLASS}>
         <p className={FETCHER_TAB_PANEL_BLURB_CLASS}>
           Manage Sonarr and Radarr connection state, addresses, and API keys used by Fetcher. Search schedules live on
           the <strong>{FETCHER_TAB_SCHEDULES_LABEL}</strong> tab; per-run limits and failed-import cleanup stay on{" "}
           <strong>{FETCHER_TAB_SONARR_LABEL}</strong> and <strong>{FETCHER_TAB_RADARR_LABEL}</strong>.
         </p>
       </header>
-
-      {q.data.connection_note ? (
-        <p
-          className="mb-5 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-3.5 text-sm leading-relaxed text-[var(--mm-text2)]"
-          data-testid="fetcher-connections-note"
-        >
-          {q.data.connection_note}
-        </p>
-      ) : null}
 
       <div className="mm-dash-grid gap-x-5 gap-y-6" data-testid="fetcher-connection-panels-grid">
         <ConnectionPanel

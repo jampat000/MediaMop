@@ -8,20 +8,13 @@ import {
 } from "../../lib/fetcher/arr-operator-settings/queries";
 import type { FetcherArrOperatorSettingsOut, FetcherArrSearchLane } from "../../lib/fetcher/arr-operator-settings/types";
 import { showFetcherArrOperatorSettingsEditor } from "../../lib/fetcher/failed-imports/eligibility";
-import {
-  FETCHER_SECTION_RADARR_HEADING,
-  FETCHER_SECTION_SCHEDULES_HEADING,
-  FETCHER_SECTION_SONARR_HEADING,
-  FETCHER_TAB_RADARR_LABEL,
-  FETCHER_TAB_SONARR_LABEL,
-} from "./fetcher-display-names";
+import { FETCHER_TAB_RADARR_LABEL, FETCHER_TAB_SONARR_LABEL } from "./fetcher-display-names";
 import { FetcherConnectionsPanels } from "./fetcher-connections-panels";
 import { FetcherEnableSwitch } from "./fetcher-enable-switch";
 import { fetcherMenuButtonClass } from "./fetcher-menu-button";
 import {
   FETCHER_TAB_PANEL_BLURB_CLASS,
   FETCHER_TAB_PANEL_INTRO_CLASS,
-  FETCHER_TAB_PANEL_TITLE_CLASS,
 } from "./fetcher-tab-panel-intro";
 import {
   MM_SCHEDULE_TIME_WINDOW_HEADING,
@@ -651,20 +644,7 @@ export function FetcherArrOperatorSettingsSection({
       aria-labelledby={`mm-fetcher-arr-tab-${activeTab}-heading`}
       data-testid="fetcher-arr-operator-settings"
     >
-      <header className={FETCHER_TAB_PANEL_INTRO_CLASS}>
-        {isSchedules ? (
-          <h2 id="mm-fetcher-arr-tab-schedules-heading" className={FETCHER_TAB_PANEL_TITLE_CLASS}>
-            {FETCHER_SECTION_SCHEDULES_HEADING}
-          </h2>
-        ) : isTv ? (
-          <h2 id="mm-fetcher-arr-tab-sonarr-heading" className={FETCHER_TAB_PANEL_TITLE_CLASS}>
-            {FETCHER_SECTION_SONARR_HEADING}
-          </h2>
-        ) : (
-          <h2 id="mm-fetcher-arr-tab-radarr-heading" className={FETCHER_TAB_PANEL_TITLE_CLASS}>
-            {FETCHER_SECTION_RADARR_HEADING}
-          </h2>
-        )}
+      <header id={`mm-fetcher-arr-tab-${activeTab}-heading`} className={FETCHER_TAB_PANEL_INTRO_CLASS}>
         <p className={FETCHER_TAB_PANEL_BLURB_CLASS}>
           {isSchedules ? (
             <>
