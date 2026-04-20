@@ -106,3 +106,22 @@ class BrokerArrConnectionPutIn(BrokerArrConnectionUpdate):
 
 class BrokerArrConnectionSyncIn(BaseModel):
     csrf_token: str = Field(..., min_length=1)
+
+
+class BrokerResultOut(BaseModel):
+    title: str
+    url: str
+    magnet: str | None
+    size: int
+    seeders: int | None
+    leechers: int | None
+    protocol: str
+    indexer_slug: str
+    categories: list[int]
+    published_at: datetime | None
+    imdb_id: str | None
+    info_hash: str | None
+
+
+class BrokerSettingsOut(BaseModel):
+    proxy_api_key: str

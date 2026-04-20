@@ -72,6 +72,16 @@ def trusted_browser_origin_headers() -> dict[str, str]:
     return {"Origin": trusted[0].rstrip("/")}
 
 
+def auth_get(
+    client: TestClient,
+    path: str,
+    *,
+    headers: dict[str, str] | None = None,
+):
+    merged = {**trusted_browser_origin_headers(), **(headers or {})}
+    return client.get(path, headers=merged)
+
+
 def auth_post(
     client: TestClient,
     path: str,
