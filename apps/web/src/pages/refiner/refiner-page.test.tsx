@@ -161,7 +161,7 @@ describe("RefinerPage", () => {
     openTab("Jobs");
     const block = screen.getByTestId("refiner-jobs-inspection-section");
     expect(block.textContent).toMatch(/Activity/i);
-    expect(block.textContent).toMatch(/Pending, running, and finished/i);
+    expect(block.textContent).toMatch(/Pending, running, and recent Refiner work/i);
   });
 
   it("Libraries tab shows processing settings controls", () => {
