@@ -527,7 +527,7 @@ function ProviderConfigurationWorkspace({
         ) : null}
 
         {providerSection === "schedule" ? (
-          <div className="grid gap-4 md:grid-cols-2" data-testid="pruner-provider-schedule-wrap">
+          <div className="mm-dash-grid gap-x-5 gap-y-6" data-testid="pruner-provider-schedule-wrap">
             <PrunerGlobalScheduleRow
               provider={provider}
               scope="tv"
@@ -888,94 +888,104 @@ function PrunerGlobalScheduleRow({
 
   const saveScheduleLabel = scope === "tv" ? "Save TV schedule" : "Save Movies schedule";
 
+  const laneTitle = scope === "tv" ? "TV automatic scan window" : "Movies automatic scan window";
+  const laneIntro =
+    scope === "tv"
+      ? "Limit which days and times Pruner may run scheduled TV cleanup previews for this provider."
+      : "Limit which days and times Pruner may run scheduled Movies cleanup previews for this provider.";
+
   return (
-    <section className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-6" data-testid={testId}>
-      <div className="space-y-6">
-        <div className="space-y-3">
-          <div>
-            <span className="text-sm font-medium text-[var(--mm-text1)]">{MM_SCHEDULE_TIME_WINDOW_HEADING}</span>
-            <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">{MM_SCHEDULE_TIME_WINDOW_HELPER}</p>
-          </div>
-          <div className="space-y-4">
-            <MmOnOffSwitch
-              id={`${idPrefix}-hours-limited`}
-              label="Limit to these hours"
-              enabled={schedHoursLimited}
-              disabled={controlsDisabled}
-              onChange={setSchedHoursLimited}
-            />
-            <div className="space-y-2">
-              <span className="text-sm font-medium text-[var(--mm-text1)]">Days</span>
-              <MmScheduleDayChips scheduleDaysCsv={schedDays} disabled={controlsDisabled} onChangeCsv={setSchedDays} />
-            </div>
-            <MmScheduleTimeFields
-              idPrefix={idPrefix}
-              start={schedStart}
-              end={schedEnd}
-              disabled={controlsDisabled}
-              onStart={setSchedStart}
-              onEnd={setSchedEnd}
-            />
-          </div>
-        </div>
+    <section className="mm-card mm-dash-card flex h-full min-h-0 min-w-0 flex-col gap-7 p-6" data-testid={testId}>
+      <div>
+        <h3 className="text-base font-semibold text-[var(--mm-text1)]">{laneTitle}</h3>
+        <p className="mt-1 text-sm text-[var(--mm-text2)]">{laneIntro}</p>
+      </div>
+      <div className="space-y-3">
         <div>
-          <span className="text-sm font-medium text-[var(--mm-text1)]">Items to scan per run</span>
-          <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-            How many items to check each time the scan runs. Higher numbers take longer. Maximum 5,000.
-          </p>
-          <input
-            type="number"
-            min={1}
-            max={5000}
-            className="mm-input mt-2 w-full max-w-xs"
-            value={previewCap}
+          <span className="text-sm font-medium text-[var(--mm-text1)]">{MM_SCHEDULE_TIME_WINDOW_HEADING}</span>
+          <p className="mt-1 text-xs text-[var(--mm-text3)]">{MM_SCHEDULE_TIME_WINDOW_HELPER}</p>
+        </div>
+        <div className="space-y-4">
+          <MmOnOffSwitch
+            id={`${idPrefix}-hours-limited`}
+            label="Limit to these hours"
+            enabled={schedHoursLimited}
             disabled={controlsDisabled}
-            onChange={(e) => setPreviewCap(Math.max(1, Math.min(5000, Number(e.target.value) || 500)))}
-            aria-label="Items to scan per run"
+            onChange={setSchedHoursLimited}
+          />
+          <div className="space-y-2">
+            <span className="text-sm font-medium text-[var(--mm-text1)]">Days</span>
+            <MmScheduleDayChips scheduleDaysCsv={schedDays} disabled={controlsDisabled} onChangeCsv={setSchedDays} />
+          </div>
+          <MmScheduleTimeFields
+            idPrefix={idPrefix}
+            start={schedStart}
+            end={schedEnd}
+            disabled={controlsDisabled}
+            onStart={setSchedStart}
+            onEnd={setSchedEnd}
           />
         </div>
-        <p className="text-xs text-[var(--mm-text2)]">
-          <span className="text-[var(--mm-text3)]">Last automatic scan:</span>{" "}
-          <span className="font-medium text-[var(--mm-text1)]">
-            {scopeRow?.last_scheduled_preview_enqueued_at
-              ? formatPrunerDateTime(scopeRow.last_scheduled_preview_enqueued_at)
-              : "Never run"}
-          </span>
+      </div>
+      <div>
+        <span className="text-sm font-medium text-[var(--mm-text1)]">Items to scan per run</span>
+        <p className="mt-1 text-xs text-[var(--mm-text3)]">
+          How many items to check each time the scan runs. Higher numbers take longer. Maximum 5,000.
         </p>
-        {canOperate ? (
+        <input
+          type="number"
+          min={1}
+          max={5000}
+          className="mm-input mt-2 w-full"
+          value={previewCap}
+          disabled={controlsDisabled}
+          onChange={(e) => setPreviewCap(Math.max(1, Math.min(5000, Number(e.target.value) || 500)))}
+          aria-label="Items to scan per run"
+        />
+      </div>
+      <p className="text-xs text-[var(--mm-text3)]">
+        Last automatic scan:{" "}
+        <span className="font-medium text-[var(--mm-text1)]">
+          {scopeRow?.last_scheduled_preview_enqueued_at
+            ? formatPrunerDateTime(scopeRow.last_scheduled_preview_enqueued_at)
+            : "Never run"}
+        </span>
+      </p>
+      {canOperate ? (
+        <div className="border-t border-[var(--mm-border)] pt-5">
           <button
             type="button"
-            className={mmActionButtonClass({ variant: "primary", disabled: saveDisabled })}
+            className={`${mmActionButtonClass({ variant: "primary", disabled: saveDisabled })} w-full`}
             disabled={saveDisabled}
             onClick={() => void saveRow()}
           >
             {busy ? "Saving…" : saveScheduleLabel}
           </button>
-        ) : null}
-        {msg ? <p className="text-xs text-green-600">{msg}</p> : null}
-        {err ? (
-          <p className="text-xs text-red-500" role="alert">
-            {err}
-          </p>
-        ) : null}
+        </div>
+      ) : null}
+      {msg ? <p className="text-xs text-green-600">{msg}</p> : null}
+      {err ? (
+        <p className="text-xs text-red-500" role="alert">
+          {err}
+        </p>
+      ) : null}
 
-        <div className="mt-6 border-t border-[var(--mm-border)] pt-6">
-          <h4 className="text-sm font-semibold text-[var(--mm-text1)]">Run now</h4>
-          <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-            Run your saved cleanup criteria immediately without waiting for the schedule.
-          </p>
-          <div className="mt-4">
-            <PrunerDryRunControls
-              instanceId={instance?.id ?? 0}
-              mediaScope={scope}
-              testIdPrefix={`pruner-schedule-${provider}`}
-              ensureSaved={ensureScopeSaved}
-              dryRunEnabled={dryRunEnabled}
-              onDryRunEnabledChange={setDryRunEnabled}
-              runDisabled={!instance || instance.id <= 0}
-              controlsDisabled={controlsDisabled}
-            />
-          </div>
+      <div className="border-t border-[var(--mm-border)] pt-6">
+        <h4 className="text-base font-semibold text-[var(--mm-text1)]">Run now</h4>
+        <p className="mt-1 text-xs text-[var(--mm-text3)]">
+          Run your saved cleanup criteria immediately without waiting for the schedule.
+        </p>
+        <div className="mt-4">
+          <PrunerDryRunControls
+            instanceId={instance?.id ?? 0}
+            mediaScope={scope}
+            testIdPrefix={`pruner-schedule-${provider}`}
+            ensureSaved={ensureScopeSaved}
+            dryRunEnabled={dryRunEnabled}
+            onDryRunEnabledChange={setDryRunEnabled}
+            runDisabled={!instance || instance.id <= 0}
+            controlsDisabled={controlsDisabled}
+          />
         </div>
       </div>
     </section>

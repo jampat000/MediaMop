@@ -297,7 +297,7 @@ describe("FetcherPage (tabbed IA)", () => {
     expect(within(arrPanel).getByRole("link", { name: "Activity" })).toBeInTheDocument();
   });
 
-  it("shows the full suite timezone label in the Schedules tab preamble", () => {
+  it("Schedules tab shows lane cards without a suite timezone preamble banner", () => {
     const { qc } = renderFetcherPage();
     act(() => {
       qc.setQueryData(fetcherArrOperatorSettingsQueryKey, {
@@ -306,7 +306,9 @@ describe("FetcherPage (tabbed IA)", () => {
       });
     });
     fireEvent.click(screen.getByRole("tab", { name: FETCHER_TAB_SCHEDULES_LABEL }));
-    expect(screen.getByTestId("fetcher-schedules-preamble")).toHaveTextContent("United States — New York");
+    expect(screen.getByTestId("fetcher-schedules-grid")).toBeInTheDocument();
+    expect(screen.queryByTestId("fetcher-schedules-preamble")).toBeNull();
+    expect(screen.getByTestId("fetcher-tv-lane-missing")).toBeInTheDocument();
   });
 
   it("keeps unsaved lane draft edits after another lane refetch", () => {

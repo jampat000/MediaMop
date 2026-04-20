@@ -88,3 +88,18 @@ def test_proxy_apikey_endpoint_returns_key(client_admin: TestClient) -> None:
     r = client_admin.get("/api/v1/broker/proxy/apikey", headers=trusted_browser_origin_headers())
     assert r.status_code == 200, r.text
     assert r.json()["proxy_api_key"] == _api_key()
+
+
+def test_proxy_apikey_rotate_changes_key(client_admin: TestClient) -> None:
+    _login(client_admin)
+    before = _api_key()
+    tok = csrf(client_admin)
+    r = client_admin.post(
+        "/api/v1/broker/proxy/apikey/rotate",
+        json={"csrf_token": tok},
+        headers=trusted_browser_origin_headers(),
+    )
+    assert r.status_code == 200, r.text
+    after = r.json()["proxy_api_key"]
+    assert after != before
+    assert after == _api_key()

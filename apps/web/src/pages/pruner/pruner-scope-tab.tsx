@@ -21,7 +21,12 @@ import {
 } from "../../lib/pruner/api";
 import type { PrunerServerInstance } from "../../lib/pruner/api";
 import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
-import { MmScheduleDayChips, MmScheduleTimeFields } from "../../components/ui/mm-schedule-window-controls";
+import {
+  MM_SCHEDULE_TIME_WINDOW_HEADING,
+  MM_SCHEDULE_TIME_WINDOW_HELPER,
+  MmScheduleDayChips,
+  MmScheduleTimeFields,
+} from "../../components/ui/mm-schedule-window-controls";
 import {
   committedPrunerRunIntervalMinutes,
   finalizePrunerRunIntervalMinutesDraft,
@@ -1984,18 +1989,17 @@ export function PrunerScopeTab(props: {
       ) : (
         <p className="text-sm text-[var(--mm-text2)]">Sign in as an operator to run scans.</p>
       )}
-      <div
-        className="space-y-4 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3"
-        data-testid="pruner-scope-scheduled-preview"
-      >
-        <h3 className="text-sm font-semibold text-[var(--mm-text)]">
-          Automatic scans ({props.scope === "tv" ? "TV shows" : "Movies"})
-        </h3>
-        <p className="text-xs text-[var(--mm-text2)]">
-          The schedule runs your saved criteria from the Cleanup tab automatically. If dry run is on in the Cleanup tab,
-          scheduled runs also only scan — they never delete automatically. Timed runs only check broken posters and
-          images; other cleanup types stay manual.
-        </p>
+      <div className="mm-card mm-dash-card flex flex-col gap-7 p-6" data-testid="pruner-scope-scheduled-preview">
+        <div>
+          <h3 className="text-base font-semibold text-[var(--mm-text1)]">
+            Automatic scans ({props.scope === "tv" ? "TV shows" : "Movies"})
+          </h3>
+          <p className="mt-1 text-sm text-[var(--mm-text2)]">
+            The schedule runs your saved criteria from the Cleanup tab automatically. If dry run is on in the Cleanup tab,
+            scheduled runs also only scan — they never delete automatically. Timed runs only check broken posters and
+            images; other cleanup types stay manual.
+          </p>
+        </div>
         {showInteractiveControls ? (
           <>
             <MmOnOffSwitch
@@ -2007,14 +2011,12 @@ export function PrunerScopeTab(props: {
             />
             <div>
               <span className="text-sm font-medium text-[var(--mm-text1)]">Run interval (minutes)</span>
-              <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-                Minutes between automatic cleanup runs for this library.
-              </p>
+              <p className="mt-1 text-xs text-[var(--mm-text3)]">How often this search runs automatically.</p>
               <input
                 type="number"
                 min={PRUNER_RUN_INTERVAL_MIN_MINUTES}
                 max={PRUNER_RUN_INTERVAL_MAX_MINUTES}
-                className="mm-input mt-2 w-full max-w-xs"
+                className="mm-input mt-2 w-full"
                 value={
                   schedIntervalMinDraft !== null
                     ? schedIntervalMinDraft
@@ -2029,10 +2031,8 @@ export function PrunerScopeTab(props: {
             </div>
             <div className="space-y-3">
               <div>
-                <span className="text-sm font-medium text-[var(--mm-text1)]">Time window</span>
-                <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-                  When limiting is on, automatic runs only start inside this window.
-                </p>
+                <span className="text-sm font-medium text-[var(--mm-text1)]">{MM_SCHEDULE_TIME_WINDOW_HEADING}</span>
+                <p className="mt-1 text-xs text-[var(--mm-text3)]">{MM_SCHEDULE_TIME_WINDOW_HELPER}</p>
               </div>
               <div className="space-y-4">
                 <MmOnOffSwitch
@@ -2056,14 +2056,16 @@ export function PrunerScopeTab(props: {
                 />
               </div>
             </div>
-            <button
-              type="button"
-              className={fetcherMenuButtonClass({ variant: "primary", disabled: busy })}
-              disabled={busy}
-              onClick={() => void saveSchedule()}
-            >
-              {props.scope === "tv" ? "Save TV schedule" : "Save Movies schedule"}
-            </button>
+            <div className="border-t border-[var(--mm-border)] pt-5">
+              <button
+                type="button"
+                className={`${fetcherMenuButtonClass({ variant: "primary", disabled: busy })} w-full`}
+                disabled={busy}
+                onClick={() => void saveSchedule()}
+              >
+                {props.scope === "tv" ? "Save TV schedule" : "Save Movies schedule"}
+              </button>
+            </div>
             {schedMsg ? <p className="text-xs text-green-600">{schedMsg}</p> : null}
           </>
         ) : (
@@ -2078,9 +2080,11 @@ export function PrunerScopeTab(props: {
             ) : null}
           </p>
         )}
-        <p className="text-xs text-[var(--mm-text2)]">
+        <p className="text-xs text-[var(--mm-text3)]">
           Last automatic scan:{" "}
-          {scopeRow?.last_scheduled_preview_enqueued_at ? fmt(scopeRow.last_scheduled_preview_enqueued_at) : "Never run"}
+          <span className="font-medium text-[var(--mm-text1)]">
+            {scopeRow?.last_scheduled_preview_enqueued_at ? fmt(scopeRow.last_scheduled_preview_enqueued_at) : "Never run"}
+          </span>
         </p>
       </div>
       {!isProvider ? (

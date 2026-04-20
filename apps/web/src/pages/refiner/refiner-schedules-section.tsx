@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
 import {
   MM_SCHEDULE_TIME_WINDOW_HEADING,
   MM_SCHEDULE_TIME_WINDOW_HELPER,
   MmScheduleDayChips,
   MmScheduleTimeFields,
 } from "../../components/ui/mm-schedule-window-controls";
-import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
 import { PageLoading } from "../../components/shared/page-loading";
 import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
 import { useMeQuery } from "../../lib/auth/queries";
@@ -16,18 +16,29 @@ import {
   useRefinerPathSettingsQuery,
   useRefinerWatchedFolderRemuxScanDispatchEnqueueMutation,
 } from "../../lib/refiner/queries";
-import { timezoneDisplayLabelForUi } from "../../lib/suite/timezone-options";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
+import {
+  FETCHER_TAB_PANEL_BLURB_CLASS,
+  FETCHER_TAB_PANEL_INTRO_CLASS,
+  FETCHER_TAB_PANEL_TITLE_CLASS,
+} from "../fetcher/fetcher-tab-panel-intro";
+
+const RUN_INTERVAL_HELPER = "How often this search runs automatically.";
+const SCHED_INTERVAL_MIN_MINUTES = 1;
+const SCHED_INTERVAL_MAX_MINUTES = 7 * 24 * 60;
 
 function canEdit(role: string | undefined): boolean {
   return role === "operator" || role === "admin";
 }
 
-function RefinerScopeScheduleCard({
-  title,
+function RefinerScheduleLaneCard({
+  sectionTitle,
+  sectionIntro,
   idPrefix,
-  enabled,
-  onEnabled,
+  timedEnabled,
+  onTimedEnabled,
+  intervalMinutes,
+  onIntervalMinutes,
   hoursLimited,
   onHoursLimited,
   scheduleDays,
@@ -39,10 +50,13 @@ function RefinerScopeScheduleCard({
   disabled,
   footer,
 }: {
-  title: string;
+  sectionTitle: string;
+  sectionIntro: string;
   idPrefix: string;
-  enabled: boolean;
-  onEnabled: (v: boolean) => void;
+  timedEnabled: boolean;
+  onTimedEnabled: (v: boolean) => void;
+  intervalMinutes: number;
+  onIntervalMinutes: (v: number) => void;
   hoursLimited: boolean;
   onHoursLimited: (v: boolean) => void;
   scheduleDays: string;
@@ -55,50 +69,68 @@ function RefinerScopeScheduleCard({
   footer?: ReactNode;
 }) {
   return (
-    <section className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-6">
-      <h3 className="text-sm font-semibold text-[var(--mm-text1)]">{title}</h3>
-      <div className="mt-5 space-y-6">
-        <div className="space-y-2">
-          <MmOnOffSwitch
-            id={`${idPrefix}-timed-enabled`}
-            label="Enable scheduled processing"
-            enabled={enabled}
-            disabled={disabled}
-            onChange={onEnabled}
-          />
-          <p className="text-xs leading-relaxed text-[var(--mm-text3)]">
-            When on, Refiner processes files in your watched folders during the time window below.
-          </p>
+    <section className="mm-card mm-dash-card flex h-full min-h-0 min-w-0 flex-col gap-7">
+      <div>
+        <h3 className="text-base font-semibold text-[var(--mm-text1)]">{sectionTitle}</h3>
+        <p className="mt-1 text-sm text-[var(--mm-text2)]">{sectionIntro}</p>
+      </div>
+      <MmOnOffSwitch
+        id={`${idPrefix}-timed`}
+        label="Enable timed scans"
+        enabled={timedEnabled}
+        disabled={disabled}
+        onChange={onTimedEnabled}
+      />
+      <div>
+        <span className="text-sm font-medium text-[var(--mm-text1)]">Run interval (minutes)</span>
+        <p className="mt-1 text-xs text-[var(--mm-text3)]">{RUN_INTERVAL_HELPER}</p>
+        <input
+          type="number"
+          min={SCHED_INTERVAL_MIN_MINUTES}
+          max={SCHED_INTERVAL_MAX_MINUTES}
+          className="mm-input mt-2 w-full"
+          value={intervalMinutes}
+          disabled={disabled}
+          onChange={(e) =>
+            onIntervalMinutes(
+              Math.max(
+                SCHED_INTERVAL_MIN_MINUTES,
+                Math.min(SCHED_INTERVAL_MAX_MINUTES, Number(e.target.value) || SCHED_INTERVAL_MIN_MINUTES),
+              ),
+            )
+          }
+        />
+      </div>
+      <div className="space-y-3">
+        <div>
+          <span className="text-sm font-medium text-[var(--mm-text1)]">{MM_SCHEDULE_TIME_WINDOW_HEADING}</span>
+          <p className="mt-1 text-xs text-[var(--mm-text3)]">{MM_SCHEDULE_TIME_WINDOW_HELPER}</p>
         </div>
-        <div className="space-y-3">
-          <div>
-            <span className="text-sm font-medium text-[var(--mm-text1)]">{MM_SCHEDULE_TIME_WINDOW_HEADING}</span>
-            <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">{MM_SCHEDULE_TIME_WINDOW_HELPER}</p>
+        <div className="space-y-4">
+          <MmOnOffSwitch
+            id={`${idPrefix}-hours-limited`}
+            label="Limit to these hours"
+            enabled={hoursLimited}
+            disabled={disabled}
+            onChange={onHoursLimited}
+          />
+          <div className="space-y-2">
+            <span className="text-sm font-medium text-[var(--mm-text1)]">Days</span>
+            <MmScheduleDayChips scheduleDaysCsv={scheduleDays} disabled={disabled} onChangeCsv={onScheduleDays} />
           </div>
-          <div className="space-y-4">
-            <MmOnOffSwitch
-              id={`${idPrefix}-hours-limited`}
-              label="Limit to these hours"
-              enabled={hoursLimited}
-              disabled={disabled}
-              onChange={onHoursLimited}
-            />
-            <div className="space-y-2">
-              <span className="text-sm font-medium text-[var(--mm-text1)]">Days</span>
-              <MmScheduleDayChips scheduleDaysCsv={scheduleDays} disabled={disabled} onChangeCsv={onScheduleDays} />
-            </div>
-            <MmScheduleTimeFields
-              idPrefix={idPrefix}
-              start={scheduleStart}
-              end={scheduleEnd}
-              disabled={disabled}
-              onStart={onScheduleStart}
-              onEnd={onScheduleEnd}
-            />
-          </div>
+          <MmScheduleTimeFields
+            idPrefix={idPrefix}
+            start={scheduleStart}
+            end={scheduleEnd}
+            disabled={disabled}
+            onStart={onScheduleStart}
+            onEnd={onScheduleEnd}
+          />
         </div>
       </div>
-      {footer !== undefined && footer !== null ? <div className="mt-6 border-t border-[var(--mm-border)] pt-5">{footer}</div> : null}
+      {footer !== undefined && footer !== null ? (
+        <div className="border-t border-[var(--mm-border)] pt-5">{footer}</div>
+      ) : null}
     </section>
   );
 }
@@ -113,21 +145,27 @@ export function RefinerSchedulesSection() {
   const queueMovieScan = useRefinerWatchedFolderRemuxScanDispatchEnqueueMutation();
   const editable = canEdit(me.data?.role);
 
-  const [movieEnabled, setMovieEnabled] = useState(true);
-  const [movieHoursLimited, setMovieHoursLimited] = useState(false);
-  const [movieDays, setMovieDays] = useState("");
-  const [movieStart, setMovieStart] = useState("00:00");
-  const [movieEnd, setMovieEnd] = useState("23:59");
-
   const [tvEnabled, setTvEnabled] = useState(true);
+  const [tvIntervalMin, setTvIntervalMin] = useState(5);
   const [tvHoursLimited, setTvHoursLimited] = useState(false);
   const [tvDays, setTvDays] = useState("");
   const [tvStart, setTvStart] = useState("00:00");
   const [tvEnd, setTvEnd] = useState("23:59");
 
+  const [movieEnabled, setMovieEnabled] = useState(true);
+  const [movieIntervalMin, setMovieIntervalMin] = useState(5);
+  const [movieHoursLimited, setMovieHoursLimited] = useState(false);
+  const [movieDays, setMovieDays] = useState("");
+  const [movieStart, setMovieStart] = useState("00:00");
+  const [movieEnd, setMovieEnd] = useState("23:59");
+
+  const tvIntervalSeconds = Math.max(60, Math.min(7 * 24 * 3600, tvIntervalMin * 60));
+  const movieIntervalSeconds = Math.max(60, Math.min(7 * 24 * 3600, movieIntervalMin * 60));
+
   const movieDirty =
     q.data !== undefined &&
     (movieEnabled !== q.data.movie_schedule_enabled ||
+      movieIntervalSeconds !== q.data.movie_schedule_interval_seconds ||
       movieHoursLimited !== q.data.movie_schedule_hours_limited ||
       movieDays !== q.data.movie_schedule_days ||
       movieStart !== q.data.movie_schedule_start ||
@@ -136,6 +174,7 @@ export function RefinerSchedulesSection() {
   const tvDirty =
     q.data !== undefined &&
     (tvEnabled !== q.data.tv_schedule_enabled ||
+      tvIntervalSeconds !== q.data.tv_schedule_interval_seconds ||
       tvHoursLimited !== q.data.tv_schedule_hours_limited ||
       tvDays !== q.data.tv_schedule_days ||
       tvStart !== q.data.tv_schedule_start ||
@@ -149,11 +188,13 @@ export function RefinerSchedulesSection() {
     }
     if (!scheduleHydratedRef.current) {
       setMovieEnabled(q.data.movie_schedule_enabled);
+      setMovieIntervalMin(Math.max(1, Math.round(q.data.movie_schedule_interval_seconds / 60)));
       setMovieHoursLimited(q.data.movie_schedule_hours_limited);
       setMovieDays(q.data.movie_schedule_days);
       setMovieStart(q.data.movie_schedule_start);
       setMovieEnd(q.data.movie_schedule_end);
       setTvEnabled(q.data.tv_schedule_enabled);
+      setTvIntervalMin(Math.max(1, Math.round(q.data.tv_schedule_interval_seconds / 60)));
       setTvHoursLimited(q.data.tv_schedule_hours_limited);
       setTvDays(q.data.tv_schedule_days);
       setTvStart(q.data.tv_schedule_start);
@@ -163,6 +204,7 @@ export function RefinerSchedulesSection() {
     }
     if (!movieDirty) {
       setMovieEnabled(q.data.movie_schedule_enabled);
+      setMovieIntervalMin(Math.max(1, Math.round(q.data.movie_schedule_interval_seconds / 60)));
       setMovieHoursLimited(q.data.movie_schedule_hours_limited);
       setMovieDays(q.data.movie_schedule_days);
       setMovieStart(q.data.movie_schedule_start);
@@ -170,6 +212,7 @@ export function RefinerSchedulesSection() {
     }
     if (!tvDirty) {
       setTvEnabled(q.data.tv_schedule_enabled);
+      setTvIntervalMin(Math.max(1, Math.round(q.data.tv_schedule_interval_seconds / 60)));
       setTvHoursLimited(q.data.tv_schedule_hours_limited);
       setTvDays(q.data.tv_schedule_days);
       setTvStart(q.data.tv_schedule_start);
@@ -203,29 +246,26 @@ export function RefinerSchedulesSection() {
   const movieWatchedSet = Boolean((pathSettings.data.refiner_watched_folder ?? "").trim());
 
   return (
-    <section className="mm-fetcher-module-surface w-full min-w-0 rounded border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-6 text-sm leading-relaxed text-[var(--mm-text2)] sm:p-7">
-      <h2 className="text-base font-semibold text-[var(--mm-text)]">Schedules</h2>
-      <p className="mt-2 max-w-3xl text-[var(--mm-text3)]">
-        Set when Refiner runs automatic watched-folder scans for TV and Movies. Nothing here affects Fetcher.
-      </p>
-      <section
-        className="mt-6 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5"
-        aria-label="Suite time zone for Refiner schedules"
-      >
-        <p className="text-sm text-[var(--mm-text2)]">
-          <span className="font-medium text-[var(--mm-text1)]">Suite time zone for schedule windows</span>{" "}
-          {timezoneDisplayLabelForUi(q.data.schedule_timezone)}
+    <section className="mm-fetcher-module-surface mb-6 w-full min-w-0" data-testid="refiner-schedules-section">
+      <header className={FETCHER_TAB_PANEL_INTRO_CLASS}>
+        <h2 id="mm-refiner-schedules-heading" className={FETCHER_TAB_PANEL_TITLE_CLASS}>
+          Schedules
+        </h2>
+        <p className={FETCHER_TAB_PANEL_BLURB_CLASS}>
+          Turn periodic watched-folder scans on or off, set how often they run, and limit runs to certain days and times.
+          Folder poll cadence is still configured under Libraries. Nothing here affects Fetcher.
         </p>
-        <p className="mt-2 text-xs leading-relaxed text-[var(--mm-text3)]">
-          Same clock as Fetcher. Days and hours in each card below are saved separately for TV and Movies.
-        </p>
-      </section>
-      <div className="mt-8 grid gap-6 lg:grid-cols-2 lg:gap-8">
-        <RefinerScopeScheduleCard
-          title="TV"
+      </header>
+
+      <div className="mm-dash-grid gap-x-5 gap-y-6">
+        <RefinerScheduleLaneCard
+          sectionTitle="TV watched-folder scans"
+          sectionIntro="When and how often Refiner may enqueue periodic TV watched-folder scan jobs."
           idPrefix="refiner-schedule-tv"
-          enabled={tvEnabled}
-          onEnabled={setTvEnabled}
+          timedEnabled={tvEnabled}
+          onTimedEnabled={setTvEnabled}
+          intervalMinutes={tvIntervalMin}
+          onIntervalMinutes={setTvIntervalMin}
           hoursLimited={tvHoursLimited}
           onHoursLimited={setTvHoursLimited}
           scheduleDays={tvDays}
@@ -238,15 +278,15 @@ export function RefinerSchedulesSection() {
           footer={
             <button
               type="button"
-              className={mmActionButtonClass({
+              className={`${mmActionButtonClass({
                 variant: "primary",
                 disabled: !editable || !tvDirty || saveTvSchedule.isPending,
-              })}
+              })} w-full`}
               disabled={!editable || !tvDirty || saveTvSchedule.isPending}
               onClick={() =>
                 saveTvSchedule.mutate({
                   tv_schedule_enabled: tvEnabled,
-                  tv_schedule_interval_seconds: q.data.tv_schedule_interval_seconds,
+                  tv_schedule_interval_seconds: tvIntervalSeconds,
                   tv_schedule_hours_limited: tvHoursLimited,
                   tv_schedule_days: tvDays,
                   tv_schedule_start: tvStart,
@@ -258,11 +298,14 @@ export function RefinerSchedulesSection() {
             </button>
           }
         />
-        <RefinerScopeScheduleCard
-          title="Movies"
+        <RefinerScheduleLaneCard
+          sectionTitle="Movies watched-folder scans"
+          sectionIntro="When and how often Refiner may enqueue periodic Movies watched-folder scan jobs."
           idPrefix="refiner-schedule-movies"
-          enabled={movieEnabled}
-          onEnabled={setMovieEnabled}
+          timedEnabled={movieEnabled}
+          onTimedEnabled={setMovieEnabled}
+          intervalMinutes={movieIntervalMin}
+          onIntervalMinutes={setMovieIntervalMin}
           hoursLimited={movieHoursLimited}
           onHoursLimited={setMovieHoursLimited}
           scheduleDays={movieDays}
@@ -275,15 +318,15 @@ export function RefinerSchedulesSection() {
           footer={
             <button
               type="button"
-              className={mmActionButtonClass({
+              className={`${mmActionButtonClass({
                 variant: "primary",
                 disabled: !editable || !movieDirty || saveMovieSchedule.isPending,
-              })}
+              })} w-full`}
               disabled={!editable || !movieDirty || saveMovieSchedule.isPending}
               onClick={() =>
                 saveMovieSchedule.mutate({
                   movie_schedule_enabled: movieEnabled,
-                  movie_schedule_interval_seconds: q.data.movie_schedule_interval_seconds,
+                  movie_schedule_interval_seconds: movieIntervalSeconds,
                   movie_schedule_hours_limited: movieHoursLimited,
                   movie_schedule_days: movieDays,
                   movie_schedule_start: movieStart,
@@ -296,10 +339,11 @@ export function RefinerSchedulesSection() {
           }
         />
       </div>
-      <section className="mt-7 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5">
-        <h3 className="text-sm font-semibold text-[var(--mm-text)]">Run now</h3>
-        <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-          Run a scan immediately without waiting for the schedule.
+
+      <section className="mm-card mm-dash-card mt-7 p-5 sm:p-6">
+        <h3 className="text-base font-semibold text-[var(--mm-text1)]">Run now</h3>
+        <p className="mt-1 text-sm text-[var(--mm-text2)]">
+          Run a scan immediately without waiting for the next folder poll or window.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div className="rounded-md border border-[var(--mm-border)] bg-black/10 p-4">

@@ -218,4 +218,17 @@ describe("RefinerPage", () => {
     expect(screen.getByRole("button", { name: "Run TV scan now" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Run Movies scan now" })).toBeInTheDocument();
   });
+
+  it("Schedules tab has no master scheduled-processing toggle (folder poll is under Libraries)", () => {
+    renderRefinerPage();
+    openTab("Schedules");
+    expect(screen.queryByText("Enable scheduled processing")).toBeNull();
+  });
+
+  it("Schedules tab has no suite timezone preamble banner", () => {
+    renderRefinerPage();
+    openTab("Schedules");
+    expect(screen.queryByText("Suite time zone for schedule windows")).toBeNull();
+    expect(screen.queryByText(/Same clock as Fetcher/i)).toBeNull();
+  });
 });

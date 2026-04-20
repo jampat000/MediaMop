@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
 import { fetchCsrfToken } from "../../lib/api/auth-api";
 import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
 import {
-  MM_SCHEDULE_DAYS_HELPER,
   MM_SCHEDULE_TIME_WINDOW_HEADING,
   MM_SCHEDULE_TIME_WINDOW_HELPER,
   MmScheduleDayChips,
@@ -13,7 +11,7 @@ import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
 import { usePutSubberSettingsMutation, useSubberSettingsQuery } from "../../lib/subber/subber-queries";
 
-const DEFAULT_INTERVAL_HELPER = "How often this runs automatically.";
+const RUN_INTERVAL_HELPER = "How often this search runs automatically.";
 
 type CardProps = {
   title: string;
@@ -37,7 +35,6 @@ type CardProps = {
   idPrefix: string;
   onSave: () => Promise<void>;
   busy: boolean;
-  preface?: ReactNode;
   fmt: (iso: string | null | undefined) => string;
 };
 
@@ -63,35 +60,35 @@ function ScheduleCard({
   idPrefix,
   onSave,
   busy,
-  preface,
   fmt,
 }: CardProps) {
   const dis = !canOperate || busy;
   return (
-    <section className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5">
-      <h2 className="text-base font-semibold text-[var(--mm-text)]">{title}</h2>
-      <p className="mt-1 text-sm text-[var(--mm-text2)]">{helper}</p>
-      <div className="mt-4 space-y-4">
-        {preface ? <div className="space-y-2">{preface}</div> : null}
-        <MmOnOffSwitch id={`${idPrefix}-en`} label="Enable timed scans" enabled={enabled} disabled={dis} onChange={setEnabled} />
-        <label className="block text-sm text-[var(--mm-text2)]">
-          Run interval (minutes)
-          <p className="mt-1 text-xs text-[var(--mm-text2)]">{DEFAULT_INTERVAL_HELPER}</p>
-          <input
-            type="number"
-            min={1}
-            max={intervalMax}
-            className="mm-input mt-1 w-full max-w-xs"
-            value={intervalMinutes}
-            disabled={dis}
-            onChange={(e) => setIntervalMinutes(Math.max(1, Math.min(intervalMax, Number(e.target.value) || 1)))}
-          />
-        </label>
-        <div className="space-y-3">
-          <div>
-            <span className="text-sm font-medium text-[var(--mm-text)]">{MM_SCHEDULE_TIME_WINDOW_HEADING}</span>
-            <p className="mt-1 text-xs text-[var(--mm-text2)]">{MM_SCHEDULE_TIME_WINDOW_HELPER}</p>
-          </div>
+    <section className="mm-card mm-dash-card flex h-full min-h-0 min-w-0 flex-col gap-7">
+      <div>
+        <h3 className="text-base font-semibold text-[var(--mm-text1)]">{title}</h3>
+        <p className="mt-1 text-sm text-[var(--mm-text2)]">{helper}</p>
+      </div>
+      <MmOnOffSwitch id={`${idPrefix}-en`} label="Enable timed scans" enabled={enabled} disabled={dis} onChange={setEnabled} />
+      <div>
+        <span className="text-sm font-medium text-[var(--mm-text1)]">Run interval (minutes)</span>
+        <p className="mt-1 text-xs text-[var(--mm-text3)]">{RUN_INTERVAL_HELPER}</p>
+        <input
+          type="number"
+          min={1}
+          max={intervalMax}
+          className="mm-input mt-2 w-full"
+          value={intervalMinutes}
+          disabled={dis}
+          onChange={(e) => setIntervalMinutes(Math.max(1, Math.min(intervalMax, Number(e.target.value) || 1)))}
+        />
+      </div>
+      <div className="space-y-3">
+        <div>
+          <span className="text-sm font-medium text-[var(--mm-text1)]">{MM_SCHEDULE_TIME_WINDOW_HEADING}</span>
+          <p className="mt-1 text-xs text-[var(--mm-text3)]">{MM_SCHEDULE_TIME_WINDOW_HELPER}</p>
+        </div>
+        <div className="space-y-4">
           <MmOnOffSwitch
             id={`${idPrefix}-hours`}
             label="Limit to these hours"
@@ -99,19 +96,20 @@ function ScheduleCard({
             disabled={dis}
             onChange={setHoursLimited}
           />
-          <div>
-            <span className="text-sm font-medium text-[var(--mm-text)]">Days</span>
-            <p className="mt-1 text-xs text-[var(--mm-text2)]">{MM_SCHEDULE_DAYS_HELPER}</p>
+          <div className="space-y-2">
+            <span className="text-sm font-medium text-[var(--mm-text1)]">Days</span>
             <MmScheduleDayChips scheduleDaysCsv={daysCsv} disabled={dis} onChangeCsv={setDaysCsv} />
           </div>
           <MmScheduleTimeFields idPrefix={idPrefix} start={start} end={end} disabled={dis} onStart={setStart} onEnd={setEnd} />
         </div>
-        <p className="text-xs text-[var(--mm-text2)]">
-          Last run: <span className="font-medium text-[var(--mm-text)]">{fmt(lastRun)}</span>
-        </p>
+      </div>
+      <p className="text-xs text-[var(--mm-text3)]">
+        Last run: <span className="font-medium text-[var(--mm-text1)]">{fmt(lastRun)}</span>
+      </p>
+      <div className="border-t border-[var(--mm-border)] pt-5">
         <button
           type="button"
-          className={mmActionButtonClass({ variant: "primary", disabled: dis })}
+          className={`${mmActionButtonClass({ variant: "primary", disabled: dis })} w-full`}
           disabled={dis}
           onClick={() => void onSave()}
         >
@@ -186,7 +184,7 @@ export function SubberScheduleTab({ canOperate }: { canOperate: boolean }) {
   if (q.isError) return <p className="text-sm text-red-600">{(q.error as Error).message}</p>;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2" data-testid="subber-schedule-tab">
+    <div className="mm-dash-grid gap-x-5 gap-y-6" data-testid="subber-schedule-tab">
       <ScheduleCard
         title="TV subtitle scan"
         helper="Subber also searches immediately when Sonarr imports a file, regardless of this schedule."

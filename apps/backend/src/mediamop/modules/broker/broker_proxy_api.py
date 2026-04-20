@@ -9,14 +9,23 @@ from xml.sax.saxutils import escape
 from fastapi import APIRouter, HTTPException, Query, Response
 from starlette import status
 
-from mediamop.api.deps import DbSessionDep
+from mediamop.api.deps import DbSessionDep, SettingsDep
+from mediamop.core.config import MediaMopSettings
 from mediamop.modules.broker.broker_result import BrokerResult
-from mediamop.modules.broker.broker_schemas import BrokerSettingsOut
+from mediamop.modules.broker.broker_schemas import BrokerSettingsOut, BrokerSettingsRotateIn
 from mediamop.modules.broker.broker_search_service import federated_search
-from mediamop.modules.broker.broker_settings_service import get_proxy_api_key
+from mediamop.modules.broker.broker_settings_service import get_proxy_api_key, rotate_proxy_api_key
 from mediamop.platform.auth.authorization import RequireOperatorDep
+from mediamop.platform.auth.csrf import verify_csrf_token
 
 router = APIRouter(tags=["broker-proxy"])
+
+
+def _csrf(settings: MediaMopSettings, token: str) -> None:
+    secret = settings.session_secret or ""
+    if not verify_csrf_token(secret, token):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
+
 
 TORZNAB_NS = "http://torznab.com/schemas/2010/feed"
 
@@ -165,3 +174,15 @@ def get_broker_proxy_api_key_display(
     db: DbSessionDep,
 ) -> BrokerSettingsOut:
     return BrokerSettingsOut(proxy_api_key=get_proxy_api_key(db))
+
+
+@router.post("/proxy/apikey/rotate", response_model=BrokerSettingsOut)
+def post_broker_proxy_api_key_rotate(
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    body: BrokerSettingsRotateIn,
+) -> BrokerSettingsOut:
+    _csrf(settings, body.csrf_token)
+    new_key = rotate_proxy_api_key(db)
+    return BrokerSettingsOut(proxy_api_key=new_key)

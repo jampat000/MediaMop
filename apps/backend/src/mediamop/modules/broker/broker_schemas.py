@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class BrokerIndexerOut(BaseModel):
@@ -84,6 +84,7 @@ class BrokerJobOut(BaseModel):
     dedupe_key: str
     job_kind: str
     status: str
+    attempt_count: int = 0
     scope: str | None = None
     payload_json: str | None = None
     last_error: str | None = None
@@ -125,3 +126,11 @@ class BrokerResultOut(BaseModel):
 
 class BrokerSettingsOut(BaseModel):
     proxy_api_key: str
+
+
+class BrokerSettingsRotateIn(BaseModel):
+    """POST body for rotating the Broker Torznab/Newznab proxy API key."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    csrf_token: str = Field(..., min_length=1)

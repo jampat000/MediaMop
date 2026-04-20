@@ -8,7 +8,6 @@ import {
 } from "../../lib/fetcher/arr-operator-settings/queries";
 import type { FetcherArrOperatorSettingsOut, FetcherArrSearchLane } from "../../lib/fetcher/arr-operator-settings/types";
 import { showFetcherArrOperatorSettingsEditor } from "../../lib/fetcher/failed-imports/eligibility";
-import { timezoneDisplayLabelForUi } from "../../lib/suite/timezone-options";
 import {
   FETCHER_SECTION_RADARR_HEADING,
   FETCHER_SECTION_SCHEDULES_HEADING,
@@ -25,184 +24,12 @@ import {
   FETCHER_TAB_PANEL_TITLE_CLASS,
 } from "./fetcher-tab-panel-intro";
 import {
-  MM_SCHEDULE_DAYS_HELPER,
   MM_SCHEDULE_TIME_WINDOW_HEADING,
   MM_SCHEDULE_TIME_WINDOW_HELPER,
+  MmScheduleDayChips,
+  MmScheduleTimeFields,
 } from "../../components/ui/mm-schedule-window-controls";
 import { draftDiffersFromCommittedLabel } from "./fetcher-numeric-settings-draft";
-
-const WEEKDAY_TOKENS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
-
-function normalizeTimeForInput(hhmm: string): string {
-  const t = hhmm.trim();
-  const m = t.match(/^(\d{1,2}):(\d{2})$/);
-  if (!m) {
-    return "00:00";
-  }
-  const h = Math.min(23, Math.max(0, parseInt(m[1], 10)));
-  const min = Math.min(59, Math.max(0, parseInt(m[2], 10)));
-  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
-}
-
-function daySelectionFromCsv(csv: string): Set<(typeof WEEKDAY_TOKENS)[number]> {
-  const raw = csv.trim();
-  if (!raw) {
-    return new Set(WEEKDAY_TOKENS);
-  }
-  const next = new Set<(typeof WEEKDAY_TOKENS)[number]>();
-  for (const p of raw.split(",")) {
-    const t = p.trim() as (typeof WEEKDAY_TOKENS)[number];
-    if (WEEKDAY_TOKENS.includes(t)) {
-      next.add(t);
-    }
-  }
-  return next.size > 0 ? next : new Set(WEEKDAY_TOKENS);
-}
-
-function csvFromDaySelection(selected: Set<(typeof WEEKDAY_TOKENS)[number]>): string {
-  if (selected.size === 0 || selected.size === WEEKDAY_TOKENS.length) {
-    return "";
-  }
-  return WEEKDAY_TOKENS.filter((d) => selected.has(d)).join(",");
-}
-
-function ScheduleDayChips({
-  scheduleDaysCsv,
-  disabled,
-  onChangeCsv,
-}: {
-  scheduleDaysCsv: string;
-  disabled: boolean;
-  onChangeCsv: (csv: string) => void;
-}) {
-  const selected = daySelectionFromCsv(scheduleDaysCsv);
-
-  const toggle = (d: (typeof WEEKDAY_TOKENS)[number]) => {
-    const next = new Set(selected);
-    if (next.has(d)) {
-      next.delete(d);
-    } else {
-      next.add(d);
-    }
-    onChangeCsv(csvFromDaySelection(next));
-  };
-
-  const preset = (days: (typeof WEEKDAY_TOKENS)[number][] | "all" | "clear") => {
-    if (days === "all" || days === "clear") {
-      onChangeCsv("");
-      return;
-    }
-    onChangeCsv(csvFromDaySelection(new Set(days)));
-  };
-
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap gap-1.5">
-        {WEEKDAY_TOKENS.map((d) => {
-          const on = selected.has(d);
-          return (
-            <button
-              key={d}
-              type="button"
-              disabled={disabled}
-              aria-pressed={on}
-              onClick={() => toggle(d)}
-              className={[
-                "min-w-[2.75rem] rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                on
-                  ? "border-[rgba(212,175,55,0.45)] bg-[var(--mm-accent-soft)] text-[var(--mm-text1)]"
-                  : "border-[var(--mm-border)] bg-transparent text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)]/60",
-                disabled ? "cursor-not-allowed opacity-50" : "",
-              ].join(" ")}
-            >
-              {d}
-            </button>
-          );
-        })}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={disabled}
-          className={fetcherMenuButtonClass({ variant: "secondary", disabled })}
-          onClick={() => preset("all")}
-        >
-          Every day
-        </button>
-        <button
-          type="button"
-          disabled={disabled}
-          className={fetcherMenuButtonClass({ variant: "secondary", disabled })}
-          onClick={() => preset(["Mon", "Tue", "Wed", "Thu", "Fri"])}
-        >
-          Weekdays
-        </button>
-        <button
-          type="button"
-          disabled={disabled}
-          className={fetcherMenuButtonClass({ variant: "secondary", disabled })}
-          onClick={() => preset(["Sat", "Sun"])}
-        >
-          Weekends
-        </button>
-        <button
-          type="button"
-          disabled={disabled}
-          className={fetcherMenuButtonClass({ variant: "secondary", disabled })}
-          onClick={() => preset("clear")}
-        >
-          Clear
-        </button>
-      </div>
-      <p className="text-xs text-[var(--mm-text3)]">{MM_SCHEDULE_DAYS_HELPER}</p>
-    </div>
-  );
-}
-
-function ScheduleTimeFields({
-  idPrefix,
-  start,
-  end,
-  disabled,
-  onStart,
-  onEnd,
-}: {
-  idPrefix: string;
-  start: string;
-  end: string;
-  disabled: boolean;
-  onStart: (hhmm: string) => void;
-  onEnd: (hhmm: string) => void;
-}) {
-  return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <label className="block text-sm text-[var(--mm-text2)]">
-        <span className="mb-1 block text-xs text-[var(--mm-text3)]">Start time (24-hour)</span>
-        <input
-          id={`${idPrefix}-time-start`}
-          type="time"
-          step={60}
-          className="mm-input w-full max-w-full text-sm tabular-nums tracking-normal text-[var(--mm-text)]"
-          value={normalizeTimeForInput(start)}
-          onChange={(e) => onStart(e.target.value)}
-          disabled={disabled}
-        />
-      </label>
-      <label className="block text-sm text-[var(--mm-text2)]">
-        <span className="mb-1 block text-xs text-[var(--mm-text3)]">End time (24-hour)</span>
-        <input
-          id={`${idPrefix}-time-end`}
-          type="time"
-          step={60}
-          className="mm-input w-full max-w-full text-sm tabular-nums tracking-normal text-[var(--mm-text)]"
-          value={normalizeTimeForInput(end)}
-          onChange={(e) => onEnd(e.target.value)}
-          disabled={disabled}
-        />
-      </label>
-    </div>
-  );
-}
 
 export type FetcherArrSettingsTabId = "connections" | "sonarr" | "radarr" | "schedules";
 
@@ -487,13 +314,13 @@ function SearchLaneBubble({
               />
               <div className="space-y-2">
                 <span className="text-sm font-medium text-[var(--mm-text1)]">Days</span>
-                <ScheduleDayChips
+                <MmScheduleDayChips
                   scheduleDaysCsv={lane.schedule_days}
                   disabled={disabled}
                   onChangeCsv={(csv) => onLaneChange({ ...lane, schedule_days: csv })}
                 />
               </div>
-              <ScheduleTimeFields
+              <MmScheduleTimeFields
                 idPrefix={idPrefix}
                 start={lane.schedule_start}
                 end={lane.schedule_end}
@@ -559,10 +386,10 @@ function SearchLaneBubble({
       <div className="border-t border-[var(--mm-border)] pt-5">
         <button
           type="button"
-          className={fetcherMenuButtonClass({
+          className={`${fetcherMenuButtonClass({
             variant: "primary",
             disabled: !canEdit || !effectiveDirty || savePending,
-          })}
+          })} w-full`}
           disabled={!canEdit || !effectiveDirty || savePending}
           onClick={handleSave}
         >
@@ -658,83 +485,74 @@ export function FetcherArrOperatorSettingsSection({
       <>
         {isSchedules ? (
           <div className="mm-dash-grid gap-x-5 gap-y-6" data-testid="fetcher-schedules-grid">
-            <section
-              className="mm-card mm-dash-card mm-dash-activity-summary"
-              data-testid="fetcher-schedules-preamble"
-              aria-label="Schedule time zone and interval note"
-            >
-              <div className="mm-card__body mm-card__body--tight text-sm">
-                <p className="text-[var(--mm-text2)]">
-                  <span className="font-medium text-[var(--mm-text1)]">Time zone for schedule windows:</span>{" "}
-                  {timezoneDisplayLabelForUi(q.data.schedule_timezone)}
-                </p>
-                <p className="mt-3 text-[var(--mm-text3)]">{q.data.interval_restart_note}</p>
-              </div>
-            </section>
-            <SearchLaneBubble
-              variant="scheduleOnly"
-              testId="fetcher-tv-lane-missing"
-              sectionTitle="Missing TV shows"
-              sectionIntro="When and how often missing TV show searches run."
-              idPrefix="fetcher-tv-missing"
-              lane={draft.sonarr_missing}
-              serverLane={q.data.sonarr_missing}
-              onLaneChange={(next) => setDraft((d) => (d ? { ...d, sonarr_missing: next } : d))}
-              saveLabel="Save missing TV show schedule"
-              canEdit={canEdit}
-              savePending={laneSaveByKey.sonarr_missing.isPending}
-              dirty={laneDirty("sonarr_missing", draft, q.data)}
-              saveSuccess={laneSavedOutline === "sonarr_missing"}
-              onPersistLane={(merged) => persistLaneAfterMerge("sonarr_missing", merged)}
-            />
-            <SearchLaneBubble
-              variant="scheduleOnly"
-              testId="fetcher-tv-lane-upgrade"
-              sectionTitle="TV upgrades"
-              sectionIntro="When and how often TV upgrade searches run."
-              idPrefix="fetcher-tv-upgrade"
-              lane={draft.sonarr_upgrade}
-              serverLane={q.data.sonarr_upgrade}
-              onLaneChange={(next) => setDraft((d) => (d ? { ...d, sonarr_upgrade: next } : d))}
-              saveLabel="Save TV upgrades schedule"
-              canEdit={canEdit}
-              savePending={laneSaveByKey.sonarr_upgrade.isPending}
-              dirty={laneDirty("sonarr_upgrade", draft, q.data)}
-              saveSuccess={laneSavedOutline === "sonarr_upgrade"}
-              onPersistLane={(merged) => persistLaneAfterMerge("sonarr_upgrade", merged)}
-            />
-            <SearchLaneBubble
-              variant="scheduleOnly"
-              testId="fetcher-movies-lane-missing"
-              sectionTitle="Missing movies"
-              sectionIntro="When and how often missing movie searches run."
-              idPrefix="fetcher-movies-missing"
-              lane={draft.radarr_missing}
-              serverLane={q.data.radarr_missing}
-              onLaneChange={(next) => setDraft((d) => (d ? { ...d, radarr_missing: next } : d))}
-              saveLabel="Save missing movie schedule"
-              canEdit={canEdit}
-              savePending={laneSaveByKey.radarr_missing.isPending}
-              dirty={laneDirty("radarr_missing", draft, q.data)}
-              saveSuccess={laneSavedOutline === "radarr_missing"}
-              onPersistLane={(merged) => persistLaneAfterMerge("radarr_missing", merged)}
-            />
-            <SearchLaneBubble
-              variant="scheduleOnly"
-              testId="fetcher-movies-lane-upgrade"
-              sectionTitle="Movie upgrades"
-              sectionIntro="When and how often movie upgrade searches run."
-              idPrefix="fetcher-movies-upgrade"
-              lane={draft.radarr_upgrade}
-              serverLane={q.data.radarr_upgrade}
-              onLaneChange={(next) => setDraft((d) => (d ? { ...d, radarr_upgrade: next } : d))}
-              saveLabel="Save movie upgrades schedule"
-              canEdit={canEdit}
-              savePending={laneSaveByKey.radarr_upgrade.isPending}
-              dirty={laneDirty("radarr_upgrade", draft, q.data)}
-              saveSuccess={laneSavedOutline === "radarr_upgrade"}
-              onPersistLane={(merged) => persistLaneAfterMerge("radarr_upgrade", merged)}
-            />
+            <div className="flex min-w-0 flex-col gap-6">
+              <SearchLaneBubble
+                variant="scheduleOnly"
+                testId="fetcher-tv-lane-missing"
+                sectionTitle="Missing TV shows"
+                sectionIntro="When and how often missing TV show searches run."
+                idPrefix="fetcher-tv-missing"
+                lane={draft.sonarr_missing}
+                serverLane={q.data.sonarr_missing}
+                onLaneChange={(next) => setDraft((d) => (d ? { ...d, sonarr_missing: next } : d))}
+                saveLabel="Save missing TV show schedule"
+                canEdit={canEdit}
+                savePending={laneSaveByKey.sonarr_missing.isPending}
+                dirty={laneDirty("sonarr_missing", draft, q.data)}
+                saveSuccess={laneSavedOutline === "sonarr_missing"}
+                onPersistLane={(merged) => persistLaneAfterMerge("sonarr_missing", merged)}
+              />
+              <SearchLaneBubble
+                variant="scheduleOnly"
+                testId="fetcher-tv-lane-upgrade"
+                sectionTitle="TV upgrades"
+                sectionIntro="When and how often TV upgrade searches run."
+                idPrefix="fetcher-tv-upgrade"
+                lane={draft.sonarr_upgrade}
+                serverLane={q.data.sonarr_upgrade}
+                onLaneChange={(next) => setDraft((d) => (d ? { ...d, sonarr_upgrade: next } : d))}
+                saveLabel="Save TV upgrades schedule"
+                canEdit={canEdit}
+                savePending={laneSaveByKey.sonarr_upgrade.isPending}
+                dirty={laneDirty("sonarr_upgrade", draft, q.data)}
+                saveSuccess={laneSavedOutline === "sonarr_upgrade"}
+                onPersistLane={(merged) => persistLaneAfterMerge("sonarr_upgrade", merged)}
+              />
+            </div>
+            <div className="flex min-w-0 flex-col gap-6">
+              <SearchLaneBubble
+                variant="scheduleOnly"
+                testId="fetcher-movies-lane-missing"
+                sectionTitle="Missing movies"
+                sectionIntro="When and how often missing movie searches run."
+                idPrefix="fetcher-movies-missing"
+                lane={draft.radarr_missing}
+                serverLane={q.data.radarr_missing}
+                onLaneChange={(next) => setDraft((d) => (d ? { ...d, radarr_missing: next } : d))}
+                saveLabel="Save missing movie schedule"
+                canEdit={canEdit}
+                savePending={laneSaveByKey.radarr_missing.isPending}
+                dirty={laneDirty("radarr_missing", draft, q.data)}
+                saveSuccess={laneSavedOutline === "radarr_missing"}
+                onPersistLane={(merged) => persistLaneAfterMerge("radarr_missing", merged)}
+              />
+              <SearchLaneBubble
+                variant="scheduleOnly"
+                testId="fetcher-movies-lane-upgrade"
+                sectionTitle="Movie upgrades"
+                sectionIntro="When and how often movie upgrade searches run."
+                idPrefix="fetcher-movies-upgrade"
+                lane={draft.radarr_upgrade}
+                serverLane={q.data.radarr_upgrade}
+                onLaneChange={(next) => setDraft((d) => (d ? { ...d, radarr_upgrade: next } : d))}
+                saveLabel="Save movie upgrades schedule"
+                canEdit={canEdit}
+                savePending={laneSaveByKey.radarr_upgrade.isPending}
+                dirty={laneDirty("radarr_upgrade", draft, q.data)}
+                saveSuccess={laneSavedOutline === "radarr_upgrade"}
+                onPersistLane={(merged) => persistLaneAfterMerge("radarr_upgrade", merged)}
+              />
+            </div>
           </div>
         ) : (
           <div

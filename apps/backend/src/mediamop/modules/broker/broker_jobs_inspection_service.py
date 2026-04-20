@@ -51,6 +51,7 @@ def list_broker_jobs_for_inspection(
             dedupe_key=str(r.dedupe_key),
             job_kind=str(r.job_kind),
             status=str(r.status),
+            attempt_count=int(r.attempt_count),
             scope=infer_broker_job_scope(job_kind=str(r.job_kind)),
             payload_json=r.payload_json,
             last_error=r.last_error,
