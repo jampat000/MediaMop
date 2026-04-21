@@ -5,6 +5,9 @@ export type SuiteSettingsOut = {
   signed_in_home_notice: string | null;
   app_timezone: string;
   log_retention_days: number;
+  configuration_backup_enabled?: boolean;
+  configuration_backup_interval_hours?: number;
+  configuration_backup_last_run_at?: string | null;
   updated_at: string;
 };
 
@@ -15,6 +18,8 @@ export type SuiteSettingsPutBody = {
   log_retention_days: number;
   /** Older APIs required this flag; current servers ignore it. Always send `true` when saving suite settings. */
   application_logs_enabled: boolean;
+  configuration_backup_enabled?: boolean;
+  configuration_backup_interval_hours?: number;
 };
 
 /** GET /api/v1/suite/security-overview — read-only snapshot from server startup configuration. */
@@ -31,3 +36,22 @@ export type SuiteSecurityOverviewOut = {
   allowed_browser_origins_count: number;
   restart_required_note: string;
 };
+
+export type SuiteConfigurationBackupItem = {
+  id: number;
+  created_at: string;
+  file_name: string;
+  size_bytes: number;
+};
+
+export type SuiteConfigurationBackupListOut = {
+  directory: string;
+  items: SuiteConfigurationBackupItem[];
+};
+
+export function suiteSettingsBackupFieldsPresent(v: SuiteSettingsOut): boolean {
+  return (
+    typeof v.configuration_backup_enabled === "boolean" &&
+    typeof v.configuration_backup_interval_hours === "number"
+  );
+}

@@ -57,6 +57,8 @@ def test_head_schema_includes_suite_settings_table() -> None:
     assert "product_display_name" in names
     assert "signed_in_home_notice" in names
     assert "application_logs_enabled" not in names
+    assert "configuration_backup_enabled" in names
+    assert "configuration_backup_interval_hours" in names
 
 
 def test_head_schema_includes_fetcher_arr_operator_settings_table() -> None:

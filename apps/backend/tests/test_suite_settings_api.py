@@ -53,6 +53,9 @@ def test_suite_settings_get_default_shape(client_with_admin: TestClient) -> None
     assert body["signed_in_home_notice"] is None
     assert body["app_timezone"] in {"UTC", "America/New_York"}
     assert body["log_retention_days"] == 30
+    assert body["configuration_backup_enabled"] is False
+    assert body["configuration_backup_interval_hours"] == 24
+    assert body["configuration_backup_last_run_at"] is None
     assert "updated_at" in body
 
 
@@ -77,6 +80,8 @@ def test_suite_settings_put_persists(client_with_admin: TestClient) -> None:
             "signed_in_home_notice": "Welcome back.",
             "app_timezone": "UTC",
             "log_retention_days": 45,
+            "configuration_backup_enabled": True,
+            "configuration_backup_interval_hours": 12,
         },
         headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
     )
@@ -84,6 +89,8 @@ def test_suite_settings_put_persists(client_with_admin: TestClient) -> None:
     assert r.json()["product_display_name"] == "House Library"
     assert r.json()["signed_in_home_notice"] == "Welcome back."
     assert r.json()["log_retention_days"] == 45
+    assert r.json()["configuration_backup_enabled"] is True
+    assert r.json()["configuration_backup_interval_hours"] == 12
 
     r2 = client_with_admin.get("/api/v1/suite/settings")
     assert r2.status_code == 200
@@ -95,6 +102,8 @@ def test_suite_settings_put_persists(client_with_admin: TestClient) -> None:
         row = db.scalars(select(SuiteSettingsRow).where(SuiteSettingsRow.id == 1)).one()
         assert row.product_display_name == "House Library"
         assert row.log_retention_days == 45
+        assert row.configuration_backup_enabled is True
+        assert row.configuration_backup_interval_hours == 12
 
 
 def test_suite_settings_put_viewer_forbidden(client_with_viewer: TestClient) -> None:

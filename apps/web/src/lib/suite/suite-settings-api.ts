@@ -1,6 +1,11 @@
 import { fetchCsrfToken } from "../api/auth-api";
 import { apiErrorDetailToString, apiFetch, readJson } from "../api/client";
-import type { SuiteSecurityOverviewOut, SuiteSettingsOut, SuiteSettingsPutBody } from "./types";
+import type {
+  SuiteConfigurationBackupListOut,
+  SuiteSecurityOverviewOut,
+  SuiteSettingsOut,
+  SuiteSettingsPutBody,
+} from "./types";
 
 export const suiteSettingsPath = () => "/api/v1/suite/settings";
 export const suiteSecurityOverviewPath = () => "/api/v1/suite/security-overview";
@@ -17,6 +22,7 @@ export const configurationBundlePaths = [
 
 /** Preferred path (first entry in {@link configurationBundlePaths}). */
 export const suiteConfigurationBundlePath = () => configurationBundlePaths[0];
+export const suiteConfigurationBackupsPath = () => "/api/v1/suite/configuration-backups";
 
 export type ConfigurationBundle = Record<string, unknown> & { format_version: number };
 
@@ -106,4 +112,20 @@ export async function putConfigurationBundle(bundle: ConfigurationBundle): Promi
     return readJson<ConfigurationBundle>(r);
   }
   throw new Error(await readFailedRequestMessage(last!, "Could not restore configuration"));
+}
+
+export async function fetchConfigurationBackupList(): Promise<SuiteConfigurationBackupListOut> {
+  const r = await apiFetch(suiteConfigurationBackupsPath());
+  if (!r.ok) {
+    throw new Error(await readFailedRequestMessage(r, "Could not load automatic snapshots"));
+  }
+  return readJson<SuiteConfigurationBackupListOut>(r);
+}
+
+export async function fetchStoredConfigurationBackupBlob(backupId: number): Promise<Blob> {
+  const r = await apiFetch(`${suiteConfigurationBackupsPath()}/${backupId}/download`);
+  if (!r.ok) {
+    throw new Error(await readFailedRequestMessage(r, "Could not download automatic snapshot"));
+  }
+  return r.blob();
 }

@@ -7,7 +7,11 @@ import { DISPLAY_DENSITY_STORAGE_KEY } from "../../lib/ui/display-density";
 import type { UserPublic } from "../../lib/api/types";
 import { qk } from "../../lib/auth/queries";
 import { activityRecentSettingsKey } from "../../lib/activity/queries";
-import { suiteSecurityOverviewQueryKey, suiteSettingsQueryKey } from "../../lib/suite/queries";
+import {
+  suiteConfigurationBackupsQueryKey,
+  suiteSecurityOverviewQueryKey,
+  suiteSettingsQueryKey,
+} from "../../lib/suite/queries";
 import type { SuiteSecurityOverviewOut, SuiteSettingsOut } from "../../lib/suite/types";
 import { SettingsPage } from "./settings-page";
 
@@ -19,6 +23,9 @@ const minimalSuiteSettings: SuiteSettingsOut = {
   signed_in_home_notice: null,
   app_timezone: "UTC",
   log_retention_days: 30,
+  configuration_backup_enabled: false,
+  configuration_backup_interval_hours: 24,
+  configuration_backup_last_run_at: null,
   updated_at: "2026-04-11T00:00:00Z",
 };
 
@@ -50,6 +57,7 @@ function renderSettings(me: UserPublic) {
   qc.setQueryData(suiteSecurityOverviewQueryKey, minimalSecurity);
   qc.setQueryData(qk.me, me);
   qc.setQueryData(activityRecentSettingsKey, { items: [] });
+  qc.setQueryData(suiteConfigurationBackupsQueryKey, { directory: "C:/MediaMop/backups/suite-configuration", items: [] });
   return render(wrap(<SettingsPage />, qc));
 }
 
@@ -75,16 +83,17 @@ describe("SettingsPage (suite settings)", () => {
     expect(screen.getByTestId("suite-settings-save-logs")).toBeDisabled();
   });
 
-  it("shows configuration export for operators", () => {
+  it("shows configuration backup + export for operators", () => {
     renderSettings(operatorMe);
-    expect(screen.getByTestId("suite-settings-configuration-export")).toBeTruthy();
+    expect(screen.getByTestId("suite-settings-backup-restore")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Download configuration now" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Restore from file…" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Save backup schedule" })).toBeDisabled();
   });
 
-  it("hides configuration export for viewers", () => {
+  it("hides configuration backup for viewers", () => {
     renderSettings(viewerMe);
-    expect(screen.queryByTestId("suite-settings-configuration-export")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("suite-settings-backup-restore")).not.toBeInTheDocument();
   });
 
   it("keeps General tab focused and splits Logs to its own tab", () => {

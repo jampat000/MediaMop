@@ -29,6 +29,18 @@ class SuiteSettingsOut(BaseModel):
         le=3650,
         description="How long Activity rows are kept before automatic cleanup.",
     )
+    configuration_backup_enabled: bool = Field(
+        description="Whether server-side automatic configuration snapshots are enabled.",
+    )
+    configuration_backup_interval_hours: int = Field(
+        ge=1,
+        le=720,
+        description="Minimum hours between automatic configuration snapshots.",
+    )
+    configuration_backup_last_run_at: datetime | None = Field(
+        default=None,
+        description="UTC timestamp of the last successful automatic configuration snapshot run.",
+    )
     updated_at: datetime
 
 
@@ -50,6 +62,16 @@ class SuiteSettingsPutIn(BaseModel):
         default=None,
         description="Deprecated; retained so older clients can POST without changes. Ignored when persisting.",
     )
+    configuration_backup_enabled: bool | None = Field(
+        default=None,
+        description="Enable or disable periodic automatic configuration snapshots.",
+    )
+    configuration_backup_interval_hours: int | None = Field(
+        default=None,
+        ge=1,
+        le=720,
+        description="Minimum hours between automatic configuration snapshots.",
+    )
 
 
 class ConfigurationBundleImportIn(BaseModel):
@@ -59,6 +81,22 @@ class ConfigurationBundleImportIn(BaseModel):
 
     csrf_token: str = Field(..., min_length=1)
     bundle: dict[str, Any]
+
+
+class SuiteConfigurationBackupItemOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    created_at: datetime
+    file_name: str
+    size_bytes: int
+
+
+class SuiteConfigurationBackupListOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    directory: str
+    items: list[SuiteConfigurationBackupItemOut]
 
 
 class SuiteSecurityOverviewOut(BaseModel):

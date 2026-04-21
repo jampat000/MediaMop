@@ -1,9 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchSuiteSecurityOverview, fetchSuiteSettings, putSuiteSettings } from "./suite-settings-api";
+import {
+  fetchConfigurationBackupList,
+  fetchSuiteSecurityOverview,
+  fetchSuiteSettings,
+  putSuiteSettings,
+} from "./suite-settings-api";
 import type { SuiteSettingsPutBody } from "./types";
 
 export const suiteSettingsQueryKey = ["suite", "settings"] as const;
 export const suiteSecurityOverviewQueryKey = ["suite", "security-overview"] as const;
+export const suiteConfigurationBackupsQueryKey = ["suite", "configuration-backups"] as const;
 
 export function useSuiteSettingsQuery() {
   return useQuery({
@@ -18,6 +24,15 @@ export function useSuiteSecurityOverviewQuery() {
     queryKey: suiteSecurityOverviewQueryKey,
     queryFn: () => fetchSuiteSecurityOverview(),
     staleTime: 30_000,
+  });
+}
+
+export function useSuiteConfigurationBackupsQuery(enabled: boolean) {
+  return useQuery({
+    queryKey: suiteConfigurationBackupsQueryKey,
+    queryFn: () => fetchConfigurationBackupList(),
+    enabled,
+    staleTime: 15_000,
   });
 }
 

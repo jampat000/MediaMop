@@ -10,10 +10,11 @@
  * the default API/web ports first so a leftover process is not reused by accident.)
  * Set ``MEDIAMOP_DEV_STACK_ALWAYS_SPAWN_API=1`` to force spawning the API child anyway.
  *
- * If ``GET /api/v1/subber/library/sync/movies`` returns **404** while ``/health`` works, the
- * default port usually holds an **older** MediaMop build (current code answers **405**). We then
- * start this repo's API on the **next free TCP port** and set ``MEDIAMOP_DEV_STACK_API_PROXY_TARGET``
- * for Vite so the UI still works without manually killing the stale process.
+ * If ``/health`` works but required routes (e.g. ``/api/v1/subber/library/sync/movies`` and
+ * ``/api/v1/system/suite-configuration-bundle``) return **404**, the default port usually holds an
+ * **older** MediaMop build. We then start this repo's API on the **next free TCP port** and set
+ * ``MEDIAMOP_DEV_STACK_API_PROXY_TARGET`` for Vite so the UI still works without manually killing
+ * the stale process.
  *
  * If the **web** port from ``dev-ports.json`` is busy (leftover Vite), the next free port is used
  * and ``MEDIAMOP_DEV_WEB_PORT`` is set for Vite (see ``vite.config.ts``). Run ``npm run dev:stop-web``
@@ -147,6 +148,43 @@ function probeSubberLibrarySyncMoviesRouteNotStale(apiHost, apiPort) {
       req.destroy();
       console.error(
         "[dev-stack] Timed out probing Subber library sync route — assuming API is OK.",
+      );
+      resolve(true);
+    });
+    req.end();
+  });
+}
+
+/**
+ * Configuration bundle route exists on current API builds; unauthenticated requests may return
+ * 401/403, but **404** means the backend is stale and missing export/restore endpoints.
+ */
+function probeSuiteConfigurationBundleRouteNotStale(apiHost, apiPort) {
+  const { hostname, port } = apiConnectTarget(apiHost, apiPort);
+  return new Promise((resolve) => {
+    const req = http.request(
+      {
+        hostname,
+        port,
+        path: "/api/v1/system/suite-configuration-bundle",
+        method: "GET",
+        timeout: 3000,
+      },
+      (res) => {
+        res.resume();
+        resolve(res.statusCode !== 404);
+      },
+    );
+    req.on("error", () => {
+      console.error(
+        "[dev-stack] Could not probe suite configuration-bundle route (network error) — assuming API is OK.",
+      );
+      resolve(true);
+    });
+    req.on("timeout", () => {
+      req.destroy();
+      console.error(
+        "[dev-stack] Timed out probing suite configuration-bundle route — assuming API is OK.",
       );
       resolve(true);
     });
@@ -370,11 +408,13 @@ async function main() {
   const forceSpawn = (process.env.MEDIAMOP_DEV_STACK_ALWAYS_SPAWN_API || "").trim() === "1";
   const healthOk = await probeApiAlreadyServing(apiHost, apiPort);
   let subberRoutesOk = true;
+  let configBundleRouteOk = true;
   if (healthOk) {
     subberRoutesOk = await probeSubberLibrarySyncMoviesRouteNotStale(apiHost, apiPort);
+    configBundleRouteOk = await probeSuiteConfigurationBundleRouteNotStale(apiHost, apiPort);
   }
-  /** Stale build on the configured port: would make Subber library sync POST return 404. */
-  const staleDefaultApi = healthOk && !subberRoutesOk;
+  /** Stale build on the configured port: required API routes missing on old server code. */
+  const staleDefaultApi = healthOk && (!subberRoutesOk || !configBundleRouteOk);
 
   let bindPort = apiPort;
   /** When set, Vite must proxy ``/api`` here (see ``vite.config.ts``). */
@@ -386,7 +426,7 @@ async function main() {
     const found = await findFirstTcpPortWithoutHealthyApi(apiHost, apiPort + 1, maxPort);
     if (found == null) {
       console.error(
-        `[dev-stack] http://${hostname}:${stalePort} is an outdated MediaMop API (Subber sync route missing). ` +
+        `[dev-stack] http://${hostname}:${stalePort} is an outdated MediaMop API (required routes missing). ` +
           `No free port found between ${apiPort + 1} and ${maxPort} for a new API.\n` +
           `[dev-stack] Free a port or stop the old process, then run npm run dev again.`,
       );
@@ -404,7 +444,7 @@ async function main() {
   const chosenWebPort = await resolveDevWebPort(webHost, configuredWebPort);
   const apiOriginEnvPatch = buildApiDevOriginEnvPatch(chosenWebPort);
 
-  const canReuse = !forceSpawn && healthOk && subberRoutesOk;
+  const canReuse = !forceSpawn && healthOk && subberRoutesOk && configBundleRouteOk;
 
   if (canReuse) {
     const { hostname, port } = apiConnectTarget(apiHost, apiPort);

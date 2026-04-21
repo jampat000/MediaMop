@@ -41,6 +41,16 @@ class RefinerRuntimeSettingsOut(BaseModel):
     refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs: bool = Field(
         description="When true, periodic scans may enqueue ``refiner.file.remux_pass.v1``.",
     )
+    refiner_probe_size_mb: int = Field(
+        ge=1,
+        le=1024,
+        description="ffprobe probe size in MB for Refiner preflight analysis.",
+    )
+    refiner_analyze_duration_seconds: int = Field(
+        ge=1,
+        le=300,
+        description="ffprobe analyze duration in seconds for Refiner preflight analysis.",
+    )
     refiner_watched_folder_min_file_age_seconds: int = Field(
         ge=0,
         description="Minimum file age before watched-folder scan or one-file pass touches media.",

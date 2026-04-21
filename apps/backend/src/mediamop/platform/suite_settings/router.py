@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import FileResponse
 from starlette import status
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
@@ -16,12 +17,18 @@ from mediamop.platform.auth.deps_auth import UserPublicDep
 from mediamop.platform.configuration_bundle.service import apply_configuration_bundle, build_configuration_bundle
 from mediamop.platform.suite_settings.schemas import (
     ConfigurationBundleImportIn,
+    SuiteConfigurationBackupItemOut,
+    SuiteConfigurationBackupListOut,
     SuiteSecurityOverviewOut,
     SuiteSettingsOut,
     SuiteSettingsPutIn,
 )
 from mediamop.platform.suite_settings.security_overview import build_suite_security_overview
 from mediamop.platform.suite_settings.service import apply_suite_settings_put, build_suite_settings_out, ensure_suite_settings_row
+from mediamop.platform.suite_settings.suite_configuration_backup_service import (
+    get_suite_configuration_backup_file_path,
+    list_suite_configuration_backups,
+)
 
 router = APIRouter(tags=["suite"])
 
@@ -58,6 +65,8 @@ def put_suite_settings(
             signed_in_home_notice=body.signed_in_home_notice,
             app_timezone=body.app_timezone,
             log_retention_days=body.log_retention_days,
+            configuration_backup_enabled=body.configuration_backup_enabled,
+            configuration_backup_interval_hours=body.configuration_backup_interval_hours,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -100,6 +109,37 @@ def put_configuration_bundle(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     db.commit()
     return build_configuration_bundle(db)
+
+
+@router.get("/suite/configuration-backups", response_model=SuiteConfigurationBackupListOut)
+def get_configuration_backups(_user: RequireOperatorDep, db: DbSessionDep, settings: SettingsDep) -> SuiteConfigurationBackupListOut:
+    directory, rows = list_suite_configuration_backups(db, settings=settings)
+    return SuiteConfigurationBackupListOut(
+        directory=directory,
+        items=[
+            SuiteConfigurationBackupItemOut(
+                id=r.id,
+                created_at=r.created_at,
+                file_name=r.file_name,
+                size_bytes=r.size_bytes,
+            )
+            for r in rows
+        ],
+    )
+
+
+@router.get("/suite/configuration-backups/{backup_id}/download")
+def download_configuration_backup(
+    backup_id: int,
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+) -> FileResponse:
+    try:
+        path, row = get_suite_configuration_backup_file_path(db, settings=settings, backup_id=backup_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return FileResponse(path, media_type="application/json", filename=row.file_name)
 
 
 @router.get("/suite/security-overview", response_model=SuiteSecurityOverviewOut)

@@ -71,6 +71,10 @@ _WATCHED_FOLDER_SCAN_PERIODIC_NOTE = (
     "MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS. "
     "Restart the API after changing any of these — values are read at process start only."
 )
+_REFINER_PROBE_NOTE = (
+    "Refiner ffprobe preflight depth: MEDIAMOP_REFINER_PROBE_SIZE_MB and "
+    "MEDIAMOP_REFINER_ANALYZE_DURATION_SECONDS in apps/backend/.env (read at startup; restart required)."
+)
 
 
 def refiner_runtime_settings_from_settings(settings: MediaMopSettings) -> RefinerRuntimeSettingsOut:
@@ -111,12 +115,14 @@ def refiner_runtime_settings_from_settings(settings: MediaMopSettings) -> Refine
         refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs=(
             settings.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs
         ),
+        refiner_probe_size_mb=settings.refiner_probe_size_mb,
+        refiner_analyze_duration_seconds=settings.refiner_analyze_duration_seconds,
         refiner_watched_folder_min_file_age_seconds=settings.refiner_watched_folder_min_file_age_seconds,
         refiner_movie_output_cleanup_min_age_seconds=settings.refiner_movie_output_cleanup_min_age_seconds,
         movie_output_cleanup_configuration_note=_MOVIE_OUTPUT_CLEANUP_NOTE,
         refiner_tv_output_cleanup_min_age_seconds=settings.refiner_tv_output_cleanup_min_age_seconds,
         tv_output_cleanup_configuration_note=_TV_OUTPUT_CLEANUP_NOTE,
-        watched_folder_scan_periodic_configuration_note=_WATCHED_FOLDER_SCAN_PERIODIC_NOTE,
+        watched_folder_scan_periodic_configuration_note=f"{_WATCHED_FOLDER_SCAN_PERIODIC_NOTE} {_REFINER_PROBE_NOTE}",
         refiner_work_temp_stale_sweep_movie_schedule_enabled=settings.refiner_work_temp_stale_sweep_movie_schedule_enabled,
         refiner_work_temp_stale_sweep_movie_schedule_interval_seconds=(
             settings.refiner_work_temp_stale_sweep_movie_schedule_interval_seconds

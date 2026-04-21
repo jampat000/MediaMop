@@ -17,10 +17,16 @@ import {
   activityRecentSettingsKey,
   useActivityRecentForSettingsQuery,
 } from "../../lib/activity/queries";
-import { useSuiteSettingsQuery, useSuiteSettingsSaveMutation } from "../../lib/suite/queries";
+import {
+  suiteConfigurationBackupsQueryKey,
+  useSuiteConfigurationBackupsQuery,
+  useSuiteSettingsQuery,
+  useSuiteSettingsSaveMutation,
+} from "../../lib/suite/queries";
 import type { SuiteSettingsPutBody } from "../../lib/suite/types";
 import {
   fetchConfigurationBundle,
+  fetchStoredConfigurationBackupBlob,
   putConfigurationBundle,
   type ConfigurationBundle,
 } from "../../lib/suite/suite-settings-api";
@@ -60,6 +66,17 @@ function tabButtonClass(active: boolean): string {
 
 const SUITE_SETTINGS_DASH_CARD_CLASS =
   "mm-card mm-dash-card flex min-h-0 min-w-0 flex-col gap-5";
+const CONFIGURATION_BACKUP_INTERVAL_HOURS = [6, 12, 24, 48, 72, 168] as const;
+
+function formatBackupBytes(n: number): string {
+  if (n < 1024) {
+    return `${n} B`;
+  }
+  if (n < 1024 * 1024) {
+    return `${(n / 1024).toFixed(1)} KB`;
+  }
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 /** Settings: General (timezone, display density, configuration export), Security, Logs (retention + recent events). */
 export function SettingsPage() {
@@ -84,7 +101,9 @@ export function SettingsPage() {
   const [backupBusy, setBackupBusy] = useState(false);
   const [backupMsg, setBackupMsg] = useState<string | null>(null);
   const [backupErr, setBackupErr] = useState<string | null>(null);
-  const [lastSuiteSaveTarget, setLastSuiteSaveTarget] = useState<"timezone" | "logs" | null>(null);
+  const [configurationBackupEnabled, setConfigurationBackupEnabled] = useState(false);
+  const [configurationBackupIntervalHours, setConfigurationBackupIntervalHours] = useState(24);
+  const [lastSuiteSaveTarget, setLastSuiteSaveTarget] = useState<"timezone" | "logs" | "backup" | null>(null);
   const restoreInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -94,9 +113,16 @@ export function SettingsPage() {
     const fromServer = settingsQ.data.app_timezone || "";
     setAppTimezone(CURATED_TIMEZONE_ID_SET.has(fromServer) ? fromServer : null);
     setLogRetentionDaysDraft(null);
+    setConfigurationBackupEnabled(Boolean(settingsQ.data.configuration_backup_enabled));
+    setConfigurationBackupIntervalHours(
+      Number.isFinite(Number(settingsQ.data.configuration_backup_interval_hours))
+        ? Number(settingsQ.data.configuration_backup_interval_hours)
+        : 24,
+    );
   }, [settingsQ.data]);
 
   const editable = canEditSuiteGlobal(me.data?.role);
+  const backupsQ = useSuiteConfigurationBackupsQuery(editable && tab === "general" && Boolean(settingsQ.data));
 
   const serverCuratedTimezone =
     settingsQ.data && CURATED_TIMEZONE_ID_SET.has(settingsQ.data.app_timezone || "") ? settingsQ.data.app_timezone : null;
@@ -109,6 +135,10 @@ export function SettingsPage() {
     settingsQ.data !== undefined &&
     logRetentionDaysDraft !== null &&
     logRetentionDaysDraft !== String(settingsQ.data.log_retention_days);
+  const backupScheduleDirty =
+    settingsQ.data !== undefined &&
+    (configurationBackupEnabled !== Boolean(settingsQ.data.configuration_backup_enabled) ||
+      configurationBackupIntervalHours !== Number(settingsQ.data.configuration_backup_interval_hours || 24));
 
   const loadingAny = settingsQ.isPending || me.isPending;
 
@@ -228,6 +258,11 @@ export function SettingsPage() {
       app_timezone: tz,
       log_retention_days: Number.isFinite(retention) ? retention : d.log_retention_days,
       application_logs_enabled: true,
+      configuration_backup_enabled: Boolean(configurationBackupEnabled),
+      configuration_backup_interval_hours: Math.min(
+        720,
+        Math.max(1, Math.trunc(Number(configurationBackupIntervalHours))),
+      ),
     };
     return body;
   };
@@ -259,6 +294,44 @@ export function SettingsPage() {
       await activityRecentQ.refetch();
     } catch {
       /* surfaced via save.isError */
+    }
+  }
+
+  async function handleSaveBackupSchedule() {
+    if (!settingsQ.data) {
+      return;
+    }
+    setBackupErr(null);
+    setBackupMsg(null);
+    setLastSuiteSaveTarget("backup");
+    save.reset();
+    try {
+      await save.mutateAsync(buildSuitePutBody());
+      setLastSuiteSaveTarget(null);
+      setBackupMsg("Backup schedule saved.");
+      await queryClient.invalidateQueries({ queryKey: suiteConfigurationBackupsQueryKey });
+    } catch (e) {
+      setBackupErr(e instanceof Error ? e.message : "Could not save backup schedule.");
+    }
+  }
+
+  async function handleDownloadStoredBackup(id: number, fileLabel: string) {
+    setBackupErr(null);
+    setBackupMsg(null);
+    setBackupBusy(true);
+    try {
+      const blob = await fetchStoredConfigurationBackupBlob(id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileLabel.replace(/[^\w.\-]+/g, "_").slice(0, 120);
+      a.click();
+      URL.revokeObjectURL(url);
+      setBackupMsg("Download started.");
+    } catch (e) {
+      setBackupErr(e instanceof Error ? e.message : "Could not download snapshot.");
+    } finally {
+      setBackupBusy(false);
     }
   }
 
@@ -423,52 +496,174 @@ export function SettingsPage() {
             {editable ? (
               <section
                 className={SUITE_SETTINGS_DASH_CARD_CLASS}
-                data-testid="suite-settings-configuration-export"
-                aria-labelledby="suite-settings-configuration-heading"
+                data-testid="suite-settings-backup-restore"
+                aria-labelledby="suite-settings-backup-heading"
               >
                 <div>
-                  <h3 id="suite-settings-configuration-heading" className="text-base font-semibold text-[var(--mm-text1)]">
-                    Configuration export and restore
+                  <h3 id="suite-settings-backup-heading" className="text-base font-semibold text-[var(--mm-text1)]">
+                    Backup and restore
                   </h3>
                   <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                    Download or upload the full suite configuration (Fetcher, Refiner, Pruner, Subber, Broker, and
-                    suite-level settings) as one JSON file. Treat exports as sensitive — they can include API keys and
-                    tokens. Restoring replaces matching stored settings for this install, including the Pruner instance
-                    list and per-library rules.
+                    Export or import the full suite configuration (Fetcher, Refiner, Pruner, Subber, Broker, and
+                    suite-level settings) as one JSON file. Automatic snapshots use the same JSON format and keep the
+                    five most recent files on disk.
                   </p>
                 </div>
 
-                <div className="flex flex-col gap-4 rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/50 p-4 shadow-sm">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                    <button
-                      type="button"
-                      className={mmActionButtonClass({ variant: "secondary", disabled: backupBusy || save.isPending })}
-                      disabled={backupBusy || save.isPending}
-                      onClick={() => void handleDownloadConfiguration()}
-                    >
-                      Download configuration now
-                    </button>
-                    <button
-                      type="button"
-                      className={mmActionButtonClass({ variant: "tertiary", disabled: backupBusy || save.isPending })}
-                      disabled={backupBusy || save.isPending}
-                      onClick={() => restoreInputRef.current?.click()}
-                    >
-                      Restore from file…
-                    </button>
-                    <input
-                      ref={restoreInputRef}
-                      type="file"
-                      accept="application/json,.json"
-                      className="hidden"
-                      aria-label="Choose configuration JSON file to restore"
-                      onChange={(e) => void handleRestoreFileChange(e)}
-                    />
+                <div className="grid gap-5 lg:grid-cols-2">
+                  <div className="flex flex-col gap-4 rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/50 p-4 shadow-sm">
+                    <div>
+                      <h4 className="text-sm font-semibold text-[var(--mm-text1)]">Automatic snapshots</h4>
+                      <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
+                        The server writes configuration snapshots on this schedule. Older files are pruned after five.
+                      </p>
+                    </div>
+                    <label className="flex cursor-pointer items-start gap-2.5 text-sm text-[var(--mm-text2)]">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--mm-accent)]"
+                        checked={configurationBackupEnabled}
+                        disabled={!editable || save.isPending}
+                        onChange={(e) => setConfigurationBackupEnabled(e.target.checked)}
+                      />
+                      <span>Run scheduled configuration backups</span>
+                    </label>
+                    <label className="block text-sm text-[var(--mm-text2)]">
+                      <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
+                        Minimum time between runs
+                      </span>
+                      <select
+                        className="mm-input w-full max-w-xs"
+                        value={configurationBackupIntervalHours}
+                        disabled={!editable || save.isPending}
+                        onChange={(e) => setConfigurationBackupIntervalHours(Number(e.target.value))}
+                      >
+                        {CONFIGURATION_BACKUP_INTERVAL_HOURS.map((h) => (
+                          <option key={h} value={h}>
+                            {h === 168 ? "Every 7 days (168 h)" : `Every ${h} hours`}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <p className="text-xs text-[var(--mm-text3)]">
+                      <span className="font-medium text-[var(--mm-text2)]">Last automatic run:</span>{" "}
+                      {settingsQ.data.configuration_backup_last_run_at
+                        ? new Date(settingsQ.data.configuration_backup_last_run_at).toLocaleString()
+                        : "—"}
+                    </p>
+                    <div className="flex flex-col gap-2 border-t border-[var(--mm-border)] pt-3">
+                      <button
+                        type="button"
+                        className={mmActionButtonClass({
+                          variant: "secondary",
+                          disabled: !editable || !backupScheduleDirty || save.isPending,
+                        })}
+                        disabled={!editable || !backupScheduleDirty || save.isPending}
+                        onClick={() => void handleSaveBackupSchedule()}
+                      >
+                        {save.isPending ? "Saving…" : "Save backup schedule"}
+                      </button>
+                      {save.isError && lastSuiteSaveTarget === "backup" ? (
+                        <p
+                          className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
+                          role="alert"
+                          data-testid="suite-settings-backup-save-error"
+                        >
+                          {save.error instanceof Error ? save.error.message : "Could not save."}
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
-                  <p className="text-xs text-[var(--mm-text3)]">
-                    You will be asked to confirm before a restore runs. Keep copies of exports wherever you already store
-                    backups for this host.
-                  </p>
+
+                  <div className="flex flex-col gap-4 rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/50 p-4 shadow-sm">
+                    <div>
+                      <h4 className="text-sm font-semibold text-[var(--mm-text1)]">Manual export and restore</h4>
+                      <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
+                        Download a snapshot now, or pick a previously exported JSON file to restore.
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <button
+                        type="button"
+                        className={mmActionButtonClass({ variant: "secondary", disabled: backupBusy || save.isPending })}
+                        disabled={backupBusy || save.isPending}
+                        onClick={() => void handleDownloadConfiguration()}
+                      >
+                        Download configuration now
+                      </button>
+                      <button
+                        type="button"
+                        className={mmActionButtonClass({ variant: "tertiary", disabled: backupBusy || save.isPending })}
+                        disabled={backupBusy || save.isPending}
+                        onClick={() => restoreInputRef.current?.click()}
+                      >
+                        Restore from file…
+                      </button>
+                      <input
+                        ref={restoreInputRef}
+                        type="file"
+                        accept="application/json,.json"
+                        className="hidden"
+                        aria-label="Choose configuration JSON file to restore"
+                        onChange={(e) => void handleRestoreFileChange(e)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/30 p-4">
+                  <h4 className="text-sm font-semibold text-[var(--mm-text1)]">Recent automatic snapshots</h4>
+                  {backupsQ.data ? (
+                    <p
+                      className="mt-1.5 break-all font-mono text-xs leading-snug text-[var(--mm-text2)]"
+                      data-testid="suite-configuration-backup-directory"
+                    >
+                      {backupsQ.data.directory}
+                    </p>
+                  ) : null}
+                  <div className="mt-3">
+                    {backupsQ.isLoading ? (
+                      <p className="text-sm text-[var(--mm-text3)]">Loading snapshot list…</p>
+                    ) : backupsQ.isError ? (
+                      <p
+                        className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
+                        role="alert"
+                      >
+                        {(backupsQ.error as Error).message}
+                      </p>
+                    ) : (backupsQ.data?.items.length ?? 0) === 0 ? (
+                      <p className="text-sm text-[var(--mm-text3)]">
+                        No automatic snapshots yet.
+                      </p>
+                    ) : (
+                      <ul className="divide-y divide-[var(--mm-border)] overflow-hidden rounded-md border border-[var(--mm-border)] text-sm">
+                        {backupsQ.data!.items.map((row) => (
+                          <li
+                            key={row.id}
+                            className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+                          >
+                            <div className="min-w-0 text-[var(--mm-text2)]">
+                              <div className="font-medium text-[var(--mm-text)]">
+                                {new Date(row.created_at).toLocaleString()}
+                              </div>
+                              <div className="text-xs text-[var(--mm-text3)]">{formatBackupBytes(row.size_bytes)}</div>
+                            </div>
+                            <button
+                              type="button"
+                              className={mmActionButtonClass({
+                                variant: "tertiary",
+                                disabled: backupBusy || save.isPending,
+                              })}
+                              disabled={backupBusy || save.isPending}
+                              onClick={() => void handleDownloadStoredBackup(row.id, row.file_name)}
+                            >
+                              Download snapshot
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 </div>
 
                 {backupMsg ? (

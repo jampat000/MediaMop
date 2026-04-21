@@ -17,6 +17,7 @@ Single canonical backlog for shipped milestones and the next honest slice of wor
 - [x] Refiner watched-folder scanning family shipped: `refiner.watched_folder.remux_scan_dispatch.v1` (manual trigger, media scan, gate-equivalent ownership/blocking, optional remux enqueue, duplicate guard, activity summary, Refiner page UI + POST enqueue API).
 - [x] Refiner jobs inspection / operator control surface: `GET …/refiner/jobs/inspection`, Refiner page queue table, `POST …/refiner/jobs/{id}/cancel-pending` (pending-only; operators); finished outcomes remain on Activity.
 - [x] Refiner watched-folder periodic scanning: optional Refiner-only asyncio enqueue loop for `refiner.watched_folder.remux_scan_dispatch.v1` (separate env enable/interval + periodic remux flags from supplied payload evaluation); scan-level idle guard; `scan_trigger` in activity summary; runtime settings snapshot + UI honesty (restart required).
+- [x] Refiner preflight parity slice shipped (bounded): ffprobe depth controls (`MEDIAMOP_REFINER_PROBE_SIZE_MB`, `MEDIAMOP_REFINER_ANALYZE_DURATION_SECONDS`), stable remux preflight observability (`preflight_status`, `preflight_reason`, `preflight_probe_settings`), and failure-contract coverage that preserves non-destructive `failed_before_execution` semantics.
 
 ## Roadmap item 6 — Refiner jobs inspection / operator control surface
 

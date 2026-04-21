@@ -64,6 +64,8 @@ def _fail_before(
     return {
         "ok": False,
         "outcome": REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
+        "preflight_status": "failed",
+        "preflight_reason": reason,
         "reason": reason,
         "relative_media_path": relative_media_path,
         **({"inspected_source_path": inspected_source_path} if inspected_source_path else {}),
@@ -364,7 +366,12 @@ def run_refiner_file_remux_pass(
             )
 
     try:
-        probe = ffprobe_json(src, mediamop_home=settings.mediamop_home)
+        probe = ffprobe_json(
+            src,
+            mediamop_home=settings.mediamop_home,
+            probe_size_mb=settings.refiner_probe_size_mb,
+            analyze_duration_seconds=settings.refiner_analyze_duration_seconds,
+        )
     except Exception as exc:
         return _fail_before(
             relative_media_path=relative_media_path,
@@ -402,6 +409,12 @@ def run_refiner_file_remux_pass(
         "inspected_source_path": inspected,
         "refiner_watched_folder_resolved": str(watched_root),
         "stream_counts": {"video": len(video), "audio": len(audio), "subtitle": len(subs)},
+        "preflight_status": "ok",
+        "preflight_reason": "ffprobe completed and remux plan was evaluated",
+        "preflight_probe_settings": {
+            "probe_size_mb": settings.refiner_probe_size_mb,
+            "analyze_duration_seconds": settings.refiner_analyze_duration_seconds,
+        },
         "plan_summary": summarize_remux_plan(plan),
         "audio_before": before_a,
         "audio_after": after_a,
@@ -497,6 +510,8 @@ def run_refiner_file_remux_pass(
         return {
             "ok": False,
             "outcome": REMUX_PASS_OUTCOME_FAILED_DURING_EXECUTION,
+            "preflight_status": "ok",
+            "preflight_reason": "ffprobe completed and remux plan was evaluated",
             "reason": str(exc),
             "relative_media_path": relative_media_path,
             "inspected_source_path": inspected,

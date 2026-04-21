@@ -69,6 +69,7 @@ def test_run_fails_when_watched_root_missing(tmp_path: Path) -> None:
     )
     assert r["ok"] is False
     assert r["outcome"] == REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION
+    assert r["preflight_status"] == "failed"
     assert "watched folder" in r["reason"].lower()
 
 def test_live_skips_when_no_remux_required_deletes_release_folder(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -89,7 +90,7 @@ def test_live_skips_when_no_remux_required_deletes_release_folder(tmp_path: Path
     settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, out=out)
 
-    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home: _fake_probe())
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
     monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
 
@@ -100,6 +101,7 @@ def test_live_skips_when_no_remux_required_deletes_release_folder(tmp_path: Path
     )
     assert r["ok"] is True
     assert r["outcome"] == REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED
+    assert r["preflight_status"] == "ok"
     assert r.get("live_mutations_skipped") is True
     assert r.get("source_deleted_after_success") is True
     assert r.get("source_folder_deleted") is True
@@ -119,7 +121,7 @@ def test_live_fails_during_ffmpeg_surfaces_outcome(tmp_path: Path, monkeypatch: 
     settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, out=out)
 
-    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home: _fake_probe())
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
     monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: True)
 
@@ -135,6 +137,7 @@ def test_live_fails_during_ffmpeg_surfaces_outcome(tmp_path: Path, monkeypatch: 
     )
     assert r["ok"] is False
     assert r["outcome"] == REMUX_PASS_OUTCOME_FAILED_DURING_EXECUTION
+    assert r["preflight_status"] == "ok"
     assert "ffmpeg simulated failure" in r["reason"]
     assert "plan_summary" in r
     assert mkv.exists()
@@ -165,7 +168,7 @@ def test_live_remux_writes_nested_output_and_logs_replacement(
         work_folder_is_default=False,
     )
 
-    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home: _fake_probe())
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
     monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: True)
 
@@ -216,7 +219,7 @@ def test_tv_live_skips_movie_folder_cleanup_deletes_season_folder_when_gates_pas
 
     settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, out=out)
-    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home: _fake_probe())
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
     monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
     monkeypatch.setattr(
@@ -272,7 +275,7 @@ def test_movie_live_skips_when_output_smaller_than_one_percent(tmp_path: Path, m
 
     settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, out=out)
-    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home: _fake_probe())
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
     monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
 
@@ -306,7 +309,7 @@ def test_movie_live_skips_when_video_sits_directly_under_watched_root(
 
     settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, out=out)
-    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home: _fake_probe())
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
     monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
 
@@ -340,7 +343,7 @@ def test_movie_live_folder_delete_skips_when_rmtree_raises(
 
     settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
     rt = _runtime(media=media, home=home, out=out)
-    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home: _fake_probe())
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
     monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
 
@@ -370,6 +373,69 @@ def test_source_file_outside_watched_root_fails_relative_to_guard(tmp_path: Path
         f.resolve().relative_to(watched.resolve())
 
 
+def test_preflight_failure_contract_has_no_cleanup_mutations(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    media = tmp_path / "media"
+    media.mkdir()
+    src = media / "bad.mkv"
+    src.write_bytes(b"x" * 100)
+    out = tmp_path / "out"
+    out.mkdir()
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    rt = _runtime(media=media, home=home, out=out)
+
+    def _probe_boom(path: Path, mediamop_home: str, **_kwargs: object) -> dict:
+        raise RuntimeError("probe failure")
+
+    monkeypatch.setattr(runmod, "ffprobe_json", _probe_boom)
+    r = runmod.run_refiner_file_remux_pass(
+        settings=settings,
+        path_runtime=rt,
+        relative_media_path="bad.mkv",
+    )
+    assert r["ok"] is False
+    assert r["outcome"] == REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION
+    assert r["preflight_status"] == "failed"
+    assert "probe failure" in r["preflight_reason"]
+    assert "source_deleted_after_success" not in r
+    assert "source_folder_deleted" not in r
+    assert "movie_output_folder_deleted" not in r
+    assert "tv_output_season_folder_deleted" not in r
+    assert "output_file" not in r
+    assert "ffmpeg_argv" not in r
+
+
+def test_preflight_failure_contract_for_age_gate_has_no_cleanup_mutations(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    media = tmp_path / "media"
+    media.mkdir()
+    src = media / "young.mkv"
+    src.write_bytes(b"x" * 200)
+    out = tmp_path / "out"
+    out.mkdir()
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=999_999)
+    rt = _runtime(media=media, home=home, out=out)
+
+    r = runmod.run_refiner_file_remux_pass(
+        settings=settings,
+        path_runtime=rt,
+        relative_media_path="young.mkv",
+    )
+    assert r["ok"] is False
+    assert r["outcome"] == REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION
+    assert r["preflight_status"] == "failed"
+    assert "too recently" in r["preflight_reason"]
+    assert "source_deleted_after_success" not in r
+    assert "source_folder_deleted" not in r
+    assert "movie_output_folder_deleted" not in r
+    assert "tv_output_season_folder_deleted" not in r
+
+
 def test_default_work_dir_created_when_flag_set(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     home = tmp_path / "home"
     home.mkdir()
@@ -394,7 +460,7 @@ def test_default_work_dir_created_when_flag_set(tmp_path: Path, monkeypatch: pyt
         work_folder_is_default=True,
     )
 
-    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home: _fake_probe())
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
     monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: True)
 

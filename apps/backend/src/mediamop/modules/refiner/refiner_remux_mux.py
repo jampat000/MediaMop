@@ -56,7 +56,40 @@ def resolve_ffprobe_ffmpeg(*, mediamop_home: str) -> tuple[str, str]:
     return ffprobe, ffmpeg
 
 
-def ffprobe_json(path: Path, *, mediamop_home: str, timeout_s: int = 120) -> dict[str, Any]:
+def build_ffprobe_argv(
+    *,
+    ffprobe_bin: str,
+    src: Path,
+    probe_size_mb: int = 10,
+    analyze_duration_seconds: int = 10,
+) -> list[str]:
+    """Build ffprobe args for Refiner preflight probe."""
+    ps_mb = max(1, min(1024, int(probe_size_mb)))
+    ad_s = max(1, min(300, int(analyze_duration_seconds)))
+    return [
+        ffprobe_bin,
+        "-v",
+        "quiet",
+        "-probesize",
+        str(ps_mb * 1024 * 1024),
+        "-analyzeduration",
+        str(ad_s * 1_000_000),
+        "-print_format",
+        "json",
+        "-show_streams",
+        "-show_format",
+        str(src),
+    ]
+
+
+def ffprobe_json(
+    path: Path,
+    *,
+    mediamop_home: str,
+    timeout_s: int = 120,
+    probe_size_mb: int = 10,
+    analyze_duration_seconds: int = 10,
+) -> dict[str, Any]:
     ffprobe, _ = resolve_ffprobe_ffmpeg(mediamop_home=mediamop_home)
     try:
         resolved_path = str(path.resolve())
@@ -88,16 +121,12 @@ def ffprobe_json(path: Path, *, mediamop_home: str, timeout_s: int = 120) -> dic
     )
     if (not exists) or (not is_file) or f_size == 0:
         raise RuntimeError("file missing or empty at probe time")
-    argv = [
-        ffprobe,
-        "-v",
-        "quiet",
-        "-print_format",
-        "json",
-        "-show_streams",
-        "-show_format",
-        str(path),
-    ]
+    argv = build_ffprobe_argv(
+        ffprobe_bin=ffprobe,
+        src=path,
+        probe_size_mb=probe_size_mb,
+        analyze_duration_seconds=analyze_duration_seconds,
+    )
     logger.warning(
         "REFINER_FFPROBE_CALL: %s",
         json.dumps(

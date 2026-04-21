@@ -82,6 +82,10 @@ from mediamop.modules.pruner.worker_loop import (
     stop_pruner_worker_background_tasks,
 )
 from mediamop.platform.auth.rate_limit import SlidingWindowLimiter
+from mediamop.platform.suite_settings.suite_configuration_backup_periodic import (
+    start_suite_configuration_backup_tasks,
+    stop_suite_configuration_backup_tasks,
+)
 _lifespan_log = logging.getLogger(__name__)
 
 
@@ -206,6 +210,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         stop_event=stop,
         job_handlers=broker_handlers,
     )
+    suite_configuration_backup_tasks = start_suite_configuration_backup_tasks(
+        session_factory,
+        stop_event=stop,
+        settings=settings,
+    )
     try:
         yield
     finally:
@@ -228,6 +237,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             await stop_subber_upgrade_schedule_enqueue_tasks(subber_upgrade_tasks)
         except Exception:
             _lifespan_log.exception("Subber upgrade schedule enqueue stop failed")
+        await stop_suite_configuration_backup_tasks(suite_configuration_backup_tasks)
         await stop_broker_worker_background_tasks(broker_stop, broker_worker_tasks)
         await stop_subber_worker_background_tasks(subber_stop, subber_worker_tasks)
         await stop_pruner_preview_schedule_enqueue_tasks(pruner_preview_schedule_tasks)

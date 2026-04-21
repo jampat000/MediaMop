@@ -82,3 +82,12 @@ def test_configuration_bundle_put_rejects_bad_version(client_with_admin: TestCli
         headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
     )
     assert r_put.status_code == 400
+
+
+def test_configuration_backup_list_shape(client_with_admin: TestClient) -> None:
+    _login_admin(client_with_admin)
+    r = client_with_admin.get("/api/v1/system/suite-configuration-backups")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert "directory" in body
+    assert isinstance(body["items"], list)
