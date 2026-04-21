@@ -6,12 +6,12 @@ describe("apiErrorDetailToString", () => {
     expect(apiErrorDetailToString("Wrong password")).toBe("Wrong password");
   });
 
-  it("joins FastAPI-style validation array messages", () => {
+  it("joins FastAPI-style validation array messages with field path", () => {
     expect(
       apiErrorDetailToString([
         { type: "string_too_short", loc: ["body", "new_password"], msg: "Too short", input: "x" },
       ]),
-    ).toBe("Too short");
+    ).toBe("new_password: Too short");
   });
 
   it("stringifies plain objects instead of object Object", () => {

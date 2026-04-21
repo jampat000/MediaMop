@@ -19,7 +19,6 @@ def ensure_suite_settings_row(session: Session) -> SuiteSettingsRow:
             id=1,
             product_display_name="MediaMop",
             signed_in_home_notice=None,
-            application_logs_enabled=True,
             app_timezone="UTC",
             log_retention_days=30,
         )
@@ -32,7 +31,6 @@ def build_suite_settings_out(row: SuiteSettingsRow) -> SuiteSettingsOut:
     return SuiteSettingsOut(
         product_display_name=(row.product_display_name or "MediaMop").strip() or "MediaMop",
         signed_in_home_notice=row.signed_in_home_notice,
-        application_logs_enabled=bool(row.application_logs_enabled),
         app_timezone=(row.app_timezone or "UTC").strip() or "UTC",
         log_retention_days=max(1, min(int(row.log_retention_days), 3650)),
         updated_at=row.updated_at,
@@ -44,7 +42,6 @@ def apply_suite_settings_put(
     *,
     product_display_name: str,
     signed_in_home_notice: str | None,
-    application_logs_enabled: bool,
     app_timezone: str,
     log_retention_days: int,
 ) -> SuiteSettingsOut:
@@ -76,7 +73,6 @@ def apply_suite_settings_put(
     row = ensure_suite_settings_row(session)
     row.product_display_name = name
     row.signed_in_home_notice = notice
-    row.application_logs_enabled = bool(application_logs_enabled)
     row.app_timezone = tz
     row.log_retention_days = keep_days
     session.flush()

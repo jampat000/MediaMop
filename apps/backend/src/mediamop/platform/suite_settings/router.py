@@ -13,7 +13,9 @@ from mediamop.platform.auth.csrf import (
     verify_csrf_token,
 )
 from mediamop.platform.auth.deps_auth import UserPublicDep
+from mediamop.platform.configuration_bundle.service import apply_configuration_bundle, build_configuration_bundle
 from mediamop.platform.suite_settings.schemas import (
+    ConfigurationBundleImportIn,
     SuiteSecurityOverviewOut,
     SuiteSettingsOut,
     SuiteSettingsPutIn,
@@ -54,7 +56,6 @@ def put_suite_settings(
             db,
             product_display_name=body.product_display_name,
             signed_in_home_notice=body.signed_in_home_notice,
-            application_logs_enabled=body.application_logs_enabled,
             app_timezone=body.app_timezone,
             log_retention_days=body.log_retention_days,
         )
@@ -62,6 +63,43 @@ def put_suite_settings(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     db.commit()
     return out
+
+
+@router.get("/suite/settings/configuration-bundle")
+@router.get("/suite/configuration-bundle")
+def get_configuration_bundle(_user: RequireOperatorDep, db: DbSessionDep) -> dict:
+    """Export suite + module configuration as JSON (operators/admins only — contains secrets)."""
+
+    try:
+        return build_configuration_bundle(db)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+
+@router.put("/suite/settings/configuration-bundle")
+@router.put("/suite/configuration-bundle")
+def put_configuration_bundle(
+    body: ConfigurationBundleImportIn,
+    request: Request,
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+) -> dict:
+    """Replace suite + module configuration from a prior export (operators/admins only)."""
+
+    validate_browser_post_origin(request, settings)
+    secret = require_session_secret(settings)
+    if not verify_csrf_token(secret, body.csrf_token):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Your confirmation token expired. Refresh the page and try again.",
+        )
+    try:
+        apply_configuration_bundle(db, body.bundle)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    db.commit()
+    return build_configuration_bundle(db)
 
 
 @router.get("/suite/security-overview", response_model=SuiteSecurityOverviewOut)

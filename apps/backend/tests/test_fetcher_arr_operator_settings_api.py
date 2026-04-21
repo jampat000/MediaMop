@@ -87,7 +87,6 @@ def test_arr_operator_settings_schedule_timezone_comes_from_suite_settings(clien
             "csrf_token": tok,
             "product_display_name": "MediaMop",
             "signed_in_home_notice": None,
-            "application_logs_enabled": True,
             "app_timezone": "America/New_York",
             "log_retention_days": 30,
         },

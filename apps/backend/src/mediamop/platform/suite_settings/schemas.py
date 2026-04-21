@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -18,9 +20,6 @@ class SuiteSettingsOut(BaseModel):
         max_length=4000,
         description="Optional short message on the home dashboard for signed-in users.",
     )
-    application_logs_enabled: bool = Field(
-        description="Whether MediaMop records new rows in the Activity timeline.",
-    )
     app_timezone: str = Field(
         max_length=120,
         description="Suite-wide timezone label used for date/time displays that follow app timezone.",
@@ -34,14 +33,32 @@ class SuiteSettingsOut(BaseModel):
 
 
 class SuiteSettingsPutIn(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    """Body for ``PUT /suite/settings``.
+
+    ``extra="ignore"`` keeps older browser builds or tools from failing when they send removed keys.
+    ``application_logs_enabled`` is accepted for compatibility with pre-0047 APIs but is not persisted.
+    """
+
+    model_config = ConfigDict(extra="ignore")
 
     csrf_token: str = Field(..., min_length=1)
     product_display_name: str = Field(..., min_length=1, max_length=120)
     signed_in_home_notice: str | None = Field(default=None, max_length=4000)
-    application_logs_enabled: bool
     app_timezone: str = Field(..., min_length=1, max_length=120)
     log_retention_days: int = Field(ge=1, le=3650)
+    application_logs_enabled: bool | None = Field(
+        default=None,
+        description="Deprecated; retained so older clients can POST without changes. Ignored when persisting.",
+    )
+
+
+class ConfigurationBundleImportIn(BaseModel):
+    """Restore suite + module settings from a prior configuration bundle export."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    csrf_token: str = Field(..., min_length=1)
+    bundle: dict[str, Any]
 
 
 class SuiteSecurityOverviewOut(BaseModel):

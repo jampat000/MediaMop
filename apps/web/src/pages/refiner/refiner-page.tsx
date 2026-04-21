@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { fetcherSectionTabClass } from "../fetcher/fetcher-menu-button";
+import { mmModuleTabBlurbBandClass, mmModuleTabBlurbTextClass } from "../../lib/ui/mm-module-tab-blurb";
 import { RefinerProcessSettingsSection } from "./refiner-process-settings-section";
 import { RefinerJobsInspectionSection } from "./refiner-jobs-inspection-section";
 import { RefinerOverviewTab, type RefinerOverviewOpenTab } from "./refiner-overview-tab";
@@ -9,6 +10,17 @@ import { RefinerSchedulesSection } from "./refiner-schedules-section";
 import { RefinerRemuxSection } from "./refiner-remux-section";
 
 type RefinerPageTabId = "overview" | "libraries" | "audio-subtitles" | "jobs" | "schedules";
+
+const REFINER_TAB_BLURBS: Record<RefinerPageTabId, string> = {
+  overview:
+    "Health and next steps across TV and movie libraries. Open Libraries, Audio & subtitles, Schedules, or Jobs to change paths, remux rules, timing, or inspect work.",
+  libraries:
+    "Watched folders, work and output paths, and per-library processing defaults. Each section saves on its own — confirm before you rely on new paths.",
+  "audio-subtitles":
+    "How Refiner remuxes audio and subtitle tracks for TV and movies — language order, commentary, and subtitle retention.",
+  schedules: "Automatic remux passes: which libraries run, how often, and optional day or time windows.",
+  jobs: "Recent Refiner jobs and outcomes in this module. Full technical detail still lives on Activity when you need it.",
+};
 
 export function RefinerPage() {
   const [tab, setTab] = useState<RefinerPageTabId>("overview");
@@ -51,7 +63,7 @@ export function RefinerPage() {
       </header>
 
       <nav
-        className="mt-3 flex gap-2.5 overflow-x-auto border-b border-[var(--mm-border)] pb-3.5 sm:mt-4 sm:flex-wrap sm:overflow-visible"
+        className="mb-5 mt-3 flex gap-2.5 overflow-x-auto sm:mt-4 sm:flex-wrap sm:overflow-visible"
         aria-label="Refiner sections"
         data-testid="refiner-section-tabs"
       >
@@ -69,25 +81,25 @@ export function RefinerPage() {
         ))}
       </nav>
 
-      <div
-        className="mt-6 w-full min-w-0 sm:mt-7"
-        role="tabpanel"
-        aria-label={tabs.find((t) => t.id === tab)?.label}
-      >
-        {tab === "overview" ? <RefinerOverviewTab onOpenTab={openFromOverview} /> : null}
+      <div className="space-y-5" role="tabpanel" aria-label={tabs.find((t) => t.id === tab)?.label}>
+        <div className={mmModuleTabBlurbBandClass} data-testid="refiner-tab-blurb">
+          <p className={mmModuleTabBlurbTextClass}>{REFINER_TAB_BLURBS[tab]}</p>
+        </div>
+        <div className="w-full min-w-0">
+          {tab === "overview" ? <RefinerOverviewTab onOpenTab={openFromOverview} /> : null}
 
-        {tab === "libraries" ? (
-          <div className="flex w-full min-w-0 flex-col gap-7">
-            <RefinerPathSettingsSection />
-            <RefinerProcessSettingsSection />
-          </div>
-        ) : null}
+          {tab === "libraries" ? (
+            <div className="flex w-full min-w-0 flex-col gap-7">
+              <RefinerPathSettingsSection />
+              <RefinerProcessSettingsSection />
+            </div>
+          ) : null}
 
-        {tab === "audio-subtitles" ? <RefinerRemuxSection /> : null}
+          {tab === "audio-subtitles" ? <RefinerRemuxSection /> : null}
 
-        {tab === "schedules" ? <RefinerSchedulesSection /> : null}
-        {tab === "jobs" ? <RefinerJobsInspectionSection /> : null}
-
+          {tab === "schedules" ? <RefinerSchedulesSection /> : null}
+          {tab === "jobs" ? <RefinerJobsInspectionSection /> : null}
+        </div>
       </div>
     </div>
   );

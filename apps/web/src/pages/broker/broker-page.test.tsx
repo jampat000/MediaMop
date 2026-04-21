@@ -72,7 +72,6 @@ describe("BrokerPage", () => {
       data: {
         product_display_name: "MediaMop",
         signed_in_home_notice: null,
-        application_logs_enabled: true,
         app_timezone: "UTC",
         log_retention_days: 30,
         updated_at: "2026-01-01T00:00:00Z",

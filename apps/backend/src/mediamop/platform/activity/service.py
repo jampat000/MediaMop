@@ -42,7 +42,7 @@ def record_activity_event(
         event_type=event_type,
         module=module,
         title=title,
-        detail=detail if bool(suite.application_logs_enabled) else None,
+        detail=detail,
     )
     db.add(row)
     db.flush()

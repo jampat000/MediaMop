@@ -32,13 +32,15 @@
 html {
   min-height: 100%;
   background: var(--mm-bg);
+  /* Root rem: Tailwind `text-*` scales with display density (rem is relative to html, not body). */
+  font-size: calc(16px * var(--mm-density-font-scale));
 }
 
 body.mm-body {
   height: 100%;
   margin: 0;
   font-family: var(--mm-font);
-  font-size: calc(15.25px * var(--mm-density-font-scale));
+  font-size: 0.953125rem; /* 15.25px when html root is 16px */
   line-height: 1.52;
   font-weight: 400;
   font-feature-settings: var(--mm-font-feature);
@@ -359,7 +361,7 @@ body.mm-body {
 /* Desktop (Material "expanded" and up): first typography step before large / extra-large tiers. */
 @media (min-width: 1280px) {
   body.mm-body {
-    font-size: calc(15.875px * var(--mm-density-font-scale));
+    font-size: 0.9921875rem; /* 15.875px at 16px root; scales via html font-size + density */
     line-height: 1.53;
   }
 
@@ -376,7 +378,7 @@ body.mm-body {
 /* Large / extra-large desktop: stronger scale (aligned ~ Material 1200dp+ / 1600dp+). */
 @media (min-width: 1600px) {
   body.mm-body {
-    font-size: calc(16.25px * var(--mm-density-font-scale));
+    font-size: 1.015625rem; /* 16.25px at 16px root */
     line-height: 1.54;
   }
 
@@ -416,7 +418,7 @@ body.mm-body {
 /* Wide desktop (incl. 1440p at 125–150% OS scale where CSS width sits ~1700–2048px). */
 @media (min-width: 1760px) {
   body.mm-body {
-    font-size: calc(16.625px * var(--mm-density-font-scale));
+    font-size: 1.0390625rem; /* 16.625px at 16px root */
     line-height: 1.54;
   }
 
@@ -442,7 +444,7 @@ body.mm-body {
 
 @media (min-width: 2000px) {
   body.mm-body {
-    font-size: calc(17.25px * var(--mm-density-font-scale));
+    font-size: 1.078125rem; /* 17.25px at 16px root */
     line-height: 1.55;
   }
 
@@ -478,6 +480,11 @@ body.mm-body {
   margin-bottom: var(--mm-space-lg);
   padding-bottom: calc(var(--mm-space) + 0.5rem);
   border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+/* Suite Settings: gap under page intro rule matches Tailwind mb-5 on tab strip (1.25rem). */
+.mm-page__intro.mm-page__intro--suite-settings-rule {
+  margin-bottom: 1.25rem;
 }
 
 .mm-page__intro--hero {
@@ -1358,6 +1365,10 @@ select.mm-input::-ms-expand {
   .mm-page__intro {
     margin-bottom: 1rem;
     padding-bottom: 0.85rem;
+  }
+
+  .mm-page__intro.mm-page__intro--suite-settings-rule {
+    margin-bottom: 1.25rem;
   }
 
   .mm-page__title {

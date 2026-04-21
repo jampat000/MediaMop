@@ -56,6 +56,7 @@ def test_head_schema_includes_suite_settings_table() -> None:
     names = {c["name"] for c in insp.get_columns("suite_settings")}
     assert "product_display_name" in names
     assert "signed_in_home_notice" in names
+    assert "application_logs_enabled" not in names
 
 
 def test_head_schema_includes_fetcher_arr_operator_settings_table() -> None:

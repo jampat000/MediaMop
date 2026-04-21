@@ -6,13 +6,17 @@ import asyncio
 import json
 from collections.abc import AsyncGenerator, Awaitable, Callable
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 from starlette.responses import StreamingResponse
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
 from mediamop.platform.activity.schemas import ActivityEventItemOut, ActivityRecentOut
-from mediamop.platform.activity.service import get_latest_activity_event_id, list_recent_activity_events
+from mediamop.platform.activity.service import (
+    RECENT_DEFAULT_LIMIT,
+    get_latest_activity_event_id,
+    list_recent_activity_events,
+)
 from mediamop.platform.auth import service as auth_service
 from mediamop.platform.auth.deps_auth import UserPublicDep
 from mediamop.platform.auth.models import UserRole
@@ -31,10 +35,11 @@ router = APIRouter(prefix="/activity", tags=["activity"])
 def get_activity_recent(
     _user: UserPublicDep,
     db: DbSessionDep,
+    limit: int = Query(default=RECENT_DEFAULT_LIMIT, ge=1, le=100),
 ) -> ActivityRecentOut:
     """Recent persisted events, newest first — snapshot only (pagination-style read; not a control plane)."""
 
-    rows = list_recent_activity_events(db)
+    rows = list_recent_activity_events(db, limit=limit)
     return ActivityRecentOut(
         items=[ActivityEventItemOut.model_validate(r) for r in rows],
     )

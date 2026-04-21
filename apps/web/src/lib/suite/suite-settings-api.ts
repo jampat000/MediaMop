@@ -1,9 +1,46 @@
 import { fetchCsrfToken } from "../api/auth-api";
-import { apiFetch, readJson } from "../api/client";
+import { apiErrorDetailToString, apiFetch, readJson } from "../api/client";
 import type { SuiteSecurityOverviewOut, SuiteSettingsOut, SuiteSettingsPutBody } from "./types";
 
 export const suiteSettingsPath = () => "/api/v1/suite/settings";
 export const suiteSecurityOverviewPath = () => "/api/v1/suite/security-overview";
+
+/**
+ * GET/PUT configuration bundle — same handler on the backend, several URL aliases for older builds
+ * and reverse proxies that only forward a subset of ``/api/v1/suite/*`` or ``/api/v1/system/*``.
+ */
+export const configurationBundlePaths = [
+  "/api/v1/suite/configuration-bundle",
+  "/api/v1/suite/settings/configuration-bundle",
+  "/api/v1/system/suite-configuration-bundle",
+] as const;
+
+/** Preferred path (first entry in {@link configurationBundlePaths}). */
+export const suiteConfigurationBundlePath = () => configurationBundlePaths[0];
+
+export type ConfigurationBundle = Record<string, unknown> & { format_version: number };
+
+async function readFailedRequestMessage(r: Response, fallback: string): Promise<string> {
+  const ctype = (r.headers.get("content-type") || "").toLowerCase();
+  if (ctype.includes("application/json")) {
+    try {
+      const b = (await r.clone().json()) as { detail?: unknown };
+      const fromDetail = apiErrorDetailToString(b.detail);
+      if (fromDetail.length > 0) {
+        return fromDetail;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  const text = await r.text();
+  const t = text.trimStart();
+  if (t.startsWith("<!") || t.toLowerCase().startsWith("<html")) {
+    return `${fallback} (${r.status}) — received HTML instead of JSON. Use the same origin as the API (dev: Vite proxy to the backend) and restart the server after upgrading.`;
+  }
+  const oneLine = text.replace(/\s+/g, " ").trim().slice(0, 180);
+  return oneLine.length > 0 ? `${fallback} (${r.status}): ${oneLine}` : `${fallback} (${r.status})`;
+}
 
 export async function fetchSuiteSettings(): Promise<SuiteSettingsOut> {
   const r = await apiFetch(suiteSettingsPath());
@@ -21,16 +58,7 @@ export async function putSuiteSettings(body: SuiteSettingsPutBody): Promise<Suit
     body: JSON.stringify({ ...body, csrf_token }),
   });
   if (!r.ok) {
-    let detail = r.statusText;
-    try {
-      const b = await readJson<{ detail?: string }>(r);
-      if (typeof b.detail === "string") {
-        detail = b.detail;
-      }
-    } catch {
-      /* ignore */
-    }
-    throw new Error(detail || `Could not save suite settings (${r.status})`);
+    throw new Error(await readFailedRequestMessage(r, `Could not save suite settings (${r.status})`));
   }
   return readJson<SuiteSettingsOut>(r);
 }
@@ -41,4 +69,41 @@ export async function fetchSuiteSecurityOverview(): Promise<SuiteSecurityOvervie
     throw new Error(`Could not load security overview (${r.status})`);
   }
   return readJson<SuiteSecurityOverviewOut>(r);
+}
+
+export async function fetchConfigurationBundle(): Promise<ConfigurationBundle> {
+  let last: Response | undefined;
+  for (const path of configurationBundlePaths) {
+    const r = await apiFetch(path);
+    last = r;
+    if (r.status === 404) {
+      continue;
+    }
+    if (!r.ok) {
+      throw new Error(await readFailedRequestMessage(r, "Could not export configuration"));
+    }
+    return readJson<ConfigurationBundle>(r);
+  }
+  throw new Error(await readFailedRequestMessage(last!, "Could not export configuration"));
+}
+
+export async function putConfigurationBundle(bundle: ConfigurationBundle): Promise<ConfigurationBundle> {
+  const csrf_token = await fetchCsrfToken();
+  let last: Response | undefined;
+  for (const path of configurationBundlePaths) {
+    const r = await apiFetch(path, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ csrf_token, bundle }),
+    });
+    last = r;
+    if (r.status === 404) {
+      continue;
+    }
+    if (!r.ok) {
+      throw new Error(await readFailedRequestMessage(r, "Could not restore configuration"));
+    }
+    return readJson<ConfigurationBundle>(r);
+  }
+  throw new Error(await readFailedRequestMessage(last!, "Could not restore configuration"));
 }

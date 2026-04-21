@@ -58,9 +58,11 @@ export function apiErrorDetailToString(detail: unknown): string {
   if (Array.isArray(detail)) {
     const parts = detail.map((item) => {
       if (typeof item === "object" && item !== null && "msg" in item) {
-        const m = (item as { msg?: unknown }).msg;
+        const o = item as { msg?: unknown; loc?: unknown };
+        const m = o.msg;
         if (typeof m === "string") {
-          return m;
+          const loc = Array.isArray(o.loc) ? o.loc.filter((x) => x !== "body").join(".") : "";
+          return loc.length > 0 ? `${loc}: ${m}` : m;
         }
       }
       try {
@@ -69,7 +71,7 @@ export function apiErrorDetailToString(detail: unknown): string {
         return String(item);
       }
     });
-    return parts.filter((s) => s.length > 0).join(" ");
+    return parts.filter((s) => s.length > 0).join("; ");
   }
   if (typeof detail === "object") {
     try {

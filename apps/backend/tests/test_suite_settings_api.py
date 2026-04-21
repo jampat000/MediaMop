@@ -51,7 +51,6 @@ def test_suite_settings_get_default_shape(client_with_admin: TestClient) -> None
     body = r.json()
     assert body["product_display_name"] == "MediaMop"
     assert body["signed_in_home_notice"] is None
-    assert body["application_logs_enabled"] is True
     assert body["app_timezone"] in {"UTC", "America/New_York"}
     assert body["log_retention_days"] == 30
     assert "updated_at" in body
@@ -76,7 +75,6 @@ def test_suite_settings_put_persists(client_with_admin: TestClient) -> None:
             "csrf_token": tok,
             "product_display_name": "House Library",
             "signed_in_home_notice": "Welcome back.",
-            "application_logs_enabled": True,
             "app_timezone": "UTC",
             "log_retention_days": 45,
         },
@@ -114,7 +112,6 @@ def test_suite_settings_put_viewer_forbidden(client_with_viewer: TestClient) -> 
             "csrf_token": tok2,
             "product_display_name": "X",
             "signed_in_home_notice": None,
-            "application_logs_enabled": True,
             "app_timezone": "UTC",
             "log_retention_days": 30,
         },
@@ -132,7 +129,6 @@ def test_apply_suite_settings_put_rejects_blank_name() -> None:
                 db,
                 product_display_name="   ",
                 signed_in_home_notice=None,
-                application_logs_enabled=True,
                 app_timezone="UTC",
                 log_retention_days=30,
             )
@@ -151,7 +147,6 @@ def test_apply_suite_settings_put_rejects_invalid_timezone() -> None:
                 db,
                 product_display_name="MediaMop",
                 signed_in_home_notice=None,
-                application_logs_enabled=True,
                 app_timezone="Not/A_Real_Zone",
                 log_retention_days=30,
             )
@@ -161,22 +156,7 @@ def test_apply_suite_settings_put_rejects_invalid_timezone() -> None:
             raise AssertionError("expected ValueError")
 
 
-def test_application_logs_toggle_off_redacts_new_activity_details(client_with_admin: TestClient) -> None:
-    _login_admin(client_with_admin)
-    tok = fetch_csrf(client_with_admin)
-    r = client_with_admin.put(
-        "/api/v1/suite/settings",
-        json={
-            "csrf_token": tok,
-            "product_display_name": "MediaMop",
-            "signed_in_home_notice": None,
-            "application_logs_enabled": False,
-            "app_timezone": "UTC",
-            "log_retention_days": 30,
-        },
-        headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
-    )
-    assert r.status_code == 200, r.text
+def test_activity_event_detail_always_persisted() -> None:
     settings = MediaMopSettings.load()
     fac = create_session_factory(create_db_engine(settings))
     with fac() as db:
@@ -184,27 +164,13 @@ def test_application_logs_toggle_off_redacts_new_activity_details(client_with_ad
             db,
             event_type=act_c.AUTH_LOGIN_SUCCEEDED,
             module="auth",
-            title="Should not persist",
+            title="Sign-in succeeded",
             detail="alice",
         )
         db.commit()
         stored = db.get(ActivityEvent, row.id)
     assert stored is not None
-    assert stored.detail is None
-    tok2 = fetch_csrf(client_with_admin)
-    r_restore = client_with_admin.put(
-        "/api/v1/suite/settings",
-        json={
-            "csrf_token": tok2,
-            "product_display_name": "MediaMop",
-            "signed_in_home_notice": None,
-            "application_logs_enabled": True,
-            "app_timezone": "UTC",
-            "log_retention_days": 30,
-        },
-        headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
-    )
-    assert r_restore.status_code == 200, r_restore.text
+    assert stored.detail == "alice"
 
 
 def test_log_retention_prunes_old_activity_rows(client_with_admin: TestClient) -> None:
@@ -216,7 +182,6 @@ def test_log_retention_prunes_old_activity_rows(client_with_admin: TestClient) -
             "csrf_token": tok,
             "product_display_name": "MediaMop",
             "signed_in_home_notice": None,
-            "application_logs_enabled": True,
             "app_timezone": "UTC",
             "log_retention_days": 30,
         },
@@ -248,7 +213,6 @@ def test_log_retention_prunes_old_activity_rows(client_with_admin: TestClient) -
             "csrf_token": tok,
             "product_display_name": "MediaMop",
             "signed_in_home_notice": None,
-            "application_logs_enabled": True,
             "app_timezone": "UTC",
             "log_retention_days": 30,
         },

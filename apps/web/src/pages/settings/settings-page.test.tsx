@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { DISPLAY_DENSITY_STORAGE_KEY } from "../../lib/ui/display-density";
 import type { UserPublic } from "../../lib/api/types";
 import { qk } from "../../lib/auth/queries";
+import { activityRecentSettingsKey } from "../../lib/activity/queries";
 import { suiteSecurityOverviewQueryKey, suiteSettingsQueryKey } from "../../lib/suite/queries";
 import type { SuiteSecurityOverviewOut, SuiteSettingsOut } from "../../lib/suite/types";
 import { SettingsPage } from "./settings-page";
@@ -16,7 +17,6 @@ const viewerMe: UserPublic = { id: 2, username: "bob", role: "viewer" };
 const minimalSuiteSettings: SuiteSettingsOut = {
   product_display_name: "MediaMop",
   signed_in_home_notice: null,
-  application_logs_enabled: true,
   app_timezone: "UTC",
   log_retention_days: 30,
   updated_at: "2026-04-11T00:00:00Z",
@@ -45,10 +45,11 @@ function wrap(ui: ReactNode, client: QueryClient) {
 }
 
 function renderSettings(me: UserPublic) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   qc.setQueryData(suiteSettingsQueryKey, minimalSuiteSettings);
   qc.setQueryData(suiteSecurityOverviewQueryKey, minimalSecurity);
   qc.setQueryData(qk.me, me);
+  qc.setQueryData(activityRecentSettingsKey, { items: [] });
   return render(wrap(<SettingsPage />, qc));
 }
 
@@ -69,14 +70,32 @@ describe("SettingsPage (suite settings)", () => {
 
   it("hides save for viewers", () => {
     renderSettings(viewerMe);
-    expect(screen.getByTestId("suite-settings-save")).toBeDisabled();
+    expect(screen.getByTestId("suite-settings-save-timezone")).toBeDisabled();
+    fireEvent.click(screen.getByRole("tab", { name: "Logs" }));
+    expect(screen.getByTestId("suite-settings-save-logs")).toBeDisabled();
   });
 
-  it("keeps Global focused and removes product/logs controls", () => {
+  it("shows configuration export for operators", () => {
+    renderSettings(operatorMe);
+    expect(screen.getByTestId("suite-settings-configuration-export")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Download configuration now" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Restore from file…" })).toBeEnabled();
+  });
+
+  it("hides configuration export for viewers", () => {
+    renderSettings(viewerMe);
+    expect(screen.queryByTestId("suite-settings-configuration-export")).not.toBeInTheDocument();
+  });
+
+  it("keeps General tab focused and splits Logs to its own tab", () => {
     renderSettings(operatorMe);
     expect(screen.queryByText("Product name")).not.toBeInTheDocument();
     expect(screen.queryByText("Application logs")).not.toBeInTheDocument();
     expect(screen.getByText("Timezone")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByText("Log retention (days)")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Logs" }));
+    expect(screen.getByRole("heading", { name: "Logs" })).toBeInTheDocument();
     expect(screen.getByText("Log retention (days)")).toBeInTheDocument();
     expect(screen.queryByText("Optional home dashboard notice")).not.toBeInTheDocument();
   });

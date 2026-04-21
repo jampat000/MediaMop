@@ -20,6 +20,7 @@ import {
   MmScheduleTimeFields,
 } from "../../components/ui/mm-schedule-window-controls";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
+import { mmModuleTabBlurbBandClass, mmModuleTabBlurbTextClass } from "../../lib/ui/mm-module-tab-blurb";
 import { MmListboxPicker } from "../../components/ui/mm-listbox-picker";
 import { fetcherMenuButtonClass, fetcherSectionTabClass } from "../fetcher/fetcher-menu-button";
 import { fetchCsrfToken } from "../../lib/api/auth-api";
@@ -35,6 +36,16 @@ import {
 import { formatPrunerDateTime, prunerJobKindOperatorLabel } from "./pruner-ui-utils";
 type TopTab = "overview" | "emby" | "jellyfin" | "plex" | "jobs" | "schedule";
 type ProviderTab = "emby" | "jellyfin" | "plex";
+
+const PRUNER_TAB_BLURBS: Record<TopTab, string> = {
+  overview:
+    "Cross-provider snapshot: connections, rule activity, and what needs attention. Use Emby, Jellyfin, or Plex to change one server’s connection, cleanup rules, or schedule.",
+  emby: "This Emby instance: test the connection, tune cleanup rules, and set when Pruner may run against that library.",
+  jellyfin: "This Jellyfin instance: test the connection, tune cleanup rules, and set when Pruner may run against that library.",
+  plex: "This Plex instance: test the connection, tune cleanup rules, and set when Pruner may run against that library.",
+  jobs: "Prune-related jobs across instances — filter by status and open Activity for full payloads when you need them.",
+  schedule: "Scheduled prune windows for this provider instance. Changes here apply only after you save from this workspace.",
+};
 
 function providerLabel(p: ProviderTab): string {
   if (p === "emby") return "Emby";
@@ -821,7 +832,10 @@ function PrunerGlobalScheduleRow({
   const qc = useQueryClient();
   const me = useMeQuery();
   const canOperate = me.data?.role === "admin" || me.data?.role === "operator";
-  const scopeRow = instance?.scopes.find((s) => s.media_scope === scope);
+  /** Draft UI uses defaults when no server exists yet; persist only once a real instance id is available. */
+  const displayInstance = instance ?? providerDisabledInstance(provider);
+  const scopeRow = displayInstance.scopes.find((s) => s.media_scope === scope);
+  const persistable = Boolean(instance && instance.id > 0);
   const [schedHoursLimited, setSchedHoursLimited] = useState(false);
   const [schedDays, setSchedDays] = useState("");
   const [schedStart, setSchedStart] = useState("00:00");
@@ -864,14 +878,19 @@ function PrunerGlobalScheduleRow({
       previewCap !== scopeRow.preview_max_items);
 
   async function saveRow() {
-    if (!instance || !scopeRow) return;
+    if (!scopeRow) return;
+    if (!persistable) {
+      setMsg(null);
+      setErr("Save a server on the Connection tab first, then you can save this schedule to that server.");
+      return;
+    }
     setMsg(null);
     setErr(null);
     setBusy(true);
     try {
       const csrf_token = await fetchCsrfToken();
       const cap = Math.max(1, Math.min(5000, Number(previewCap) || 500));
-      await patchPrunerScope(instance.id, scope, {
+      await patchPrunerScope(instance!.id, scope, {
         scheduled_preview_enabled: scopeRow.scheduled_preview_enabled,
         scheduled_preview_interval_seconds: scopeRow.scheduled_preview_interval_seconds,
         scheduled_preview_hours_limited: schedHoursLimited,
@@ -890,9 +909,8 @@ function PrunerGlobalScheduleRow({
     }
   }
 
-  const missing = !instance;
-  const controlsDisabled = !canOperate || busy || missing;
-  const saveDisabled = busy || !canOperate || missing || !scopeRow || !scheduleFieldsDirty;
+  const controlsDisabled = !canOperate || busy;
+  const saveDisabled = busy || !canOperate || !scopeRow || !scheduleFieldsDirty;
   const testId = `pruner-schedule-row-${provider}-${scope}`;
   const idPrefix = `pruner-sched-${provider}-${scope}`;
 
@@ -994,7 +1012,7 @@ function PrunerGlobalScheduleRow({
             dryRunEnabled={dryRunEnabled}
             onDryRunEnabledChange={setDryRunEnabled}
             runDisabled={!instance || instance.id <= 0}
-            controlsDisabled={controlsDisabled}
+            controlsDisabled={!canOperate || busy}
           />
         </div>
       </div>
@@ -1148,7 +1166,7 @@ export function PrunerInstancesListPage() {
       </header>
 
       <nav
-        className="mt-3 flex gap-2.5 overflow-x-auto border-b border-[var(--mm-border)] pb-3.5 sm:mt-4 sm:flex-wrap sm:overflow-visible"
+        className="mb-5 mt-3 flex gap-2.5 overflow-x-auto sm:mt-4 sm:flex-wrap sm:overflow-visible"
         aria-label="Pruner sections"
         data-testid="pruner-top-level-tabs"
       >
@@ -1173,7 +1191,7 @@ export function PrunerInstancesListPage() {
       </nav>
 
       <div
-        className="mt-6 sm:mt-7"
+        className="space-y-5"
         role="tabpanel"
         aria-label={
           (
@@ -1188,23 +1206,28 @@ export function PrunerInstancesListPage() {
           )[topTab]
         }
       >
-        {q.isLoading ? <p className="text-sm text-[var(--mm-text2)]">Loading provider instances…</p> : null}
-        {q.isError ? <p className="text-sm text-red-600">{(q.error as Error).message}</p> : null}
-        {!q.isLoading && !q.isError ? (
-          topTab === "overview" ? (
-            <TopLevelOverview
-              instances={instances}
-              onOpenProviderTab={(t) => setTopTab(t)}
-              onNavigateTopTab={(t) => setTopTab(t)}
-            />
-          ) : topTab === "jobs" ? (
-            <TopLevelJobs instances={instances} />
-          ) : topTab === "schedule" ? (
-            <ProviderConfigurationWorkspace provider="emby" allInstances={instances} initialSection="schedule" />
-          ) : (
-            <ProviderConfigurationWorkspace provider={topTab} allInstances={instances} />
-          )
-        ) : null}
+        <div className={mmModuleTabBlurbBandClass} data-testid="pruner-tab-blurb">
+          <p className={mmModuleTabBlurbTextClass}>{PRUNER_TAB_BLURBS[topTab]}</p>
+        </div>
+        <div className="min-w-0">
+          {q.isLoading ? <p className="text-sm text-[var(--mm-text2)]">Loading provider instances…</p> : null}
+          {q.isError ? <p className="text-sm text-red-600">{(q.error as Error).message}</p> : null}
+          {!q.isLoading && !q.isError ? (
+            topTab === "overview" ? (
+              <TopLevelOverview
+                instances={instances}
+                onOpenProviderTab={(t) => setTopTab(t)}
+                onNavigateTopTab={(t) => setTopTab(t)}
+              />
+            ) : topTab === "jobs" ? (
+              <TopLevelJobs instances={instances} />
+            ) : topTab === "schedule" ? (
+              <ProviderConfigurationWorkspace provider="emby" allInstances={instances} initialSection="schedule" />
+            ) : (
+              <ProviderConfigurationWorkspace provider={topTab} allInstances={instances} />
+            )
+          ) : null}
+        </div>
       </div>
     </div>
   );

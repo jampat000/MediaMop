@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMeQuery } from "../../lib/auth/queries";
 import { fetcherSectionTabClass } from "../fetcher/fetcher-menu-button";
+import { mmModuleTabBlurbBandClass, mmModuleTabBlurbTextClass } from "../../lib/ui/mm-module-tab-blurb";
 import { BrokerConnectionsTab } from "./broker-connections-tab";
 import {
   BROKER_MODULE_DESCRIPTION,
@@ -17,6 +18,16 @@ import { BrokerOverviewTab } from "./broker-overview-tab";
 import { BrokerSearchTab } from "./broker-search-tab";
 
 type TopTab = "overview" | "connections" | "indexers" | "search" | "jobs";
+
+const BROKER_TAB_BLURBS: Record<TopTab, string> = {
+  overview:
+    "Indexer health, sync with Sonarr and Radarr, and suggested next steps. Use Connections, Indexers, Search, or Jobs to change credentials, definitions, manual queries, or inspect work.",
+  connections:
+    "Upstream indexer source plus Sonarr and Radarr endpoints and API keys. Test and save after you change credentials so search and sync keep working.",
+  indexers: "Which indexers Broker knows about, how they map into Sonarr and Radarr, and what operators can edit.",
+  search: "Run manual torrent or Usenet searches through Broker against your configured indexers.",
+  jobs: "Recent Broker jobs — syncs, searches, and failures. Use Activity when you need line-by-line detail.",
+};
 
 export function BrokerPage() {
   const me = useMeQuery();
@@ -40,7 +51,7 @@ export function BrokerPage() {
       </header>
 
       <nav
-        className="mt-3 flex gap-2.5 overflow-x-auto border-b border-[var(--mm-border)] pb-3.5 sm:mt-4 sm:flex-wrap sm:overflow-visible"
+        className="mb-5 mt-3 flex gap-2.5 overflow-x-auto sm:mt-4 sm:flex-wrap sm:overflow-visible"
         data-testid="broker-top-level-tabs"
         aria-label="Broker sections"
       >
@@ -58,12 +69,17 @@ export function BrokerPage() {
         ))}
       </nav>
 
-      <div className="mt-6 sm:mt-7" role="tabpanel">
-        {tab === "overview" ? <BrokerOverviewTab onOpenTab={(t) => setTab(t)} /> : null}
-        {tab === "connections" ? <BrokerConnectionsTab canOperate={Boolean(canOperate)} /> : null}
-        {tab === "indexers" ? <BrokerIndexersTab canOperate={Boolean(canOperate)} /> : null}
-        {tab === "search" ? <BrokerSearchTab /> : null}
-        {tab === "jobs" ? <BrokerJobsTab /> : null}
+      <div className="space-y-5" role="tabpanel">
+        <div className={mmModuleTabBlurbBandClass} data-testid="broker-tab-blurb">
+          <p className={mmModuleTabBlurbTextClass}>{BROKER_TAB_BLURBS[tab]}</p>
+        </div>
+        <div className="min-w-0">
+          {tab === "overview" ? <BrokerOverviewTab onOpenTab={(t) => setTab(t)} /> : null}
+          {tab === "connections" ? <BrokerConnectionsTab canOperate={Boolean(canOperate)} /> : null}
+          {tab === "indexers" ? <BrokerIndexersTab canOperate={Boolean(canOperate)} /> : null}
+          {tab === "search" ? <BrokerSearchTab /> : null}
+          {tab === "jobs" ? <BrokerJobsTab /> : null}
+        </div>
       </div>
     </div>
   );

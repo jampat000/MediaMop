@@ -82,7 +82,6 @@ from mediamop.modules.pruner.worker_loop import (
     stop_pruner_worker_background_tasks,
 )
 from mediamop.platform.auth.rate_limit import SlidingWindowLimiter
-
 _lifespan_log = logging.getLogger(__name__)
 
 
