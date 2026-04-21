@@ -70,9 +70,8 @@ export function RefinerProcessSettingsSection() {
     <section className="mm-fetcher-module-surface w-full min-w-0 rounded border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-6 text-sm leading-relaxed text-[var(--mm-text2)] sm:p-7">
       <h2 className="text-base font-semibold text-[var(--mm-text)]">Processing settings</h2>
       <p className="mt-2 max-w-3xl text-[var(--mm-text3)]">
-        Control how many files Refiner works on at once and how long a file must sit unchanged before processing. Timed
-        scans and per-library folder checks are under <strong className="text-[var(--mm-text2)]">Schedules</strong> and{" "}
-        <strong className="text-[var(--mm-text2)]">Libraries</strong>.
+        Control how many files Refiner works on at once and how long a file must sit unchanged before processing.
+        Per-library watched-folder timers are under <strong className="text-[var(--mm-text2)]">Libraries</strong>.
       </p>
       <div className="mt-6 grid gap-4 sm:grid-cols-2 sm:gap-5">
         <div className="block min-w-0">

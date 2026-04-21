@@ -22,7 +22,6 @@ import {
 import type { PrunerServerInstance } from "../../lib/pruner/api";
 import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
 import {
-  MM_SCHEDULE_TIME_WINDOW_HEADING,
   MM_SCHEDULE_TIME_WINDOW_HELPER,
   MmScheduleDayChips,
   MmScheduleTimeFields,
@@ -1212,10 +1211,10 @@ export function PrunerScopeTab(props: {
 
   return (
     <section
-      className={isProvider ? "w-full min-w-0 space-y-3" : "max-w-3xl space-y-3"}
+      className={isProvider ? "mm-bubble-stack w-full min-w-0" : "mm-bubble-stack max-w-3xl"}
       aria-labelledby="pruner-scope-heading"
     >
-      <fieldset disabled={Boolean(props.disabledMode)} className="space-y-3">
+      <fieldset disabled={Boolean(props.disabledMode)} className="mm-bubble-stack">
       {!isProvider ? (
         <h2 id="pruner-scope-heading" className="text-base font-semibold text-[var(--mm-text)]">
           {label}
@@ -1989,7 +1988,7 @@ export function PrunerScopeTab(props: {
       ) : (
         <p className="text-sm text-[var(--mm-text2)]">Sign in as an operator to run scans.</p>
       )}
-      <div className="mm-card mm-dash-card flex flex-col gap-7 p-6" data-testid="pruner-scope-scheduled-preview">
+      <div className="mm-card mm-dash-card mm-bubble-stack p-6" data-testid="pruner-scope-scheduled-preview">
         <div>
           <h3 className="text-base font-semibold text-[var(--mm-text1)]">
             Automatic scans ({props.scope === "tv" ? "TV shows" : "Movies"})
@@ -2031,7 +2030,7 @@ export function PrunerScopeTab(props: {
             </div>
             <div className="space-y-3">
               <div>
-                <span className="text-sm font-medium text-[var(--mm-text1)]">{MM_SCHEDULE_TIME_WINDOW_HEADING}</span>
+                <span className="text-sm font-medium text-[var(--mm-text1)]">Schedule window</span>
                 <p className="mt-1 text-xs text-[var(--mm-text3)]">{MM_SCHEDULE_TIME_WINDOW_HELPER}</p>
               </div>
               <div className="space-y-4">

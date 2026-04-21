@@ -15,18 +15,11 @@ import {
   FETCHER_CONNECTION_PANEL_SONARR,
   FETCHER_SAVE_RADARR,
   FETCHER_SAVE_SONARR,
-  FETCHER_TAB_RADARR_LABEL,
-  FETCHER_TAB_SCHEDULES_LABEL,
-  FETCHER_TAB_SONARR_LABEL,
   FETCHER_TEST_RADARR,
   FETCHER_TEST_SONARR,
 } from "./fetcher-display-names";
 import { FetcherEnableSwitch } from "./fetcher-enable-switch";
 import { fetcherMenuButtonClass } from "./fetcher-menu-button";
-import {
-  FETCHER_TAB_PANEL_BLURB_CLASS,
-  FETCHER_TAB_PANEL_INTRO_CLASS,
-} from "./fetcher-tab-panel-intro";
 
 /** Placeholder when a key is stored server-side (empty field = unchanged). */
 const API_KEY_SAVED_PLACEHOLDER = "\u2022".repeat(10);
@@ -159,7 +152,7 @@ function ConnectionPanel({
   return (
     <section
       className={[
-        "mm-card mm-dash-card flex h-full min-h-0 min-w-0 flex-col gap-7 transition-shadow duration-200",
+        "mm-card mm-dash-card mm-bubble-stack flex h-full min-h-0 min-w-0 flex-col transition-shadow duration-200",
         saveJustSucceeded
           ? "ring-2 ring-[var(--mm-accent-ring)] ring-offset-2 ring-offset-[var(--mm-bg-main)] shadow-[0_0_0_1px_rgba(212,175,55,0.12)]"
           : "",
@@ -492,19 +485,15 @@ export function FetcherConnectionsPanels({ role }: { role: string | undefined })
 
   return (
     <section
-      className="mm-fetcher-module-surface mb-6"
+      className="mm-fetcher-module-surface"
       aria-labelledby="mm-fetcher-connections-heading"
       data-testid="fetcher-connections-panels"
     >
-      <header id="mm-fetcher-connections-heading" className={FETCHER_TAB_PANEL_INTRO_CLASS}>
-        <p className={FETCHER_TAB_PANEL_BLURB_CLASS}>
-          Manage Sonarr and Radarr connection state, addresses, and API keys used by Fetcher. Search schedules live on
-          the <strong>{FETCHER_TAB_SCHEDULES_LABEL}</strong> tab; per-run limits and failed-import cleanup stay on{" "}
-          <strong>{FETCHER_TAB_SONARR_LABEL}</strong> and <strong>{FETCHER_TAB_RADARR_LABEL}</strong>.
-        </p>
-      </header>
+      <h2 id="mm-fetcher-connections-heading" className="sr-only">
+        Fetcher connections
+      </h2>
 
-      <div className="mm-dash-grid gap-x-5 gap-y-6" data-testid="fetcher-connection-panels-grid">
+      <div className="mm-dash-grid" data-testid="fetcher-connection-panels-grid">
         <ConnectionPanel
           title={FETCHER_CONNECTION_PANEL_SONARR}
           app="sonarr"

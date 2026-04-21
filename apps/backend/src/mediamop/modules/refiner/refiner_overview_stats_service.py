@@ -44,7 +44,7 @@ def build_refiner_overview_stats(db: Session, *, window_days: int = 30) -> Refin
     terminal = completed + failed
     rate = round((completed / terminal) * 100.0, 1) if terminal > 0 else 0.0
     return RefinerOverviewStatsOut(
-        window_days=30,
+        window_days=max(1, int(window_days)),
         files_processed=completed,
         files_failed=failed,
         success_rate_percent=rate,

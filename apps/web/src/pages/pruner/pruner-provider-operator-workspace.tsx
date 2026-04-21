@@ -611,12 +611,14 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
 
   return (
     <div
-      className="mm-card mm-dash-card border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 sm:p-6"
+      className="mm-bubble-grid lg:grid-cols-2"
       data-testid={`pruner-provider-configuration-${provider}`}
       data-provider-section="cleanup"
     >
-      <div className="grid gap-8 lg:grid-cols-2 lg:gap-10">
-        <fieldset disabled={tvControlsDisabled} className="min-w-0 border-0 p-0">
+        <fieldset
+          disabled={tvControlsDisabled}
+          className="mm-card mm-dash-card min-w-0 border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 sm:p-6"
+        >
           <div className="min-w-0 space-y-5" data-testid={`pruner-provider-tv-config-${provider}`}>
             <div className="space-y-1 border-b border-[var(--mm-border)] pb-2">
               <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">TV</span>
@@ -747,7 +749,10 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
           </div>
         </fieldset>
 
-        <fieldset disabled={moviesControlsDisabled} className="min-w-0 border-0 p-0 lg:border-l lg:border-[var(--mm-border)] lg:pl-8">
+        <fieldset
+          disabled={moviesControlsDisabled}
+          className="mm-card mm-dash-card min-w-0 border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 sm:p-6"
+        >
           <div className="min-w-0 space-y-5" data-testid={`pruner-provider-movies-config-${provider}`}>
             <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">
               <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">Movies</span>
@@ -889,7 +894,6 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
             </div>
           </div>
         </fieldset>
-      </div>
     </div>
   );
   },

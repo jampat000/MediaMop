@@ -196,11 +196,6 @@ export function RefinerOverviewTab({
   const failedN = failed.data?.jobs.length ?? 0;
   const failedReady = !failed.isPending && !failed.isError;
 
-  const fmtSchedule = (enabled: boolean, seconds: number, hoursLimited: boolean) =>
-    enabled
-      ? `Every ${Math.round(seconds / 60)} min${hoursLimited ? ", limited to window" : ""}`
-      : "Off";
-
   const workerBody = (
       <div className="space-y-3 lg:space-y-3.5">
         <p className="font-medium text-[var(--mm-text1)]">
@@ -208,22 +203,6 @@ export function RefinerOverviewTab({
           {operatorSettings.data.max_concurrent_files === 1 ? "" : "s"} at once
         </p>
         <div className="space-y-2 text-xs leading-relaxed text-[var(--mm-text3)] lg:space-y-2.5 lg:text-sm">
-        <p>
-          <span className="font-medium text-[var(--mm-text2)]">TV timed scans:</span>{" "}
-          {fmtSchedule(
-            operatorSettings.data.tv_schedule_enabled,
-            operatorSettings.data.tv_schedule_interval_seconds,
-            operatorSettings.data.tv_schedule_hours_limited,
-          )}
-        </p>
-        <p>
-          <span className="font-medium text-[var(--mm-text2)]">Movies timed scans:</span>{" "}
-          {fmtSchedule(
-            operatorSettings.data.movie_schedule_enabled,
-            operatorSettings.data.movie_schedule_interval_seconds,
-            operatorSettings.data.movie_schedule_hours_limited,
-          )}
-        </p>
         <p>
           <span className="font-medium text-[var(--mm-text2)]">Folder checks:</span> TV every{" "}
           {pathSettings.data.tv_watched_folder_check_interval_seconds}s · Movies every{" "}
@@ -316,7 +295,7 @@ export function RefinerOverviewTab({
     ) : (
       <div>
         <MmStatTileRow>
-          <MmStatTile label="Done" value={overviewStats.data.files_processed} />
+          <MmStatTile label="Completed" value={overviewStats.data.files_processed} />
           <MmStatTile label="Failed" value={overviewStats.data.files_failed} />
           <MmStatTile label="Success" value={`${overviewStats.data.success_rate_percent}%`} />
         </MmStatTileRow>
@@ -392,7 +371,7 @@ export function RefinerOverviewTab({
       >
         <div className="space-y-5">
           <p className="leading-relaxed">
-            Finished work is summarized on Activity. Use Libraries for folders and limits, Schedules for timed scans, Audio & subtitles
+            Finished work is summarized on Activity. Use Libraries for folders and timers, Schedules for manual scan triggers, Audio & subtitles
             for defaults, and Jobs for the queue on this server.
           </p>
           {onOpenTab ? (

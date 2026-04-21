@@ -242,7 +242,7 @@ export function BrokerConnectionsTab({ canOperate }: { canOperate: boolean }) {
   }
 
   return (
-    <div className="space-y-5" data-testid="broker-connections-tab">
+    <div className="mm-bubble-stack" data-testid="broker-connections-tab">
       <div className="grid gap-5 lg:grid-cols-2 lg:gap-6">
         <ArrConnectionCard title="Sonarr" arrType="sonarr" canOperate={canOperate} />
         <ArrConnectionCard title="Radarr" arrType="radarr" canOperate={canOperate} />

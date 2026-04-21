@@ -274,6 +274,62 @@ Single canonical backlog for shipped milestones and the next honest slice of wor
 3. **Taxonomy / tree truth (optional):** suite `dashboard` package location, `queue_worker` naming vs role, `arr_failed_import` vs env seam — only when justified by ownership truth.
 4. **Backlog:** SQLite WAL mode; SSE/WebSocket or similar push for activity/dashboard; app-wide hard copy pass.
 
+## Execution runlist (Now / Next / Later)
+
+### Now
+
+1. **Item 2 completion pass (schedule wording standardization)**  
+   Final module-by-module wording parity sweep for schedule-related copy and labels.
+
+2. **Item 17 completion pass (overview content audit)**  
+   Validate each module overview for correct placement, usefulness, and missing content.
+
+3. **Item 28 verification pass (Subscene/Addic7ed live provider verification)**  
+   Execute real-provider verification and capture outcomes/fixes.
+
+### Next
+
+1. **Richer Activity rendering for watched-folder summaries**  
+   Improve readability when plain `detail` text is insufficient.
+
+2. **App-wide hard copy pass**  
+   Consistency and clarity pass across user-facing copy after functional backlog closes.
+
+### Later
+
+1. **SQLite WAL mode investigation and rollout**
+2. **SSE/WebSocket push for activity/dashboard**
+3. **Taxonomy/tree truth cleanup (optional, only if justified)**
+
 ## Completed / deferred reference
 
 - No duplicate task file at repo root; this file remains the milestone canon; Cursor may hold ephemeral execution detail — fold shipped outcomes back here.
+
+## Archived board — Refiner parity task board (closed)
+
+This board is preserved here as historical execution detail for the Refiner parity slice and is fully closed.
+
+### TODO items (final status)
+
+- [x] **R1. Probe controls (config + wiring)** — Added probe size and analyze-duration settings with bounds/defaults; wired into ffprobe argument construction; defaults preserve prior behavior.
+- [x] **R2. Preflight observability** — Added stable `preflight_status` / `preflight_reason` summary fields in remux result payloads; existing outcome enums unchanged.
+- [x] **R3. Optional typed preflight model** — Covered by normalized preflight/probe mapping path used by planning logic (no track-selection behavior change introduced).
+- [x] **R4. Probe argument tests** — Added unit coverage for ffprobe argv flags and bounds/default validation.
+- [x] **R5. Preflight failure contract tests** — Preflight failure paths continue to return `failed_before_execution`; assertions confirm no destructive cleanup side effects.
+- [x] **R6. Cleanup regression test sweep** — Existing success/skip/failure cleanup contracts preserved.
+- [x] **R7. Queue/idempotency regression** — Scan-dispatch duplicate active-remux protection preserved.
+- [x] **R8. Dead-code pass** — Consolidated preflight flow; removed temporary/duplicate branches/helpers from the parity slice.
+- [x] **R9. Docs/ADR note** — Parity boundary and new probe controls/defaults documented.
+
+### DONE items (carried from board)
+
+- [x] **D1. Baseline parity audit (read-only)** — Confirmed existing probe/plan/execute flow and protected cleanup boundary.
+- [x] **D2. Post-work contract matrix defined** — Trigger/behavior/invariant matrix captured.
+- [x] **D3. File ownership boundaries defined** — Allowed-change and protected cleanup areas identified.
+
+### Acceptance gates (final status)
+
+- [x] **Gate A (R1 + R4)** — Settings validate; ffprobe argv reflects settings; defaults preserve behavior.
+- [x] **Gate B (R2 + R5)** — Preflight summary fields stable; `failed_before_execution` retained; no cleanup side effects on preflight failure.
+- [x] **Gate C (R6 + R7 + R8)** — Cleanup regressions preserved; duplicate enqueue regression not introduced; no dead preflight branches remaining.
+- [x] **Gate D (R9)** — Docs updated; parity boundary documented.

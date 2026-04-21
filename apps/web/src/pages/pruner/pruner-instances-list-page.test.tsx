@@ -3,7 +3,6 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MM_SCHEDULE_TIME_WINDOW_HEADING } from "../../components/ui/mm-schedule-window-controls";
 import type { UserPublic } from "../../lib/api/types";
 import * as authApi from "../../lib/api/auth-api";
 import { qk } from "../../lib/auth/queries";
@@ -591,7 +590,7 @@ describe("PrunerInstancesListPage", () => {
     await waitFor(() => expect(screen.getByTestId("pruner-schedule-row-emby-tv")).toBeInTheDocument());
     expect(screen.getByTestId("pruner-schedule-row-emby-movies")).toBeInTheDocument();
     const tvCard = screen.getByTestId("pruner-schedule-row-emby-tv");
-    expect(within(tvCard).getAllByText(MM_SCHEDULE_TIME_WINDOW_HEADING).length).toBeGreaterThanOrEqual(1);
+    expect(within(tvCard).getAllByText("Schedule window").length).toBeGreaterThanOrEqual(1);
     expect(within(tvCard).queryByLabelText(/Run interval in minutes/i)).not.toBeInTheDocument();
   });
 

@@ -24,10 +24,7 @@ import type {
   FetcherArrOperatorSettingsOut,
 } from "../../lib/fetcher/arr-operator-settings/types";
 import { fetcherJobsInspectionQueryKey } from "../../lib/fetcher/jobs-inspection/queries";
-import {
-  MM_SCHEDULE_TIME_WINDOW_HEADING,
-  MM_SCHEDULE_TIME_WINDOW_HELPER,
-} from "../../components/ui/mm-schedule-window-controls";
+import { MM_SCHEDULE_TIME_WINDOW_HELPER } from "../../components/ui/mm-schedule-window-controls";
 import {
   FETCHER_TAB_JOBS_LABEL,
   FETCHER_TAB_RADARR_LABEL,
@@ -293,8 +290,9 @@ describe("FetcherPage (tabbed IA)", () => {
     renderFetcherPage();
     fireEvent.click(screen.getByRole("tab", { name: FETCHER_TAB_SONARR_LABEL }));
     expect(screen.getByTestId("fetcher-arr-operator-settings")).toBeInTheDocument();
-    const arrPanel = screen.getByTestId("fetcher-arr-operator-settings");
-    expect(arrPanel.textContent).toMatch(/Configure Fetcher search behavior for Sonarr/i);
+    expect(screen.getByTestId("fetcher-tab-blurb")).toHaveTextContent(
+      /Set how Fetcher searches Sonarr/i,
+    );
   });
 
   it("Schedules tab shows lane cards without a suite timezone preamble banner", () => {
@@ -338,8 +336,9 @@ describe("FetcherPage (tabbed IA)", () => {
     renderFetcherPage();
     fireEvent.click(screen.getByRole("tab", { name: "Connections" }));
     expect(screen.getByTestId("fetcher-connections-panels")).toBeInTheDocument();
-    expect(screen.getByText(/Manage Sonarr and Radarr connection state/i)).toBeInTheDocument();
-    expect(screen.getByText(/Search schedules live on/i)).toBeInTheDocument();
+    expect(screen.getByTestId("fetcher-tab-blurb")).toHaveTextContent(
+      /Connect Fetcher to Sonarr and Radarr/i,
+    );
     expect(screen.queryByText(/Library link is active/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Library link is paused/i)).not.toBeInTheDocument();
     const grid = screen.getByTestId("fetcher-connection-panels-grid");
@@ -506,8 +505,8 @@ describe("FetcherPage (tabbed IA)", () => {
     expect(screen.getByRole("heading", { name: "Movie upgrades" })).toBeInTheDocument();
     expect(screen.getByText("Set up searches for missing movies.")).toBeInTheDocument();
     expect(screen.getByText("Set up searches for better quality movies.")).toBeInTheDocument();
-    expect(screen.getByTestId("fetcher-arr-operator-settings").textContent).toMatch(
-      /Configure Fetcher search behavior for Radarr/i,
+    expect(screen.getByTestId("fetcher-tab-blurb")).toHaveTextContent(
+      /Set how Fetcher searches Radarr/i,
     );
     const missing = screen.getByTestId("fetcher-movies-lane-missing");
     const h = missing.innerHTML;
@@ -528,12 +527,12 @@ describe("FetcherPage (tabbed IA)", () => {
     qc.setQueryData(fetcherArrOperatorSettingsQueryKey, minimalArrOperatorSettings);
     render(wrap(<FetcherPage />, qc));
     fireEvent.click(screen.getByRole("tab", { name: FETCHER_TAB_SONARR_LABEL }));
-    expect(screen.getByTestId("fetcher-arr-operator-settings").textContent).toMatch(
-      /Configure Fetcher search behavior for Sonarr/i,
+    expect(screen.getByTestId("fetcher-tab-blurb")).toHaveTextContent(
+      /Set how Fetcher searches Sonarr/i,
     );
     fireEvent.click(screen.getByRole("tab", { name: FETCHER_TAB_RADARR_LABEL }));
-    expect(screen.getByTestId("fetcher-arr-operator-settings").textContent).toMatch(
-      /Configure Fetcher search behavior for Radarr/i,
+    expect(screen.getByTestId("fetcher-tab-blurb")).toHaveTextContent(
+      /Set how Fetcher searches Radarr/i,
     );
   });
 
@@ -561,8 +560,8 @@ describe("FetcherPage (tabbed IA)", () => {
     const h = missingTv.innerHTML;
     const idx = (s: string) => h.indexOf(s);
     expect(idx("Enable timed scans")).toBeLessThan(idx("Run interval"));
-    expect(idx("Run interval")).toBeLessThan(idx(MM_SCHEDULE_TIME_WINDOW_HEADING));
-    expect(idx(MM_SCHEDULE_TIME_WINDOW_HEADING)).toBeLessThan(idx("Save missing TV show schedule"));
+    expect(idx("Run interval")).toBeLessThan(idx("Schedule window"));
+    expect(idx("Schedule window")).toBeLessThan(idx("Save missing TV show schedule"));
     expect(h).not.toContain("Items per run");
   });
 });

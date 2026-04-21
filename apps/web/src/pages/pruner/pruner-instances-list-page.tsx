@@ -14,7 +14,6 @@ import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
 import {
-  MM_SCHEDULE_TIME_WINDOW_HEADING,
   MM_SCHEDULE_TIME_WINDOW_HELPER,
   MmScheduleDayChips,
   MmScheduleTimeFields,
@@ -39,12 +38,12 @@ type ProviderTab = "emby" | "jellyfin" | "plex";
 
 const PRUNER_TAB_BLURBS: Record<TopTab, string> = {
   overview:
-    "Cross-provider snapshot: connections, rule activity, and what needs attention. Use Emby, Jellyfin, or Plex to change one server’s connection, cleanup rules, or schedule.",
-  emby: "This Emby instance: test the connection, tune cleanup rules, and set when Pruner may run against that library.",
-  jellyfin: "This Jellyfin instance: test the connection, tune cleanup rules, and set when Pruner may run against that library.",
-  plex: "This Plex instance: test the connection, tune cleanup rules, and set when Pruner may run against that library.",
-  jobs: "Prune-related jobs across instances — filter by status and open Activity for full payloads when you need them.",
-  schedule: "Scheduled prune windows for this provider instance. Changes here apply only after you save from this workspace.",
+    "See cross-provider status for connections, cleanup coverage, and items that need attention.",
+  emby: "Manage one Emby server: test connection, set cleanup rules, and control run windows.",
+  jellyfin: "Manage one Jellyfin server: test connection, set cleanup rules, and control run windows.",
+  plex: "Manage one Plex server: test connection, set cleanup rules, and control run windows.",
+  jobs: "View queued, running, and recent Pruner jobs across providers.",
+  schedule: "Edit scheduled prune windows in the provider workspace and save changes per library.",
 };
 
 function providerLabel(p: ProviderTab): string {
@@ -298,7 +297,7 @@ function PrunerConnectionCredentialPanel({
   return (
     <section
       className={[
-        "mm-card mm-dash-card flex h-full min-h-0 min-w-0 flex-col gap-6 transition-shadow duration-200",
+        "mm-card mm-dash-card mm-bubble-stack flex h-full min-h-0 min-w-0 flex-col transition-shadow duration-200",
         saveJustSucceeded
           ? "ring-2 ring-[var(--mm-accent-ring)] ring-offset-2 ring-offset-[var(--mm-bg-main)] shadow-[0_0_0_1px_rgba(212,175,55,0.12)]"
           : "",
@@ -485,7 +484,7 @@ function ProviderConfigurationWorkspace({
   };
 
   return (
-    <section className="space-y-5" data-testid={`pruner-provider-tab-${provider}`}>
+    <section className="mm-bubble-stack" data-testid={`pruner-provider-tab-${provider}`}>
       {providerInstances.length > 1 ? (
         <label className="block max-w-md text-sm text-[var(--mm-text2)]">
           <span className="mb-1 block text-xs text-[var(--mm-text3)]">Server</span>
@@ -548,7 +547,7 @@ function ProviderConfigurationWorkspace({
         ) : null}
 
         {providerSection === "schedule" ? (
-          <div className="mm-dash-grid gap-x-5 gap-y-6" data-testid="pruner-provider-schedule-wrap">
+          <div className="mm-dash-grid" data-testid="pruner-provider-schedule-wrap">
             <PrunerGlobalScheduleRow
               provider={provider}
               scope="tv"
@@ -923,14 +922,14 @@ function PrunerGlobalScheduleRow({
       : "Limit which days and times Pruner may run scheduled Movies cleanup previews for this provider.";
 
   return (
-    <section className="mm-card mm-dash-card flex h-full min-h-0 min-w-0 flex-col gap-7 p-6" data-testid={testId}>
+    <section className="mm-card mm-dash-card mm-bubble-stack flex h-full min-h-0 min-w-0 flex-col p-6" data-testid={testId}>
       <div>
         <h3 className="text-base font-semibold text-[var(--mm-text1)]">{laneTitle}</h3>
         <p className="mt-1 text-sm text-[var(--mm-text2)]">{laneIntro}</p>
       </div>
       <div className="space-y-3">
         <div>
-          <span className="text-sm font-medium text-[var(--mm-text1)]">{MM_SCHEDULE_TIME_WINDOW_HEADING}</span>
+          <span className="text-sm font-medium text-[var(--mm-text1)]">Schedule window</span>
           <p className="mt-1 text-xs text-[var(--mm-text3)]">{MM_SCHEDULE_TIME_WINDOW_HELPER}</p>
         </div>
         <div className="space-y-4">
@@ -1191,7 +1190,7 @@ export function PrunerInstancesListPage() {
       </nav>
 
       <div
-        className="space-y-5"
+        className="mm-bubble-stack"
         role="tabpanel"
         aria-label={
           (

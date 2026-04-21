@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { fetcherSectionTabClass } from "../fetcher/fetcher-menu-button";
-import { mmModuleTabBlurbBandClass, mmModuleTabBlurbTextClass } from "../../lib/ui/mm-module-tab-blurb";
 import { useMeQuery } from "../../lib/auth/queries";
 import { SubberConnectionsTab } from "./subber-connections-tab";
 import { SubberJobsTab } from "./subber-jobs-tab";
@@ -10,20 +9,19 @@ import { SubberPreferencesTab } from "./subber-preferences-tab";
 import { SubberProvidersTab } from "./subber-providers-tab";
 import { SubberScheduleTab } from "./subber-schedule-tab";
 import { SubberTvTab } from "./subber-tv-tab";
+import { mmModuleTabBlurbBandClass, mmModuleTabBlurbTextClass } from "../../lib/ui/mm-module-tab-blurb";
 
 type TopTab = "overview" | "tv" | "movies" | "connections" | "providers" | "preferences" | "schedule" | "jobs";
 
 const SUBBER_TAB_BLURBS: Record<TopTab, string> = {
-  overview:
-    "Snapshot of subtitle activity, Sonarr and Radarr links, and what to fix next. Use the other tabs to change settings, run searches, or review jobs.",
-  tv: "TV episodes from Sonarr with per-language subtitle status. Search for missing tracks when Subber is enabled and your role allows it.",
-  movies: "Movies from Radarr with subtitle state. Sync the library or search for missing subtitles when you have permission.",
-  connections:
-    "OpenSubtitles account, Sonarr and Radarr URLs and API keys, and connection tests. Each block saves on its own action — nothing here writes until you confirm.",
-  providers: "Enable providers, set search order, and tune options. Subber only calls providers that are turned on here.",
-  preferences: "Default languages and where subtitle files are written. These preferences apply to TV and movie searches going forward.",
-  schedule: "Timed scans for missing subtitles on TV and movies, with optional day and time windows.",
-  jobs: "Recent subtitle search jobs — outcomes, timing, and errors for troubleshooting. This list is read-only.",
+  overview: "Review subtitle coverage, provider status, and recent Subber activity.",
+  tv: "Configure TV subtitle rules and run TV subtitle operations.",
+  movies: "Configure Movies subtitle rules and run Movies subtitle operations.",
+  connections: "Save and test the service connections and credentials Subber depends on.",
+  providers: "Enable, disable, and prioritize subtitle providers used during searches.",
+  preferences: "Set subtitle language, matching, and selection behavior for downloads.",
+  schedule: "Control automatic subtitle scan timing for TV and Movies, including optional windows.",
+  jobs: "View queued, running, and recent Subber jobs.",
 };
 
 export function SubberPage() {
@@ -69,11 +67,11 @@ export function SubberPage() {
         ))}
       </nav>
 
-      <div className="space-y-5" role="tabpanel">
-        <div className={mmModuleTabBlurbBandClass} data-testid="subber-tab-blurb">
-          <p className={mmModuleTabBlurbTextClass}>{SUBBER_TAB_BLURBS[tab]}</p>
-        </div>
-        <div className="min-w-0">
+      <div className="mm-bubble-stack" role="tabpanel">
+        <div className="mm-bubble-stack min-w-0">
+          <div className={mmModuleTabBlurbBandClass} data-testid="subber-tab-blurb">
+            <p className={mmModuleTabBlurbTextClass}>{SUBBER_TAB_BLURBS[tab]}</p>
+          </div>
           {tab === "overview" ? (
             <SubberOverviewTab onOpenTab={(t) => setTab(t === "settings" ? "connections" : t)} />
           ) : null}

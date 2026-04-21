@@ -148,7 +148,7 @@ describe("RefinerPage", () => {
     const panel = screen.getByTestId("refiner-overview-at-a-glance");
     const last30 = screen.getByTestId("refiner-overview-last-30-days");
     expect(panel.textContent).toMatch(/Last 30 days/i);
-    expect(last30.textContent).toMatch(/Done/i);
+    expect(last30.textContent).toMatch(/Completed/i);
     expect(last30.textContent).toMatch(/42/);
     expect(last30.textContent).toMatch(/Failed/i);
     expect(last30.textContent).toMatch(/Success/i);

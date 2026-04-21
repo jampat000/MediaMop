@@ -39,6 +39,10 @@
   --mm-main-max: min(100%, var(--mm-main-max-cap));
   --mm-space: clamp(1.125rem, 3vw, 1.75rem);
   --mm-space-lg: clamp(1.65rem, 4vw, 2.35rem);
+  --mm-bubble-stack-gap-mobile: 1.25rem;
+  --mm-bubble-stack-gap-desktop: 1.75rem;
+  --mm-bubble-grid-gap-mobile: 1.25rem;
+  --mm-bubble-grid-gap-desktop: 1.75rem;
   --mm-font: "Outfit", system-ui, -apple-system, sans-serif;
   --mm-shadow-card: 0 16px 48px rgba(0, 0, 0, 0.45);
   --mm-shadow-card-inner: 0 1px 0 rgba(255, 255, 255, 0.04) inset;

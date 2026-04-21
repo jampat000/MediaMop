@@ -11,21 +11,20 @@ import {
   FETCHER_TAB_SCHEDULES_LABEL,
   FETCHER_TAB_SONARR_LABEL,
 } from "./fetcher-display-names";
-import { mmModuleTabBlurbBandClass, mmModuleTabBlurbTextClass } from "../../lib/ui/mm-module-tab-blurb";
 import { fetcherSectionTabClass } from "./fetcher-menu-button";
 import { FetcherJobsTab } from "./fetcher-jobs-tab";
 import { FetcherOverviewTab } from "./fetcher-overview-tab";
+import { mmModuleTabBlurbBandClass, mmModuleTabBlurbTextClass } from "../../lib/ui/mm-module-tab-blurb";
 
 type FetcherPageTabId = "overview" | FetcherArrSettingsTabId | "jobs";
 
 const FETCHER_TAB_BLURBS: Record<FetcherPageTabId, string> = {
-  overview:
-    "What Fetcher is doing with Sonarr and Radarr, and where to go next. Use Connections, Sonarr, Radarr, or Schedules to change URLs, API keys, lists, and timing.",
-  connections: "Sonarr and Radarr base URLs, API keys, and connectivity tests. Save from each card when you change credentials or endpoints.",
-  sonarr: "Sonarr lists, quality profiles, and sync behaviour. Failed imports for TV appear below when this tab is open.",
-  radarr: "Radarr lists, quality profiles, and sync behaviour. Failed imports for movies appear below when this tab is open.",
-  schedules: "When Fetcher talks to Sonarr and Radarr on a timer — intervals and optional windows for automated sync.",
-  jobs: "Recent Fetcher jobs: syncs, searches, and errors. Open Activity when you need the full payload for a run.",
+  overview: "Check recent Fetcher activity, connection health, and failed-import handling at a glance.",
+  connections: "Connect Fetcher to Sonarr and Radarr by saving each server URL and API key.",
+  sonarr: "Set how Fetcher searches Sonarr for missing shows and upgrades, including limits and failed-import actions.",
+  radarr: "Set how Fetcher searches Radarr for missing movies and upgrades, including limits and failed-import actions.",
+  schedules: "Choose when each Fetcher lane runs automatically, including optional day and hour windows.",
+  jobs: "View queued, running, and recent Fetcher jobs for troubleshooting and progress tracking.",
 };
 
 export function FetcherPage() {
@@ -74,11 +73,11 @@ export function FetcherPage() {
         ))}
       </nav>
 
-      <div className="space-y-5" role="tabpanel" aria-label={tabs.find((t) => t.id === tab)?.label}>
-        <div className={mmModuleTabBlurbBandClass} data-testid="fetcher-tab-blurb">
-          <p className={mmModuleTabBlurbTextClass}>{FETCHER_TAB_BLURBS[tab]}</p>
-        </div>
-        <div className="min-w-0 space-y-6 sm:space-y-7">
+      <div className="mm-bubble-stack" role="tabpanel" aria-label={tabs.find((t) => t.id === tab)?.label}>
+        <div className="mm-bubble-stack min-w-0">
+          <div className={mmModuleTabBlurbBandClass} data-testid="fetcher-tab-blurb">
+            <p className={mmModuleTabBlurbTextClass}>{FETCHER_TAB_BLURBS[tab]}</p>
+          </div>
           {tab === "overview" ? <FetcherOverviewTab onOpenSection={(target) => setTab(target)} /> : null}
 
           {showArrSection ? <FetcherArrOperatorSettingsSection role={me.data?.role} activeTab={tab} /> : null}

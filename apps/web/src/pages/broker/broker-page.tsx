@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useMeQuery } from "../../lib/auth/queries";
 import { fetcherSectionTabClass } from "../fetcher/fetcher-menu-button";
-import { mmModuleTabBlurbBandClass, mmModuleTabBlurbTextClass } from "../../lib/ui/mm-module-tab-blurb";
 import { BrokerConnectionsTab } from "./broker-connections-tab";
 import {
   BROKER_MODULE_DESCRIPTION,
@@ -16,17 +15,16 @@ import { BrokerIndexersTab } from "./broker-indexers-tab";
 import { BrokerJobsTab } from "./broker-jobs-tab";
 import { BrokerOverviewTab } from "./broker-overview-tab";
 import { BrokerSearchTab } from "./broker-search-tab";
+import { mmModuleTabBlurbBandClass, mmModuleTabBlurbTextClass } from "../../lib/ui/mm-module-tab-blurb";
 
 type TopTab = "overview" | "connections" | "indexers" | "search" | "jobs";
 
 const BROKER_TAB_BLURBS: Record<TopTab, string> = {
-  overview:
-    "Indexer health, sync with Sonarr and Radarr, and suggested next steps. Use Connections, Indexers, Search, or Jobs to change credentials, definitions, manual queries, or inspect work.",
-  connections:
-    "Upstream indexer source plus Sonarr and Radarr endpoints and API keys. Test and save after you change credentials so search and sync keep working.",
-  indexers: "Which indexers Broker knows about, how they map into Sonarr and Radarr, and what operators can edit.",
-  search: "Run manual torrent or Usenet searches through Broker against your configured indexers.",
-  jobs: "Recent Broker jobs — syncs, searches, and failures. Use Activity when you need line-by-line detail.",
+  overview: "See Broker health, recent outcomes, and anything that needs attention.",
+  connections: "Save and test the service connections Broker needs to run searches.",
+  indexers: "Choose which indexers Broker can use and how they are prioritized.",
+  search: "Run manual searches to verify indexers, mappings, and immediate results.",
+  jobs: "View queued, running, and recent Broker jobs to track execution state.",
 };
 
 export function BrokerPage() {
@@ -69,11 +67,11 @@ export function BrokerPage() {
         ))}
       </nav>
 
-      <div className="space-y-5" role="tabpanel">
-        <div className={mmModuleTabBlurbBandClass} data-testid="broker-tab-blurb">
-          <p className={mmModuleTabBlurbTextClass}>{BROKER_TAB_BLURBS[tab]}</p>
-        </div>
-        <div className="min-w-0">
+      <div className="mm-bubble-stack" role="tabpanel">
+        <div className="mm-bubble-stack min-w-0">
+          <div className={mmModuleTabBlurbBandClass} data-testid="broker-tab-blurb">
+            <p className={mmModuleTabBlurbTextClass}>{BROKER_TAB_BLURBS[tab]}</p>
+          </div>
           {tab === "overview" ? <BrokerOverviewTab onOpenTab={(t) => setTab(t)} /> : null}
           {tab === "connections" ? <BrokerConnectionsTab canOperate={Boolean(canOperate)} /> : null}
           {tab === "indexers" ? <BrokerIndexersTab canOperate={Boolean(canOperate)} /> : null}

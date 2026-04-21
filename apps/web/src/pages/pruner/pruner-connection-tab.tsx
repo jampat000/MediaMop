@@ -36,7 +36,7 @@ export function PrunerConnectionTab(props: { contextOverride?: Ctx }) {
   }
 
   return (
-    <div className="max-w-3xl space-y-5" data-testid="pruner-connection-tab">
+    <div className="mm-bubble-stack max-w-3xl" data-testid="pruner-connection-tab">
       <header className="mm-page__intro !mb-0 border-0 p-0 shadow-none">
         <p className="mm-page__eyebrow">This server</p>
         <h2 className="mm-page__title text-xl sm:text-2xl">Connection</h2>

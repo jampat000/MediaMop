@@ -94,11 +94,11 @@ export function RefinerPathSettingsSection() {
   const effectiveTvWorkPreview = tvWork.trim() ? tvWork.trim() : d.effective_tv_work_folder;
 
   return (
-    <section
-      className="mm-fetcher-module-surface w-full min-w-0 rounded border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-6 text-sm leading-relaxed text-[var(--mm-text2)] sm:p-7"
-      aria-labelledby="refiner-path-settings-heading"
-      data-testid="refiner-path-settings"
-    >
+    <div className="mm-bubble-stack w-full min-w-0" data-testid="refiner-path-settings">
+      <section
+        className="mm-card mm-dash-card mm-fetcher-module-surface w-full min-w-0 p-6 text-sm leading-relaxed text-[var(--mm-text2)] sm:p-7"
+        aria-labelledby="refiner-path-settings-heading"
+      >
       <h2 id="refiner-path-settings-heading" className="text-base font-semibold text-[var(--mm-text)]">
         Saved folders
       </h2>
@@ -182,9 +182,10 @@ export function RefinerPathSettingsSection() {
       {!editable ? (
         <p className="mt-4 text-xs text-[var(--mm-text3)]">Operators and admins can edit these paths.</p>
       ) : null}
+      </section>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-2 lg:gap-8">
-        <div className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 sm:p-6">
+      <div className="mm-dash-grid">
+        <div className="mm-card mm-dash-card p-5 sm:p-6">
           <div className="border-b border-[var(--mm-border)] pb-4">
             <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--mm-text3)]">Library</p>
             <h3 className="mt-1 text-sm font-semibold text-[var(--mm-text1)]">TV</h3>
@@ -282,7 +283,7 @@ export function RefinerPathSettingsSection() {
           </div>
         </div>
 
-        <div className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 sm:p-6">
+        <div className="mm-card mm-dash-card p-5 sm:p-6">
           <div className="border-b border-[var(--mm-border)] pb-4">
             <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--mm-text3)]">Library</p>
             <h3 className="mt-1 text-sm font-semibold text-[var(--mm-text1)]">Movies</h3>
@@ -391,6 +392,6 @@ export function RefinerPathSettingsSection() {
         </p>
       ) : null}
 
-    </section>
+    </div>
   );
 }

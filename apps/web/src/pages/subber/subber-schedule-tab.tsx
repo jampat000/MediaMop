@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { fetchCsrfToken } from "../../lib/api/auth-api";
 import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
 import {
-  MM_SCHEDULE_TIME_WINDOW_HEADING,
   MM_SCHEDULE_TIME_WINDOW_HELPER,
   MmScheduleDayChips,
   MmScheduleTimeFields,
@@ -35,6 +34,7 @@ type CardProps = {
   idPrefix: string;
   onSave: () => Promise<void>;
   busy: boolean;
+  dirty: boolean;
   fmt: (iso: string | null | undefined) => string;
 };
 
@@ -60,11 +60,13 @@ function ScheduleCard({
   idPrefix,
   onSave,
   busy,
+  dirty,
   fmt,
 }: CardProps) {
   const dis = !canOperate || busy;
+  const saveDisabled = dis || !dirty;
   return (
-    <section className="mm-card mm-dash-card flex h-full min-h-0 min-w-0 flex-col gap-7">
+    <section className="mm-card mm-dash-card mm-bubble-stack flex h-full min-h-0 min-w-0 flex-col">
       <div>
         <h3 className="text-base font-semibold text-[var(--mm-text1)]">{title}</h3>
         <p className="mt-1 text-sm text-[var(--mm-text2)]">{helper}</p>
@@ -85,7 +87,7 @@ function ScheduleCard({
       </div>
       <div className="space-y-3">
         <div>
-          <span className="text-sm font-medium text-[var(--mm-text1)]">{MM_SCHEDULE_TIME_WINDOW_HEADING}</span>
+          <span className="text-sm font-medium text-[var(--mm-text1)]">Schedule window</span>
           <p className="mt-1 text-xs text-[var(--mm-text3)]">{MM_SCHEDULE_TIME_WINDOW_HELPER}</p>
         </div>
         <div className="space-y-4">
@@ -109,11 +111,11 @@ function ScheduleCard({
       <div className="border-t border-[var(--mm-border)] pt-5">
         <button
           type="button"
-          className={`${mmActionButtonClass({ variant: "primary", disabled: dis })} w-full`}
-          disabled={dis}
+          className={`${mmActionButtonClass({ variant: "primary", disabled: saveDisabled })} w-full`}
+          disabled={saveDisabled}
           onClick={() => void onSave()}
         >
-          {saveLabel}
+          {busy ? "Saving…" : saveLabel}
         </button>
       </div>
     </section>
@@ -154,6 +156,24 @@ export function SubberScheduleTab({ canOperate }: { canOperate: boolean }) {
     setMvEnd(d.movies_schedule_end ?? "23:59");
   }, [q.data]);
 
+  const tvDirty =
+    q.data !== undefined &&
+    (tvEn !== q.data.tv_schedule_enabled ||
+      tvMin !== Math.max(1, Math.round(q.data.tv_schedule_interval_seconds / 60)) ||
+      tvHl !== q.data.tv_schedule_hours_limited ||
+      tvDays !== (q.data.tv_schedule_days ?? "") ||
+      tvStart !== (q.data.tv_schedule_start ?? "00:00") ||
+      tvEnd !== (q.data.tv_schedule_end ?? "23:59"));
+
+  const mvDirty =
+    q.data !== undefined &&
+    (mvEn !== q.data.movies_schedule_enabled ||
+      mvMin !== Math.max(1, Math.round(q.data.movies_schedule_interval_seconds / 60)) ||
+      mvHl !== q.data.movies_schedule_hours_limited ||
+      mvDays !== (q.data.movies_schedule_days ?? "") ||
+      mvStart !== (q.data.movies_schedule_start ?? "00:00") ||
+      mvEnd !== (q.data.movies_schedule_end ?? "23:59"));
+
   async function saveTv() {
     const csrf_token = await fetchCsrfToken();
     await put.mutateAsync({
@@ -184,7 +204,7 @@ export function SubberScheduleTab({ canOperate }: { canOperate: boolean }) {
   if (q.isError) return <p className="text-sm text-red-600">{(q.error as Error).message}</p>;
 
   return (
-    <div className="mm-dash-grid gap-x-5 gap-y-6" data-testid="subber-schedule-tab">
+    <div className="mm-dash-grid" data-testid="subber-schedule-tab">
       <ScheduleCard
         title="TV subtitle scan"
         helper="Subber also searches immediately when Sonarr imports a file, regardless of this schedule."
@@ -203,10 +223,11 @@ export function SubberScheduleTab({ canOperate }: { canOperate: boolean }) {
         end={tvEnd}
         setEnd={setTvEnd}
         lastRun={q.data?.tv_last_scheduled_scan_enqueued_at}
-        saveLabel="Save TV schedule"
+        saveLabel="Save TV schedule window"
         idPrefix="subber-tv-sched"
         onSave={saveTv}
         busy={put.isPending}
+        dirty={tvDirty}
         fmt={fmt}
       />
       <ScheduleCard
@@ -227,10 +248,11 @@ export function SubberScheduleTab({ canOperate }: { canOperate: boolean }) {
         end={mvEnd}
         setEnd={setMvEnd}
         lastRun={q.data?.movies_last_scheduled_scan_enqueued_at}
-        saveLabel="Save Movies schedule"
+        saveLabel="Save Movies schedule window"
         idPrefix="subber-movies-sched"
         onSave={saveMovies}
         busy={put.isPending}
+        dirty={mvDirty}
         fmt={fmt}
       />
     </div>

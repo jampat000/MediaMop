@@ -62,7 +62,7 @@ export function RefinerJobsInspectionSection() {
 
   return (
     <section
-      className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] shadow-sm"
+      className="mm-card mm-dash-card mm-fetcher-module-surface overflow-hidden p-0"
       aria-labelledby="refiner-jobs-inspection-heading"
       data-testid="refiner-jobs-inspection-section"
     >

@@ -584,7 +584,7 @@ export function BrokerIndexersTab({ canOperate }: { canOperate: boolean }) {
   }
 
   return (
-    <div className="space-y-5" data-testid="broker-indexers-tab">
+    <div className="mm-bubble-stack" data-testid="broker-indexers-tab">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <button

@@ -14,9 +14,14 @@ const MASK = "\u2022".repeat(10);
 
 function providerNeedsConfigureButton(p: SubberProviderOut): boolean {
   if (p.provider_key === "subscene") return false;
+  if (p.provider_key === "addic7ed") return false;
   if (p.requires_account) return true;
   if (p.provider_key === "podnapisi") return true;
   return false;
+}
+
+function providerImplemented(providerKey: string): boolean {
+  return providerKey !== "subscene" && providerKey !== "addic7ed";
 }
 
 export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
@@ -94,7 +99,7 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
   );
 
   return (
-    <div className="space-y-4" data-testid="subber-providers-tab">
+    <div className="mm-bubble-stack" data-testid="subber-providers-tab">
       <p className="text-sm text-[var(--mm-text2)]">
         Subber searches providers in priority order until a subtitle is found. Click any row to configure credentials and enable it.
       </p>
@@ -133,8 +138,8 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
                         {provMsgText}
                       </span>
                     );
-                } else if (p.provider_key === "subscene") {
-                  statusEl = <span className="text-xs text-[var(--mm-text2)]">No account needed</span>;
+                } else if (p.provider_key === "subscene" || p.provider_key === "addic7ed") {
+                  statusEl = <span className="text-xs text-amber-400">Not implemented yet</span>;
                 } else if (p.requires_account) {
                   statusEl = p.has_credentials ? (
                     <span className="text-xs font-medium text-emerald-600">Configured</span>
@@ -300,7 +305,7 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
                                 label="Enabled"
                                 layout="inline"
                                 enabled={p.enabled}
-                                disabled={dis || putProv.isPending}
+                                disabled={dis || putProv.isPending || !providerImplemented(p.provider_key)}
                                 onChange={(v) => void saveProviderRow(p.provider_key, v, pri)}
                               />
                             </div>

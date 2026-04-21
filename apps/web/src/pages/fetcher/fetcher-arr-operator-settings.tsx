@@ -12,11 +12,6 @@ import { FetcherConnectionsPanels } from "./fetcher-connections-panels";
 import { FetcherEnableSwitch } from "./fetcher-enable-switch";
 import { fetcherMenuButtonClass } from "./fetcher-menu-button";
 import {
-  FETCHER_TAB_PANEL_BLURB_CLASS,
-  FETCHER_TAB_PANEL_INTRO_CLASS,
-} from "./fetcher-tab-panel-intro";
-import {
-  MM_SCHEDULE_TIME_WINDOW_HEADING,
   MM_SCHEDULE_TIME_WINDOW_HELPER,
   MmScheduleDayChips,
   MmScheduleTimeFields,
@@ -253,7 +248,7 @@ function SearchLaneBubble({
   return (
     <section
       className={[
-        "mm-card mm-dash-card flex h-full min-h-0 min-w-0 flex-col gap-7 transition-shadow duration-200",
+        "mm-card mm-dash-card mm-bubble-stack flex h-full min-h-0 min-w-0 flex-col transition-shadow duration-200",
         saveSuccess
           ? "ring-2 ring-[var(--mm-accent-ring)] ring-offset-2 ring-offset-[var(--mm-bg-main)] shadow-[0_0_0_1px_rgba(212,175,55,0.12)]"
           : "",
@@ -293,7 +288,7 @@ function SearchLaneBubble({
 
           <div className="space-y-3">
             <div>
-              <span className="text-sm font-medium text-[var(--mm-text1)]">{MM_SCHEDULE_TIME_WINDOW_HEADING}</span>
+              <span className="text-sm font-medium text-[var(--mm-text1)]">Schedule window</span>
               <p className="mt-1 text-xs text-[var(--mm-text3)]">{MM_SCHEDULE_TIME_WINDOW_HELPER}</p>
             </div>
             <div className="space-y-4">
@@ -476,8 +471,8 @@ export function FetcherArrOperatorSettingsSection({
     ) : q.data && draft ? (
       <>
         {isSchedules ? (
-          <div className="mm-dash-grid gap-x-5 gap-y-6" data-testid="fetcher-schedules-grid">
-            <div className="flex min-w-0 flex-col gap-6">
+          <div className="mm-dash-grid" data-testid="fetcher-schedules-grid">
+            <div className="mm-bubble-stack flex min-w-0 flex-col">
               <SearchLaneBubble
                 variant="scheduleOnly"
                 testId="fetcher-tv-lane-missing"
@@ -511,7 +506,7 @@ export function FetcherArrOperatorSettingsSection({
                 onPersistLane={(merged) => persistLaneAfterMerge("sonarr_upgrade", merged)}
               />
             </div>
-            <div className="flex min-w-0 flex-col gap-6">
+            <div className="mm-bubble-stack flex min-w-0 flex-col">
               <SearchLaneBubble
                 variant="scheduleOnly"
                 testId="fetcher-movies-lane-missing"
@@ -548,7 +543,7 @@ export function FetcherArrOperatorSettingsSection({
           </div>
         ) : (
           <div
-            className="mm-dash-grid gap-x-5 gap-y-6"
+            className="mm-dash-grid"
             data-testid={isTv ? "fetcher-tv-lanes-grid" : "fetcher-movies-lanes-grid"}
           >
             {isTv ? (
@@ -639,30 +634,13 @@ export function FetcherArrOperatorSettingsSection({
 
   return (
     <section
-      className="mm-fetcher-module-surface mb-6"
+      className="mm-fetcher-module-surface"
       aria-labelledby={`mm-fetcher-arr-tab-${activeTab}-heading`}
       data-testid="fetcher-arr-operator-settings"
     >
-      <header id={`mm-fetcher-arr-tab-${activeTab}-heading`} className={FETCHER_TAB_PANEL_INTRO_CLASS}>
-        <p className={FETCHER_TAB_PANEL_BLURB_CLASS}>
-          {isSchedules ? (
-            <>
-              Turn searches on or off, set how often they run, and limit runs to certain days and times. Per-run limits
-              stay on the <strong>{FETCHER_TAB_SONARR_LABEL}</strong> and <strong>{FETCHER_TAB_RADARR_LABEL}</strong> tabs.
-            </>
-          ) : isTv ? (
-            <>
-              Configure Fetcher search behavior for <strong>{FETCHER_TAB_SONARR_LABEL}</strong>, including missing and
-              upgrade lanes.
-            </>
-          ) : (
-            <>
-              Configure Fetcher search behavior for <strong>{FETCHER_TAB_RADARR_LABEL}</strong>, including missing and
-              upgrade lanes.
-            </>
-          )}
-        </p>
-      </header>
+      <h2 id={`mm-fetcher-arr-tab-${activeTab}-heading`} className="sr-only">
+        {isSchedules ? "Fetcher schedules" : isTv ? "Fetcher Sonarr" : "Fetcher Radarr"}
+      </h2>
 
       {lanesBody}
     </section>

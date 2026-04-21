@@ -1,25 +1,22 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { fetcherSectionTabClass } from "../fetcher/fetcher-menu-button";
-import { mmModuleTabBlurbBandClass, mmModuleTabBlurbTextClass } from "../../lib/ui/mm-module-tab-blurb";
 import { RefinerProcessSettingsSection } from "./refiner-process-settings-section";
 import { RefinerJobsInspectionSection } from "./refiner-jobs-inspection-section";
 import { RefinerOverviewTab, type RefinerOverviewOpenTab } from "./refiner-overview-tab";
 import { RefinerPathSettingsSection } from "./refiner-path-settings-section";
 import { RefinerSchedulesSection } from "./refiner-schedules-section";
 import { RefinerRemuxSection } from "./refiner-remux-section";
+import { mmModuleTabBlurbBandClass, mmModuleTabBlurbTextClass } from "../../lib/ui/mm-module-tab-blurb";
 
 type RefinerPageTabId = "overview" | "libraries" | "audio-subtitles" | "jobs" | "schedules";
 
 const REFINER_TAB_BLURBS: Record<RefinerPageTabId, string> = {
-  overview:
-    "Health and next steps across TV and movie libraries. Open Libraries, Audio & subtitles, Schedules, or Jobs to change paths, remux rules, timing, or inspect work.",
-  libraries:
-    "Watched folders, work and output paths, and per-library processing defaults. Each section saves on its own — confirm before you rely on new paths.",
-  "audio-subtitles":
-    "How Refiner remuxes audio and subtitle tracks for TV and movies — language order, commentary, and subtitle retention.",
-  schedules: "Automatic remux passes: which libraries run, how often, and optional day or time windows.",
-  jobs: "Recent Refiner jobs and outcomes in this module. Full technical detail still lives on Activity when you need it.",
+  overview: "Review remux throughput, recent outcomes, and overall Refiner status.",
+  libraries: "Set TV and Movies watched, work, and output folders, plus per-library scan controls.",
+  "audio-subtitles": "Choose default audio and subtitle remux rules separately for TV and Movies.",
+  schedules: "Set optional schedule windows and run manual watched-folder scans when needed.",
+  jobs: "View queued, running, and recent Refiner jobs for troubleshooting and progress.",
 };
 
 export function RefinerPage() {
@@ -81,15 +78,15 @@ export function RefinerPage() {
         ))}
       </nav>
 
-      <div className="space-y-5" role="tabpanel" aria-label={tabs.find((t) => t.id === tab)?.label}>
-        <div className={mmModuleTabBlurbBandClass} data-testid="refiner-tab-blurb">
-          <p className={mmModuleTabBlurbTextClass}>{REFINER_TAB_BLURBS[tab]}</p>
-        </div>
-        <div className="w-full min-w-0">
+      <div className="mm-bubble-stack" role="tabpanel" aria-label={tabs.find((t) => t.id === tab)?.label}>
+        <div className="mm-bubble-stack w-full min-w-0">
+          <div className={mmModuleTabBlurbBandClass} data-testid="refiner-tab-blurb">
+            <p className={mmModuleTabBlurbTextClass}>{REFINER_TAB_BLURBS[tab]}</p>
+          </div>
           {tab === "overview" ? <RefinerOverviewTab onOpenTab={openFromOverview} /> : null}
 
           {tab === "libraries" ? (
-            <div className="flex w-full min-w-0 flex-col gap-7">
+            <div className="mm-bubble-stack flex w-full min-w-0 flex-col">
               <RefinerPathSettingsSection />
               <RefinerProcessSettingsSection />
             </div>

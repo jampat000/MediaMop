@@ -110,7 +110,7 @@ function ScopeCard({
   const disabled = !editable || isPending;
   const subtitleCodes = parseCsvCodes(draft.subtitle_langs_csv);
   return (
-    <section className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-6 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.03)]">
+    <section className="mm-card mm-dash-card p-6">
       <div className="border-b border-[var(--mm-border)] pb-4">
         <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-[var(--mm-text3)]">Scope</p>
         <h3 className="mt-1.5 text-base font-semibold text-[var(--mm-text1)]">{title}</h3>
@@ -300,9 +300,9 @@ export function RefinerRemuxSection() {
   const saveTvBody: RefinerRemuxRulesSettingsPutBody = { media_scope: "tv", ...tvDraft };
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-8" data-testid="refiner-remux-section">
+    <div className="mm-bubble-stack flex w-full min-w-0 flex-col" data-testid="refiner-remux-section">
       <section
-        className="mm-fetcher-module-surface w-full min-w-0 rounded border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-6 text-sm leading-relaxed text-[var(--mm-text2)] sm:p-7"
+        className="mm-card mm-dash-card mm-fetcher-module-surface w-full min-w-0 p-6 text-sm leading-relaxed text-[var(--mm-text2)] sm:p-7"
         aria-labelledby="refiner-audio-subtitles-saved-heading"
         data-testid="refiner-remux-defaults"
       >
@@ -318,38 +318,37 @@ export function RefinerRemuxSection() {
           <strong className="text-[var(--mm-text2)]">What happens to your files</strong>.
         </p>
         {!editable ? <p className="mt-3 text-xs text-[var(--mm-text3)]">Operators and admins can edit these rules.</p> : null}
-        <div className="mt-8 grid gap-6 lg:grid-cols-2 lg:gap-8">
-          <ScopeCard
-            title="TV"
-            draft={tvDraft}
-            setDraft={setTvDraft}
-            editable={editable}
-            isPending={saveTv.isPending}
-            dirty={tvDirty}
-            isError={saveTv.isError}
-            error={saveTv.error}
-            isSuccess={saveTv.isSuccess}
-            onSave={() => saveTv.mutate(saveTvBody)}
-            pickerTestId="refiner-subtitle-language-picker-tv"
-            saveLabel="Save TV audio/subtitle defaults"
-          />
-          <ScopeCard
-            title="Movies"
-            draft={movieDraft}
-            setDraft={setMovieDraft}
-            editable={editable}
-            isPending={saveMovie.isPending}
-            dirty={movieDirty}
-            isError={saveMovie.isError}
-            error={saveMovie.error}
-            isSuccess={saveMovie.isSuccess}
-            onSave={() => saveMovie.mutate(saveMovieBody)}
-            pickerTestId="refiner-subtitle-language-picker-movie"
-            saveLabel="Save Movies audio/subtitle defaults"
-          />
-        </div>
       </section>
-
+      <div className="mm-dash-grid">
+        <ScopeCard
+          title="TV"
+          draft={tvDraft}
+          setDraft={setTvDraft}
+          editable={editable}
+          isPending={saveTv.isPending}
+          dirty={tvDirty}
+          isError={saveTv.isError}
+          error={saveTv.error}
+          isSuccess={saveTv.isSuccess}
+          onSave={() => saveTv.mutate(saveTvBody)}
+          pickerTestId="refiner-subtitle-language-picker-tv"
+          saveLabel="Save TV audio/subtitle defaults"
+        />
+        <ScopeCard
+          title="Movies"
+          draft={movieDraft}
+          setDraft={setMovieDraft}
+          editable={editable}
+          isPending={saveMovie.isPending}
+          dirty={movieDirty}
+          isError={saveMovie.isError}
+          error={saveMovie.error}
+          isSuccess={saveMovie.isSuccess}
+          onSave={() => saveMovie.mutate(saveMovieBody)}
+          pickerTestId="refiner-subtitle-language-picker-movie"
+          saveLabel="Save Movies audio/subtitle defaults"
+        />
+      </div>
     </div>
   );
 }

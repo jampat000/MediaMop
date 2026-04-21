@@ -227,71 +227,73 @@ export function BrokerSearchTab() {
   const enabledCount = enabled.length;
 
   return (
-    <div className="space-y-6" data-testid="broker-search-tab">
-      <form className="space-y-3" onSubmit={(e) => void onSubmit(e)}>
-        <input
-          className="mm-input w-full text-base"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search indexers…"
-          aria-label="Search query"
-        />
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Media type">
-            {(
-              [
-                { v: "all" as const, label: "All" },
-                { v: "tv" as const, label: "TV" },
-                { v: "movie" as const, label: "Movies" },
-              ] as const
-            ).map(({ v, label }) => (
-              <button
-                key={v}
-                type="button"
-                aria-pressed={mediaType === v}
-                onClick={() => setMediaType(v)}
-                className={[
-                  "rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
-                  mediaType === v
-                    ? "border-[rgba(212,175,55,0.45)] bg-[var(--mm-accent-soft)] text-[var(--mm-text1)]"
-                    : "border-[var(--mm-border)] bg-transparent text-[var(--mm-text2)] hover:bg-white/5",
-                ].join(" ")}
-              >
-                {label}
-              </button>
-            ))}
+    <div className="mm-bubble-stack" data-testid="broker-search-tab">
+      <section className="mm-card mm-dash-card p-4 sm:p-5">
+        <form className="space-y-3" onSubmit={(e) => void onSubmit(e)}>
+          <input
+            className="mm-input w-full text-base"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search indexers…"
+            aria-label="Search query"
+          />
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Media type">
+              {(
+                [
+                  { v: "all" as const, label: "All" },
+                  { v: "tv" as const, label: "TV" },
+                  { v: "movie" as const, label: "Movies" },
+                ] as const
+              ).map(({ v, label }) => (
+                <button
+                  key={v}
+                  type="button"
+                  aria-pressed={mediaType === v}
+                  onClick={() => setMediaType(v)}
+                  className={[
+                    "rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                    mediaType === v
+                      ? "border-[rgba(212,175,55,0.45)] bg-[var(--mm-accent-soft)] text-[var(--mm-text1)]"
+                      : "border-[var(--mm-border)] bg-transparent text-[var(--mm-text2)] hover:bg-white/5",
+                  ].join(" ")}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="min-w-0 flex-1 sm:max-w-md">
+              <span id={ixLabel} className="sr-only">
+                Indexers
+              </span>
+              <MmMultiListboxPicker
+                className="w-full"
+                ariaLabelledBy={ixLabel}
+                options={indexerOptions}
+                values={indexerValues}
+                onChange={setIndexerValues}
+                placeholder={enabled.length ? "All enabled (default)" : "No enabled indexers"}
+                summaryText={
+                  indexerValues.length === 0 || indexerValues.length >= enabled.length ? "All enabled" : `${indexerValues.length} selected`
+                }
+                disabled={!enabled.length}
+              />
+            </div>
+            <button
+              type="submit"
+              className={`${mmActionButtonClass({ variant: "primary", disabled: search.isPending || !q.trim() })} w-full sm:w-auto sm:shrink-0`}
+              disabled={search.isPending || !q.trim()}
+            >
+              {search.isPending ? "Searching…" : "Search"}
+            </button>
           </div>
-          <div className="min-w-0 flex-1 sm:max-w-md">
-            <span id={ixLabel} className="sr-only">
-              Indexers
-            </span>
-            <MmMultiListboxPicker
-              className="w-full"
-              ariaLabelledBy={ixLabel}
-              options={indexerOptions}
-              values={indexerValues}
-              onChange={setIndexerValues}
-              placeholder={enabled.length ? "All enabled (default)" : "No enabled indexers"}
-              summaryText={
-                indexerValues.length === 0 || indexerValues.length >= enabled.length ? "All enabled" : `${indexerValues.length} selected`
-              }
-              disabled={!enabled.length}
-            />
-          </div>
-          <button
-            type="submit"
-            className={`${mmActionButtonClass({ variant: "primary", disabled: search.isPending || !q.trim() })} w-full sm:w-auto sm:shrink-0`}
-            disabled={search.isPending || !q.trim()}
-          >
-            {search.isPending ? "Searching…" : "Search"}
-          </button>
-        </div>
-        {search.isError ? (
-          <div className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-6 text-center text-sm text-red-200" role="alert">
-            {(search.error as Error).message}
-          </div>
-        ) : null}
-      </form>
+          {search.isError ? (
+            <div className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-6 text-center text-sm text-red-200" role="alert">
+              {(search.error as Error).message}
+            </div>
+          ) : null}
+        </form>
+      </section>
 
       {!search.isPending && !search.isSuccess && !search.isError ? (
         <div className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-12 text-center shadow-sm">
