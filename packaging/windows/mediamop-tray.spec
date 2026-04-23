@@ -3,7 +3,7 @@ from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_submodules
 
-ROOT = Path.cwd()
+ROOT = Path(SPEC).resolve().parents[2]
 BACKEND = ROOT / "apps" / "backend"
 WEB_DIST = ROOT / "apps" / "web" / "dist"
 LOGO = ROOT / "apps" / "web" / "src" / "components" / "brand" / "mediamop-logo-premium.png"
