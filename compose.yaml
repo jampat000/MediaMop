@@ -1,28 +1,23 @@
-# MediaMop all-in-one (API + production web UI) from GHCR — default for `docker compose` at repo root.
-#
-# Prerequisites:
-#   - Docker Desktop / Engine running (Linux engine on Windows is fine).
-#   - Copy docker/mediamop.env.example to .env.mediamop and set MEDIAMOP_SESSION_SECRET (32+ chars).
+# MediaMop all-in-one (API + production web UI) from GHCR.
+# This is the default `docker compose` entrypoint at repo root.
 #
 # From repo root:
-#   docker compose --env-file .env.mediamop pull
-#   docker compose --env-file .env.mediamop up -d
+#   docker compose pull
+#   docker compose up -d
 #
-# Open http://localhost:8788/ — first visit runs admin bootstrap when the data volume is empty.
-#
-# CI publishes amd64 and arm64; Docker picks the matching architecture.
-# Override: MEDIAMOP_DOCKER_IMAGE=ghcr.io/your-user/your-repo:tag
+# Open http://localhost:8788/ after the container starts.
+# Stable releases currently publish linux/amd64 images.
+# Override the image with MEDIAMOP_DOCKER_IMAGE if needed.
 
 name: mediamop
 
 services:
   mediamop:
-    image: ${MEDIAMOP_DOCKER_IMAGE:-ghcr.io/jampat000/mediamop:alpha}
+    image: ${MEDIAMOP_DOCKER_IMAGE:-ghcr.io/jampat000/mediamop:latest}
     pull_policy: always
     ports:
       - "8788:8788"
     environment:
-      MEDIAMOP_SESSION_SECRET: ${MEDIAMOP_SESSION_SECRET:?Set MEDIAMOP_SESSION_SECRET in env file see docker mediamop env example}
       MEDIAMOP_HOME: ${MEDIAMOP_HOME:-/data/mediamop}
     volumes:
       - mediamop_data:/data/mediamop

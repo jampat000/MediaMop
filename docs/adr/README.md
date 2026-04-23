@@ -1,10 +1,15 @@
-# Architecture Decision Records — MediaMop
+# Architecture Decision Records - MediaMop
 
-ADRs in this folder capture **locked** structural and platform choices for this repository. They override ad hoc experimentation when the two conflict.
+ADRs in this folder capture locked structural and platform choices for this repository.
+They override ad hoc experimentation when the two conflict.
 
-**Durable-job timing:** operator-controlled intervals, schedules, cooldowns, retries, last-run, and timing-based pruning must follow [ADR-0009](ADR-0009-suite-wide-timing-isolation.md) (per module, then per job family).
+**Durable-job timing:** operator-controlled intervals, schedules, cooldowns, retries, last-run,
+and timing-based pruning must follow [ADR-0009](ADR-0009-suite-wide-timing-isolation.md)
+(per module, then per job family).
 
-**Numbering:** [ADR-0004](ADR-0004-reserved-number.md), [ADR-0005](ADR-0005-reserved-number.md), and [ADR-0006](ADR-0006-reserved-number.md) are intentionally reserved (no architectural body) so filenames and cross-references stay stable. **Git rename noise** around historical durable-job table migrations is documented in [note-git-rename-metadata-93547e2.md](note-git-rename-metadata-93547e2.md); fixing it would require history rewrite and force-push.
+**Numbering:** [ADR-0004](ADR-0004-reserved-number.md), [ADR-0005](ADR-0005-reserved-number.md),
+and [ADR-0006](ADR-0006-reserved-number.md) are intentionally reserved so filenames and
+cross-references stay stable.
 
 | ADR | Title |
 |-----|--------|

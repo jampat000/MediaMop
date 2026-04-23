@@ -1,6 +1,4 @@
-# Tag-driven release: push tag v* → same validation as ci.yml, then GitHub Release + mediamop-web-dist.zip.
-# Top-level permissions stay read-only; only tagged-release escalates to contents:write for the release + upload.
-# Keep step sequence aligned with .github/workflows/ci.yml (Test / mediamop).
+# Tag-driven release: push tag v* -> full validation, Windows installer, Docker image, GitHub Release.
 name: Release
 
 on:
@@ -14,13 +12,16 @@ concurrency:
 
 permissions:
   contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
 
 jobs:
-  tagged-release:
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    permissions:
-      contents: write
+  windows-smoke:
+    runs-on: windows-latest
+    if: ${{ !contains(github.ref_name, '-') }}
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
 
@@ -28,7 +29,60 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install MediaMop backend (editable) + Playwright browser
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Install MediaMop backend (editable) and Playwright browser
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e "./apps/backend[dev]"
+          python -m playwright install chromium
+
+      - name: MediaMop web - install and build
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm run build
+
+      - name: MediaMop Windows auth shell smoke
+        env:
+          MEDIAMOP_E2E: "1"
+          MEDIAMOP_HOME: ${{ runner.temp }}\mediamop-e2e
+          MEDIAMOP_SESSION_SECRET: ci-mediamop-session-secret-32chars-min
+          PYTHONPATH: ${{ github.workspace }}\apps\backend\src
+        run: python -m pytest tests/e2e/mediamop -q --tb=short
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build MediaMop Windows installer
+        env:
+          MEDIAMOP_BUILD_VERSION: ${{ github.ref_name }}
+        run: powershell -ExecutionPolicy Bypass -File packaging/windows/build.ps1
+
+      - name: Upload MediaMop Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: mediamop-windows-installer
+          path: dist/windows/MediaMopSetup.exe
+
+  tagged-release:
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.ref_name, '-') }}
+    timeout-minutes: 90
+    needs: windows-smoke
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install MediaMop backend (editable) and Playwright browser
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e "./apps/backend[dev]"
@@ -47,15 +101,17 @@ jobs:
         with:
           node-version: "20"
 
-      - name: MediaMop web — install, build, unit tests
+      - name: MediaMop web - install, build, unit tests
         working-directory: apps/web
         run: |
           npm ci
           npm run build
           npm run test
 
-      - name: Pack web dist (release artifact)
-        run: (cd apps/web && zip -r "$GITHUB_WORKSPACE/mediamop-web-dist.zip" dist)
+      - name: Pack web dist
+        run: |
+          cd apps/web
+          zip -r "$GITHUB_WORKSPACE/mediamop-web-dist.zip" dist
 
       - name: MediaMop E2E smoke (Playwright + real API)
         env:
@@ -65,17 +121,59 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/apps/backend/src
         run: python -m pytest tests/e2e/mediamop -q --tb=short
 
+      - name: Docker image name
+        id: image
+        run: echo "name=${REGISTRY}/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Download MediaMop Windows installer
+        uses: actions/download-artifact@v4
+        with:
+          name: mediamop-windows-installer
+          path: ${{ github.workspace }}/windows-artifact
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish release Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          sbom: false
+          tags: |
+            ${{ steps.image.outputs.name }}:${{ github.ref_name }}
+            ${{ steps.image.outputs.name }}:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ github.ref_name }}
+
       - name: Publish GitHub Release
-        # Pin 2.x line: v3+ targets the Node 24 Actions runtime; keep v2 until runners are uniformly on that stack.
         uses: softprops/action-gh-release@v2.6.2
         with:
-          files: mediamop-web-dist.zip
+          files: |
+            mediamop-web-dist.zip
+            windows-artifact/MediaMopSetup.exe
           generate_release_notes: true
           body: |
-            **MediaMop** tested source release for `${{ github.ref_name }}`.
+            **MediaMop** release `${{ github.ref_name }}`.
 
-            **Install from source:** [docs/release.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/docs/release.md) · [docs/local-development.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/docs/local-development.md)
+            **Included artifacts**
+            - `mediamop-web-dist.zip` - production web bundle from `apps/web/dist`
+            - `MediaMopSetup.exe` - Windows desktop installer with tray host and bundled web UI
 
-            **Attached:** `mediamop-web-dist.zip` — `vite` production bundle for `apps/web` only; the FastAPI backend is installed from this repository (`pip install -e ./apps/backend`), not from the zip.
+            **Container image**
+            - `ghcr.io/${{ github.repository }}:${{ github.ref_name }}`
+            - `ghcr.io/${{ github.repository }}:latest`
 
-            **Not published:** Docker images, Windows installers, PyPI/npm packages.
+            **Run instructions**
+            - Windows installer and release notes: `docs/release.md`
+            - Docker: `docker/README.md`

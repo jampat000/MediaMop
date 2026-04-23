@@ -1,6 +1,7 @@
-# MediaMop — backend tests, web build/tests, E2E smoke (Playwright + live API).
-# Triggers: push to any branch, pull_request, workflow_dispatch. GitHub shows the job as "Test / mediamop".
-# Keep step sequence aligned with .github/workflows/release.yml (tag-driven release re-runs the same checks).
+# MediaMop - backend tests, web build/tests, E2E smoke (Playwright + live API).
+# Triggers: push to any branch, pull_request, workflow_dispatch.
+# GitHub shows the job as "Test / mediamop".
+# Keep this step sequence aligned with .github/workflows/release.yml.
 name: Test
 
 on:
@@ -46,7 +47,7 @@ jobs:
         with:
           node-version: "20"
 
-      - name: MediaMop web — install, build, unit tests
+      - name: MediaMop web - install, build, unit tests
         working-directory: apps/web
         run: |
           npm ci
