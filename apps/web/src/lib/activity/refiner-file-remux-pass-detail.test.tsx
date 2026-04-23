@@ -21,8 +21,11 @@ describe("RefinerFileRemuxPassActivityDetail", () => {
     });
     render(<RefinerFileRemuxPassActivityDetail detail={detail} />);
     expect(screen.getByTestId("refiner-remux-activity-detail")).toBeInTheDocument();
-    expect(screen.getByText(/Live — remux wrote an output file/i)).toBeInTheDocument();
-    expect(screen.getByText("movies/a.mkv")).toBeInTheDocument();
+    expect(screen.getByText("Outcome")).toBeInTheDocument();
+    expect(screen.getByText("Output written")).toBeInTheDocument();
+    expect(screen.getByText("Show track and cleanup details")).toBeInTheDocument();
+    expect(screen.getByText("/data/movies/a.mkv")).toBeInTheDocument();
+    expect(screen.getByText("Audio in file")).toBeInTheDocument();
     expect(screen.getByText("A before")).toBeInTheDocument();
     expect(screen.getByText(/ffmpeg command line/i)).toBeInTheDocument();
   });

@@ -121,6 +121,16 @@ def test_try_enqueue_periodic_skips_when_active_scan_exists() -> None:
     settings = _settings_on()
     with fac() as db:
         db.execute(delete(RefinerJob))
+        db.execute(
+            update(RefinerPathSettingsRow)
+            .where(RefinerPathSettingsRow.id == 1)
+            .values(
+                refiner_watched_folder=None,
+                refiner_output_folder="",
+                refiner_tv_watched_folder=None,
+                refiner_tv_output_folder=None,
+            ),
+        )
         db.add(
             RefinerJob(
                 dedupe_key="wf-scan-block",

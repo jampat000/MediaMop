@@ -1,15 +1,21 @@
 # MediaMop releases
 
-MediaMop ships as a **tested source release**: a **git tag** on `main` that passed CI, plus a **GitHub Release** that documents how to run from source. There is **no** Docker image, **no** Windows installer, and **no** PyPI package in this path.
+MediaMop now ships three release deliverables from a tagged release:
+
+1. a GitHub Release for the tagged source snapshot
+2. a Windows desktop installer (`MediaMopSetup.exe`)
+3. a Docker image published to GitHub Container Registry
+
+The Windows artifact is an installer-based desktop app with a tray host. It is not a Windows service.
 
 ## Contract
 
-1. **Version bump** — Update semver in **both** files in a **normal PR** (same version string):
-   - `apps/backend/pyproject.toml` → `[project] version`
-   - `apps/web/package.json` → `version`  
-   The web shell also exposes this at runtime via `WEB_APP_VERSION` (Vite `define` from `package.json`).
-2. **Merge to `main`** — PR must pass the **`Test`** workflow (`Test / mediamop`) on GitHub Actions.
-3. **Tag** — Repository owner creates an **annotated** tag on the **merge commit** (not a random local commit):
+1. Update the version in both files in a normal PR:
+   - `apps/backend/pyproject.toml`
+   - `apps/web/package.json`
+2. Merge to `main` after `Test / mediamop` passes.
+3. Create an annotated tag on the merge commit:
+
    ```bash
    git fetch origin
    git checkout main
@@ -17,36 +23,97 @@ MediaMop ships as a **tested source release**: a **git tag** on `main` that pass
    git tag -a vX.Y.Z -m "MediaMop vX.Y.Z"
    git push origin vX.Y.Z
    ```
-   Tag format: **`vX.Y.Z`** (semver, leading `v`), e.g. `v0.1.0`.
-4. **GitHub Release** — Pushing `v*` triggers the **`Release`** workflow, which re-runs the same checks as **`Test`**, attaches **`mediamop-web-dist.zip`** (contents of `apps/web/dist/` after `npm run build`), and creates the GitHub Release for that tag (with generated notes plus the short body from the workflow). You can edit the Release description in the GitHub UI afterward if needed.
 
-## What is shipped
+4. Pushing `v*` triggers `.github/workflows/release.yml`.
+
+## What the release workflow does
+
+The `Release` workflow:
+
+- reruns backend tests on Linux
+- reruns web build and unit tests on Linux
+- reruns the E2E auth smoke on Linux
+- reruns a Windows E2E smoke on `windows-latest`
+- builds `MediaMopSetup.exe` on Windows
+- publishes `mediamop-web-dist.zip`
+- builds and pushes Docker tags:
+  - `ghcr.io/<owner>/<repo>:vX.Y.Z`
+  - `ghcr.io/<owner>/<repo>:latest`
+- verifies the published Docker manifest resolves
+- runs the published Docker image and waits for `/health`
+- creates the GitHub Release
+
+## Registry authentication
+
+For the most reliable GHCR publishing path, add a repository secret named `GHCR_TOKEN`.
+
+Recommended scopes for that token:
+
+- `write:packages`
+- `read:packages`
+- `repo`
+
+The workflow prefers `GHCR_TOKEN` when it exists and falls back to `GITHUB_TOKEN` otherwise.
+This avoids depending on a maintainer machine having cached Docker registry credentials.
+
+## Release artifacts
 
 | Deliverable | Meaning |
 |-------------|---------|
-| **Tag + source tree** | Authoritative snapshot; backend via `pip install -e ./apps/backend`, SQLite under `MEDIAMOP_HOME`, migrations, env per `docs/local-development.md`. |
-| **`mediamop-web-dist.zip`** | Optional convenience: production **static** web build only. It is **not** a standalone app; the API is still required. |
+| `Tag + source tree` | Canonical source snapshot for the release. |
+| `mediamop-web-dist.zip` | Static production build of `apps/web/dist`. Backend still required. |
+| `MediaMopSetup.exe` | Windows desktop installer with tray host, bundled backend runtime, bundled web UI, and Start Menu integration. |
+| `ghcr.io/<owner>/<repo>:vX.Y.Z` | Versioned all-in-one container image. |
+| `ghcr.io/<owner>/<repo>:latest` | Latest stable container image. |
 
-## Not supported yet
+## Windows installer
 
-- **Stable** Docker registry publishing (no semver-tagged GA image pipeline). **Alpha:** all-in-one image + root **`compose.yaml`** (GHCR) / **`docker-compose.mediamop.yml`** (local build) — **Actions → Docker alpha**, **`docker/README.md`** (tester checklist), **`docs/docker.md`** (short pointer), GHCR.
-- **Windows** installer / MSIX / signed `.exe` pipeline.
-- **npm / PyPI** registry publishing.
-- **Automation that commits to `main`** (no release bots or version-push workflows).
+`MediaMopSetup.exe` is the supported Windows release artifact.
 
-## CI alignment
+After installing it:
 
-- Day-to-day: **`.github/workflows/ci.yml`** — workflow name **`Test`**, job id **`mediamop`** (GitHub UI: **`Test / mediamop`**).
-- **`Test`** triggers on **push** to **any** branch, on **`pull_request`**, and on **`workflow_dispatch`** (manual run from the Actions tab).
-- Tag releases: **`.github/workflows/release.yml`** — workflow name **`Release`**, job **`tagged-release`**. It **re-runs the same validation steps** as **`Test`**, then publishes the GitHub Release and attaches **`mediamop-web-dist.zip`**. **Keep the two workflow step blocks aligned** when you change checks.
+1. Launch `MediaMop` from the Start Menu or desktop shortcut.
+2. MediaMop starts in the user session, not as a Windows service.
+3. The tray icon opens the local app in the browser and exposes `Open MediaMop`, `Open Data Folder`, and `Quit`.
+4. The local runtime root is created under `%LOCALAPPDATA%\MediaMop`.
 
-## Branch protection (GitHub Settings — manual)
+This design is intentional. Running in the user session avoids common NAS or external-drive access issues that affect Windows services.
 
-Nothing in this repository turns on branch rules for you. Repo admins configure **rulesets** or **classic branch protection** for **`main`** (or your default branch) in GitHub. Typical expectation here:
+## Docker
 
-- Require the **`Test / mediamop`** status check before merge (exact label can vary slightly by UI; it is the **`mediamop`** job from workflow **`Test`**).
-- Whether PRs are required, who can push, and linear-history rules are **team policy** — not encoded in workflow files.
+Stable Docker releases are published from the same tag workflow.
 
-## Permissions note
+Pull and run:
 
-The **`Release`** workflow sets workflow-wide **`contents: read`** and grants **`contents: write`** **only** on the **`tagged-release`** job, so the release action can create the GitHub Release and upload the zip. It does **not** push branches or open PRs.
+```bash
+docker pull ghcr.io/jampat000/mediamop:latest
+docker run --rm \
+  -p 8788:8788 \
+  -v mediamop-data:/data/mediamop \
+  ghcr.io/jampat000/mediamop:latest
+```
+
+Or use the root `compose.yaml`:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+No env file is required for the default all-in-one container path. Create `.env.mediamop`
+only if you want to override defaults such as the image tag or runtime home.
+
+## Not shipped
+
+- Windows service mode
+- Windows installer code signing
+- PyPI publishing
+- npm publishing
+- automatic version bumps or release bots
+
+## Related files
+
+- `.github/workflows/ci.yml`
+- `.github/workflows/release.yml`
+- `docker/README.md`
+- `docs/local-development.md`
