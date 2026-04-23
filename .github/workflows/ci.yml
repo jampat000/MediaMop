@@ -1,4 +1,4 @@
-# MediaMop - backend tests, web build/tests, E2E smoke (Playwright + live API).
+# MediaMop - backend tests, web build/tests, E2E smoke, Docker smoke, and Windows packaging smoke.
 # Triggers: push to any branch, pull_request, workflow_dispatch.
 # GitHub shows the job as "Test / mediamop".
 # Keep this step sequence aligned with .github/workflows/release.yml.
@@ -61,3 +61,60 @@ jobs:
           MEDIAMOP_SESSION_SECRET: ci-mediamop-session-secret-32chars-min
           PYTHONPATH: ${{ github.workspace }}/apps/backend/src
         run: python -m pytest tests/e2e/mediamop -q --tb=short
+
+  docker-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build MediaMop Docker image
+        run: docker build -t mediamop-ci-smoke .
+
+      - name: Run MediaMop Docker smoke
+        run: |
+          docker rm -f mediamop-ci-smoke >/dev/null 2>&1 || true
+          docker run -d --name mediamop-ci-smoke -p 8788:8788 \
+            -e MEDIAMOP_SESSION_SECRET=ci-mediamop-session-secret-32chars-min \
+            mediamop-ci-smoke
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:8788/health >/tmp/mediamop-health.json; then
+              cat /tmp/mediamop-health.json
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs mediamop-ci-smoke
+          exit 1
+
+      - name: Cleanup MediaMop Docker smoke
+        if: always()
+        run: docker rm -f mediamop-ci-smoke >/dev/null 2>&1 || true
+
+  windows-package-smoke:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: MediaMop web - install and build
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build MediaMop Windows installer
+        env:
+          MEDIAMOP_BUILD_VERSION: ci-${{ github.run_number }}
+        run: powershell -ExecutionPolicy Bypass -File packaging/windows/build.ps1

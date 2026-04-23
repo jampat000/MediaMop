@@ -3,21 +3,28 @@
 <!-- README_LOCKED_SECTION_START: project-note -->
 ## A note on this project
 
-This is a vibe-coded project.
+MediaMop is a vibe-coded project.
 
-I am not a software engineer, and I have a lot of respect for the people who do this properly for a living.
+I built it because I wanted a media workflow that matched the way I actually manage my library, and I could not find an existing tool that fit. I am not a software engineer, so this started from a very practical place: solve the problems I kept running into and keep refining it until it worked the way I needed.
 
-I built MediaMop because I could not find something that matched the way I actually wanted to manage my media setup. I needed something opinionated, practical, and built around the workflows I care about, so I kept going until it did what I needed.
+It is opinionated on purpose. Every module exists because it solved a real problem in my own setup first.
 
-Every feature is here because it solved a real problem for me first. The product decisions come from that angle too: user workflow before theory.
-
-If it ends up useful to you as well, use it. If you want to fork it and take it somewhere else, do that.
-
-It was built by someone who just wanted their media library to work properly.
+If it happens to fit the way you manage your library too, use it. If not, fork it and take it somewhere else.
 
 <!-- README_LOCKED_SECTION_END: project-note -->
 
-MediaMop is a standalone product: FastAPI + SQLite backend in `apps/backend` and React + Vite web shell in `apps/web`.
+## What MediaMop is
+
+MediaMop is a self-hosted media operations app for people who want more control over how their library is processed and maintained.
+
+It brings a few focused tools together in one place:
+
+- **Refiner** cleans up media files by remuxing them into a cleaner, more consistent result.
+- **Pruner** finds media that matches your cleanup rules so you can preview or remove it safely.
+- **Subber** syncs your library from Sonarr and Radarr, tracks subtitle state, and manages subtitle providers and schedules.
+- **Dashboard, Activity, and Settings** give you a live view of system health, recent work, logs, and core app configuration.
+
+The app ships as a FastAPI + SQLite backend with a React + Vite web UI.
 
 ## Screenshots
 
@@ -112,13 +119,3 @@ No env file is required for the default Docker path. The container will generate
 its own session secret if you do not provide one.
 
 Full Docker instructions: [`docker/README.md`](docker/README.md)
-
-## Architecture
-
-Locked decisions: [`docs/adr/`](docs/adr/)
-
-Current shipped vs next work: [`docs/TASKS.md`](docs/TASKS.md)
-
-## Transitional Jinja app
-
-An older Jinja/SQLite experiment lived in another repository. It is not part of this tree and is not the active shell. `apps/web` is the UI source of truth.
