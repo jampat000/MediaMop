@@ -2,6 +2,14 @@ import { useEffect } from "react";
 import { useQueryClient, type QueryKey } from "@tanstack/react-query";
 
 type LatestPayload = { latest_event_id: number };
+type ActivityLatestSubscriber = () => void;
+
+let source: EventSource | null = null;
+const subscribers = new Set<ActivityLatestSubscriber>();
+
+function emitActivityLatest(): void {
+  subscribers.forEach((subscriber) => subscriber());
+}
 
 function parseLatestPayload(data: string): LatestPayload | null {
   try {
@@ -15,24 +23,43 @@ function parseLatestPayload(data: string): LatestPayload | null {
   }
 }
 
+function ensureActivityStream(): EventSource | null {
+  if (source) {
+    return source;
+  }
+  if (typeof EventSource === "undefined") {
+    return null;
+  }
+  source = new EventSource("/api/v1/activity/stream");
+  source.addEventListener("activity.latest", (ev) => {
+    const payload = parseLatestPayload((ev as MessageEvent<string>).data);
+    if (!payload) {
+      return;
+    }
+    emitActivityLatest();
+  });
+  return source;
+}
+
+function subscribeActivityLatest(subscriber: ActivityLatestSubscriber): () => void {
+  subscribers.add(subscriber);
+  ensureActivityStream();
+
+  return () => {
+    subscribers.delete(subscriber);
+    if (subscribers.size === 0) {
+      source?.close();
+      source = null;
+    }
+  };
+}
+
 export function useActivityStreamInvalidation(queryKey: QueryKey): void {
   const qc = useQueryClient();
 
   useEffect(() => {
-    const es = new EventSource("/api/v1/activity/stream");
-
-    const onLatest = (ev: MessageEvent<string>) => {
-      const payload = parseLatestPayload(ev.data);
-      if (!payload) {
-        return;
-      }
+    return subscribeActivityLatest(() => {
       void qc.invalidateQueries({ queryKey });
-    };
-
-    es.addEventListener("activity.latest", onLatest as EventListener);
-    return () => {
-      es.removeEventListener("activity.latest", onLatest as EventListener);
-      es.close();
-    };
+    });
   }, [qc, queryKey]);
 }

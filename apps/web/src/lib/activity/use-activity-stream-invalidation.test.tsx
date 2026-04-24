@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 
@@ -80,5 +80,49 @@ describe("useActivityStreamInvalidation", () => {
     src.emit("activity.latest", JSON.stringify({ latest_event_id: 77 }));
 
     expect(spy).toHaveBeenCalledWith({ queryKey: dashboardStatusKey });
+  });
+
+  it("shares one EventSource across multiple query subscribers", () => {
+    vi.stubGlobal("EventSource", FakeEventSource as unknown as typeof EventSource);
+    const qc = new QueryClient();
+    const spy = vi.spyOn(qc, "invalidateQueries");
+
+    const first = renderHook(() => useActivityStreamInvalidation(activityRecentKey), {
+      wrapper: withQueryClient(qc),
+    });
+    const second = renderHook(() => useActivityStreamInvalidation(dashboardStatusKey), {
+      wrapper: withQueryClient(qc),
+    });
+
+    expect(FakeEventSource.instances).toHaveLength(1);
+    const src = FakeEventSource.instances[0];
+    src.emit("activity.latest", JSON.stringify({ latest_event_id: 88 }));
+
+    expect(spy).toHaveBeenCalledWith({ queryKey: activityRecentKey });
+    expect(spy).toHaveBeenCalledWith({ queryKey: dashboardStatusKey });
+
+    first.unmount();
+    expect(src.closed).toBe(false);
+
+    second.unmount();
+    expect(src.closed).toBe(true);
+  });
+
+  it("opens a fresh EventSource after all subscribers unmount", async () => {
+    vi.stubGlobal("EventSource", FakeEventSource as unknown as typeof EventSource);
+    const qc = new QueryClient();
+
+    const first = renderHook(() => useActivityStreamInvalidation(activityRecentKey), {
+      wrapper: withQueryClient(qc),
+    });
+    first.unmount();
+    await waitFor(() => expect(FakeEventSource.instances[0].closed).toBe(true));
+
+    renderHook(() => useActivityStreamInvalidation(activityRecentKey), {
+      wrapper: withQueryClient(qc),
+    });
+
+    expect(FakeEventSource.instances).toHaveLength(2);
+    expect(FakeEventSource.instances[1].closed).toBe(false);
   });
 });
