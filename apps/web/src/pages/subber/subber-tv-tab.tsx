@@ -43,6 +43,16 @@ function pickSearchStateId(ep: SubberTvEpisode, prefs: string[]): number | null 
   return any?.state_id ?? null;
 }
 
+function coverageState(ep: SubberTvEpisode, prefs: string[]): string {
+  const preferredRows = prefs
+    .map((code) => ep.languages.find((row) => row.language_code.toLowerCase() === code.toLowerCase()))
+    .filter((row): row is NonNullable<typeof row> => Boolean(row));
+  if (preferredRows.length > 0 && preferredRows.every((row) => row.status === "found")) {
+    return "Preferred subtitle found";
+  }
+  return "Still missing";
+}
+
 export function SubberTvTab({ canOperate }: { canOperate: boolean }) {
   const settingsQ = useSubberSettingsQuery();
   const prefs = settingsQ.data?.language_preferences ?? ["en"];
@@ -136,7 +146,7 @@ export function SubberTvTab({ canOperate }: { canOperate: boolean }) {
         <p className="text-sm text-[var(--mm-text2)]" data-testid="subber-tv-empty">
           {hasActiveFilters
             ? "No episodes match the current filters. Try All episodes or clear search."
-            : "No TV episodes tracked yet. Go to Settings and use the Sync TV library button to import your Sonarr library, or Subber will populate this automatically when Sonarr imports a new file."}
+            : "No TV episodes are tracked yet. Open Connections and run Sync TV library from Sonarr, or wait for a new Sonarr import."}
         </p>
       ) : null}
       {!libQ.isLoading && !libQ.isError && total > 0 ? (
@@ -172,6 +182,7 @@ export function SubberTvTab({ canOperate }: { canOperate: boolean }) {
                               <span className="font-normal text-[var(--mm-text2)]"> · </span>
                               {ep.episode_title ?? "Episode"}
                             </h4>
+                            <p className="text-sm text-[var(--mm-text2)]">{coverageState(ep, prefs)}</p>
                             <div className="flex flex-wrap gap-1">{ep.languages.map((l) => langBadge(l.status, l.language_code))}</div>
                           </div>
                           {canOperate && hasMissing && sid != null ? (

@@ -30,6 +30,7 @@ REPO_ROOT = _repo_root()
 BACKEND_DIR = REPO_ROOT / "apps" / "backend"
 WEB_DIR = REPO_ROOT / "apps" / "web"
 SRC_PATH = (BACKEND_DIR / "src").resolve()
+NPM_CMD = "npm.cmd" if os.name == "nt" else "npm"
 
 
 def _pick_loopback_port() -> int:
@@ -83,6 +84,20 @@ def _truncate_auth_tables(home: str) -> None:
     )
 
 
+def _run_backend_code(home: str, code: str, *, extra_env: dict[str, str] | None = None) -> None:
+    subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=str(BACKEND_DIR.resolve()),
+        env={
+            **os.environ,
+            "MEDIAMOP_BACKEND_SRC": str(SRC_PATH.resolve()),
+            "MEDIAMOP_HOME": home,
+            **(extra_env or {}),
+        },
+        check=True,
+    )
+
+
 def _wait_http(url: str, *, timeout_s: float = 60.0) -> None:
     deadline = time.time() + timeout_s
     last: Exception | None = None
@@ -97,8 +112,8 @@ def _wait_http(url: str, *, timeout_s: float = 60.0) -> None:
     raise RuntimeError(f"timeout waiting for {url}: {last!r}")
 
 
-@pytest.fixture(scope="session")
-def mediamop_shell() -> str:
+@pytest.fixture(scope="function")
+def mediamop_runtime() -> dict[str, str]:
     if os.environ.get("MEDIAMOP_E2E") != "1":
         pytest.skip("MEDIAMOP_E2E=1 required")
     secret = os.environ.get("MEDIAMOP_SESSION_SECRET", "").strip()
@@ -120,7 +135,7 @@ def mediamop_shell() -> str:
     }
 
     subprocess.run(
-        ["alembic", "upgrade", "head"],
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
         cwd=str(BACKEND_DIR),
         env=env_base,
         check=True,
@@ -157,7 +172,7 @@ def mediamop_shell() -> str:
     }
     web_proc = subprocess.Popen(
         [
-            "npm",
+            NPM_CMD,
             "run",
             "preview",
             "--",
@@ -180,7 +195,11 @@ def mediamop_shell() -> str:
         pytest.fail("Vite preview did not start (run npm install && npm run build in apps/web first)")
 
     try:
-        yield web_origin
+        yield {
+            "base_url": web_origin,
+            "api_url": api_internal,
+            "home": home,
+        }
     finally:
         web_proc.terminate()
         try:
@@ -192,3 +211,44 @@ def mediamop_shell() -> str:
             api_proc.wait(timeout=8)
         except subprocess.TimeoutExpired:
             api_proc.kill()
+
+
+@pytest.fixture(scope="function")
+def mediamop_shell(mediamop_runtime: dict[str, str]) -> str:
+    return mediamop_runtime["base_url"]
+
+
+@pytest.fixture(scope="function")
+def mediamop_home(mediamop_runtime: dict[str, str]) -> str:
+    return mediamop_runtime["home"]
+
+
+@pytest.fixture()
+def seed_activity_event(mediamop_home: str):
+    def _seed(*, event_type: str, module: str, title: str, detail: str | None = None) -> None:
+        code = (
+            "import os, sys\n"
+            "sys.path.insert(0, os.environ['MEDIAMOP_BACKEND_SRC'])\n"
+            "from mediamop.core.config import MediaMopSettings\n"
+            "from mediamop.core.db import create_db_engine, create_session_factory\n"
+            "from mediamop.platform.activity.models import ActivityEvent\n"
+            "settings = MediaMopSettings.load()\n"
+            "eng = create_db_engine(settings)\n"
+            "fac = create_session_factory(eng)\n"
+            "with fac() as db:\n"
+            "    db.add(ActivityEvent(event_type=os.environ['MM_EVENT_TYPE'], module=os.environ['MM_MODULE'], title=os.environ['MM_TITLE'], detail=os.environ.get('MM_DETAIL') or None))\n"
+            "    db.commit()\n"
+            "eng.dispose()\n"
+        )
+        _run_backend_code(
+            mediamop_home,
+            code,
+            extra_env={
+                "MM_EVENT_TYPE": event_type,
+                "MM_MODULE": module,
+                "MM_TITLE": title,
+                "MM_DETAIL": detail or "",
+            },
+        )
+
+    return _seed

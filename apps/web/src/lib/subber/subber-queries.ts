@@ -9,9 +9,11 @@ import {
   postSubberProviderTest,
   postSubberLibrarySyncMovies,
   postSubberLibrarySyncTv,
+  postSubberRadarrRootFolders,
   postSubberSearchAllMissingMovies,
   postSubberSearchAllMissingTv,
   postSubberSearchNow,
+  postSubberSonarrRootFolders,
   postSubberTestOpensubtitles,
   postSubberTestRadarr,
   postSubberTestSonarr,
@@ -172,4 +174,12 @@ export function useSubberTestSonarrMutation() {
 
 export function useSubberTestRadarrMutation() {
   return useMutation({ mutationFn: postSubberTestRadarr });
+}
+
+export function useSubberSonarrRootFoldersMutation() {
+  return useMutation({ mutationFn: postSubberSonarrRootFolders });
+}
+
+export function useSubberRadarrRootFoldersMutation() {
+  return useMutation({ mutationFn: postSubberRadarrRootFolders });
 }

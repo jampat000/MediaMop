@@ -14,16 +14,14 @@ import { MmListboxPicker } from "../../components/ui/mm-listbox-picker";
 import { mmActionButtonClass, mmEditableTextFieldClass } from "../../lib/ui/mm-control-roles";
 import { mmModuleTabBlurbBandClass, mmModuleTabBlurbTextClass } from "../../lib/ui/mm-module-tab-blurb";
 import {
-  activityRecentSettingsKey,
-  useActivityRecentForSettingsQuery,
-} from "../../lib/activity/queries";
-import {
   suiteConfigurationBackupsQueryKey,
   useSuiteConfigurationBackupsQuery,
+  useSuiteLogsQuery,
   useSuiteSettingsQuery,
   useSuiteSettingsSaveMutation,
+  useSuiteUpdateStatusQuery,
 } from "../../lib/suite/queries";
-import type { SuiteSettingsPutBody } from "../../lib/suite/types";
+import type { SuiteLogEntry, SuiteSettingsPutBody } from "../../lib/suite/types";
 import {
   fetchConfigurationBundle,
   fetchStoredConfigurationBackupBlob,
@@ -35,6 +33,7 @@ import {
   readStoredDisplayDensity,
   type DisplayDensity,
 } from "../../lib/ui/display-density";
+import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
 
 function canEditSuiteGlobal(role: string | undefined): boolean {
   return role === "operator" || role === "admin";
@@ -68,6 +67,8 @@ const SUITE_SETTINGS_DASH_CARD_CLASS =
   "mm-card mm-dash-card flex min-h-0 min-w-0 flex-col gap-5";
 const CONFIGURATION_BACKUP_INTERVAL_HOURS = [6, 12, 24, 48, 72, 168] as const;
 
+type LogLevelFilter = "" | "INFO" | "WARNING" | "ERROR";
+
 function formatBackupBytes(n: number): string {
   if (n < 1024) {
     return `${n} B`;
@@ -78,10 +79,82 @@ function formatBackupBytes(n: number): string {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function logCardTone(level: string): string {
+  switch (level.toUpperCase()) {
+    case "ERROR":
+    case "CRITICAL":
+      return "border-red-500/35 bg-red-950/20";
+    case "WARNING":
+      return "border-amber-400/35 bg-amber-950/20";
+    default:
+      return "border-[var(--mm-border)] bg-[var(--mm-card-bg)]/50";
+  }
+}
+
+function logLevelBadgeTone(level: string): string {
+  switch (level.toUpperCase()) {
+    case "ERROR":
+    case "CRITICAL":
+      return "border-red-500/40 bg-red-500/10 text-red-100";
+    case "WARNING":
+      return "border-amber-400/40 bg-amber-400/10 text-amber-100";
+    default:
+      return "border-[var(--mm-border)] bg-black/10 text-[var(--mm-text2)]";
+  }
+}
+
+function renderLogTechnicalDetails(entry: SuiteLogEntry) {
+  if (!entry.traceback && !entry.source && !entry.logger && !entry.correlation_id && !entry.job_id) {
+    return null;
+  }
+  return (
+    <details className="rounded-md border border-[var(--mm-border)] bg-black/10 px-3 py-2">
+      <summary className="cursor-pointer text-sm font-medium text-[var(--mm-text2)]">Technical details</summary>
+      <div className="mt-3 space-y-2 text-sm text-[var(--mm-text2)]">
+        {entry.source ? (
+          <p>
+            <span className="font-medium text-[var(--mm-text1)]">Source:</span> {entry.source}
+          </p>
+        ) : null}
+        {entry.logger ? (
+          <p>
+            <span className="font-medium text-[var(--mm-text1)]">Logger:</span> {entry.logger}
+          </p>
+        ) : null}
+        {entry.correlation_id ? (
+          <p>
+            <span className="font-medium text-[var(--mm-text1)]">Request ID:</span> {entry.correlation_id}
+          </p>
+        ) : null}
+        {entry.job_id ? (
+          <p>
+            <span className="font-medium text-[var(--mm-text1)]">Job ID:</span> {entry.job_id}
+          </p>
+        ) : null}
+        {entry.traceback ? (
+          <pre className="overflow-auto rounded-md border border-[var(--mm-border)] bg-black/20 p-3 text-xs leading-5 text-[var(--mm-text2)] whitespace-pre-wrap">
+            {entry.traceback}
+          </pre>
+        ) : null}
+      </div>
+    </details>
+  );
+}
+
+function SettingsSummaryCard({ label, value }: { label: string; value: string }) {
+  return (
+    <section className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text3)]">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-[var(--mm-text1)]">{value}</p>
+    </section>
+  );
+}
+
 /** Settings: General (timezone, display density, configuration export), Security, Logs (retention + recent events). */
 export function SettingsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const formatDateTime = useAppDateFormatter();
   const me = useMeQuery();
   const changePassword = useChangePasswordMutation();
   const settingsQ = useSuiteSettingsQuery();
@@ -103,7 +176,11 @@ export function SettingsPage() {
   const [backupErr, setBackupErr] = useState<string | null>(null);
   const [configurationBackupEnabled, setConfigurationBackupEnabled] = useState(false);
   const [configurationBackupIntervalHours, setConfigurationBackupIntervalHours] = useState(24);
+  const [configurationBackupPreferredTime, setConfigurationBackupPreferredTime] = useState("02:00");
   const [lastSuiteSaveTarget, setLastSuiteSaveTarget] = useState<"timezone" | "logs" | "backup" | null>(null);
+  const [logSearch, setLogSearch] = useState("");
+  const [logLevel, setLogLevel] = useState<LogLevelFilter>("");
+  const [tracebacksOnly, setTracebacksOnly] = useState(false);
   const restoreInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -119,15 +196,26 @@ export function SettingsPage() {
         ? Number(settingsQ.data.configuration_backup_interval_hours)
         : 24,
     );
+    setConfigurationBackupPreferredTime(
+      (settingsQ.data.configuration_backup_preferred_time || "02:00").trim() || "02:00",
+    );
   }, [settingsQ.data]);
 
   const editable = canEditSuiteGlobal(me.data?.role);
   const backupsQ = useSuiteConfigurationBackupsQuery(editable && tab === "general" && Boolean(settingsQ.data));
+  const updateStatusQ = useSuiteUpdateStatusQuery(tab === "general" && Boolean(settingsQ.data));
+  const logsQ = useSuiteLogsQuery(
+    {
+      level: logLevel || undefined,
+      search: logSearch.trim() || undefined,
+      has_exception: tracebacksOnly ? true : undefined,
+      limit: 100,
+    },
+    tab === "logs" && Boolean(settingsQ.data),
+  );
 
   const serverCuratedTimezone =
     settingsQ.data && CURATED_TIMEZONE_ID_SET.has(settingsQ.data.app_timezone || "") ? settingsQ.data.app_timezone : null;
-
-  const activityRecentQ = useActivityRecentForSettingsQuery(tab === "logs" && Boolean(settingsQ.data));
 
   const timezoneDirty = settingsQ.data !== undefined && appTimezone !== serverCuratedTimezone;
 
@@ -138,7 +226,8 @@ export function SettingsPage() {
   const backupScheduleDirty =
     settingsQ.data !== undefined &&
     (configurationBackupEnabled !== Boolean(settingsQ.data.configuration_backup_enabled) ||
-      configurationBackupIntervalHours !== Number(settingsQ.data.configuration_backup_interval_hours || 24));
+      configurationBackupIntervalHours !== Number(settingsQ.data.configuration_backup_interval_hours || 24) ||
+      configurationBackupPreferredTime !== ((settingsQ.data.configuration_backup_preferred_time || "02:00").trim() || "02:00"));
 
   const loadingAny = settingsQ.isPending || me.isPending;
 
@@ -190,7 +279,6 @@ export function SettingsPage() {
       setBackupBusy(true);
       await putConfigurationBundle(bundle);
       await queryClient.invalidateQueries();
-      await queryClient.invalidateQueries({ queryKey: activityRecentSettingsKey });
       const refreshed = await settingsQ.refetch();
       if (refreshed.data) {
         const tz = refreshed.data.app_timezone || "";
@@ -255,6 +343,7 @@ export function SettingsPage() {
     const body: SuiteSettingsPutBody = {
       product_display_name: name,
       signed_in_home_notice: d.signed_in_home_notice,
+      setup_wizard_state: d.setup_wizard_state,
       app_timezone: tz,
       log_retention_days: Number.isFinite(retention) ? retention : d.log_retention_days,
       application_logs_enabled: true,
@@ -263,6 +352,7 @@ export function SettingsPage() {
         720,
         Math.max(1, Math.trunc(Number(configurationBackupIntervalHours))),
       ),
+      configuration_backup_preferred_time: configurationBackupPreferredTime.trim() || "02:00",
     };
     return body;
   };
@@ -290,8 +380,6 @@ export function SettingsPage() {
     try {
       await save.mutateAsync(buildSuitePutBody());
       setLastSuiteSaveTarget(null);
-      await queryClient.invalidateQueries({ queryKey: activityRecentSettingsKey });
-      await activityRecentQ.refetch();
     } catch {
       /* surfaced via save.isError */
     }
@@ -391,17 +479,50 @@ export function SettingsPage() {
               </p>
             ) : null}
 
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-              <div className={`${mmModuleTabBlurbBandClass} lg:col-span-2`}>
+            <div className="grid grid-cols-1 gap-5">
+              <div className={mmModuleTabBlurbBandClass}>
                 <p className={mmModuleTabBlurbTextClass}>
                   Suite-wide choices saved in the app database. Integration details for Refiner, Pruner, and Subber stay
                   on those module pages.
                 </p>
               </div>
+              <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+              <section className={SUITE_SETTINGS_DASH_CARD_CLASS} aria-labelledby="suite-settings-wizard-heading">
+                <div className="mm-card-action-body">
+                  <div>
+                    <h3 id="suite-settings-wizard-heading" className="text-base font-semibold text-[var(--mm-text1)]">
+                      Setup wizard
+                    </h3>
+                    <p className="mt-1 text-sm text-[var(--mm-text2)]">
+                      Reopen the first-run wizard to adjust the basic suite setup flow at any time.
+                    </p>
+                  </div>
+                  <div className="space-y-2 text-sm text-[var(--mm-text2)]">
+                    <p>
+                      Current state:{" "}
+                      <span className="font-medium capitalize text-[var(--mm-text1)]">
+                        {settingsQ.data.setup_wizard_state || "pending"}
+                      </span>
+                    </p>
+                    <p>Use this when you want the guided setup again without exposing it in the sidebar.</p>
+                  </div>
+                </div>
+                <div className="mm-card-action-footer">
+                  <button
+                    type="button"
+                    className={mmActionButtonClass({ variant: "secondary", disabled: false })}
+                    data-testid="suite-settings-open-setup-wizard"
+                    onClick={() => navigate("/app/setup-wizard")}
+                  >
+                    Open setup wizard
+                  </button>
+                </div>
+              </section>
               <section
                 className={SUITE_SETTINGS_DASH_CARD_CLASS}
                 aria-labelledby="suite-settings-timezone-heading"
               >
+                <div className="mm-card-action-body">
                 <div>
                   <h3 id="suite-settings-timezone-heading" className="text-base font-semibold text-[var(--mm-text1)]">
                     Timezone
@@ -429,6 +550,8 @@ export function SettingsPage() {
                     {save.error instanceof Error ? save.error.message : "Could not save."}
                   </p>
                 ) : null}
+                </div>
+                <div className="mm-card-action-footer">
                 <button
                   type="button"
                   className={mmActionButtonClass({
@@ -441,58 +564,114 @@ export function SettingsPage() {
                 >
                   {save.isPending ? "Saving…" : "Save timezone"}
                 </button>
+                </div>
               </section>
 
-              <section className={SUITE_SETTINGS_DASH_CARD_CLASS} aria-labelledby="suite-settings-density-heading">
-                <fieldset className="min-w-0 border-0 p-0">
-                  <legend id="suite-settings-density-heading" className="text-base font-semibold text-[var(--mm-text1)]">
-                    Display density (this browser)
-                  </legend>
-                  <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                    Adjust type size and how wide the main column can grow on large monitors. Your choice saves in this
-                    browser only and applies as soon as you select it. Choose Default to clear the stored preference.
-                  </p>
-                  <div
-                    className="mt-3 flex flex-col gap-2"
-                    data-testid="suite-settings-display-density"
-                    role="radiogroup"
-                    aria-label="Display density"
-                  >
-                    {(
-                      [
-                        { id: "default" as const, label: "Default", hint: "Balanced" },
-                        { id: "compact" as const, label: "Compact", hint: "Smaller text, narrower cap" },
-                        { id: "comfortable" as const, label: "Comfortable", hint: "Larger text (+10%), wider cap" },
-                      ] as const
-                    ).map(({ id, label, hint }) => (
-                      <label
-                        key={id}
-                        className={[
-                          "flex min-w-0 cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2 text-sm transition-colors",
-                          displayDensity === id
-                            ? "border-[var(--mm-accent)] bg-[var(--mm-accent)]/12 text-[var(--mm-text)]"
-                            : "border-[var(--mm-border)] bg-transparent text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)]",
-                        ].join(" ")}
-                      >
-                        <input
-                          type="radio"
-                          name="mm-display-density"
-                          className="h-4 w-4 shrink-0 accent-[var(--mm-accent)]"
-                          checked={displayDensity === id}
-                          onChange={() => {
-                            setDisplayDensity(id);
-                            persistDisplayDensity(id);
-                          }}
-                        />
-                        <span className="min-w-0 font-medium">{label}</span>
-                        <span className="text-xs text-[var(--mm-text3)]">({hint})</span>
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-              </section>
             </div>
 
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+            <section className={SUITE_SETTINGS_DASH_CARD_CLASS} aria-labelledby="suite-settings-log-retention-heading">
+              <div className="mm-card-action-body">
+              <div>
+                <h3 id="suite-settings-log-retention-heading" className="text-base font-semibold text-[var(--mm-text1)]">
+                  Log retention
+                </h3>
+                <p className="mt-1 text-sm text-[var(--mm-text2)]">
+                  Decide how long MediaMop keeps persisted system log entries on disk.
+                </p>
+              </div>
+              <label className="block max-w-md">
+                <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+                  Log retention (days)
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  max={3650}
+                  className={`${mmEditableTextFieldClass} mt-1`}
+                  value={normalizedLogRetentionDraft}
+                  disabled={!editable || save.isPending}
+                  onFocus={() => setLogRetentionDaysDraft(String(settingsQ.data.log_retention_days))}
+                  onChange={(e) => setLogRetentionDaysDraft(e.target.value)}
+                  onBlur={() => setLogRetentionDaysDraft(String(finalizeLogRetentionDays()))}
+                  aria-describedby="suite-general-log-retention-hint"
+                />
+                <p id="suite-general-log-retention-hint" className="mt-1 text-xs text-[var(--mm-text3)]">
+                  Between 1 and 3650 days. Older system log entries are removed automatically.
+                </p>
+              </label>
+              {save.isError && lastSuiteSaveTarget === "logs" ? (
+                <p className="text-sm text-red-300" role="alert" data-testid="suite-settings-logs-save-error">
+                  {save.error instanceof Error ? save.error.message : "Could not save."}
+                </p>
+              ) : null}
+              </div>
+              <div className="mm-card-action-footer">
+              <button
+                type="button"
+                className={mmActionButtonClass({
+                  variant: "primary",
+                  disabled: !editable || !logsDirty || save.isPending,
+                })}
+                disabled={!editable || !logsDirty || save.isPending}
+                data-testid="suite-settings-save-logs"
+                onClick={() => void handleSaveLogs()}
+              >
+                {save.isPending ? "Saving…" : "Save log retention"}
+              </button>
+              </div>
+            </section>
+            <section className={SUITE_SETTINGS_DASH_CARD_CLASS} aria-labelledby="suite-settings-density-heading">
+              <fieldset className="min-w-0 border-0 p-0">
+                <legend id="suite-settings-density-heading" className="text-base font-semibold text-[var(--mm-text1)]">
+                  Display density (this browser)
+                </legend>
+                <p className="mt-1 text-sm text-[var(--mm-text2)]">
+                  Adjust type size and how wide the main column can grow on large monitors. Your choice saves in this
+                  browser only and applies as soon as you select it. Choose Default to clear the stored preference.
+                </p>
+                <div
+                  className="mt-3 flex flex-col gap-2"
+                  data-testid="suite-settings-display-density"
+                  role="radiogroup"
+                  aria-label="Display density"
+                >
+                  {(
+                    [
+                      { id: "default" as const, label: "Default", hint: "Balanced" },
+                      { id: "compact" as const, label: "Compact", hint: "Smaller text, narrower cap" },
+                      { id: "comfortable" as const, label: "Comfortable", hint: "Larger text (+10%), wider cap" },
+                    ] as const
+                  ).map(({ id, label, hint }) => (
+                    <label
+                      key={id}
+                      className={[
+                        "flex min-w-0 cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2 text-sm transition-colors",
+                        displayDensity === id
+                          ? "border-[var(--mm-accent)] bg-[var(--mm-accent)]/12 text-[var(--mm-text)]"
+                          : "border-[var(--mm-border)] bg-transparent text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)]",
+                      ].join(" ")}
+                    >
+                      <input
+                        type="radio"
+                        name="mm-display-density"
+                        className="h-4 w-4 shrink-0 accent-[var(--mm-accent)]"
+                        checked={displayDensity === id}
+                        onChange={() => {
+                          setDisplayDensity(id);
+                          persistDisplayDensity(id);
+                        }}
+                      />
+                      <span className="min-w-0 font-medium">{label}</span>
+                      <span className="text-xs text-[var(--mm-text3)]">({hint})</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            </section>
+            </div>
+
+            <div className={`grid grid-cols-1 gap-5 ${editable ? "xl:grid-cols-2" : ""}`}>
             {editable ? (
               <section
                 className={SUITE_SETTINGS_DASH_CARD_CLASS}
@@ -512,7 +691,7 @@ export function SettingsPage() {
                 </div>
 
                 <div className="grid gap-5 lg:grid-cols-2">
-                  <div className="flex flex-col gap-4 rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/50 p-4 shadow-sm">
+                  <div className="flex min-h-0 min-w-0 flex-col gap-4 rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/50 p-4 shadow-sm">
                     <div>
                       <h4 className="text-sm font-semibold text-[var(--mm-text1)]">Automatic snapshots</h4>
                       <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
@@ -546,13 +725,28 @@ export function SettingsPage() {
                         ))}
                       </select>
                     </label>
+                    <label className="block text-sm text-[var(--mm-text2)]">
+                      <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
+                        Preferred backup time
+                      </span>
+                      <input
+                        type="time"
+                        className="mm-input w-full max-w-xs"
+                        value={configurationBackupPreferredTime}
+                        disabled={!editable || save.isPending}
+                        onChange={(e) => setConfigurationBackupPreferredTime(e.target.value || "02:00")}
+                      />
+                    </label>
                     <p className="text-xs text-[var(--mm-text3)]">
                       <span className="font-medium text-[var(--mm-text2)]">Last automatic run:</span>{" "}
                       {settingsQ.data.configuration_backup_last_run_at
                         ? new Date(settingsQ.data.configuration_backup_last_run_at).toLocaleString()
                         : "—"}
                     </p>
-                    <div className="flex flex-col gap-2 border-t border-[var(--mm-border)] pt-3">
+                    <p className="text-xs text-[var(--mm-text3)]">
+                      <span className="font-medium text-[var(--mm-text2)]">Target time:</span> {configurationBackupPreferredTime}
+                    </p>
+                    <div className="mt-auto flex flex-col gap-2 border-t border-[var(--mm-border)] pt-3">
                       <button
                         type="button"
                         className={mmActionButtonClass({
@@ -576,14 +770,14 @@ export function SettingsPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-4 rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/50 p-4 shadow-sm">
+                  <div className="flex min-h-0 min-w-0 flex-col gap-4 rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/50 p-4 shadow-sm">
                     <div>
                       <h4 className="text-sm font-semibold text-[var(--mm-text1)]">Manual export and restore</h4>
                       <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
                         Download a snapshot now, or pick a previously exported JSON file to restore.
                       </p>
                     </div>
-                    <div className="flex flex-col gap-2">
+                    <div className="mt-auto flex flex-col gap-2 border-t border-[var(--mm-border)] pt-3">
                       <button
                         type="button"
                         className={mmActionButtonClass({ variant: "secondary", disabled: backupBusy || save.isPending })}
@@ -682,6 +876,102 @@ export function SettingsPage() {
                 ) : null}
               </section>
             ) : null}
+
+            <section
+              className={SUITE_SETTINGS_DASH_CARD_CLASS}
+              data-testid="suite-settings-upgrade"
+              aria-labelledby="suite-settings-upgrade-heading"
+            >
+              <div>
+                <h3 id="suite-settings-upgrade-heading" className="text-base font-semibold text-[var(--mm-text1)]">
+                  Upgrade
+                </h3>
+                <p className="mt-1 text-sm text-[var(--mm-text2)]">
+                  Check the latest public release and get the right next step for this install type.
+                </p>
+              </div>
+
+              {updateStatusQ.isPending ? (
+                <p className="text-sm text-[var(--mm-text3)]">Checking for updates…</p>
+              ) : updateStatusQ.isError || !updateStatusQ.data ? (
+                <p className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200" role="alert">
+                  {updateStatusQ.error instanceof Error
+                    ? updateStatusQ.error.message
+                    : "Could not check for updates right now."}
+                </p>
+              ) : (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/40 p-3">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Installed</div>
+                      <div className="mt-1 text-sm font-medium text-[var(--mm-text1)]">
+                        {updateStatusQ.data.current_version}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/40 p-3">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Latest</div>
+                      <div className="mt-1 text-sm font-medium text-[var(--mm-text1)]">
+                        {updateStatusQ.data.latest_version || "Unknown"}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/40 p-3">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Install type</div>
+                      <div className="mt-1 text-sm font-medium capitalize text-[var(--mm-text1)]">
+                        {updateStatusQ.data.install_type}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/40 p-3">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Status</div>
+                      <div className="mt-1 text-sm font-medium capitalize text-[var(--mm-text1)]">
+                        {updateStatusQ.data.status.replaceAll("_", " ")}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 text-sm text-[var(--mm-text2)]">
+                    <p>{updateStatusQ.data.summary}</p>
+                    {updateStatusQ.data.install_type === "docker" && updateStatusQ.data.docker_update_command ? (
+                      <p className="font-mono text-xs text-[var(--mm-text3)]">
+                        {updateStatusQ.data.docker_update_command}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className={mmActionButtonClass({ variant: "secondary", disabled: updateStatusQ.isFetching })}
+                      disabled={updateStatusQ.isFetching}
+                      onClick={() => void updateStatusQ.refetch()}
+                    >
+                      {updateStatusQ.isFetching ? "Checking…" : "Check again"}
+                    </button>
+                    {updateStatusQ.data.windows_installer_url ? (
+                      <a
+                        className={mmActionButtonClass({ variant: "primary", disabled: false })}
+                        href={updateStatusQ.data.windows_installer_url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Download installer
+                      </a>
+                    ) : null}
+                    {updateStatusQ.data.release_url ? (
+                      <a
+                        className={mmActionButtonClass({ variant: "tertiary", disabled: false })}
+                        href={updateStatusQ.data.release_url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Release notes
+                      </a>
+                    ) : null}
+                  </div>
+                </>
+              )}
+            </section>
+            </div>
+          </div>
           </div>
         ) : tab === "security" ? (
           <div className="mm-bubble-stack w-full" data-testid="suite-settings-security">
@@ -849,107 +1139,178 @@ export function SettingsPage() {
           <div data-testid="suite-settings-logs" className="mm-bubble-stack w-full">
             <div className={mmModuleTabBlurbBandClass}>
               <p className={mmModuleTabBlurbTextClass}>
-                Timeline events stored in the database and how long they are kept. Open the Activity views on module
-                pages for deeper history.
+                System event logs from the MediaMop runtime. Use filters to narrow down warnings, failures, and
+                tracebacks. Runtime health lives on the Dashboard.
               </p>
             </div>
 
-            <section
-              className="mm-card mm-dash-card flex min-h-0 min-w-0 w-full max-w-none flex-col p-5 sm:p-6"
-              aria-labelledby="suite-settings-logs-heading"
-            >
-              <div className="mm-card-action-body flex-1 min-h-0">
-              <div>
-                <h3 id="suite-settings-logs-heading" className="text-base font-semibold text-[var(--mm-text1)]">
-                  Logs
-                </h3>
-                <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                  Control how long Activity rows are kept. Use Save logs settings when you change retention.
-                </p>
-              </div>
+            <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="Log summary">
+              <SettingsSummaryCard label="Showing now" value={`${logsQ.data?.items.length ?? 0} events`} />
+              <SettingsSummaryCard label="Matching events" value={`${logsQ.data?.total ?? 0} events`} />
+              <SettingsSummaryCard label="Errors" value={String(logsQ.data?.counts.error ?? 0)} />
+              <SettingsSummaryCard label="Warnings" value={String(logsQ.data?.counts.warning ?? 0)} />
+              <SettingsSummaryCard label="Information" value={String(logsQ.data?.counts.information ?? 0)} />
+            </section>
 
-              <label className="block max-w-md">
-                <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-                  Log retention (days)
-                </span>
-                <input
-                  type="number"
-                  min={1}
-                  max={3650}
-                  className={`${mmEditableTextFieldClass} mt-1`}
-                  value={normalizedLogRetentionDraft}
-                  disabled={!editable || save.isPending}
-                  onFocus={() => setLogRetentionDaysDraft(String(settingsQ.data.log_retention_days))}
-                  onChange={(e) => setLogRetentionDaysDraft(e.target.value)}
-                  onBlur={() => setLogRetentionDaysDraft(String(finalizeLogRetentionDays()))}
-                  aria-describedby="suite-log-retention-hint"
-                />
-                <p id="suite-log-retention-hint" className="mt-1 text-xs text-[var(--mm-text3)]">
-                  Between 1 and 3650 days. Older rows are removed automatically.
-                </p>
-              </label>
-
-              {save.isError && lastSuiteSaveTarget === "logs" ? (
-                <p className="text-sm text-red-300" role="alert" data-testid="suite-settings-logs-save-error">
-                  {save.error instanceof Error ? save.error.message : "Could not save."}
-                </p>
-              ) : null}
-              </div>
-
-              <div className="mm-card-action-footer">
-              <button
-                type="button"
-                className={mmActionButtonClass({
-                  variant: "primary",
-                  disabled: !editable || !logsDirty || save.isPending,
-                })}
-                disabled={!editable || !logsDirty || save.isPending}
-                data-testid="suite-settings-save-logs"
-                onClick={() => void handleSaveLogs()}
-              >
-                {save.isPending ? "Saving…" : "Save logs settings"}
-              </button>
-              </div>
-
-              <div className="mt-4 border-t border-[var(--mm-border)] pt-5">
-                <h4 className="text-sm font-semibold text-[var(--mm-text1)]">Most recent events (20)</h4>
-                <p className="mt-1 text-xs text-[var(--mm-text3)]">Newest first — same data as the Activity feed API.</p>
-                <div className="mt-3 max-h-[28rem] overflow-auto rounded-md border border-[var(--mm-border)]">
-                  {activityRecentQ.isPending ? (
-                    <p className="p-4 text-sm text-[var(--mm-text3)]">Loading…</p>
-                  ) : activityRecentQ.isError ? (
-                    <p className="p-4 text-sm text-red-400" role="alert">
-                      {(activityRecentQ.error as Error).message}
-                    </p>
-                  ) : (activityRecentQ.data?.items.length ?? 0) === 0 ? (
-                    <p className="p-4 text-sm text-[var(--mm-text3)]">No events recorded yet.</p>
-                  ) : (
-                    <table className="w-full min-w-[40rem] border-collapse text-left text-sm">
-                      <thead className="sticky top-0 z-[1] bg-[var(--mm-card-bg)]">
-                        <tr className="border-b border-[var(--mm-border)] text-xs uppercase tracking-wide text-[var(--mm-text3)]">
-                          <th className="px-3 py-2 font-medium">When</th>
-                          <th className="px-3 py-2 font-medium">Module</th>
-                          <th className="px-3 py-2 font-medium">Title</th>
-                          <th className="px-3 py-2 font-medium">Detail</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {activityRecentQ.data!.items.map((ev) => (
-                          <tr key={ev.id} className="border-b border-[var(--mm-border)]/70">
-                            <td className="whitespace-nowrap px-3 py-2 text-[var(--mm-text2)]">
-                              {new Date(ev.created_at).toLocaleString()}
-                            </td>
-                            <td className="px-3 py-2 font-mono text-xs text-[var(--mm-text3)]">{ev.module}</td>
-                            <td className="px-3 py-2 text-[var(--mm-text)]">{ev.title}</td>
-                            <td className="max-w-md truncate px-3 py-2 text-xs text-[var(--mm-text2)]">
-                              {ev.detail ?? "—"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
+            <section className="mm-card mm-dash-card w-full" aria-labelledby="suite-settings-logs-filters-heading">
+              <div className="mm-card__body space-y-4">
+                <div>
+                  <h3 id="suite-settings-logs-filters-heading" className="text-base font-semibold text-[var(--mm-text1)]">
+                    Search logs
+                  </h3>
+                  <p className="mt-1 text-sm text-[var(--mm-text2)]">
+                    Search message text, component names, tracebacks, request IDs, and job IDs. This view refreshes while
+                    it is open.
+                  </p>
                 </div>
+
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_220px_auto_auto]">
+                  <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+                    Search
+                    <input
+                      type="text"
+                      className={mmEditableTextFieldClass}
+                      placeholder="Search message, detail, traceback, logger, or source"
+                      value={logSearch}
+                      onChange={(e) => setLogSearch(e.target.value)}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+                    Level
+                    <select
+                      className={mmEditableTextFieldClass}
+                      value={logLevel}
+                      onChange={(e) => setLogLevel(e.target.value as LogLevelFilter)}
+                    >
+                      <option value="">All levels</option>
+                      <option value="INFO">Information</option>
+                      <option value="WARNING">Warnings</option>
+                      <option value="ERROR">Errors</option>
+                    </select>
+                  </label>
+                  <div className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+                    <span>Tracebacks only</span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        className={mmActionButtonClass({ variant: tracebacksOnly ? "primary" : "tertiary" })}
+                        onClick={() => setTracebacksOnly(true)}
+                      >
+                        On
+                      </button>
+                      <button
+                        type="button"
+                        className={mmActionButtonClass({ variant: !tracebacksOnly ? "primary" : "tertiary" })}
+                        onClick={() => setTracebacksOnly(false)}
+                      >
+                        Off
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-end gap-2">
+                    <button
+                      type="button"
+                      className={mmActionButtonClass({ variant: "secondary", disabled: logsQ.isFetching })}
+                      disabled={logsQ.isFetching}
+                      onClick={() => void logsQ.refetch()}
+                    >
+                      {logsQ.isFetching ? "Refreshing..." : "Refresh"}
+                    </button>
+                    <button
+                      type="button"
+                      className={mmActionButtonClass({
+                        variant: "tertiary",
+                        disabled: !logSearch.trim() && !logLevel && !tracebacksOnly,
+                      })}
+                      disabled={!logSearch.trim() && !logLevel && !tracebacksOnly}
+                      onClick={() => {
+                        setLogSearch("");
+                        setLogLevel("");
+                        setTracebacksOnly(false);
+                      }}
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                </div>
+
+                {logSearch.trim() || logLevel || tracebacksOnly ? (
+                  <div className="flex flex-wrap gap-2">
+                    {logSearch.trim() ? (
+                      <span className="rounded-full border border-[var(--mm-border)] bg-black/10 px-2.5 py-1 text-xs text-[var(--mm-text2)]">
+                        Search: {logSearch.trim()}
+                      </span>
+                    ) : null}
+                    {logLevel ? (
+                      <span className="rounded-full border border-[var(--mm-border)] bg-black/10 px-2.5 py-1 text-xs text-[var(--mm-text2)]">
+                        Level: {logLevel === "INFO" ? "Information" : logLevel}
+                      </span>
+                    ) : null}
+                    {tracebacksOnly ? (
+                      <span className="rounded-full border border-[var(--mm-border)] bg-black/10 px-2.5 py-1 text-xs text-[var(--mm-text2)]">
+                        Tracebacks only
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            </section>
+
+            <section className="mm-card mm-dash-card w-full" aria-labelledby="suite-settings-logs-list-heading">
+              <div className="mm-card__body space-y-4">
+                <div>
+                  <h3 id="suite-settings-logs-list-heading" className="text-base font-semibold text-[var(--mm-text1)]">
+                    System events
+                  </h3>
+                  <p className="mt-1 text-sm text-[var(--mm-text2)]">
+                    Recent runtime events, warnings, and failures captured by MediaMop.
+                  </p>
+                </div>
+
+                {logsQ.isPending ? (
+                  <div className="rounded-lg border border-[var(--mm-border)] bg-black/10 px-4 py-4 text-sm text-[var(--mm-text3)]">
+                    Loading logs...
+                  </div>
+                ) : logsQ.isError ? (
+                  <div className="rounded-lg border border-red-500/40 bg-red-950/25 px-4 py-4 text-sm text-red-200" role="alert">
+                    {logsQ.error instanceof Error ? logsQ.error.message : "Could not load logs."}
+                  </div>
+                ) : (logsQ.data?.items.length ?? 0) === 0 ? (
+                  <div className="rounded-lg border border-[var(--mm-border)] bg-black/10 px-4 py-4 text-sm text-[var(--mm-text2)]">
+                    No system events matched the current filters.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {logsQ.data?.items.map((entry) => {
+                      const technicalDetails = renderLogTechnicalDetails(entry);
+                      return (
+                        <article
+                          key={`${entry.timestamp}-${entry.level}-${entry.message}`}
+                          className={`rounded-lg border px-4 py-4 ${logCardTone(entry.level)}`}
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="space-y-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-gold)]">
+                                  {entry.component}
+                                </span>
+                                <span
+                                  className={`rounded-full border px-2.5 py-1 text-xs font-medium ${logLevelBadgeTone(entry.level)}`}
+                                >
+                                  {entry.level === "INFO" ? "Information" : entry.level}
+                                </span>
+                              </div>
+                              <h4 className="text-sm font-semibold text-[var(--mm-text1)]">{entry.message}</h4>
+                              {entry.detail ? <p className="text-sm leading-6 text-[var(--mm-text2)]">{entry.detail}</p> : null}
+                            </div>
+                            <time className="text-sm text-[var(--mm-text3)]">{formatDateTime(entry.timestamp)}</time>
+                          </div>
+                          {technicalDetails ? <div className="mt-3">{technicalDetails}</div> : null}
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </section>
           </div>
@@ -958,4 +1319,5 @@ export function SettingsPage() {
     </div>
   );
 }
+
 

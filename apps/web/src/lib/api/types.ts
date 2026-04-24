@@ -37,4 +37,6 @@ export type DashboardStatus = {
 
 export type ActivityRecentResponse = {
   items: ActivityEventItem[];
+  total: number;
+  system_events: number;
 };

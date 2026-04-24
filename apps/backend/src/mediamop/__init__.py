@@ -1,3 +1,5 @@
 """MediaMop backend package — modular monolith spine."""
 
-__version__ = "0.0.0"
+from mediamop.version import __version__
+
+__all__ = ["__version__"]

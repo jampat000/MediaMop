@@ -146,34 +146,16 @@ function trackSection(label: string, values: string[], tone: "before" | "kept" |
     );
   }
 
-  const preview = values.slice(0, 6);
-  const extraCount = values.length - preview.length;
-
   return (
     <div key={label} className="mm-activity-remux-detail__tracks-section">
       <h5 className="mm-activity-remux-detail__tracks-title">{label}</h5>
       <div className="mm-activity-remux-detail__chips">
-        {preview.map((value) => (
+        {values.map((value) => (
           <span key={`${label}-${value}`} className={`mm-activity-remux-detail__chip mm-activity-remux-detail__chip--${tone}`}>
             {value}
           </span>
         ))}
       </div>
-      {extraCount > 0 ? (
-        <details className="mm-activity-remux-detail__more">
-          <summary>Show {extraCount} more</summary>
-          <div className="mm-activity-remux-detail__chips mm-activity-remux-detail__chips--expanded">
-            {values.slice(6).map((value) => (
-              <span
-                key={`${label}-extra-${value}`}
-                className={`mm-activity-remux-detail__chip mm-activity-remux-detail__chip--${tone}`}
-              >
-                {value}
-              </span>
-            ))}
-          </div>
-        </details>
-      ) : null}
     </div>
   );
 }

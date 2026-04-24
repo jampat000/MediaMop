@@ -20,6 +20,11 @@ class SuiteSettingsOut(BaseModel):
         max_length=4000,
         description="Optional short message on the home dashboard for signed-in users.",
     )
+    setup_wizard_state: str = Field(
+        min_length=1,
+        max_length=32,
+        description="First-run wizard state: pending, skipped, or completed.",
+    )
     app_timezone: str = Field(
         max_length=120,
         description="Suite-wide timezone label used for date/time displays that follow app timezone.",
@@ -27,7 +32,7 @@ class SuiteSettingsOut(BaseModel):
     log_retention_days: int = Field(
         ge=1,
         le=3650,
-        description="How long Activity rows are kept before automatic cleanup.",
+        description="How long persisted system logs are kept before automatic cleanup.",
     )
     configuration_backup_enabled: bool = Field(
         description="Whether server-side automatic configuration snapshots are enabled.",
@@ -36,6 +41,11 @@ class SuiteSettingsOut(BaseModel):
         ge=1,
         le=720,
         description="Minimum hours between automatic configuration snapshots.",
+    )
+    configuration_backup_preferred_time: str = Field(
+        min_length=5,
+        max_length=5,
+        description="Preferred local backup time in HH:MM for daily-style automatic snapshots.",
     )
     configuration_backup_last_run_at: datetime | None = Field(
         default=None,
@@ -56,6 +66,7 @@ class SuiteSettingsPutIn(BaseModel):
     csrf_token: str = Field(..., min_length=1)
     product_display_name: str = Field(..., min_length=1, max_length=120)
     signed_in_home_notice: str | None = Field(default=None, max_length=4000)
+    setup_wizard_state: str | None = Field(default=None, min_length=1, max_length=32)
     app_timezone: str = Field(..., min_length=1, max_length=120)
     log_retention_days: int = Field(ge=1, le=3650)
     application_logs_enabled: bool | None = Field(
@@ -71,6 +82,12 @@ class SuiteSettingsPutIn(BaseModel):
         ge=1,
         le=720,
         description="Minimum hours between automatic configuration snapshots.",
+    )
+    configuration_backup_preferred_time: str | None = Field(
+        default=None,
+        min_length=5,
+        max_length=5,
+        description="Preferred local backup time in HH:MM for daily-style automatic snapshots.",
     )
 
 
@@ -130,3 +147,72 @@ class SuiteSecurityOverviewOut(BaseModel):
     restart_required_note: str = Field(
         description="Plain explanation that these values follow the server configuration file and a restart.",
     )
+
+
+class SuiteUpdateStatusOut(BaseModel):
+    """Current app version compared with the latest public release."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    current_version: str = Field(min_length=1)
+    install_type: str = Field(min_length=1, description="windows, docker, or source")
+    status: str = Field(min_length=1, description="up_to_date, update_available, or unavailable")
+    summary: str = Field(min_length=1)
+    latest_version: str | None = None
+    latest_name: str | None = None
+    published_at: datetime | None = None
+    release_url: str | None = None
+    windows_installer_url: str | None = None
+    docker_image: str | None = None
+    docker_tag: str | None = None
+    docker_update_command: str | None = None
+
+
+class SuiteLogEntryOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    timestamp: datetime
+    level: str
+    component: str
+    message: str
+    detail: str | None = None
+    traceback: str | None = None
+    source: str | None = None
+    logger: str
+    correlation_id: str | None = None
+    job_id: str | None = None
+
+
+class SuiteLogCountsOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    error: int
+    warning: int
+    information: int
+
+
+class SuiteLogsOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[SuiteLogEntryOut]
+    total: int
+    counts: SuiteLogCountsOut
+
+
+class SuiteMetricsRouteOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    route: str
+    request_count: int
+    average_response_ms: float
+
+
+class SuiteMetricsOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    uptime_seconds: float
+    total_requests: int
+    average_response_ms: float
+    error_log_count: int
+    status_counts: dict[str, int]
+    busiest_routes: list[SuiteMetricsRouteOut]

@@ -43,6 +43,16 @@ function pickSearchStateId(row: SubberMovieRow, prefs: string[]): number | null 
   return any?.state_id ?? null;
 }
 
+function coverageState(row: SubberMovieRow, prefs: string[]): string {
+  const preferredRows = prefs
+    .map((code) => row.languages.find((item) => item.language_code.toLowerCase() === code.toLowerCase()))
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
+  if (preferredRows.length > 0 && preferredRows.every((item) => item.status === "found")) {
+    return "Preferred subtitle found";
+  }
+  return "Still missing";
+}
+
 export function SubberMoviesTab({ canOperate }: { canOperate: boolean }) {
   const settingsQ = useSubberSettingsQuery();
   const prefs = settingsQ.data?.language_preferences ?? ["en"];
@@ -137,7 +147,7 @@ export function SubberMoviesTab({ canOperate }: { canOperate: boolean }) {
         <p className="text-sm text-[var(--mm-text2)]" data-testid="subber-movies-empty">
           {hasActiveFilters
             ? "No movies match the current filters. Try All titles or clear search."
-            : "No movies tracked yet. Go to Settings and use the Sync Movies library button to import your Radarr library, or Subber will populate this automatically when Radarr imports a new file."}
+            : "No movies are tracked yet. Open Connections and run Sync Movies library from Radarr, or wait for a new Radarr import."}
         </p>
       ) : null}
       {!libQ.isLoading && !libQ.isError && total > 0 ? (
@@ -165,6 +175,7 @@ export function SubberMoviesTab({ canOperate }: { canOperate: boolean }) {
                     {m.movie_title ?? m.file_path}
                     {m.movie_year != null ? <span className="text-[var(--mm-text2)]"> ({m.movie_year})</span> : null}
                   </h3>
+                  <p className="text-sm text-[var(--mm-text2)]">{coverageState(m, prefs)}</p>
                   <div className="flex flex-wrap gap-1">{m.languages.map((l) => langBadge(l.status, l.language_code))}</div>
                 </div>
                 {canOperate && hasMissing && sid != null ? (

@@ -63,16 +63,15 @@ def _is_same_or_nested(a: Path, b: Path) -> bool:
         return False
 
 
-def _validate_path_separation(*, watched: Path | None, work: Path, output: Path) -> None:
-    if _is_same_or_nested(work, output):
-        msg = "Refiner work/temp folder and output folder must be separate (no overlap or containment)."
-        raise ValueError(msg)
-    if watched is None:
-        return
-    if _is_same_or_nested(watched, output):
-        msg = "Refiner watched folder and output folder must be separate (no overlap or containment)."
-        raise ValueError(msg)
-    if _is_same_or_nested(watched, work):
+def _validate_path_separation(*, watched: Path | None, work: Path, output: Path | None) -> None:
+    if output is not None:
+        if _is_same_or_nested(work, output):
+            msg = "Refiner work/temp folder and output folder must be separate (no overlap or containment)."
+            raise ValueError(msg)
+        if watched is not None and _is_same_or_nested(watched, output):
+            msg = "Refiner watched folder and output folder must be separate (no overlap or containment)."
+            raise ValueError(msg)
+    if watched is not None and _is_same_or_nested(watched, work):
         msg = "Refiner watched folder and work/temp folder must be separate (no overlap or containment)."
         raise ValueError(msg)
 
@@ -218,13 +217,17 @@ def build_refiner_path_settings_get_out(*, row: RefinerPathSettingsRow, settings
     default_tv_work = resolved_default_refiner_tv_work_folder(mediamop_home=settings.mediamop_home)
     return {
         "refiner_watched_folder": row.refiner_watched_folder,
+        "refiner_watched_folder_exists": bool((row.refiner_watched_folder or "").strip() and Path(row.refiner_watched_folder).is_dir()),
         "refiner_work_folder": row.refiner_work_folder,
-        "refiner_output_folder": row.refiner_output_folder,
+        "refiner_output_folder": (row.refiner_output_folder or "").strip() or None,
         "resolved_default_work_folder": default_work,
         "effective_work_folder": work_eff,
         "refiner_tv_watched_folder": row.refiner_tv_watched_folder,
+        "refiner_tv_watched_folder_exists": bool(
+            (row.refiner_tv_watched_folder or "").strip() and Path(row.refiner_tv_watched_folder).is_dir()
+        ),
         "refiner_tv_work_folder": row.refiner_tv_work_folder,
-        "refiner_tv_output_folder": row.refiner_tv_output_folder,
+        "refiner_tv_output_folder": (row.refiner_tv_output_folder or "").strip() or None,
         "resolved_default_tv_work_folder": default_tv_work,
         "effective_tv_work_folder": tv_work_eff,
         "movie_watched_folder_check_interval_seconds": _clamp_watched_folder_poll_interval_seconds(
@@ -264,7 +267,7 @@ def apply_refiner_path_settings_put(
     *,
     watched_folder: str | None,
     work_folder: str | None,
-    output_folder: str,
+    output_folder: str | None,
     tv_paths_included: bool = False,
     tv_watched_folder: str | None = None,
     tv_work_folder: str | None = None,
@@ -281,19 +284,18 @@ def apply_refiner_path_settings_put(
     watched_store: str | None = None
     if watched_clean is not None:
         watched_path = _norm_dir_path(watched_clean)
-        if not watched_path.is_dir():
-            msg = "Movies Refiner watched folder must already exist on disk when set."
-            raise ValueError(msg)
         watched_store = str(watched_path)
 
-    out_clean = output_folder.strip()
-    if not out_clean:
-        msg = "Movies Refiner output folder is required (non-empty path)."
+    out_clean = (output_folder or "").strip()
+    output_path: Path | None = None
+    if watched_clean is not None and not out_clean:
+        msg = "Movies Refiner output folder is required when a Movies watched folder is set."
         raise ValueError(msg)
-    output_path = _norm_dir_path(out_clean)
-    if not output_path.is_dir():
-        msg = "Movies Refiner output folder must already exist on disk."
-        raise ValueError(msg)
+    if out_clean:
+        output_path = _norm_dir_path(out_clean)
+        if not output_path.is_dir():
+            msg = "Movies Refiner output folder must already exist on disk."
+            raise ValueError(msg)
 
     work_in = (work_folder if work_folder is not None else "").strip()
     if not work_in:
@@ -310,7 +312,9 @@ def apply_refiner_path_settings_put(
 
     _validate_path_separation(watched=watched_path, work=work_path, output=output_path)
 
-    cross_paths: list[Path] = [work_path, output_path]
+    cross_paths: list[Path] = [work_path]
+    if output_path is not None:
+        cross_paths.append(output_path)
     if watched_path is not None:
         cross_paths.append(watched_path)
 
@@ -331,9 +335,6 @@ def apply_refiner_path_settings_put(
                 msg = "TV Refiner paths: set a watched folder (or clear all TV fields)."
                 raise ValueError(msg)
             tv_watched_path = _norm_dir_path(tw_clean)
-            if not tv_watched_path.is_dir():
-                msg = "TV Refiner watched folder must already exist on disk when set."
-                raise ValueError(msg)
             tw_store = str(tv_watched_path)
 
             if not tout_in:
@@ -370,7 +371,7 @@ def apply_refiner_path_settings_put(
 
     row.refiner_watched_folder = watched_store
     row.refiner_work_folder = stored_work
-    row.refiner_output_folder = str(output_path)
+    row.refiner_output_folder = str(output_path) if output_path is not None else ""
     if movie_watched_folder_check_interval_seconds is not None:
         row.movie_watched_folder_check_interval_seconds = _clamp_watched_folder_poll_interval_seconds(
             movie_watched_folder_check_interval_seconds

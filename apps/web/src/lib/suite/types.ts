@@ -3,10 +3,12 @@
 export type SuiteSettingsOut = {
   product_display_name: string;
   signed_in_home_notice: string | null;
+  setup_wizard_state: "pending" | "skipped" | "completed" | string;
   app_timezone: string;
   log_retention_days: number;
   configuration_backup_enabled?: boolean;
   configuration_backup_interval_hours?: number;
+  configuration_backup_preferred_time?: string;
   configuration_backup_last_run_at?: string | null;
   updated_at: string;
 };
@@ -14,12 +16,14 @@ export type SuiteSettingsOut = {
 export type SuiteSettingsPutBody = {
   product_display_name: string;
   signed_in_home_notice: string | null;
+  setup_wizard_state?: "pending" | "skipped" | "completed" | string;
   app_timezone: string;
   log_retention_days: number;
   /** Older APIs required this flag; current servers ignore it. Always send `true` when saving suite settings. */
   application_logs_enabled: boolean;
   configuration_backup_enabled?: boolean;
   configuration_backup_interval_hours?: number;
+  configuration_backup_preferred_time?: string;
 };
 
 /** GET /api/v1/suite/security-overview — read-only snapshot from server startup configuration. */
@@ -49,9 +53,63 @@ export type SuiteConfigurationBackupListOut = {
   items: SuiteConfigurationBackupItem[];
 };
 
+export type SuiteUpdateStatusOut = {
+  current_version: string;
+  install_type: string;
+  status: "up_to_date" | "update_available" | "unavailable" | string;
+  summary: string;
+  latest_version?: string | null;
+  latest_name?: string | null;
+  published_at?: string | null;
+  release_url?: string | null;
+  windows_installer_url?: string | null;
+  docker_image?: string | null;
+  docker_tag?: string | null;
+  docker_update_command?: string | null;
+};
+
+export type SuiteLogEntry = {
+  timestamp: string;
+  level: string;
+  component: string;
+  message: string;
+  detail?: string | null;
+  traceback?: string | null;
+  source?: string | null;
+  logger: string;
+  correlation_id?: string | null;
+  job_id?: string | null;
+};
+
+export type SuiteLogsOut = {
+  items: SuiteLogEntry[];
+  total: number;
+  counts: {
+    error: number;
+    warning: number;
+    information: number;
+  };
+};
+
+export type SuiteMetricsRoute = {
+  route: string;
+  request_count: number;
+  average_response_ms: number;
+};
+
+export type SuiteMetricsOut = {
+  uptime_seconds: number;
+  total_requests: number;
+  average_response_ms: number;
+  error_log_count: number;
+  status_counts: Record<string, number>;
+  busiest_routes: SuiteMetricsRoute[];
+};
+
 export function suiteSettingsBackupFieldsPresent(v: SuiteSettingsOut): boolean {
   return (
     typeof v.configuration_backup_enabled === "boolean" &&
-    typeof v.configuration_backup_interval_hours === "number"
+    typeof v.configuration_backup_interval_hours === "number" &&
+    typeof v.configuration_backup_preferred_time === "string"
   );
 }

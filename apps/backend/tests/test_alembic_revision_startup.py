@@ -59,6 +59,7 @@ def test_head_schema_includes_suite_settings_table() -> None:
     assert "application_logs_enabled" not in names
     assert "configuration_backup_enabled" in names
     assert "configuration_backup_interval_hours" in names
+    assert "configuration_backup_preferred_time" in names
 
 
 def test_head_schema_includes_arr_library_operator_settings_table() -> None:

@@ -14,7 +14,9 @@ from mediamop.api.router import build_v1_router
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.lifespan import lifespan
 from mediamop.platform.health import health_router
+from mediamop.platform.http.request_context import RequestContextMiddleware
 from mediamop.platform.http.security_headers import SecurityHeadersMiddleware
+from mediamop.platform.metrics.router import router as metrics_router
 
 
 def _mount_web_spa_if_configured(application: FastAPI) -> None:
@@ -37,6 +39,7 @@ def create_app() -> FastAPI:
     )
 
     application.add_middleware(SecurityHeadersMiddleware)
+    application.add_middleware(RequestContextMiddleware)
     if settings.cors_origins:
         application.add_middleware(
             CORSMiddleware,
@@ -47,6 +50,7 @@ def create_app() -> FastAPI:
         )
 
     application.include_router(health_router)
+    application.include_router(metrics_router)
     application.include_router(build_v1_router())
     _mount_web_spa_if_configured(application)
 

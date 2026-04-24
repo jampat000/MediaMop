@@ -19,16 +19,25 @@ from mediamop.platform.suite_settings.schemas import (
     ConfigurationBundleImportIn,
     SuiteConfigurationBackupItemOut,
     SuiteConfigurationBackupListOut,
+    SuiteLogCountsOut,
+    SuiteLogEntryOut,
+    SuiteLogsOut,
+    SuiteMetricsOut,
+    SuiteMetricsRouteOut,
     SuiteSecurityOverviewOut,
     SuiteSettingsOut,
     SuiteSettingsPutIn,
+    SuiteUpdateStatusOut,
 )
+from mediamop.platform.metrics.service import build_runtime_metrics_summary
 from mediamop.platform.suite_settings.security_overview import build_suite_security_overview
+from mediamop.platform.suite_settings.logs_service import prune_log_file, read_suite_logs
 from mediamop.platform.suite_settings.service import apply_suite_settings_put, build_suite_settings_out, ensure_suite_settings_row
 from mediamop.platform.suite_settings.suite_configuration_backup_service import (
     get_suite_configuration_backup_file_path,
     list_suite_configuration_backups,
 )
+from mediamop.platform.suite_settings.update_service import build_suite_update_status
 
 router = APIRouter(tags=["suite"])
 
@@ -63,14 +72,17 @@ def put_suite_settings(
             db,
             product_display_name=body.product_display_name,
             signed_in_home_notice=body.signed_in_home_notice,
+            setup_wizard_state=body.setup_wizard_state,
             app_timezone=body.app_timezone,
             log_retention_days=body.log_retention_days,
             configuration_backup_enabled=body.configuration_backup_enabled,
             configuration_backup_interval_hours=body.configuration_backup_interval_hours,
+            configuration_backup_preferred_time=body.configuration_backup_preferred_time,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     db.commit()
+    prune_log_file(settings, keep_days=out.log_retention_days)
     return out
 
 
@@ -150,3 +162,71 @@ def get_suite_security_overview(
     """Read-only snapshot of sign-in protection (from startup configuration, not the database)."""
 
     return build_suite_security_overview(settings)
+
+
+@router.get("/suite/update-status", response_model=SuiteUpdateStatusOut)
+def get_suite_update_status(_user: UserPublicDep) -> SuiteUpdateStatusOut:
+    """Read-only update check for the signed-in Settings page."""
+
+    return build_suite_update_status()
+
+
+@router.get("/suite/logs", response_model=SuiteLogsOut)
+def get_suite_logs(
+    _user: UserPublicDep,
+    settings: SettingsDep,
+    level: str | None = None,
+    search: str | None = None,
+    has_exception: bool | None = None,
+    limit: int = 100,
+) -> SuiteLogsOut:
+    items, total, counts = read_suite_logs(
+        settings,
+        level=level,
+        search=search,
+        has_exception=has_exception,
+        limit=limit,
+    )
+    return SuiteLogsOut(
+        items=[
+            SuiteLogEntryOut(
+                timestamp=item.timestamp,
+                level=item.level,
+                component=item.component,
+                message=item.message,
+                detail=item.detail,
+                traceback=item.traceback,
+                source=item.source,
+                logger=item.logger,
+                correlation_id=item.correlation_id,
+                job_id=item.job_id,
+            )
+            for item in items
+        ],
+        total=total,
+        counts=SuiteLogCountsOut(
+            error=counts["ERROR"],
+            warning=counts["WARNING"],
+            information=counts["INFO"],
+        ),
+    )
+
+
+@router.get("/suite/metrics", response_model=SuiteMetricsOut)
+def get_suite_metrics(_user: UserPublicDep) -> SuiteMetricsOut:
+    summary = build_runtime_metrics_summary()
+    return SuiteMetricsOut(
+        uptime_seconds=float(summary["uptime_seconds"]),
+        total_requests=int(summary["total_requests"]),
+        average_response_ms=float(summary["average_response_ms"]),
+        error_log_count=int(summary["error_log_count"]),
+        status_counts={k: int(v) for k, v in dict(summary["status_counts"]).items()},
+        busiest_routes=[
+            SuiteMetricsRouteOut(
+                route=str(row["route"]),
+                request_count=int(row["request_count"]),
+                average_response_ms=float(row["average_response_ms"]),
+            )
+            for row in list(summary["busiest_routes"])
+        ],
+    )

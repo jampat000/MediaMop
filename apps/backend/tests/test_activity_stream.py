@@ -14,6 +14,7 @@ from mediamop.api.deps import get_db_session
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.platform.activity import constants as activity_constants
+from mediamop.platform.activity.live_stream import activity_latest_notifier
 from mediamop.platform.activity import service as activity_service
 from mediamop.platform.activity.router import get_activity_stream, iter_activity_latest_sse
 from tests.integration_helpers import auth_post, csrf as fetch_csrf
@@ -55,6 +56,28 @@ def test_activity_stream_requires_authentication(client_with_admin: TestClient) 
     assert r.status_code == 401
 
 
+def test_record_activity_event_notifies_only_after_commit() -> None:
+    activity_latest_notifier.reset_for_tests()
+    settings = MediaMopSettings.load()
+    eng = create_db_engine(settings)
+    fac = create_session_factory(eng)
+    with fac() as db:
+        row = activity_service.record_activity_event(
+            db,
+            event_type=activity_constants.AUTH_LOGIN_SUCCEEDED,
+            module="auth",
+            title="Commit-time notify test",
+            detail="alice",
+        )
+        latest_id, version = activity_latest_notifier.snapshot()
+        assert latest_id is None
+        assert version == 0
+        db.commit()
+        committed_id, committed_version = activity_latest_notifier.snapshot()
+        assert committed_id == int(row.id)
+        assert committed_version == 1
+
+
 @pytest.mark.anyio
 async def test_activity_stream_authenticated_emits_latest_format(client_with_admin: TestClient) -> None:
     _login(client_with_admin)
@@ -86,6 +109,7 @@ async def test_activity_stream_authenticated_emits_latest_format(client_with_adm
 
 @pytest.mark.anyio
 async def test_activity_stream_generator_emits_expected_payload_for_newer_id() -> None:
+    activity_latest_notifier.reset_for_tests()
     values = iter([10, 10, 11, 11])
     checks = {"n": 0}
 

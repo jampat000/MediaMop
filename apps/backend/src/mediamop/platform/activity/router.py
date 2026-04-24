@@ -2,18 +2,21 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 from collections.abc import AsyncGenerator, Awaitable, Callable
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 from starlette.responses import StreamingResponse
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
+from mediamop.platform.activity.live_stream import activity_latest_notifier
 from mediamop.platform.activity.schemas import ActivityEventItemOut, ActivityRecentOut
 from mediamop.platform.activity.service import (
     RECENT_DEFAULT_LIMIT,
+    count_activity_events,
+    count_system_activity_events,
     get_latest_activity_event_id,
     list_recent_activity_events,
 )
@@ -36,12 +39,53 @@ def get_activity_recent(
     _user: UserPublicDep,
     db: DbSessionDep,
     limit: int = Query(default=RECENT_DEFAULT_LIMIT, ge=1, le=100),
+    module: str | None = Query(default=None, min_length=1, max_length=32),
+    event_type: str | None = Query(default=None, min_length=1, max_length=64),
+    search: str | None = Query(default=None, min_length=1, max_length=200),
+    date_from: str | None = Query(default=None),
+    date_to: str | None = Query(default=None),
 ) -> ActivityRecentOut:
     """Recent persisted events, newest first — snapshot only (pagination-style read; not a control plane)."""
 
-    rows = list_recent_activity_events(db, limit=limit)
+    parsed_from = None
+    parsed_to = None
+    if date_from:
+        try:
+            parsed_from = datetime.fromisoformat(date_from)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid date_from.") from exc
+    if date_to:
+        try:
+            parsed_to = datetime.fromisoformat(date_to)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid date_to.") from exc
+
+    rows = list_recent_activity_events(
+        db,
+        limit=limit,
+        module=module,
+        event_type=event_type,
+        search=search,
+        date_from=parsed_from,
+        date_to=parsed_to,
+    )
     return ActivityRecentOut(
         items=[ActivityEventItemOut.model_validate(r) for r in rows],
+        total=count_activity_events(
+            db,
+            module=module,
+            event_type=event_type,
+            search=search,
+            date_from=parsed_from,
+            date_to=parsed_to,
+        ),
+        system_events=count_system_activity_events(
+            db,
+            event_type=event_type,
+            search=search,
+            date_from=parsed_from,
+            date_to=parsed_to,
+        ),
     )
 
 
@@ -94,6 +138,7 @@ async def iter_activity_latest_sse(
     """Narrow activity freshness SSE stream: emits only latest id changes + keepalives."""
 
     last_sent_id: int | None = None
+    _latest_id, last_seen_version = activity_latest_notifier.snapshot()
     polls_since_keepalive = 0
     yield f"retry: {_STREAM_RETRY_MS}\n\n"
     while True:
@@ -104,12 +149,19 @@ async def iter_activity_latest_sse(
             last_sent_id = latest_id
             yield _sse_event(event="activity.latest", data={"latest_event_id": latest_id})
             polls_since_keepalive = 0
-        else:
-            polls_since_keepalive += 1
-            if polls_since_keepalive >= keepalive_every_polls:
-                yield ": keepalive\n\n"
+            continue
+        changed = await activity_latest_notifier.wait_for_change(last_seen_version, timeout=poll_seconds)
+        if changed is not None:
+            latest_id, last_seen_version = changed
+            if latest_id is not None and latest_id != last_sent_id:
+                last_sent_id = latest_id
+                yield _sse_event(event="activity.latest", data={"latest_event_id": latest_id})
                 polls_since_keepalive = 0
-        await asyncio.sleep(poll_seconds)
+                continue
+        polls_since_keepalive += 1
+        if polls_since_keepalive >= keepalive_every_polls:
+            yield ": keepalive\n\n"
+            polls_since_keepalive = 0
 
 
 @router.get("/stream")

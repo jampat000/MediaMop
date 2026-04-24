@@ -121,6 +121,17 @@ class SubberTestConnectionOut(BaseModel):
     message: str
 
 
+class SubberArrRootFolderOut(BaseModel):
+    path: str
+    free_space: int | None = None
+
+
+class SubberArrRootFoldersOut(BaseModel):
+    ok: bool
+    message: str
+    folders: list[SubberArrRootFolderOut] = Field(default_factory=list)
+
+
 class SubberOverviewOut(BaseModel):
     window_days: int = 30
     subtitles_downloaded: int = Field(ge=0, description="Rows in subber_subtitle_state with status=found.")

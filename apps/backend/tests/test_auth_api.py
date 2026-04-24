@@ -330,6 +330,30 @@ def test_bootstrap_username_conflict_returns_409() -> None:
         assert r.status_code == 409
 
 
+def test_bootstrap_rejects_short_password() -> None:
+    reset_user_tables()
+    app = create_app()
+    with TestClient(app) as client:
+        assert client.get("/api/v1/auth/bootstrap/status").json()["bootstrap_allowed"] is True
+        csrf = fetch_csrf(client)
+        r = auth_post(
+            client,
+            "/api/v1/auth/bootstrap",
+            json={
+                "username": "owner1",
+                "password": "short",
+                "csrf_token": csrf,
+            },
+        )
+        assert r.status_code == 422, r.text
+        detail = r.json().get("detail") or []
+        assert any(
+            item.get("loc") == ["body", "password"] and "at least 8 characters" in item.get("msg", "")
+            for item in detail
+            if isinstance(item, dict)
+        )
+
+
 def test_bootstrap_blocked_after_admin_exists(client_with_admin: TestClient) -> None:
     r_s = client_with_admin.get("/api/v1/auth/bootstrap/status")
     assert r_s.json()["bootstrap_allowed"] is False

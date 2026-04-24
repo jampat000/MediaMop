@@ -1,5 +1,0 @@
-# Back-compat alias: same stack as compose.yaml (all-in-one from GHCR).
-# Prefer: docker compose --env-file .env.mediamop pull && docker compose --env-file .env.mediamop up -d
-
-include:
-  - path: compose.yaml

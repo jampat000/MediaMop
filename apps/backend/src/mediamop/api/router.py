@@ -19,6 +19,7 @@ from mediamop.modules.subber.router import router as subber_router
 from mediamop.modules.pruner.router import router as pruner_router
 from mediamop.platform.activity.router import router as activity_router
 from mediamop.platform.auth.router import router as auth_router
+from mediamop.platform.local_browse.router import router as local_browse_router
 from mediamop.platform.suite_settings.router import router as suite_settings_router
 from mediamop.platform.arr_library.http_router import router as arr_library_router
 from mediamop.platform.system_configuration.router import router as system_configuration_router
@@ -31,6 +32,7 @@ def build_v1_router() -> APIRouter:
     router = APIRouter(prefix=API_V1_PREFIX)
     router.include_router(auth_router)
     router.include_router(system_configuration_router)
+    router.include_router(local_browse_router)
     router.include_router(suite_settings_router)
     router.include_router(dashboard_router)
     router.include_router(arr_library_router)

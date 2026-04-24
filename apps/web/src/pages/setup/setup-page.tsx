@@ -12,9 +12,10 @@ export function SetupPage() {
   const bootstrap = useBootstrapMutation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   if (me.isPending || boot.isPending) {
-    return <PageLoading label="Checking setup…" />;
+    return <PageLoading label="Checking setup..." />;
   }
 
   if (me.data) {
@@ -43,8 +44,18 @@ export function SetupPage() {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    const trimmedUsername = username.trim();
+    if (!trimmedUsername) {
+      setValidationError("Admin username is required.");
+      return;
+    }
+    if (password.length < 8) {
+      setValidationError("Password must be at least 8 characters.");
+      return;
+    }
+    setValidationError(null);
     try {
-      await bootstrap.mutateAsync({ username: username.trim(), password });
+      await bootstrap.mutateAsync({ username: trimmedUsername, password });
       navigate("/login", { replace: true, state: { fromSetup: true } });
     } catch {
       /* surfaced below */
@@ -59,8 +70,8 @@ export function SetupPage() {
           <p className="mm-auth-eyebrow">First run</p>
           <h1 className="mm-auth-title">Create admin</h1>
           <p className="mm-auth-lead">
-            This workspace has no administrator yet. Choose credentials for the initial account —
-            afterward this step is locked.
+            This workspace has no administrator yet. Choose credentials for the initial account.
+            After you sign in, MediaMop will run the first-run setup wizard.
           </p>
 
           <form data-testid="setup-form" className="mm-auth-form" onSubmit={onSubmit}>
@@ -74,7 +85,12 @@ export function SetupPage() {
               autoComplete="username"
               className="mm-auth-input"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                if (validationError) {
+                  setValidationError(null);
+                }
+              }}
               required
               maxLength={64}
             />
@@ -89,11 +105,21 @@ export function SetupPage() {
               autoComplete="new-password"
               className="mm-auth-input"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (validationError) {
+                  setValidationError(null);
+                }
+              }}
               required
               minLength={8}
               maxLength={512}
             />
+            {validationError ? (
+              <p className="mm-auth-banner" role="alert">
+                {validationError}
+              </p>
+            ) : null}
             {bootstrap.isError ? (
               <p className="mm-auth-banner" role="alert">
                 {bootstrap.error instanceof Error ? bootstrap.error.message : "Setup failed."}
@@ -105,7 +131,7 @@ export function SetupPage() {
               className="mm-auth-submit"
               disabled={bootstrap.isPending}
             >
-              {bootstrap.isPending ? "Creating…" : "Create admin account"}
+              {bootstrap.isPending ? "Creating..." : "Create admin account"}
             </button>
           </form>
 

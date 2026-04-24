@@ -12,9 +12,10 @@
  *
  * If ``/health`` works but required routes (e.g. ``/api/v1/subber/library/sync/movies`` and
  * ``/api/v1/system/suite-configuration-bundle``) return **404**, the default port usually holds an
- * **older** MediaMop build. We then start this repo's API on the **next free TCP port** and set
- * ``MEDIAMOP_DEV_STACK_API_PROXY_TARGET`` for Vite so the UI still works without manually killing
- * the stale process.
+ * **older** MediaMop build. The local folder picker route is also checked because Windows can leave
+ * an unkillable stale listener behind after desktop/dev restarts. We then start this repo's API on
+ * the **next free TCP port** and set ``MEDIAMOP_DEV_STACK_API_PROXY_TARGET`` for Vite so the UI still
+ * works without manually killing the stale process.
  *
  * If the **web** port from ``dev-ports.json`` is busy (leftover Vite), the next free port is used
  * and ``MEDIAMOP_DEV_WEB_PORT`` is set for Vite (see ``vite.config.ts``). Run ``npm run dev:stop-web``
@@ -193,12 +194,65 @@ function probeSuiteConfigurationBundleRouteNotStale(apiHost, apiPort) {
 }
 
 /**
+ * Local directory browser backs Browse buttons; **404** means Vite would proxy Browse clicks to an
+ * old API build.
+ */
+function probeDirectoryBrowserRouteNotStale(apiHost, apiPort) {
+  const { hostname, port } = apiConnectTarget(apiHost, apiPort);
+  return new Promise((resolve) => {
+    const req = http.request(
+      {
+        hostname,
+        port,
+        path: "/api/v1/system/directories",
+        method: "GET",
+        timeout: 3000,
+      },
+      (res) => {
+        res.resume();
+        resolve(res.statusCode !== 404);
+      },
+    );
+    req.on("error", () => {
+      console.error(
+        "[dev-stack] Could not probe directory browser route (network error) - assuming API is OK.",
+      );
+      resolve(true);
+    });
+    req.on("timeout", () => {
+      req.destroy();
+      console.error(
+        "[dev-stack] Timed out probing directory browser route - assuming API is OK.",
+      );
+      resolve(true);
+    });
+    req.end();
+  });
+}
+
+/**
  * First port in ``[startPort, inclusiveMax]`` with nothing answering ``/health`` like our API
  * probe (frees the slot for a new uvicorn).
  */
 async function findFirstTcpPortWithoutHealthyApi(apiHost, startPort, inclusiveMax) {
   for (let p = startPort; p <= inclusiveMax; p += 1) {
     if (!(await probeApiAlreadyServing(apiHost, p))) {
+      return p;
+    }
+  }
+  return null;
+}
+
+async function probeRequiredCurrentApiRoutes(apiHost, apiPort) {
+  const subberOk = await probeSubberLibrarySyncMoviesRouteNotStale(apiHost, apiPort);
+  const configOk = await probeSuiteConfigurationBundleRouteNotStale(apiHost, apiPort);
+  const directoryBrowserOk = await probeDirectoryBrowserRouteNotStale(apiHost, apiPort);
+  return subberOk && configOk && directoryBrowserOk;
+}
+
+async function findFirstHealthyCurrentApi(apiHost, startPort, inclusiveMax) {
+  for (let p = startPort; p <= inclusiveMax; p += 1) {
+    if ((await probeApiAlreadyServing(apiHost, p)) && (await probeRequiredCurrentApiRoutes(apiHost, p))) {
       return p;
     }
   }
@@ -361,6 +415,7 @@ const apiPort = process.env.MEDIAMOP_DEV_API_PORT?.trim()
 let api = null;
 let web = null;
 let stopping = false;
+let reuseAlternateApi = false;
 
 function forwardStop(signal) {
   try {
@@ -409,12 +464,14 @@ async function main() {
   const healthOk = await probeApiAlreadyServing(apiHost, apiPort);
   let subberRoutesOk = true;
   let configBundleRouteOk = true;
+  let directoryBrowserRouteOk = true;
   if (healthOk) {
     subberRoutesOk = await probeSubberLibrarySyncMoviesRouteNotStale(apiHost, apiPort);
     configBundleRouteOk = await probeSuiteConfigurationBundleRouteNotStale(apiHost, apiPort);
+    directoryBrowserRouteOk = await probeDirectoryBrowserRouteNotStale(apiHost, apiPort);
   }
   /** Stale build on the configured port: required API routes missing on old server code. */
-  const staleDefaultApi = healthOk && (!subberRoutesOk || !configBundleRouteOk);
+  const staleDefaultApi = healthOk && (!subberRoutesOk || !configBundleRouteOk || !directoryBrowserRouteOk);
 
   let bindPort = apiPort;
   /** When set, Vite must proxy ``/api`` here (see ``vite.config.ts``). */
@@ -423,7 +480,8 @@ async function main() {
   if (staleDefaultApi) {
     const { hostname, port: stalePort } = apiConnectTarget(apiHost, apiPort);
     const maxPort = Math.min(apiPort + 40, 65535);
-    const found = await findFirstTcpPortWithoutHealthyApi(apiHost, apiPort + 1, maxPort);
+    const existingCurrent = await findFirstHealthyCurrentApi(apiHost, apiPort + 1, maxPort);
+    const found = existingCurrent ?? (await findFirstTcpPortWithoutHealthyApi(apiHost, apiPort + 1, maxPort));
     if (found == null) {
       console.error(
         `[dev-stack] http://${hostname}:${stalePort} is an outdated MediaMop API (required routes missing). ` +
@@ -435,19 +493,36 @@ async function main() {
     bindPort = found;
     const { hostname: bindHost, port: bindProbePort } = apiConnectTarget(apiHost, bindPort);
     viteProxyOverride = `http://${bindHost}:${bindProbePort}`;
+    if (existingCurrent != null) {
+      reuseAlternateApi = true;
+      console.error(
+        `[dev-stack] Port ${stalePort} has an older MediaMop API build. Reusing current API on ` +
+          `${bindProbePort} and proxying /api there.`,
+      );
+    } else {
+      console.error(
+        `[dev-stack] Port ${stalePort} has an older MediaMop API build. Starting this repo's API on ` +
+          `${bindProbePort} and proxying /api there (close the old terminal when convenient).`,
+      );
+    }
+  }
+
+  if (!viteProxyOverride.trim() && bindPort !== Number(portFromFile)) {
+    const { hostname: bindHost, port: bindProbePort } = apiConnectTarget(apiHost, bindPort);
+    viteProxyOverride = `http://${bindHost}:${bindProbePort}`;
     console.error(
-      `[dev-stack] Port ${stalePort} has an older MediaMop API build. Starting this repo's API on ` +
-        `${bindProbePort} and proxying /api there (close the old terminal when convenient).`,
+      `[dev-stack] API port is ${bindProbePort}; proxying Vite /api there instead of default ${portFromFile}.`,
     );
   }
 
   const chosenWebPort = await resolveDevWebPort(webHost, configuredWebPort);
   const apiOriginEnvPatch = buildApiDevOriginEnvPatch(chosenWebPort);
 
-  const canReuse = !forceSpawn && healthOk && subberRoutesOk && configBundleRouteOk;
+  const canReuse = !forceSpawn && healthOk && subberRoutesOk && configBundleRouteOk && directoryBrowserRouteOk;
 
-  if (canReuse) {
-    const { hostname, port } = apiConnectTarget(apiHost, apiPort);
+  if (canReuse || reuseAlternateApi) {
+    const reusePort = reuseAlternateApi ? bindPort : apiPort;
+    const { hostname, port } = apiConnectTarget(apiHost, reusePort);
     console.error(
       `[dev-stack] API already serving at http://${hostname}:${port}/health — skipping API spawn. ` +
         `Starting Vite only. (Set MEDIAMOP_DEV_STACK_ALWAYS_SPAWN_API=1 to spawn a new API.)`,
@@ -465,7 +540,11 @@ async function main() {
 
   const viteEnv =
     viteProxyOverride.trim().length > 0
-      ? { ...process.env, MEDIAMOP_DEV_STACK_API_PROXY_TARGET: viteProxyOverride.trim() }
+      ? {
+          ...process.env,
+          MEDIAMOP_DEV_STACK_API_PROXY_TARGET: viteProxyOverride.trim(),
+          VITE_DEV_API_PROXY_TARGET: viteProxyOverride.trim(),
+        }
       : { ...process.env };
 
   const viteEnvWithPort = { ...viteEnv, MEDIAMOP_DEV_WEB_PORT: String(chosenWebPort) };

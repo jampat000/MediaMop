@@ -206,7 +206,7 @@ export function SubberOverviewTab({
     <div className="space-y-1.5">
       <p>
         <span className="text-[var(--mm-text3)]">Status:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">{sonConnected ? "Connected" : "Not connected"}</span>
+        <span className="font-medium text-[var(--mm-text1)]">{sonConnected ? "Credentials saved" : "Not configured"}</span>
       </p>
       <p>
         <span className="text-[var(--mm-text3)]">TV tracked:</span>{" "}
@@ -223,7 +223,7 @@ export function SubberOverviewTab({
     <div className="space-y-1.5">
       <p>
         <span className="text-[var(--mm-text3)]">Status:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">{radConnected ? "Connected" : "Not connected"}</span>
+        <span className="font-medium text-[var(--mm-text1)]">{radConnected ? "Credentials saved" : "Not configured"}</span>
       </p>
       <p>
         <span className="text-[var(--mm-text3)]">Movies tracked:</span>{" "}

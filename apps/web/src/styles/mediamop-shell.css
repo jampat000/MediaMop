@@ -855,15 +855,100 @@ body.mm-body {
 }
 
 .mm-activity-remux-detail {
-  margin-top: 0.25rem;
+  margin-top: 0.5rem;
   max-width: 100%;
+}
+
+.mm-activity-remux-detail__tiles {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+}
+
+.mm-activity-remux-detail__tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: var(--mm-radius-sm);
+  border: 1px solid rgba(231, 231, 234, 0.08);
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.mm-activity-remux-detail__tile-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mm-text3);
+}
+
+.mm-activity-remux-detail__tile-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--mm-text1);
+}
+
+.mm-activity-remux-detail__expand {
+  margin-top: 0.75rem;
+  border-radius: var(--mm-radius-sm);
+  border: 1px solid rgba(231, 231, 234, 0.08);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.mm-activity-remux-detail__expand > summary {
+  cursor: pointer;
+  padding: 0.7rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--mm-text2);
+  list-style: none;
+}
+
+.mm-activity-remux-detail__expand > summary::-webkit-details-marker {
+  display: none;
+}
+
+.mm-activity-remux-detail__expand-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border-top: 1px solid rgba(231, 231, 234, 0.08);
+  padding: 0.85rem;
+}
+
+.mm-activity-remux-detail__compare {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mm-activity-remux-detail__column,
+.mm-activity-remux-detail__supplemental {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border-radius: var(--mm-radius-sm);
+  border: 1px solid rgba(231, 231, 234, 0.08);
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.mm-activity-remux-detail__column-title,
+.mm-activity-remux-detail__section-title {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mm-text2);
 }
 
 .mm-activity-remux-detail__dl {
   margin: 0;
   display: grid;
-  grid-template-columns: minmax(6rem, 10rem) 1fr;
-  gap: 0.2rem 0.65rem;
+  grid-template-columns: minmax(6rem, 8rem) 1fr;
+  gap: 0.35rem 0.75rem;
   font-size: 0.8125rem;
   line-height: 1.45;
   color: var(--mm-text2);
@@ -885,16 +970,75 @@ body.mm-body {
   white-space: pre-wrap;
 }
 
+.mm-activity-remux-detail__tracks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.mm-activity-remux-detail__tracks-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.mm-activity-remux-detail__tracks-title {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--mm-text2);
+}
+
+.mm-activity-remux-detail__tracks-empty {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--mm-text3);
+}
+
+.mm-activity-remux-detail__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.mm-activity-remux-detail__chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(231, 231, 234, 0.08);
+  font-size: 0.74rem;
+  line-height: 1.2;
+  color: var(--mm-text2);
+}
+
+.mm-activity-remux-detail__chip--before {
+  background: rgba(120, 133, 155, 0.12);
+  border-color: rgba(120, 133, 155, 0.26);
+  color: var(--mm-text2);
+}
+
+.mm-activity-remux-detail__chip--kept {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.26);
+  color: rgb(187, 247, 208);
+}
+
+.mm-activity-remux-detail__chip--removed {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.26);
+  color: rgb(253, 230, 138);
+}
+
 .mm-activity-remux-detail__ffmpeg {
-  margin-top: 0.45rem;
   font-size: 0.75rem;
   color: var(--mm-text3);
 }
 
 .mm-activity-remux-detail__pre {
-  margin: 0.25rem 0 0;
-  padding: 0.4rem 0.5rem;
-  max-height: 8rem;
+  margin: 0.35rem 0 0;
+  padding: 0.55rem 0.65rem;
+  max-height: 10rem;
   overflow: auto;
   font-size: 0.7rem;
   line-height: 1.35;
@@ -903,6 +1047,12 @@ body.mm-body {
   color: var(--mm-text2);
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+@media (max-width: 900px) {
+  .mm-activity-remux-detail__compare {
+    grid-template-columns: 1fr;
+  }
 }
 
 .mm-module-surface {
@@ -1022,6 +1172,16 @@ body.mm-body {
 .mm-auth-frame {
   width: 100%;
   max-width: 420px;
+}
+
+.mm-setup-wizard-frame {
+  max-width: min(1120px, calc(100vw - 2rem));
+}
+
+.mm-setup-wizard-card {
+  width: 100%;
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
 }
 
 .mm-auth-brand {

@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { fetchCsrfToken } from "../../lib/api/auth-api";
 import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
 import { MmListboxPicker } from "../../components/ui/mm-listbox-picker";
+import { ServerFolderPickerButton } from "../../components/ui/server-folder-picker-button";
 import type { MmListboxOption } from "../../components/ui/mm-listbox-picker";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 import { SUBBER_LANGUAGE_OPTIONS, subberLanguageLabel } from "../../lib/subber/subber-languages";
@@ -403,7 +404,7 @@ export function SubberPreferencesTab({ canOperate }: { canOperate: boolean }) {
             </label>
             <input
               id="subber-subtitle-folder"
-              className="mm-input mt-1 w-full max-w-xl"
+              className="mm-input w-full"
               value={folder}
               disabled={dis}
               onChange={(e) => {
@@ -412,6 +413,17 @@ export function SubberPreferencesTab({ canOperate }: { canOperate: boolean }) {
               }}
               placeholder="Same folder as media file"
             />
+            <div className="mt-2 max-w-xl">
+              <ServerFolderPickerButton
+                title="Choose subtitle folder"
+                value={folder}
+                disabled={dis}
+                onSelect={(path) => {
+                  setFolder(path);
+                  setPrefsDirty(true);
+                }}
+              />
+            </div>
             <p className="mt-1 text-xs text-[var(--mm-text2)]">
               Leave empty to save subtitles next to your media file. Subtitles are named to match — Movie.2023.en.srt alongside
               Movie.2023.mkv.

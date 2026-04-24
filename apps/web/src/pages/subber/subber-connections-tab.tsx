@@ -1,16 +1,20 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { fetchCsrfToken } from "../../lib/api/auth-api";
 import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
+import { ServerFolderPickerButton } from "../../components/ui/server-folder-picker-button";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
 import {
   usePutSubberSettingsMutation,
   useSubberLibrarySyncMoviesMutation,
   useSubberLibrarySyncTvMutation,
+  useSubberRadarrRootFoldersMutation,
   useSubberSettingsQuery,
+  useSubberSonarrRootFoldersMutation,
   useSubberTestRadarrMutation,
   useSubberTestSonarrMutation,
 } from "../../lib/subber/subber-queries";
+import type { SubberArrRootFolderOut } from "../../lib/subber/subber-api";
 
 const MASK = "\u2022".repeat(10);
 
@@ -48,48 +52,6 @@ function ConnectionStatusPanel({
       ) : null}
       {check.outcome === "fail" && check.detail ? <p className="mt-1 text-xs text-red-400">{check.detail}</p> : null}
       {check.outcome === null && idleHelper ? <p className="mt-2 text-xs text-[var(--mm-text2)]">{idleHelper}</p> : null}
-    </div>
-  );
-}
-
-function WebhookUrlField({
-  id,
-  helper,
-  value,
-  disabled,
-}: {
-  id: string;
-  helper: string;
-  value: string;
-  disabled: boolean;
-}) {
-  const [copied, setCopied] = useState(false);
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* ignore */
-    }
-  }
-  return (
-    <div className="mt-4">
-      <label className="block text-sm font-medium text-[var(--mm-text)]" htmlFor={id}>
-        Webhook URL
-      </label>
-      <p className="mt-1 text-xs text-[var(--mm-text2)]">{helper}</p>
-      <div className="mt-1 flex max-w-3xl flex-wrap gap-2">
-        <input id={id} readOnly className="mm-input min-w-0 flex-1 font-mono text-xs" value={value} />
-        <button
-          type="button"
-          className={mmActionButtonClass({ variant: "secondary", disabled })}
-          disabled={disabled}
-          onClick={() => void copy()}
-        >
-          {copied ? "Copied" : "Copy"}
-        </button>
-      </div>
     </div>
   );
 }
@@ -159,6 +121,63 @@ function SubberSettingsSubsection({ title, children }: { title: string; children
   );
 }
 
+function formatBytes(bytes: number | null | undefined) {
+  if (bytes == null || !Number.isFinite(bytes)) return null;
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return `${value.toFixed(unit === 0 ? 0 : 1)} ${units[unit]} free`;
+}
+
+function ArrRootFolderChoices({
+  label,
+  folders,
+  message,
+  error,
+  onUseArr,
+  onUseBoth,
+}: {
+  label: "Sonarr" | "Radarr";
+  folders: SubberArrRootFolderOut[];
+  message: string | null;
+  error: string | null;
+  onUseArr: (path: string) => void;
+  onUseBoth: (path: string) => void;
+}) {
+  if (!message && !error && folders.length === 0) return null;
+  return (
+    <div className="rounded-md border border-[var(--mm-border)] bg-black/10 p-3">
+      {error ? <p className="text-xs text-red-400">{error}</p> : null}
+      {message ? <p className="text-xs text-[var(--mm-text2)]">{message}</p> : null}
+      {folders.length ? (
+        <div className="mt-2 grid gap-2">
+          {folders.map((folder) => {
+            const free = formatBytes(folder.free_space);
+            return (
+              <div key={folder.path} className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-2.5">
+                <p className="break-all font-mono text-xs text-[var(--mm-text)]">{folder.path}</p>
+                {free ? <p className="mt-1 text-[0.7rem] text-[var(--mm-text2)]">{free}</p> : null}
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button type="button" className={mmActionButtonClass({ variant: "secondary" })} onClick={() => onUseArr(folder.path)}>
+                    Use as {label} path
+                  </button>
+                  <button type="button" className={mmActionButtonClass({ variant: "secondary" })} onClick={() => onUseBoth(folder.path)}>
+                    Use for both
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
   const fmt = useAppDateFormatter();
   const q = useSubberSettingsQuery();
@@ -167,6 +186,8 @@ export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
   const testRad = useSubberTestRadarrMutation();
   const syncTv = useSubberLibrarySyncTvMutation();
   const syncMovies = useSubberLibrarySyncMoviesMutation();
+  const sonRootFoldersFetch = useSubberSonarrRootFoldersMutation();
+  const radRootFoldersFetch = useSubberRadarrRootFoldersMutation();
 
   const [sonUrl, setSonUrl] = useState("");
   const [sonKey, setSonKey] = useState("");
@@ -194,6 +215,12 @@ export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
   const [radDirty, setRadDirty] = useState(false);
   const [sonMapDirty, setSonMapDirty] = useState(false);
   const [radMapDirty, setRadMapDirty] = useState(false);
+  const [sonRootFolders, setSonRootFolders] = useState<SubberArrRootFolderOut[]>([]);
+  const [radRootFolders, setRadRootFolders] = useState<SubberArrRootFolderOut[]>([]);
+  const [sonRootMessage, setSonRootMessage] = useState<string | null>(null);
+  const [radRootMessage, setRadRootMessage] = useState<string | null>(null);
+  const [sonRootError, setSonRootError] = useState<string | null>(null);
+  const [radRootError, setRadRootError] = useState<string | null>(null);
 
   useEffect(() => {
     const d = q.data;
@@ -214,9 +241,6 @@ export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
     setRadMapDirty(false);
   }, [q.data]);
 
-  const base = typeof window !== "undefined" ? window.location.origin : "";
-  const sonHook = `${base}/api/v1/subber/webhook/sonarr`;
-  const radHook = `${base}/api/v1/subber/webhook/radarr`;
   const dis = !canOperate || put.isPending;
 
   function flashSave(setter: typeof setSaveSon) {
@@ -314,6 +338,38 @@ export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
     }
   }
 
+  async function detectSonarrRootFolders() {
+    setSonRootMessage(null);
+    setSonRootError(null);
+    try {
+      const r = await sonRootFoldersFetch.mutateAsync();
+      setSonRootFolders(r.folders);
+      if (r.ok) {
+        setSonRootMessage(r.message);
+      } else {
+        setSonRootError(r.message || "Sonarr did not return any root folders.");
+      }
+    } catch (e) {
+      setSonRootError((e as Error).message);
+    }
+  }
+
+  async function detectRadarrRootFolders() {
+    setRadRootMessage(null);
+    setRadRootError(null);
+    try {
+      const r = await radRootFoldersFetch.mutateAsync();
+      setRadRootFolders(r.folders);
+      if (r.ok) {
+        setRadRootMessage(r.message);
+      } else {
+        setRadRootError(r.message || "Radarr did not return any root folders.");
+      }
+    } catch (e) {
+      setRadRootError((e as Error).message);
+    }
+  }
+
   if (q.isLoading) return <p className="text-sm text-[var(--mm-text2)]">Loading settings…</p>;
   if (q.isError) return <p className="text-sm text-red-600">{(q.error as Error).message}</p>;
 
@@ -398,15 +454,6 @@ export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
               />
             </SubberSettingsSubsection>
 
-            <SubberSettingsSubsection title="Webhook">
-              <WebhookUrlField
-                id="subber-webhook-sonarr"
-                helper="In Sonarr: Settings → Connect → Webhook. Trigger: On Download. Subber searches as soon as Sonarr imports a file."
-                value={sonHook}
-                disabled={dis}
-              />
-            </SubberSettingsSubsection>
-
             <SubberSettingsSubsection title="Library sync">
               <button
                 type="button"
@@ -455,32 +502,84 @@ export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
               }}
             />
             {sonMapEn ? (
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                <label className="block min-w-0 flex-1 text-sm text-[var(--mm-text2)]">
-                  Path as Sonarr reports it
-                  <input
-                    className="mm-input mt-1 w-full font-mono text-sm"
-                    value={sonArr}
-                    disabled={dis}
-                    onChange={(e) => {
-                      setSonArr(e.target.value);
-                      setSonMapDirty(true);
-                    }}
-                  />
-                </label>
-                <label className="block min-w-0 flex-1 text-sm text-[var(--mm-text2)]">
-                  Path as MediaMop sees it
-                  <input
-                    className="mm-input mt-1 w-full font-mono text-sm"
-                    value={sonSub}
-                    disabled={dis}
-                    onChange={(e) => {
-                      setSonSub(e.target.value);
-                      setSonMapDirty(true);
-                    }}
-                  />
-                </label>
-              </div>
+              <>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                  <label className="block min-w-0 flex-1 text-sm text-[var(--mm-text2)]">
+                    Path as Sonarr reports it
+                    <div className="mt-1 flex flex-col gap-2 sm:flex-row">
+                      <input
+                        className="mm-input w-full font-mono text-sm"
+                        value={sonArr}
+                        disabled={dis}
+                        onChange={(e) => {
+                          setSonArr(e.target.value);
+                          setSonMapDirty(true);
+                        }}
+                      />
+                      <ServerFolderPickerButton
+                        title="Choose Sonarr TV path"
+                        value={sonArr}
+                        disabled={dis}
+                        onSelect={(path) => {
+                          setSonArr(path);
+                          setSonMapDirty(true);
+                        }}
+                      />
+                    </div>
+                  </label>
+                  <label className="block min-w-0 flex-1 text-sm text-[var(--mm-text2)]">
+                    Path as MediaMop sees it
+                    <div className="mt-1 flex flex-col gap-2 sm:flex-row">
+                      <input
+                        className="mm-input w-full font-mono text-sm"
+                        value={sonSub}
+                        disabled={dis}
+                        onChange={(e) => {
+                          setSonSub(e.target.value);
+                          setSonMapDirty(true);
+                        }}
+                      />
+                      <ServerFolderPickerButton
+                        title="Choose MediaMop TV path"
+                        value={sonSub}
+                        disabled={dis}
+                        onSelect={(path) => {
+                          setSonSub(path);
+                          setSonMapDirty(true);
+                        }}
+                      />
+                    </div>
+                  </label>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className={mmActionButtonClass({ variant: "secondary", disabled: dis || sonRootFoldersFetch.isPending })}
+                    disabled={dis || sonRootFoldersFetch.isPending}
+                    onClick={() => void detectSonarrRootFolders()}
+                  >
+                    {sonRootFoldersFetch.isPending ? "Detecting..." : "Detect Sonarr paths"}
+                  </button>
+                  <p className="basis-full text-xs text-[var(--mm-text2)]">
+                    Pulls Sonarr root folders through the API. Use these when Sonarr reports container or NAS paths differently from MediaMop.
+                  </p>
+                </div>
+                <ArrRootFolderChoices
+                  label="Sonarr"
+                  folders={sonRootFolders}
+                  message={sonRootMessage}
+                  error={sonRootError}
+                  onUseArr={(path) => {
+                    setSonArr(path);
+                    setSonMapDirty(true);
+                  }}
+                  onUseBoth={(path) => {
+                    setSonArr(path);
+                    setSonSub(path);
+                    setSonMapDirty(true);
+                  }}
+                />
+              </>
             ) : null}
             <button
               type="button"
@@ -570,15 +669,6 @@ export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
               />
             </SubberSettingsSubsection>
 
-            <SubberSettingsSubsection title="Webhook">
-              <WebhookUrlField
-                id="subber-webhook-radarr"
-                helper="In Radarr: Settings → Connect → Webhook. Trigger: On Download. Subber searches as soon as Radarr imports a file."
-                value={radHook}
-                disabled={dis}
-              />
-            </SubberSettingsSubsection>
-
             <SubberSettingsSubsection title="Library sync">
               <button
                 type="button"
@@ -627,32 +717,84 @@ export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
               }}
             />
             {radMapEn ? (
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                <label className="block min-w-0 flex-1 text-sm text-[var(--mm-text2)]">
-                  Path as Radarr reports it
-                  <input
-                    className="mm-input mt-1 w-full font-mono text-sm"
-                    value={radArr}
-                    disabled={dis}
-                    onChange={(e) => {
-                      setRadArr(e.target.value);
-                      setRadMapDirty(true);
-                    }}
-                  />
-                </label>
-                <label className="block min-w-0 flex-1 text-sm text-[var(--mm-text2)]">
-                  Path as MediaMop sees it
-                  <input
-                    className="mm-input mt-1 w-full font-mono text-sm"
-                    value={radSub}
-                    disabled={dis}
-                    onChange={(e) => {
-                      setRadSub(e.target.value);
-                      setRadMapDirty(true);
-                    }}
-                  />
-                </label>
-              </div>
+              <>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                  <label className="block min-w-0 flex-1 text-sm text-[var(--mm-text2)]">
+                    Path as Radarr reports it
+                    <div className="mt-1 flex flex-col gap-2 sm:flex-row">
+                      <input
+                        className="mm-input w-full font-mono text-sm"
+                        value={radArr}
+                        disabled={dis}
+                        onChange={(e) => {
+                          setRadArr(e.target.value);
+                          setRadMapDirty(true);
+                        }}
+                      />
+                      <ServerFolderPickerButton
+                        title="Choose Radarr Movies path"
+                        value={radArr}
+                        disabled={dis}
+                        onSelect={(path) => {
+                          setRadArr(path);
+                          setRadMapDirty(true);
+                        }}
+                      />
+                    </div>
+                  </label>
+                  <label className="block min-w-0 flex-1 text-sm text-[var(--mm-text2)]">
+                    Path as MediaMop sees it
+                    <div className="mt-1 flex flex-col gap-2 sm:flex-row">
+                      <input
+                        className="mm-input w-full font-mono text-sm"
+                        value={radSub}
+                        disabled={dis}
+                        onChange={(e) => {
+                          setRadSub(e.target.value);
+                          setRadMapDirty(true);
+                        }}
+                      />
+                      <ServerFolderPickerButton
+                        title="Choose MediaMop Movies path"
+                        value={radSub}
+                        disabled={dis}
+                        onSelect={(path) => {
+                          setRadSub(path);
+                          setRadMapDirty(true);
+                        }}
+                      />
+                    </div>
+                  </label>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className={mmActionButtonClass({ variant: "secondary", disabled: dis || radRootFoldersFetch.isPending })}
+                    disabled={dis || radRootFoldersFetch.isPending}
+                    onClick={() => void detectRadarrRootFolders()}
+                  >
+                    {radRootFoldersFetch.isPending ? "Detecting..." : "Detect Radarr paths"}
+                  </button>
+                  <p className="basis-full text-xs text-[var(--mm-text2)]">
+                    Pulls Radarr root folders through the API. Use these when Radarr reports container or NAS paths differently from MediaMop.
+                  </p>
+                </div>
+                <ArrRootFolderChoices
+                  label="Radarr"
+                  folders={radRootFolders}
+                  message={radRootMessage}
+                  error={radRootError}
+                  onUseArr={(path) => {
+                    setRadArr(path);
+                    setRadMapDirty(true);
+                  }}
+                  onUseBoth={(path) => {
+                    setRadArr(path);
+                    setRadSub(path);
+                    setRadMapDirty(true);
+                  }}
+                />
+              </>
             ) : null}
             <button
               type="button"

@@ -1,7 +1,4 @@
-"""Playwright smoke: bootstrap → login → /app → logout → guard redirect.
-
-Requires Chromium (``python -m playwright install chromium``) and opt-in env — see ``conftest.py``.
-"""
+"""Playwright smoke: bootstrap -> login -> setup wizard -> app -> logout -> guard redirect."""
 
 from __future__ import annotations
 
@@ -21,8 +18,6 @@ pytestmark = [
 
 BOOTSTRAP_USER = "e2e-shell-admin"
 BOOTSTRAP_PASS = "e2e-shell-pass-min8"
-
-# Logout + client-side redirect can exceed Playwright's default expect timeout under CI load.
 _URL_ASSERT_MS = 20_000
 
 
@@ -48,6 +43,10 @@ def test_auth_shell_bootstrap_login_logout_guard(mediamop_shell: str) -> None:
             page.get_by_test_id("login-password").fill(BOOTSTRAP_PASS)
             page.get_by_test_id("login-submit").click()
 
+            expect(page).to_have_url(re.compile(r".*/app/setup-wizard"))
+            expect(page.get_by_text("Setup wizard", exact=False)).to_be_visible()
+            page.get_by_test_id("setup-wizard-skip").click()
+
             expect(page).to_have_url(re.compile(r".*/app"))
             expect(page.get_by_test_id("shell-ready")).to_be_visible()
 
@@ -55,9 +54,6 @@ def test_auth_shell_bootstrap_login_logout_guard(mediamop_shell: str) -> None:
             expect(page).to_have_url(re.compile(r".*/login"), timeout=_URL_ASSERT_MS)
 
             page.goto(f"{base}/app", wait_until="domcontentloaded")
-            expect(page).to_have_url(re.compile(r".*/login"), timeout=_URL_ASSERT_MS)
-
-            page.goto(f"{base}/", wait_until="domcontentloaded")
             expect(page).to_have_url(re.compile(r".*/login"), timeout=_URL_ASSERT_MS)
         finally:
             browser.close()

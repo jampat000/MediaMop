@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from "react";
 import { PageLoading } from "../../components/shared/page-loading";
 import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
 import { MmListboxPicker, type MmListboxOption } from "../../components/ui/mm-listbox-picker";
+import { ServerFolderPickerButton } from "../../components/ui/server-folder-picker-button";
 import { useMeQuery } from "../../lib/auth/queries";
 import { useRefinerPathSettingsQuery, useRefinerPathSettingsSaveMutation } from "../../lib/refiner/queries";
 import { mmActionButtonClass, mmEditableTextFieldClass, mmTechnicalMonoSmallClass } from "../../lib/ui/mm-control-roles";
@@ -62,6 +63,8 @@ export function RefinerPathSettingsSection() {
       tvWatchedFolderInterval !== String(q.data.tv_watched_folder_check_interval_seconds));
   const tvNeedsOutput = tvWatched.trim().length > 0;
   const tvOutputMissing = tvNeedsOutput && tvOutput.trim().length === 0;
+  const movieNeedsOutput = watched.trim().length > 0;
+  const movieOutputMissing = movieNeedsOutput && output.trim().length === 0;
 
   if (q.isPending || me.isPending) {
     return <PageLoading label="Loading Refiner path settings" />;
@@ -92,6 +95,37 @@ export function RefinerPathSettingsSection() {
   const d = q.data;
   const effectiveMovieWorkPreview = work.trim() ? work.trim() : d.effective_work_folder;
   const effectiveTvWorkPreview = tvWork.trim() ? tvWork.trim() : d.effective_tv_work_folder;
+
+  function renderFolderInput({
+    label,
+    value,
+    setter,
+    title,
+    required,
+  }: {
+    label: string;
+    value: string;
+    setter: (value: string) => void;
+    title: string;
+    required?: boolean;
+  }) {
+    return (
+      <label className="block">
+        <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">{label}</span>
+        <div className="mt-1 flex flex-col gap-2 sm:flex-row">
+          <input
+            className={mmEditableTextFieldClass}
+            value={value}
+            disabled={!editable || save.isPending}
+            onChange={(e) => setter(e.target.value)}
+            placeholder=""
+            required={required}
+          />
+          <ServerFolderPickerButton title={title} value={value} disabled={!editable || save.isPending} onSelect={setter} />
+        </div>
+      </label>
+    );
+  }
 
   return (
     <div className="mm-bubble-stack w-full min-w-0" data-testid="refiner-path-settings">
@@ -195,41 +229,36 @@ export function RefinerPathSettingsSection() {
           </p>
           <div className="mt-6 flex min-h-0 flex-1 flex-col">
             <div className="mm-card-action-body flex-1 min-h-0">
-            <label className="block">
-              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Watched folder</span>
-              <input
-                className={mmEditableTextFieldClass}
-                value={tvWatched}
-                disabled={!editable || save.isPending}
-                onChange={(e) => setTvWatched(e.target.value)}
-                placeholder=""
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Work / temp folder</span>
-              <input
-                className={mmEditableTextFieldClass}
-                value={tvWork}
-                disabled={!editable || save.isPending}
-                onChange={(e) => setTvWork(e.target.value)}
-                placeholder=""
-              />
+            <div>
+              {renderFolderInput({
+                label: "Watched folder",
+                value: tvWatched,
+                setter: setTvWatched,
+                title: "Choose TV watched folder",
+              })}
+              {tvWatched.trim() && !d.refiner_tv_watched_folder_exists ? (
+                <span className="mt-1 block text-xs text-amber-200/90">
+                  This folder is not on disk yet. Save is allowed. Refiner will warn at runtime until it exists.
+                </span>
+              ) : null}
+            </div>
+            <div>
+              {renderFolderInput({
+                label: "Work / temp folder",
+                value: tvWork,
+                setter: setTvWork,
+                title: "Choose TV work folder",
+              })}
               <span className="mt-1 block text-xs text-[var(--mm-text3)]">
                 Effective work folder now: <span className={mmTechnicalMonoSmallClass}>{effectiveTvWorkPreview}</span>
               </span>
-            </label>
-            <label className="block">
-              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-                Output folder
-              </span>
-              <input
-                className={mmEditableTextFieldClass}
-                value={tvOutput}
-                disabled={!editable || save.isPending}
-                onChange={(e) => setTvOutput(e.target.value)}
-                placeholder=""
-              />
-            </label>
+            </div>
+            {renderFolderInput({
+              label: "Output folder",
+              value: tvOutput,
+              setter: setTvOutput,
+              title: "Choose TV output folder",
+            })}
             <div className="border-t border-[var(--mm-border)] pt-6 pb-6">
               <span id={tvIntervalLabelId} className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
                 Watched folder interval
@@ -263,13 +292,9 @@ export function RefinerPathSettingsSection() {
                 disabled={!editable || !tvDirty || save.isPending || tvOutputMissing}
                 onClick={() =>
                   save.mutate({
-                    refiner_watched_folder: (q.data?.refiner_watched_folder ?? "").trim()
-                      ? (q.data?.refiner_watched_folder ?? "").trim()
-                      : null,
-                    refiner_work_folder: (q.data?.refiner_work_folder ?? "").trim()
-                      ? (q.data?.refiner_work_folder ?? "").trim()
-                      : null,
-                    refiner_output_folder: (q.data?.refiner_output_folder ?? "").trim(),
+                    refiner_watched_folder: watched.trim() ? watched.trim() : null,
+                    refiner_work_folder: work.trim() ? work.trim() : null,
+                    refiner_output_folder: output.trim() ? output.trim() : null,
                     refiner_tv_paths_included: true,
                     refiner_tv_watched_folder: tvWatched.trim() ? tvWatched.trim() : null,
                     refiner_tv_work_folder: tvWork.trim() ? tvWork.trim() : null,
@@ -279,7 +304,7 @@ export function RefinerPathSettingsSection() {
                   })
                 }
               >
-                {save.isPending ? "Saving…" : "Save TV path settings"}
+                {save.isPending ? "Saving..." : "Save TV path settings"}
               </button>
             </div>
           </div>
@@ -295,42 +320,37 @@ export function RefinerPathSettingsSection() {
           </p>
           <div className="mt-6 flex min-h-0 flex-1 flex-col">
             <div className="mm-card-action-body flex-1 min-h-0">
-            <label className="block">
-              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Watched folder</span>
-              <input
-                className={mmEditableTextFieldClass}
-                value={watched}
-                disabled={!editable || save.isPending}
-                onChange={(e) => setWatched(e.target.value)}
-                placeholder=""
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Work / temp folder</span>
-              <input
-                className={mmEditableTextFieldClass}
-                value={work}
-                disabled={!editable || save.isPending}
-                onChange={(e) => setWork(e.target.value)}
-                placeholder=""
-              />
+            <div>
+              {renderFolderInput({
+                label: "Watched folder",
+                value: watched,
+                setter: setWatched,
+                title: "Choose Movies watched folder",
+              })}
+              {watched.trim() && !d.refiner_watched_folder_exists ? (
+                <span className="mt-1 block text-xs text-amber-200/90">
+                  This folder is not on disk yet. Save is allowed. Refiner will warn at runtime until it exists.
+                </span>
+              ) : null}
+            </div>
+            <div>
+              {renderFolderInput({
+                label: "Work / temp folder",
+                value: work,
+                setter: setWork,
+                title: "Choose Movies work folder",
+              })}
               <span className="mt-1 block text-xs text-[var(--mm-text3)]">
                 Effective work folder now: <span className={mmTechnicalMonoSmallClass}>{effectiveMovieWorkPreview}</span>
               </span>
-            </label>
-            <label className="block">
-              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-                Output folder
-              </span>
-              <input
-                className={mmEditableTextFieldClass}
-                value={output}
-                disabled={!editable || save.isPending}
-                onChange={(e) => setOutput(e.target.value)}
-                placeholder=""
-                required
-              />
-            </label>
+            </div>
+            {renderFolderInput({
+              label: "Output folder",
+              value: output,
+              setter: setOutput,
+              title: "Choose Movies output folder",
+              required: true,
+            })}
             <div className="border-t border-[var(--mm-border)] pt-6 pb-6">
               <span id={movieIntervalLabelId} className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
                 Watched folder interval
@@ -349,35 +369,34 @@ export function RefinerPathSettingsSection() {
               />
             </div>
             </div>
+            {movieOutputMissing ? (
+              <p className="text-xs text-amber-200/90">
+                Set a Movies output folder before saving when Movies watched is set.
+              </p>
+            ) : null}
             <div className="mm-card-action-footer">
               <button
                 type="button"
                 className={mmActionButtonClass({
                   variant: "primary",
-                  disabled: !editable || !moviesDirty || save.isPending || !output.trim(),
+                  disabled: !editable || !moviesDirty || save.isPending || movieOutputMissing,
                 })}
-                disabled={!editable || !moviesDirty || save.isPending || !output.trim()}
+                disabled={!editable || !moviesDirty || save.isPending || movieOutputMissing}
                 onClick={() =>
                   save.mutate({
                     refiner_watched_folder: watched.trim() ? watched.trim() : null,
                     refiner_work_folder: work.trim() ? work.trim() : null,
-                    refiner_output_folder: output.trim(),
+                    refiner_output_folder: output.trim() ? output.trim() : null,
                     refiner_tv_paths_included: true,
-                    refiner_tv_watched_folder: (q.data?.refiner_tv_watched_folder ?? "").trim()
-                      ? (q.data?.refiner_tv_watched_folder ?? "").trim()
-                      : null,
-                    refiner_tv_work_folder: (q.data?.refiner_tv_work_folder ?? "").trim()
-                      ? (q.data?.refiner_tv_work_folder ?? "").trim()
-                      : null,
-                    refiner_tv_output_folder: (q.data?.refiner_tv_output_folder ?? "").trim()
-                      ? (q.data?.refiner_tv_output_folder ?? "").trim()
-                      : null,
+                    refiner_tv_watched_folder: tvWatched.trim() ? tvWatched.trim() : null,
+                    refiner_tv_work_folder: tvWork.trim() ? tvWork.trim() : null,
+                    refiner_tv_output_folder: tvOutput.trim() ? tvOutput.trim() : null,
                     movie_watched_folder_check_interval_seconds: Number.parseInt(movieWatchedFolderInterval, 10),
                     tv_watched_folder_check_interval_seconds: Number.parseInt(tvWatchedFolderInterval, 10),
                   })
                 }
               >
-                {save.isPending ? "Saving…" : "Save Movies path settings"}
+                {save.isPending ? "Saving..." : "Save Movies path settings"}
               </button>
             </div>
           </div>

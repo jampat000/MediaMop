@@ -18,6 +18,7 @@ from typing import Literal
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
+from mediamop.platform.http.request_context import job_logging_context
 from mediamop.modules.queue_worker.job_kind_boundaries import (
     REFINER_QUEUE_JOB_KIND_PREFIX,
     job_kind_forbidden_on_refiner_lane,
@@ -162,7 +163,8 @@ def process_one_refiner_job(
         return "processed"
 
     try:
-        handler(ctx)
+        with job_logging_context(ctx.id):
+            handler(ctx)
     except Exception as exc:
         logger.exception("Refiner job handler failed for job_id=%s kind=%s", ctx.id, ctx.job_kind)
         err_text = str(exc)[:10_000]
