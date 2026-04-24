@@ -13,8 +13,8 @@
  * Env:
  *   OVERVIEW_SHOT_BASE_URL   default http://127.0.0.1:8782
  *   OVERVIEW_SHOT_OUT        default <repo>/tmp/overview-sections
- *   OVERVIEW_SHOT_USER       default admin
- *   OVERVIEW_SHOT_PASS       default password123
+ *   OVERVIEW_SHOT_USER       required
+ *   OVERVIEW_SHOT_PASS       required
  */
 
 const fs = require("fs");
@@ -24,6 +24,14 @@ const { createRequire } = require("module");
 const repoRoot = path.resolve(__dirname, "..");
 const baseUrl = (process.env.OVERVIEW_SHOT_BASE_URL || "http://127.0.0.1:8782").replace(/\/$/, "");
 const outDir = process.env.OVERVIEW_SHOT_OUT || path.join(repoRoot, "tmp", "overview-sections");
+const shotUser = process.env.OVERVIEW_SHOT_USER;
+const shotPass = process.env.OVERVIEW_SHOT_PASS;
+
+if (!shotUser || !shotPass) {
+  // eslint-disable-next-line no-console
+  console.error("Set OVERVIEW_SHOT_USER and OVERVIEW_SHOT_PASS for the local account before capturing screenshots.");
+  process.exit(1);
+}
 
 const requirePlaywright = createRequire(path.join(__dirname, "package.json"));
 let chromium;
@@ -43,8 +51,8 @@ async function loginViaApi(page) {
   const csrf = await csrfRes.json();
   const loginRes = await page.request.post(`${baseUrl}/api/v1/auth/login`, {
     data: {
-      username: process.env.OVERVIEW_SHOT_USER || "admin",
-      password: process.env.OVERVIEW_SHOT_PASS || "password123",
+      username: shotUser,
+      password: shotPass,
       csrf_token: csrf.csrf_token,
     },
     headers: {

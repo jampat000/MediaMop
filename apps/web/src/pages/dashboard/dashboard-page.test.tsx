@@ -77,7 +77,7 @@ describe("DashboardPage", () => {
       isError: false,
       data: {
         scope_note: "Read-only overview.",
-        system: { api_version: "0.0.0", environment: "test", healthy: true },
+        system: { api_version: "1.0.0", environment: "test", healthy: true },
         activity_summary: { events_last_24h: 0, latest: null },
       },
     });

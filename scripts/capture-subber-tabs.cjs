@@ -9,8 +9,8 @@
  * Env:
  *   SUBBER_SHOT_BASE_URL   default http://127.0.0.1:8782
  *   SUBBER_SHOT_OUT        default <repo>/tmp/subber-tabs
- *   SUBBER_SHOT_USER       default admin
- *   SUBBER_SHOT_PASS       default password123
+ *   SUBBER_SHOT_USER       required unless OVERVIEW_SHOT_USER is set
+ *   SUBBER_SHOT_PASS       required unless OVERVIEW_SHOT_PASS is set
  */
 
 const fs = require("fs");
@@ -35,8 +35,11 @@ async function loginViaApi(page) {
   const csrfRes = await page.request.get(`${baseUrl}/api/v1/auth/csrf`);
   if (!csrfRes.ok()) throw new Error(`csrf failed ${csrfRes.status()}`);
   const csrf = await csrfRes.json();
-  const user = process.env.SUBBER_SHOT_USER || process.env.OVERVIEW_SHOT_USER || "admin";
-  const pass = process.env.SUBBER_SHOT_PASS || process.env.OVERVIEW_SHOT_PASS || "password123";
+  const user = process.env.SUBBER_SHOT_USER || process.env.OVERVIEW_SHOT_USER;
+  const pass = process.env.SUBBER_SHOT_PASS || process.env.OVERVIEW_SHOT_PASS;
+  if (!user || !pass) {
+    throw new Error("Set SUBBER_SHOT_USER/SUBBER_SHOT_PASS or OVERVIEW_SHOT_USER/OVERVIEW_SHOT_PASS before capturing screenshots.");
+  }
   const loginRes = await page.request.post(`${baseUrl}/api/v1/auth/login`, {
     data: {
       username: user,

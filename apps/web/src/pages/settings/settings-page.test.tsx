@@ -32,12 +32,12 @@ const minimalSuiteSettings: SuiteSettingsOut = {
 };
 
 const minimalUpdateStatus: SuiteUpdateStatusOut = {
-  current_version: "0.0.0",
+  current_version: "1.0.0",
   install_type: "source",
   status: "up_to_date",
-  summary: "This install is already on MediaMop 0.0.0.",
-  latest_version: "0.0.0",
-  latest_name: "MediaMop 0.0.0",
+  summary: "This install is already on MediaMop 1.0.0.",
+  latest_version: "1.0.0",
+  latest_name: "MediaMop 1.0.0",
   published_at: null,
   release_url: "https://example.com/release",
   windows_installer_url: null,
