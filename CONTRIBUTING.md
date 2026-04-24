@@ -46,6 +46,14 @@ pytest tests/e2e/mediamop -q --tb=short
 
 See **[`docs/local-development.md`](docs/local-development.md)** for env layout and CI parity.
 
+**Remote Docker validation** (no local Docker Desktop required):
+
+```powershell
+.\scripts\verify-docker-remote.ps1
+```
+
+This triggers the GitHub `Test` workflow for the current ref and watches it. The Docker build and smoke test run on GitHub-hosted runners.
+
 ## Security
 
 Do **not** commit `.env`, real secrets, or production database paths. Use `.env.example` patterns only.
