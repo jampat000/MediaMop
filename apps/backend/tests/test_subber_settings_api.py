@@ -354,6 +354,56 @@ def test_put_settings_path_mapping_radarr(client_admin: TestClient) -> None:
     assert b.get("radarr_path_subber") == "/mnt/nas/movies"
 
 
+class _JsonResponse:
+    status = 200
+
+    def __init__(self, payload: str) -> None:
+        self._payload = payload
+
+    def __enter__(self) -> "_JsonResponse":
+        return self
+
+    def __exit__(self, *_args: object) -> None:
+        return None
+
+    def read(self) -> bytes:
+        return self._payload.encode("utf-8")
+
+
+def test_sonarr_root_folders_uses_saved_connection(client_admin: TestClient) -> None:
+    _login_admin(client_admin)
+    _put_settings(client_admin, {"sonarr_base_url": "http://sonarr.local", "sonarr_api_key": "son-key"})
+    tok = csrf(client_admin)
+    with patch("urllib.request.urlopen", return_value=_JsonResponse('[{"path":"/tv","freeSpace":1073741824},{"path":"/tv"}]')) as mocked:
+        r = client_admin.post(
+            "/api/v1/subber/settings/sonarr-root-folders",
+            json={"csrf_token": tok},
+            headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
+        )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["ok"] is True
+    assert body["folders"] == [{"path": "/tv", "free_space": 1073741824}]
+    req = mocked.call_args.args[0]
+    assert req.full_url == "http://sonarr.local/api/v3/rootfolder"
+    assert dict(req.header_items())["X-api-key"] == "son-key"
+
+
+def test_radarr_root_folders_missing_connection_is_user_safe(client_admin: TestClient) -> None:
+    _login_admin(client_admin)
+    tok = csrf(client_admin)
+    r = client_admin.post(
+        "/api/v1/subber/settings/radarr-root-folders",
+        json={"csrf_token": tok},
+        headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["ok"] is False
+    assert body["folders"] == []
+    assert "Save the Radarr URL" in body["message"]
+
+
 def test_put_provider_enabled(client_admin: TestClient) -> None:
     _login_admin(client_admin)
     r0 = client_admin.get("/api/v1/subber/providers")

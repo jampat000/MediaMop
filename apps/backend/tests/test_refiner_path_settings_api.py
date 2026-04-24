@@ -53,11 +53,13 @@ def test_refiner_path_settings_get_shape(client_with_admin: TestClient) -> None:
     assert r.status_code == 200, r.text
     body = r.json()
     assert "refiner_watched_folder" in body
+    assert "refiner_watched_folder_exists" in body
     assert "refiner_work_folder" in body
     assert "refiner_output_folder" in body
     assert "resolved_default_work_folder" in body
     assert "effective_work_folder" in body
     assert "refiner_tv_watched_folder" in body
+    assert "refiner_tv_watched_folder_exists" in body
     assert "refiner_tv_work_folder" in body
     assert "refiner_tv_output_folder" in body
     assert "resolved_default_tv_work_folder" in body
@@ -126,6 +128,62 @@ def test_refiner_path_settings_put_save_without_watched_folder_succeeds(
     assert body["refiner_watched_folder"] is None
     settings = MediaMopSettings.load()
     assert body["refiner_work_folder"] == resolved_default_refiner_work_folder(mediamop_home=settings.mediamop_home)
+
+
+def test_refiner_path_settings_put_allows_missing_watched_folder_on_disk(
+    client_with_admin: TestClient,
+    tmp_path: Path,
+) -> None:
+    _login_admin(client_with_admin)
+    missing_watch = tmp_path / "missing-watch"
+    out = tmp_path / "out"
+    out.mkdir()
+    tok = fetch_csrf(client_with_admin)
+    r = client_with_admin.put(
+        "/api/v1/refiner/path-settings",
+        json={
+            "csrf_token": tok,
+            "refiner_watched_folder": str(missing_watch.resolve()),
+            "refiner_work_folder": None,
+            "refiner_output_folder": str(out.resolve()),
+        },
+        headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["refiner_watched_folder"] == str(missing_watch.resolve())
+    assert body["refiner_watched_folder_exists"] is False
+
+
+def test_refiner_path_settings_put_allows_tv_save_without_movies_output(
+    client_with_admin: TestClient,
+    tmp_path: Path,
+) -> None:
+    _login_admin(client_with_admin)
+    tv_out = tmp_path / "tv-out"
+    tv_out.mkdir()
+    tok = fetch_csrf(client_with_admin)
+    r = client_with_admin.put(
+        "/api/v1/refiner/path-settings",
+        json={
+            "csrf_token": tok,
+            "refiner_watched_folder": None,
+            "refiner_work_folder": None,
+            "refiner_output_folder": None,
+            "refiner_tv_paths_included": True,
+            "refiner_tv_watched_folder": str((tmp_path / "tv-watch").resolve()),
+            "refiner_tv_work_folder": None,
+            "refiner_tv_output_folder": str(tv_out.resolve()),
+            "movie_watched_folder_check_interval_seconds": 300,
+            "tv_watched_folder_check_interval_seconds": 300,
+        },
+        headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["refiner_output_folder"] is None
+    assert body["refiner_tv_watched_folder"] == str((tmp_path / "tv-watch").resolve())
+    assert body["refiner_tv_watched_folder_exists"] is False
 
 
 def test_resolve_refiner_path_runtime_fails_without_watched_folder(client_with_admin: TestClient) -> None:

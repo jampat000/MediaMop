@@ -6,13 +6,14 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { DISPLAY_DENSITY_STORAGE_KEY } from "../../lib/ui/display-density";
 import type { UserPublic } from "../../lib/api/types";
 import { qk } from "../../lib/auth/queries";
-import { activityRecentSettingsKey } from "../../lib/activity/queries";
 import {
   suiteConfigurationBackupsQueryKey,
+  suiteLogsQueryKey,
   suiteSecurityOverviewQueryKey,
   suiteSettingsQueryKey,
+  suiteUpdateStatusQueryKey,
 } from "../../lib/suite/queries";
-import type { SuiteSecurityOverviewOut, SuiteSettingsOut } from "../../lib/suite/types";
+import type { SuiteLogsOut, SuiteSecurityOverviewOut, SuiteSettingsOut, SuiteUpdateStatusOut } from "../../lib/suite/types";
 import { SettingsPage } from "./settings-page";
 
 const operatorMe: UserPublic = { id: 1, username: "alice", role: "operator" };
@@ -21,12 +22,28 @@ const viewerMe: UserPublic = { id: 2, username: "bob", role: "viewer" };
 const minimalSuiteSettings: SuiteSettingsOut = {
   product_display_name: "MediaMop",
   signed_in_home_notice: null,
+  setup_wizard_state: "pending",
   app_timezone: "UTC",
   log_retention_days: 30,
   configuration_backup_enabled: false,
   configuration_backup_interval_hours: 24,
   configuration_backup_last_run_at: null,
   updated_at: "2026-04-11T00:00:00Z",
+};
+
+const minimalUpdateStatus: SuiteUpdateStatusOut = {
+  current_version: "1.0.0",
+  install_type: "source",
+  status: "up_to_date",
+  summary: "This install is already on MediaMop 1.0.0.",
+  latest_version: "1.0.0",
+  latest_name: "MediaMop 1.0.0",
+  published_at: null,
+  release_url: "https://example.com/release",
+  windows_installer_url: null,
+  docker_image: null,
+  docker_tag: null,
+  docker_update_command: null,
 };
 
 const minimalSecurity: SuiteSecurityOverviewOut = {
@@ -43,6 +60,16 @@ const minimalSecurity: SuiteSecurityOverviewOut = {
     "These safety options are read when the app starts from the server configuration file. To change them, ask whoever runs the server to edit that file and restart the app.",
 };
 
+const minimalLogs: SuiteLogsOut = {
+  items: [],
+  total: 0,
+  counts: {
+    error: 0,
+    warning: 0,
+    information: 0,
+  },
+};
+
 function wrap(ui: ReactNode, client: QueryClient) {
   return (
     <QueryClientProvider client={client}>
@@ -56,8 +83,9 @@ function renderSettings(me: UserPublic) {
   qc.setQueryData(suiteSettingsQueryKey, minimalSuiteSettings);
   qc.setQueryData(suiteSecurityOverviewQueryKey, minimalSecurity);
   qc.setQueryData(qk.me, me);
-  qc.setQueryData(activityRecentSettingsKey, { items: [] });
   qc.setQueryData(suiteConfigurationBackupsQueryKey, { directory: "C:/MediaMop/backups/suite-configuration", items: [] });
+  qc.setQueryData(suiteUpdateStatusQueryKey, minimalUpdateStatus);
+  qc.setQueryData([...suiteLogsQueryKey, { level: undefined, search: undefined, has_exception: undefined, limit: 100 }], minimalLogs);
   return render(wrap(<SettingsPage />, qc));
 }
 
@@ -79,7 +107,6 @@ describe("SettingsPage (suite settings)", () => {
   it("hides save for viewers", () => {
     renderSettings(viewerMe);
     expect(screen.getByTestId("suite-settings-save-timezone")).toBeDisabled();
-    fireEvent.click(screen.getByRole("tab", { name: "Logs" }));
     expect(screen.getByTestId("suite-settings-save-logs")).toBeDisabled();
   });
 
@@ -101,11 +128,14 @@ describe("SettingsPage (suite settings)", () => {
     expect(screen.queryByText("Product name")).not.toBeInTheDocument();
     expect(screen.queryByText("Application logs")).not.toBeInTheDocument();
     expect(screen.getByText("Timezone")).toBeInTheDocument();
+    expect(screen.getByText("Setup wizard")).toBeInTheDocument();
+    expect(screen.getByText("Upgrade")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.queryByText("Log retention (days)")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("tab", { name: "Logs" }));
-    expect(screen.getByRole("heading", { name: "Logs" })).toBeInTheDocument();
     expect(screen.getByText("Log retention (days)")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Logs" }));
+    expect(screen.getByText("Search logs")).toBeInTheDocument();
+    expect(screen.getByText("System events")).toBeInTheDocument();
+    expect(screen.queryByText("Log retention (days)")).not.toBeInTheDocument();
     expect(screen.queryByText("Optional home dashboard notice")).not.toBeInTheDocument();
   });
 

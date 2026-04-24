@@ -11,3 +11,17 @@ class RefinerOverviewStatsOut(BaseModel):
         description="Terminal-failure refiner.file.remux_pass.v1 jobs in the window (failed + finalize-failed).",
     )
     success_rate_percent: float = Field(ge=0.0, le=100.0)
+    output_written_count: int = Field(
+        ge=0,
+        description="Refiner remux activity rows that wrote a new output file in the window.",
+    )
+    already_optimized_count: int = Field(
+        ge=0,
+        description="Refiner remux activity rows skipped because the file already matched the plan.",
+    )
+    net_space_saved_bytes: int = Field(
+        description="Net source-bytes minus output-bytes across output-written remuxes in the window.",
+    )
+    net_space_saved_percent: float = Field(
+        description="Net size reduction percentage across output-written remuxes in the window.",
+    )

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mediamop-backend"
-version = "0.0.0"
+version = "1.0.0"
 description = "MediaMop backend spine (FastAPI, SQLite, Alembic)"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -18,6 +18,7 @@ dependencies = [
   "itsdangerous>=2.1",
   "cryptography>=44.0.0",
   "httpx>=0.27",
+  "tzdata>=2025.1",
 ]
 
 [project.optional-dependencies]

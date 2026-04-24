@@ -14,6 +14,14 @@ export function AppShell() {
   const logout = useLogoutMutation();
   const suite = useSuiteSettingsQuery();
   const productTitle = (suite.data?.product_display_name ?? "MediaMop").trim() || "MediaMop";
+  const handleSignOut = () => {
+    logout.mutate(undefined, {
+      onSettled: () => {
+        navigate("/login", { replace: true });
+      },
+    });
+    navigate("/login", { replace: true });
+  };
 
   return (
     <div className="mm-app-layout" data-testid="shell-ready">
@@ -73,16 +81,7 @@ export function AppShell() {
               data-testid="sign-out"
               className="mm-sidebar-signout"
               disabled={logout.isPending}
-              onClick={() => {
-                void logout
-                  .mutateAsync()
-                  .catch(() => {
-                    // Always return to login even if API logout fails.
-                  })
-                  .finally(() => {
-                    navigate("/login", { replace: true });
-                  });
-              }}
+              onClick={handleSignOut}
             >
               {logout.isPending ? "Signing out…" : "Sign out"}
             </button>

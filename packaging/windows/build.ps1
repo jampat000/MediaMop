@@ -10,9 +10,71 @@ $backendDir = Join-Path $repoRoot "apps\\backend"
 $webDir = Join-Path $repoRoot "apps\\web"
 $specPath = Join-Path $PSScriptRoot "mediamop-tray.spec"
 $distRoot = Join-Path $repoRoot "dist\\windows"
-$py = Join-Path $backendDir ".venv\\Scripts\\python.exe"
-$pip = Join-Path $backendDir ".venv\\Scripts\\pip.exe"
-$pyinstaller = Join-Path $backendDir ".venv\\Scripts\\pyinstaller.exe"
+$venvScriptsDir = Join-Path $backendDir ".venv\\Scripts"
+$py = Join-Path $venvScriptsDir "python.exe"
+
+function Resolve-VenvExecutable {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$ScriptsDir,
+
+    [Parameter(Mandatory = $true)]
+    [string]$NamePattern,
+
+    [Parameter(Mandatory = $true)]
+    [string]$MissingMessage
+  )
+
+  $matches = Get-ChildItem -Path $ScriptsDir -Filter $NamePattern -ErrorAction SilentlyContinue | Sort-Object Name
+  if (-not $matches -or $matches.Count -eq 0) {
+    throw $MissingMessage
+  }
+  return $matches[0].FullName
+}
+
+function Resolve-SystemPython {
+  $candidates = @()
+  $pyLauncher = Get-Command py.exe -ErrorAction SilentlyContinue
+  if ($pyLauncher -and $pyLauncher.Source) {
+    $candidates += $pyLauncher.Source
+  }
+  $pythonExe = Get-Command python.exe -ErrorAction SilentlyContinue
+  if ($pythonExe -and $pythonExe.Source) {
+    $candidates += $pythonExe.Source
+  }
+
+  foreach ($candidate in $candidates) {
+    try {
+      if ($candidate -like '*\WindowsApps\*') {
+        continue
+      }
+
+      if ($candidate -match '\\py(?:thon)?(?:\.exe)?$') {
+        & $candidate -3 -c "import sys" *> $null
+        if ($LASTEXITCODE -eq 0) {
+          return @{
+            FilePath = $candidate
+            Arguments = @('-3')
+          }
+        }
+        continue
+      }
+
+      & $candidate -c "import sys" *> $null
+      if ($LASTEXITCODE -eq 0) {
+        return @{
+          FilePath = $candidate
+          Arguments = @()
+        }
+      }
+    } catch {
+      continue
+    }
+  }
+
+  throw "No usable system Python was found. Install Python 3 or ensure py.exe is available."
+}
+
 function Invoke-Native {
   param(
     [Parameter(Mandatory = $true)]
@@ -50,29 +112,68 @@ $buildVersion = if ($env:MEDIAMOP_BUILD_VERSION) {
 }
 
 if (-not (Test-Path $py)) {
+  $systemPython = Resolve-SystemPython
   Push-Location $backendDir
   try {
-    Invoke-Native -FilePath python -ArgumentList @("-m", "venv", ".venv")
+    Invoke-Native -FilePath $systemPython.FilePath -ArgumentList @($systemPython.Arguments + @("-m", "venv", ".venv"))
   } finally {
     Pop-Location
   }
 }
 
 if (-not $SkipWebBuild) {
-  Push-Location $webDir
+  $webBuildRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("mediamop-web-build-" + [System.Guid]::NewGuid().ToString("N"))
+  $webBuildWebDir = Join-Path $webBuildRoot "apps\\web"
+  $webBuildScriptsDir = Join-Path $webBuildRoot "scripts"
   try {
+    New-Item -ItemType Directory -Path $webBuildWebDir | Out-Null
+    New-Item -ItemType Directory -Path $webBuildScriptsDir | Out-Null
+    Copy-Item -LiteralPath (Join-Path $repoRoot "scripts\\dev-ports.json") -Destination (Join-Path $webBuildScriptsDir "dev-ports.json") -Force
+    $copyArgs = @(
+      $webDir,
+      $webBuildWebDir,
+      "/MIR",
+      "/XD",
+      "node_modules",
+      "dist",
+      ".vite",
+      "tmp",
+      "/XF",
+      "*.log"
+    )
+    & robocopy @copyArgs | Out-Host
+    if ($LASTEXITCODE -gt 7) {
+      throw ("Command failed with exit code {0}: robocopy {1}" -f $LASTEXITCODE, ($copyArgs -join " "))
+    }
+
+    Push-Location $webBuildWebDir
     Invoke-Native -FilePath npm.cmd -ArgumentList @("ci")
     Invoke-Native -FilePath npm.cmd -ArgumentList @("run", "build")
+
+    $sourceDist = Join-Path $webBuildWebDir "dist"
+    $targetDist = Join-Path $webDir "dist"
+    if (Test-Path $targetDist) {
+      Remove-Item -LiteralPath $targetDist -Recurse -Force
+    }
+    Copy-Item -LiteralPath $sourceDist -Destination $targetDist -Recurse -Force
   } finally {
-    Pop-Location
+    if ((Get-Location).Path -eq $webBuildRoot) {
+      Pop-Location
+    }
+    if (Test-Path $webBuildRoot) {
+      Remove-Item -LiteralPath $webBuildRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
   }
 }
 
 Push-Location $backendDir
 try {
+  Invoke-Native -FilePath $py -ArgumentList @("-m", "ensurepip", "--upgrade")
+  $pip = Resolve-VenvExecutable -ScriptsDir $venvScriptsDir -NamePattern "pip*.exe" -MissingMessage "pip launcher was not created in the backend virtual environment."
   Invoke-Native -FilePath $py -ArgumentList @("-m", "pip", "install", "--upgrade", "pip")
-  Invoke-Native -FilePath $py -ArgumentList @("-m", "pip", "install", "-e", ".")
-  Invoke-Native -FilePath $py -ArgumentList @("-m", "pip", "install", "pillow>=11.0.0", "pyinstaller>=6.12.0", "pystray>=0.19.5")
+  Invoke-Native -FilePath $pip -ArgumentList @("install", "-e", ".")
+  Invoke-Native -FilePath $pip -ArgumentList @("install", "pillow>=11.0.0", "pyinstaller>=6.12.0", "pystray>=0.19.5")
+  $pyinstaller = Resolve-VenvExecutable -ScriptsDir $venvScriptsDir -NamePattern "pyinstaller*.exe" -MissingMessage "pyinstaller launcher was not installed in the backend virtual environment."
 } finally {
   Pop-Location
 }

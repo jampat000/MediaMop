@@ -19,10 +19,12 @@ class SuiteSettingsRow(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     product_display_name: Mapped[str] = mapped_column(Text, nullable=False, server_default="MediaMop")
     signed_in_home_notice: Mapped[str | None] = mapped_column(Text, nullable=True)
+    setup_wizard_state: Mapped[str] = mapped_column(Text, nullable=False, server_default="pending")
     app_timezone: Mapped[str] = mapped_column(Text, nullable=False, server_default="UTC")
     log_retention_days: Mapped[int] = mapped_column(Integer, nullable=False, server_default="30")
     configuration_backup_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     configuration_backup_interval_hours: Mapped[int] = mapped_column(Integer, nullable=False, server_default="24")
+    configuration_backup_preferred_time: Mapped[str] = mapped_column(Text, nullable=False, server_default="02:00")
     configuration_backup_last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

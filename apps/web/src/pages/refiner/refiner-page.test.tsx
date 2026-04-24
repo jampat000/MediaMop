@@ -20,11 +20,13 @@ const operatorMe: UserPublic = { id: 1, username: "alice", role: "operator" };
 /** Seeded path API shape — matches Windows product defaults from the backend. */
 const minimalRefinerPathSettings: RefinerPathSettingsOut = {
   refiner_watched_folder: null,
+  refiner_watched_folder_exists: false,
   refiner_work_folder: null,
   refiner_output_folder: "",
   resolved_default_work_folder: "C:\\ProgramData\\Media\\refiner-movie-work",
   effective_work_folder: "C:\\ProgramData\\Media\\refiner-movie-work",
   refiner_tv_watched_folder: null,
+  refiner_tv_watched_folder_exists: false,
   refiner_tv_work_folder: null,
   refiner_tv_output_folder: null,
   resolved_default_tv_work_folder: "C:\\ProgramData\\MediaMop\\refiner-tv-work",

@@ -1,16 +1,31 @@
 import { apiFetch, readJson } from "./client";
 import type { ActivityRecentResponse } from "./types";
 
-export function activityRecentPath(options?: { limit?: number }): string {
+export type ActivityRecentFilters = {
+  limit?: number;
+  module?: string;
+  event_type?: string;
+  search?: string;
+  date_from?: string;
+  date_to?: string;
+};
+
+export function activityRecentPath(options?: ActivityRecentFilters): string {
+  const q = new URLSearchParams();
   const lim = options?.limit;
   if (lim !== undefined && Number.isFinite(lim)) {
-    const q = new URLSearchParams({ limit: String(Math.trunc(lim)) });
-    return `/api/v1/activity/recent?${q.toString()}`;
+    q.set("limit", String(Math.trunc(lim)));
   }
-  return "/api/v1/activity/recent";
+  if (options?.module) q.set("module", options.module);
+  if (options?.event_type) q.set("event_type", options.event_type);
+  if (options?.search) q.set("search", options.search);
+  if (options?.date_from) q.set("date_from", options.date_from);
+  if (options?.date_to) q.set("date_to", options.date_to);
+  const qs = q.toString();
+  return qs ? `/api/v1/activity/recent?${qs}` : "/api/v1/activity/recent";
 }
 
-export async function fetchActivityRecent(options?: { limit?: number }): Promise<ActivityRecentResponse> {
+export async function fetchActivityRecent(options?: ActivityRecentFilters): Promise<ActivityRecentResponse> {
   const r = await apiFetch(activityRecentPath(options));
   if (!r.ok) {
     throw new Error(`activity recent: ${r.status}`);

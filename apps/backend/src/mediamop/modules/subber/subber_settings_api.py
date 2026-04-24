@@ -20,6 +20,8 @@ from mediamop.modules.subber.subber_opensubtitles_client import USER_AGENT
 from mediamop.modules.subber import subber_opensubtitles_client as os_client
 from mediamop.modules.subber.subber_overview_service import build_subber_overview
 from mediamop.modules.subber.subber_schemas import (
+    SubberArrRootFolderOut,
+    SubberArrRootFoldersOut,
     SubberOverviewOut,
     SubberSettingsOut,
     SubberSettingsPutIn,
@@ -341,6 +343,52 @@ def _arr_status_probe(base_url: str, api_key: str) -> tuple[bool, str]:
         return False, str(exc)[:500]
 
 
+def _arr_api_key(settings: MediaMopSettings, ciphertext: str | None) -> str:
+    raw = decrypt_subber_credentials_json(settings, ciphertext or "") or "{}"
+    try:
+        kd = json.loads(raw)
+    except json.JSONDecodeError:
+        kd = {}
+    sec = kd.get("secrets") if isinstance(kd.get("secrets"), dict) else {}
+    return str(sec.get("api_key") or "").strip()
+
+
+def _arr_root_folders(base_url: str, api_key: str) -> tuple[bool, str, list[SubberArrRootFolderOut]]:
+    u = base_url.rstrip("/") + "/api/v3/rootfolder"
+    req = urllib.request.Request(  # noqa: S310
+        u,
+        headers={"X-Api-Key": api_key, "User-Agent": USER_AGENT},
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            code = int(getattr(resp, "status", 200))
+            if not (200 <= code < 300):
+                return False, f"HTTP {code}", []
+            payload = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        return False, f"HTTP {e.code}", []
+    except json.JSONDecodeError:
+        return False, "The server returned invalid JSON.", []
+    except Exception as exc:
+        return False, str(exc)[:500], []
+    if not isinstance(payload, list):
+        return False, "The server did not return a folder list.", []
+    folders: list[SubberArrRootFolderOut] = []
+    seen: set[str] = set()
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        path = str(item.get("path") or "").strip()
+        if not path or path in seen:
+            continue
+        free_raw = item.get("freeSpace", item.get("freeSpaceBytes"))
+        free_space = int(free_raw) if isinstance(free_raw, int) else None
+        folders.append(SubberArrRootFolderOut(path=path, free_space=free_space))
+        seen.add(path)
+    return True, f"Found {len(folders)} root folder{'s' if len(folders) != 1 else ''}.", folders
+
+
 @router.post("/settings/test-sonarr", response_model=SubberTestConnectionOut)
 def post_test_sonarr(
     _user: RequireOperatorDep,
@@ -365,6 +413,24 @@ def post_test_sonarr(
     return SubberTestConnectionOut(ok=ok, message=msg)
 
 
+@router.post("/settings/sonarr-root-folders", response_model=SubberArrRootFoldersOut)
+def post_sonarr_root_folders(
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    body: SubberCsrfIn,
+) -> SubberArrRootFoldersOut:
+    secret = settings.session_secret or ""
+    if not verify_csrf_token(secret, body.csrf_token):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
+    row = ensure_subber_settings_row(db)
+    api_key = _arr_api_key(settings, row.sonarr_credentials_ciphertext)
+    if not row.sonarr_base_url.strip() or not api_key:
+        return SubberArrRootFoldersOut(ok=False, message="Save the Sonarr URL and API key first.")
+    ok, msg, folders = _arr_root_folders(row.sonarr_base_url, api_key)
+    return SubberArrRootFoldersOut(ok=ok, message=msg, folders=folders)
+
+
 @router.post("/settings/test-radarr", response_model=SubberTestConnectionOut)
 def post_test_radarr(
     _user: RequireOperatorDep,
@@ -387,6 +453,24 @@ def post_test_radarr(
         return SubberTestConnectionOut(ok=False, message="Radarr URL or API key not set.")
     ok, msg = _arr_status_probe(row.radarr_base_url, api_key)
     return SubberTestConnectionOut(ok=ok, message=msg)
+
+
+@router.post("/settings/radarr-root-folders", response_model=SubberArrRootFoldersOut)
+def post_radarr_root_folders(
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    body: SubberCsrfIn,
+) -> SubberArrRootFoldersOut:
+    secret = settings.session_secret or ""
+    if not verify_csrf_token(secret, body.csrf_token):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
+    row = ensure_subber_settings_row(db)
+    api_key = _arr_api_key(settings, row.radarr_credentials_ciphertext)
+    if not row.radarr_base_url.strip() or not api_key:
+        return SubberArrRootFoldersOut(ok=False, message="Save the Radarr URL and API key first.")
+    ok, msg, folders = _arr_root_folders(row.radarr_base_url, api_key)
+    return SubberArrRootFoldersOut(ok=ok, message=msg, folders=folders)
 
 
 @router.get("/overview", response_model=SubberOverviewOut)

@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
+import httpx
+import pytest
 from sqlalchemy import func, select
 from starlette.testclient import TestClient
 
@@ -12,6 +16,8 @@ from mediamop.platform.activity.models import ActivityEvent
 from mediamop.platform.activity.service import record_activity_event
 from mediamop.platform.suite_settings.model import SuiteSettingsRow
 from mediamop.platform.suite_settings.service import apply_suite_settings_put
+from mediamop.platform.suite_settings.suite_configuration_backup_periodic import run_suite_configuration_backup_tick
+from mediamop.platform.suite_settings.suite_configuration_backup_service import list_suite_configuration_backups
 
 from tests.integration_helpers import auth_post, csrf as fetch_csrf, trusted_browser_origin_headers
 
@@ -51,10 +57,12 @@ def test_suite_settings_get_default_shape(client_with_admin: TestClient) -> None
     body = r.json()
     assert body["product_display_name"] == "MediaMop"
     assert body["signed_in_home_notice"] is None
+    assert body["setup_wizard_state"] == "pending"
     assert body["app_timezone"] in {"UTC", "America/New_York"}
     assert body["log_retention_days"] == 30
     assert body["configuration_backup_enabled"] is False
     assert body["configuration_backup_interval_hours"] == 24
+    assert body["configuration_backup_preferred_time"] == "02:00"
     assert body["configuration_backup_last_run_at"] is None
     assert "updated_at" in body
 
@@ -78,19 +86,23 @@ def test_suite_settings_put_persists(client_with_admin: TestClient) -> None:
             "csrf_token": tok,
             "product_display_name": "House Library",
             "signed_in_home_notice": "Welcome back.",
+            "setup_wizard_state": "skipped",
             "app_timezone": "UTC",
             "log_retention_days": 45,
             "configuration_backup_enabled": True,
             "configuration_backup_interval_hours": 12,
+            "configuration_backup_preferred_time": "03:30",
         },
         headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
     )
     assert r.status_code == 200, r.text
     assert r.json()["product_display_name"] == "House Library"
     assert r.json()["signed_in_home_notice"] == "Welcome back."
+    assert r.json()["setup_wizard_state"] == "skipped"
     assert r.json()["log_retention_days"] == 45
     assert r.json()["configuration_backup_enabled"] is True
     assert r.json()["configuration_backup_interval_hours"] == 12
+    assert r.json()["configuration_backup_preferred_time"] == "03:30"
 
     r2 = client_with_admin.get("/api/v1/suite/settings")
     assert r2.status_code == 200
@@ -101,9 +113,11 @@ def test_suite_settings_put_persists(client_with_admin: TestClient) -> None:
     with fac() as db:
         row = db.scalars(select(SuiteSettingsRow).where(SuiteSettingsRow.id == 1)).one()
         assert row.product_display_name == "House Library"
+        assert row.setup_wizard_state == "skipped"
         assert row.log_retention_days == 45
         assert row.configuration_backup_enabled is True
         assert row.configuration_backup_interval_hours == 12
+        assert row.configuration_backup_preferred_time == "03:30"
 
 
 def test_suite_settings_put_viewer_forbidden(client_with_viewer: TestClient) -> None:
@@ -239,3 +253,131 @@ def test_log_retention_prunes_old_activity_rows(client_with_admin: TestClient) -
         db.commit()
         n_old = db.scalar(select(func.count()).select_from(ActivityEvent).where(ActivityEvent.title == "old"))
     assert int(n_old or 0) == 0
+
+
+def test_suite_update_status_ok(client_with_admin: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    _login_admin(client_with_admin)
+    monkeypatch.setattr(
+        "mediamop.platform.suite_settings.update_service._fetch_latest_release_payload",
+        lambda: {
+            "tag_name": "v1.2.3",
+            "name": "MediaMop 1.2.3",
+            "html_url": "https://example.com/release",
+            "published_at": "2026-04-23T00:00:00Z",
+            "assets": [
+                {
+                    "name": "MediaMopSetup.exe",
+                    "browser_download_url": "https://example.com/MediaMopSetup.exe",
+                }
+            ],
+        },
+    )
+    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "1.0.0")
+    r = client_with_admin.get("/api/v1/suite/update-status")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["current_version"] == "1.0.0"
+    assert body["latest_version"] == "1.2.3"
+    assert body["status"] == "update_available"
+
+
+def test_suite_update_status_not_published_when_release_missing(
+    client_with_admin: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _login_admin(client_with_admin)
+
+    request = httpx.Request("GET", "https://api.github.com/repos/jampat000/MediaMop/releases/latest")
+    response = httpx.Response(404, request=request)
+
+    def _raise_not_found() -> None:
+        raise httpx.HTTPStatusError("not found", request=request, response=response)
+
+    monkeypatch.setattr(
+        "mediamop.platform.suite_settings.update_service._fetch_latest_release_payload",
+        _raise_not_found,
+    )
+    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "1.0.0")
+
+    r = client_with_admin.get("/api/v1/suite/update-status")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["status"] == "not_published"
+    assert "no public mediamop release is published yet" in body["summary"].lower()
+
+
+def test_suite_configuration_backup_tick_creates_snapshot(client_with_admin: TestClient) -> None:
+    _login_admin(client_with_admin)
+    tok = fetch_csrf(client_with_admin)
+    r = client_with_admin.put(
+        "/api/v1/suite/settings",
+        json={
+            "csrf_token": tok,
+            "product_display_name": "MediaMop",
+            "signed_in_home_notice": None,
+            "setup_wizard_state": "completed",
+            "app_timezone": "UTC",
+            "log_retention_days": 30,
+            "configuration_backup_enabled": True,
+            "configuration_backup_interval_hours": 6,
+            "configuration_backup_preferred_time": "04:15",
+        },
+        headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
+    )
+    assert r.status_code == 200, r.text
+
+    settings = MediaMopSettings.load()
+    engine = create_db_engine(settings)
+    fac = create_session_factory(engine)
+    with fac() as db:
+        _directory_before, rows_before = list_suite_configuration_backups(db, settings=settings)
+    created = run_suite_configuration_backup_tick(fac, settings=settings, now=datetime.now(UTC).replace(microsecond=0))
+    if created == 0:
+        created = run_suite_configuration_backup_tick(
+            fac,
+            settings=settings,
+            now=datetime.now(UTC).replace(microsecond=0) + timedelta(hours=7),
+        )
+    assert created == 1
+
+    with fac() as db:
+        directory, rows = list_suite_configuration_backups(db, settings=settings)
+        suite = db.scalars(select(SuiteSettingsRow).where(SuiteSettingsRow.id == 1)).one()
+        assert len(rows) >= len(rows_before) + 1
+        assert rows[0].size_bytes > 0
+        assert suite.configuration_backup_last_run_at is not None
+        assert suite.configuration_backup_preferred_time == "04:15"
+        assert directory
+
+
+def test_suite_configuration_backup_tick_waits_for_preferred_time(client_with_admin: TestClient) -> None:
+    _login_admin(client_with_admin)
+    tok = fetch_csrf(client_with_admin)
+    r = client_with_admin.put(
+        "/api/v1/suite/settings",
+        json={
+            "csrf_token": tok,
+            "product_display_name": "MediaMop",
+            "signed_in_home_notice": None,
+            "setup_wizard_state": "completed",
+            "app_timezone": "Australia/Sydney",
+            "log_retention_days": 30,
+            "configuration_backup_enabled": True,
+            "configuration_backup_interval_hours": 24,
+            "configuration_backup_preferred_time": "23:30",
+        },
+        headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
+    )
+    assert r.status_code == 200, r.text
+
+    settings = MediaMopSettings.load()
+    fac = create_session_factory(create_db_engine(settings))
+    with fac() as db:
+        suite = db.scalars(select(SuiteSettingsRow).where(SuiteSettingsRow.id == 1)).one()
+        suite.configuration_backup_last_run_at = None
+        db.commit()
+    before_target = datetime(2026, 4, 24, 12, 0, tzinfo=UTC)
+    after_target = datetime(2026, 4, 24, 13, 45, tzinfo=UTC)
+
+    assert run_suite_configuration_backup_tick(fac, settings=settings, now=before_target) == 0
+    assert run_suite_configuration_backup_tick(fac, settings=settings, now=after_target) == 1

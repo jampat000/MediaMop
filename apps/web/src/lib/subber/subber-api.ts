@@ -137,6 +137,17 @@ export type SubberSettingsPutIn = {
 
 export type SubberTestConnectionOut = { ok: boolean; message: string };
 
+export type SubberArrRootFolderOut = {
+  path: string;
+  free_space: number | null;
+};
+
+export type SubberArrRootFoldersOut = {
+  ok: boolean;
+  message: string;
+  folders: SubberArrRootFolderOut[];
+};
+
 export type SubberOverviewOut = {
   window_days: number;
   subtitles_downloaded: number;
@@ -233,6 +244,28 @@ export async function postSubberTestRadarr(): Promise<SubberTestConnectionOut> {
   });
   if (!r.ok) throw new Error(`Radarr test: ${r.status}`);
   return readJson<SubberTestConnectionOut>(r);
+}
+
+export async function postSubberSonarrRootFolders(): Promise<SubberArrRootFoldersOut> {
+  const csrf = await fetchCsrfToken();
+  const r = await apiFetch("/api/v1/subber/settings/sonarr-root-folders", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ csrf_token: csrf }),
+  });
+  if (!r.ok) throw new Error(`Sonarr root folders: ${r.status}`);
+  return readJson<SubberArrRootFoldersOut>(r);
+}
+
+export async function postSubberRadarrRootFolders(): Promise<SubberArrRootFoldersOut> {
+  const csrf = await fetchCsrfToken();
+  const r = await apiFetch("/api/v1/subber/settings/radarr-root-folders", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ csrf_token: csrf }),
+  });
+  if (!r.ok) throw new Error(`Radarr root folders: ${r.status}`);
+  return readJson<SubberArrRootFoldersOut>(r);
 }
 
 export async function fetchSubberOverview(): Promise<SubberOverviewOut> {

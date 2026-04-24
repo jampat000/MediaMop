@@ -32,6 +32,7 @@ Thumbs.db
 # Local-only working files (never commit)
 .local/
 .local-dev-home/
+.local-dev-home*/
 .tmp/
 
 # Script-generated UI captures (see scripts/capture-overview-sections.cjs)

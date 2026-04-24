@@ -139,9 +139,9 @@ If the static site and API are on **different origins**:
 
 **Not used by MediaMop** in normal Docker or SQLite setups — the app stores data in **SQLite** under **`MEDIAMOP_HOME`**.
 
-The repo includes **`docker-compose.postgres.yml`** only for **ad hoc experiments** (starts Postgres on host port **5433**): `docker compose -f docker-compose.postgres.yml up -d`. Ignore it unless you are explicitly testing against Postgres; it is **not** part of the alpha Docker instructions in **`docker/README.md`**.
+MediaMop local development is SQLite-first. There is no separate Postgres compose path in the greenfield repo state.
 
-## All-in-one Docker (alpha)
+## All-in-one Docker
 
 For a **single-container** build (API + production web UI, SQLite volume), see **`docker/README.md`** (requirements + steps), root **`compose.yaml`** (GHCR, default `docker compose`), or **`docker-compose.mediamop.yml`** (local build). Overview: **`docs/docker.md`**.
 

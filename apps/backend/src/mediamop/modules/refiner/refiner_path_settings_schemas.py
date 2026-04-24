@@ -9,11 +9,13 @@ from pydantic import BaseModel, Field
 
 class RefinerPathSettingsOut(BaseModel):
     refiner_watched_folder: str | None
+    refiner_watched_folder_exists: bool
     refiner_work_folder: str | None
-    refiner_output_folder: str
+    refiner_output_folder: str | None
     resolved_default_work_folder: str
     effective_work_folder: str
     refiner_tv_watched_folder: str | None
+    refiner_tv_watched_folder_exists: bool
     refiner_tv_work_folder: str | None
     refiner_tv_output_folder: str | None
     resolved_default_tv_work_folder: str
@@ -26,7 +28,7 @@ class RefinerPathSettingsOut(BaseModel):
 class RefinerPathSettingsPutIn(BaseModel):
     refiner_watched_folder: str | None = None
     refiner_work_folder: str | None = None
-    refiner_output_folder: str = Field(..., min_length=1)
+    refiner_output_folder: str | None = None
     refiner_tv_paths_included: bool = Field(
         default=False,
         description=(

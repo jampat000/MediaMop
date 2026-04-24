@@ -62,6 +62,7 @@ from mediamop.modules.pruner.worker_loop import (
     stop_pruner_worker_background_tasks,
 )
 from mediamop.platform.auth.rate_limit import SlidingWindowLimiter
+from mediamop.platform.suite_settings.logs_service import prune_logs_for_retention
 from mediamop.platform.suite_settings.suite_configuration_backup_periodic import (
     start_suite_configuration_backup_tasks,
     stop_suite_configuration_backup_tasks,
@@ -88,6 +89,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.engine = engine
     session_factory = create_session_factory(engine)
     app.state.session_factory = session_factory
+    with session_factory() as session:
+        prune_logs_for_retention(session, settings)
     stop = asyncio.Event()
     refiner_supplied_payload_eval_tasks = start_refiner_supplied_payload_evaluation_enqueue_tasks(
         session_factory,

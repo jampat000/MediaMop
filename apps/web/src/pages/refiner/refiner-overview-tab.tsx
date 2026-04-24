@@ -295,11 +295,14 @@ export function RefinerOverviewTab({
     ) : (
       <div>
         <MmStatTileRow>
-          <MmStatTile label="Completed" value={overviewStats.data.files_processed} />
-          <MmStatTile label="Failed" value={overviewStats.data.files_failed} />
+          <MmStatTile label="Completed jobs" value={overviewStats.data.files_processed} />
+          <MmStatTile label="Failed jobs" value={overviewStats.data.files_failed} />
           <MmStatTile label="Success" value={`${overviewStats.data.success_rate_percent}%`} />
         </MmStatTileRow>
-        <MmStatCaption>Counts remux jobs on this server. Success rate = completed ÷ (completed + failed).</MmStatCaption>
+        <MmStatCaption>
+          Counts completed and terminal-failed remux jobs in the overview window. Success rate = completed / (completed +
+          failed).
+        </MmStatCaption>
       </div>
     );
 

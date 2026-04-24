@@ -11,8 +11,8 @@
  * Environment (optional):
  *   PRUNER_SCREENSHOT_BASE_URL   default http://127.0.0.1:8782
  *   PRUNER_SCREENSHOT_OUT        default <repo>/tmp/pruner-screenshots
- *   PRUNER_SCREENSHOT_USER       default admin
- *   PRUNER_SCREENSHOT_PASS       default password123
+ *   PRUNER_SCREENSHOT_USER       required
+ *   PRUNER_SCREENSHOT_PASS       required
  */
 
 const fs = require("fs");
@@ -22,6 +22,14 @@ const { createRequire } = require("module");
 const repoRoot = path.resolve(__dirname, "..");
 const baseUrl = process.env.PRUNER_SCREENSHOT_BASE_URL || "http://127.0.0.1:8782";
 const outDir = process.env.PRUNER_SCREENSHOT_OUT || path.join(repoRoot, "tmp", "pruner-screenshots");
+const screenshotUser = process.env.PRUNER_SCREENSHOT_USER;
+const screenshotPass = process.env.PRUNER_SCREENSHOT_PASS;
+
+if (!screenshotUser || !screenshotPass) {
+  // eslint-disable-next-line no-console
+  console.error("Set PRUNER_SCREENSHOT_USER and PRUNER_SCREENSHOT_PASS for the local account before capturing screenshots.");
+  process.exit(1);
+}
 
 const requirePlaywright = createRequire(path.join(__dirname, "package.json"));
 let chromium;
@@ -52,8 +60,8 @@ async function loginViaApi(page) {
   const csrf = await csrfRes.json();
   const loginRes = await page.request.post(`${baseUrl}/api/v1/auth/login`, {
     data: {
-      username: process.env.PRUNER_SCREENSHOT_USER || "admin",
-      password: process.env.PRUNER_SCREENSHOT_PASS || "password123",
+      username: screenshotUser,
+      password: screenshotPass,
       csrf_token: csrf.csrf_token,
     },
     headers: {

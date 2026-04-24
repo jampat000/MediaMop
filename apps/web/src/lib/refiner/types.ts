@@ -2,11 +2,13 @@
 
 export type RefinerPathSettingsOut = {
   refiner_watched_folder: string | null;
+  refiner_watched_folder_exists: boolean;
   refiner_work_folder: string | null;
-  refiner_output_folder: string;
+  refiner_output_folder: string | null;
   resolved_default_work_folder: string;
   effective_work_folder: string;
   refiner_tv_watched_folder: string | null;
+  refiner_tv_watched_folder_exists: boolean;
   refiner_tv_work_folder: string | null;
   refiner_tv_output_folder: string | null;
   resolved_default_tv_work_folder: string;
@@ -21,7 +23,7 @@ export type RefinerPathSettingsOut = {
 export type RefinerPathSettingsPutBody = {
   refiner_watched_folder: string | null;
   refiner_work_folder: string | null;
-  refiner_output_folder: string;
+  refiner_output_folder: string | null;
   /** When true, TV path fields are written (send empty strings to clear TV paths). */
   refiner_tv_paths_included: boolean;
   refiner_tv_watched_folder: string | null;
@@ -72,6 +74,10 @@ export type RefinerOverviewStatsOut = {
   files_processed: number;
   files_failed: number;
   success_rate_percent: number;
+  output_written_count: number;
+  already_optimized_count: number;
+  net_space_saved_bytes: number;
+  net_space_saved_percent: number;
 };
 
 export type RefinerOperatorSettingsOut = {

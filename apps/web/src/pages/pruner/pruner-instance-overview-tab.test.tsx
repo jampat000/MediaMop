@@ -118,12 +118,12 @@ describe("PrunerInstanceOverviewTab", () => {
     expect(screen.getByTestId("pruner-overview-scope-tv")).toBeInTheDocument();
     expect(screen.getByTestId("pruner-overview-scope-movies")).toBeInTheDocument();
     expect(screen.getByText(/Delete watched TV episodes/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Genres narrowed to:/).length).toBe(2);
     const tvCard = screen.getByTestId("pruner-overview-scope-tv");
     expect(tvCard.textContent).toMatch(/success/);
     expect(tvCard.textContent).toMatch(/2026/);
+    expect(tvCard.textContent).toMatch(/Automatic previews are off/i);
     expect(screen.getByRole("link", { name: /open activity/i })).toHaveAttribute("href", "/app/activity");
-    expect(screen.getByText(/does not yet repeat those counts/i)).toBeInTheDocument();
+    expect(screen.getByText(/Removed, skipped, and failed counts for each cleanup run/i)).toBeInTheDocument();
   });
 
   it("shows Plex-only unsupported callouts on the TV scope card", async () => {

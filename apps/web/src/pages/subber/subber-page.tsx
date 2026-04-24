@@ -15,8 +15,8 @@ type TopTab = "overview" | "tv" | "movies" | "connections" | "providers" | "pref
 
 const SUBBER_TAB_BLURBS: Record<TopTab, string> = {
   overview: "Review subtitle coverage, provider status, and recent Subber activity.",
-  tv: "Configure TV subtitle rules and run TV subtitle operations.",
-  movies: "Configure Movies subtitle rules and run Movies subtitle operations.",
+  tv: "Review tracked TV episodes, subtitle coverage, and run TV subtitle searches when needed.",
+  movies: "Review tracked movies, subtitle coverage, and run movie subtitle searches when needed.",
   connections: "Save and test the service connections and credentials Subber depends on.",
   providers:
     "Choose which subtitle sources Subber uses and the order it tries them (lower number = searched first). Open a row to set credentials, enable a source, or test it—keep at least one provider on.",
