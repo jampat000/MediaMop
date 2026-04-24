@@ -16,7 +16,6 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  PUBLISHED_IMAGE: ghcr.io/${{ github.repository }}
 
 jobs:
   windows-smoke:
@@ -129,7 +128,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_TOKEN != '' && secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish release Docker image
         uses: docker/build-push-action@v6
@@ -149,14 +148,14 @@ jobs:
             org.opencontainers.image.version=${{ github.ref_name }}
 
       - name: Verify published Docker manifest
-        run: docker manifest inspect "${{ env.PUBLISHED_IMAGE }}:latest"
+        run: docker manifest inspect "${{ steps.image.outputs.name }}:latest"
 
       - name: Smoke test published Docker image
         run: |
           docker rm -f mediamop-release-smoke >/dev/null 2>&1 || true
           docker run -d --name mediamop-release-smoke -p 8788:8788 \
             -e MEDIAMOP_SESSION_SECRET=ci-mediamop-session-secret-32chars-min \
-            "${{ env.PUBLISHED_IMAGE }}:latest"
+            "${{ steps.image.outputs.name }}:latest"
           for i in {1..30}; do
             if curl -fsS http://127.0.0.1:8788/health >/tmp/mediamop-health.json; then
               cat /tmp/mediamop-health.json
@@ -190,8 +189,7 @@ jobs:
             - `ghcr.io/${{ github.repository }}:latest`
 
             **Registry publishing**
-            - workflow prefers `GHCR_TOKEN` when present
-            - falls back to the repository `GITHUB_TOKEN`
+            - workflow publishes with the repository `GITHUB_TOKEN`
 
             **Run instructions**
             - Windows installer and release notes: `docs/release.md`

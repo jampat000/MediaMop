@@ -44,16 +44,8 @@ The `Release` workflow:
 
 ## Registry authentication
 
-For the most reliable GHCR publishing path, add a repository secret named `GHCR_TOKEN`.
-
-Recommended scopes for that token:
-
-- `write:packages`
-- `read:packages`
-- `repo`
-
-The workflow prefers `GHCR_TOKEN` when it exists and falls back to `GITHUB_TOKEN` otherwise.
-This avoids depending on a maintainer machine having cached Docker registry credentials.
+The release workflow publishes GHCR images with the repository `GITHUB_TOKEN` and
+`packages: write` permission. No personal access token is required for normal releases.
 
 ## Release artifacts
 
