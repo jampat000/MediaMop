@@ -26,6 +26,10 @@ The Windows artifact is an installer-based desktop app with a tray host. It is n
 
 4. Pushing `v*` triggers `.github/workflows/release.yml`.
 
+Local Docker is not required for this release path. Docker build, publish,
+manifest verification, and container smoke testing all run on GitHub-hosted
+Actions runners.
+
 ## What the release workflow does
 
 The `Release` workflow:
@@ -73,6 +77,16 @@ This design is intentional. Running in the user session avoids common NAS or ext
 ## Docker
 
 Stable Docker releases are published from the same tag workflow.
+
+If Docker Desktop is broken or not installed locally, do not block the release
+on this workstation. Run the remote validation workflow instead:
+
+```powershell
+.\scripts\verify-docker-remote.ps1
+```
+
+That command triggers the `Test` workflow for the current ref and watches it.
+The Docker image build and Docker smoke test run on GitHub infrastructure.
 
 Pull and run:
 

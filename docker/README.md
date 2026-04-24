@@ -55,6 +55,8 @@ The image exposes `GET /health` and includes a Docker `HEALTHCHECK`.
 
 - `compose.yaml` defaults to `ghcr.io/jampat000/mediamop:latest`
 - `.github/workflows/release.yml` publishes stable images on tagged releases
+- maintainers do not need local Docker to ship releases; use `scripts/verify-docker-remote.ps1`
+  or the tag-driven release workflow to run Docker build and smoke checks on GitHub-hosted runners
 
 ## What Docker does not do
 

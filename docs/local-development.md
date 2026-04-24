@@ -10,6 +10,7 @@ This **MediaMop** repository contains **`apps/backend`** (FastAPI, **SQLite**, c
 - **Node.js LTS** (npm on `PATH`)
 
 The backend persists state in **file-backed SQLite** under **`MEDIAMOP_HOME`** (see **`apps/backend/.env.example`**). You do **not** install or run PostgreSQL for normal MediaMop development.
+Docker Desktop is not required for normal local development or for shipping a release.
 
 ## Backend `.env` (local)
 
@@ -143,7 +144,15 @@ MediaMop local development is SQLite-first. There is no separate Postgres compos
 
 ## All-in-one Docker
 
-For a **single-container** build (API + production web UI, SQLite volume), see **`docker/README.md`** (requirements + steps), root **`compose.yaml`** (GHCR, default `docker compose`), or **`docker-compose.mediamop.yml`** (local build). Overview: **`docs/docker.md`**.
+For a **single-container** runtime (API + production web UI, SQLite volume), see **`docker/README.md`** and root **`compose.yaml`**. These files are for users or maintainers who want to run the published container.
+
+For maintainers without working local Docker, use GitHub-hosted validation:
+
+```powershell
+.\scripts\verify-docker-remote.ps1
+```
+
+The release workflow also builds, publishes, verifies, and smoke-tests Docker on GitHub-hosted runners.
 
 ## Visual shell
 
