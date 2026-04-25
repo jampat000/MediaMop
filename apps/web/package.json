@@ -1,7 +1,7 @@
 {
   "name": "mediamop-web",
   "private": true,
-  "version": "1.0.7",
+  "version": "1.0.8",
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "scripts": {

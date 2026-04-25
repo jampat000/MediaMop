@@ -12,12 +12,16 @@ if (-not $PackageDir) {
 $packagePath = (Resolve-Path -LiteralPath $PackageDir).Path
 $serverExe = Join-Path $packagePath "MediaMopServer.exe"
 $webIndex = Join-Path $packagePath "_internal\web-dist\index.html"
+$trayIcon = Join-Path $packagePath "_internal\assets\mediamop-tray-icon.png"
 
 if (-not (Test-Path -LiteralPath $serverExe)) {
   throw "Packaged server executable not found: $serverExe"
 }
 if (-not (Test-Path -LiteralPath $webIndex)) {
   throw "Packaged web index not found: $webIndex"
+}
+if (-not (Test-Path -LiteralPath $trayIcon)) {
+  throw "Packaged tray icon not found: $trayIcon"
 }
 $indexText = Get-Content -LiteralPath $webIndex -Raw
 if ($indexText -notmatch "MediaMop") {

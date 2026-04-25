@@ -26,6 +26,7 @@ WizardStyle=modern
 PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
+SetupIconFile={#RepoRoot}\packaging\windows\assets\mediamop-tray-icon.ico
 UninstallDisplayIcon={app}\{#ExeName}
 
 [Tasks]

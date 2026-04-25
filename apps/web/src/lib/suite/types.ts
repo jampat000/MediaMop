@@ -68,6 +68,12 @@ export type SuiteUpdateStatusOut = {
   docker_update_command?: string | null;
 };
 
+export type SuiteUpdateStartOut = {
+  status: "started" | "unavailable" | string;
+  message: string;
+  target_version?: string | null;
+};
+
 export type SuiteLogEntry = {
   timestamp: string;
   level: string;

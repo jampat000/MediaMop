@@ -7,6 +7,7 @@ import {
   fetchSuiteSettings,
   fetchSuiteUpdateStatus,
   putSuiteSettings,
+  startSuiteUpdateNow,
 } from "./suite-settings-api";
 import type { SuiteSettingsPutBody } from "./types";
 
@@ -49,6 +50,12 @@ export function useSuiteUpdateStatusQuery(enabled = true) {
     enabled,
     staleTime: 60_000,
     retry: false,
+  });
+}
+
+export function useSuiteUpdateNowMutation() {
+  return useMutation({
+    mutationFn: () => startSuiteUpdateNow(),
   });
 }
 

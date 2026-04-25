@@ -7,6 +7,8 @@ ROOT = Path.cwd()
 BACKEND = ROOT / "apps" / "backend"
 WEB_DIST = ROOT / "apps" / "web" / "dist"
 LOGO = ROOT / "apps" / "web" / "src" / "components" / "brand" / "mediamop-logo-premium.png"
+TRAY_ICON_PNG = ROOT / "packaging" / "windows" / "assets" / "mediamop-tray-icon.png"
+TRAY_ICON_ICO = ROOT / "packaging" / "windows" / "assets" / "mediamop-tray-icon.ico"
 
 hiddenimports = collect_submodules("mediamop")
 datas = [
@@ -14,6 +16,8 @@ datas = [
     (str(BACKEND / "alembic.ini"), "."),
     (str(WEB_DIST), "web-dist"),
     (str(LOGO), "assets"),
+    (str(TRAY_ICON_PNG), "assets"),
+    (str(TRAY_ICON_ICO), "assets"),
 ]
 
 a = Analysis(
@@ -41,7 +45,7 @@ tray_exe = EXE(
     strip=False,
     upx=True,
     console=False,
-    icon=str(LOGO),
+    icon=str(TRAY_ICON_ICO),
 )
 
 server_exe = EXE(
@@ -55,7 +59,7 @@ server_exe = EXE(
     strip=False,
     upx=True,
     console=True,
-    icon=str(LOGO),
+    icon=str(TRAY_ICON_ICO),
 )
 
 coll = COLLECT(

@@ -17,8 +17,8 @@ _SQLITE_THROUGHPUT_NOTE = (
 )
 
 _CONFIGURATION_NOTE = (
-    "Change MEDIAMOP_REFINER_WORKER_COUNT in apps/backend/.env (integer 0–8: 0 = off, 1 = one worker, "
-    "2–8 = several concurrent workers for this Refiner lane only), then restart the MediaMop API."
+    "Refiner concurrency is controlled by the Processing settings page. Set Files at once to 1 for one active "
+    "Refiner file worker or up to 8 for parallel file work. No restart is needed after changing that setting."
 )
 
 _WORK_TEMP_STALE_SWEEP_PERIODIC_NOTE = (
@@ -89,13 +89,13 @@ def refiner_runtime_settings_from_settings(settings: MediaMopSettings) -> Refine
         )
     elif n == 1:
         summary = (
-            "One in-process Refiner worker is configured — it processes refiner_jobs one lease at a time "
-            "(the usual default when automation is on)."
+            "Refiner has one available refiner_jobs worker slot. The Processing settings page controls the active "
+            "Files at once value."
         )
     else:
         summary = (
-            f"{n} in-process Refiner workers are configured — each can lease a different refiner_jobs row. "
-            "Only this lane’s worker count is controlled here; other module lanes use their own settings."
+            f"{n} in-process Refiner worker slots are available. The Processing settings page decides how many of "
+            "those refiner_jobs slots may process files at once; other module lanes use their own workers."
         )
 
     return RefinerRuntimeSettingsOut(

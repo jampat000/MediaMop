@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 import httpx
 
-from mediamop.platform.suite_settings.schemas import SuiteUpdateStatusOut
+from mediamop.core.config import MediaMopSettings
+from mediamop.platform.suite_settings.schemas import SuiteUpdateStartOut, SuiteUpdateStatusOut
 from mediamop.version import __version__
 
 GH_REPO = "jampat000/MediaMop"
@@ -58,6 +60,19 @@ def _fetch_latest_release_payload() -> dict[str, Any]:
         return payload
 
 
+def _find_windows_installer_asset(payload: dict[str, Any]) -> str | None:
+    assets = payload.get("assets")
+    if not isinstance(assets, list):
+        return None
+    for asset in assets:
+        if not isinstance(asset, dict):
+            continue
+        name = str(asset.get("name") or "").strip().lower()
+        if name == "mediamopsetup.exe":
+            return str(asset.get("browser_download_url") or "").strip() or None
+    return None
+
+
 def build_suite_update_status() -> SuiteUpdateStatusOut:
     install_type = _detect_install_type()
     current_version = __version__ or "1.0.0"
@@ -93,16 +108,7 @@ def build_suite_update_status() -> SuiteUpdateStatusOut:
     latest_name = str(payload.get("name") or "").strip() or latest_version
     release_url = str(payload.get("html_url") or "").strip() or None
     published_at = payload.get("published_at")
-    windows_installer_url: str | None = None
-    assets = payload.get("assets")
-    if isinstance(assets, list):
-        for asset in assets:
-            if not isinstance(asset, dict):
-                continue
-            name = str(asset.get("name") or "").strip().lower()
-            if name == "mediamopsetup.exe":
-                windows_installer_url = str(asset.get("browser_download_url") or "").strip() or None
-                break
+    windows_installer_url = _find_windows_installer_asset(payload)
 
     current_parsed = _parse_version(current_version)
     latest_parsed = _parse_version(latest_version)
@@ -136,4 +142,97 @@ def build_suite_update_status() -> SuiteUpdateStatusOut:
         docker_image=DOCKER_IMAGE if install_type == "docker" else None,
         docker_tag=docker_tag,
         docker_update_command=docker_update_command,
+    )
+
+
+def _write_windows_upgrade_script(*, installer_path: Path, executable_dir: Path, script_path: Path) -> None:
+    log_path = installer_path.parent / "upgrade-run.log"
+    exe_path = executable_dir / "MediaMop.exe"
+    script = f"""$ErrorActionPreference = "Continue"
+$logPath = {str(log_path)!r}
+function Write-UpgradeLog([string]$message) {{
+  $stamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+  Add-Content -LiteralPath $logPath -Value "[$stamp] $message"
+}}
+Write-UpgradeLog "Starting MediaMop in-app upgrade."
+Start-Sleep -Seconds 2
+Get-Process -Name MediaMop,MediaMopServer -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Write-UpgradeLog "Stopped running MediaMop processes."
+$installer = {str(installer_path)!r}
+$args = @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS", "/RESTARTAPPLICATIONS")
+$proc = Start-Process -FilePath $installer -ArgumentList $args -Wait -PassThru -ErrorAction Stop
+Write-UpgradeLog "Installer exited with code $($proc.ExitCode)."
+$exe = {str(exe_path)!r}
+if (Test-Path -LiteralPath $exe) {{
+  Start-Process -FilePath $exe -WorkingDirectory {str(executable_dir)!r}
+  Write-UpgradeLog "Restarted MediaMop."
+}} else {{
+  Write-UpgradeLog "MediaMop executable was not found after upgrade: $exe"
+}}
+"""
+    script_path.write_text(script, encoding="utf-8")
+
+
+def _launch_windows_upgrade_script(script_path: Path) -> None:
+    subprocess.Popen(
+        [
+            "powershell.exe",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-WindowStyle",
+            "Hidden",
+            "-File",
+            str(script_path),
+        ],
+        cwd=str(script_path.parent),
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "DETACHED_PROCESS", 0),
+        close_fds=True,
+    )
+
+
+def start_suite_update_now(settings: MediaMopSettings) -> SuiteUpdateStartOut:
+    """Stage and launch an in-place upgrade for packaged Windows installs."""
+
+    install_type = _detect_install_type()
+    if install_type != "windows":
+        return SuiteUpdateStartOut(
+            status="unavailable",
+            message="In-app upgrades are only available for the Windows desktop install. Docker/source installs must be updated outside the app.",
+        )
+
+    payload = _fetch_latest_release_payload()
+    latest_version = str(payload.get("tag_name") or "").strip().removeprefix("v") or None
+    installer_url = _find_windows_installer_asset(payload)
+    current_parsed = _parse_version(__version__)
+    latest_parsed = _parse_version(latest_version)
+    if not installer_url or not current_parsed or not latest_parsed or latest_parsed <= current_parsed:
+        return SuiteUpdateStartOut(
+            status="unavailable",
+            message="No newer Windows installer is available right now.",
+            target_version=latest_version,
+        )
+
+    upgrade_dir = Path(settings.mediamop_home) / "upgrades"
+    upgrade_dir.mkdir(parents=True, exist_ok=True)
+    installer_path = upgrade_dir / f"MediaMopSetup-{latest_version}.exe"
+    with httpx.stream("GET", installer_url, timeout=60.0, follow_redirects=True) as response:
+        response.raise_for_status()
+        with installer_path.open("wb") as handle:
+            for chunk in response.iter_bytes():
+                if chunk:
+                    handle.write(chunk)
+
+    executable_dir = Path(sys.executable).resolve().parent
+    script_path = upgrade_dir / "run-windows-upgrade.ps1"
+    _write_windows_upgrade_script(
+        installer_path=installer_path,
+        executable_dir=executable_dir,
+        script_path=script_path,
+    )
+    _launch_windows_upgrade_script(script_path)
+    return SuiteUpdateStartOut(
+        status="started",
+        message="Upgrade started. MediaMop will close, install the update, reopen, and this page should reconnect after the app is back.",
+        target_version=latest_version,
     )

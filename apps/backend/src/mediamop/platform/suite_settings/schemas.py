@@ -168,6 +168,24 @@ class SuiteUpdateStatusOut(BaseModel):
     docker_update_command: str | None = None
 
 
+class SuiteUpdateStartOut(BaseModel):
+    """Result of requesting an in-place app upgrade."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: str = Field(min_length=1, description="started or unavailable")
+    message: str = Field(min_length=1)
+    target_version: str | None = None
+
+
+class SuiteUpdateStartIn(BaseModel):
+    """Body for ``POST /suite/update-now``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    csrf_token: str = Field(..., min_length=1)
+
+
 class SuiteLogEntryOut(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

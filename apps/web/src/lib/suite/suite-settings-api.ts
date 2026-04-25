@@ -7,12 +7,14 @@ import type {
   SuiteSecurityOverviewOut,
   SuiteSettingsOut,
   SuiteSettingsPutBody,
+  SuiteUpdateStartOut,
   SuiteUpdateStatusOut,
 } from "./types";
 
 export const suiteSettingsPath = () => "/api/v1/suite/settings";
 export const suiteSecurityOverviewPath = () => "/api/v1/suite/security-overview";
 export const suiteUpdateStatusPath = () => "/api/v1/suite/update-status";
+export const suiteUpdateNowPath = () => "/api/v1/suite/update-now";
 export const suiteLogsPath = () => "/api/v1/suite/logs";
 export const suiteMetricsPath = () => "/api/v1/suite/metrics";
 
@@ -89,6 +91,19 @@ export async function fetchSuiteUpdateStatus(): Promise<SuiteUpdateStatusOut> {
     throw new Error(await readFailedRequestMessage(r, "Could not check for updates"));
   }
   return readJson<SuiteUpdateStatusOut>(r);
+}
+
+export async function startSuiteUpdateNow(): Promise<SuiteUpdateStartOut> {
+  const csrf_token = await fetchCsrfToken();
+  const r = await apiFetch(suiteUpdateNowPath(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ csrf_token }),
+  });
+  if (!r.ok) {
+    throw new Error(await readFailedRequestMessage(r, "Could not start upgrade"));
+  }
+  return readJson<SuiteUpdateStartOut>(r);
 }
 
 export async function fetchSuiteLogs(filters?: {

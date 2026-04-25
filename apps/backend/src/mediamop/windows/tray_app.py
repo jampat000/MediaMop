@@ -155,6 +155,7 @@ def _load_icon(resource_root: Path) -> Any:
     from PIL import Image, ImageDraw
 
     candidates = [
+        resource_root / "assets" / "mediamop-tray-icon.png",
         resource_root / "assets" / "mediamop-logo-premium.png",
         resource_root / "mediamop-logo-premium.png",
     ]

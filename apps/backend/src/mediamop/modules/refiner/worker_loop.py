@@ -303,7 +303,7 @@ def start_refiner_worker_background_tasks(
     max_concurrent_files_getter: Callable[[], int] | None = None,
     stop_event: asyncio.Event | None = None,
 ) -> tuple[asyncio.Event, list[asyncio.Task[None]]]:
-    """Create one asyncio task per configured Refiner worker (``refiner_worker_count`` from settings).
+    """Create Refiner worker slots and let operator settings control active file concurrency.
 
     When ``refiner_worker_count > 0``, callers must pass ``job_handlers`` (built at the application
     composition root).
@@ -311,16 +311,15 @@ def start_refiner_worker_background_tasks(
     Modes:
 
     - **0** — Returns an empty task list (workers intentionally off; lifespan still stops cleanly).
-    - **1** — Supported default.
-    - **>1** — Guarded only: concurrent tasks compete under SQLite single-writer rules; this is
-      **not** documented as the normal rollout target (see worker-mode tests and logs).
+    - **1** — One available worker slot.
+    - **>1** — Multiple available worker slots; ``max_concurrent_files_getter`` gates the active slots
+      from the user-facing "Files at once" setting while SQLite still serializes writes.
     """
 
     if settings.refiner_worker_count > 1:
         logger.warning(
             "Refiner refiner_worker_count=%s: multi-worker is a guarded capability under SQLite "
-            "(single-writer database). Default remains 1; validate behavior before treating "
-            ">1 as normal rollout.",
+            "(single-writer database). The user-facing files-at-once setting gates active slots.",
             settings.refiner_worker_count,
         )
 
@@ -337,9 +336,8 @@ def start_refiner_worker_background_tasks(
 
     stop = stop_event if stop_event is not None else asyncio.Event()
     tasks: list[asyncio.Task[None]] = []
-    # ``refiner_worker_count`` is already clamped to 0..8 on :class:`MediaMopSettings`. When it is
-    # 0, spawn **no** asyncio worker tasks even if callers pass a non-``None`` ``job_handlers`` map
-    # (the application root always builds handlers before calling this — workers must still stay off).
+    # ``refiner_worker_count`` is an internal startup slot cap. In normal app usage it is 8, and
+    # ``max_concurrent_files_getter`` makes the saved "Files at once" value the effective worker count.
     worker_slots = int(settings.refiner_worker_count)
     for i in range(worker_slots):
         t = asyncio.create_task(

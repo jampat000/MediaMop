@@ -244,8 +244,8 @@ class MediaMopSettings:
         )
         assert_sqlite_db_location_usable(db_p)
         db_url = sqlalchemy_sqlite_url(db_p)
-        refiner_workers = clamp_refiner_worker_count(_env_int("MEDIAMOP_REFINER_WORKER_COUNT", 0))
-        pruner_workers = clamp_pruner_worker_count(_env_int("MEDIAMOP_PRUNER_WORKER_COUNT", 0))
+        refiner_workers = clamp_refiner_worker_count(_env_int("MEDIAMOP_REFINER_WORKER_COUNT", 8))
+        pruner_workers = clamp_pruner_worker_count(_env_int("MEDIAMOP_PRUNER_WORKER_COUNT", 1))
         pruner_preview_sched_enq = _env_bool("MEDIAMOP_PRUNER_PREVIEW_SCHEDULE_ENQUEUE_ENABLED", True)
         pruner_preview_sched_scan_iv = max(
             10,
@@ -254,7 +254,7 @@ class MediaMopSettings:
         pruner_apply_on = _env_bool("MEDIAMOP_PRUNER_APPLY_ENABLED", False)
         pruner_plex_live_on = _env_bool("MEDIAMOP_PRUNER_PLEX_LIVE_REMOVAL_ENABLED", False)
         pruner_plex_live_abs_max = max(1, min(5000, _env_int("MEDIAMOP_PRUNER_PLEX_LIVE_ABS_MAX_ITEMS", 150)))
-        subber_workers = clamp_subber_worker_count(_env_int("MEDIAMOP_SUBBER_WORKER_COUNT", 0))
+        subber_workers = clamp_subber_worker_count(_env_int("MEDIAMOP_SUBBER_WORKER_COUNT", 1))
         subber_lib_scan_sched_enq = _env_bool("MEDIAMOP_SUBBER_LIBRARY_SCAN_SCHEDULE_ENQUEUE_ENABLED", True)
         subber_lib_scan_sched_scan_iv = max(
             10,

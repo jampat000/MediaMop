@@ -27,6 +27,8 @@ from mediamop.platform.suite_settings.schemas import (
     SuiteSecurityOverviewOut,
     SuiteSettingsOut,
     SuiteSettingsPutIn,
+    SuiteUpdateStartIn,
+    SuiteUpdateStartOut,
     SuiteUpdateStatusOut,
 )
 from mediamop.platform.metrics.service import build_runtime_metrics_summary
@@ -37,7 +39,7 @@ from mediamop.platform.suite_settings.suite_configuration_backup_service import 
     get_suite_configuration_backup_file_path,
     list_suite_configuration_backups,
 )
-from mediamop.platform.suite_settings.update_service import build_suite_update_status
+from mediamop.platform.suite_settings.update_service import build_suite_update_status, start_suite_update_now
 
 router = APIRouter(tags=["suite"])
 
@@ -169,6 +171,31 @@ def get_suite_update_status(_user: UserPublicDep) -> SuiteUpdateStatusOut:
     """Read-only update check for the signed-in Settings page."""
 
     return build_suite_update_status()
+
+
+@router.post("/suite/update-now", response_model=SuiteUpdateStartOut)
+def post_suite_update_now(
+    body: SuiteUpdateStartIn,
+    request: Request,
+    _user: RequireOperatorDep,
+    settings: SettingsDep,
+) -> SuiteUpdateStartOut:
+    """Start an in-place Windows upgrade from the latest published installer."""
+
+    validate_browser_post_origin(request, settings)
+    secret = require_session_secret(settings)
+    if not verify_csrf_token(secret, body.csrf_token):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Your confirmation token expired. Refresh the page and try again.",
+        )
+    try:
+        return start_suite_update_now(settings)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Could not start the upgrade: {exc}",
+        ) from exc
 
 
 @router.get("/suite/logs", response_model=SuiteLogsOut)

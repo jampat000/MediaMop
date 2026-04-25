@@ -19,6 +19,7 @@ import {
   useSuiteLogsQuery,
   useSuiteSettingsQuery,
   useSuiteSettingsSaveMutation,
+  useSuiteUpdateNowMutation,
   useSuiteUpdateStatusQuery,
 } from "../../lib/suite/queries";
 import type { SuiteLogEntry, SuiteSettingsPutBody } from "../../lib/suite/types";
@@ -159,6 +160,7 @@ export function SettingsPage() {
   const changePassword = useChangePasswordMutation();
   const settingsQ = useSuiteSettingsQuery();
   const save = useSuiteSettingsSaveMutation();
+  const updateNow = useSuiteUpdateNowMutation();
 
   const [tab, setTab] = useState<TabId>("general");
   const [appTimezone, setAppTimezone] = useState<string | null>(null);
@@ -174,6 +176,7 @@ export function SettingsPage() {
   const [backupBusy, setBackupBusy] = useState(false);
   const [backupMsg, setBackupMsg] = useState<string | null>(null);
   const [backupErr, setBackupErr] = useState<string | null>(null);
+  const [upgradeMsg, setUpgradeMsg] = useState<string | null>(null);
   const [configurationBackupEnabled, setConfigurationBackupEnabled] = useState(false);
   const [configurationBackupIntervalHours, setConfigurationBackupIntervalHours] = useState(24);
   const [configurationBackupPreferredTime, setConfigurationBackupPreferredTime] = useState("02:00");
@@ -420,6 +423,21 @@ export function SettingsPage() {
       setBackupErr(e instanceof Error ? e.message : "Could not download snapshot.");
     } finally {
       setBackupBusy(false);
+    }
+  }
+
+  async function handleUpgradeNow() {
+    setUpgradeMsg(null);
+    try {
+      const result = await updateNow.mutateAsync();
+      setUpgradeMsg(result.message);
+      if (result.status === "started") {
+        window.setTimeout(() => {
+          window.location.reload();
+        }, 30_000);
+      }
+    } catch {
+      /* surfaced below */
     }
   }
 
@@ -930,6 +948,12 @@ export function SettingsPage() {
 
                   <div className="space-y-2 text-sm text-[var(--mm-text2)]">
                     <p>{updateStatusQ.data.summary}</p>
+                    {updateStatusQ.data.install_type === "windows" && updateStatusQ.data.status === "update_available" ? (
+                      <p className="text-xs text-[var(--mm-text3)]">
+                        Upgrade now downloads the installer, closes MediaMop, installs the update, reopens the app, and
+                        refreshes this page after the server comes back.
+                      </p>
+                    ) : null}
                     {updateStatusQ.data.install_type === "docker" && updateStatusQ.data.docker_update_command ? (
                       <p className="font-mono text-xs text-[var(--mm-text3)]">
                         {updateStatusQ.data.docker_update_command}
@@ -946,9 +970,21 @@ export function SettingsPage() {
                     >
                       {updateStatusQ.isFetching ? "Checking…" : "Check again"}
                     </button>
+                    {updateStatusQ.data.install_type === "windows" &&
+                    updateStatusQ.data.status === "update_available" &&
+                    updateStatusQ.data.windows_installer_url ? (
+                      <button
+                        type="button"
+                        className={mmActionButtonClass({ variant: "primary", disabled: updateNow.isPending })}
+                        disabled={updateNow.isPending}
+                        onClick={() => void handleUpgradeNow()}
+                      >
+                        {updateNow.isPending ? "Starting upgrade…" : "Upgrade now"}
+                      </button>
+                    ) : null}
                     {updateStatusQ.data.windows_installer_url ? (
                       <a
-                        className={mmActionButtonClass({ variant: "primary", disabled: false })}
+                        className={mmActionButtonClass({ variant: "tertiary", disabled: false })}
                         href={updateStatusQ.data.windows_installer_url}
                         target="_blank"
                         rel="noreferrer"
@@ -967,6 +1003,16 @@ export function SettingsPage() {
                       </a>
                     ) : null}
                   </div>
+                  {upgradeMsg ? (
+                    <p className="rounded-md border border-emerald-500/30 bg-emerald-950/20 px-3 py-2 text-sm text-emerald-200">
+                      {upgradeMsg}
+                    </p>
+                  ) : null}
+                  {updateNow.isError ? (
+                    <p className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200" role="alert">
+                      {updateNow.error instanceof Error ? updateNow.error.message : "Could not start the upgrade."}
+                    </p>
+                  ) : null}
                 </>
               )}
             </section>

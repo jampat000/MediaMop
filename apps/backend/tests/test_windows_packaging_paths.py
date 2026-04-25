@@ -38,3 +38,18 @@ def test_inno_installer_uses_program_files_and_programdata() -> None:
     assert 'Name: "{commonappdata}\\MediaMop"; Permissions: users-modify' in text
     assert "{localappdata}\\MediaMop" not in text
     assert "{userdesktop}\\MediaMop" not in text
+    assert "SetupIconFile={#RepoRoot}\\packaging\\windows\\assets\\mediamop-tray-icon.ico" in text
+
+
+def test_windows_package_uses_dedicated_tray_icon_assets() -> None:
+    repo = Path(__file__).resolve().parents[3]
+    spec = repo / "packaging" / "windows" / "mediamop-tray.spec"
+    text = spec.read_text(encoding="utf-8")
+
+    assert (repo / "packaging" / "windows" / "assets" / "mediamop-tray-icon.png").is_file()
+    assert (repo / "packaging" / "windows" / "assets" / "mediamop-tray-icon.ico").is_file()
+    assert 'TRAY_ICON_PNG = ROOT / "packaging" / "windows" / "assets" / "mediamop-tray-icon.png"' in text
+    assert 'TRAY_ICON_ICO = ROOT / "packaging" / "windows" / "assets" / "mediamop-tray-icon.ico"' in text
+    assert "(str(TRAY_ICON_PNG), \"assets\")" in text
+    assert "(str(TRAY_ICON_ICO), \"assets\")" in text
+    assert "icon=str(TRAY_ICON_ICO)" in text

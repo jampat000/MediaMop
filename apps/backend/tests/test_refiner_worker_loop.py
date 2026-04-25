@@ -55,10 +55,10 @@ def session_factory(jobs_engine):
     )
 
 
-def test_refiner_worker_count_defaults_to_zero(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_refiner_worker_count_defaults_to_eight_slots(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("MEDIAMOP_REFINER_WORKER_COUNT", raising=False)
     s = MediaMopSettings.load()
-    assert s.refiner_worker_count == 0
+    assert s.refiner_worker_count == 8
 
 
 def test_refiner_worker_count_clamps_low_and_high(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -102,6 +102,44 @@ def test_start_refiner_worker_background_tasks_zero_spawns_no_tasks_even_with_ha
         await stop_refiner_worker_background_tasks(stop, tasks)
 
     asyncio.run(_run())
+
+
+def test_refiner_worker_slots_are_gated_by_max_concurrent_files(
+    session_factory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        refiner_worker_loop_mod,
+        "REFINER_WORKER_IDLE_SLEEP_SECONDS",
+        0.01,
+    )
+    base = MediaMopSettings.load()
+    settings = replace(base, refiner_worker_count=8)
+    observed: list[int] = []
+
+    async def _fake_worker_run_forever(*_args, **kwargs) -> None:
+        idx = int(kwargs["worker_index"])
+        getter = kwargs["max_concurrent_files_getter"]
+        assert getter is not None
+        if idx < getter():
+            observed.append(idx)
+
+    async def _run() -> None:
+        with patch(
+            "mediamop.modules.refiner.worker_loop.refiner_worker_run_forever",
+            side_effect=_fake_worker_run_forever,
+        ):
+            stop, tasks = start_refiner_worker_background_tasks(
+                session_factory,
+                settings,
+                job_handlers={"refiner.candidate_gate.v1": lambda ctx: None},
+                max_concurrent_files_getter=lambda: 3,
+            )
+            await asyncio.gather(*tasks)
+            await stop_refiner_worker_background_tasks(stop, tasks)
+
+    asyncio.run(_run())
+    assert observed == [0, 1, 2]
 
 
 def test_process_one_idle_when_no_jobs(session_factory) -> None:

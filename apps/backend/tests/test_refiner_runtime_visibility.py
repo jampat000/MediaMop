@@ -10,14 +10,15 @@ from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.refiner_runtime_visibility import refiner_runtime_settings_from_settings
 
 
-def test_refiner_runtime_settings_zero_workers(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_refiner_runtime_settings_default_workers_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("MEDIAMOP_REFINER_WORKER_COUNT", raising=False)
     s = MediaMopSettings.load()
     out = refiner_runtime_settings_from_settings(s)
-    assert out.in_process_refiner_worker_count == 0
-    assert out.in_process_workers_disabled is True
-    assert out.in_process_workers_enabled is False
-    assert "off" in out.worker_mode_summary.lower()
+    assert out.in_process_refiner_worker_count == 8
+    assert out.in_process_workers_disabled is False
+    assert out.in_process_workers_enabled is True
+    assert "8" in out.worker_mode_summary
+    assert "processing settings" in out.worker_mode_summary.lower()
 
 
 def test_refiner_runtime_settings_multi_worker_summary(monkeypatch: pytest.MonkeyPatch) -> None:

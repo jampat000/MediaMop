@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -18,6 +19,7 @@ from mediamop.platform.suite_settings.model import SuiteSettingsRow
 from mediamop.platform.suite_settings.service import apply_suite_settings_put
 from mediamop.platform.suite_settings.suite_configuration_backup_periodic import run_suite_configuration_backup_tick
 from mediamop.platform.suite_settings.suite_configuration_backup_service import list_suite_configuration_backups
+from mediamop.platform.suite_settings.update_service import start_suite_update_now
 
 from tests.integration_helpers import auth_post, csrf as fetch_csrf, trusted_browser_origin_headers
 
@@ -304,6 +306,57 @@ def test_suite_update_status_not_published_when_release_missing(
     body = r.json()
     assert body["status"] == "not_published"
     assert "no public mediamop release is published yet" in body["summary"].lower()
+
+
+def test_suite_update_now_stages_windows_installer_and_launches_script(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(tmp_path))
+    monkeypatch.setenv("MEDIAMOP_RUNTIME", "windows")
+    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "1.0.0")
+    monkeypatch.setattr(
+        "mediamop.platform.suite_settings.update_service._fetch_latest_release_payload",
+        lambda: {
+            "tag_name": "v1.2.3",
+            "assets": [
+                {
+                    "name": "MediaMopSetup.exe",
+                    "browser_download_url": "https://example.com/MediaMopSetup.exe",
+                }
+            ],
+        },
+    )
+
+    class _Stream:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            return None
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def iter_bytes(self):
+            yield b"installer-bytes"
+
+    launched: list[str] = []
+    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.httpx.stream", lambda *a, **k: _Stream())
+    monkeypatch.setattr(
+        "mediamop.platform.suite_settings.update_service._launch_windows_upgrade_script",
+        lambda path: launched.append(str(path)),
+    )
+
+    out = start_suite_update_now(settings)
+
+    installer = tmp_path / "upgrades" / "MediaMopSetup-1.2.3.exe"
+    script = tmp_path / "upgrades" / "run-windows-upgrade.ps1"
+    assert out.status == "started"
+    assert installer.read_bytes() == b"installer-bytes"
+    assert script.is_file()
+    assert launched == [str(script)]
+    assert "Stop-Process" in script.read_text(encoding="utf-8")
 
 
 def test_suite_configuration_backup_tick_creates_snapshot(client_with_admin: TestClient) -> None:
