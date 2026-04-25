@@ -27,6 +27,8 @@ DisableWelcomePage=no
 DisableDirPage=no
 DisableProgramGroupPage=no
 DisableReadyPage=no
+CloseApplications=no
+RestartApplications=no
 PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
@@ -48,3 +50,26 @@ Name: "{commondesktop}\MediaMop"; Filename: "{app}\{#ExeName}"; Tasks: desktopic
 
 [Run]
 Filename: "{app}\{#ExeName}"; Description: "Launch MediaMop"; Flags: nowait postinstall skipifsilent
+
+[Code]
+procedure StopMediaMopProcess(ProcessName: String);
+var
+  ResultCode: Integer;
+begin
+  Exec(
+    ExpandConstant('{sys}\taskkill.exe'),
+    '/F /T /IM "' + ProcessName + '"',
+    '',
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode
+  );
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  StopMediaMopProcess('MediaMop.exe');
+  StopMediaMopProcess('MediaMopServer.exe');
+  Sleep(1000);
+  Result := '';
+end;
