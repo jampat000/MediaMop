@@ -118,3 +118,6 @@ jobs:
         env:
           MEDIAMOP_BUILD_VERSION: ci-${{ github.run_number }}
         run: powershell -ExecutionPolicy Bypass -File packaging/windows/build.ps1
+
+      - name: Smoke test packaged Windows server
+        run: powershell -ExecutionPolicy Bypass -File scripts/smoke-windows-package.ps1

@@ -5,6 +5,7 @@ Shared by API startup and ``scripts/verify_local_db.py``.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from alembic import command
@@ -34,6 +35,9 @@ def _manual_migration_instructions() -> str:
 
 
 def _backend_root() -> Path:
+    packaged_root = (os.environ.get("MEDIAMOP_ALEMBIC_ROOT") or "").strip()
+    if packaged_root:
+        return Path(packaged_root).expanduser().resolve()
     return Path(__file__).resolve().parents[3]
 
 
