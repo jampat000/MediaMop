@@ -59,7 +59,7 @@ function outcomeLabel(outcome: string | undefined): string {
     case "live_output_written":
       return "File processed";
     case "live_skipped_not_required":
-      return "Already matched rules";
+      return "No changes needed";
     case "failed_before_execution":
       return "Could not check file";
     case "failed_during_execution":

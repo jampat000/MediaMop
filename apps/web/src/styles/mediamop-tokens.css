@@ -3,7 +3,8 @@
 :root {
   color-scheme: dark;
   /* Display density: overridden on `html[data-mm-density="…"]` (see below). */
-  --mm-density-font-scale: 1;
+  --mm-density-font-scale: 1.08;
+  --mm-density-ui-scale: 1;
   --mm-main-max-cap: 2400px;
   --mm-charcoal: #0b0b10;
   --mm-slate: #1f232a;
@@ -31,18 +32,23 @@
   --mm-accent-soft: rgba(212, 175, 55, 0.16);
   --mm-accent-ring: rgba(212, 175, 55, 0.45);
   --mm-on-accent: #0b0b10;
-  --mm-sidebar-w: 256px;
+  --mm-sidebar-w: calc(256px * var(--mm-density-ui-scale));
   --mm-radius: 12px;
   --mm-radius-sm: 8px;
   --mm-radius-pill: 999px;
   /* Main column: never wider than the pane; cap scales slightly with display density. */
   --mm-main-max: min(100%, var(--mm-main-max-cap));
-  --mm-space: clamp(1.125rem, 3vw, 1.75rem);
-  --mm-space-lg: clamp(1.65rem, 4vw, 2.35rem);
-  --mm-bubble-stack-gap-mobile: 1.25rem;
-  --mm-bubble-stack-gap-desktop: 1.75rem;
-  --mm-bubble-grid-gap-mobile: 1.25rem;
-  --mm-bubble-grid-gap-desktop: 1.75rem;
+  --mm-space: calc(clamp(1.125rem, 3vw, 1.75rem) * var(--mm-density-ui-scale));
+  --mm-space-lg: calc(clamp(1.65rem, 4vw, 2.35rem) * var(--mm-density-ui-scale));
+  --mm-bubble-stack-gap-mobile: calc(1.25rem * var(--mm-density-ui-scale));
+  --mm-bubble-stack-gap-desktop: calc(1.75rem * var(--mm-density-ui-scale));
+  --mm-bubble-grid-gap-mobile: calc(1.25rem * var(--mm-density-ui-scale));
+  --mm-bubble-grid-gap-desktop: calc(1.75rem * var(--mm-density-ui-scale));
+  --mm-main-pad-y: calc(clamp(32px, 2.2vw, 40px) * var(--mm-density-ui-scale));
+  --mm-main-pad-x: calc(clamp(16px, 3vw, 40px) * var(--mm-density-ui-scale));
+  --mm-control-height: calc(34px * var(--mm-density-ui-scale));
+  --mm-control-pad-x: calc(11px * var(--mm-density-ui-scale));
+  --mm-control-pad-y: calc(7px * var(--mm-density-ui-scale));
   --mm-font: "Outfit", system-ui, -apple-system, sans-serif;
   --mm-shadow-card: 0 16px 48px rgba(0, 0, 0, 0.45);
   --mm-shadow-card-inner: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
@@ -98,12 +104,19 @@ html[data-mm-theme="light"] {
 }
 
 html[data-mm-density="comfortable"] {
-  /* Stronger lift for QHD / 4K where UI can still feel small next to physical screen size. */
-  --mm-density-font-scale: 1.1;
+  --mm-density-font-scale: 1.2;
+  --mm-density-ui-scale: 1.12;
   --mm-main-max-cap: 2600px;
+}
+
+html[data-mm-density="expanded"] {
+  --mm-density-font-scale: 1.32;
+  --mm-density-ui-scale: 1.22;
+  --mm-main-max-cap: 2800px;
 }
 
 html[data-mm-density="compact"] {
   --mm-density-font-scale: 0.94;
+  --mm-density-ui-scale: 0.84;
   --mm-main-max-cap: 2100px;
 }

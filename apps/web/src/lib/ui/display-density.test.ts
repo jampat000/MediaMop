@@ -7,6 +7,7 @@ describe("display-density", () => {
     expect(parseDisplayDensity("")).toBe("default");
     expect(parseDisplayDensity("comfortable")).toBe("comfortable");
     expect(parseDisplayDensity("compact")).toBe("compact");
+    expect(parseDisplayDensity("expanded")).toBe("expanded");
     expect(parseDisplayDensity("nope")).toBe("default");
   });
 

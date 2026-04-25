@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from starlette import status
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
@@ -172,6 +172,14 @@ def get_suite_update_status(_user: UserPublicDep) -> SuiteUpdateStatusOut:
     """Read-only update check for the signed-in Settings page."""
 
     return build_suite_update_status()
+
+
+@router.get("/suite/update-now")
+@router.get("/suite/settings/update-now")
+def get_suite_update_now_redirect() -> RedirectResponse:
+    """If a browser lands on the upgrade API after restart, send it back to the app."""
+
+    return RedirectResponse(url="/app/settings", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/suite/update-now", response_model=SuiteUpdateStartOut)

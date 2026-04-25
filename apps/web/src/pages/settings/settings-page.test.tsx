@@ -208,7 +208,9 @@ describe("SettingsPage (suite settings)", () => {
     expect(screen.getByTestId("suite-settings-display-density")).toBeTruthy();
     fireEvent.click(screen.getByText("Comfortable"));
     expect(document.documentElement.getAttribute("data-mm-density")).toBe("comfortable");
-    fireEvent.click(screen.getByText("Default"));
+    fireEvent.click(screen.getByText("Expanded"));
+    expect(document.documentElement.getAttribute("data-mm-density")).toBe("expanded");
+    fireEvent.click(screen.getByText("Balanced"));
     expect(document.documentElement.getAttribute("data-mm-density")).toBeNull();
   });
 });

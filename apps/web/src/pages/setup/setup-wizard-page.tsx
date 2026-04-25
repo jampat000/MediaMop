@@ -372,12 +372,13 @@ export function SetupWizardPage() {
               </div>
               <div>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Display density</p>
-                <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Display density">
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4" role="radiogroup" aria-label="Display density">
                   {(
                     [
-                      { id: "default" as const, label: "Default", hint: "Balanced" },
-                      { id: "compact" as const, label: "Compact", hint: "Denser layout" },
-                      { id: "comfortable" as const, label: "Comfortable", hint: "Larger text" },
+                      { id: "compact" as const, label: "Compact", hint: "Smaller layout" },
+                      { id: "default" as const, label: "Balanced", hint: "Readable default" },
+                      { id: "comfortable" as const, label: "Comfortable", hint: "Larger controls" },
+                      { id: "expanded" as const, label: "Expanded", hint: "Big-screen mode" },
                     ] as const
                   ).map(({ id, label, hint }) => (
                     <label

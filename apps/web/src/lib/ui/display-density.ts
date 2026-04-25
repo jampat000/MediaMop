@@ -2,10 +2,10 @@
 
 export const DISPLAY_DENSITY_STORAGE_KEY = "mediamop-display-density";
 
-export type DisplayDensity = "default" | "comfortable" | "compact";
+export type DisplayDensity = "default" | "compact" | "comfortable" | "expanded";
 
 export function parseDisplayDensity(raw: string | null): DisplayDensity {
-  if (raw === "comfortable" || raw === "compact") {
+  if (raw === "compact" || raw === "comfortable" || raw === "expanded") {
     return raw;
   }
   return "default";

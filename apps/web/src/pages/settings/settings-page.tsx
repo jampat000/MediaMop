@@ -471,7 +471,7 @@ export function SettingsPage() {
       setUpgradeMsg(result.message);
       if (result.status === "started") {
         window.setTimeout(() => {
-          window.location.reload();
+          window.location.assign("/app/settings");
         }, 30_000);
       }
     } catch {
@@ -685,8 +685,7 @@ export function SettingsPage() {
                   Display density (this browser)
                 </legend>
                 <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                  Adjust type size and how wide the main column can grow on large monitors. Your choice saves in this
-                  browser only and applies as soon as you select it. Choose Default to clear the stored preference.
+                  Adjust text, spacing, sidebar width, and card density for this browser. The change applies immediately.
                 </p>
                 <div
                   className="mt-3 flex flex-col gap-2"
@@ -696,9 +695,10 @@ export function SettingsPage() {
                 >
                   {(
                     [
-                      { id: "default" as const, label: "Default", hint: "Balanced" },
-                      { id: "compact" as const, label: "Compact", hint: "Smaller text, narrower cap" },
-                      { id: "comfortable" as const, label: "Comfortable", hint: "Larger text (+10%), wider cap" },
+                      { id: "compact" as const, label: "Compact", hint: "Smaller, tighter app layout" },
+                      { id: "default" as const, label: "Balanced", hint: "Readable default" },
+                      { id: "comfortable" as const, label: "Comfortable", hint: "Larger text and controls" },
+                      { id: "expanded" as const, label: "Expanded", hint: "Big-screen reading mode" },
                     ] as const
                   ).map(({ id, label, hint }) => (
                     <label

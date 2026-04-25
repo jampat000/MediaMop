@@ -17,7 +17,7 @@ class RefinerOverviewStatsOut(BaseModel):
     )
     already_optimized_count: int = Field(
         ge=0,
-        description="Refiner remux activity rows skipped because the file already matched the plan.",
+        description="Refiner activity rows where no file changes were needed.",
     )
     net_space_saved_bytes: int = Field(
         description="Net source-bytes minus output-bytes across output-written remuxes in the window.",

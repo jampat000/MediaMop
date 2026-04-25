@@ -39,7 +39,7 @@ def test_activity_title_per_outcome() -> None:
     assert "processed successfully" in remux_pass_activity_title(
         {**base, "outcome": REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN},
     ).lower()
-    assert "matched your refiner rules" in remux_pass_activity_title(
+    assert "no changes needed" in remux_pass_activity_title(
         {**base, "outcome": REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED},
     ).lower()
 

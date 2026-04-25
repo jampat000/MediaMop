@@ -354,7 +354,7 @@ function normalizeRefinerSummary(ev: ActivityEventItem): ActivityDisplay | null 
     return {
       title:
         outcome === "live_skipped_not_required"
-          ? `${fileName} already matched your rules`
+          ? `No changes needed for ${fileName}`
           : outcome?.startsWith("failed")
             ? `${fileName} could not be processed`
             : `${fileName} was processed successfully`,
@@ -364,12 +364,12 @@ function normalizeRefinerSummary(ev: ActivityEventItem): ActivityDisplay | null 
           : outcome?.startsWith("failed")
             ? "Refiner could not finish this file"
             : remuxNeeded === false
-              ? "The file already matched your rules"
+              ? "The file already fits your Refiner rules"
               : "Refiner finished writing the cleaned-up file",
       detail: ev.detail,
       chip:
         outcome === "live_skipped_not_required"
-          ? "Already clean"
+          ? "No changes needed"
           : outcome?.startsWith("failed")
             ? "Processing failed"
             : "File processed",

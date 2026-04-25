@@ -215,7 +215,7 @@ describe("DashboardPage", () => {
     );
 
     expect(screen.getByText("Files handled")).toBeInTheDocument();
-    expect(screen.getByText("2 changed - 0 already clean")).toBeInTheDocument();
+    expect(screen.getByText("2 changed - 0 needed no changes")).toBeInTheDocument();
     expect(screen.queryByText("Scan watched folders")).not.toBeInTheDocument();
     expect(screen.getByText("Process file")).toBeInTheDocument();
   });

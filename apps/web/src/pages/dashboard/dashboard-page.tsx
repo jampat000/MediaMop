@@ -232,7 +232,7 @@ function buildRefinerCard(args: {
           : "Ready. No recent remux work recorded.",
     metrics: [
       { label: "Completed jobs", value: formatCount(args.processed), detail: `Success rate ${formatPercent(args.successRatePercent)}` },
-      { label: "Output written", value: formatCount(args.outputWritten), detail: `Already optimized ${formatCount(args.alreadyOptimized)}` },
+      { label: "Output written", value: formatCount(args.outputWritten), detail: `No-change files ${formatCount(args.alreadyOptimized)}` },
       { label: "Net space saved", value: formatBytesCompact(args.netSpaceSavedBytes), detail: describeNetSizeChange(args.netSpaceSavedBytes, args.netSpaceSavedPercent) },
       { label: "Failures", value: formatCount(args.failed) },
     ],
@@ -418,7 +418,7 @@ export function DashboardPage() {
             value: formatCount(refinerFileOutcomes),
             detail:
               refinerFileOutcomes > 0
-                ? `${formatCount(refinerStats.data?.output_written_count ?? 0)} changed - ${formatCount(refinerStats.data?.already_optimized_count ?? 0)} already clean`
+                ? `${formatCount(refinerStats.data?.output_written_count ?? 0)} changed - ${formatCount(refinerStats.data?.already_optimized_count ?? 0)} needed no changes`
                 : "No completed file outcomes yet",
           }
         : metric,

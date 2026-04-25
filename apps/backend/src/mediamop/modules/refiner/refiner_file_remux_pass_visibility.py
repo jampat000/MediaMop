@@ -50,7 +50,7 @@ def remux_pass_activity_title(payload: dict[str, Any]) -> str:
     if outcome == REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN:
         return f"{name} was processed successfully"
     if outcome == REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED:
-        return f"{name} already matched your Refiner rules"
+        return f"No changes needed for {name}"
     if outcome == REMUX_PASS_OUTCOME_FAILED_DURING_EXECUTION:
         return f"{name} could not be processed"
     if outcome == REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION or payload.get("ok") is False:

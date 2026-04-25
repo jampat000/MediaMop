@@ -40,7 +40,7 @@ body.mm-body {
   height: 100%;
   margin: 0;
   font-family: var(--mm-font);
-  font-size: 0.953125rem; /* 15.25px when html root is 16px */
+  font-size: 1rem;
   line-height: 1.52;
   font-weight: 400;
   font-feature-settings: var(--mm-font-feature);
@@ -78,17 +78,21 @@ body.mm-body {
   background: var(--mm-bg);
 }
 
+.mm-shell-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  min-height: var(--mm-control-height);
+  margin: 0 0 calc(12px * var(--mm-density-ui-scale));
+}
+
 .mm-theme-toggle {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  float: right;
+  position: static;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 34px;
-  margin: 0 2px 10px 14px;
-  padding: 7px 11px;
+  min-height: var(--mm-control-height);
+  margin: 0;
+  padding: var(--mm-control-pad-y) var(--mm-control-pad-x);
   border: 1px solid var(--mm-border);
   border-radius: var(--mm-radius-pill);
   background:
@@ -98,7 +102,7 @@ body.mm-body {
   box-shadow: var(--mm-shadow-card-inner), 0 8px 24px rgba(0, 0, 0, 0.16);
   cursor: pointer;
   font: inherit;
-  font-size: 0.78rem;
+  font-size: 0.8125rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -149,7 +153,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
-  padding: 8px 0 14px;
+  padding: calc(8px * var(--mm-density-ui-scale)) 0 calc(14px * var(--mm-density-ui-scale));
   overflow-y: auto;
   position: relative;
   z-index: 2;
@@ -160,9 +164,9 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   flex-direction: column;
   align-items: flex-start;
   text-align: left;
-  padding: 0 16px 4px;
+  padding: 0 calc(16px * var(--mm-density-ui-scale)) calc(4px * var(--mm-density-ui-scale));
   border-bottom: 1px solid var(--mm-border);
-  margin: 0 10px 3px;
+  margin: 0 calc(10px * var(--mm-density-ui-scale)) calc(3px * var(--mm-density-ui-scale));
   text-decoration: none;
   color: inherit;
   transition: opacity 0.15s ease;
@@ -207,7 +211,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 .mm-sidebar-product-title {
   margin: 6px 0 0;
   padding: 0;
-  font-size: 13px;
+  font-size: 0.875rem;
   line-height: 1.25;
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -219,7 +223,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 .mm-sidebar-tagline {
   margin: 2px 0 0;
   padding: 0;
-  font-size: 10px;
+  font-size: 0.75rem;
   line-height: 1.35;
   font-weight: 500;
   font-style: normal;
@@ -234,14 +238,18 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 2px 10px 0;
-  gap: 3px;
+  padding: calc(2px * var(--mm-density-ui-scale)) calc(10px * var(--mm-density-ui-scale)) 0;
+  gap: calc(3px * var(--mm-density-ui-scale));
 }
 
 .mm-sidebar-section-label {
   margin: 0;
-  padding: 6px 14px 1px 16px;
-  font-size: 9px;
+  padding:
+    calc(6px * var(--mm-density-ui-scale))
+    calc(14px * var(--mm-density-ui-scale))
+    calc(1px * var(--mm-density-ui-scale))
+    calc(16px * var(--mm-density-ui-scale));
+  font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -270,13 +278,13 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 .mm-sidebar-link {
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 10px 14px;
-  margin: 0 4px 0 2px;
+  gap: calc(11px * var(--mm-density-ui-scale));
+  padding: calc(10px * var(--mm-density-ui-scale)) calc(14px * var(--mm-density-ui-scale));
+  margin: 0 calc(4px * var(--mm-density-ui-scale)) 0 calc(2px * var(--mm-density-ui-scale));
   border-radius: var(--mm-radius-pill);
   color: var(--mm-text2);
   text-decoration: none;
-  font-size: 13px;
+  font-size: 0.9375rem;
   font-weight: 500;
   letter-spacing: 0.015em;
   border: 1px solid transparent;
@@ -316,12 +324,15 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 }
 
 .mm-sidebar-footer {
-  padding: 0 10px 6px;
+  padding: 0 calc(10px * var(--mm-density-ui-scale)) calc(6px * var(--mm-density-ui-scale));
   margin-top: auto;
 }
 
 .mm-sidebar-footer-panel {
-  padding: 14px 14px 12px;
+  padding:
+    calc(14px * var(--mm-density-ui-scale))
+    calc(14px * var(--mm-density-ui-scale))
+    calc(12px * var(--mm-density-ui-scale));
   border-radius: 11px;
   background: rgba(0, 0, 0, 0.22);
   border: 1px solid rgba(231, 231, 234, 0.07);
@@ -329,7 +340,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 }
 
 .mm-sidebar-meta {
-  font-size: 9px;
+  font-size: 0.6875rem;
   color: var(--mm-gold);
   font-weight: 600;
   letter-spacing: 0.18em;
@@ -339,7 +350,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 
 .mm-sidebar-version {
   margin-top: 8px;
-  font-size: 10.5px;
+  font-size: 0.75rem;
   color: var(--mm-text2);
   font-variant-numeric: tabular-nums;
   font-weight: 500;
@@ -357,7 +368,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   justify-content: flex-start;
   background: none;
   font: inherit;
-  font-size: 11.5px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--mm-text2);
   cursor: pointer;
@@ -386,7 +397,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 .mm-main {
   flex: 1;
   height: 100vh;
-  padding: 32px clamp(16px, 3vw, 40px) 40px;
+  padding: var(--mm-main-pad-y) var(--mm-main-pad-x) calc(40px * var(--mm-density-ui-scale));
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
@@ -444,8 +455,8 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   }
 
   .mm-main {
-    padding-top: 34px;
-    padding-bottom: 44px;
+    padding-top: calc(34px * var(--mm-density-ui-scale));
+    padding-bottom: calc(44px * var(--mm-density-ui-scale));
   }
 
   .mm-page__title {
@@ -458,7 +469,9 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   }
 
   .mm-card {
-    padding: 1.45rem 1.55rem;
+    padding:
+      calc(1.45rem * var(--mm-density-ui-scale))
+      calc(1.55rem * var(--mm-density-ui-scale));
   }
 
   .mm-card__title {
@@ -510,8 +523,8 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   }
 
   .mm-main {
-    padding-top: 36px;
-    padding-bottom: 48px;
+    padding-top: calc(36px * var(--mm-density-ui-scale));
+    padding-bottom: calc(48px * var(--mm-density-ui-scale));
   }
 
   .mm-page__title {
@@ -519,7 +532,9 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   }
 
   .mm-card {
-    padding: 1.5rem 1.6rem;
+    padding:
+      calc(1.5rem * var(--mm-density-ui-scale))
+      calc(1.6rem * var(--mm-density-ui-scale));
   }
 
   .mm-card__body {
@@ -699,7 +714,9 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 }
 
 .mm-card {
-  padding: 1.35rem 1.45rem;
+  padding:
+    calc(1.35rem * var(--mm-density-ui-scale))
+    calc(1.45rem * var(--mm-density-ui-scale));
   min-height: 5rem;
   background: var(--mm-card-bg);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -708,7 +725,10 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 }
 
 .mm-card--shell {
-  padding: 1.45rem 1.55rem 1.5rem;
+  padding:
+    calc(1.45rem * var(--mm-density-ui-scale))
+    calc(1.55rem * var(--mm-density-ui-scale))
+    calc(1.5rem * var(--mm-density-ui-scale));
   border-color: rgba(212, 175, 55, 0.2);
   background: linear-gradient(150deg, rgba(212, 175, 55, 0.06) 0%, var(--mm-card-bg) 50%);
   box-shadow: var(--mm-shadow-card), var(--mm-shadow-card-inner);

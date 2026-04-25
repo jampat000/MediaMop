@@ -1,4 +1,4 @@
-"""Refiner watched-folder remux scan dispatch: refiner_jobs + handler + activity (isolated SQLite)."""
+"""Refiner watched-folder remux scan dispatch: refiner_jobs + handler (isolated SQLite)."""
 
 from __future__ import annotations
 
@@ -22,7 +22,6 @@ from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_job_kin
     REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
 )
 from mediamop.modules.refiner.worker_loop import process_one_refiner_job
-from mediamop.platform.activity import constants as C
 from mediamop.platform.activity.models import ActivityEvent
 
 import mediamop.modules.refiner.jobs_model  # noqa: F401
@@ -135,17 +134,7 @@ def test_scan_handler_enqueues_remux_when_requested(
         assert body.get("relative_media_path") == "Gate Test 2001.mkv"
         assert "dry_run" not in body
 
-        ev = s.scalars(
-            select(ActivityEvent).where(
-                ActivityEvent.event_type == C.REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_COMPLETED,
-            ),
-        ).first()
-        assert ev is not None
-        detail = json.loads(ev.detail or "{}")
-        assert detail.get("verdict_proceed") == 1
-        assert detail.get("remux_jobs_enqueued") == 1
-        assert detail.get("scan_result_label") == "Files added to Refiner"
-        assert detail.get("scan_trigger") == "manual"
+        assert s.scalar(select(ActivityEvent)) is None
 
 
 def test_scan_handler_enqueues_remux_without_arr_connections(
@@ -212,16 +201,7 @@ def test_scan_handler_enqueues_remux_without_arr_connections(
         assert len(remux) == 1
         body = json.loads(remux[0].payload_json or "{}")
         assert body.get("relative_media_path") == "Standalone Movie 2026.mkv"
-        ev = s.scalars(
-            select(ActivityEvent).where(
-                ActivityEvent.event_type == C.REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_COMPLETED,
-            ),
-        ).first()
-        assert ev is not None
-        detail = json.loads(ev.detail or "{}")
-        assert detail.get("verdict_proceed") == 1
-        assert detail.get("remux_jobs_enqueued") == 1
-        assert detail.get("user_message") == "1 file was added to Refiner for processing."
+        assert s.scalar(select(ActivityEvent)) is None
 
 
 def test_scan_handler_does_not_record_activity_when_no_files_are_queued(
@@ -276,11 +256,4 @@ def test_scan_handler_does_not_record_activity_when_no_files_are_queued(
         )
 
     with session_factory() as s:
-        assert (
-            s.scalar(
-                select(ActivityEvent).where(
-                    ActivityEvent.event_type == C.REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_COMPLETED,
-                ),
-            )
-            is None
-        )
+        assert s.scalar(select(ActivityEvent)) is None

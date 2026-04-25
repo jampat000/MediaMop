@@ -15,13 +15,9 @@ from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.refiner_file_remux_pass_job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
 from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
-from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_activity import (
-    record_refiner_watched_folder_remux_scan_dispatch_completed,
-)
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_evaluate import (
     evaluate_watched_media_file_for_dispatch,
     fetch_radarr_and_sonarr_queue_rows_for_scan,
-    format_scan_summary_for_activity,
 )
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_ops import (
     iter_watched_folder_media_candidate_files,
@@ -81,7 +77,7 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
             "job_id": ctx.id,
             "scan_trigger": scan_trigger,
             "media_scope": media_scope,
-            "scan_result_label": "Watched folder checked",
+            "scan_result_label": "watched_folder_checked",
             "watched_folder_resolved": watched_root,
             "enqueue_remux_jobs": enqueue_remux_jobs,
             "min_file_age_seconds": op_settings.min_file_age_seconds,
@@ -159,36 +155,35 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                 seen = int(summary["media_candidates_seen"])
                 duplicates = int(summary["skipped_duplicate_same_scan"]) + int(summary["skipped_duplicate_active_queue"])
                 if queued:
-                    summary["scan_result_label"] = "Files added to Refiner"
+                    summary["scan_result_label"] = "files_queued"
                     summary["user_message"] = (
                         f"{queued} file{' was' if queued == 1 else 's were'} added to Refiner for processing."
                     )
                 elif waiting:
-                    summary["scan_result_label"] = "Waiting for files to finish"
+                    summary["scan_result_label"] = "waiting_for_files"
                     summary["user_message"] = (
                         f"{waiting} file{' looks' if waiting == 1 else 's look'} like it is still being copied or imported, "
                         "so MediaMop left it alone for now."
                     )
                     summary["waiting_message"] = "MediaMop will check again on the next scheduled scan."
                 elif seen and not enqueue_remux_jobs:
-                    summary["scan_result_label"] = "Folder checked only"
+                    summary["scan_result_label"] = "check_only"
                     summary["user_message"] = (
                         f"{seen} media file{' was' if seen == 1 else 's were'} found, but this scan was set to check only."
                     )
                 elif seen and duplicates:
-                    summary["scan_result_label"] = "Already queued"
+                    summary["scan_result_label"] = "already_queued"
                     summary["user_message"] = (
                         "MediaMop found matching media files, but they were already waiting for Refiner."
                     )
                 elif seen:
-                    summary["scan_result_label"] = "No new Refiner work"
+                    summary["scan_result_label"] = "nothing_new"
                     summary["user_message"] = "MediaMop found media files, but there was nothing new to queue."
                 else:
-                    summary["scan_result_label"] = "No media found"
+                    summary["scan_result_label"] = "no_media_found"
                     summary["user_message"] = "MediaMop did not find any media files in this watched folder."
 
-                if int(summary["remux_jobs_enqueued"]) > 0:
-                    detail = format_scan_summary_for_activity(summary)
-                    record_refiner_watched_folder_remux_scan_dispatch_completed(session, detail=detail)
+                # File-level processing events now tell the user what happened. Recording a scan
+                # event here makes Activity look backwards when completed file events arrive first.
 
     return _run

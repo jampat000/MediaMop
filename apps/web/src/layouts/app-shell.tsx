@@ -95,21 +95,23 @@ export function AppShell() {
         </div>
       </aside>
       <main className="mm-main" id="mm-main-content" tabIndex={-1}>
-        <button
-          type="button"
-          className="mm-theme-toggle"
-          data-testid="theme-toggle"
-          aria-label={`Switch to ${nextTheme} mode`}
-          title={`Switch to ${nextTheme} mode`}
-          onClick={() => {
-            setTheme(nextTheme);
-            persistAppTheme(nextTheme);
-          }}
-        >
-          <span className="mm-theme-toggle__dot" aria-hidden="true" />
-          <span className="mm-theme-toggle__label">{theme === "dark" ? "Dark" : "Light"}</span>
-        </button>
         <div className="mm-main-inner">
+          <div className="mm-shell-toolbar" aria-label="Display controls">
+            <button
+              type="button"
+              className="mm-theme-toggle"
+              data-testid="theme-toggle"
+              aria-label={`Switch to ${nextTheme} mode`}
+              title={`Switch to ${nextTheme} mode`}
+              onClick={() => {
+                setTheme(nextTheme);
+                persistAppTheme(nextTheme);
+              }}
+            >
+              <span className="mm-theme-toggle__dot" aria-hidden="true" />
+              <span className="mm-theme-toggle__label">{theme === "dark" ? "Dark" : "Light"}</span>
+            </button>
+          </div>
           <Outlet />
         </div>
       </main>
