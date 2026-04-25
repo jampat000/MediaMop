@@ -122,5 +122,7 @@ only if you want to override defaults such as the image tag or runtime home.
 
 - `.github/workflows/ci.yml`
 - `.github/workflows/release.yml`
+- `docs/release-governance.md`
+- `docs/smoke-checklists.md`
 - `docker/README.md`
 - `docs/local-development.md`
