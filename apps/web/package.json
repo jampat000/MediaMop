@@ -2,6 +2,7 @@
   "name": "mediamop-web",
   "private": true,
   "version": "1.0.4",
+  "license": "AGPL-3.0-or-later",
   "type": "module",
   "scripts": {
     "dev": "npm run dev:stop-api && npm run dev:stop-web && node ./scripts/run-dev-stack.mjs",

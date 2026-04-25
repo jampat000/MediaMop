@@ -8,6 +8,8 @@ MediaMop now ships three release deliverables from a tagged release:
 
 The Windows artifact is an installer-based desktop app with a tray host. It is not a Windows service.
 
+MediaMop is released under AGPL-3.0-or-later. Release artifacts are built from the tagged source tree and remain subject to that license.
+
 ## Contract
 
 1. Update the version in both files in a normal PR:
