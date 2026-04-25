@@ -9,6 +9,8 @@ WEB_DIST = ROOT / "apps" / "web" / "dist"
 LOGO = ROOT / "apps" / "web" / "src" / "components" / "brand" / "mediamop-logo-premium.png"
 TRAY_ICON_PNG = ROOT / "packaging" / "windows" / "assets" / "mediamop-tray-icon.png"
 TRAY_ICON_ICO = ROOT / "packaging" / "windows" / "assets" / "mediamop-tray-icon.ico"
+FFMPEG_VENDOR = ROOT / "packaging" / "windows" / "vendor" / "ffmpeg"
+THIRD_PARTY_NOTICES = ROOT / "THIRD_PARTY_NOTICES.md"
 
 hiddenimports = collect_submodules("mediamop")
 datas = [
@@ -18,7 +20,10 @@ datas = [
     (str(LOGO), "assets"),
     (str(TRAY_ICON_PNG), "assets"),
     (str(TRAY_ICON_ICO), "assets"),
+    (str(THIRD_PARTY_NOTICES), "."),
 ]
+if FFMPEG_VENDOR.is_dir():
+    datas.append((str(FFMPEG_VENDOR), "bin/ffmpeg"))
 
 a = Analysis(
     [str(BACKEND / "src" / "mediamop" / "windows" / "tray_app.py")],

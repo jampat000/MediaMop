@@ -22,6 +22,7 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
+    ffmpeg \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/mediamop

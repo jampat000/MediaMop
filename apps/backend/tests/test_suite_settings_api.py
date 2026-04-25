@@ -283,6 +283,26 @@ def test_suite_update_status_ok(client_with_admin: TestClient, monkeypatch: pyte
     assert body["status"] == "update_available"
 
 
+def test_suite_update_status_alias_ok(client_with_admin: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    _login_admin(client_with_admin)
+    monkeypatch.setattr(
+        "mediamop.platform.suite_settings.update_service._fetch_latest_release_payload",
+        lambda: {
+            "tag_name": "v1.2.3",
+            "name": "MediaMop 1.2.3",
+            "html_url": "https://example.com/release",
+            "published_at": "2026-04-23T00:00:00Z",
+            "assets": [],
+        },
+    )
+    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "1.0.0")
+
+    r = client_with_admin.get("/api/v1/suite/settings/update-status")
+
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] == "update_available"
+
+
 def test_suite_update_status_not_published_when_release_missing(
     client_with_admin: TestClient,
     monkeypatch: pytest.MonkeyPatch,

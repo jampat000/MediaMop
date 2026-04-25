@@ -13,6 +13,9 @@ $packagePath = (Resolve-Path -LiteralPath $PackageDir).Path
 $serverExe = Join-Path $packagePath "MediaMopServer.exe"
 $webIndex = Join-Path $packagePath "_internal\web-dist\index.html"
 $trayIcon = Join-Path $packagePath "_internal\assets\mediamop-tray-icon.png"
+$alembicIni = Join-Path $packagePath "_internal\alembic.ini"
+$ffmpegExe = Join-Path $packagePath "_internal\bin\ffmpeg\ffmpeg.exe"
+$ffprobeExe = Join-Path $packagePath "_internal\bin\ffmpeg\ffprobe.exe"
 
 if (-not (Test-Path -LiteralPath $serverExe)) {
   throw "Packaged server executable not found: $serverExe"
@@ -22,6 +25,15 @@ if (-not (Test-Path -LiteralPath $webIndex)) {
 }
 if (-not (Test-Path -LiteralPath $trayIcon)) {
   throw "Packaged tray icon not found: $trayIcon"
+}
+if (-not (Test-Path -LiteralPath $alembicIni)) {
+  throw "Packaged database migration config not found: $alembicIni"
+}
+if (-not (Test-Path -LiteralPath $ffmpegExe)) {
+  throw "Packaged ffmpeg executable not found: $ffmpegExe"
+}
+if (-not (Test-Path -LiteralPath $ffprobeExe)) {
+  throw "Packaged ffprobe executable not found: $ffprobeExe"
 }
 $indexText = Get-Content -LiteralPath $webIndex -Raw
 if ($indexText -notmatch "MediaMop") {
