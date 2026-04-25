@@ -11,6 +11,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -33,25 +34,33 @@ def resolve_ffprobe_ffmpeg(*, mediamop_home: str) -> tuple[str, str]:
     """Prefer bundled tools under ``mediamop_home``, then host ``PATH``."""
 
     home = Path(mediamop_home).expanduser().resolve()
-    bundled_win = [
-        home / "bin" / "ffmpeg" / "ffprobe.exe",
-        home / "bin" / "ffmpeg" / "ffmpeg.exe",
-    ]
-    if bundled_win[0].is_file() and bundled_win[1].is_file():
-        return str(bundled_win[0]), str(bundled_win[1])
-    bundled_unix = [
-        home / "bin" / "ffmpeg" / "ffprobe",
-        home / "bin" / "ffmpeg" / "ffmpeg",
-    ]
-    if bundled_unix[0].is_file() and bundled_unix[1].is_file():
-        return str(bundled_unix[0]), str(bundled_unix[1])
+    candidate_dirs: list[Path] = []
+    raw_env_dir = (os.environ.get("MEDIAMOP_FFMPEG_DIR") or "").strip()
+    if raw_env_dir:
+        candidate_dirs.append(Path(raw_env_dir).expanduser())
+    candidate_dirs.append(home / "bin" / "ffmpeg")
+    if getattr(sys, "frozen", False):
+        exe_dir = Path(sys.executable).resolve().parent
+        candidate_dirs.extend(
+            [
+                exe_dir / "bin" / "ffmpeg",
+                exe_dir / "_internal" / "bin" / "ffmpeg",
+            ]
+        )
+
+    names = ("ffprobe.exe", "ffmpeg.exe") if os.name == "nt" else ("ffprobe", "ffmpeg")
+    for candidate_dir in candidate_dirs:
+        ffprobe_path = candidate_dir / names[0]
+        ffmpeg_path = candidate_dir / names[1]
+        if ffprobe_path.is_file() and ffmpeg_path.is_file():
+            return str(ffprobe_path), str(ffmpeg_path)
 
     ffprobe = shutil.which("ffprobe")
     ffmpeg = shutil.which("ffmpeg")
     if not ffprobe or not ffmpeg:
         raise RuntimeError(
-            "Refiner needs ffprobe and ffmpeg. Place binaries under MEDIAMOP_HOME/bin/ffmpeg/, "
-            "or install both on the host PATH (Linux/macOS/Windows).",
+            "Refiner could not find the video tools it needs. Windows and Docker installs should include them; "
+            "source installs must provide ffprobe and ffmpeg on PATH or set MEDIAMOP_FFMPEG_DIR.",
         )
     return ffprobe, ffmpeg
 

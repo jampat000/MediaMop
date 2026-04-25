@@ -42,3 +42,6 @@ artifacts/
 tmp/
 scripts/node_modules/
 apps/web/tmp-*.cjs
+
+# Build-time downloaded Windows FFmpeg runtime
+packaging/windows/vendor/

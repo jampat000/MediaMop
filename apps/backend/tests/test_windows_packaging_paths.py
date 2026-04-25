@@ -61,4 +61,18 @@ def test_windows_package_uses_dedicated_tray_icon_assets() -> None:
     assert 'TRAY_ICON_ICO = ROOT / "packaging" / "windows" / "assets" / "mediamop-tray-icon.ico"' in text
     assert "(str(TRAY_ICON_PNG), \"assets\")" in text
     assert "(str(TRAY_ICON_ICO), \"assets\")" in text
+    assert "(str(THIRD_PARTY_NOTICES), \".\")" in text
     assert "icon=str(TRAY_ICON_ICO)" in text
+
+
+def test_windows_package_includes_ffmpeg_runtime_assets() -> None:
+    repo = Path(__file__).resolve().parents[3]
+    spec = repo / "packaging" / "windows" / "mediamop-tray.spec"
+    build = repo / "packaging" / "windows" / "build.ps1"
+    spec_text = spec.read_text(encoding="utf-8")
+    build_text = build.read_text(encoding="utf-8")
+
+    assert 'FFMPEG_VENDOR = ROOT / "packaging" / "windows" / "vendor" / "ffmpeg"' in spec_text
+    assert '(str(FFMPEG_VENDOR), "bin/ffmpeg")' in spec_text
+    assert "Ensure-WindowsFfmpegRuntime" in build_text
+    assert "ffmpeg-master-latest-win64-lgpl.zip" in build_text

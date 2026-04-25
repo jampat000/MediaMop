@@ -13,8 +13,10 @@ import type {
 
 export const suiteSettingsPath = () => "/api/v1/suite/settings";
 export const suiteSecurityOverviewPath = () => "/api/v1/suite/security-overview";
-export const suiteUpdateStatusPath = () => "/api/v1/suite/update-status";
-export const suiteUpdateNowPath = () => "/api/v1/suite/update-now";
+export const suiteUpdateStatusPaths = ["/api/v1/suite/update-status", "/api/v1/suite/settings/update-status"] as const;
+export const suiteUpdateNowPaths = ["/api/v1/suite/update-now", "/api/v1/suite/settings/update-now"] as const;
+export const suiteUpdateStatusPath = () => suiteUpdateStatusPaths[0];
+export const suiteUpdateNowPath = () => suiteUpdateNowPaths[0];
 export const suiteLogsPath = () => "/api/v1/suite/logs";
 export const suiteMetricsPath = () => "/api/v1/suite/metrics";
 
@@ -86,24 +88,40 @@ export async function fetchSuiteSecurityOverview(): Promise<SuiteSecurityOvervie
 }
 
 export async function fetchSuiteUpdateStatus(): Promise<SuiteUpdateStatusOut> {
-  const r = await apiFetch(suiteUpdateStatusPath());
-  if (!r.ok) {
-    throw new Error(await readFailedRequestMessage(r, "Could not check for updates"));
+  let last: Response | undefined;
+  for (const path of suiteUpdateStatusPaths) {
+    const r = await apiFetch(path);
+    last = r;
+    if (r.status === 404) {
+      continue;
+    }
+    if (!r.ok) {
+      throw new Error(await readFailedRequestMessage(r, "Could not check for updates"));
+    }
+    return readJson<SuiteUpdateStatusOut>(r);
   }
-  return readJson<SuiteUpdateStatusOut>(r);
+  throw new Error(await readFailedRequestMessage(last!, "Could not check for updates"));
 }
 
 export async function startSuiteUpdateNow(): Promise<SuiteUpdateStartOut> {
   const csrf_token = await fetchCsrfToken();
-  const r = await apiFetch(suiteUpdateNowPath(), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ csrf_token }),
-  });
-  if (!r.ok) {
-    throw new Error(await readFailedRequestMessage(r, "Could not start upgrade"));
+  let last: Response | undefined;
+  for (const path of suiteUpdateNowPaths) {
+    const r = await apiFetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ csrf_token }),
+    });
+    last = r;
+    if (r.status === 404) {
+      continue;
+    }
+    if (!r.ok) {
+      throw new Error(await readFailedRequestMessage(r, "Could not start upgrade"));
+    }
+    return readJson<SuiteUpdateStartOut>(r);
   }
-  return readJson<SuiteUpdateStartOut>(r);
+  throw new Error(await readFailedRequestMessage(last!, "Could not start upgrade"));
 }
 
 export async function fetchSuiteLogs(filters?: {

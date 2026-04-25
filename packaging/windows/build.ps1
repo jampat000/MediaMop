@@ -10,6 +10,7 @@ $backendDir = Join-Path $repoRoot "apps\\backend"
 $webDir = Join-Path $repoRoot "apps\\web"
 $specPath = Join-Path $PSScriptRoot "mediamop-tray.spec"
 $distRoot = Join-Path $repoRoot "dist\\windows"
+$ffmpegVendorDir = Join-Path $PSScriptRoot "vendor\\ffmpeg"
 $venvScriptsDir = Join-Path $backendDir ".venv\\Scripts"
 $py = Join-Path $venvScriptsDir "python.exe"
 
@@ -104,6 +105,44 @@ function Resolve-IsccPath {
   return $null
 }
 
+function Ensure-WindowsFfmpegRuntime {
+  $ffmpegExe = Join-Path $ffmpegVendorDir "ffmpeg.exe"
+  $ffprobeExe = Join-Path $ffmpegVendorDir "ffprobe.exe"
+  if ((Test-Path -LiteralPath $ffmpegExe) -and (Test-Path -LiteralPath $ffprobeExe)) {
+    return
+  }
+
+  $downloadRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("mediamop-ffmpeg-" + [System.Guid]::NewGuid().ToString("N"))
+  $archivePath = Join-Path $downloadRoot "ffmpeg.zip"
+  $extractRoot = Join-Path $downloadRoot "extract"
+  $url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-lgpl.zip"
+  try {
+    New-Item -ItemType Directory -Path $downloadRoot | Out-Null
+    New-Item -ItemType Directory -Path $extractRoot | Out-Null
+    Write-Host "Downloading Windows FFmpeg runtime..."
+    Invoke-WebRequest -Uri $url -OutFile $archivePath -UseBasicParsing
+    Expand-Archive -LiteralPath $archivePath -DestinationPath $extractRoot -Force
+    $binDir = Get-ChildItem -Path $extractRoot -Recurse -Directory |
+      Where-Object {
+        (Test-Path (Join-Path $_.FullName "ffmpeg.exe")) -and
+        (Test-Path (Join-Path $_.FullName "ffprobe.exe"))
+      } |
+      Select-Object -First 1
+    if (-not $binDir) {
+      throw "Downloaded FFmpeg archive did not contain ffmpeg.exe and ffprobe.exe."
+    }
+    if (Test-Path $ffmpegVendorDir) {
+      Remove-Item -LiteralPath $ffmpegVendorDir -Recurse -Force
+    }
+    New-Item -ItemType Directory -Path $ffmpegVendorDir | Out-Null
+    Copy-Item -Path (Join-Path $binDir.FullName "*") -Destination $ffmpegVendorDir -Recurse -Force
+  } finally {
+    if (Test-Path $downloadRoot) {
+      Remove-Item -LiteralPath $downloadRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+  }
+}
+
 $iscc = Resolve-IsccPath
 $buildVersion = if ($env:MEDIAMOP_BUILD_VERSION) {
   $env:MEDIAMOP_BUILD_VERSION
@@ -182,6 +221,8 @@ if (Test-Path $distRoot) {
   Remove-Item -LiteralPath $distRoot -Recurse -Force
 }
 New-Item -ItemType Directory -Path $distRoot | Out-Null
+
+Ensure-WindowsFfmpegRuntime
 
 Push-Location $repoRoot
 try {
