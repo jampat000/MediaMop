@@ -39,6 +39,10 @@ def test_inno_installer_uses_program_files_and_programdata() -> None:
     assert "{localappdata}\\MediaMop" not in text
     assert "{userdesktop}\\MediaMop" not in text
     assert "SetupIconFile={#RepoRoot}\\packaging\\windows\\assets\\mediamop-tray-icon.ico" in text
+    assert "DisableWelcomePage=no" in text
+    assert "DisableDirPage=no" in text
+    assert "DisableProgramGroupPage=no" in text
+    assert "DisableReadyPage=no" in text
 
 
 def test_windows_package_uses_dedicated_tray_icon_assets() -> None:
