@@ -13,7 +13,7 @@ from alembic.script import ScriptDirectory
 from starlette.testclient import TestClient
 
 from mediamop.api.factory import create_app
-from mediamop.core.alembic_revision_check import DatabaseSchemaMismatch, ensure_database_at_application_head
+from mediamop.core.alembic_revision_check import DatabaseSchemaMismatch, _script_and_head, ensure_database_at_application_head
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine
 
@@ -127,3 +127,13 @@ def test_api_startup_auto_upgrades_known_behind_revision_to_head(
     with engine.connect() as conn:
         ctx = MigrationContext.configure(conn)
         assert ctx.get_current_revision() == head
+
+
+def test_alembic_root_env_supports_packaged_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
+    backend = Path(__file__).resolve().parents[1]
+    monkeypatch.setenv("MEDIAMOP_ALEMBIC_ROOT", str(backend))
+
+    script, head = _script_and_head()
+
+    assert head
+    assert script.dir == str(backend / "alembic")

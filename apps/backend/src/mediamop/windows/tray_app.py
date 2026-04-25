@@ -110,6 +110,7 @@ def _prepare_environment(resource_root: Path, runtime_home: Path) -> Path:
     os.environ["MEDIAMOP_ENV"] = "production"
     os.environ["MEDIAMOP_HOME"] = str(runtime_home)
     os.environ["MEDIAMOP_WEB_DIST"] = str(web_dist)
+    os.environ["MEDIAMOP_ALEMBIC_ROOT"] = str(resource_root)
     os.environ["MEDIAMOP_SESSION_COOKIE_SECURE"] = "false"
     os.environ["MEDIAMOP_SESSION_SECRET"] = _ensure_session_secret(runtime_home)
     return web_dist
@@ -269,6 +270,7 @@ def _run_server_mode(port: int) -> None:
     resource_root = _resource_root()
     runtime_home = _runtime_home()
     _prepare_environment(resource_root, runtime_home)
+    _run_migrations(resource_root)
     app = create_app()
     server = uvicorn.Server(
         uvicorn.Config(
