@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { PageLoading } from "../../components/shared/page-loading";
 import { activityRecentKey, useActivityRecentQuery } from "../../lib/activity/queries";
-import { useActivityStreamInvalidation } from "../../lib/activity/use-activity-stream-invalidation";
+import { useActivityStreamInvalidations } from "../../lib/activity/use-activity-stream-invalidation";
 import type { ActivityEventItem } from "../../lib/api/types";
 import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
 import { dashboardStatusKey, useDashboardStatusQuery } from "../../lib/dashboard/queries";
@@ -9,7 +9,6 @@ import { usePrunerInstancesQuery, usePrunerJobsInspectionQuery, usePrunerOvervie
 import { useRefinerJobsInspectionQuery } from "../../lib/refiner/jobs-inspection/queries";
 import { useRefinerOverviewStatsQuery, useRefinerPathSettingsQuery } from "../../lib/refiner/queries";
 import { useSubberJobsQuery, useSubberOverviewQuery, useSubberProvidersQuery, useSubberSettingsQuery } from "../../lib/subber/subber-queries";
-import { useSuiteMetricsQuery } from "../../lib/suite/queries";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
 
@@ -41,6 +40,30 @@ type GlobalJobRow = {
   detail: string;
   updatedAt: string;
 };
+
+const DASHBOARD_LIVE_INVALIDATION_KEYS = [
+  dashboardStatusKey,
+  activityRecentKey,
+  ["refiner"] as const,
+  ["pruner"] as const,
+  ["subber"] as const,
+  ["suite"] as const,
+] as const;
+
+type DashboardJobRow = {
+  id: number;
+  job_kind: string;
+  status: string;
+  last_error: string | null;
+  updated_at: string;
+};
+
+const REFINER_FILE_REMUX_PASS_JOB_KIND = "refiner.file.remux_pass.v1";
+const REFINER_DASHBOARD_JOB_KINDS = new Set([
+  REFINER_FILE_REMUX_PASS_JOB_KIND,
+  "refiner.candidate_gate.v1",
+  "refiner.supplied_payload_evaluation.v1",
+]);
 
 function shortLastActivity(items: ActivityEventItem[], fmt: (iso: string) => string): string {
   if (items.length === 0) return "No recent activity";
@@ -86,6 +109,11 @@ function formatPercent(value: number): string {
 
 function describeNetSizeChange(bytes: number, percent: number): string {
   if (!Number.isFinite(bytes) || bytes === 0) return "No net size change";
+  if (Number.isFinite(percent) && (Math.abs(percent) < 0.1 || Math.abs(bytes) < 1024 * 1024)) {
+    return bytes > 0
+      ? `Size basically unchanged (${formatBytesCompact(bytes)} saved)`
+      : `Size basically unchanged (${formatBytesCompact(Math.abs(bytes))} container overhead)`;
+  }
   if (bytes > 0) return `Saved ${formatBytesCompact(bytes)} (${formatPercent(percent)})`;
   return `Grew by ${formatBytesCompact(Math.abs(bytes))} (${formatPercent(Math.abs(percent))})`;
 }
@@ -150,11 +178,14 @@ function jobStatusLabel(status: string): string {
   }
 }
 
+function isDashboardVisibleRefinerJob(jobKind: string): boolean {
+  return REFINER_DASHBOARD_JOB_KINDS.has(jobKind);
+}
+
 function refinerJobTitle(jobKind: string): string {
-  if (jobKind === "refiner.file_remux_pass") return "Remux file";
-  if (jobKind === "refiner.watched_folder_remux_scan_dispatch") return "Scan watched folders";
-  if (jobKind === "refiner.work_temp_stale_sweep") return "Clean temporary files";
-  if (jobKind === "refiner.failure_cleanup_sweep") return "Clean failed remux leftovers";
+  if (jobKind === REFINER_FILE_REMUX_PASS_JOB_KIND) return "Process file";
+  if (jobKind === "refiner.candidate_gate.v1") return "Check file readiness";
+  if (jobKind === "refiner.supplied_payload_evaluation.v1") return "Check new media";
   return "Refiner job";
 }
 
@@ -301,43 +332,12 @@ function buildSubberCard(args: {
   };
 }
 
-function formatRuntimeUptime(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds <= 0) return "Just started";
-  const totalSeconds = Math.max(0, Math.floor(seconds));
-  const days = Math.floor(totalSeconds / 86400);
-  const hours = Math.floor((totalSeconds % 86400) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
-}
-
-function formatAverageMs(value: number): string {
-  if (!Number.isFinite(value) || value <= 0) return "0 ms";
-  return `${value >= 100 ? value.toFixed(0) : value.toFixed(1)} ms`;
-}
-
-function httpHealthSummary(statusCounts: Record<string, number> | undefined): { value: string; detail: string } {
-  const counts = statusCounts ?? {};
-  const success = counts["2xx"] ?? 0;
-  const redirects = counts["3xx"] ?? 0;
-  const client = counts["4xx"] ?? 0;
-  const server = counts["5xx"] ?? 0;
-  let value = "Healthy";
-  if (server > 0) value = `${server} server ${server === 1 ? "error" : "errors"}`;
-  else if (client > 0) value = `${client} client ${client === 1 ? "error" : "errors"}`;
-  const detail = `2xx ${success} - 3xx ${redirects} - 4xx ${client} - 5xx ${server}`;
-  return { value, detail };
-}
-
 export function DashboardPage() {
   const fmt = useAppDateFormatter();
-  useActivityStreamInvalidation(dashboardStatusKey);
-  useActivityStreamInvalidation(activityRecentKey);
+  useActivityStreamInvalidations(DASHBOARD_LIVE_INVALIDATION_KEYS);
 
   const dash = useDashboardStatusQuery();
   const recent = useActivityRecentQuery({ limit: 20 });
-  const metrics = useSuiteMetricsQuery();
   const refinerStats = useRefinerOverviewStatsQuery();
   const refinerPaths = useRefinerPathSettingsQuery();
   const refinerJobs = useRefinerJobsInspectionQuery("recent");
@@ -408,7 +408,24 @@ export function DashboardPage() {
     moviesMissing: subberOverview.data?.movies_missing ?? 0,
   });
 
-  const moduleCards = [refinerCard, prunerCard, subberCard];
+  const refinerFileOutcomes = (refinerStats.data?.output_written_count ?? 0) + (refinerStats.data?.already_optimized_count ?? 0);
+  const refinerCardForDashboard = {
+    ...refinerCard,
+    metrics: refinerCard.metrics.map((metric) =>
+      metric.label === "Completed jobs"
+        ? {
+            label: "Files handled",
+            value: formatCount(refinerFileOutcomes),
+            detail:
+              refinerFileOutcomes > 0
+                ? `${formatCount(refinerStats.data?.output_written_count ?? 0)} changed - ${formatCount(refinerStats.data?.already_optimized_count ?? 0)} already clean`
+                : "No completed file outcomes yet",
+          }
+        : metric,
+    ),
+  };
+
+  const moduleCards = [refinerCardForDashboard, prunerCard, subberCard];
   const modulesNeedingAttentionTotal = moduleCards.filter((m) => m.status === "Review needed").length;
   const activeModuleCount = moduleCards.filter((m) => m.status === "Active").length;
   const overallStatus =
@@ -421,8 +438,11 @@ export function DashboardPage() {
   const attentionItems = moduleCards.filter((m) => m.status === "Review needed").map((m) => `${m.name}: ${m.summary}`);
   const activeItems = moduleCards.filter((m) => m.status === "Active").map((m) => `${m.name}: ${m.summary}`);
 
+  const refinerDashboardJobs: DashboardJobRow[] = (refinerJobs.data?.jobs ?? []).filter((job) =>
+    isDashboardVisibleRefinerJob(job.job_kind),
+  );
   const globalJobs: GlobalJobRow[] = [
-    ...(refinerJobs.data?.jobs.slice(0, 4).map((job) => ({
+    ...(refinerDashboardJobs.slice(0, 4).map((job) => ({
       key: `refiner-${job.id}`,
       module: "Refiner",
       status: jobStatusLabel(job.status),
@@ -449,9 +469,6 @@ export function DashboardPage() {
   ]
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .slice(0, 10);
-
-  const runtime = metrics.data;
-  const health = httpHealthSummary(runtime?.status_counts);
 
   return (
     <div className="mm-page" data-testid="dashboard-page">
@@ -521,30 +538,6 @@ export function DashboardPage() {
             ))
           )}
         </div>
-      </section>
-
-      <section className="mm-card mm-dash-card mt-6" data-testid="dashboard-runtime-health">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="mm-card__title">Runtime health</h2>
-            <p className="mt-1 text-sm text-[var(--mm-text2)]">Live process and request health for the running MediaMop server.</p>
-          </div>
-        </div>
-        {metrics.isError ? (
-          <div className="mm-card__body">
-            <p className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200" role="alert">
-              {metrics.error instanceof Error ? metrics.error.message : "Could not load runtime health."}
-            </p>
-          </div>
-        ) : (
-          <div className="mm-card__body grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-            <MetricCard label="Uptime" value={runtime ? formatRuntimeUptime(runtime.uptime_seconds) : "Loading..."} />
-            <MetricCard label="Requests handled" value={runtime ? String(runtime.total_requests) : "Loading..."} />
-            <MetricCard label="Average response" value={runtime ? formatAverageMs(runtime.average_response_ms) : "Loading..."} />
-            <MetricCard label="Errors logged" value={runtime ? String(runtime.error_log_count) : "Loading..."} />
-            <MetricCard label="HTTP health" value={runtime ? health.value : "Loading..."} detail={runtime ? health.detail : undefined} />
-          </div>
-        )}
       </section>
     </div>
   );

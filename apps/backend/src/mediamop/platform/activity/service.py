@@ -47,6 +47,28 @@ def record_activity_event(
     return row
 
 
+def update_activity_event(
+    db: Session,
+    *,
+    activity_id: int,
+    title: str | None = None,
+    detail: str | None = None,
+) -> ActivityEvent | None:
+    """Update an existing activity row and notify live Activity listeners after commit."""
+
+    row = db.get(ActivityEvent, int(activity_id))
+    if row is None:
+        return None
+    if title is not None:
+        row.title = title
+    if detail is not None:
+        row.detail = detail
+    db.flush()
+    pending_ids = db.info.setdefault(_PENDING_ACTIVITY_IDS_INFO_KEY, [])
+    pending_ids.append(int(row.id))
+    return row
+
+
 @event.listens_for(Session, "after_commit")
 def _publish_committed_activity_events(session: Session) -> None:
     pending_ids = session.info.pop(_PENDING_ACTIVITY_IDS_INFO_KEY, None)

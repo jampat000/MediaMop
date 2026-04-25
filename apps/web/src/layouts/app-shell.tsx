@@ -2,8 +2,8 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { BrandHeaderLink } from "../components/brand/brand-header-link";
 import { NavIconActivity, NavIconDashboard, NavIconRefiner, NavIconSettings, NavIconSubber, NavIconPruner } from "../components/shell/nav-icons";
-import { WEB_APP_VERSION } from "../lib/app-meta";
 import { useLogoutMutation } from "../lib/auth/queries";
+import { useDashboardStatusQuery } from "../lib/dashboard/queries";
 import { useSuiteSettingsQuery } from "../lib/suite/queries";
 import { persistAppTheme, readStoredAppTheme, type AppTheme } from "../lib/ui/app-theme";
 
@@ -15,8 +15,10 @@ export function AppShell() {
   const navigate = useNavigate();
   const logout = useLogoutMutation();
   const suite = useSuiteSettingsQuery();
+  const dashboard = useDashboardStatusQuery();
   const [theme, setTheme] = useState<AppTheme>(() => readStoredAppTheme());
   const productTitle = (suite.data?.product_display_name ?? "MediaMop").trim() || "MediaMop";
+  const appVersion = dashboard.data?.system.api_version;
   const nextTheme: AppTheme = theme === "dark" ? "light" : "dark";
   const handleSignOut = () => {
     logout.mutate(undefined, {
@@ -77,8 +79,8 @@ export function AppShell() {
         <div className="mm-sidebar-footer">
           <div className="mm-sidebar-footer-panel">
             <div className="mm-sidebar-meta">{productTitle}</div>
-            <div className="mm-sidebar-version" title="Web shell version (package.json)">
-              Web {WEB_APP_VERSION}
+            <div className="mm-sidebar-version" title="Installed MediaMop version reported by the running server">
+              {appVersion ? `Version ${appVersion}` : "Version checking..."}
             </div>
             <button
               type="button"

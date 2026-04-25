@@ -162,7 +162,6 @@ export function RefinerSchedulesSection() {
               onClick={() =>
                 saveTvSchedule.mutate({
                   tv_schedule_enabled: q.data.tv_schedule_enabled,
-                  tv_schedule_interval_seconds: q.data.tv_schedule_interval_seconds,
                   tv_schedule_hours_limited: tvHoursLimited,
                   tv_schedule_days: tvDays,
                   tv_schedule_start: tvStart,
@@ -225,7 +224,6 @@ export function RefinerSchedulesSection() {
               onClick={() =>
                 saveMovieSchedule.mutate({
                   movie_schedule_enabled: q.data.movie_schedule_enabled,
-                  movie_schedule_interval_seconds: q.data.movie_schedule_interval_seconds,
                   movie_schedule_hours_limited: movieHoursLimited,
                   movie_schedule_days: movieDays,
                   movie_schedule_start: movieStart,

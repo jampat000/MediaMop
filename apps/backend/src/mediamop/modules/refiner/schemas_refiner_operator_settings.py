@@ -11,7 +11,6 @@ class RefinerOperatorSettingsOut(BaseModel):
     max_concurrent_files: int = Field(ge=1, le=8)
     min_file_age_seconds: int = Field(ge=0, le=7 * 24 * 3600)
     movie_schedule_enabled: bool
-    movie_schedule_interval_seconds: int = Field(ge=60, le=7 * 24 * 3600)
     movie_schedule_hours_limited: bool = Field(
         description="When true, timed movie scans only enqueue inside the days and times below (suite time zone).",
     )
@@ -19,7 +18,6 @@ class RefinerOperatorSettingsOut(BaseModel):
     movie_schedule_start: str = Field(max_length=5)
     movie_schedule_end: str = Field(max_length=5)
     tv_schedule_enabled: bool
-    tv_schedule_interval_seconds: int = Field(ge=60, le=7 * 24 * 3600)
     tv_schedule_hours_limited: bool
     tv_schedule_days: str = Field(max_length=2000)
     tv_schedule_start: str = Field(max_length=5)
@@ -37,13 +35,11 @@ class RefinerOperatorSettingsPutIn(BaseModel):
     max_concurrent_files: int | None = Field(default=None, ge=1, le=8)
     min_file_age_seconds: int | None = Field(default=None, ge=0, le=7 * 24 * 3600)
     movie_schedule_enabled: bool | None = None
-    movie_schedule_interval_seconds: int | None = Field(default=None, ge=60, le=7 * 24 * 3600)
     movie_schedule_hours_limited: bool | None = None
     movie_schedule_days: str | None = Field(default=None, max_length=2000)
     movie_schedule_start: str | None = Field(default=None, max_length=5)
     movie_schedule_end: str | None = Field(default=None, max_length=5)
     tv_schedule_enabled: bool | None = None
-    tv_schedule_interval_seconds: int | None = Field(default=None, ge=60, le=7 * 24 * 3600)
     tv_schedule_hours_limited: bool | None = None
     tv_schedule_days: str | None = Field(default=None, max_length=2000)
     tv_schedule_start: str | None = Field(default=None, max_length=5)
@@ -53,7 +49,6 @@ class RefinerOperatorSettingsPutIn(BaseModel):
     def _movie_schedule_all_or_nothing(self) -> RefinerOperatorSettingsPutIn:
         keys = (
             self.movie_schedule_enabled,
-            self.movie_schedule_interval_seconds,
             self.movie_schedule_hours_limited,
             self.movie_schedule_days,
             self.movie_schedule_start,
@@ -70,7 +65,6 @@ class RefinerOperatorSettingsPutIn(BaseModel):
     def _tv_schedule_all_or_nothing(self) -> RefinerOperatorSettingsPutIn:
         keys = (
             self.tv_schedule_enabled,
-            self.tv_schedule_interval_seconds,
             self.tv_schedule_hours_limited,
             self.tv_schedule_days,
             self.tv_schedule_start,

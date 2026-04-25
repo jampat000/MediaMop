@@ -15,7 +15,6 @@ const useSubberOverviewQuery = vi.fn();
 const useSubberSettingsQuery = vi.fn();
 const useSubberProvidersQuery = vi.fn();
 const useSubberJobsQuery = vi.fn();
-const useSuiteMetricsQuery = vi.fn();
 
 vi.mock("../../lib/activity/queries", () => ({
   activityRecentKey: ["activity", "recent"],
@@ -29,6 +28,7 @@ vi.mock("../../lib/dashboard/queries", () => ({
 
 vi.mock("../../lib/activity/use-activity-stream-invalidation", () => ({
   useActivityStreamInvalidation: vi.fn(),
+  useActivityStreamInvalidations: vi.fn(),
 }));
 
 vi.mock("../../lib/refiner/queries", () => ({
@@ -51,10 +51,6 @@ vi.mock("../../lib/subber/subber-queries", () => ({
   useSubberSettingsQuery: (...args: unknown[]) => useSubberSettingsQuery(...args),
   useSubberProvidersQuery: (...args: unknown[]) => useSubberProvidersQuery(...args),
   useSubberJobsQuery: (...args: unknown[]) => useSubberJobsQuery(...args),
-}));
-
-vi.mock("../../lib/suite/queries", () => ({
-  useSuiteMetricsQuery: (...args: unknown[]) => useSuiteMetricsQuery(...args),
 }));
 
 vi.mock("../../lib/ui/mm-format-date", () => ({
@@ -135,17 +131,6 @@ describe("DashboardPage", () => {
     useSubberSettingsQuery.mockReturnValue({ data: { sonarr_base_url: "", sonarr_api_key_set: false, radarr_base_url: "", radarr_api_key_set: false } });
     useSubberProvidersQuery.mockReturnValue({ data: [] });
     useSubberJobsQuery.mockReturnValue({ data: { jobs: [] } });
-    useSuiteMetricsQuery.mockReturnValue({
-      isError: false,
-      data: {
-        uptime_seconds: 3600,
-        total_requests: 10,
-        average_response_ms: 12.5,
-        error_log_count: 0,
-        status_counts: { "2xx": 10, "3xx": 0, "4xx": 0, "5xx": 0 },
-        busiest_routes: [],
-      },
-    });
   });
 
   it("renders restored dashboard sections", () => {
@@ -159,12 +144,79 @@ describe("DashboardPage", () => {
     expect(screen.getByTestId("dashboard-needs-attention")).toBeInTheDocument();
     expect(screen.getByTestId("dashboard-active-work")).toBeInTheDocument();
     expect(screen.getByTestId("dashboard-global-jobs")).toBeInTheDocument();
-    expect(screen.getByTestId("dashboard-runtime-health")).toBeInTheDocument();
+    expect(screen.queryByTestId("dashboard-runtime-health")).not.toBeInTheDocument();
     expect(screen.getByText("Refiner")).toBeInTheDocument();
     expect(screen.getByText("Pruner")).toBeInTheDocument();
     expect(screen.getByText("Subber")).toBeInTheDocument();
     expect(screen.getByText("Net space saved")).toBeInTheDocument();
     expect(screen.getByText("Removal rate")).toBeInTheDocument();
     expect(screen.getByText("Coverage")).toBeInTheDocument();
+  });
+
+  it("keeps Refiner scan maintenance noise out of the dashboard", () => {
+    useRefinerOverviewStatsQuery.mockReturnValue({
+      data: {
+        files_processed: 12,
+        files_failed: 0,
+        success_rate_percent: 100,
+        output_written_count: 2,
+        already_optimized_count: 0,
+        net_space_saved_bytes: 1024,
+        net_space_saved_percent: 1.5,
+      },
+    });
+    useRefinerPathSettingsQuery.mockReturnValue({
+      data: {
+        refiner_watched_folder: "E:\\Completed-Movies",
+        refiner_watched_folder_exists: true,
+        refiner_tv_watched_folder: null,
+        refiner_tv_watched_folder_exists: false,
+      },
+    });
+    useRefinerJobsInspectionQuery.mockReturnValue({
+      data: {
+        jobs: [
+          {
+            id: 22,
+            dedupe_key: "scan",
+            job_kind: "refiner.watched_folder.remux_scan_dispatch.v1",
+            status: "completed",
+            attempt_count: 1,
+            max_attempts: 3,
+            lease_owner: null,
+            lease_expires_at: null,
+            last_error: null,
+            payload_json: null,
+            created_at: "2026-04-25T10:00:00Z",
+            updated_at: "2026-04-25T10:00:00Z",
+          },
+          {
+            id: 23,
+            dedupe_key: "file",
+            job_kind: "refiner.file.remux_pass.v1",
+            status: "completed",
+            attempt_count: 1,
+            max_attempts: 3,
+            lease_owner: null,
+            lease_expires_at: null,
+            last_error: null,
+            payload_json: null,
+            created_at: "2026-04-25T10:01:00Z",
+            updated_at: "2026-04-25T10:01:00Z",
+          },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Files handled")).toBeInTheDocument();
+    expect(screen.getByText("2 changed - 0 already clean")).toBeInTheDocument();
+    expect(screen.queryByText("Scan watched folders")).not.toBeInTheDocument();
+    expect(screen.getByText("Process file")).toBeInTheDocument();
   });
 });

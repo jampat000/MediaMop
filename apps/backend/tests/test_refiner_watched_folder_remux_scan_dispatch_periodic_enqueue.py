@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import replace
+from types import SimpleNamespace
 
 from sqlalchemy import delete, select, update
 
@@ -17,6 +18,9 @@ from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_enqueue
 )
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_job_kinds import (
     REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
+)
+from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue import (
+    _watched_folder_scan_interval_seconds,
 )
 
 import mediamop.modules.refiner.jobs_model  # noqa: F401
@@ -39,6 +43,15 @@ def _settings_on() -> MediaMopSettings:
         refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds=3600,
         refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs=True,
     )
+
+
+def test_periodic_scheduler_uses_library_watched_folder_interval() -> None:
+    row = SimpleNamespace(
+        movie_watched_folder_check_interval_seconds=20,
+        tv_watched_folder_check_interval_seconds=40,
+    )
+    assert _watched_folder_scan_interval_seconds(row, media_scope="movie") == 20
+    assert _watched_folder_scan_interval_seconds(row, media_scope="tv") == 40
 
 
 def test_queue_has_active_scan_detects_pending_and_leased_per_scope() -> None:

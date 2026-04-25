@@ -36,10 +36,10 @@ def test_summarize_remux_plan_includes_streams() -> None:
 
 def test_activity_title_per_outcome() -> None:
     base = {"relative_media_path": "movies/foo.mkv"}
-    assert "output written" in remux_pass_activity_title(
+    assert "processed successfully" in remux_pass_activity_title(
         {**base, "outcome": REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN},
     ).lower()
-    assert "no ffmpeg" in remux_pass_activity_title(
+    assert "matched your refiner rules" in remux_pass_activity_title(
         {**base, "outcome": REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED},
     ).lower()
 

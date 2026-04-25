@@ -48,14 +48,14 @@ def remux_pass_activity_title(payload: dict[str, Any]) -> str:
     name = Path(str(rel)).name if isinstance(rel, str) and rel.strip() else "unknown file"
     outcome = payload.get("outcome")
     if outcome == REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN:
-        return f"Refiner remux (live, output written): {name}"
+        return f"{name} was processed successfully"
     if outcome == REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED:
-        return f"Refiner remux (live, no ffmpeg — already matched plan): {name}"
+        return f"{name} already matched your Refiner rules"
     if outcome == REMUX_PASS_OUTCOME_FAILED_DURING_EXECUTION:
-        return f"Refiner remux (failed during ffmpeg): {name}"
+        return f"{name} could not be processed"
     if outcome == REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION or payload.get("ok") is False:
-        return f"Refiner remux (failed before ffmpeg): {name}"
-    return "Refiner remux pass"
+        return f"{name} could not be checked"
+    return "Refiner file processing finished"
 
 
 def clip_remux_pass_payload_for_activity(payload: dict[str, Any]) -> dict[str, Any]:

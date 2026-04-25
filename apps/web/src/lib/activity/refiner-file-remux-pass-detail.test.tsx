@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { RefinerFileRemuxPassActivityDetail } from "./refiner-file-remux-pass-detail";
+import { RefinerFileProcessingProgressDetail, RefinerFileRemuxPassActivityDetail } from "./refiner-file-remux-pass-detail";
 
 describe("RefinerFileRemuxPassActivityDetail", () => {
   it("renders structured remux fields from JSON detail", () => {
@@ -22,7 +22,7 @@ describe("RefinerFileRemuxPassActivityDetail", () => {
     render(<RefinerFileRemuxPassActivityDetail detail={detail} />);
     expect(screen.getByTestId("refiner-remux-activity-detail")).toBeInTheDocument();
     expect(screen.getByText("Outcome")).toBeInTheDocument();
-    expect(screen.getByText("Output written")).toBeInTheDocument();
+    expect(screen.getByText("File processed")).toBeInTheDocument();
     expect(screen.getByText("Show track and cleanup details")).toBeInTheDocument();
     expect(screen.getByText("/data/movies/a.mkv")).toBeInTheDocument();
     expect(screen.getByText("Audio in file")).toBeInTheDocument();
@@ -33,5 +33,25 @@ describe("RefinerFileRemuxPassActivityDetail", () => {
   it("falls back to raw string when detail is not JSON", () => {
     render(<RefinerFileRemuxPassActivityDetail detail="not-json" />);
     expect(screen.getByTestId("refiner-remux-activity-detail-raw")).toHaveTextContent("not-json");
+  });
+
+  it("renders live Refiner processing progress in plain language", () => {
+    const detail = JSON.stringify({
+      status: "processing",
+      relative_media_path: "movies/Caddyshack.mkv",
+      percent: 42.4,
+      eta_seconds: 71,
+      elapsed_seconds: 50,
+      processed_seconds: 1200,
+      duration_seconds: 2800,
+      speed: "16x",
+      message: "Refiner is writing the cleaned-up file.",
+    });
+    render(<RefinerFileProcessingProgressDetail detail={detail} />);
+    expect(screen.getByTestId("refiner-processing-progress-detail")).toBeInTheDocument();
+    expect(screen.getByText("Processing")).toBeInTheDocument();
+    expect(screen.getByText("42%")).toBeInTheDocument();
+    expect(screen.getByText(/About 1m 11s left/i)).toBeInTheDocument();
+    expect(screen.getByText(/Speed 16x/i)).toBeInTheDocument();
   });
 });

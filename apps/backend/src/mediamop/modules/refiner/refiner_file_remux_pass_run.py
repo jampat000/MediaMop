@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import shutil
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -75,6 +76,27 @@ def _fail_before(
 def _normalize_media_scope_for_cleanup(raw: str | None) -> str:
     s = (raw or "movie").strip().lower()
     return "tv" if s == "tv" else "movie"
+
+
+def _probe_duration_seconds(probe: dict[str, Any]) -> float | None:
+    candidates: list[float] = []
+    fmt = probe.get("format")
+    if isinstance(fmt, dict):
+        try:
+            candidates.append(float(fmt.get("duration")))
+        except (TypeError, ValueError):
+            pass
+    streams = probe.get("streams")
+    if isinstance(streams, list):
+        for stream in streams:
+            if not isinstance(stream, dict):
+                continue
+            try:
+                candidates.append(float(stream.get("duration")))
+            except (TypeError, ValueError):
+                pass
+    valid = [item for item in candidates if item > 0]
+    return max(valid) if valid else None
 
 
 def _check_output_file_completeness(*, output_file: Path, source_file: Path) -> dict[str, Any]:
@@ -325,6 +347,7 @@ def run_refiner_file_remux_pass(
     media_scope: str | None = "movie",
     cleanup_session: Session | None = None,
     current_job_id: int | None = None,
+    progress_reporter: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     """Run one pass: probe, plan, optional ffmpeg remux, and post-success cleanup.
 
@@ -380,6 +403,7 @@ def run_refiner_file_remux_pass(
         )
 
     video, audio, subs = split_streams(probe)
+    duration_seconds = _probe_duration_seconds(probe)
     config = rules_config if rules_config is not None else default_refiner_remux_rules_config()
     plan = plan_remux(video=video, audio=audio, subtitles=subs, config=config)
     if plan is None:
@@ -497,7 +521,44 @@ def run_refiner_file_remux_pass(
         return out
 
     try:
-        tmp = remux_to_temp_file(src=src, work_dir=work_dir, plan=plan, mediamop_home=settings.mediamop_home)
+        if progress_reporter is not None:
+            progress_reporter(
+                {
+                    "status": "processing",
+                    "percent": 0.0,
+                    "eta_seconds": None,
+                    "elapsed_seconds": 0,
+                    "relative_media_path": relative_media_path,
+                    "inspected_source_path": inspected,
+                    "media_scope": scope,
+                    "stream_counts": out.get("stream_counts"),
+                    "duration_seconds": duration_seconds,
+                    "message": "Refiner has started writing the cleaned-up file.",
+                }
+            )
+        tmp = remux_to_temp_file(
+            src=src,
+            work_dir=work_dir,
+            plan=plan,
+            mediamop_home=settings.mediamop_home,
+            duration_seconds=duration_seconds,
+            progress_callback=(
+                None
+                if progress_reporter is None
+                else lambda update: progress_reporter(
+                    {
+                        "status": "processing",
+                        "relative_media_path": relative_media_path,
+                        "inspected_source_path": inspected,
+                        "media_scope": scope,
+                        "stream_counts": out.get("stream_counts"),
+                        "duration_seconds": duration_seconds,
+                        "message": "Refiner is writing the cleaned-up file.",
+                        **update,
+                    }
+                )
+            ),
+        )
         rel = src.resolve().relative_to(watched_root)
         final = out_dir / rel
         final.parent.mkdir(parents=True, exist_ok=True)
@@ -507,6 +568,19 @@ def run_refiner_file_remux_pass(
             final.unlink()
         shutil.move(str(tmp), str(final))
     except Exception as exc:
+        if progress_reporter is not None:
+            progress_reporter(
+                {
+                    "status": "failed",
+                    "percent": None,
+                    "eta_seconds": None,
+                    "relative_media_path": relative_media_path,
+                    "inspected_source_path": inspected,
+                    "media_scope": scope,
+                    "message": "Refiner could not finish this file.",
+                    "reason": str(exc),
+                }
+            )
         return {
             "ok": False,
             "outcome": REMUX_PASS_OUTCOME_FAILED_DURING_EXECUTION,
@@ -541,6 +615,19 @@ def run_refiner_file_remux_pass(
         "Live remux finished; before = source probe; after = planned disposition (copy remux — "
         "ffprobe of the written file was used for validation only)."
     )
+    if progress_reporter is not None:
+        progress_reporter(
+            {
+                "status": "finishing",
+                "percent": 100.0,
+                "eta_seconds": 0,
+                "relative_media_path": relative_media_path,
+                "inspected_source_path": inspected,
+                "output_file": str(final.resolve()),
+                "media_scope": scope,
+                "message": "The cleaned-up file was written. Refiner is doing final safety checks.",
+            }
+    )
     _handle_refiner_cleanup_after_success(
         src=src,
         watched_root=watched_root,
@@ -554,6 +641,19 @@ def run_refiner_file_remux_pass(
         current_job_id=current_job_id,
     )
     _run_scope_output_cleanup(final_output_file=final)
+    if progress_reporter is not None:
+        progress_reporter(
+            {
+                "status": "finished",
+                "percent": 100.0,
+                "eta_seconds": 0,
+                "relative_media_path": relative_media_path,
+                "inspected_source_path": inspected,
+                "output_file": str(final.resolve()),
+                "media_scope": scope,
+                "message": "Refiner finished processing this file.",
+            }
+        )
     return out
 
 

@@ -12,7 +12,9 @@ import shutil
 import subprocess
 import tempfile
 import sys
+import time
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any
 
 from mediamop.modules.refiner.refiner_remux_rules import RemuxPlan
@@ -219,14 +221,98 @@ def build_ffmpeg_argv(*, ffmpeg_bin: str, src: Path, dst: Path, plan: RemuxPlan)
     return args
 
 
-def run_ffmpeg(argv: list[str], *, timeout_s: int | None = REFINER_FFMPEG_TIMEOUT_S) -> None:
-    r = subprocess.run(argv, capture_output=True, text=True, timeout=timeout_s)
-    if r.returncode != 0:
-        msg = (r.stderr or r.stdout or "").strip()
-        raise RuntimeError(msg or "ffmpeg failed")
+def _argv_with_progress(argv: list[str]) -> list[str]:
+    out = list(argv)
+    insert_at = len(out) - 1 if len(out) > 1 else len(out)
+    return out[:insert_at] + ["-progress", "pipe:1", "-nostats"] + out[insert_at:]
 
 
-def remux_to_temp_file(*, src: Path, work_dir: Path, plan: RemuxPlan, mediamop_home: str) -> Path:
+def run_ffmpeg(
+    argv: list[str],
+    *,
+    timeout_s: int | None = REFINER_FFMPEG_TIMEOUT_S,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    duration_seconds: float | None = None,
+) -> None:
+    if progress_callback is None:
+        r = subprocess.run(argv, capture_output=True, text=True, timeout=timeout_s)
+        if r.returncode != 0:
+            msg = (r.stderr or r.stdout or "").strip()
+            raise RuntimeError(msg or "ffmpeg failed")
+        return
+
+    progress_argv = _argv_with_progress(argv)
+    started = time.monotonic()
+    fields: dict[str, str] = {}
+    proc = subprocess.Popen(
+        progress_argv,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        stdin=subprocess.DEVNULL,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    assert proc.stdout is not None
+    try:
+        for raw in proc.stdout:
+            if timeout_s is not None and time.monotonic() - started > timeout_s:
+                proc.kill()
+                raise RuntimeError("ffmpeg timed out")
+            line = raw.strip()
+            if not line or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            fields[key] = value
+            if key != "progress":
+                continue
+            elapsed = max(0.0, time.monotonic() - started)
+            out_time_s: float | None = None
+            try:
+                out_time_s = max(0.0, float(fields.get("out_time_ms", "0")) / 1_000_000.0)
+            except ValueError:
+                out_time_s = None
+            percent: float | None = None
+            eta_s: int | None = None
+            if duration_seconds and duration_seconds > 0 and out_time_s is not None:
+                percent = max(0.0, min(99.0 if value != "end" else 100.0, (out_time_s / duration_seconds) * 100.0))
+                if percent > 0 and value != "end":
+                    total_est = elapsed / (percent / 100.0)
+                    eta_s = max(0, int(total_est - elapsed))
+            if value == "end":
+                percent = 100.0
+                eta_s = 0
+            progress_callback(
+                {
+                    "percent": percent,
+                    "eta_seconds": eta_s,
+                    "elapsed_seconds": int(elapsed),
+                    "processed_seconds": out_time_s,
+                    "speed": fields.get("speed"),
+                    "progress": value,
+                }
+            )
+        rc = proc.wait(timeout=5)
+    except Exception:
+        if proc.poll() is None:
+            proc.kill()
+        raise
+    stderr = ""
+    if proc.stderr is not None:
+        stderr = proc.stderr.read()
+    if rc != 0:
+        raise RuntimeError((stderr or "").strip() or "ffmpeg failed")
+
+
+def remux_to_temp_file(
+    *,
+    src: Path,
+    work_dir: Path,
+    plan: RemuxPlan,
+    mediamop_home: str,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    duration_seconds: float | None = None,
+) -> Path:
     """Write remux output into work_dir and validate it. Caller owns move/delete decisions."""
 
     _, ffmpeg_bin = resolve_ffprobe_ffmpeg(mediamop_home=mediamop_home)
@@ -241,7 +327,7 @@ def remux_to_temp_file(*, src: Path, work_dir: Path, plan: RemuxPlan, mediamop_h
     try:
         argv = build_ffmpeg_argv(ffmpeg_bin=ffmpeg_bin, src=src, dst=tmp_path, plan=plan)
         logger.debug("Refiner: ffmpeg %s", " ".join(argv[:8]) + " ...")
-        run_ffmpeg(argv)
+        run_ffmpeg(argv, progress_callback=progress_callback, duration_seconds=duration_seconds)
         validate_remux_output(tmp_path, mediamop_home=mediamop_home, expected_audio=len(plan.audio))
     except Exception:
         try:

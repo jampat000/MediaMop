@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { PageLoading } from "../../components/shared/page-loading";
 import {
+  REFINER_FILE_PROCESSING_PROGRESS_EVENT,
   REFINER_FILE_REMUX_PASS_COMPLETED_EVENT,
+  RefinerFileProcessingProgressDetail,
   RefinerFileRemuxPassActivityDetail,
 } from "../../lib/activity/refiner-file-remux-pass-detail";
 import { activityRecentKey, useActivityRecentQuery } from "../../lib/activity/queries";
@@ -58,7 +60,8 @@ const EVENT_LABELS: Record<string, string> = {
   "refiner.supplied_payload_evaluation_completed": "Manual queue check finished",
   "refiner.candidate_gate_completed": "Queue check finished",
   "refiner.watched_folder_remux_scan_dispatch_completed": "Watched-folder scan finished",
-  "refiner.file_remux_pass_completed": "Remux finished",
+  "refiner.file_processing_progress": "File processing",
+  "refiner.file_remux_pass_completed": "File processing finished",
   "refiner.work_temp_stale_sweep_completed": "Temporary files cleanup finished",
   "refiner.failure_cleanup_sweep_completed": "Failed-remux cleanup finished",
   "subber.library_scan_enqueued": "Library scan checked",
@@ -318,12 +321,58 @@ function normalizePrunerSummary(ev: ActivityEventItem): ActivityDisplay | null {
 }
 
 function normalizeRefinerSummary(ev: ActivityEventItem): ActivityDisplay | null {
-  if (ev.event_type === REFINER_FILE_REMUX_PASS_COMPLETED_EVENT) {
+  if (ev.event_type === REFINER_FILE_PROCESSING_PROGRESS_EVENT) {
+    const parsed = parseDetail(ev.detail);
+    const status = asString(parsed?.status);
+    const percent = asNumber(parsed?.percent);
+    const name = asString(parsed?.relative_media_path)?.split(/[\\/]/).filter(Boolean).at(-1) ?? "file";
     return {
-      title: ev.title,
-      summary: "File remux result",
+      title:
+        status === "finished"
+          ? `${name} finished processing`
+          : status === "failed"
+            ? `${name} could not be processed`
+            : `Refiner is processing ${name}`,
+      summary:
+        percent == null
+          ? "Refiner is preparing the cleaned-up file"
+          : `Refiner is writing the cleaned-up file (${Math.round(percent)}%)`,
       detail: ev.detail,
-      chip: "Remux completed",
+      chip: status === "failed" ? "Processing stopped" : status === "finished" ? "Processing finished" : "Processing now",
+      tone: status === "failed" ? "error" : status === "finished" ? "success" : "info",
+      compact: false,
+    };
+  }
+  if (ev.event_type === REFINER_FILE_REMUX_PASS_COMPLETED_EVENT) {
+    const parsed = parseDetail(ev.detail);
+    const outcome = asString(parsed?.outcome);
+    const remuxNeeded = asBoolean(parsed?.remux_required);
+    const fileName =
+      asString(parsed?.relative_media_path)?.split(/[\\/]/).filter(Boolean).at(-1) ??
+      asString(parsed?.inspected_source_path)?.split(/[\\/]/).filter(Boolean).at(-1) ??
+      "File";
+    return {
+      title:
+        outcome === "live_skipped_not_required"
+          ? `${fileName} already matched your rules`
+          : outcome?.startsWith("failed")
+            ? `${fileName} could not be processed`
+            : `${fileName} was processed successfully`,
+      summary:
+        outcome === "live_skipped_not_required"
+          ? "No changes were needed"
+          : outcome?.startsWith("failed")
+            ? "Refiner could not finish this file"
+            : remuxNeeded === false
+              ? "The file already matched your rules"
+              : "Refiner finished writing the cleaned-up file",
+      detail: ev.detail,
+      chip:
+        outcome === "live_skipped_not_required"
+          ? "Already clean"
+          : outcome?.startsWith("failed")
+            ? "Processing failed"
+            : "File processed",
       tone: ev.detail?.includes("\"ok\":false") ? "error" : "success",
       compact: false,
     };
@@ -600,6 +649,9 @@ function StructuredActivityDetails({ ev }: { ev: ActivityEventItem }) {
 
 function ActivityEventDetails({ ev, display }: { ev: ActivityEventItem; display: ActivityDisplay }) {
   if (!display.detail) return null;
+  if (ev.event_type === REFINER_FILE_PROCESSING_PROGRESS_EVENT) {
+    return <RefinerFileProcessingProgressDetail detail={display.detail} />;
+  }
   if (ev.event_type === REFINER_FILE_REMUX_PASS_COMPLETED_EVENT) {
     return <RefinerFileRemuxPassActivityDetail detail={display.detail} />;
   }

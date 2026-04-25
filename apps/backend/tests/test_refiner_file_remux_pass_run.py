@@ -198,6 +198,59 @@ def test_live_remux_writes_nested_output_and_logs_replacement(
     assert r.get("source_folder_deleted") is True
 
 
+def test_live_remux_reports_processing_progress(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    media = tmp_path / "media"
+    media.mkdir()
+    mkv = media / "movie.mkv"
+    mkv.write_bytes(b"x")
+    out = tmp_path / "out"
+    out.mkdir()
+    work = tmp_path / "work"
+    work.mkdir()
+
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    rt = RefinerPathRuntime(
+        watched_folder=str(media.resolve()),
+        output_folder=str(out.resolve()),
+        work_folder_effective=str(work.resolve()),
+        work_folder_is_default=False,
+    )
+
+    probe = _fake_probe()
+    probe["format"] = {"duration": "100.0"}
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: probe)
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: True)
+
+    tmp_file = work / "t.mkv"
+    tmp_file.write_bytes(b"tmp")
+    progress_seen: list[dict[str, object]] = []
+
+    def _fake_remux(**kwargs: object) -> Path:
+        cb = kwargs.get("progress_callback")
+        assert callable(cb)
+        cb({"percent": 25.0, "eta_seconds": 30, "elapsed_seconds": 10, "progress": "continue"})
+        return tmp_file
+
+    monkeypatch.setattr(runmod, "remux_to_temp_file", _fake_remux)
+
+    r = runmod.run_refiner_file_remux_pass(
+        settings=settings,
+        path_runtime=rt,
+        relative_media_path="movie.mkv",
+        progress_reporter=progress_seen.append,
+    )
+    assert r["ok"] is True
+    assert [item["status"] for item in progress_seen] == ["processing", "processing", "finishing", "finished"]
+    assert progress_seen[1]["percent"] == 25.0
+    assert progress_seen[-1]["percent"] == 100.0
+
+
 def test_tv_live_skips_movie_folder_cleanup_deletes_season_folder_when_gates_pass(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

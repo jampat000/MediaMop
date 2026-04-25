@@ -63,7 +63,7 @@ def test_refiner_activity_card_shows_before_after_processing_details(
             ensure_signed_in(page, base)
             open_sidebar(page, "Activity")
 
-            expect(page.get_by_role("heading", name="Remux finished for Example.Movie.2024.mkv")).to_be_visible()
+            expect(page.get_by_role("heading", name="Example.Movie.2024.mkv was processed successfully")).to_be_visible()
             page.get_by_role("button", name="Apply filters", exact=True).click()
             detail_card = page.get_by_test_id("refiner-remux-activity-detail")
             expect(detail_card).to_be_visible()

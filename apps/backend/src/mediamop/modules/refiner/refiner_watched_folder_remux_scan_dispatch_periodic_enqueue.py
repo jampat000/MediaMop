@@ -22,6 +22,16 @@ logger = logging.getLogger(__name__)
 REFINER_WATCHED_FOLDER_SCAN_DISPATCH_ENQUEUE_FAILURE_COOLDOWN_SECONDS = 2.0
 
 
+def _watched_folder_scan_interval_seconds(path_row: object, *, media_scope: str) -> float:
+    """Actual watched-folder scan cadence configured on the Refiner Libraries tab."""
+
+    if media_scope == "tv":
+        raw = getattr(path_row, "tv_watched_folder_check_interval_seconds", 300)
+    else:
+        raw = getattr(path_row, "movie_watched_folder_check_interval_seconds", 300)
+    return max(10.0, min(float(raw), float(7 * 24 * 3600)))
+
+
 def start_refiner_watched_folder_remux_scan_dispatch_enqueue_tasks(
     session_factory: sessionmaker[Session],
     *,
@@ -63,17 +73,17 @@ async def _run_periodic_watched_folder_scan_dispatch_enqueue(
                     and refiner_periodic_scope_in_schedule_window(session, row, media_scope="movie")
                 ):
                     try_enqueue_periodic_watched_folder_remux_scan_dispatch(session, settings, media_scope="movie")
-                    next_movie = now_loop + max(10.0, float(row.movie_schedule_interval_seconds))
+                    next_movie = now_loop + _watched_folder_scan_interval_seconds(path_row, media_scope="movie")
                 if (
                     bool(row.tv_schedule_enabled)
                     and now_loop >= next_run_tv
                     and refiner_periodic_scope_in_schedule_window(session, row, media_scope="tv")
                 ):
                     try_enqueue_periodic_watched_folder_remux_scan_dispatch(session, settings, media_scope="tv")
-                    next_tv = now_loop + max(10.0, float(row.tv_schedule_interval_seconds))
+                    next_tv = now_loop + _watched_folder_scan_interval_seconds(path_row, media_scope="tv")
                 session.commit()
-                poll_movie = max(1.0, min(300.0, float(path_row.movie_watched_folder_check_interval_seconds)))
-                poll_tv = max(1.0, min(300.0, float(path_row.tv_watched_folder_check_interval_seconds)))
+                poll_movie = _watched_folder_scan_interval_seconds(path_row, media_scope="movie")
+                poll_tv = _watched_folder_scan_interval_seconds(path_row, media_scope="tv")
                 poll_s = min(poll_movie, poll_tv)
                 return next_movie, next_tv, poll_s
 

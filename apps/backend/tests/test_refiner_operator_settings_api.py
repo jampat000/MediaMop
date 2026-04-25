@@ -28,13 +28,13 @@ def test_refiner_operator_settings_get_shape(client_with_admin: TestClient) -> N
     assert body["max_concurrent_files"] == 1
     assert body["min_file_age_seconds"] == 60
     assert body["movie_schedule_enabled"] is True
-    assert body["movie_schedule_interval_seconds"] >= 60
+    assert "movie_schedule_interval_seconds" not in body
     assert body["movie_schedule_hours_limited"] is False
     assert body["movie_schedule_days"] == ""
     assert body["movie_schedule_start"] == "00:00"
     assert body["movie_schedule_end"] == "23:59"
     assert body["tv_schedule_enabled"] is True
-    assert body["tv_schedule_interval_seconds"] >= 60
+    assert "tv_schedule_interval_seconds" not in body
     assert body["tv_schedule_hours_limited"] is False
     assert body["tv_schedule_days"] == ""
     assert body["tv_schedule_start"] == "00:00"
@@ -52,13 +52,11 @@ def test_refiner_operator_settings_put_updates(client_with_admin: TestClient) ->
             "max_concurrent_files": 4,
             "min_file_age_seconds": 90,
             "movie_schedule_enabled": True,
-            "movie_schedule_interval_seconds": 180,
             "movie_schedule_hours_limited": True,
             "movie_schedule_days": "Mon,Tue",
             "movie_schedule_start": "09:00",
             "movie_schedule_end": "17:30",
             "tv_schedule_enabled": False,
-            "tv_schedule_interval_seconds": 240,
             "tv_schedule_hours_limited": False,
             "tv_schedule_days": "",
             "tv_schedule_start": "00:00",
@@ -71,13 +69,11 @@ def test_refiner_operator_settings_put_updates(client_with_admin: TestClient) ->
     assert body["max_concurrent_files"] == 4
     assert body["min_file_age_seconds"] == 90
     assert body["movie_schedule_enabled"] is True
-    assert body["movie_schedule_interval_seconds"] == 180
     assert body["movie_schedule_hours_limited"] is True
     assert body["movie_schedule_days"] == "Mon,Tue"
     assert body["movie_schedule_start"] == "09:00"
     assert body["movie_schedule_end"] == "17:30"
     assert body["tv_schedule_enabled"] is False
-    assert body["tv_schedule_interval_seconds"] == 240
     assert body["tv_schedule_hours_limited"] is False
 
 
@@ -89,13 +85,11 @@ def test_refiner_operator_settings_put_tv_only_preserves_movie(client_with_admin
         json={
             "csrf_token": tok,
             "movie_schedule_enabled": True,
-            "movie_schedule_interval_seconds": 1200,
             "movie_schedule_hours_limited": True,
             "movie_schedule_days": "Mon",
             "movie_schedule_start": "10:00",
             "movie_schedule_end": "11:00",
             "tv_schedule_enabled": True,
-            "tv_schedule_interval_seconds": 600,
             "tv_schedule_hours_limited": False,
             "tv_schedule_days": "",
             "tv_schedule_start": "00:00",
@@ -111,7 +105,6 @@ def test_refiner_operator_settings_put_tv_only_preserves_movie(client_with_admin
         json={
             "csrf_token": tok2,
             "tv_schedule_enabled": False,
-            "tv_schedule_interval_seconds": 7200,
             "tv_schedule_hours_limited": True,
             "tv_schedule_days": "Wed",
             "tv_schedule_start": "08:00",
@@ -121,13 +114,11 @@ def test_refiner_operator_settings_put_tv_only_preserves_movie(client_with_admin
     )
     assert r1.status_code == 200, r1.text
     body = r1.json()
-    assert body["movie_schedule_interval_seconds"] == 1200
     assert body["movie_schedule_hours_limited"] is True
     assert body["movie_schedule_days"] == "Mon"
     assert body["movie_schedule_start"] == "10:00"
     assert body["movie_schedule_end"] == "11:00"
     assert body["tv_schedule_enabled"] is False
-    assert body["tv_schedule_interval_seconds"] == 7200
     assert body["tv_schedule_hours_limited"] is True
     assert body["tv_schedule_days"] == "Wed"
     assert body["tv_schedule_start"] == "08:00"
@@ -142,13 +133,11 @@ def test_refiner_operator_settings_put_process_only_preserves_schedules(client_w
         json={
             "csrf_token": tok,
             "movie_schedule_enabled": True,
-            "movie_schedule_interval_seconds": 900,
             "movie_schedule_hours_limited": False,
             "movie_schedule_days": "",
             "movie_schedule_start": "00:00",
             "movie_schedule_end": "23:59",
             "tv_schedule_enabled": True,
-            "tv_schedule_interval_seconds": 900,
             "tv_schedule_hours_limited": False,
             "tv_schedule_days": "",
             "tv_schedule_start": "00:00",
@@ -172,8 +161,8 @@ def test_refiner_operator_settings_put_process_only_preserves_schedules(client_w
     body = r1.json()
     assert body["max_concurrent_files"] == 3
     assert body["min_file_age_seconds"] == 120
-    assert body["movie_schedule_interval_seconds"] == 900
-    assert body["tv_schedule_interval_seconds"] == 900
+    assert body["movie_schedule_hours_limited"] is False
+    assert body["tv_schedule_hours_limited"] is False
 
 
 def test_refiner_operator_settings_put_rejects_partial_movie_schedule_group(client_with_admin: TestClient) -> None:
@@ -184,7 +173,6 @@ def test_refiner_operator_settings_put_rejects_partial_movie_schedule_group(clie
         json={
             "csrf_token": tok,
             "movie_schedule_enabled": True,
-            "movie_schedule_interval_seconds": 300,
             "movie_schedule_hours_limited": False,
             "movie_schedule_days": "",
             "movie_schedule_start": "00:00",
@@ -216,13 +204,11 @@ def test_refiner_operator_settings_put_invalid_days(client_with_admin: TestClien
             "max_concurrent_files": 1,
             "min_file_age_seconds": 60,
             "movie_schedule_enabled": True,
-            "movie_schedule_interval_seconds": 300,
             "movie_schedule_hours_limited": False,
             "movie_schedule_days": "Caturday",
             "movie_schedule_start": "00:00",
             "movie_schedule_end": "23:59",
             "tv_schedule_enabled": True,
-            "tv_schedule_interval_seconds": 300,
             "tv_schedule_hours_limited": False,
             "tv_schedule_days": "",
             "tv_schedule_start": "00:00",

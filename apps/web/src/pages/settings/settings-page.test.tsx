@@ -9,11 +9,12 @@ import { qk } from "../../lib/auth/queries";
 import {
   suiteConfigurationBackupsQueryKey,
   suiteLogsQueryKey,
+  suiteMetricsQueryKey,
   suiteSecurityOverviewQueryKey,
   suiteSettingsQueryKey,
   suiteUpdateStatusQueryKey,
 } from "../../lib/suite/queries";
-import type { SuiteLogsOut, SuiteSecurityOverviewOut, SuiteSettingsOut, SuiteUpdateStatusOut } from "../../lib/suite/types";
+import type { SuiteLogsOut, SuiteMetricsOut, SuiteSecurityOverviewOut, SuiteSettingsOut, SuiteUpdateStatusOut } from "../../lib/suite/types";
 import { SettingsPage } from "./settings-page";
 
 const operatorMe: UserPublic = { id: 1, username: "alice", role: "operator" };
@@ -70,6 +71,15 @@ const minimalLogs: SuiteLogsOut = {
   },
 };
 
+const minimalMetrics: SuiteMetricsOut = {
+  uptime_seconds: 3600,
+  total_requests: 20,
+  average_response_ms: 12,
+  error_log_count: 0,
+  status_counts: { "2xx": 18, "3xx": 0, "4xx": 2, "5xx": 0 },
+  busiest_routes: [],
+};
+
 function wrap(ui: ReactNode, client: QueryClient) {
   return (
     <QueryClientProvider client={client}>
@@ -86,6 +96,7 @@ function renderSettings(me: UserPublic) {
   qc.setQueryData(suiteConfigurationBackupsQueryKey, { directory: "C:/MediaMop/backups/suite-configuration", items: [] });
   qc.setQueryData(suiteUpdateStatusQueryKey, minimalUpdateStatus);
   qc.setQueryData([...suiteLogsQueryKey, { level: undefined, search: undefined, has_exception: undefined, limit: 100 }], minimalLogs);
+  qc.setQueryData(suiteMetricsQueryKey, minimalMetrics);
   return render(wrap(<SettingsPage />, qc));
 }
 
@@ -135,6 +146,7 @@ describe("SettingsPage (suite settings)", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Logs" }));
     expect(screen.getByText("Search logs")).toBeInTheDocument();
     expect(screen.getByText("System events")).toBeInTheDocument();
+    expect(screen.getByText("Server diagnostics")).toBeInTheDocument();
     expect(screen.queryByText("Log retention (days)")).not.toBeInTheDocument();
     expect(screen.queryByText("Optional home dashboard notice")).not.toBeInTheDocument();
   });

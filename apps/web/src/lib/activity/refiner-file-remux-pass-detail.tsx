@@ -1,5 +1,6 @@
 /** Persisted ``event_type`` for Refiner file remux pass must match backend ``REFINER_FILE_REMUX_PASS_COMPLETED``. */
 export const REFINER_FILE_REMUX_PASS_COMPLETED_EVENT = "refiner.file_remux_pass_completed";
+export const REFINER_FILE_PROCESSING_PROGRESS_EVENT = "refiner.file_processing_progress";
 
 type RemuxDetail = {
   outcome?: string;
@@ -38,16 +39,31 @@ type RemuxDetail = {
   tv_output_truth_check?: string;
 };
 
+type RefinerProgressDetail = {
+  status?: string;
+  message?: string;
+  relative_media_path?: string;
+  inspected_source_path?: string;
+  output_file?: string;
+  percent?: number | null;
+  eta_seconds?: number | null;
+  elapsed_seconds?: number | null;
+  processed_seconds?: number | null;
+  duration_seconds?: number | null;
+  speed?: string | null;
+  reason?: string | null;
+};
+
 function outcomeLabel(outcome: string | undefined): string {
   switch (outcome) {
     case "live_output_written":
-      return "Output written";
+      return "File processed";
     case "live_skipped_not_required":
-      return "No remux needed";
+      return "Already matched rules";
     case "failed_before_execution":
-      return "Failed before remux";
+      return "Could not check file";
     case "failed_during_execution":
-      return "Failed during remux";
+      return "Could not process file";
     default:
       return outcome || "Unknown outcome";
   }
@@ -66,6 +82,23 @@ function formatBytes(value: number | null | undefined): string | null {
   return `${size.toFixed(decimals)} ${units[unitIndex]}`;
 }
 
+function formatDuration(seconds: number | null | undefined): string | null {
+  if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds < 0) return null;
+  const rounded = Math.round(seconds);
+  const mins = Math.floor(rounded / 60);
+  const secs = rounded % 60;
+  if (mins <= 0) return `${secs}s`;
+  const hours = Math.floor(mins / 60);
+  const remMins = mins % 60;
+  if (hours <= 0) return `${mins}m ${secs.toString().padStart(2, "0")}s`;
+  return `${hours}h ${remMins.toString().padStart(2, "0")}m`;
+}
+
+function filenameFromPath(path: string | undefined): string {
+  if (!path) return "this file";
+  return path.split(/[\\/]/).filter(Boolean).at(-1) || "this file";
+}
+
 function formatSavings(source: number | null | undefined, output: number | null | undefined): string | null {
   if (typeof source !== "number" || typeof output !== "number" || !Number.isFinite(source) || !Number.isFinite(output)) {
     return null;
@@ -75,6 +108,10 @@ function formatSavings(source: number | null | undefined, output: number | null 
   const percent = source > 0 ? Math.abs(delta / source) * 100 : null;
   const sizeText = formatBytes(Math.abs(delta));
   if (!sizeText) return null;
+  if (percent != null && (percent < 0.1 || Math.abs(delta) < 1024 * 1024)) {
+    const direction = delta > 0 ? "saved" : "container overhead";
+    return `Size basically unchanged (${sizeText} ${direction})`;
+  }
   if (delta > 0) {
     return percent != null ? `Saved ${sizeText} (${percent.toFixed(1)}%)` : `Saved ${sizeText}`;
   }
@@ -213,8 +250,8 @@ export function RefinerFileRemuxPassActivityDetail({ detail }: { detail: string 
   ].filter(Boolean);
 
   const supplementalRows: { k: string; v: string | undefined | null }[] = [
-    { k: "Remux needed", v: parsed.remux_required === undefined ? undefined : parsed.remux_required ? "Yes" : "No" },
-    { k: "Remux plan", v: parsed.plan_summary },
+    { k: "Changes needed", v: parsed.remux_required === undefined ? undefined : parsed.remux_required ? "Yes" : "No" },
+    { k: "What Refiner planned", v: parsed.plan_summary },
     ...cleanupRows.map((row) => ({ k: row.label, v: row.value })),
     { k: "Safety note", v: parsed.output_completeness_note || undefined },
     { k: "Reason", v: parsed.reason },
@@ -281,6 +318,59 @@ export function RefinerFileRemuxPassActivityDetail({ detail }: { detail: string 
           ) : null}
         </div>
       </details>
+    </div>
+  );
+}
+
+export function RefinerFileProcessingProgressDetail({ detail }: { detail: string }) {
+  let parsed: RefinerProgressDetail | null = null;
+  try {
+    const raw: unknown = JSON.parse(detail);
+    parsed = typeof raw === "object" && raw !== null ? (raw as RefinerProgressDetail) : null;
+  } catch {
+    parsed = null;
+  }
+
+  if (!parsed) {
+    return <p className="text-sm leading-6 text-[var(--mm-text2)]">{detail}</p>;
+  }
+
+  const rawPercent = typeof parsed.percent === "number" && Number.isFinite(parsed.percent) ? parsed.percent : null;
+  const percent = rawPercent == null ? null : Math.max(0, Math.min(100, rawPercent));
+  const status = parsed.status || "processing";
+  const fileName = filenameFromPath(parsed.relative_media_path || parsed.inspected_source_path);
+  const eta = formatDuration(parsed.eta_seconds);
+  const elapsed = formatDuration(parsed.elapsed_seconds);
+  const processed = formatDuration(parsed.processed_seconds);
+  const duration = formatDuration(parsed.duration_seconds);
+  const statusText =
+    status === "finished"
+      ? "Finished"
+      : status === "failed"
+        ? "Stopped"
+        : status === "finishing"
+          ? "Final checks"
+          : "Processing";
+
+  return (
+    <div className="mm-activity-processing" data-testid="refiner-processing-progress-detail">
+      <div className="mm-activity-processing__header">
+        <div>
+          <p className="mm-activity-processing__eyebrow">{statusText}</p>
+          <p className="mm-activity-processing__title">{parsed.message || `Refiner is processing ${fileName}.`}</p>
+        </div>
+        <strong className="mm-activity-processing__percent">{percent == null ? "Working" : `${Math.round(percent)}%`}</strong>
+      </div>
+      <div className="mm-activity-processing__bar" aria-label={`Processing progress for ${fileName}`}>
+        <span style={{ width: `${percent ?? 8}%` }} />
+      </div>
+      <div className="mm-activity-processing__metrics">
+        <span>{eta ? `About ${eta} left` : status === "processing" ? "Estimating time left" : statusText}</span>
+        {elapsed ? <span>Running {elapsed}</span> : null}
+        {processed && duration ? <span>Processed {processed} of {duration}</span> : null}
+        {parsed.speed ? <span>Speed {parsed.speed}</span> : null}
+      </div>
+      {parsed.reason ? <p className="mm-activity-processing__error">{parsed.reason}</p> : null}
     </div>
   );
 }

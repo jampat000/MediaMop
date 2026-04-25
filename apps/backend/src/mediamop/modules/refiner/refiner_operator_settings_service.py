@@ -22,11 +22,6 @@ def _clamp_max_concurrent_files(raw: int) -> int:
     return max(1, min(8, int(raw)))
 
 
-def _clamp_scan_schedule_interval_seconds(raw: int) -> int:
-    """Match suite minimum (60s); Refiner timed-scan cadence only."""
-    return max(60, min(int(raw), 7 * 24 * 3600))
-
-
 def _clamp_min_file_age_seconds(raw: int) -> int:
     return max(0, min(int(raw), 7 * 24 * 3600))
 
@@ -39,13 +34,11 @@ def ensure_refiner_operator_settings_row(db: Session) -> RefinerOperatorSettings
             max_concurrent_files=1,
             min_file_age_seconds=60,
             movie_schedule_enabled=1,
-            movie_schedule_interval_seconds=300,
             movie_schedule_hours_limited=0,
             movie_schedule_days="",
             movie_schedule_start="00:00",
             movie_schedule_end="23:59",
             tv_schedule_enabled=1,
-            tv_schedule_interval_seconds=300,
             tv_schedule_hours_limited=0,
             tv_schedule_days="",
             tv_schedule_start="00:00",
@@ -102,13 +95,11 @@ def build_refiner_operator_settings_out(db: Session, row: RefinerOperatorSetting
         max_concurrent_files=_clamp_max_concurrent_files(row.max_concurrent_files),
         min_file_age_seconds=_clamp_min_file_age_seconds(row.min_file_age_seconds),
         movie_schedule_enabled=bool(row.movie_schedule_enabled),
-        movie_schedule_interval_seconds=_clamp_scan_schedule_interval_seconds(row.movie_schedule_interval_seconds),
         movie_schedule_hours_limited=bool(row.movie_schedule_hours_limited),
         movie_schedule_days=(row.movie_schedule_days or "").strip(),
         movie_schedule_start=(row.movie_schedule_start or "00:00").strip(),
         movie_schedule_end=(row.movie_schedule_end or "23:59").strip(),
         tv_schedule_enabled=bool(row.tv_schedule_enabled),
-        tv_schedule_interval_seconds=_clamp_scan_schedule_interval_seconds(row.tv_schedule_interval_seconds),
         tv_schedule_hours_limited=bool(row.tv_schedule_hours_limited),
         tv_schedule_days=(row.tv_schedule_days or "").strip(),
         tv_schedule_start=(row.tv_schedule_start or "00:00").strip(),
@@ -126,18 +117,12 @@ def apply_refiner_operator_settings_put(db: Session, body: RefinerOperatorSettin
         row.min_file_age_seconds = _clamp_min_file_age_seconds(body.min_file_age_seconds)
     if body.movie_schedule_enabled is not None:
         row.movie_schedule_enabled = 1 if body.movie_schedule_enabled else 0
-        row.movie_schedule_interval_seconds = _clamp_scan_schedule_interval_seconds(
-            cast(int, body.movie_schedule_interval_seconds)
-        )
         row.movie_schedule_hours_limited = 1 if body.movie_schedule_hours_limited else 0
         row.movie_schedule_days = validate_schedule_days_csv(cast(str, body.movie_schedule_days))
         row.movie_schedule_start = normalize_hhmm(cast(str, body.movie_schedule_start), fallback="00:00")
         row.movie_schedule_end = normalize_hhmm(cast(str, body.movie_schedule_end), fallback="23:59")
     if body.tv_schedule_enabled is not None:
         row.tv_schedule_enabled = 1 if body.tv_schedule_enabled else 0
-        row.tv_schedule_interval_seconds = _clamp_scan_schedule_interval_seconds(
-            cast(int, body.tv_schedule_interval_seconds)
-        )
         row.tv_schedule_hours_limited = 1 if body.tv_schedule_hours_limited else 0
         row.tv_schedule_days = validate_schedule_days_csv(cast(str, body.tv_schedule_days))
         row.tv_schedule_start = normalize_hhmm(cast(str, body.tv_schedule_start), fallback="00:00")

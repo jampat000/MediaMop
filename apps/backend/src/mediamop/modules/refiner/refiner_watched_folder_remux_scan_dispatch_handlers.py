@@ -187,7 +187,8 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                     summary["scan_result_label"] = "No media found"
                     summary["user_message"] = "MediaMop did not find any media files in this watched folder."
 
-                detail = format_scan_summary_for_activity(summary)
-                record_refiner_watched_folder_remux_scan_dispatch_completed(session, detail=detail)
+                if int(summary["remux_jobs_enqueued"]) > 0:
+                    detail = format_scan_summary_for_activity(summary)
+                    record_refiner_watched_folder_remux_scan_dispatch_completed(session, detail=detail)
 
     return _run

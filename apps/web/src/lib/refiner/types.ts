@@ -84,13 +84,11 @@ export type RefinerOperatorSettingsOut = {
   max_concurrent_files: number;
   min_file_age_seconds: number;
   movie_schedule_enabled: boolean;
-  movie_schedule_interval_seconds: number;
   movie_schedule_hours_limited: boolean;
   movie_schedule_days: string;
   movie_schedule_start: string;
   movie_schedule_end: string;
   tv_schedule_enabled: boolean;
-  tv_schedule_interval_seconds: number;
   tv_schedule_hours_limited: boolean;
   tv_schedule_days: string;
   tv_schedule_start: string;
@@ -105,13 +103,11 @@ export type RefinerOperatorSettingsPutBody = {
   max_concurrent_files?: number;
   min_file_age_seconds?: number;
   movie_schedule_enabled?: boolean;
-  movie_schedule_interval_seconds?: number;
   movie_schedule_hours_limited?: boolean;
   movie_schedule_days?: string;
   movie_schedule_start?: string;
   movie_schedule_end?: string;
   tv_schedule_enabled?: boolean;
-  tv_schedule_interval_seconds?: number;
   tv_schedule_hours_limited?: boolean;
   tv_schedule_days?: string;
   tv_schedule_start?: string;

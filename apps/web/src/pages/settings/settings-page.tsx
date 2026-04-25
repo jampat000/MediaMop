@@ -17,6 +17,7 @@ import {
   suiteConfigurationBackupsQueryKey,
   useSuiteConfigurationBackupsQuery,
   useSuiteLogsQuery,
+  useSuiteMetricsQuery,
   useSuiteSettingsQuery,
   useSuiteSettingsSaveMutation,
   useSuiteUpdateNowMutation,
@@ -66,6 +67,10 @@ function tabButtonClass(active: boolean): string {
 
 const SUITE_SETTINGS_DASH_CARD_CLASS =
   "mm-card mm-dash-card flex min-h-0 min-w-0 flex-col gap-5";
+const SUITE_SETTINGS_PREMIUM_PANEL_CLASS =
+  "flex min-h-0 min-w-0 flex-col gap-4 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/80 p-4 shadow-[var(--mm-shadow-card-inner)]";
+const SUITE_SETTINGS_PREMIUM_TILE_CLASS =
+  "rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/80 px-4 py-3 shadow-[var(--mm-shadow-card-inner)]";
 const CONFIGURATION_BACKUP_INTERVAL_HOURS = [6, 12, 24, 48, 72, 168] as const;
 
 type LogLevelFilter = "" | "INFO" | "WARNING" | "ERROR";
@@ -151,6 +156,38 @@ function SettingsSummaryCard({ label, value }: { label: string; value: string })
   );
 }
 
+function formatRuntimeUptime(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds <= 0) return "Just started";
+  const totalSeconds = Math.max(0, Math.floor(seconds));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
+function formatAverageMs(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return "0 ms";
+  return `${value >= 100 ? value.toFixed(0) : value.toFixed(1)} ms`;
+}
+
+function requestIssueSummary(statusCounts: Record<string, number> | undefined): { value: string; detail: string } {
+  const counts = statusCounts ?? {};
+  const success = counts["2xx"] ?? 0;
+  const redirects = counts["3xx"] ?? 0;
+  const rejectedOrMissing = counts["4xx"] ?? 0;
+  const serverFailures = counts["5xx"] ?? 0;
+  const detail = `Successful ${success} - Redirected ${redirects} - Rejected or not found ${rejectedOrMissing} - Server failures ${serverFailures}`;
+  if (serverFailures > 0) {
+    return { value: `${serverFailures} server ${serverFailures === 1 ? "failure" : "failures"}`, detail };
+  }
+  if (rejectedOrMissing > 0) {
+    return { value: `${rejectedOrMissing} request ${rejectedOrMissing === 1 ? "issue" : "issues"}`, detail };
+  }
+  return { value: "No request issues", detail };
+}
+
 /** Settings: General (timezone, display density, configuration export), Security, Logs (retention + recent events). */
 export function SettingsPage() {
   const navigate = useNavigate();
@@ -216,6 +253,7 @@ export function SettingsPage() {
     },
     tab === "logs" && Boolean(settingsQ.data),
   );
+  const metricsQ = useSuiteMetricsQuery(tab === "logs" && Boolean(settingsQ.data));
 
   const serverCuratedTimezone =
     settingsQ.data && CURATED_TIMEZONE_ID_SET.has(settingsQ.data.app_timezone || "") ? settingsQ.data.app_timezone : null;
@@ -442,6 +480,8 @@ export function SettingsPage() {
   }
 
   const changePasswordBusy = changePassword.isPending;
+  const runtimeMetrics = metricsQ.data;
+  const runtimeRequestIssues = requestIssueSummary(runtimeMetrics?.status_counts);
 
   return (
     <div className="mm-page" data-testid="suite-settings-page">
@@ -701,19 +741,19 @@ export function SettingsPage() {
                     Backup and restore
                   </h3>
                   <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                    Export or import the full suite configuration (Refiner, Pruner, Subber, arr library operator
-                    settings, and suite-level settings) as one JSON file. Automatic snapshots use the same JSON format
-                    and keep the
-                    five most recent files on disk.
+                    Keep a clean copy of MediaMop settings and restore them if something goes wrong.
                   </p>
                 </div>
 
                 <div className="grid gap-5 lg:grid-cols-2">
-                  <div className="flex min-h-0 min-w-0 flex-col gap-4 rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/50 p-4 shadow-sm">
+                  <div className={SUITE_SETTINGS_PREMIUM_PANEL_CLASS}>
                     <div>
-                      <h4 className="text-sm font-semibold text-[var(--mm-text1)]">Automatic snapshots</h4>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
+                        Automatic protection
+                      </p>
+                      <h4 className="mt-1 text-sm font-semibold text-[var(--mm-text1)]">Scheduled snapshots</h4>
                       <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-                        The server writes configuration snapshots on this schedule. Older files are pruned after five.
+                        MediaMop keeps the latest five configuration snapshots using the same restore-safe JSON format.
                       </p>
                     </div>
                     <label className="flex cursor-pointer items-start gap-2.5 text-sm text-[var(--mm-text2)]">
@@ -788,11 +828,14 @@ export function SettingsPage() {
                     </div>
                   </div>
 
-                  <div className="flex min-h-0 min-w-0 flex-col gap-4 rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/50 p-4 shadow-sm">
+                  <div className={SUITE_SETTINGS_PREMIUM_PANEL_CLASS}>
                     <div>
-                      <h4 className="text-sm font-semibold text-[var(--mm-text1)]">Manual export and restore</h4>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
+                        Manual control
+                      </p>
+                      <h4 className="mt-1 text-sm font-semibold text-[var(--mm-text1)]">Export or restore now</h4>
                       <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-                        Download a snapshot now, or pick a previously exported JSON file to restore.
+                        Download a full settings file, or restore a MediaMop configuration JSON from disk.
                       </p>
                     </div>
                     <div className="mt-auto flex flex-col gap-2 border-t border-[var(--mm-border)] pt-3">
@@ -824,8 +867,18 @@ export function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/30 p-4">
-                  <h4 className="text-sm font-semibold text-[var(--mm-text1)]">Recent automatic snapshots</h4>
+                <div className={SUITE_SETTINGS_PREMIUM_PANEL_CLASS}>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
+                        Snapshot history
+                      </p>
+                      <h4 className="mt-1 text-sm font-semibold text-[var(--mm-text1)]">Recent automatic snapshots</h4>
+                    </div>
+                    <span className="rounded-full border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-2.5 py-1 text-xs text-[var(--mm-text2)]">
+                      Keeps latest 5
+                    </span>
+                  </div>
                   {backupsQ.data ? (
                     <p
                       className="mt-1.5 break-all font-mono text-xs leading-snug text-[var(--mm-text2)]"
@@ -905,7 +958,7 @@ export function SettingsPage() {
                   Upgrade
                 </h3>
                 <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                  Check the latest public release and get the right next step for this install type.
+                  Check the running MediaMop version and install the latest release for this install type.
                 </p>
               </div>
 
@@ -919,49 +972,75 @@ export function SettingsPage() {
                 </p>
               ) : (
                 <>
+                  <div
+                    className={`rounded-xl border p-4 ${
+                      updateStatusQ.data.status === "update_available"
+                        ? "border-amber-400/25 bg-amber-400/[0.06]"
+                        : "border-emerald-500/20 bg-emerald-500/[0.05]"
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
+                          Release status
+                        </p>
+                        <h4 className="mt-1 text-base font-semibold text-[var(--mm-text1)]">
+                          {updateStatusQ.data.summary}
+                        </h4>
+                      </div>
+                      <span className="rounded-full border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-2.5 py-1 text-xs font-medium capitalize text-[var(--mm-text2)]">
+                        {updateStatusQ.data.status.replaceAll("_", " ")}
+                      </span>
+                    </div>
+                  </div>
+
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <div className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/40 p-3">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Installed</div>
-                      <div className="mt-1 text-sm font-medium text-[var(--mm-text1)]">
+                    <div className={SUITE_SETTINGS_PREMIUM_TILE_CLASS}>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-text3)]">Installed</div>
+                      <div className="mt-1 text-base font-semibold text-[var(--mm-text1)]">
                         {updateStatusQ.data.current_version}
                       </div>
                     </div>
-                    <div className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/40 p-3">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Latest</div>
-                      <div className="mt-1 text-sm font-medium text-[var(--mm-text1)]">
+                    <div className={SUITE_SETTINGS_PREMIUM_TILE_CLASS}>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-text3)]">Latest</div>
+                      <div className="mt-1 text-base font-semibold text-[var(--mm-text1)]">
                         {updateStatusQ.data.latest_version || "Unknown"}
                       </div>
                     </div>
-                    <div className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/40 p-3">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Install type</div>
-                      <div className="mt-1 text-sm font-medium capitalize text-[var(--mm-text1)]">
+                    <div className={SUITE_SETTINGS_PREMIUM_TILE_CLASS}>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-text3)]">Install type</div>
+                      <div className="mt-1 text-base font-semibold capitalize text-[var(--mm-text1)]">
                         {updateStatusQ.data.install_type}
                       </div>
                     </div>
-                    <div className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/40 p-3">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Status</div>
-                      <div className="mt-1 text-sm font-medium capitalize text-[var(--mm-text1)]">
+                    <div className={SUITE_SETTINGS_PREMIUM_TILE_CLASS}>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-text3)]">Status</div>
+                      <div className="mt-1 text-base font-semibold capitalize text-[var(--mm-text1)]">
                         {updateStatusQ.data.status.replaceAll("_", " ")}
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-2 text-sm text-[var(--mm-text2)]">
-                    <p>{updateStatusQ.data.summary}</p>
+                  <div className={SUITE_SETTINGS_PREMIUM_PANEL_CLASS}>
+                    <h4 className="text-sm font-semibold text-[var(--mm-text1)]">What happens next</h4>
                     {updateStatusQ.data.install_type === "windows" && updateStatusQ.data.status === "update_available" ? (
-                      <p className="text-xs text-[var(--mm-text3)]">
+                      <p className="text-sm leading-6 text-[var(--mm-text2)]">
                         Upgrade now downloads the installer, closes MediaMop, installs the update, reopens the app, and
                         refreshes this page after the server comes back.
                       </p>
+                    ) : updateStatusQ.data.install_type === "windows" ? (
+                      <p className="text-sm leading-6 text-[var(--mm-text2)]">
+                        This Windows install does not need an update right now.
+                      </p>
                     ) : null}
                     {updateStatusQ.data.install_type === "docker" && updateStatusQ.data.docker_update_command ? (
-                      <p className="font-mono text-xs text-[var(--mm-text3)]">
+                      <p className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-3 py-2 font-mono text-xs text-[var(--mm-text3)]">
                         {updateStatusQ.data.docker_update_command}
                       </p>
                     ) : null}
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
+                  <div className="mt-auto flex flex-wrap gap-2 border-t border-[var(--mm-border)] pt-4">
                     <button
                       type="button"
                       className={mmActionButtonClass({ variant: "secondary", disabled: updateStatusQ.isFetching })}
@@ -1186,7 +1265,7 @@ export function SettingsPage() {
             <div className={mmModuleTabBlurbBandClass}>
               <p className={mmModuleTabBlurbTextClass}>
                 System event logs from the MediaMop runtime. Use filters to narrow down warnings, failures, and
-                tracebacks. Runtime health lives on the Dashboard.
+                tracebacks. Advanced server diagnostics are available here when troubleshooting.
               </p>
             </div>
 
@@ -1196,6 +1275,52 @@ export function SettingsPage() {
               <SettingsSummaryCard label="Errors" value={String(logsQ.data?.counts.error ?? 0)} />
               <SettingsSummaryCard label="Warnings" value={String(logsQ.data?.counts.warning ?? 0)} />
               <SettingsSummaryCard label="Information" value={String(logsQ.data?.counts.information ?? 0)} />
+            </section>
+
+            <section className="mm-card mm-dash-card w-full" aria-labelledby="suite-settings-diagnostics-heading">
+              <details>
+                <summary
+                  id="suite-settings-diagnostics-heading"
+                  className="cursor-pointer text-base font-semibold text-[var(--mm-text1)]"
+                >
+                  Server diagnostics
+                </summary>
+                <p className="mt-2 text-sm text-[var(--mm-text2)]">
+                  Advanced counters for troubleshooting. Request issues usually mean a browser or API request was rejected
+                  or asked for something that was not found; they are not the same as application failures.
+                </p>
+                {metricsQ.isError ? (
+                  <p className="mt-4 rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200" role="alert">
+                    {metricsQ.error instanceof Error ? metricsQ.error.message : "Could not load server diagnostics."}
+                  </p>
+                ) : (
+                  <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                    <SettingsSummaryCard
+                      label="Running for"
+                      value={runtimeMetrics ? formatRuntimeUptime(runtimeMetrics.uptime_seconds) : "Loading..."}
+                    />
+                    <SettingsSummaryCard
+                      label="Requests handled"
+                      value={runtimeMetrics ? String(runtimeMetrics.total_requests) : "Loading..."}
+                    />
+                    <SettingsSummaryCard
+                      label="Average response"
+                      value={runtimeMetrics ? formatAverageMs(runtimeMetrics.average_response_ms) : "Loading..."}
+                    />
+                    <SettingsSummaryCard
+                      label="Logged failures"
+                      value={runtimeMetrics ? String(runtimeMetrics.error_log_count) : "Loading..."}
+                    />
+                    <SettingsSummaryCard
+                      label="Request issues"
+                      value={runtimeMetrics ? runtimeRequestIssues.value : "Loading..."}
+                    />
+                  </div>
+                )}
+                {runtimeMetrics ? (
+                  <p className="mt-3 text-xs text-[var(--mm-text3)]">{runtimeRequestIssues.detail}</p>
+                ) : null}
+              </details>
             </section>
 
             <section className="mm-card mm-dash-card w-full" aria-labelledby="suite-settings-logs-filters-heading">

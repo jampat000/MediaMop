@@ -9,7 +9,11 @@ from typing import Any
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.refiner_file_remux_pass_activity import record_refiner_file_remux_pass_completed
+from mediamop.modules.refiner.refiner_file_remux_pass_activity import (
+    record_refiner_file_processing_started,
+    record_refiner_file_remux_pass_completed,
+    update_refiner_file_processing_progress,
+)
 from mediamop.modules.refiner.refiner_file_remux_pass_run import run_refiner_file_remux_pass
 from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
 from mediamop.modules.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
@@ -28,6 +32,22 @@ def _record(session_factory: sessionmaker[Session], *, payload: dict[str, Any]) 
     with session_factory() as session:
         with session.begin():
             record_refiner_file_remux_pass_completed(session, title=title, detail=detail)
+
+
+def _make_progress_reporter(session_factory: sessionmaker[Session], *, job_id: int) -> Callable[[dict[str, Any]], None]:
+    activity_id: int | None = None
+
+    def _report(payload: dict[str, Any]) -> None:
+        nonlocal activity_id
+        body = {"job_id": job_id, **payload}
+        with session_factory() as session:
+            with session.begin():
+                if activity_id is None:
+                    activity_id = record_refiner_file_processing_started(session, payload=body)
+                else:
+                    update_refiner_file_processing_progress(session, activity_id=activity_id, payload=body)
+
+    return _report
 
 
 def make_refiner_file_remux_pass_handler(
@@ -140,6 +160,7 @@ def make_refiner_file_remux_pass_handler(
                 media_scope=media_scope,
                 cleanup_session=session,
                 current_job_id=ctx.id,
+                progress_reporter=_make_progress_reporter(session_factory, job_id=ctx.id),
             )
             result["job_id"] = ctx.id
         _record(session_factory, payload=result)

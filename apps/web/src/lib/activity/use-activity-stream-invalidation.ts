@@ -63,3 +63,15 @@ export function useActivityStreamInvalidation(queryKey: QueryKey): void {
     });
   }, [qc, queryKey]);
 }
+
+export function useActivityStreamInvalidations(queryKeys: readonly QueryKey[]): void {
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    return subscribeActivityLatest(() => {
+      queryKeys.forEach((queryKey) => {
+        void qc.invalidateQueries({ queryKey });
+      });
+    });
+  }, [qc, queryKeys]);
+}
