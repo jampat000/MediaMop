@@ -41,6 +41,11 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 [Dirs]
 Name: "{commonappdata}\MediaMop"; Permissions: users-modify
 
+[InstallDelete]
+Type: filesandordirs; Name: "{app}\_internal"
+Type: files; Name: "{app}\MediaMop.exe"
+Type: files; Name: "{app}\MediaMopServer.exe"
+
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
