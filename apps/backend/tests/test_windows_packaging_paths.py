@@ -46,6 +46,8 @@ def test_inno_installer_uses_program_files_and_programdata() -> None:
     assert "CloseApplications=no" in text
     assert "RestartApplications=no" in text
     assert "taskkill.exe" in text
+    assert "advfirewall firewall add rule" in text
+    assert 'program=""{app}\\MediaMopServer.exe""' in text
     assert "MediaMop.exe" in text
     assert "MediaMopServer.exe" in text
 
@@ -76,3 +78,11 @@ def test_windows_package_includes_ffmpeg_runtime_assets() -> None:
     assert '(str(FFMPEG_VENDOR), "bin/ffmpeg")' in spec_text
     assert "Ensure-WindowsFfmpegRuntime" in build_text
     assert "ffmpeg-master-latest-win64-lgpl.zip" in build_text
+
+
+def test_packaged_server_binds_to_lan_interfaces() -> None:
+    source = Path(tray_app.__file__).read_text(encoding="utf-8")
+
+    assert 'host="0.0.0.0"' in source
+    assert 'host="127.0.0.1"' not in source
+    assert "MediaMop LAN URLs" in source

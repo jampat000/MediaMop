@@ -54,7 +54,12 @@ Name: "{group}\MediaMop"; Filename: "{app}\{#ExeName}"
 Name: "{commondesktop}\MediaMop"; Filename: "{app}\{#ExeName}"; Tasks: desktopicon
 
 [Run]
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""MediaMop Server"""; Flags: runhidden waituntilterminated
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""MediaMop Server"" dir=in action=allow program=""{app}\MediaMopServer.exe"" enable=yes profile=private"; Flags: runhidden waituntilterminated
 Filename: "{app}\{#ExeName}"; Description: "Launch MediaMop"; Flags: nowait postinstall skipifsilent
+
+[UninstallRun]
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""MediaMop Server"""; Flags: runhidden waituntilterminated
 
 [Code]
 procedure StopMediaMopProcess(ProcessName: String);

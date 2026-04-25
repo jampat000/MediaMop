@@ -118,5 +118,5 @@ html[data-mm-density="expanded"] {
 html[data-mm-density="compact"] {
   --mm-density-font-scale: 0.94;
   --mm-density-ui-scale: 0.84;
-  --mm-main-max-cap: 2100px;
+  --mm-main-max-cap: 2800px;
 }

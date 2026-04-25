@@ -144,6 +144,24 @@ def _check_output_file_completeness(*, output_file: Path, source_file: Path) -> 
     }
 
 
+def _copy_unchanged_source_to_output(*, src: Path, final: Path) -> tuple[bool, bool]:
+    """For already-correct files, still place a copy in the output tree before cleanup."""
+
+    src_resolved = src.resolve()
+    final.parent.mkdir(parents=True, exist_ok=True)
+    if final.exists():
+        final_resolved = final.resolve()
+        if final_resolved == src_resolved:
+            raise RuntimeError(
+                "Refiner output path resolves to the watched source file; output and watched folders must differ."
+            )
+        final.unlink()
+        shutil.copy2(src_resolved, final)
+        return True, True
+    shutil.copy2(src_resolved, final)
+    return True, False
+
+
 def _cascade_delete_empty_parents(
     *,
     first_parent: Path,
@@ -493,18 +511,55 @@ def run_refiner_file_remux_pass(
 
     if not remux_needed:
         out["outcome"] = REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED
-        out["live_mutations_skipped"] = True
         out["refiner_output_folder_resolved"] = str(out_dir)
         out["after_track_lines_meaning"] = (
-            "No ffmpeg run; before/after lines compare the file as-is to the planned layout "
-            "(they may match when remux was not required)."
+            "No ffmpeg run was needed because the file already matched the saved Refiner rules."
         )
         out["reason"] = (
-            "Streams already match the remux plan; no ffmpeg run in this pass. "
-            "On success, the source file under the watched folder may still be removed per Refiner path settings."
+            "The file already matched the saved Refiner rules, so Refiner copied it to the output folder without rewriting it."
         )
         rel_skip = src.resolve().relative_to(watched_root)
         final_skip = out_dir / rel_skip
+        try:
+            _copied, output_replaced_existing = _copy_unchanged_source_to_output(src=src, final=final_skip)
+        except Exception as exc:
+            if progress_reporter is not None:
+                progress_reporter(
+                    {
+                        "status": "failed",
+                        "percent": None,
+                        "eta_seconds": None,
+                        "relative_media_path": relative_media_path,
+                        "inspected_source_path": inspected,
+                        "media_scope": scope,
+                        "message": "Refiner could not copy this unchanged file to the output folder.",
+                        "reason": str(exc),
+                    }
+                )
+            return {
+                "ok": False,
+                "outcome": REMUX_PASS_OUTCOME_FAILED_DURING_EXECUTION,
+                "preflight_status": "ok",
+                "preflight_reason": "ffprobe completed and remux plan was evaluated",
+                "reason": str(exc),
+                "relative_media_path": relative_media_path,
+                "inspected_source_path": inspected,
+                "refiner_watched_folder_resolved": str(watched_root),
+                "refiner_output_folder_resolved": str(out_dir),
+                "stream_counts": out.get("stream_counts"),
+                "plan_summary": out.get("plan_summary"),
+                "audio_before": before_a,
+                "audio_after": after_a,
+                "subs_before": before_s,
+                "subs_after": after_s,
+                "remux_required": remux_needed,
+                "ffmpeg_argv": [str(x) for x in argv],
+                "audio_selection_notes": list(plan.audio_selection_notes),
+            }
+        out["output_file"] = str(final_skip.resolve())
+        out["output_replaced_existing"] = output_replaced_existing
+        out["output_copied_without_remux"] = True
+        out["live_mutations_skipped"] = False
         _handle_refiner_cleanup_after_success(
             src=src,
             watched_root=watched_root,

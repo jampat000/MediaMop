@@ -130,6 +130,24 @@ def _open_browser(port: int) -> None:
     webbrowser.open(f"http://127.0.0.1:{port}/", new=2)
 
 
+def _lan_urls(port: int) -> list[str]:
+    urls: list[str] = []
+    seen: set[str] = set()
+    try:
+        hostname = socket.gethostname()
+        for info in socket.getaddrinfo(hostname, port, family=socket.AF_INET, type=socket.SOCK_STREAM):
+            addr = str(info[4][0])
+            if addr.startswith("127."):
+                continue
+            url = f"http://{addr}:{port}/"
+            if url not in seen:
+                seen.add(url)
+                urls.append(url)
+    except OSError:
+        return []
+    return urls
+
+
 def _wait_for_health(port: int, timeout_seconds: float = 30.0) -> None:
     import http.client
 
@@ -255,6 +273,9 @@ class _MediaMopTrayApp:
             self._log("Waiting for local health endpoint")
             _wait_for_health(self._port)
             self._log(f"MediaMop is healthy on http://127.0.0.1:{self._port}/")
+            lan = _lan_urls(self._port)
+            if lan:
+                self._log("MediaMop LAN URLs: " + ", ".join(lan))
             _open_browser(self._port)
             self._icon = self._create_icon()
             self._log("Starting tray icon event loop")
@@ -276,7 +297,7 @@ def _run_server_mode(port: int) -> None:
     server = uvicorn.Server(
         uvicorn.Config(
             app,
-            host="127.0.0.1",
+            host="0.0.0.0",
             port=port,
             log_level="info",
             log_config=None,
