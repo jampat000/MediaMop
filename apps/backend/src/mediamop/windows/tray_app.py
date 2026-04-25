@@ -79,9 +79,27 @@ def _ensure_session_secret(runtime_home: Path) -> str:
         if len(existing) >= 32:
             return existing
     runtime_home.mkdir(parents=True, exist_ok=True)
-    secret = secrets.token_urlsafe(48)
-    secret_path.write_text(secret, encoding="utf-8")
-    return secret
+    token = secrets.token_urlsafe(48)
+    _write_private_runtime_token(secret_path, token)
+    return token
+
+
+def _write_private_runtime_token(path: Path, value: str) -> None:
+    """Persist the local session token with owner-only permissions where supported."""
+
+    if os.name == "nt":
+        path.write_text(value, encoding="utf-8")
+        return
+
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(value)
+    finally:
+        try:
+            os.chmod(path, 0o600)
+        except OSError:
+            pass
 
 
 def _prepare_environment(resource_root: Path, runtime_home: Path) -> Path:

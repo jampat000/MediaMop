@@ -1,0 +1,9 @@
+name: MediaMop CodeQL security scan
+
+paths:
+  - apps/backend/src
+  - apps/web/src
+
+paths-ignore:
+  - "**/*.test.ts"
+  - "**/*.test.tsx"

@@ -41,7 +41,14 @@ def get_suite_configuration_backup_file_path(
     row = session.get(SuiteConfigurationBackupRow, int(backup_id))
     if row is None:
         raise ValueError("Configuration snapshot not found.")
-    p = _backup_dir(settings) / row.file_name
+    if Path(row.file_name).name != row.file_name or not row.file_name.startswith("suite-configuration-"):
+        raise ValueError("Configuration snapshot file name is invalid.")
+    backup_root = _backup_dir(settings)
+    p = (backup_root / row.file_name).resolve()
+    try:
+        p.relative_to(backup_root)
+    except ValueError as exc:
+        raise ValueError("Configuration snapshot path is outside the backup directory.") from exc
     if not p.is_file():
         raise ValueError("Configuration snapshot file is missing on disk.")
     return p, row

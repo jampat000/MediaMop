@@ -29,7 +29,7 @@ def _get(path: str) -> dict[str, Any] | None:
             parsed = json.loads(raw)
             return parsed if isinstance(parsed, dict) else None
     except Exception:
-        logger.exception("SubDL request failed: %s", url)
+        logger.exception("SubDL request failed.")
         return None
 
 

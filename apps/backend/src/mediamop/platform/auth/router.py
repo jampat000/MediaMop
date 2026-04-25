@@ -79,7 +79,7 @@ def post_login(
         settings=settings,
     )
     if result is None:
-        logger.warning("auth event: login failed (username=%s)", uname)
+        logger.warning("auth event: login failed")
         activity_service.maybe_record_login_failed(db, username=uname)
         db.commit()
         raise HTTPException(
@@ -87,7 +87,7 @@ def post_login(
             detail="Invalid username or password.",
         )
     user, raw = result
-    logger.info("auth event: login succeeded (user_id=%s username=%s)", user.id, user.username)
+    logger.info("auth event: login succeeded (user_id=%s)", user.id)
     activity_service.record_activity_event(
         db,
         event_type=activity_constants.AUTH_LOGIN_SUCCEEDED,
@@ -224,9 +224,8 @@ def post_bootstrap(
             detail="Username already exists.",
         ) from exc
     logger.info(
-        "auth event: bootstrap succeeded (user_id=%s username=%s)",
+        "auth event: bootstrap succeeded (user_id=%s)",
         user.id,
-        user.username,
     )
     activity_service.record_activity_event(
         db,
@@ -328,7 +327,7 @@ def post_change_password(
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    logger.info("auth event: password changed (user_id=%s username=%s)", user.id, user.username)
+    logger.info("auth event: password changed (user_id=%s)", user.id)
     activity_service.record_activity_event(
         db,
         event_type=activity_constants.AUTH_PASSWORD_CHANGED,
