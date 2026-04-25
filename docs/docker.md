@@ -8,3 +8,4 @@ Short summary:
 - same-origin API under `/api/v1`
 - stable tags are published by `.github/workflows/release.yml`
 - root `compose.yaml` pulls `ghcr.io/jampat000/mediamop:latest`
+- release smoke validation is defined in [`smoke-checklists.md`](smoke-checklists.md)
