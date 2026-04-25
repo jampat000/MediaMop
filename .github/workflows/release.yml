@@ -117,7 +117,7 @@ jobs:
         run: echo "name=${REGISTRY}/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
       - name: Download MediaMop Windows installer
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: mediamop-windows-installer
           path: ${{ github.workspace }}/windows-artifact
