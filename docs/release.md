@@ -8,6 +8,8 @@ MediaMop now ships three release deliverables from a tagged release:
 
 The Windows artifact is an installer-based desktop app with a tray host. It is not a Windows service.
 
+MediaMop is released under AGPL-3.0-or-later. Release artifacts are built from the tagged source tree and remain subject to that license.
+
 ## Contract
 
 1. Update the version in both files in a normal PR:
@@ -120,5 +122,7 @@ only if you want to override defaults such as the image tag or runtime home.
 
 - `.github/workflows/ci.yml`
 - `.github/workflows/release.yml`
+- `docs/release-governance.md`
+- `docs/smoke-checklists.md`
 - `docker/README.md`
 - `docs/local-development.md`

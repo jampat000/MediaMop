@@ -18,3 +18,7 @@
 
 - Initial acknowledgment target: within 7 days.
 - Confirmed vulnerabilities are triaged, fixed, and disclosed once a patch is available.
+
+## Hardening baseline
+
+The practical release hardening checklist lives in [`docs/security-hardening.md`](docs/security-hardening.md).

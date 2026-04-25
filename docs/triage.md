@@ -30,3 +30,10 @@ MediaMop issues should stay practical and reproducible. Every issue needs a clea
 4. Add one `priority:*` label after impact is understood.
 5. Close issues only when the fix is merged, intentionally declined, or superseded by a better issue.
 
+## Backlog references
+
+- Release governance: [`release-governance.md`](release-governance.md)
+- Windows and Docker smoke checks: [`smoke-checklists.md`](smoke-checklists.md)
+- Security hardening: [`security-hardening.md`](security-hardening.md)
+- UX polish baseline: [`ux-polish.md`](ux-polish.md)
+

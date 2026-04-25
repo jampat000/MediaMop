@@ -8,6 +8,7 @@ version = "1.0.4"
 description = "MediaMop backend spine (FastAPI, SQLite, Alembic)"
 readme = "README.md"
 requires-python = ">=3.11"
+license = "AGPL-3.0-or-later"
 dependencies = [
   "fastapi>=0.115",
   "python-dotenv>=1.0",

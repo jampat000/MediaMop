@@ -9,7 +9,7 @@ I built it because I wanted a media workflow that matched the way I actually man
 
 It is opinionated on purpose. Every module exists because it solved a real problem in my own setup first.
 
-If it happens to fit the way you manage your library too, use it. If not, fork it and take it somewhere else.
+If it happens to fit the way you manage your library too, use it, improve it, and share those improvements under the same open license.
 
 <!-- README_LOCKED_SECTION_END: project-note -->
 
@@ -75,6 +75,12 @@ The default dev URL is `http://localhost:8782/`.
 - SQLite runtime files live under `MEDIAMOP_HOME`
 - production deployments should expose one canonical HTTPS origin
 - local development uses the Vite `/api` proxy; keep `VITE_API_BASE_URL` unset unless you know you need it
+
+## License
+
+MediaMop is licensed under the GNU Affero General Public License v3.0 or later (`AGPL-3.0-or-later`).
+
+You can use, study, modify, and redistribute it under the license terms. If you distribute a modified version or run a modified version as a network service, the AGPL requires you to make the corresponding source code available under the same license.
 
 ## Verification
 

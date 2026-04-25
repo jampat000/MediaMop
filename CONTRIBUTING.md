@@ -57,3 +57,7 @@ This triggers the GitHub `Test` workflow for the current ref and watches it. The
 ## Security
 
 Do not commit `.env`, real secrets, production database files, logs, backups, or machine-specific media paths. Use `.env.example` patterns only.
+
+## License
+
+By contributing to MediaMop, you agree that your contribution is provided under the repository license: AGPL-3.0-or-later.
