@@ -1,9 +1,11 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { BrandHeaderLink } from "../components/brand/brand-header-link";
 import { NavIconActivity, NavIconDashboard, NavIconRefiner, NavIconSettings, NavIconSubber, NavIconPruner } from "../components/shell/nav-icons";
 import { WEB_APP_VERSION } from "../lib/app-meta";
 import { useLogoutMutation } from "../lib/auth/queries";
 import { useSuiteSettingsQuery } from "../lib/suite/queries";
+import { persistAppTheme, readStoredAppTheme, type AppTheme } from "../lib/ui/app-theme";
 
 function sidebarNavClass({ isActive }: { isActive: boolean }) {
   return isActive ? "mm-sidebar-link active" : "mm-sidebar-link";
@@ -13,7 +15,9 @@ export function AppShell() {
   const navigate = useNavigate();
   const logout = useLogoutMutation();
   const suite = useSuiteSettingsQuery();
+  const [theme, setTheme] = useState<AppTheme>(() => readStoredAppTheme());
   const productTitle = (suite.data?.product_display_name ?? "MediaMop").trim() || "MediaMop";
+  const nextTheme: AppTheme = theme === "dark" ? "light" : "dark";
   const handleSignOut = () => {
     logout.mutate(undefined, {
       onSettled: () => {
@@ -89,6 +93,20 @@ export function AppShell() {
         </div>
       </aside>
       <main className="mm-main" id="mm-main-content" tabIndex={-1}>
+        <button
+          type="button"
+          className="mm-theme-toggle"
+          data-testid="theme-toggle"
+          aria-label={`Switch to ${nextTheme} mode`}
+          title={`Switch to ${nextTheme} mode`}
+          onClick={() => {
+            setTheme(nextTheme);
+            persistAppTheme(nextTheme);
+          }}
+        >
+          <span className="mm-theme-toggle__dot" aria-hidden="true" />
+          <span className="mm-theme-toggle__label">{theme === "dark" ? "Dark" : "Light"}</span>
+        </button>
         <div className="mm-main-inner">
           <Outlet />
         </div>
