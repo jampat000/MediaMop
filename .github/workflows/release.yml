@@ -56,7 +56,7 @@ jobs:
         run: powershell -ExecutionPolicy Bypass -File scripts/smoke-windows-package.ps1
 
       - name: Upload MediaMop Windows installer
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: mediamop-windows-installer
           path: dist/windows/MediaMopSetup.exe
@@ -120,7 +120,7 @@ jobs:
         run: echo "name=${REGISTRY}/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
       - name: Download MediaMop Windows installer
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: mediamop-windows-installer
           path: ${{ github.workspace }}/windows-artifact
