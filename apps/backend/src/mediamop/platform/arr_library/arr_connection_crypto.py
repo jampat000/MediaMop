@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import base64
 import binascii
-import hashlib
 
 from cryptography.fernet import Fernet, InvalidToken
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 from mediamop.core.config import MediaMopSettings
 
@@ -14,14 +15,20 @@ from mediamop.core.config import MediaMopSettings
 _ARR_API_KEY_KDF_PEPPER = binascii.a2b_hex(
     "6d656469616d6f702e666574636865722e6172725f6170695f6b65792e76317c"
 )
+_ARR_API_KEY_KDF_ITERATIONS = 390_000
 
 
 def _fernet(settings: MediaMopSettings) -> Fernet | None:
     secret = (settings.session_secret or "").strip()
     if not secret:
         return None
-    digest = hashlib.sha256(_ARR_API_KEY_KDF_PEPPER + secret.encode()).digest()
-    key = base64.urlsafe_b64encode(digest)
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=_ARR_API_KEY_KDF_PEPPER,
+        iterations=_ARR_API_KEY_KDF_ITERATIONS,
+    )
+    key = base64.urlsafe_b64encode(kdf.derive(secret.encode("utf-8")))
     return Fernet(key)
 
 
