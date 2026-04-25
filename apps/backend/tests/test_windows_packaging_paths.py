@@ -43,6 +43,11 @@ def test_inno_installer_uses_program_files_and_programdata() -> None:
     assert "DisableDirPage=no" in text
     assert "DisableProgramGroupPage=no" in text
     assert "DisableReadyPage=no" in text
+    assert "CloseApplications=no" in text
+    assert "RestartApplications=no" in text
+    assert "taskkill.exe" in text
+    assert "MediaMop.exe" in text
+    assert "MediaMopServer.exe" in text
 
 
 def test_windows_package_uses_dedicated_tray_icon_assets() -> None:
