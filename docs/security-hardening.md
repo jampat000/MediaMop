@@ -25,6 +25,7 @@ This checklist defines the current practical hardening baseline for MediaMop.
 - `main` is protected by GitHub rules.
 - Required checks are `mediamop`, `docker-smoke`, and `windows-package-smoke`.
 - Dependabot is enabled for Python and GitHub Actions dependencies.
+- CodeQL code scanning runs on `main`, pull requests to `main`, weekly schedule, and manual dispatch.
 - Security vulnerabilities are reported privately through `SECURITY.md`.
 - Public issues are not used for unpatched vulnerabilities.
 
@@ -41,6 +42,7 @@ Run this list before any major release:
 
 1. Confirm no secrets or runtime files are staged.
 2. Confirm dependency audit jobs pass.
-3. Confirm auth setup, login, logout, and password validation smoke tests pass.
-4. Confirm backup files do not expose secrets in public docs, logs, or screenshots.
-5. Confirm activity/log views do not expose tokens or internal implementation details to normal users.
+3. Confirm CodeQL has no open high-confidence security findings.
+4. Confirm auth setup, login, logout, and password validation smoke tests pass.
+5. Confirm backup files do not expose secrets in public docs, logs, or screenshots.
+6. Confirm activity/log views do not expose tokens or internal implementation details to normal users.

@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pytest
 
 from mediamop.core.config import MediaMopSettings
+from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
 from mediamop.modules.refiner.refiner_path_settings_service import (
     _validate_path_separation,
+    effective_work_folder,
     resolved_default_refiner_tv_work_folder,
     resolved_default_refiner_work_folder,
 )
@@ -22,10 +23,7 @@ def test_resolved_default_work_under_home(tmp_path: Path, monkeypatch: pytest.Mo
     monkeypatch.setenv("MEDIAMOP_HOME", str(h))
     s = MediaMopSettings.load()
     got = resolved_default_refiner_work_folder(mediamop_home=s.mediamop_home)
-    if sys.platform == "win32":
-        assert got == str(Path(r"C:\ProgramData\Media\refiner-movie-work"))
-    else:
-        assert got.endswith(str(Path("refiner") / "refiner-movie-work"))
+    assert got == str(h.resolve() / "refiner" / "refiner-movie-work")
     assert Path(got).is_absolute()
 
 
@@ -36,11 +34,17 @@ def test_resolved_default_tv_work_under_home(tmp_path: Path, monkeypatch: pytest
     monkeypatch.setenv("MEDIAMOP_HOME", str(h))
     s = MediaMopSettings.load()
     got = resolved_default_refiner_tv_work_folder(mediamop_home=s.mediamop_home)
-    if sys.platform == "win32":
-        assert got == str(Path(r"C:\ProgramData\MediaMop\refiner-tv-work"))
-    else:
-        assert got.endswith(str(Path("refiner") / "refiner-tv-work"))
+    assert got == str(h.resolve() / "refiner" / "refiner-tv-work")
     assert Path(got).is_absolute()
+
+
+def test_legacy_movie_default_is_treated_as_default(tmp_path: Path) -> None:
+    row = RefinerPathSettingsRow(id=1, refiner_work_folder=r"C:\ProgramData\Media\refiner-movie-work")
+
+    got, is_default = effective_work_folder(row=row, mediamop_home=str(tmp_path))
+
+    assert is_default is True
+    assert got == str(tmp_path.resolve() / "refiner" / "refiner-movie-work")
 
 
 def test_validate_rejects_nested_watched_and_output(tmp_path: Path) -> None:

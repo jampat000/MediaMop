@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -14,33 +13,36 @@ from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSett
 
 RefinerMediaScope = Literal["movie", "tv"]
 
-# Windows product defaults (fixed paths; not under MEDIAMOP_HOME).
-_REFINER_DEFAULT_WINDOWS_MOVIE_WORK = Path(r"C:\ProgramData\Media\refiner-movie-work")
-_REFINER_DEFAULT_WINDOWS_TV_WORK = Path(r"C:\ProgramData\MediaMop\refiner-tv-work")
+_REFINER_LEGACY_WINDOWS_MOVIE_WORK = Path(r"C:\ProgramData\Media\refiner-movie-work")
+_REFINER_LEGACY_WINDOWS_TV_WORK = Path(r"C:\ProgramData\MediaMop\refiner-tv-work")
 
 
 def resolved_default_refiner_work_folder(*, mediamop_home: str) -> str:
     """Default Movies work/temp directory.
 
-    On Windows: ``C:\\ProgramData\\Media\\refiner-movie-work``.
-    Elsewhere: ``<MEDIAMOP_HOME>/refiner/refiner-movie-work`` (portable dev/CI).
+    Defaults are under ``MEDIAMOP_HOME`` so packaged Windows installs use
+    ``C:\\ProgramData\\MediaMop`` while Docker/dev installs follow their configured
+    runtime root.
     """
 
-    if sys.platform == "win32":
-        return str(_REFINER_DEFAULT_WINDOWS_MOVIE_WORK)
     return str(Path(mediamop_home).expanduser().resolve() / "refiner" / "refiner-movie-work")
 
 
 def resolved_default_refiner_tv_work_folder(*, mediamop_home: str) -> str:
     """Default TV work/temp directory (separate from Movies).
 
-    On Windows: ``C:\\ProgramData\\MediaMop\\refiner-tv-work``.
-    Elsewhere: ``<MEDIAMOP_HOME>/refiner/refiner-tv-work``.
+    Defaults are under ``MEDIAMOP_HOME`` so packaged Windows installs use
+    ``C:\\ProgramData\\MediaMop`` while Docker/dev installs follow their configured
+    runtime root.
     """
 
-    if sys.platform == "win32":
-        return str(_REFINER_DEFAULT_WINDOWS_TV_WORK)
     return str(Path(mediamop_home).expanduser().resolve() / "refiner" / "refiner-tv-work")
+
+
+def _is_legacy_refiner_default_work_folder(raw: str, *, media_scope: RefinerMediaScope) -> bool:
+    candidate = Path(raw).expanduser()
+    legacy = _REFINER_LEGACY_WINDOWS_TV_WORK if media_scope == "tv" else _REFINER_LEGACY_WINDOWS_MOVIE_WORK
+    return str(candidate).rstrip("\\/").lower() == str(legacy).rstrip("\\/").lower()
 
 
 def _norm_dir_path(raw: str) -> Path:
@@ -101,6 +103,8 @@ def effective_work_folder(*, row: RefinerPathSettingsRow, mediamop_home: str) ->
 
     stored = (row.refiner_work_folder or "").strip()
     if stored:
+        if _is_legacy_refiner_default_work_folder(stored, media_scope="movie"):
+            return resolved_default_refiner_work_folder(mediamop_home=mediamop_home), True
         return stored, False
     return resolved_default_refiner_work_folder(mediamop_home=mediamop_home), True
 
@@ -110,6 +114,8 @@ def effective_tv_work_folder(*, row: RefinerPathSettingsRow, mediamop_home: str)
 
     stored = (row.refiner_tv_work_folder or "").strip()
     if stored:
+        if _is_legacy_refiner_default_work_folder(stored, media_scope="tv"):
+            return resolved_default_refiner_tv_work_folder(mediamop_home=mediamop_home), True
         return stored, False
     return resolved_default_refiner_tv_work_folder(mediamop_home=mediamop_home), True
 

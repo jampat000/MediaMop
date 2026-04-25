@@ -72,7 +72,7 @@ On-disk runtime defaults must **not** be tied to “the Git clone directory” o
 
 - **`MEDIAMOP_HOME`** (optional): explicit absolute root for product-owned data. Loaded into `MediaMopSettings.mediamop_home`.
 - **Default when unset:**
-  - **Windows:** `%LOCALAPPDATA%\MediaMop`
+  - **Windows:** `%PROGRAMDATA%\MediaMop` (normally `C:\ProgramData\MediaMop`)
   - **Linux/macOS:** `$XDG_DATA_HOME/mediamop`, or `~/.local/share/mediamop`
 
 The default SQLite file is **`{MEDIAMOP_HOME}/data/mediamop.sqlite3`** unless **`MEDIAMOP_DB_PATH`** overrides.

@@ -7,26 +7,28 @@ These checklists define the minimum user-level validation before calling a relea
 Use `MediaMopSetup.exe` from the release being validated.
 
 1. Install MediaMop on a clean Windows user profile or a reset test profile.
-2. Launch MediaMop from the Start Menu shortcut.
-3. Confirm the tray icon appears and the browser opens the app.
-4. Confirm first-run user creation appears when no user exists.
-5. Attempt a password shorter than 8 characters and confirm it is blocked.
-6. Create the first user with a valid password.
-7. Confirm the setup wizard opens after first-user creation.
-8. Confirm `Skip for now` exits the wizard and can be reopened from Settings.
-9. Confirm `Finish setup` saves timezone, display density, backup schedule, and starter module settings.
-10. In Settings, confirm setup wizard, timezone, log retention, and display density cards render correctly.
-11. Confirm Backup and Restore controls sit consistently at the bottom of their cards.
-12. Create a configuration backup.
-13. Restore that backup and confirm the app remains usable.
-14. Confirm Upgrade shows a meaningful status, even when no update is available.
-15. Open Refiner path inputs and use Browse for a local folder.
-16. Enter a UNC-style path manually and confirm validation warns without blocking legitimate save paths by design.
-17. Confirm Pruner and Subber settings can save required connection/path fields without exposing internal webhook controls.
-18. Quit MediaMop from the tray icon.
-19. Relaunch MediaMop and confirm the existing user, settings, and wizard completion state persist.
-20. Install the next version over the current version and confirm this is treated as an upgrade, not a first-run install.
-21. Uninstall and reinstall only when intentionally testing clean-install behavior.
+2. Confirm application files install under `C:\Program Files\MediaMop`, not a user profile.
+3. Confirm runtime data is created under `C:\ProgramData\MediaMop`, not `AppData\Local`.
+4. Launch MediaMop from the Start Menu shortcut.
+5. Confirm the tray icon appears and the browser opens the app.
+6. Confirm first-run user creation appears when no user exists.
+7. Attempt a password shorter than 8 characters and confirm it is blocked.
+8. Create the first user with a valid password.
+9. Confirm the setup wizard opens after first-user creation.
+10. Confirm `Skip for now` exits the wizard and can be reopened from Settings.
+11. Confirm `Finish setup` saves timezone, display density, backup schedule, and starter module settings.
+12. In Settings, confirm setup wizard, timezone, log retention, and display density cards render correctly.
+13. Confirm Backup and Restore controls sit consistently at the bottom of their cards.
+14. Create a configuration backup.
+15. Restore that backup and confirm the app remains usable.
+16. Confirm Upgrade shows a meaningful status, even when no update is available.
+17. Open Refiner path inputs and use Browse for a local folder.
+18. Enter a UNC-style path manually and confirm validation warns without blocking legitimate save paths by design.
+19. Confirm Pruner and Subber settings can save required connection/path fields without exposing internal webhook controls.
+20. Quit MediaMop from the tray icon.
+21. Relaunch MediaMop and confirm the existing user, settings, and wizard completion state persist.
+22. Install the next version over the current version and confirm this is treated as an upgrade, not a first-run install.
+23. Uninstall and reinstall only when intentionally testing clean-install behavior.
 
 ## Docker smoke
 

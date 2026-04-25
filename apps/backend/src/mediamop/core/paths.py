@@ -5,7 +5,7 @@ derived from the process current working directory unless ``MEDIAMOP_HOME`` expl
 uses a relative segment (discouraged).
 
 Defaults:
-- **Windows:** ``%LOCALAPPDATA%\\MediaMop``
+- **Windows:** ``%PROGRAMDATA%\\MediaMop`` (normally ``C:\\ProgramData\\MediaMop``)
 - **Unix:** ``$XDG_DATA_HOME/mediamop`` if set, else ``~/.local/share/mediamop``
 
 Future runtime artifacts (logs, cache, local exports) should live under this root; nothing
@@ -23,10 +23,8 @@ def default_mediamop_home() -> Path:
     """OS-appropriate default when ``MEDIAMOP_HOME`` is unset."""
 
     if sys.platform == "win32":
-        base = (os.environ.get("LOCALAPPDATA") or "").strip()
-        if base:
-            return Path(base) / "MediaMop"
-        return Path.home() / "AppData" / "Local" / "MediaMop"
+        base = (os.environ.get("PROGRAMDATA") or r"C:\ProgramData").strip()
+        return Path(base) / "MediaMop"
     xdg = (os.environ.get("XDG_DATA_HOME") or "").strip()
     if xdg:
         return Path(xdg) / "mediamop"

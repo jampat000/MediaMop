@@ -31,7 +31,7 @@ See `mediamop/api/router.py` for composition.
 
 Copy **`.env.example`** to **`.env`** in this directory (gitignored). The API loads **`.env`** on startup; Alembic loads it too. Variables use the **`MEDIAMOP_*`** prefix only.
 
-**`MEDIAMOP_HOME`:** canonical on-disk root for future MediaMop file artifacts (not “this Git clone” as an implicit data directory; see ADR intent in **`../../docs/local-development.md`**). Defaults: Windows `%LOCALAPPDATA%\MediaMop`, Unix `XDG_DATA_HOME|mediamop` or `~/.local/share/mediamop`. Exposed as `MediaMopSettings.mediamop_home`.
+**`MEDIAMOP_HOME`:** canonical on-disk root for future MediaMop file artifacts (not “this Git clone” as an implicit data directory; see ADR intent in **`../../docs/local-development.md`**). Defaults: Windows `%PROGRAMDATA%\MediaMop`, Unix `XDG_DATA_HOME|mediamop` or `~/.local/share/mediamop`. Exposed as `MediaMopSettings.mediamop_home`.
 
 | Variable | Purpose |
 |----------|---------|

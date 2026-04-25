@@ -59,10 +59,8 @@ def _runtime_home() -> Path:
     raw = (os.environ.get("MEDIAMOP_HOME") or "").strip()
     if raw:
         return Path(raw).expanduser().resolve()
-    local_app_data = os.environ.get("LOCALAPPDATA")
-    if local_app_data:
-        return Path(local_app_data).resolve() / "MediaMop"
-    return Path.home() / "AppData" / "Local" / "MediaMop"
+    program_data = (os.environ.get("PROGRAMDATA") or r"C:\ProgramData").strip()
+    return Path(program_data) / "MediaMop"
 
 
 def _find_free_port(preferred: int = 8788) -> int:

@@ -3,6 +3,6 @@
   "private": true,
   "description": "Optional tooling deps for maintainer scripts (e.g. Playwright screenshots).",
   "dependencies": {
-    "playwright": "1.49.1"
+    "playwright": "^1.59.1"
   }
 }

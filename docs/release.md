@@ -72,9 +72,10 @@ After installing it:
 1. Launch `MediaMop` from the Start Menu or desktop shortcut.
 2. MediaMop starts in the user session, not as a Windows service.
 3. The tray icon opens the local app in the browser and exposes `Open MediaMop`, `Open Data Folder`, and `Quit`.
-4. The local runtime root is created under `%LOCALAPPDATA%\MediaMop`.
+4. Application binaries install under `C:\Program Files\MediaMop`.
+5. The local runtime root is created under `C:\ProgramData\MediaMop`.
 
-This design is intentional. Running in the user session avoids common NAS or external-drive access issues that affect Windows services.
+This design is intentional. Running in the user session avoids common NAS or external-drive access issues that affect Windows services, while keeping writable configuration, logs, backups, and the SQLite database out of the protected application install directory.
 
 ## Docker
 
