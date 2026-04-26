@@ -952,6 +952,28 @@ html[data-mm-theme="light"] .mm-theme-toggle {
     color-mix(in srgb, var(--mm-card-bg) 92%, transparent);
 }
 
+.mm-activity-processing--processing,
+.mm-activity-processing--finishing {
+  border-color: rgba(230, 193, 92, 0.26);
+  background:
+    linear-gradient(135deg, rgba(230, 193, 92, 0.12), transparent 46%),
+    color-mix(in srgb, var(--mm-card-bg) 92%, transparent);
+}
+
+.mm-activity-processing--finished {
+  border-color: rgba(52, 211, 153, 0.32);
+  background:
+    linear-gradient(135deg, rgba(16, 185, 129, 0.16), transparent 46%),
+    color-mix(in srgb, var(--mm-card-bg) 92%, transparent);
+}
+
+.mm-activity-processing--failed {
+  border-color: rgba(248, 113, 113, 0.36);
+  background:
+    linear-gradient(135deg, rgba(239, 68, 68, 0.15), transparent 46%),
+    color-mix(in srgb, var(--mm-card-bg) 92%, transparent);
+}
+
 .mm-activity-processing__header {
   display: flex;
   align-items: flex-start;
@@ -966,6 +988,14 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.mm-activity-processing--finished .mm-activity-processing__eyebrow {
+  color: #6ee7b7;
+}
+
+.mm-activity-processing--failed .mm-activity-processing__eyebrow {
+  color: #fca5a5;
 }
 
 .mm-activity-processing__title {
@@ -989,6 +1019,14 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   background: color-mix(in srgb, var(--mm-slate) 88%, transparent);
 }
 
+.mm-activity-processing--finished .mm-activity-processing__bar {
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+.mm-activity-processing--failed .mm-activity-processing__bar {
+  border-color: rgba(248, 113, 113, 0.34);
+}
+
 .mm-activity-processing__bar > span {
   display: block;
   min-width: 0.45rem;
@@ -997,6 +1035,16 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   background: linear-gradient(90deg, #d7b13f, #f2d36f);
   box-shadow: 0 0 22px rgba(230, 193, 92, 0.32);
   transition: width 240ms ease;
+}
+
+.mm-activity-processing--finished .mm-activity-processing__bar > span {
+  background: linear-gradient(90deg, #10b981, #6ee7b7);
+  box-shadow: 0 0 22px rgba(16, 185, 129, 0.34);
+}
+
+.mm-activity-processing--failed .mm-activity-processing__bar > span {
+  background: linear-gradient(90deg, #dc2626, #fca5a5);
+  box-shadow: 0 0 22px rgba(248, 113, 113, 0.28);
 }
 
 .mm-activity-processing__metrics {

@@ -351,13 +351,37 @@ export function RefinerFileProcessingProgressDetail({ detail }: { detail: string
         : status === "finishing"
           ? "Final checks"
           : "Processing";
+  const statusClass =
+    status === "finished"
+      ? "mm-activity-processing--finished"
+      : status === "failed"
+        ? "mm-activity-processing--failed"
+        : status === "finishing"
+          ? "mm-activity-processing--finishing"
+          : "mm-activity-processing--processing";
+  const message =
+    status === "finished"
+      ? "Refiner finished processing this file."
+      : status === "failed"
+        ? parsed.message || "Refiner could not finish this file."
+        : parsed.message || `Refiner is processing ${fileName}.`;
+  const primaryMetric =
+    status === "finished"
+      ? "Finished"
+      : status === "failed"
+        ? "Stopped"
+        : eta
+          ? `About ${eta} left`
+          : status === "processing"
+            ? "Estimating time left"
+            : statusText;
 
   return (
-    <div className="mm-activity-processing" data-testid="refiner-processing-progress-detail">
+    <div className={`mm-activity-processing ${statusClass}`} data-testid="refiner-processing-progress-detail">
       <div className="mm-activity-processing__header">
         <div>
           <p className="mm-activity-processing__eyebrow">{statusText}</p>
-          <p className="mm-activity-processing__title">{parsed.message || `Refiner is processing ${fileName}.`}</p>
+          <p className="mm-activity-processing__title">{message}</p>
         </div>
         <strong className="mm-activity-processing__percent">{percent == null ? "Working" : `${Math.round(percent)}%`}</strong>
       </div>
@@ -365,7 +389,7 @@ export function RefinerFileProcessingProgressDetail({ detail }: { detail: string
         <span style={{ width: `${percent ?? 8}%` }} />
       </div>
       <div className="mm-activity-processing__metrics">
-        <span>{eta ? `About ${eta} left` : status === "processing" ? "Estimating time left" : statusText}</span>
+        <span>{primaryMetric}</span>
         {elapsed ? <span>Running {elapsed}</span> : null}
         {processed && duration ? <span>Processed {processed} of {duration}</span> : null}
         {parsed.speed ? <span>Speed {parsed.speed}</span> : null}
