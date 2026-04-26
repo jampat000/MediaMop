@@ -7,7 +7,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exception_handlers import http_exception_handler
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -23,15 +23,34 @@ from mediamop.platform.http.security_headers import SecurityHeadersMiddleware
 from mediamop.platform.metrics.router import router as metrics_router
 
 
-def _mount_web_spa_if_configured(application: FastAPI) -> None:
-    """Serve the Vite production bundle from disk when ``MEDIAMOP_WEB_DIST`` is set (e.g. Docker all-in-one)."""
+def _web_dist_root() -> Path | None:
     raw = (os.environ.get("MEDIAMOP_WEB_DIST") or "").strip()
     if not raw:
-        return
+        return None
     root = Path(raw).expanduser().resolve()
     if not root.is_dir() or not (root / "index.html").is_file():
+        return None
+    return root
+
+
+def _mount_web_spa_if_configured(application: FastAPI) -> None:
+    """Serve the Vite production bundle from disk when ``MEDIAMOP_WEB_DIST`` is set."""
+    root = _web_dist_root()
+    if root is None:
         return
     application.mount("/", StaticFiles(directory=str(root), html=True), name="web")
+
+
+def _register_web_spa_history_fallback(application: FastAPI) -> None:
+    """Return the React shell for browser refreshes on client-side app routes."""
+
+    @application.get("/app", include_in_schema=False)
+    @application.get("/app/{spa_path:path}", include_in_schema=False)
+    def _web_spa_history_fallback() -> FileResponse:
+        root = _web_dist_root()
+        if root is None:
+            raise StarletteHTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        return FileResponse(root / "index.html", media_type="text/html")
 
 
 def _is_upgrade_browser_landing_404(request: Request, exc: StarletteHTTPException) -> bool:
@@ -79,6 +98,7 @@ def create_app() -> FastAPI:
     application.include_router(health_router)
     application.include_router(metrics_router)
     application.include_router(build_v1_router())
+    _register_web_spa_history_fallback(application)
     _mount_web_spa_if_configured(application)
 
     return application

@@ -76,12 +76,11 @@ def login_user(
     password: str,
     settings: MediaMopSettings,
 ) -> tuple[User, str] | None:
-    """Verify credentials, rotate sessions, create new server-side session. Returns user + raw token."""
+    """Verify credentials and create a new server-side session. Returns user + raw token."""
 
     user = authenticate_user(db, username, password)
     if user is None:
         return None
-    revoke_active_sessions_for_user(db, user.id)
     _row, raw = create_user_session(db, user, settings=settings)
     return user, raw
 

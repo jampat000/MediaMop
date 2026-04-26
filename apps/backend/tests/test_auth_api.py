@@ -227,6 +227,38 @@ def test_session_rotation_replaces_old_cookie(client_with_admin: TestClient) -> 
     assert r_me.status_code == 200
 
 
+def test_second_browser_login_does_not_revoke_first_browser_session() -> None:
+    seed_admin_user()
+    app = create_app()
+    with TestClient(app) as remote_client, TestClient(app) as local_client:
+        remote_csrf = fetch_csrf(remote_client)
+        remote_login = auth_post(
+            remote_client,
+            "/api/v1/auth/login",
+            json={
+                "username": "alice",
+                "password": "test-password-strong",
+                "csrf_token": remote_csrf,
+            },
+        )
+        assert remote_login.status_code == 200, remote_login.text
+        assert remote_client.get("/api/v1/auth/me").status_code == 200
+
+        local_csrf = fetch_csrf(local_client)
+        local_login = auth_post(
+            local_client,
+            "/api/v1/auth/login",
+            json={
+                "username": "alice",
+                "password": "test-password-strong",
+                "csrf_token": local_csrf,
+            },
+        )
+        assert local_login.status_code == 200, local_login.text
+        assert local_client.get("/api/v1/auth/me").status_code == 200
+        assert remote_client.get("/api/v1/auth/me").status_code == 200
+
+
 def test_admin_ping_requires_admin(client_with_admin: TestClient) -> None:
     csrf = fetch_csrf(client_with_admin)
     auth_post(
