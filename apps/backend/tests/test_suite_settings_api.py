@@ -385,7 +385,9 @@ def test_suite_update_now_stages_windows_installer_and_launches_script(
     assert installer.read_bytes() == b"installer-bytes"
     assert script.is_file()
     assert launched == [str(script)]
-    assert "Stop-Process" in script.read_text(encoding="utf-8")
+    script_text = script.read_text(encoding="utf-8")
+    assert "-Verb RunAs" in script_text
+    assert "Starting elevated installer" in script_text
 
 
 def test_suite_configuration_backup_tick_creates_snapshot(client_with_admin: TestClient) -> None:

@@ -155,13 +155,11 @@ function Write-UpgradeLog([string]$message) {{
   Add-Content -LiteralPath $logPath -Value "[$stamp] $message"
 }}
 Write-UpgradeLog "Starting MediaMop in-app upgrade."
-Start-Sleep -Seconds 2
-Get-Process -Name MediaMop,MediaMopServer -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-Write-UpgradeLog "Stopped running MediaMop processes."
 $installer = {str(installer_path)!r}
 $args = @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS", "/RESTARTAPPLICATIONS")
-$proc = Start-Process -FilePath $installer -ArgumentList $args -Wait -PassThru -ErrorAction Stop
-Write-UpgradeLog "Installer exited with code $($proc.ExitCode)."
+Write-UpgradeLog "Starting elevated installer. Windows may ask for permission."
+$proc = Start-Process -FilePath $installer -ArgumentList $args -Verb RunAs -Wait -PassThru -ErrorAction Stop
+Write-UpgradeLog "Elevated installer exited with code $($proc.ExitCode)."
 $exe = {str(exe_path)!r}
 if (Test-Path -LiteralPath $exe) {{
   Start-Process -FilePath $exe -WorkingDirectory {str(executable_dir)!r}
@@ -174,9 +172,19 @@ if (Test-Path -LiteralPath $exe) {{
 
 
 def _launch_windows_upgrade_script(script_path: Path) -> None:
+    log_path = script_path.parent / "upgrade-launch.log"
+    log_path.write_text("Launching MediaMop in-app upgrade script.\n", encoding="utf-8")
+    powershell = (
+        Path(os.environ.get("SystemRoot") or r"C:\Windows")
+        / "System32"
+        / "WindowsPowerShell"
+        / "v1.0"
+        / "powershell.exe"
+    )
+    command = str(powershell) if powershell.is_file() else "powershell.exe"
     subprocess.Popen(
         [
-            "powershell.exe",
+            command,
             "-NoProfile",
             "-ExecutionPolicy",
             "Bypass",
