@@ -51,6 +51,7 @@ def update_activity_event(
     db: Session,
     *,
     activity_id: int,
+    event_type: str | None = None,
     title: str | None = None,
     detail: str | None = None,
 ) -> ActivityEvent | None:
@@ -59,6 +60,8 @@ def update_activity_event(
     row = db.get(ActivityEvent, int(activity_id))
     if row is None:
         return None
+    if event_type is not None:
+        row.event_type = event_type
     if title is not None:
         row.title = title
     if detail is not None:

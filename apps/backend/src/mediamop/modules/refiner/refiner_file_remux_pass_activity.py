@@ -30,6 +30,23 @@ def record_refiner_file_remux_pass_completed(db: Session, *, title: str, detail:
     )
 
 
+def complete_refiner_file_processing_activity(
+    db: Session,
+    *,
+    activity_id: int,
+    title: str,
+    detail: str | None,
+) -> bool:
+    row = update_activity_event(
+        db,
+        activity_id=activity_id,
+        event_type=C.REFINER_FILE_REMUX_PASS_COMPLETED,
+        title=title,
+        detail=detail,
+    )
+    return row is not None
+
+
 def record_refiner_file_processing_started(db: Session, *, payload: dict[str, Any]) -> int:
     name = _filename(payload.get("relative_media_path"))
     row = record_activity_event(
