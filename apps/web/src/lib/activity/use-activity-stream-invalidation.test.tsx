@@ -67,6 +67,41 @@ describe("useActivityStreamInvalidation", () => {
     expect(spy).toHaveBeenCalledWith({ queryKey: activityRecentKey });
   });
 
+  it("invalidates when an existing activity row receives a newer revision", () => {
+    vi.stubGlobal("EventSource", FakeEventSource as unknown as typeof EventSource);
+    const qc = new QueryClient();
+    const spy = vi.spyOn(qc, "invalidateQueries");
+
+    renderHook(() => useActivityStreamInvalidation(activityRecentKey), {
+      wrapper: withQueryClient(qc),
+    });
+
+    const src = FakeEventSource.instances[0];
+    src.emit("activity.latest", JSON.stringify({ latest_event_id: 12, activity_revision: 1 }));
+    src.emit("activity.latest", JSON.stringify({ latest_event_id: 12, activity_revision: 2 }));
+
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(spy).toHaveBeenLastCalledWith({ queryKey: activityRecentKey });
+  });
+
+  it("ignores malformed stream messages instead of breaking live updates", () => {
+    vi.stubGlobal("EventSource", FakeEventSource as unknown as typeof EventSource);
+    const qc = new QueryClient();
+    const spy = vi.spyOn(qc, "invalidateQueries");
+
+    renderHook(() => useActivityStreamInvalidation(activityRecentKey), {
+      wrapper: withQueryClient(qc),
+    });
+
+    const src = FakeEventSource.instances[0];
+    src.emit("activity.latest", "{");
+    src.emit("activity.latest", JSON.stringify({ activity_revision: 1 }));
+    src.emit("activity.latest", JSON.stringify({ latest_event_id: 12, activity_revision: 2 }));
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith({ queryKey: activityRecentKey });
+  });
+
   it("invalidates dashboard status query on activity.latest", () => {
     vi.stubGlobal("EventSource", FakeEventSource as unknown as typeof EventSource);
     const qc = new QueryClient();

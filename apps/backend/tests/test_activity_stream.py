@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from types import SimpleNamespace
 
 import pytest
@@ -78,6 +79,64 @@ def test_record_activity_event_notifies_only_after_commit() -> None:
         assert committed_version == 1
 
 
+def test_update_activity_event_notifies_same_row_progress_after_commit() -> None:
+    activity_latest_notifier.reset_for_tests()
+    settings = MediaMopSettings.load()
+    eng = create_db_engine(settings)
+    fac = create_session_factory(eng)
+    with fac() as db:
+        row = activity_service.record_activity_event(
+            db,
+            event_type=activity_constants.REFINER_FILE_PROCESSING_PROGRESS,
+            module="refiner",
+            title="Refiner is processing movie.mkv",
+            detail='{"percent":10}',
+        )
+        db.commit()
+        first_id, first_version = activity_latest_notifier.snapshot()
+        assert first_id == int(row.id)
+        assert first_version == 1
+
+        activity_service.update_activity_event(
+            db,
+            activity_id=int(row.id),
+            title="Refiner is processing movie.mkv",
+            detail='{"percent":42}',
+        )
+        latest_id, version_before_commit = activity_latest_notifier.snapshot()
+        assert latest_id == int(row.id)
+        assert version_before_commit == 1
+        db.commit()
+
+        updated_id, updated_version = activity_latest_notifier.snapshot()
+        assert updated_id == int(row.id)
+        assert updated_version == 2
+
+
+@pytest.mark.anyio
+async def test_activity_latest_notifier_wakes_all_active_stream_subscribers() -> None:
+    activity_latest_notifier.reset_for_tests()
+
+    first = asyncio.create_task(activity_latest_notifier.wait_for_change(0, timeout=1.0))
+    second = asyncio.create_task(activity_latest_notifier.wait_for_change(0, timeout=1.0))
+    await asyncio.sleep(0)
+    assert activity_latest_notifier.waiter_count_for_tests() == 2
+
+    activity_latest_notifier.notify(99)
+
+    assert await first == (99, 1)
+    assert await second == (99, 1)
+    assert activity_latest_notifier.waiter_count_for_tests() == 0
+
+
+@pytest.mark.anyio
+async def test_activity_latest_notifier_removes_timed_out_stream_subscribers() -> None:
+    activity_latest_notifier.reset_for_tests()
+
+    assert await activity_latest_notifier.wait_for_change(0, timeout=0.001) is None
+    assert activity_latest_notifier.waiter_count_for_tests() == 0
+
+
 @pytest.mark.anyio
 async def test_activity_stream_authenticated_emits_latest_format(client_with_admin: TestClient) -> None:
     _login(client_with_admin)
@@ -129,8 +188,38 @@ async def test_activity_stream_generator_emits_expected_payload_for_newer_id() -
 
     merged = "".join(chunks)
     assert "event: activity.latest" in merged
-    assert 'data: {"latest_event_id":10}' in merged
-    assert 'data: {"latest_event_id":11}' in merged
+    assert 'data: {"latest_event_id":10,"activity_revision":0}' in merged
+    assert 'data: {"latest_event_id":11,"activity_revision":0}' in merged
+
+
+@pytest.mark.anyio
+async def test_activity_stream_generator_emits_same_id_when_activity_revision_changes() -> None:
+    activity_latest_notifier.reset_for_tests()
+    checks = {"n": 0}
+
+    async def _is_disconnected() -> bool:
+        checks["n"] += 1
+        if checks["n"] == 2:
+            activity_latest_notifier.notify(42)
+        if checks["n"] == 3:
+            activity_latest_notifier.notify(42)
+        return checks["n"] > 3
+
+    gen = iter_activity_latest_sse(
+        read_latest_id=lambda: 42,
+        is_disconnected=_is_disconnected,
+        poll_seconds=0.0,
+        keepalive_every_polls=100,
+    )
+    chunks: list[str] = []
+    async for chunk in gen:
+        chunks.append(chunk)
+
+    merged = "".join(chunks)
+    assert merged.count('"latest_event_id":42') == 3
+    assert '"activity_revision":0' in merged
+    assert '"activity_revision":1' in merged
+    assert '"activity_revision":2' in merged
 
 
 def test_activity_stream_does_not_depend_on_request_db_dependency(client_with_admin: TestClient) -> None:

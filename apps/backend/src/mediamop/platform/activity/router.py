@@ -147,15 +147,23 @@ async def iter_activity_latest_sse(
         latest_id = read_latest_id()
         if latest_id is not None and latest_id != last_sent_id:
             last_sent_id = latest_id
-            yield _sse_event(event="activity.latest", data={"latest_event_id": latest_id})
+            _notifier_latest_id, notifier_version = activity_latest_notifier.snapshot()
+            last_seen_version = max(last_seen_version, notifier_version)
+            yield _sse_event(
+                event="activity.latest",
+                data={"latest_event_id": latest_id, "activity_revision": last_seen_version},
+            )
             polls_since_keepalive = 0
             continue
         changed = await activity_latest_notifier.wait_for_change(last_seen_version, timeout=poll_seconds)
         if changed is not None:
             latest_id, last_seen_version = changed
-            if latest_id is not None and latest_id != last_sent_id:
+            if latest_id is not None:
                 last_sent_id = latest_id
-                yield _sse_event(event="activity.latest", data={"latest_event_id": latest_id})
+                yield _sse_event(
+                    event="activity.latest",
+                    data={"latest_event_id": latest_id, "activity_revision": last_seen_version},
+                )
                 polls_since_keepalive = 0
                 continue
         polls_since_keepalive += 1

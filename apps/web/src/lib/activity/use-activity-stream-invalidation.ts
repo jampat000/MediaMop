@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useQueryClient, type QueryKey } from "@tanstack/react-query";
 
-type LatestPayload = { latest_event_id: number };
+type LatestPayload = { latest_event_id: number; activity_revision?: number };
 type ActivityLatestSubscriber = () => void;
 
 let source: EventSource | null = null;
