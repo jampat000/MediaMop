@@ -54,4 +54,37 @@ describe("RefinerFileRemuxPassActivityDetail", () => {
     expect(screen.getByText(/About 1m 11s left/i)).toBeInTheDocument();
     expect(screen.getByText(/Speed 16x/i)).toBeInTheDocument();
   });
+
+  it("uses finished styling and copy when Refiner progress completes", () => {
+    const detail = JSON.stringify({
+      status: "finished",
+      relative_media_path: "movies/Mickey 17.mkv",
+      percent: 100,
+      eta_seconds: 0,
+      elapsed_seconds: 183,
+      message: "Refiner is writing the cleaned-up file.",
+    });
+    render(<RefinerFileProcessingProgressDetail detail={detail} />);
+    const card = screen.getByTestId("refiner-processing-progress-detail");
+
+    expect(card).toHaveClass("mm-activity-processing--finished");
+    expect(screen.getAllByText("Finished")).toHaveLength(2);
+    expect(screen.getByText("Refiner finished processing this file.")).toBeInTheDocument();
+    expect(screen.getByText("100%")).toBeInTheDocument();
+    expect(screen.queryByText(/About 0s left/i)).not.toBeInTheDocument();
+  });
+
+  it("uses failed styling when Refiner progress stops", () => {
+    const detail = JSON.stringify({
+      status: "failed",
+      relative_media_path: "movies/Broken.mkv",
+      percent: 63,
+      reason: "ffmpeg stopped unexpectedly.",
+    });
+    render(<RefinerFileProcessingProgressDetail detail={detail} />);
+
+    expect(screen.getByTestId("refiner-processing-progress-detail")).toHaveClass("mm-activity-processing--failed");
+    expect(screen.getAllByText("Stopped")).toHaveLength(2);
+    expect(screen.getByText("ffmpeg stopped unexpectedly.")).toBeInTheDocument();
+  });
 });
