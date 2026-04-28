@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -77,6 +78,8 @@ _lifespan_log = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    app.state.startup_started_at = time.monotonic()
+    app.state.startup_ready = False
     settings = MediaMopSettings.load()
     app.state.settings = settings
     app.state.auth_login_rate_limiter = SlidingWindowLimiter(
@@ -174,9 +177,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         stop_event=stop,
         settings=settings,
     )
+    app.state.startup_ready = True
     try:
         yield
     finally:
+        app.state.startup_ready = False
         stop.set()
         await stop_refiner_supplied_payload_evaluation_enqueue_tasks(refiner_supplied_payload_eval_tasks)
         await stop_refiner_watched_folder_remux_scan_dispatch_enqueue_tasks(refiner_watched_folder_scan_dispatch_tasks)
