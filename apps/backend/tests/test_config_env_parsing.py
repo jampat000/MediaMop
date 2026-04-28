@@ -29,3 +29,15 @@ def test_session_ttl_clamps_to_at_least_one(monkeypatch: pytest.MonkeyPatch) -> 
     s = MediaMopSettings.load()
     assert s.session_idle_minutes == 1
     assert s.session_absolute_days == 1
+
+
+def test_credentialed_cors_rejects_wildcard_origin(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MEDIAMOP_CORS_ORIGINS", "*")
+    with pytest.raises(RuntimeError, match="cannot include"):
+        MediaMopSettings.load()
+
+
+def test_trusted_proxy_ips_are_loaded(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MEDIAMOP_TRUSTED_PROXY_IPS", "10.0.0.1,172.18.0.0/16")
+    s = MediaMopSettings.load()
+    assert s.trusted_proxy_ips == ("10.0.0.1", "172.18.0.0/16")

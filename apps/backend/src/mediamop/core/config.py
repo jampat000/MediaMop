@@ -112,6 +112,7 @@ class MediaMopSettings:
     session_idle_minutes: int
     session_absolute_days: int
     trusted_browser_origins_override: tuple[str, ...]
+    trusted_proxy_ips: tuple[str, ...]
     auth_login_rate_max_attempts: int
     auth_login_rate_window_seconds: int
     bootstrap_rate_max_attempts: int
@@ -231,6 +232,13 @@ class MediaMopSettings:
         if env == "development":
             cors = _expand_loopback_browser_origins_in_development(cors)
             trusted_override = _expand_loopback_browser_origins_in_development(trusted_override)
+        if any(origin == "*" for origin in cors):
+            msg = (
+                "MEDIAMOP_CORS_ORIGINS cannot include '*' because MediaMop uses credentialed "
+                "browser requests. Configure explicit origins instead."
+            )
+            raise RuntimeError(msg)
+        trusted_proxy_ips = _parse_csv_urls(os.environ.get("MEDIAMOP_TRUSTED_PROXY_IPS") or "")
         login_max = max(1, _env_int("MEDIAMOP_AUTH_LOGIN_RATE_MAX_ATTEMPTS", 30))
         login_win = max(1, _env_int("MEDIAMOP_AUTH_LOGIN_RATE_WINDOW_SECONDS", 60))
         boot_max = max(1, _env_int("MEDIAMOP_BOOTSTRAP_RATE_MAX_ATTEMPTS", 10))
@@ -398,6 +406,7 @@ class MediaMopSettings:
             session_idle_minutes=idle_min,
             session_absolute_days=abs_days,
             trusted_browser_origins_override=trusted_override,
+            trusted_proxy_ips=trusted_proxy_ips,
             auth_login_rate_max_attempts=login_max,
             auth_login_rate_window_seconds=login_win,
             bootstrap_rate_max_attempts=boot_max,
