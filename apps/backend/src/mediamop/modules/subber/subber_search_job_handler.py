@@ -14,7 +14,6 @@ from mediamop.modules.subber.subber_job_kinds import (
     SUBBER_JOB_KIND_SUBTITLE_SEARCH_MOVIES,
     SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV,
 )
-from mediamop.modules.subber.subber_opensubtitles_client import SubberRateLimitError
 from mediamop.modules.subber.subber_settings_service import ensure_subber_settings_row
 from mediamop.modules.subber.subber_subtitle_search_service import (
     search_and_download_subtitle,
@@ -65,20 +64,19 @@ def make_subber_subtitle_search_handler(
                 row2 = get_state_by_id(session, state_id)
                 if row2 is None:
                     return
-                try:
-                    ok = search_and_download_subtitle(
-                        settings=settings,
-                        settings_row=settings_row,
-                        state_row=row2,
-                        db=session,
-                    )
-                except SubberRateLimitError:
-                    raise
+                provider_events: list[dict[str, str]] = []
+                ok = search_and_download_subtitle(
+                    settings=settings,
+                    settings_row=settings_row,
+                    state_row=row2,
+                    db=session,
+                    provider_events=provider_events,
+                )
                 subber_activity.record_subber_activity(
                     session,
                     event_type=C.SUBBER_SUBTITLE_SEARCH_COMPLETED,
                     title="Subtitle search finished",
-                    detail={"state_id": state_id, "media_scope": media_scope, "ok": ok},
+                    detail={"state_id": state_id, "media_scope": media_scope, "ok": ok, "provider_events": provider_events},
                 )
 
     _ = job_kind

@@ -743,6 +743,7 @@ def search_and_download_subtitle(
     db: Session,
     providers: list[SubberProviderRow] | None = None,
     retain_found_on_failure: bool = False,
+    provider_events: list[dict[str, str]] | None = None,
 ) -> bool:
     """Search providers in order; legacy settings path when ``providers`` is empty.
 
@@ -870,8 +871,23 @@ def search_and_download_subtitle(
                     exclude_hi=exclude_hi,
                 ):
                     return True
-        except SubberRateLimitError:
-            raise
+        except SubberRateLimitError as exc:
+            message = (
+                f"{prow.provider_key} is rate-limited for this run, so Subber skipped it "
+                "and continued with the next enabled provider."
+            )
+            logger.warning("%s state_id=%s", message, state_row.id)
+            if provider_events is not None:
+                provider_events.append(
+                    {
+                        "provider": str(prow.provider_key),
+                        "result": "skipped",
+                        "reason": "rate_limited",
+                        "message": message,
+                        "detail": str(exc),
+                    }
+                )
+            continue
         except Exception:  # noqa: BLE001 — continue to next provider
             logger.exception("Provider %s search failed state_id=%s", prow.provider_key, state_row.id)
             continue
