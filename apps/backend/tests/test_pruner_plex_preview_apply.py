@@ -352,6 +352,72 @@ def test_candidates_json_cap_does_not_widen_apply_set(
     assert deleted == ["0", "1"]
 
 
+def test_auto_apply_payload_enforces_max_deletes_per_run(
+    session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MEDIAMOP_PRUNER_APPLY_ENABLED", "1")
+    settings = MediaMopSettings.load()
+    sid = _plex_instance(session_factory)
+    run_uuid = str(uuid.uuid4())
+    candidates = [{"item_id": str(i), "granularity": "episode"} for i in range(5)]
+    with session_factory() as s:
+        with s.begin():
+            insert_preview_run(
+                s,
+                preview_run_uuid=run_uuid,
+                server_instance_id=sid,
+                media_scope=MEDIA_SCOPE_TV,
+                rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+                pruner_job_id=None,
+                candidate_count=5,
+                candidates_json=json.dumps(candidates),
+                truncated=False,
+                outcome="success",
+                unsupported_detail=None,
+                error_message=None,
+            )
+
+    deleted: list[str] = []
+
+    def _delete(**kw: object) -> tuple[int, str | None]:
+        deleted.append(str(kw.get("rating_key", "")))
+        return 200, None
+
+    monkeypatch.setattr(
+        "mediamop.modules.pruner.pruner_apply_job_handler.plex_delete_library_metadata",
+        _delete,
+    )
+
+    handlers = build_pruner_job_handlers(settings, session_factory)
+    handlers[PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND](
+        PrunerJobWorkContext(
+            id=1,
+            job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
+            payload_json=json.dumps(
+                {
+                    "preview_run_uuid": run_uuid,
+                    "server_instance_id": sid,
+                    "media_scope": MEDIA_SCOPE_TV,
+                    "rule_family_id": RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+                    "auto_applied": True,
+                    "max_deletes_per_run": 2,
+                },
+            ),
+            lease_owner="pytest",
+        ),
+    )
+
+    assert deleted == ["0", "1"]
+    with session_factory() as s:
+        evt = s.scalars(select(ActivityEvent).order_by(ActivityEvent.id.desc()).limit(1)).first()
+        assert evt is not None
+        detail = json.loads(evt.detail or "{}")
+        assert detail["auto_applied"] is True
+        assert detail["deleted_count"] == 2
+        assert detail["max_deletes_per_run"] == 2
+
+
 def test_plex_missing_primary_effective_max_items_matches_retired_live_contract(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

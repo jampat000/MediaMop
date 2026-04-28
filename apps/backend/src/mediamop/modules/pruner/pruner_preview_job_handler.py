@@ -39,6 +39,8 @@ from mediamop.modules.pruner.pruner_studio_collection_filters import (
     preview_studio_filters_from_db_column,
 )
 from mediamop.modules.pruner.pruner_instances_service import get_scope_settings, get_server_instance
+from mediamop.modules.pruner.pruner_job_kinds import PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND
+from mediamop.modules.pruner.pruner_jobs_ops import pruner_enqueue_or_get_job
 from mediamop.modules.pruner.pruner_plex_live_eligibility import plex_missing_primary_effective_max_items
 from mediamop.modules.pruner.pruner_media_library import preview_payload_json, serialize_candidates
 from mediamop.modules.pruner.pruner_preview_service import insert_preview_run
@@ -148,6 +150,8 @@ def make_pruner_candidate_removal_preview_handler(
             preview_collections = preview_collection_filters_from_db_column(str(sc.preview_include_collections_json))
             preview_year_min = clamp_preview_year_bound(sc.preview_year_min)
             preview_year_max = clamp_preview_year_bound(sc.preview_year_max)
+            auto_apply_enabled = bool(sc.auto_apply_enabled)
+            max_deletes_per_run = max(1, min(int(sc.max_deletes_per_run), 5000))
             if preview_year_min is not None and preview_year_max is not None and preview_year_min > preview_year_max:
                 msg = "preview_year_min is greater than preview_year_max for this scope"
                 raise ValueError(msg)
@@ -280,6 +284,18 @@ def make_pruner_candidate_removal_preview_handler(
                     detail_obj["unsupported_detail"] = unsup[:2000]
                 if err:
                     detail_obj["error"] = err[:2000]
+                auto_apply_queued = bool(
+                    is_scheduled
+                    and auto_apply_enabled
+                    and settings.pruner_apply_enabled
+                    and outcome == "success"
+                    and len(cands) > 0,
+                )
+                if auto_apply_queued:
+                    detail_obj["auto_apply_queued"] = True
+                    detail_obj["max_deletes_per_run"] = max_deletes_per_run
+                elif is_scheduled and auto_apply_enabled and not settings.pruner_apply_enabled:
+                    detail_obj["auto_apply_skipped"] = "Pruner apply is disabled for this MediaMop process."
                 detail = json.dumps(detail_obj, separators=(",", ":"))[:10_000]
                 if outcome == "success":
                     evt = C.PRUNER_PREVIEW_SUCCEEDED
@@ -294,5 +310,20 @@ def make_pruner_candidate_removal_preview_handler(
                     title=title,
                     detail=detail,
                 )
+                if auto_apply_queued:
+                    payload = {
+                        "preview_run_uuid": run_uuid,
+                        "server_instance_id": sid,
+                        "media_scope": scope,
+                        "rule_family_id": rule_family_id,
+                        "auto_applied": True,
+                        "max_deletes_per_run": max_deletes_per_run,
+                    }
+                    pruner_enqueue_or_get_job(
+                        session,
+                        dedupe_key=f"pruner:apply:auto:v1:{run_uuid}:{uuid.uuid4()}",
+                        job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
+                        payload_json=json.dumps(payload, separators=(",", ":")),
+                    )
 
     return _run

@@ -2021,9 +2021,8 @@ export function PrunerScopeTab(props: {
               Automatic scans ({props.scope === "tv" ? "TV shows" : "Movies"})
             </h3>
             <p className="mt-1 text-sm text-[var(--mm-text2)]">
-              The schedule runs your saved criteria from the Cleanup tab automatically. If dry run is on in the Cleanup tab,
-              scheduled runs also only scan — they never delete automatically. Timed runs only check broken posters and
-              images; other cleanup types stay manual.
+              The schedule runs your saved criteria automatically and records a review snapshot. Deleting only happens when
+              automatic apply is enabled for this library and uses that saved snapshot.
             </p>
           </div>
           {showInteractiveControls ? (

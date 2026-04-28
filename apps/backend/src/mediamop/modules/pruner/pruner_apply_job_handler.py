@@ -80,6 +80,8 @@ def make_pruner_candidate_removal_apply_handler(
         sid = body.get("server_instance_id")
         scope = body.get("media_scope")
         rule_family_id = body.get("rule_family_id")
+        auto_applied = bool(body.get("auto_applied", False))
+        max_deletes_raw = body.get("max_deletes_per_run")
         if not isinstance(preview_run_uuid, str) or len(preview_run_uuid) < 36:
             msg = "payload.preview_run_uuid must be a non-empty string (UUID)"
             raise ValueError(msg)
@@ -150,6 +152,12 @@ def make_pruner_candidate_removal_apply_handler(
             cap = int(run.candidate_count)
             if cap < 0:
                 cap = 0
+            if max_deletes_raw is not None:
+                try:
+                    cap = min(cap, max(1, min(int(max_deletes_raw), 5000)))
+                except (TypeError, ValueError):
+                    msg = "payload.max_deletes_per_run must be an integer when provided"
+                    raise ValueError(msg) from None
             if len(candidates) > cap:
                 candidates = candidates[:cap]
             display_name = inst.display_name
@@ -216,8 +224,11 @@ def make_pruner_candidate_removal_apply_handler(
             "media_scope": scope,
             "rule_family_id": rid,
             "removed": removed,
+            "deleted_count": removed,
             "skipped": skipped,
             "failed": failed,
+            "auto_applied": auto_applied,
+            "max_deletes_per_run": max_deletes_raw,
             "note": "Skipped usually means the library entry was already gone. This path does not re-run preview.",
         }
         detail = json.dumps(detail_obj, separators=(",", ":"))[:10_000]

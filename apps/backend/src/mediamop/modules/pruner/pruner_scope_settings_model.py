@@ -147,6 +147,16 @@ class PrunerScopeSettings(Base):
         DateTime(timezone=True),
         nullable=True,
     )
+    auto_apply_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default=text("0"),
+    )
+    max_deletes_per_run: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        server_default=text("50"),
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

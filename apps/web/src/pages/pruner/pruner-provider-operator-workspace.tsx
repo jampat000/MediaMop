@@ -102,6 +102,7 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
     afterRunSlot,
   } = props;
   const qc = useQueryClient();
+  void onDryRunEnabledChange;
   const [phase, setPhase] = useState<"idle" | "scanning" | "results" | "deleting">("idle");
   const [err, setErr] = useState<string | null>(null);
   const [snapshots, setSnapshots] = useState<PreviewSnapshot[]>([]);
@@ -199,7 +200,7 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
         (s) => s.outcome === "success" && s.rows.length > 0 && elig[s.previewRunId] === true,
       );
 
-      if (dryRunEnabled) {
+      if (dryRunEnabled || true) {
         setPhase("results");
         await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
         return;
@@ -243,11 +244,9 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
           pollMs: PRUNER_SCAN_POLL_MS,
           timeoutMs: PRUNER_SCAN_TIMEOUT_MS,
         });
-        if (parsed) {
-          removed += parsed.removed;
-          skipped += parsed.skipped;
-          failed += parsed.failed;
-        }
+        removed += parsed?.removed ?? 0;
+        skipped += parsed?.skipped ?? 0;
+        failed += parsed?.failed ?? 0;
       }
       setSnapshots([]);
       setDeleteEligible({});
@@ -268,17 +267,9 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
 
   return (
     <div className="min-w-0 space-y-4" data-testid={`${testIdPrefix}-run-${mediaScope}`}>
-      <MmOnOffSwitch
-        id={`${testIdPrefix}-dry-run-${mediaScope}`}
-        label="Dry run"
-        enabled={dryRunEnabled}
-        disabled={controlsDisabled}
-        onChange={onDryRunEnabledChange}
-      />
       <p className="text-xs text-[var(--mm-text3)]">
-        {dryRunEnabled
-          ? "Dry run is ON — Run will show you what would be deleted. Nothing is deleted until you turn dry run off."
-          : "Dry run is OFF — Run will immediately and permanently delete everything that matches. We strongly recommend doing a dry run first."}
+        Run scans your saved rules and creates a review snapshot. Deleting always uses that saved snapshot, never a fresh
+        live query.
       </p>
       <div>
         <button
