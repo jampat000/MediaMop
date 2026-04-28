@@ -20,6 +20,7 @@ from mediamop.core.db import (
 from mediamop.core.logging import configure_logging
 from mediamop.modules.refiner.refiner_job_handlers import build_refiner_job_handlers
 from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
+from mediamop.modules.refiner.refiner_crash_recovery import cleanup_refiner_partial_output_files
 from mediamop.modules.refiner.refiner_failure_cleanup_periodic_enqueue import (
     start_refiner_failure_cleanup_enqueue_tasks,
     stop_refiner_failure_cleanup_enqueue_tasks,
@@ -63,6 +64,7 @@ from mediamop.modules.pruner.worker_loop import (
     stop_pruner_worker_background_tasks,
 )
 from mediamop.platform.auth.rate_limit import SlidingWindowLimiter
+from mediamop.platform.jobs.startup_recovery import recover_incomplete_jobs_after_startup
 from mediamop.platform.suite_settings.logs_service import prune_logs_for_retention
 from mediamop.platform.suite_settings.suite_configuration_backup_periodic import (
     start_suite_configuration_backup_tasks,
@@ -97,7 +99,16 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     session_factory = create_session_factory(engine)
     app.state.session_factory = session_factory
     with session_factory() as session:
-        prune_logs_for_retention(session, settings)
+        with session.begin():
+            recovered = recover_incomplete_jobs_after_startup(session)
+            partial_outputs_removed = cleanup_refiner_partial_output_files(session, settings)
+            prune_logs_for_retention(session, settings)
+        if recovered.total_recovered or partial_outputs_removed:
+            _lifespan_log.warning(
+                "MediaMop startup recovered interrupted work recovered_jobs=%s partial_outputs_removed=%s",
+                recovered.as_log_dict(),
+                partial_outputs_removed,
+            )
     stop = asyncio.Event()
     log_retention_tasks = start_log_retention_tasks(
         session_factory,
