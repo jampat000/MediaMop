@@ -16,6 +16,7 @@ from mediamop.modules.refiner.refiner_file_remux_pass_visibility import (
 from mediamop.modules.refiner.schemas_refiner_overview_stats import RefinerOverviewStatsOut
 from mediamop.platform.activity import constants as activity_constants
 from mediamop.platform.activity.models import ActivityEvent
+from mediamop.platform.observability.metrics_truth import finalized_success_total
 
 
 def _json_int(value: object) -> int | None:
@@ -102,7 +103,12 @@ def build_refiner_overview_stats(db: Session, *, window_days: int = 30) -> Refin
                 continue
             already_optimized_count += 1
 
-    completed = output_written_count + already_optimized_count
+    completed = finalized_success_total(
+        {
+            "output_written_count": output_written_count,
+            "already_optimized_count": already_optimized_count,
+        }
+    )
     terminal = completed + failed
     rate = round((completed / terminal) * 100.0, 1) if terminal > 0 else 0.0
     net_space_saved_bytes = total_source_bytes - total_output_bytes
