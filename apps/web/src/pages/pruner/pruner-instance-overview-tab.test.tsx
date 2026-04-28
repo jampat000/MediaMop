@@ -147,7 +147,7 @@ describe("PrunerInstanceOverviewTab", () => {
 
     await waitFor(() => expect(screen.getByTestId("pruner-overview-scope-tv")).toBeInTheDocument());
     const tvCard = screen.getByTestId("pruner-overview-scope-tv");
-    expect(tvCard.textContent).toMatch(/Not available on Plex for this tab/i);
+    expect(tvCard.textContent).toMatch(/Not available for this Plex library/i);
     expect(tvCard.textContent).toMatch(/Watched TV episodes/i);
   });
 });

@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from mediamop.modules.refiner.refiner_remux_rules import RemuxPlan
+from mediamop.platform.observability.diagnostics import DiagnosticAction, DiagnosticModule, DiagnosticResult, DiagnosticTrigger
+from mediamop.platform.observability.operator_messages import activity_detail_envelope
 
 # Persisted on activity detail JSON — keep aligned with web ``REFINER_FILE_REMUX_PASS_EVENT_TYPE`` consumers.
 REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN = "live_output_written"
@@ -65,6 +67,28 @@ def clip_remux_pass_payload_for_activity(payload: dict[str, Any]) -> dict[str, A
     """Bound ffmpeg argv list so activity JSON stays under typical row limits."""
 
     out = dict(payload)
+    outcome = str(out.get("outcome") or "")
+    if outcome in {REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN, REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED}:
+        result = DiagnosticResult.SUCCESS
+    elif outcome == REMUX_PASS_OUTCOME_SKIPPED_GUARDRAIL:
+        result = DiagnosticResult.SKIPPED
+    else:
+        result = DiagnosticResult.FAILED if out.get("ok") is False else DiagnosticResult.SUCCESS
+    out.update(
+        activity_detail_envelope(
+            module=DiagnosticModule.REFINER,
+            action=DiagnosticAction.REMUX,
+            trigger=DiagnosticTrigger.WORKER,
+            result=result,
+            media_scope=out.get("media_scope") if isinstance(out.get("media_scope"), str) else None,
+            counts={
+                "audio_removed": len(out.get("audio_removed") or []),
+                "subtitles_removed": len(out.get("subtitles_removed") or []),
+            },
+            user_message=remux_pass_activity_title(out),
+            next_action=str(out.get("reason") or "") if result == DiagnosticResult.FAILED else None,
+        )
+    )
     argv = out.get("ffmpeg_argv")
     if isinstance(argv, list) and len(argv) > 64:
         out["ffmpeg_argv"] = list(argv[:64]) + ["…(truncated for activity log)"]

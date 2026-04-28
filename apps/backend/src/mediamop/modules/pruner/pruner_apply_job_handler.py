@@ -34,6 +34,8 @@ from mediamop.modules.pruner.pruner_preview_run_model import PrunerPreviewRun
 from mediamop.modules.pruner.worker_loop import PrunerJobWorkContext
 from mediamop.platform.activity import constants as C
 from mediamop.platform.activity.service import record_activity_event
+from mediamop.platform.observability.diagnostics import DiagnosticAction, DiagnosticModule, DiagnosticResult, DiagnosticTrigger
+from mediamop.platform.observability.operator_messages import activity_detail_envelope, media_scope_label, provider_label
 
 _APPLY_SUPPORTED = frozenset(
     {
@@ -217,8 +219,33 @@ def make_pruner_candidate_removal_apply_handler(
                 failed += 1
 
         label = _scope_label(scope)
-        title = f"{action_label}: {display_name} ({provider_for_delete}) — {label} — from preview snapshot"
+        provider_s = provider_label(provider_for_delete) or provider_for_delete
+        scope_s = media_scope_label(scope) or label
+        result_for_message = DiagnosticResult.FAILED if removed == 0 and skipped == 0 and failed > 0 else DiagnosticResult.SUCCESS
+        if auto_applied:
+            title = (
+                f"{action_label}: Pruner automatically removed {removed} {scope_s} item"
+                f"{'' if removed == 1 else 's'} from {display_name} ({provider_s}) using the saved preview snapshot"
+            )
+        else:
+            title = (
+                f"{action_label}: Pruner removed {removed} {scope_s} item"
+                f"{'' if removed == 1 else 's'} from {display_name} ({provider_s}) using the saved preview snapshot"
+            )
         detail_obj: dict[str, object] = {
+            **activity_detail_envelope(
+                module=DiagnosticModule.PRUNER,
+                action=DiagnosticAction.APPLY,
+                trigger=DiagnosticTrigger.SCHEDULED if auto_applied else DiagnosticTrigger.MANUAL,
+                result=result_for_message,
+                provider=provider_for_delete,
+                media_scope=scope,
+                counts={"removed": removed, "skipped": skipped, "failed": failed},
+                user_message=(
+                    f"Pruner used the saved preview list for {label} and removed {removed} item"
+                    f"{'' if removed == 1 else 's'}."
+                ),
+            ),
             "phase": "apply",
             "action": action_label,
             "preview_run_id": preview_run_uuid,
@@ -232,7 +259,7 @@ def make_pruner_candidate_removal_apply_handler(
             "failed": failed,
             "auto_applied": auto_applied,
             "max_deletes_per_run": max_deletes_raw,
-            "note": "Skipped usually means the library entry was already gone. This path does not re-run preview.",
+            "note": "Skipped usually means the library entry was already gone. This path uses the saved preview snapshot and does not re-run preview.",
         }
         detail = json.dumps(detail_obj, separators=(",", ":"))[:10_000]
         evt = C.PRUNER_APPLY_LIBRARY_REMOVAL_COMPLETED

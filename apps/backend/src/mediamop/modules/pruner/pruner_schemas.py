@@ -58,7 +58,7 @@ class PrunerScopeSummaryOut(BaseModel):
     preview_include_people_roles: list[str] = Field(
         default_factory=list,
         description=(
-            "Which credit roles count toward people-name matching for preview narrowing on this tab. "
+            "Which credit roles count toward people-name matching for preview narrowing on this library. "
             "Jellyfin/Emby match ``People[].Name`` when ``People[].Type`` maps to a selected role. "
             "Plex uses Role / Director / Writer tags on allLeaves; producer and guest_star are ignored on Plex. "
             "When empty, names match against all credits the provider exposes for this rule (all People on JF/Emby; "

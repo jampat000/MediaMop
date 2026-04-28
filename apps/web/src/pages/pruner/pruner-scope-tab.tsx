@@ -279,7 +279,7 @@ export function PrunerScopeTab(props: {
         csrf_token,
       });
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
-      setPreviewMaxItemsMsg("Saved how many items each scan may check on this tab.");
+      setPreviewMaxItemsMsg("Saved how many items each scan may check for this library.");
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -300,7 +300,7 @@ export function PrunerScopeTab(props: {
         csrf_token,
       });
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
-      setStaleNeverMsg("Saved never-watched TV and movie age settings for this tab.");
+      setStaleNeverMsg("Saved never-watched TV and movie age settings for this library.");
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -322,7 +322,7 @@ export function PrunerScopeTab(props: {
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
       setGenreMsg(
         tokens.length
-          ? "Saved your genre picks for this tab."
+          ? "Saved your genre picks for this library."
           : "Cleared genre picks — all genres will be included in scans.",
       );
     } catch (e) {
@@ -350,8 +350,8 @@ export function PrunerScopeTab(props: {
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
       setPeopleMsg(
         tokens.length
-          ? "Saved name filters for this tab."
-          : "Cleared name filters for this tab.",
+          ? "Saved name filters for this library."
+          : "Cleared name filters for this library.",
       );
     } catch (e) {
       setErr((e as Error).message);
@@ -389,7 +389,7 @@ export function PrunerScopeTab(props: {
         csrf_token,
       });
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
-      setYearMsg("Saved release year limits for this tab.");
+      setYearMsg("Saved release year limits for this library.");
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -414,8 +414,8 @@ export function PrunerScopeTab(props: {
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
       setStudioMsg(
         tokens.length
-          ? "Saved studio filters for this tab."
-          : "Cleared studio filters for this tab.",
+          ? "Saved studio filters for this library."
+          : "Cleared studio filters for this library.",
       );
     } catch (e) {
       setErr((e as Error).message);
@@ -441,8 +441,8 @@ export function PrunerScopeTab(props: {
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
       setCollectionMsg(
         tokens.length
-          ? "Saved collection filters for this tab."
-          : "Cleared collection filters for this tab.",
+          ? "Saved collection filters for this library."
+          : "Cleared collection filters for this library.",
       );
     } catch (e) {
       setErr((e as Error).message);
@@ -462,7 +462,7 @@ export function PrunerScopeTab(props: {
         csrf_token,
       });
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
-      setWatchedMoviesMsg("Saved watched-movie cleanup setting for this tab.");
+      setWatchedMoviesMsg("Saved watched-movie cleanup setting for this library.");
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -533,7 +533,7 @@ export function PrunerScopeTab(props: {
         csrf_token,
       });
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
-      setWatchedTvMsg("Saved watched-TV cleanup setting for this tab.");
+      setWatchedTvMsg("Saved watched-TV cleanup setting for this library.");
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -1429,7 +1429,7 @@ export function PrunerScopeTab(props: {
             </p>
           ) : !isProvider ? (
             <p className="text-xs text-[var(--mm-text2)]" data-testid="pruner-people-jf-emby-note">
-              Jellyfin / Emby: names come from each item’s People list on the server and apply to every scan on this tab.
+              Jellyfin / Emby: names come from each item’s People list on the server and apply to every scan for this library.
             </p>
           ) : null}
           {showInteractiveControls ? (
@@ -1800,7 +1800,7 @@ export function PrunerScopeTab(props: {
               ) : (
                 <p className="text-xs text-[var(--mm-text2)]">
                   Watched movies rule is <strong>{scopeRow?.watched_movies_reported_enabled ? "on" : "off"}</strong> for
-                  this tab. Sign in as an operator to change it.
+                  this library. Sign in as an operator to change it.
                 </p>
               )}
             </div>
@@ -2196,7 +2196,7 @@ export function PrunerScopeTab(props: {
           </div>
         ) : (
           <p className="text-sm text-[var(--mm-text2)]" data-testid="pruner-preview-runs-empty">
-            No scans yet for this tab. Run a scan from a rule panel above; when it finishes, rows appear here with the
+            No scans yet for this library. Run a scan from a rule panel above; when it finishes, rows appear here with the
             result, how many items matched, and a short explanation (including rules Plex does not support).
           </p>
         )}

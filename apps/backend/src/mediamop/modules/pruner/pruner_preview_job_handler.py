@@ -47,6 +47,8 @@ from mediamop.modules.pruner.pruner_preview_service import insert_preview_run
 from mediamop.modules.pruner.worker_loop import PrunerJobWorkContext
 from mediamop.platform.activity import constants as C
 from mediamop.platform.activity.service import record_activity_event
+from mediamop.platform.observability.diagnostics import DiagnosticAction, DiagnosticModule, DiagnosticResult, DiagnosticTrigger
+from mediamop.platform.observability.operator_messages import activity_detail_envelope, provider_label, scan_title
 
 
 def _parse_payload(payload_json: str | None) -> dict[str, Any]:
@@ -218,10 +220,21 @@ def make_pruner_candidate_removal_preview_handler(
             rule_tag = "year range match"
         else:
             rule_tag = str(rule_family_id)
-        title = (
-            f"Scheduled Pruner preview ({rule_tag}): {display_name} ({provider}) — {label_scope}"
-            if is_scheduled
-            else f"Pruner preview ({rule_tag}): {display_name} ({provider}) — {label_scope}"
+        source_label = f"{display_name} ({provider_label(provider) or provider})"
+        result_for_message = (
+            DiagnosticResult.SUCCESS
+            if outcome == "success"
+            else DiagnosticResult.SKIPPED
+            if outcome == "unsupported"
+            else DiagnosticResult.FAILED
+        )
+        title = scan_title(
+            module_label="Pruner preview",
+            result=result_for_message,
+            count=len(cands),
+            scope=scope,
+            source=source_label,
+            scheduled=is_scheduled,
         )
 
         with session_factory() as session:
@@ -240,7 +253,27 @@ def make_pruner_candidate_removal_preview_handler(
                     unsupported_detail=unsup,
                     error_message=err,
                 )
+                auto_apply_queued = bool(
+                    is_scheduled
+                    and auto_apply_enabled
+                    and settings.pruner_apply_enabled
+                    and outcome == "success"
+                    and len(cands) > 0,
+                )
                 detail_obj: dict[str, object] = {
+                    **activity_detail_envelope(
+                        module=DiagnosticModule.PRUNER,
+                        action=DiagnosticAction.PREVIEW,
+                        trigger=DiagnosticTrigger.SCHEDULED if is_scheduled else DiagnosticTrigger.MANUAL,
+                        result=result_for_message,
+                        provider=provider,
+                        media_scope=scope,
+                        counts={"checked": len(cands), "found": len(cands), "queued": int(auto_apply_queued)},
+                        user_message=(
+                            f"Pruner checked {label_scope} for {rule_tag} and found {len(cands)} item"
+                            f"{'' if len(cands) == 1 else 's'}."
+                        ),
+                    ),
                     "phase": "preview",
                     "preview_run_id": run_uuid,
                     "outcome": outcome,
@@ -287,13 +320,6 @@ def make_pruner_candidate_removal_preview_handler(
                     detail_obj["unsupported_detail"] = unsup[:2000]
                 if err:
                     detail_obj["error"] = err[:2000]
-                auto_apply_queued = bool(
-                    is_scheduled
-                    and auto_apply_enabled
-                    and settings.pruner_apply_enabled
-                    and outcome == "success"
-                    and len(cands) > 0,
-                )
                 if auto_apply_queued:
                     detail_obj["auto_apply_queued"] = True
                     detail_obj["max_deletes_per_run"] = max_deletes_per_run

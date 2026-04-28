@@ -26,6 +26,8 @@ from mediamop.modules.subber.subber_subtitle_state_service import (
 )
 from mediamop.modules.subber.worker_loop import SubberJobWorkContext
 from mediamop.platform.activity import constants as C
+from mediamop.platform.observability.diagnostics import DiagnosticAction, DiagnosticModule, DiagnosticResult, DiagnosticTrigger
+from mediamop.platform.observability.operator_messages import activity_detail_envelope, media_scope_label
 
 
 def make_subber_subtitle_search_handler(
@@ -56,8 +58,21 @@ def make_subber_subtitle_search_handler(
                     subber_activity.record_subber_activity(
                         session,
                         event_type=C.SUBBER_SUBTITLE_SEARCH_COMPLETED,
-                        title="Subtitle search skipped (limit)",
-                        detail={"state_id": state_id, "reason": "search_count"},
+                        title="Subtitle search skipped because the retry limit was reached",
+                        detail={
+                            **activity_detail_envelope(
+                                module=DiagnosticModule.SUBBER,
+                                action=DiagnosticAction.SEARCH,
+                                trigger=DiagnosticTrigger.WORKER,
+                                result=DiagnosticResult.SKIPPED,
+                                media_scope=media_scope,
+                                counts={"checked": 1, "downloaded": 0, "skipped": 1},
+                                user_message="Subber has already searched this item enough times.",
+                                next_action="Change Subber retry settings or manually add a subtitle if this item still needs one.",
+                            ),
+                            "state_id": state_id,
+                            "reason": "search_count",
+                        },
                     )
                     return
                 mark_searching(session, state_id)
@@ -75,8 +90,30 @@ def make_subber_subtitle_search_handler(
                 subber_activity.record_subber_activity(
                     session,
                     event_type=C.SUBBER_SUBTITLE_SEARCH_COMPLETED,
-                    title="Subtitle search finished",
-                    detail={"state_id": state_id, "media_scope": media_scope, "ok": ok, "provider_events": provider_events},
+                    title=(
+                        f"Subtitle downloaded for {media_scope_label(media_scope)}"
+                        if ok
+                        else f"No subtitle found for {media_scope_label(media_scope)}"
+                    ),
+                    detail={
+                        **activity_detail_envelope(
+                            module=DiagnosticModule.SUBBER,
+                            action=DiagnosticAction.SEARCH,
+                            trigger=DiagnosticTrigger.WORKER,
+                            result=DiagnosticResult.SUCCESS if ok else DiagnosticResult.SKIPPED,
+                            media_scope=media_scope,
+                            counts={"checked": 1, "downloaded": int(bool(ok)), "skipped": int(not ok)},
+                            user_message=(
+                                "Subber downloaded a matching subtitle."
+                                if ok
+                                else "Subber checked the configured providers but did not find a usable subtitle."
+                            ),
+                        ),
+                        "state_id": state_id,
+                        "media_scope": media_scope,
+                        "ok": ok,
+                        "provider_events": provider_events,
+                    },
                 )
 
     _ = job_kind

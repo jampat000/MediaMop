@@ -175,7 +175,7 @@ def test_scheduled_preview_activity_title_and_detail_trigger(
             .order_by(ActivityEvent.id.desc()),
         ).first()
         assert evt is not None
-        assert evt.title.startswith("Scheduled Pruner preview (missing primary):")
+        assert evt.title.startswith("Scheduled Pruner preview scan found")
         detail = json.loads(evt.detail or "{}")
         assert detail.get("trigger") == "scheduled"
 
@@ -245,7 +245,7 @@ def test_scheduled_preview_accepts_non_missing_primary_rule_family(
             .order_by(ActivityEvent.id.desc()),
         ).first()
         assert evt is not None
-        assert evt.title.startswith("Scheduled Pruner preview (watched movies):")
+        assert evt.title.startswith("Scheduled Pruner preview scan found")
         detail = json.loads(evt.detail or "{}")
         assert detail.get("trigger") == "scheduled"
         assert detail.get("rule_family_id") == RULE_FAMILY_WATCHED_MOVIES_REPORTED
