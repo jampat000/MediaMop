@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
+from collections import deque
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -41,51 +44,50 @@ def read_suite_logs(
 
     requested_level = (level or "").strip().upper() or None
     search_term = (search or "").strip().lower()
-    rows: list[ParsedLogEntry] = []
+    rows: deque[ParsedLogEntry] = deque(maxlen=max(1, min(limit, 250)))
     counts = {"ERROR": 0, "WARNING": 0, "INFO": 0}
     total = 0
 
     try:
-        raw_lines = path.read_text(encoding="utf-8").splitlines()
+        handle = path.open("r", encoding="utf-8")
     except OSError:
         return ([], 0, counts)
 
-    for raw in reversed(raw_lines):
-        entry = _parse_log_line(raw)
-        if entry is None:
-            continue
-        if _skip_low_value_noise(entry):
-            continue
-        total += 1
-        counts[_count_bucket(entry.level)] += 1
-        if requested_level and entry.level != requested_level:
-            continue
-        if has_exception is True and not entry.traceback:
-            continue
-        if has_exception is False and entry.traceback:
-            continue
-        if search_term:
-            haystack = " ".join(
-                part
-                for part in (
-                    entry.message,
-                    entry.detail or "",
-                    entry.traceback or "",
-                    entry.logger,
-                    entry.source or "",
-                    entry.component,
-                    entry.correlation_id or "",
-                    entry.job_id or "",
-                )
-                if part
-            ).lower()
-            if search_term not in haystack:
+    with handle:
+        for raw in handle:
+            entry = _parse_log_line(raw)
+            if entry is None:
                 continue
-        rows.append(entry)
-        if len(rows) >= max(1, min(limit, 250)):
-            break
+            if _skip_low_value_noise(entry):
+                continue
+            total += 1
+            counts[_count_bucket(entry.level)] += 1
+            if requested_level and entry.level != requested_level:
+                continue
+            if has_exception is True and not entry.traceback:
+                continue
+            if has_exception is False and entry.traceback:
+                continue
+            if search_term:
+                haystack = " ".join(
+                    part
+                    for part in (
+                        entry.message,
+                        entry.detail or "",
+                        entry.traceback or "",
+                        entry.logger,
+                        entry.source or "",
+                        entry.component,
+                        entry.correlation_id or "",
+                        entry.job_id or "",
+                    )
+                    if part
+                ).lower()
+                if search_term not in haystack:
+                    continue
+            rows.append(entry)
 
-    return rows, total, counts
+    return list(reversed(rows)), total, counts
 
 
 def prune_logs_for_retention(session: Session, settings: MediaMopSettings) -> None:
@@ -98,23 +100,28 @@ def prune_log_file(settings: MediaMopSettings, *, keep_days: int) -> None:
     if not path.is_file():
         return
     cutoff = datetime.now(UTC) - timedelta(days=max(1, keep_days))
-    kept: list[str] = []
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_name: str | None = None
     try:
-        for raw in path.read_text(encoding="utf-8").splitlines():
-            parsed = _parse_log_line(raw)
-            if parsed is None:
-                continue
+        fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".prune", dir=str(path.parent))
+        with path.open("r", encoding="utf-8") as source, os.fdopen(fd, "w", encoding="utf-8") as target:
+            for raw in source:
+                parsed = _parse_log_line(raw)
+                if parsed is None:
+                    continue
+                try:
+                    at = datetime.fromisoformat(parsed.timestamp.replace("Z", "+00:00"))
+                except ValueError:
+                    continue
+                if at >= cutoff:
+                    target.write(raw.rstrip("\n") + "\n")
+        os.replace(tmp_name, path)
+    except OSError:
+        if tmp_name:
             try:
-                at = datetime.fromisoformat(parsed.timestamp.replace("Z", "+00:00"))
-            except ValueError:
-                continue
-            if at >= cutoff:
-                kept.append(raw)
-    except OSError:
-        return
-    try:
-        path.write_text("\n".join(kept) + ("\n" if kept else ""), encoding="utf-8")
-    except OSError:
+                Path(tmp_name).unlink()
+            except OSError:
+                pass
         return
 
 
