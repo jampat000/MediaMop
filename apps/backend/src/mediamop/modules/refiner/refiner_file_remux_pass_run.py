@@ -52,6 +52,7 @@ from mediamop.modules.refiner.refiner_remux_track_display import (
     subtitle_after_line_from_plan,
     subtitle_before_line_from_probe,
 )
+from mediamop.platform.file_lifecycle.mutations import safe_copy_to_final, safe_finalize_file
 
 logger = logging.getLogger(__name__)
 
@@ -155,10 +156,9 @@ def _copy_unchanged_source_to_output(*, src: Path, final: Path) -> tuple[bool, b
             raise RuntimeError(
                 "Refiner output path resolves to the watched source file; output and watched folders must differ."
             )
-        final.unlink()
-        shutil.copy2(src_resolved, final)
+        safe_copy_to_final(source=src_resolved, final=final)
         return True, True
-    shutil.copy2(src_resolved, final)
+    safe_copy_to_final(source=src_resolved, final=final)
     return True, False
 
 
@@ -617,11 +617,8 @@ def run_refiner_file_remux_pass(
         rel = src.resolve().relative_to(watched_root)
         final = out_dir / rel
         final.parent.mkdir(parents=True, exist_ok=True)
-        output_replaced_existing = False
-        if final.exists():
-            output_replaced_existing = True
-            final.unlink()
-        shutil.move(str(tmp), str(final))
+        output_replaced_existing = final.exists()
+        safe_finalize_file(staged=tmp, final=final)
     except Exception as exc:
         if progress_reporter is not None:
             progress_reporter(
