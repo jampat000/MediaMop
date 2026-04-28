@@ -11,6 +11,7 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from starlette.testclient import TestClient
 
 from mediamop.api.factory import create_app
@@ -27,7 +28,7 @@ from mediamop.modules.pruner.pruner_job_kinds import (
     PRUNER_SERVER_CONNECTION_TEST_JOB_KIND,
 )
 from mediamop.modules.pruner.pruner_jobs_model import PrunerJob
-from mediamop.modules.pruner.pruner_instances_service import get_scope_settings
+from mediamop.modules.pruner.pruner_instances_service import get_scope_settings, normalize_server_base_url
 from mediamop.modules.pruner.pruner_scope_settings_model import PrunerScopeSettings
 from mediamop.modules.pruner.pruner_preview_service import insert_preview_run
 from mediamop.modules.pruner.pruner_server_instance_model import PrunerServerInstance
@@ -192,6 +193,76 @@ def test_post_pruner_instances_creates_row_seeds_scopes_and_hides_secrets(client
         ).all()
         assert len(rows) == 2
         assert {r.media_scope for r in rows} == {MEDIA_SCOPE_TV, MEDIA_SCOPE_MOVIES}
+
+
+def test_pruner_instance_base_url_is_normalized_for_duplicate_detection(client_with_admin: TestClient) -> None:
+    _login_admin(client_with_admin)
+    tok = fetch_csrf(client_with_admin)
+    r0 = auth_post(
+        client_with_admin,
+        "/api/v1/pruner/instances",
+        json={
+            "provider": "jellyfin",
+            "display_name": "Primary Jellyfin",
+            "base_url": "HTTP://MediaServer.local:80/",
+            "credentials": {"api_key": "a"},
+            "csrf_token": tok,
+        },
+        headers={"Content-Type": "application/json"},
+    )
+    assert r0.status_code == 200, r0.text
+
+    tok = fetch_csrf(client_with_admin)
+    r1 = auth_post(
+        client_with_admin,
+        "/api/v1/pruner/instances",
+        json={
+            "provider": "jellyfin",
+            "display_name": "Duplicate Jellyfin",
+            "base_url": "http://mediaserver.local",
+            "credentials": {"api_key": "b"},
+            "csrf_token": tok,
+        },
+        headers={"Content-Type": "application/json"},
+    )
+    assert r1.status_code == 422, r1.text
+    assert "already configured" in r1.text
+
+    fac = _fac()
+    with fac() as db:
+        row = db.scalars(select(PrunerServerInstance)).one()
+        assert row.normalized_base_url == "http://mediaserver.local"
+
+
+def test_pruner_scope_settings_are_unique_per_instance_and_scope(client_with_admin: TestClient) -> None:
+    _login_admin(client_with_admin)
+    tok = fetch_csrf(client_with_admin)
+    r = auth_post(
+        client_with_admin,
+        "/api/v1/pruner/instances",
+        json={
+            "provider": "emby",
+            "display_name": "Home Emby",
+            "base_url": "http://emby-scope-unique.test",
+            "credentials": {"api_key": "a"},
+            "csrf_token": tok,
+        },
+        headers={"Content-Type": "application/json"},
+    )
+    assert r.status_code == 200, r.text
+    instance_id = int(r.json()["id"])
+
+    fac = _fac()
+    with fac() as db:
+        db.add(PrunerScopeSettings(server_instance_id=instance_id, media_scope=MEDIA_SCOPE_TV))
+        with pytest.raises(IntegrityError):
+            db.commit()
+
+
+def test_normalize_server_base_url_canonicalizes_identity_parts() -> None:
+    assert normalize_server_base_url("HTTP://Example.COM:80/") == "http://example.com"
+    assert normalize_server_base_url("https://Example.COM:443/library/") == "https://example.com/library"
+    assert normalize_server_base_url("example.com:8096/") == "http://example.com:8096"
 
 
 def test_post_pruner_preview_enqueue_payload_is_per_instance_and_scope(client_with_admin: TestClient) -> None:

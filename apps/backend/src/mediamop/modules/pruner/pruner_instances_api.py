@@ -49,6 +49,7 @@ from mediamop.modules.pruner.pruner_instances_service import (
     create_server_instance,
     get_scope_settings,
     get_server_instance,
+    normalize_server_base_url,
 )
 from mediamop.modules.pruner.pruner_job_kinds import (
     PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
@@ -180,14 +181,17 @@ def post_pruner_instance(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
 
     prov = cast(PrunerProvider, body.provider)
-    row = create_server_instance(
-        db,
-        settings,
-        provider=prov,
-        display_name=body.display_name,
-        base_url=body.base_url,
-        credentials_secrets=body.credentials,
-    )
+    try:
+        row = create_server_instance(
+            db,
+            settings,
+            provider=prov,
+            display_name=body.display_name,
+            base_url=body.base_url,
+            credentials_secrets=body.credentials,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e)) from e
     db.flush()
     row = db.scalars(
         select(PrunerServerInstance)
@@ -273,7 +277,24 @@ def patch_pruner_instance(
     if body.display_name is not None:
         row.display_name = body.display_name.strip()
     if body.base_url is not None:
+        try:
+            normalized = normalize_server_base_url(body.base_url)
+        except ValueError as e:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e)) from e
+        duplicate = db.scalars(
+            select(PrunerServerInstance).where(
+                PrunerServerInstance.provider == row.provider,
+                PrunerServerInstance.normalized_base_url == normalized,
+                PrunerServerInstance.id != row.id,
+            ),
+        ).first()
+        if duplicate is not None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="This media server is already configured for Pruner.",
+            )
         row.base_url = body.base_url.strip()
+        row.normalized_base_url = normalized
     if body.enabled is not None:
         row.enabled = bool(body.enabled)
     if body.credentials is not None:
