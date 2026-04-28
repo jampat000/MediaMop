@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { apiErrorDetailToString } from "./client";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { apiErrorDetailToString, apiFetch, resetUnauthorizedHandlingForTests, setUnauthorizedHandler } from "./client";
+
+afterEach(() => {
+  resetUnauthorizedHandlingForTests();
+  vi.restoreAllMocks();
+});
 
 describe("apiErrorDetailToString", () => {
   it("returns strings as-is", () => {
@@ -21,5 +26,41 @@ describe("apiErrorDetailToString", () => {
   it("returns empty for nullish", () => {
     expect(apiErrorDetailToString(undefined)).toBe("");
     expect(apiErrorDetailToString(null)).toBe("");
+  });
+});
+
+describe("apiFetch unauthorized handling", () => {
+  it("calls the central unauthorized handler once for repeated 401s", async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response("", { status: 401 })),
+    );
+
+    await apiFetch("/api/v1/suite/settings");
+    await apiFetch("/api/v1/activity/recent");
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith("/api/v1/suite/settings");
+  });
+
+  it("resets unauthorized suppression after a non-401 response", async () => {
+    const handler = vi.fn();
+    setUnauthorizedHandler(handler);
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(new Response("", { status: 401 }))
+        .mockResolvedValueOnce(new Response("{}", { status: 200 }))
+        .mockResolvedValueOnce(new Response("", { status: 401 })),
+    );
+
+    await apiFetch("/api/v1/suite/settings");
+    await apiFetch("/api/v1/auth/me");
+    await apiFetch("/api/v1/activity/recent");
+
+    expect(handler).toHaveBeenCalledTimes(2);
   });
 });

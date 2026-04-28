@@ -4,6 +4,20 @@
  */
 
 const API_PREFIX = "/api/v1";
+type UnauthorizedHandler = (path: string) => void;
+
+let unauthorizedHandler: UnauthorizedHandler | null = null;
+let unauthorizedHandled = false;
+
+export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
+  unauthorizedHandler = handler;
+  unauthorizedHandled = false;
+}
+
+export function resetUnauthorizedHandlingForTests(): void {
+  unauthorizedHandler = null;
+  unauthorizedHandled = false;
+}
 
 function baseUrl(): string {
   // In ``vite dev``, always use same-origin ``/api`` so the dev proxy applies (including
@@ -26,7 +40,7 @@ export function apiUrl(path: string): string {
 }
 
 export async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
-  return fetch(apiUrl(path), {
+  const response = await fetch(apiUrl(path), {
     ...init,
     credentials: "include",
     headers: {
@@ -34,6 +48,14 @@ export async function apiFetch(path: string, init?: RequestInit): Promise<Respon
       ...init?.headers,
     },
   });
+  if (response.status === 401 && unauthorizedHandler && !unauthorizedHandled) {
+    unauthorizedHandled = true;
+    unauthorizedHandler(path);
+  }
+  if (response.status !== 401) {
+    unauthorizedHandled = false;
+  }
+  return response;
 }
 
 export async function readJson<T>(r: Response): Promise<T> {
