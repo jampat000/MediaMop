@@ -115,7 +115,7 @@ def ffprobe_json(
     except OSError:
         f_size = -1
         f_mtime = 0.0
-    logger.warning(
+    logger.debug(
         "REFINER_FFPROBE_FILE_STATE: %s",
         json.dumps(
             {
@@ -138,7 +138,7 @@ def ffprobe_json(
         probe_size_mb=probe_size_mb,
         analyze_duration_seconds=analyze_duration_seconds,
     )
-    logger.warning(
+    logger.debug(
         "REFINER_FFPROBE_CALL: %s",
         json.dumps(
             {
@@ -156,7 +156,8 @@ def ffprobe_json(
         errors="replace",
         timeout=timeout_s,
     )
-    logger.warning(
+    log = logger.warning if r.returncode != 0 else logger.debug
+    log(
         "REFINER_FFPROBE_RESULT: %s",
         json.dumps(
             {
