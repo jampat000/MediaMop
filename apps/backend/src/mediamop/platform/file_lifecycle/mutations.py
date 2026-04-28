@@ -29,6 +29,25 @@ def safe_copy_to_final(*, source: Path, final: Path) -> None:
         raise FileLifecycleError(f"Could not safely copy {src} to {dst}: {exc}") from exc
 
 
+def try_hardlink_to_final(*, source: Path, final: Path) -> bool:
+    """Atomically expose ``final`` as a hardlink to ``source`` when the filesystem supports it."""
+
+    src = source.resolve()
+    dst = final
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{dst.name}.", suffix=".link", dir=str(dst.parent))
+    os.close(fd)
+    tmp = Path(tmp_name)
+    _best_effort_unlink(tmp)
+    try:
+        os.link(src, tmp)
+        os.replace(tmp, dst)
+        return True
+    except OSError:
+        _best_effort_unlink(tmp)
+        return False
+
+
 def safe_finalize_file(*, staged: Path, final: Path) -> None:
     """Place a completed staged file at ``final`` without reporting partial output as success.
 

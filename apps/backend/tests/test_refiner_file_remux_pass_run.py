@@ -106,6 +106,7 @@ def test_live_skips_when_no_remux_required_copies_to_output_and_deletes_release_
     assert r["preflight_status"] == "ok"
     assert r.get("live_mutations_skipped") is False
     assert r.get("output_copied_without_remux") is True
+    assert r.get("unchanged_output_method") in {"hardlink", "copy"}
     assert Path(r["output_file"]).resolve() == (out / "ReleaseTitle" / "one.mkv").resolve()
     assert (out / "ReleaseTitle" / "one.mkv").read_bytes() == b"x" * 2000
     assert r.get("source_deleted_after_success") is True

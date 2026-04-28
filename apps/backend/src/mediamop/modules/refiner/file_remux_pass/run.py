@@ -54,7 +54,7 @@ from mediamop.modules.refiner.refiner_remux_track_display import (
     subtitle_before_line_from_probe,
 )
 from mediamop.platform.file_lifecycle.guardrails import bytes_to_mb, check_minimum_free_disk_space
-from mediamop.platform.file_lifecycle.mutations import safe_copy_to_final, safe_finalize_file
+from mediamop.platform.file_lifecycle.mutations import safe_copy_to_final, safe_finalize_file, try_hardlink_to_final
 
 logger = logging.getLogger(__name__)
 
@@ -170,7 +170,7 @@ def _check_output_file_completeness(*, output_file: Path, source_file: Path) -> 
     }
 
 
-def _copy_unchanged_source_to_output(*, src: Path, final: Path) -> tuple[bool, bool]:
+def _copy_unchanged_source_to_output(*, src: Path, final: Path) -> tuple[bool, bool, str]:
     """For already-correct files, still place a copy in the output tree before cleanup."""
 
     src_resolved = src.resolve()
@@ -181,10 +181,14 @@ def _copy_unchanged_source_to_output(*, src: Path, final: Path) -> tuple[bool, b
             raise RuntimeError(
                 "Refiner output path resolves to the watched source file; output and watched folders must differ."
             )
+        if try_hardlink_to_final(source=src_resolved, final=final):
+            return True, True, "hardlink"
         safe_copy_to_final(source=src_resolved, final=final)
-        return True, True
+        return True, True, "copy"
+    if try_hardlink_to_final(source=src_resolved, final=final):
+        return True, False, "hardlink"
     safe_copy_to_final(source=src_resolved, final=final)
-    return True, False
+    return True, False, "copy"
 
 
 def _cascade_delete_empty_parents(
@@ -593,7 +597,7 @@ def run_refiner_file_remux_pass(
                 remux_required=remux_needed,
             )
         try:
-            _copied, output_replaced_existing = _copy_unchanged_source_to_output(src=src, final=final_skip)
+            _copied, output_replaced_existing, unchanged_output_method = _copy_unchanged_source_to_output(src=src, final=final_skip)
         except Exception as exc:
             if progress_reporter is not None:
                 progress_reporter(
@@ -631,6 +635,7 @@ def run_refiner_file_remux_pass(
         out["output_file"] = str(final_skip.resolve())
         out["output_replaced_existing"] = output_replaced_existing
         out["output_copied_without_remux"] = True
+        out["unchanged_output_method"] = unchanged_output_method
         out["live_mutations_skipped"] = False
         _handle_refiner_cleanup_after_success(
             src=src,
