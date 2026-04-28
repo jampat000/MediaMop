@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+from dataclasses import replace
 
 from fastapi.testclient import TestClient
 
 from mediamop.api.factory import create_app
+from mediamop.core.config import MediaMopSettings
+from mediamop.platform.jobs.worker_health import reset_worker_health_for_tests
 from mediamop.platform.readiness.service import build_readiness
 
 
@@ -39,6 +42,23 @@ def test_readiness_reports_starting_before_startup_complete() -> None:
     assert payload.ready is False
     assert payload.status == "starting"
     assert payload.steps[0].status == "starting"
+
+
+def test_readiness_reports_failed_when_worker_heartbeat_missing() -> None:
+    reset_worker_health_for_tests()
+
+    class State:
+        startup_started_at = 0.0
+        startup_ready = True
+        engine = object()
+        session_factory = object()
+        settings = replace(MediaMopSettings.load(), refiner_worker_count=1, pruner_worker_count=0, subber_worker_count=0)
+
+    payload = build_readiness(State())
+
+    assert payload.ready is False
+    assert payload.status == "failed"
+    assert any(step.name == "workers" and step.status == "failed" for step in payload.steps)
 
 
 def test_unknown_upgrade_api_browser_landing_redirects_to_settings() -> None:
