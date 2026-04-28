@@ -38,7 +38,12 @@ from mediamop.modules.pruner.pruner_plex_movie_rule_candidates import (
     list_plex_watched_movie_candidates,
     list_plex_watched_movie_low_rating_candidates,
 )
-from mediamop.modules.pruner.pruner_http import http_get_json, http_get_text, join_base_path
+from mediamop.modules.pruner.pruner_http import (
+    PrunerHttpStatusError,
+    http_get_json,
+    http_get_text,
+    join_base_path,
+)
 
 def jf_emby_pruner_preview_items_fields_csv() -> str:
     """Comma-separated Jellyfin/Emby ``Fields`` for **all** Pruner preview ``Items`` queries in this module.
@@ -123,8 +128,7 @@ def _items_query(*, base_url: str, api_key: str, params: dict[str, str]) -> dict
     url = join_base_path(base_url, "Items", params)
     status, data = http_get_json(url, headers=_emby_style_headers(api_key))
     if status != 200:
-        msg = f"Items query failed HTTP {status}"
-        raise RuntimeError(msg)
+        raise PrunerHttpStatusError(url=url, status_code=status, body=data)
     if not isinstance(data, dict):
         msg = "Items query returned non-object JSON"
         raise RuntimeError(msg)
@@ -196,8 +200,8 @@ def list_missing_primary_candidates(
                 page_limit=page,
                 use_has_primary_image=use_filter,
             )
-        except urllib.error.HTTPError as e:
-            if e.code == 400 and use_filter:
+        except PrunerHttpStatusError as e:
+            if e.status_code == 400 and use_filter:
                 use_filter = False
                 start = 0
                 candidates.clear()
@@ -343,8 +347,8 @@ def list_watched_tv_episode_candidates(
         _jf_emby_items_params_attach_preview_fields(params)
         try:
             data = _items_query(base_url=base_url, api_key=api_key, params=params)
-        except urllib.error.HTTPError as e:
-            if e.code == 400 and use_is_played_filter:
+        except PrunerHttpStatusError as e:
+            if e.status_code == 400 and use_is_played_filter:
                 use_is_played_filter = False
                 start = 0
                 candidates.clear()
@@ -429,8 +433,8 @@ def list_watched_movie_candidates(
         _jf_emby_items_params_attach_preview_fields(params)
         try:
             data = _items_query(base_url=base_url, api_key=api_key, params=params)
-        except urllib.error.HTTPError as e:
-            if e.code == 400 and use_is_played_filter:
+        except PrunerHttpStatusError as e:
+            if e.status_code == 400 and use_is_played_filter:
                 use_is_played_filter = False
                 start = 0
                 candidates.clear()
@@ -519,8 +523,8 @@ def list_watched_movie_low_rating_candidates(
         _jf_emby_items_params_attach_preview_fields(params)
         try:
             data = _items_query(base_url=base_url, api_key=api_key, params=params)
-        except urllib.error.HTTPError as e:
-            if e.code == 400 and use_is_played_filter:
+        except PrunerHttpStatusError as e:
+            if e.status_code == 400 and use_is_played_filter:
                 use_is_played_filter = False
                 start = 0
                 candidates.clear()
@@ -613,8 +617,8 @@ def list_unwatched_movie_stale_candidates(
         _jf_emby_items_params_attach_preview_fields(params)
         try:
             data = _items_query(base_url=base_url, api_key=api_key, params=params)
-        except urllib.error.HTTPError as e:
-            if e.code == 400 and use_is_played_filter:
+        except PrunerHttpStatusError as e:
+            if e.status_code == 400 and use_is_played_filter:
                 use_is_played_filter = False
                 start = 0
                 candidates.clear()
@@ -709,8 +713,8 @@ def list_never_played_stale_candidates(
         _jf_emby_items_params_attach_preview_fields(params)
         try:
             data = _items_query(base_url=base_url, api_key=api_key, params=params)
-        except urllib.error.HTTPError as e:
-            if e.code == 400 and use_is_played_filter:
+        except PrunerHttpStatusError as e:
+            if e.status_code == 400 and use_is_played_filter:
                 use_is_played_filter = False
                 start = 0
                 candidates.clear()
