@@ -68,7 +68,7 @@ def _plex_instance(session_factory: sessionmaker[Session], *, label: str = "Plex
                 settings,
                 provider="plex",
                 display_name=label,
-                base_url="http://plex.test:32400",
+                base_url=f"http://plex-{label.lower().replace(' ', '-')}.test:32400",
                 credentials_secrets={"auth_token": "tok"},
             )
             return int(inst.id)
