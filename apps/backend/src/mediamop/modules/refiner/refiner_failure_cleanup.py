@@ -212,6 +212,7 @@ def run_refiner_failure_cleanup_sweep_for_scope(
     output_raw = (row.refiner_tv_output_folder if ms == "tv" else row.refiner_output_folder) or ""
     out: dict[str, Any] = {
         "media_scope": ms,
+        "cleanup_run_status": "started",
         "grace_period_seconds": int(grace),
         "eligible_failed_jobs": 0,
         "processed_failed_jobs": 0,
@@ -219,6 +220,7 @@ def run_refiner_failure_cleanup_sweep_for_scope(
         "jobs": [],
     }
     if not watched_raw.strip() or not output_raw.strip():
+        out["cleanup_run_status"] = "skipped"
         out["skip_reason"] = (
             "Saved watched/output paths are not configured for this scope, so failure cleanup was skipped safely."
         )
@@ -227,6 +229,10 @@ def run_refiner_failure_cleanup_sweep_for_scope(
     output_root = Path(output_raw).expanduser().resolve()
     failed_rows = _failed_jobs_for_scope(session=session, media_scope=ms, older_than=older_than)
     out["eligible_failed_jobs"] = len(failed_rows)
+    if not failed_rows:
+        out["cleanup_run_status"] = "no_eligible_files"
+        out["skip_reason"] = "No eligible failed Refiner jobs were old enough for cleanup."
+        return out
 
     radarr_rows: list[dict[str, Any]] = []
     sonarr_rows: list[dict[str, Any]] = []
@@ -393,5 +399,6 @@ def run_refiner_failure_cleanup_sweep_for_scope(
                 ok, _ = _safe_unlink(temp)
                 if ok:
                     detail["tv_failure_cleanup_temp_files_deleted"].append(str(temp))
+    out["cleanup_run_status"] = "completed"
     return out
 
