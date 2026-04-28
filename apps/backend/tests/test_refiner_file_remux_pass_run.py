@@ -16,7 +16,9 @@ from mediamop.modules.refiner.refiner_file_remux_pass_visibility import (
     REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
     REMUX_PASS_OUTCOME_FAILED_DURING_EXECUTION,
     REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED,
+    REMUX_PASS_OUTCOME_SKIPPED_GUARDRAIL,
 )
+from mediamop.platform.file_lifecycle.guardrails import DiskSpaceCheck
 
 from .test_refiner_tv_season_folder_cleanup import _sqlite_session
 
@@ -580,5 +582,106 @@ def test_default_work_dir_created_when_flag_set(tmp_path: Path, monkeypatch: pyt
     assert work_default.is_dir()
     assert r.get("source_folder_deleted") is True
     assert not mkv.exists()
+
+
+def test_guardrail_skips_below_minimum_size_before_ffprobe(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    media = tmp_path / "media"
+    media.mkdir()
+    src = media / "tiny.mkv"
+    src.write_bytes(b"x" * 1024)
+    out = tmp_path / "out"
+    out.mkdir()
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    rt = _runtime(media=media, home=home, out=out)
+
+    def _probe_must_not_run(*_args: object, **_kwargs: object) -> dict:
+        raise AssertionError("ffprobe should not run for below-minimum files")
+
+    monkeypatch.setattr(runmod, "ffprobe_json", _probe_must_not_run)
+
+    r = runmod.run_refiner_file_remux_pass(
+        settings=settings,
+        path_runtime=rt,
+        relative_media_path="tiny.mkv",
+        refiner_min_input_file_size_mb=1,
+    )
+    assert r["ok"] is True
+    assert r["outcome"] == REMUX_PASS_OUTCOME_SKIPPED_GUARDRAIL
+    assert r["preflight_status"] == "skipped"
+    assert "file below minimum size" in r["reason"]
+    assert src.exists()
+
+
+def test_guardrail_allows_file_at_minimum_size(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    media = tmp_path / "media"
+    media.mkdir()
+    src = media / "ok.mkv"
+    src.write_bytes(b"x" * 1024 * 1024)
+    out = tmp_path / "out"
+    out.mkdir()
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    rt = _runtime(media=media, home=home, out=out)
+
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
+
+    r = runmod.run_refiner_file_remux_pass(
+        settings=settings,
+        path_runtime=rt,
+        relative_media_path="ok.mkv",
+        refiner_min_input_file_size_mb=1,
+    )
+    assert r["ok"] is True
+    assert r["outcome"] == REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED
+    assert (out / "ok.mkv").exists()
+
+
+def test_guardrail_skips_before_unchanged_copy_when_output_disk_low(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    media = tmp_path / "media"
+    media.mkdir()
+    src = media / "copy.mkv"
+    src.write_bytes(b"x" * 1024 * 1024)
+    out = tmp_path / "out"
+    out.mkdir()
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    rt = _runtime(media=media, home=home, out=out)
+
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
+    monkeypatch.setattr(
+        runmod,
+        "check_minimum_free_disk_space",
+        lambda *, target_path, required_mb: DiskSpaceCheck(
+            ok=False,
+            checked_path=Path(target_path).parent,
+            free_mb=100.0,
+            required_mb=required_mb,
+            message="Skipped: insufficient disk space on target drive (0.1 GB < 5.0 GB required).",
+        ),
+    )
+
+    r = runmod.run_refiner_file_remux_pass(
+        settings=settings,
+        path_runtime=rt,
+        relative_media_path="copy.mkv",
+        minimum_free_disk_space_mb=5120,
+    )
+    assert r["ok"] is True
+    assert r["outcome"] == REMUX_PASS_OUTCOME_SKIPPED_GUARDRAIL
+    assert r["guardrail"] == "minimum_free_disk_space"
+    assert "insufficient disk space" in r["reason"]
+    assert src.exists()
+    assert not (out / "copy.mkv").exists()
 
 

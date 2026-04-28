@@ -83,6 +83,8 @@ function seedRefinerQueries(qc: QueryClient) {
   qc.setQueryData(refinerOperatorSettingsQueryKey, {
     max_concurrent_files: 1,
     min_file_age_seconds: 60,
+    refiner_min_input_file_size_mb: 50,
+    minimum_free_disk_space_mb: 5120,
     movie_schedule_enabled: true,
     movie_schedule_hours_limited: false,
     movie_schedule_days: "",

@@ -11,6 +11,7 @@ from mediamop.modules.refiner.refiner_remux_rules import RemuxPlan
 # Persisted on activity detail JSON — keep aligned with web ``REFINER_FILE_REMUX_PASS_EVENT_TYPE`` consumers.
 REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN = "live_output_written"
 REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED = "live_skipped_not_required"
+REMUX_PASS_OUTCOME_SKIPPED_GUARDRAIL = "skipped_guardrail"
 REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION = "failed_before_execution"
 REMUX_PASS_OUTCOME_FAILED_DURING_EXECUTION = "failed_during_execution"
 
@@ -51,6 +52,8 @@ def remux_pass_activity_title(payload: dict[str, Any]) -> str:
         return f"{name} was processed successfully"
     if outcome == REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED:
         return f"No changes needed for {name}"
+    if outcome == REMUX_PASS_OUTCOME_SKIPPED_GUARDRAIL:
+        return f"Skipped {name}"
     if outcome == REMUX_PASS_OUTCOME_FAILED_DURING_EXECUTION:
         return f"{name} could not be processed"
     if outcome == REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION or payload.get("ok") is False:

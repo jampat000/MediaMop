@@ -27,6 +27,8 @@ def test_refiner_operator_settings_get_shape(client_with_admin: TestClient) -> N
     body = r.json()
     assert body["max_concurrent_files"] == 1
     assert body["min_file_age_seconds"] == 60
+    assert body["refiner_min_input_file_size_mb"] == 50
+    assert body["minimum_free_disk_space_mb"] == 5120
     assert body["movie_schedule_enabled"] is True
     assert "movie_schedule_interval_seconds" not in body
     assert body["movie_schedule_hours_limited"] is False
@@ -51,6 +53,8 @@ def test_refiner_operator_settings_put_updates(client_with_admin: TestClient) ->
             "csrf_token": tok,
             "max_concurrent_files": 4,
             "min_file_age_seconds": 90,
+            "refiner_min_input_file_size_mb": 75,
+            "minimum_free_disk_space_mb": 6144,
             "movie_schedule_enabled": True,
             "movie_schedule_hours_limited": True,
             "movie_schedule_days": "Mon,Tue",
@@ -68,6 +72,8 @@ def test_refiner_operator_settings_put_updates(client_with_admin: TestClient) ->
     body = r.json()
     assert body["max_concurrent_files"] == 4
     assert body["min_file_age_seconds"] == 90
+    assert body["refiner_min_input_file_size_mb"] == 75
+    assert body["minimum_free_disk_space_mb"] == 6144
     assert body["movie_schedule_enabled"] is True
     assert body["movie_schedule_hours_limited"] is True
     assert body["movie_schedule_days"] == "Mon,Tue"
@@ -154,6 +160,8 @@ def test_refiner_operator_settings_put_process_only_preserves_schedules(client_w
             "csrf_token": tok2,
             "max_concurrent_files": 3,
             "min_file_age_seconds": 120,
+            "refiner_min_input_file_size_mb": 80,
+            "minimum_free_disk_space_mb": 8192,
         },
         headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
     )
@@ -161,6 +169,8 @@ def test_refiner_operator_settings_put_process_only_preserves_schedules(client_w
     body = r1.json()
     assert body["max_concurrent_files"] == 3
     assert body["min_file_age_seconds"] == 120
+    assert body["refiner_min_input_file_size_mb"] == 80
+    assert body["minimum_free_disk_space_mb"] == 8192
     assert body["movie_schedule_hours_limited"] is False
     assert body["tv_schedule_hours_limited"] is False
 

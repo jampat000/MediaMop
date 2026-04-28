@@ -83,6 +83,8 @@ export type RefinerOverviewStatsOut = {
 export type RefinerOperatorSettingsOut = {
   max_concurrent_files: number;
   min_file_age_seconds: number;
+  refiner_min_input_file_size_mb: number;
+  minimum_free_disk_space_mb: number;
   movie_schedule_enabled: boolean;
   movie_schedule_hours_limited: boolean;
   movie_schedule_days: string;
@@ -102,6 +104,8 @@ export type RefinerOperatorSettingsOut = {
 export type RefinerOperatorSettingsPutBody = {
   max_concurrent_files?: number;
   min_file_age_seconds?: number;
+  refiner_min_input_file_size_mb?: number;
+  minimum_free_disk_space_mb?: number;
   movie_schedule_enabled?: boolean;
   movie_schedule_hours_limited?: boolean;
   movie_schedule_days?: string;

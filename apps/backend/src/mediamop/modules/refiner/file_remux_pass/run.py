@@ -18,6 +18,7 @@ from mediamop.modules.refiner.refiner_file_remux_pass_visibility import (
     REMUX_PASS_OUTCOME_FAILED_DURING_EXECUTION,
     REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN,
     REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED,
+    REMUX_PASS_OUTCOME_SKIPPED_GUARDRAIL,
     remux_pass_result_to_activity_detail,
     summarize_remux_plan,
 )
@@ -52,6 +53,7 @@ from mediamop.modules.refiner.refiner_remux_track_display import (
     subtitle_after_line_from_plan,
     subtitle_before_line_from_probe,
 )
+from mediamop.platform.file_lifecycle.guardrails import bytes_to_mb, check_minimum_free_disk_space
 from mediamop.platform.file_lifecycle.mutations import safe_copy_to_final, safe_finalize_file
 
 logger = logging.getLogger(__name__)
@@ -72,6 +74,29 @@ def _fail_before(
         "relative_media_path": relative_media_path,
         **({"inspected_source_path": inspected_source_path} if inspected_source_path else {}),
     }
+
+
+def _skip_guardrail(
+    *,
+    relative_media_path: str,
+    reason: str,
+    guardrail: str,
+    inspected_source_path: str | None = None,
+    **extra: Any,
+) -> dict[str, Any]:
+    data: dict[str, Any] = {
+        "ok": True,
+        "outcome": REMUX_PASS_OUTCOME_SKIPPED_GUARDRAIL,
+        "preflight_status": "skipped",
+        "preflight_reason": reason,
+        "reason": reason,
+        "guardrail": guardrail,
+        "relative_media_path": relative_media_path,
+        **extra,
+    }
+    if inspected_source_path is not None:
+        data["inspected_source_path"] = inspected_source_path
+    return data
 
 
 def _normalize_media_scope_for_cleanup(raw: str | None) -> str:
@@ -366,6 +391,8 @@ def run_refiner_file_remux_pass(
     cleanup_session: Session | None = None,
     current_job_id: int | None = None,
     progress_reporter: Callable[[dict[str, Any]], None] | None = None,
+    refiner_min_input_file_size_mb: int = 0,
+    minimum_free_disk_space_mb: int = 0,
 ) -> dict[str, Any]:
     """Run one pass: probe, plan, optional ffmpeg remux, and post-success cleanup.
 
@@ -387,6 +414,28 @@ def run_refiner_file_remux_pass(
             reason="file is not a supported Refiner media candidate for this pass",
             inspected_source_path=inspected,
         )
+    min_size_mb = max(0, int(refiner_min_input_file_size_mb))
+    if min_size_mb > 0:
+        try:
+            source_size_bytes = int(src.stat().st_size)
+        except OSError as exc:
+            return _fail_before(
+                relative_media_path=relative_media_path,
+                reason=f"Refiner could not read the source file size: {exc}",
+                inspected_source_path=inspected,
+            )
+        source_size_mb = bytes_to_mb(source_size_bytes)
+        if source_size_bytes < min_size_mb * 1024 * 1024:
+            return _skip_guardrail(
+                relative_media_path=relative_media_path,
+                inspected_source_path=inspected,
+                guardrail="minimum_input_file_size",
+                reason=f"Skipped: file below minimum size ({source_size_mb:.1f} MB < {min_size_mb} MB).",
+                source_size_bytes=source_size_bytes,
+                source_size_mb=round(source_size_mb, 1),
+                minimum_input_file_size_mb=min_size_mb,
+                media_scope=scope,
+            )
     min_age = max(
         0,
         int(settings.refiner_watched_folder_min_file_age_seconds if min_file_age_seconds is None else min_file_age_seconds),
@@ -520,6 +569,29 @@ def run_refiner_file_remux_pass(
         )
         rel_skip = src.resolve().relative_to(watched_root)
         final_skip = out_dir / rel_skip
+        disk = check_minimum_free_disk_space(
+            target_path=final_skip,
+            required_mb=minimum_free_disk_space_mb,
+        )
+        if not disk.ok:
+            return _skip_guardrail(
+                relative_media_path=relative_media_path,
+                inspected_source_path=inspected,
+                guardrail="minimum_free_disk_space",
+                reason=disk.message,
+                disk_checked_path=str(disk.checked_path),
+                disk_free_mb=round(disk.free_mb, 1),
+                minimum_free_disk_space_mb=disk.required_mb,
+                media_scope=scope,
+                refiner_output_folder_resolved=str(out_dir),
+                stream_counts=out.get("stream_counts"),
+                plan_summary=out.get("plan_summary"),
+                audio_before=before_a,
+                audio_after=after_a,
+                subs_before=before_s,
+                subs_after=after_s,
+                remux_required=remux_needed,
+            )
         try:
             _copied, output_replaced_existing = _copy_unchanged_source_to_output(src=src, final=final_skip)
         except Exception as exc:
@@ -576,6 +648,28 @@ def run_refiner_file_remux_pass(
         return out
 
     try:
+        work_disk = check_minimum_free_disk_space(
+            target_path=work_dir / f".{src.name}.work-preflight",
+            required_mb=minimum_free_disk_space_mb,
+        )
+        if not work_disk.ok:
+            return _skip_guardrail(
+                relative_media_path=relative_media_path,
+                inspected_source_path=inspected,
+                guardrail="minimum_free_disk_space",
+                reason=work_disk.message,
+                disk_checked_path=str(work_disk.checked_path),
+                disk_free_mb=round(work_disk.free_mb, 1),
+                minimum_free_disk_space_mb=work_disk.required_mb,
+                media_scope=scope,
+                stream_counts=out.get("stream_counts"),
+                plan_summary=out.get("plan_summary"),
+                audio_before=before_a,
+                audio_after=after_a,
+                subs_before=before_s,
+                subs_after=after_s,
+                remux_required=remux_needed,
+            )
         if progress_reporter is not None:
             progress_reporter(
                 {
@@ -616,6 +710,33 @@ def run_refiner_file_remux_pass(
         )
         rel = src.resolve().relative_to(watched_root)
         final = out_dir / rel
+        output_disk = check_minimum_free_disk_space(
+            target_path=final,
+            required_mb=minimum_free_disk_space_mb,
+        )
+        if not output_disk.ok:
+            try:
+                tmp.unlink(missing_ok=True)
+            except OSError:
+                pass
+            return _skip_guardrail(
+                relative_media_path=relative_media_path,
+                inspected_source_path=inspected,
+                guardrail="minimum_free_disk_space",
+                reason=output_disk.message,
+                disk_checked_path=str(output_disk.checked_path),
+                disk_free_mb=round(output_disk.free_mb, 1),
+                minimum_free_disk_space_mb=output_disk.required_mb,
+                media_scope=scope,
+                refiner_output_folder_resolved=str(out_dir),
+                stream_counts=out.get("stream_counts"),
+                plan_summary=out.get("plan_summary"),
+                audio_before=before_a,
+                audio_after=after_a,
+                subs_before=before_s,
+                subs_after=after_s,
+                remux_required=remux_needed,
+            )
         final.parent.mkdir(parents=True, exist_ok=True)
         output_replaced_existing = final.exists()
         safe_finalize_file(staged=tmp, final=final)

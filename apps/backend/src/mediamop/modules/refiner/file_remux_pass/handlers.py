@@ -172,6 +172,8 @@ def make_refiner_file_remux_pass_handler(
                 relative_media_path=rel.strip(),
                 rules_config=rules_cfg,
                 min_file_age_seconds=op_settings.min_file_age_seconds,
+                refiner_min_input_file_size_mb=op_settings.refiner_min_input_file_size_mb,
+                minimum_free_disk_space_mb=op_settings.minimum_free_disk_space_mb,
                 media_scope=media_scope,
                 cleanup_session=session,
                 current_job_id=ctx.id,

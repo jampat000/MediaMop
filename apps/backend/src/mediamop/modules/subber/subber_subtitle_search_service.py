@@ -35,12 +35,14 @@ from mediamop.modules.subber.subber_provider_registry import (
     PROVIDER_SUBSOURCE,
     PROVIDER_YIFY,
 )
+from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
 from mediamop.modules.subber.subber_providers_model import SubberProviderRow
 from mediamop.modules.subber.subber_providers_service import get_enabled_providers_ordered, provider_is_ready_for_search
 from mediamop.modules.subber.subber_settings_model import SubberSettingsRow
 from mediamop.modules.subber.subber_settings_service import language_preferences_list
 from mediamop.modules.subber.subber_subtitle_state_model import SubberSubtitleState
 from mediamop.modules.subber.subber_subtitle_state_service import mark_found, mark_missing
+from mediamop.platform.file_lifecycle.guardrails import check_minimum_free_disk_space
 
 logger = logging.getLogger(__name__)
 
@@ -245,6 +247,13 @@ def _write_srt_for_state(
     out_dir.mkdir(parents=True, exist_ok=True)
     safe_lang = re.sub(r"[^a-z0-9_-]", "", lang)[:10] or "en"
     out_path = out_dir / f"{stem}.{safe_lang}.srt"
+    guardrail = ensure_refiner_operator_settings_row(db)
+    disk = check_minimum_free_disk_space(
+        target_path=out_path,
+        required_mb=guardrail.minimum_free_disk_space_mb,
+    )
+    if not disk.ok:
+        raise RuntimeError(disk.message)
     out_path.write_bytes(srt_bytes)
     mark_found(
         db,

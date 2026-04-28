@@ -10,6 +10,16 @@ class RefinerOperatorSettingsOut(BaseModel):
 
     max_concurrent_files: int = Field(ge=1, le=8)
     min_file_age_seconds: int = Field(ge=0, le=7 * 24 * 3600)
+    refiner_min_input_file_size_mb: int = Field(
+        ge=0,
+        le=1024 * 1024,
+        description="Files smaller than this are skipped before Refiner probes or writes them.",
+    )
+    minimum_free_disk_space_mb: int = Field(
+        ge=0,
+        le=1024 * 1024,
+        description="Processing skips before writes when the target drive has less free space than this.",
+    )
     movie_schedule_enabled: bool
     movie_schedule_hours_limited: bool = Field(
         description="When true, timed movie scans only enqueue inside the days and times below (suite time zone).",
@@ -34,6 +44,8 @@ class RefinerOperatorSettingsPutIn(BaseModel):
     csrf_token: str = Field(..., min_length=1)
     max_concurrent_files: int | None = Field(default=None, ge=1, le=8)
     min_file_age_seconds: int | None = Field(default=None, ge=0, le=7 * 24 * 3600)
+    refiner_min_input_file_size_mb: int | None = Field(default=None, ge=0, le=1024 * 1024)
+    minimum_free_disk_space_mb: int | None = Field(default=None, ge=0, le=1024 * 1024)
     movie_schedule_enabled: bool | None = None
     movie_schedule_hours_limited: bool | None = None
     movie_schedule_days: str | None = Field(default=None, max_length=2000)
@@ -79,7 +91,12 @@ class RefinerOperatorSettingsPutIn(BaseModel):
 
     @model_validator(mode="after")
     def _at_least_one_update_field(self) -> RefinerOperatorSettingsPutIn:
-        has_process = self.max_concurrent_files is not None or self.min_file_age_seconds is not None
+        has_process = (
+            self.max_concurrent_files is not None
+            or self.min_file_age_seconds is not None
+            or self.refiner_min_input_file_size_mb is not None
+            or self.minimum_free_disk_space_mb is not None
+        )
         has_movie = self.movie_schedule_enabled is not None
         has_tv = self.tv_schedule_enabled is not None
         if not (has_process or has_movie or has_tv):

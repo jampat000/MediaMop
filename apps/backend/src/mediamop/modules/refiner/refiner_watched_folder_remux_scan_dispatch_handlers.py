@@ -81,6 +81,7 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
             "watched_folder_resolved": watched_root,
             "enqueue_remux_jobs": enqueue_remux_jobs,
             "min_file_age_seconds": op_settings.min_file_age_seconds,
+            "minimum_input_file_size_mb": op_settings.refiner_min_input_file_size_mb,
             "radarr_queue_row_count": len(rad_rows),
             "sonarr_queue_row_count": len(son_rows),
             "radarr_queue_fetch_error": rad_err,
@@ -92,6 +93,7 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
             "remux_jobs_enqueued": 0,
             "skipped_duplicate_same_scan": 0,
             "skipped_duplicate_active_queue": 0,
+            "skipped_below_minimum_file_size": 0,
             "user_message": "",
             "waiting_message": None,
             "enqueued_relative_paths_sample": sample_paths,
@@ -103,6 +105,16 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
         with session_factory() as session:
             with session.begin():
                 for file_path in files:
+                    min_size_mb = max(0, int(op_settings.refiner_min_input_file_size_mb))
+                    if min_size_mb > 0:
+                        try:
+                            size_bytes = int(file_path.stat().st_size)
+                        except OSError:
+                            continue
+                        if size_bytes < min_size_mb * 1024 * 1024:
+                            summary["skipped_below_minimum_file_size"] += 1
+                            continue
+
                     verdict = evaluate_watched_media_file_for_dispatch(
                         radarr_rows=rad_rows,
                         sonarr_rows=son_rows,
