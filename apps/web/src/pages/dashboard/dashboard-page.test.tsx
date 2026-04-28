@@ -219,4 +219,40 @@ describe("DashboardPage", () => {
     expect(screen.queryByText("Scan watched folders")).not.toBeInTheDocument();
     expect(screen.getByText("Process file")).toBeInTheDocument();
   });
+
+  it("shows worker health problems as attention items", () => {
+    useDashboardStatusQuery.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: {
+        scope_note: "Read-only overview.",
+        system: {
+          api_version: "1.0.0",
+          environment: "test",
+          healthy: false,
+          worker_health: [
+            {
+              module: "refiner",
+              expected_workers: 1,
+              active_workers: 0,
+              stale_workers: 1,
+              stopped_workers: 0,
+              status: "degraded",
+              detail: "Refiner expected 1 worker(s), but 1 are stale, stopped, or missing.",
+            },
+          ],
+        },
+        activity_summary: { events_last_24h: 0, latest: null },
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getAllByText("Review needed").length).toBeGreaterThan(0);
+    expect(screen.getByText(/Refiner workers: Refiner expected 1 worker/)).toBeInTheDocument();
+  });
 });

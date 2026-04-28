@@ -30,6 +30,7 @@ from mediamop.modules.refiner.jobs_ops import (
     fail_claimed_refiner_job,
     fail_leased_refiner_job_after_complete_failure,
 )
+from mediamop.platform.jobs.worker_health import worker_heartbeat, worker_started, worker_stopped
 
 logger = logging.getLogger(__name__)
 
@@ -248,51 +249,58 @@ async def refiner_worker_run_forever(
 
     owner = _lease_owner(worker_index)
     handlers = job_handlers if job_handlers is not None else default_refiner_job_handler_registry()
-    while not stop_event.is_set():
-        if max_concurrent_files_getter is not None:
+    worker_started("refiner", worker_index)
+    try:
+        while not stop_event.is_set():
+            worker_heartbeat("refiner", worker_index)
+            if max_concurrent_files_getter is not None:
+                try:
+                    max_concurrent = max(1, min(8, int(max_concurrent_files_getter())))
+                except Exception:
+                    max_concurrent = 1
+                if worker_index >= max_concurrent:
+                    loop = asyncio.get_running_loop()
+                    deadline = loop.time() + idle_sleep_seconds
+                    while loop.time() < deadline and not stop_event.is_set():
+                        worker_heartbeat("refiner", worker_index)
+                        remaining = deadline - loop.time()
+                        if remaining <= 0:
+                            break
+                        await asyncio.sleep(min(0.25, remaining))
+                    continue
+
+            def _tick() -> Literal["idle", "processed"]:
+                return process_one_refiner_job(
+                    session_factory,
+                    lease_owner=owner,
+                    job_handlers=handlers,
+                    lease_seconds=lease_seconds,
+                )
+
             try:
-                max_concurrent = max(1, min(8, int(max_concurrent_files_getter())))
+                outcome = await asyncio.to_thread(_tick)
+            except asyncio.CancelledError:
+                raise
             except Exception:
-                max_concurrent = 1
-            if worker_index >= max_concurrent:
+                logger.exception("Refiner worker tick crashed worker_index=%s", worker_index)
+                await asyncio.sleep(REFINER_WORKER_TICK_ERROR_BACKOFF_SECONDS)
+                continue
+
+            if stop_event.is_set():
+                break
+
+            if outcome == "idle":
                 loop = asyncio.get_running_loop()
                 deadline = loop.time() + idle_sleep_seconds
                 while loop.time() < deadline and not stop_event.is_set():
+                    worker_heartbeat("refiner", worker_index)
                     remaining = deadline - loop.time()
                     if remaining <= 0:
                         break
                     await asyncio.sleep(min(0.25, remaining))
-                continue
-
-        def _tick() -> Literal["idle", "processed"]:
-            return process_one_refiner_job(
-                session_factory,
-                lease_owner=owner,
-                job_handlers=handlers,
-                lease_seconds=lease_seconds,
-            )
-
-        try:
-            outcome = await asyncio.to_thread(_tick)
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            logger.exception("Refiner worker tick crashed worker_index=%s", worker_index)
-            await asyncio.sleep(REFINER_WORKER_TICK_ERROR_BACKOFF_SECONDS)
-            continue
-
-        if stop_event.is_set():
-            break
-
-        if outcome == "idle":
-            loop = asyncio.get_running_loop()
-            deadline = loop.time() + idle_sleep_seconds
-            while loop.time() < deadline and not stop_event.is_set():
-                remaining = deadline - loop.time()
-                if remaining <= 0:
-                    break
-                await asyncio.sleep(min(0.25, remaining))
-        # processed: tight spin for back-to-back queue drain
+            # processed: tight spin for back-to-back queue drain
+    finally:
+        worker_stopped("refiner", worker_index)
 
 
 def start_refiner_worker_background_tasks(
