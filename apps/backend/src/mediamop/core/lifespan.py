@@ -67,6 +67,10 @@ from mediamop.platform.suite_settings.suite_configuration_backup_periodic import
     start_suite_configuration_backup_tasks,
     stop_suite_configuration_backup_tasks,
 )
+from mediamop.platform.suite_settings.logs_retention_periodic import (
+    start_log_retention_tasks,
+    stop_log_retention_tasks,
+)
 
 _lifespan_log = logging.getLogger(__name__)
 
@@ -92,6 +96,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     with session_factory() as session:
         prune_logs_for_retention(session, settings)
     stop = asyncio.Event()
+    log_retention_tasks = start_log_retention_tasks(
+        session_factory,
+        stop_event=stop,
+        settings=settings,
+    )
     refiner_supplied_payload_eval_tasks = start_refiner_supplied_payload_evaluation_enqueue_tasks(
         session_factory,
         stop_event=stop,
@@ -186,6 +195,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         except Exception:
             _lifespan_log.exception("Subber upgrade schedule enqueue stop failed")
         await stop_suite_configuration_backup_tasks(suite_configuration_backup_tasks)
+        await stop_log_retention_tasks(log_retention_tasks)
         await stop_subber_worker_background_tasks(subber_stop, subber_worker_tasks)
         await stop_pruner_preview_schedule_enqueue_tasks(pruner_preview_schedule_tasks)
         await stop_pruner_worker_background_tasks(pruner_stop, pruner_worker_tasks)
