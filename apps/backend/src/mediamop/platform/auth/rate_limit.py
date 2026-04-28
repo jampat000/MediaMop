@@ -38,6 +38,7 @@ class SlidingWindowLimiter:
         cutoff = now - self.window_seconds
         k = key or "unknown"
         with self._lock:
+            self._evict_expired_locked(cutoff)
             bucket = self._buckets[k]
             while bucket and bucket[0] < cutoff:
                 bucket.pop(0)
@@ -45,6 +46,14 @@ class SlidingWindowLimiter:
                 return False
             bucket.append(now)
             return True
+
+    def _evict_expired_locked(self, cutoff: float) -> None:
+        for key in list(self._buckets):
+            bucket = self._buckets[key]
+            while bucket and bucket[0] < cutoff:
+                bucket.pop(0)
+            if not bucket:
+                del self._buckets[key]
 
     def reset_for_tests(self) -> None:
         with self._lock:
