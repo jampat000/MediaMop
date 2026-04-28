@@ -47,7 +47,10 @@ def make_pruner_server_connection_test_handler(
                 raise ValueError(msg)
             env = decrypt_and_parse_envelope(settings, inst.credentials_ciphertext)
             if env is None:
-                msg = "cannot decrypt credentials (session secret missing or ciphertext invalid)"
+                msg = (
+                    "Pruner credentials could not be read. Re-enter this server's credentials or migrate them with "
+                    "the original MEDIAMOP_SESSION_SECRET and MEDIAMOP_CREDENTIALS_SECRET configured."
+                )
                 raise RuntimeError(msg)
             provider = str(env["provider"])
             secrets: dict[str, str] = env["secrets"]

@@ -44,6 +44,8 @@ and run `docker compose --env-file .env.mediamop up -d`.
 - `MEDIAMOP_HOME` defaults to `/data/mediamop`
 - mount a volume if you want SQLite data and runtime files to persist
 - if `MEDIAMOP_SESSION_SECRET` is not provided, the container generates one automatically and persists it to `$MEDIAMOP_HOME/session.secret`
+- set `MEDIAMOP_CREDENTIALS_SECRET` to a different long random value before saving Pruner, Subber, Sonarr, or Radarr credentials
+- changing `MEDIAMOP_SESSION_SECRET` can require re-entering any credentials that were still encrypted with the old session secret
 - `MEDIAMOP_SESSION_COOKIE_SECURE=false` is the default in the image so plain `http://localhost` works
 - set `MEDIAMOP_SESSION_COOKIE_SECURE=true` only when all browser traffic is HTTPS
 

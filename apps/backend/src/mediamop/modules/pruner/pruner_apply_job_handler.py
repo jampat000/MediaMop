@@ -164,7 +164,10 @@ def make_pruner_candidate_removal_apply_handler(
             base_url = inst.base_url
             env = decrypt_and_parse_envelope(settings, inst.credentials_ciphertext)
             if env is None:
-                msg = "cannot decrypt credentials (session secret missing or ciphertext invalid)"
+                msg = (
+                    "Pruner credentials could not be read. Re-enter this server's credentials or migrate them with "
+                    "the original MEDIAMOP_SESSION_SECRET and MEDIAMOP_CREDENTIALS_SECRET configured."
+                )
                 raise RuntimeError(msg)
             secrets = env.get("secrets") or {}
             api_key = str(secrets.get("api_key", ""))
