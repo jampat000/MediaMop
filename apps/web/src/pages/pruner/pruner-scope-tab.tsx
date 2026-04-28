@@ -43,6 +43,7 @@ import {
 } from "./pruner-people-roles";
 import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
 import { formatPrunerDateTime, previewRunRowCaption } from "./pruner-ui-utils";
+import { PrunerProviderSection } from "./pruner-scope-tab-sections";
 
 type Ctx = { instanceId: number; instance: PrunerServerInstance | undefined };
 
@@ -1116,7 +1117,7 @@ export function PrunerScopeTab(props: {
     const onSave = props.scope === "tv" ? saveProviderTvRulesBundle : saveProviderMoviesRulesBundle;
     const saveDisabled = busy || !showInteractiveControls || (isPlex && props.scope === "tv");
     return (
-      <section className="flex min-h-0 w-full min-w-0 flex-1 flex-col" data-testid={`pruner-provider-subsection-rules-${props.scope}`}>
+      <PrunerProviderSection scope={props.scope} section="rules">
         <fieldset disabled={Boolean(props.disabledMode)} className="flex min-h-0 flex-1 flex-col">
           <div className="mm-card-action-body min-h-0 flex-1">{renderProviderRulesControls()}</div>
           {showInteractiveControls ? (
@@ -1147,14 +1148,14 @@ export function PrunerScopeTab(props: {
             </>
           )}
         </fieldset>
-      </section>
+      </PrunerProviderSection>
     );
   }
 
   if (isProvider && provSub === "filters") {
     const saveLabel = props.scope === "tv" ? "Save TV filters" : "Save Movies filters";
     return (
-      <section className="flex min-h-0 w-full min-w-0 flex-1 flex-col" data-testid={`pruner-provider-subsection-filters-${props.scope}`}>
+      <PrunerProviderSection scope={props.scope} section="filters">
         <fieldset disabled={Boolean(props.disabledMode)} className="flex min-h-0 flex-1 flex-col">
           <div className="mm-card-action-body min-h-0 flex-1">{renderProviderFiltersControls()}</div>
           {showInteractiveControls ? (
@@ -1185,14 +1186,14 @@ export function PrunerScopeTab(props: {
             </>
           )}
         </fieldset>
-      </section>
+      </PrunerProviderSection>
     );
   }
 
   if (isProvider && provSub === "people") {
     const saveLabel = props.scope === "tv" ? "Save TV people" : "Save Movies people";
     return (
-      <section className="flex min-h-0 w-full min-w-0 flex-1 flex-col" data-testid={`pruner-provider-subsection-people-${props.scope}`}>
+      <PrunerProviderSection scope={props.scope} section="people">
         <fieldset disabled={Boolean(props.disabledMode)} className="flex min-h-0 flex-1 flex-col">
           <div className="mm-card-action-body min-h-0 flex-1">{renderProviderPeopleControls()}</div>
           {showInteractiveControls ? (
@@ -1223,7 +1224,7 @@ export function PrunerScopeTab(props: {
             </>
           )}
         </fieldset>
-      </section>
+      </PrunerProviderSection>
     );
   }
 
