@@ -5,6 +5,7 @@ No JWT for browser, no localStorage. Cookie holds opaque token; ``UserSession`` 
 
 from __future__ import annotations
 
+import logging
 from datetime import timedelta
 
 from sqlalchemy import select, update
@@ -18,11 +19,13 @@ from mediamop.platform.auth.sessions import (
     compute_absolute_expiry,
     generate_raw_session_token,
     hash_session_token,
-    session_is_valid,
+    session_invalid_reason,
     touch_last_seen,
     utcnow,
     revoke_session,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def authenticate_user(db: Session, username: str, password: str) -> User | None:
@@ -66,6 +69,7 @@ def create_user_session(
     )
     db.add(row)
     db.flush()
+    logger.info("auth event: session created (user_id=%s, absolute_expires_at=%s)", user.id, row.absolute_expires_at)
     return row, raw
 
 
@@ -112,7 +116,11 @@ def load_valid_session_for_request(
         return None
     idle = timedelta(minutes=settings.session_idle_minutes)
     now = utcnow()
-    if not session_is_valid(row, idle=idle, now=now):
+    reason = session_invalid_reason(row, idle=idle, now=now)
+    if reason is not None:
+        if row.revoked_at is None and reason in {"absolute_expired", "idle_expired"}:
+            revoke_session(row, at=now)
+        logger.info("auth event: session rejected (reason=%s, user_id=%s)", reason, row.user_id)
         return None
     user = db.get(User, row.user_id)
     if user is None or not user.is_active:
