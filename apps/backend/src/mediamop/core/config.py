@@ -13,6 +13,15 @@ from mediamop.core.runtime_paths import (
     resolve_all_runtime_paths,
     sqlalchemy_sqlite_url,
 )
+from mediamop.core.config_domains import (
+    ArrSettings,
+    AuthSettings,
+    PrunerSettings,
+    RefinerSettings,
+    SecuritySettings,
+    SessionSettings,
+    SubberSettings,
+)
 from mediamop.modules.refiner.refiner_family_intervals import (
     clamp_refiner_min_file_age_seconds,
     clamp_refiner_schedule_interval_seconds,
@@ -192,6 +201,92 @@ class MediaMopSettings:
         if self.trusted_browser_origins_override:
             return self.trusted_browser_origins_override
         return self.cors_origins
+
+    @property
+    def session(self) -> SessionSettings:
+        return SessionSettings(
+            secret=self.session_secret,
+            cookie_name=self.session_cookie_name,
+            cookie_secure=self.session_cookie_secure,
+            cookie_samesite=self.session_cookie_samesite,
+            idle_minutes=self.session_idle_minutes,
+            absolute_days=self.session_absolute_days,
+        )
+
+    @property
+    def auth(self) -> AuthSettings:
+        return AuthSettings(
+            login_rate_max_attempts=self.auth_login_rate_max_attempts,
+            login_rate_window_seconds=self.auth_login_rate_window_seconds,
+            bootstrap_rate_max_attempts=self.bootstrap_rate_max_attempts,
+            bootstrap_rate_window_seconds=self.bootstrap_rate_window_seconds,
+        )
+
+    @property
+    def security(self) -> SecuritySettings:
+        return SecuritySettings(
+            enable_hsts=self.security_enable_hsts,
+            cors_origins=self.cors_origins,
+            trusted_browser_origins_override=self.trusted_browser_origins_override,
+            trusted_proxy_ips=self.trusted_proxy_ips,
+        )
+
+    @property
+    def refiner(self) -> RefinerSettings:
+        return RefinerSettings(
+            worker_count=self.refiner_worker_count,
+            supplied_payload_evaluation_schedule_enabled=self.refiner_supplied_payload_evaluation_schedule_enabled,
+            supplied_payload_evaluation_schedule_interval_seconds=self.refiner_supplied_payload_evaluation_schedule_interval_seconds,
+            watched_folder_remux_scan_dispatch_schedule_enabled=self.refiner_watched_folder_remux_scan_dispatch_schedule_enabled,
+            watched_folder_remux_scan_dispatch_schedule_interval_seconds=self.refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds,
+            watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs=self.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs,
+            probe_size_mb=self.refiner_probe_size_mb,
+            analyze_duration_seconds=self.refiner_analyze_duration_seconds,
+            watched_folder_min_file_age_seconds=self.refiner_watched_folder_min_file_age_seconds,
+            movie_output_cleanup_min_age_seconds=self.refiner_movie_output_cleanup_min_age_seconds,
+            tv_output_cleanup_min_age_seconds=self.refiner_tv_output_cleanup_min_age_seconds,
+            work_temp_stale_sweep_movie_schedule_enabled=self.refiner_work_temp_stale_sweep_movie_schedule_enabled,
+            work_temp_stale_sweep_movie_schedule_interval_seconds=self.refiner_work_temp_stale_sweep_movie_schedule_interval_seconds,
+            work_temp_stale_sweep_tv_schedule_enabled=self.refiner_work_temp_stale_sweep_tv_schedule_enabled,
+            work_temp_stale_sweep_tv_schedule_interval_seconds=self.refiner_work_temp_stale_sweep_tv_schedule_interval_seconds,
+            work_temp_stale_sweep_min_stale_age_seconds=self.refiner_work_temp_stale_sweep_min_stale_age_seconds,
+            movie_failure_cleanup_schedule_enabled=self.refiner_movie_failure_cleanup_schedule_enabled,
+            movie_failure_cleanup_schedule_interval_seconds=self.refiner_movie_failure_cleanup_schedule_interval_seconds,
+            tv_failure_cleanup_schedule_enabled=self.refiner_tv_failure_cleanup_schedule_enabled,
+            tv_failure_cleanup_schedule_interval_seconds=self.refiner_tv_failure_cleanup_schedule_interval_seconds,
+            movie_failure_cleanup_grace_period_seconds=self.refiner_movie_failure_cleanup_grace_period_seconds,
+            tv_failure_cleanup_grace_period_seconds=self.refiner_tv_failure_cleanup_grace_period_seconds,
+            remux_media_root=self.refiner_remux_media_root,
+        )
+
+    @property
+    def pruner(self) -> PrunerSettings:
+        return PrunerSettings(
+            worker_count=self.pruner_worker_count,
+            preview_schedule_enqueue_enabled=self.pruner_preview_schedule_enqueue_enabled,
+            preview_schedule_scan_interval_seconds=self.pruner_preview_schedule_scan_interval_seconds,
+            apply_enabled=self.pruner_apply_enabled,
+            plex_live_removal_enabled=self.pruner_plex_live_removal_enabled,
+            plex_live_abs_max_items=self.pruner_plex_live_abs_max_items,
+        )
+
+    @property
+    def subber(self) -> SubberSettings:
+        return SubberSettings(
+            worker_count=self.subber_worker_count,
+            library_scan_schedule_enqueue_enabled=self.subber_library_scan_schedule_enqueue_enabled,
+            library_scan_schedule_scan_interval_seconds=self.subber_library_scan_schedule_scan_interval_seconds,
+            upgrade_schedule_enqueue_enabled=self.subber_upgrade_schedule_enqueue_enabled,
+        )
+
+    @property
+    def arr(self) -> ArrSettings:
+        return ArrSettings(
+            radarr_base_url=self.arr_radarr_base_url,
+            radarr_api_key=self.arr_radarr_api_key,
+            sonarr_base_url=self.arr_sonarr_base_url,
+            sonarr_api_key=self.arr_sonarr_api_key,
+        )
 
     def arr_http_radarr_credentials(self) -> tuple[str | None, str | None]:
         """Radarr HTTP ``(base_url, api_key)`` from ``MEDIAMOP_ARR_RADARR_*`` at process start."""
