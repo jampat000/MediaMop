@@ -17,7 +17,21 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.pruner.pruner_constants import clamp_pruner_scheduled_preview_interval_seconds
+from mediamop.modules.pruner.pruner_constants import (
+    MEDIA_SCOPE_MOVIES,
+    MEDIA_SCOPE_TV,
+    RULE_FAMILY_GENRE_MATCH_REPORTED,
+    RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+    RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
+    RULE_FAMILY_PEOPLE_MATCH_REPORTED,
+    RULE_FAMILY_STUDIO_MATCH_REPORTED,
+    RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED,
+    RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
+    RULE_FAMILY_WATCHED_MOVIES_REPORTED,
+    RULE_FAMILY_WATCHED_TV_REPORTED,
+    RULE_FAMILY_YEAR_RANGE_MATCH_REPORTED,
+    clamp_pruner_scheduled_preview_interval_seconds,
+)
 from mediamop.modules.pruner.pruner_job_kinds import PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND
 from mediamop.modules.pruner.pruner_jobs_ops import pruner_enqueue_or_get_job
 from mediamop.platform.arr_library.schedule_wall_clock import DAY_NAMES, schedule_time_window_active
@@ -28,6 +42,44 @@ from mediamop.platform.suite_settings.service import ensure_suite_settings_row
 logger = logging.getLogger(__name__)
 
 PRUNER_PREVIEW_SCHEDULE_ENQUEUE_FAILURE_COOLDOWN_SECONDS = 2.0
+
+
+def _json_list_has_values(raw: object) -> bool:
+    if raw is None:
+        return False
+    try:
+        data = json.loads(str(raw))
+    except json.JSONDecodeError:
+        return False
+    return isinstance(data, list) and any(str(v).strip() for v in data)
+
+
+def _enabled_rule_family_ids(sc: PrunerScopeSettings) -> list[str]:
+    """Return scheduled preview rule families enabled by this scope's real rule controls."""
+
+    scope = str(sc.media_scope)
+    families: list[str] = []
+    if bool(sc.missing_primary_media_reported_enabled):
+        families.append(RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED)
+    if bool(sc.never_played_stale_reported_enabled):
+        families.append(RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED)
+    if scope == MEDIA_SCOPE_TV and bool(sc.watched_tv_reported_enabled):
+        families.append(RULE_FAMILY_WATCHED_TV_REPORTED)
+    if scope == MEDIA_SCOPE_MOVIES and bool(sc.watched_movies_reported_enabled):
+        families.append(RULE_FAMILY_WATCHED_MOVIES_REPORTED)
+    if scope == MEDIA_SCOPE_MOVIES and bool(sc.watched_movie_low_rating_reported_enabled):
+        families.append(RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED)
+    if scope == MEDIA_SCOPE_MOVIES and bool(sc.unwatched_movie_stale_reported_enabled):
+        families.append(RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED)
+    if _json_list_has_values(sc.preview_include_genres_json):
+        families.append(RULE_FAMILY_GENRE_MATCH_REPORTED)
+    if _json_list_has_values(sc.preview_include_studios_json):
+        families.append(RULE_FAMILY_STUDIO_MATCH_REPORTED)
+    if _json_list_has_values(sc.preview_include_people_json):
+        families.append(RULE_FAMILY_PEOPLE_MATCH_REPORTED)
+    if sc.preview_year_min is not None or sc.preview_year_max is not None:
+        families.append(RULE_FAMILY_YEAR_RANGE_MATCH_REPORTED)
+    return families
 
 
 def _scope_row_in_schedule_window(session: Session, sc: PrunerScopeSettings, *, when: datetime) -> bool:
@@ -70,7 +122,7 @@ def enqueue_due_scheduled_pruner_previews(session: Session, *, now: datetime) ->
 
     * ``scheduled_preview_enabled``
     * parent instance ``enabled``
-    * ``missing_primary_media_reported_enabled`` for that scope row
+    * at least one enabled/applicable rule family for that scope row
     * row's own due-time vs ``last_scheduled_preview_enqueued_at`` and its interval
     """
 
@@ -84,7 +136,6 @@ def enqueue_due_scheduled_pruner_previews(session: Session, *, now: datetime) ->
         .where(
             PrunerScopeSettings.scheduled_preview_enabled.is_(True),
             PrunerServerInstance.enabled.is_(True),
-            PrunerScopeSettings.missing_primary_media_reported_enabled.is_(True),
         )
         .order_by(PrunerScopeSettings.id.asc())
     )
@@ -97,16 +148,25 @@ def enqueue_due_scheduled_pruner_previews(session: Session, *, now: datetime) ->
             continue
         sid = int(sc.server_instance_id)
         scope = str(sc.media_scope)
-        dedupe = f"pruner:preview:sched:v1:{sid}:{scope}:{uuid.uuid4()}"
-        payload = {"server_instance_id": sid, "media_scope": scope, "trigger": "scheduled"}
-        pruner_enqueue_or_get_job(
-            session,
-            dedupe_key=dedupe,
-            job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
-            payload_json=json.dumps(payload, separators=(",", ":")),
-        )
+        rule_family_ids = _enabled_rule_family_ids(sc)
+        if not rule_family_ids:
+            continue
+        for rule_family_id in rule_family_ids:
+            dedupe = f"pruner:preview:sched:v1:{sid}:{scope}:{rule_family_id}:{uuid.uuid4()}"
+            payload = {
+                "server_instance_id": sid,
+                "media_scope": scope,
+                "rule_family_id": rule_family_id,
+                "trigger": "scheduled",
+            }
+            pruner_enqueue_or_get_job(
+                session,
+                dedupe_key=dedupe,
+                job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
+                payload_json=json.dumps(payload, separators=(",", ":")),
+            )
+            enqueued += 1
         sc.last_scheduled_preview_enqueued_at = when
-        enqueued += 1
     return enqueued
 
 

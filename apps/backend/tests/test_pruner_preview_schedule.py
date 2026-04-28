@@ -24,7 +24,12 @@ import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.pruner.pruner_constants import MEDIA_SCOPE_MOVIES, MEDIA_SCOPE_TV
+from mediamop.modules.pruner.pruner_constants import (
+    MEDIA_SCOPE_MOVIES,
+    MEDIA_SCOPE_TV,
+    RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+    RULE_FAMILY_WATCHED_MOVIES_REPORTED,
+)
 from mediamop.modules.pruner.pruner_instances_service import create_server_instance, get_scope_settings
 from mediamop.modules.pruner.pruner_job_kinds import PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND
 from mediamop.modules.pruner.pruner_jobs_model import PrunerJob
@@ -145,6 +150,7 @@ def test_two_same_provider_instances_independent_due(session_factory: sessionmak
         payload = json.loads(ja[0].payload_json or "{}")
         assert payload["server_instance_id"] == id_a
         assert payload["media_scope"] == MEDIA_SCOPE_TV
+        assert payload["rule_family_id"] == RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED
         assert payload["trigger"] == "scheduled"
         tv_a2 = _scope(s, instance_id=id_a, media_scope=MEDIA_SCOPE_TV)
         tv_b2 = _scope(s, instance_id=id_b, media_scope=MEDIA_SCOPE_TV)
@@ -179,6 +185,71 @@ def test_tv_and_movies_same_instance_both_enqueue_when_due(session_factory: sess
         jobs = s.scalars(select(PrunerJob).where(PrunerJob.job_kind == PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND)).all()
         scopes = {json.loads(j.payload_json or "{}")["media_scope"] for j in jobs}
         assert scopes == {MEDIA_SCOPE_TV, MEDIA_SCOPE_MOVIES}
+        rules = {json.loads(j.payload_json or "{}")["rule_family_id"] for j in jobs}
+        assert rules == {RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED}
+
+
+def test_scheduled_tick_enqueues_non_missing_primary_rule_family(session_factory: sessionmaker[Session]) -> None:
+    settings = MediaMopSettings.load()
+    with session_factory() as s:
+        with s.begin():
+            inst = create_server_instance(
+                s,
+                settings,
+                provider="jellyfin",
+                display_name="Movies",
+                base_url="http://movies.test",
+                credentials_secrets={"api_key": "k"},
+            )
+            sid = int(inst.id)
+            movies = _scope(s, instance_id=sid, media_scope=MEDIA_SCOPE_MOVIES)
+            movies.scheduled_preview_enabled = True
+            movies.scheduled_preview_interval_seconds = 60
+            movies.missing_primary_media_reported_enabled = False
+            movies.watched_movies_reported_enabled = True
+            movies.last_scheduled_preview_enqueued_at = None
+
+    n = run_pruner_preview_schedule_enqueue_tick(session_factory, now=datetime.now(timezone.utc))
+
+    assert n == 1
+    with session_factory() as s:
+        job = s.scalars(select(PrunerJob).where(PrunerJob.job_kind == PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND)).one()
+        payload = json.loads(job.payload_json or "{}")
+        assert payload == {
+            "server_instance_id": sid,
+            "media_scope": MEDIA_SCOPE_MOVIES,
+            "rule_family_id": RULE_FAMILY_WATCHED_MOVIES_REPORTED,
+            "trigger": "scheduled",
+        }
+
+
+def test_scheduled_tick_enqueues_one_job_per_enabled_rule_family(session_factory: sessionmaker[Session]) -> None:
+    settings = MediaMopSettings.load()
+    with session_factory() as s:
+        with s.begin():
+            inst = create_server_instance(
+                s,
+                settings,
+                provider="jellyfin",
+                display_name="Multi",
+                base_url="http://multi.test",
+                credentials_secrets={"api_key": "k"},
+            )
+            sid = int(inst.id)
+            movies = _scope(s, instance_id=sid, media_scope=MEDIA_SCOPE_MOVIES)
+            movies.scheduled_preview_enabled = True
+            movies.scheduled_preview_interval_seconds = 60
+            movies.missing_primary_media_reported_enabled = True
+            movies.watched_movies_reported_enabled = True
+            movies.last_scheduled_preview_enqueued_at = None
+
+    n = run_pruner_preview_schedule_enqueue_tick(session_factory, now=datetime.now(timezone.utc))
+
+    assert n == 2
+    with session_factory() as s:
+        jobs = s.scalars(select(PrunerJob).where(PrunerJob.job_kind == PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND)).all()
+        rules = {json.loads(j.payload_json or "{}")["rule_family_id"] for j in jobs}
+        assert rules == {RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED, RULE_FAMILY_WATCHED_MOVIES_REPORTED}
 
 
 def test_second_tick_not_due_until_own_interval_elapses(session_factory: sessionmaker[Session]) -> None:
