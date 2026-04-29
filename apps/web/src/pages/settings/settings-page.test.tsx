@@ -123,27 +123,41 @@ describe("SettingsPage (suite settings)", () => {
 
   it("shows configuration backup + export for operators", () => {
     renderSettings(operatorMe);
+    fireEvent.click(screen.getByRole("tab", { name: "Backup and restore" }));
     expect(screen.getByTestId("suite-settings-backup-restore")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Download configuration now" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Restore from file…" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Save backup schedule" })).toBeDisabled();
+    expect(screen.queryByTestId("suite-settings-history-reset")).not.toBeInTheDocument();
   });
 
   it("hides configuration backup for viewers", () => {
     renderSettings(viewerMe);
+    fireEvent.click(screen.getByRole("tab", { name: "Backup and restore" }));
     expect(screen.queryByTestId("suite-settings-backup-restore")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("suite-settings-history-reset")).not.toBeInTheDocument();
   });
 
-  it("keeps General tab focused and splits Logs to its own tab", () => {
+  it("keeps General focused and splits Logs, Backup, and Upgrade to their own tabs", () => {
     renderSettings(operatorMe);
     expect(screen.queryByText("Product name")).not.toBeInTheDocument();
     expect(screen.queryByText("Application logs")).not.toBeInTheDocument();
     expect(screen.getByText("Timezone")).toBeInTheDocument();
     expect(screen.getByText("Setup wizard")).toBeInTheDocument();
-    expect(screen.getByText("Upgrade")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText("Log retention (days)")).toBeInTheDocument();
     expect(screen.getByText(/no restart is required/i)).toBeInTheDocument();
+    expect(screen.getByTestId("suite-settings-history-reset")).toBeInTheDocument();
+    expect(screen.queryByTestId("suite-settings-backup-restore")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("suite-settings-upgrade")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Backup and restore" }));
+    expect(screen.getByTestId("suite-settings-backup-tab")).toBeInTheDocument();
+    expect(screen.getByTestId("suite-settings-backup-restore")).toBeInTheDocument();
+    expect(screen.queryByText("Log retention (days)")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
+    expect(screen.getByTestId("suite-settings-upgrade-tab")).toBeInTheDocument();
+    expect(screen.getByTestId("suite-settings-upgrade")).toBeInTheDocument();
+    expect(screen.queryByText("Log retention (days)")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "Logs" }));
     expect(screen.getByText("Search logs")).toBeInTheDocument();
     expect(screen.getByText("System events")).toBeInTheDocument();

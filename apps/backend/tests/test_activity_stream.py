@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy.orm import Session
@@ -15,9 +16,11 @@ from mediamop.api.deps import get_db_session
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.platform.activity import constants as activity_constants
+from mediamop.platform.activity.models import ActivityEvent
 from mediamop.platform.activity.live_stream import activity_latest_notifier
 from mediamop.platform.activity import service as activity_service
 from mediamop.platform.activity.router import get_activity_stream, iter_activity_latest_sse
+from mediamop.platform.suite_settings.service import ensure_suite_settings_row
 from tests.integration_helpers import auth_post, csrf as fetch_csrf
 
 
@@ -77,6 +80,42 @@ def test_record_activity_event_notifies_only_after_commit() -> None:
         committed_id, committed_version = activity_latest_notifier.snapshot()
         assert committed_id == int(row.id)
         assert committed_version == 1
+
+
+def test_record_activity_event_does_not_prune_history_using_log_retention() -> None:
+    settings = MediaMopSettings.load()
+    eng = create_db_engine(settings)
+    fac = create_session_factory(eng)
+    with fac() as db:
+        assert isinstance(db, Session)
+        suite = ensure_suite_settings_row(db)
+        original_retention = int(suite.log_retention_days)
+        suite.log_retention_days = 1
+        old = ActivityEvent(
+            event_type=activity_constants.REFINER_FILE_REMUX_PASS_COMPLETED,
+            module="refiner",
+            title="Old Refiner result that still backs overview history",
+            detail="{}",
+            created_at=datetime.now(timezone.utc) - timedelta(days=10),
+        )
+        db.add(old)
+        db.flush()
+        old_id = int(old.id)
+
+        activity_service.record_activity_event(
+            db,
+            event_type=activity_constants.AUTH_LOGIN_SUCCEEDED,
+            module="auth",
+            title="Session event should not prune operational history",
+            detail="alice",
+        )
+        db.commit()
+
+    with fac() as db:
+        assert db.get(ActivityEvent, old_id) is not None
+        suite = ensure_suite_settings_row(db)
+        suite.log_retention_days = original_retention
+        db.commit()
 
 
 def test_update_activity_event_notifies_same_row_progress_after_commit() -> None:

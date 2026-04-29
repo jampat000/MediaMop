@@ -223,7 +223,7 @@ def test_activity_event_detail_always_persisted() -> None:
     assert stored.detail == "alice"
 
 
-def test_log_retention_prunes_old_activity_rows(client_with_admin: TestClient) -> None:
+def test_log_retention_does_not_prune_activity_history(client_with_admin: TestClient) -> None:
     _login_admin(client_with_admin)
     tok = fetch_csrf(client_with_admin)
     r = client_with_admin.put(
@@ -279,7 +279,7 @@ def test_log_retention_prunes_old_activity_rows(client_with_admin: TestClient) -
         )
         db.commit()
         n_old = db.scalar(select(func.count()).select_from(ActivityEvent).where(ActivityEvent.title == "old"))
-    assert int(n_old or 0) == 0
+    assert int(n_old or 0) == 1
 
 
 def test_suite_update_status_ok(client_with_admin: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:

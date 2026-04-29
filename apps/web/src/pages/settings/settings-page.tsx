@@ -18,6 +18,7 @@ import {
   useSuiteConfigurationBackupsQuery,
   useSuiteLogsQuery,
   useSuiteMetricsQuery,
+  useSuiteOperationalHistoryResetMutation,
   useSuiteSettingsQuery,
   useSuiteSettingsSaveMutation,
   useSuiteUpdateNowMutation,
@@ -41,7 +42,7 @@ function canEditSuiteGlobal(role: string | undefined): boolean {
   return role === "operator" || role === "admin";
 }
 
-type TabId = "general" | "security" | "logs";
+type TabId = "general" | "backup" | "upgrade" | "security" | "logs";
 
 const SUITE_PASSWORD_FIELD_CLASS =
   "mm-input w-full min-w-0 flex-1 text-sm tracking-normal text-[var(--mm-text)]";
@@ -198,6 +199,7 @@ export function SettingsPage() {
   const settingsQ = useSuiteSettingsQuery();
   const save = useSuiteSettingsSaveMutation();
   const updateNow = useSuiteUpdateNowMutation();
+  const resetHistory = useSuiteOperationalHistoryResetMutation();
 
   const [tab, setTab] = useState<TabId>("general");
   const [appTimezone, setAppTimezone] = useState<string | null>(null);
@@ -214,6 +216,8 @@ export function SettingsPage() {
   const [backupMsg, setBackupMsg] = useState<string | null>(null);
   const [backupErr, setBackupErr] = useState<string | null>(null);
   const [upgradeMsg, setUpgradeMsg] = useState<string | null>(null);
+  const [resetHistoryMsg, setResetHistoryMsg] = useState<string | null>(null);
+  const [resetHistoryConfirm, setResetHistoryConfirm] = useState("");
   const [configurationBackupEnabled, setConfigurationBackupEnabled] = useState(false);
   const [configurationBackupIntervalHours, setConfigurationBackupIntervalHours] = useState(24);
   const [configurationBackupPreferredTime, setConfigurationBackupPreferredTime] = useState("02:00");
@@ -242,8 +246,8 @@ export function SettingsPage() {
   }, [settingsQ.data]);
 
   const editable = canEditSuiteGlobal(me.data?.role);
-  const backupsQ = useSuiteConfigurationBackupsQuery(editable && tab === "general" && Boolean(settingsQ.data));
-  const updateStatusQ = useSuiteUpdateStatusQuery(tab === "general" && Boolean(settingsQ.data));
+  const backupsQ = useSuiteConfigurationBackupsQuery(editable && tab === "backup" && Boolean(settingsQ.data));
+  const updateStatusQ = useSuiteUpdateStatusQuery(tab === "upgrade" && Boolean(settingsQ.data));
   const logsQ = useSuiteLogsQuery(
     {
       level: logLevel || undefined,
@@ -481,6 +485,17 @@ export function SettingsPage() {
     }
   }
 
+  async function handleResetOperationalHistory() {
+    setResetHistoryMsg(null);
+    try {
+      const result = await resetHistory.mutateAsync(resetHistoryConfirm);
+      setResetHistoryConfirm("");
+      setResetHistoryMsg(`History reset. Removed ${result.total_deleted} old history ${result.total_deleted === 1 ? "item" : "items"}.`);
+    } catch {
+      /* surfaced below */
+    }
+  }
+
   const changePasswordBusy = changePassword.isPending;
   const runtimeMetrics = metricsQ.data;
   const runtimeRequestIssues = requestIssueSummary(runtimeMetrics?.status_counts);
@@ -519,6 +534,24 @@ export function SettingsPage() {
             onClick={() => setTab("security")}
           >
             Security
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "backup"}
+            className={tabButtonClass(tab === "backup")}
+            onClick={() => setTab("backup")}
+          >
+            Backup and restore
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "upgrade"}
+            className={tabButtonClass(tab === "upgrade")}
+            onClick={() => setTab("upgrade")}
+          >
+            Upgrade
           </button>
           <button
             type="button"
@@ -629,7 +662,7 @@ export function SettingsPage() {
 
             </div>
 
-            <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
             <section className={SUITE_SETTINGS_DASH_CARD_CLASS} aria-labelledby="suite-settings-log-retention-heading">
               <div className="mm-card-action-body">
               <div>
@@ -682,6 +715,65 @@ export function SettingsPage() {
               </button>
               </div>
             </section>
+            {editable ? (
+              <section
+                className={SUITE_SETTINGS_DASH_CARD_CLASS}
+                data-testid="suite-settings-history-reset"
+                aria-labelledby="suite-settings-history-reset-heading"
+              >
+                <div className="mm-card-action-body">
+                  <div>
+                    <h3 id="suite-settings-history-reset-heading" className="text-base font-semibold text-[var(--mm-text1)]">
+                      Dashboard and activity history
+                    </h3>
+                    <p className="mt-1 text-sm leading-6 text-[var(--mm-text2)]">
+                      History is kept until you reset it. Sign-outs, expired sessions, and log retention do not clear this
+                      data.
+                    </p>
+                  </div>
+                  <label className="block text-sm text-[var(--mm-text2)]">
+                    <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
+                      Type RESET to confirm
+                    </span>
+                    <input
+                      type="text"
+                      className="mm-input w-full"
+                      value={resetHistoryConfirm}
+                      disabled={resetHistory.isPending}
+                      onChange={(e) => setResetHistoryConfirm(e.target.value)}
+                    />
+                    <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
+                      Clears Activity entries and finished job history only.
+                    </p>
+                  </label>
+                  {resetHistoryMsg ? (
+                    <p className="rounded-md border border-emerald-500/30 bg-emerald-950/20 px-3 py-2 text-sm text-emerald-200">
+                      {resetHistoryMsg}
+                    </p>
+                  ) : null}
+                  {resetHistory.isError ? (
+                    <p className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200" role="alert">
+                      {resetHistory.error instanceof Error
+                        ? resetHistory.error.message
+                        : "Could not reset dashboard and activity history."}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="mm-card-action-footer">
+                  <button
+                    type="button"
+                    className={mmActionButtonClass({
+                      variant: "tertiary",
+                      disabled: resetHistory.isPending || resetHistoryConfirm.trim().toUpperCase() !== "RESET",
+                    })}
+                    disabled={resetHistory.isPending || resetHistoryConfirm.trim().toUpperCase() !== "RESET"}
+                    onClick={() => void handleResetOperationalHistory()}
+                  >
+                    {resetHistory.isPending ? "Resetting..." : "Reset history"}
+                  </button>
+                  </div>
+              </section>
+            ) : null}
             <section className={SUITE_SETTINGS_DASH_CARD_CLASS} aria-labelledby="suite-settings-density-heading">
               <fieldset className="min-w-0 border-0 p-0">
                 <legend id="suite-settings-density-heading" className="text-base font-semibold text-[var(--mm-text1)]">
@@ -731,15 +823,23 @@ export function SettingsPage() {
               </fieldset>
             </section>
             </div>
+          </div>
+          </div>
+        ) : tab === "backup" ? (
+          <div data-testid="suite-settings-backup-tab" className="mm-bubble-stack">
+            <div className={mmModuleTabBlurbBandClass}>
+              <p className={mmModuleTabBlurbTextClass}>
+                Export, restore, and automatically snapshot MediaMop configuration.
+              </p>
+            </div>
 
-            <div className={`grid grid-cols-1 gap-5 ${editable ? "xl:grid-cols-2" : ""}`}>
             {editable ? (
               <section
-                className={SUITE_SETTINGS_DASH_CARD_CLASS}
+                className="grid grid-cols-1 gap-5 xl:grid-cols-3"
                 data-testid="suite-settings-backup-restore"
                 aria-labelledby="suite-settings-backup-heading"
               >
-                <div>
+                <div className="xl:col-span-3">
                   <h3 id="suite-settings-backup-heading" className="text-base font-semibold text-[var(--mm-text1)]">
                     Backup and restore
                   </h3>
@@ -748,8 +848,9 @@ export function SettingsPage() {
                   </p>
                 </div>
 
-                <div className="grid gap-5 lg:grid-cols-2">
-                  <div className={SUITE_SETTINGS_PREMIUM_PANEL_CLASS}>
+                <div className="contents">
+                  <section className={SUITE_SETTINGS_DASH_CARD_CLASS}>
+                    <div className="mm-card-action-body">
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
                         Automatic protection
@@ -807,7 +908,8 @@ export function SettingsPage() {
                     <p className="text-xs text-[var(--mm-text3)]">
                       <span className="font-medium text-[var(--mm-text2)]">Target time:</span> {configurationBackupPreferredTime}
                     </p>
-                    <div className="mt-auto flex flex-col gap-2 border-t border-[var(--mm-border)] pt-3">
+                    </div>
+                    <div className="mm-card-action-footer">
                       <button
                         type="button"
                         className={mmActionButtonClass({
@@ -829,9 +931,10 @@ export function SettingsPage() {
                         </p>
                       ) : null}
                     </div>
-                  </div>
+                  </section>
 
-                  <div className={SUITE_SETTINGS_PREMIUM_PANEL_CLASS}>
+                  <section className={SUITE_SETTINGS_DASH_CARD_CLASS}>
+                    <div className="mm-card-action-body">
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
                         Manual control
@@ -841,7 +944,8 @@ export function SettingsPage() {
                         Download a full settings file, or restore a MediaMop configuration JSON from disk.
                       </p>
                     </div>
-                    <div className="mt-auto flex flex-col gap-2 border-t border-[var(--mm-border)] pt-3">
+                    </div>
+                    <div className="mm-card-action-footer">
                       <button
                         type="button"
                         className={mmActionButtonClass({ variant: "secondary", disabled: backupBusy || save.isPending })}
@@ -867,10 +971,11 @@ export function SettingsPage() {
                         onChange={(e) => void handleRestoreFileChange(e)}
                       />
                     </div>
-                  </div>
+                  </section>
                 </div>
 
-                <div className={SUITE_SETTINGS_PREMIUM_PANEL_CLASS}>
+                <section className={SUITE_SETTINGS_DASH_CARD_CLASS}>
+                  <div className="mm-card-action-body">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
@@ -933,16 +1038,17 @@ export function SettingsPage() {
                       </ul>
                     )}
                   </div>
-                </div>
+                  </div>
+                </section>
 
                 {backupMsg ? (
-                  <p className="rounded-md border border-emerald-500/30 bg-emerald-950/20 px-3 py-2 text-sm text-emerald-200">
+                  <p className="rounded-md border border-emerald-500/30 bg-emerald-950/20 px-3 py-2 text-sm text-emerald-200 xl:col-span-3">
                     {backupMsg}
                   </p>
                 ) : null}
                 {backupErr ? (
                   <p
-                    className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
+                    className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200 xl:col-span-3"
                     role="alert"
                   >
                     {backupErr}
@@ -950,6 +1056,15 @@ export function SettingsPage() {
                 ) : null}
               </section>
             ) : null}
+          </div>
+        ) : tab === "upgrade" ? (
+          <div data-testid="suite-settings-upgrade-tab" className="mm-bubble-stack">
+            <div className={mmModuleTabBlurbBandClass}>
+              <p className={mmModuleTabBlurbTextClass}>
+                Check the installed version, see the latest release, and start a guided in-app upgrade when this install
+                type supports it.
+              </p>
+            </div>
 
             <section
               className={SUITE_SETTINGS_DASH_CARD_CLASS}
@@ -1098,8 +1213,6 @@ export function SettingsPage() {
                 </>
               )}
             </section>
-            </div>
-          </div>
           </div>
         ) : tab === "security" ? (
           <div className="mm-bubble-stack w-full" data-testid="suite-settings-security">

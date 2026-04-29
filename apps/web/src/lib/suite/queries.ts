@@ -7,6 +7,7 @@ import {
   fetchSuiteSettings,
   fetchSuiteUpdateStatus,
   putSuiteSettings,
+  resetSuiteOperationalHistory,
   startSuiteUpdateNow,
 } from "./suite-settings-api";
 import type { SuiteSettingsPutBody } from "./types";
@@ -56,6 +57,16 @@ export function useSuiteUpdateStatusQuery(enabled = true) {
 export function useSuiteUpdateNowMutation() {
   return useMutation({
     mutationFn: () => startSuiteUpdateNow(),
+  });
+}
+
+export function useSuiteOperationalHistoryResetMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (confirm: string) => resetSuiteOperationalHistory(confirm),
+    onSuccess: async () => {
+      await qc.invalidateQueries();
+    },
   });
 }
 

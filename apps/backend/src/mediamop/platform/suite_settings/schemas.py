@@ -188,6 +188,28 @@ class SuiteUpdateStartIn(BaseModel):
     csrf_token: str = Field(..., min_length=1)
 
 
+class SuiteOperationalHistoryResetIn(BaseModel):
+    """Body for ``POST /suite/operational-history/reset``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    csrf_token: str = Field(..., min_length=1)
+    confirm: str = Field(..., min_length=5, max_length=32)
+
+
+class SuiteOperationalHistoryResetOut(BaseModel):
+    """Counts removed by an explicit operator reset."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: str = Field(min_length=1)
+    activity_events_deleted: int = Field(ge=0)
+    refiner_jobs_deleted: int = Field(ge=0)
+    pruner_jobs_deleted: int = Field(ge=0)
+    subber_jobs_deleted: int = Field(ge=0)
+    total_deleted: int = Field(ge=0)
+
+
 class SuiteLogEntryOut(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
