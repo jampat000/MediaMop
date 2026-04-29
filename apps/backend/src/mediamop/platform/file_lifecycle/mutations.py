@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import shutil
 import tempfile
+from collections.abc import Iterable
 from pathlib import Path
 
 
@@ -77,17 +78,36 @@ def safe_finalize_file(*, staged: Path, final: Path) -> None:
         raise FileLifecycleError(f"Could not safely finalize {src} to {dst}: {exc}") from exc
 
 
-def safe_unlink(path: Path) -> bool:
-    """Delete one file. Missing files are treated as already absent."""
+def safe_unlink(path: Path, *, allowed_roots: Iterable[Path] | None = None) -> bool:
+    """Delete one file. Missing files are treated as already absent.
 
+    When ``allowed_roots`` is supplied, the target must normalize under one of
+    those roots before deletion is attempted.
+    """
+
+    target = _authorized_path(path, allowed_roots=allowed_roots)
     try:
-        # codeql[py/path-injection] callers must authorize deletion scope first.
-        path.unlink()
+        target.unlink()
         return True
     except FileNotFoundError:
         return False
     except OSError as exc:
         raise FileLifecycleError(f"Could not remove {path}: {exc}") from exc
+
+
+def _authorized_path(path: Path, *, allowed_roots: Iterable[Path] | None) -> Path:
+    if allowed_roots is None:
+        return path
+
+    target = os.path.abspath(os.fspath(path))
+    for raw_root in allowed_roots:
+        root = os.path.abspath(os.fspath(raw_root))
+        try:
+            if os.path.commonpath([target, root]) == root:
+                return Path(target)
+        except ValueError:
+            continue
+    raise FileLifecycleError("Refusing to remove a file outside the authorized folder roots.")
 
 
 def _best_effort_unlink(path: Path) -> None:

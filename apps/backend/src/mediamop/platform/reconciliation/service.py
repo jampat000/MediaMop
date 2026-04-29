@@ -73,17 +73,6 @@ def _is_temp_artifact(path: Path) -> bool:
     return name.startswith(".") or name.endswith(TEMP_ARTIFACT_SUFFIXES)
 
 
-def _is_under_root(path: Path, root: Path) -> bool:
-    try:
-        # codeql[py/path-injection] this is a containment check, not a file mutation.
-        path.resolve().relative_to(root.resolve())
-        return True
-    except ValueError:
-        return False
-    except OSError:
-        return False
-
-
 def _scan_subber_state(session: Session) -> list[ReconciliationIssue]:
     issues: list[ReconciliationIssue] = []
     rows = list(session.scalars(select(SubberSubtitleState).order_by(SubberSubtitleState.id.asc())))
@@ -221,13 +210,10 @@ def repair_reconciliation_issue(
             raise ValueError("path is required for this repair action.")
         row = session.get(RefinerPathSettingsRow, 1)
         roots = _configured_refiner_work_roots(row)
-        # codeql[py/path-injection] constrained to configured Refiner work roots before deletion.
-        target = Path(path).resolve()
-        if not any(_is_under_root(target, root) for root in roots):
-            raise ValueError("Refusing to remove a file outside configured Refiner work folders.")
+        target = Path(path)
         if not _is_temp_artifact(target):
             raise ValueError("Refusing to remove a file that does not look like a temp artifact.")
-        removed = safe_unlink(target)
+        removed = safe_unlink(target, allowed_roots=roots)
         return {
             "applied": removed,
             "message": "Removed the Refiner temp artifact." if removed else "Temp artifact is already gone.",
