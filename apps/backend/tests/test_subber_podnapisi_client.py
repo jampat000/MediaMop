@@ -2,20 +2,15 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from mediamop.modules.subber import subber_podnapisi_client as pnc
 
 
-@patch("mediamop.modules.subber.subber_podnapisi_client.urllib.request.urlopen")
-def test_podnapisi_search_parses_data_list(mock_urlopen: MagicMock) -> None:
-    import json
-
+@patch("mediamop.modules.subber.subber_podnapisi_client.request_json")
+def test_podnapisi_search_parses_data_list(mock_request_json) -> None:
     body = {"data": [{"id": "42", "language": "en", "flags": []}]}
-    mock_resp = MagicMock()
-    mock_resp.read.return_value = json.dumps(body).encode()
-    mock_resp.status = 200
-    mock_urlopen.return_value.__enter__.return_value = mock_resp
+    mock_request_json.return_value = (200, body)
     items = pnc.search(
         query="Test Show",
         season_number=1,

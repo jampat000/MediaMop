@@ -9,23 +9,19 @@ from __future__ import annotations
 import logging
 import re
 import urllib.parse
-import urllib.request
 from typing import Any
 
+from mediamop.modules.subber.subber_http_client import HTML_USER_AGENT, request_bytes, request_text
+
 BASE = "https://subf2m.co"
-USER_AGENT = "Mozilla/5.0 (compatible; MediaMop/1.0)"
+USER_AGENT = HTML_USER_AGENT
 logger = logging.getLogger(__name__)
 
 
 def _get_html(url: str) -> str:
-    req = urllib.request.Request(  # noqa: S310
-        url,
-        headers={"User-Agent": USER_AGENT, "Accept": "text/html"},
-        method="GET",
-    )
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            return resp.read().decode("utf-8", errors="replace")
+        _code, text = request_text(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html"}, timeout=30)
+        return text
     except Exception:
         logger.exception("Subf2m request failed: %s", url)
         return ""
@@ -66,10 +62,5 @@ def search(
 
 def download(*, download_url: str) -> bytes:
     """Download subtitle from Subf2m."""
-    req = urllib.request.Request(  # noqa: S310
-        download_url,
-        headers={"User-Agent": USER_AGENT},
-        method="GET",
-    )
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        return resp.read()
+    _code, data = request_bytes(download_url, headers={"User-Agent": USER_AGENT}, timeout=60)
+    return data
