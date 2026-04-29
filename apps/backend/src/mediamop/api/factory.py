@@ -92,8 +92,8 @@ def create_app() -> FastAPI:
             CORSMiddleware,
             allow_origins=list(settings.cors_origins),
             allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
+            allow_methods=["GET", "POST", "OPTIONS"],
+            allow_headers=["Content-Type", "Accept", "X-CSRF-Token"],
         )
 
     application.include_router(health_router)
