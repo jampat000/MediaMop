@@ -58,8 +58,6 @@ Name: "{commondesktop}\MediaMop"; Filename: "{app}\{#ExeName}"; Tasks: desktopic
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "MediaMop"; ValueData: """{app}\{#ExeName}"""; Flags: uninsdeletevalue; Tasks: startup
 
 [Run]
-Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""MediaMop Server"""; Flags: runhidden waituntilterminated
-Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""MediaMop Server"" dir=in action=allow program=""{app}\MediaMopServer.exe"" enable=yes profile=private"; Flags: runhidden waituntilterminated
 Filename: "{app}\{#ExeName}"; Description: "Launch MediaMop"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
@@ -86,4 +84,47 @@ begin
   StopMediaMopProcess('MediaMopServer.exe');
   Sleep(1000);
   Result := '';
+end;
+
+procedure InstallFirewallRule();
+var
+  ResultCode: Integer;
+  AddOk: Boolean;
+begin
+  Exec(
+    ExpandConstant('{sys}\netsh.exe'),
+    'advfirewall firewall delete rule name="MediaMop Server"',
+    '',
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode
+  );
+
+  AddOk := Exec(
+    ExpandConstant('{sys}\netsh.exe'),
+    'advfirewall firewall add rule name="MediaMop Server" dir=in action=allow program="' +
+      ExpandConstant('{app}\MediaMopServer.exe') + '" enable=yes profile=private,domain',
+    '',
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode
+  );
+
+  if (not AddOk) or (ResultCode <> 0) then
+  begin
+    MsgBox(
+      'MediaMop was installed, but Windows did not allow Setup to add the firewall rule for LAN access.' + #13#10 + #13#10 +
+      'Local access will still work. To open MediaMop from another device, allow MediaMopServer.exe through Windows Firewall for your current network profile.',
+      mbInformation,
+      MB_OK
+    );
+  end;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+  begin
+    InstallFirewallRule();
+  end;
 end;

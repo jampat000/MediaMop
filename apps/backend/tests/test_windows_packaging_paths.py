@@ -47,7 +47,7 @@ def test_inno_installer_uses_program_files_and_programdata() -> None:
     assert "RestartApplications=no" in text
     assert "taskkill.exe" in text
     assert "advfirewall firewall add rule" in text
-    assert 'program=""{app}\\MediaMopServer.exe""' in text
+    assert "MediaMopServer.exe" in text
     assert "MediaMop.exe" in text
     assert "MediaMopServer.exe" in text
 
@@ -63,6 +63,17 @@ def test_windows_installer_startup_task_is_explicit_and_opt_in() -> None:
     assert 'ValueData: """{app}\\{#ExeName}"""' in text
     assert "uninsdeletevalue" in text
     assert "Tasks: startup" in text
+
+
+def test_windows_installer_surfaces_firewall_rule_failures() -> None:
+    installer = Path(__file__).resolve().parents[3] / "packaging" / "windows" / "MediaMop.iss"
+    text = installer.read_text(encoding="utf-8")
+
+    assert "procedure InstallFirewallRule()" in text
+    assert "profile=private,domain" in text
+    assert "MsgBox(" in text
+    assert "Windows did not allow Setup to add the firewall rule" in text
+    assert 'Filename: "{sys}\\netsh.exe"; Parameters: "advfirewall firewall add rule' not in text
 
 
 def test_windows_package_uses_dedicated_tray_icon_assets() -> None:
