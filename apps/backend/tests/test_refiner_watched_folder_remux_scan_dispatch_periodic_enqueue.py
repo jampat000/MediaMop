@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from dataclasses import replace
 from types import SimpleNamespace
 
+import pytest
 from sqlalchemy import delete, select, update
 
 from mediamop.core.config import MediaMopSettings
@@ -16,10 +18,13 @@ from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_enqueue
     refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan,
     try_enqueue_periodic_watched_folder_remux_scan_dispatch,
 )
+import mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue as periodic_enqueue
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_job_kinds import (
     REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
 )
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue import (
+    _missed_due_run_count,
+    _next_scheduler_sleep_seconds,
     _watched_folder_scan_interval_seconds,
 )
 
@@ -52,6 +57,103 @@ def test_periodic_scheduler_uses_library_watched_folder_interval() -> None:
     )
     assert _watched_folder_scan_interval_seconds(row, media_scope="movie") == 20
     assert _watched_folder_scan_interval_seconds(row, media_scope="tv") == 40
+
+
+def test_periodic_scheduler_reports_missed_due_intervals() -> None:
+    assert _missed_due_run_count(now_loop=100.0, next_run_loop=100.0, interval_seconds=20.0) == 0
+    assert _missed_due_run_count(now_loop=119.9, next_run_loop=100.0, interval_seconds=20.0) == 0
+    assert _missed_due_run_count(now_loop=120.0, next_run_loop=100.0, interval_seconds=20.0) == 1
+    assert _missed_due_run_count(now_loop=165.0, next_run_loop=100.0, interval_seconds=20.0) == 3
+
+
+def test_periodic_scheduler_sleeps_until_nearest_scope_due() -> None:
+    assert _next_scheduler_sleep_seconds(
+        now_loop=100.0,
+        next_run_movie=104.0,
+        next_run_tv=180.0,
+        poll_seconds=300.0,
+    ) == 4.0
+    assert _next_scheduler_sleep_seconds(
+        now_loop=100.0,
+        next_run_movie=100.0,
+        next_run_tv=180.0,
+        poll_seconds=300.0,
+    ) == 0.25
+    assert _next_scheduler_sleep_seconds(
+        now_loop=100.0,
+        next_run_movie=500.0,
+        next_run_tv=600.0,
+        poll_seconds=60.0,
+    ) == 60.0
+
+
+def test_periodic_scheduler_scope_failure_does_not_block_other_scope(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fac = _fac()
+    settings = _settings_on()
+    for name in ("mwatch", "mout", "twatch", "tout"):
+        tmp_path.joinpath(name).mkdir()
+
+    with fac() as db:
+        db.execute(delete(RefinerJob))
+        db.execute(
+            update(RefinerPathSettingsRow)
+            .where(RefinerPathSettingsRow.id == 1)
+            .values(
+                refiner_watched_folder=str(tmp_path / "mwatch"),
+                refiner_output_folder=str(tmp_path / "mout"),
+                refiner_tv_watched_folder=str(tmp_path / "twatch"),
+                refiner_tv_output_folder=str(tmp_path / "tout"),
+            ),
+        )
+        db.commit()
+
+    calls: list[str] = []
+
+    async def _run() -> None:
+        stop_event = asyncio.Event()
+        loop = asyncio.get_running_loop()
+
+        def _fake_enqueue(_session, _settings, *, media_scope: str = "movie"):
+            calls.append(media_scope)
+            if media_scope == "movie":
+                raise RuntimeError("movie scope failed")
+            loop.call_soon_threadsafe(stop_event.set)
+            return True, None
+
+        monkeypatch.setattr(
+            periodic_enqueue,
+            "try_enqueue_periodic_watched_folder_remux_scan_dispatch",
+            _fake_enqueue,
+        )
+        await asyncio.wait_for(
+            periodic_enqueue._run_periodic_watched_folder_scan_dispatch_enqueue(
+                fac,
+                stop_event=stop_event,
+                settings=settings,
+            ),
+            timeout=2.0,
+        )
+
+    try:
+        asyncio.run(_run())
+        assert calls == ["movie", "tv"]
+    finally:
+        with fac() as db:
+            db.execute(delete(RefinerJob))
+            db.execute(
+                update(RefinerPathSettingsRow)
+                .where(RefinerPathSettingsRow.id == 1)
+                .values(
+                    refiner_watched_folder=None,
+                    refiner_output_folder="",
+                    refiner_tv_watched_folder=None,
+                    refiner_tv_output_folder=None,
+                ),
+            )
+            db.commit()
 
 
 def test_queue_has_active_scan_detects_pending_and_leased_per_scope() -> None:
