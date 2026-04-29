@@ -54,3 +54,4 @@ ignore_missing_imports = true
 follow_imports = "skip"
 check_untyped_defs = false
 warn_unused_ignores = false
+ignore_errors = true

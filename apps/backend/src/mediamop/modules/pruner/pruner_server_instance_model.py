@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, Integer, String, Text, UniqueConstraint, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from mediamop.core.db import Base
+
+if TYPE_CHECKING:
+    from mediamop.modules.pruner.pruner_scope_settings_model import PrunerScopeSettings
 
 
 class PrunerServerInstance(Base):
