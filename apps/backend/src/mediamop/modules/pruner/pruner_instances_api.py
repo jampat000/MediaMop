@@ -491,7 +491,7 @@ def get_pruner_preview_run(
     response_model=PrunerApplyEligibilityOut,
     summary="Whether live apply from this preview snapshot can be enqueued (Jellyfin, Emby, Plex)",
     description=(
-        "Read-only gate check for apply-from-preview. This is **not** a preview/dry run — it only reports whether the "
+        "Read-only gate check for apply-from-preview. This is **not** a second scan — it only reports whether the "
         "snapshot is eligible given instance, scope, outcome, and feature flag."
     ),
 )

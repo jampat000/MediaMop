@@ -88,7 +88,7 @@ async function evaluateEligibilityForSnapshots(
   return { elig, reasons };
 }
 
-/** Dry-run toggle, run button, and scan/delete results for one media column. */
+/** Review-snapshot button and scan results for one media column. */
 export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
   const {
     instanceId,
@@ -261,15 +261,15 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
     }
   }
 
-  const runLabel = mediaScope === "tv" ? "Run TV cleanup now" : "Run Movies cleanup now";
+  const runLabel = mediaScope === "tv" ? "Scan TV for cleanup review" : "Scan Movies for cleanup review";
   const runBusy = phase === "scanning" || phase === "deleting";
   const runBtnDisabled = runDisabled || controlsDisabled || runBusy;
 
   return (
     <div className="min-w-0 space-y-4" data-testid={`${testIdPrefix}-run-${mediaScope}`}>
       <p className="text-xs text-[var(--mm-text3)]">
-        Run scans your saved rules and creates a review snapshot. Deleting always uses that saved snapshot, never a fresh
-        live query.
+        This scans your saved rules and creates a review snapshot. Nothing is deleted from this button; deletion only
+        happens when you open and confirm a saved snapshot.
       </p>
       <div>
         <button

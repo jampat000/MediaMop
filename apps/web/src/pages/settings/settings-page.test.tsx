@@ -143,6 +143,7 @@ describe("SettingsPage (suite settings)", () => {
     expect(screen.getByText("Upgrade")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText("Log retention (days)")).toBeInTheDocument();
+    expect(screen.getByText(/no restart is required/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "Logs" }));
     expect(screen.getByText("Search logs")).toBeInTheDocument();
     expect(screen.getByText("System events")).toBeInTheDocument();

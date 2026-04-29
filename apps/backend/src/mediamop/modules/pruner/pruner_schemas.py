@@ -409,7 +409,7 @@ class PrunerPreviewRunOut(BaseModel):
 
 
 class PrunerApplyEligibilityOut(BaseModel):
-    """Read-only: whether apply can be enqueued for this snapshot (not a second dry run)."""
+    """Read-only: whether apply can be enqueued for this snapshot (not a second scan)."""
 
     eligible: bool
     reasons: list[str] = Field(default_factory=list)

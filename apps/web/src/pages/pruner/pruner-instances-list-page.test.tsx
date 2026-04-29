@@ -228,6 +228,9 @@ describe("PrunerInstancesListPage", () => {
     expect(within(card).getAllByPlaceholderText(/Alex Carter/i)).toHaveLength(2);
     fireEvent.click(screen.getByRole("button", { name: "Schedule" }));
     await waitFor(() => expect(screen.getByTestId("pruner-provider-schedule-wrap")).toBeInTheDocument());
+    expect(screen.getAllByText(/creates review snapshots/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole("button", { name: "Scan TV for cleanup review" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Scan Movies for cleanup review" })).toBeInTheDocument();
     expect(screen.getByTestId("pruner-schedule-emby-run-tv-btn")).toBeInTheDocument();
     expect(screen.getByTestId("pruner-schedule-emby-run-movies-btn")).toBeInTheDocument();
   });
