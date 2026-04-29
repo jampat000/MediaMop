@@ -81,7 +81,8 @@ def safe_unlink(path: Path) -> bool:
     """Delete one file. Missing files are treated as already absent."""
 
     try:
-        path.unlink()  # codeql[py/path-injection] callers must authorize deletion scope first.
+        # codeql[py/path-injection] callers must authorize deletion scope first.
+        path.unlink()
         return True
     except FileNotFoundError:
         return False

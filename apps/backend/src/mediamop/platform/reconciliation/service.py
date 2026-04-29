@@ -75,6 +75,7 @@ def _is_temp_artifact(path: Path) -> bool:
 
 def _is_under_root(path: Path, root: Path) -> bool:
     try:
+        # codeql[py/path-injection] this is a containment check, not a file mutation.
         path.resolve().relative_to(root.resolve())
         return True
     except ValueError:
@@ -220,7 +221,8 @@ def repair_reconciliation_issue(
             raise ValueError("path is required for this repair action.")
         row = session.get(RefinerPathSettingsRow, 1)
         roots = _configured_refiner_work_roots(row)
-        target = Path(path).resolve()  # codeql[py/path-injection] constrained to configured Refiner work roots below.
+        # codeql[py/path-injection] constrained to configured Refiner work roots before deletion.
+        target = Path(path).resolve()
         if not any(_is_under_root(target, root) for root in roots):
             raise ValueError("Refusing to remove a file outside configured Refiner work folders.")
         if not _is_temp_artifact(target):
