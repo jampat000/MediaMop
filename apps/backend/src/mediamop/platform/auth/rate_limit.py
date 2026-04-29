@@ -10,7 +10,8 @@ import ipaddress
 import logging
 import threading
 import time
-from collections import defaultdict
+from collections import OrderedDict, deque
+from typing import Deque
 
 logger = logging.getLogger(__name__)
 _forwarded_without_trust_warned = False
@@ -32,7 +33,7 @@ class SlidingWindowLimiter:
         self.max_keys = max_keys
         self.window_seconds = float(window_seconds)
         self._lock = threading.Lock()
-        self._buckets: dict[str, list[float]] = defaultdict(list)
+        self._buckets: OrderedDict[str, Deque[float]] = OrderedDict()
 
     def allow(self, key: str) -> bool:
         """Record one event for ``key``. Return True if allowed, False if limited."""
@@ -42,33 +43,30 @@ class SlidingWindowLimiter:
         k = key or "unknown"
         with self._lock:
             self._evict_expired_locked(cutoff)
-            bucket = self._buckets[k]
+            bucket = self._buckets.get(k)
+            if bucket is None:
+                bucket = deque()
+                self._buckets[k] = bucket
             while bucket and bucket[0] < cutoff:
-                bucket.pop(0)
+                bucket.popleft()
             if len(bucket) >= self.max_events:
                 return False
             bucket.append(now)
-            self._evict_over_capacity_locked(prefer_keep=k)
+            self._buckets.move_to_end(k)
+            self._evict_over_capacity_locked()
             return True
 
     def _evict_expired_locked(self, cutoff: float) -> None:
         for key in list(self._buckets):
             bucket = self._buckets[key]
             while bucket and bucket[0] < cutoff:
-                bucket.pop(0)
+                bucket.popleft()
             if not bucket:
                 del self._buckets[key]
 
-    def _evict_over_capacity_locked(self, *, prefer_keep: str) -> None:
+    def _evict_over_capacity_locked(self) -> None:
         while len(self._buckets) > self.max_keys:
-            oldest_key = min(
-                (key for key in self._buckets if key != prefer_keep),
-                key=lambda key: self._buckets[key][-1] if self._buckets[key] else 0.0,
-                default=None,
-            )
-            if oldest_key is None:
-                break
-            del self._buckets[oldest_key]
+            self._buckets.popitem(last=False)
 
     def reset_for_tests(self) -> None:
         with self._lock:

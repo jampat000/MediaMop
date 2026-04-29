@@ -14,10 +14,19 @@ from mediamop.platform.readiness.service import build_readiness
 
 
 def test_health_ok() -> None:
-    client = TestClient(create_app())
-    response = client.get("/health")
+    with TestClient(create_app()) as client:
+        response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    assert response.json() == {"status": "ok", "dependencies": {"database": "ok"}}
+    assert response.headers.get("Cache-Control", "").startswith("no-store")
+    assert response.headers.get("X-Request-ID")
+
+
+def test_request_id_header_is_echoed() -> None:
+    with TestClient(create_app()) as client:
+        response = client.get("/health", headers={"X-Request-ID": "audit-request-1"})
+
+    assert response.headers.get("X-Request-ID") == "audit-request-1"
 
 
 def test_ready_ok_after_lifespan_startup() -> None:
@@ -28,6 +37,7 @@ def test_ready_ok_after_lifespan_startup() -> None:
     assert body["ready"] is True
     assert body["status"] == "ready"
     assert {step["name"] for step in body["steps"]} == {"database", "workers"}
+    assert response.headers.get("Cache-Control", "").startswith("no-store")
 
 
 def test_readiness_reports_starting_before_startup_complete() -> None:
@@ -50,15 +60,15 @@ def test_readiness_reports_failed_when_worker_heartbeat_missing() -> None:
     class State:
         startup_started_at = 0.0
         startup_ready = True
-        engine = object()
-        session_factory = object()
+        engine = None
+        session_factory = None
         settings = replace(MediaMopSettings.load(), refiner_worker_count=1, pruner_worker_count=0, subber_worker_count=0)
 
     payload = build_readiness(State())
 
     assert payload.ready is False
     assert payload.status == "failed"
-    assert any(step.name == "workers" and step.status == "failed" for step in payload.steps)
+    assert any(step.name in {"database", "workers"} and step.status == "failed" for step in payload.steps)
 
 
 def test_unknown_upgrade_api_browser_landing_redirects_to_settings() -> None:

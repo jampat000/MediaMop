@@ -11,7 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from mediamop.platform.auth.models import User, UserRole
-from mediamop.platform.auth.password import hash_password
+from mediamop.platform.auth.password import hash_password, validate_password_strength
 
 
 def acquire_bootstrap_transaction_lock(db: Session) -> None:
@@ -41,6 +41,7 @@ def create_initial_admin(db: Session, *, username: str, password: str) -> User:
 
     if any_admin_user_exists(db):
         raise RuntimeError("bootstrap not allowed: an admin user already exists")
+    validate_password_strength(password, username=username)
     row = User(
         username=username.strip(),
         password_hash=hash_password(password),

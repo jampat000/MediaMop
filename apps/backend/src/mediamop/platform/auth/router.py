@@ -217,6 +217,9 @@ def post_bootstrap(
             username=body.username.strip(),
             password=body.password,
         )
+    except ValueError as exc:
+        logger.warning("auth event: bootstrap failed (weak password)")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except IntegrityError as exc:
         logger.warning("auth event: bootstrap failed (username conflict)")
         raise HTTPException(

@@ -6,6 +6,7 @@ import time
 from dataclasses import asdict
 from typing import Any
 
+from mediamop.platform.health.service import database_is_connected
 from mediamop.platform.jobs.worker_health import build_worker_health_snapshot
 from mediamop.platform.readiness.schemas import ReadinessResponse, ReadinessStep, ReadinessWorkerOut
 
@@ -15,6 +16,7 @@ def build_readiness(app_state: Any) -> ReadinessResponse:
     startup_seconds = max(0.0, time.monotonic() - started_at)
     session_factory = getattr(app_state, "session_factory", None)
     engine = getattr(app_state, "engine", None)
+    database_ready = session_factory is not None and engine is not None and database_is_connected(app_state)
     startup_complete = bool(getattr(app_state, "startup_ready", False))
     settings = getattr(app_state, "settings", None)
     worker_health: list[ReadinessWorkerOut] = []
@@ -33,10 +35,12 @@ def build_readiness(app_state: Any) -> ReadinessResponse:
     steps = [
         ReadinessStep(
             name="database",
-            status="ready" if session_factory is not None and engine is not None else "starting",
+            status="ready" if database_ready else ("starting" if not startup_complete else "failed"),
             detail=(
                 "Local database is connected and migrations are complete."
-                if session_factory is not None and engine is not None
+                if database_ready
+                else "MediaMop could not verify the local database connection."
+                if startup_complete
                 else "MediaMop is preparing the local database."
             ),
         ),
