@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiErrorDetailToString, apiFetch, resetUnauthorizedHandlingForTests, setUnauthorizedHandler } from "./client";
+import {
+  ApiHttpError,
+  apiErrorDetailToString,
+  apiFetch,
+  apiResponseErrorMessage,
+  resetUnauthorizedHandlingForTests,
+  setUnauthorizedHandler,
+  throwApiResponseError,
+} from "./client";
 
 afterEach(() => {
   resetUnauthorizedHandlingForTests();
@@ -26,6 +34,61 @@ describe("apiErrorDetailToString", () => {
   it("returns empty for nullish", () => {
     expect(apiErrorDetailToString(undefined)).toBe("");
     expect(apiErrorDetailToString(null)).toBe("");
+  });
+});
+
+describe("apiResponseErrorMessage", () => {
+  it("normalizes FastAPI string detail", async () => {
+    const response = new Response(JSON.stringify({ detail: "Wrong password" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+
+    await expect(throwApiResponseError("/api/v1/auth/login", response, "Could not sign in")).rejects.toMatchObject({
+      name: "ApiHttpError",
+      path: "/api/v1/auth/login",
+      status: 401,
+      message: "Wrong password",
+    });
+  });
+
+  it("normalizes validation arrays without object Object", async () => {
+    const response = new Response(
+      JSON.stringify({ detail: [{ loc: ["body", "password"], msg: "String should have at least 8 characters" }] }),
+      { status: 422, headers: { "Content-Type": "application/json" } },
+    );
+
+    const normalized = await apiResponseErrorMessage(response, "Could not save");
+
+    expect(normalized.message).toBe("password: String should have at least 8 characters");
+    expect(normalized.message).not.toContain("[object Object]");
+  });
+
+  it("normalizes object bodies without object Object", async () => {
+    const response = new Response(JSON.stringify({ reason: "missing-route" }), {
+      status: 404,
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const normalized = await apiResponseErrorMessage(response, "Could not load");
+
+    expect(normalized.message).toBe(JSON.stringify({ reason: "missing-route" }));
+    expect(normalized.message).not.toContain("[object Object]");
+  });
+
+  it("turns HTML responses into operator-safe proxy guidance", async () => {
+    const response = new Response("<!doctype html><title>Not found</title>", { status: 404 });
+
+    const normalized = await apiResponseErrorMessage(response, "Could not check for updates");
+
+    expect(normalized.message).toContain("received HTML instead of JSON");
+  });
+
+  it("exposes status and path on ApiHttpError", () => {
+    const error = new ApiHttpError("/api/v1/example", 503, "Service unavailable");
+
+    expect(error.status).toBe(503);
+    expect(error.path).toBe("/api/v1/example");
   });
 });
 

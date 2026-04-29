@@ -1,3 +1,5 @@
+import { ApiHttpError } from "./client";
+
 /**
  * Classify failures from auth API helpers ({@link ./auth-api}) for honest UI copy.
  * `fetch` only throws TypeError (or "Failed to fetch") when the response never arrived.
@@ -24,6 +26,9 @@ const _API_HTTP_ERR =
 
 /** True when {@link ./auth-api} threw after receiving an HTTP status (API was reached). */
 export function isHttpErrorFromApi(error: unknown): boolean {
+  if (error instanceof ApiHttpError) {
+    return true;
+  }
   if (!(error instanceof Error)) {
     return false;
   }
@@ -31,6 +36,9 @@ export function isHttpErrorFromApi(error: unknown): boolean {
 }
 
 export function httpStatusFromApiError(error: unknown): number | null {
+  if (error instanceof ApiHttpError) {
+    return error.status;
+  }
   if (!(error instanceof Error)) {
     return null;
   }

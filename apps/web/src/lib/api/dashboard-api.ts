@@ -1,10 +1,9 @@
-import { apiFetch, readJson } from "./client";
+import { apiFetch, readJson, requireOk } from "./client";
 import type { DashboardStatus } from "./types";
 
 export async function fetchDashboardStatus(): Promise<DashboardStatus> {
-  const r = await apiFetch("/api/v1/dashboard/status");
-  if (!r.ok) {
-    throw new Error(`dashboard status: ${r.status}`);
-  }
+  const path = "/api/v1/dashboard/status";
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load dashboard status");
   return readJson<DashboardStatus>(r);
 }

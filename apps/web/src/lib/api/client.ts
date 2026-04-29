@@ -6,6 +6,20 @@
 const API_PREFIX = "/api/v1";
 type UnauthorizedHandler = (path: string) => void;
 
+export class ApiHttpError extends Error {
+  readonly status: number;
+  readonly path: string;
+  readonly detail: unknown;
+
+  constructor(path: string, status: number, message: string, detail?: unknown) {
+    super(message);
+    this.name = "ApiHttpError";
+    this.status = status;
+    this.path = path;
+    this.detail = detail;
+  }
+}
+
 let unauthorizedHandler: UnauthorizedHandler | null = null;
 let unauthorizedHandled = false;
 
@@ -64,6 +78,64 @@ export async function readJson<T>(r: Response): Promise<T> {
     return undefined as T;
   }
   return JSON.parse(text) as T;
+}
+
+function messageFromResponseBody(body: unknown): { message: string; detail?: unknown } {
+  if (body === undefined || body === null) {
+    return { message: "" };
+  }
+  if (typeof body === "string") {
+    return { message: body.trim() };
+  }
+  if (typeof body === "object" && "detail" in body) {
+    const detail = (body as { detail?: unknown }).detail;
+    return { message: apiErrorDetailToString(detail), detail };
+  }
+  return { message: apiErrorDetailToString(body), detail: body };
+}
+
+export async function apiResponseErrorMessage(r: Response, fallback: string): Promise<{ message: string; detail?: unknown }> {
+  const ctype = (r.headers.get("content-type") || "").toLowerCase();
+  if (ctype.includes("application/json")) {
+    try {
+      const parsed = await r.clone().json();
+      const fromBody = messageFromResponseBody(parsed);
+      if (fromBody.message.length > 0) {
+        return fromBody;
+      }
+    } catch {
+      /* fall through to text/status fallback */
+    }
+  }
+
+  let text = "";
+  try {
+    text = await r.clone().text();
+  } catch {
+    text = "";
+  }
+  const trimmed = text.trimStart();
+  if (trimmed.startsWith("<!") || trimmed.toLowerCase().startsWith("<html")) {
+    return {
+      message: `${fallback} (${r.status}) - received HTML instead of JSON. Use the same origin as the API and restart MediaMop after upgrading.`,
+    };
+  }
+  const oneLine = text.replace(/\s+/g, " ").trim().slice(0, 180);
+  if (oneLine.length > 0) {
+    return { message: `${fallback} (${r.status}): ${oneLine}` };
+  }
+  return { message: `${fallback} (${r.status})` };
+}
+
+export async function throwApiResponseError(path: string, r: Response, fallback: string): Promise<never> {
+  const normalized = await apiResponseErrorMessage(r, fallback);
+  throw new ApiHttpError(path, r.status, normalized.message, normalized.detail);
+}
+
+export async function requireOk(path: string, r: Response, fallback: string): Promise<void> {
+  if (!r.ok) {
+    await throwApiResponseError(path, r, fallback);
+  }
 }
 
 /**

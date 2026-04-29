@@ -1,4 +1,4 @@
-import { apiErrorDetailToString, apiFetch, readJson } from "../api/client";
+﻿import { apiFetch, readJson, requireOk } from "../api/client";
 import { fetchCsrfToken } from "../api/auth-api";
 
 export type SubberSubtitleLangState = {
@@ -198,79 +198,87 @@ export type SubberJobsInspectionRow = {
 export type SubberJobsInspectionOut = { jobs: SubberJobsInspectionRow[]; default_recent_slice: boolean };
 
 export async function fetchSubberSettings(): Promise<SubberSettingsOut> {
-  const r = await apiFetch("/api/v1/subber/settings");
-  if (!r.ok) throw new Error(`Subber settings: ${r.status}`);
+  const path = "/api/v1/subber/settings";
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load Subber settings");
   return readJson<SubberSettingsOut>(r);
 }
 
 export async function putSubberSettings(body: SubberSettingsPutIn): Promise<SubberSettingsOut> {
-  const r = await apiFetch("/api/v1/subber/settings", {
+  const path = "/api/v1/subber/settings";
+  const r = await apiFetch(path, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!r.ok) throw new Error(`Subber settings save: ${r.status}`);
+  await requireOk(path, r, "Could not save Subber settings");
   return readJson<SubberSettingsOut>(r);
 }
 
 export async function postSubberTestOpensubtitles(): Promise<SubberTestConnectionOut> {
   const csrf = await fetchCsrfToken();
-  const r = await apiFetch("/api/v1/subber/settings/test-opensubtitles", {
+  const path = "/api/v1/subber/settings/test-opensubtitles";
+  const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ csrf_token: csrf }),
   });
-  if (!r.ok) throw new Error(`OpenSubtitles test: ${r.status}`);
+  await requireOk(path, r, "Could not test OpenSubtitles");
   return readJson<SubberTestConnectionOut>(r);
 }
 
 export async function postSubberTestSonarr(): Promise<SubberTestConnectionOut> {
   const csrf = await fetchCsrfToken();
-  const r = await apiFetch("/api/v1/subber/settings/test-sonarr", {
+  const path = "/api/v1/subber/settings/test-sonarr";
+  const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ csrf_token: csrf }),
   });
-  if (!r.ok) throw new Error(`Sonarr test: ${r.status}`);
+  await requireOk(path, r, "Could not test Sonarr");
   return readJson<SubberTestConnectionOut>(r);
 }
 
 export async function postSubberTestRadarr(): Promise<SubberTestConnectionOut> {
   const csrf = await fetchCsrfToken();
-  const r = await apiFetch("/api/v1/subber/settings/test-radarr", {
+  const path = "/api/v1/subber/settings/test-radarr";
+  const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ csrf_token: csrf }),
   });
-  if (!r.ok) throw new Error(`Radarr test: ${r.status}`);
+  await requireOk(path, r, "Could not test Radarr");
   return readJson<SubberTestConnectionOut>(r);
 }
 
 export async function postSubberSonarrRootFolders(): Promise<SubberArrRootFoldersOut> {
   const csrf = await fetchCsrfToken();
-  const r = await apiFetch("/api/v1/subber/settings/sonarr-root-folders", {
+  const path = "/api/v1/subber/settings/sonarr-root-folders";
+  const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ csrf_token: csrf }),
   });
-  if (!r.ok) throw new Error(`Sonarr root folders: ${r.status}`);
+  await requireOk(path, r, "Could not load Sonarr root folders");
   return readJson<SubberArrRootFoldersOut>(r);
 }
 
 export async function postSubberRadarrRootFolders(): Promise<SubberArrRootFoldersOut> {
   const csrf = await fetchCsrfToken();
-  const r = await apiFetch("/api/v1/subber/settings/radarr-root-folders", {
+  const path = "/api/v1/subber/settings/radarr-root-folders";
+  const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ csrf_token: csrf }),
   });
-  if (!r.ok) throw new Error(`Radarr root folders: ${r.status}`);
+  await requireOk(path, r, "Could not load Radarr root folders");
   return readJson<SubberArrRootFoldersOut>(r);
 }
 
 export async function fetchSubberOverview(): Promise<SubberOverviewOut> {
-  const r = await apiFetch("/api/v1/subber/overview");
-  if (!r.ok) throw new Error(`Subber overview: ${r.status}`);
+  const path = "/api/v1/subber/overview";
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load Subber overview");
   return readJson<SubberOverviewOut>(r);
 }
 
@@ -288,8 +296,9 @@ export async function fetchSubberLibraryTv(params: {
   if (params.limit != null) q.set("limit", String(params.limit));
   if (params.offset != null) q.set("offset", String(params.offset));
   const qs = q.toString();
-  const r = await apiFetch(`/api/v1/subber/library/tv${qs ? `?${qs}` : ""}`);
-  if (!r.ok) throw new Error(`Subber TV library: ${r.status}`);
+  const path = `/api/v1/subber/library/tv${qs ? `?${qs}` : ""}`;
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load TV subtitle library");
   return readJson<SubberTvLibraryOut>(r);
 }
 
@@ -307,117 +316,107 @@ export async function fetchSubberLibraryMovies(params: {
   if (params.limit != null) q.set("limit", String(params.limit));
   if (params.offset != null) q.set("offset", String(params.offset));
   const qs = q.toString();
-  const r = await apiFetch(`/api/v1/subber/library/movies${qs ? `?${qs}` : ""}`);
-  if (!r.ok) throw new Error(`Subber movies library: ${r.status}`);
+  const path = `/api/v1/subber/library/movies${qs ? `?${qs}` : ""}`;
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load movie subtitle library");
   return readJson<SubberMoviesLibraryOut>(r);
 }
 
 export async function postSubberSearchNow(stateId: number): Promise<{ status: string }> {
   const csrf = await fetchCsrfToken();
-  const r = await apiFetch(`/api/v1/subber/library/${stateId}/search-now`, {
+  const path = `/api/v1/subber/library/${stateId}/search-now`;
+  const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ csrf_token: csrf }),
   });
-  if (!r.ok) throw new Error(`Subber search now: ${r.status}`);
+  await requireOk(path, r, "Could not start subtitle search");
   return readJson(r);
 }
 
 export async function postSubberSearchAllMissingTv(): Promise<{ status: string }> {
   const csrf = await fetchCsrfToken();
-  const r = await apiFetch("/api/v1/subber/library/search-all-missing/tv", {
+  const path = "/api/v1/subber/library/search-all-missing/tv";
+  const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ csrf_token: csrf }),
   });
-  if (!r.ok) throw new Error(`Subber search all TV: ${r.status}`);
+  await requireOk(path, r, "Could not start TV subtitle search");
   return readJson(r);
 }
 
 export async function postSubberSearchAllMissingMovies(): Promise<{ status: string }> {
   const csrf = await fetchCsrfToken();
-  const r = await apiFetch("/api/v1/subber/library/search-all-missing/movies", {
+  const path = "/api/v1/subber/library/search-all-missing/movies";
+  const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ csrf_token: csrf }),
   });
-  if (!r.ok) throw new Error(`Subber search all movies: ${r.status}`);
+  await requireOk(path, r, "Could not start movie subtitle search");
   return readJson(r);
 }
 
 export async function postSubberLibrarySyncTv(): Promise<{ status: string }> {
   const csrf = await fetchCsrfToken();
-  const r = await apiFetch("/api/v1/subber/library/sync/tv", {
+  const path = "/api/v1/subber/library/sync/tv";
+  const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ csrf_token: csrf }),
   });
-  if (!r.ok) {
-    let msg = `TV library sync failed (${r.status}).`;
-    try {
-      const body = await readJson<{ detail?: unknown }>(r);
-      const d = apiErrorDetailToString(body.detail);
-      if (d) msg = r.status === 404 ? `${d} — restart the API from the current repo so this route is registered.` : d;
-    } catch {
-      /* ignore */
-    }
-    throw new Error(msg);
-  }
+  await requireOk(path, r, "Could not sync TV library");
   return readJson(r);
 }
 
 export async function postSubberLibrarySyncMovies(): Promise<{ status: string }> {
   const csrf = await fetchCsrfToken();
-  const r = await apiFetch("/api/v1/subber/library/sync/movies", {
+  const path = "/api/v1/subber/library/sync/movies";
+  const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ csrf_token: csrf }),
   });
-  if (!r.ok) {
-    let msg = `Movies library sync failed (${r.status}).`;
-    try {
-      const body = await readJson<{ detail?: unknown }>(r);
-      const d = apiErrorDetailToString(body.detail);
-      if (d) msg = r.status === 404 ? `${d} — restart the API from the current repo so this route is registered.` : d;
-    } catch {
-      /* ignore */
-    }
-    throw new Error(msg);
-  }
+  await requireOk(path, r, "Could not sync movie library");
   return readJson(r);
 }
 
 export async function fetchSubberProviders(): Promise<SubberProviderOut[]> {
-  const r = await apiFetch("/api/v1/subber/providers");
-  if (!r.ok) throw new Error(`Subber providers: ${r.status}`);
+  const path = "/api/v1/subber/providers";
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load subtitle providers");
   return readJson<SubberProviderOut[]>(r);
 }
 
 export async function putSubberProvider(providerKey: string, body: SubberProviderPutIn): Promise<SubberProviderOut> {
   const pk = encodeURIComponent(providerKey);
-  const r = await apiFetch(`/api/v1/subber/providers/${pk}`, {
+  const path = `/api/v1/subber/providers/${pk}`;
+  const r = await apiFetch(path, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!r.ok) throw new Error(`Subber provider save: ${r.status}`);
+  await requireOk(path, r, "Could not save subtitle provider");
   return readJson<SubberProviderOut>(r);
 }
 
 export async function postSubberProviderTest(providerKey: string): Promise<SubberTestConnectionOut> {
   const csrf = await fetchCsrfToken();
   const pk = encodeURIComponent(providerKey);
-  const r = await apiFetch(`/api/v1/subber/providers/${pk}/test`, {
+  const path = `/api/v1/subber/providers/${pk}/test`;
+  const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ csrf_token: csrf }),
   });
-  if (!r.ok) throw new Error(`Subber provider test: ${r.status}`);
+  await requireOk(path, r, "Could not test subtitle provider");
   return readJson<SubberTestConnectionOut>(r);
 }
 
 export async function fetchSubberJobs(limit = 50): Promise<SubberJobsInspectionOut> {
-  const r = await apiFetch(`/api/v1/subber/jobs?limit=${encodeURIComponent(String(limit))}`);
-  if (!r.ok) throw new Error(`Subber jobs: ${r.status}`);
+  const path = `/api/v1/subber/jobs?limit=${encodeURIComponent(String(limit))}`;
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load Subber jobs");
   return readJson<SubberJobsInspectionOut>(r);
 }

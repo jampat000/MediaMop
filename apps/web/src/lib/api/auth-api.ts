@@ -1,32 +1,29 @@
-import { apiFetch, apiErrorDetailToString, readJson } from "./client";
+import { apiFetch, readJson, requireOk } from "./client";
 import type { BootstrapStatus, UserPublic } from "./types";
 
 export async function fetchCsrfToken(): Promise<string> {
-  const r = await apiFetch("/api/v1/auth/csrf");
-  if (!r.ok) {
-    throw new Error(`CSRF: ${r.status}`);
-  }
+  const path = "/api/v1/auth/csrf";
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not start a secure session");
   const data = await readJson<{ csrf_token: string }>(r);
   return data.csrf_token;
 }
 
 export async function fetchMe(): Promise<UserPublic | null> {
-  const r = await apiFetch("/api/v1/auth/me");
+  const path = "/api/v1/auth/me";
+  const r = await apiFetch(path);
   if (r.status === 401) {
     return null;
   }
-  if (!r.ok) {
-    throw new Error(`me: ${r.status}`);
-  }
+  await requireOk(path, r, "Could not load the current user");
   const data = await readJson<{ user: UserPublic }>(r);
   return data.user;
 }
 
 export async function fetchBootstrapStatus(): Promise<BootstrapStatus> {
-  const r = await apiFetch("/api/v1/auth/bootstrap/status");
-  if (!r.ok) {
-    throw new Error(`bootstrap status: ${r.status}`);
-  }
+  const path = "/api/v1/auth/bootstrap/status";
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not check first-run setup");
   return readJson<BootstrapStatus>(r);
 }
 
@@ -34,32 +31,20 @@ export type LoginResult = { user: UserPublic };
 
 export async function postLogin(username: string, password: string): Promise<LoginResult> {
   const csrf_token = await fetchCsrfToken();
-  const r = await apiFetch("/api/v1/auth/login", {
+  const path = "/api/v1/auth/login";
+  const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password, csrf_token }),
   });
-  if (!r.ok) {
-    let detail = r.statusText;
-    try {
-      const body = await readJson<{ detail?: unknown }>(r);
-      if (body.detail !== undefined && body.detail !== null) {
-        const s = apiErrorDetailToString(body.detail);
-        if (s) {
-          detail = s;
-        }
-      }
-    } catch {
-      /* ignore */
-    }
-    throw new Error(detail || `login: ${r.status}`);
-  }
+  await requireOk(path, r, "Could not sign in");
   return readJson<LoginResult>(r);
 }
 
 export async function postLogout(): Promise<void> {
   const csrf = await fetchCsrfToken();
-  const r = await apiFetch("/api/v1/auth/logout", {
+  const path = "/api/v1/auth/logout";
+  const r = await apiFetch(path, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -68,7 +53,7 @@ export async function postLogout(): Promise<void> {
     body: JSON.stringify({ csrf_token: csrf }),
   });
   if (!r.ok && r.status !== 204) {
-    throw new Error(`logout: ${r.status}`);
+    await requireOk(path, r, "Could not sign out");
   }
 }
 
@@ -77,26 +62,13 @@ export async function postBootstrap(
   password: string,
 ): Promise<{ message: string; username: string }> {
   const csrf_token = await fetchCsrfToken();
-  const r = await apiFetch("/api/v1/auth/bootstrap", {
+  const path = "/api/v1/auth/bootstrap";
+  const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password, csrf_token }),
   });
-  if (!r.ok) {
-    let detail = r.statusText;
-    try {
-      const body = await readJson<{ detail?: unknown }>(r);
-      if (body.detail !== undefined && body.detail !== null) {
-        const s = apiErrorDetailToString(body.detail);
-        if (s) {
-          detail = s;
-        }
-      }
-    } catch {
-      /* ignore */
-    }
-    throw new Error(detail || `bootstrap: ${r.status}`);
-  }
+  await requireOk(path, r, "Could not create the first user");
   return readJson(r);
 }
 
@@ -105,7 +77,8 @@ export async function postChangePassword(
   newPassword: string,
 ): Promise<{ message: string }> {
   const csrf_token = await fetchCsrfToken();
-  const r = await apiFetch("/api/v1/auth/change-password", {
+  const path = "/api/v1/auth/change-password";
+  const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -114,20 +87,6 @@ export async function postChangePassword(
       new_password: newPassword,
     }),
   });
-  if (!r.ok) {
-    let detail = r.statusText;
-    try {
-      const body = await readJson<{ detail?: unknown }>(r);
-      if (body.detail !== undefined && body.detail !== null) {
-        const s = apiErrorDetailToString(body.detail);
-        if (s) {
-          detail = s;
-        }
-      }
-    } catch {
-      /* ignore */
-    }
-    throw new Error(detail || `change password: ${r.status}`);
-  }
+  await requireOk(path, r, "Could not change the password");
   return readJson(r);
 }
