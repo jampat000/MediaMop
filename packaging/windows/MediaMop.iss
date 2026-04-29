@@ -49,6 +49,7 @@ Type: files; Name: "{app}\MediaMopServer.exe"
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#RepoRoot}\packaging\windows\MediaMopUpgrade.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\MediaMop"; Filename: "{app}\{#ExeName}"
@@ -62,6 +63,7 @@ Filename: "{app}\{#ExeName}"; Description: "Launch MediaMop"; Flags: nowait post
 
 [UninstallRun]
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""MediaMop Server"""; Flags: runhidden waituntilterminated
+Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /TN ""MediaMop Upgrade"" /F"; Flags: runhidden waituntilterminated
 
 [Code]
 procedure StopMediaMopProcess(ProcessName: String);
@@ -121,10 +123,33 @@ begin
   end;
 end;
 
+procedure InstallUpgradeTask();
+var
+  ResultCode: Integer;
+  TaskCommand: String;
+  UserName: String;
+begin
+  UserName := ExpandConstant('{username}');
+  TaskCommand :=
+    '/Create /TN "MediaMop Upgrade" /SC ONDEMAND /RL HIGHEST /IT /F /RU "' + UserName +
+    '" /TR "\"' + ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe') +
+    '\" -NoProfile -ExecutionPolicy Bypass -File \"' + ExpandConstant('{app}\MediaMopUpgrade.ps1') + '\""';
+
+  Exec(
+    ExpandConstant('{sys}\schtasks.exe'),
+    TaskCommand,
+    '',
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode
+  );
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
   begin
     InstallFirewallRule();
+    InstallUpgradeTask();
   end;
 end;

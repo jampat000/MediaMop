@@ -473,6 +473,8 @@ export function SettingsPage() {
         window.setTimeout(() => {
           window.location.assign("/app/settings");
         }, 30_000);
+      } else {
+        void queryClient.invalidateQueries({ queryKey: ["suite", "update-status"] });
       }
     } catch {
       /* surfaced below */
