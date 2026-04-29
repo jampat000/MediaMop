@@ -679,6 +679,9 @@ def test_security_headers_on_health_and_api(monkeypatch: pytest.MonkeyPatch) -> 
     with TestClient(app) as client:
         r_h = client.get("/health")
         assert r_h.headers.get("X-Content-Type-Options") == "nosniff"
+        assert r_h.headers.get("X-Frame-Options") == "DENY"
+        assert r_h.headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
+        assert r_h.headers.get("Content-Security-Policy")
         assert r_h.headers.get("strict-transport-security")
         r_csrf = client.get("/api/v1/auth/csrf")
         assert r_csrf.headers.get("Content-Security-Policy")

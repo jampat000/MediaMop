@@ -75,3 +75,34 @@ def test_legacy_session_secret_ciphertexts_can_be_rewrapped(monkeypatch, tmp_pat
     assert decrypt_pruner_credentials_json(rotated, pruner_new) == '{"api_key":"p"}'
     assert decrypt_subber_credentials_json(rotated, subber_new) == '{"api_key":"s"}'
     assert decrypt_arr_api_key(rotated, arr_new) == "arr-key"
+
+
+def test_previous_credentials_secret_allows_safe_secret_rotation(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("MEDIAMOP_HOME", str(tmp_path))
+    old = _settings(monkeypatch, session="session-secret-a-abcdefghijklmnopqrstuvwxyz", credentials="old-credentials-secret")
+
+    pruner = encrypt_pruner_credentials_json(old, '{"api_key":"p"}')
+    subber = encrypt_subber_credentials_json(old, '{"api_key":"s"}')
+    arr = encrypt_arr_api_key(old, "arr-key")
+
+    monkeypatch.setenv("MEDIAMOP_SESSION_SECRET", "session-secret-b-abcdefghijklmnopqrstuvwxyz")
+    monkeypatch.setenv("MEDIAMOP_CREDENTIALS_SECRET", "new-credentials-secret")
+    monkeypatch.setenv("MEDIAMOP_PREVIOUS_CREDENTIALS_SECRETS", "old-credentials-secret")
+    rotated = MediaMopSettings.load()
+
+    assert decrypt_pruner_credentials_json(rotated, pruner) == '{"api_key":"p"}'
+    assert decrypt_subber_credentials_json(rotated, subber) == '{"api_key":"s"}'
+    assert decrypt_arr_api_key(rotated, arr) == "arr-key"
+
+    pruner_new = rewrap_pruner_credentials_json(rotated, pruner)
+    subber_new = rewrap_subber_credentials_json(rotated, subber)
+    arr_new = rewrap_arr_api_key(rotated, arr)
+
+    monkeypatch.setenv("MEDIAMOP_PREVIOUS_CREDENTIALS_SECRETS", "")
+    new_only = MediaMopSettings.load()
+    assert pruner_new is not None
+    assert subber_new is not None
+    assert arr_new is not None
+    assert decrypt_pruner_credentials_json(new_only, pruner_new) == '{"api_key":"p"}'
+    assert decrypt_subber_credentials_json(new_only, subber_new) == '{"api_key":"s"}'
+    assert decrypt_arr_api_key(new_only, arr_new) == "arr-key"

@@ -19,14 +19,17 @@ _forwarded_without_trust_warned = False
 class SlidingWindowLimiter:
     """Fixed-capacity sliding window: at most ``max_events`` timestamps within ``window_seconds``."""
 
-    __slots__ = ("_buckets", "_lock", "max_events", "window_seconds")
+    __slots__ = ("_buckets", "_lock", "max_events", "max_keys", "window_seconds")
 
-    def __init__(self, *, max_events: int, window_seconds: float) -> None:
+    def __init__(self, *, max_events: int, window_seconds: float, max_keys: int = 10_000) -> None:
         if max_events < 1:
             raise ValueError("max_events must be >= 1")
         if window_seconds <= 0:
             raise ValueError("window_seconds must be > 0")
+        if max_keys < 1:
+            raise ValueError("max_keys must be >= 1")
         self.max_events = max_events
+        self.max_keys = max_keys
         self.window_seconds = float(window_seconds)
         self._lock = threading.Lock()
         self._buckets: dict[str, list[float]] = defaultdict(list)
@@ -45,6 +48,7 @@ class SlidingWindowLimiter:
             if len(bucket) >= self.max_events:
                 return False
             bucket.append(now)
+            self._evict_over_capacity_locked(prefer_keep=k)
             return True
 
     def _evict_expired_locked(self, cutoff: float) -> None:
@@ -54,6 +58,17 @@ class SlidingWindowLimiter:
                 bucket.pop(0)
             if not bucket:
                 del self._buckets[key]
+
+    def _evict_over_capacity_locked(self, *, prefer_keep: str) -> None:
+        while len(self._buckets) > self.max_keys:
+            oldest_key = min(
+                (key for key in self._buckets if key != prefer_keep),
+                key=lambda key: self._buckets[key][-1] if self._buckets[key] else 0.0,
+                default=None,
+            )
+            if oldest_key is None:
+                break
+            del self._buckets[oldest_key]
 
     def reset_for_tests(self) -> None:
         with self._lock:
