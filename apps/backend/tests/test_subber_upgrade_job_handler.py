@@ -182,4 +182,6 @@ def test_upgrade_handler_runs_when_enabled_with_candidates(session_factory, tmp_
             .order_by(ActivityEvent.id.desc()),
         ).first()
         assert ev is not None
-        assert "finished" in (ev.title or "").lower()
+        title = (ev.title or "").lower()
+        assert "checked 1 item" in title
+        assert "improved 1" in title
