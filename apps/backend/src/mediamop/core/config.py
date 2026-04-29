@@ -115,6 +115,7 @@ class MediaMopSettings:
     cors_origins: tuple[str, ...]
     session_secret: str | None
     credentials_secret: str | None
+    previous_credentials_secrets: tuple[str, ...]
     session_cookie_name: str
     session_cookie_secure: bool
     session_cookie_samesite: str
@@ -306,6 +307,11 @@ class MediaMopSettings:
         cors = _parse_csv_urls(os.environ.get("MEDIAMOP_CORS_ORIGINS") or "")
         session = (os.environ.get("MEDIAMOP_SESSION_SECRET") or "").strip() or None
         credentials_secret = (os.environ.get("MEDIAMOP_CREDENTIALS_SECRET") or "").strip() or None
+        previous_credentials_secrets = tuple(
+            item
+            for item in _parse_csv_urls(os.environ.get("MEDIAMOP_PREVIOUS_CREDENTIALS_SECRETS") or "")
+            if item and item != credentials_secret
+        )
         cookie_name = (
             (os.environ.get("MEDIAMOP_SESSION_COOKIE_NAME") or "").strip()
             or "mediamop_session"
@@ -495,6 +501,7 @@ class MediaMopSettings:
             cors_origins=cors,
             session_secret=session,
             credentials_secret=credentials_secret,
+            previous_credentials_secrets=previous_credentials_secrets,
             session_cookie_name=cookie_name,
             session_cookie_secure=secure,
             session_cookie_samesite=samesite,

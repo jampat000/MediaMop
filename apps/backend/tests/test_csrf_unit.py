@@ -30,6 +30,7 @@ def _csrf_settings(**overrides: object) -> MediaMopSettings:
         cors_origins=(),
         session_secret="x",
         credentials_secret=None,
+        previous_credentials_secrets=(),
         session_cookie_name="mediamop_session",
         session_cookie_secure=False,
         session_cookie_samesite="lax",

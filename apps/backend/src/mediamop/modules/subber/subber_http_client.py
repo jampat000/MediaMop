@@ -62,7 +62,10 @@ def request_json(
     code, text = request_text(url, method=method, headers=merged, data=data, timeout=timeout)
     if not text.strip():
         return code, None
-    parsed = json.loads(text)
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        return code, None
     return code, parsed if isinstance(parsed, (dict, list)) else None
 
 
@@ -70,5 +73,8 @@ def decode_http_error_json(exc: urllib.error.HTTPError) -> dict[str, Any] | None
     raw = exc.read().decode("utf-8", errors="replace")
     if not raw.strip():
         return None
-    parsed = json.loads(raw)
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return {"raw": raw}
     return parsed if isinstance(parsed, dict) else {"raw": raw}

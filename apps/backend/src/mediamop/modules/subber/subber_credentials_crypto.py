@@ -10,6 +10,7 @@ from typing import Literal
 from cryptography.fernet import Fernet, InvalidToken
 
 from mediamop.core.config import MediaMopSettings
+from mediamop.core.credentials_rotation import credential_secret_candidates
 
 
 _DOMAIN = b"mediamop.subber.credentials.v1|"
@@ -66,13 +67,19 @@ def decrypt_subber_credentials_json(settings: MediaMopSettings, ciphertext: str)
     if env is not None:
         token = str(env.get("token") or "")
         key_id = str(env.get("key_id") or "")
-        f = _fernet_for_secret(settings.credentials_secret) if key_id == _CREDENTIALS_KEY_ID else _legacy_fernet(settings)
-        if f is None or not token:
+        if not token:
             return None
-        try:
-            return f.decrypt(token.encode("ascii")).decode("utf-8")
-        except (InvalidToken, ValueError, TypeError):
-            return None
+        fernets = (
+            credential_secret_candidates(settings, _fernet_for_secret)
+            if key_id == _CREDENTIALS_KEY_ID
+            else [f for f in [_legacy_fernet(settings)] if f]
+        )
+        for f in fernets:
+            try:
+                return f.decrypt(token.encode("ascii")).decode("utf-8")
+            except (InvalidToken, ValueError, TypeError):
+                continue
+        return None
     f = _legacy_fernet(settings)
     if f is None:
         return None
