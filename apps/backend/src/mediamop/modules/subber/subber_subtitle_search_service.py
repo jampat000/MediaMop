@@ -43,6 +43,7 @@ from mediamop.modules.subber.subber_settings_service import language_preferences
 from mediamop.modules.subber.subber_subtitle_state_model import SubberSubtitleState
 from mediamop.modules.subber.subber_subtitle_state_service import mark_found, mark_missing
 from mediamop.platform.file_lifecycle.guardrails import check_minimum_free_disk_space
+from mediamop.platform.observability.failure_messages import operator_failure_from_exception
 
 logger = logging.getLogger(__name__)
 
@@ -881,10 +882,15 @@ def search_and_download_subtitle(
                 ):
                     return True
         except SubberRateLimitError as exc:
-            message = (
-                f"{prow.provider_key} is rate-limited for this run, so Subber skipped it "
-                "and continued with the next enabled provider."
+            failure = operator_failure_from_exception(
+                module="Subber",
+                action="subtitle search",
+                exc=exc,
+                provider=str(prow.provider_key),
+                recoverable=True,
+                continuation="Subber skipped this provider and continued with the next enabled provider.",
             )
+            message = failure.message
             logger.warning("%s state_id=%s", message, state_row.id)
             if provider_events is not None:
                 provider_events.append(
@@ -893,12 +899,30 @@ def search_and_download_subtitle(
                         "result": "skipped",
                         "reason": "rate_limited",
                         "message": message,
-                        "detail": str(exc),
+                        **failure.as_dict(),
                     }
                 )
             continue
-        except Exception:  # noqa: BLE001 — continue to next provider
-            logger.exception("Provider %s search failed state_id=%s", prow.provider_key, state_row.id)
+        except Exception as exc:  # noqa: BLE001 - continue to next provider
+            failure = operator_failure_from_exception(
+                module="Subber",
+                action="subtitle search",
+                exc=exc,
+                provider=str(prow.provider_key),
+                recoverable=True,
+                continuation="Subber skipped this provider and continued with the next enabled provider.",
+            )
+            logger.exception("%s state_id=%s", failure.message, state_row.id)
+            if provider_events is not None:
+                provider_events.append(
+                    {
+                        "provider": str(prow.provider_key),
+                        "result": "skipped",
+                        "reason": failure.kind,
+                        "message": failure.message,
+                        **failure.as_dict(),
+                    }
+                )
             continue
 
     if not retain_found_on_failure:

@@ -26,6 +26,17 @@ Every operational Activity detail should include stable fields when applicable:
 - `user_message`: one plain-language sentence suitable for the UI.
 - `next_action`: only when the operator can do something useful.
 
+## Failure Messages
+
+Failures must use the shared failure helper in `mediamop.platform.observability.failure_messages` before they reach job `last_error`, Activity detail, or provider result arrays.
+
+- Say what failed with module and action, for example `Subber subtitle search`.
+- Say where it failed when known, for example provider, server, or media scope.
+- Classify why it failed as `rate_limit`, `credential`, `auth`, `network`, `validation`, `not_found`, or `internal`.
+- Say what happens next: skipped and continued, will retry, or marked failed.
+- Add `next_action` for credential, auth, network, validation, and rate-limit cases.
+- Keep raw stack traces and exception internals in structured logs, not primary UI text.
+
 ## Wording
 
 - Use product names and user concepts: `Movies`, `TV episodes`, `connection test`, `scan`, `preview`, `saved list`, `removed from library`, `processed file`.

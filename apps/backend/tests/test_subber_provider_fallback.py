@@ -45,10 +45,22 @@ def test_rate_limited_provider_is_skipped_and_next_provider_is_tried(monkeypatch
             "provider": PROVIDER_OPENSUBTITLES_COM,
             "result": "skipped",
             "reason": "rate_limited",
-            "message": (
-                "opensubtitles_com is rate-limited for this run, so Subber skipped it "
-                "and continued with the next enabled provider."
+            "failure_kind": "rate_limit",
+            "recoverable": True,
+            "what_failed": "Subber subtitle search",
+            "why": "The provider from opensubtitles_com temporarily limited requests.",
+            "what_happens_next": "Subber skipped this provider and continued with the next enabled provider.",
+            "user_message": (
+                "Subber subtitle search for opensubtitles_com skipped and continued: "
+                "The provider from opensubtitles_com temporarily limited requests. "
+                "Subber skipped this provider and continued with the next enabled provider."
             ),
-            "detail": "OpenSubtitles daily limit reached",
+            "message": (
+                "Subber subtitle search for opensubtitles_com skipped and continued: "
+                "The provider from opensubtitles_com temporarily limited requests. "
+                "Subber skipped this provider and continued with the next enabled provider."
+            ),
+            "next_action": "Wait for the provider limit to reset, or reduce how often this workflow runs.",
+            "technical_detail": "SubberRateLimitError: OpenSubtitles daily limit reached",
         }
     ]

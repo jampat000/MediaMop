@@ -27,6 +27,7 @@ from mediamop.modules.pruner.pruner_jobs_ops import (
     fail_leased_pruner_job_after_complete_failure,
 )
 from mediamop.platform.jobs.worker_health import worker_heartbeat, worker_started, worker_stopped
+from mediamop.platform.observability.failure_messages import operator_failure_from_exception
 
 logger = logging.getLogger(__name__)
 
@@ -147,7 +148,12 @@ def process_one_pruner_job(
             handler(ctx)
     except Exception as exc:
         logger.exception("Pruner job handler failed for job_id=%s kind=%s", ctx.id, ctx.job_kind)
-        err_text = str(exc)[:10_000]
+        err_text = operator_failure_from_exception(
+            module="Pruner",
+            action="job",
+            exc=exc,
+            recoverable=False,
+        ).message[:10_000]
         try:
             with session_factory() as session:
                 with session.begin():
