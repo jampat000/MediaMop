@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -671,7 +672,7 @@ def test_expired_session_is_rejected_and_revoked(monkeypatch: pytest.MonkeyPatch
         assert row.revoked_at is not None
 
 
-def test_security_headers_on_health_and_auth(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_security_headers_on_health_and_api(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MEDIAMOP_SECURITY_ENABLE_HSTS", "1")
     reset_user_tables()
     app = create_app()
@@ -683,3 +684,21 @@ def test_security_headers_on_health_and_auth(monkeypatch: pytest.MonkeyPatch) ->
         assert r_csrf.headers.get("Content-Security-Policy")
         assert "frame-ancestors" in (r_csrf.headers.get("Content-Security-Policy") or "").lower()
         assert r_csrf.headers.get("Cache-Control", "").startswith("no-store")
+        r_system = client.get("/api/v1/system/directories")
+        assert r_system.headers.get("Cache-Control", "").startswith("no-store")
+
+
+def test_static_assets_do_not_get_api_no_store(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    dist = tmp_path / "web"
+    assets = dist / "assets"
+    assets.mkdir(parents=True)
+    (dist / "index.html").write_text("<div id='root'></div>", encoding="utf-8")
+    (assets / "app.js").write_text("console.log('ok');", encoding="utf-8")
+    monkeypatch.setenv("MEDIAMOP_WEB_DIST", str(dist))
+
+    app = create_app()
+    with TestClient(app) as client:
+        response = client.get("/assets/app.js")
+
+    assert response.status_code == 200
+    assert response.headers.get("Cache-Control") != "no-store, private"
