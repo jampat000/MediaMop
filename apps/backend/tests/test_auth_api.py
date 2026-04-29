@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -225,6 +226,44 @@ def test_session_rotation_replaces_old_cookie(client_with_admin: TestClient) -> 
     assert old_cookie != new_cookie
     r_me = client_with_admin.get("/api/v1/auth/me")
     assert r_me.status_code == 200
+
+
+def test_login_cookie_has_explicit_lifetime(client_with_admin: TestClient) -> None:
+    csrf = fetch_csrf(client_with_admin)
+    response = auth_post(
+        client_with_admin,
+        "/api/v1/auth/login",
+        json={"username": "alice", "password": "test-password-strong", "csrf_token": csrf},
+    )
+
+    assert response.status_code == 200, response.text
+    set_cookie = response.headers.get("set-cookie", "")
+    assert "Max-Age=" in set_cookie
+    assert "HttpOnly" in set_cookie
+    assert "SameSite=" in set_cookie
+
+
+def test_session_cookie_survives_backend_app_restart() -> None:
+    seed_admin_user()
+    cookie_name = MediaMopSettings.load().session_cookie_name
+    app1 = create_app()
+    with TestClient(app1) as client1:
+        csrf = fetch_csrf(client1)
+        login = auth_post(
+            client1,
+            "/api/v1/auth/login",
+            json={"username": "alice", "password": "test-password-strong", "csrf_token": csrf},
+        )
+        assert login.status_code == 200, login.text
+        cookie = client1.cookies.get(cookie_name)
+        assert cookie
+
+    app2 = create_app()
+    with TestClient(app2) as client2:
+        client2.cookies.set(cookie_name, cookie, path="/")
+        me = client2.get("/api/v1/auth/me")
+        assert me.status_code == 200, me.text
+        assert me.json()["user"]["username"] == "alice"
 
 
 def test_second_browser_login_does_not_revoke_first_browser_session() -> None:
@@ -606,7 +645,34 @@ def test_load_valid_session_throttles_last_seen_persistence(monkeypatch: pytest.
     assert read_last_seen() == later
 
 
-def test_security_headers_on_health_and_auth(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_expired_session_is_rejected_and_revoked(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MEDIAMOP_SESSION_IDLE_MINUTES", "720")
+    seed_admin_user()
+    settings = MediaMopSettings.load()
+    eng = create_db_engine(settings)
+    fac = create_session_factory(eng)
+    base = datetime(2026, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+
+    with patch("mediamop.platform.auth.service.utcnow", return_value=base):
+        with fac() as db:
+            user = db.scalars(select(User).where(User.username == "alice")).one()
+            row, raw = auth_service.create_user_session(db, user, settings=settings)
+            sid = row.id
+            db.commit()
+
+    with patch("mediamop.platform.auth.service.utcnow", return_value=base + timedelta(days=settings.session_absolute_days + 1)):
+        with fac() as db:
+            pair = auth_service.load_valid_session_for_request(db, raw, settings)
+            db.commit()
+
+    assert pair is None
+    with fac() as db:
+        row = db.get(UserSession, sid)
+        assert row is not None
+        assert row.revoked_at is not None
+
+
+def test_security_headers_on_health_and_api(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MEDIAMOP_SECURITY_ENABLE_HSTS", "1")
     reset_user_tables()
     app = create_app()
@@ -618,3 +684,21 @@ def test_security_headers_on_health_and_auth(monkeypatch: pytest.MonkeyPatch) ->
         assert r_csrf.headers.get("Content-Security-Policy")
         assert "frame-ancestors" in (r_csrf.headers.get("Content-Security-Policy") or "").lower()
         assert r_csrf.headers.get("Cache-Control", "").startswith("no-store")
+        r_system = client.get("/api/v1/system/directories")
+        assert r_system.headers.get("Cache-Control", "").startswith("no-store")
+
+
+def test_static_assets_do_not_get_api_no_store(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    dist = tmp_path / "web"
+    assets = dist / "assets"
+    assets.mkdir(parents=True)
+    (dist / "index.html").write_text("<div id='root'></div>", encoding="utf-8")
+    (assets / "app.js").write_text("console.log('ok');", encoding="utf-8")
+    monkeypatch.setenv("MEDIAMOP_WEB_DIST", str(dist))
+
+    app = create_app()
+    with TestClient(app) as client:
+        response = client.get("/assets/app.js")
+
+    assert response.status_code == 200
+    assert response.headers.get("Cache-Control") != "no-store, private"

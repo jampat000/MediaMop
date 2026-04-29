@@ -19,11 +19,18 @@ import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.pruner.pruner_constants import MEDIA_SCOPE_MOVIES, RULE_FAMILY_WATCHED_MOVIES_REPORTED
+from mediamop.modules.pruner.pruner_constants import (
+    MEDIA_SCOPE_MOVIES,
+    RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+    RULE_FAMILY_WATCHED_MOVIES_REPORTED,
+)
 from mediamop.modules.pruner.pruner_genre_filters import preview_genre_filters_to_db_column
 from mediamop.modules.pruner.pruner_instances_service import create_server_instance
 from mediamop.modules.pruner.pruner_job_handlers import build_pruner_job_handlers
-from mediamop.modules.pruner.pruner_job_kinds import PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND
+from mediamop.modules.pruner.pruner_job_kinds import (
+    PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
+    PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
+)
 from mediamop.modules.pruner.pruner_jobs_model import PrunerJob, PrunerJobStatus
 from mediamop.modules.pruner.pruner_preview_run_model import PrunerPreviewRun
 from mediamop.modules.pruner.pruner_scope_settings_model import PrunerScopeSettings
@@ -168,7 +175,7 @@ def test_scheduled_preview_activity_title_and_detail_trigger(
             .order_by(ActivityEvent.id.desc()),
         ).first()
         assert evt is not None
-        assert evt.title.startswith("Scheduled Pruner preview (missing primary):")
+        assert evt.title.startswith("Scheduled Pruner preview scan found")
         detail = json.loads(evt.detail or "{}")
         assert detail.get("trigger") == "scheduled"
 
@@ -238,10 +245,87 @@ def test_scheduled_preview_accepts_non_missing_primary_rule_family(
             .order_by(ActivityEvent.id.desc()),
         ).first()
         assert evt is not None
-        assert evt.title.startswith("Scheduled Pruner preview (watched movies):")
+        assert evt.title.startswith("Scheduled Pruner preview scan found")
         detail = json.loads(evt.detail or "{}")
         assert detail.get("trigger") == "scheduled"
         assert detail.get("rule_family_id") == RULE_FAMILY_WATCHED_MOVIES_REPORTED
+
+
+def test_scheduled_preview_auto_apply_enqueues_snapshot_apply_job(
+    session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MEDIAMOP_PRUNER_APPLY_ENABLED", "1")
+    settings = MediaMopSettings.load()
+    with session_factory() as s:
+        with s.begin():
+            inst = create_server_instance(
+                s,
+                settings,
+                provider="jellyfin",
+                display_name="JF Auto",
+                base_url="http://jf-auto.test",
+                credentials_secrets={"api_key": "k"},
+            )
+            sid = int(inst.id)
+            row_m = s.scalars(
+                select(PrunerScopeSettings).where(
+                    PrunerScopeSettings.server_instance_id == sid,
+                    PrunerScopeSettings.media_scope == MEDIA_SCOPE_MOVIES,
+                ),
+            ).one()
+            row_m.auto_apply_enabled = True
+            row_m.max_deletes_per_run = 3
+
+    monkeypatch.setattr(
+        "mediamop.modules.pruner.pruner_preview_job_handler.preview_payload_json",
+        lambda **kwargs: (
+            "success",
+            "",
+            [{"granularity": "movie_item", "item_id": "1"}, {"granularity": "movie_item", "item_id": "2"}],
+            False,
+        ),
+    )
+
+    with session_factory() as s:
+        with s.begin():
+            job_row = PrunerJob(
+                dedupe_key="preview-auto-apply-scheduled",
+                job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
+                status=PrunerJobStatus.COMPLETED.value,
+            )
+            s.add(job_row)
+            s.flush()
+            job_id = int(job_row.id)
+
+    handlers = build_pruner_job_handlers(settings, session_factory)
+    handlers[PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND](
+        PrunerJobWorkContext(
+            id=job_id,
+            job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
+            payload_json=json.dumps(
+                {
+                    "server_instance_id": sid,
+                    "media_scope": MEDIA_SCOPE_MOVIES,
+                    "trigger": "scheduled",
+                    "rule_family_id": RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+                },
+            ),
+            lease_owner="pytest",
+        ),
+    )
+
+    with session_factory() as s:
+        apply_job = s.scalars(
+            select(PrunerJob).where(PrunerJob.job_kind == PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND),
+        ).one()
+        payload = json.loads(apply_job.payload_json or "{}")
+        assert payload["server_instance_id"] == sid
+        assert payload["media_scope"] == MEDIA_SCOPE_MOVIES
+        assert payload["rule_family_id"] == RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED
+        assert payload["auto_applied"] is True
+        assert payload["max_deletes_per_run"] == 3
+        assert isinstance(payload["preview_run_uuid"], str)
 
 
 def test_plex_preview_zero_candidates_with_genres_records_operator_note(

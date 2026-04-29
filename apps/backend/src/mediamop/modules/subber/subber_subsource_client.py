@@ -2,35 +2,27 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import urllib.parse
-import urllib.request
 from typing import Any
 
+from mediamop.modules.subber.subber_http_client import DEFAULT_USER_AGENT, request_bytes, request_json
+
 BASE = "https://api.subsource.net"
-USER_AGENT = "MediaMop/1.0"
+USER_AGENT = DEFAULT_USER_AGENT
 logger = logging.getLogger(__name__)
 
 
 def _request(path: str, *, api_key: str, method: str = "GET", body: dict | None = None) -> dict[str, Any] | list | None:
     url = f"{BASE}{path}"
-    data = json.dumps(body).encode() if body else None
     headers: dict[str, str] = {
         "User-Agent": USER_AGENT,
         "Accept": "application/json",
         "X-API-Key": api_key.strip(),
     }
-    if data:
-        headers["Content-Type"] = "application/json"
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)  # noqa: S310
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            raw = resp.read().decode("utf-8", errors="replace")
-            if not raw.strip():
-                return None
-            parsed = json.loads(raw)
-            return parsed if isinstance(parsed, (dict, list)) else None
+        _code, parsed = request_json(url, method=method, headers=headers, body=body, timeout=30)
+        return parsed
     except Exception:
         logger.exception("SubSource request failed: %s", url)
         return None
@@ -76,10 +68,5 @@ def search(
 
 def download(*, download_url: str, api_key: str) -> bytes:
     """Download subtitle from SubSource."""
-    req = urllib.request.Request(  # noqa: S310
-        download_url,
-        headers={"User-Agent": USER_AGENT, "X-API-Key": api_key.strip()},
-        method="GET",
-    )
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        return resp.read()
+    _code, data = request_bytes(download_url, headers={"User-Agent": USER_AGENT, "X-API-Key": api_key.strip()}, timeout=60)
+    return data

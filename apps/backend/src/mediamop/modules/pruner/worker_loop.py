@@ -26,6 +26,8 @@ from mediamop.modules.pruner.pruner_jobs_ops import (
     fail_claimed_pruner_job,
     fail_leased_pruner_job_after_complete_failure,
 )
+from mediamop.platform.jobs.worker_health import worker_heartbeat, worker_started, worker_stopped
+from mediamop.platform.observability.failure_messages import operator_failure_from_exception
 
 logger = logging.getLogger(__name__)
 
@@ -146,7 +148,12 @@ def process_one_pruner_job(
             handler(ctx)
     except Exception as exc:
         logger.exception("Pruner job handler failed for job_id=%s kind=%s", ctx.id, ctx.job_kind)
-        err_text = str(exc)[:10_000]
+        err_text = operator_failure_from_exception(
+            module="Pruner",
+            action="job",
+            exc=exc,
+            recoverable=False,
+        ).message[:10_000]
         try:
             with session_factory() as session:
                 with session.begin():
@@ -221,36 +228,42 @@ async def pruner_worker_run_forever(
 ) -> None:
     owner = _lease_owner(worker_index)
     handlers = job_handlers if job_handlers is not None else default_pruner_job_handler_registry()
-    while not stop_event.is_set():
+    worker_started("pruner", worker_index)
+    try:
+        while not stop_event.is_set():
+            worker_heartbeat("pruner", worker_index)
 
-        def _tick() -> Literal["idle", "processed"]:
-            return process_one_pruner_job(
-                session_factory,
-                lease_owner=owner,
-                job_handlers=handlers,
-                lease_seconds=lease_seconds,
-            )
+            def _tick() -> Literal["idle", "processed"]:
+                return process_one_pruner_job(
+                    session_factory,
+                    lease_owner=owner,
+                    job_handlers=handlers,
+                    lease_seconds=lease_seconds,
+                )
 
-        try:
-            outcome = await asyncio.to_thread(_tick)
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            logger.exception("Pruner worker tick crashed worker_index=%s", worker_index)
-            await asyncio.sleep(PRUNER_WORKER_TICK_ERROR_BACKOFF_SECONDS)
-            continue
+            try:
+                outcome = await asyncio.to_thread(_tick)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("Pruner worker tick crashed worker_index=%s", worker_index)
+                await asyncio.sleep(PRUNER_WORKER_TICK_ERROR_BACKOFF_SECONDS)
+                continue
 
-        if stop_event.is_set():
-            break
+            if stop_event.is_set():
+                break
 
-        if outcome == "idle":
-            loop = asyncio.get_running_loop()
-            deadline = loop.time() + idle_sleep_seconds
-            while loop.time() < deadline and not stop_event.is_set():
-                remaining = deadline - loop.time()
-                if remaining <= 0:
-                    break
-                await asyncio.sleep(min(0.25, remaining))
+            if outcome == "idle":
+                loop = asyncio.get_running_loop()
+                deadline = loop.time() + idle_sleep_seconds
+                while loop.time() < deadline and not stop_event.is_set():
+                    worker_heartbeat("pruner", worker_index)
+                    remaining = deadline - loop.time()
+                    if remaining <= 0:
+                        break
+                    await asyncio.sleep(min(0.25, remaining))
+    finally:
+        worker_stopped("pruner", worker_index)
 
 
 def start_pruner_worker_background_tasks(

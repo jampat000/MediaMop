@@ -1,4 +1,4 @@
-import { apiFetch, readJson } from "./client";
+import { apiFetch, readJson, requireOk } from "./client";
 import type { ActivityRecentResponse } from "./types";
 
 export type ActivityRecentFilters = {
@@ -26,9 +26,8 @@ export function activityRecentPath(options?: ActivityRecentFilters): string {
 }
 
 export async function fetchActivityRecent(options?: ActivityRecentFilters): Promise<ActivityRecentResponse> {
-  const r = await apiFetch(activityRecentPath(options));
-  if (!r.ok) {
-    throw new Error(`activity recent: ${r.status}`);
-  }
+  const path = activityRecentPath(options);
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load activity");
   return readJson<ActivityRecentResponse>(r);
 }

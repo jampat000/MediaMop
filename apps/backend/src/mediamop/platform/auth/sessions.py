@@ -90,3 +90,19 @@ def session_is_valid(
     if is_idle_expired(session_row, idle=idle, now=n):
         return False
     return True
+
+
+def session_invalid_reason(
+    session_row: UserSession,
+    *,
+    idle: timedelta = DEFAULT_IDLE_TIMEOUT,
+    now: datetime | None = None,
+) -> str | None:
+    n = now or utcnow()
+    if is_revoked(session_row):
+        return "revoked"
+    if is_past_absolute_expiry(session_row, now=n):
+        return "absolute_expired"
+    if is_idle_expired(session_row, idle=idle, now=n):
+        return "idle_expired"
+    return None

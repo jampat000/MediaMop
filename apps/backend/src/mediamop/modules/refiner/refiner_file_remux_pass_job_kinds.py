@@ -1,5 +1,7 @@
-"""Durable Refiner job kinds: per-file remux pass (ffprobe + plan + optional ffmpeg)."""
+"""Compatibility alias for the Refiner file remux pass job kinds."""
 
-from __future__ import annotations
+import sys
 
-REFINER_FILE_REMUX_PASS_JOB_KIND = "refiner.file.remux_pass.v1"
+from mediamop.modules.refiner.file_remux_pass import job_kinds as _job_kinds
+
+sys.modules[__name__] = _job_kinds

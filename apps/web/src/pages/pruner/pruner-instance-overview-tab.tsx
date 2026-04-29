@@ -32,7 +32,7 @@ function activeRuleLines(scope: PrunerScopeSummary, provider: string): string[] 
       lines.push(`Delete unwatched movies older than ${scope.unwatched_movie_stale_min_age_days} days.`);
     }
   }
-  return lines.length > 0 ? lines : ["No cleanup rules are turned on for this tab yet."];
+  return lines.length > 0 ? lines : ["No cleanup rules are turned on for this library yet."];
 }
 
 function scheduleLine(scope: PrunerScopeSummary): string {
@@ -126,7 +126,7 @@ function ScopeWorkspaceCard({
 
       {unsupported.length ? (
         <div className="rounded-md border border-amber-900/40 bg-amber-950/20 px-3 py-3 text-xs text-amber-100/95">
-          <p className="font-semibold text-amber-50">Not available on Plex for this tab</p>
+          <p className="font-semibold text-amber-50">Not available for this Plex library</p>
           <ul className="mt-2 list-inside list-disc space-y-1">
             {unsupported.map((u) => (
               <li key={u}>{u}</li>

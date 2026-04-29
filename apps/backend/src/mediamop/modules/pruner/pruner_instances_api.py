@@ -49,6 +49,7 @@ from mediamop.modules.pruner.pruner_instances_service import (
     create_server_instance,
     get_scope_settings,
     get_server_instance,
+    normalize_server_base_url,
 )
 from mediamop.modules.pruner.pruner_job_kinds import (
     PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
@@ -128,6 +129,8 @@ def _scope_row_out(session: Session, row: PrunerScopeSettings) -> PrunerScopeSum
         scheduled_preview_start=str(row.scheduled_preview_start or "00:00"),
         scheduled_preview_end=str(row.scheduled_preview_end or "23:59"),
         last_scheduled_preview_enqueued_at=row.last_scheduled_preview_enqueued_at,
+        auto_apply_enabled=bool(row.auto_apply_enabled),
+        max_deletes_per_run=max(1, min(int(row.max_deletes_per_run), 5000)),
         last_preview_run_uuid=str(run_uuid) if run_uuid else None,
         last_preview_at=row.last_preview_at,
         last_preview_candidate_count=row.last_preview_candidate_count,
@@ -178,14 +181,17 @@ def post_pruner_instance(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
 
     prov = cast(PrunerProvider, body.provider)
-    row = create_server_instance(
-        db,
-        settings,
-        provider=prov,
-        display_name=body.display_name,
-        base_url=body.base_url,
-        credentials_secrets=body.credentials,
-    )
+    try:
+        row = create_server_instance(
+            db,
+            settings,
+            provider=prov,
+            display_name=body.display_name,
+            base_url=body.base_url,
+            credentials_secrets=body.credentials,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e)) from e
     db.flush()
     row = db.scalars(
         select(PrunerServerInstance)
@@ -271,7 +277,24 @@ def patch_pruner_instance(
     if body.display_name is not None:
         row.display_name = body.display_name.strip()
     if body.base_url is not None:
+        try:
+            normalized = normalize_server_base_url(body.base_url)
+        except ValueError as e:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e)) from e
+        duplicate = db.scalars(
+            select(PrunerServerInstance).where(
+                PrunerServerInstance.provider == row.provider,
+                PrunerServerInstance.normalized_base_url == normalized,
+                PrunerServerInstance.id != row.id,
+            ),
+        ).first()
+        if duplicate is not None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="This media server is already configured for Pruner.",
+            )
         row.base_url = body.base_url.strip()
+        row.normalized_base_url = normalized
     if body.enabled is not None:
         row.enabled = bool(body.enabled)
     if body.credentials is not None:
@@ -395,6 +418,10 @@ def patch_pruner_scope(
             sc.scheduled_preview_end = normalize_hhmm(body.scheduled_preview_end, fallback="23:59")
         except ValueError as e:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e)) from e
+    if body.auto_apply_enabled is not None:
+        sc.auto_apply_enabled = bool(body.auto_apply_enabled)
+    if body.max_deletes_per_run is not None:
+        sc.max_deletes_per_run = max(1, min(int(body.max_deletes_per_run), 5000))
     ym = sc.preview_year_min
     yx = sc.preview_year_max
     if ym is not None and yx is not None and ym > yx:
@@ -464,7 +491,7 @@ def get_pruner_preview_run(
     response_model=PrunerApplyEligibilityOut,
     summary="Whether live apply from this preview snapshot can be enqueued (Jellyfin, Emby, Plex)",
     description=(
-        "Read-only gate check for apply-from-preview. This is **not** a preview/dry run — it only reports whether the "
+        "Read-only gate check for apply-from-preview. This is **not** a second scan — it only reports whether the "
         "snapshot is eligible given instance, scope, outcome, and feature flag."
     ),
 )

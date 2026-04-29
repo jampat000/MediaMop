@@ -1,4 +1,4 @@
-import { apiErrorDetailToString, apiFetch, readJson } from "../api/client";
+import { apiFetch, readJson, requireOk } from "../api/client";
 
 export type DirectoryBrowseEntry = {
   name: string;
@@ -15,16 +15,8 @@ export type DirectoryBrowseResponse = {
 
 export async function fetchServerDirectories(path?: string | null): Promise<DirectoryBrowseResponse> {
   const qs = path?.trim() ? `?path=${encodeURIComponent(path.trim())}` : "";
-  const r = await apiFetch(`/api/v1/system/directories${qs}`);
-  if (!r.ok) {
-    let detail = r.statusText;
-    try {
-      const body = await readJson<{ detail?: unknown }>(r);
-      detail = apiErrorDetailToString(body.detail) || detail;
-    } catch {
-      /* ignore */
-    }
-    throw new Error(detail || `Could not browse folders (${r.status})`);
-  }
+  const apiPath = `/api/v1/system/directories${qs}`;
+  const r = await apiFetch(apiPath);
+  await requireOk(apiPath, r, "Could not browse folders");
   return readJson<DirectoryBrowseResponse>(r);
 }

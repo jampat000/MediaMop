@@ -19,6 +19,10 @@ from mediamop.platform.suite_settings.model import SuiteSettingsRow
 from mediamop.platform.suite_settings.service import apply_suite_settings_put
 from mediamop.platform.suite_settings.suite_configuration_backup_periodic import run_suite_configuration_backup_tick
 from mediamop.platform.suite_settings.suite_configuration_backup_service import list_suite_configuration_backups
+from mediamop.platform.suite_settings.logs_retention_periodic import (
+    reset_log_retention_periodic_state_for_tests,
+    run_log_retention_tick,
+)
 from mediamop.platform.suite_settings.update_service import start_suite_update_now
 
 from tests.integration_helpers import auth_post, csrf as fetch_csrf, trusted_browser_origin_headers
@@ -67,6 +71,27 @@ def test_suite_settings_get_default_shape(client_with_admin: TestClient) -> None
     assert body["configuration_backup_preferred_time"] == "02:00"
     assert body["configuration_backup_last_run_at"] is None
     assert "updated_at" in body
+
+
+def test_log_retention_tick_runs_once_per_day(monkeypatch: pytest.MonkeyPatch) -> None:
+    reset_log_retention_periodic_state_for_tests()
+    settings = MediaMopSettings.load()
+    fac = create_session_factory(create_db_engine(settings))
+    calls: list[int] = []
+
+    def fake_prune(session, settings) -> None:
+        calls.append(1)
+
+    monkeypatch.setattr(
+        "mediamop.platform.suite_settings.logs_retention_periodic.prune_logs_for_retention",
+        fake_prune,
+    )
+
+    t0 = datetime(2026, 4, 29, 0, 0, tzinfo=UTC)
+    assert run_log_retention_tick(fac, settings=settings, now=t0) == 1
+    assert run_log_retention_tick(fac, settings=settings, now=t0 + timedelta(hours=1)) == 0
+    assert run_log_retention_tick(fac, settings=settings, now=t0 + timedelta(days=1, seconds=1)) == 1
+    assert len(calls) == 2
 
 
 def test_suite_security_overview_get_ok(client_with_admin: TestClient) -> None:

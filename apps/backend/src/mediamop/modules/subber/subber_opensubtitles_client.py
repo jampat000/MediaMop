@@ -1,15 +1,21 @@
-"""OpenSubtitles.com REST API v1 client (urllib)."""
+"""OpenSubtitles.com REST API v1 client."""
 
 from __future__ import annotations
 
 import json
 import urllib.error
 import urllib.parse
-import urllib.request
 from typing import Any
 
+from mediamop.modules.subber.subber_http_client import (
+    DEFAULT_USER_AGENT,
+    decode_http_error_json,
+    request_bytes,
+    request_json,
+)
+
 OS_BASE = "https://api.opensubtitles.com/api/v1"
-USER_AGENT = "MediaMop/1.0"
+USER_AGENT = DEFAULT_USER_AGENT
 
 
 class SubberRateLimitError(Exception):
@@ -25,35 +31,23 @@ def _request(
     token: str | None = None,
 ) -> tuple[int, dict[str, Any] | list[Any] | None]:
     url = f"{OS_BASE}{path}"
-    data_bytes = None
     headers = {
         "User-Agent": USER_AGENT,
         "Api-Key": api_key.strip(),
         "Accept": "application/json",
     }
-    if body is not None:
-        data_bytes = json.dumps(body, separators=(",", ":")).encode("utf-8")
-        headers["Content-Type"] = "application/json"
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    req = urllib.request.Request(url, data=data_bytes, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:  # noqa: S310 — controlled URL
-            raw = resp.read().decode("utf-8", errors="replace")
-            code = int(getattr(resp, "status", 200))
-            if not raw.strip():
-                return code, None
-            parsed = json.loads(raw)
-            return code, parsed if isinstance(parsed, (dict, list)) else None
-    except urllib.error.HTTPError as e:
-        if e.code == 429:
-            raise SubberRateLimitError from e
+        return request_json(url, method=method, headers=headers, body=body, timeout=60)
+    except urllib.error.HTTPError as exc:
+        if exc.code == 429:
+            raise SubberRateLimitError from exc
         try:
-            err_body = e.read().decode("utf-8", errors="replace")
-            parsed = json.loads(err_body) if err_body.strip() else None
+            parsed = decode_http_error_json(exc)
         except json.JSONDecodeError:
             parsed = None
-        return int(e.code), parsed if isinstance(parsed, dict) else {"raw": err_body}
+        return int(exc.code), parsed
 
 
 def login(username: str, password: str, api_key: str) -> str:
@@ -150,10 +144,5 @@ def download(token: str, api_key: str, *, file_id: int) -> bytes:
     if not link:
         msg = "OpenSubtitles download response missing link"
         raise ValueError(msg)
-    req = urllib.request.Request(  # noqa: S310
-        link,
-        headers={"User-Agent": USER_AGENT},
-        method="GET",
-    )
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        return resp.read()
+    _code, data = request_bytes(link, headers={"User-Agent": USER_AGENT}, timeout=120)
+    return data

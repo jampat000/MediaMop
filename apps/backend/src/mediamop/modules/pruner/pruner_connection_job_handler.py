@@ -16,6 +16,8 @@ from mediamop.modules.pruner.pruner_media_library import test_emby_jellyfin_conn
 from mediamop.modules.pruner.worker_loop import PrunerJobWorkContext
 from mediamop.platform.activity import constants as C
 from mediamop.platform.activity.service import record_activity_event
+from mediamop.platform.observability.diagnostics import DiagnosticAction, DiagnosticModule, DiagnosticResult, DiagnosticTrigger
+from mediamop.platform.observability.operator_messages import activity_detail_envelope, connection_test_title
 
 
 def _parse_payload(payload_json: str | None) -> dict[str, Any]:
@@ -47,7 +49,10 @@ def make_pruner_server_connection_test_handler(
                 raise ValueError(msg)
             env = decrypt_and_parse_envelope(settings, inst.credentials_ciphertext)
             if env is None:
-                msg = "cannot decrypt credentials (session secret missing or ciphertext invalid)"
+                msg = (
+                    "Pruner credentials could not be read. Re-enter this server's credentials or migrate them with "
+                    "the original MEDIAMOP_SESSION_SECRET and MEDIAMOP_CREDENTIALS_SECRET configured."
+                )
                 raise RuntimeError(msg)
             provider = str(env["provider"])
             secrets: dict[str, str] = env["secrets"]
@@ -68,8 +73,21 @@ def make_pruner_server_connection_test_handler(
             ok, detail = False, f"unsupported provider {provider!r}"
 
         when = datetime.now(timezone.utc)
-        title = f"Pruner: {display_name} ({provider}) connection test"
+        title = connection_test_title(module_label="Pruner", name=display_name, provider=provider, ok=ok)
         detail_s = (detail or "")[:10_000]
+        result_for_message = DiagnosticResult.SUCCESS if ok else DiagnosticResult.FAILED
+        activity_detail = {
+            **activity_detail_envelope(
+                module=DiagnosticModule.PRUNER,
+                action=DiagnosticAction.CONNECTION_TEST,
+                trigger=DiagnosticTrigger.MANUAL,
+                result=result_for_message,
+                provider=provider,
+                user_message=detail_s or ("Connection test passed." if ok else "Connection test failed."),
+                next_action=None if ok else "Check the server URL and credentials, then run the connection test again.",
+            ),
+            "detail": detail_s,
+        }
         with session_factory() as session:
             with session.begin():
                 inst2 = get_server_instance(session, sid)
@@ -88,7 +106,7 @@ def make_pruner_server_connection_test_handler(
                     event_type=evt,
                     module="pruner",
                     title=title,
-                    detail=detail_s,
+                    detail=json.dumps(activity_detail, separators=(",", ":"))[:10_000],
                 )
 
     return _run

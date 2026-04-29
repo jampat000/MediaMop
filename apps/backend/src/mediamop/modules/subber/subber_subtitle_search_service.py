@@ -35,12 +35,15 @@ from mediamop.modules.subber.subber_provider_registry import (
     PROVIDER_SUBSOURCE,
     PROVIDER_YIFY,
 )
+from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
 from mediamop.modules.subber.subber_providers_model import SubberProviderRow
 from mediamop.modules.subber.subber_providers_service import get_enabled_providers_ordered, provider_is_ready_for_search
 from mediamop.modules.subber.subber_settings_model import SubberSettingsRow
 from mediamop.modules.subber.subber_settings_service import language_preferences_list
 from mediamop.modules.subber.subber_subtitle_state_model import SubberSubtitleState
 from mediamop.modules.subber.subber_subtitle_state_service import mark_found, mark_missing
+from mediamop.platform.file_lifecycle.guardrails import check_minimum_free_disk_space
+from mediamop.platform.observability.failure_messages import operator_failure_from_exception
 
 logger = logging.getLogger(__name__)
 
@@ -245,6 +248,13 @@ def _write_srt_for_state(
     out_dir.mkdir(parents=True, exist_ok=True)
     safe_lang = re.sub(r"[^a-z0-9_-]", "", lang)[:10] or "en"
     out_path = out_dir / f"{stem}.{safe_lang}.srt"
+    guardrail = ensure_refiner_operator_settings_row(db)
+    disk = check_minimum_free_disk_space(
+        target_path=out_path,
+        required_mb=guardrail.minimum_free_disk_space_mb,
+    )
+    if not disk.ok:
+        raise RuntimeError(disk.message)
     out_path.write_bytes(srt_bytes)
     mark_found(
         db,
@@ -743,6 +753,7 @@ def search_and_download_subtitle(
     db: Session,
     providers: list[SubberProviderRow] | None = None,
     retain_found_on_failure: bool = False,
+    provider_events: list[dict[str, str]] | None = None,
 ) -> bool:
     """Search providers in order; legacy settings path when ``providers`` is empty.
 
@@ -870,10 +881,48 @@ def search_and_download_subtitle(
                     exclude_hi=exclude_hi,
                 ):
                     return True
-        except SubberRateLimitError:
-            raise
-        except Exception:  # noqa: BLE001 — continue to next provider
-            logger.exception("Provider %s search failed state_id=%s", prow.provider_key, state_row.id)
+        except SubberRateLimitError as exc:
+            failure = operator_failure_from_exception(
+                module="Subber",
+                action="subtitle search",
+                exc=exc,
+                provider=str(prow.provider_key),
+                recoverable=True,
+                continuation="Subber skipped this provider and continued with the next enabled provider.",
+            )
+            message = failure.message
+            logger.warning("%s state_id=%s", message, state_row.id)
+            if provider_events is not None:
+                provider_events.append(
+                    {
+                        "provider": str(prow.provider_key),
+                        "result": "skipped",
+                        "reason": "rate_limited",
+                        "message": message,
+                        **failure.as_dict(),
+                    }
+                )
+            continue
+        except Exception as exc:  # noqa: BLE001 - continue to next provider
+            failure = operator_failure_from_exception(
+                module="Subber",
+                action="subtitle search",
+                exc=exc,
+                provider=str(prow.provider_key),
+                recoverable=True,
+                continuation="Subber skipped this provider and continued with the next enabled provider.",
+            )
+            logger.exception("%s state_id=%s", failure.message, state_row.id)
+            if provider_events is not None:
+                provider_events.append(
+                    {
+                        "provider": str(prow.provider_key),
+                        "result": "skipped",
+                        "reason": failure.kind,
+                        "message": failure.message,
+                        **failure.as_dict(),
+                    }
+                )
             continue
 
     if not retain_found_on_failure:

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.refiner_failure_cleanup_enqueue import enqueue_refiner_failure_cleanup_sweep_job
+from mediamop.modules.refiner.refiner_failure_cleanup_activity import record_refiner_failure_cleanup_sweep_skipped
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +67,17 @@ async def _run_periodic_scope_enqueue(
 
         def _once() -> None:
             with session_factory() as session:
-                enqueue_refiner_failure_cleanup_sweep_job(session, media_scope=media_scope)
+                job, inserted = enqueue_refiner_failure_cleanup_sweep_job(session, media_scope=media_scope)
+                if not inserted:
+                    record_refiner_failure_cleanup_sweep_skipped(
+                        session,
+                        media_scope=media_scope,
+                        detail=(
+                            f'{{"media_scope":"{media_scope}","cleanup_run_status":"skipped",'
+                            f'"reason":"Previous cleanup job is still queued or running.",'
+                            f'"existing_job_id":{int(job.id)}}}'
+                        ),
+                    )
                 session.commit()
 
         try:

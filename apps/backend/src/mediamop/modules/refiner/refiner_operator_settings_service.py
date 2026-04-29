@@ -26,6 +26,10 @@ def _clamp_min_file_age_seconds(raw: int) -> int:
     return max(0, min(int(raw), 7 * 24 * 3600))
 
 
+def _clamp_size_mb(raw: int) -> int:
+    return max(0, min(int(raw), 1024 * 1024))
+
+
 def ensure_refiner_operator_settings_row(db: Session) -> RefinerOperatorSettingsRow:
     row = db.scalars(select(RefinerOperatorSettingsRow).where(RefinerOperatorSettingsRow.id == 1)).one_or_none()
     if row is None:
@@ -33,6 +37,8 @@ def ensure_refiner_operator_settings_row(db: Session) -> RefinerOperatorSettings
             id=1,
             max_concurrent_files=1,
             min_file_age_seconds=60,
+            refiner_min_input_file_size_mb=50,
+            minimum_free_disk_space_mb=5120,
             movie_schedule_enabled=1,
             movie_schedule_hours_limited=0,
             movie_schedule_days="",
@@ -94,6 +100,8 @@ def build_refiner_operator_settings_out(db: Session, row: RefinerOperatorSetting
     return RefinerOperatorSettingsOut(
         max_concurrent_files=_clamp_max_concurrent_files(row.max_concurrent_files),
         min_file_age_seconds=_clamp_min_file_age_seconds(row.min_file_age_seconds),
+        refiner_min_input_file_size_mb=_clamp_size_mb(row.refiner_min_input_file_size_mb),
+        minimum_free_disk_space_mb=_clamp_size_mb(row.minimum_free_disk_space_mb),
         movie_schedule_enabled=bool(row.movie_schedule_enabled),
         movie_schedule_hours_limited=bool(row.movie_schedule_hours_limited),
         movie_schedule_days=(row.movie_schedule_days or "").strip(),
@@ -115,6 +123,10 @@ def apply_refiner_operator_settings_put(db: Session, body: RefinerOperatorSettin
         row.max_concurrent_files = _clamp_max_concurrent_files(body.max_concurrent_files)
     if body.min_file_age_seconds is not None:
         row.min_file_age_seconds = _clamp_min_file_age_seconds(body.min_file_age_seconds)
+    if body.refiner_min_input_file_size_mb is not None:
+        row.refiner_min_input_file_size_mb = _clamp_size_mb(body.refiner_min_input_file_size_mb)
+    if body.minimum_free_disk_space_mb is not None:
+        row.minimum_free_disk_space_mb = _clamp_size_mb(body.minimum_free_disk_space_mb)
     if body.movie_schedule_enabled is not None:
         row.movie_schedule_enabled = 1 if body.movie_schedule_enabled else 0
         row.movie_schedule_hours_limited = 1 if body.movie_schedule_hours_limited else 0

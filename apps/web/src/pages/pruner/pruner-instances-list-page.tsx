@@ -1009,7 +1009,8 @@ function PrunerGlobalScheduleRow({
       <div className="mt-4 border-t border-[var(--mm-border)] pt-6">
         <h4 className="text-base font-semibold text-[var(--mm-text1)]">Run now</h4>
         <p className="mt-1 text-xs text-[var(--mm-text3)]">
-          Run your saved cleanup criteria immediately without waiting for the schedule.
+          Scan your saved cleanup criteria immediately without waiting for the schedule. This creates review snapshots;
+          deletion still requires a saved snapshot confirmation.
         </p>
         <div className="mt-4">
           <PrunerDryRunControls

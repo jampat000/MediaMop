@@ -18,7 +18,7 @@ npm ci
 npm run dev
 ```
 
-**`npm run dev`** first runs **`dev:stop-api`** and **`dev:stop-web`** (listeners on the default ports from **`../../scripts/dev-ports.json`**, overridable with **`MEDIAMOP_DEV_API_PORT`** / **`MEDIAMOP_DEV_WEB_PORT`**), then starts **both** the FastAPI process (same as `../../scripts/dev-backend.ps1`) and Vite in one terminal via `scripts/run-dev-stack.mjs` (no reliance on `node_modules/.bin` shims, which some Windows setups omit). The stack **waits for `GET /health` on the API port before starting Vite**, so the browser is not served until the backend has finished lifespan (including Alembic). Override wait with **`MEDIAMOP_DEV_STACK_API_WAIT_MS`** (default `120000`). Use **`npm run dev:quick`** to skip the port-stop step when you know the default ports are free. Use **`npm run dev:web`** for Vite only (e.g. when the API is already running elsewhere). **`npm run dev:fresh`** is the same as **`npm run dev`**.
+**`npm run dev`** first runs **`dev:stop-api`** and **`dev:stop-web`** (listeners on the default ports from **`../../scripts/dev-ports.json`**, overridable with **`MEDIAMOP_DEV_API_PORT`** / **`MEDIAMOP_DEV_WEB_PORT`**), then starts **both** the FastAPI process (same as `../../scripts/dev-backend.ps1`) and Vite in one terminal via `scripts/run-dev-stack.mjs` (no reliance on `node_modules/.bin` shims, which some Windows setups omit). The stack **waits for `GET /health` on the API port before starting Vite**, so the browser is not served until the backend has finished lifespan (including Alembic). Override wait with **`MEDIAMOP_DEV_STACK_API_WAIT_MS`** (default `120000`). Use **`npm run dev:quick`** to skip the port-stop step when you know the default ports are free. Use **`npm run dev:web`** for Vite only (e.g. when the API is already running elsewhere).
 
 **`package-lock.json`** is committed; use **`npm ci`** for reproducible installs (CI uses **`npm ci`**).
 
@@ -71,8 +71,7 @@ All calls use `credentials: 'include'` and the real endpoints:
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Stop default dev ports, then API + Vite (same as `dev:fresh`) |
-| `npm run dev:fresh` | Same as `npm run dev` |
+| `npm run dev` | Stop default dev ports, then API + Vite |
 | `npm run dev:quick` | API + Vite without stopping ports first |
 | `npm run build` | Typecheck + production bundle |
 | `npm run preview` | Preview production build |

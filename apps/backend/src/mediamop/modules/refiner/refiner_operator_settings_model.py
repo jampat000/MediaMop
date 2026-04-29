@@ -17,6 +17,8 @@ class RefinerOperatorSettingsRow(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     max_concurrent_files: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
     min_file_age_seconds: Mapped[int] = mapped_column(Integer, nullable=False, server_default="60")
+    refiner_min_input_file_size_mb: Mapped[int] = mapped_column(Integer, nullable=False, server_default="50")
+    minimum_free_disk_space_mb: Mapped[int] = mapped_column(Integer, nullable=False, server_default="5120")
     movie_schedule_enabled: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
     movie_schedule_hours_limited: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     movie_schedule_days: Mapped[str] = mapped_column(Text, nullable=False, server_default="")

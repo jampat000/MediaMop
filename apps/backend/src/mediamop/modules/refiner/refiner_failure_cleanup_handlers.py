@@ -12,6 +12,7 @@ from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.refiner_failure_cleanup import run_refiner_failure_cleanup_sweep_for_scope
 from mediamop.modules.refiner.refiner_failure_cleanup_activity import (
     record_refiner_failure_cleanup_sweep_completed,
+    record_refiner_failure_cleanup_sweep_started,
 )
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
 
@@ -38,6 +39,15 @@ def make_refiner_failure_cleanup_handler(
         media_scope = _parse_payload(ctx.payload_json, default_scope=default_scope)
         with session_factory() as session:
             with session.begin():
+                record_refiner_failure_cleanup_sweep_started(
+                    session,
+                    media_scope=media_scope,
+                    detail=json.dumps(
+                        {"job_id": ctx.id, "media_scope": media_scope, "cleanup_run_status": "started"},
+                        separators=(",", ":"),
+                        ensure_ascii=True,
+                    ),
+                )
                 result: dict[str, Any] = run_refiner_failure_cleanup_sweep_for_scope(
                     session=session,
                     settings=settings,

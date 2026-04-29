@@ -655,7 +655,8 @@ export function SettingsPage() {
                   aria-describedby="suite-general-log-retention-hint"
                 />
                 <p id="suite-general-log-retention-hint" className="mt-1 text-xs text-[var(--mm-text3)]">
-                  Between 1 and 3650 days. Older system log entries are removed automatically.
+                  Between 1 and 3650 days. Older system log entries are removed automatically while MediaMop is running;
+                  no restart is required.
                 </p>
               </label>
               {save.isError && lastSuiteSaveTarget === "logs" ? (
@@ -1490,5 +1491,4 @@ export function SettingsPage() {
     </div>
   );
 }
-
 

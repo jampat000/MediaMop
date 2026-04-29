@@ -34,7 +34,11 @@ def test_refiner_remux_handler_updates_progress_row_to_completed_activity(
     monkeypatch.setattr(
         handler_mod,
         "ensure_refiner_operator_settings_row",
-        lambda _session: SimpleNamespace(min_file_age_seconds=0),
+        lambda _session: SimpleNamespace(
+            min_file_age_seconds=0,
+            refiner_min_input_file_size_mb=0,
+            minimum_free_disk_space_mb=0,
+        ),
     )
     monkeypatch.setattr(handler_mod, "load_refiner_remux_rules_config", lambda _session, *, media_scope: object())
     monkeypatch.setattr(handler_mod, "resolve_refiner_path_runtime_for_remux", lambda *_args, **_kwargs: (object(), None))

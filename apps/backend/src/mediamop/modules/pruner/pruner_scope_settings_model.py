@@ -3,17 +3,22 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func, text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from mediamop.core.db import Base
+
+if TYPE_CHECKING:
+    from mediamop.modules.pruner.pruner_server_instance_model import PrunerServerInstance
 
 
 class PrunerScopeSettings(Base):
     """Exactly one row per (server_instance_id, media_scope) — ``tv`` or ``movies``."""
 
     __tablename__ = "pruner_scope_settings"
+    __table_args__ = (UniqueConstraint("server_instance_id", "media_scope", name="uq_pruner_scope_instance_scope"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     server_instance_id: Mapped[int] = mapped_column(
@@ -146,6 +151,16 @@ class PrunerScopeSettings(Base):
     last_scheduled_preview_enqueued_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
+    )
+    auto_apply_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default=text("0"),
+    )
+    max_deletes_per_run: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        server_default=text("50"),
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

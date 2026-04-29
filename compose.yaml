@@ -19,6 +19,11 @@ services:
       - "8788:8788"
     environment:
       MEDIAMOP_HOME: ${MEDIAMOP_HOME:-/data/mediamop}
+      # Optional. If omitted, the container generates and persists /data/mediamop/session.secret.
+      # To provide your own value, generate one with: openssl rand -hex 32
+      # MEDIAMOP_SESSION_SECRET: ${MEDIAMOP_SESSION_SECRET}
+      # Recommended before saving Pruner/Subber/Sonarr/Radarr credentials:
+      # MEDIAMOP_CREDENTIALS_SECRET: ${MEDIAMOP_CREDENTIALS_SECRET}
     volumes:
       - mediamop_data:/data/mediamop
     restart: unless-stopped

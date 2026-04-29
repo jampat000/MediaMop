@@ -43,6 +43,7 @@ import {
 } from "./pruner-people-roles";
 import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
 import { formatPrunerDateTime, previewRunRowCaption } from "./pruner-ui-utils";
+import { PrunerProviderSection } from "./pruner-scope-tab-sections";
 
 type Ctx = { instanceId: number; instance: PrunerServerInstance | undefined };
 
@@ -278,7 +279,7 @@ export function PrunerScopeTab(props: {
         csrf_token,
       });
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
-      setPreviewMaxItemsMsg("Saved how many items each scan may check on this tab.");
+      setPreviewMaxItemsMsg("Saved how many items each scan may check for this library.");
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -299,7 +300,7 @@ export function PrunerScopeTab(props: {
         csrf_token,
       });
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
-      setStaleNeverMsg("Saved never-watched TV and movie age settings for this tab.");
+      setStaleNeverMsg("Saved never-watched TV and movie age settings for this library.");
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -321,7 +322,7 @@ export function PrunerScopeTab(props: {
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
       setGenreMsg(
         tokens.length
-          ? "Saved your genre picks for this tab."
+          ? "Saved your genre picks for this library."
           : "Cleared genre picks — all genres will be included in scans.",
       );
     } catch (e) {
@@ -349,8 +350,8 @@ export function PrunerScopeTab(props: {
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
       setPeopleMsg(
         tokens.length
-          ? "Saved name filters for this tab."
-          : "Cleared name filters for this tab.",
+          ? "Saved name filters for this library."
+          : "Cleared name filters for this library.",
       );
     } catch (e) {
       setErr((e as Error).message);
@@ -388,7 +389,7 @@ export function PrunerScopeTab(props: {
         csrf_token,
       });
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
-      setYearMsg("Saved release year limits for this tab.");
+      setYearMsg("Saved release year limits for this library.");
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -413,8 +414,8 @@ export function PrunerScopeTab(props: {
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
       setStudioMsg(
         tokens.length
-          ? "Saved studio filters for this tab."
-          : "Cleared studio filters for this tab.",
+          ? "Saved studio filters for this library."
+          : "Cleared studio filters for this library.",
       );
     } catch (e) {
       setErr((e as Error).message);
@@ -440,8 +441,8 @@ export function PrunerScopeTab(props: {
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
       setCollectionMsg(
         tokens.length
-          ? "Saved collection filters for this tab."
-          : "Cleared collection filters for this tab.",
+          ? "Saved collection filters for this library."
+          : "Cleared collection filters for this library.",
       );
     } catch (e) {
       setErr((e as Error).message);
@@ -461,7 +462,7 @@ export function PrunerScopeTab(props: {
         csrf_token,
       });
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
-      setWatchedMoviesMsg("Saved watched-movie cleanup setting for this tab.");
+      setWatchedMoviesMsg("Saved watched-movie cleanup setting for this library.");
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -532,7 +533,7 @@ export function PrunerScopeTab(props: {
         csrf_token,
       });
       await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
-      setWatchedTvMsg("Saved watched-TV cleanup setting for this tab.");
+      setWatchedTvMsg("Saved watched-TV cleanup setting for this library.");
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -1116,7 +1117,7 @@ export function PrunerScopeTab(props: {
     const onSave = props.scope === "tv" ? saveProviderTvRulesBundle : saveProviderMoviesRulesBundle;
     const saveDisabled = busy || !showInteractiveControls || (isPlex && props.scope === "tv");
     return (
-      <section className="flex min-h-0 w-full min-w-0 flex-1 flex-col" data-testid={`pruner-provider-subsection-rules-${props.scope}`}>
+      <PrunerProviderSection scope={props.scope} section="rules">
         <fieldset disabled={Boolean(props.disabledMode)} className="flex min-h-0 flex-1 flex-col">
           <div className="mm-card-action-body min-h-0 flex-1">{renderProviderRulesControls()}</div>
           {showInteractiveControls ? (
@@ -1147,14 +1148,14 @@ export function PrunerScopeTab(props: {
             </>
           )}
         </fieldset>
-      </section>
+      </PrunerProviderSection>
     );
   }
 
   if (isProvider && provSub === "filters") {
     const saveLabel = props.scope === "tv" ? "Save TV filters" : "Save Movies filters";
     return (
-      <section className="flex min-h-0 w-full min-w-0 flex-1 flex-col" data-testid={`pruner-provider-subsection-filters-${props.scope}`}>
+      <PrunerProviderSection scope={props.scope} section="filters">
         <fieldset disabled={Boolean(props.disabledMode)} className="flex min-h-0 flex-1 flex-col">
           <div className="mm-card-action-body min-h-0 flex-1">{renderProviderFiltersControls()}</div>
           {showInteractiveControls ? (
@@ -1185,14 +1186,14 @@ export function PrunerScopeTab(props: {
             </>
           )}
         </fieldset>
-      </section>
+      </PrunerProviderSection>
     );
   }
 
   if (isProvider && provSub === "people") {
     const saveLabel = props.scope === "tv" ? "Save TV people" : "Save Movies people";
     return (
-      <section className="flex min-h-0 w-full min-w-0 flex-1 flex-col" data-testid={`pruner-provider-subsection-people-${props.scope}`}>
+      <PrunerProviderSection scope={props.scope} section="people">
         <fieldset disabled={Boolean(props.disabledMode)} className="flex min-h-0 flex-1 flex-col">
           <div className="mm-card-action-body min-h-0 flex-1">{renderProviderPeopleControls()}</div>
           {showInteractiveControls ? (
@@ -1223,7 +1224,7 @@ export function PrunerScopeTab(props: {
             </>
           )}
         </fieldset>
-      </section>
+      </PrunerProviderSection>
     );
   }
 
@@ -1428,7 +1429,7 @@ export function PrunerScopeTab(props: {
             </p>
           ) : !isProvider ? (
             <p className="text-xs text-[var(--mm-text2)]" data-testid="pruner-people-jf-emby-note">
-              Jellyfin / Emby: names come from each item’s People list on the server and apply to every scan on this tab.
+              Jellyfin / Emby: names come from each item’s People list on the server and apply to every scan for this library.
             </p>
           ) : null}
           {showInteractiveControls ? (
@@ -1799,7 +1800,7 @@ export function PrunerScopeTab(props: {
               ) : (
                 <p className="text-xs text-[var(--mm-text2)]">
                   Watched movies rule is <strong>{scopeRow?.watched_movies_reported_enabled ? "on" : "off"}</strong> for
-                  this tab. Sign in as an operator to change it.
+                  this library. Sign in as an operator to change it.
                 </p>
               )}
             </div>
@@ -2021,9 +2022,8 @@ export function PrunerScopeTab(props: {
               Automatic scans ({props.scope === "tv" ? "TV shows" : "Movies"})
             </h3>
             <p className="mt-1 text-sm text-[var(--mm-text2)]">
-              The schedule runs your saved criteria from the Cleanup tab automatically. If dry run is on in the Cleanup tab,
-              scheduled runs also only scan — they never delete automatically. Timed runs only check broken posters and
-              images; other cleanup types stay manual.
+              The schedule runs your saved criteria automatically and records a review snapshot. Deleting only happens when
+              automatic apply is enabled for this library and uses that saved snapshot.
             </p>
           </div>
           {showInteractiveControls ? (
@@ -2196,7 +2196,7 @@ export function PrunerScopeTab(props: {
           </div>
         ) : (
           <p className="text-sm text-[var(--mm-text2)]" data-testid="pruner-preview-runs-empty">
-            No scans yet for this tab. Run a scan from a rule panel above; when it finishes, rows appear here with the
+            No scans yet for this library. Run a scan from a rule panel above; when it finishes, rows appear here with the
             result, how many items matched, and a short explanation (including rules Plex does not support).
           </p>
         )}

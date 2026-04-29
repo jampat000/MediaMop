@@ -1,5 +1,5 @@
 import { fetchCsrfToken } from "../api/auth-api";
-import { apiErrorDetailToString, apiFetch, readJson } from "../api/client";
+import { apiFetch, readJson, requireOk, throwApiResponseError } from "../api/client";
 import type {
   SuiteConfigurationBackupListOut,
   SuiteLogsOut,
@@ -21,8 +21,8 @@ export const suiteLogsPath = () => "/api/v1/suite/logs";
 export const suiteMetricsPath = () => "/api/v1/suite/metrics";
 
 /**
- * GET/PUT configuration bundle — same handler on the backend, several URL aliases for older builds
- * and reverse proxies that only forward a subset of ``/api/v1/suite/*`` or ``/api/v1/system/*``.
+ * GET/PUT configuration bundle: same handler on the backend, several URL aliases for older builds
+ * and reverse proxies that only forward a subset of `/api/v1/suite/*` or `/api/v1/system/*`.
  */
 export const configurationBundlePaths = [
   "/api/v1/suite/configuration-bundle",
@@ -36,54 +36,29 @@ export const suiteConfigurationBackupsPath = () => "/api/v1/suite/configuration-
 
 export type ConfigurationBundle = Record<string, unknown> & { format_version: number };
 
-async function readFailedRequestMessage(r: Response, fallback: string): Promise<string> {
-  const ctype = (r.headers.get("content-type") || "").toLowerCase();
-  if (ctype.includes("application/json")) {
-    try {
-      const b = (await r.clone().json()) as { detail?: unknown };
-      const fromDetail = apiErrorDetailToString(b.detail);
-      if (fromDetail.length > 0) {
-        return fromDetail;
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-  const text = await r.text();
-  const t = text.trimStart();
-  if (t.startsWith("<!") || t.toLowerCase().startsWith("<html")) {
-    return `${fallback} (${r.status}) — received HTML instead of JSON. Use the same origin as the API (dev: Vite proxy to the backend) and restart the server after upgrading.`;
-  }
-  const oneLine = text.replace(/\s+/g, " ").trim().slice(0, 180);
-  return oneLine.length > 0 ? `${fallback} (${r.status}): ${oneLine}` : `${fallback} (${r.status})`;
-}
-
 export async function fetchSuiteSettings(): Promise<SuiteSettingsOut> {
-  const r = await apiFetch(suiteSettingsPath());
-  if (!r.ok) {
-    throw new Error(`Could not load suite settings (${r.status})`);
-  }
+  const path = suiteSettingsPath();
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load suite settings");
   return readJson<SuiteSettingsOut>(r);
 }
 
 export async function putSuiteSettings(body: SuiteSettingsPutBody): Promise<SuiteSettingsOut> {
   const csrf_token = await fetchCsrfToken();
-  const r = await apiFetch(suiteSettingsPath(), {
+  const path = suiteSettingsPath();
+  const r = await apiFetch(path, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...body, csrf_token }),
   });
-  if (!r.ok) {
-    throw new Error(await readFailedRequestMessage(r, `Could not save suite settings (${r.status})`));
-  }
+  await requireOk(path, r, "Could not save suite settings");
   return readJson<SuiteSettingsOut>(r);
 }
 
 export async function fetchSuiteSecurityOverview(): Promise<SuiteSecurityOverviewOut> {
-  const r = await apiFetch(suiteSecurityOverviewPath());
-  if (!r.ok) {
-    throw new Error(`Could not load security overview (${r.status})`);
-  }
+  const path = suiteSecurityOverviewPath();
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load security overview");
   return readJson<SuiteSecurityOverviewOut>(r);
 }
 
@@ -96,11 +71,11 @@ export async function fetchSuiteUpdateStatus(): Promise<SuiteUpdateStatusOut> {
       continue;
     }
     if (!r.ok) {
-      throw new Error(await readFailedRequestMessage(r, "Could not check for updates"));
+      await throwApiResponseError(path, r, "Could not check for updates");
     }
     return readJson<SuiteUpdateStatusOut>(r);
   }
-  throw new Error(await readFailedRequestMessage(last!, "Could not check for updates"));
+  return throwApiResponseError(suiteUpdateStatusPath(), last!, "Could not check for updates");
 }
 
 export async function startSuiteUpdateNow(): Promise<SuiteUpdateStartOut> {
@@ -117,11 +92,11 @@ export async function startSuiteUpdateNow(): Promise<SuiteUpdateStartOut> {
       continue;
     }
     if (!r.ok) {
-      throw new Error(await readFailedRequestMessage(r, "Could not start upgrade"));
+      await throwApiResponseError(path, r, "Could not start upgrade");
     }
     return readJson<SuiteUpdateStartOut>(r);
   }
-  throw new Error(await readFailedRequestMessage(last!, "Could not start upgrade"));
+  return throwApiResponseError(suiteUpdateNowPath(), last!, "Could not start upgrade");
 }
 
 export async function fetchSuiteLogs(filters?: {
@@ -137,17 +112,14 @@ export async function fetchSuiteLogs(filters?: {
   if (typeof filters?.limit === "number") params.set("limit", String(filters.limit));
   const path = params.size > 0 ? `${suiteLogsPath()}?${params.toString()}` : suiteLogsPath();
   const r = await apiFetch(path);
-  if (!r.ok) {
-    throw new Error(await readFailedRequestMessage(r, "Could not load logs"));
-  }
+  await requireOk(path, r, "Could not load logs");
   return readJson<SuiteLogsOut>(r);
 }
 
 export async function fetchSuiteMetrics(): Promise<SuiteMetricsOut> {
-  const r = await apiFetch(suiteMetricsPath());
-  if (!r.ok) {
-    throw new Error(await readFailedRequestMessage(r, "Could not load runtime health"));
-  }
+  const path = suiteMetricsPath();
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load runtime health");
   return readJson<SuiteMetricsOut>(r);
 }
 
@@ -160,11 +132,11 @@ export async function fetchConfigurationBundle(): Promise<ConfigurationBundle> {
       continue;
     }
     if (!r.ok) {
-      throw new Error(await readFailedRequestMessage(r, "Could not export configuration"));
+      await throwApiResponseError(path, r, "Could not export configuration");
     }
     return readJson<ConfigurationBundle>(r);
   }
-  throw new Error(await readFailedRequestMessage(last!, "Could not export configuration"));
+  return throwApiResponseError(suiteConfigurationBundlePath(), last!, "Could not export configuration");
 }
 
 export async function putConfigurationBundle(bundle: ConfigurationBundle): Promise<ConfigurationBundle> {
@@ -181,25 +153,23 @@ export async function putConfigurationBundle(bundle: ConfigurationBundle): Promi
       continue;
     }
     if (!r.ok) {
-      throw new Error(await readFailedRequestMessage(r, "Could not restore configuration"));
+      await throwApiResponseError(path, r, "Could not restore configuration");
     }
     return readJson<ConfigurationBundle>(r);
   }
-  throw new Error(await readFailedRequestMessage(last!, "Could not restore configuration"));
+  return throwApiResponseError(suiteConfigurationBundlePath(), last!, "Could not restore configuration");
 }
 
 export async function fetchConfigurationBackupList(): Promise<SuiteConfigurationBackupListOut> {
-  const r = await apiFetch(suiteConfigurationBackupsPath());
-  if (!r.ok) {
-    throw new Error(await readFailedRequestMessage(r, "Could not load automatic snapshots"));
-  }
+  const path = suiteConfigurationBackupsPath();
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load automatic snapshots");
   return readJson<SuiteConfigurationBackupListOut>(r);
 }
 
 export async function fetchStoredConfigurationBackupBlob(backupId: number): Promise<Blob> {
-  const r = await apiFetch(`${suiteConfigurationBackupsPath()}/${backupId}/download`);
-  if (!r.ok) {
-    throw new Error(await readFailedRequestMessage(r, "Could not download automatic snapshot"));
-  }
+  const path = `${suiteConfigurationBackupsPath()}/${backupId}/download`;
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not download automatic snapshot");
   return r.blob();
 }

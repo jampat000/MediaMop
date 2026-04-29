@@ -41,6 +41,7 @@ export function LoginPage() {
   const fromSetup = Boolean(
     (location.state as { fromSetup?: boolean } | null)?.fromSetup,
   );
+  const sessionExpired = new URLSearchParams(location.search).get("session") === "expired";
   const me = useMeQuery();
   const boot = useBootstrapStatusQuery();
   const login = useLoginMutation();
@@ -92,6 +93,11 @@ export function LoginPage() {
           {fromSetup ? (
             <p className="mm-auth-banner mm-auth-banner--ok" role="status">
               Initial account created. Sign in with the credentials you chose.
+            </p>
+          ) : null}
+          {sessionExpired ? (
+            <p className="mm-auth-banner" role="status">
+              Your session expired. Sign in again to keep using MediaMop.
             </p>
           ) : null}
 

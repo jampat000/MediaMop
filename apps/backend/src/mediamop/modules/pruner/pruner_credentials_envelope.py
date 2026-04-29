@@ -21,6 +21,7 @@ def build_envelope_for_storage(*, provider: PrunerProvider, secrets: dict[str, s
 
     body: dict[str, Any] = {
         "version": CURRENT_ENVELOPE_VERSION,
+        "key_id": "provider-secrets:v1",
         "provider": provider,
         "secrets": dict(secrets),
     }
@@ -49,7 +50,7 @@ def parse_envelope_plaintext(plaintext_json: str) -> dict[str, Any]:
         msg = "Pruner credentials envelope.secrets must be an object"
         raise ValueError(msg)
     secrets = {str(k): str(v) for k, v in sec.items()}
-    return {"version": int(ver), "provider": prov, "secrets": secrets}
+    return {"version": int(ver), "key_id": str(data.get("key_id") or "legacy"), "provider": prov, "secrets": secrets}
 
 
 def decrypt_and_parse_envelope(settings: MediaMopSettings, ciphertext: str) -> dict[str, Any] | None:

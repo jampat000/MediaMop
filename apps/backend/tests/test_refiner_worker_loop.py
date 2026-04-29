@@ -198,7 +198,8 @@ def test_process_one_fail_path_on_handler_error(session_factory) -> None:
     with session_factory() as s:
         row = s.get(RefinerJob, 1)
         assert row.status == RefinerJobStatus.FAILED.value
-        assert "boom" in (row.last_error or "")
+        assert "Refiner job failed" in (row.last_error or "")
+        assert "marked failed" in (row.last_error or "")
 
 
 def test_process_one_missing_handler_fails_claimed_job(session_factory) -> None:

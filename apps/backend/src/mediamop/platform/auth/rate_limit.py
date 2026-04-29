@@ -1,21 +1,19 @@
-"""In-process sliding-window rate limiting (Phase 6).
+"""In-process sliding-window rate limiting.
 
-No Redis or external store: counters live in process memory. Suitable for a single
-node or few uvicorn workers; limits are **not** shared across processes.
-
-Tradeoffs (intentional for this stage):
-- Each worker maintains its own buckets (effective limit scales ~linearly with workers).
-- Restart clears counters (attackers also get a fresh window).
-- Keys default to the immediate peer IP (``request.client.host``); reverse-proxy setups
-  must terminate TLS and expose the real client consistently (``X-Forwarded-For`` is
-  **not** parsed here to avoid spoofing without a trusted proxy contract).
+Counters live in process memory and are valid only under MediaMop's supported
+single-application-process deployment model.
 """
 
 from __future__ import annotations
 
+import ipaddress
+import logging
 import threading
 import time
 from collections import defaultdict
+
+logger = logging.getLogger(__name__)
+_forwarded_without_trust_warned = False
 
 
 class SlidingWindowLimiter:
@@ -40,6 +38,7 @@ class SlidingWindowLimiter:
         cutoff = now - self.window_seconds
         k = key or "unknown"
         with self._lock:
+            self._evict_expired_locked(cutoff)
             bucket = self._buckets[k]
             while bucket and bucket[0] < cutoff:
                 bucket.pop(0)
@@ -48,14 +47,68 @@ class SlidingWindowLimiter:
             bucket.append(now)
             return True
 
+    def _evict_expired_locked(self, cutoff: float) -> None:
+        for key in list(self._buckets):
+            bucket = self._buckets[key]
+            while bucket and bucket[0] < cutoff:
+                bucket.pop(0)
+            if not bucket:
+                del self._buckets[key]
+
     def reset_for_tests(self) -> None:
         with self._lock:
             self._buckets.clear()
 
 
 def client_rate_limit_key(request) -> str:
-    """Stable per-request key for abuse controls (direct peer IP when present)."""
+    """Stable per-request key for abuse controls.
 
-    if request.client and request.client.host:
-        return request.client.host
-    return "unknown"
+    ``X-Forwarded-For`` is used only when the immediate peer is explicitly trusted
+    through ``MEDIAMOP_TRUSTED_PROXY_IPS``.
+    """
+
+    peer = request.client.host if request.client and request.client.host else "unknown"
+    xff = (request.headers.get("x-forwarded-for") or "").strip()
+    settings = getattr(getattr(request, "app", None), "state", None)
+    trusted_raw = tuple(getattr(getattr(settings, "settings", None), "trusted_proxy_ips", ()) or ())
+    if not xff:
+        return peer
+    if not trusted_raw:
+        _warn_forwarded_headers_ignored()
+        return peer
+    trusted = [_parse_proxy_network(value) for value in trusted_raw]
+    trusted = [item for item in trusted if item is not None]
+    if not _ip_in_networks(peer, trusted):
+        return peer
+    chain = [item.strip() for item in xff.split(",") if item.strip()]
+    for candidate in reversed(chain):
+        if not _ip_in_networks(candidate, trusted):
+            return candidate
+    return chain[0] if chain else peer
+
+
+def _parse_proxy_network(raw: str):
+    try:
+        return ipaddress.ip_network(raw, strict=False)
+    except ValueError:
+        logger.warning("Ignoring invalid MEDIAMOP_TRUSTED_PROXY_IPS entry.")
+        return None
+
+
+def _ip_in_networks(raw: str, networks) -> bool:
+    try:
+        ip = ipaddress.ip_address(raw)
+    except ValueError:
+        return False
+    return any(ip in network for network in networks)
+
+
+def _warn_forwarded_headers_ignored() -> None:
+    global _forwarded_without_trust_warned
+    if _forwarded_without_trust_warned:
+        return
+    _forwarded_without_trust_warned = True
+    logger.warning(
+        "X-Forwarded-For was present but MEDIAMOP_TRUSTED_PROXY_IPS is not configured; "
+        "rate limiting will use the immediate peer address."
+    )

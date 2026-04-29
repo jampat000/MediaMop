@@ -34,6 +34,14 @@ jobs:
           python -m pip install -e "./apps/backend[dev]"
           python -m playwright install --with-deps chromium
 
+      - name: MediaMop backend lint
+        working-directory: apps/backend
+        run: ruff check src tests
+
+      - name: MediaMop backend type check
+        working-directory: apps/backend
+        run: mypy src/mediamop
+
       - name: Run MediaMop backend tests
         working-directory: apps/backend
         env:
@@ -41,7 +49,7 @@ jobs:
           MEDIAMOP_SESSION_SECRET: ci-mediamop-session-secret-32chars-min
         run: |
           alembic upgrade head
-          pytest -q
+          pytest -q --cov=mediamop --cov-fail-under=60
 
       - uses: actions/setup-node@v6
         with:

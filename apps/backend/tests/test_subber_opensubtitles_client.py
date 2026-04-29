@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import io
-import json
 from unittest.mock import patch
 
 import pytest
@@ -20,6 +19,6 @@ def test_login_extracts_token_from_top_level() -> None:
 
 def test_request_429_raises_subber_rate_limit_error() -> None:
     err = urllib.error.HTTPError("https://api.opensubtitles.com/api/v1/x", 429, "Too Many Requests", hdrs=None, fp=io.BytesIO())
-    with patch("mediamop.modules.subber.subber_opensubtitles_client.urllib.request.urlopen", side_effect=err):
+    with patch("mediamop.modules.subber.subber_opensubtitles_client.request_json", side_effect=err):
         with pytest.raises(SubberRateLimitError):
             _request("GET", "/subtitles?query=x", api_key="key", token=None)

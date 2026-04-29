@@ -22,6 +22,29 @@ logger = logging.getLogger(__name__)
 REFINER_WATCHED_FOLDER_SCAN_DISPATCH_ENQUEUE_FAILURE_COOLDOWN_SECONDS = 2.0
 
 
+def _missed_due_run_count(*, now_loop: float, next_run_loop: float, interval_seconds: float) -> int:
+    """Return how many configured intervals elapsed after the next due time."""
+
+    interval = max(1.0, float(interval_seconds))
+    if now_loop <= next_run_loop:
+        return 0
+    return int((now_loop - next_run_loop) // interval)
+
+
+def _next_scheduler_sleep_seconds(
+    *,
+    now_loop: float,
+    next_run_movie: float,
+    next_run_tv: float,
+    poll_seconds: float,
+) -> float:
+    """Sleep until the nearest due scope, capped by the configured polling cadence."""
+
+    next_due = min(float(next_run_movie), float(next_run_tv))
+    until_due = max(0.25, next_due - now_loop)
+    return max(0.25, min(float(poll_seconds), until_due))
+
+
 def _watched_folder_scan_interval_seconds(path_row: object, *, media_scope: str) -> float:
     """Actual watched-folder scan cadence configured on the Refiner Libraries tab."""
 
@@ -61,31 +84,47 @@ async def _run_periodic_watched_folder_scan_dispatch_enqueue(
     next_run_tv = loop.time()
     while not stop_event.is_set():
 
-        def _once(now_loop: float) -> tuple[float, float, float]:
+        def _scope_once(media_scope: str, *, now_loop: float, next_run_loop: float) -> tuple[float, float]:
             with session_factory() as session:
                 row = ensure_refiner_operator_settings_row(session)
                 path_row = ensure_refiner_path_settings_row(session)
-                next_movie = next_run_movie
-                next_tv = next_run_tv
-                if (
-                    bool(row.movie_schedule_enabled)
-                    and now_loop >= next_run_movie
-                    and refiner_periodic_scope_in_schedule_window(session, row, media_scope="movie")
-                ):
-                    try_enqueue_periodic_watched_folder_remux_scan_dispatch(session, settings, media_scope="movie")
-                    next_movie = now_loop + _watched_folder_scan_interval_seconds(path_row, media_scope="movie")
-                if (
-                    bool(row.tv_schedule_enabled)
-                    and now_loop >= next_run_tv
-                    and refiner_periodic_scope_in_schedule_window(session, row, media_scope="tv")
-                ):
-                    try_enqueue_periodic_watched_folder_remux_scan_dispatch(session, settings, media_scope="tv")
-                    next_tv = now_loop + _watched_folder_scan_interval_seconds(path_row, media_scope="tv")
+                interval = _watched_folder_scan_interval_seconds(path_row, media_scope=media_scope)
+                enabled_attr = "tv_schedule_enabled" if media_scope == "tv" else "movie_schedule_enabled"
+                if not bool(getattr(row, enabled_attr)):
+                    return next_run_loop, interval
+                if now_loop < next_run_loop:
+                    return next_run_loop, interval
+                if not refiner_periodic_scope_in_schedule_window(session, row, media_scope=media_scope):
+                    return now_loop + min(interval, 60.0), interval
+
+                missed = _missed_due_run_count(
+                    now_loop=now_loop,
+                    next_run_loop=next_run_loop,
+                    interval_seconds=interval,
+                )
+                if missed > 0:
+                    logger.warning(
+                        "Refiner watched-folder scheduler missed %s %s run(s); enqueueing one catch-up scan",
+                        missed,
+                        media_scope,
+                    )
+
+                try:
+                    try_enqueue_periodic_watched_folder_remux_scan_dispatch(session, settings, media_scope=media_scope)
+                except Exception:
+                    session.rollback()
+                    logger.exception("Refiner watched-folder scheduler failed for %s scope", media_scope)
+                    return (
+                        now_loop + REFINER_WATCHED_FOLDER_SCAN_DISPATCH_ENQUEUE_FAILURE_COOLDOWN_SECONDS,
+                        interval,
+                    )
                 session.commit()
-                poll_movie = _watched_folder_scan_interval_seconds(path_row, media_scope="movie")
-                poll_tv = _watched_folder_scan_interval_seconds(path_row, media_scope="tv")
-                poll_s = min(poll_movie, poll_tv)
-                return next_movie, next_tv, poll_s
+                return now_loop + interval, interval
+
+        def _once(now_loop: float) -> tuple[float, float, float]:
+            next_movie, poll_movie = _scope_once("movie", now_loop=now_loop, next_run_loop=next_run_movie)
+            next_tv, poll_tv = _scope_once("tv", now_loop=now_loop, next_run_loop=next_run_tv)
+            return next_movie, next_tv, min(poll_movie, poll_tv)
 
         try:
             now_loop = loop.time()
@@ -109,7 +148,12 @@ async def _run_periodic_watched_folder_scan_dispatch_enqueue(
 
         if stop_event.is_set():
             break
-        deadline = loop.time() + poll_seconds
+        deadline = loop.time() + _next_scheduler_sleep_seconds(
+            now_loop=loop.time(),
+            next_run_movie=next_run_movie,
+            next_run_tv=next_run_tv,
+            poll_seconds=poll_seconds,
+        )
         while loop.time() < deadline and not stop_event.is_set():
             remaining = deadline - loop.time()
             if remaining <= 0:

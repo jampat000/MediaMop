@@ -93,7 +93,14 @@ def test_scan_handler_enqueues_remux_when_requested(
                 refiner_output_folder=str(out.resolve()),
             ),
         )
-        s.merge(RefinerOperatorSettingsRow(id=1, min_file_age_seconds=0))
+        s.merge(
+            RefinerOperatorSettingsRow(
+                id=1,
+                min_file_age_seconds=0,
+                refiner_min_input_file_size_mb=0,
+                minimum_free_disk_space_mb=0,
+            )
+        )
         s.commit()
 
     payload = {"enqueue_remux_jobs": True}
@@ -164,7 +171,14 @@ def test_scan_handler_enqueues_remux_without_arr_connections(
                 refiner_output_folder=str(out.resolve()),
             ),
         )
-        s.merge(RefinerOperatorSettingsRow(id=1, min_file_age_seconds=0))
+        s.merge(
+            RefinerOperatorSettingsRow(
+                id=1,
+                min_file_age_seconds=0,
+                refiner_min_input_file_size_mb=0,
+                minimum_free_disk_space_mb=0,
+            )
+        )
         s.commit()
 
     with session_factory() as s:

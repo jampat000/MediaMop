@@ -15,6 +15,12 @@ import {
   useSubberTestSonarrMutation,
 } from "../../lib/subber/subber-queries";
 import type { SubberArrRootFolderOut } from "../../lib/subber/subber-api";
+import {
+  PathMappingSection,
+  RadarrConnectionSection,
+  SonarrConnectionSection,
+  SyncActionsSection,
+} from "./subber-connections-sections";
 
 const MASK = "\u2022".repeat(10);
 
@@ -386,6 +392,7 @@ export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
             description="Connect Sonarr so Subber can read your TV library and react to imports."
             data-testid="subber-settings-sonarr"
           >
+            <SonarrConnectionSection>
             <SubberSettingsSubsection title="Connection">
               {sonHint ? (
                 <p className="text-sm text-[var(--mm-text2)]">
@@ -453,7 +460,9 @@ export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
                 fmt={fmt}
               />
             </SubberSettingsSubsection>
+            </SonarrConnectionSection>
 
+            <SyncActionsSection>
             <SubberSettingsSubsection title="Library sync">
               <button
                 type="button"
@@ -485,8 +494,10 @@ export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
                 </p>
               ) : null}
             </SubberSettingsSubsection>
+            </SyncActionsSection>
           </SubberSettingsSection>
 
+          <PathMappingSection>
           <SubberSettingsSection
             title="Path mapping"
             description="Only needed when Subber and Sonarr run in separate containers."
@@ -592,6 +603,7 @@ export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
             </button>
             <SaveFeedback ok={saveSonMap.ok} err={saveSonMap.err} />
           </SubberSettingsSection>
+          </PathMappingSection>
         </div>
 
         <div className="mm-bubble-stack">
@@ -601,6 +613,7 @@ export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
             description="Connect Radarr so Subber can read your movies library and react to imports."
             data-testid="subber-settings-radarr"
           >
+            <RadarrConnectionSection>
             <SubberSettingsSubsection title="Connection">
               {radHint ? (
                 <p className="text-sm text-[var(--mm-text2)]">
@@ -668,7 +681,9 @@ export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
                 fmt={fmt}
               />
             </SubberSettingsSubsection>
+            </RadarrConnectionSection>
 
+            <SyncActionsSection>
             <SubberSettingsSubsection title="Library sync">
               <button
                 type="button"
@@ -700,8 +715,10 @@ export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
                 </p>
               ) : null}
             </SubberSettingsSubsection>
+            </SyncActionsSection>
           </SubberSettingsSection>
 
+          <PathMappingSection>
           <SubberSettingsSection
             title="Path mapping"
             description="Only needed when Subber and Radarr run in separate containers."
@@ -807,6 +824,7 @@ export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
             </button>
             <SaveFeedback ok={saveRadMap.ok} err={saveRadMap.err} />
           </SubberSettingsSection>
+          </PathMappingSection>
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ApiHttpError } from "./client";
 import {
   httpStatusFromApiError,
   isHttpErrorFromApi,
@@ -21,6 +22,7 @@ describe("error-guards", () => {
   });
 
   it("detects HTTP errors from auth-api throws", () => {
+    expect(isHttpErrorFromApi(new ApiHttpError("/api/v1/auth/me", 401, "Signed out"))).toBe(true);
     expect(isHttpErrorFromApi(new Error("bootstrap status: 503"))).toBe(true);
     expect(isHttpErrorFromApi(new Error("me: 401"))).toBe(true);
     expect(isHttpErrorFromApi(new Error("CSRF: 403"))).toBe(true);
@@ -30,6 +32,7 @@ describe("error-guards", () => {
   });
 
   it("parses status from HTTP-shaped errors", () => {
+    expect(httpStatusFromApiError(new ApiHttpError("/api/v1/auth/me", 401, "Signed out"))).toBe(401);
     expect(httpStatusFromApiError(new Error("bootstrap status: 503"))).toBe(503);
     expect(httpStatusFromApiError(new Error("me: 422"))).toBe(422);
     expect(httpStatusFromApiError(new Error("CSRF: 400"))).toBe(400);

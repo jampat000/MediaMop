@@ -21,6 +21,8 @@ from mediamop.modules.subber.subber_settings_service import ensure_subber_settin
 from mediamop.modules.subber.subber_subtitle_state_service import get_missing_for_scope, mark_skipped
 from mediamop.modules.subber.worker_loop import SubberJobWorkContext
 from mediamop.platform.activity import constants as C
+from mediamop.platform.observability.diagnostics import DiagnosticAction, DiagnosticModule, DiagnosticResult, DiagnosticTrigger
+from mediamop.platform.observability.operator_messages import activity_detail_envelope, scan_title
 
 
 def make_subber_library_scan_handler(
@@ -72,8 +74,28 @@ def make_subber_library_scan_handler(
                 subber_activity.record_subber_activity(
                     session,
                     event_type=C.SUBBER_LIBRARY_SCAN_ENQUEUED,
-                    title=f"Subber library scan ({media_scope})",
-                    detail={"enqueued": enqueued, "media_scope": media_scope},
+                    title=scan_title(
+                        module_label="Subber",
+                        result=DiagnosticResult.SUCCESS,
+                        count=enqueued,
+                        scope=media_scope,
+                    ),
+                    detail={
+                        **activity_detail_envelope(
+                            module=DiagnosticModule.SUBBER,
+                            action=DiagnosticAction.SCAN,
+                            trigger=DiagnosticTrigger.MANUAL,
+                            result=DiagnosticResult.SUCCESS,
+                            media_scope=media_scope,
+                            counts={"queued": enqueued},
+                            user_message=(
+                                f"Subber queued {enqueued} subtitle search"
+                                f"{'' if enqueued == 1 else 'es'} for {media_scope}."
+                            ),
+                        ),
+                        "enqueued": enqueued,
+                        "media_scope": media_scope,
+                    },
                 )
 
     _ = library_job_kind

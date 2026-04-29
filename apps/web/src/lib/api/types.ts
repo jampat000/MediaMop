@@ -13,6 +13,15 @@ export type DashboardSystemStatus = {
   api_version: string;
   environment: string;
   healthy: boolean;
+  worker_health?: Array<{
+    module: string;
+    expected_workers: number;
+    active_workers: number;
+    stale_workers: number;
+    stopped_workers: number;
+    status: string;
+    detail: string;
+  }>;
 };
 
 export type ActivityEventItem = {

@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import io
-import json
 import logging
 import urllib.parse
-import urllib.request
 import zipfile
 from typing import Any
 
-USER_AGENT = "MediaMop/1.0"
+from mediamop.modules.subber.subber_http_client import DEFAULT_USER_AGENT, basic_auth_header, request_bytes, request_json
+
+USER_AGENT = DEFAULT_USER_AGENT
 LIST_BASE = "https://www.podnapisi.net/api/v2/subtitles/list"
 
 logger = logging.getLogger(__name__)
@@ -18,20 +18,12 @@ logger = logging.getLogger(__name__)
 
 def _request_json(url: str, *, username: str | None = None, password: str | None = None) -> dict[str, Any] | list[Any] | None:
     headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
-    u, p = (username or "").strip(), (password or "").strip()
-    if u and p:
-        import base64
-
-        tok = base64.b64encode(f"{u}:{p}".encode()).decode("ascii")
-        headers["Authorization"] = f"Basic {tok}"
-    req = urllib.request.Request(url, headers=headers, method="GET")  # noqa: S310
+    auth = basic_auth_header(username, password)
+    if auth:
+        headers["Authorization"] = auth
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            raw = resp.read().decode("utf-8", errors="replace")
-            if not raw.strip():
-                return None
-            parsed = json.loads(raw)
-            return parsed if isinstance(parsed, (dict, list)) else None
+        _code, parsed = request_json(url, headers=headers, timeout=60)
+        return parsed
     except Exception:
         logger.exception("Podnapisi request failed url=%s", url)
         return None
@@ -116,15 +108,10 @@ def download(*, subtitle_id: str, username: str | None = None, password: str | N
     sid = urllib.parse.quote(str(subtitle_id).strip(), safe="")
     url = f"https://www.podnapisi.net/api/v2/subtitles/{sid}/download"
     headers = {"User-Agent": USER_AGENT, "Accept": "*/*"}
-    u, p = (username or "").strip(), (password or "").strip()
-    if u and p:
-        import base64
-
-        tok = base64.b64encode(f"{u}:{p}".encode()).decode("ascii")
-        headers["Authorization"] = f"Basic {tok}"
-    req = urllib.request.Request(url, headers=headers, method="GET")  # noqa: S310
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        data = resp.read()
+    auth = basic_auth_header(username, password)
+    if auth:
+        headers["Authorization"] = auth
+    _code, data = request_bytes(url, headers=headers, timeout=120)
     bio = io.BytesIO(data)
     if zipfile.is_zipfile(bio):
         bio.seek(0)

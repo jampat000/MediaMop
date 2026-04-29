@@ -94,6 +94,15 @@ function formatDuration(seconds: number | null | undefined): string | null {
   return `${hours}h ${remMins.toString().padStart(2, "0")}m`;
 }
 
+export function formatRefinerProcessingSpeed(speed: string | null | undefined): string | null {
+  const value = (speed || "").trim();
+  if (!value) return null;
+  if (/^[0-9]+(?:\.[0-9]+)?x$/i.test(value)) {
+    return `${value} realtime`;
+  }
+  return value;
+}
+
 function filenameFromPath(path: string | undefined): string {
   if (!path) return "this file";
   return path.split(/[\\/]/).filter(Boolean).at(-1) || "this file";
@@ -343,6 +352,7 @@ export function RefinerFileProcessingProgressDetail({ detail }: { detail: string
   const elapsed = formatDuration(parsed.elapsed_seconds);
   const processed = formatDuration(parsed.processed_seconds);
   const duration = formatDuration(parsed.duration_seconds);
+  const speed = formatRefinerProcessingSpeed(parsed.speed);
   const statusText =
     status === "finished"
       ? "Finished"
@@ -392,7 +402,7 @@ export function RefinerFileProcessingProgressDetail({ detail }: { detail: string
         <span>{primaryMetric}</span>
         {elapsed ? <span>Running {elapsed}</span> : null}
         {processed && duration ? <span>Processed {processed} of {duration}</span> : null}
-        {parsed.speed ? <span>Speed {parsed.speed}</span> : null}
+        {speed ? <span>Processing speed {speed}</span> : null}
       </div>
       {parsed.reason ? <p className="mm-activity-processing__error">{parsed.reason}</p> : null}
     </div>

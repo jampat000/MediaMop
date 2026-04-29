@@ -1060,6 +1060,8 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   border: 1px solid var(--mm-border);
   border-radius: 999px;
   background: color-mix(in srgb, var(--mm-card-bg) 88%, transparent);
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .mm-activity-processing__error {

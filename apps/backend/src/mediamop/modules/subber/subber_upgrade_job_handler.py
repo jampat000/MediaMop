@@ -15,6 +15,8 @@ from mediamop.modules.subber.subber_subtitle_search_service import search_and_do
 from mediamop.modules.subber.subber_subtitle_state_service import get_candidates_for_upgrade, mark_for_upgrade
 from mediamop.modules.subber.worker_loop import SubberJobWorkContext
 from mediamop.platform.activity import constants as C
+from mediamop.platform.observability.diagnostics import DiagnosticAction, DiagnosticModule, DiagnosticResult, DiagnosticTrigger
+from mediamop.platform.observability.operator_messages import activity_detail_envelope
 
 
 def make_subber_subtitle_upgrade_handler(
@@ -32,16 +34,39 @@ def make_subber_subtitle_upgrade_handler(
                     subber_activity.record_subber_activity(
                         session,
                         event_type=C.SUBBER_SUBTITLE_UPGRADE_COMPLETED,
-                        title="Subtitle upgrade skipped (disabled)",
-                        detail={"attempted": 0, "upgraded": 0},
+                        title="Subtitle upgrade skipped because it is turned off",
+                        detail={
+                            **activity_detail_envelope(
+                                module=DiagnosticModule.SUBBER,
+                                action=DiagnosticAction.SEARCH,
+                                trigger=DiagnosticTrigger.SCHEDULED,
+                                result=DiagnosticResult.SKIPPED,
+                                counts={"checked": 0, "upgraded": 0, "skipped": 0},
+                                user_message="Subtitle upgrade is turned off in Subber settings.",
+                            ),
+                            "attempted": 0,
+                            "upgraded": 0,
+                        },
                     )
                     return
                 if not subber_any_search_configured(settings, settings_row, session):
                     subber_activity.record_subber_activity(
                         session,
                         event_type=C.SUBBER_SUBTITLE_UPGRADE_COMPLETED,
-                        title="Subtitle upgrade skipped (no providers)",
-                        detail={"attempted": 0, "upgraded": 0},
+                        title="Subtitle upgrade skipped because no providers are configured",
+                        detail={
+                            **activity_detail_envelope(
+                                module=DiagnosticModule.SUBBER,
+                                action=DiagnosticAction.SEARCH,
+                                trigger=DiagnosticTrigger.SCHEDULED,
+                                result=DiagnosticResult.SKIPPED,
+                                counts={"checked": 0, "upgraded": 0, "skipped": 0},
+                                user_message="Subber needs at least one subtitle provider before it can upgrade subtitles.",
+                                next_action="Add a subtitle provider in Subber settings.",
+                            ),
+                            "attempted": 0,
+                            "upgraded": 0,
+                        },
                     )
                     return
                 interval_sec = max(60, int(settings_row.upgrade_schedule_interval_seconds or 604800))
@@ -65,8 +90,22 @@ def make_subber_subtitle_upgrade_handler(
                 subber_activity.record_subber_activity(
                     session,
                     event_type=C.SUBBER_SUBTITLE_UPGRADE_COMPLETED,
-                    title="Subtitle upgrade finished",
-                    detail={"attempted": attempted, "upgraded": upgraded},
+                    title=f"Subtitle upgrade checked {attempted} item{'' if attempted == 1 else 's'} and improved {upgraded}",
+                    detail={
+                        **activity_detail_envelope(
+                            module=DiagnosticModule.SUBBER,
+                            action=DiagnosticAction.SEARCH,
+                            trigger=DiagnosticTrigger.SCHEDULED,
+                            result=DiagnosticResult.SUCCESS,
+                            counts={"checked": attempted, "upgraded": upgraded},
+                            user_message=(
+                                f"Subber checked {attempted} existing subtitle"
+                                f"{'' if attempted == 1 else 's'} and improved {upgraded}."
+                            ),
+                        ),
+                        "attempted": attempted,
+                        "upgraded": upgraded,
+                    },
                 )
 
     return handle

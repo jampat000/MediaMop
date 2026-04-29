@@ -15,9 +15,13 @@ import mediamop.modules.refiner.jobs_model  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.modules.refiner.refiner_failure_cleanup_enqueue import enqueue_refiner_failure_cleanup_sweep_job
 from mediamop.modules.refiner.refiner_failure_cleanup import run_refiner_failure_cleanup_sweep_for_scope
+from mediamop.modules.refiner.refiner_failure_cleanup_handlers import make_refiner_failure_cleanup_handler
 from mediamop.modules.refiner.refiner_file_remux_pass_job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
+from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
+from mediamop.platform.activity.models import ActivityEvent
 
 
 def _session(tmp_path: Path) -> Session:
@@ -190,6 +194,19 @@ def test_missing_path_settings_skip_cleanly(tmp_path: Path) -> None:
     session.commit()
     result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="movie")
     assert "not configured" in result["skip_reason"]
+    assert result["cleanup_run_status"] == "skipped"
+
+
+def test_no_eligible_failed_jobs_reports_no_eligible_status(tmp_path: Path) -> None:
+    session = _session(tmp_path)
+    root = tmp_path
+    for p in ("mw", "mo", "tw", "to", "mwork", "twork"):
+        (root / p).mkdir(parents=True, exist_ok=True)
+    _seed_paths(session, mw=root / "mw", mo=root / "mo", tw=root / "tw", to=root / "to")
+    result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="movie")
+    assert result["cleanup_run_status"] == "no_eligible_files"
+    assert result["eligible_failed_jobs"] == 0
+    assert "No eligible failed Refiner jobs" in result["skip_reason"]
 
 
 def test_failed_movie_radarr_unreachable_skips(tmp_path: Path) -> None:
@@ -394,4 +411,57 @@ def test_per_scope_grace_settings_are_independent(tmp_path: Path) -> None:
         tv_res = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=settings, media_scope="tv")
     assert movie_res["eligible_failed_jobs"] == 1
     assert tv_res["eligible_failed_jobs"] == 0
+
+
+def test_failure_cleanup_enqueue_ignores_completed_prior_runs(tmp_path: Path) -> None:
+    session = _session(tmp_path)
+    job1, inserted1 = enqueue_refiner_failure_cleanup_sweep_job(session, media_scope="movie")
+    assert inserted1 is True
+    job1.status = RefinerJobStatus.COMPLETED.value
+    session.commit()
+
+    job2, inserted2 = enqueue_refiner_failure_cleanup_sweep_job(session, media_scope="movie")
+    session.commit()
+
+    assert inserted2 is True
+    assert int(job2.id) != int(job1.id)
+    assert job2.status == RefinerJobStatus.PENDING.value
+
+
+def test_failure_cleanup_enqueue_skips_when_active_run_exists(tmp_path: Path) -> None:
+    session = _session(tmp_path)
+    job1, inserted1 = enqueue_refiner_failure_cleanup_sweep_job(session, media_scope="tv")
+    session.commit()
+
+    job2, inserted2 = enqueue_refiner_failure_cleanup_sweep_job(session, media_scope="tv")
+
+    assert inserted1 is True
+    assert inserted2 is False
+    assert int(job2.id) == int(job1.id)
+
+
+def test_failure_cleanup_handler_records_started_and_no_eligible_activity(tmp_path: Path) -> None:
+    session = _session(tmp_path)
+    root = tmp_path
+    for p in ("mw", "mo", "tw", "to", "mwork", "twork"):
+        (root / p).mkdir(parents=True, exist_ok=True)
+    _seed_paths(session, mw=root / "mw", mo=root / "mo", tw=root / "tw", to=root / "to")
+    bind = session.get_bind()
+    session.close()
+    fac = sessionmaker(bind=bind, class_=Session, autoflush=False, autocommit=False, future=True)
+    handler = make_refiner_failure_cleanup_handler(_settings(), fac, default_scope="movie")
+
+    handler(
+        RefinerJobWorkContext(
+            id=123,
+            job_kind="refiner.movie_failure_cleanup_sweep.v1",
+            payload_json=json.dumps({"media_scope": "movie"}),
+            lease_owner="test",
+        )
+    )
+
+    with fac() as db:
+        titles = [row.title for row in db.query(ActivityEvent).order_by(ActivityEvent.id.asc()).all()]
+    assert "Refiner cleanup started for Movies" in titles
+    assert "Refiner cleanup checked Movies: no eligible files" in titles
 

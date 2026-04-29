@@ -58,7 +58,7 @@ class PrunerScopeSummaryOut(BaseModel):
     preview_include_people_roles: list[str] = Field(
         default_factory=list,
         description=(
-            "Which credit roles count toward people-name matching for preview narrowing on this tab. "
+            "Which credit roles count toward people-name matching for preview narrowing on this library. "
             "Jellyfin/Emby match ``People[].Name`` when ``People[].Type`` maps to a selected role. "
             "Plex uses Role / Director / Writer tags on allLeaves; producer and guest_star are ignored on Plex. "
             "When empty, names match against all credits the provider exposes for this rule (all People on JF/Emby; "
@@ -103,6 +103,8 @@ class PrunerScopeSummaryOut(BaseModel):
     scheduled_preview_start: str = "00:00"
     scheduled_preview_end: str = "23:59"
     last_scheduled_preview_enqueued_at: datetime | None = None
+    auto_apply_enabled: bool = False
+    max_deletes_per_run: int = 50
     last_preview_run_uuid: str | None = None
     last_preview_at: datetime | None = None
     last_preview_candidate_count: int | None = None
@@ -191,6 +193,8 @@ class PrunerScopePatchIn(BaseModel):
     scheduled_preview_days: str | None = Field(default=None, max_length=200)
     scheduled_preview_start: str | None = Field(default=None, max_length=5)
     scheduled_preview_end: str | None = Field(default=None, max_length=5)
+    auto_apply_enabled: bool | None = None
+    max_deletes_per_run: int | None = Field(None, ge=1, le=5000)
 
     @field_validator("preview_include_genres", mode="before")
     @classmethod
@@ -351,6 +355,8 @@ class PrunerScopePatchHttpIn(PrunerScopePatchIn):
             and self.scheduled_preview_days is None
             and self.scheduled_preview_start is None
             and self.scheduled_preview_end is None
+            and self.auto_apply_enabled is None
+            and self.max_deletes_per_run is None
         ):
             msg = (
                 "At least one of missing_primary_media_reported_enabled, never_played_stale_reported_enabled, "
@@ -362,7 +368,8 @@ class PrunerScopePatchHttpIn(PrunerScopePatchIn):
                 "preview_year_min, "
                 "preview_year_max, preview_include_studios, preview_include_collections, scheduled_preview_enabled, "
                 "scheduled_preview_interval_seconds, scheduled_preview_hours_limited, scheduled_preview_days, "
-                "scheduled_preview_start, or scheduled_preview_end must be provided."
+                "scheduled_preview_start, scheduled_preview_end, auto_apply_enabled, or max_deletes_per_run must be "
+                "provided."
             )
             raise ValueError(msg)
         return self
@@ -402,7 +409,7 @@ class PrunerPreviewRunOut(BaseModel):
 
 
 class PrunerApplyEligibilityOut(BaseModel):
-    """Read-only: whether apply can be enqueued for this snapshot (not a second dry run)."""
+    """Read-only: whether apply can be enqueued for this snapshot (not a second scan)."""
 
     eligible: bool
     reasons: list[str] = Field(default_factory=list)

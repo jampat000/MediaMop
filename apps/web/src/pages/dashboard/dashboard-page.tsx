@@ -428,14 +428,18 @@ export function DashboardPage() {
   const moduleCards = [refinerCardForDashboard, prunerCard, subberCard];
   const modulesNeedingAttentionTotal = moduleCards.filter((m) => m.status === "Review needed").length;
   const activeModuleCount = moduleCards.filter((m) => m.status === "Active").length;
+  const workerIssues = (dash.data.system.worker_health ?? []).filter((row) => row.status === "degraded");
   const overallStatus =
-    !dash.data.system.healthy || modulesNeedingAttentionTotal > 0
+    !dash.data.system.healthy || modulesNeedingAttentionTotal > 0 || workerIssues.length > 0
       ? "Review needed"
       : activeModuleCount > 0
         ? "Active"
         : "Healthy";
 
-  const attentionItems = moduleCards.filter((m) => m.status === "Review needed").map((m) => `${m.name}: ${m.summary}`);
+  const attentionItems = [
+    ...moduleCards.filter((m) => m.status === "Review needed").map((m) => `${m.name}: ${m.summary}`),
+    ...workerIssues.map((row) => `${row.module[0].toUpperCase()}${row.module.slice(1)} workers: ${row.detail}`),
+  ];
   const activeItems = moduleCards.filter((m) => m.status === "Active").map((m) => `${m.name}: ${m.summary}`);
 
   const refinerDashboardJobs: DashboardJobRow[] = (refinerJobs.data?.jobs ?? []).filter((job) =>

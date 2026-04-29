@@ -1,5 +1,5 @@
 import { fetchCsrfToken } from "../api/auth-api";
-import { apiFetch, readJson } from "../api/client";
+import { apiFetch, readJson, requireOk } from "../api/client";
 import type {
   RefinerWatchedFolderRemuxScanDispatchEnqueueBody,
   RefinerWatchedFolderRemuxScanDispatchEnqueueOut,
@@ -12,22 +12,12 @@ export async function postRefinerWatchedFolderRemuxScanDispatchEnqueue(
   body: RefinerWatchedFolderRemuxScanDispatchEnqueueBody,
 ): Promise<RefinerWatchedFolderRemuxScanDispatchEnqueueOut> {
   const csrf_token = await fetchCsrfToken();
-  const r = await apiFetch(refinerWatchedFolderRemuxScanDispatchEnqueuePath(), {
+  const path = refinerWatchedFolderRemuxScanDispatchEnqueuePath();
+  const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...body, csrf_token }),
   });
-  if (!r.ok) {
-    let detail = r.statusText;
-    try {
-      const b = await readJson<{ detail?: string }>(r);
-      if (typeof b.detail === "string") {
-        detail = b.detail;
-      }
-    } catch {
-      /* ignore */
-    }
-    throw new Error(detail || `Could not queue watched-folder scan (${r.status})`);
-  }
+  await requireOk(path, r, "Could not queue watched-folder scan");
   return readJson<RefinerWatchedFolderRemuxScanDispatchEnqueueOut>(r);
 }

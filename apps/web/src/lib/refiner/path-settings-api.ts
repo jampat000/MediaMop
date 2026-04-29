@@ -1,35 +1,24 @@
 import { fetchCsrfToken } from "../api/auth-api";
-import { apiFetch, readJson } from "../api/client";
+import { apiFetch, readJson, requireOk } from "../api/client";
 import type { RefinerPathSettingsOut, RefinerPathSettingsPutBody } from "./types";
 
 export const refinerPathSettingsPath = () => "/api/v1/refiner/path-settings";
 
 export async function fetchRefinerPathSettings(): Promise<RefinerPathSettingsOut> {
-  const r = await apiFetch(refinerPathSettingsPath());
-  if (!r.ok) {
-    throw new Error(`Could not load Refiner path settings (${r.status})`);
-  }
+  const path = refinerPathSettingsPath();
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load Refiner path settings");
   return readJson<RefinerPathSettingsOut>(r);
 }
 
 export async function putRefinerPathSettings(body: RefinerPathSettingsPutBody): Promise<RefinerPathSettingsOut> {
   const csrf_token = await fetchCsrfToken();
-  const r = await apiFetch(refinerPathSettingsPath(), {
+  const path = refinerPathSettingsPath();
+  const r = await apiFetch(path, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...body, csrf_token }),
   });
-  if (!r.ok) {
-    let detail = r.statusText;
-    try {
-      const b = await readJson<{ detail?: string }>(r);
-      if (typeof b.detail === "string") {
-        detail = b.detail;
-      }
-    } catch {
-      /* ignore */
-    }
-    throw new Error(detail || `Could not save Refiner path settings (${r.status})`);
-  }
+  await requireOk(path, r, "Could not save Refiner path settings");
   return readJson<RefinerPathSettingsOut>(r);
 }

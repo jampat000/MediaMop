@@ -52,7 +52,10 @@ From the repository root:
    pip install -e .
    ```
 
-2. Copy `apps/backend/.env.example` to `apps/backend/.env` and set `MEDIAMOP_SESSION_SECRET`.
+2. Copy `apps/backend/.env.example` to `apps/backend/.env` and set `MEDIAMOP_SESSION_SECRET`. Set
+   `MEDIAMOP_CREDENTIALS_SECRET` as a separate long random value before saving Pruner, Subber, Sonarr, or Radarr
+   credentials. Changing `MEDIAMOP_SESSION_SECRET` later can require re-entering credentials that were still encrypted
+   with the old session secret.
 3. Run migrations:
 
    ```powershell

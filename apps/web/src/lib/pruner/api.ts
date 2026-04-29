@@ -1,4 +1,4 @@
-import { apiFetch, apiErrorDetailToString, readJson } from "../api/client";
+import { apiFetch, readJson, requireOk } from "../api/client";
 import { fetchCsrfToken } from "../api/auth-api";
 
 export type PrunerScopeSummary = {
@@ -30,6 +30,8 @@ export type PrunerScopeSummary = {
   scheduled_preview_start?: string;
   scheduled_preview_end?: string;
   last_scheduled_preview_enqueued_at: string | null;
+  auto_apply_enabled?: boolean;
+  max_deletes_per_run?: number;
   last_preview_run_uuid: string | null;
   last_preview_at: string | null;
   last_preview_candidate_count: number | null;
@@ -181,10 +183,9 @@ export async function fetchPrunerApplyEligibility(
   media_scope: "tv" | "movies",
   previewRunId: string,
 ): Promise<PrunerApplyEligibility> {
-  const r = await apiFetch(prunerApplyEligibilityPath(instanceId, media_scope, previewRunId));
-  if (!r.ok) {
-    throw new Error(`Pruner apply eligibility: ${r.status}`);
-  }
+  const path = prunerApplyEligibilityPath(instanceId, media_scope, previewRunId);
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load Pruner apply eligibility");
   return readJson<PrunerApplyEligibility>(r);
 }
 
@@ -203,34 +204,30 @@ export async function fetchPrunerPreviewRuns(
   instanceId: number,
   opts?: { media_scope?: "tv" | "movies"; limit?: number },
 ): Promise<PrunerPreviewRunSummary[]> {
-  const r = await apiFetch(prunerPreviewRunsListPath(instanceId, opts));
-  if (!r.ok) {
-    throw new Error(`Pruner preview runs: ${r.status}`);
-  }
+  const path = prunerPreviewRunsListPath(instanceId, opts);
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load Pruner preview runs");
   return readJson<PrunerPreviewRunSummary[]>(r);
 }
 
 export async function fetchPrunerOverviewStats(): Promise<PrunerOverviewStatsOut> {
-  const r = await apiFetch("/api/v1/pruner/overview-stats");
-  if (!r.ok) {
-    throw new Error(`Pruner overview stats: ${r.status}`);
-  }
+  const path = "/api/v1/pruner/overview-stats";
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load Pruner overview stats");
   return readJson<PrunerOverviewStatsOut>(r);
 }
 
 export async function fetchPrunerInstances(): Promise<PrunerServerInstance[]> {
-  const r = await apiFetch("/api/v1/pruner/instances");
-  if (!r.ok) {
-    throw new Error(`Pruner instances: ${r.status}`);
-  }
+  const path = "/api/v1/pruner/instances";
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load Pruner servers");
   return readJson<PrunerServerInstance[]>(r);
 }
 
 export async function fetchPrunerInstance(id: number): Promise<PrunerServerInstance> {
-  const r = await apiFetch(`/api/v1/pruner/instances/${id}`);
-  if (!r.ok) {
-    throw new Error(`Pruner instance: ${r.status}`);
-  }
+  const path = `/api/v1/pruner/instances/${id}`;
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load Pruner server");
   return readJson<PrunerServerInstance>(r);
 }
 
@@ -256,15 +253,13 @@ export async function postPrunerInstance(body: {
   credentials: Record<string, string>;
 }): Promise<PrunerServerInstance> {
   const csrf_token = await fetchCsrfToken();
-  const r = await apiFetch("/api/v1/pruner/instances", {
+  const path = "/api/v1/pruner/instances";
+  const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...body, csrf_token }),
   });
-  if (!r.ok) {
-    const errBody = (await readJson<{ detail?: unknown }>(r).catch(() => ({}))) as { detail?: unknown };
-    throw new Error(apiErrorDetailToString(errBody.detail) || `Pruner instance create: ${r.status}`);
-  }
+  await requireOk(path, r, "Could not add Pruner server");
   return readJson<PrunerServerInstance>(r);
 }
 
@@ -278,15 +273,13 @@ export async function patchPrunerInstance(
   },
 ): Promise<PrunerServerInstance> {
   const csrf_token = await fetchCsrfToken();
-  const r = await apiFetch(`/api/v1/pruner/instances/${instanceId}`, {
+  const path = `/api/v1/pruner/instances/${instanceId}`;
+  const r = await apiFetch(path, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...body, csrf_token }),
   });
-  if (!r.ok) {
-    const errBody = (await readJson<{ detail?: unknown }>(r).catch(() => ({}))) as { detail?: unknown };
-    throw new Error(apiErrorDetailToString(errBody.detail) || `Pruner instance patch: ${r.status}`);
-  }
+  await requireOk(path, r, "Could not save Pruner server");
   return readJson<PrunerServerInstance>(r);
 }
 
@@ -294,24 +287,21 @@ export async function fetchPrunerPreviewRun(
   instanceId: number,
   previewRunId: string,
 ): Promise<PrunerPreviewRun> {
-  const r = await apiFetch(`/api/v1/pruner/instances/${instanceId}/preview-runs/${previewRunId}`);
-  if (!r.ok) {
-    throw new Error(`Pruner preview run: ${r.status}`);
-  }
+  const path = `/api/v1/pruner/instances/${instanceId}/preview-runs/${previewRunId}`;
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load Pruner preview");
   return readJson<PrunerPreviewRun>(r);
 }
 
 export async function postPrunerConnectionTest(instanceId: number): Promise<{ pruner_job_id: number }> {
   const csrf_token = await fetchCsrfToken();
-  const r = await apiFetch(`/api/v1/pruner/instances/${instanceId}/connection-test`, {
+  const path = `/api/v1/pruner/instances/${instanceId}/connection-test`;
+  const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ csrf_token }),
   });
-  if (!r.ok) {
-    const body = (await readJson<{ detail?: unknown }>(r).catch(() => ({}))) as { detail?: unknown };
-    throw new Error(apiErrorDetailToString(body.detail) || `connection test: ${r.status}`);
-  }
+  await requireOk(path, r, "Could not start Pruner connection test");
   return readJson<{ pruner_job_id: number }>(r);
 }
 
@@ -343,18 +333,18 @@ export async function patchPrunerScope(
     scheduled_preview_days?: string;
     scheduled_preview_start?: string;
     scheduled_preview_end?: string;
+    auto_apply_enabled?: boolean;
+    max_deletes_per_run?: number;
     csrf_token: string;
   },
 ): Promise<PrunerScopeSummary> {
-  const r = await apiFetch(`/api/v1/pruner/instances/${instanceId}/scopes/${media_scope}`, {
+  const path = `/api/v1/pruner/instances/${instanceId}/scopes/${media_scope}`;
+  const r = await apiFetch(path, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!r.ok) {
-    const errBody = (await readJson<{ detail?: unknown }>(r).catch(() => ({}))) as { detail?: unknown };
-    throw new Error(apiErrorDetailToString(errBody.detail) || `Pruner scope: ${r.status}`);
-  }
+  await requireOk(path, r, "Could not save Pruner cleanup scope");
   return readJson<PrunerScopeSummary>(r);
 }
 
@@ -364,18 +354,13 @@ export async function postPrunerApplyFromPreview(
   previewRunId: string,
 ): Promise<{ pruner_job_id: number }> {
   const csrf_token = await fetchCsrfToken();
-  const r = await apiFetch(
-    `/api/v1/pruner/instances/${instanceId}/scopes/${media_scope}/preview-runs/${previewRunId}/apply`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ csrf_token }),
-    },
-  );
-  if (!r.ok) {
-    const body = (await readJson<{ detail?: unknown }>(r).catch(() => ({}))) as { detail?: unknown };
-    throw new Error(apiErrorDetailToString(body.detail) || `apply: ${r.status}`);
-  }
+  const path = `/api/v1/pruner/instances/${instanceId}/scopes/${media_scope}/preview-runs/${previewRunId}/apply`;
+  const r = await apiFetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ csrf_token }),
+  });
+  await requireOk(path, r, "Could not apply Pruner cleanup");
   return readJson<{ pruner_job_id: number }>(r);
 }
 
@@ -389,23 +374,20 @@ export async function postPrunerPreview(
   if (opts?.rule_family_id) {
     payload.rule_family_id = opts.rule_family_id;
   }
-  const r = await apiFetch(`/api/v1/pruner/instances/${instanceId}/previews`, {
+  const path = `/api/v1/pruner/instances/${instanceId}/previews`;
+  const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!r.ok) {
-    const body = (await readJson<{ detail?: unknown }>(r).catch(() => ({}))) as { detail?: unknown };
-    throw new Error(apiErrorDetailToString(body.detail) || `preview: ${r.status}`);
-  }
+  await requireOk(path, r, "Could not start Pruner cleanup preview");
   return readJson<{ pruner_job_id: number }>(r);
 }
 
 export async function fetchPrunerJobsInspection(limit = 50): Promise<PrunerJobsInspectionOut> {
   const params = new URLSearchParams({ limit: String(limit) });
-  const r = await apiFetch(`/api/v1/pruner/jobs/inspection?${params.toString()}`);
-  if (!r.ok) {
-    throw new Error(`Pruner jobs inspection: ${r.status}`);
-  }
+  const path = `/api/v1/pruner/jobs/inspection?${params.toString()}`;
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load Pruner jobs");
   return readJson<PrunerJobsInspectionOut>(r);
 }
