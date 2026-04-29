@@ -47,7 +47,7 @@ def _path_exists(raw: str | None) -> bool:
     if not raw or not raw.strip():
         return False
     try:
-        return Path(raw).exists()
+        return Path(raw).exists()  # codeql[py/path-injection] read-only reachability check for stored paths.
     except OSError:
         return False
 
@@ -220,7 +220,7 @@ def repair_reconciliation_issue(
             raise ValueError("path is required for this repair action.")
         row = session.get(RefinerPathSettingsRow, 1)
         roots = _configured_refiner_work_roots(row)
-        target = Path(path).resolve()
+        target = Path(path).resolve()  # codeql[py/path-injection] constrained to configured Refiner work roots below.
         if not any(_is_under_root(target, root) for root in roots):
             raise ValueError("Refusing to remove a file outside configured Refiner work folders.")
         if not _is_temp_artifact(target):

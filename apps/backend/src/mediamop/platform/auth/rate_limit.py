@@ -91,7 +91,7 @@ def _parse_proxy_network(raw: str):
     try:
         return ipaddress.ip_network(raw, strict=False)
     except ValueError:
-        logger.warning("Ignoring invalid MEDIAMOP_TRUSTED_PROXY_IPS entry: %s", raw)
+        logger.warning("Ignoring invalid MEDIAMOP_TRUSTED_PROXY_IPS entry.")
         return None
 
 
