@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
 from mediamop.modules.subber.subber_subtitle_state_model import SubberSubtitleState
-from mediamop.platform.file_lifecycle.mutations import safe_unlink
+from mediamop.platform.file_lifecycle.mutations import safe_unlink_under_roots
 
 TEMP_ARTIFACT_SUFFIXES = (".partial", ".part", ".tmp", ".link")
 MAX_ISSUES_PER_CATEGORY = 200
@@ -213,7 +213,7 @@ def repair_reconciliation_issue(
         target = Path(path)
         if not _is_temp_artifact(target):
             raise ValueError("Refusing to remove a file that does not look like a temp artifact.")
-        removed = safe_unlink(target, allowed_roots=roots)
+        removed = safe_unlink_under_roots(target, allowed_roots=roots)
         return {
             "applied": removed,
             "message": "Removed the Refiner temp artifact." if removed else "Temp artifact is already gone.",

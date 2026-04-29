@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import shutil
 import tempfile
-from collections.abc import Iterable
+from collections.abc import Sequence
 from pathlib import Path
 
 
@@ -78,16 +78,11 @@ def safe_finalize_file(*, staged: Path, final: Path) -> None:
         raise FileLifecycleError(f"Could not safely finalize {src} to {dst}: {exc}") from exc
 
 
-def safe_unlink(path: Path, *, allowed_roots: Iterable[Path] | None = None) -> bool:
-    """Delete one file. Missing files are treated as already absent.
+def safe_unlink(path: Path) -> bool:
+    """Delete one internally-owned file. Missing files are treated as already absent."""
 
-    When ``allowed_roots`` is supplied, the target must normalize under one of
-    those roots before deletion is attempted.
-    """
-
-    target = _authorized_path(path, allowed_roots=allowed_roots)
     try:
-        target.unlink()
+        path.unlink()
         return True
     except FileNotFoundError:
         return False
@@ -95,18 +90,20 @@ def safe_unlink(path: Path, *, allowed_roots: Iterable[Path] | None = None) -> b
         raise FileLifecycleError(f"Could not remove {path}: {exc}") from exc
 
 
-def _authorized_path(path: Path, *, allowed_roots: Iterable[Path] | None) -> Path:
-    if allowed_roots is None:
-        return path
+def safe_unlink_under_roots(path: Path, *, allowed_roots: Sequence[Path]) -> bool:
+    """Delete ``path`` only after it normalizes under one of ``allowed_roots``."""
 
-    target = os.path.abspath(os.fspath(path))
+    target = os.path.normpath(os.path.abspath(os.fspath(path)))
     for raw_root in allowed_roots:
-        root = os.path.abspath(os.fspath(raw_root))
-        try:
-            if os.path.commonpath([target, root]) == root:
-                return Path(target)
-        except ValueError:
-            continue
+        root = os.path.normpath(os.path.abspath(os.fspath(raw_root)))
+        if target == root or target.startswith(root + os.sep):
+            try:
+                os.remove(target)
+                return True
+            except FileNotFoundError:
+                return False
+            except OSError as exc:
+                raise FileLifecycleError(f"Could not remove {path}: {exc}") from exc
     raise FileLifecycleError("Refusing to remove a file outside the authorized folder roots.")
 
 
