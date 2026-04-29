@@ -1,6 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { RefinerFileProcessingProgressDetail, RefinerFileRemuxPassActivityDetail } from "./refiner-file-remux-pass-detail";
+import {
+  RefinerFileProcessingProgressDetail,
+  RefinerFileRemuxPassActivityDetail,
+  formatRefinerProcessingSpeed,
+} from "./refiner-file-remux-pass-detail";
 
 describe("RefinerFileRemuxPassActivityDetail", () => {
   it("renders structured remux fields from JSON detail", () => {
@@ -52,7 +56,13 @@ describe("RefinerFileRemuxPassActivityDetail", () => {
     expect(screen.getByText("Processing")).toBeInTheDocument();
     expect(screen.getByText("42%")).toBeInTheDocument();
     expect(screen.getByText(/About 1m 11s left/i)).toBeInTheDocument();
-    expect(screen.getByText(/Speed 16x/i)).toBeInTheDocument();
+    expect(screen.getByText(/Processing speed 16x realtime/i)).toBeInTheDocument();
+  });
+
+  it("preserves full Refiner speed precision and standardizes realtime units", () => {
+    expect(formatRefinerProcessingSpeed("123.456789x")).toBe("123.456789x realtime");
+    expect(formatRefinerProcessingSpeed(" 0.987654x ")).toBe("0.987654x realtime");
+    expect(formatRefinerProcessingSpeed("N/A")).toBe("N/A");
   });
 
   it("uses finished styling and copy when Refiner progress completes", () => {
