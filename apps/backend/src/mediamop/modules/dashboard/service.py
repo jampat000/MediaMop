@@ -12,7 +12,6 @@ from mediamop.core.config import MediaMopSettings
 from mediamop.modules.dashboard.schemas import ActivitySummaryOut, DashboardStatusOut, SystemStatusOut, WorkerLaneHealthOut
 from mediamop.platform.activity.schemas import ActivityEventItemOut
 from mediamop.platform.activity import service as activity_service
-from mediamop.platform.health.service import get_health
 from mediamop.platform.jobs.worker_health import build_worker_health_snapshot
 
 
@@ -25,7 +24,6 @@ def _build_activity_summary(db: Session) -> ActivitySummaryOut:
 
 
 def build_dashboard_status(db: Session, settings: MediaMopSettings) -> DashboardStatusOut:
-    health = get_health()
     worker_health = build_worker_health_snapshot(
         expected_workers={
             "refiner": int(settings.refiner_worker_count),
@@ -38,7 +36,7 @@ def build_dashboard_status(db: Session, settings: MediaMopSettings) -> Dashboard
         system=SystemStatusOut(
             api_version=__version__,
             environment=settings.env,
-            healthy=health.status == "ok" and workers_healthy,
+            healthy=workers_healthy,
             worker_health=[WorkerLaneHealthOut(**asdict(row)) for row in worker_health],
         ),
         activity_summary=_build_activity_summary(db),

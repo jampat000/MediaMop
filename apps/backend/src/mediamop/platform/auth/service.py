@@ -8,13 +8,13 @@ from __future__ import annotations
 import logging
 from datetime import timedelta
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.datetime_util import as_utc
 from mediamop.platform.auth.models import User, UserSession
-from mediamop.platform.auth.password import hash_password, verify_password
+from mediamop.platform.auth.password import hash_password, validate_password_strength, verify_password
 from mediamop.platform.auth.sessions import (
     compute_absolute_expiry,
     generate_raw_session_token,
@@ -26,6 +26,7 @@ from mediamop.platform.auth.sessions import (
 )
 
 logger = logging.getLogger(__name__)
+MAX_ACTIVE_SESSIONS_PER_USER = 5
 
 
 def authenticate_user(db: Session, username: str, password: str) -> User | None:
@@ -49,6 +50,59 @@ def revoke_active_sessions_for_user(db: Session, user_id: int) -> None:
     db.execute(stmt)
 
 
+def cleanup_inactive_sessions(db: Session, *, settings: MediaMopSettings, now=None) -> int:
+    """Delete sessions that can no longer authenticate a request."""
+
+    n = now or utcnow()
+    idle_cutoff = n - timedelta(minutes=settings.session_idle_minutes)
+    result = db.execute(
+        delete(UserSession).where(
+            (UserSession.revoked_at.is_not(None))
+            | (UserSession.absolute_expires_at <= n)
+            | (UserSession.last_seen_at < idle_cutoff),
+        )
+    )
+    return int(result.rowcount or 0)
+
+
+def enforce_session_limit_for_user(
+    db: Session,
+    user_id: int,
+    *,
+    max_active_sessions: int = MAX_ACTIVE_SESSIONS_PER_USER,
+) -> int:
+    """Keep newest active sessions and revoke older overflow rows."""
+
+    if max_active_sessions < 1:
+        max_active_sessions = 1
+    now = utcnow()
+    active_count = db.scalar(
+        select(func.count())
+        .select_from(UserSession)
+        .where(
+            UserSession.user_id == user_id,
+            UserSession.revoked_at.is_(None),
+            UserSession.absolute_expires_at > now,
+        )
+    ) or 0
+    overflow = int(active_count) - max_active_sessions
+    if overflow <= 0:
+        return 0
+    rows = db.scalars(
+        select(UserSession)
+        .where(
+            UserSession.user_id == user_id,
+            UserSession.revoked_at.is_(None),
+            UserSession.absolute_expires_at > now,
+        )
+        .order_by(UserSession.created_at.asc(), UserSession.id.asc())
+        .limit(overflow)
+    ).all()
+    for row in rows:
+        revoke_session(row, at=now)
+    return len(rows)
+
+
 def create_user_session(
     db: Session,
     user: User,
@@ -64,11 +118,15 @@ def create_user_session(
     row = UserSession(
         user_id=user.id,
         token_hash=th,
+        created_at=now,
         absolute_expires_at=compute_absolute_expiry(now=now, ttl=abs_ttl),
         last_seen_at=now,
     )
     db.add(row)
     db.flush()
+    revoked = enforce_session_limit_for_user(db, user.id)
+    if revoked:
+        logger.info("auth event: oldest sessions revoked after session cap (user_id=%s, count=%s)", user.id, revoked)
     logger.info("auth event: session created (user_id=%s, absolute_expires_at=%s)", user.id, row.absolute_expires_at)
     return row, raw
 
@@ -166,6 +224,7 @@ def change_password_for_user(
         raise ValueError("Current password is incorrect.")
     if current_password == new_password:
         raise ValueError("New password must be different from the current password.")
+    validate_password_strength(new_password, username=user.username)
     user.password_hash = hash_password(new_password)
     revoke_active_sessions_for_user(db, user.id)
     db.flush()

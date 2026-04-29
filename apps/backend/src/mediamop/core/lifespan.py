@@ -64,6 +64,8 @@ from mediamop.modules.pruner.worker_loop import (
     stop_pruner_worker_background_tasks,
 )
 from mediamop.platform.auth.rate_limit import SlidingWindowLimiter
+from mediamop.platform.auth.session_cleanup import start_session_cleanup_task, stop_session_cleanup_task
+from mediamop.platform.auth.service import cleanup_inactive_sessions
 from mediamop.platform.jobs.startup_recovery import recover_incomplete_jobs_after_startup
 from mediamop.platform.suite_settings.logs_service import prune_logs_for_retention
 from mediamop.platform.suite_settings.suite_configuration_backup_periodic import (
@@ -103,6 +105,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             recovered = recover_incomplete_jobs_after_startup(session)
             partial_outputs_removed = cleanup_refiner_partial_output_files(session, settings)
             prune_logs_for_retention(session, settings)
+            cleanup_inactive_sessions(session, settings=settings)
         if recovered.total_recovered or partial_outputs_removed:
             _lifespan_log.warning(
                 "MediaMop startup recovered interrupted work recovered_jobs=%s partial_outputs_removed=%s",
@@ -110,6 +113,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 partial_outputs_removed,
             )
     stop = asyncio.Event()
+    session_cleanup_task = start_session_cleanup_task(
+        session_factory,
+        stop_event=stop,
+        settings=settings,
+    )
     log_retention_tasks = start_log_retention_tasks(
         session_factory,
         stop_event=stop,
@@ -211,6 +219,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         except Exception:
             _lifespan_log.exception("Subber upgrade schedule enqueue stop failed")
         await stop_suite_configuration_backup_tasks(suite_configuration_backup_tasks)
+        await stop_session_cleanup_task(session_cleanup_task)
         await stop_log_retention_tasks(log_retention_tasks)
         await stop_subber_worker_background_tasks(subber_stop, subber_worker_tasks)
         await stop_pruner_preview_schedule_enqueue_tasks(pruner_preview_schedule_tasks)

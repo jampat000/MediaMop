@@ -19,6 +19,7 @@ from mediamop.platform.activity.models import ActivityEvent
 from mediamop.platform.auth import service as auth_service
 from mediamop.platform.auth.models import User, UserRole, UserSession
 from mediamop.platform.auth.password import hash_password
+from mediamop.platform.auth.sessions import revoke_session
 from mediamop.core.datetime_util import as_utc
 from tests.integration_helpers import auth_post, csrf as fetch_csrf, reset_user_tables, seed_admin_user
 
@@ -298,6 +299,58 @@ def test_second_browser_login_does_not_revoke_first_browser_session() -> None:
         assert remote_client.get("/api/v1/auth/me").status_code == 200
 
 
+def test_login_keeps_only_newest_five_active_sessions() -> None:
+    seed_admin_user()
+    settings = MediaMopSettings.load()
+    app = create_app()
+    clients = [TestClient(app) for _ in range(6)]
+    with clients[0], clients[1], clients[2], clients[3], clients[4], clients[5]:
+        for client in clients:
+            csrf = fetch_csrf(client)
+            login = auth_post(
+                client,
+                "/api/v1/auth/login",
+                json={"username": "alice", "password": "test-password-strong", "csrf_token": csrf},
+            )
+            assert login.status_code == 200, login.text
+
+        assert clients[0].get("/api/v1/auth/me").status_code == 401
+        for client in clients[1:]:
+            assert client.get("/api/v1/auth/me").status_code == 200
+
+    eng = create_db_engine(settings)
+    fac = create_session_factory(eng)
+    with fac() as db:
+        active = db.scalars(select(UserSession).where(UserSession.revoked_at.is_(None))).all()
+        revoked = db.scalars(select(UserSession).where(UserSession.revoked_at.is_not(None))).all()
+    assert len(active) == 5
+    assert len(revoked) == 1
+
+
+def test_session_limit_ignores_absolute_expired_sessions() -> None:
+    seed_admin_user()
+    settings = MediaMopSettings.load()
+    eng = create_db_engine(settings)
+    fac = create_session_factory(eng)
+    base = datetime(2026, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+    with patch("mediamop.platform.auth.service.utcnow", return_value=base):
+        with fac() as db:
+            user = db.scalars(select(User).where(User.username == "alice")).one()
+            for _ in range(5):
+                row, _raw = auth_service.create_user_session(db, user, settings=settings)
+                row.absolute_expires_at = base - timedelta(seconds=1)
+            live, _raw = auth_service.create_user_session(db, user, settings=settings)
+            db.commit()
+
+    with fac() as db:
+        live_row = db.get(UserSession, live.id)
+        expired_rows = db.scalars(select(UserSession).where(UserSession.id != live.id)).all()
+
+    assert live_row is not None
+    assert live_row.revoked_at is None
+    assert all(row.revoked_at is None for row in expired_rows)
+
+
 def test_admin_ping_requires_admin(client_with_admin: TestClient) -> None:
     csrf = fetch_csrf(client_with_admin)
     auth_post(
@@ -419,10 +472,28 @@ def test_bootstrap_rejects_short_password() -> None:
         assert r.status_code == 422, r.text
         detail = r.json().get("detail") or []
         assert any(
-            item.get("loc") == ["body", "password"] and "at least 8 characters" in item.get("msg", "")
+            item.get("loc") == ["body", "password"] and "at least 12 characters" in item.get("msg", "")
             for item in detail
             if isinstance(item, dict)
         )
+
+
+def test_bootstrap_rejects_common_password() -> None:
+    reset_user_tables()
+    app = create_app()
+    with TestClient(app) as client:
+        csrf = fetch_csrf(client)
+        r = auth_post(
+            client,
+            "/api/v1/auth/bootstrap",
+            json={
+                "username": "owner1",
+                "password": "password1234",
+                "csrf_token": csrf,
+            },
+        )
+        assert r.status_code == 400, r.text
+        assert "common" in r.json()["detail"].lower()
 
 
 def test_bootstrap_blocked_after_admin_exists(client_with_admin: TestClient) -> None:
@@ -672,6 +743,34 @@ def test_expired_session_is_rejected_and_revoked(monkeypatch: pytest.MonkeyPatch
         assert row.revoked_at is not None
 
 
+def test_session_cleanup_deletes_revoked_and_expired_sessions(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MEDIAMOP_SESSION_IDLE_MINUTES", "720")
+    seed_admin_user()
+    settings = MediaMopSettings.load()
+    eng = create_db_engine(settings)
+    fac = create_session_factory(eng)
+    base = datetime(2026, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+
+    with patch("mediamop.platform.auth.service.utcnow", return_value=base):
+        with fac() as db:
+            user = db.scalars(select(User).where(User.username == "alice")).one()
+            revoked, _ = auth_service.create_user_session(db, user, settings=settings)
+            expired, _ = auth_service.create_user_session(db, user, settings=settings)
+            active, _ = auth_service.create_user_session(db, user, settings=settings)
+            revoke_session(revoked, at=base)
+            expired.absolute_expires_at = base - timedelta(seconds=1)
+            db.commit()
+
+    with fac() as db:
+        removed = auth_service.cleanup_inactive_sessions(db, settings=settings, now=base)
+        db.commit()
+
+    assert removed == 2
+    with fac() as db:
+        rows = db.scalars(select(UserSession)).all()
+    assert [row.id for row in rows] == [active.id]
+
+
 def test_security_headers_on_health_and_api(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MEDIAMOP_SECURITY_ENABLE_HSTS", "1")
     reset_user_tables()
@@ -682,6 +781,7 @@ def test_security_headers_on_health_and_api(monkeypatch: pytest.MonkeyPatch) -> 
         assert r_h.headers.get("X-Frame-Options") == "DENY"
         assert r_h.headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
         assert r_h.headers.get("Content-Security-Policy")
+        assert r_h.headers.get("Cache-Control", "").startswith("no-store")
         assert r_h.headers.get("strict-transport-security")
         r_csrf = client.get("/api/v1/auth/csrf")
         assert r_csrf.headers.get("Content-Security-Policy")
@@ -689,6 +789,8 @@ def test_security_headers_on_health_and_api(monkeypatch: pytest.MonkeyPatch) -> 
         assert r_csrf.headers.get("Cache-Control", "").startswith("no-store")
         r_system = client.get("/api/v1/system/directories")
         assert r_system.headers.get("Cache-Control", "").startswith("no-store")
+        r_metrics = client.get("/metrics")
+        assert r_metrics.headers.get("Cache-Control", "").startswith("no-store")
 
 
 def test_static_assets_do_not_get_api_no_store(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

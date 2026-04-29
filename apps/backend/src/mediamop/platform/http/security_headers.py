@@ -55,7 +55,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers.setdefault("X-Frame-Options", "DENY")
         # API responses can include filesystem paths, credentials metadata, and operator settings.
         path = request.url.path
-        if path.startswith("/api/v1"):
+        if path.startswith("/api/v1") or path in {"/health", "/ready", "/readiness", "/metrics"}:
             response.headers.setdefault("Cache-Control", "no-store, private")
 
         if settings is not None and settings.security_enable_hsts:
