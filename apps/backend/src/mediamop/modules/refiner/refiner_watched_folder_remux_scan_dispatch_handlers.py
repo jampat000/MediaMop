@@ -22,7 +22,9 @@ from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_evaluat
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_ops import (
     iter_watched_folder_media_candidate_files,
     refiner_active_remux_pass_exists_for_relative_path,
+    refiner_completed_remux_output_exists_for_relative_path,
     relative_posix_path_under_watched,
+    retry_completed_movie_source_cleanup,
 )
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
 
@@ -93,6 +95,10 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
             "remux_jobs_enqueued": 0,
             "skipped_duplicate_same_scan": 0,
             "skipped_duplicate_active_queue": 0,
+            "skipped_existing_completed_output": 0,
+            "completed_source_cleanup_retried": 0,
+            "completed_source_cleanup_retry_deleted": 0,
+            "completed_source_cleanup_retry_failed": 0,
             "skipped_below_minimum_file_size": 0,
             "user_message": "",
             "waiting_message": None,
@@ -143,6 +149,23 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                     ):
                         summary["skipped_duplicate_active_queue"] += 1
                         continue
+                    if refiner_completed_remux_output_exists_for_relative_path(
+                        session,
+                        relative_posix=rel,
+                        media_scope=media_scope,
+                    ):
+                        summary["skipped_existing_completed_output"] += 1
+                        if media_scope == "movie":
+                            summary["completed_source_cleanup_retried"] += 1
+                            cleanup_ok, _cleanup_reason = retry_completed_movie_source_cleanup(
+                                watched_root=watched_path,
+                                file_path=file_path,
+                            )
+                            if cleanup_ok:
+                                summary["completed_source_cleanup_retry_deleted"] += 1
+                            else:
+                                summary["completed_source_cleanup_retry_failed"] += 1
+                        continue
 
                     payload = json.dumps(
                         {
@@ -165,7 +188,11 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                 queued = int(summary["remux_jobs_enqueued"])
                 waiting = int(summary["verdict_wait_upstream"])
                 seen = int(summary["media_candidates_seen"])
-                duplicates = int(summary["skipped_duplicate_same_scan"]) + int(summary["skipped_duplicate_active_queue"])
+                duplicates = (
+                    int(summary["skipped_duplicate_same_scan"])
+                    + int(summary["skipped_duplicate_active_queue"])
+                    + int(summary["skipped_existing_completed_output"])
+                )
                 if queued:
                     summary["scan_result_label"] = "files_queued"
                     summary["user_message"] = (

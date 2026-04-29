@@ -218,6 +218,98 @@ def test_scan_handler_enqueues_remux_without_arr_connections(
         assert s.scalar(select(ActivityEvent)) is None
 
 
+def test_scan_handler_skips_file_when_previous_success_output_still_exists(
+    session_factory,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MEDIAMOP_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
+    settings = MediaMopSettings.load()
+
+    watch = tmp_path / "watch_existing_output"
+    watch.mkdir()
+    out = tmp_path / "out_existing_output"
+    out.mkdir()
+    release = watch / "Locked Source 2026"
+    release.mkdir()
+    mkv = release / "Locked Source 2026.mkv"
+    mkv.write_bytes(b"source-still-locked")
+    output = out / "Locked Source 2026" / "Locked Source 2026.mkv"
+    output.parent.mkdir(parents=True)
+    output.write_bytes(b"already-written")
+
+    with session_factory() as s:
+        s.merge(
+            RefinerPathSettingsRow(
+                id=1,
+                refiner_watched_folder=str(watch.resolve()),
+                refiner_work_folder=None,
+                refiner_output_folder=str(out.resolve()),
+            ),
+        )
+        s.merge(
+            RefinerOperatorSettingsRow(
+                id=1,
+                min_file_age_seconds=0,
+                refiner_min_input_file_size_mb=0,
+                minimum_free_disk_space_mb=0,
+            )
+        )
+        s.add(
+            ActivityEvent(
+                module="refiner",
+                event_type="refiner.file_remux_pass_completed",
+                title="Locked Source 2026.mkv was processed successfully",
+                detail=json.dumps(
+                    {
+                        "ok": True,
+                        "relative_media_path": "Locked Source 2026/Locked Source 2026.mkv",
+                        "media_scope": "movie",
+                        "output_file": str(output.resolve()),
+                        "source_deleted_after_success": False,
+                        "source_folder_skip_reason": "file is locked",
+                    },
+                ),
+            ),
+        )
+        s.commit()
+
+    with session_factory() as s:
+        refiner_enqueue_or_get_job(
+            s,
+            dedupe_key="refiner.watched_folder.remux_scan_dispatch.v1:existing-output",
+            job_kind=REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
+            payload_json=json.dumps({"enqueue_remux_jobs": True}),
+        )
+        s.commit()
+
+    handlers = build_refiner_job_handlers(settings, session_factory)
+    with patch(
+        "mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_radarr_and_sonarr_queue_rows_for_scan",
+        return_value=([], [], "Radarr not configured", "Sonarr not configured"),
+    ):
+        assert (
+            process_one_refiner_job(
+                session_factory,
+                lease_owner="scan-test",
+                job_handlers=handlers,
+                now=datetime(2026, 4, 12, 12, 0, 0, tzinfo=timezone.utc),
+                lease_seconds=3600,
+            )
+            == "processed"
+        )
+
+    with session_factory() as s:
+        remux = [
+            j
+            for j in s.scalars(select(RefinerJob)).all()
+            if j.job_kind == "refiner.file.remux_pass.v1"
+        ]
+        assert remux == []
+    assert watch.exists()
+    assert not release.exists()
+
+
 def test_scan_handler_does_not_record_activity_when_no_files_are_queued(
     session_factory,
     tmp_path: Path,
