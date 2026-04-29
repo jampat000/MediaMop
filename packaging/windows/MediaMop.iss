@@ -37,6 +37,7 @@ UninstallDisplayIcon={app}\{#ExeName}
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"
+Name: "startup"; Description: "Start MediaMop when Windows starts"; GroupDescription: "Startup options:"; Flags: unchecked
 
 [Dirs]
 Name: "{commonappdata}\MediaMop"; Permissions: users-modify
@@ -52,6 +53,9 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs 
 [Icons]
 Name: "{group}\MediaMop"; Filename: "{app}\{#ExeName}"
 Name: "{commondesktop}\MediaMop"; Filename: "{app}\{#ExeName}"; Tasks: desktopicon
+
+[Registry]
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "MediaMop"; ValueData: """{app}\{#ExeName}"""; Flags: uninsdeletevalue; Tasks: startup
 
 [Run]
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""MediaMop Server"""; Flags: runhidden waituntilterminated

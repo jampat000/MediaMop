@@ -52,6 +52,19 @@ def test_inno_installer_uses_program_files_and_programdata() -> None:
     assert "MediaMopServer.exe" in text
 
 
+def test_windows_installer_startup_task_is_explicit_and_opt_in() -> None:
+    installer = Path(__file__).resolve().parents[3] / "packaging" / "windows" / "MediaMop.iss"
+    text = installer.read_text(encoding="utf-8")
+
+    assert 'Name: "startup"; Description: "Start MediaMop when Windows starts"' in text
+    assert 'Flags: unchecked' in text
+    assert 'Root: HKCU; Subkey: "Software\\Microsoft\\Windows\\CurrentVersion\\Run"' in text
+    assert 'ValueName: "MediaMop"' in text
+    assert 'ValueData: """{app}\\{#ExeName}"""' in text
+    assert "uninsdeletevalue" in text
+    assert "Tasks: startup" in text
+
+
 def test_windows_package_uses_dedicated_tray_icon_assets() -> None:
     repo = Path(__file__).resolve().parents[3]
     spec = repo / "packaging" / "windows" / "mediamop-tray.spec"
