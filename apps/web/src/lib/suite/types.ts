@@ -69,9 +69,11 @@ export type SuiteUpdateStatusOut = {
 };
 
 export type SuiteUpdateStartOut = {
-  status: "started" | "unavailable" | string;
+  status: "started" | "manual_required" | "unavailable" | string;
   message: string;
   target_version?: string | null;
+  installer_path?: string | null;
+  log_path?: string | null;
 };
 
 export type SuiteLogEntry = {

@@ -362,7 +362,7 @@ def test_suite_update_status_not_published_when_release_missing(
     assert "no public mediamop release is published yet" in body["summary"].lower()
 
 
-def test_suite_update_now_stages_windows_installer_and_launches_script(
+def test_suite_update_now_stages_windows_installer_when_task_missing(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -397,6 +397,7 @@ def test_suite_update_now_stages_windows_installer_and_launches_script(
 
     launched: list[str] = []
     monkeypatch.setattr("mediamop.platform.suite_settings.update_service.httpx.stream", lambda *a, **k: _Stream())
+    monkeypatch.setattr("mediamop.platform.suite_settings.update_service._windows_upgrade_task_ready", lambda: False)
     monkeypatch.setattr(
         "mediamop.platform.suite_settings.update_service._launch_windows_upgrade_script",
         lambda path: launched.append(str(path)),
@@ -406,13 +407,43 @@ def test_suite_update_now_stages_windows_installer_and_launches_script(
 
     installer = tmp_path / "upgrades" / "MediaMopSetup-1.2.3.exe"
     script = tmp_path / "upgrades" / "run-windows-upgrade.ps1"
-    assert out.status == "started"
+    assert out.status == "manual_required"
     assert installer.read_bytes() == b"installer-bytes"
     assert script.is_file()
-    assert launched == [str(script)]
+    assert launched == []
     script_text = script.read_text(encoding="utf-8")
-    assert "-Verb RunAs" in script_text
-    assert "Starting elevated installer" in script_text
+    assert "-Verb RunAs" not in script_text
+    assert "Starting installer directly" in script_text
+    assert out.installer_path == str(installer)
+
+
+def test_suite_update_now_uses_windows_updater_task_when_available(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(tmp_path))
+    monkeypatch.setenv("MEDIAMOP_RUNTIME", "windows")
+    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "1.0.0")
+    monkeypatch.setattr(
+        "mediamop.platform.suite_settings.update_service._fetch_latest_release_payload",
+        lambda: {
+            "tag_name": "v1.2.3",
+            "assets": [
+                {
+                    "name": "MediaMopSetup.exe",
+                    "browser_download_url": "https://example.com/MediaMopSetup.exe",
+                }
+            ],
+        },
+    )
+    monkeypatch.setattr("mediamop.platform.suite_settings.update_service._windows_upgrade_task_ready", lambda: True)
+    monkeypatch.setattr("mediamop.platform.suite_settings.update_service._run_windows_upgrade_task", lambda: True)
+
+    out = start_suite_update_now(settings)
+
+    assert out.status == "started"
+    assert out.target_version == "1.2.3"
+    assert out.log_path == str(tmp_path / "upgrades" / "upgrade-task.log")
 
 
 def test_suite_configuration_backup_tick_creates_snapshot(client_with_admin: TestClient) -> None:

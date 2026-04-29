@@ -173,9 +173,11 @@ class SuiteUpdateStartOut(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    status: str = Field(min_length=1, description="started or unavailable")
+    status: str = Field(min_length=1, description="started, manual_required, or unavailable")
     message: str = Field(min_length=1)
     target_version: str | None = None
+    installer_path: str | None = None
+    log_path: str | None = None
 
 
 class SuiteUpdateStartIn(BaseModel):

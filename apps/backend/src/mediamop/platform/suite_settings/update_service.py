@@ -17,6 +17,7 @@ from mediamop.version import __version__
 GH_REPO = "jampat000/MediaMop"
 GH_RELEASES_LATEST_URL = f"https://api.github.com/repos/{GH_REPO}/releases/latest"
 DOCKER_IMAGE = "ghcr.io/jampat000/mediamop"
+WINDOWS_UPGRADE_TASK_NAME = "MediaMop Upgrade"
 
 
 def _detect_install_type() -> str:
@@ -71,6 +72,54 @@ def _find_windows_installer_asset(payload: dict[str, Any]) -> str | None:
         if name == "mediamopsetup.exe":
             return str(asset.get("browser_download_url") or "").strip() or None
     return None
+
+
+def _windows_system_exe(name: str) -> str:
+    root = Path(os.environ.get("SystemRoot") or r"C:\Windows") / "System32"
+    candidate = root / name
+    return str(candidate) if candidate.is_file() else name
+
+
+def _windows_upgrade_task_ready() -> bool:
+    if os.name != "nt":
+        return False
+    try:
+        proc = subprocess.run(
+            [
+                _windows_system_exe("schtasks.exe"),
+                "/Query",
+                "/TN",
+                WINDOWS_UPGRADE_TASK_NAME,
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except Exception:
+        return False
+    return proc.returncode == 0
+
+
+def _run_windows_upgrade_task() -> bool:
+    if os.name != "nt":
+        return False
+    try:
+        proc = subprocess.run(
+            [
+                _windows_system_exe("schtasks.exe"),
+                "/Run",
+                "/TN",
+                WINDOWS_UPGRADE_TASK_NAME,
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except Exception:
+        return False
+    return proc.returncode == 0
 
 
 def build_suite_update_status() -> SuiteUpdateStatusOut:
@@ -156,10 +205,11 @@ function Write-UpgradeLog([string]$message) {{
 }}
 Write-UpgradeLog "Starting MediaMop in-app upgrade."
 $installer = {str(installer_path)!r}
-$args = @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS", "/RESTARTAPPLICATIONS")
-Write-UpgradeLog "Starting elevated installer. Windows may ask for permission."
-$proc = Start-Process -FilePath $installer -ArgumentList $args -Verb RunAs -Wait -PassThru -ErrorAction Stop
-Write-UpgradeLog "Elevated installer exited with code $($proc.ExitCode)."
+$setupLog = {str(installer_path.parent / "installer-direct.log")!r}
+$args = @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS", "/RESTARTAPPLICATIONS", "/LOG=`"$setupLog`"")
+Write-UpgradeLog "Starting installer directly."
+$proc = Start-Process -FilePath $installer -ArgumentList $args -Wait -PassThru -ErrorAction Stop
+Write-UpgradeLog "Installer exited with code $($proc.ExitCode)."
 $exe = {str(exe_path)!r}
 if (Test-Path -LiteralPath $exe) {{
   Start-Process -FilePath $exe -WorkingDirectory {str(executable_dir)!r}
@@ -222,6 +272,28 @@ def start_suite_update_now(settings: MediaMopSettings) -> SuiteUpdateStartOut:
         )
 
     upgrade_dir = Path(settings.mediamop_home) / "upgrades"
+    task_log_path = upgrade_dir / "upgrade-task.log"
+    if _windows_upgrade_task_ready():
+        if _run_windows_upgrade_task():
+            return SuiteUpdateStartOut(
+                status="started",
+                message=(
+                    "Upgrade started using the MediaMop Windows updater. MediaMop will close, install the update, "
+                    "reopen, and this page should reconnect after the app is back."
+                ),
+                target_version=latest_version,
+                log_path=str(task_log_path),
+            )
+        return SuiteUpdateStartOut(
+            status="unavailable",
+            message=(
+                "MediaMop found the Windows updater task, but Windows would not start it. "
+                f"Check {task_log_path} or download and run the installer manually."
+            ),
+            target_version=latest_version,
+            log_path=str(task_log_path),
+        )
+
     upgrade_dir.mkdir(parents=True, exist_ok=True)
     installer_path = upgrade_dir / f"MediaMopSetup-{latest_version}.exe"
     with httpx.stream("GET", installer_url, timeout=60.0, follow_redirects=True) as response:
@@ -238,9 +310,13 @@ def start_suite_update_now(settings: MediaMopSettings) -> SuiteUpdateStartOut:
         executable_dir=executable_dir,
         script_path=script_path,
     )
-    _launch_windows_upgrade_script(script_path)
     return SuiteUpdateStartOut(
-        status="started",
-        message="Upgrade started. MediaMop will close, install the update, reopen, and this page should reconnect after the app is back.",
+        status="manual_required",
+        message=(
+            "The installer was downloaded, but this older MediaMop install does not have the Windows updater task yet. "
+            "Run the downloaded installer once on the MediaMop computer as administrator; future upgrades can be started from this page."
+        ),
         target_version=latest_version,
+        installer_path=str(installer_path),
+        log_path=str(script_path),
     )
