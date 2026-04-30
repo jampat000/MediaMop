@@ -24,6 +24,8 @@ services:
       # MEDIAMOP_SESSION_SECRET: ${MEDIAMOP_SESSION_SECRET}
       # Recommended before saving Pruner/Subber/Sonarr/Radarr credentials:
       # MEDIAMOP_CREDENTIALS_SECRET: ${MEDIAMOP_CREDENTIALS_SECRET}
+      # Optional bearer token for Prometheus or other machine scrapes of /metrics:
+      # MEDIAMOP_METRICS_BEARER_TOKEN: ${MEDIAMOP_METRICS_BEARER_TOKEN}
     volumes:
       - mediamop_data:/data/mediamop
     restart: unless-stopped

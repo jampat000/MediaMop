@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { isRouteErrorResponse, useRouteError } from "react-router-dom";
 
 type ErrorBoundaryState = {
   error: Error | null;
@@ -70,4 +71,22 @@ export function AppErrorScreen({ error, onReload }: { error: Error; onReload?: (
       </div>
     </main>
   );
+}
+
+function routeErrorToError(error: unknown): Error {
+  if (error instanceof Error) {
+    return error;
+  }
+  if (isRouteErrorResponse(error)) {
+    return new Error(error.statusText || error.data || `Route error ${error.status}`);
+  }
+  if (typeof error === "string" && error.trim()) {
+    return new Error(error);
+  }
+  return new Error("Unknown route error");
+}
+
+export function RouteErrorScreen() {
+  const routeError = useRouteError();
+  return <AppErrorScreen error={routeErrorToError(routeError)} />;
 }

@@ -13,8 +13,7 @@ import {
 const MASK = "\u2022".repeat(10);
 
 function providerNeedsConfigureButton(p: SubberProviderOut): boolean {
-  if (p.provider_key === "subscene") return false;
-  if (p.provider_key === "addic7ed") return false;
+  if (!p.available) return false;
   if (p.requires_account) return true;
   if (p.provider_key === "podnapisi") return true;
   return false;
@@ -131,8 +130,8 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
                         {provMsgText}
                       </span>
                     );
-                } else if (p.provider_key === "subscene" || p.provider_key === "addic7ed") {
-                  statusEl = <span className="text-xs text-amber-400">Not implemented yet</span>;
+                } else if (!p.available) {
+                  statusEl = <span className="text-xs text-amber-400">{p.availability_note ?? "Not available"}</span>;
                 } else if (p.requires_account) {
                   statusEl = p.has_credentials ? (
                     <span className="text-xs font-medium text-emerald-600">Configured</span>
@@ -157,6 +156,7 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
                     <button
                       type="button"
                       className="flex w-full items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.02]"
+                      disabled={!p.available}
                       onClick={() => setExpandedProviderKey(expanded ? null : p.provider_key)}
                     >
                       <span

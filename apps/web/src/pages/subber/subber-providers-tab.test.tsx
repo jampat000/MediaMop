@@ -35,6 +35,8 @@ describe("SubberProvidersTab", () => {
           priority: 0,
           requires_account: true,
           has_credentials: false,
+          available: true,
+          availability_note: null,
         },
       ],
       isLoading: false,
@@ -86,5 +88,27 @@ describe("SubberProvidersTab", () => {
     await waitFor(() => expect(screen.getByTestId("subber-test-opensubtitles")).toBeInTheDocument());
     fireEvent.click(screen.getByTestId("subber-test-opensubtitles"));
     await waitFor(() => expect(testMut).toHaveBeenCalled());
+  });
+
+  it("shows unavailable providers as not available", async () => {
+    vi.spyOn(subberQueries, "useSubberProvidersQuery").mockReturnValue({
+      data: [
+        {
+          provider_key: "subscene",
+          display_name: "Subscene",
+          enabled: false,
+          priority: 9,
+          requires_account: false,
+          has_credentials: false,
+          available: false,
+          availability_note: "Not available in this version.",
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof subberQueries.useSubberProvidersQuery>);
+    const client = new QueryClient();
+    render(wrap(<SubberProvidersTab canOperate />, client));
+    await waitFor(() => expect(screen.getByText("Not available in this version.")).toBeInTheDocument());
   });
 });

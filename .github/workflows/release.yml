@@ -88,6 +88,7 @@ jobs:
           MEDIAMOP_HOME: ${{ runner.temp }}/mediamop-ci
           MEDIAMOP_SESSION_SECRET: ci-mediamop-session-secret-32chars-min
         run: |
+          alembic check
           alembic upgrade head
           pytest -q
 
@@ -140,8 +141,8 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64
           push: true
-          provenance: false
-          sbom: false
+          provenance: true
+          sbom: true
           tags: |
             ${{ steps.image.outputs.name }}:${{ github.ref_name }}
             ${{ steps.image.outputs.name }}:latest

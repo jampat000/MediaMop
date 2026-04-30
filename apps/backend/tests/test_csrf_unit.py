@@ -43,6 +43,7 @@ def _csrf_settings(**overrides: object) -> MediaMopSettings:
         bootstrap_rate_max_attempts=10,
         bootstrap_rate_window_seconds=3600,
         security_enable_hsts=False,
+        metrics_bearer_token=None,
         mediamop_home=str(home),
         db_path=str(db),
         backup_dir=str(home / "backups"),

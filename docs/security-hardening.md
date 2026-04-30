@@ -21,6 +21,7 @@ This checklist defines the current practical hardening baseline for MediaMop.
 - Docker can generate a persistent session secret when one is not provided.
 - `MEDIAMOP_SESSION_SECRET` signs sessions and CSRF tokens; `MEDIAMOP_CREDENTIALS_SECRET` encrypts saved provider
   credentials. Keep them separate.
+- `MEDIAMOP_METRICS_BEARER_TOKEN` can gate machine access to `/metrics` without requiring an operator browser session.
 - To rotate `MEDIAMOP_CREDENTIALS_SECRET`, set the new value as `MEDIAMOP_CREDENTIALS_SECRET`, add the old value to
   `MEDIAMOP_PREVIOUS_CREDENTIALS_SECRETS`, restart MediaMop, then re-save Pruner, Subber, Sonarr, and Radarr
   credentials. After every saved credential has been re-written with the new value, remove the old value from

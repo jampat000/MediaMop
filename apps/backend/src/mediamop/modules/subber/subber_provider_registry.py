@@ -71,3 +71,8 @@ PROVIDER_SCOPE_RESTRICTION: dict[str, str] = {
     PROVIDER_GESTDOWN: "tv",
     PROVIDER_YIFY: "movies",
 }
+
+PROVIDER_AVAILABILITY: dict[str, tuple[bool, str | None]] = {
+    PROVIDER_SUBSCENE: (False, "Not available in this version."),
+    PROVIDER_ADDIC7ED: (False, "Not available in this version."),
+}

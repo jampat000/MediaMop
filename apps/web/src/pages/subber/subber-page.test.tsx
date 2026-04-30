@@ -58,6 +58,8 @@ describe("SubberPage", () => {
           priority: 0,
           requires_account: true,
           has_credentials: false,
+          available: true,
+          availability_note: null,
         },
       ],
       isLoading: false,

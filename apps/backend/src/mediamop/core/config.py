@@ -128,6 +128,7 @@ class MediaMopSettings:
     bootstrap_rate_max_attempts: int
     bootstrap_rate_window_seconds: int
     security_enable_hsts: bool
+    metrics_bearer_token: str | None
     mediamop_home: str
     db_path: str
     backup_dir: str
@@ -345,6 +346,7 @@ class MediaMopSettings:
         boot_max = max(1, _env_int("MEDIAMOP_BOOTSTRAP_RATE_MAX_ATTEMPTS", 10))
         boot_win = max(1, _env_int("MEDIAMOP_BOOTSTRAP_RATE_WINDOW_SECONDS", 3600))
         enable_hsts = _env_bool("MEDIAMOP_SECURITY_ENABLE_HSTS", default=False)
+        metrics_bearer_token = (os.environ.get("MEDIAMOP_METRICS_BEARER_TOKEN") or "").strip() or None
 
         home_path, db_p, backup_p, log_p, temp_p = resolve_all_runtime_paths()
         ensure_runtime_directories(
@@ -514,6 +516,7 @@ class MediaMopSettings:
             bootstrap_rate_max_attempts=boot_max,
             bootstrap_rate_window_seconds=boot_win,
             security_enable_hsts=enable_hsts,
+            metrics_bearer_token=metrics_bearer_token,
             mediamop_home=str(home_path),
             db_path=str(db_p),
             backup_dir=str(backup_p),

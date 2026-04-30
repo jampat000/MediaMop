@@ -13,6 +13,7 @@ from mediamop.modules.subber.subber_podnapisi_client import LIST_BASE
 from mediamop.modules.subber.subber_provider_registry import (
     ALL_PROVIDER_KEYS,
     PROVIDER_ADDIC7ED,
+    PROVIDER_AVAILABILITY,
     PROVIDER_DISPLAY_NAMES,
     PROVIDER_OPENSUBTITLES_COM,
     PROVIDER_OPENSUBTITLES_ORG,
@@ -41,6 +42,7 @@ class SubberCsrfIn(BaseModel):
 
 def _provider_out(settings: MediaMopSettings, row) -> SubberProviderOut:
     pk = str(row.provider_key)
+    available, availability_note = PROVIDER_AVAILABILITY.get(pk, (True, None))
     return SubberProviderOut(
         provider_key=pk,
         display_name=PROVIDER_DISPLAY_NAMES.get(pk, pk),
@@ -48,6 +50,8 @@ def _provider_out(settings: MediaMopSettings, row) -> SubberProviderOut:
         priority=int(row.priority) if row.priority is not None else None,
         requires_account=bool(PROVIDER_REQUIRES_ACCOUNT.get(pk, True)),
         has_credentials=provider_has_stored_credentials(settings, row),
+        available=available,
+        availability_note=availability_note,
     )
 
 
@@ -83,6 +87,12 @@ def put_subber_provider(
     pk = provider_key.strip()
     if pk not in ALL_PROVIDER_KEYS:
         raise HTTPException(status_code=404, detail="Unknown provider_key.")
+    available, availability_note = PROVIDER_AVAILABILITY.get(pk, (True, None))
+    if body.enabled is True and not available:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=availability_note or "Provider is not available in this version.",
+        )
     creds: dict[str, str | None] | None = None
     if body.username is not None or (body.password is not None and body.password.strip()) or (
         body.api_key is not None and body.api_key.strip()

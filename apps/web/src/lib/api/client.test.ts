@@ -92,6 +92,33 @@ describe("apiResponseErrorMessage", () => {
   });
 });
 
+describe("apiFetch timeouts", () => {
+  it("turns request timeouts into typed ApiHttpError", async () => {
+    const timeoutSignal = {
+      aborted: true,
+      reason: new DOMException("The operation timed out.", "TimeoutError"),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+      onabort: null,
+      throwIfAborted: vi.fn(),
+    } as unknown as AbortSignal;
+    vi.spyOn(AbortSignal, "timeout").mockReturnValue(timeoutSignal);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new DOMException("The operation was aborted.", "AbortError")),
+    );
+
+    await expect(apiFetch("/api/v1/suite/settings")).rejects.toMatchObject({
+      name: "ApiHttpError",
+      status: 0,
+      path: "/api/v1/suite/settings",
+      timedOut: true,
+      message: "Request timed out - the backend may be slow or unreachable.",
+    });
+  });
+});
+
 describe("apiFetch unauthorized handling", () => {
   it("calls the central unauthorized handler once for repeated 401s", async () => {
     const handler = vi.fn();

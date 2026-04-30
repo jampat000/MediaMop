@@ -28,6 +28,8 @@ _hasher = PasswordHasher(
     hash_len=32,
     salt_len=16,
 )
+_DUMMY_PASSWORD_PLAIN = "mediamop-login-padding-password"
+DUMMY_PASSWORD_HASH = _hasher.hash(_DUMMY_PASSWORD_PLAIN)
 
 
 def hash_password(plain: str) -> str:

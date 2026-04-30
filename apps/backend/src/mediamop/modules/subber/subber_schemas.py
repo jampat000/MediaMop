@@ -156,6 +156,8 @@ class SubberProviderOut(BaseModel):
     priority: int | None = None
     requires_account: bool
     has_credentials: bool
+    available: bool = True
+    availability_note: str | None = None
 
 
 class SubberProviderPutIn(BaseModel):

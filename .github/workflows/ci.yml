@@ -48,6 +48,7 @@ jobs:
           MEDIAMOP_HOME: ${{ runner.temp }}/mediamop-ci
           MEDIAMOP_SESSION_SECRET: ci-mediamop-session-secret-32chars-min
         run: |
+          alembic check
           alembic upgrade head
           pytest -q --cov=mediamop --cov-fail-under=60
 

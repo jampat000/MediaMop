@@ -26,11 +26,15 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/mediamop
-COPY apps/backend /opt/mediamop/apps/backend
+RUN groupadd --system --gid 1000 mediamop \
+  && useradd --system --uid 1000 --gid 1000 --create-home --home-dir /home/mediamop --shell /usr/sbin/nologin mediamop \
+  && mkdir -p /data/mediamop /opt/mediamop/apps/backend /opt/mediamop/web-dist \
+  && chown -R mediamop:mediamop /data/mediamop /opt/mediamop /home/mediamop
+COPY --chown=mediamop:mediamop apps/backend /opt/mediamop/apps/backend
 RUN pip install --no-cache-dir --upgrade pip \
   && pip install --no-cache-dir --prefer-binary -e "/opt/mediamop/apps/backend"
 
-COPY --from=web /src/apps/web/dist /opt/mediamop/web-dist
+COPY --from=web --chown=mediamop:mediamop /src/apps/web/dist /opt/mediamop/web-dist
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
@@ -41,6 +45,8 @@ ENV MEDIAMOP_ENV=production
 # never be sent on http://, which breaks sign-in. Set MEDIAMOP_SESSION_COOKIE_SECURE=true when
 # browsers always use HTTPS (e.g. TLS terminated at a reverse proxy in front of this container).
 ENV MEDIAMOP_SESSION_COOKIE_SECURE=false
+
+USER mediamop
 
 EXPOSE 8788
 

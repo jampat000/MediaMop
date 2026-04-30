@@ -172,6 +172,8 @@ export type SubberProviderOut = {
   priority: number | null;
   requires_account: boolean;
   has_credentials: boolean;
+  available: boolean;
+  availability_note: string | null;
 };
 
 export type SubberProviderPutIn = {
