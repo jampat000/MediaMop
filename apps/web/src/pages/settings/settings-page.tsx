@@ -1440,9 +1440,9 @@ export function SettingsPage() {
                     updateStatusQ.data.status === "update_available" ? (
                       updateStatusQ.data.in_app_upgrade_supported ? (
                         <p className="text-sm leading-6 text-[var(--mm-text2)]">
-                          Upgrade now downloads the installer, closes
-                          MediaMop, installs the update, reopens the app, and
-                          refreshes this page after the server comes back.
+                          Upgrade now downloads the installer, closes MediaMop,
+                          installs the update, reopens the app, and refreshes
+                          this page after the server comes back.
                         </p>
                       ) : (
                         <p className="text-sm leading-6 text-[var(--mm-text2)]">
