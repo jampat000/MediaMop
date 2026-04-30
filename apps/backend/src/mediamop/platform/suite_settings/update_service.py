@@ -3,21 +3,26 @@
 from __future__ import annotations
 
 import os
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.platform.suite_settings.schemas import SuiteUpdateStartOut, SuiteUpdateStatusOut
 from mediamop.version import __version__
+from mediamop.windows.updater_service import UPDATER_PORT
 
 GH_REPO = "jampat000/MediaMop"
 GH_RELEASES_LATEST_URL = f"https://api.github.com/repos/{GH_REPO}/releases/latest"
 DOCKER_IMAGE = "ghcr.io/jampat000/mediamop"
-WINDOWS_UPGRADE_TASK_NAME = "MediaMop Upgrade"
+
+_WINDOWS_LEGACY_UPGRADE_SUMMARY = (
+    "This Windows install does not have the MediaMop updater service yet. "
+    "Remote in-app upgrade is not available until one newer installer has been run locally as administrator."
+)
 
 
 def _detect_install_type() -> str:
@@ -74,57 +79,117 @@ def _find_windows_installer_asset(payload: dict[str, Any]) -> str | None:
     return None
 
 
-def _windows_system_exe(name: str) -> str:
-    root = Path(os.environ.get("SystemRoot") or r"C:\Windows") / "System32"
-    candidate = root / name
-    return str(candidate) if candidate.is_file() else name
+def _runtime_home(settings: MediaMopSettings | None = None) -> Path:
+    if settings is not None:
+        return Path(settings.mediamop_home)
+    raw = (os.environ.get("MEDIAMOP_HOME") or "").strip()
+    if raw:
+        return Path(raw).expanduser().resolve()
+    program_data = (os.environ.get("PROGRAMDATA") or r"C:\ProgramData").strip()
+    return Path(program_data) / "MediaMop"
 
 
-def _windows_upgrade_task_ready() -> bool:
+def _install_root() -> Path:
+    if getattr(sys, "frozen", False) and os.name == "nt":
+        return Path(sys.executable).resolve().parent
+    return _runtime_home()
+
+
+def _updater_token_path(settings: MediaMopSettings | None = None) -> Path:
+    if getattr(sys, "frozen", False) and os.name == "nt":
+        return _install_root() / "updater.secret"
+    return _runtime_home(settings) / "updater.secret"
+
+
+def _read_updater_token(settings: MediaMopSettings | None = None) -> str | None:
+    path = _updater_token_path(settings)
+    try:
+        token = path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    return token if len(token) >= 32 else None
+
+
+def _updater_base_url() -> str:
+    port = int((os.environ.get("MEDIAMOP_UPDATER_PORT") or str(UPDATER_PORT)).strip())
+    return f"http://127.0.0.1:{port}"
+
+
+def _updater_headers(settings: MediaMopSettings | None = None) -> dict[str, str] | None:
+    token = _read_updater_token(settings)
+    if not token:
+        return None
+    return {"X-MediaMop-Updater-Token": token}
+
+
+def _windows_updater_service_ready(settings: MediaMopSettings | None = None) -> bool:
     if os.name != "nt":
         return False
-    try:
-        proc = subprocess.run(
-            [
-                _windows_system_exe("schtasks.exe"),
-                "/Query",
-                "/TN",
-                WINDOWS_UPGRADE_TASK_NAME,
-            ],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-    except Exception:
-        return False
-    return proc.returncode == 0
-
-
-def _run_windows_upgrade_task() -> bool:
-    if os.name != "nt":
+    headers = _updater_headers(settings)
+    if not headers:
         return False
     try:
-        proc = subprocess.run(
-            [
-                _windows_system_exe("schtasks.exe"),
-                "/Run",
-                "/TN",
-                WINDOWS_UPGRADE_TASK_NAME,
-            ],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
+        response = httpx.get(f"{_updater_base_url()}/health", timeout=3.0)
+        return response.status_code == 200
     except Exception:
         return False
-    return proc.returncode == 0
 
 
-def build_suite_update_status() -> SuiteUpdateStatusOut:
+def _assert_safe_installer_url(installer_url: str) -> str:
+    parsed = urlparse(installer_url)
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme != "https":
+        msg = "Installer download URL must use HTTPS."
+        raise ValueError(msg)
+    if host not in {
+        "github.com",
+        "objects.githubusercontent.com",
+        "release-assets.githubusercontent.com",
+    }:
+        msg = "Installer download URL must come from GitHub Releases."
+        raise ValueError(msg)
+    return installer_url
+
+
+def _start_windows_updater_service_apply(
+    settings: MediaMopSettings,
+    *,
+    installer_url: str,
+    target_version: str,
+) -> tuple[bool, str]:
+    headers = _updater_headers(settings)
+    if not headers:
+        return False, _WINDOWS_LEGACY_UPGRADE_SUMMARY
+    try:
+        response = httpx.post(
+            f"{_updater_base_url()}/api/v1/apply",
+            headers=headers,
+            json={
+                "installer_url": _assert_safe_installer_url(installer_url),
+                "target_version": target_version,
+            },
+            timeout=10.0,
+        )
+    except Exception as exc:
+        return False, f"MediaMop could not reach the local updater service: {exc}"
+    if response.status_code != 200:
+        try:
+            payload = response.json()
+            detail = str(payload.get("detail") or "").strip()
+        except Exception:
+            detail = ""
+        return False, detail or "MediaMop could not start the local updater service request."
+    try:
+        payload = response.json()
+    except Exception:
+        return False, "MediaMop updater service returned an invalid response."
+    return bool(payload.get("accepted")), str(payload.get("message") or "").strip()
+
+
+def build_suite_update_status(settings: MediaMopSettings | None = None) -> SuiteUpdateStatusOut:
     install_type = _detect_install_type()
     current_version = __version__ or "1.0.0"
+    windows_updater_ready = install_type == "windows" and _windows_updater_service_ready(settings)
     try:
         payload = _fetch_latest_release_payload()
     except httpx.HTTPStatusError as exc:
@@ -135,6 +200,16 @@ def build_suite_update_status() -> SuiteUpdateStatusOut:
                 status="not_published",
                 summary="No public MediaMop release is published yet.",
                 docker_image=DOCKER_IMAGE if install_type == "docker" else None,
+                in_app_upgrade_supported=windows_updater_ready,
+                in_app_upgrade_summary=(
+                    None
+                    if install_type != "windows"
+                    else (
+                        "Remote in-app upgrade is ready on this Windows install."
+                        if windows_updater_ready
+                        else _WINDOWS_LEGACY_UPGRADE_SUMMARY
+                    )
+                ),
             )
         return SuiteUpdateStatusOut(
             current_version=current_version,
@@ -142,6 +217,16 @@ def build_suite_update_status() -> SuiteUpdateStatusOut:
             status="unavailable",
             summary="Could not check for updates right now.",
             docker_image=DOCKER_IMAGE if install_type == "docker" else None,
+            in_app_upgrade_supported=windows_updater_ready,
+            in_app_upgrade_summary=(
+                None
+                if install_type != "windows"
+                else (
+                    "Remote in-app upgrade is ready on this Windows install."
+                    if windows_updater_ready
+                    else _WINDOWS_LEGACY_UPGRADE_SUMMARY
+                )
+            ),
         )
     except Exception:
         return SuiteUpdateStatusOut(
@@ -150,6 +235,16 @@ def build_suite_update_status() -> SuiteUpdateStatusOut:
             status="unavailable",
             summary="Could not check for updates right now.",
             docker_image=DOCKER_IMAGE if install_type == "docker" else None,
+            in_app_upgrade_supported=windows_updater_ready,
+            in_app_upgrade_summary=(
+                None
+                if install_type != "windows"
+                else (
+                    "Remote in-app upgrade is ready on this Windows install."
+                    if windows_updater_ready
+                    else _WINDOWS_LEGACY_UPGRADE_SUMMARY
+                )
+            ),
         )
 
     tag_name = str(payload.get("tag_name") or "").strip()
@@ -191,95 +286,21 @@ def build_suite_update_status() -> SuiteUpdateStatusOut:
         docker_image=DOCKER_IMAGE if install_type == "docker" else None,
         docker_tag=docker_tag,
         docker_update_command=docker_update_command,
-    )
-
-
-def _write_windows_upgrade_script(*, installer_path: Path, executable_dir: Path, script_path: Path) -> None:
-    log_path = installer_path.parent / "upgrade-run.log"
-    exe_path = executable_dir / "MediaMop.exe"
-    script = f"""$ErrorActionPreference = "Continue"
-$logPath = {str(log_path)!r}
-function Write-UpgradeLog([string]$message) {{
-  $stamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-  Add-Content -LiteralPath $logPath -Value "[$stamp] $message"
-}}
-Write-UpgradeLog "Starting MediaMop in-app upgrade."
-$installer = {str(installer_path)!r}
-$setupLog = {str(installer_path.parent / "installer-direct.log")!r}
-$args = @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS", "/RESTARTAPPLICATIONS", "/LOG=`"$setupLog`"")
-Write-UpgradeLog "Starting installer directly."
-$proc = Start-Process -FilePath $installer -ArgumentList $args -Wait -PassThru -ErrorAction Stop
-Write-UpgradeLog "Installer exited with code $($proc.ExitCode)."
-$exe = {str(exe_path)!r}
-if (Test-Path -LiteralPath $exe) {{
-  Start-Process -FilePath $exe -WorkingDirectory {str(executable_dir)!r}
-  Write-UpgradeLog "Restarted MediaMop."
-}} else {{
-  Write-UpgradeLog "MediaMop executable was not found after upgrade: $exe"
-}}
-"""
-    script_path.write_text(script, encoding="utf-8")
-
-
-def _launch_windows_upgrade_script(script_path: Path) -> bool:
-    log_path = script_path.parent / "upgrade-launch.log"
-    log_path.write_text("Launching MediaMop in-app upgrade script.\n", encoding="utf-8")
-    powershell = (
-        Path(os.environ.get("SystemRoot") or r"C:\Windows")
-        / "System32"
-        / "WindowsPowerShell"
-        / "v1.0"
-        / "powershell.exe"
-    )
-    command = str(powershell) if powershell.is_file() else "powershell.exe"
-    args = [
-        command,
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-WindowStyle",
-        "Hidden",
-        "-File",
-        str(script_path),
-    ]
-    try:
-        if os.name == "nt":
-            import ctypes
-
-            params = subprocess.list2cmdline(
-                [
-                    "-NoProfile",
-                    "-ExecutionPolicy",
-                    "Bypass",
-                    "-WindowStyle",
-                    "Hidden",
-                    "-File",
-                    str(script_path),
-                ]
+        in_app_upgrade_supported=windows_updater_ready,
+        in_app_upgrade_summary=(
+            None
+            if install_type != "windows"
+            else (
+                "Remote in-app upgrade is ready on this Windows install."
+                if windows_updater_ready
+                else _WINDOWS_LEGACY_UPGRADE_SUMMARY
             )
-            rc = ctypes.windll.shell32.ShellExecuteW(
-                None,
-                "runas",
-                command,
-                params,
-                str(script_path.parent),
-                0,
-            )
-            return int(rc) > 32
-
-        subprocess.Popen(
-            args,
-            cwd=str(script_path.parent),
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "DETACHED_PROCESS", 0),
-            close_fds=True,
-        )
-    except Exception:
-        return False
-    return True
+        ),
+    )
 
 
 def start_suite_update_now(settings: MediaMopSettings) -> SuiteUpdateStartOut:
-    """Stage and launch an in-place upgrade for packaged Windows installs."""
+    """Request an in-place upgrade from the local Windows updater service."""
 
     install_type = _detect_install_type()
     if install_type != "windows":
@@ -301,62 +322,26 @@ def start_suite_update_now(settings: MediaMopSettings) -> SuiteUpdateStartOut:
         )
 
     upgrade_dir = Path(settings.mediamop_home) / "upgrades"
-    task_log_path = upgrade_dir / "upgrade-task.log"
-    if _windows_upgrade_task_ready():
-        if _run_windows_upgrade_task():
-            return SuiteUpdateStartOut(
-                status="started",
-                message=(
-                    "Upgrade started using the MediaMop Windows updater. MediaMop will close, install the update, "
-                    "reopen, and this page should reconnect after the app is back."
-                ),
-                target_version=latest_version,
-                log_path=str(task_log_path),
-            )
+    task_log_path = upgrade_dir / "updater-service.log"
+    started, detail = _start_windows_updater_service_apply(
+        settings,
+        installer_url=installer_url,
+        target_version=latest_version,
+    )
+    if started:
         return SuiteUpdateStartOut(
-            status="unavailable",
+            status="started",
             message=(
-                "MediaMop found the Windows updater task, but Windows would not start it. "
-                f"Check {task_log_path} or download and run the installer manually."
+                detail
+                or "Upgrade started using the MediaMop updater service. MediaMop will close, install the update, "
+                "reopen, and this page should reconnect after the app is back."
             ),
             target_version=latest_version,
             log_path=str(task_log_path),
         )
-
-    upgrade_dir.mkdir(parents=True, exist_ok=True)
-    installer_path = upgrade_dir / f"MediaMopSetup-{latest_version}.exe"
-    with httpx.stream("GET", installer_url, timeout=60.0, follow_redirects=True) as response:
-        response.raise_for_status()
-        with installer_path.open("wb") as handle:
-            for chunk in response.iter_bytes():
-                if chunk:
-                    handle.write(chunk)
-
-    executable_dir = Path(sys.executable).resolve().parent
-    script_path = upgrade_dir / "run-windows-upgrade.ps1"
-    _write_windows_upgrade_script(
-        installer_path=installer_path,
-        executable_dir=executable_dir,
-        script_path=script_path,
-    )
-    if _launch_windows_upgrade_script(script_path):
-        return SuiteUpdateStartOut(
-            status="started",
-            message=(
-                "Upgrade started using the staged Windows installer. Approve the Windows administrator prompt if it appears; "
-                "after this installer runs, future upgrades can start from this page without the fallback path."
-            ),
-            target_version=latest_version,
-            installer_path=str(installer_path),
-            log_path=str(script_path),
-        )
     return SuiteUpdateStartOut(
-        status="manual_required",
-        message=(
-            "The installer was downloaded, but Windows would not start the elevated installer prompt. "
-            "Run the downloaded installer once on the MediaMop computer as administrator; future upgrades can be started from this page."
-        ),
+        status="unavailable",
+        message=detail or _WINDOWS_LEGACY_UPGRADE_SUMMARY,
         target_version=latest_version,
-        installer_path=str(installer_path),
-        log_path=str(script_path),
+        log_path=str(task_log_path),
     )

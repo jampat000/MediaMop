@@ -54,6 +54,33 @@ def _register_web_spa_history_fallback(application: FastAPI) -> None:
         return FileResponse(root / "index.html", media_type="text/html")
 
 
+def _is_browser_document_request(request: Request) -> bool:
+    accept = (request.headers.get("accept") or "").lower()
+    if "text/html" in accept:
+        return True
+    sec_fetch_dest = (request.headers.get("sec-fetch-dest") or "").lower()
+    return sec_fetch_dest == "document"
+
+
+def _is_spa_history_404(request: Request, exc: StarletteHTTPException) -> bool:
+    """Serve the React shell for browser refreshes on client-side routes.
+
+    FastAPI still owns JSON/API routes and missing static assets. We only convert
+    document-style GET/HEAD 404s without a file suffix into ``index.html``.
+    """
+
+    if exc.status_code != status.HTTP_404_NOT_FOUND or request.method not in {"GET", "HEAD"}:
+        return False
+    if not _is_browser_document_request(request):
+        return False
+    path = request.url.path
+    if path.startswith(("/api", "/health", "/ready", "/metrics")):
+        return False
+    if Path(path).suffix:
+        return False
+    return _web_dist_root() is not None
+
+
 def _is_upgrade_browser_landing_404(request: Request, exc: StarletteHTTPException) -> bool:
     """Redirect stale/legacy in-app-upgrade browser landings back to the SPA.
 
@@ -85,6 +112,10 @@ def create_app() -> FastAPI:
     async def _friendly_upgrade_landing_handler(request: Request, exc: StarletteHTTPException):
         if _is_upgrade_browser_landing_404(request, exc):
             return RedirectResponse(url="/app/settings", status_code=status.HTTP_303_SEE_OTHER)
+        if _is_spa_history_404(request, exc):
+            root = _web_dist_root()
+            if root is not None:
+                return FileResponse(root / "index.html", media_type="text/html")
         return await http_exception_handler(request, exc)
 
     if settings.cors_origins:

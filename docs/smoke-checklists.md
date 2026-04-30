@@ -6,29 +6,32 @@ These checklists define the minimum user-level validation before calling a relea
 
 Use `MediaMopSetup.exe` from the release being validated.
 
-1. Install MediaMop on a clean Windows user profile or a reset test profile.
+1. Run `MediaMopSetup.exe` as administrator on a clean Windows user profile or a reset test profile.
 2. Confirm application files install under `C:\Program Files\MediaMop`, not a user profile.
 3. Confirm runtime data is created under `C:\ProgramData\MediaMop`, not `AppData\Local`.
-4. Launch MediaMop from the Start Menu shortcut.
-5. Confirm the tray icon appears and the browser opens the app.
-6. Confirm first-run user creation appears when no user exists.
-7. Attempt a password shorter than 8 characters and confirm it is blocked.
-8. Create the first user with a valid password.
-9. Confirm the setup wizard opens after first-user creation.
-10. Confirm `Skip for now` exits the wizard and can be reopened from Settings.
-11. Confirm `Finish setup` saves timezone, display density, backup schedule, and starter module settings.
-12. In Settings, confirm setup wizard, timezone, log retention, and display density cards render correctly.
-13. Confirm Backup and Restore controls sit consistently at the bottom of their cards.
-14. Create a configuration backup.
-15. Restore that backup and confirm the app remains usable.
-16. Confirm Upgrade shows a meaningful status, even when no update is available.
-17. Open Refiner path inputs and use Browse for a local folder.
-18. Enter a UNC-style path manually and confirm validation warns without blocking legitimate save paths by design.
-19. Confirm Pruner and Subber settings can save required connection/path fields without exposing internal webhook controls.
-20. Quit MediaMop from the tray icon.
-21. Relaunch MediaMop and confirm the existing user, settings, and wizard completion state persist.
-22. Install the next version over the current version and confirm this is treated as an upgrade, not a first-run install.
-23. Uninstall and reinstall only when intentionally testing clean-install behavior.
+4. Confirm the local `MediaMop Updater` service is installed and running after setup completes.
+5. Launch MediaMop from the Start Menu shortcut.
+6. Confirm the tray icon appears and the browser opens the app.
+7. Confirm first-run user creation appears when no user exists.
+8. Attempt a password shorter than 8 characters and confirm it is blocked.
+9. Create the first user with a valid password.
+10. Confirm the setup wizard opens after first-user creation.
+11. Confirm `Skip for now` exits the wizard and can be reopened from Settings.
+12. Confirm `Finish setup` saves timezone, display density, backup schedule, and starter module settings.
+13. In Settings, confirm setup wizard, timezone, log retention, and display density cards render correctly.
+14. Confirm Backup and Restore controls sit consistently at the bottom of their cards.
+15. Create a configuration backup.
+16. Restore that backup and confirm the app remains usable.
+17. Confirm Upgrade shows a meaningful status, even when no update is available.
+18. If testing an older pre-updater install, confirm the Upgrade tab clearly says the latest installer must be run once as administrator before remote in-app upgrade is available.
+19. Open Refiner path inputs and use Browse for a local folder.
+20. Enter a UNC-style path manually and confirm validation warns without blocking legitimate save paths by design.
+21. Confirm Pruner and Subber settings can save required connection/path fields without exposing internal webhook controls.
+22. Quit MediaMop from the tray icon.
+23. Relaunch MediaMop and confirm the existing user, settings, and wizard completion state persist.
+24. Install the next version over the current version and confirm this is treated as an upgrade, not a first-run install.
+25. Confirm the Upgrade tab on the upgraded install offers remote in-app upgrade once the updater service bootstrap has been completed.
+26. Uninstall and reinstall only when intentionally testing clean-install behavior.
 
 ## Docker smoke
 

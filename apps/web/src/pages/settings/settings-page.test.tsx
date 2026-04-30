@@ -51,6 +51,8 @@ const minimalUpdateStatus: SuiteUpdateStatusOut = {
   docker_image: null,
   docker_tag: null,
   docker_update_command: null,
+  in_app_upgrade_supported: false,
+  in_app_upgrade_summary: null,
 };
 
 const minimalSecurity: SuiteSecurityOverviewOut = {
@@ -94,7 +96,10 @@ function wrap(ui: ReactNode, client: QueryClient) {
   );
 }
 
-function renderSettings(me: UserPublic) {
+function renderSettings(
+  me: UserPublic,
+  overrides?: { updateStatus?: SuiteUpdateStatusOut },
+) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
@@ -105,7 +110,10 @@ function renderSettings(me: UserPublic) {
     directory: "C:/MediaMop/backups/suite-configuration",
     items: [],
   });
-  qc.setQueryData(suiteUpdateStatusQueryKey, minimalUpdateStatus);
+  qc.setQueryData(
+    suiteUpdateStatusQueryKey,
+    overrides?.updateStatus ?? minimalUpdateStatus,
+  );
   qc.setQueryData(
     [
       ...suiteLogsQueryKey,
@@ -221,6 +229,26 @@ describe("SettingsPage (suite settings)", () => {
     expect(
       screen.queryByText("Optional home dashboard notice"),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows one-time admin bootstrap guidance when Windows updater service is not ready", () => {
+    renderSettings(operatorMe, {
+      updateStatus: {
+        ...minimalUpdateStatus,
+        install_type: "windows",
+        in_app_upgrade_supported: false,
+        in_app_upgrade_summary:
+          "This Windows install does not have the MediaMop updater service yet. Remote in-app upgrade is not available until one newer installer has been run locally as administrator.",
+      },
+    });
+    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
+    expect(screen.getByText("One-time setup required")).toBeInTheDocument();
+    expect(
+      screen.getByText(/run the latest mediamop installer once/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/future upgrades can start remotely from this page/i),
+    ).toBeInTheDocument();
   });
 
   it("shows change password only on Security tab", () => {

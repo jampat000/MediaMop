@@ -1,12 +1,12 @@
 # MediaMop - backend tests, web build/tests, E2E smoke, Docker smoke, and Windows packaging smoke.
-# Triggers: push to any branch, pull_request, workflow_dispatch.
+# Triggers: push to main, pull_request, workflow_dispatch.
 # GitHub shows the job as "Test / mediamop".
 # Keep this step sequence aligned with .github/workflows/release.yml.
 name: Test
 
 on:
   push:
-    branches: ["**"]
+    branches: ["main"]
   pull_request:
   workflow_dispatch:
 

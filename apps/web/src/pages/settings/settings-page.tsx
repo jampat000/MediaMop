@@ -1423,15 +1423,37 @@ export function SettingsPage() {
                       What happens next
                     </h4>
                     {updateStatusQ.data.install_type === "windows" &&
+                    !updateStatusQ.data.in_app_upgrade_supported ? (
+                      <div className="rounded-lg border border-amber-400/25 bg-amber-400/[0.06] px-3 py-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
+                          One-time setup required
+                        </p>
+                        <p className="mt-1 text-sm leading-6 text-[var(--mm-text2)]">
+                          Run the latest MediaMop installer once on the MediaMop
+                          computer as administrator so it can install the local
+                          updater service. After that one admin install, future
+                          upgrades can start remotely from this page.
+                        </p>
+                      </div>
+                    ) : null}
+                    {updateStatusQ.data.install_type === "windows" &&
                     updateStatusQ.data.status === "update_available" ? (
-                      <p className="text-sm leading-6 text-[var(--mm-text2)]">
-                        Upgrade now downloads the installer, closes MediaMop,
-                        installs the update, reopens the app, and refreshes this
-                        page after the server comes back.
-                      </p>
+                      updateStatusQ.data.in_app_upgrade_supported ? (
+                        <p className="text-sm leading-6 text-[var(--mm-text2)]">
+                          Upgrade now downloads the installer, closes MediaMop,
+                          installs the update, reopens the app, and refreshes
+                          this page after the server comes back.
+                        </p>
+                      ) : (
+                        <p className="text-sm leading-6 text-[var(--mm-text2)]">
+                          {updateStatusQ.data.in_app_upgrade_summary ||
+                            "This Windows install cannot run a remote in-app upgrade yet. Run the latest installer locally once as administrator first so it can install the local updater service."}
+                        </p>
+                      )
                     ) : updateStatusQ.data.install_type === "windows" ? (
                       <p className="text-sm leading-6 text-[var(--mm-text2)]">
-                        This Windows install does not need an update right now.
+                        {updateStatusQ.data.in_app_upgrade_summary ||
+                          "This Windows install does not need an update right now."}
                       </p>
                     ) : null}
                     {updateStatusQ.data.install_type === "docker" &&
@@ -1456,6 +1478,7 @@ export function SettingsPage() {
                     </button>
                     {updateStatusQ.data.install_type === "windows" &&
                     updateStatusQ.data.status === "update_available" &&
+                    updateStatusQ.data.in_app_upgrade_supported &&
                     updateStatusQ.data.windows_installer_url ? (
                       <button
                         type="button"

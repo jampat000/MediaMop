@@ -300,12 +300,14 @@ def test_suite_update_status_ok(client_with_admin: TestClient, monkeypatch: pyte
         },
     )
     monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "1.0.0")
+    monkeypatch.setattr("mediamop.platform.suite_settings.update_service._windows_updater_service_ready", lambda _settings=None: False)
     r = client_with_admin.get("/api/v1/suite/update-status")
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["current_version"] == "1.0.0"
     assert body["latest_version"] == "1.2.3"
     assert body["status"] == "update_available"
+    assert body["in_app_upgrade_supported"] is False
 
 
 def test_suite_update_status_alias_ok(client_with_admin: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -321,6 +323,7 @@ def test_suite_update_status_alias_ok(client_with_admin: TestClient, monkeypatch
         },
     )
     monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "1.0.0")
+    monkeypatch.setattr("mediamop.platform.suite_settings.update_service._windows_updater_service_ready", lambda _settings=None: False)
 
     r = client_with_admin.get("/api/v1/suite/settings/update-status")
 
@@ -382,42 +385,23 @@ def test_suite_update_now_stages_windows_installer_when_task_missing(
         },
     )
 
-    class _Stream:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb) -> None:
-            return None
-
-        def raise_for_status(self) -> None:
-            return None
-
-        def iter_bytes(self):
-            yield b"installer-bytes"
-
-    launched: list[str] = []
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.httpx.stream", lambda *a, **k: _Stream())
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service._windows_upgrade_task_ready", lambda: False)
     monkeypatch.setattr(
-        "mediamop.platform.suite_settings.update_service._launch_windows_upgrade_script",
-        lambda path: launched.append(str(path)) or True,
+        "mediamop.platform.suite_settings.update_service._start_windows_updater_service_apply",
+        lambda _settings, installer_url, target_version: (
+            False,
+            "Remote in-app upgrade is not available on this Windows install yet because the MediaMop updater service has not been installed.",
+        ),
     )
 
     out = start_suite_update_now(settings)
 
-    installer = tmp_path / "upgrades" / "MediaMopSetup-1.2.3.exe"
-    script = tmp_path / "upgrades" / "run-windows-upgrade.ps1"
-    assert out.status == "started"
-    assert installer.read_bytes() == b"installer-bytes"
-    assert script.is_file()
-    assert launched == [str(script)]
-    script_text = script.read_text(encoding="utf-8")
-    assert "-Verb RunAs" not in script_text
-    assert "Starting installer directly" in script_text
-    assert out.installer_path == str(installer)
+    assert out.status == "unavailable"
+    assert "updater service has not been installed" in out.message.lower()
+    assert out.installer_path is None
+    assert out.log_path == str(tmp_path / "upgrades" / "updater-service.log")
 
 
-def test_suite_update_now_reports_manual_when_legacy_elevation_fallback_fails(
+def test_suite_update_now_reports_manual_when_task_missing(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -437,31 +421,23 @@ def test_suite_update_now_reports_manual_when_legacy_elevation_fallback_fails(
         },
     )
 
-    class _Stream:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb) -> None:
-            return None
-
-        def raise_for_status(self) -> None:
-            return None
-
-        def iter_bytes(self):
-            yield b"installer-bytes"
-
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.httpx.stream", lambda *a, **k: _Stream())
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service._windows_upgrade_task_ready", lambda: False)
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service._launch_windows_upgrade_script", lambda path: False)
+    monkeypatch.setattr(
+        "mediamop.platform.suite_settings.update_service._start_windows_updater_service_apply",
+        lambda _settings, installer_url, target_version: (
+            False,
+            "Remote in-app upgrade is not available on this Windows install yet because the MediaMop updater service has not been installed.",
+        ),
+    )
 
     out = start_suite_update_now(settings)
 
-    assert out.status == "manual_required"
-    assert "Windows would not start the elevated installer prompt" in out.message
-    assert out.installer_path == str(tmp_path / "upgrades" / "MediaMopSetup-1.2.3.exe")
+    assert out.status == "unavailable"
+    assert "remote in-app upgrade is not available on this windows install yet" in out.message.lower()
+    assert out.installer_path is None
+    assert out.log_path == str(tmp_path / "upgrades" / "updater-service.log")
 
 
-def test_suite_update_now_uses_windows_updater_task_when_available(
+def test_suite_update_now_uses_windows_updater_service_when_available(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -480,14 +456,19 @@ def test_suite_update_now_uses_windows_updater_task_when_available(
             ],
         },
     )
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service._windows_upgrade_task_ready", lambda: True)
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service._run_windows_upgrade_task", lambda: True)
+    monkeypatch.setattr(
+        "mediamop.platform.suite_settings.update_service._start_windows_updater_service_apply",
+        lambda _settings, installer_url, target_version: (
+            True,
+            "Upgrade started using the MediaMop updater service.",
+        ),
+    )
 
     out = start_suite_update_now(settings)
 
     assert out.status == "started"
     assert out.target_version == "1.2.3"
-    assert out.log_path == str(tmp_path / "upgrades" / "upgrade-task.log")
+    assert out.log_path == str(tmp_path / "upgrades" / "updater-service.log")
 
 
 def test_suite_configuration_backup_tick_creates_snapshot(client_with_admin: TestClient) -> None:

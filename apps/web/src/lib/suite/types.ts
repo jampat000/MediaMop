@@ -66,6 +66,8 @@ export type SuiteUpdateStatusOut = {
   docker_image?: string | null;
   docker_tag?: string | null;
   docker_update_command?: string | null;
+  in_app_upgrade_supported?: boolean;
+  in_app_upgrade_summary?: string | null;
 };
 
 export type SuiteUpdateStartOut = {
