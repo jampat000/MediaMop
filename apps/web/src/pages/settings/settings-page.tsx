@@ -675,7 +675,7 @@ export function SettingsPage() {
               </div>
               <label className="block max-w-md">
                 <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-                  Log retention (days)
+                  System log retention (days)
                 </span>
                 <input
                   type="number"
@@ -691,7 +691,7 @@ export function SettingsPage() {
                 />
                 <p id="suite-general-log-retention-hint" className="mt-1 text-xs text-[var(--mm-text3)]">
                   Between 1 and 3650 days. Older system log entries are removed automatically while MediaMop is running;
-                  no restart is required.
+                  activity history is kept until you reset it.
                 </p>
               </label>
               {save.isError && lastSuiteSaveTarget === "logs" ? (

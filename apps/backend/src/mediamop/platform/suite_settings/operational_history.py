@@ -43,7 +43,11 @@ def _count(session: Session, model, *criteria) -> int:
 
 
 def reset_operational_history(session: Session) -> OperationalHistoryResetResult:
-    """Clear completed history while leaving queued/running work and configuration intact."""
+    """Clear completed history while leaving queued/running work and configuration intact.
+
+    This also clears Refiner completed-output guard events. Locked source folders
+    still visible to the scanner can be queued again on the next scan.
+    """
 
     refiner_terminal = (
         RefinerJobStatus.COMPLETED.value,
