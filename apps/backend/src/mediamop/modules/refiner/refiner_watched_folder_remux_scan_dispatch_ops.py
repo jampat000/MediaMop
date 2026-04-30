@@ -7,7 +7,7 @@ import shutil
 import time
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
@@ -104,13 +104,12 @@ def refiner_completed_remux_output_exists_for_relative_path(
     """
 
     want_scope = media_scope if media_scope in ("movie", "tv") else "movie"
-    escaped_relative_posix = relative_posix.replace("^", "^^").replace("%", "^%").replace("_", "^_")
     rows = session.scalars(
         select(ActivityEvent)
         .where(
             ActivityEvent.module == "refiner",
             ActivityEvent.event_type == "refiner.file_remux_pass_completed",
-            ActivityEvent.detail.like(f"%{escaped_relative_posix}%", escape="^"),
+            func.instr(ActivityEvent.detail, relative_posix) > 0,
         )
         .order_by(ActivityEvent.id.desc())
         .limit(50),
