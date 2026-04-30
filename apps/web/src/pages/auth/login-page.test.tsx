@@ -7,7 +7,12 @@ import { describe, expect, it, vi } from "vitest";
 import { LoginPage } from "./login-page";
 
 vi.mock("../../lib/auth/queries", () => ({
-  useMeQuery: () => ({ isPending: false, data: null, isError: false, error: null }),
+  useMeQuery: () => ({
+    isPending: false,
+    data: null,
+    isError: false,
+    error: null,
+  }),
   useBootstrapStatusQuery: () => ({
     isPending: false,
     isError: false,

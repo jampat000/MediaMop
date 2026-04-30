@@ -66,11 +66,10 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
-  const fromSetup = Boolean(
-    (location.state as { fromSetup?: boolean } | null)?.fromSetup,
-  ) || searchParams.get("bootstrap") === "created";
-  const sessionExpired =
-    searchParams.get("session") === "expired";
+  const fromSetup =
+    Boolean((location.state as { fromSetup?: boolean } | null)?.fromSetup) ||
+    searchParams.get("bootstrap") === "created";
+  const sessionExpired = searchParams.get("session") === "expired";
   const me = useMeQuery();
   const boot = useBootstrapStatusQuery();
   const login = useLoginMutation();
