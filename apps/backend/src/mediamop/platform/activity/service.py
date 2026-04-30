@@ -4,13 +4,12 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import delete, desc, event, func, or_, select
+from sqlalchemy import desc, event, func, or_, select
 from sqlalchemy.orm import Session
 
 from mediamop.platform.activity import constants as C
 from mediamop.platform.activity.live_stream import activity_latest_notifier
 from mediamop.platform.activity.models import ActivityEvent
-from mediamop.platform.suite_settings.service import ensure_suite_settings_row
 
 RECENT_DEFAULT_LIMIT = 50
 _SYSTEM_MODULES = frozenset({"refiner", "pruner", "subber"})
@@ -32,8 +31,6 @@ def record_activity_event(
     title: str,
     detail: str | None = None,
 ) -> ActivityEvent:
-    suite = ensure_suite_settings_row(db)
-    _maybe_prune_activity_rows_by_retention(db, keep_days=max(1, min(int(suite.log_retention_days), 3650)))
     row = ActivityEvent(
         event_type=event_type,
         module=module,
@@ -82,12 +79,6 @@ def _publish_committed_activity_events(session: Session) -> None:
 @event.listens_for(Session, "after_rollback")
 def _clear_pending_activity_events(session: Session) -> None:
     session.info.pop(_PENDING_ACTIVITY_IDS_INFO_KEY, None)
-
-
-def _maybe_prune_activity_rows_by_retention(db: Session, *, keep_days: int) -> None:
-    cutoff = _utcnow() - timedelta(days=keep_days)
-    db.execute(delete(ActivityEvent).where(ActivityEvent.created_at < cutoff))
-
 
 def maybe_record_login_failed(db: Session, *, username: str) -> None:
     """One failed-login event per username per short window to limit brute-force noise."""

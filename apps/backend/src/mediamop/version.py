@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 import sys
+import tomllib
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
@@ -42,6 +43,27 @@ def _packaged_dist_info_version() -> str | None:
     return sorted(versions, key=_version_key)[-1]
 
 
+def _source_tree_version() -> str | None:
+    """Read the checked-out backend version during source/dev runs.
+
+    Editable installs can leave stale ``*.dist-info`` metadata in the venv
+    after the repo version is bumped. The source tree is the truth when the
+    package is being imported from ``apps/backend/src``.
+    """
+
+    if getattr(sys, "frozen", False):
+        return None
+    pyproject = Path(__file__).resolve().parents[2] / "pyproject.toml"
+    if not pyproject.is_file():
+        return None
+    try:
+        data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+        project_version = str(data.get("project", {}).get("version") or "").strip()
+    except Exception:
+        return None
+    return project_version or None
+
+
 def get_version() -> str:
     env_version = (os.environ.get("MEDIAMOP_VERSION") or "").strip()
     if env_version:
@@ -49,6 +71,9 @@ def get_version() -> str:
     packaged_version = _packaged_dist_info_version()
     if packaged_version:
         return packaged_version
+    source_version = _source_tree_version()
+    if source_version:
+        return source_version
     try:
         pkg_version = (version("mediamop-backend") or "").strip()
         if pkg_version:

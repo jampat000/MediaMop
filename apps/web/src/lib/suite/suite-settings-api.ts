@@ -4,6 +4,7 @@ import type {
   SuiteConfigurationBackupListOut,
   SuiteLogsOut,
   SuiteMetricsOut,
+  SuiteOperationalHistoryResetOut,
   SuiteSecurityOverviewOut,
   SuiteSettingsOut,
   SuiteSettingsPutBody,
@@ -19,6 +20,7 @@ export const suiteUpdateStatusPath = () => suiteUpdateStatusPaths[0];
 export const suiteUpdateNowPath = () => suiteUpdateNowPaths[0];
 export const suiteLogsPath = () => "/api/v1/suite/logs";
 export const suiteMetricsPath = () => "/api/v1/suite/metrics";
+export const suiteOperationalHistoryResetPath = () => "/api/v1/suite/operational-history/reset";
 
 /**
  * GET/PUT configuration bundle: same handler on the backend, several URL aliases for older builds
@@ -121,6 +123,18 @@ export async function fetchSuiteMetrics(): Promise<SuiteMetricsOut> {
   const r = await apiFetch(path);
   await requireOk(path, r, "Could not load runtime health");
   return readJson<SuiteMetricsOut>(r);
+}
+
+export async function resetSuiteOperationalHistory(confirm: string): Promise<SuiteOperationalHistoryResetOut> {
+  const csrf_token = await fetchCsrfToken();
+  const path = suiteOperationalHistoryResetPath();
+  const r = await apiFetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ csrf_token, confirm }),
+  });
+  await requireOk(path, r, "Could not reset dashboard and activity history");
+  return readJson<SuiteOperationalHistoryResetOut>(r);
 }
 
 export async function fetchConfigurationBundle(): Promise<ConfigurationBundle> {

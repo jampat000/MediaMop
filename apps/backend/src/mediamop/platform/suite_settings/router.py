@@ -24,6 +24,8 @@ from mediamop.platform.suite_settings.schemas import (
     SuiteLogsOut,
     SuiteMetricsOut,
     SuiteMetricsRouteOut,
+    SuiteOperationalHistoryResetIn,
+    SuiteOperationalHistoryResetOut,
     SuiteSecurityOverviewOut,
     SuiteSettingsOut,
     SuiteSettingsPutIn,
@@ -32,6 +34,7 @@ from mediamop.platform.suite_settings.schemas import (
     SuiteUpdateStatusOut,
 )
 from mediamop.platform.metrics.service import build_runtime_metrics_summary
+from mediamop.platform.suite_settings.operational_history import reset_operational_history
 from mediamop.platform.suite_settings.security_overview import build_suite_security_overview
 from mediamop.platform.suite_settings.logs_service import prune_log_file, read_suite_logs
 from mediamop.platform.suite_settings.service import apply_suite_settings_put, build_suite_settings_out, ensure_suite_settings_row
@@ -206,6 +209,40 @@ def post_suite_update_now(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Could not start the upgrade: {exc}",
         ) from exc
+
+
+@router.post("/suite/operational-history/reset", response_model=SuiteOperationalHistoryResetOut)
+def post_suite_operational_history_reset(
+    body: SuiteOperationalHistoryResetIn,
+    request: Request,
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+) -> SuiteOperationalHistoryResetOut:
+    """Explicitly clear dashboard/activity history without touching settings or active work."""
+
+    validate_browser_post_origin(request, settings)
+    secret = require_session_secret(settings)
+    if not verify_csrf_token(secret, body.csrf_token):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Your confirmation token expired. Refresh the page and try again.",
+        )
+    if body.confirm.strip().upper() != "RESET":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Type RESET to confirm clearing dashboard and activity history.",
+        )
+    result = reset_operational_history(db)
+    db.commit()
+    return SuiteOperationalHistoryResetOut(
+        status="reset",
+        activity_events_deleted=result.activity_events_deleted,
+        refiner_jobs_deleted=result.refiner_jobs_deleted,
+        pruner_jobs_deleted=result.pruner_jobs_deleted,
+        subber_jobs_deleted=result.subber_jobs_deleted,
+        total_deleted=result.total_deleted,
+    )
 
 
 @router.get("/suite/logs", response_model=SuiteLogsOut)

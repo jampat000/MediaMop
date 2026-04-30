@@ -76,6 +76,15 @@ export type SuiteUpdateStartOut = {
   log_path?: string | null;
 };
 
+export type SuiteOperationalHistoryResetOut = {
+  status: "reset" | string;
+  activity_events_deleted: number;
+  refiner_jobs_deleted: number;
+  pruner_jobs_deleted: number;
+  subber_jobs_deleted: number;
+  total_deleted: number;
+};
+
 export type SuiteLogEntry = {
   timestamp: string;
   level: string;
