@@ -1,8 +1,12 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useId, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AuthBrandStack } from "../../components/brand/auth-brand-stack";
 import { ApiEntryError } from "../../components/shared/api-entry-error";
 import { PageLoading } from "../../components/shared/page-loading";
+import {
+  httpStatusFromApiError,
+  isLikelyNetworkFailure,
+} from "../../lib/api/error-guards";
 import {
   useBootstrapStatusQuery,
   useLoginMutation,
@@ -69,6 +73,7 @@ export function LoginPage() {
   const me = useMeQuery();
   const boot = useBootstrapStatusQuery();
   const login = useLoginMutation();
+  const fieldId = useId();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -102,6 +107,33 @@ export function LoginPage() {
       /* mutation error surfaces below */
     }
   };
+
+  const loginUserId = `${fieldId}-user`;
+  const loginPasswordId = `${fieldId}-pass`;
+  const loginErrorMessage = (() => {
+    if (!login.isError) {
+      return null;
+    }
+    const status = httpStatusFromApiError(login.error);
+    if (status === 400 || status === 401) {
+      return login.error instanceof Error
+        ? login.error.message
+        : "Sign-in failed.";
+    }
+    if (
+      isLikelyNetworkFailure(login.error) ||
+      status === 500 ||
+      status === 503
+    ) {
+      console.error("MediaMop login failed against the backend.", login.error);
+      return "Sign-in failed. Check that the MediaMop server is running.";
+    }
+    console.error(
+      "MediaMop login failed with an unexpected error.",
+      login.error,
+    );
+    return "Sign-in failed. Check that the MediaMop server is running.";
+  })();
 
   return (
     <main className="mm-auth-body" id="mm-main-content" tabIndex={-1}>
@@ -144,25 +176,26 @@ export function LoginPage() {
             className="mm-auth-form mt-4"
             onSubmit={onSubmit}
           >
-            <label className="mm-auth-label" htmlFor="login-user">
+            <label className="mm-auth-label" htmlFor={loginUserId}>
               Username
             </label>
             <input
-              id="login-user"
+              id={loginUserId}
               data-testid="login-username"
               name="username"
               autoComplete="username"
               className="mm-auth-input"
+              autoFocus
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
             />
-            <label className="mm-auth-label" htmlFor="login-pass">
+            <label className="mm-auth-label" htmlFor={loginPasswordId}>
               Password
             </label>
             <div className="mm-auth-password-field">
               <input
-                id="login-pass"
+                id={loginPasswordId}
                 data-testid="login-password"
                 name="password"
                 type={showPassword ? "text" : "password"}
@@ -187,11 +220,9 @@ export function LoginPage() {
                 {showPassword ? <EyeOffIcon /> : <EyeIcon />}
               </button>
             </div>
-            {login.isError ? (
+            {loginErrorMessage ? (
               <p className="mm-auth-banner" role="alert">
-                {login.error instanceof Error
-                  ? login.error.message
-                  : "Sign-in failed."}
+                {loginErrorMessage}
               </p>
             ) : null}
             <button

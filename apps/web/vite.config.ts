@@ -91,6 +91,9 @@ export default defineConfig(({ mode }) => {
       __WEB_PACKAGE_VERSION__: JSON.stringify(packageJson.version),
     },
     plugins: [react()],
+    build: {
+      sourcemap: "hidden",
+    },
     server: {
       // ``true`` = listen on all interfaces (0.0.0.0). Required so **http://localhost:<port>**
       // works on Windows: ``localhost`` often resolves to ``::1`` (IPv6) while binding only

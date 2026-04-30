@@ -3,6 +3,8 @@
 ADRs in this folder capture locked structural and platform choices for this repository.
 They override ad hoc experimentation when the two conflict.
 
+Some ADR numbers are intentionally absent. Those numbers were reserved for drafts or withdrawn decisions that were never accepted into the repository; gaps do not mean documents are missing from source control.
+
 **Durable-job timing:** operator-controlled intervals, schedules, cooldowns, retries, last-run,
 and timing-based pruning must follow [ADR-0009](ADR-0009-suite-wide-timing-isolation.md)
 (per module, then per job family).

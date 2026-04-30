@@ -45,6 +45,12 @@ Failures must use the shared failure helper in `mediamop.platform.observability.
 - No-op work is still successful when the target already matched the configured plan. It should say `No changes needed`, not `warning`.
 - Secrets must never appear in messages, Activity details, or logs.
 
+## Visible = Truthful
+
+- Any feature, provider, rule, or setting shown in the UI must either work in this release or be explicitly labelled `Not available`, `Coming soon`, or `Unsupported in this version`.
+- Backend handlers must never silently no-op on operator-visible work. If nothing was done, log at least a debug line; if a configured capability is unavailable, log a warning and make the UI disclose that state.
+- MediaMop must not spend provider/network quota on features whose results will always be discarded.
+
 ## Implementation
 
 Backend producers should use `mediamop.platform.observability.operator_messages` for shared labels, titles, and detail envelopes. Frontend pages may render richer layouts, but must preserve the same result/severity meaning and must not invent success states that the backend did not report.

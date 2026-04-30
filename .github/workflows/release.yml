@@ -22,6 +22,8 @@ jobs:
     runs-on: windows-latest
     if: ${{ !contains(github.ref_name, '-') }}
     timeout-minutes: 60
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6
 
@@ -69,6 +71,8 @@ jobs:
     permissions:
       contents: write
       packages: write
+    env:
+      MEDIAMOP_SESSION_SECRET: ${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-release-session-secret-32chars-min
     steps:
       - uses: actions/checkout@v6
 
@@ -86,11 +90,10 @@ jobs:
         working-directory: apps/backend
         env:
           MEDIAMOP_HOME: ${{ runner.temp }}/mediamop-ci
-          MEDIAMOP_SESSION_SECRET: ci-mediamop-session-secret-32chars-min
         run: |
           alembic check
           alembic upgrade head
-          pytest -q
+          pytest -q --cov=mediamop --cov-fail-under=70
 
       - uses: actions/setup-node@v6
         with:
@@ -112,7 +115,6 @@ jobs:
         env:
           MEDIAMOP_E2E: "1"
           MEDIAMOP_HOME: ${{ runner.temp }}/mediamop-e2e
-          MEDIAMOP_SESSION_SECRET: ci-mediamop-session-secret-32chars-min
           PYTHONPATH: ${{ github.workspace }}/apps/backend/src
         run: python -m pytest tests/e2e/mediamop -q --tb=short
 
@@ -158,7 +160,7 @@ jobs:
         run: |
           docker rm -f mediamop-release-smoke >/dev/null 2>&1 || true
           docker run -d --name mediamop-release-smoke -p 8788:8788 \
-            -e MEDIAMOP_SESSION_SECRET=ci-mediamop-session-secret-32chars-min \
+            -e MEDIAMOP_SESSION_SECRET="$MEDIAMOP_SESSION_SECRET" \
             "${{ steps.image.outputs.name }}:latest"
           for i in {1..30}; do
             if curl -fsS http://127.0.0.1:8788/health >/tmp/mediamop-health.json; then

@@ -88,11 +88,13 @@ def test_windows_installer_installs_dedicated_upgrade_task() -> None:
     assert "procedure InstallUpgradeTask()" in text
     assert '/TN "MediaMop Upgrade"' in text
     assert "/RL HIGHEST" in text
+    assert '/RU "' not in text
     assert "MediaMopUpgrade.ps1" in text
     assert 'Filename: "{sys}\\schtasks.exe"; Parameters: "/Delete /TN ""MediaMop Upgrade"" /F"' in text
     assert "https://api.github.com/repos/jampat000/MediaMop/releases/latest" in script_text
     assert "MediaMopSetup.exe" in script_text
     assert "/CLOSEAPPLICATIONS" in script_text
+    assert "WaitForMediaMopProcessesToExit" in text
 
 
 def test_windows_package_uses_dedicated_tray_icon_assets() -> None:

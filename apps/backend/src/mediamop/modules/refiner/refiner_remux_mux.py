@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 REFINER_FFMPEG_TIMEOUT_S: int = 3600
 _REFINER_FFPROBE_LOG_MAX_CHARS = 2000
+_REFINER_FFMPEG_STDERR_TAIL_BYTES = 32 * 1024
 
 
 def _clip_probe_text(raw: object, *, max_chars: int = _REFINER_FFPROBE_LOG_MAX_CHARS) -> str:
@@ -30,6 +31,17 @@ def _clip_probe_text(raw: object, *, max_chars: int = _REFINER_FFPROBE_LOG_MAX_C
     if len(t) > max_chars:
         return t[:max_chars] + "…(truncated)"
     return t
+
+
+def _read_tail_text(path: Path, *, max_bytes: int = _REFINER_FFMPEG_STDERR_TAIL_BYTES) -> str:
+    try:
+        with path.open("rb") as handle:
+            handle.seek(0, os.SEEK_END)
+            size = handle.tell()
+            handle.seek(max(0, size - max_bytes), os.SEEK_SET)
+            return handle.read().decode("utf-8", errors="replace").strip()
+    except OSError:
+        return ""
 
 
 def resolve_ffprobe_ffmpeg(*, mediamop_home: str) -> tuple[str, str]:
@@ -236,10 +248,30 @@ def run_ffmpeg(
     duration_seconds: float | None = None,
 ) -> None:
     if progress_callback is None:
-        r = subprocess.run(argv, capture_output=True, text=True, timeout=timeout_s)
-        if r.returncode != 0:
-            msg = (r.stderr or r.stdout or "").strip()
-            raise RuntimeError(msg or "ffmpeg failed")
+        with tempfile.NamedTemporaryFile(delete=False) as stderr_file:
+            stderr_path = Path(stderr_file.name)
+        try:
+            with stderr_path.open("wb") as stderr_handle:
+                r = subprocess.run(
+                    argv,
+                    stdout=subprocess.DEVNULL,
+                    stderr=stderr_handle,
+                    stdin=subprocess.DEVNULL,
+                    timeout=timeout_s,
+                    check=False,
+                )
+            if r.returncode != 0:
+                msg = _read_tail_text(stderr_path)
+                raise RuntimeError(msg or "ffmpeg failed")
+        finally:
+            try:
+                stderr_path.unlink(missing_ok=True)
+            except OSError:
+                logger.debug(
+                    "Refiner: could not remove temporary ffmpeg stderr log %s",
+                    stderr_path,
+                    exc_info=True,
+                )
         return
 
     progress_argv = _argv_with_progress(argv)

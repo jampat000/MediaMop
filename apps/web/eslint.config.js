@@ -54,6 +54,7 @@ export default tseslint.config(
       "@typescript-eslint/no-unsafe-member-access": "off",
       "@typescript-eslint/no-unsafe-return": "off",
       "@typescript-eslint/require-await": "off",
+      "jsx-a11y/no-autofocus": "off",
       "jsx-a11y/label-has-associated-control": "off",
       "react-hooks/set-state-in-effect": "off",
     },

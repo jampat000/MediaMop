@@ -307,7 +307,7 @@ def get_me(current: UserPublicDep) -> schemas.MeOut:
     return schemas.MeOut(user=current)
 
 
-@router.get("/admin/ping")
+@router.get("/admin/ping", include_in_schema=False)
 def admin_ping(_admin: RequireAdminDep) -> dict[str, bool]:
     """Minimal authenticated probe for the admin-only dependency (Phase 6 tests + ops)."""
 

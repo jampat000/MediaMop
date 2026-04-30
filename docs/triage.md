@@ -32,6 +32,7 @@ MediaMop issues should stay practical and reproducible. Every issue needs a clea
 
 ## Backlog references
 
+- The 1.0.30 backlog hardening tranche added operator-visible logging and explicit unavailability disclosure to several previously silent no-op paths. New operator-visible no-op paths must log at debug or higher and disclose unavailable functionality explicitly.
 - Release governance: [`release-governance.md`](release-governance.md)
 - Windows and Docker smoke checks: [`smoke-checklists.md`](smoke-checklists.md)
 - Security hardening: [`security-hardening.md`](security-hardening.md)

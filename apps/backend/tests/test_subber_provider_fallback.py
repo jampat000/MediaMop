@@ -26,8 +26,8 @@ def test_rate_limited_provider_is_skipped_and_next_provider_is_tried(monkeypatch
         tried.append(kwargs["prow"].provider_key)
         return True
 
-    monkeypatch.setattr(svc, "_try_opensubtitles_provider", rate_limited)
-    monkeypatch.setattr(svc, "_try_podnapisi", podnapisi_success)
+    monkeypatch.setitem(svc._PROVIDER_HANDLERS, PROVIDER_OPENSUBTITLES_COM, rate_limited)
+    monkeypatch.setitem(svc._PROVIDER_HANDLERS, PROVIDER_PODNAPISI, podnapisi_success)
 
     ok = svc.search_and_download_subtitle(
         settings=SimpleNamespace(),

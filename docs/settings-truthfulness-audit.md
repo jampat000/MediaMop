@@ -30,5 +30,6 @@ MediaMop settings must describe runtime behaviour as shipped, not intended behav
 
 - Sonarr/Radarr connections and path mappings are saved immediately and used by new sync/search work.
 - Provider settings are saved per provider and used by the next subtitle search.
+- Providers that are present for roadmap or compatibility reasons but not functional in this release must stay visibly labelled as unavailable and must not silently discard downloaded results.
 - Schedule windows affect scheduled search work; import/webhook searches can still run immediately and are labelled separately.
 - Preference and upgrade settings are database-backed and used by new Subber jobs after save.

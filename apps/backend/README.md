@@ -19,7 +19,6 @@ Requires **`MEDIAMOP_SESSION_SECRET`**, a writable SQLite file under **`MEDIAMOP
 | GET | `/api/v1/auth/me` | Current user from cookie + ``UserSession`` row. |
 | GET | `/api/v1/auth/bootstrap/status` | Whether first-run bootstrap is allowed (no ``admin`` user yet). |
 | POST | `/api/v1/auth/bootstrap` | Create initial ``admin`` only while bootstrap is allowed; CSRF + optional Origin checks (Phase 6). |
-| GET | `/api/v1/auth/admin/ping` | Authenticated **admin** probe (uses ``RequireAdminDep``). |
 
 When trusted browser origins are configured — **`MEDIAMOP_TRUSTED_BROWSER_ORIGINS`** if set, otherwise **`MEDIAMOP_CORS_ORIGINS`** — browser **POST** auth routes require a matching **Origin** or **Referer**.
 

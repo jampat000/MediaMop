@@ -5,8 +5,10 @@ from __future__ import annotations
 import io
 import json
 import logging
+import os
 import re
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -46,6 +48,8 @@ from mediamop.platform.file_lifecycle.guardrails import check_minimum_free_disk_
 from mediamop.platform.observability.failure_messages import operator_failure_from_exception
 
 logger = logging.getLogger(__name__)
+MAX_SRT_BYTES = 10 * 1024 * 1024
+ProviderSearchHandler = Callable[..., bool]
 
 
 def _extract_srt_from_zip_or_raw(data: bytes) -> bytes:
@@ -56,6 +60,14 @@ def _extract_srt_from_zip_or_raw(data: bytes) -> bytes:
         with zipfile.ZipFile(bio) as zf:
             for name in zf.namelist():
                 if name.lower().endswith(".srt"):
+                    info = zf.getinfo(name)
+                    if info.file_size > MAX_SRT_BYTES:
+                        logger.warning(
+                            "Subber skipped oversized subtitle archive member %s (%s bytes).",
+                            name,
+                            info.file_size,
+                        )
+                        continue
                     return zf.read(name)
     return data
 
@@ -255,7 +267,9 @@ def _write_srt_for_state(
     )
     if not disk.ok:
         raise RuntimeError(disk.message)
-    out_path.write_bytes(srt_bytes)
+    tmp_path = out_path.with_suffix(out_path.suffix + ".tmp")
+    tmp_path.write_bytes(srt_bytes)
+    os.replace(tmp_path, out_path)
     mark_found(
         db,
         int(state_row.id),
@@ -379,14 +393,16 @@ def _try_podnapisi(
 
 def _try_subscene(
     *,
+    settings: MediaMopSettings,
     settings_row: SubberSettingsRow,
     state_row: SubberSubtitleState,
     db: Session,
+    prow: SubberProviderRow,
     prefs: list[str],
     lang: str,
     exclude_hi: bool,
 ) -> bool:
-    _ = (exclude_hi,)
+    _ = (settings, settings_row, db, prow, exclude_hi)
     query = _search_query(state_row)
     season = state_row.season_number if state_row.media_scope == "tv" else None
     episode = state_row.episode_number if state_row.media_scope == "tv" else None
@@ -398,7 +414,9 @@ def _try_subscene(
         media_scope=state_row.media_scope,
     )
     if not items:
+        logger.debug("Subscene returned no usable subtitle results state_id=%s", state_row.id)
         return False
+    logger.warning("Subscene provider is unavailable in this release; downloaded results are skipped state_id=%s", state_row.id)
     return False
 
 
@@ -427,20 +445,25 @@ def _try_addic7ed(
         password=p,
     )
     if not items:
+        logger.debug("Addic7ed returned no usable subtitle results state_id=%s", state_row.id)
         return False
     _ = (settings_row, state_row, db, exclude_hi)
+    logger.warning("Addic7ed provider is unavailable in this release; downloaded results are skipped state_id=%s", state_row.id)
     return False
 
 
 def _try_gestdown(
     *,
+    settings: MediaMopSettings,
     settings_row: SubberSettingsRow,
     state_row: SubberSubtitleState,
     db: Session,
+    prow: SubberProviderRow,
     prefs: list[str],
     lang: str,
     exclude_hi: bool,
 ) -> bool:
+    _ = (settings, prow)
     if state_row.media_scope != "tv":
         return False
     items = gestdown_client.search(
@@ -593,13 +616,16 @@ def _try_subsource(
 
 def _try_subf2m(
     *,
+    settings: MediaMopSettings,
     settings_row: SubberSettingsRow,
     state_row: SubberSubtitleState,
     db: Session,
+    prow: SubberProviderRow,
     prefs: list[str],
     lang: str,
     exclude_hi: bool,
 ) -> bool:
+    _ = (settings, prow)
     items = subf2m_client.search(
         query=_search_query(state_row),
         season_number=state_row.season_number if state_row.media_scope == "tv" else None,
@@ -637,13 +663,16 @@ def _try_subf2m(
 
 def _try_yify(
     *,
+    settings: MediaMopSettings,
     settings_row: SubberSettingsRow,
     state_row: SubberSubtitleState,
     db: Session,
+    prow: SubberProviderRow,
     prefs: list[str],
     lang: str,
     exclude_hi: bool,
 ) -> bool:
+    _ = (settings, prow)
     if state_row.media_scope != "movies":
         return False
     items = yify_client.search(
@@ -745,6 +774,20 @@ def _legacy_opensubtitles_search(
                 pass
 
 
+_PROVIDER_HANDLERS: dict[str, ProviderSearchHandler] = {
+    PROVIDER_OPENSUBTITLES_ORG: _try_opensubtitles_provider,
+    PROVIDER_OPENSUBTITLES_COM: _try_opensubtitles_provider,
+    PROVIDER_PODNAPISI: _try_podnapisi,
+    PROVIDER_SUBSCENE: _try_subscene,
+    PROVIDER_ADDIC7ED: _try_addic7ed,
+    PROVIDER_GESTDOWN: _try_gestdown,
+    PROVIDER_SUBDL: _try_subdl,
+    PROVIDER_SUBSOURCE: _try_subsource,
+    PROVIDER_SUBF2M: _try_subf2m,
+    PROVIDER_YIFY: _try_yify,
+}
+
+
 def search_and_download_subtitle(
     *,
     settings: MediaMopSettings,
@@ -780,107 +823,25 @@ def search_and_download_subtitle(
 
     for prow in ready:
         try:
-            pk = prow.provider_key
-            if pk in (PROVIDER_OPENSUBTITLES_ORG, PROVIDER_OPENSUBTITLES_COM):
-                if _try_opensubtitles_provider(
-                    settings=settings,
-                    settings_row=settings_row,
-                    state_row=state_row,
-                    db=db,
-                    prow=prow,
-                    prefs=prefs,
-                    lang=lang,
-                    exclude_hi=exclude_hi,
-                ):
-                    return True
-            elif pk == PROVIDER_PODNAPISI:
-                if _try_podnapisi(
-                    settings_row=settings_row,
-                    state_row=state_row,
-                    db=db,
-                    prow=prow,
-                    settings=settings,
-                    prefs=prefs,
-                    lang=lang,
-                    exclude_hi=exclude_hi,
-                ):
-                    return True
-            elif pk == PROVIDER_SUBSCENE:
-                if _try_subscene(
-                    settings_row=settings_row,
-                    state_row=state_row,
-                    db=db,
-                    prefs=prefs,
-                    lang=lang,
-                    exclude_hi=exclude_hi,
-                ):
-                    return True
-            elif pk == PROVIDER_ADDIC7ED:
-                if _try_addic7ed(
-                    settings_row=settings_row,
-                    state_row=state_row,
-                    db=db,
-                    prow=prow,
-                    settings=settings,
-                    prefs=prefs,
-                    lang=lang,
-                    exclude_hi=exclude_hi,
-                ):
-                    return True
-            elif pk == PROVIDER_GESTDOWN:
-                if _try_gestdown(
-                    settings_row=settings_row,
-                    state_row=state_row,
-                    db=db,
-                    prefs=prefs,
-                    lang=lang,
-                    exclude_hi=exclude_hi,
-                ):
-                    return True
-            elif pk == PROVIDER_SUBDL:
-                if _try_subdl(
-                    settings_row=settings_row,
-                    state_row=state_row,
-                    db=db,
-                    prow=prow,
-                    settings=settings,
-                    prefs=prefs,
-                    lang=lang,
-                    exclude_hi=exclude_hi,
-                ):
-                    return True
-            elif pk == PROVIDER_SUBSOURCE:
-                if _try_subsource(
-                    settings_row=settings_row,
-                    state_row=state_row,
-                    db=db,
-                    prow=prow,
-                    settings=settings,
-                    prefs=prefs,
-                    lang=lang,
-                    exclude_hi=exclude_hi,
-                ):
-                    return True
-            elif pk == PROVIDER_SUBF2M:
-                if _try_subf2m(
-                    settings_row=settings_row,
-                    state_row=state_row,
-                    db=db,
-                    prefs=prefs,
-                    lang=lang,
-                    exclude_hi=exclude_hi,
-                ):
-                    return True
-            elif pk == PROVIDER_YIFY:
-                if _try_yify(
-                    settings_row=settings_row,
-                    state_row=state_row,
-                    db=db,
-                    prefs=prefs,
-                    lang=lang,
-                    exclude_hi=exclude_hi,
-                ):
-                    return True
+            handler = _PROVIDER_HANDLERS.get(prow.provider_key)
+            if handler is None:
+                logger.warning(
+                    "Subber provider %s is enabled but has no registered search handler; skipping state_id=%s",
+                    prow.provider_key,
+                    state_row.id,
+                )
+                continue
+            if handler(
+                settings=settings,
+                settings_row=settings_row,
+                state_row=state_row,
+                db=db,
+                prow=prow,
+                prefs=prefs,
+                lang=lang,
+                exclude_hi=exclude_hi,
+            ):
+                return True
         except SubberRateLimitError as exc:
             failure = operator_failure_from_exception(
                 module="Subber",

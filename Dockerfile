@@ -31,14 +31,16 @@ RUN groupadd --system --gid 1000 mediamop \
   && mkdir -p /data/mediamop /opt/mediamop/apps/backend /opt/mediamop/web-dist \
   && chown -R mediamop:mediamop /data/mediamop /opt/mediamop /home/mediamop
 COPY --chown=mediamop:mediamop apps/backend /opt/mediamop/apps/backend
-RUN pip install --no-cache-dir --upgrade pip \
-  && pip install --no-cache-dir --prefer-binary -e "/opt/mediamop/apps/backend"
+RUN python -m venv /opt/mediamop/.venv \
+  && /opt/mediamop/.venv/bin/pip install --no-cache-dir --upgrade pip \
+  && /opt/mediamop/.venv/bin/pip install --no-cache-dir --prefer-binary -e "/opt/mediamop/apps/backend"
 
 COPY --from=web --chown=mediamop:mediamop /src/apps/web/dist /opt/mediamop/web-dist
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 ENV PYTHONPATH=/opt/mediamop/apps/backend/src
+ENV PATH=/opt/mediamop/.venv/bin:$PATH
 ENV MEDIAMOP_WEB_DIST=/opt/mediamop/web-dist
 ENV MEDIAMOP_ENV=production
 # All-in-one is usually reached over plain HTTP first (localhost / LAN). Secure cookies would

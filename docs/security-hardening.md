@@ -5,7 +5,7 @@ This checklist defines the current practical hardening baseline for MediaMop.
 ## Authentication and setup
 
 - First-run bootstrap is only available when no admin user exists.
-- Passwords shorter than 8 characters must be blocked by both frontend and backend validation.
+- Passwords shorter than 12 characters must be blocked by both frontend and backend validation.
 - Login and bootstrap routes are rate-limited.
 - Authenticated state-changing browser requests require CSRF protection.
 - Session cookies are HTTP-only.
@@ -35,6 +35,7 @@ This checklist defines the current practical hardening baseline for MediaMop.
 - CodeQL code scanning runs on `main`, pull requests to `main`, weekly schedule, and manual dispatch.
 - Security vulnerabilities are reported privately through `SECURITY.md`.
 - Public issues are not used for unpatched vulnerabilities.
+- CI runs `bandit`, `pip-audit`, and `npm audit` in addition to CodeQL and standard test gates.
 
 ## Release controls
 
