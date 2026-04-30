@@ -38,6 +38,7 @@ const repoRoot = path.resolve(webDir, "..", "..");
 const apiScript = path.join(__dirname, "run-api-dev.mjs");
 const viteEntry = path.join(webDir, "node_modules", "vite", "bin", "vite.js");
 const portsPath = path.join(repoRoot, "scripts", "dev-ports.json");
+const backendPyprojectPath = path.join(repoRoot, "apps", "backend", "pyproject.toml");
 
 if (!existsSync(viteEntry)) {
   console.error(`Missing ${viteEntry}. Run npm install (or npm ci) in apps/web.`);
@@ -47,6 +48,16 @@ if (!existsSync(viteEntry)) {
 function readDevPorts() {
   const raw = readFileSync(portsPath, "utf8");
   return JSON.parse(raw).development;
+}
+
+function readExpectedApiVersion() {
+  try {
+    const raw = readFileSync(backendPyprojectPath, "utf8");
+    const match = raw.match(/^\s*version\s*=\s*"([^"]+)"/m);
+    return match?.[1]?.trim() || null;
+  } catch {
+    return null;
+  }
 }
 
 function apiConnectTarget(apiHost, apiPort) {
@@ -230,6 +241,54 @@ function probeDirectoryBrowserRouteNotStale(apiHost, apiPort) {
   });
 }
 
+function probeApiVersionMatchesSource(apiHost, apiPort, expectedVersion) {
+  if (!expectedVersion) {
+    return Promise.resolve(true);
+  }
+  const { hostname, port } = apiConnectTarget(apiHost, apiPort);
+  return new Promise((resolve) => {
+    const req = http.request(
+      {
+        hostname,
+        port,
+        path: "/openapi.json",
+        method: "GET",
+        timeout: 3000,
+      },
+      (res) => {
+        let body = "";
+        res.setEncoding("utf8");
+        res.on("data", (chunk) => {
+          body += chunk;
+        });
+        res.on("end", () => {
+          try {
+            const parsed = JSON.parse(body);
+            const actual = String(parsed?.info?.version || "").trim();
+            resolve(actual === expectedVersion);
+          } catch {
+            resolve(false);
+          }
+        });
+      },
+    );
+    req.on("error", () => {
+      console.error(
+        "[dev-stack] Could not probe API version from /openapi.json (network error) - assuming API is OK.",
+      );
+      resolve(true);
+    });
+    req.on("timeout", () => {
+      req.destroy();
+      console.error(
+        "[dev-stack] Timed out probing API version from /openapi.json - assuming API is OK.",
+      );
+      resolve(true);
+    });
+    req.end();
+  });
+}
+
 /**
  * First port in ``[startPort, inclusiveMax]`` with nothing answering ``/health`` like our API
  * probe (frees the slot for a new uvicorn).
@@ -243,16 +302,20 @@ async function findFirstTcpPortWithoutHealthyApi(apiHost, startPort, inclusiveMa
   return null;
 }
 
-async function probeRequiredCurrentApiRoutes(apiHost, apiPort) {
+async function probeRequiredCurrentApiRoutes(apiHost, apiPort, expectedVersion) {
   const subberOk = await probeSubberLibrarySyncMoviesRouteNotStale(apiHost, apiPort);
   const configOk = await probeSuiteConfigurationBundleRouteNotStale(apiHost, apiPort);
   const directoryBrowserOk = await probeDirectoryBrowserRouteNotStale(apiHost, apiPort);
-  return subberOk && configOk && directoryBrowserOk;
+  const versionOk = await probeApiVersionMatchesSource(apiHost, apiPort, expectedVersion);
+  return subberOk && configOk && directoryBrowserOk && versionOk;
 }
 
-async function findFirstHealthyCurrentApi(apiHost, startPort, inclusiveMax) {
+async function findFirstHealthyCurrentApi(apiHost, startPort, inclusiveMax, expectedVersion) {
   for (let p = startPort; p <= inclusiveMax; p += 1) {
-    if ((await probeApiAlreadyServing(apiHost, p)) && (await probeRequiredCurrentApiRoutes(apiHost, p))) {
+    if (
+      (await probeApiAlreadyServing(apiHost, p)) &&
+      (await probeRequiredCurrentApiRoutes(apiHost, p, expectedVersion))
+    ) {
       return p;
     }
   }
@@ -460,18 +523,22 @@ const waitMs = Number(process.env.MEDIAMOP_DEV_STACK_API_WAIT_MS || 120000);
 const webWaitMs = Number(process.env.MEDIAMOP_DEV_STACK_WEB_WAIT_MS || 120000);
 
 async function main() {
+  const expectedApiVersion = readExpectedApiVersion();
   const forceSpawn = (process.env.MEDIAMOP_DEV_STACK_ALWAYS_SPAWN_API || "").trim() === "1";
   const healthOk = await probeApiAlreadyServing(apiHost, apiPort);
   let subberRoutesOk = true;
   let configBundleRouteOk = true;
   let directoryBrowserRouteOk = true;
+  let apiVersionOk = true;
   if (healthOk) {
     subberRoutesOk = await probeSubberLibrarySyncMoviesRouteNotStale(apiHost, apiPort);
     configBundleRouteOk = await probeSuiteConfigurationBundleRouteNotStale(apiHost, apiPort);
     directoryBrowserRouteOk = await probeDirectoryBrowserRouteNotStale(apiHost, apiPort);
+    apiVersionOk = await probeApiVersionMatchesSource(apiHost, apiPort, expectedApiVersion);
   }
   /** Stale build on the configured port: required API routes missing on old server code. */
-  const staleDefaultApi = healthOk && (!subberRoutesOk || !configBundleRouteOk || !directoryBrowserRouteOk);
+  const staleDefaultApi =
+    healthOk && (!subberRoutesOk || !configBundleRouteOk || !directoryBrowserRouteOk || !apiVersionOk);
 
   let bindPort = apiPort;
   /** When set, Vite must proxy ``/api`` here (see ``vite.config.ts``). */
@@ -480,11 +547,11 @@ async function main() {
   if (staleDefaultApi) {
     const { hostname, port: stalePort } = apiConnectTarget(apiHost, apiPort);
     const maxPort = Math.min(apiPort + 40, 65535);
-    const existingCurrent = await findFirstHealthyCurrentApi(apiHost, apiPort + 1, maxPort);
+    const existingCurrent = await findFirstHealthyCurrentApi(apiHost, apiPort + 1, maxPort, expectedApiVersion);
     const found = existingCurrent ?? (await findFirstTcpPortWithoutHealthyApi(apiHost, apiPort + 1, maxPort));
     if (found == null) {
       console.error(
-        `[dev-stack] http://${hostname}:${stalePort} is an outdated MediaMop API (required routes missing). ` +
+        `[dev-stack] http://${hostname}:${stalePort} is an outdated MediaMop API. ` +
           `No free port found between ${apiPort + 1} and ${maxPort} for a new API.\n` +
           `[dev-stack] Free a port or stop the old process, then run npm run dev again.`,
       );
@@ -518,7 +585,8 @@ async function main() {
   const chosenWebPort = await resolveDevWebPort(webHost, configuredWebPort);
   const apiOriginEnvPatch = buildApiDevOriginEnvPatch(chosenWebPort);
 
-  const canReuse = !forceSpawn && healthOk && subberRoutesOk && configBundleRouteOk && directoryBrowserRouteOk;
+  const canReuse =
+    !forceSpawn && healthOk && subberRoutesOk && configBundleRouteOk && directoryBrowserRouteOk && apiVersionOk;
 
   if (canReuse || reuseAlternateApi) {
     const reusePort = reuseAlternateApi ? bindPort : apiPort;

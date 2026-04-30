@@ -123,7 +123,11 @@ function MetricCard({ label, value, detail }: { label: string; value: string; de
     <section className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3">
       <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text3)]">{label}</p>
       <p className="mt-1 text-lg font-semibold text-[var(--mm-text1)]">{value}</p>
-      {detail ? <p className="mt-1 text-xs text-[var(--mm-text3)]">{detail}</p> : null}
+      {detail ? (
+        <p className="mt-1 truncate text-xs text-[var(--mm-text3)]" title={detail}>
+          {detail}
+        </p>
+      ) : null}
     </section>
   );
 }
@@ -429,18 +433,32 @@ export function DashboardPage() {
   const modulesNeedingAttentionTotal = moduleCards.filter((m) => m.status === "Review needed").length;
   const activeModuleCount = moduleCards.filter((m) => m.status === "Active").length;
   const workerIssues = (dash.data.system.worker_health ?? []).filter((row) => row.status === "degraded");
+  const attentionItems = [
+    ...moduleCards.filter((m) => m.status === "Review needed").map((m) => `${m.name}: ${m.summary}`),
+    ...workerIssues.map((row) => `${row.module[0].toUpperCase()}${row.module.slice(1)} workers: ${row.detail}`),
+  ];
+  const activeItems = moduleCards.filter((m) => m.status === "Active").map((m) => `${m.name}: ${m.summary}`);
   const overallStatus =
     !dash.data.system.healthy || modulesNeedingAttentionTotal > 0 || workerIssues.length > 0
       ? "Review needed"
       : activeModuleCount > 0
         ? "Active"
         : "Healthy";
-
-  const attentionItems = [
-    ...moduleCards.filter((m) => m.status === "Review needed").map((m) => `${m.name}: ${m.summary}`),
-    ...workerIssues.map((row) => `${row.module[0].toUpperCase()}${row.module.slice(1)} workers: ${row.detail}`),
-  ];
-  const activeItems = moduleCards.filter((m) => m.status === "Active").map((m) => `${m.name}: ${m.summary}`);
+  const moduleAttentionNames = moduleCards.filter((m) => m.status === "Review needed").map((m) => m.name);
+  const workerIssueNames = workerIssues.map((row) => `${row.module[0].toUpperCase()}${row.module.slice(1)} workers`);
+  const overallStatusDetail =
+    moduleAttentionNames.length > 0 && workerIssueNames.length > 0
+      ? `Needs setup: ${moduleAttentionNames.join(", ")}. Worker issues: ${workerIssueNames.join(", ")}.`
+      : moduleAttentionNames.length > 0
+        ? `Needs setup: ${moduleAttentionNames.join(", ")}.`
+        : workerIssueNames.length > 0
+          ? `Worker issues: ${workerIssueNames.join(", ")}.`
+      : activeItems.length > 0
+        ? `Active: ${moduleCards
+            .filter((m) => m.status === "Active")
+            .map((m) => m.name)
+            .join(", ")}.`
+        : "No module or worker issues detected.";
 
   const refinerDashboardJobs: DashboardJobRow[] = (refinerJobs.data?.jobs ?? []).filter((job) =>
     isDashboardVisibleRefinerJob(job.job_kind),
@@ -482,7 +500,7 @@ export function DashboardPage() {
       </header>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" data-testid="dashboard-status-strip">
-        <MetricCard label="Overall status" value={overallStatus} />
+        <MetricCard label="Overall status" value={overallStatus} detail={overallStatusDetail} />
         <MetricCard
           label="Modules needing attention"
           value={modulesNeedingAttentionTotal === 0 ? "None detected" : String(modulesNeedingAttentionTotal)}

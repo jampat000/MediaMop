@@ -148,6 +148,7 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Refiner")).toBeInTheDocument();
     expect(screen.getByText("Pruner")).toBeInTheDocument();
     expect(screen.getByText("Subber")).toBeInTheDocument();
+    expect(screen.getByText("Needs setup: Refiner, Pruner, Subber.")).toBeInTheDocument();
     expect(screen.getByText("Net space saved")).toBeInTheDocument();
     expect(screen.getByText("Removal rate")).toBeInTheDocument();
     expect(screen.getByText("Coverage")).toBeInTheDocument();
