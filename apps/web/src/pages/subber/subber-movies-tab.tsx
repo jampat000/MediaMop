@@ -34,9 +34,14 @@ function langBadge(status: string, code: string) {
   );
 }
 
-function pickSearchStateId(row: SubberMovieRow, prefs: string[]): number | null {
+function pickSearchStateId(
+  row: SubberMovieRow,
+  prefs: string[],
+): number | null {
   for (const p of prefs) {
-    const lang = row.languages.find((l) => l.language_code.toLowerCase() === p.toLowerCase());
+    const lang = row.languages.find(
+      (l) => l.language_code.toLowerCase() === p.toLowerCase(),
+    );
     if (lang && lang.status !== "found") return lang.state_id;
   }
   const any = row.languages.find((l) => l.status !== "found");
@@ -45,9 +50,16 @@ function pickSearchStateId(row: SubberMovieRow, prefs: string[]): number | null 
 
 function coverageState(row: SubberMovieRow, prefs: string[]): string {
   const preferredRows = prefs
-    .map((code) => row.languages.find((item) => item.language_code.toLowerCase() === code.toLowerCase()))
+    .map((code) =>
+      row.languages.find(
+        (item) => item.language_code.toLowerCase() === code.toLowerCase(),
+      ),
+    )
     .filter((item): item is NonNullable<typeof item> => Boolean(item));
-  if (preferredRows.length > 0 && preferredRows.every((item) => item.status === "found")) {
+  if (
+    preferredRows.length > 0 &&
+    preferredRows.every((item) => item.status === "found")
+  ) {
     return "Preferred subtitle found";
   }
   return "Still missing";
@@ -59,7 +71,9 @@ export function SubberMoviesTab({ canOperate }: { canOperate: boolean }) {
   const [status, setStatus] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [language, setLanguage] = useState("");
-  const [pageSize, setPageSizeState] = useState<SubberLibraryPageSize>(() => readSubberLibraryPageSize());
+  const [pageSize, setPageSizeState] = useState<SubberLibraryPageSize>(() =>
+    readSubberLibraryPageSize(),
+  );
   const [page, setPage] = useState(0);
 
   const filters = useMemo(
@@ -78,7 +92,8 @@ export function SubberMoviesTab({ canOperate }: { canOperate: boolean }) {
 
   const total = libQ.data?.total ?? 0;
   const movies = libQ.data?.movies ?? [];
-  const hasActiveFilters = status !== "all" || Boolean(search.trim()) || Boolean(language.trim());
+  const hasActiveFilters =
+    status !== "all" || Boolean(search.trim()) || Boolean(language.trim());
 
   useEffect(() => {
     setPage(0);
@@ -100,7 +115,9 @@ export function SubberMoviesTab({ canOperate }: { canOperate: boolean }) {
   return (
     <div className="space-y-4" data-testid="subber-movies-tab">
       <div className="rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/30 p-4">
-        <p className="mb-3 text-xs font-medium uppercase tracking-wide text-[var(--mm-text2)]">Filters</p>
+        <p className="mb-3 text-xs font-medium uppercase tracking-wide text-[var(--mm-text2)]">
+          Filters
+        </p>
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1 text-xs text-[var(--mm-text2)]">
             Search
@@ -113,7 +130,11 @@ export function SubberMoviesTab({ canOperate }: { canOperate: boolean }) {
           </label>
           <label className="flex flex-col gap-1 text-xs text-[var(--mm-text2)]">
             Subtitles
-            <select className="mm-input min-w-[11rem]" value={status} onChange={(e) => setStatus(e.target.value)}>
+            <select
+              className="mm-input min-w-[11rem]"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+            >
               <option value="all">All titles</option>
               <option value="missing">Missing subtitles</option>
               <option value="complete">All preferred languages found</option>
@@ -141,10 +162,17 @@ export function SubberMoviesTab({ canOperate }: { canOperate: boolean }) {
           ) : null}
         </div>
       </div>
-      {libQ.isLoading ? <p className="text-sm text-[var(--mm-text2)]">Loading movies…</p> : null}
-      {libQ.isError ? <p className="text-sm text-red-600">{(libQ.error as Error).message}</p> : null}
+      {libQ.isLoading ? (
+        <p className="text-sm text-[var(--mm-text2)]">Loading movies…</p>
+      ) : null}
+      {libQ.isError ? (
+        <p className="text-sm text-red-600">{(libQ.error as Error).message}</p>
+      ) : null}
       {!libQ.isLoading && !libQ.isError && total === 0 ? (
-        <p className="text-sm text-[var(--mm-text2)]" data-testid="subber-movies-empty">
+        <p
+          className="text-sm text-[var(--mm-text2)]"
+          data-testid="subber-movies-empty"
+        >
           {hasActiveFilters
             ? "No movies match the current filters. Try All titles or clear search."
             : "No movies are tracked yet. Open Connections and run Sync Movies library from Radarr, or wait for a new Radarr import."}
@@ -173,10 +201,21 @@ export function SubberMoviesTab({ canOperate }: { canOperate: boolean }) {
                 <div className="min-w-0 flex-1 space-y-2">
                   <h3 className="text-base font-semibold leading-tight text-[var(--mm-text)]">
                     {m.movie_title ?? m.file_path}
-                    {m.movie_year != null ? <span className="text-[var(--mm-text2)]"> ({m.movie_year})</span> : null}
+                    {m.movie_year != null ? (
+                      <span className="text-[var(--mm-text2)]">
+                        {" "}
+                        ({m.movie_year})
+                      </span>
+                    ) : null}
                   </h3>
-                  <p className="text-sm text-[var(--mm-text2)]">{coverageState(m, prefs)}</p>
-                  <div className="flex flex-wrap gap-1">{m.languages.map((l) => langBadge(l.status, l.language_code))}</div>
+                  <p className="text-sm text-[var(--mm-text2)]">
+                    {coverageState(m, prefs)}
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {m.languages.map((l) =>
+                      langBadge(l.status, l.language_code),
+                    )}
+                  </div>
                 </div>
                 {canOperate && hasMissing && sid != null ? (
                   <div className="flex shrink-0 sm:pt-0.5">

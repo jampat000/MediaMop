@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
@@ -27,7 +27,7 @@ from mediamop.modules.subber.subber_providers_service import (
 )
 from mediamop.modules.subber.subber_schemas import SubberProviderOut, SubberProviderPutIn, SubberTestConnectionOut
 from mediamop.platform.auth.authorization import RequireOperatorDep
-from mediamop.platform.auth.csrf import verify_csrf_token
+from mediamop.platform.auth.csrf import current_raw_session_token, verify_csrf_token
 
 router = APIRouter(tags=["subber-providers"])
 
@@ -77,12 +77,13 @@ def get_subber_providers(
 def put_subber_provider(
     _user: RequireOperatorDep,
     db: DbSessionDep,
+    request: Request,
     settings: SettingsDep,
     provider_key: str,
     body: SubberProviderPutHttpIn,
 ) -> SubberProviderOut:
     secret = settings.session_secret or ""
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     pk = provider_key.strip()
     if pk not in ALL_PROVIDER_KEYS:
@@ -122,12 +123,13 @@ def put_subber_provider(
 def post_subber_provider_test(
     _user: RequireOperatorDep,
     db: DbSessionDep,
+    request: Request,
     settings: SettingsDep,
     provider_key: str,
     body: SubberCsrfIn,
 ) -> SubberTestConnectionOut:
     secret = settings.session_secret or ""
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     pk = provider_key.strip()
     if pk not in ALL_PROVIDER_KEYS:

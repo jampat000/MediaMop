@@ -87,10 +87,16 @@ const plexInstance: PrunerServerInstance = {
 
 describe("PrunerScopeTab (Plex)", () => {
   it("Movies tab: shows watched / low-rating / unwatched stale panels for Plex (allLeaves-backed)", async () => {
-    const spy = vi.spyOn(prunerApi, "fetchPrunerPreviewRuns").mockResolvedValue([]);
-    const spyInst = vi.spyOn(prunerApi, "fetchPrunerInstance").mockResolvedValue(plexInstance);
+    const spy = vi
+      .spyOn(prunerApi, "fetchPrunerPreviewRuns")
+      .mockResolvedValue([]);
+    const spyInst = vi
+      .spyOn(prunerApi, "fetchPrunerInstance")
+      .mockResolvedValue(plexInstance);
     try {
-      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const qc = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
       qc.setQueryData(qk.me, operator);
       qc.setQueryData(["pruner", "instances", 9], plexInstance);
 
@@ -99,7 +105,9 @@ describe("PrunerScopeTab (Plex)", () => {
           {
             path: "/instances/:instanceId",
             element: <PrunerInstanceShell />,
-            children: [{ path: "movies", element: <PrunerScopeTab scope="movies" /> }],
+            children: [
+              { path: "movies", element: <PrunerScopeTab scope="movies" /> },
+            ],
           },
         ],
         { initialEntries: ["/instances/9/movies"] },
@@ -112,12 +120,22 @@ describe("PrunerScopeTab (Plex)", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId("pruner-watched-movies-panel")).toBeInTheDocument();
+        expect(
+          screen.getByTestId("pruner-watched-movies-panel"),
+        ).toBeInTheDocument();
       });
-      expect(screen.getByTestId("pruner-scope-trust-banner")).toBeInTheDocument();
-      expect(screen.getByTestId("pruner-watched-low-rating-panel")).toBeInTheDocument();
-      expect(screen.getByTestId("pruner-unwatched-stale-panel")).toBeInTheDocument();
-      expect(screen.getByTestId("pruner-watched-low-rating-panel").textContent ?? "").toMatch(/audience rating/i);
+      expect(
+        screen.getByTestId("pruner-scope-trust-banner"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("pruner-watched-low-rating-panel"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("pruner-unwatched-stale-panel"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("pruner-watched-low-rating-panel").textContent ?? "",
+      ).toMatch(/audience rating/i);
     } finally {
       spy.mockRestore();
       spyInst.mockRestore();
@@ -125,10 +143,16 @@ describe("PrunerScopeTab (Plex)", () => {
   });
 
   it("uses preview-first flow for missing primary: queue enabled, no live-only surface, other rules called out", async () => {
-    const spy = vi.spyOn(prunerApi, "fetchPrunerPreviewRuns").mockResolvedValue([]);
-    const spyInst = vi.spyOn(prunerApi, "fetchPrunerInstance").mockResolvedValue(plexInstance);
+    const spy = vi
+      .spyOn(prunerApi, "fetchPrunerPreviewRuns")
+      .mockResolvedValue([]);
+    const spyInst = vi
+      .spyOn(prunerApi, "fetchPrunerInstance")
+      .mockResolvedValue(plexInstance);
     try {
-      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const qc = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
       qc.setQueryData(qk.me, operator);
       qc.setQueryData(["pruner", "instances", 9], plexInstance);
 
@@ -150,13 +174,25 @@ describe("PrunerScopeTab (Plex)", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId("pruner-plex-other-rules-note")).toBeInTheDocument();
+        expect(
+          screen.getByTestId("pruner-plex-other-rules-note"),
+        ).toBeInTheDocument();
       });
-      expect(screen.queryByTestId("pruner-plex-live-surface")).not.toBeInTheDocument();
-      expect(screen.getByTestId("pruner-plex-genre-empty-preview-note")).toBeInTheDocument();
-      expect(screen.getByTestId("pruner-plex-genre-empty-preview-note").textContent).toMatch(/nothing listed/i);
-      expect(screen.getByTestId("pruner-plex-other-rules-note").textContent).toMatch(/Plex does not support/i);
-      const btn = screen.getByRole("button", { name: /Scan for broken posters/i });
+      expect(
+        screen.queryByTestId("pruner-plex-live-surface"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByTestId("pruner-plex-genre-empty-preview-note"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("pruner-plex-genre-empty-preview-note").textContent,
+      ).toMatch(/nothing listed/i);
+      expect(
+        screen.getByTestId("pruner-plex-other-rules-note").textContent,
+      ).toMatch(/Plex does not support/i);
+      const btn = screen.getByRole("button", {
+        name: /Scan for broken posters/i,
+      });
       expect(btn).not.toBeDisabled();
     } finally {
       spy.mockRestore();
@@ -166,24 +202,30 @@ describe("PrunerScopeTab (Plex)", () => {
 
   it("shows apply-from-preview for Plex only when snapshot is missing-primary success with candidates", async () => {
     const runId = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
-    const spy = vi.spyOn(prunerApi, "fetchPrunerPreviewRuns").mockResolvedValue([
-      {
-        preview_run_id: runId,
-        server_instance_id: 9,
-        media_scope: "tv",
-        rule_family_id: RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
-        pruner_job_id: 1,
-        candidate_count: 2,
-        truncated: false,
-        outcome: "success",
-        unsupported_detail: null,
-        error_message: null,
-        created_at: new Date().toISOString(),
-      },
-    ]);
-    const spyInst = vi.spyOn(prunerApi, "fetchPrunerInstance").mockResolvedValue(plexInstance);
+    const spy = vi
+      .spyOn(prunerApi, "fetchPrunerPreviewRuns")
+      .mockResolvedValue([
+        {
+          preview_run_id: runId,
+          server_instance_id: 9,
+          media_scope: "tv",
+          rule_family_id: RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+          pruner_job_id: 1,
+          candidate_count: 2,
+          truncated: false,
+          outcome: "success",
+          unsupported_detail: null,
+          error_message: null,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+    const spyInst = vi
+      .spyOn(prunerApi, "fetchPrunerInstance")
+      .mockResolvedValue(plexInstance);
     try {
-      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const qc = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
       qc.setQueryData(qk.me, operator);
       qc.setQueryData(["pruner", "instances", 9], plexInstance);
 
@@ -204,7 +246,11 @@ describe("PrunerScopeTab (Plex)", () => {
         </QueryClientProvider>,
       );
 
-      await waitFor(() => expect(screen.getByTestId(`pruner-apply-open-${runId}`)).toBeInTheDocument());
+      await waitFor(() =>
+        expect(
+          screen.getByTestId(`pruner-apply-open-${runId}`),
+        ).toBeInTheDocument(),
+      );
     } finally {
       spy.mockRestore();
       spyInst.mockRestore();
@@ -214,39 +260,45 @@ describe("PrunerScopeTab (Plex)", () => {
   it("Plex: never_played_stale_reported and watched_tv_reported preview rows stay unsupported (no apply)", async () => {
     const neverId = "bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee";
     const watchedId = "cccccccc-bbbb-cccc-dddd-eeeeeeeeeeee";
-    const spy = vi.spyOn(prunerApi, "fetchPrunerPreviewRuns").mockResolvedValue([
-      {
-        preview_run_id: neverId,
-        server_instance_id: 9,
-        media_scope: "tv",
-        rule_family_id: "never_played_stale_reported",
-        pruner_job_id: 2,
-        candidate_count: 0,
-        truncated: false,
-        outcome: "unsupported",
-        unsupported_detail:
-          "Plex: never-played stale library candidacy is not implemented on MediaMop (Jellyfin/Emby only for this rule).",
-        error_message: null,
-        created_at: new Date().toISOString(),
-      },
-      {
-        preview_run_id: watchedId,
-        server_instance_id: 9,
-        media_scope: "tv",
-        rule_family_id: RULE_FAMILY_WATCHED_TV_REPORTED,
-        pruner_job_id: 3,
-        candidate_count: 0,
-        truncated: false,
-        outcome: "unsupported",
-        unsupported_detail:
-          "Plex: watched TV preview is not implemented on MediaMop in this release (Jellyfin/Emby only).",
-        error_message: null,
-        created_at: new Date().toISOString(),
-      },
-    ]);
-    const spyInst = vi.spyOn(prunerApi, "fetchPrunerInstance").mockResolvedValue(plexInstance);
+    const spy = vi
+      .spyOn(prunerApi, "fetchPrunerPreviewRuns")
+      .mockResolvedValue([
+        {
+          preview_run_id: neverId,
+          server_instance_id: 9,
+          media_scope: "tv",
+          rule_family_id: "never_played_stale_reported",
+          pruner_job_id: 2,
+          candidate_count: 0,
+          truncated: false,
+          outcome: "unsupported",
+          unsupported_detail:
+            "Plex: never-played stale library candidacy is not implemented on MediaMop (Jellyfin/Emby only for this rule).",
+          error_message: null,
+          created_at: new Date().toISOString(),
+        },
+        {
+          preview_run_id: watchedId,
+          server_instance_id: 9,
+          media_scope: "tv",
+          rule_family_id: RULE_FAMILY_WATCHED_TV_REPORTED,
+          pruner_job_id: 3,
+          candidate_count: 0,
+          truncated: false,
+          outcome: "unsupported",
+          unsupported_detail:
+            "Plex: watched TV preview is not implemented on MediaMop in this release (Jellyfin/Emby only).",
+          error_message: null,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+    const spyInst = vi
+      .spyOn(prunerApi, "fetchPrunerInstance")
+      .mockResolvedValue(plexInstance);
     try {
-      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const qc = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
       qc.setQueryData(qk.me, operator);
       qc.setQueryData(["pruner", "instances", 9], plexInstance);
 
@@ -267,14 +319,30 @@ describe("PrunerScopeTab (Plex)", () => {
         </QueryClientProvider>,
       );
 
-      await waitFor(() => expect(screen.getByText(/Delete never-started TV or movies/i)).toBeInTheDocument());
-      await waitFor(() => expect(screen.getByText(/Delete watched TV episodes/i)).toBeInTheDocument());
+      await waitFor(() =>
+        expect(
+          screen.getByText(/Delete never-started TV or movies/i),
+        ).toBeInTheDocument(),
+      );
+      await waitFor(() =>
+        expect(
+          screen.getByText(/Delete watched TV episodes/i),
+        ).toBeInTheDocument(),
+      );
       expect(
-        screen.getAllByText(/never-played stale library candidacy is not implemented/i).length,
+        screen.getAllByText(
+          /never-played stale library candidacy is not implemented/i,
+        ).length,
       ).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText(/watched TV preview is not implemented/i).length).toBeGreaterThanOrEqual(1);
-      expect(screen.queryByTestId(`pruner-apply-open-${neverId}`)).not.toBeInTheDocument();
-      expect(screen.queryByTestId(`pruner-apply-open-${watchedId}`)).not.toBeInTheDocument();
+      expect(
+        screen.getAllByText(/watched TV preview is not implemented/i).length,
+      ).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.queryByTestId(`pruner-apply-open-${neverId}`),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId(`pruner-apply-open-${watchedId}`),
+      ).not.toBeInTheDocument();
     } finally {
       spy.mockRestore();
       spyInst.mockRestore();
@@ -282,10 +350,16 @@ describe("PrunerScopeTab (Plex)", () => {
   });
 
   it("shows Plex missing-primary preview cap note for operators", async () => {
-    const spy = vi.spyOn(prunerApi, "fetchPrunerPreviewRuns").mockResolvedValue([]);
-    const spyInst = vi.spyOn(prunerApi, "fetchPrunerInstance").mockResolvedValue(plexInstance);
+    const spy = vi
+      .spyOn(prunerApi, "fetchPrunerPreviewRuns")
+      .mockResolvedValue([]);
+    const spyInst = vi
+      .spyOn(prunerApi, "fetchPrunerInstance")
+      .mockResolvedValue(plexInstance);
     try {
-      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const qc = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
       qc.setQueryData(qk.me, operator);
       qc.setQueryData(["pruner", "instances", 9], plexInstance);
 
@@ -306,8 +380,13 @@ describe("PrunerScopeTab (Plex)", () => {
         </QueryClientProvider>,
       );
 
-      await waitFor(() => expect(screen.getByTestId("pruner-plex-preview-cap-note")).toBeInTheDocument());
-      const note = screen.getByTestId("pruner-plex-preview-cap-note").textContent ?? "";
+      await waitFor(() =>
+        expect(
+          screen.getByTestId("pruner-plex-preview-cap-note"),
+        ).toBeInTheDocument(),
+      );
+      const note =
+        screen.getByTestId("pruner-plex-preview-cap-note").textContent ?? "";
       expect(note).toMatch(/per-tab item limit/i);
       expect(note).toMatch(/built-in safety cap/i);
     } finally {
@@ -317,10 +396,16 @@ describe("PrunerScopeTab (Plex)", () => {
   });
 
   it("does not render Jellyfin-only never-played panel for Plex", async () => {
-    const spy = vi.spyOn(prunerApi, "fetchPrunerPreviewRuns").mockResolvedValue([]);
-    const spyInst = vi.spyOn(prunerApi, "fetchPrunerInstance").mockResolvedValue(plexInstance);
+    const spy = vi
+      .spyOn(prunerApi, "fetchPrunerPreviewRuns")
+      .mockResolvedValue([]);
+    const spyInst = vi
+      .spyOn(prunerApi, "fetchPrunerInstance")
+      .mockResolvedValue(plexInstance);
     try {
-      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const qc = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
       qc.setQueryData(qk.me, operator);
       qc.setQueryData(["pruner", "instances", 9], plexInstance);
 
@@ -341,8 +426,14 @@ describe("PrunerScopeTab (Plex)", () => {
         </QueryClientProvider>,
       );
 
-      await waitFor(() => expect(screen.getByTestId("pruner-plex-other-rules-note")).toBeInTheDocument());
-      expect(screen.queryByTestId("pruner-never-played-stale-panel")).not.toBeInTheDocument();
+      await waitFor(() =>
+        expect(
+          screen.getByTestId("pruner-plex-other-rules-note"),
+        ).toBeInTheDocument(),
+      );
+      expect(
+        screen.queryByTestId("pruner-never-played-stale-panel"),
+      ).not.toBeInTheDocument();
     } finally {
       spy.mockRestore();
       spyInst.mockRestore();
@@ -351,11 +442,19 @@ describe("PrunerScopeTab (Plex)", () => {
 
   it("saves low-rating ceiling using Plex audienceRating field only (not Jellyfin/Emby CommunityRating)", async () => {
     vi.spyOn(authApi, "fetchCsrfToken").mockResolvedValue("csrf-test");
-    const spyPatch = vi.spyOn(prunerApi, "patchPrunerScope").mockResolvedValue(plexInstance.scopes[1]!);
-    const spy = vi.spyOn(prunerApi, "fetchPrunerPreviewRuns").mockResolvedValue([]);
-    const spyInst = vi.spyOn(prunerApi, "fetchPrunerInstance").mockResolvedValue(plexInstance);
+    const spyPatch = vi
+      .spyOn(prunerApi, "patchPrunerScope")
+      .mockResolvedValue(plexInstance.scopes[1]!);
+    const spy = vi
+      .spyOn(prunerApi, "fetchPrunerPreviewRuns")
+      .mockResolvedValue([]);
+    const spyInst = vi
+      .spyOn(prunerApi, "fetchPrunerInstance")
+      .mockResolvedValue(plexInstance);
     try {
-      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const qc = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
       qc.setQueryData(qk.me, operator);
       qc.setQueryData(["pruner", "instances", 9], plexInstance);
 
@@ -364,7 +463,9 @@ describe("PrunerScopeTab (Plex)", () => {
           {
             path: "/instances/:instanceId",
             element: <PrunerInstanceShell />,
-            children: [{ path: "movies", element: <PrunerScopeTab scope="movies" /> }],
+            children: [
+              { path: "movies", element: <PrunerScopeTab scope="movies" /> },
+            ],
           },
         ],
         { initialEntries: ["/instances/9/movies"] },
@@ -376,13 +477,22 @@ describe("PrunerScopeTab (Plex)", () => {
         </QueryClientProvider>,
       );
 
-      await waitFor(() => expect(screen.getByTestId("pruner-watched-low-rating-panel")).toBeInTheDocument());
-      fireEvent.click(screen.getByRole("button", { name: /save low-rating rule/i }));
+      await waitFor(() =>
+        expect(
+          screen.getByTestId("pruner-watched-low-rating-panel"),
+        ).toBeInTheDocument(),
+      );
+      fireEvent.click(
+        screen.getByRole("button", { name: /save low-rating rule/i }),
+      );
       await waitFor(() => expect(spyPatch).toHaveBeenCalled());
       const body = spyPatch.mock.calls[0]![2] as Record<string, unknown>;
       expect(body.watched_movie_low_rating_max_plex_audience_rating).toBe(4);
       expect(
-        Object.prototype.hasOwnProperty.call(body, "watched_movie_low_rating_max_jellyfin_emby_community_rating"),
+        Object.prototype.hasOwnProperty.call(
+          body,
+          "watched_movie_low_rating_max_jellyfin_emby_community_rating",
+        ),
       ).toBe(false);
     } finally {
       spyPatch.mockRestore();

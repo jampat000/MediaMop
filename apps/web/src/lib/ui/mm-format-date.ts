@@ -7,7 +7,9 @@ function parseIso(iso: string): Date {
   return new Date(s);
 }
 
-export function useAppDateFormatter(): (iso: string | null | undefined) => string {
+export function useAppDateFormatter(): (
+  iso: string | null | undefined,
+) => string {
   const q = useSuiteSettingsQuery();
   const tz = q.data?.app_timezone || undefined;
 
@@ -28,7 +30,10 @@ export function useAppDateFormatter(): (iso: string | null | undefined) => strin
   );
 }
 
-export function formatAppDate(iso: string | null | undefined, tz?: string): string {
+export function formatAppDate(
+  iso: string | null | undefined,
+  tz?: string,
+): string {
   if (!iso) return "—";
   try {
     return new Intl.DateTimeFormat(undefined, {

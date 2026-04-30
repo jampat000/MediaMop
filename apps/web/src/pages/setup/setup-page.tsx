@@ -3,7 +3,11 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { AuthBrandStack } from "../../components/brand/auth-brand-stack";
 import { ApiEntryError } from "../../components/shared/api-entry-error";
 import { PageLoading } from "../../components/shared/page-loading";
-import { useBootstrapMutation, useBootstrapStatusQuery, useMeQuery } from "../../lib/auth/queries";
+import {
+  useBootstrapMutation,
+  useBootstrapStatusQuery,
+  useMeQuery,
+} from "../../lib/auth/queries";
 
 export function SetupPage() {
   const navigate = useNavigate();
@@ -70,11 +74,16 @@ export function SetupPage() {
           <p className="mm-auth-eyebrow">First run</p>
           <h1 className="mm-auth-title">Create admin</h1>
           <p className="mm-auth-lead">
-            This workspace has no administrator yet. Choose credentials for the initial account.
-            After you sign in, MediaMop will run the first-run setup wizard.
+            This workspace has no administrator yet. Choose credentials for the
+            initial account. After you sign in, MediaMop will run the first-run
+            setup wizard.
           </p>
 
-          <form data-testid="setup-form" className="mm-auth-form" onSubmit={onSubmit}>
+          <form
+            data-testid="setup-form"
+            className="mm-auth-form"
+            onSubmit={onSubmit}
+          >
             <label className="mm-auth-label" htmlFor="setup-user">
               Admin username
             </label>
@@ -122,7 +131,9 @@ export function SetupPage() {
             ) : null}
             {bootstrap.isError ? (
               <p className="mm-auth-banner" role="alert">
-                {bootstrap.error instanceof Error ? bootstrap.error.message : "Setup failed."}
+                {bootstrap.error instanceof Error
+                  ? bootstrap.error.message
+                  : "Setup failed."}
               </p>
             ) : null}
             <button

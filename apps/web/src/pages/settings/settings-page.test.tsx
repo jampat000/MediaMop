@@ -14,7 +14,13 @@ import {
   suiteSettingsQueryKey,
   suiteUpdateStatusQueryKey,
 } from "../../lib/suite/queries";
-import type { SuiteLogsOut, SuiteMetricsOut, SuiteSecurityOverviewOut, SuiteSettingsOut, SuiteUpdateStatusOut } from "../../lib/suite/types";
+import type {
+  SuiteLogsOut,
+  SuiteMetricsOut,
+  SuiteSecurityOverviewOut,
+  SuiteSettingsOut,
+  SuiteUpdateStatusOut,
+} from "../../lib/suite/types";
 import { SettingsPage } from "./settings-page";
 
 const operatorMe: UserPublic = { id: 1, username: "alice", role: "operator" };
@@ -89,13 +95,29 @@ function wrap(ui: ReactNode, client: QueryClient) {
 }
 
 function renderSettings(me: UserPublic) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
   qc.setQueryData(suiteSettingsQueryKey, minimalSuiteSettings);
   qc.setQueryData(suiteSecurityOverviewQueryKey, minimalSecurity);
   qc.setQueryData(qk.me, me);
-  qc.setQueryData(suiteConfigurationBackupsQueryKey, { directory: "C:/MediaMop/backups/suite-configuration", items: [] });
+  qc.setQueryData(suiteConfigurationBackupsQueryKey, {
+    directory: "C:/MediaMop/backups/suite-configuration",
+    items: [],
+  });
   qc.setQueryData(suiteUpdateStatusQueryKey, minimalUpdateStatus);
-  qc.setQueryData([...suiteLogsQueryKey, { level: undefined, search: undefined, has_exception: undefined, limit: 100 }], minimalLogs);
+  qc.setQueryData(
+    [
+      ...suiteLogsQueryKey,
+      {
+        level: undefined,
+        search: undefined,
+        has_exception: undefined,
+        limit: 100,
+      },
+    ],
+    minimalLogs,
+  );
   qc.setQueryData(suiteMetricsQueryKey, minimalMetrics);
   return render(wrap(<SettingsPage />, qc));
 }
@@ -125,17 +147,29 @@ describe("SettingsPage (suite settings)", () => {
     renderSettings(operatorMe);
     fireEvent.click(screen.getByRole("tab", { name: "Backup and restore" }));
     expect(screen.getByTestId("suite-settings-backup-restore")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Download configuration now" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Restore from file…" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Save backup schedule" })).toBeDisabled();
-    expect(screen.queryByTestId("suite-settings-history-reset")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Download configuration now" }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Restore from file…" }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Save backup schedule" }),
+    ).toBeDisabled();
+    expect(
+      screen.queryByTestId("suite-settings-history-reset"),
+    ).not.toBeInTheDocument();
   });
 
   it("hides configuration backup for viewers", () => {
     renderSettings(viewerMe);
     fireEvent.click(screen.getByRole("tab", { name: "Backup and restore" }));
-    expect(screen.queryByTestId("suite-settings-backup-restore")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("suite-settings-history-reset")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("suite-settings-backup-restore"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("suite-settings-history-reset"),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps General focused and splits Logs, Backup, and Upgrade to their own tabs", () => {
@@ -144,33 +178,60 @@ describe("SettingsPage (suite settings)", () => {
     expect(screen.queryByText("Application logs")).not.toBeInTheDocument();
     expect(screen.getByText("Timezone")).toBeInTheDocument();
     expect(screen.getByText("Setup wizard")).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "General" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
     expect(screen.getByText("System log retention (days)")).toBeInTheDocument();
-    expect(screen.getByText(/activity history is kept until you reset it/i)).toBeInTheDocument();
-    expect(screen.getByTestId("suite-settings-history-reset")).toBeInTheDocument();
-    expect(screen.queryByTestId("suite-settings-backup-restore")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("suite-settings-upgrade")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/activity history is kept until you reset it/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("suite-settings-history-reset"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("suite-settings-backup-restore"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("suite-settings-upgrade"),
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "Backup and restore" }));
     expect(screen.getByTestId("suite-settings-backup-tab")).toBeInTheDocument();
-    expect(screen.getByTestId("suite-settings-backup-restore")).toBeInTheDocument();
-    expect(screen.queryByText("System log retention (days)")).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId("suite-settings-backup-restore"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("System log retention (days)"),
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    expect(screen.getByTestId("suite-settings-upgrade-tab")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("suite-settings-upgrade-tab"),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("suite-settings-upgrade")).toBeInTheDocument();
-    expect(screen.queryByText("System log retention (days)")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("System log retention (days)"),
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "Logs" }));
     expect(screen.getByText("Search logs")).toBeInTheDocument();
     expect(screen.getByText("System events")).toBeInTheDocument();
     expect(screen.getByText("Server diagnostics")).toBeInTheDocument();
-    expect(screen.queryByText("System log retention (days)")).not.toBeInTheDocument();
-    expect(screen.queryByText("Optional home dashboard notice")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("System log retention (days)"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Optional home dashboard notice"),
+    ).not.toBeInTheDocument();
   });
 
   it("shows change password only on Security tab", () => {
     renderSettings(operatorMe);
     fireEvent.click(screen.getByRole("tab", { name: "Security" }));
-    expect(screen.getByRole("heading", { name: "Change password" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Security posture" })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Change password" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Security posture" }),
+    ).not.toBeInTheDocument();
   });
 
   it("change password fields use Show/Hide and reset visibility when cleared", () => {
@@ -197,7 +258,9 @@ describe("SettingsPage (suite settings)", () => {
     fireEvent.mouseDown(firstOption);
     fireEvent.click(firstOption);
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Timezone/ })).toHaveTextContent(chosenLabel);
+    expect(screen.getByRole("button", { name: /Timezone/ })).toHaveTextContent(
+      chosenLabel,
+    );
   });
 
   it("closes timezone dropdown on outside click", () => {
@@ -222,9 +285,13 @@ describe("SettingsPage (suite settings)", () => {
     renderSettings(viewerMe);
     expect(screen.getByTestId("suite-settings-display-density")).toBeTruthy();
     fireEvent.click(screen.getByText("Comfortable"));
-    expect(document.documentElement.getAttribute("data-mm-density")).toBe("comfortable");
+    expect(document.documentElement.getAttribute("data-mm-density")).toBe(
+      "comfortable",
+    );
     fireEvent.click(screen.getByText("Expanded"));
-    expect(document.documentElement.getAttribute("data-mm-density")).toBe("expanded");
+    expect(document.documentElement.getAttribute("data-mm-density")).toBe(
+      "expanded",
+    );
     fireEvent.click(screen.getByText("Balanced"));
     expect(document.documentElement.getAttribute("data-mm-density")).toBeNull();
   });

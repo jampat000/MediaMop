@@ -1,8 +1,12 @@
 import { fetchCsrfToken } from "../api/auth-api";
 import { apiFetch, readJson, requireOk } from "../api/client";
-import type { RefinerOperatorSettingsOut, RefinerOperatorSettingsPutBody } from "./types";
+import type {
+  RefinerOperatorSettingsOut,
+  RefinerOperatorSettingsPutBody,
+} from "./types";
 
-export const refinerOperatorSettingsPath = () => "/api/v1/refiner/operator-settings";
+export const refinerOperatorSettingsPath = () =>
+  "/api/v1/refiner/operator-settings";
 
 export async function fetchRefinerOperatorSettings(): Promise<RefinerOperatorSettingsOut> {
   const path = refinerOperatorSettingsPath();

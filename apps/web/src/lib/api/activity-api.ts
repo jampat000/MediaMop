@@ -25,7 +25,9 @@ export function activityRecentPath(options?: ActivityRecentFilters): string {
   return qs ? `/api/v1/activity/recent?${qs}` : "/api/v1/activity/recent";
 }
 
-export async function fetchActivityRecent(options?: ActivityRecentFilters): Promise<ActivityRecentResponse> {
+export async function fetchActivityRecent(
+  options?: ActivityRecentFilters,
+): Promise<ActivityRecentResponse> {
   const path = activityRecentPath(options);
   const r = await apiFetch(path);
   await requireOk(path, r, "Could not load activity");

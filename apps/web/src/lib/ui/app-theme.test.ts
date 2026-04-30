@@ -30,7 +30,9 @@ describe("app-theme", () => {
 
   it("applies and persists the document theme", () => {
     applyAppThemeToDocument("light");
-    expect(document.documentElement.getAttribute("data-mm-theme")).toBe("light");
+    expect(document.documentElement.getAttribute("data-mm-theme")).toBe(
+      "light",
+    );
     persistAppTheme("dark");
     expect(localStorage.getItem(APP_THEME_STORAGE_KEY)).toBe("dark");
     expect(document.documentElement.getAttribute("data-mm-theme")).toBe("dark");

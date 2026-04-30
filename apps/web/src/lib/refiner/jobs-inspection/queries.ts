@@ -12,10 +12,13 @@ export type RefinerJobsInspectionFilter =
   | "cancelled"
   | "terminal";
 
-export const refinerJobsInspectionQueryKey = (filter: RefinerJobsInspectionFilter) =>
-  ["refiner", "jobs", "inspection", filter] as const;
+export const refinerJobsInspectionQueryKey = (
+  filter: RefinerJobsInspectionFilter,
+) => ["refiner", "jobs", "inspection", filter] as const;
 
-function statusesForFilter(filter: RefinerJobsInspectionFilter): string[] | undefined {
+function statusesForFilter(
+  filter: RefinerJobsInspectionFilter,
+): string[] | undefined {
   if (filter === "recent") {
     return undefined;
   }
@@ -25,7 +28,9 @@ function statusesForFilter(filter: RefinerJobsInspectionFilter): string[] | unde
   return [filter];
 }
 
-export function useRefinerJobsInspectionQuery(filter: RefinerJobsInspectionFilter) {
+export function useRefinerJobsInspectionQuery(
+  filter: RefinerJobsInspectionFilter,
+) {
   return useQuery({
     queryKey: refinerJobsInspectionQueryKey(filter),
     queryFn: () =>
@@ -42,7 +47,9 @@ export function useRefinerJobCancelPendingMutation() {
   return useMutation({
     mutationFn: (jobId: number) => postRefinerJobCancelPending(jobId),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["refiner", "jobs", "inspection"] });
+      void qc.invalidateQueries({
+        queryKey: ["refiner", "jobs", "inspection"],
+      });
     },
   });
 }

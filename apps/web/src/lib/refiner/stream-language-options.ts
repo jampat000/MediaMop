@@ -1,5 +1,8 @@
 /** ISO-639-3 codes + English labels for operator stream-language picks. */
-export const REFINER_STREAM_LANGUAGE_OPTIONS: readonly { code: string; label: string }[] = [
+export const REFINER_STREAM_LANGUAGE_OPTIONS: readonly {
+  code: string;
+  label: string;
+}[] = [
   { code: "eng", label: "English" },
   { code: "jpn", label: "Japanese" },
   { code: "spa", label: "Spanish" },
@@ -32,7 +35,9 @@ export const REFINER_STREAM_LANGUAGE_OPTIONS: readonly { code: string; label: st
   { code: "und", label: "Undetermined" },
 ] as const;
 
-export function refinerStreamLanguageLabel(code: string | null | undefined): string {
+export function refinerStreamLanguageLabel(
+  code: string | null | undefined,
+): string {
   const c = (code ?? "").trim().toLowerCase();
   if (!c) {
     return "—";

@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import io
-import urllib.error
+import httpx
 
 from mediamop.modules.subber import subber_http_client
 
@@ -32,12 +31,31 @@ def test_subber_request_json_treats_malformed_json_as_empty_payload(monkeypatch)
 
 
 def test_subber_http_error_json_preserves_malformed_payload() -> None:
-    exc = urllib.error.HTTPError(
-        "https://example.invalid",
+    request = httpx.Request("GET", "https://example.invalid")
+    response = httpx.Response(
         500,
-        "bad",
-        {},
-        fp=io.BytesIO(b"{not-json"),
+        request=request,
+        content=b"{not-json",
     )
+    exc = httpx.HTTPStatusError("bad", request=request, response=response)
 
     assert subber_http_client.decode_http_error_json(exc) == {"raw": "{not-json"}
+
+
+def test_safe_provider_url_blocks_local_targets() -> None:
+    for url in (
+        "http://localhost/file.srt",
+        "http://127.0.0.1/file.srt",
+        "http://169.254.1.1/file.srt",
+        "http://10.0.0.5/file.srt",
+    ):
+        try:
+            subber_http_client.safe_provider_url(url)
+        except ValueError as exc:
+            assert "Blocked provider URL host" in str(exc)
+        else:
+            raise AssertionError(f"expected blocked URL for {url}")
+
+
+def test_safe_provider_url_allows_public_https_targets() -> None:
+    assert subber_http_client.safe_provider_url("https://subtitles.example/file.srt") == "https://subtitles.example/file.srt"

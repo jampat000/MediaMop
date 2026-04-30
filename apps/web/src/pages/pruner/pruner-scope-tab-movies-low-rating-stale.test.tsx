@@ -87,11 +87,19 @@ const jellyfinMovies: PrunerServerInstance = {
 
 describe("PrunerScopeTab Movies / low-rating and unwatched stale", () => {
   it("queues previews with watched_movie_low_rating_reported and unwatched_movie_stale_reported", async () => {
-    const spyRuns = vi.spyOn(prunerApi, "fetchPrunerPreviewRuns").mockResolvedValue([]);
-    const spyInst = vi.spyOn(prunerApi, "fetchPrunerInstance").mockResolvedValue(jellyfinMovies);
-    const spyPreview = vi.spyOn(prunerApi, "postPrunerPreview").mockResolvedValue({ pruner_job_id: 902 });
+    const spyRuns = vi
+      .spyOn(prunerApi, "fetchPrunerPreviewRuns")
+      .mockResolvedValue([]);
+    const spyInst = vi
+      .spyOn(prunerApi, "fetchPrunerInstance")
+      .mockResolvedValue(jellyfinMovies);
+    const spyPreview = vi
+      .spyOn(prunerApi, "postPrunerPreview")
+      .mockResolvedValue({ pruner_job_id: 902 });
     try {
-      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const qc = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
       qc.setQueryData(qk.me, operator);
       qc.setQueryData(["pruner", "instances", 44], jellyfinMovies);
 
@@ -100,7 +108,9 @@ describe("PrunerScopeTab Movies / low-rating and unwatched stale", () => {
           {
             path: "/instances/:instanceId",
             element: <PrunerInstanceShell />,
-            children: [{ path: "movies", element: <PrunerScopeTab scope="movies" /> }],
+            children: [
+              { path: "movies", element: <PrunerScopeTab scope="movies" /> },
+            ],
           },
         ],
         { initialEntries: ["/instances/44/movies"] },
@@ -112,14 +122,24 @@ describe("PrunerScopeTab Movies / low-rating and unwatched stale", () => {
         </QueryClientProvider>,
       );
 
-      await waitFor(() => expect(screen.getByTestId("pruner-watched-low-rating-panel")).toBeInTheDocument());
-      fireEvent.click(screen.getByRole("button", { name: /Scan for low-score watched movies/i }));
+      await waitFor(() =>
+        expect(
+          screen.getByTestId("pruner-watched-low-rating-panel"),
+        ).toBeInTheDocument(),
+      );
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: /Scan for low-score watched movies/i,
+        }),
+      );
       await waitFor(() => {
         expect(spyPreview).toHaveBeenCalledWith(44, "movies", {
           rule_family_id: RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
         });
       });
-      fireEvent.click(screen.getByRole("button", { name: /Scan for old unwatched movies/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /Scan for old unwatched movies/i }),
+      );
       await waitFor(() => {
         expect(spyPreview).toHaveBeenCalledWith(44, "movies", {
           rule_family_id: RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED,
@@ -134,11 +154,19 @@ describe("PrunerScopeTab Movies / low-rating and unwatched stale", () => {
 
   it("saves low-rating ceiling using Jellyfin/Emby CommunityRating field only (not Plex audienceRating)", async () => {
     vi.spyOn(authApi, "fetchCsrfToken").mockResolvedValue("csrf-test");
-    const spyPatch = vi.spyOn(prunerApi, "patchPrunerScope").mockResolvedValue(jellyfinMovies.scopes[1]!);
-    const spyRuns = vi.spyOn(prunerApi, "fetchPrunerPreviewRuns").mockResolvedValue([]);
-    const spyInst = vi.spyOn(prunerApi, "fetchPrunerInstance").mockResolvedValue(jellyfinMovies);
+    const spyPatch = vi
+      .spyOn(prunerApi, "patchPrunerScope")
+      .mockResolvedValue(jellyfinMovies.scopes[1]!);
+    const spyRuns = vi
+      .spyOn(prunerApi, "fetchPrunerPreviewRuns")
+      .mockResolvedValue([]);
+    const spyInst = vi
+      .spyOn(prunerApi, "fetchPrunerInstance")
+      .mockResolvedValue(jellyfinMovies);
     try {
-      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const qc = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
       qc.setQueryData(qk.me, operator);
       qc.setQueryData(["pruner", "instances", 44], jellyfinMovies);
 
@@ -147,7 +175,9 @@ describe("PrunerScopeTab Movies / low-rating and unwatched stale", () => {
           {
             path: "/instances/:instanceId",
             element: <PrunerInstanceShell />,
-            children: [{ path: "movies", element: <PrunerScopeTab scope="movies" /> }],
+            children: [
+              { path: "movies", element: <PrunerScopeTab scope="movies" /> },
+            ],
           },
         ],
         { initialEntries: ["/instances/44/movies"] },
@@ -159,14 +189,25 @@ describe("PrunerScopeTab Movies / low-rating and unwatched stale", () => {
         </QueryClientProvider>,
       );
 
-      await waitFor(() => expect(screen.getByTestId("pruner-watched-low-rating-panel")).toBeInTheDocument());
-      fireEvent.click(screen.getByRole("button", { name: /save low-rating rule/i }));
+      await waitFor(() =>
+        expect(
+          screen.getByTestId("pruner-watched-low-rating-panel"),
+        ).toBeInTheDocument(),
+      );
+      fireEvent.click(
+        screen.getByRole("button", { name: /save low-rating rule/i }),
+      );
       await waitFor(() => expect(spyPatch).toHaveBeenCalled());
       const body = spyPatch.mock.calls[0]![2] as Record<string, unknown>;
-      expect(body.watched_movie_low_rating_max_jellyfin_emby_community_rating).toBe(4);
-      expect(Object.prototype.hasOwnProperty.call(body, "watched_movie_low_rating_max_plex_audience_rating")).toBe(
-        false,
-      );
+      expect(
+        body.watched_movie_low_rating_max_jellyfin_emby_community_rating,
+      ).toBe(4);
+      expect(
+        Object.prototype.hasOwnProperty.call(
+          body,
+          "watched_movie_low_rating_max_plex_audience_rating",
+        ),
+      ).toBe(false);
     } finally {
       spyPatch.mockRestore();
       spyRuns.mockRestore();

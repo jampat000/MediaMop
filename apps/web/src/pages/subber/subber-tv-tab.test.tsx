@@ -23,7 +23,9 @@ describe("SubberTvTab", () => {
 
   beforeEach(() => {
     vi.spyOn(subberQueries, "useSubberSettingsQuery").mockReturnValue({
-      data: { language_preferences: ["en", "fr"] } as ReturnType<typeof subberQueries.useSubberSettingsQuery>["data"],
+      data: { language_preferences: ["en", "fr"] } as ReturnType<
+        typeof subberQueries.useSubberSettingsQuery
+      >["data"],
       isLoading: false,
       isError: false,
     } as unknown as ReturnType<typeof subberQueries.useSubberSettingsQuery>);
@@ -41,8 +43,24 @@ describe("SubberTvTab", () => {
                     episode_number: 1,
                     episode_title: "Pilot",
                     languages: [
-                      { state_id: 7, language_code: "en", status: "found", subtitle_path: null, last_searched_at: null, search_count: 0, source: null },
-                      { state_id: 8, language_code: "fr", status: "missing", subtitle_path: null, last_searched_at: null, search_count: 0, source: null },
+                      {
+                        state_id: 7,
+                        language_code: "en",
+                        status: "found",
+                        subtitle_path: null,
+                        last_searched_at: null,
+                        search_count: 0,
+                        source: null,
+                      },
+                      {
+                        state_id: 8,
+                        language_code: "fr",
+                        status: "missing",
+                        subtitle_path: null,
+                        last_searched_at: null,
+                        search_count: 0,
+                        source: null,
+                      },
                     ],
                   },
                 ],
@@ -58,11 +76,18 @@ describe("SubberTvTab", () => {
     vi.spyOn(subberQueries, "useSubberSearchNowMutation").mockReturnValue({
       mutate,
       isPending: false,
-    } as unknown as ReturnType<typeof subberQueries.useSubberSearchNowMutation>);
-    vi.spyOn(subberQueries, "useSubberSearchAllMissingTvMutation").mockReturnValue({
+    } as unknown as ReturnType<
+      typeof subberQueries.useSubberSearchNowMutation
+    >);
+    vi.spyOn(
+      subberQueries,
+      "useSubberSearchAllMissingTvMutation",
+    ).mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
-    } as unknown as ReturnType<typeof subberQueries.useSubberSearchAllMissingTvMutation>);
+    } as unknown as ReturnType<
+      typeof subberQueries.useSubberSearchAllMissingTvMutation
+    >);
   });
 
   it("renders episode and Search now triggers mutation", async () => {
@@ -81,6 +106,8 @@ describe("SubberTvTab", () => {
     } as unknown as ReturnType<typeof subberQueries.useSubberLibraryTvQuery>);
     const client = new QueryClient();
     render(wrap(<SubberTvTab canOperate={false} />, client));
-    await waitFor(() => expect(screen.getByTestId("subber-tv-empty")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("subber-tv-empty")).toBeInTheDocument(),
+    );
   });
 });

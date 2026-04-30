@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { DISPLAY_DENSITY_STORAGE_KEY, parseDisplayDensity, readStoredDisplayDensity } from "./display-density";
+import {
+  DISPLAY_DENSITY_STORAGE_KEY,
+  parseDisplayDensity,
+  readStoredDisplayDensity,
+} from "./display-density";
 
 describe("display-density", () => {
   it("parses stored values", () => {

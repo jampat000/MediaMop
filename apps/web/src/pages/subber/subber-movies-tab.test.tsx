@@ -23,7 +23,9 @@ describe("SubberMoviesTab", () => {
 
   beforeEach(() => {
     vi.spyOn(subberQueries, "useSubberSettingsQuery").mockReturnValue({
-      data: { language_preferences: ["en"] } as ReturnType<typeof subberQueries.useSubberSettingsQuery>["data"],
+      data: { language_preferences: ["en"] } as ReturnType<
+        typeof subberQueries.useSubberSettingsQuery
+      >["data"],
       isLoading: false,
       isError: false,
     } as unknown as ReturnType<typeof subberQueries.useSubberSettingsQuery>);
@@ -34,28 +36,49 @@ describe("SubberMoviesTab", () => {
             file_path: "/m.mkv",
             movie_title: "Inception",
             movie_year: 2010,
-            languages: [{ state_id: 2, language_code: "en", status: "missing", subtitle_path: null, last_searched_at: null, search_count: 0, source: null }],
+            languages: [
+              {
+                state_id: 2,
+                language_code: "en",
+                status: "missing",
+                subtitle_path: null,
+                last_searched_at: null,
+                search_count: 0,
+                source: null,
+              },
+            ],
           },
         ],
         total: 1,
       },
       isLoading: false,
       isError: false,
-    } as unknown as ReturnType<typeof subberQueries.useSubberLibraryMoviesQuery>);
+    } as unknown as ReturnType<
+      typeof subberQueries.useSubberLibraryMoviesQuery
+    >);
     vi.spyOn(subberQueries, "useSubberSearchNowMutation").mockReturnValue({
       mutate,
       isPending: false,
-    } as unknown as ReturnType<typeof subberQueries.useSubberSearchNowMutation>);
-    vi.spyOn(subberQueries, "useSubberSearchAllMissingMoviesMutation").mockReturnValue({
+    } as unknown as ReturnType<
+      typeof subberQueries.useSubberSearchNowMutation
+    >);
+    vi.spyOn(
+      subberQueries,
+      "useSubberSearchAllMissingMoviesMutation",
+    ).mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
-    } as unknown as ReturnType<typeof subberQueries.useSubberSearchAllMissingMoviesMutation>);
+    } as unknown as ReturnType<
+      typeof subberQueries.useSubberSearchAllMissingMoviesMutation
+    >);
   });
 
   it("renders movie row and Search now", async () => {
     const client = new QueryClient();
     render(wrap(<SubberMoviesTab canOperate />, client));
-    await waitFor(() => expect(screen.getByText(/Inception/)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText(/Inception/)).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByTestId("subber-movies-search-now"));
     expect(mutate).toHaveBeenCalledWith(2);
   });
@@ -65,9 +88,13 @@ describe("SubberMoviesTab", () => {
       data: { movies: [], total: 0 },
       isLoading: false,
       isError: false,
-    } as unknown as ReturnType<typeof subberQueries.useSubberLibraryMoviesQuery>);
+    } as unknown as ReturnType<
+      typeof subberQueries.useSubberLibraryMoviesQuery
+    >);
     const client = new QueryClient();
     render(wrap(<SubberMoviesTab canOperate={false} />, client));
-    await waitFor(() => expect(screen.getByTestId("subber-movies-empty")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("subber-movies-empty")).toBeInTheDocument(),
+    );
   });
 });

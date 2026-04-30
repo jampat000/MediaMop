@@ -7,16 +7,33 @@ import { MmListboxPicker } from "../../components/ui/mm-listbox-picker";
 import { ServerFolderPickerButton } from "../../components/ui/server-folder-picker-button";
 import { fetchCsrfToken } from "../../lib/api/auth-api";
 import { useMeQuery } from "../../lib/auth/queries";
-import { patchPrunerInstance, postPrunerInstance, type PrunerServerInstance } from "../../lib/pruner/api";
+import {
+  patchPrunerInstance,
+  postPrunerInstance,
+  type PrunerServerInstance,
+} from "../../lib/pruner/api";
 import { usePrunerInstancesQuery } from "../../lib/pruner/queries";
-import { useRefinerPathSettingsQuery, useRefinerPathSettingsSaveMutation } from "../../lib/refiner/queries";
+import {
+  useRefinerPathSettingsQuery,
+  useRefinerPathSettingsSaveMutation,
+} from "../../lib/refiner/queries";
 import {
   curatedTimezoneOptionsSorted,
   CURATED_TIMEZONE_ID_SET,
 } from "../../lib/suite/timezone-options";
-import { useSuiteSettingsQuery, useSuiteSettingsSaveMutation } from "../../lib/suite/queries";
-import { usePutSubberSettingsMutation, useSubberSettingsQuery } from "../../lib/subber/subber-queries";
-import { persistDisplayDensity, readStoredDisplayDensity, type DisplayDensity } from "../../lib/ui/display-density";
+import {
+  useSuiteSettingsQuery,
+  useSuiteSettingsSaveMutation,
+} from "../../lib/suite/queries";
+import {
+  usePutSubberSettingsMutation,
+  useSubberSettingsQuery,
+} from "../../lib/subber/subber-queries";
+import {
+  persistDisplayDensity,
+  readStoredDisplayDensity,
+  type DisplayDensity,
+} from "../../lib/ui/display-density";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 
 const LANDING_OPTIONS = [
@@ -49,7 +66,9 @@ function WizardSection({
 }) {
   return (
     <section className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/40 p-4">
-      <h2 className="text-base font-semibold text-[var(--mm-text1)]">{title}</h2>
+      <h2 className="text-base font-semibold text-[var(--mm-text1)]">
+        {title}
+      </h2>
       <p className="mt-1 text-sm text-[var(--mm-text2)]">{description}</p>
       <div className="mt-4 space-y-4">{children}</div>
     </section>
@@ -74,8 +93,12 @@ function labelForPrunerSecret(provider: string): string {
   return provider === "plex" ? "Plex token" : "API key";
 }
 
-function defaultPrunerDisplayName(provider: "jellyfin" | "emby" | "plex"): string {
-  const label = PRUNER_PROVIDER_OPTIONS.find((option) => option.value === provider)?.label ?? "Media server";
+function defaultPrunerDisplayName(
+  provider: "jellyfin" | "emby" | "plex",
+): string {
+  const label =
+    PRUNER_PROVIDER_OPTIONS.find((option) => option.value === provider)
+      ?.label ?? "Media server";
   return `${label} server`;
 }
 
@@ -91,7 +114,9 @@ export function SetupWizardPage() {
   const saveSubber = usePutSubberSettingsMutation();
 
   const [appTimezone, setAppTimezone] = useState<string>("UTC");
-  const [displayDensity, setDisplayDensity] = useState<DisplayDensity>(() => readStoredDisplayDensity());
+  const [displayDensity, setDisplayDensity] = useState<DisplayDensity>(() =>
+    readStoredDisplayDensity(),
+  );
   const [landingPath, setLandingPath] = useState<string>("/app");
   const [backupEnabled, setBackupEnabled] = useState(false);
   const [backupIntervalHours, setBackupIntervalHours] = useState("24");
@@ -100,7 +125,9 @@ export function SetupWizardPage() {
   const [movieOutputFolder, setMovieOutputFolder] = useState("");
   const [tvWatchedFolder, setTvWatchedFolder] = useState("");
   const [tvOutputFolder, setTvOutputFolder] = useState("");
-  const [prunerProvider, setPrunerProvider] = useState<"jellyfin" | "emby" | "plex">("jellyfin");
+  const [prunerProvider, setPrunerProvider] = useState<
+    "jellyfin" | "emby" | "plex"
+  >("jellyfin");
   const [prunerBaseUrl, setPrunerBaseUrl] = useState("");
   const [prunerSecret, setPrunerSecret] = useState("");
   const [sonarrBaseUrl, setSonarrBaseUrl] = useState("");
@@ -118,8 +145,13 @@ export function SetupWizardPage() {
     const tz = (settingsQ.data.app_timezone || "UTC").trim() || "UTC";
     setAppTimezone(CURATED_TIMEZONE_ID_SET.has(tz) ? tz : "UTC");
     setBackupEnabled(Boolean(settingsQ.data.configuration_backup_enabled));
-    setBackupIntervalHours(String(settingsQ.data.configuration_backup_interval_hours || 24));
-    setBackupPreferredTime((settingsQ.data.configuration_backup_preferred_time || "02:00").trim() || "02:00");
+    setBackupIntervalHours(
+      String(settingsQ.data.configuration_backup_interval_hours || 24),
+    );
+    setBackupPreferredTime(
+      (settingsQ.data.configuration_backup_preferred_time || "02:00").trim() ||
+        "02:00",
+    );
   }, [settingsQ.data]);
 
   useEffect(() => {
@@ -139,7 +171,9 @@ export function SetupWizardPage() {
     setSonarrBaseUrl(subberQ.data.sonarr_base_url ?? "");
     setRadarrBaseUrl(subberQ.data.radarr_base_url ?? "");
     setLanguagePreferencesCsv(
-      subberQ.data.language_preferences.length > 0 ? subberQ.data.language_preferences.join(", ") : "en",
+      subberQ.data.language_preferences.length > 0
+        ? subberQ.data.language_preferences.join(", ")
+        : "en",
     );
   }, [subberQ.data]);
 
@@ -153,14 +187,24 @@ export function SetupWizardPage() {
     setPrunerBaseUrl(first.base_url || "");
   }, [prunerInstancesQ.data]);
 
-  const wizardState = (settingsQ.data?.setup_wizard_state || "pending").trim().toLowerCase();
+  const wizardState = (settingsQ.data?.setup_wizard_state || "pending")
+    .trim()
+    .toLowerCase();
   const timezoneOptions = useMemo(
-    () => curatedTimezoneOptionsSorted().map((tz) => ({ value: tz.id, label: tz.label })),
+    () =>
+      curatedTimezoneOptionsSorted().map((tz) => ({
+        value: tz.id,
+        label: tz.label,
+      })),
     [],
   );
 
   const loading =
-    me.isPending || settingsQ.isPending || refinerQ.isPending || subberQ.isPending || prunerInstancesQ.isPending;
+    me.isPending ||
+    settingsQ.isPending ||
+    refinerQ.isPending ||
+    subberQ.isPending ||
+    prunerInstancesQ.isPending;
 
   if (loading) {
     return <PageLoading label="Loading setup wizard" />;
@@ -177,7 +221,8 @@ export function SetupWizardPage() {
             <p className="mm-auth-eyebrow">Setup wizard</p>
             <h1 className="mm-auth-title">Could not load setup</h1>
             <p className="mm-auth-lead">
-              The wizard could not load the current suite settings. Open Settings later and try again.
+              The wizard could not load the current suite settings. Open
+              Settings later and try again.
             </p>
             <p className="mm-auth-footer-link">
               <Link to="/app">Continue to the app</Link>
@@ -189,9 +234,7 @@ export function SetupWizardPage() {
   }
 
   const savePending =
-    saveSuite.isPending ||
-    saveRefiner.isPending ||
-    saveSubber.isPending;
+    saveSuite.isPending || saveRefiner.isPending || saveSubber.isPending;
 
   function renderFolderInput({
     value,
@@ -213,7 +256,12 @@ export function SetupWizardPage() {
           placeholder={placeholder}
           disabled={savePending}
         />
-        <ServerFolderPickerButton title={title} value={value} disabled={savePending} onSelect={setter} />
+        <ServerFolderPickerButton
+          title={title}
+          value={value}
+          disabled={savePending}
+          onSelect={setter}
+        />
       </div>
     );
   }
@@ -225,15 +273,24 @@ export function SetupWizardPage() {
     const subberCurrent = subberQ.data;
 
     if (tvWatchedFolder.trim() && !tvOutputFolder.trim()) {
-      setStatusMessage("TV Refiner setup needs an output folder when a TV watched folder is set.");
+      setStatusMessage(
+        "TV Refiner setup needs an output folder when a TV watched folder is set.",
+      );
       return;
     }
     if (movieWatchedFolder.trim() && !movieOutputFolder.trim()) {
-      setStatusMessage("Movies Refiner setup needs an output folder when a Movies watched folder is set.");
+      setStatusMessage(
+        "Movies Refiner setup needs an output folder when a Movies watched folder is set.",
+      );
       return;
     }
-    if ((prunerBaseUrl.trim() && !prunerSecret.trim()) || (!prunerBaseUrl.trim() && prunerSecret.trim())) {
-      setStatusMessage("Pruner setup needs both a base URL and a connection secret.");
+    if (
+      (prunerBaseUrl.trim() && !prunerSecret.trim()) ||
+      (!prunerBaseUrl.trim() && prunerSecret.trim())
+    ) {
+      setStatusMessage(
+        "Pruner setup needs both a base URL and a connection secret.",
+      );
       return;
     }
 
@@ -248,21 +305,34 @@ export function SetupWizardPage() {
         log_retention_days: current.log_retention_days,
         application_logs_enabled: true,
         configuration_backup_enabled: backupEnabled,
-        configuration_backup_interval_hours: Number.parseInt(backupIntervalHours, 10),
+        configuration_backup_interval_hours: Number.parseInt(
+          backupIntervalHours,
+          10,
+        ),
         configuration_backup_preferred_time: backupPreferredTime,
       });
 
       if (refinerCurrent) {
         await saveRefiner.mutateAsync({
-          refiner_watched_folder: movieWatchedFolder.trim() ? movieWatchedFolder.trim() : null,
+          refiner_watched_folder: movieWatchedFolder.trim()
+            ? movieWatchedFolder.trim()
+            : null,
           refiner_work_folder: refinerCurrent.refiner_work_folder,
-          refiner_output_folder: movieOutputFolder.trim() ? movieOutputFolder.trim() : null,
+          refiner_output_folder: movieOutputFolder.trim()
+            ? movieOutputFolder.trim()
+            : null,
           refiner_tv_paths_included: true,
-          refiner_tv_watched_folder: tvWatchedFolder.trim() ? tvWatchedFolder.trim() : null,
+          refiner_tv_watched_folder: tvWatchedFolder.trim()
+            ? tvWatchedFolder.trim()
+            : null,
           refiner_tv_work_folder: refinerCurrent.refiner_tv_work_folder,
-          refiner_tv_output_folder: tvOutputFolder.trim() ? tvOutputFolder.trim() : null,
-          movie_watched_folder_check_interval_seconds: refinerCurrent.movie_watched_folder_check_interval_seconds,
-          tv_watched_folder_check_interval_seconds: refinerCurrent.tv_watched_folder_check_interval_seconds,
+          refiner_tv_output_folder: tvOutputFolder.trim()
+            ? tvOutputFolder.trim()
+            : null,
+          movie_watched_folder_check_interval_seconds:
+            refinerCurrent.movie_watched_folder_check_interval_seconds,
+          tv_watched_folder_check_interval_seconds:
+            refinerCurrent.tv_watched_folder_check_interval_seconds,
         });
       }
 
@@ -285,7 +355,9 @@ export function SetupWizardPage() {
           prunerProvider === "plex"
             ? { auth_token: prunerSecret.trim() }
             : { api_key: prunerSecret.trim() };
-        const displayName = existing?.display_name?.trim() || defaultPrunerDisplayName(prunerProvider);
+        const displayName =
+          existing?.display_name?.trim() ||
+          defaultPrunerDisplayName(prunerProvider);
         if (existing) {
           await patchPrunerInstance(existing.id, {
             display_name: displayName,
@@ -305,7 +377,9 @@ export function SetupWizardPage() {
 
       navigate(landingPath, { replace: true });
     } catch (err) {
-      setStatusMessage(err instanceof Error ? err.message : "Could not save setup.");
+      setStatusMessage(
+        err instanceof Error ? err.message : "Could not save setup.",
+      );
     }
   }
 
@@ -317,7 +391,8 @@ export function SetupWizardPage() {
           <p className="mm-auth-eyebrow">First run</p>
           <h1 className="mm-auth-title">Setup wizard</h1>
           <p className="mm-auth-lead">
-            Set the suite basics, backup schedule, and starter connections now. You can skip this and reopen it later from Settings.
+            Set the suite basics, backup schedule, and starter connections now.
+            You can skip this and reopen it later from Settings.
           </p>
 
           <div className="grid gap-4 lg:grid-cols-2">
@@ -346,7 +421,11 @@ export function SetupWizardPage() {
                   <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
                     Open first
                   </label>
-                  <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Open first">
+                  <div
+                    className="grid gap-2 sm:grid-cols-2"
+                    role="radiogroup"
+                    aria-label="Open first"
+                  >
                     {LANDING_OPTIONS.map((option) => (
                       <label
                         key={option.value}
@@ -364,21 +443,45 @@ export function SetupWizardPage() {
                           checked={landingPath === option.value}
                           onChange={() => setLandingPath(option.value)}
                         />
-                        <span className="min-w-0 whitespace-nowrap font-medium text-[var(--mm-text)]">{option.label}</span>
+                        <span className="min-w-0 whitespace-nowrap font-medium text-[var(--mm-text)]">
+                          {option.label}
+                        </span>
                       </label>
                     ))}
                   </div>
                 </div>
               </div>
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Display density</p>
-                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4" role="radiogroup" aria-label="Display density">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+                  Display density
+                </p>
+                <div
+                  className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4"
+                  role="radiogroup"
+                  aria-label="Display density"
+                >
                   {(
                     [
-                      { id: "compact" as const, label: "Compact", hint: "Smaller layout" },
-                      { id: "default" as const, label: "Balanced", hint: "Readable default" },
-                      { id: "comfortable" as const, label: "Comfortable", hint: "Larger controls" },
-                      { id: "expanded" as const, label: "Expanded", hint: "Big-screen mode" },
+                      {
+                        id: "compact" as const,
+                        label: "Compact",
+                        hint: "Smaller layout",
+                      },
+                      {
+                        id: "default" as const,
+                        label: "Balanced",
+                        hint: "Readable default",
+                      },
+                      {
+                        id: "comfortable" as const,
+                        label: "Comfortable",
+                        hint: "Larger controls",
+                      },
+                      {
+                        id: "expanded" as const,
+                        label: "Expanded",
+                        hint: "Big-screen mode",
+                      },
                     ] as const
                   ).map(({ id, label, hint }) => (
                     <label
@@ -398,8 +501,12 @@ export function SetupWizardPage() {
                         onChange={() => setDisplayDensity(id)}
                       />
                       <span className="min-w-0">
-                        <span className="block font-medium text-[var(--mm-text)]">{label}</span>
-                        <span className="block text-xs text-[var(--mm-text3)]">{hint}</span>
+                        <span className="block font-medium text-[var(--mm-text)]">
+                          {label}
+                        </span>
+                        <span className="block text-xs text-[var(--mm-text3)]">
+                          {hint}
+                        </span>
                       </span>
                     </label>
                   ))}
@@ -447,7 +554,9 @@ export function SetupWizardPage() {
                     className="mm-input w-full"
                     value={backupPreferredTime}
                     disabled={!backupEnabled}
-                    onChange={(e) => setBackupPreferredTime(e.target.value || "02:00")}
+                    onChange={(e) =>
+                      setBackupPreferredTime(e.target.value || "02:00")
+                    }
                   />
                 </label>
               </div>
@@ -459,7 +568,9 @@ export function SetupWizardPage() {
             >
               <div className="grid gap-4 lg:grid-cols-2">
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-[var(--mm-text1)]">TV</h3>
+                  <h3 className="text-sm font-semibold text-[var(--mm-text1)]">
+                    TV
+                  </h3>
                   {renderFolderInput({
                     value: tvWatchedFolder,
                     setter: setTvWatchedFolder,
@@ -474,7 +585,9 @@ export function SetupWizardPage() {
                   })}
                 </div>
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-[var(--mm-text1)]">Movies</h3>
+                  <h3 className="text-sm font-semibold text-[var(--mm-text1)]">
+                    Movies
+                  </h3>
                   {renderFolderInput({
                     value: movieWatchedFolder,
                     setter: setMovieWatchedFolder,
@@ -503,7 +616,11 @@ export function SetupWizardPage() {
                   <select
                     className="mm-input w-full"
                     value={prunerProvider}
-                    onChange={(e) => setPrunerProvider(e.target.value as "jellyfin" | "emby" | "plex")}
+                    onChange={(e) =>
+                      setPrunerProvider(
+                        e.target.value as "jellyfin" | "emby" | "plex",
+                      )
+                    }
                   >
                     {PRUNER_PROVIDER_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -522,7 +639,11 @@ export function SetupWizardPage() {
                     className="mm-input w-full"
                     value={prunerBaseUrl}
                     onChange={(e) => setPrunerBaseUrl(e.target.value)}
-                    placeholder={prunerProvider === "plex" ? "http://127.0.0.1:32400" : "http://127.0.0.1:8096"}
+                    placeholder={
+                      prunerProvider === "plex"
+                        ? "http://127.0.0.1:32400"
+                        : "http://127.0.0.1:8096"
+                    }
                   />
                 </label>
                 <label className="block text-sm text-[var(--mm-text2)]">
@@ -545,7 +666,9 @@ export function SetupWizardPage() {
             >
               <div className="grid gap-4 lg:grid-cols-2">
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-[var(--mm-text1)]">Sonarr</h3>
+                  <h3 className="text-sm font-semibold text-[var(--mm-text1)]">
+                    Sonarr
+                  </h3>
                   <input
                     className="mm-input w-full"
                     value={sonarrBaseUrl}
@@ -560,7 +683,9 @@ export function SetupWizardPage() {
                   />
                 </div>
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-[var(--mm-text1)]">Radarr</h3>
+                  <h3 className="text-sm font-semibold text-[var(--mm-text1)]">
+                    Radarr
+                  </h3>
                   <input
                     className="mm-input w-full"
                     value={radarrBaseUrl}
@@ -615,7 +740,11 @@ export function SetupWizardPage() {
               onClick={() => void saveWizardState("completed")}
               disabled={savePending}
             >
-              {savePending ? "Saving..." : wizardState === "pending" ? "Finish setup" : "Save changes"}
+              {savePending
+                ? "Saving..."
+                : wizardState === "pending"
+                  ? "Finish setup"
+                  : "Save changes"}
             </button>
             <button
               type="button"

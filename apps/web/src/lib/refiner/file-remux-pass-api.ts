@@ -1,8 +1,12 @@
 import { fetchCsrfToken } from "../api/auth-api";
 import { apiFetch, readJson, requireOk } from "../api/client";
-import type { RefinerFileRemuxPassManualEnqueueBody, RefinerFileRemuxPassManualEnqueueOut } from "./types";
+import type {
+  RefinerFileRemuxPassManualEnqueueBody,
+  RefinerFileRemuxPassManualEnqueueOut,
+} from "./types";
 
-export const refinerFileRemuxPassEnqueuePath = () => "/api/v1/refiner/jobs/file-remux-pass/enqueue";
+export const refinerFileRemuxPassEnqueuePath = () =>
+  "/api/v1/refiner/jobs/file-remux-pass/enqueue";
 
 export async function postRefinerFileRemuxPassEnqueue(
   body: RefinerFileRemuxPassManualEnqueueBody,

@@ -8,8 +8,14 @@ import { AppRouter } from "./app/router";
 import { AppProviders } from "./app/providers";
 import { StartupGate } from "./app/startup-gate";
 import { AppErrorScreen, ErrorBoundary } from "./components/error-boundary";
-import { applyAppThemeToDocument, readStoredAppTheme } from "./lib/ui/app-theme";
-import { applyDisplayDensityToDocument, readStoredDisplayDensity } from "./lib/ui/display-density";
+import {
+  applyAppThemeToDocument,
+  readStoredAppTheme,
+} from "./lib/ui/app-theme";
+import {
+  applyDisplayDensityToDocument,
+  readStoredDisplayDensity,
+} from "./lib/ui/display-density";
 import "./index.css";
 
 applyAppThemeToDocument(readStoredAppTheme());

@@ -34,8 +34,13 @@ export function useBootstrapStatusQuery() {
 export function useLoginMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ username, password }: { username: string; password: string }) =>
-      postLogin(username, password),
+    mutationFn: ({
+      username,
+      password,
+    }: {
+      username: string;
+      password: string;
+    }) => postLogin(username, password),
     onSuccess: (data) => {
       // Anonymous /me is cached as `null` (401). Hydrate from the login response — do not invalidate
       // /me here: an immediate refetch can run before the session cookie is visible to fetch(), get
@@ -68,8 +73,13 @@ export function useLogoutMutation() {
 export function useBootstrapMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ username, password }: { username: string; password: string }) =>
-      postBootstrap(username, password),
+    mutationFn: ({
+      username,
+      password,
+    }: {
+      username: string;
+      password: string;
+    }) => postBootstrap(username, password),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: qk.bootstrap });
       void qc.invalidateQueries({ queryKey: activityRecentKey });
@@ -81,8 +91,13 @@ export function useBootstrapMutation() {
 export function useChangePasswordMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ currentPassword, newPassword }: { currentPassword: string; newPassword: string }) =>
-      postChangePassword(currentPassword, newPassword),
+    mutationFn: ({
+      currentPassword,
+      newPassword,
+    }: {
+      currentPassword: string;
+      newPassword: string;
+    }) => postChangePassword(currentPassword, newPassword),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: qk.me });
       void qc.invalidateQueries({ queryKey: activityRecentKey });

@@ -13,8 +13,14 @@ import {
 import type { SuiteSettingsPutBody } from "./types";
 
 export const suiteSettingsQueryKey = ["suite", "settings"] as const;
-export const suiteSecurityOverviewQueryKey = ["suite", "security-overview"] as const;
-export const suiteConfigurationBackupsQueryKey = ["suite", "configuration-backups"] as const;
+export const suiteSecurityOverviewQueryKey = [
+  "suite",
+  "security-overview",
+] as const;
+export const suiteConfigurationBackupsQueryKey = [
+  "suite",
+  "configuration-backups",
+] as const;
 export const suiteUpdateStatusQueryKey = ["suite", "update-status"] as const;
 export const suiteLogsQueryKey = ["suite", "logs"] as const;
 export const suiteMetricsQueryKey = ["suite", "metrics"] as const;

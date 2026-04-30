@@ -26,10 +26,14 @@ export const PRUNER_RULE_GENRE_OPTIONS = [
   "Western",
 ] as const;
 
-const GENRE_LISTBOX_OPTIONS: MmListboxOption[] = PRUNER_RULE_GENRE_OPTIONS.map((g) => ({ value: g, label: g }));
+const GENRE_LISTBOX_OPTIONS: MmListboxOption[] = PRUNER_RULE_GENRE_OPTIONS.map(
+  (g) => ({ value: g, label: g }),
+);
 
 /** Map saved API genres onto canonical list entries (case-insensitive). */
-export function prunerGenresFromApi(api: string[] | undefined | null): string[] {
+export function prunerGenresFromApi(
+  api: string[] | undefined | null,
+): string[] {
   if (!api?.length) return [];
   const out: string[] = [];
   for (const canon of PRUNER_RULE_GENRE_OPTIONS) {
@@ -44,7 +48,9 @@ function genreTriggerSummary(values: string[]): string {
   if (values.length === 0) return "No genres selected";
   if (values.length <= 3) {
     const lower = new Set(values.map((v) => v.toLowerCase()));
-    return PRUNER_RULE_GENRE_OPTIONS.filter((g) => lower.has(g.toLowerCase())).join(", ");
+    return PRUNER_RULE_GENRE_OPTIONS.filter((g) =>
+      lower.has(g.toLowerCase()),
+    ).join(", ");
   }
   return `${values.length} genres selected`;
 }
@@ -74,7 +80,10 @@ export function PrunerGenreMultiSelect({
   const placeholder = pickerPlaceholder ?? "No genres selected";
 
   return (
-    <div className="space-y-2" data-testid={testId ?? "pruner-genre-multiselect"}>
+    <div
+      className="space-y-2"
+      data-testid={testId ?? "pruner-genre-multiselect"}
+    >
       <span className="sr-only" data-testid="pruner-genre-multiselect-summary">
         {summary}
       </span>
@@ -85,9 +94,13 @@ export function PrunerGenreMultiSelect({
         disabled={disabled}
         placeholder={placeholder}
         summaryText={summary}
-        data-testid={testId ? `${testId}-picker` : "pruner-genre-multiselect-picker"}
+        data-testid={
+          testId ? `${testId}-picker` : "pruner-genre-multiselect-picker"
+        }
       />
-      {helper ? <p className="text-xs text-[var(--mm-text3)]">{helper}</p> : null}
+      {helper ? (
+        <p className="text-xs text-[var(--mm-text3)]">{helper}</p>
+      ) : null}
     </div>
   );
 }

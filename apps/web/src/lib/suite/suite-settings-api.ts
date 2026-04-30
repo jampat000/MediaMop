@@ -1,5 +1,10 @@
 import { fetchCsrfToken } from "../api/auth-api";
-import { apiFetch, readJson, requireOk, throwApiResponseError } from "../api/client";
+import {
+  apiFetch,
+  readJson,
+  requireOk,
+  throwApiResponseError,
+} from "../api/client";
 import type {
   SuiteConfigurationBackupListOut,
   SuiteLogsOut,
@@ -13,14 +18,22 @@ import type {
 } from "./types";
 
 export const suiteSettingsPath = () => "/api/v1/suite/settings";
-export const suiteSecurityOverviewPath = () => "/api/v1/suite/security-overview";
-export const suiteUpdateStatusPaths = ["/api/v1/suite/update-status", "/api/v1/suite/settings/update-status"] as const;
-export const suiteUpdateNowPaths = ["/api/v1/suite/update-now", "/api/v1/suite/settings/update-now"] as const;
+export const suiteSecurityOverviewPath = () =>
+  "/api/v1/suite/security-overview";
+export const suiteUpdateStatusPaths = [
+  "/api/v1/suite/update-status",
+  "/api/v1/suite/settings/update-status",
+] as const;
+export const suiteUpdateNowPaths = [
+  "/api/v1/suite/update-now",
+  "/api/v1/suite/settings/update-now",
+] as const;
 export const suiteUpdateStatusPath = () => suiteUpdateStatusPaths[0];
 export const suiteUpdateNowPath = () => suiteUpdateNowPaths[0];
 export const suiteLogsPath = () => "/api/v1/suite/logs";
 export const suiteMetricsPath = () => "/api/v1/suite/metrics";
-export const suiteOperationalHistoryResetPath = () => "/api/v1/suite/operational-history/reset";
+export const suiteOperationalHistoryResetPath = () =>
+  "/api/v1/suite/operational-history/reset";
 
 /**
  * GET/PUT configuration bundle: same handler on the backend, several URL aliases for older builds
@@ -34,9 +47,12 @@ export const configurationBundlePaths = [
 
 /** Preferred path (first entry in {@link configurationBundlePaths}). */
 export const suiteConfigurationBundlePath = () => configurationBundlePaths[0];
-export const suiteConfigurationBackupsPath = () => "/api/v1/suite/configuration-backups";
+export const suiteConfigurationBackupsPath = () =>
+  "/api/v1/suite/configuration-backups";
 
-export type ConfigurationBundle = Record<string, unknown> & { format_version: number };
+export type ConfigurationBundle = Record<string, unknown> & {
+  format_version: number;
+};
 
 export async function fetchSuiteSettings(): Promise<SuiteSettingsOut> {
   const path = suiteSettingsPath();
@@ -45,7 +61,9 @@ export async function fetchSuiteSettings(): Promise<SuiteSettingsOut> {
   return readJson<SuiteSettingsOut>(r);
 }
 
-export async function putSuiteSettings(body: SuiteSettingsPutBody): Promise<SuiteSettingsOut> {
+export async function putSuiteSettings(
+  body: SuiteSettingsPutBody,
+): Promise<SuiteSettingsOut> {
   const csrf_token = await fetchCsrfToken();
   const path = suiteSettingsPath();
   const r = await apiFetch(path, {
@@ -77,7 +95,11 @@ export async function fetchSuiteUpdateStatus(): Promise<SuiteUpdateStatusOut> {
     }
     return readJson<SuiteUpdateStatusOut>(r);
   }
-  return throwApiResponseError(suiteUpdateStatusPath(), last!, "Could not check for updates");
+  return throwApiResponseError(
+    suiteUpdateStatusPath(),
+    last!,
+    "Could not check for updates",
+  );
 }
 
 export async function startSuiteUpdateNow(): Promise<SuiteUpdateStartOut> {
@@ -98,7 +120,11 @@ export async function startSuiteUpdateNow(): Promise<SuiteUpdateStartOut> {
     }
     return readJson<SuiteUpdateStartOut>(r);
   }
-  return throwApiResponseError(suiteUpdateNowPath(), last!, "Could not start upgrade");
+  return throwApiResponseError(
+    suiteUpdateNowPath(),
+    last!,
+    "Could not start upgrade",
+  );
 }
 
 export async function fetchSuiteLogs(filters?: {
@@ -110,9 +136,14 @@ export async function fetchSuiteLogs(filters?: {
   const params = new URLSearchParams();
   if (filters?.level) params.set("level", filters.level);
   if (filters?.search) params.set("search", filters.search);
-  if (typeof filters?.has_exception === "boolean") params.set("has_exception", String(filters.has_exception));
-  if (typeof filters?.limit === "number") params.set("limit", String(filters.limit));
-  const path = params.size > 0 ? `${suiteLogsPath()}?${params.toString()}` : suiteLogsPath();
+  if (typeof filters?.has_exception === "boolean")
+    params.set("has_exception", String(filters.has_exception));
+  if (typeof filters?.limit === "number")
+    params.set("limit", String(filters.limit));
+  const path =
+    params.size > 0
+      ? `${suiteLogsPath()}?${params.toString()}`
+      : suiteLogsPath();
   const r = await apiFetch(path);
   await requireOk(path, r, "Could not load logs");
   return readJson<SuiteLogsOut>(r);
@@ -125,7 +156,9 @@ export async function fetchSuiteMetrics(): Promise<SuiteMetricsOut> {
   return readJson<SuiteMetricsOut>(r);
 }
 
-export async function resetSuiteOperationalHistory(confirm: string): Promise<SuiteOperationalHistoryResetOut> {
+export async function resetSuiteOperationalHistory(
+  confirm: string,
+): Promise<SuiteOperationalHistoryResetOut> {
   const csrf_token = await fetchCsrfToken();
   const path = suiteOperationalHistoryResetPath();
   const r = await apiFetch(path, {
@@ -150,10 +183,16 @@ export async function fetchConfigurationBundle(): Promise<ConfigurationBundle> {
     }
     return readJson<ConfigurationBundle>(r);
   }
-  return throwApiResponseError(suiteConfigurationBundlePath(), last!, "Could not export configuration");
+  return throwApiResponseError(
+    suiteConfigurationBundlePath(),
+    last!,
+    "Could not export configuration",
+  );
 }
 
-export async function putConfigurationBundle(bundle: ConfigurationBundle): Promise<ConfigurationBundle> {
+export async function putConfigurationBundle(
+  bundle: ConfigurationBundle,
+): Promise<ConfigurationBundle> {
   const csrf_token = await fetchCsrfToken();
   let last: Response | undefined;
   for (const path of configurationBundlePaths) {
@@ -171,7 +210,11 @@ export async function putConfigurationBundle(bundle: ConfigurationBundle): Promi
     }
     return readJson<ConfigurationBundle>(r);
   }
-  return throwApiResponseError(suiteConfigurationBundlePath(), last!, "Could not restore configuration");
+  return throwApiResponseError(
+    suiteConfigurationBundlePath(),
+    last!,
+    "Could not restore configuration",
+  );
 }
 
 export async function fetchConfigurationBackupList(): Promise<SuiteConfigurationBackupListOut> {
@@ -181,7 +224,9 @@ export async function fetchConfigurationBackupList(): Promise<SuiteConfiguration
   return readJson<SuiteConfigurationBackupListOut>(r);
 }
 
-export async function fetchStoredConfigurationBackupBlob(backupId: number): Promise<Blob> {
+export async function fetchStoredConfigurationBackupBlob(
+  backupId: number,
+): Promise<Blob> {
   const path = `${suiteConfigurationBackupsPath()}/${backupId}/download`;
   const r = await apiFetch(path);
   await requireOk(path, r, "Could not download automatic snapshot");

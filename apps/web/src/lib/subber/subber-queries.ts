@@ -97,7 +97,13 @@ export function usePutSubberSettingsMutation() {
 export function usePutSubberProviderMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ providerKey, body }: { providerKey: string; body: SubberProviderPutIn }) => putSubberProvider(providerKey, body),
+    mutationFn: ({
+      providerKey,
+      body,
+    }: {
+      providerKey: string;
+      body: SubberProviderPutIn;
+    }) => putSubberProvider(providerKey, body),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["subber", "providers"] });
     },

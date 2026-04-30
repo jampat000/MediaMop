@@ -63,9 +63,13 @@ export function MmMultiOptionRows({
             onChange={(e) => opt.onCheckedChange(e.target.checked)}
           />
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-medium text-[var(--mm-text1)]">{opt.title}</span>
+            <span className="block text-sm font-medium text-[var(--mm-text1)]">
+              {opt.title}
+            </span>
             {opt.description ? (
-              <span className="mt-0.5 block text-xs leading-snug text-[var(--mm-text3)]">{opt.description}</span>
+              <span className="mt-0.5 block text-xs leading-snug text-[var(--mm-text3)]">
+                {opt.description}
+              </span>
             ) : null}
           </span>
         </label>

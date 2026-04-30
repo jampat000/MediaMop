@@ -6,7 +6,7 @@ import json
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
@@ -24,7 +24,7 @@ from mediamop.modules.subber.subber_schemas import SubberMoviesLibraryOut, Subbe
 from mediamop.modules.subber.subber_settings_service import ensure_subber_settings_row, language_preferences_list
 from mediamop.modules.subber.subber_subtitle_state_service import get_all_for_scope, get_state_by_id
 from mediamop.platform.auth.authorization import RequireOperatorDep
-from mediamop.platform.auth.csrf import verify_csrf_token
+from mediamop.platform.auth.csrf import current_raw_session_token, verify_csrf_token
 from mediamop.platform.auth.deps_auth import UserPublicDep
 
 router = APIRouter(tags=["subber-library"])
@@ -87,11 +87,16 @@ def post_subber_search_now(
     _user: RequireOperatorDep,
     db: DbSessionDep,
     settings: SettingsDep,
+    request: Request,
     state_id: int,
     body: SubberCsrfBody,
 ) -> dict[str, str]:
     secret = settings.session_secret or ""
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(
+        secret,
+        body.csrf_token,
+        raw_session_token=current_raw_session_token(request, settings),
+    ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     st = get_state_by_id(db, state_id)
     if st is None:
@@ -112,10 +117,15 @@ def post_subber_search_all_missing_tv(
     _user: RequireOperatorDep,
     db: DbSessionDep,
     settings: SettingsDep,
+    request: Request,
     body: SubberCsrfBody,
 ) -> dict[str, str]:
     secret = settings.session_secret or ""
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(
+        secret,
+        body.csrf_token,
+        raw_session_token=current_raw_session_token(request, settings),
+    ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     dedupe = f"subber:libscan:manual:tv:{uuid.uuid4()}"
     subber_enqueue_or_get_job(
@@ -132,10 +142,15 @@ def post_subber_search_all_missing_movies(
     _user: RequireOperatorDep,
     db: DbSessionDep,
     settings: SettingsDep,
+    request: Request,
     body: SubberCsrfBody,
 ) -> dict[str, str]:
     secret = settings.session_secret or ""
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(
+        secret,
+        body.csrf_token,
+        raw_session_token=current_raw_session_token(request, settings),
+    ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     dedupe = f"subber:libscan:manual:movies:{uuid.uuid4()}"
     subber_enqueue_or_get_job(
@@ -152,10 +167,15 @@ def post_subber_library_sync_tv(
     _user: RequireOperatorDep,
     db: DbSessionDep,
     settings: SettingsDep,
+    request: Request,
     body: SubberCsrfBody,
 ) -> dict[str, str]:
     secret = settings.session_secret or ""
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(
+        secret,
+        body.csrf_token,
+        raw_session_token=current_raw_session_token(request, settings),
+    ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     dedupe = f"subber:libsync:manual:tv:{uuid.uuid4()}"
     subber_enqueue_or_get_job(
@@ -172,10 +192,15 @@ def post_subber_library_sync_movies(
     _user: RequireOperatorDep,
     db: DbSessionDep,
     settings: SettingsDep,
+    request: Request,
     body: SubberCsrfBody,
 ) -> dict[str, str]:
     secret = settings.session_secret or ""
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(
+        secret,
+        body.csrf_token,
+        raw_session_token=current_raw_session_token(request, settings),
+    ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     dedupe = f"subber:libsync:manual:movies:{uuid.uuid4()}"
     subber_enqueue_or_get_job(

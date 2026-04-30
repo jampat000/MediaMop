@@ -4,11 +4,15 @@ type SubberConnectionSectionProps = {
   children: ReactNode;
 };
 
-export function SonarrConnectionSection({ children }: SubberConnectionSectionProps) {
+export function SonarrConnectionSection({
+  children,
+}: SubberConnectionSectionProps) {
   return <>{children}</>;
 }
 
-export function RadarrConnectionSection({ children }: SubberConnectionSectionProps) {
+export function RadarrConnectionSection({
+  children,
+}: SubberConnectionSectionProps) {
   return <>{children}</>;
 }
 

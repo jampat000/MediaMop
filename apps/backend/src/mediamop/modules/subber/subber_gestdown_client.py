@@ -68,5 +68,5 @@ def search(
 def download(*, download_url: str) -> bytes:
     """Download SRT directly from Gestdown download URL."""
     url = download_url if download_url.startswith("http") else f"{BASE}{download_url}"
-    _code, data = request_bytes(url, headers={"User-Agent": USER_AGENT}, timeout=60)
+    _code, data = request_bytes(url, headers={"User-Agent": USER_AGENT}, timeout=60, validate_provider_url=True)
     return data

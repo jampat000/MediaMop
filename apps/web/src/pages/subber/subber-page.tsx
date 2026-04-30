@@ -9,19 +9,35 @@ import { SubberPreferencesTab } from "./subber-preferences-tab";
 import { SubberProvidersTab } from "./subber-providers-tab";
 import { SubberScheduleTab } from "./subber-schedule-tab";
 import { SubberTvTab } from "./subber-tv-tab";
-import { mmModuleTabBlurbBandClass, mmModuleTabBlurbTextClass } from "../../lib/ui/mm-module-tab-blurb";
+import {
+  mmModuleTabBlurbBandClass,
+  mmModuleTabBlurbTextClass,
+} from "../../lib/ui/mm-module-tab-blurb";
 
-type TopTab = "overview" | "tv" | "movies" | "connections" | "providers" | "preferences" | "schedule" | "jobs";
+type TopTab =
+  | "overview"
+  | "tv"
+  | "movies"
+  | "connections"
+  | "providers"
+  | "preferences"
+  | "schedule"
+  | "jobs";
 
 const SUBBER_TAB_BLURBS: Record<TopTab, string> = {
-  overview: "Review subtitle coverage, provider status, and recent Subber activity.",
+  overview:
+    "Review subtitle coverage, provider status, and recent Subber activity.",
   tv: "Review tracked TV episodes, subtitle coverage, and run TV subtitle searches when needed.",
-  movies: "Review tracked movies, subtitle coverage, and run movie subtitle searches when needed.",
-  connections: "Save and test the service connections and credentials Subber depends on.",
+  movies:
+    "Review tracked movies, subtitle coverage, and run movie subtitle searches when needed.",
+  connections:
+    "Save and test the service connections and credentials Subber depends on.",
   providers:
     "Choose which subtitle sources Subber uses and the order it tries them (lower number = searched first). Open a row to set credentials, enable a source, or test it—keep at least one provider on.",
-  preferences: "Set subtitle language, matching, and selection behavior for downloads.",
-  schedule: "Control automatic subtitle scan timing for TV and Movies, including optional windows.",
+  preferences:
+    "Set subtitle language, matching, and selection behavior for downloads.",
+  schedule:
+    "Control automatic subtitle scan timing for TV and Movies, including optional windows.",
   jobs: "View queued, running, and recent Subber jobs.",
 };
 
@@ -46,7 +62,10 @@ export function SubberPage() {
       <header className="mm-page__intro !mb-0">
         <p className="mm-page__eyebrow">MediaMop</p>
         <h1 className="mm-page__title">Subber</h1>
-        <p className="mm-page__subtitle">Automatically find and download subtitles for your movies and TV shows.</p>
+        <p className="mm-page__subtitle">
+          Automatically find and download subtitles for your movies and TV
+          shows.
+        </p>
       </header>
 
       <nav
@@ -70,18 +89,37 @@ export function SubberPage() {
 
       <div className="mm-bubble-stack" role="tabpanel">
         <div className="mm-bubble-stack min-w-0">
-          <div className={mmModuleTabBlurbBandClass} data-testid="subber-tab-blurb">
-            <p className={mmModuleTabBlurbTextClass}>{SUBBER_TAB_BLURBS[tab]}</p>
+          <div
+            className={mmModuleTabBlurbBandClass}
+            data-testid="subber-tab-blurb"
+          >
+            <p className={mmModuleTabBlurbTextClass}>
+              {SUBBER_TAB_BLURBS[tab]}
+            </p>
           </div>
           {tab === "overview" ? (
-            <SubberOverviewTab onOpenTab={(t) => setTab(t === "settings" ? "connections" : t)} />
+            <SubberOverviewTab
+              onOpenTab={(t) => setTab(t === "settings" ? "connections" : t)}
+            />
           ) : null}
-          {tab === "tv" ? <SubberTvTab canOperate={Boolean(canOperate)} /> : null}
-          {tab === "movies" ? <SubberMoviesTab canOperate={Boolean(canOperate)} /> : null}
-          {tab === "connections" ? <SubberConnectionsTab canOperate={Boolean(canOperate)} /> : null}
-          {tab === "providers" ? <SubberProvidersTab canOperate={Boolean(canOperate)} /> : null}
-          {tab === "preferences" ? <SubberPreferencesTab canOperate={Boolean(canOperate)} /> : null}
-          {tab === "schedule" ? <SubberScheduleTab canOperate={Boolean(canOperate)} /> : null}
+          {tab === "tv" ? (
+            <SubberTvTab canOperate={Boolean(canOperate)} />
+          ) : null}
+          {tab === "movies" ? (
+            <SubberMoviesTab canOperate={Boolean(canOperate)} />
+          ) : null}
+          {tab === "connections" ? (
+            <SubberConnectionsTab canOperate={Boolean(canOperate)} />
+          ) : null}
+          {tab === "providers" ? (
+            <SubberProvidersTab canOperate={Boolean(canOperate)} />
+          ) : null}
+          {tab === "preferences" ? (
+            <SubberPreferencesTab canOperate={Boolean(canOperate)} />
+          ) : null}
+          {tab === "schedule" ? (
+            <SubberScheduleTab canOperate={Boolean(canOperate)} />
+          ) : null}
           {tab === "jobs" ? <SubberJobsTab /> : null}
         </div>
       </div>

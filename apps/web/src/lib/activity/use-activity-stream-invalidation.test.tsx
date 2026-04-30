@@ -23,7 +23,10 @@ class FakeEventSource {
     this.listeners.set(type, set);
   }
 
-  removeEventListener(type: string, cb: (ev: MessageEvent<string>) => void): void {
+  removeEventListener(
+    type: string,
+    cb: (ev: MessageEvent<string>) => void,
+  ): void {
     this.listeners.get(type)?.delete(cb);
   }
 
@@ -52,7 +55,10 @@ describe("useActivityStreamInvalidation", () => {
   });
 
   it("invalidates activity recent query on activity.latest", () => {
-    vi.stubGlobal("EventSource", FakeEventSource as unknown as typeof EventSource);
+    vi.stubGlobal(
+      "EventSource",
+      FakeEventSource as unknown as typeof EventSource,
+    );
     const qc = new QueryClient();
     const spy = vi.spyOn(qc, "invalidateQueries");
 
@@ -68,7 +74,10 @@ describe("useActivityStreamInvalidation", () => {
   });
 
   it("invalidates when an existing activity row receives a newer revision", () => {
-    vi.stubGlobal("EventSource", FakeEventSource as unknown as typeof EventSource);
+    vi.stubGlobal(
+      "EventSource",
+      FakeEventSource as unknown as typeof EventSource,
+    );
     const qc = new QueryClient();
     const spy = vi.spyOn(qc, "invalidateQueries");
 
@@ -77,15 +86,24 @@ describe("useActivityStreamInvalidation", () => {
     });
 
     const src = FakeEventSource.instances[0];
-    src.emit("activity.latest", JSON.stringify({ latest_event_id: 12, activity_revision: 1 }));
-    src.emit("activity.latest", JSON.stringify({ latest_event_id: 12, activity_revision: 2 }));
+    src.emit(
+      "activity.latest",
+      JSON.stringify({ latest_event_id: 12, activity_revision: 1 }),
+    );
+    src.emit(
+      "activity.latest",
+      JSON.stringify({ latest_event_id: 12, activity_revision: 2 }),
+    );
 
     expect(spy).toHaveBeenCalledTimes(2);
     expect(spy).toHaveBeenLastCalledWith({ queryKey: activityRecentKey });
   });
 
   it("ignores malformed stream messages instead of breaking live updates", () => {
-    vi.stubGlobal("EventSource", FakeEventSource as unknown as typeof EventSource);
+    vi.stubGlobal(
+      "EventSource",
+      FakeEventSource as unknown as typeof EventSource,
+    );
     const qc = new QueryClient();
     const spy = vi.spyOn(qc, "invalidateQueries");
 
@@ -96,14 +114,20 @@ describe("useActivityStreamInvalidation", () => {
     const src = FakeEventSource.instances[0];
     src.emit("activity.latest", "{");
     src.emit("activity.latest", JSON.stringify({ activity_revision: 1 }));
-    src.emit("activity.latest", JSON.stringify({ latest_event_id: 12, activity_revision: 2 }));
+    src.emit(
+      "activity.latest",
+      JSON.stringify({ latest_event_id: 12, activity_revision: 2 }),
+    );
 
     expect(spy).toHaveBeenCalledTimes(1);
     expect(spy).toHaveBeenCalledWith({ queryKey: activityRecentKey });
   });
 
   it("invalidates dashboard status query on activity.latest", () => {
-    vi.stubGlobal("EventSource", FakeEventSource as unknown as typeof EventSource);
+    vi.stubGlobal(
+      "EventSource",
+      FakeEventSource as unknown as typeof EventSource,
+    );
     const qc = new QueryClient();
     const spy = vi.spyOn(qc, "invalidateQueries");
 
@@ -118,16 +142,25 @@ describe("useActivityStreamInvalidation", () => {
   });
 
   it("shares one EventSource across multiple query subscribers", () => {
-    vi.stubGlobal("EventSource", FakeEventSource as unknown as typeof EventSource);
+    vi.stubGlobal(
+      "EventSource",
+      FakeEventSource as unknown as typeof EventSource,
+    );
     const qc = new QueryClient();
     const spy = vi.spyOn(qc, "invalidateQueries");
 
-    const first = renderHook(() => useActivityStreamInvalidation(activityRecentKey), {
-      wrapper: withQueryClient(qc),
-    });
-    const second = renderHook(() => useActivityStreamInvalidation(dashboardStatusKey), {
-      wrapper: withQueryClient(qc),
-    });
+    const first = renderHook(
+      () => useActivityStreamInvalidation(activityRecentKey),
+      {
+        wrapper: withQueryClient(qc),
+      },
+    );
+    const second = renderHook(
+      () => useActivityStreamInvalidation(dashboardStatusKey),
+      {
+        wrapper: withQueryClient(qc),
+      },
+    );
 
     expect(FakeEventSource.instances).toHaveLength(1);
     const src = FakeEventSource.instances[0];
@@ -144,12 +177,18 @@ describe("useActivityStreamInvalidation", () => {
   });
 
   it("opens a fresh EventSource after all subscribers unmount", async () => {
-    vi.stubGlobal("EventSource", FakeEventSource as unknown as typeof EventSource);
+    vi.stubGlobal(
+      "EventSource",
+      FakeEventSource as unknown as typeof EventSource,
+    );
     const qc = new QueryClient();
 
-    const first = renderHook(() => useActivityStreamInvalidation(activityRecentKey), {
-      wrapper: withQueryClient(qc),
-    });
+    const first = renderHook(
+      () => useActivityStreamInvalidation(activityRecentKey),
+      {
+        wrapper: withQueryClient(qc),
+      },
+    );
     first.unmount();
     await waitFor(() => expect(FakeEventSource.instances[0].closed).toBe(true));
 

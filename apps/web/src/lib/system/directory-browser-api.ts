@@ -13,7 +13,9 @@ export type DirectoryBrowseResponse = {
   entries: DirectoryBrowseEntry[];
 };
 
-export async function fetchServerDirectories(path?: string | null): Promise<DirectoryBrowseResponse> {
+export async function fetchServerDirectories(
+  path?: string | null,
+): Promise<DirectoryBrowseResponse> {
   const qs = path?.trim() ? `?path=${encodeURIComponent(path.trim())}` : "";
   const apiPath = `/api/v1/system/directories${qs}`;
   const r = await apiFetch(apiPath);

@@ -22,10 +22,15 @@ describe("SubberProvidersTab", () => {
 
   beforeEach(() => {
     vi.spyOn(authApi, "fetchCsrfToken").mockResolvedValue("csrf");
-    vi.spyOn(subberQueries, "useSubberTestOpensubtitlesMutation").mockReturnValue({
+    vi.spyOn(
+      subberQueries,
+      "useSubberTestOpensubtitlesMutation",
+    ).mockReturnValue({
       mutateAsync: vi.fn().mockResolvedValue({ ok: true, message: "ok" }),
       isPending: false,
-    } as unknown as ReturnType<typeof subberQueries.useSubberTestOpensubtitlesMutation>);
+    } as unknown as ReturnType<
+      typeof subberQueries.useSubberTestOpensubtitlesMutation
+    >);
     vi.spyOn(subberQueries, "useSubberProvidersQuery").mockReturnValue({
       data: [
         {
@@ -45,11 +50,15 @@ describe("SubberProvidersTab", () => {
     vi.spyOn(subberQueries, "usePutSubberProviderMutation").mockReturnValue({
       mutateAsync: vi.fn().mockResolvedValue({}),
       isPending: false,
-    } as unknown as ReturnType<typeof subberQueries.usePutSubberProviderMutation>);
+    } as unknown as ReturnType<
+      typeof subberQueries.usePutSubberProviderMutation
+    >);
     vi.spyOn(subberQueries, "useSubberTestProviderMutation").mockReturnValue({
       mutateAsync: vi.fn().mockResolvedValue({ ok: true, message: "ok" }),
       isPending: false,
-    } as unknown as ReturnType<typeof subberQueries.useSubberTestProviderMutation>);
+    } as unknown as ReturnType<
+      typeof subberQueries.useSubberTestProviderMutation
+    >);
   });
 
   it("saves OpenSubtitles when Save is clicked", async () => {
@@ -57,14 +66,26 @@ describe("SubberProvidersTab", () => {
     vi.spyOn(subberQueries, "usePutSubberProviderMutation").mockReturnValue({
       mutateAsync: putProvMutate,
       isPending: false,
-    } as unknown as ReturnType<typeof subberQueries.usePutSubberProviderMutation>);
+    } as unknown as ReturnType<
+      typeof subberQueries.usePutSubberProviderMutation
+    >);
 
     const client = new QueryClient();
     render(wrap(<SubberProvidersTab canOperate />, client));
-    await waitFor(() => expect(screen.getByTestId("subber-providers-tab")).toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: /OpenSubtitles\.org/i }));
-    await waitFor(() => expect(screen.getByTestId("subber-save-opensubtitles")).toBeInTheDocument());
-    fireEvent.change(screen.getByLabelText("Username"), { target: { value: "u" } });
+    await waitFor(() =>
+      expect(screen.getByTestId("subber-providers-tab")).toBeInTheDocument(),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /OpenSubtitles\.org/i }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("subber-save-opensubtitles"),
+      ).toBeInTheDocument(),
+    );
+    fireEvent.change(screen.getByLabelText("Username"), {
+      target: { value: "u" },
+    });
     fireEvent.click(screen.getByTestId("subber-save-opensubtitles"));
     await waitFor(() => expect(putProvMutate).toHaveBeenCalled());
   });
@@ -72,20 +93,39 @@ describe("SubberProvidersTab", () => {
   it("renders subtitle providers section", async () => {
     const client = new QueryClient();
     render(wrap(<SubberProvidersTab canOperate />, client));
-    await waitFor(() => expect(screen.getByTestId("subber-providers-section")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("subber-providers-section"),
+      ).toBeInTheDocument(),
+    );
   });
 
   it("runs test connection when Test is clicked", async () => {
-    const testMut = vi.fn().mockResolvedValue({ ok: true, message: "Connected" });
-    vi.spyOn(subberQueries, "useSubberTestOpensubtitlesMutation").mockReturnValue({
+    const testMut = vi
+      .fn()
+      .mockResolvedValue({ ok: true, message: "Connected" });
+    vi.spyOn(
+      subberQueries,
+      "useSubberTestOpensubtitlesMutation",
+    ).mockReturnValue({
       mutateAsync: testMut,
       isPending: false,
-    } as unknown as ReturnType<typeof subberQueries.useSubberTestOpensubtitlesMutation>);
+    } as unknown as ReturnType<
+      typeof subberQueries.useSubberTestOpensubtitlesMutation
+    >);
     const client = new QueryClient();
     render(wrap(<SubberProvidersTab canOperate />, client));
-    await waitFor(() => expect(screen.getByTestId("subber-providers-tab")).toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: /OpenSubtitles\.org/i }));
-    await waitFor(() => expect(screen.getByTestId("subber-test-opensubtitles")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("subber-providers-tab")).toBeInTheDocument(),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /OpenSubtitles\.org/i }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("subber-test-opensubtitles"),
+      ).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByTestId("subber-test-opensubtitles"));
     await waitFor(() => expect(testMut).toHaveBeenCalled());
   });
@@ -109,6 +149,10 @@ describe("SubberProvidersTab", () => {
     } as unknown as ReturnType<typeof subberQueries.useSubberProvidersQuery>);
     const client = new QueryClient();
     render(wrap(<SubberProvidersTab canOperate />, client));
-    await waitFor(() => expect(screen.getByText("Not available in this version.")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByText("Not available in this version."),
+      ).toBeInTheDocument(),
+    );
   });
 });

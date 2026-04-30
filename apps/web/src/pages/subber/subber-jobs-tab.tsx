@@ -40,7 +40,9 @@ export function SubberJobsTab() {
   const fmt = useAppDateFormatter();
 
   const filtered =
-    statusFilter === "recent" ? (q.data?.jobs ?? []) : (q.data?.jobs ?? []).filter((j) => j.status === statusFilter);
+    statusFilter === "recent"
+      ? (q.data?.jobs ?? [])
+      : (q.data?.jobs ?? []).filter((j) => j.status === statusFilter);
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const pagedRows = filtered.slice((page - 1) * pageSize, page * pageSize);
 
@@ -60,20 +62,30 @@ export function SubberJobsTab() {
       data-testid="subber-jobs-tab"
     >
       <header className="border-b border-[var(--mm-border)] bg-black/10 px-4 py-3.5 sm:px-5 sm:py-4">
-        <h2 className="text-lg font-semibold tracking-tight text-[var(--mm-text)]">Jobs</h2>
-        <p className="mt-1 text-sm text-[var(--mm-text2)]">Pending, running, and recent Subber work.</p>
+        <h2 className="text-lg font-semibold tracking-tight text-[var(--mm-text)]">
+          Jobs
+        </h2>
+        <p className="mt-1 text-sm text-[var(--mm-text2)]">
+          Pending, running, and recent Subber work.
+        </p>
       </header>
       <div className="space-y-4 px-4 py-4 sm:px-5 sm:py-5">
         <div className="flex flex-col gap-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-3.5 py-3.5 sm:flex-row sm:items-end sm:justify-between sm:px-5 sm:py-4">
           <label className="block min-w-0 flex-1">
-            <span id={filterLabelId} className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+            <span
+              id={filterLabelId}
+              className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]"
+            >
               Show jobs
             </span>
             <MmListboxPicker
               className="mt-2 max-w-xl"
               ariaLabelledBy={filterLabelId}
               placeholder="Recent (all statuses, newest first)"
-              options={JOB_FILTER_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+              options={JOB_FILTER_OPTIONS.map((o) => ({
+                value: o.value,
+                label: o.label,
+              }))}
               value={statusFilter}
               onChange={(v) => setStatusFilter(v)}
             />
@@ -87,42 +99,57 @@ export function SubberJobsTab() {
         ) : filtered.length > 0 ? (
           <>
             <div className="overflow-x-auto rounded border border-[var(--mm-border)]">
-            <table className="w-full min-w-[32rem] text-left text-sm">
-              <thead className="bg-black/20 text-[var(--mm-text2)]">
-                <tr>
-                  <th className="sticky left-0 top-0 z-30 bg-black/20 px-3 py-2 font-medium">Job</th>
-                  <th className="sticky top-0 z-20 bg-black/20 px-3 py-2 font-medium">Scope</th>
-                  <th className="sticky top-0 z-20 bg-black/20 px-3 py-2 font-medium">Status</th>
-                  <th className="sticky top-0 z-20 bg-black/20 px-3 py-2 font-medium">Updated</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pagedRows.map((j) => (
-                  <tr key={j.id} className="border-t border-[var(--mm-border)]">
-                    <td className="sticky left-0 z-[1] max-w-[14rem] break-words bg-[var(--mm-card-bg)] px-3 py-2">
-                      {jobLabel(j.job_kind)}
-                    </td>
-                    <td className="px-3 py-2 capitalize text-[var(--mm-text2)]">{j.scope ?? "—"}</td>
-                    <td className="px-3 py-2">
-                      <span
-                        className={
-                          j.status === "completed"
-                            ? "text-emerald-500"
-                            : j.status === "failed"
-                              ? "text-red-400"
-                              : j.status === "running"
-                                ? "text-amber-400"
-                                : "text-[var(--mm-text2)]"
-                        }
-                      >
-                        {j.status}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-xs text-[var(--mm-text2)]">{fmt(j.updated_at)}</td>
+              <table className="w-full min-w-[32rem] text-left text-sm">
+                <thead className="bg-black/20 text-[var(--mm-text2)]">
+                  <tr>
+                    <th className="sticky left-0 top-0 z-30 bg-black/20 px-3 py-2 font-medium">
+                      Job
+                    </th>
+                    <th className="sticky top-0 z-20 bg-black/20 px-3 py-2 font-medium">
+                      Scope
+                    </th>
+                    <th className="sticky top-0 z-20 bg-black/20 px-3 py-2 font-medium">
+                      Status
+                    </th>
+                    <th className="sticky top-0 z-20 bg-black/20 px-3 py-2 font-medium">
+                      Updated
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {pagedRows.map((j) => (
+                    <tr
+                      key={j.id}
+                      className="border-t border-[var(--mm-border)]"
+                    >
+                      <td className="sticky left-0 z-[1] max-w-[14rem] break-words bg-[var(--mm-card-bg)] px-3 py-2">
+                        {jobLabel(j.job_kind)}
+                      </td>
+                      <td className="px-3 py-2 capitalize text-[var(--mm-text2)]">
+                        {j.scope ?? "—"}
+                      </td>
+                      <td className="px-3 py-2">
+                        <span
+                          className={
+                            j.status === "completed"
+                              ? "text-emerald-500"
+                              : j.status === "failed"
+                                ? "text-red-400"
+                                : j.status === "running"
+                                  ? "text-amber-400"
+                                  : "text-[var(--mm-text2)]"
+                          }
+                        >
+                          {j.status}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-xs text-[var(--mm-text2)]">
+                        {fmt(j.updated_at)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
             <MmJobsPagination
               page={page}
@@ -135,7 +162,9 @@ export function SubberJobsTab() {
           </>
         ) : (
           <div className="space-y-1 rounded border border-[var(--mm-border)] bg-black/10 px-5 py-10 text-center">
-            <p className="text-sm font-medium text-[var(--mm-text)]">No jobs match this view</p>
+            <p className="text-sm font-medium text-[var(--mm-text)]">
+              No jobs match this view
+            </p>
             <p className="text-xs text-[var(--mm-text2)]">
               {statusFilter !== "recent"
                 ? `Nothing with status "${statusFilter}" yet. Try Recent (all statuses) for the latest rows.`
@@ -145,8 +174,12 @@ export function SubberJobsTab() {
         )}
 
         <p className="text-xs text-[var(--mm-text2)]">
-          Full detail on every subtitle search, sync result, and any errors is in the{" "}
-          <Link to="/app/activity" className="text-[var(--mm-accent)] underline">
+          Full detail on every subtitle search, sync result, and any errors is
+          in the{" "}
+          <Link
+            to="/app/activity"
+            className="text-[var(--mm-accent)] underline"
+          >
             Activity log
           </Link>
           .

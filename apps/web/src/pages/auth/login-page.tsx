@@ -3,11 +3,22 @@ import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AuthBrandStack } from "../../components/brand/auth-brand-stack";
 import { ApiEntryError } from "../../components/shared/api-entry-error";
 import { PageLoading } from "../../components/shared/page-loading";
-import { useBootstrapStatusQuery, useLoginMutation, useMeQuery } from "../../lib/auth/queries";
+import {
+  useBootstrapStatusQuery,
+  useLoginMutation,
+  useMeQuery,
+} from "../../lib/auth/queries";
 
 function EyeIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+    >
       <path
         d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"
         stroke="currentColor"
@@ -22,7 +33,14 @@ function EyeIcon() {
 
 function EyeOffIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+    >
       <path
         d="M10.73 5.08A10.4 10.4 0 0 1 12 5c7 0 10 7 10 7a13.2 13.2 0 0 1-1.67 2.68M6.61 6.61A13.5 13.5 0 0 0 2 12s4 7 10 7c1.38 0 2.65-.21 3.78-.6M9.88 9.88a3 3 0 1 0 4.24 4.24"
         stroke="currentColor"
@@ -30,7 +48,12 @@ function EyeOffIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <path d="m2 2 20 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path
+        d="m2 2 20 20"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -41,7 +64,8 @@ export function LoginPage() {
   const fromSetup = Boolean(
     (location.state as { fromSetup?: boolean } | null)?.fromSetup,
   );
-  const sessionExpired = new URLSearchParams(location.search).get("session") === "expired";
+  const sessionExpired =
+    new URLSearchParams(location.search).get("session") === "expired";
   const me = useMeQuery();
   const boot = useBootstrapStatusQuery();
   const login = useLoginMutation();
@@ -87,7 +111,8 @@ export function LoginPage() {
           <p className="mm-auth-eyebrow">MediaMop</p>
           <h1 className="mm-auth-title">Sign in</h1>
           <p className="mm-auth-lead">
-            Server-side session sign-in — MediaMop keeps your sign-in on the backend, not browser storage.
+            Server-side session sign-in — MediaMop keeps your sign-in on the
+            backend, not browser storage.
           </p>
 
           {fromSetup ? (
@@ -104,14 +129,21 @@ export function LoginPage() {
           {boot.data?.bootstrap_allowed ? (
             <p className="mm-auth-lead mt-2">
               First-time setup?{" "}
-              <Link to="/setup" className="font-medium text-[var(--mm-accent-bright)] hover:underline">
+              <Link
+                to="/setup"
+                className="font-medium text-[var(--mm-accent-bright)] hover:underline"
+              >
                 Create the admin account
               </Link>
               .
             </p>
           ) : null}
 
-          <form data-testid="login-form" className="mm-auth-form mt-4" onSubmit={onSubmit}>
+          <form
+            data-testid="login-form"
+            className="mm-auth-form mt-4"
+            onSubmit={onSubmit}
+          >
             <label className="mm-auth-label" htmlFor="login-user">
               Username
             </label>
@@ -157,7 +189,9 @@ export function LoginPage() {
             </div>
             {login.isError ? (
               <p className="mm-auth-banner" role="alert">
-                {login.error instanceof Error ? login.error.message : "Sign-in failed."}
+                {login.error instanceof Error
+                  ? login.error.message
+                  : "Sign-in failed."}
               </p>
             ) : null}
             <button

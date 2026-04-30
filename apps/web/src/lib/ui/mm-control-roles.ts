@@ -55,7 +55,8 @@ export function mmListboxOptionButtonClass(selected: boolean): string {
 }
 
 /** Monospace for read-only technical strings (resolved paths, env keys, raw ids). */
-export const mmTechnicalMonoSmallClass = "font-mono text-xs break-all text-[var(--mm-text2)]";
+export const mmTechnicalMonoSmallClass =
+  "font-mono text-xs break-all text-[var(--mm-text2)]";
 
 /** In-page section tabs (e.g. module Overview / Connections). Not sidebar navigation. */
 export function mmSectionTabClass(active: boolean): string {

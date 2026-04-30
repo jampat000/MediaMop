@@ -95,9 +95,17 @@ def _csrf_settings(**overrides: object) -> MediaMopSettings:
 def test_issue_and_verify_csrf() -> None:
     secret = "unit-test-csrf-secret-key-32chars-minimum!"
     t = issue_csrf_token(secret)
-    assert verify_csrf_token(secret, t) is True
+    assert verify_csrf_token(secret, t, allow_anonymous=True) is True
     assert verify_csrf_token("wrong-secret", t) is False
     assert verify_csrf_token(secret, "tampered") is False
+
+
+def test_session_bound_csrf_rejects_other_session() -> None:
+    secret = "unit-test-csrf-secret-key-32chars-minimum!"
+    token = issue_csrf_token(secret, "session-a-cookie")
+    assert verify_csrf_token(secret, token, raw_session_token="session-a-cookie") is True
+    assert verify_csrf_token(secret, token, raw_session_token="session-b-cookie") is False
+    assert verify_csrf_token(secret, token, allow_anonymous=True) is False
 
 
 def _request_with_headers(items: list[tuple[bytes, bytes]]) -> Request:

@@ -33,7 +33,9 @@ vi.mock("../../lib/auth/queries", () => ({
 }));
 
 function wrap(ui: ReactNode) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return (
     <QueryClientProvider client={client}>
       <MemoryRouter>{ui}</MemoryRouter>
@@ -50,12 +52,18 @@ describe("SetupPage", () => {
   it("blocks bootstrap submit when password is shorter than 8 characters", async () => {
     render(wrap(<SetupPage />));
 
-    fireEvent.change(screen.getByTestId("setup-username"), { target: { value: "admin" } });
-    fireEvent.change(screen.getByTestId("setup-password"), { target: { value: "short" } });
+    fireEvent.change(screen.getByTestId("setup-username"), {
+      target: { value: "admin" },
+    });
+    fireEvent.change(screen.getByTestId("setup-password"), {
+      target: { value: "short" },
+    });
     fireEvent.submit(screen.getByTestId("setup-form"));
 
     expect(mutateAsyncMock).not.toHaveBeenCalled();
-    expect(screen.getByRole("alert")).toHaveTextContent("Password must be at least 8 characters.");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Password must be at least 8 characters.",
+    );
   });
 
   it("submits bootstrap when username and password meet the requirements", async () => {
@@ -63,7 +71,9 @@ describe("SetupPage", () => {
 
     render(wrap(<SetupPage />));
 
-    fireEvent.change(screen.getByTestId("setup-username"), { target: { value: " admin " } });
+    fireEvent.change(screen.getByTestId("setup-username"), {
+      target: { value: " admin " },
+    });
     fireEvent.change(screen.getByTestId("setup-password"), {
       target: { value: "password-strong" },
     });

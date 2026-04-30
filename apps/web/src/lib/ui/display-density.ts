@@ -13,7 +13,9 @@ export function parseDisplayDensity(raw: string | null): DisplayDensity {
 
 export function readStoredDisplayDensity(): DisplayDensity {
   try {
-    return parseDisplayDensity(localStorage.getItem(DISPLAY_DENSITY_STORAGE_KEY));
+    return parseDisplayDensity(
+      localStorage.getItem(DISPLAY_DENSITY_STORAGE_KEY),
+    );
   } catch {
     return "default";
   }

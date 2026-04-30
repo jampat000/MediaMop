@@ -83,11 +83,19 @@ const jellyfinMovies: PrunerServerInstance = {
 
 describe("PrunerScopeTab Movies / watched movies", () => {
   it("shows Jellyfin/Emby watched-movies panel and queues preview with watched_movies_reported", async () => {
-    const spyRuns = vi.spyOn(prunerApi, "fetchPrunerPreviewRuns").mockResolvedValue([]);
-    const spyInst = vi.spyOn(prunerApi, "fetchPrunerInstance").mockResolvedValue(jellyfinMovies);
-    const spyPreview = vi.spyOn(prunerApi, "postPrunerPreview").mockResolvedValue({ pruner_job_id: 901 });
+    const spyRuns = vi
+      .spyOn(prunerApi, "fetchPrunerPreviewRuns")
+      .mockResolvedValue([]);
+    const spyInst = vi
+      .spyOn(prunerApi, "fetchPrunerInstance")
+      .mockResolvedValue(jellyfinMovies);
+    const spyPreview = vi
+      .spyOn(prunerApi, "postPrunerPreview")
+      .mockResolvedValue({ pruner_job_id: 901 });
     try {
-      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const qc = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
       qc.setQueryData(qk.me, operator);
       qc.setQueryData(["pruner", "instances", 22], jellyfinMovies);
 
@@ -96,7 +104,9 @@ describe("PrunerScopeTab Movies / watched movies", () => {
           {
             path: "/instances/:instanceId",
             element: <PrunerInstanceShell />,
-            children: [{ path: "movies", element: <PrunerScopeTab scope="movies" /> }],
+            children: [
+              { path: "movies", element: <PrunerScopeTab scope="movies" /> },
+            ],
           },
         ],
         { initialEntries: ["/instances/22/movies"] },
@@ -108,12 +118,26 @@ describe("PrunerScopeTab Movies / watched movies", () => {
         </QueryClientProvider>,
       );
 
-      await waitFor(() => expect(screen.getByTestId("pruner-watched-movies-panel")).toBeInTheDocument());
-      expect(screen.getByTestId("pruner-scope-trust-banner")).toBeInTheDocument();
-      expect(screen.getByTestId("pruner-filters-section-heading").textContent ?? "").toMatch(/optional filters for scans/i);
-      expect(screen.getByTestId("pruner-rules-section-heading").textContent ?? "").toMatch(/cleanup rules/i);
-      expect(screen.getByTestId("pruner-actions-history-heading").textContent ?? "").toMatch(/scan and delete actions/i);
-      fireEvent.click(screen.getByRole("button", { name: /Scan for watched movies/i }));
+      await waitFor(() =>
+        expect(
+          screen.getByTestId("pruner-watched-movies-panel"),
+        ).toBeInTheDocument(),
+      );
+      expect(
+        screen.getByTestId("pruner-scope-trust-banner"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("pruner-filters-section-heading").textContent ?? "",
+      ).toMatch(/optional filters for scans/i);
+      expect(
+        screen.getByTestId("pruner-rules-section-heading").textContent ?? "",
+      ).toMatch(/cleanup rules/i);
+      expect(
+        screen.getByTestId("pruner-actions-history-heading").textContent ?? "",
+      ).toMatch(/scan and delete actions/i);
+      fireEvent.click(
+        screen.getByRole("button", { name: /Scan for watched movies/i }),
+      );
       await waitFor(() => {
         expect(spyPreview).toHaveBeenCalledWith(22, "movies", {
           rule_family_id: RULE_FAMILY_WATCHED_MOVIES_REPORTED,

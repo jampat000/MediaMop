@@ -64,7 +64,8 @@ export function StartupGate({ children }: { children: ReactNode }) {
         if (elapsedMs >= STARTUP_TIMEOUT_MS) {
           setState({
             kind: "failed",
-            message: "MediaMop did not become ready in time. Check that the MediaMop server is still running, then refresh.",
+            message:
+              "MediaMop did not become ready in time. Check that the MediaMop server is still running, then refresh.",
             steps: payload.steps ?? [],
           });
           return;
@@ -84,7 +85,8 @@ export function StartupGate({ children }: { children: ReactNode }) {
         if (elapsedMs >= STARTUP_TIMEOUT_MS) {
           setState({
             kind: "failed",
-            message: "MediaMop did not respond in time. Check that the MediaMop server is running, then refresh.",
+            message:
+              "MediaMop did not respond in time. Check that the MediaMop server is running, then refresh.",
             steps: [],
           });
           return;
@@ -121,38 +123,55 @@ export function StartupGate({ children }: { children: ReactNode }) {
   return (
     <main className="min-h-screen bg-[var(--mm-bg)] px-6 py-10 text-[var(--mm-text)]">
       <div className="mx-auto flex min-h-[70vh] max-w-xl flex-col justify-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--mm-accent)]">MediaMop</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--mm-accent)]">
+          MediaMop
+        </p>
         <h1 className="mt-4 text-3xl font-semibold">{state.message}</h1>
         <p className="mt-3 text-sm leading-6 text-[var(--mm-text3)]">
-          Preparing the local database, background workers, and schedules before opening the app.
+          Preparing the local database, background workers, and schedules before
+          opening the app.
         </p>
         <div className="mt-6 rounded border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-4">
           <div className="h-2 overflow-hidden rounded-full bg-[var(--mm-input-bg)]">
             <div
               className="h-full rounded-full bg-[var(--mm-accent)] transition-all"
-              style={{ width: state.kind === "failed" ? "100%" : `${Math.min(90, 20 + state.elapsedMs / 750)}%` }}
+              style={{
+                width:
+                  state.kind === "failed"
+                    ? "100%"
+                    : `${Math.min(90, 20 + state.elapsedMs / 750)}%`,
+              }}
             />
           </div>
           <ul className="mt-4 space-y-3 text-sm">
-            {(state.steps.length ? state.steps : [{ name: "server", status: "starting", detail: "Waiting for MediaMop to start." }]).map(
-              (step) => (
-                <li key={step.name} className="flex gap-3">
-                  <span
-                    className={
-                      step.status === "ready"
-                        ? "mt-1 h-2.5 w-2.5 rounded-full bg-emerald-400"
-                        : state.kind === "failed"
-                          ? "mt-1 h-2.5 w-2.5 rounded-full bg-red-400"
-                          : "mt-1 h-2.5 w-2.5 rounded-full bg-[var(--mm-accent)]"
-                    }
-                  />
-                  <span>
-                    <span className="block font-semibold capitalize text-[var(--mm-text)]">{step.name}</span>
-                    <span className="text-[var(--mm-text3)]">{step.detail}</span>
+            {(state.steps.length
+              ? state.steps
+              : [
+                  {
+                    name: "server",
+                    status: "starting",
+                    detail: "Waiting for MediaMop to start.",
+                  },
+                ]
+            ).map((step) => (
+              <li key={step.name} className="flex gap-3">
+                <span
+                  className={
+                    step.status === "ready"
+                      ? "mt-1 h-2.5 w-2.5 rounded-full bg-emerald-400"
+                      : state.kind === "failed"
+                        ? "mt-1 h-2.5 w-2.5 rounded-full bg-red-400"
+                        : "mt-1 h-2.5 w-2.5 rounded-full bg-[var(--mm-accent)]"
+                  }
+                />
+                <span>
+                  <span className="block font-semibold capitalize text-[var(--mm-text)]">
+                    {step.name}
                   </span>
-                </li>
-              ),
-            )}
+                  <span className="text-[var(--mm-text3)]">{step.detail}</span>
+                </span>
+              </li>
+            ))}
           </ul>
         </div>
         {state.kind === "failed" ? (

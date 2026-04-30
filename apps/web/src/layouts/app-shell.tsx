@@ -1,11 +1,22 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { BrandHeaderLink } from "../components/brand/brand-header-link";
-import { NavIconActivity, NavIconDashboard, NavIconRefiner, NavIconSettings, NavIconSubber, NavIconPruner } from "../components/shell/nav-icons";
+import {
+  NavIconActivity,
+  NavIconDashboard,
+  NavIconRefiner,
+  NavIconSettings,
+  NavIconSubber,
+  NavIconPruner,
+} from "../components/shell/nav-icons";
 import { useLogoutMutation } from "../lib/auth/queries";
 import { useDashboardStatusQuery } from "../lib/dashboard/queries";
 import { useSuiteSettingsQuery } from "../lib/suite/queries";
-import { persistAppTheme, readStoredAppTheme, type AppTheme } from "../lib/ui/app-theme";
+import {
+  persistAppTheme,
+  readStoredAppTheme,
+  type AppTheme,
+} from "../lib/ui/app-theme";
 
 function sidebarNavClass({ isActive }: { isActive: boolean }) {
   return isActive ? "mm-sidebar-link active" : "mm-sidebar-link";
@@ -17,7 +28,8 @@ export function AppShell() {
   const suite = useSuiteSettingsQuery();
   const dashboard = useDashboardStatusQuery();
   const [theme, setTheme] = useState<AppTheme>(() => readStoredAppTheme());
-  const productTitle = (suite.data?.product_display_name ?? "MediaMop").trim() || "MediaMop";
+  const productTitle =
+    (suite.data?.product_display_name ?? "MediaMop").trim() || "MediaMop";
   const appVersion = dashboard.data?.system.api_version;
   const nextTheme: AppTheme = theme === "dark" ? "light" : "dark";
   const handleSignOut = () => {
@@ -79,7 +91,10 @@ export function AppShell() {
         <div className="mm-sidebar-footer">
           <div className="mm-sidebar-footer-panel">
             <div className="mm-sidebar-meta">{productTitle}</div>
-            <div className="mm-sidebar-version" title="Installed MediaMop version reported by the running server">
+            <div
+              className="mm-sidebar-version"
+              title="Installed MediaMop version reported by the running server"
+            >
               {appVersion ? `Version ${appVersion}` : "Version checking..."}
             </div>
             <button
@@ -109,7 +124,9 @@ export function AppShell() {
               }}
             >
               <span className="mm-theme-toggle__dot" aria-hidden="true" />
-              <span className="mm-theme-toggle__label">{theme === "dark" ? "Dark" : "Light"}</span>
+              <span className="mm-theme-toggle__label">
+                {theme === "dark" ? "Dark" : "Light"}
+              </span>
             </button>
           </div>
           <Outlet />

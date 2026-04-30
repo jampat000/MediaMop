@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import base64
+import ipaddress
 import json
-import urllib.error
-import urllib.request
 from typing import Any
+from urllib.parse import urlparse
+
+import httpx
 
 DEFAULT_USER_AGENT = "MediaMop/1.0"
 HTML_USER_AGENT = "Mozilla/5.0 (compatible; MediaMop/1.0)"
+_SHARED_CLIENT = httpx.Client(follow_redirects=True, max_redirects=5)
 
 
 def basic_auth_header(username: str | None, password: str | None) -> str | None:
@@ -28,10 +31,18 @@ def request_bytes(
     headers: dict[str, str] | None = None,
     data: bytes | None = None,
     timeout: float = 60,
+    validate_provider_url: bool = False,
 ) -> tuple[int, bytes]:
-    req = urllib.request.Request(url, data=data, headers=headers or {}, method=method)  # noqa: S310
-    with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
-        return int(getattr(resp, "status", 200)), resp.read()
+    request_url = safe_provider_url(url) if validate_provider_url else url
+    response = _SHARED_CLIENT.request(
+        method=method,
+        url=request_url,
+        headers=headers,
+        content=data,
+        timeout=timeout,
+    )
+    response.raise_for_status()
+    return response.status_code, response.content
 
 
 def request_text(
@@ -69,8 +80,8 @@ def request_json(
     return code, parsed if isinstance(parsed, (dict, list)) else None
 
 
-def decode_http_error_json(exc: urllib.error.HTTPError) -> dict[str, Any] | None:
-    raw = exc.read().decode("utf-8", errors="replace")
+def decode_http_error_json(exc: httpx.HTTPStatusError) -> dict[str, Any] | None:
+    raw = exc.response.text
     if not raw.strip():
         return None
     try:
@@ -78,3 +89,21 @@ def decode_http_error_json(exc: urllib.error.HTTPError) -> dict[str, Any] | None
     except json.JSONDecodeError:
         return {"raw": raw}
     return parsed if isinstance(parsed, dict) else {"raw": raw}
+
+
+def safe_provider_url(url: str) -> str:
+    parsed = urlparse(url.strip())
+    if parsed.scheme not in {"http", "https"}:
+        raise ValueError(f"Blocked provider URL scheme: {parsed.scheme or '<missing>'}")
+    host = (parsed.hostname or "").strip().lower()
+    if not host:
+        raise ValueError("Blocked provider URL host: <missing>")
+    if host in {"localhost", "127.0.0.1", "::1", "0.0.0.0"}:
+        raise ValueError(f"Blocked provider URL host: {host}")
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return url
+    if ip.is_loopback or ip.is_link_local or ip.is_private or ip.is_multicast or ip.is_reserved or ip.is_unspecified:
+        raise ValueError(f"Blocked provider URL host: {host}")
+    return url

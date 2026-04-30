@@ -13,7 +13,9 @@ export function RequireSetupWizard() {
     return <Outlet />;
   }
 
-  const wizardState = (settingsQ.data.setup_wizard_state || "pending").trim().toLowerCase();
+  const wizardState = (settingsQ.data.setup_wizard_state || "pending")
+    .trim()
+    .toLowerCase();
   if (wizardState === "pending" && location.pathname !== "/app/setup-wizard") {
     return <Navigate to="/app/setup-wizard" replace />;
   }

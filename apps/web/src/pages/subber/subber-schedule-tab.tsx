@@ -8,7 +8,10 @@ import {
 } from "../../components/ui/mm-schedule-window-controls";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
-import { usePutSubberSettingsMutation, useSubberSettingsQuery } from "../../lib/subber/subber-queries";
+import {
+  usePutSubberSettingsMutation,
+  useSubberSettingsQuery,
+} from "../../lib/subber/subber-queries";
 
 const RUN_INTERVAL_HELPER = "How often this search runs automatically.";
 
@@ -69,13 +72,25 @@ function ScheduleCard({
     <section className="mm-card mm-dash-card flex h-full min-h-0 min-w-0 flex-col">
       <div className="mm-card-action-body flex-1 min-h-0">
         <div>
-          <h3 className="text-base font-semibold text-[var(--mm-text1)]">{title}</h3>
+          <h3 className="text-base font-semibold text-[var(--mm-text1)]">
+            {title}
+          </h3>
           <p className="mt-1 text-sm text-[var(--mm-text2)]">{helper}</p>
         </div>
-        <MmOnOffSwitch id={`${idPrefix}-en`} label="Enable timed scans" enabled={enabled} disabled={dis} onChange={setEnabled} />
+        <MmOnOffSwitch
+          id={`${idPrefix}-en`}
+          label="Enable timed scans"
+          enabled={enabled}
+          disabled={dis}
+          onChange={setEnabled}
+        />
         <div>
-          <span className="text-sm font-medium text-[var(--mm-text1)]">Run interval (minutes)</span>
-          <p className="mt-1 text-xs text-[var(--mm-text3)]">{RUN_INTERVAL_HELPER}</p>
+          <span className="text-sm font-medium text-[var(--mm-text1)]">
+            Run interval (minutes)
+          </span>
+          <p className="mt-1 text-xs text-[var(--mm-text3)]">
+            {RUN_INTERVAL_HELPER}
+          </p>
           <input
             type="number"
             min={1}
@@ -83,13 +98,21 @@ function ScheduleCard({
             className="mm-input mt-2 w-full"
             value={intervalMinutes}
             disabled={dis}
-            onChange={(e) => setIntervalMinutes(Math.max(1, Math.min(intervalMax, Number(e.target.value) || 1)))}
+            onChange={(e) =>
+              setIntervalMinutes(
+                Math.max(1, Math.min(intervalMax, Number(e.target.value) || 1)),
+              )
+            }
           />
         </div>
         <div className="space-y-3">
           <div>
-            <span className="text-sm font-medium text-[var(--mm-text1)]">Schedule window</span>
-            <p className="mt-1 text-xs text-[var(--mm-text3)]">{MM_SCHEDULE_TIME_WINDOW_HELPER}</p>
+            <span className="text-sm font-medium text-[var(--mm-text1)]">
+              Schedule window
+            </span>
+            <p className="mt-1 text-xs text-[var(--mm-text3)]">
+              {MM_SCHEDULE_TIME_WINDOW_HELPER}
+            </p>
           </div>
           <div className="space-y-4">
             <MmOnOffSwitch
@@ -100,14 +123,30 @@ function ScheduleCard({
               onChange={setHoursLimited}
             />
             <div className="space-y-2">
-              <span className="text-sm font-medium text-[var(--mm-text1)]">Days</span>
-              <MmScheduleDayChips scheduleDaysCsv={daysCsv} disabled={dis} onChangeCsv={setDaysCsv} />
+              <span className="text-sm font-medium text-[var(--mm-text1)]">
+                Days
+              </span>
+              <MmScheduleDayChips
+                scheduleDaysCsv={daysCsv}
+                disabled={dis}
+                onChangeCsv={setDaysCsv}
+              />
             </div>
-            <MmScheduleTimeFields idPrefix={idPrefix} start={start} end={end} disabled={dis} onStart={setStart} onEnd={setEnd} />
+            <MmScheduleTimeFields
+              idPrefix={idPrefix}
+              start={start}
+              end={end}
+              disabled={dis}
+              onStart={setStart}
+              onEnd={setEnd}
+            />
           </div>
         </div>
         <p className="text-xs text-[var(--mm-text3)]">
-          Last run: <span className="font-medium text-[var(--mm-text1)]">{fmt(lastRun)}</span>
+          Last run:{" "}
+          <span className="font-medium text-[var(--mm-text1)]">
+            {fmt(lastRun)}
+          </span>
         </p>
       </div>
       <div className="mm-card-action-footer">
@@ -161,7 +200,8 @@ export function SubberScheduleTab({ canOperate }: { canOperate: boolean }) {
   const tvDirty =
     q.data !== undefined &&
     (tvEn !== q.data.tv_schedule_enabled ||
-      tvMin !== Math.max(1, Math.round(q.data.tv_schedule_interval_seconds / 60)) ||
+      tvMin !==
+        Math.max(1, Math.round(q.data.tv_schedule_interval_seconds / 60)) ||
       tvHl !== q.data.tv_schedule_hours_limited ||
       tvDays !== (q.data.tv_schedule_days ?? "") ||
       tvStart !== (q.data.tv_schedule_start ?? "00:00") ||
@@ -170,7 +210,8 @@ export function SubberScheduleTab({ canOperate }: { canOperate: boolean }) {
   const mvDirty =
     q.data !== undefined &&
     (mvEn !== q.data.movies_schedule_enabled ||
-      mvMin !== Math.max(1, Math.round(q.data.movies_schedule_interval_seconds / 60)) ||
+      mvMin !==
+        Math.max(1, Math.round(q.data.movies_schedule_interval_seconds / 60)) ||
       mvHl !== q.data.movies_schedule_hours_limited ||
       mvDays !== (q.data.movies_schedule_days ?? "") ||
       mvStart !== (q.data.movies_schedule_start ?? "00:00") ||
@@ -181,7 +222,10 @@ export function SubberScheduleTab({ canOperate }: { canOperate: boolean }) {
     await put.mutateAsync({
       csrf_token,
       tv_schedule_enabled: tvEn,
-      tv_schedule_interval_seconds: Math.max(60, Math.min(7 * 24 * 3600, tvMin * 60)),
+      tv_schedule_interval_seconds: Math.max(
+        60,
+        Math.min(7 * 24 * 3600, tvMin * 60),
+      ),
       tv_schedule_hours_limited: tvHl,
       tv_schedule_days: tvDays,
       tv_schedule_start: tvStart,
@@ -194,7 +238,10 @@ export function SubberScheduleTab({ canOperate }: { canOperate: boolean }) {
     await put.mutateAsync({
       csrf_token,
       movies_schedule_enabled: mvEn,
-      movies_schedule_interval_seconds: Math.max(60, Math.min(7 * 24 * 3600, mvMin * 60)),
+      movies_schedule_interval_seconds: Math.max(
+        60,
+        Math.min(7 * 24 * 3600, mvMin * 60),
+      ),
       movies_schedule_hours_limited: mvHl,
       movies_schedule_days: mvDays,
       movies_schedule_start: mvStart,
@@ -202,8 +249,10 @@ export function SubberScheduleTab({ canOperate }: { canOperate: boolean }) {
     });
   }
 
-  if (q.isLoading) return <p className="text-sm text-[var(--mm-text2)]">Loading schedule…</p>;
-  if (q.isError) return <p className="text-sm text-red-600">{(q.error as Error).message}</p>;
+  if (q.isLoading)
+    return <p className="text-sm text-[var(--mm-text2)]">Loading schedule…</p>;
+  if (q.isError)
+    return <p className="text-sm text-red-600">{(q.error as Error).message}</p>;
 
   return (
     <div className="mm-dash-grid" data-testid="subber-schedule-tab">

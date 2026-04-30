@@ -35,7 +35,7 @@ from mediamop.modules.subber.subber_settings_service import (
     set_language_preferences_json,
 )
 from mediamop.platform.auth.authorization import RequireOperatorDep
-from mediamop.platform.auth.csrf import verify_csrf_token
+from mediamop.platform.auth.csrf import current_raw_session_token, verify_csrf_token
 
 router = APIRouter(tags=["subber-settings"])
 
@@ -124,7 +124,7 @@ def put_subber_settings(
     body: SubberSettingsPutHttpIn,
 ) -> SubberSettingsOut:
     secret = settings.session_secret or ""
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     row = ensure_subber_settings_row(db)
     if body.enabled is not None:
@@ -290,11 +290,12 @@ def _apply_sched(row: SubberSettingsRow, body: SubberSettingsPutIn) -> None:
 def post_test_opensubtitles(
     _user: RequireOperatorDep,
     db: DbSessionDep,
+    request: Request,
     settings: SettingsDep,
     body: SubberCsrfIn,
 ) -> SubberTestConnectionOut:
     secret = settings.session_secret or ""
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     row = ensure_subber_settings_row(db)
     raw = decrypt_subber_credentials_json(settings, row.opensubtitles_credentials_ciphertext or "") or "{}"
@@ -393,11 +394,12 @@ def _arr_root_folders(base_url: str, api_key: str) -> tuple[bool, str, list[Subb
 def post_test_sonarr(
     _user: RequireOperatorDep,
     db: DbSessionDep,
+    request: Request,
     settings: SettingsDep,
     body: SubberCsrfIn,
 ) -> SubberTestConnectionOut:
     secret = settings.session_secret or ""
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     row = ensure_subber_settings_row(db)
     key_raw = decrypt_subber_credentials_json(settings, row.sonarr_credentials_ciphertext or "") or "{}"
@@ -417,11 +419,12 @@ def post_test_sonarr(
 def post_sonarr_root_folders(
     _user: RequireOperatorDep,
     db: DbSessionDep,
+    request: Request,
     settings: SettingsDep,
     body: SubberCsrfIn,
 ) -> SubberArrRootFoldersOut:
     secret = settings.session_secret or ""
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     row = ensure_subber_settings_row(db)
     api_key = _arr_api_key(settings, row.sonarr_credentials_ciphertext)
@@ -435,11 +438,12 @@ def post_sonarr_root_folders(
 def post_test_radarr(
     _user: RequireOperatorDep,
     db: DbSessionDep,
+    request: Request,
     settings: SettingsDep,
     body: SubberCsrfIn,
 ) -> SubberTestConnectionOut:
     secret = settings.session_secret or ""
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     row = ensure_subber_settings_row(db)
     key_raw = decrypt_subber_credentials_json(settings, row.radarr_credentials_ciphertext or "") or "{}"
@@ -459,11 +463,12 @@ def post_test_radarr(
 def post_radarr_root_folders(
     _user: RequireOperatorDep,
     db: DbSessionDep,
+    request: Request,
     settings: SettingsDep,
     body: SubberCsrfIn,
 ) -> SubberArrRootFoldersOut:
     secret = settings.session_secret or ""
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     row = ensure_subber_settings_row(db)
     api_key = _arr_api_key(settings, row.radarr_credentials_ciphertext)

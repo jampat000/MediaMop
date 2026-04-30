@@ -146,7 +146,10 @@ export async function resolvePreviewRunIdForJob(
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (opts.signal?.aborted) throw new Error("Aborted");
-    const runs = await fetchPrunerPreviewRuns(instanceId, { media_scope: mediaScope, limit: 40 });
+    const runs = await fetchPrunerPreviewRuns(instanceId, {
+      media_scope: mediaScope,
+      limit: 40,
+    });
     const hit = runs.find((r) => r.pruner_job_id === jobId);
     if (hit?.preview_run_id) return hit.preview_run_id;
     await sleep(pollMs);
@@ -173,7 +176,11 @@ export async function waitForApplyActivity(
         const removed = Number(o.removed);
         const skipped = Number(o.skipped);
         const failed = Number(o.failed);
-        if (Number.isFinite(removed) && Number.isFinite(skipped) && Number.isFinite(failed)) {
+        if (
+          Number.isFinite(removed) &&
+          Number.isFinite(skipped) &&
+          Number.isFinite(failed)
+        ) {
           return { removed, skipped, failed };
         }
       } catch {
@@ -195,7 +202,10 @@ export function tvRuleFamiliesToScan(
     out.push(RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED);
   }
   if (p === "jellyfin" || p === "emby") {
-    if (tv.never_played_stale_reported_enabled && tv.never_played_min_age_days >= 7) {
+    if (
+      tv.never_played_stale_reported_enabled &&
+      tv.never_played_min_age_days >= 7
+    ) {
       out.push(RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED);
     }
     if (tv.watched_tv_reported_enabled) {
@@ -230,7 +240,10 @@ export function moviesRuleFamiliesToScan(
   if (movies.watched_movie_low_rating_reported_enabled) {
     out.push(RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED);
   }
-  if (movies.unwatched_movie_stale_reported_enabled && movies.unwatched_movie_stale_min_age_days >= 7) {
+  if (
+    movies.unwatched_movie_stale_reported_enabled &&
+    movies.unwatched_movie_stale_min_age_days >= 7
+  ) {
     out.push(RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED);
   }
   if ((movies.preview_include_genres as string[] | undefined)?.length) {

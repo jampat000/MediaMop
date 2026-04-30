@@ -2,7 +2,10 @@ import { useEffect, useState, type ReactNode } from "react";
 import { fetchCsrfToken } from "../../lib/api/auth-api";
 import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
-import type { SubberProviderOut, SubberProviderPutIn } from "../../lib/subber/subber-api";
+import type {
+  SubberProviderOut,
+  SubberProviderPutIn,
+} from "../../lib/subber/subber-api";
 import {
   usePutSubberProviderMutation,
   useSubberProvidersQuery,
@@ -35,7 +38,9 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
   const [provPri, setProvPri] = useState<Record<string, number | null>>({});
   const [provMsg, setProvMsg] = useState<Record<string, string | null>>({});
   const [provDirty, setProvDirty] = useState<Record<string, boolean>>({});
-  const [expandedProviderKey, setExpandedProviderKey] = useState<string | null>(null);
+  const [expandedProviderKey, setExpandedProviderKey] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!pq.data) return;
@@ -50,9 +55,17 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
 
   const dis = !canOperate || putProv.isPending;
 
-  async function saveProviderRow(pk: string, enabledP: boolean, priority: number | null) {
+  async function saveProviderRow(
+    pk: string,
+    enabledP: boolean,
+    priority: number | null,
+  ) {
     const csrf_token = await fetchCsrfToken();
-    const body: SubberProviderPutIn = { csrf_token, enabled: enabledP, priority: priority ?? undefined };
+    const body: SubberProviderPutIn = {
+      csrf_token,
+      enabled: enabledP,
+      priority: priority ?? undefined,
+    };
     const u = provUser[pk]?.trim();
     const p = provPass[pk]?.trim();
     const k = provKey[pk]?.trim();
@@ -62,7 +75,11 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
     await putProv.mutateAsync({ providerKey: pk, body });
   }
 
-  async function saveExpandedProvider(pk: string, enabledP: boolean, priority: number | null) {
+  async function saveExpandedProvider(
+    pk: string,
+    enabledP: boolean,
+    priority: number | null,
+  ) {
     try {
       await saveProviderRow(pk, enabledP, priority);
       setProvDirty((d) => ({ ...d, [pk]: false }));
@@ -86,7 +103,10 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
     setProvMsg((m) => ({ ...m, [pk]: null }));
     try {
       const r = await testOs.mutateAsync();
-      setProvMsg((m) => ({ ...m, [pk]: r.ok ? "Connected" : r.message ?? "Error" }));
+      setProvMsg((m) => ({
+        ...m,
+        [pk]: r.ok ? "Connected" : (r.message ?? "Error"),
+      }));
     } catch (e) {
       setProvMsg((m) => ({ ...m, [pk]: (e as Error).message }));
     }
@@ -94,7 +114,8 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
 
   const sorted = [...(pq.data ?? [])].sort(
     (a, b) =>
-      (a.priority ?? 999_999) - (b.priority ?? 999_999) || a.provider_key.localeCompare(b.provider_key),
+      (a.priority ?? 999_999) - (b.priority ?? 999_999) ||
+      a.provider_key.localeCompare(b.provider_key),
   );
 
   return (
@@ -104,14 +125,20 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
         data-testid="subber-providers-section"
       >
         <header className="border-b border-[var(--mm-border)] bg-black/10 px-5 py-4">
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text2)]">Sources</p>
-          <h2 className="mt-1 text-lg font-semibold tracking-tight text-[var(--mm-text)]">Subtitle providers</h2>
+          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text2)]">
+            Sources
+          </p>
+          <h2 className="mt-1 text-lg font-semibold tracking-tight text-[var(--mm-text)]">
+            Subtitle providers
+          </h2>
         </header>
         <div className="px-5 py-5">
           {pq.isLoading ? (
             <p className="text-sm text-[var(--mm-text2)]">Loading providers…</p>
           ) : pq.isError ? (
-            <p className="text-sm text-red-600">{(pq.error as Error).message}</p>
+            <p className="text-sm text-red-600">
+              {(pq.error as Error).message}
+            </p>
           ) : (
             <ul className="divide-y divide-[var(--mm-border)] rounded-md border border-[var(--mm-border)] bg-black/10">
               {sorted.map((p) => {
@@ -124,24 +151,43 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
                 if (provMsgText) {
                   statusEl =
                     provMsgText === "Connected" ? (
-                      <span className="text-xs font-medium text-emerald-600">{provMsgText}</span>
+                      <span className="text-xs font-medium text-emerald-600">
+                        {provMsgText}
+                      </span>
                     ) : (
-                      <span className="max-w-[14rem] truncate text-xs text-[var(--mm-text2)]" title={provMsgText}>
+                      <span
+                        className="max-w-[14rem] truncate text-xs text-[var(--mm-text2)]"
+                        title={provMsgText}
+                      >
                         {provMsgText}
                       </span>
                     );
                 } else if (!p.available) {
-                  statusEl = <span className="text-xs text-amber-400">{p.availability_note ?? "Not available"}</span>;
+                  statusEl = (
+                    <span className="text-xs text-amber-400">
+                      {p.availability_note ?? "Not available"}
+                    </span>
+                  );
                 } else if (p.requires_account) {
                   statusEl = p.has_credentials ? (
-                    <span className="text-xs font-medium text-emerald-600">Configured</span>
+                    <span className="text-xs font-medium text-emerald-600">
+                      Configured
+                    </span>
                   ) : (
-                    <span className="text-xs text-[var(--mm-text2)]">Not configured</span>
+                    <span className="text-xs text-[var(--mm-text2)]">
+                      Not configured
+                    </span>
                   );
                 } else if (p.provider_key === "podnapisi") {
-                  statusEl = <span className="text-xs text-[var(--mm-text2)]">Optional credentials</span>;
+                  statusEl = (
+                    <span className="text-xs text-[var(--mm-text2)]">
+                      Optional credentials
+                    </span>
+                  );
                 } else {
-                  statusEl = <span className="text-xs text-[var(--mm-text2)]">—</span>;
+                  statusEl = (
+                    <span className="text-xs text-[var(--mm-text2)]">—</span>
+                  );
                 }
                 return (
                   <li
@@ -157,23 +203,35 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
                       type="button"
                       className="flex w-full items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.02]"
                       disabled={!p.available}
-                      onClick={() => setExpandedProviderKey(expanded ? null : p.provider_key)}
+                      onClick={() =>
+                        setExpandedProviderKey(expanded ? null : p.provider_key)
+                      }
                     >
                       <span
                         className={[
                           "h-2 w-2 shrink-0 rounded-full",
-                          p.enabled && (p.has_credentials || !p.requires_account)
+                          p.enabled &&
+                          (p.has_credentials || !p.requires_account)
                             ? "bg-emerald-500"
-                            : p.enabled && p.requires_account && !p.has_credentials
+                            : p.enabled &&
+                                p.requires_account &&
+                                !p.has_credentials
                               ? "bg-red-500"
                               : "bg-[var(--mm-border)]",
                         ].join(" ")}
                       />
-                      <span className="min-w-[10rem] text-sm font-semibold text-[var(--mm-text)]">{p.display_name}</span>
-                      <span className="text-xs text-[var(--mm-text2)]">{statusEl}</span>
+                      <span className="min-w-[10rem] text-sm font-semibold text-[var(--mm-text)]">
+                        {p.display_name}
+                      </span>
+                      <span className="text-xs text-[var(--mm-text2)]">
+                        {statusEl}
+                      </span>
                       <span className="ml-auto flex items-center gap-3">
                         <span className="text-xs text-[var(--mm-text3)]">
-                          Priority {p.priority !== null && p.priority !== undefined ? p.priority : "—"}
+                          Priority{" "}
+                          {p.priority !== null && p.priority !== undefined
+                            ? p.priority
+                            : "—"}
                         </span>
                         <svg
                           aria-hidden
@@ -192,8 +250,11 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
                     {expanded ? (
                       <div className="border-t border-[var(--mm-border)] bg-black/20 px-4 pb-4 pt-4">
                         <div className="space-y-4">
-                          {p.provider_key === "podnapisi" && !p.requires_account ? (
-                            <p className="text-xs text-[var(--mm-text2)]">No account required — credentials optional.</p>
+                          {p.provider_key === "podnapisi" &&
+                          !p.requires_account ? (
+                            <p className="text-xs text-[var(--mm-text2)]">
+                              No account required — credentials optional.
+                            </p>
                           ) : null}
                           {p.requires_account ? (
                             <div className="grid gap-3 sm:grid-cols-2">
@@ -204,14 +265,24 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
                                   disabled={dis}
                                   value={provUser[p.provider_key] ?? ""}
                                   onChange={(e) => {
-                                    setProvUser((x) => ({ ...x, [p.provider_key]: e.target.value }));
-                                    setProvDirty((d) => ({ ...d, [p.provider_key]: true }));
+                                    setProvUser((x) => ({
+                                      ...x,
+                                      [p.provider_key]: e.target.value,
+                                    }));
+                                    setProvDirty((d) => ({
+                                      ...d,
+                                      [p.provider_key]: true,
+                                    }));
                                   }}
                                 />
                               </label>
                               <label className="block text-xs text-[var(--mm-text2)]">
                                 Password{" "}
-                                {p.has_credentials ? <span className="text-[0.7rem]">(leave blank to keep)</span> : null}
+                                {p.has_credentials ? (
+                                  <span className="text-[0.7rem]">
+                                    (leave blank to keep)
+                                  </span>
+                                ) : null}
                                 <input
                                   type="password"
                                   className="mm-input mt-1 w-full"
@@ -219,8 +290,14 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
                                   placeholder={p.has_credentials ? MASK : ""}
                                   value={provPass[p.provider_key] ?? ""}
                                   onChange={(e) => {
-                                    setProvPass((x) => ({ ...x, [p.provider_key]: e.target.value }));
-                                    setProvDirty((d) => ({ ...d, [p.provider_key]: true }));
+                                    setProvPass((x) => ({
+                                      ...x,
+                                      [p.provider_key]: e.target.value,
+                                    }));
+                                    setProvDirty((d) => ({
+                                      ...d,
+                                      [p.provider_key]: true,
+                                    }));
                                   }}
                                 />
                               </label>
@@ -234,8 +311,14 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
                                     placeholder={p.has_credentials ? MASK : ""}
                                     value={provKey[p.provider_key] ?? ""}
                                     onChange={(e) => {
-                                      setProvKey((x) => ({ ...x, [p.provider_key]: e.target.value }));
-                                      setProvDirty((d) => ({ ...d, [p.provider_key]: true }));
+                                      setProvKey((x) => ({
+                                        ...x,
+                                        [p.provider_key]: e.target.value,
+                                      }));
+                                      setProvDirty((d) => ({
+                                        ...d,
+                                        [p.provider_key]: true,
+                                      }));
                                     }}
                                   />
                                 </label>
@@ -250,8 +333,14 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
                                   disabled={dis}
                                   value={provUser[p.provider_key] ?? ""}
                                   onChange={(e) => {
-                                    setProvUser((x) => ({ ...x, [p.provider_key]: e.target.value }));
-                                    setProvDirty((d) => ({ ...d, [p.provider_key]: true }));
+                                    setProvUser((x) => ({
+                                      ...x,
+                                      [p.provider_key]: e.target.value,
+                                    }));
+                                    setProvDirty((d) => ({
+                                      ...d,
+                                      [p.provider_key]: true,
+                                    }));
                                   }}
                                 />
                               </label>
@@ -264,8 +353,14 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
                                   placeholder={p.has_credentials ? MASK : ""}
                                   value={provPass[p.provider_key] ?? ""}
                                   onChange={(e) => {
-                                    setProvPass((x) => ({ ...x, [p.provider_key]: e.target.value }));
-                                    setProvDirty((d) => ({ ...d, [p.provider_key]: true }));
+                                    setProvPass((x) => ({
+                                      ...x,
+                                      [p.provider_key]: e.target.value,
+                                    }));
+                                    setProvDirty((d) => ({
+                                      ...d,
+                                      [p.provider_key]: true,
+                                    }));
                                   }}
                                 />
                               </label>
@@ -284,11 +379,22 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
                                   const v = e.target.value;
                                   setProvPri((x) => ({
                                     ...x,
-                                    [p.provider_key]: v === "" ? null : Math.max(0, Math.min(9999, Number(v) || 0)),
+                                    [p.provider_key]:
+                                      v === ""
+                                        ? null
+                                        : Math.max(
+                                            0,
+                                            Math.min(9999, Number(v) || 0),
+                                          ),
                                   }));
                                 }}
                                 onBlur={() => {
-                                  if (pri !== p.priority) void saveProviderRow(p.provider_key, p.enabled, pri);
+                                  if (pri !== p.priority)
+                                    void saveProviderRow(
+                                      p.provider_key,
+                                      p.enabled,
+                                      pri,
+                                    );
                                 }}
                               />
                             </label>
@@ -298,8 +404,14 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
                                 label="Enabled"
                                 layout="inline"
                                 enabled={p.enabled}
-                                disabled={dis || putProv.isPending || !providerImplemented(p.provider_key)}
-                                onChange={(v) => void saveProviderRow(p.provider_key, v, pri)}
+                                disabled={
+                                  dis ||
+                                  putProv.isPending ||
+                                  !providerImplemented(p.provider_key)
+                                }
+                                onChange={(v) =>
+                                  void saveProviderRow(p.provider_key, v, pri)
+                                }
                               />
                             </div>
                             <div className="ml-auto flex gap-2">
@@ -308,13 +420,25 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
                                   <button
                                     type="button"
                                     className={mmActionButtonClass({
-                                      variant: isDirty ? "primary" : "secondary",
-                                      disabled: dis || putProv.isPending || !isDirty,
+                                      variant: isDirty
+                                        ? "primary"
+                                        : "secondary",
+                                      disabled:
+                                        dis || putProv.isPending || !isDirty,
                                     })}
-                                    disabled={dis || putProv.isPending || !isDirty}
-                                    onClick={() => void saveExpandedProvider(p.provider_key, p.enabled, pri)}
+                                    disabled={
+                                      dis || putProv.isPending || !isDirty
+                                    }
+                                    onClick={() =>
+                                      void saveExpandedProvider(
+                                        p.provider_key,
+                                        p.enabled,
+                                        pri,
+                                      )
+                                    }
                                     data-testid={
-                                      p.provider_key === "opensubtitles_org" || p.provider_key === "opensubtitles_com"
+                                      p.provider_key === "opensubtitles_org" ||
+                                      p.provider_key === "opensubtitles_com"
                                         ? "subber-save-opensubtitles"
                                         : undefined
                                     }
@@ -327,7 +451,8 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
                                       variant: "secondary",
                                       disabled:
                                         dis ||
-                                        (p.provider_key === "opensubtitles_org" ||
+                                        (p.provider_key ===
+                                          "opensubtitles_org" ||
                                         p.provider_key === "opensubtitles_com"
                                           ? testOs.isPending
                                           : testProv.isPending),
@@ -341,7 +466,8 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
                                     }
                                     onClick={() => {
                                       if (
-                                        p.provider_key === "opensubtitles_org" ||
+                                        p.provider_key ===
+                                          "opensubtitles_org" ||
                                         p.provider_key === "opensubtitles_com"
                                       ) {
                                         void runTestOs(p.provider_key);
@@ -350,7 +476,8 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
                                       }
                                     }}
                                     data-testid={
-                                      p.provider_key === "opensubtitles_org" || p.provider_key === "opensubtitles_com"
+                                      p.provider_key === "opensubtitles_org" ||
+                                      p.provider_key === "opensubtitles_com"
                                         ? "subber-test-opensubtitles"
                                         : undefined
                                     }
@@ -366,7 +493,9 @@ export function SubberProvidersTab({ canOperate }: { canOperate: boolean }) {
                             <p
                               className={[
                                 "text-xs",
-                                provMsg[p.provider_key] === "Connected" ? "text-emerald-500" : "text-red-400",
+                                provMsg[p.provider_key] === "Connected"
+                                  ? "text-emerald-500"
+                                  : "text-red-400",
                               ].join(" ")}
                             >
                               {provMsg[p.provider_key]}

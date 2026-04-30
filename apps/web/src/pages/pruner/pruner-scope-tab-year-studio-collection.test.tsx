@@ -53,7 +53,10 @@ const jellyfin: PrunerServerInstance = {
   last_connection_test_at: null,
   last_connection_test_ok: null,
   last_connection_test_detail: null,
-  scopes: [scopeBase({ media_scope: "tv" }), scopeBase({ media_scope: "movies" })],
+  scopes: [
+    scopeBase({ media_scope: "tv" }),
+    scopeBase({ media_scope: "movies" }),
+  ],
 };
 
 const plex: PrunerServerInstance = {
@@ -65,7 +68,10 @@ const plex: PrunerServerInstance = {
   last_connection_test_at: null,
   last_connection_test_ok: null,
   last_connection_test_detail: null,
-  scopes: [scopeBase({ media_scope: "tv" }), scopeBase({ media_scope: "movies" })],
+  scopes: [
+    scopeBase({ media_scope: "tv" }),
+    scopeBase({ media_scope: "movies" }),
+  ],
 };
 
 describe("PrunerScopeTab year / studio / collection preview filters", () => {
@@ -80,7 +86,9 @@ describe("PrunerScopeTab year / studio / collection preview filters", () => {
       preview_include_studios: ["Acme"],
     });
     try {
-      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const qc = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
       qc.setQueryData(qk.me, operator);
       qc.setQueryData(["pruner", "instances", 71], jellyfin);
 
@@ -102,13 +110,23 @@ describe("PrunerScopeTab year / studio / collection preview filters", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId("pruner-year-filters-panel")).toBeInTheDocument();
+        expect(
+          screen.getByTestId("pruner-year-filters-panel"),
+        ).toBeInTheDocument();
       });
-      expect(screen.queryByTestId("pruner-collection-preview-panel")).toBeNull();
+      expect(
+        screen.queryByTestId("pruner-collection-preview-panel"),
+      ).toBeNull();
 
-      fireEvent.change(screen.getByRole("spinbutton", { name: /min year/i }), { target: { value: "2010" } });
-      fireEvent.change(screen.getByRole("spinbutton", { name: /max year/i }), { target: { value: "2020" } });
-      fireEvent.click(screen.getByRole("button", { name: /save year bounds/i }));
+      fireEvent.change(screen.getByRole("spinbutton", { name: /min year/i }), {
+        target: { value: "2010" },
+      });
+      fireEvent.change(screen.getByRole("spinbutton", { name: /max year/i }), {
+        target: { value: "2020" },
+      });
+      fireEvent.click(
+        screen.getByRole("button", { name: /save year bounds/i }),
+      );
 
       await waitFor(() => {
         expect(spyPatch).toHaveBeenCalledWith(
@@ -122,8 +140,12 @@ describe("PrunerScopeTab year / studio / collection preview filters", () => {
         );
       });
 
-      fireEvent.change(screen.getByPlaceholderText(/warner bros/i), { target: { value: "Acme" } });
-      fireEvent.click(screen.getByRole("button", { name: /save studio filters/i }));
+      fireEvent.change(screen.getByPlaceholderText(/warner bros/i), {
+        target: { value: "Acme" },
+      });
+      fireEvent.click(
+        screen.getByRole("button", { name: /save studio filters/i }),
+      );
 
       await waitFor(() => {
         expect(spyPatch).toHaveBeenCalledWith(
@@ -149,7 +171,9 @@ describe("PrunerScopeTab year / studio / collection preview filters", () => {
       preview_include_collections: ["MCU"],
     });
     try {
-      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const qc = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
       qc.setQueryData(qk.me, operator);
       qc.setQueryData(["pruner", "instances", 72], plex);
 
@@ -171,12 +195,20 @@ describe("PrunerScopeTab year / studio / collection preview filters", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId("pruner-collection-preview-panel")).toBeInTheDocument();
+        expect(
+          screen.getByTestId("pruner-collection-preview-panel"),
+        ).toBeInTheDocument();
       });
-      expect(screen.getByText(/Comma-separated collection names/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Comma-separated collection names/i),
+      ).toBeInTheDocument();
 
-      fireEvent.change(screen.getByPlaceholderText(/marvel cinematic/i), { target: { value: "MCU" } });
-      fireEvent.click(screen.getByRole("button", { name: /save collection filters/i }));
+      fireEvent.change(screen.getByPlaceholderText(/marvel cinematic/i), {
+        target: { value: "MCU" },
+      });
+      fireEvent.click(
+        screen.getByRole("button", { name: /save collection filters/i }),
+      );
 
       await waitFor(() => {
         expect(spyPatch).toHaveBeenCalledWith(
@@ -199,7 +231,9 @@ describe("PrunerScopeTab year / studio / collection preview filters", () => {
     vi.spyOn(prunerApi, "fetchPrunerInstance").mockResolvedValue(jellyfin);
     const spyPatch = vi.spyOn(prunerApi, "patchPrunerScope");
     try {
-      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const qc = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
       qc.setQueryData(qk.me, operator);
       qc.setQueryData(["pruner", "instances", 71], jellyfin);
 
@@ -221,14 +255,22 @@ describe("PrunerScopeTab year / studio / collection preview filters", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId("pruner-year-filters-panel")).toBeInTheDocument();
+        expect(
+          screen.getByTestId("pruner-year-filters-panel"),
+        ).toBeInTheDocument();
       });
 
-      fireEvent.change(screen.getByRole("spinbutton", { name: /min year/i }), { target: { value: "20.5" } });
-      fireEvent.click(screen.getByRole("button", { name: /save year bounds/i }));
+      fireEvent.change(screen.getByRole("spinbutton", { name: /min year/i }), {
+        target: { value: "20.5" },
+      });
+      fireEvent.click(
+        screen.getByRole("button", { name: /save year bounds/i }),
+      );
 
       await waitFor(() => {
-        expect(screen.getByText(/whole number between 1900 and 2100/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/whole number between 1900 and 2100/i),
+        ).toBeInTheDocument();
       });
       expect(spyPatch).not.toHaveBeenCalled();
     } finally {

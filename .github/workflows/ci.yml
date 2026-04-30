@@ -59,10 +59,12 @@ jobs:
       - name: MediaMop agent documentation map
         run: node scripts/check-agent-docs.mjs
 
-      - name: MediaMop web - install, build, unit tests
+      - name: MediaMop web - install, lint, format, build, unit tests
         working-directory: apps/web
         run: |
           npm ci
+          npm run lint
+          npm run format
           npm run build
           npm run test
 

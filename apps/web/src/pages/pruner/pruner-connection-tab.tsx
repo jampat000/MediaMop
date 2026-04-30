@@ -24,7 +24,9 @@ export function PrunerConnectionTab(props: { contextOverride?: Ctx }) {
     setBusy(true);
     try {
       const { pruner_job_id } = await postPrunerConnectionTest(instanceId);
-      await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+      await qc.invalidateQueries({
+        queryKey: ["pruner", "instances", instanceId],
+      });
       setMsg(
         `Connection test started. When it finishes, this panel and Activity update for this server only (task #${pruner_job_id}).`,
       );
@@ -36,13 +38,18 @@ export function PrunerConnectionTab(props: { contextOverride?: Ctx }) {
   }
 
   return (
-    <div className="mm-bubble-stack max-w-3xl" data-testid="pruner-connection-tab">
+    <div
+      className="mm-bubble-stack max-w-3xl"
+      data-testid="pruner-connection-tab"
+    >
       <header className="mm-page__intro !mb-0 border-0 p-0 shadow-none">
         <p className="mm-page__eyebrow">This server</p>
         <h2 className="mm-page__title text-xl sm:text-2xl">Connection</h2>
         <p className="mm-page__subtitle max-w-3xl">
-          Check that MediaMop can reach <strong className="text-[var(--mm-text)]">this</strong> server only. Jellyfin and
-          Emby use a small public info check; Plex checks identity with your saved token when you have one.
+          Check that MediaMop can reach{" "}
+          <strong className="text-[var(--mm-text)]">this</strong> server only.
+          Jellyfin and Emby use a small public info check; Plex checks identity
+          with your saved token when you have one.
         </p>
       </header>
 
@@ -50,7 +57,10 @@ export function PrunerConnectionTab(props: { contextOverride?: Ctx }) {
         className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-4 text-sm text-[var(--mm-text2)]"
         aria-labelledby="pruner-conn-status"
       >
-        <h3 id="pruner-conn-status" className="text-sm font-semibold text-[var(--mm-text1)]">
+        <h3
+          id="pruner-conn-status"
+          className="text-sm font-semibold text-[var(--mm-text1)]"
+        >
           Last completed test
         </h3>
         {instance ? (
@@ -64,12 +74,18 @@ export function PrunerConnectionTab(props: { contextOverride?: Ctx }) {
             <div className="flex flex-wrap gap-x-2">
               <dt className="text-[var(--mm-text3)]">OK</dt>
               <dd className="font-medium text-[var(--mm-text1)]">
-                {instance.last_connection_test_ok === null ? "—" : instance.last_connection_test_ok ? "Yes" : "No"}
+                {instance.last_connection_test_ok === null
+                  ? "—"
+                  : instance.last_connection_test_ok
+                    ? "Yes"
+                    : "No"}
               </dd>
             </div>
             <div>
               <dt className="text-[var(--mm-text3)]">Detail</dt>
-              <dd className="mt-0.5 text-[var(--mm-text2)]">{instance.last_connection_test_detail ?? "—"}</dd>
+              <dd className="mt-0.5 text-[var(--mm-text2)]">
+                {instance.last_connection_test_detail ?? "—"}
+              </dd>
             </div>
           </dl>
         ) : (
@@ -87,7 +103,9 @@ export function PrunerConnectionTab(props: { contextOverride?: Ctx }) {
           Run connection test
         </button>
       ) : (
-        <p className="text-sm text-[var(--mm-text2)]">Sign in as an operator to run connection tests.</p>
+        <p className="text-sm text-[var(--mm-text2)]">
+          Sign in as an operator to run connection tests.
+        </p>
       )}
       {err ? (
         <p className="text-sm text-red-600" role="alert">
@@ -98,7 +116,10 @@ export function PrunerConnectionTab(props: { contextOverride?: Ctx }) {
 
       <p className="text-xs text-[var(--mm-text2)]">
         Job outcomes:{" "}
-        <Link className="font-semibold text-[var(--mm-accent)] underline-offset-2 hover:underline" to="/app/activity">
+        <Link
+          className="font-semibold text-[var(--mm-accent)] underline-offset-2 hover:underline"
+          to="/app/activity"
+        >
           Activity
         </Link>
       </p>

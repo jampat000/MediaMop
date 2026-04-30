@@ -81,6 +81,7 @@ from mediamop.modules.pruner.pruner_scope_settings_model import PrunerScopeSetti
 from mediamop.modules.pruner.pruner_server_instance_model import PrunerServerInstance
 from mediamop.platform.auth.authorization import RequireOperatorDep
 from mediamop.platform.auth.csrf import (
+    current_raw_session_token,
     require_session_secret,
     validate_browser_post_origin,
     verify_csrf_token,
@@ -177,7 +178,7 @@ def post_pruner_instance(
 ) -> PrunerServerInstanceOut:
     validate_browser_post_origin(request, settings)
     secret = require_session_secret(settings)
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
 
     prov = cast(PrunerProvider, body.provider)
@@ -264,7 +265,7 @@ def patch_pruner_instance(
 ) -> PrunerServerInstanceOut:
     validate_browser_post_origin(request, settings)
     secret = require_session_secret(settings)
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
 
     row = db.scalars(
@@ -346,7 +347,7 @@ def patch_pruner_scope(
 ) -> PrunerScopeSummaryOut:
     validate_browser_post_origin(request, settings)
     secret = require_session_secret(settings)
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     if media_scope not in (MEDIA_SCOPE_TV, MEDIA_SCOPE_MOVIES):
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="media_scope must be tv or movies.")
@@ -533,7 +534,7 @@ def post_pruner_apply_from_preview(
 ) -> PrunerEnqueueOut:
     validate_browser_post_origin(request, settings)
     secret = require_session_secret(settings)
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     if media_scope not in (MEDIA_SCOPE_TV, MEDIA_SCOPE_MOVIES):
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="media_scope must be tv or movies.")
@@ -607,7 +608,7 @@ def post_pruner_plex_live_removal(
 ) -> PrunerEnqueueOut:
     validate_browser_post_origin(request, settings)
     secret = require_session_secret(settings)
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     if media_scope not in (MEDIA_SCOPE_TV, MEDIA_SCOPE_MOVIES):
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="media_scope must be tv or movies.")
@@ -658,7 +659,7 @@ def post_pruner_connection_test(
 ) -> PrunerEnqueueOut:
     validate_browser_post_origin(request, settings)
     secret = require_session_secret(settings)
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     if get_server_instance(db, instance_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found.")
@@ -683,7 +684,7 @@ def post_pruner_preview(
 ) -> PrunerEnqueueOut:
     validate_browser_post_origin(request, settings)
     secret = require_session_secret(settings)
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     if get_server_instance(db, instance_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found.")

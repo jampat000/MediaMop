@@ -299,6 +299,39 @@ def test_second_browser_login_does_not_revoke_first_browser_session() -> None:
         assert remote_client.get("/api/v1/auth/me").status_code == 200
 
 
+def test_authenticated_csrf_token_is_rejected_across_sessions() -> None:
+    seed_admin_user()
+    app = create_app()
+    with TestClient(app) as client_a, TestClient(app) as client_b:
+        csrf_a_login = fetch_csrf(client_a)
+        login_a = auth_post(
+            client_a,
+            "/api/v1/auth/login",
+            json={"username": "alice", "password": "test-password-strong", "csrf_token": csrf_a_login},
+        )
+        assert login_a.status_code == 200, login_a.text
+
+        csrf_b_login = fetch_csrf(client_b)
+        login_b = auth_post(
+            client_b,
+            "/api/v1/auth/login",
+            json={"username": "alice", "password": "test-password-strong", "csrf_token": csrf_b_login},
+        )
+        assert login_b.status_code == 200, login_b.text
+
+        session_a_csrf = fetch_csrf(client_a)
+        cross_session = auth_post(
+            client_b,
+            "/api/v1/auth/change-password",
+            json={
+                "csrf_token": session_a_csrf,
+                "current_password": "test-password-strong",
+                "new_password": "new-password-stronger-123",
+            },
+        )
+        assert cross_session.status_code == 400
+
+
 def test_login_keeps_only_newest_five_active_sessions() -> None:
     seed_admin_user()
     settings = MediaMopSettings.load()

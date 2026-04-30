@@ -37,7 +37,10 @@ export function usePrunerJobsInspectionQuery(limit = 100) {
   });
 }
 
-export function usePrunerStudiosQuery(instanceId: number, scope: "tv" | "movies") {
+export function usePrunerStudiosQuery(
+  instanceId: number,
+  scope: "tv" | "movies",
+) {
   return useQuery({
     queryKey: ["pruner", "instances", instanceId, "studios", scope],
     queryFn: () => fetchPrunerStudios(instanceId, scope),

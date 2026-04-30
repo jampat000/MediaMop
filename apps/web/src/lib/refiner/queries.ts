@@ -1,9 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { postRefinerFileRemuxPassEnqueue } from "./file-remux-pass-api";
-import { fetchRefinerOperatorSettings, putRefinerOperatorSettings } from "./operator-settings-api";
+import {
+  fetchRefinerOperatorSettings,
+  putRefinerOperatorSettings,
+} from "./operator-settings-api";
 import { fetchRefinerOverviewStats } from "./overview-stats-api";
-import { fetchRefinerPathSettings, putRefinerPathSettings } from "./path-settings-api";
-import { fetchRefinerRemuxRulesSettings, putRefinerRemuxRulesSettings } from "./remux-rules-settings-api";
+import {
+  fetchRefinerPathSettings,
+  putRefinerPathSettings,
+} from "./path-settings-api";
+import {
+  fetchRefinerRemuxRulesSettings,
+  putRefinerRemuxRulesSettings,
+} from "./remux-rules-settings-api";
 import { fetchRefinerRuntimeSettings } from "./runtime-settings-api";
 import { postRefinerWatchedFolderRemuxScanDispatchEnqueue } from "./watched-folder-scan-api";
 import type {
@@ -14,9 +23,18 @@ import type {
   RefinerWatchedFolderRemuxScanDispatchEnqueueBody,
 } from "./types";
 
-export const refinerPathSettingsQueryKey = ["refiner", "path-settings"] as const;
-export const refinerOverviewStatsQueryKey = ["refiner", "overview-stats"] as const;
-export const refinerOperatorSettingsQueryKey = ["refiner", "operator-settings"] as const;
+export const refinerPathSettingsQueryKey = [
+  "refiner",
+  "path-settings",
+] as const;
+export const refinerOverviewStatsQueryKey = [
+  "refiner",
+  "overview-stats",
+] as const;
+export const refinerOperatorSettingsQueryKey = [
+  "refiner",
+  "operator-settings",
+] as const;
 
 export function useRefinerOverviewStatsQuery() {
   return useQuery({
@@ -37,7 +55,8 @@ export function useRefinerOperatorSettingsQuery() {
 export function useRefinerOperatorSettingsSaveMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: RefinerOperatorSettingsPutBody) => putRefinerOperatorSettings(body),
+    mutationFn: (body: RefinerOperatorSettingsPutBody) =>
+      putRefinerOperatorSettings(body),
     onSuccess: (data) => {
       qc.setQueryData(refinerOperatorSettingsQueryKey, data);
       void qc.invalidateQueries({ queryKey: refinerRuntimeSettingsQueryKey });
@@ -56,14 +75,18 @@ export function useRefinerPathSettingsQuery() {
 export function useRefinerPathSettingsSaveMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: RefinerPathSettingsPutBody) => putRefinerPathSettings(body),
+    mutationFn: (body: RefinerPathSettingsPutBody) =>
+      putRefinerPathSettings(body),
     onSuccess: (data) => {
       qc.setQueryData(refinerPathSettingsQueryKey, data);
     },
   });
 }
 
-export const refinerRuntimeSettingsQueryKey = ["refiner", "runtime-settings"] as const;
+export const refinerRuntimeSettingsQueryKey = [
+  "refiner",
+  "runtime-settings",
+] as const;
 
 export function useRefinerRuntimeSettingsQuery() {
   return useQuery({
@@ -80,7 +103,10 @@ export function useRefinerWatchedFolderRemuxScanDispatchEnqueueMutation() {
   });
 }
 
-export const refinerRemuxRulesSettingsQueryKey = ["refiner", "remux-rules-settings"] as const;
+export const refinerRemuxRulesSettingsQueryKey = [
+  "refiner",
+  "remux-rules-settings",
+] as const;
 
 export function useRefinerRemuxRulesSettingsQuery() {
   return useQuery({
@@ -93,7 +119,8 @@ export function useRefinerRemuxRulesSettingsQuery() {
 export function useRefinerRemuxRulesSettingsSaveMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: RefinerRemuxRulesSettingsPutBody) => putRefinerRemuxRulesSettings(body),
+    mutationFn: (body: RefinerRemuxRulesSettingsPutBody) =>
+      putRefinerRemuxRulesSettings(body),
     onSuccess: (data) => {
       qc.setQueryData(refinerRemuxRulesSettingsQueryKey, data);
     },
@@ -103,9 +130,12 @@ export function useRefinerRemuxRulesSettingsSaveMutation() {
 export function useRefinerFileRemuxPassEnqueueMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: RefinerFileRemuxPassManualEnqueueBody) => postRefinerFileRemuxPassEnqueue(body),
+    mutationFn: (body: RefinerFileRemuxPassManualEnqueueBody) =>
+      postRefinerFileRemuxPassEnqueue(body),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["refiner", "jobs", "inspection"] });
+      void qc.invalidateQueries({
+        queryKey: ["refiner", "jobs", "inspection"],
+      });
     },
   });
 }
