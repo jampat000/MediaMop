@@ -67,6 +67,13 @@ The release workflow publishes GHCR images with the repository `GITHUB_TOKEN` an
 
 `MediaMopSetup.exe` is the supported Windows release artifact.
 
+Important upgrade requirement:
+
+- Run `MediaMopSetup.exe` as administrator.
+- The installer must successfully install the local `MediaMop Updater` service.
+- Existing Windows installs from before this updater-service model need one manual admin installer run to bootstrap that service.
+- After that one-time bootstrap, future upgrades can start remotely from **Settings -> Upgrade**.
+
 After installing it:
 
 1. Launch `MediaMop` from the Start Menu or desktop shortcut.
@@ -74,6 +81,7 @@ After installing it:
 3. The tray icon opens the local app in the browser and exposes `Open MediaMop`, `Open Data Folder`, and `Quit`.
 4. Application binaries install under `C:\Program Files\MediaMop`.
 5. The local runtime root is created under `C:\ProgramData\MediaMop`.
+6. The local `MediaMop Updater` Windows service is installed and started.
 
 This design is intentional. Running in the user session avoids common NAS or external-drive access issues that affect Windows services, while keeping writable configuration, logs, backups, and the SQLite database out of the protected application install directory.
 
