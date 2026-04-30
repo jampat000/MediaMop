@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from collections.abc import Callable
 
@@ -21,6 +22,8 @@ from mediamop.modules.subber.subber_subtitle_state_service import upsert_subtitl
 from mediamop.modules.subber.worker_loop import SubberJobWorkContext
 from mediamop.platform.activity import constants as C
 
+logger = logging.getLogger(__name__)
+
 
 def make_subber_webhook_import_handler(
     session_factory: sessionmaker[Session],
@@ -32,9 +35,11 @@ def make_subber_webhook_import_handler(
     def handle(ctx: SubberJobWorkContext) -> None:
         p = json.loads(ctx.payload_json or "{}")
         if str(p.get("media_scope") or "") != media_scope:
+            logger.debug("Subber webhook import skipped because payload media_scope did not match %s.", media_scope)
             return
         file_path = str(p.get("file_path") or "").strip()
         if not file_path:
+            logger.debug("Subber webhook import skipped because payload had no file_path (%s).", media_scope)
             return
         title = str(p.get("title") or "").strip()
         year = p.get("year")
@@ -56,6 +61,7 @@ def make_subber_webhook_import_handler(
             with session.begin():
                 settings_row = ensure_subber_settings_row(session)
                 if not settings_row.enabled:
+                    logger.debug("Subber webhook import skipped because Subber is disabled (%s).", media_scope)
                     return
                 for lang in language_preferences_list(settings_row):
                     st = upsert_subtitle_state(

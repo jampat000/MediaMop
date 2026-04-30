@@ -163,6 +163,7 @@ def _failed_jobs_for_scope(
         try:
             rel, scope, legacy_dry_run = _parse_payload(row.payload_json)
         except (ValueError, json.JSONDecodeError):
+            logger.debug("Refiner failure cleanup ignored malformed failed-job payload job_id=%s", row.id, exc_info=True)
             continue
         if scope != media_scope:
             continue
@@ -270,6 +271,11 @@ def run_refiner_failure_cleanup_sweep_for_scope(
         out["processed_failed_jobs"] += 1
         out["jobs"].append(detail)
         if legacy_dry_run:
+            logger.debug(
+                "Refiner failure cleanup skipped legacy dry-run payload job_id=%s relative_media_path=%s",
+                job.id,
+                rel_norm,
+            )
             detail[f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_skip_reason"] = (
                 "Skipped for compatibility: this failed remux row uses legacy dry_run payload format, "
                 "which is not a current Refiner mode."
@@ -306,6 +312,11 @@ def run_refiner_failure_cleanup_sweep_for_scope(
                             out=detail["movie_failure_cleanup_cascade_folders_deleted"],
                         )
             except ValueError:
+                logger.warning(
+                    "Refiner movie failure cleanup skipped source folder outside watched root job_id=%s path=%s",
+                    job.id,
+                    src_folder,
+                )
                 pass
             try:
                 out_folder.relative_to(output_root)
@@ -319,6 +330,11 @@ def run_refiner_failure_cleanup_sweep_for_scope(
                             out=detail["movie_failure_cleanup_cascade_folders_deleted"],
                         )
             except ValueError:
+                logger.warning(
+                    "Refiner movie failure cleanup skipped output folder outside output root job_id=%s path=%s",
+                    job.id,
+                    out_folder,
+                )
                 pass
             for temp in _job_temp_candidates(work_root=work_root, rel_norm=rel_norm):
                 ok, _ = _safe_unlink(temp)
@@ -349,6 +365,11 @@ def run_refiner_failure_cleanup_sweep_for_scope(
                 try:
                     rel = relative_posix_path_under_watched(watched_root=watched_root, file_path=ep)
                 except ValueError:
+                    logger.warning(
+                        "Refiner TV failure cleanup skipped episode outside watched root job_id=%s path=%s",
+                        job.id,
+                        ep,
+                    )
                     continue
                 if refiner_active_remux_pass_exists_for_relative_path(
                     session,
@@ -381,6 +402,11 @@ def run_refiner_failure_cleanup_sweep_for_scope(
                             out=detail["tv_failure_cleanup_cascade_folders_deleted"],
                         )
             except ValueError:
+                logger.warning(
+                    "Refiner TV failure cleanup skipped season folder outside watched root job_id=%s path=%s",
+                    job.id,
+                    src_season,
+                )
                 pass
             try:
                 out_season.relative_to(output_root)
@@ -394,6 +420,11 @@ def run_refiner_failure_cleanup_sweep_for_scope(
                             out=detail["tv_failure_cleanup_cascade_folders_deleted"],
                         )
             except ValueError:
+                logger.warning(
+                    "Refiner TV failure cleanup skipped output season outside output root job_id=%s path=%s",
+                    job.id,
+                    out_season,
+                )
                 pass
             for temp in _job_temp_candidates(work_root=work_root, rel_norm=rel_norm):
                 ok, _ = _safe_unlink(temp)

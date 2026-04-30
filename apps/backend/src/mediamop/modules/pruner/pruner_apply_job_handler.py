@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Callable
 from typing import Any
 
@@ -36,6 +37,8 @@ from mediamop.platform.activity import constants as C
 from mediamop.platform.activity.service import record_activity_event
 from mediamop.platform.observability.diagnostics import DiagnosticAction, DiagnosticModule, DiagnosticResult, DiagnosticTrigger
 from mediamop.platform.observability.operator_messages import activity_detail_envelope, media_scope_label, provider_label
+
+logger = logging.getLogger(__name__)
 
 _APPLY_SUPPORTED = frozenset(
     {
@@ -188,6 +191,7 @@ def make_pruner_candidate_removal_apply_handler(
         for c in candidates:
             item_id = str(c.get("item_id", "")).strip()
             if not item_id:
+                logger.warning("Pruner apply skipped a candidate with no item_id preview_run_id=%s", preview_run_uuid)
                 failed += 1
                 continue
             if provider_for_delete == "emby":
@@ -198,6 +202,11 @@ def make_pruner_candidate_removal_apply_handler(
                 )
             elif provider_for_delete == "plex":
                 if not plex_token.strip():
+                    logger.warning(
+                        "Pruner apply could not delete Plex item %s because the auth token is missing preview_run_id=%s",
+                        item_id,
+                        preview_run_uuid,
+                    )
                     failed += 1
                     continue
                 status, _err_body = plex_delete_library_metadata(
@@ -214,8 +223,19 @@ def make_pruner_candidate_removal_apply_handler(
             if status in (200, 204):
                 removed += 1
             elif status == 404:
+                logger.debug(
+                    "Pruner apply skipped item_id=%s because it was already absent on provider=%s.",
+                    item_id,
+                    provider_for_delete,
+                )
                 skipped += 1
             else:
+                logger.warning(
+                    "Pruner apply failed to delete item_id=%s on provider=%s (HTTP %s).",
+                    item_id,
+                    provider_for_delete,
+                    status,
+                )
                 failed += 1
 
         label = _scope_label(scope)

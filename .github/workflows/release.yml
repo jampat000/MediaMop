@@ -86,6 +86,13 @@ jobs:
           python -m pip install -e "./apps/backend[dev]"
           python -m playwright install --with-deps chromium
 
+      - name: Backend dependency vulnerability scan (pip-audit)
+        working-directory: apps/backend
+        run: |
+          python -m pip freeze --exclude-editable > pip-audit-requirements.txt
+          pip-audit --strict -r pip-audit-requirements.txt
+          rm pip-audit-requirements.txt
+
       - name: Run MediaMop backend tests
         working-directory: apps/backend
         env:

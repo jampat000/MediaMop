@@ -107,14 +107,15 @@ end;
 
 procedure WaitForMediaMopProcessesToExit();
 var
-  Deadline: Integer;
+  Attempts: Integer;
 begin
-  Deadline := GetTickCount() + 10000;
-  while GetTickCount() < Deadline do
+  Attempts := 40;
+  while Attempts > 0 do
   begin
     if (not QueryProcessRunning('MediaMop.exe')) and (not QueryProcessRunning('MediaMopServer.exe')) then
       Exit;
     Sleep(250);
+    Attempts := Attempts - 1;
   end;
 end;
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import tempfile
 from collections import deque
@@ -14,6 +15,8 @@ from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.platform.suite_settings.service import ensure_suite_settings_row
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -51,6 +54,7 @@ def read_suite_logs(
     try:
         handle = path.open("r", encoding="utf-8")
     except OSError:
+        logger.warning("Suite log read skipped because %s could not be opened.", path, exc_info=True)
         return ([], 0, counts)
 
     with handle:
@@ -117,11 +121,12 @@ def prune_log_file(settings: MediaMopSettings, *, keep_days: int) -> None:
                     target.write(raw.rstrip("\n") + "\n")
         os.replace(tmp_name, path)
     except OSError:
+        logger.warning("Suite log prune skipped because %s could not be rewritten.", path, exc_info=True)
         if tmp_name:
             try:
                 Path(tmp_name).unlink()
             except OSError:
-                pass
+                logger.debug("Suite log prune could not remove temp file %s", tmp_name, exc_info=True)
         return
 
 

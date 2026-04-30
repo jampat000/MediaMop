@@ -46,7 +46,10 @@ jobs:
 
       - name: Backend dependency vulnerability scan (pip-audit)
         working-directory: apps/backend
-        run: pip-audit --strict
+        run: |
+          python -m pip freeze --exclude-editable > pip-audit-requirements.txt
+          pip-audit --strict -r pip-audit-requirements.txt
+          rm pip-audit-requirements.txt
 
       - name: MediaMop backend type check
         working-directory: apps/backend

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from collections.abc import Callable
 
@@ -29,6 +30,8 @@ from mediamop.platform.activity import constants as C
 from mediamop.platform.observability.diagnostics import DiagnosticAction, DiagnosticModule, DiagnosticResult, DiagnosticTrigger
 from mediamop.platform.observability.operator_messages import activity_detail_envelope, media_scope_label
 
+logger = logging.getLogger(__name__)
+
 
 def make_subber_subtitle_search_handler(
     settings: MediaMopSettings,
@@ -44,13 +47,20 @@ def make_subber_subtitle_search_handler(
             with session.begin():
                 row = get_state_by_id(session, state_id)
                 if row is None:
+                    logger.debug("Subber subtitle search skipped because state_id=%s no longer exists.", state_id)
                     return
                 if row.status == "found" and row.subtitle_path and os.path.isfile(row.subtitle_path):
+                    logger.debug("Subber subtitle search skipped because state_id=%s already has a subtitle file.", state_id)
                     return
                 settings_row = ensure_subber_settings_row(session)
                 if not settings_row.enabled:
+                    logger.debug("Subber subtitle search skipped because Subber is disabled (state_id=%s).", state_id)
                     return
                 if not subber_any_search_configured(settings, settings_row, session):
+                    logger.debug(
+                        "Subber subtitle search skipped because no providers are configured (state_id=%s).",
+                        state_id,
+                    )
                     return
                 perm = max(1, int(settings_row.permanent_skip_after_attempts or 10))
                 if int(row.search_count or 0) >= perm:
@@ -78,6 +88,10 @@ def make_subber_subtitle_search_handler(
                 mark_searching(session, state_id)
                 row2 = get_state_by_id(session, state_id)
                 if row2 is None:
+                    logger.debug(
+                        "Subber subtitle search stopped because state_id=%s disappeared after marking searching.",
+                        state_id,
+                    )
                     return
                 provider_events: list[dict[str, str]] = []
                 ok = search_and_download_subtitle(

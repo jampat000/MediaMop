@@ -34,6 +34,8 @@ async def _session_cleanup_loop(
                 session.commit()
             if removed:
                 logger.info("auth event: cleaned up inactive sessions (count=%s)", removed)
+            else:
+                logger.debug("auth event: inactive session cleanup found nothing to remove")
         except Exception:
             logger.exception("auth event: inactive session cleanup failed")
 

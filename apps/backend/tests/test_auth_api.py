@@ -854,5 +854,7 @@ def test_bundled_html_csp_does_not_allow_inline_styles(monkeypatch: pytest.Monke
 
     assert response.status_code == 200
     csp = response.headers.get("Content-Security-Policy") or ""
-    assert "style-src 'self' https://fonts.googleapis.com" in csp
+    assert "style-src 'self'" in csp
+    assert "fonts.googleapis.com" not in csp
+    assert "fonts.gstatic.com" not in csp
     assert "'unsafe-inline'" not in csp
