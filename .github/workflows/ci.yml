@@ -55,6 +55,9 @@ jobs:
         with:
           node-version: "20"
 
+      - name: MediaMop agent documentation map
+        run: node scripts/check-agent-docs.mjs
+
       - name: MediaMop web - install, build, unit tests
         working-directory: apps/web
         run: |
