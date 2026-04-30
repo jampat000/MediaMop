@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from unittest.mock import patch
 
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -162,14 +163,18 @@ def test_completed_remux_output_guard_escapes_like_wildcards(tmp_path) -> None:
         s.commit()
 
     with fac() as s:
-        assert (
-            refiner_completed_remux_output_exists_for_relative_path(
-                s,
-                relative_posix="movies/a_b.mkv",
-                media_scope="movie",
+        with patch(
+            "mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_ops.Path.is_file",
+            return_value=True,
+        ):
+            assert (
+                refiner_completed_remux_output_exists_for_relative_path(
+                    s,
+                    relative_posix="movies/a_b.mkv",
+                    media_scope="movie",
+                )
+                is True
             )
-            is True
-        )
 
 
 def test_completed_remux_output_guard_allows_reprocess_when_output_missing(tmp_path) -> None:
