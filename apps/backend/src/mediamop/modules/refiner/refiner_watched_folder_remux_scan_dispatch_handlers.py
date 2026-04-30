@@ -153,6 +153,7 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                         session,
                         relative_posix=rel,
                         media_scope=media_scope,
+                        output_root=rt.output_folder,
                     ):
                         summary["skipped_existing_completed_output"] += 1
                         if media_scope == "movie":

@@ -400,21 +400,65 @@ def test_suite_update_now_stages_windows_installer_when_task_missing(
     monkeypatch.setattr("mediamop.platform.suite_settings.update_service._windows_upgrade_task_ready", lambda: False)
     monkeypatch.setattr(
         "mediamop.platform.suite_settings.update_service._launch_windows_upgrade_script",
-        lambda path: launched.append(str(path)),
+        lambda path: launched.append(str(path)) or True,
     )
 
     out = start_suite_update_now(settings)
 
     installer = tmp_path / "upgrades" / "MediaMopSetup-1.2.3.exe"
     script = tmp_path / "upgrades" / "run-windows-upgrade.ps1"
-    assert out.status == "manual_required"
+    assert out.status == "started"
     assert installer.read_bytes() == b"installer-bytes"
     assert script.is_file()
-    assert launched == []
+    assert launched == [str(script)]
     script_text = script.read_text(encoding="utf-8")
     assert "-Verb RunAs" not in script_text
     assert "Starting installer directly" in script_text
     assert out.installer_path == str(installer)
+
+
+def test_suite_update_now_reports_manual_when_legacy_elevation_fallback_fails(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(tmp_path))
+    monkeypatch.setenv("MEDIAMOP_RUNTIME", "windows")
+    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "1.0.0")
+    monkeypatch.setattr(
+        "mediamop.platform.suite_settings.update_service._fetch_latest_release_payload",
+        lambda: {
+            "tag_name": "v1.2.3",
+            "assets": [
+                {
+                    "name": "MediaMopSetup.exe",
+                    "browser_download_url": "https://example.com/MediaMopSetup.exe",
+                }
+            ],
+        },
+    )
+
+    class _Stream:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            return None
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def iter_bytes(self):
+            yield b"installer-bytes"
+
+    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.httpx.stream", lambda *a, **k: _Stream())
+    monkeypatch.setattr("mediamop.platform.suite_settings.update_service._windows_upgrade_task_ready", lambda: False)
+    monkeypatch.setattr("mediamop.platform.suite_settings.update_service._launch_windows_upgrade_script", lambda path: False)
+
+    out = start_suite_update_now(settings)
+
+    assert out.status == "manual_required"
+    assert "Windows would not start the elevated installer prompt" in out.message
+    assert out.installer_path == str(tmp_path / "upgrades" / "MediaMopSetup-1.2.3.exe")
 
 
 def test_suite_update_now_uses_windows_updater_task_when_available(

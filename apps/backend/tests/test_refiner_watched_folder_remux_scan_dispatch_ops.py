@@ -33,6 +33,20 @@ def test_iter_watched_folder_media_candidates_sorted(tmp_path) -> None:
     assert [p.name for p in got] == ["a.mkv", "b.mkv"]
 
 
+def test_iter_watched_folder_media_candidates_skip_downloader_hash_artifact(tmp_path) -> None:
+    watched = tmp_path / "watch"
+    release = watched / "Fair.Game.2010.1080p.HMAX.WEB-DL.DDP5.1.x264-PTerWEB"
+    release.mkdir(parents=True)
+    final = release / "Fair.Game.2010.1080p.HMAX.WEB-DL.DDP5.1.x264-PTerWEB.mkv"
+    transient = release / "f25fd97b42a546f08a49e40a39b46e8d.mkv"
+    final.write_bytes(b"final")
+    transient.write_bytes(b"hash")
+
+    got = iter_watched_folder_media_candidate_files(watched)
+
+    assert got == [final]
+
+
 def test_relative_posix_under_watched(tmp_path) -> None:
     w = tmp_path / "root"
     w.mkdir()
@@ -150,6 +164,36 @@ def test_completed_remux_output_guard_allows_reprocess_when_output_missing(tmp_p
                 s,
                 relative_posix="movies/a.mkv",
                 media_scope="movie",
+            )
+            is False
+        )
+
+
+def test_existing_output_root_file_blocks_repeat_scan_after_history_reset(tmp_path) -> None:
+    url = f"sqlite:///{tmp_path / 't.sqlite'}"
+    engine = create_engine(url, connect_args={"check_same_thread": False}, future=True)
+    Base.metadata.create_all(engine)
+    fac = sessionmaker(bind=engine, class_=Session, autoflush=False, autocommit=False, future=True)
+    output = tmp_path / "out" / "movies" / "a.mkv"
+    output.parent.mkdir(parents=True)
+    output.write_bytes(b"done")
+
+    with fac() as s:
+        assert (
+            refiner_completed_remux_output_exists_for_relative_path(
+                s,
+                relative_posix="movies/a.mkv",
+                media_scope="movie",
+                output_root=tmp_path / "out",
+            )
+            is True
+        )
+        assert (
+            refiner_completed_remux_output_exists_for_relative_path(
+                s,
+                relative_posix="movies/missing.mkv",
+                media_scope="movie",
+                output_root=tmp_path / "out",
             )
             is False
         )

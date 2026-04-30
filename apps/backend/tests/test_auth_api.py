@@ -807,3 +807,19 @@ def test_static_assets_do_not_get_api_no_store(monkeypatch: pytest.MonkeyPatch, 
 
     assert response.status_code == 200
     assert response.headers.get("Cache-Control") != "no-store, private"
+
+
+def test_bundled_html_csp_does_not_allow_inline_styles(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    dist = tmp_path / "web"
+    dist.mkdir(parents=True)
+    (dist / "index.html").write_text("<!doctype html><div id='root'></div>", encoding="utf-8")
+    monkeypatch.setenv("MEDIAMOP_WEB_DIST", str(dist))
+
+    app = create_app()
+    with TestClient(app) as client:
+        response = client.get("/")
+
+    assert response.status_code == 200
+    csp = response.headers.get("Content-Security-Policy") or ""
+    assert "style-src 'self' https://fonts.googleapis.com" in csp
+    assert "'unsafe-inline'" not in csp

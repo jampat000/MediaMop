@@ -54,8 +54,10 @@ From the repository root:
 
 2. Copy `apps/backend/.env.example` to `apps/backend/.env` and set `MEDIAMOP_SESSION_SECRET`. Set
    `MEDIAMOP_CREDENTIALS_SECRET` as a separate long random value before saving Pruner, Subber, Sonarr, or Radarr
-   credentials. Changing `MEDIAMOP_SESSION_SECRET` later can require re-entering credentials that were still encrypted
-   with the old session secret.
+   credentials. To rotate `MEDIAMOP_CREDENTIALS_SECRET`, put the old value in `MEDIAMOP_PREVIOUS_CREDENTIALS_SECRETS`,
+   restart MediaMop, then re-save provider credentials so they are written with the new secret. Changing
+   `MEDIAMOP_SESSION_SECRET` later can require re-entering credentials that were still encrypted with the old session
+   secret.
 3. Run migrations:
 
    ```powershell
