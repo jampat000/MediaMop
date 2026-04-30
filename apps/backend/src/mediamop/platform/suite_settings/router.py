@@ -172,10 +172,10 @@ def get_suite_security_overview(
 
 @router.get("/suite/update-status", response_model=SuiteUpdateStatusOut)
 @router.get("/suite/settings/update-status", response_model=SuiteUpdateStatusOut)
-def get_suite_update_status(_user: UserPublicDep) -> SuiteUpdateStatusOut:
+def get_suite_update_status(_user: UserPublicDep, settings: SettingsDep) -> SuiteUpdateStatusOut:
     """Read-only update check for the signed-in Settings page."""
 
-    return build_suite_update_status()
+    return build_suite_update_status(settings)
 
 
 @router.get("/suite/update-now")

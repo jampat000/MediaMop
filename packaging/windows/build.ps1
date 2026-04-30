@@ -11,11 +11,15 @@ $webDir = Join-Path $repoRoot "apps\\web"
 $specPath = Join-Path $PSScriptRoot "mediamop-tray.spec"
 $distRoot = Join-Path $repoRoot "dist\\windows"
 $ffmpegVendorDir = Join-Path $PSScriptRoot "vendor\\ffmpeg"
+$winswVendorDir = Join-Path $PSScriptRoot "vendor\\winsw"
 $venvScriptsDir = Join-Path $backendDir ".venv\\Scripts"
 $py = Join-Path $venvScriptsDir "python.exe"
 $ffmpegArchiveName = "ffmpeg-N-124254-g397c7c7524-win64-lgpl.zip"
 $ffmpegArchiveUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-04-29-13-28/$ffmpegArchiveName"
 $ffmpegArchiveSha256 = "42f9457901fcc1928834ded69f0fc4903bd16c9a41c185234a40490060bda9fb"
+$winswArchiveName = "WinSW-x64.exe"
+$winswArchiveUrl = "https://github.com/winsw/winsw/releases/download/v2.12.0/WinSW-x64.exe"
+$winswArchiveSha256 = "05b82d46ad331cc16bdc00de5c6332c1ef818df8ceefcd49c726553209b3a0da"
 
 function Resolve-VenvExecutable {
   param(
@@ -149,6 +153,34 @@ function Ensure-WindowsFfmpegRuntime {
   }
 }
 
+function Ensure-WindowsServiceWrapper {
+  $winswExe = Join-Path $winswVendorDir "WinSW-x64.exe"
+  if (Test-Path -LiteralPath $winswExe) {
+    return
+  }
+
+  $downloadRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("mediamop-winsw-" + [System.Guid]::NewGuid().ToString("N"))
+  $archivePath = Join-Path $downloadRoot $winswArchiveName
+  try {
+    New-Item -ItemType Directory -Path $downloadRoot | Out-Null
+    Write-Host "Downloading WinSW runtime..."
+    Invoke-WebRequest -Uri $winswArchiveUrl -OutFile $archivePath -UseBasicParsing
+    $actualSha256 = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($actualSha256 -ne $winswArchiveSha256) {
+      throw "Downloaded WinSW binary hash mismatch. Expected $winswArchiveSha256 but got $actualSha256."
+    }
+    if (Test-Path $winswVendorDir) {
+      Remove-Item -LiteralPath $winswVendorDir -Recurse -Force
+    }
+    New-Item -ItemType Directory -Path $winswVendorDir | Out-Null
+    Copy-Item -LiteralPath $archivePath -Destination $winswExe -Force
+  } finally {
+    if (Test-Path $downloadRoot) {
+      Remove-Item -LiteralPath $downloadRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+  }
+}
+
 $iscc = Resolve-IsccPath
 $buildVersion = if ($env:MEDIAMOP_BUILD_VERSION) {
   $env:MEDIAMOP_BUILD_VERSION
@@ -229,6 +261,7 @@ if (Test-Path $distRoot) {
 New-Item -ItemType Directory -Path $distRoot | Out-Null
 
 Ensure-WindowsFfmpegRuntime
+Ensure-WindowsServiceWrapper
 
 Push-Location $repoRoot
 try {

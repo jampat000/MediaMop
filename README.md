@@ -110,6 +110,8 @@ Current release outputs include:
 - `MediaMopSetup.exe`
 - Docker images on GHCR such as `ghcr.io/jampat000/mediamop:latest`
 
+On Windows, `MediaMopSetup.exe` now installs the local `MediaMop Updater` service as a required component. After that one admin install, future in-app upgrades can run remotely from Settings without staging installers into the app directory.
+
 ## Docker
 
 Quick start:

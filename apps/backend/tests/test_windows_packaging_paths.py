@@ -79,21 +79,22 @@ def test_windows_installer_surfaces_firewall_rule_failures() -> None:
 def test_windows_installer_installs_dedicated_upgrade_task() -> None:
     repo = Path(__file__).resolve().parents[3]
     installer = repo / "packaging" / "windows" / "MediaMop.iss"
-    upgrade_script = repo / "packaging" / "windows" / "MediaMopUpgrade.ps1"
+    updater_service_xml = repo / "packaging" / "windows" / "MediaMopUpdaterService.xml"
     text = installer.read_text(encoding="utf-8")
-    script_text = upgrade_script.read_text(encoding="utf-8")
+    service_text = updater_service_xml.read_text(encoding="utf-8")
 
-    assert upgrade_script.is_file()
-    assert 'Source: "{#RepoRoot}\\packaging\\windows\\MediaMopUpgrade.ps1"; DestDir: "{app}"' in text
-    assert "procedure InstallUpgradeTask()" in text
-    assert '/TN "MediaMop Upgrade"' in text
-    assert "/RL HIGHEST" in text
-    assert '/RU "' not in text
-    assert "MediaMopUpgrade.ps1" in text
+    assert updater_service_xml.is_file()
+    assert 'Source: "{#RepoRoot}\\packaging\\windows\\MediaMopUpdaterService.xml"; DestDir: "{app}"' in text
+    assert 'Source: "{#RepoRoot}\\packaging\\windows\\vendor\\winsw\\WinSW-x64.exe"; DestDir: "{app}"; DestName: "MediaMopUpdaterService.exe"; Flags: ignoreversion' in text
+    assert "function UpdaterServiceInstalled(): Boolean;" in text
+    assert "procedure InstallUpdaterService();" in text
+    assert "MediaMopUpdaterService.exe" in text
+    assert "Remote in-app upgrades depend on that service." in text
+    assert "RaiseException('MediaMop could not install the required Windows updater service.');" in text
     assert 'Filename: "{sys}\\schtasks.exe"; Parameters: "/Delete /TN ""MediaMop Upgrade"" /F"' in text
-    assert "https://api.github.com/repos/jampat000/MediaMop/releases/latest" in script_text
-    assert "MediaMopSetup.exe" in script_text
-    assert "/CLOSEAPPLICATIONS" in script_text
+    assert "<id>MediaMopUpdater</id>" in service_text
+    assert "<name>MediaMop Updater</name>" in service_text
+    assert "<executable>%BASE%\\MediaMopUpdater.exe</executable>" in service_text
     assert "WaitForMediaMopProcessesToExit" in text
 
 
@@ -110,6 +111,8 @@ def test_windows_package_uses_dedicated_tray_icon_assets() -> None:
     assert "(str(TRAY_ICON_ICO), \"assets\")" in text
     assert "(str(THIRD_PARTY_NOTICES), \".\")" in text
     assert "icon=str(TRAY_ICON_ICO)" in text
+    assert 'name="MediaMopUpdater"' in text
+    assert 'str(BACKEND / "src" / "mediamop" / "windows" / "updater_service.py")' in text
 
 
 def test_windows_package_includes_ffmpeg_runtime_assets() -> None:
@@ -125,6 +128,9 @@ def test_windows_package_includes_ffmpeg_runtime_assets() -> None:
     assert "autobuild-2026-04-29-13-28" in build_text
     assert "ffmpeg-N-124254-g397c7c7524-win64-lgpl.zip" in build_text
     assert "Get-FileHash" in build_text
+    assert "Ensure-WindowsServiceWrapper" in build_text
+    assert "https://github.com/winsw/winsw/releases/download/v2.12.0/WinSW-x64.exe" in build_text
+    assert "05b82d46ad331cc16bdc00de5c6332c1ef818df8ceefcd49c726553209b3a0da" in build_text
 
 
 def test_packaged_server_binds_to_lan_interfaces() -> None:

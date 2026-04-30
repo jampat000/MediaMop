@@ -46,10 +46,14 @@ Name: "{commonappdata}\MediaMop"; Permissions: users-modify
 Type: filesandordirs; Name: "{app}\_internal"
 Type: files; Name: "{app}\MediaMop.exe"
 Type: files; Name: "{app}\MediaMopServer.exe"
+Type: files; Name: "{app}\MediaMopUpdater.exe"
+Type: files; Name: "{app}\MediaMopUpdaterService.exe"
+Type: files; Name: "{app}\MediaMopUpdaterService.xml"
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "{#RepoRoot}\packaging\windows\MediaMopUpgrade.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#RepoRoot}\packaging\windows\MediaMopUpdaterService.xml"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#RepoRoot}\packaging\windows\vendor\winsw\WinSW-x64.exe"; DestDir: "{app}"; DestName: "MediaMopUpdaterService.exe"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\MediaMop"; Filename: "{app}\{#ExeName}"
@@ -63,6 +67,8 @@ Filename: "{app}\{#ExeName}"; Description: "Launch MediaMop"; Flags: nowait post
 
 [UninstallRun]
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""MediaMop Server"""; Flags: runhidden waituntilterminated
+Filename: "{app}\MediaMopUpdaterService.exe"; Parameters: "stop"; Flags: runhidden waituntilterminated skipifdoesntexist
+Filename: "{app}\MediaMopUpdaterService.exe"; Parameters: "uninstall"; Flags: runhidden waituntilterminated skipifdoesntexist
 Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /TN ""MediaMop Upgrade"" /F"; Flags: runhidden waituntilterminated
 
 [Code]
@@ -78,6 +84,16 @@ begin
     ewWaitUntilTerminated,
     ResultCode
   );
+end;
+
+procedure StopUpdaterServiceBeforeFileCopy;
+var
+  ResultCode: Integer;
+  WrapperPath: String;
+begin
+  WrapperPath := ExpandConstant('{app}\MediaMopUpdaterService.exe');
+  if FileExists(WrapperPath) then
+    Exec(WrapperPath, 'stop', ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
 end;
 
 function QueryProcessRunning(ProcessName: String): Boolean;
@@ -121,6 +137,7 @@ end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
+  StopUpdaterServiceBeforeFileCopy();
   StopMediaMopProcess('MediaMop.exe');
   StopMediaMopProcess('MediaMopServer.exe');
   WaitForMediaMopProcessesToExit();
@@ -162,24 +179,68 @@ begin
   end;
 end;
 
-procedure InstallUpgradeTask();
+function UpdaterServiceInstalled(): Boolean;
 var
   ResultCode: Integer;
-  TaskCommand: String;
 begin
-  TaskCommand :=
-    '/Create /TN "MediaMop Upgrade" /SC ONDEMAND /RL HIGHEST /IT /F ' +
-    '" /TR "\"' + ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe') +
-    '\" -NoProfile -ExecutionPolicy Bypass -File \"' + ExpandConstant('{app}\MediaMopUpgrade.ps1') + '\""';
+  Result := Exec(
+    ExpandConstant('{app}\MediaMopUpdaterService.exe'),
+    'status',
+    ExpandConstant('{app}'),
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode
+  ) and (ResultCode = 0);
+end;
 
-  Exec(
-    ExpandConstant('{sys}\schtasks.exe'),
-    TaskCommand,
-    '',
+procedure InstallUpdaterService();
+var
+  ResultCode: Integer;
+  WrapperPath: String;
+  InstallOk: Boolean;
+  StartOk: Boolean;
+begin
+  WrapperPath := ExpandConstant('{app}\MediaMopUpdaterService.exe');
+  StartOk := Exec(
+    WrapperPath,
+    'start',
+    ExpandConstant('{app}'),
     SW_HIDE,
     ewWaitUntilTerminated,
     ResultCode
   );
+  InstallOk := True;
+  if (not StartOk) or (ResultCode <> 0) then
+  begin
+    InstallOk := Exec(
+      WrapperPath,
+      'install',
+      ExpandConstant('{app}'),
+      SW_HIDE,
+      ewWaitUntilTerminated,
+      ResultCode
+    );
+    if InstallOk and (ResultCode = 0) then
+      StartOk := Exec(
+        WrapperPath,
+        'start',
+        ExpandConstant('{app}'),
+        SW_HIDE,
+        ewWaitUntilTerminated,
+        ResultCode
+      );
+  end;
+
+  if (not InstallOk) or (not StartOk) or (ResultCode <> 0) or (not UpdaterServiceInstalled()) then
+  begin
+    MsgBox(
+      'MediaMop could not install the required Windows updater service.' + #13#10 + #13#10 +
+      'Remote in-app upgrades depend on that service. Fix the Windows service installation issue and run this installer again as administrator.',
+      mbCriticalError,
+      MB_OK
+    );
+    RaiseException('MediaMop could not install the required Windows updater service.');
+  end;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -187,6 +248,6 @@ begin
   if CurStep = ssPostInstall then
   begin
     InstallFirewallRule();
-    InstallUpgradeTask();
+    InstallUpdaterService();
   end;
 end;

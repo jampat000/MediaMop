@@ -51,6 +51,8 @@ const minimalUpdateStatus: SuiteUpdateStatusOut = {
   docker_image: null,
   docker_tag: null,
   docker_update_command: null,
+  in_app_upgrade_supported: false,
+  in_app_upgrade_summary: null,
 };
 
 const minimalSecurity: SuiteSecurityOverviewOut = {

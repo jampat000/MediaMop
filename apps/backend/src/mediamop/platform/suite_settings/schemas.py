@@ -166,6 +166,8 @@ class SuiteUpdateStatusOut(BaseModel):
     docker_image: str | None = None
     docker_tag: str | None = None
     docker_update_command: str | None = None
+    in_app_upgrade_supported: bool = False
+    in_app_upgrade_summary: str | None = None
 
 
 class SuiteUpdateStartOut(BaseModel):
