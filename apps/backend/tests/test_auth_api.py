@@ -858,3 +858,32 @@ def test_bundled_html_csp_does_not_allow_inline_styles(monkeypatch: pytest.Monke
     assert "fonts.googleapis.com" not in csp
     assert "fonts.gstatic.com" not in csp
     assert "'unsafe-inline'" not in csp
+
+
+def test_spa_login_route_serves_index_html(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    dist = tmp_path / "web"
+    dist.mkdir(parents=True)
+    html = "<!doctype html><html><body><div id='root'>MediaMop</div></body></html>"
+    (dist / "index.html").write_text(html, encoding="utf-8")
+    monkeypatch.setenv("MEDIAMOP_WEB_DIST", str(dist))
+
+    app = create_app()
+    with TestClient(app) as client:
+        response = client.get("/login?session=expired", headers={"Accept": "text/html"})
+
+    assert response.status_code == 200
+    assert "text/html" in (response.headers.get("content-type") or "").lower()
+    assert "MediaMop" in response.text
+
+
+def test_missing_static_asset_still_returns_404(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    dist = tmp_path / "web"
+    dist.mkdir(parents=True)
+    (dist / "index.html").write_text("<!doctype html><div id='root'></div>", encoding="utf-8")
+    monkeypatch.setenv("MEDIAMOP_WEB_DIST", str(dist))
+
+    app = create_app()
+    with TestClient(app) as client:
+        response = client.get("/assets/missing.js", headers={"Accept": "*/*"})
+
+    assert response.status_code == 404
