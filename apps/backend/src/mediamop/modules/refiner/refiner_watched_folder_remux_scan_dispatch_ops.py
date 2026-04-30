@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import time
 from pathlib import Path
@@ -14,6 +15,47 @@ from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.refiner_file_remux_pass_job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.refiner_remux_rules import is_refiner_media_candidate
 from mediamop.platform.activity.models import ActivityEvent
+
+_HASH_ARTIFACT_STEM_RE = re.compile(r"^[a-fA-F0-9]{32,64}$")
+_TRANSIENT_DOWNLOAD_DIR_MARKERS = {
+    ".sabnzbd",
+    "__admin__",
+    "_failed_",
+    "_unpack_",
+    "_repair_",
+    "incomplete",
+}
+
+
+def is_transient_download_artifact_media_path(path: Path) -> bool:
+    """True for media-shaped files that are still downloader staging artifacts."""
+
+    stem = path.stem.strip()
+    if _HASH_ARTIFACT_STEM_RE.fullmatch(stem):
+        return True
+
+    parts = {part.strip().lower() for part in path.parts}
+    return bool(parts.intersection(_TRANSIENT_DOWNLOAD_DIR_MARKERS))
+
+
+def _expected_output_file_for_relative_path(*, output_root: Path, relative_posix: str) -> Path | None:
+    root = output_root.expanduser().resolve()
+    parts = [part for part in relative_posix.split("/") if part and part not in {".", ".."}]
+    if not parts:
+        return None
+    candidate = root.joinpath(*parts).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError:
+        return None
+    return candidate
+
+
+def _existing_completed_output_path_is_safe(path: Path) -> bool:
+    try:
+        return path.is_file() and path.stat().st_size > 0
+    except OSError:
+        return False
 
 
 def iter_watched_folder_media_candidate_files(watched_root: Path, *, min_file_age_seconds: int = 0) -> list[Path]:
@@ -27,6 +69,8 @@ def iter_watched_folder_media_candidate_files(watched_root: Path, *, min_file_ag
         if not p.is_file():
             continue
         if not is_refiner_media_candidate(p):
+            continue
+        if is_transient_download_artifact_media_path(p):
             continue
         try:
             p.resolve().relative_to(root)
@@ -94,6 +138,7 @@ def refiner_completed_remux_output_exists_for_relative_path(
     *,
     relative_posix: str,
     media_scope: str = "movie",
+    output_root: Path | str | None = None,
 ) -> bool:
     """True when this file already completed successfully and its output still exists.
 
@@ -137,10 +182,14 @@ def refiner_completed_remux_output_exists_for_relative_path(
         if not isinstance(output_file, str) or not output_file.strip():
             continue
         try:
-            if Path(output_file).is_file():
+            if _existing_completed_output_path_is_safe(Path(output_file)):
                 return True
         except OSError:
             continue
+    if output_root is not None:
+        expected = _expected_output_file_for_relative_path(output_root=Path(output_root), relative_posix=relative_posix)
+        if expected is not None and _existing_completed_output_path_is_safe(expected):
+            return True
     return False
 
 

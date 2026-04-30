@@ -198,7 +198,7 @@ def test_refiner_overview_stats_excludes_non_finalized_successes(client_with_adm
     r = client_with_admin.get("/api/v1/refiner/overview-stats")
     assert r.status_code == 200, r.text
     body = r.json()
-    assert body["files_processed"] == 1
-    assert body["output_written_count"] == 1
+    assert body["files_processed"] == 2
+    assert body["output_written_count"] == 2
     assert body["already_optimized_count"] == 0
     assert body["files_failed"] == 1

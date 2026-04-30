@@ -221,7 +221,7 @@ if (Test-Path -LiteralPath $exe) {{
     script_path.write_text(script, encoding="utf-8")
 
 
-def _launch_windows_upgrade_script(script_path: Path) -> None:
+def _launch_windows_upgrade_script(script_path: Path) -> bool:
     log_path = script_path.parent / "upgrade-launch.log"
     log_path.write_text("Launching MediaMop in-app upgrade script.\n", encoding="utf-8")
     powershell = (
@@ -232,21 +232,50 @@ def _launch_windows_upgrade_script(script_path: Path) -> None:
         / "powershell.exe"
     )
     command = str(powershell) if powershell.is_file() else "powershell.exe"
-    subprocess.Popen(
-        [
-            command,
-            "-NoProfile",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-WindowStyle",
-            "Hidden",
-            "-File",
-            str(script_path),
-        ],
-        cwd=str(script_path.parent),
-        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "DETACHED_PROCESS", 0),
-        close_fds=True,
-    )
+    args = [
+        command,
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-WindowStyle",
+        "Hidden",
+        "-File",
+        str(script_path),
+    ]
+    try:
+        if os.name == "nt":
+            import ctypes
+
+            params = subprocess.list2cmdline(
+                [
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-WindowStyle",
+                    "Hidden",
+                    "-File",
+                    str(script_path),
+                ]
+            )
+            rc = ctypes.windll.shell32.ShellExecuteW(
+                None,
+                "runas",
+                command,
+                params,
+                str(script_path.parent),
+                0,
+            )
+            return int(rc) > 32
+
+        subprocess.Popen(
+            args,
+            cwd=str(script_path.parent),
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "DETACHED_PROCESS", 0),
+            close_fds=True,
+        )
+    except Exception:
+        return False
+    return True
 
 
 def start_suite_update_now(settings: MediaMopSettings) -> SuiteUpdateStartOut:
@@ -310,10 +339,21 @@ def start_suite_update_now(settings: MediaMopSettings) -> SuiteUpdateStartOut:
         executable_dir=executable_dir,
         script_path=script_path,
     )
+    if _launch_windows_upgrade_script(script_path):
+        return SuiteUpdateStartOut(
+            status="started",
+            message=(
+                "Upgrade started using the staged Windows installer. Approve the Windows administrator prompt if it appears; "
+                "after this installer runs, future upgrades can start from this page without the fallback path."
+            ),
+            target_version=latest_version,
+            installer_path=str(installer_path),
+            log_path=str(script_path),
+        )
     return SuiteUpdateStartOut(
         status="manual_required",
         message=(
-            "The installer was downloaded, but this older MediaMop install does not have the Windows updater task yet. "
+            "The installer was downloaded, but Windows would not start the elevated installer prompt. "
             "Run the downloaded installer once on the MediaMop computer as administrator; future upgrades can be started from this page."
         ),
         target_version=latest_version,

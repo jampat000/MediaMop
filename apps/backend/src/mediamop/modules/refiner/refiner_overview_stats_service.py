@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -35,16 +34,6 @@ def _json_int(value: object) -> int | None:
         except ValueError:
             return None
     return None
-
-
-def _activity_output_file_exists(payload: dict[str, object]) -> bool:
-    raw = payload.get("output_file")
-    if not isinstance(raw, str) or not raw.strip():
-        return False
-    try:
-        return Path(raw.strip()).expanduser().is_file()
-    except OSError:
-        return False
 
 
 def build_refiner_overview_stats(db: Session, *, window_days: int = 30) -> RefinerOverviewStatsOut:
@@ -88,8 +77,6 @@ def build_refiner_overview_stats(db: Session, *, window_days: int = 30) -> Refin
             continue
         outcome = str(payload.get("outcome") or "").strip()
         if outcome == REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN:
-            if not _activity_output_file_exists(payload):
-                continue
             output_written_count += 1
             source_bytes = _json_int(payload.get("source_size_bytes"))
             output_bytes = _json_int(payload.get("output_size_bytes"))
@@ -98,8 +85,6 @@ def build_refiner_overview_stats(db: Session, *, window_days: int = 30) -> Refin
                 total_output_bytes += max(0, output_bytes)
         elif outcome == REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED:
             if payload.get("output_copied_without_remux") is not True:
-                continue
-            if not _activity_output_file_exists(payload):
                 continue
             already_optimized_count += 1
 
