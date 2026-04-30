@@ -60,7 +60,7 @@ export function SetupPage() {
     setValidationError(null);
     try {
       await bootstrap.mutateAsync({ username: trimmedUsername, password });
-      navigate("/login", { replace: true, state: { fromSetup: true } });
+      navigate("/login?bootstrap=created", { replace: true });
     } catch {
       /* surfaced below */
     }

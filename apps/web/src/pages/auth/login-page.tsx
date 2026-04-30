@@ -65,11 +65,12 @@ function EyeOffIcon() {
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
   const fromSetup = Boolean(
     (location.state as { fromSetup?: boolean } | null)?.fromSetup,
-  );
+  ) || searchParams.get("bootstrap") === "created";
   const sessionExpired =
-    new URLSearchParams(location.search).get("session") === "expired";
+    searchParams.get("session") === "expired";
   const me = useMeQuery();
   const boot = useBootstrapStatusQuery();
   const login = useLoginMutation();

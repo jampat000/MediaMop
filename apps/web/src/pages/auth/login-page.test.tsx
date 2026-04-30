@@ -1,0 +1,46 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { MemoryRouter } from "react-router-dom";
+import { describe, expect, it, vi } from "vitest";
+
+import { LoginPage } from "./login-page";
+
+vi.mock("../../lib/auth/queries", () => ({
+  useMeQuery: () => ({ isPending: false, data: null, isError: false, error: null }),
+  useBootstrapStatusQuery: () => ({
+    isPending: false,
+    isError: false,
+    data: { bootstrap_allowed: false, reason: "admin_exists" },
+    error: null,
+  }),
+  useLoginMutation: () => ({
+    isPending: false,
+    isError: false,
+    error: null,
+    mutateAsync: vi.fn(),
+  }),
+}));
+
+function wrap(ui: ReactNode, initialEntry = "/login") {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return (
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[initialEntry]}>{ui}</MemoryRouter>
+    </QueryClientProvider>
+  );
+}
+
+describe("LoginPage", () => {
+  it("shows the bootstrap-created banner from the query string", () => {
+    render(wrap(<LoginPage />, "/login?bootstrap=created"));
+
+    expect(
+      screen.getByText(
+        "Initial account created. Sign in with the credentials you chose.",
+      ),
+    ).toBeVisible();
+  });
+});
