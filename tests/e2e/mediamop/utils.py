@@ -7,6 +7,7 @@ from sqlalchemy import delete
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.platform.auth.models import User, UserSession
+from mediamop.platform.suite_settings.model import SuiteSettingsRow
 
 
 def clear_auth_tables_for_home(home: str) -> None:
@@ -17,5 +18,6 @@ def clear_auth_tables_for_home(home: str) -> None:
     with factory() as db:
         db.execute(delete(UserSession))
         db.execute(delete(User))
+        db.execute(delete(SuiteSettingsRow))
         db.commit()
     engine.dispose()
