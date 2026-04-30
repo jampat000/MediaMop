@@ -21,7 +21,9 @@ export const SUBBER_LANGUAGE_BY_CODE: Record<string, string> = {
   tr: "Turkish",
 };
 
-export const SUBBER_LANGUAGE_OPTIONS = Object.entries(SUBBER_LANGUAGE_BY_CODE).map(([code, label]) => ({
+export const SUBBER_LANGUAGE_OPTIONS = Object.entries(
+  SUBBER_LANGUAGE_BY_CODE,
+).map(([code, label]) => ({
   code,
   label,
 }));

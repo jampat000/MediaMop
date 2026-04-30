@@ -47,37 +47,21 @@ def _e2e_home() -> str:
 
 
 def _truncate_auth_tables(home: str) -> None:
-    """Clear auth rows in a **subprocess** (same pattern as Alembic).
-
-    The pytest parent process can still fail ``import mediamop`` on CI (editable hooks,
-    importlib mode, sys.path ordering). A fresh ``python -c`` with an explicit ``src``
-    prefix matches the working uvicorn/alembic children.
-    """
-
-    src = str(SRC_PATH.resolve())
-    code = (
-        "import os, sys\n"
-        "sys.path.insert(0, os.environ['MEDIAMOP_BACKEND_SRC'])\n"
-        "os.environ['MEDIAMOP_HOME'] = os.environ['MEDIAMOP_E2E_TRUNCATE_HOME']\n"
-        "from sqlalchemy import delete\n"
-        "from mediamop.core.config import MediaMopSettings\n"
-        "from mediamop.core.db import create_db_engine, create_session_factory\n"
-        "from mediamop.platform.auth.models import User, UserSession\n"
-        "settings = MediaMopSettings.load()\n"
-        "eng = create_db_engine(settings)\n"
-        "fac = create_session_factory(eng)\n"
-        "with fac() as db:\n"
-        "    db.execute(delete(UserSession))\n"
-        "    db.execute(delete(User))\n"
-        "    db.commit()\n"
-        "eng.dispose()\n"
-    )
     subprocess.run(
-        [sys.executable, "-c", code],
-        cwd=str(BACKEND_DIR.resolve()),
+        [
+            sys.executable,
+            "-c",
+            (
+                "from tests.e2e.mediamop.utils import clear_auth_tables_for_home;"
+                "clear_auth_tables_for_home(__import__('os').environ['MEDIAMOP_E2E_TRUNCATE_HOME'])"
+            ),
+        ],
+        cwd=str(REPO_ROOT.resolve()),
         env={
             **os.environ,
-            "MEDIAMOP_BACKEND_SRC": src,
+            "PYTHONPATH": os.pathsep.join(
+                [str(REPO_ROOT.resolve()), str(SRC_PATH.resolve())]
+            ),
             "MEDIAMOP_E2E_TRUNCATE_HOME": home,
         },
         check=True,
@@ -112,7 +96,7 @@ def _wait_http(url: str, *, timeout_s: float = 60.0) -> None:
     raise RuntimeError(f"timeout waiting for {url}: {last!r}")
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def mediamop_runtime() -> dict[str, str]:
     if os.environ.get("MEDIAMOP_E2E") != "1":
         pytest.skip("MEDIAMOP_E2E=1 required")
@@ -211,6 +195,11 @@ def mediamop_runtime() -> dict[str, str]:
             api_proc.wait(timeout=8)
         except subprocess.TimeoutExpired:
             api_proc.kill()
+
+
+@pytest.fixture(scope="function", autouse=True)
+def _reset_runtime_auth_state(mediamop_runtime: dict[str, str]) -> None:
+    _truncate_auth_tables(mediamop_runtime["home"])
 
 
 @pytest.fixture(scope="function")

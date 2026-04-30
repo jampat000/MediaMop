@@ -13,36 +13,69 @@ you open.
 
 from __future__ import annotations
 
+import secrets
 from urllib.parse import urlparse
 
 from fastapi import HTTPException, Request, status
 from itsdangerous import BadSignature, SignatureExpired, TimestampSigner
 
 from mediamop.core.config import MediaMopSettings
+from mediamop.platform.auth.sessions import hash_session_token
 
 CSRF_SIGNER_SALT = "mediamop-csrf-v1"
 CSRF_MAX_AGE_SEC = 3600
-CSRF_SUBJECT = "csrf"
+CSRF_SUBJECT_ANONYMOUS = "csrf.anonymous"
+CSRF_SUBJECT_SESSION = "csrf.session"
 
 
 def _signer(secret: str) -> TimestampSigner:
     return TimestampSigner(secret, salt=CSRF_SIGNER_SALT)
 
 
-def issue_csrf_token(secret: str) -> str:
+def _csrf_session_binding(raw_session_token: str) -> str:
+    return hash_session_token(raw_session_token.strip())
+
+
+def _session_subject_payload(raw_session_token: str) -> str:
+    return f"{CSRF_SUBJECT_SESSION}:{_csrf_session_binding(raw_session_token)}"
+
+
+def current_raw_session_token(request: Request, settings: MediaMopSettings) -> str | None:
+    raw = (request.cookies.get(settings.session_cookie_name) or "").strip()
+    return raw or None
+
+
+def issue_csrf_token(secret: str, raw_session_token: str | None = None) -> str:
     if not secret.strip():
         raise ValueError("session secret required for CSRF")
-    return _signer(secret).sign(CSRF_SUBJECT.encode("utf-8")).decode("utf-8")
+    payload = (
+        _session_subject_payload(raw_session_token)
+        if (raw_session_token or "").strip()
+        else CSRF_SUBJECT_ANONYMOUS
+    )
+    return _signer(secret).sign(payload.encode("utf-8")).decode("utf-8")
 
 
-def verify_csrf_token(secret: str, token: str, *, max_age_sec: int = CSRF_MAX_AGE_SEC) -> bool:
+def verify_csrf_token(
+    secret: str,
+    token: str,
+    *,
+    raw_session_token: str | None = None,
+    allow_anonymous: bool = False,
+    max_age_sec: int = CSRF_MAX_AGE_SEC,
+) -> bool:
     if not (token or "").strip() or not (secret or "").strip():
         return False
     try:
         raw = _signer(secret).unsign(token.encode("utf-8"), max_age=max_age_sec)
-        return raw.decode("utf-8") == CSRF_SUBJECT
+        payload = raw.decode("utf-8")
     except (BadSignature, SignatureExpired, UnicodeDecodeError):
         return False
+    if allow_anonymous and payload == CSRF_SUBJECT_ANONYMOUS:
+        return True
+    if not (raw_session_token or "").strip():
+        return False
+    return secrets.compare_digest(payload, _session_subject_payload(raw_session_token))
 
 
 def validate_browser_post_origin(request: Request, settings: MediaMopSettings) -> None:

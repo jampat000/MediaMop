@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from collections.abc import Callable
 
@@ -25,6 +26,8 @@ from mediamop.modules.subber.subber_subtitle_search_service import apply_path_ma
 from mediamop.modules.subber.subber_subtitle_state_service import upsert_subtitle_state
 from mediamop.modules.subber.worker_loop import SubberJobWorkContext
 from mediamop.platform.activity import constants as C
+
+logger = logging.getLogger(__name__)
 
 
 def _arr_api_key(settings: MediaMopSettings, row: SubberSettingsRow, *, radarr: bool) -> str:
@@ -97,6 +100,7 @@ def make_subber_library_sync_movies_handler(
                 api_key = _arr_api_key(settings, row, radarr=True)
                 base = (row.radarr_base_url or "").strip()
                 if not base or not api_key:
+                    logger.debug("Subber library sync skipped for movies because Radarr is not configured.")
                     subber_activity.record_subber_activity(
                         session,
                         event_type=C.SUBBER_LIBRARY_SYNC_COMPLETED,
@@ -201,7 +205,12 @@ def make_subber_library_sync_tv_handler(
                     show_title = str(ser.get("title") or "").strip() or None
                     try:
                         ep_files = get_sonarr_episode_files(base, api_key, series_id)
-                    except SubberArrClientError:
+                    except SubberArrClientError as exc:
+                        logger.warning(
+                            "Subber TV library sync could not fetch Sonarr episode files for series_id=%s: %s",
+                            series_id,
+                            exc,
+                        )
                         ep_files = []
                     episode_file_id_to_path: dict[int, str] = {}
                     for ef in ep_files:
@@ -213,7 +222,12 @@ def make_subber_library_sync_tv_handler(
                             episode_file_id_to_path[int(fid)] = path
                     try:
                         episodes = get_sonarr_episodes(base, api_key, series_id)
-                    except SubberArrClientError:
+                    except SubberArrClientError as exc:
+                        logger.warning(
+                            "Subber TV library sync skipped series_id=%s because Sonarr episodes could not be listed: %s",
+                            series_id,
+                            exc,
+                        )
                         continue
                     for ep in episodes:
                         if not ep.get("hasFile"):

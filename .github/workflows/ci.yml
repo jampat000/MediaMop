@@ -21,6 +21,8 @@ jobs:
   mediamop:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      MEDIAMOP_SESSION_SECRET: ${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-ci-session-secret-32chars-min
     steps:
       - uses: actions/checkout@v6
 
@@ -38,6 +40,17 @@ jobs:
         working-directory: apps/backend
         run: ruff check src tests
 
+      - name: Backend security scan (bandit)
+        working-directory: apps/backend
+        run: bandit -r src -lll -q
+
+      - name: Backend dependency vulnerability scan (pip-audit)
+        working-directory: apps/backend
+        run: |
+          python -m pip freeze --exclude-editable > pip-audit-requirements.txt
+          pip-audit --strict -r pip-audit-requirements.txt
+          rm pip-audit-requirements.txt
+
       - name: MediaMop backend type check
         working-directory: apps/backend
         run: mypy src/mediamop
@@ -46,10 +59,10 @@ jobs:
         working-directory: apps/backend
         env:
           MEDIAMOP_HOME: ${{ runner.temp }}/mediamop-ci
-          MEDIAMOP_SESSION_SECRET: ci-mediamop-session-secret-32chars-min
         run: |
           alembic upgrade head
-          pytest -q --cov=mediamop --cov-fail-under=60
+          alembic check
+          pytest -q --cov=mediamop --cov-fail-under=70
 
       - uses: actions/setup-node@v6
         with:
@@ -58,24 +71,31 @@ jobs:
       - name: MediaMop agent documentation map
         run: node scripts/check-agent-docs.mjs
 
-      - name: MediaMop web - install, build, unit tests
+      - name: MediaMop web - install, lint, format, build, unit tests
         working-directory: apps/web
         run: |
           npm ci
+          npm run lint
+          npm run format
           npm run build
           npm run test
+
+      - name: Frontend dependency vulnerability scan
+        working-directory: apps/web
+        run: npm audit --audit-level=high
 
       - name: MediaMop E2E smoke (Playwright + real API)
         env:
           MEDIAMOP_E2E: "1"
           MEDIAMOP_HOME: ${{ runner.temp }}/mediamop-e2e
-          MEDIAMOP_SESSION_SECRET: ci-mediamop-session-secret-32chars-min
           PYTHONPATH: ${{ github.workspace }}/apps/backend/src
         run: python -m pytest tests/e2e/mediamop -q --tb=short
 
   docker-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      MEDIAMOP_SESSION_SECRET: ${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-ci-session-secret-32chars-min
     steps:
       - uses: actions/checkout@v6
 
@@ -86,7 +106,7 @@ jobs:
         run: |
           docker rm -f mediamop-ci-smoke >/dev/null 2>&1 || true
           docker run -d --name mediamop-ci-smoke -p 8788:8788 \
-            -e MEDIAMOP_SESSION_SECRET=ci-mediamop-session-secret-32chars-min \
+            -e MEDIAMOP_SESSION_SECRET="$MEDIAMOP_SESSION_SECRET" \
             mediamop-ci-smoke
           for i in {1..30}; do
             if curl -fsS http://127.0.0.1:8788/health >/tmp/mediamop-health.json; then

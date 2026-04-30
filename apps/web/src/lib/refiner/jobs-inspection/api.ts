@@ -1,13 +1,18 @@
 import { fetchCsrfToken } from "../../api/auth-api";
 import { apiFetch, readJson, requireOk } from "../../api/client";
-import type { RefinerJobCancelPendingOut, RefinerJobsInspectionOut } from "./types";
+import type {
+  RefinerJobCancelPendingOut,
+  RefinerJobsInspectionOut,
+} from "./types";
 
 export type FetchRefinerJobsInspectionOpts = {
   statuses?: string[];
   limit?: number;
 };
 
-export function refinerJobsInspectionPath(opts?: FetchRefinerJobsInspectionOpts): string {
+export function refinerJobsInspectionPath(
+  opts?: FetchRefinerJobsInspectionOpts,
+): string {
   const params = new URLSearchParams();
   const limit = opts?.limit ?? 100;
   params.set("limit", String(limit));
@@ -28,7 +33,9 @@ export async function fetchRefinerJobsInspection(
   return readJson<RefinerJobsInspectionOut>(r);
 }
 
-export async function postRefinerJobCancelPending(jobId: number): Promise<RefinerJobCancelPendingOut> {
+export async function postRefinerJobCancelPending(
+  jobId: number,
+): Promise<RefinerJobCancelPendingOut> {
   const csrf_token = await fetchCsrfToken();
   const path = `/api/v1/refiner/jobs/${jobId}/cancel-pending`;
   const r = await apiFetch(path, {

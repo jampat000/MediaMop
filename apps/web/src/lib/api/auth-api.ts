@@ -29,7 +29,10 @@ export async function fetchBootstrapStatus(): Promise<BootstrapStatus> {
 
 export type LoginResult = { user: UserPublic };
 
-export async function postLogin(username: string, password: string): Promise<LoginResult> {
+export async function postLogin(
+  username: string,
+  password: string,
+): Promise<LoginResult> {
   const csrf_token = await fetchCsrfToken();
   const path = "/api/v1/auth/login";
   const r = await apiFetch(path, {

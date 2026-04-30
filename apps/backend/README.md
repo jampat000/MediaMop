@@ -19,7 +19,6 @@ Requires **`MEDIAMOP_SESSION_SECRET`**, a writable SQLite file under **`MEDIAMOP
 | GET | `/api/v1/auth/me` | Current user from cookie + ``UserSession`` row. |
 | GET | `/api/v1/auth/bootstrap/status` | Whether first-run bootstrap is allowed (no ``admin`` user yet). |
 | POST | `/api/v1/auth/bootstrap` | Create initial ``admin`` only while bootstrap is allowed; CSRF + optional Origin checks (Phase 6). |
-| GET | `/api/v1/auth/admin/ping` | Authenticated **admin** probe (uses ``RequireAdminDep``). |
 
 When trusted browser origins are configured — **`MEDIAMOP_TRUSTED_BROWSER_ORIGINS`** if set, otherwise **`MEDIAMOP_CORS_ORIGINS`** — browser **POST** auth routes require a matching **Origin** or **Referer**.
 
@@ -41,6 +40,7 @@ Copy **`.env.example`** to **`.env`** in this directory (gitignored). The API lo
 | `MEDIAMOP_BOOTSTRAP_RATE_MAX_ATTEMPTS` | Max ``POST /auth/bootstrap`` per IP per window (default `10`). |
 | `MEDIAMOP_BOOTSTRAP_RATE_WINDOW_SECONDS` | Bootstrap window (default `3600`). |
 | `MEDIAMOP_SECURITY_ENABLE_HSTS` | If `1`/`true`, send ``Strict-Transport-Security`` on responses. Only when **all** clients use HTTPS. |
+| `MEDIAMOP_METRICS_BEARER_TOKEN` | Optional bearer token for machine access to ``GET /metrics``; operator/admin browser sessions still work. |
 
 ## Run API (development)
 

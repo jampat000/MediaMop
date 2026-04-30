@@ -21,17 +21,25 @@ export function PrunerInstanceShell() {
     <div className="mm-page w-full min-w-0" data-testid="pruner-instance-shell">
       <header className="mm-page__intro !mb-0">
         <p className="mm-page__eyebrow">MediaMop</p>
-        {q.isLoading ? <h1 className="mm-page__title">Pruner — loading…</h1> : null}
+        {q.isLoading ? (
+          <h1 className="mm-page__title">Pruner — loading…</h1>
+        ) : null}
         {q.data ? (
           <>
             <h1 className="mm-page__title">Pruner — {q.data.display_name}</h1>
             <p className="mm-page__subtitle max-w-3xl">
-              Pruner helps clean up Emby, Jellyfin, and Plex libraries. This page is for{" "}
-              <strong className="text-[var(--mm-text)]">one</strong>{" "}
-              <strong className="text-[var(--mm-text)]">{q.data.provider}</strong> server (
-              <span className="font-mono text-[0.9em]">{q.data.base_url}</span>). Use the{" "}
-              <strong className="text-[var(--mm-text)]">Movies</strong> and <strong className="text-[var(--mm-text)]">TV</strong>{" "}
-              tabs for rules, scans, and deletes — nothing is shared between servers or between providers.
+              Pruner helps clean up Emby, Jellyfin, and Plex libraries. This
+              page is for <strong className="text-[var(--mm-text)]">one</strong>{" "}
+              <strong className="text-[var(--mm-text)]">
+                {q.data.provider}
+              </strong>{" "}
+              server (
+              <span className="font-mono text-[0.9em]">{q.data.base_url}</span>
+              ). Use the{" "}
+              <strong className="text-[var(--mm-text)]">Movies</strong> and{" "}
+              <strong className="text-[var(--mm-text)]">TV</strong> tabs for
+              rules, scans, and deletes — nothing is shared between servers or
+              between providers.
             </p>
           </>
         ) : null}
@@ -47,16 +55,29 @@ export function PrunerInstanceShell() {
         aria-label="Pruner server sections"
         data-testid="pruner-instance-section-tabs"
       >
-        <NavLink to={`${base}/overview`} className={({ isActive }) => mmSectionTabClass(isActive)} end>
+        <NavLink
+          to={`${base}/overview`}
+          className={({ isActive }) => mmSectionTabClass(isActive)}
+          end
+        >
           Overview
         </NavLink>
-        <NavLink to={`${base}/movies`} className={({ isActive }) => mmSectionTabClass(isActive)}>
+        <NavLink
+          to={`${base}/movies`}
+          className={({ isActive }) => mmSectionTabClass(isActive)}
+        >
           Movies
         </NavLink>
-        <NavLink to={`${base}/tv`} className={({ isActive }) => mmSectionTabClass(isActive)}>
+        <NavLink
+          to={`${base}/tv`}
+          className={({ isActive }) => mmSectionTabClass(isActive)}
+        >
           TV
         </NavLink>
-        <NavLink to={`${base}/connection`} className={({ isActive }) => mmSectionTabClass(isActive)}>
+        <NavLink
+          to={`${base}/connection`}
+          className={({ isActive }) => mmSectionTabClass(isActive)}
+        >
           Connection
         </NavLink>
       </nav>

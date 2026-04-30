@@ -1,6 +1,9 @@
 import { fetchCsrfToken } from "../api/auth-api";
 import { apiFetch, readJson, requireOk } from "../api/client";
-import type { RefinerPathSettingsOut, RefinerPathSettingsPutBody } from "./types";
+import type {
+  RefinerPathSettingsOut,
+  RefinerPathSettingsPutBody,
+} from "./types";
 
 export const refinerPathSettingsPath = () => "/api/v1/refiner/path-settings";
 
@@ -11,7 +14,9 @@ export async function fetchRefinerPathSettings(): Promise<RefinerPathSettingsOut
   return readJson<RefinerPathSettingsOut>(r);
 }
 
-export async function putRefinerPathSettings(body: RefinerPathSettingsPutBody): Promise<RefinerPathSettingsOut> {
+export async function putRefinerPathSettings(
+  body: RefinerPathSettingsPutBody,
+): Promise<RefinerPathSettingsOut> {
   const csrf_token = await fetchCsrfToken();
   const path = refinerPathSettingsPath();
   const r = await apiFetch(path, {

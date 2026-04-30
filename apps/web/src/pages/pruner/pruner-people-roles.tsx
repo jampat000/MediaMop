@@ -1,10 +1,20 @@
 /** Wire tokens stored per scope (API + backend). */
 import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
 
-export const PRUNER_PEOPLE_ROLE_IDS = ["cast", "director", "writer", "producer", "guest_star"] as const;
+export const PRUNER_PEOPLE_ROLE_IDS = [
+  "cast",
+  "director",
+  "writer",
+  "producer",
+  "guest_star",
+] as const;
 export type PrunerPeopleRoleId = (typeof PRUNER_PEOPLE_ROLE_IDS)[number];
 
-const PLEX_UI_ROLE_IDS: readonly PrunerPeopleRoleId[] = ["cast", "director", "writer"];
+const PLEX_UI_ROLE_IDS: readonly PrunerPeopleRoleId[] = [
+  "cast",
+  "director",
+  "writer",
+];
 
 const ROLE_LABELS: Record<PrunerPeopleRoleId, string> = {
   cast: "Cast (actors)",
@@ -14,11 +24,16 @@ const ROLE_LABELS: Record<PrunerPeopleRoleId, string> = {
   guest_star: "Guest stars",
 };
 
-const PLEX_UNAVAILABLE: ReadonlySet<PrunerPeopleRoleId> = new Set(["producer", "guest_star"]);
+const PLEX_UNAVAILABLE: ReadonlySet<PrunerPeopleRoleId> = new Set([
+  "producer",
+  "guest_star",
+]);
 
 export const DEFAULT_PRUNER_PEOPLE_ROLES: PrunerPeopleRoleId[] = [];
 
-export function normalizePeopleRolesFromApi(raw: string[] | undefined | null): PrunerPeopleRoleId[] {
+export function normalizePeopleRolesFromApi(
+  raw: string[] | undefined | null,
+): PrunerPeopleRoleId[] {
   const out: PrunerPeopleRoleId[] = [];
   const seen = new Set<string>();
   for (const id of PRUNER_PEOPLE_ROLE_IDS) {
@@ -31,13 +46,19 @@ export function normalizePeopleRolesFromApi(raw: string[] | undefined | null): P
 }
 
 /** Plex PATCH: omit tags Plex cannot supply. */
-export function peopleRolesForPlexPersist(roles: readonly PrunerPeopleRoleId[]): PrunerPeopleRoleId[] {
+export function peopleRolesForPlexPersist(
+  roles: readonly PrunerPeopleRoleId[],
+): PrunerPeopleRoleId[] {
   return roles.filter((r) => !PLEX_UNAVAILABLE.has(r));
 }
 
 /** Hydrate Plex People UI: drop roles Plex cannot supply. */
-export function peopleRolesForPlexUiState(raw: string[] | undefined | null): PrunerPeopleRoleId[] {
-  return normalizePeopleRolesFromApi(raw).filter((r) => !PLEX_UNAVAILABLE.has(r));
+export function peopleRolesForPlexUiState(
+  raw: string[] | undefined | null,
+): PrunerPeopleRoleId[] {
+  return normalizePeopleRolesFromApi(raw).filter(
+    (r) => !PLEX_UNAVAILABLE.has(r),
+  );
 }
 
 type PrunerPeopleRoleCheckboxesProps = {
@@ -63,7 +84,9 @@ export function PrunerPeopleRoleCheckboxes({
 }: PrunerPeopleRoleCheckboxesProps) {
   const isPlex = variant === "plex";
   const baseTestId = testId ?? "pruner-people-role-toggles";
-  const roleIds: readonly PrunerPeopleRoleId[] = isPlex ? PLEX_UI_ROLE_IDS : PRUNER_PEOPLE_ROLE_IDS;
+  const roleIds: readonly PrunerPeopleRoleId[] = isPlex
+    ? PLEX_UI_ROLE_IDS
+    : PRUNER_PEOPLE_ROLE_IDS;
 
   function setRoleEnabled(id: PrunerPeopleRoleId, enabled: boolean) {
     let next: PrunerPeopleRoleId[];
@@ -100,7 +123,9 @@ export function PrunerPeopleRoleCheckboxes({
         })}
       </div>
       <p className="text-xs text-[var(--mm-text3)]">{helper}</p>
-      {footerHelper ? <p className="text-xs text-[var(--mm-text3)]">{footerHelper}</p> : null}
+      {footerHelper ? (
+        <p className="text-xs text-[var(--mm-text3)]">{footerHelper}</p>
+      ) : null}
     </div>
   );
 }

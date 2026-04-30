@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
-import urllib.error
 import urllib.parse
 from typing import Any
+
+import httpx
 
 from mediamop.modules.subber.subber_http_client import (
     DEFAULT_USER_AGENT,
@@ -40,14 +41,14 @@ def _request(
         headers["Authorization"] = f"Bearer {token}"
     try:
         return request_json(url, method=method, headers=headers, body=body, timeout=60)
-    except urllib.error.HTTPError as exc:
-        if exc.code == 429:
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 429:
             raise SubberRateLimitError from exc
         try:
             parsed = decode_http_error_json(exc)
         except json.JSONDecodeError:
             parsed = None
-        return int(exc.code), parsed
+        return int(exc.response.status_code), parsed
 
 
 def login(username: str, password: str, api_key: str) -> str:
@@ -144,5 +145,5 @@ def download(token: str, api_key: str, *, file_id: int) -> bytes:
     if not link:
         msg = "OpenSubtitles download response missing link"
         raise ValueError(msg)
-    _code, data = request_bytes(link, headers={"User-Agent": USER_AGENT}, timeout=120)
+    _code, data = request_bytes(link, headers={"User-Agent": USER_AGENT}, timeout=120, validate_provider_url=True)
     return data

@@ -13,7 +13,10 @@ function studioTriggerSummary(values: string[]): string {
   return `${values.length} studios selected`;
 }
 
-function mergeOptionsFromLibrary(libraryStudios: readonly string[], selected: readonly string[]): MmListboxOption[] {
+function mergeOptionsFromLibrary(
+  libraryStudios: readonly string[],
+  selected: readonly string[],
+): MmListboxOption[] {
   const byFold = new Map<string, string>();
   for (const s of libraryStudios) {
     const t = s.trim();
@@ -27,7 +30,9 @@ function mergeOptionsFromLibrary(libraryStudios: readonly string[], selected: re
     const k = t.toLowerCase();
     if (!byFold.has(k)) byFold.set(k, t);
   }
-  const labels = [...byFold.values()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  const labels = [...byFold.values()].sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: "base" }),
+  );
   return labels.map((label) => ({ value: label, label }));
 }
 
@@ -55,7 +60,9 @@ export function PrunerStudioMultiSelect({
   const baseTestId = testId ?? "pruner-studio-multiselect";
 
   const helperBelow = (
-    <p className="text-xs text-[var(--mm-text3)]">Select studios to activate this rule.</p>
+    <p className="text-xs text-[var(--mm-text3)]">
+      Select studios to activate this rule.
+    </p>
   );
 
   if (loading) {
@@ -82,10 +89,17 @@ export function PrunerStudioMultiSelect({
         <span className="sr-only" data-testid={`${baseTestId}-summary`}>
           {summary}
         </span>
-        <select className="mm-input w-full cursor-not-allowed opacity-70" disabled value="__none__" data-testid={`${baseTestId}-empty`}>
+        <select
+          className="mm-input w-full cursor-not-allowed opacity-70"
+          disabled
+          value="__none__"
+          data-testid={`${baseTestId}-empty`}
+        >
           <option value="__none__">No studios found</option>
         </select>
-        <p className="text-xs text-[var(--mm-text3)]">No studios found in your library for this scope.</p>
+        <p className="text-xs text-[var(--mm-text3)]">
+          No studios found in your library for this scope.
+        </p>
         {helperBelow}
       </div>
     );

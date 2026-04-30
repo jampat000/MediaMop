@@ -58,6 +58,8 @@ describe("SubberPage", () => {
           priority: 0,
           requires_account: true,
           has_credentials: false,
+          available: true,
+          availability_note: null,
         },
       ],
       isLoading: false,
@@ -104,7 +106,9 @@ describe("SubberPage", () => {
       data: { movies: [] },
       isLoading: false,
       isError: false,
-    } as unknown as ReturnType<typeof subberQueries.useSubberLibraryMoviesQuery>);
+    } as unknown as ReturnType<
+      typeof subberQueries.useSubberLibraryMoviesQuery
+    >);
     vi.spyOn(subberQueries, "useSubberJobsQuery").mockReturnValue({
       data: { jobs: [], default_recent_slice: true },
       isLoading: false,
@@ -113,37 +117,62 @@ describe("SubberPage", () => {
     vi.spyOn(subberQueries, "usePutSubberSettingsMutation").mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: false,
-    } as unknown as ReturnType<typeof subberQueries.usePutSubberSettingsMutation>);
+    } as unknown as ReturnType<
+      typeof subberQueries.usePutSubberSettingsMutation
+    >);
     vi.spyOn(subberQueries, "useSubberSearchNowMutation").mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
-    } as unknown as ReturnType<typeof subberQueries.useSubberSearchNowMutation>);
-    vi.spyOn(subberQueries, "useSubberSearchAllMissingTvMutation").mockReturnValue({
+    } as unknown as ReturnType<
+      typeof subberQueries.useSubberSearchNowMutation
+    >);
+    vi.spyOn(
+      subberQueries,
+      "useSubberSearchAllMissingTvMutation",
+    ).mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
-    } as unknown as ReturnType<typeof subberQueries.useSubberSearchAllMissingTvMutation>);
-    vi.spyOn(subberQueries, "useSubberSearchAllMissingMoviesMutation").mockReturnValue({
+    } as unknown as ReturnType<
+      typeof subberQueries.useSubberSearchAllMissingTvMutation
+    >);
+    vi.spyOn(
+      subberQueries,
+      "useSubberSearchAllMissingMoviesMutation",
+    ).mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
-    } as unknown as ReturnType<typeof subberQueries.useSubberSearchAllMissingMoviesMutation>);
-    vi.spyOn(subberQueries, "useSubberTestOpensubtitlesMutation").mockReturnValue({
+    } as unknown as ReturnType<
+      typeof subberQueries.useSubberSearchAllMissingMoviesMutation
+    >);
+    vi.spyOn(
+      subberQueries,
+      "useSubberTestOpensubtitlesMutation",
+    ).mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: false,
-    } as unknown as ReturnType<typeof subberQueries.useSubberTestOpensubtitlesMutation>);
+    } as unknown as ReturnType<
+      typeof subberQueries.useSubberTestOpensubtitlesMutation
+    >);
     vi.spyOn(subberQueries, "useSubberTestSonarrMutation").mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
-    } as unknown as ReturnType<typeof subberQueries.useSubberTestSonarrMutation>);
+    } as unknown as ReturnType<
+      typeof subberQueries.useSubberTestSonarrMutation
+    >);
     vi.spyOn(subberQueries, "useSubberTestRadarrMutation").mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
-    } as unknown as ReturnType<typeof subberQueries.useSubberTestRadarrMutation>);
+    } as unknown as ReturnType<
+      typeof subberQueries.useSubberTestRadarrMutation
+    >);
   });
 
   it("renders tabs with Overview selected by default", async () => {
     const client = new QueryClient();
     render(wrap(<SubberPage />, client));
-    await waitFor(() => expect(screen.getByTestId("subber-top-level-tabs")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("subber-top-level-tabs")).toBeInTheDocument(),
+    );
     const tabs = screen.getByTestId("subber-top-level-tabs");
     expect(tabs.textContent).toMatch(/Overview/);
     expect(tabs.textContent).toMatch(/TV/);
@@ -153,8 +182,12 @@ describe("SubberPage", () => {
   it("switches to TV tab", async () => {
     const client = new QueryClient();
     render(wrap(<SubberPage />, client));
-    await waitFor(() => expect(screen.getByTestId("subber-top-level-tabs")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("subber-top-level-tabs")).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByRole("tab", { name: "TV" }));
-    await waitFor(() => expect(screen.getByTestId("subber-tv-tab")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("subber-tv-tab")).toBeInTheDocument(),
+    );
   });
 });

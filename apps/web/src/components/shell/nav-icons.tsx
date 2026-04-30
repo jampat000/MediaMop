@@ -65,7 +65,13 @@ export function NavIconActivity({ className = "" }: { className?: string }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx="12" cy="12" r="8.25" stroke="currentColor" strokeWidth="1.35" />
+      <circle
+        cx="12"
+        cy="12"
+        r="8.25"
+        stroke="currentColor"
+        strokeWidth="1.35"
+      />
     </svg>
   );
 }
@@ -81,7 +87,12 @@ export function NavIconRefiner({ className = "" }: { className?: string }) {
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >
-      <path d="M3 21h18" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+      <path
+        d="M3 21h18"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+      />
       <path
         d="M5 21V15L7.5 10 10 15V21H5z"
         stroke="currentColor"
@@ -116,10 +127,32 @@ export function NavIconPruner({ className = "" }: { className?: string }) {
       aria-hidden="true"
     >
       <circle cx="8" cy="17" r="2.4" stroke="currentColor" strokeWidth="1.35" />
-      <circle cx="16" cy="17" r="2.4" stroke="currentColor" strokeWidth="1.35" />
-      <path d="M9.7 15.8L14 6.5" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
-      <path d="M14.3 15.8L10 6.5" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
-      <circle cx="12" cy="6.75" r="1.1" stroke="currentColor" strokeWidth="1.2" />
+      <circle
+        cx="16"
+        cy="17"
+        r="2.4"
+        stroke="currentColor"
+        strokeWidth="1.35"
+      />
+      <path
+        d="M9.7 15.8L14 6.5"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+      />
+      <path
+        d="M14.3 15.8L10 6.5"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+      />
+      <circle
+        cx="12"
+        cy="6.75"
+        r="1.1"
+        stroke="currentColor"
+        strokeWidth="1.2"
+      />
     </svg>
   );
 }

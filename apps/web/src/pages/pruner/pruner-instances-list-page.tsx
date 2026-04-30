@@ -18,20 +18,41 @@ import {
   MmScheduleDayChips,
   MmScheduleTimeFields,
 } from "../../components/ui/mm-schedule-window-controls";
-import { mmModuleTabBlurbBandClass, mmModuleTabBlurbTextClass } from "../../lib/ui/mm-module-tab-blurb";
+import {
+  mmModuleTabBlurbBandClass,
+  mmModuleTabBlurbTextClass,
+} from "../../lib/ui/mm-module-tab-blurb";
 import { MmListboxPicker } from "../../components/ui/mm-listbox-picker";
-import { mmActionButtonClass, mmSectionTabClass } from "../../lib/ui/mm-control-roles";
+import {
+  mmActionButtonClass,
+  mmSectionTabClass,
+} from "../../lib/ui/mm-control-roles";
 import { fetchCsrfToken } from "../../lib/api/auth-api";
-import type { PrunerJobsInspectionRow, PrunerServerInstance } from "../../lib/pruner/api";
-import { patchPrunerInstance, patchPrunerScope, postPrunerConnectionTest, postPrunerInstance } from "../../lib/pruner/api";
+import type {
+  PrunerJobsInspectionRow,
+  PrunerServerInstance,
+} from "../../lib/pruner/api";
+import {
+  patchPrunerInstance,
+  patchPrunerScope,
+  postPrunerConnectionTest,
+  postPrunerInstance,
+} from "../../lib/pruner/api";
 import { useMeQuery } from "../../lib/auth/queries";
-import { usePrunerInstancesQuery, usePrunerJobsInspectionQuery, usePrunerOverviewStatsQuery } from "../../lib/pruner/queries";
+import {
+  usePrunerInstancesQuery,
+  usePrunerJobsInspectionQuery,
+  usePrunerOverviewStatsQuery,
+} from "../../lib/pruner/queries";
 import {
   PrunerDryRunControls,
   PrunerProviderRulesCard,
   type PrunerProviderRulesCardHandle,
 } from "./pruner-provider-operator-workspace";
-import { formatPrunerDateTime, prunerJobKindOperatorLabel } from "./pruner-ui-utils";
+import {
+  formatPrunerDateTime,
+  prunerJobKindOperatorLabel,
+} from "./pruner-ui-utils";
 type TopTab = "overview" | "emby" | "jellyfin" | "plex" | "jobs" | "schedule";
 type ProviderTab = "emby" | "jellyfin" | "plex";
 
@@ -39,10 +60,12 @@ const PRUNER_TAB_BLURBS: Record<TopTab, string> = {
   overview:
     "See cross-provider status for connections, cleanup coverage, and items that need attention.",
   emby: "Manage one Emby server: test connection, set cleanup rules, and control run windows.",
-  jellyfin: "Manage one Jellyfin server: test connection, set cleanup rules, and control run windows.",
+  jellyfin:
+    "Manage one Jellyfin server: test connection, set cleanup rules, and control run windows.",
   plex: "Manage one Plex server: test connection, set cleanup rules, and control run windows.",
   jobs: "View queued, running, and recent Pruner jobs across providers.",
-  schedule: "Edit scheduled prune windows in the provider workspace and save changes per library.",
+  schedule:
+    "Edit scheduled prune windows in the provider workspace and save changes per library.",
 };
 
 function providerLabel(p: ProviderTab): string {
@@ -54,7 +77,9 @@ function providerLabel(p: ProviderTab): string {
 function parseServerInstanceId(job: PrunerJobsInspectionRow): number | null {
   if (!job.payload_json) return null;
   try {
-    const parsed = JSON.parse(job.payload_json) as { server_instance_id?: unknown };
+    const parsed = JSON.parse(job.payload_json) as {
+      server_instance_id?: unknown;
+    };
     const sid = parsed.server_instance_id;
     return typeof sid === "number" && Number.isFinite(sid) ? sid : null;
   } catch {
@@ -70,7 +95,9 @@ const PRUNER_JOB_FILTER_OPTIONS = [
   { value: "completed", label: "Completed" },
 ] as const;
 
-function activeRuleCount(scope: PrunerServerInstance["scopes"][number]): number {
+function activeRuleCount(
+  scope: PrunerServerInstance["scopes"][number],
+): number {
   return [
     scope.missing_primary_media_reported_enabled,
     scope.never_played_stale_reported_enabled,
@@ -174,12 +201,23 @@ function PrunerConnectionCredentialPanel({
   const q = useQueryClient();
   const canOperate = me.data?.role === "admin" || me.data?.role === "operator";
   const providerName = providerLabel(provider);
-  const providerInstances = useMemo(() => allInstances.filter((x) => x.provider === provider), [allInstances, provider]);
-  const [internalSelectedInstanceId, setInternalSelectedInstanceId] = useState<number | null>(providerInstances[0]?.id ?? null);
+  const providerInstances = useMemo(
+    () => allInstances.filter((x) => x.provider === provider),
+    [allInstances, provider],
+  );
+  const [internalSelectedInstanceId, setInternalSelectedInstanceId] = useState<
+    number | null
+  >(providerInstances[0]?.id ?? null);
   const controlled = Boolean(instanceSelection);
-  const selectedInstanceId = controlled ? instanceSelection!.selectedId : internalSelectedInstanceId;
-  const setSelectedInstanceId = controlled ? instanceSelection!.onSelectedIdChange : setInternalSelectedInstanceId;
-  const selectedInstance = providerInstances.find((x) => x.id === selectedInstanceId) ?? providerInstances[0];
+  const selectedInstanceId = controlled
+    ? instanceSelection!.selectedId
+    : internalSelectedInstanceId;
+  const setSelectedInstanceId = controlled
+    ? instanceSelection!.onSelectedIdChange
+    : setInternalSelectedInstanceId;
+  const selectedInstance =
+    providerInstances.find((x) => x.id === selectedInstanceId) ??
+    providerInstances[0];
   const hasInstance = Boolean(selectedInstance);
   const [baseUrlDraft, setBaseUrlDraft] = useState("");
   const [credentialDraft, setCredentialDraft] = useState("");
@@ -191,7 +229,12 @@ function PrunerConnectionCredentialPanel({
   const [testJustSucceeded, setTestJustSucceeded] = useState(false);
 
   const savedUrl = selectedInstance?.base_url ?? "";
-  const dirty = prunerConnectionDirty(hasInstance, savedUrl, baseUrlDraft, credentialDraft);
+  const dirty = prunerConnectionDirty(
+    hasInstance,
+    savedUrl,
+    baseUrlDraft,
+    credentialDraft,
+  );
   const panelBusy = savePending || testPending;
   const credentialPlaceholder =
     hasInstance && credentialDraft === ""
@@ -244,10 +287,14 @@ function PrunerConnectionCredentialPanel({
       const trimmedUrl = baseUrlDraft.trim();
       if (!trimmedUrl) throw new Error("Base URL is required.");
       if (!hasInstance && !credentialDraft.trim()) {
-        throw new Error(`${providerCredentialLabel(provider)} is required to create a new ${providerName} connection.`);
+        throw new Error(
+          `${providerCredentialLabel(provider)} is required to create a new ${providerName} connection.`,
+        );
       }
       const credentialKey = provider === "plex" ? "auth_token" : "api_key";
-      const credentials = credentialDraft.trim() ? { [credentialKey]: credentialDraft.trim() } : undefined;
+      const credentials = credentialDraft.trim()
+        ? { [credentialKey]: credentialDraft.trim() }
+        : undefined;
       if (selectedInstance) {
         await patchPrunerInstance(selectedInstance.id, {
           base_url: trimmedUrl,
@@ -304,96 +351,112 @@ function PrunerConnectionCredentialPanel({
       data-testid={`pruner-connection-panel-${provider}`}
     >
       <div className="mm-card-action-body flex-1 min-h-0">
-      {!controlled && providerInstances.length > 1 ? (
+        {!controlled && providerInstances.length > 1 ? (
+          <label className="block text-sm text-[var(--mm-text2)]">
+            <span className="mb-1 block text-xs text-[var(--mm-text3)]">
+              Server
+            </span>
+            <select
+              className="mm-input mt-1 w-full"
+              value={selectedInstance?.id ?? ""}
+              onChange={(e) => setSelectedInstanceId(Number(e.target.value))}
+              disabled={panelBusy || !canOperate}
+            >
+              {providerInstances.map((inst) => (
+                <option key={inst.id} value={inst.id}>
+                  {inst.display_name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <label className="block text-sm text-[var(--mm-text2)]">
-          <span className="mb-1 block text-xs text-[var(--mm-text3)]">Server</span>
-          <select
-            className="mm-input mt-1 w-full"
-            value={selectedInstance?.id ?? ""}
-            onChange={(e) => setSelectedInstanceId(Number(e.target.value))}
-            disabled={panelBusy || !canOperate}
-          >
-            {providerInstances.map((inst) => (
-              <option key={inst.id} value={inst.id}>
-                {inst.display_name}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
-      <label className="block text-sm text-[var(--mm-text2)]">
-        <span className="mb-1 block text-xs text-[var(--mm-text3)]">Base URL</span>
-        <input
-          type="url"
-          autoComplete="off"
-          value={baseUrlDraft}
-          onChange={(e) => setBaseUrlDraft(e.target.value)}
-          disabled={panelBusy || !canOperate}
-          placeholder={prunerConnectionPlaceholderUrl(provider)}
-          className="mm-input w-full"
-        />
-      </label>
-
-      <div className="space-y-1">
-        <label className="block text-sm text-[var(--mm-text2)]" htmlFor={`pruner-conn-key-${provider}`}>
-          <span className="mb-1 block text-xs text-[var(--mm-text3)]">{providerCredentialLabel(provider)}</span>
-        </label>
-        <div className="flex flex-wrap gap-2">
+          <span className="mb-1 block text-xs text-[var(--mm-text3)]">
+            Base URL
+          </span>
           <input
-            id={`pruner-conn-key-${provider}`}
-            type={showCredential ? "text" : "password"}
-            autoComplete="new-password"
-            placeholder={credentialPlaceholder}
-            className="mm-input min-w-[12rem] flex-1 text-sm tracking-normal text-[var(--mm-text)]"
+            type="url"
+            autoComplete="off"
+            value={baseUrlDraft}
+            onChange={(e) => setBaseUrlDraft(e.target.value)}
             disabled={panelBusy || !canOperate}
-            value={credentialDraft}
-            aria-describedby={hasInstance ? `pruner-conn-key-hint-${provider}` : undefined}
-            onChange={(e) => {
-              const next = e.target.value;
-              setCredentialDraft(next);
-              if (next.trim() === "") {
-                setShowCredential(false);
-              }
-            }}
+            placeholder={prunerConnectionPlaceholderUrl(provider)}
+            className="mm-input w-full"
           />
-          <button
-            type="button"
-            className={mmActionButtonClass({
-              variant: "tertiary",
-              disabled: !canOperate || panelBusy,
-            })}
-            disabled={!canOperate || panelBusy}
-            onClick={() => setShowCredential((v) => !v)}
+        </label>
+
+        <div className="space-y-1">
+          <label
+            className="block text-sm text-[var(--mm-text2)]"
+            htmlFor={`pruner-conn-key-${provider}`}
           >
-            {showCredential ? "Hide" : "Show"}
-          </button>
+            <span className="mb-1 block text-xs text-[var(--mm-text3)]">
+              {providerCredentialLabel(provider)}
+            </span>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <input
+              id={`pruner-conn-key-${provider}`}
+              type={showCredential ? "text" : "password"}
+              autoComplete="new-password"
+              placeholder={credentialPlaceholder}
+              className="mm-input min-w-[12rem] flex-1 text-sm tracking-normal text-[var(--mm-text)]"
+              disabled={panelBusy || !canOperate}
+              value={credentialDraft}
+              aria-describedby={
+                hasInstance ? `pruner-conn-key-hint-${provider}` : undefined
+              }
+              onChange={(e) => {
+                const next = e.target.value;
+                setCredentialDraft(next);
+                if (next.trim() === "") {
+                  setShowCredential(false);
+                }
+              }}
+            />
+            <button
+              type="button"
+              className={mmActionButtonClass({
+                variant: "tertiary",
+                disabled: !canOperate || panelBusy,
+              })}
+              disabled={!canOperate || panelBusy}
+              onClick={() => setShowCredential((v) => !v)}
+            >
+              {showCredential ? "Hide" : "Show"}
+            </button>
+          </div>
+          {hasInstance ? (
+            <p
+              id={`pruner-conn-key-hint-${provider}`}
+              className="text-xs text-[var(--mm-text3)]"
+            >
+              Leave blank to keep your saved{" "}
+              {provider === "plex" ? "token" : "key"}, or type a new one to
+              replace it.
+            </p>
+          ) : null}
         </div>
-        {hasInstance ? (
-          <p id={`pruner-conn-key-hint-${provider}`} className="text-xs text-[var(--mm-text3)]">
-            Leave blank to keep your saved {provider === "plex" ? "token" : "key"}, or type a new one to replace it.
+
+        {saveJustSucceeded ? (
+          <p
+            className="rounded-md border border-[rgba(212,175,55,0.45)] bg-[var(--mm-accent-soft)] px-3 py-2 text-sm font-medium text-[var(--mm-text1)]"
+            role="status"
+            data-testid={`pruner-connection-save-ok-${provider}`}
+          >
+            Saved.
           </p>
         ) : null}
-      </div>
 
-      {saveJustSucceeded ? (
-        <p
-          className="rounded-md border border-[rgba(212,175,55,0.45)] bg-[var(--mm-accent-soft)] px-3 py-2 text-sm font-medium text-[var(--mm-text1)]"
-          role="status"
-          data-testid={`pruner-connection-save-ok-${provider}`}
-        >
-          Saved.
-        </p>
-      ) : null}
-
-      {testJustSucceeded ? (
-        <p
-          className="rounded-md border border-[rgba(212,175,55,0.45)] bg-[var(--mm-accent-soft)] px-3 py-2 text-sm font-medium text-[var(--mm-text1)]"
-          role="status"
-          data-testid={`pruner-connection-test-ok-${provider}`}
-        >
-          Test started — results appear here when it finishes.
-        </p>
-      ) : null}
+        {testJustSucceeded ? (
+          <p
+            className="rounded-md border border-[rgba(212,175,55,0.45)] bg-[var(--mm-accent-soft)] px-3 py-2 text-sm font-medium text-[var(--mm-text1)]"
+            role="status"
+            data-testid={`pruner-connection-test-ok-${provider}`}
+          >
+            Test started — results appear here when it finishes.
+          </p>
+        ) : null}
       </div>
 
       <div className="mm-card-action-footer mm-card-action-footer--row">
@@ -425,12 +488,20 @@ function PrunerConnectionCredentialPanel({
         className="mt-4 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-3.5 text-sm text-[var(--mm-text2)]"
         data-testid={`pruner-connection-status-${provider}`}
       >
-        <p className="text-sm font-medium text-[var(--mm-text1)]">{connectionStatusMain}</p>
-        <p className="mt-1 text-xs text-[var(--mm-text3)]">
-          Last completed check: {formatPrunerDateTime(selectedInstance?.last_connection_test_at ?? null)}
+        <p className="text-sm font-medium text-[var(--mm-text1)]">
+          {connectionStatusMain}
         </p>
-        {selectedInstance?.last_connection_test_detail && selectedInstance.last_connection_test_ok !== true ? (
-          <p className="mt-1 text-xs text-[var(--mm-text3)]">{selectedInstance.last_connection_test_detail}</p>
+        <p className="mt-1 text-xs text-[var(--mm-text3)]">
+          Last completed check:{" "}
+          {formatPrunerDateTime(
+            selectedInstance?.last_connection_test_at ?? null,
+          )}
+        </p>
+        {selectedInstance?.last_connection_test_detail &&
+        selectedInstance.last_connection_test_ok !== true ? (
+          <p className="mt-1 text-xs text-[var(--mm-text3)]">
+            {selectedInstance.last_connection_test_detail}
+          </p>
         ) : null}
         {err ? (
           <p className="mt-2 text-sm text-red-400" role="alert">
@@ -439,7 +510,10 @@ function PrunerConnectionCredentialPanel({
         ) : null}
         <p className="mt-2 text-xs text-[var(--mm-text3)]">
           Each test adds a line to{" "}
-          <Link to="/app/activity" className="text-[var(--mm-accent)] underline-offset-2 hover:underline">
+          <Link
+            to="/app/activity"
+            className="text-[var(--mm-accent)] underline-offset-2 hover:underline"
+          >
             Activity
           </Link>{" "}
           for your records.
@@ -461,15 +535,24 @@ function ProviderConfigurationWorkspace({
   initialSection?: ProviderWorkspaceSection;
 }) {
   const providerName = providerLabel(provider);
-  const providerInstances = useMemo(() => allInstances.filter((x) => x.provider === provider), [allInstances, provider]);
-  const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(providerInstances[0]?.id ?? null);
-  const [providerSection, setProviderSection] = useState<ProviderWorkspaceSection>(initialSection);
-  const selectedInstance = providerInstances.find((x) => x.id === selectedInstanceId) ?? providerInstances[0];
+  const providerInstances = useMemo(
+    () => allInstances.filter((x) => x.provider === provider),
+    [allInstances, provider],
+  );
+  const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(
+    providerInstances[0]?.id ?? null,
+  );
+  const [providerSection, setProviderSection] =
+    useState<ProviderWorkspaceSection>(initialSection);
+  const selectedInstance =
+    providerInstances.find((x) => x.id === selectedInstanceId) ??
+    providerInstances[0];
   const rulesCardRef = useRef<PrunerProviderRulesCardHandle>(null);
 
   useEffect(() => {
     setSelectedInstanceId((prev) => {
-      if (prev != null && providerInstances.some((x) => x.id === prev)) return prev;
+      if (prev != null && providerInstances.some((x) => x.id === prev))
+        return prev;
       return providerInstances[0]?.id ?? null;
     });
   }, [provider, providerInstances]);
@@ -478,17 +561,25 @@ function ProviderConfigurationWorkspace({
     setProviderSection(initialSection);
   }, [provider, initialSection]);
 
-  const disabledCtx = { instanceId: 0, instance: providerDisabledInstance(provider) } as const;
+  const disabledCtx = {
+    instanceId: 0,
+    instance: providerDisabledInstance(provider),
+  } as const;
   const instanceSelection = {
     selectedId: selectedInstanceId,
     onSelectedIdChange: setSelectedInstanceId,
   };
 
   return (
-    <section className="mm-bubble-stack" data-testid={`pruner-provider-tab-${provider}`}>
+    <section
+      className="mm-bubble-stack"
+      data-testid={`pruner-provider-tab-${provider}`}
+    >
       {providerInstances.length > 1 ? (
         <label className="block max-w-md text-sm text-[var(--mm-text2)]">
-          <span className="mb-1 block text-xs text-[var(--mm-text3)]">Server</span>
+          <span className="mb-1 block text-xs text-[var(--mm-text3)]">
+            Server
+          </span>
           <select
             className="mm-input mt-1 w-full"
             value={selectedInstance?.id ?? ""}
@@ -529,13 +620,21 @@ function ProviderConfigurationWorkspace({
 
       <div data-testid={`pruner-provider-sections-${provider}`}>
         {providerSection === "connection" ? (
-          <PrunerConnectionCredentialPanel provider={provider} allInstances={allInstances} instanceSelection={instanceSelection} />
+          <PrunerConnectionCredentialPanel
+            provider={provider}
+            allInstances={allInstances}
+            instanceSelection={instanceSelection}
+          />
         ) : null}
 
         {providerSection === "cleanup" || providerSection === "schedule" ? (
           <div
             className={providerSection !== "cleanup" ? "hidden" : undefined}
-            data-testid={providerSection === "cleanup" ? "pruner-provider-cleanup-wrap" : undefined}
+            data-testid={
+              providerSection === "cleanup"
+                ? "pruner-provider-cleanup-wrap"
+                : undefined
+            }
             aria-hidden={providerSection !== "cleanup"}
           >
             <PrunerProviderRulesCard
@@ -548,7 +647,10 @@ function ProviderConfigurationWorkspace({
         ) : null}
 
         {providerSection === "schedule" ? (
-          <div className="mm-dash-grid" data-testid="pruner-provider-schedule-wrap">
+          <div
+            className="mm-dash-grid"
+            data-testid="pruner-provider-schedule-wrap"
+          >
             <PrunerGlobalScheduleRow
               provider={provider}
               scope="tv"
@@ -581,7 +683,9 @@ function scanOutcomeReadable(o: string | null | undefined): string {
   return o;
 }
 
-function buildPrunerNeedsAttention(instances: PrunerServerInstance[]): { text: string; tab: ProviderTab }[] {
+function buildPrunerNeedsAttention(
+  instances: PrunerServerInstance[],
+): { text: string; tab: ProviderTab }[] {
   const items: { text: string; tab: ProviderTab }[] = [];
   if (instances.length === 0) {
     items.push({
@@ -599,7 +703,9 @@ function buildPrunerNeedsAttention(instances: PrunerServerInstance[]): { text: s
       });
     }
   }
-  const allRulesZero = instances.every((inst) => inst.scopes.every((sc) => activeRuleCount(sc) === 0));
+  const allRulesZero = instances.every((inst) =>
+    inst.scopes.every((sc) => activeRuleCount(sc) === 0),
+  );
   if (allRulesZero) {
     items.push({
       text: "No cleanup rules are enabled — turn on rules in the Cleanup tab.",
@@ -639,7 +745,11 @@ function PrunerLast30StatsTiles({
 const PRUNER_NEXT_STEPS_BODY =
   "Use Emby, Jellyfin, or Plex to connect your media server and configure cleanup rules. Check Jobs for recent activity. Use Schedule for timed scans and optional hour limits.";
 
-function PrunerOverviewNextSteps({ onNavigate }: { onNavigate: (tab: TopTab) => void }) {
+function PrunerOverviewNextSteps({
+  onNavigate,
+}: {
+  onNavigate: (tab: TopTab) => void;
+}) {
   return (
     <MmOverviewSection
       headingId="pruner-overview-next-steps-heading"
@@ -651,10 +761,16 @@ function PrunerOverviewNextSteps({ onNavigate }: { onNavigate: (tab: TopTab) => 
         <p className="leading-relaxed">{PRUNER_NEXT_STEPS_BODY}</p>
         <div className="flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">
           <MmNextStepsButton label="Emby" onClick={() => onNavigate("emby")} />
-          <MmNextStepsButton label="Jellyfin" onClick={() => onNavigate("jellyfin")} />
+          <MmNextStepsButton
+            label="Jellyfin"
+            onClick={() => onNavigate("jellyfin")}
+          />
           <MmNextStepsButton label="Plex" onClick={() => onNavigate("plex")} />
           <MmNextStepsButton label="Jobs" onClick={() => onNavigate("jobs")} />
-          <MmNextStepsButton label="Schedule" onClick={() => onNavigate("schedule")} />
+          <MmNextStepsButton
+            label="Schedule"
+            onClick={() => onNavigate("schedule")}
+          />
         </div>
       </div>
     </MmOverviewSection>
@@ -668,7 +784,9 @@ function PrunerOverviewNeedsAttention({
   items: { text: string; tab: ProviderTab }[];
   onOpenProviderTab: (tab: ProviderTab) => void;
 }) {
-  const actionTabs = PRUNER_ATTENTION_TAB_ORDER.filter((t) => items.some((row) => row.tab === t));
+  const actionTabs = PRUNER_ATTENTION_TAB_ORDER.filter((t) =>
+    items.some((row) => row.tab === t),
+  );
   return (
     <MmOverviewSection
       headingId="pruner-overview-needs-attention-heading"
@@ -682,7 +800,11 @@ function PrunerOverviewNeedsAttention({
           actionTabs.length > 0 ? (
             <>
               {actionTabs.map((tab) => (
-                <MmNextStepsButton key={tab} label={prunerAttentionOpenLabel(tab)} onClick={() => onOpenProviderTab(tab)} />
+                <MmNextStepsButton
+                  key={tab}
+                  label={prunerAttentionOpenLabel(tab)}
+                  onClick={() => onOpenProviderTab(tab)}
+                />
               ))}
             </>
           ) : undefined
@@ -708,17 +830,32 @@ function TopLevelOverview({
     const rows = instances.filter((x) => x.provider === provider);
     const first = rows[0];
     const scopeRows = first?.scopes ?? [];
-    const activeRules = scopeRows.reduce((acc, scope) => acc + activeRuleCount(scope), 0);
+    const activeRules = scopeRows.reduce(
+      (acc, scope) => acc + activeRuleCount(scope),
+      0,
+    );
     const previews = scopeRows.filter((scope) => scope.last_preview_at);
     const latestPreview = previews.sort((a, b) =>
-      String(b.last_preview_at ?? "").localeCompare(String(a.last_preview_at ?? "")),
+      String(b.last_preview_at ?? "").localeCompare(
+        String(a.last_preview_at ?? ""),
+      ),
     )[0];
     const providerJobs = jobsQ.data?.jobs?.filter((j) => {
       const sid = parseServerInstanceId(j);
       return sid != null && rows.some((row) => row.id === sid);
     });
-    const latestApplyLike = providerJobs?.find((j) => String(j.job_kind).toLowerCase().includes("apply")) ?? providerJobs?.[0];
-    return { provider, rows, first, activeRules, latestPreview, latestJob: latestApplyLike };
+    const latestApplyLike =
+      providerJobs?.find((j) =>
+        String(j.job_kind).toLowerCase().includes("apply"),
+      ) ?? providerJobs?.[0];
+    return {
+      provider,
+      rows,
+      first,
+      activeRules,
+      latestPreview,
+      latestJob: latestApplyLike,
+    };
   });
 
   const attentionItems = buildPrunerNeedsAttention(instances);
@@ -760,17 +897,29 @@ function TopLevelOverview({
             const body = card.first ? (
               <div className="space-y-1.5">
                 <p>
-                  <span className="text-[var(--mm-text3)]">Connection test:</span>{" "}
+                  <span className="text-[var(--mm-text3)]">
+                    Connection test:
+                  </span>{" "}
                   <span className="font-medium text-[var(--mm-text1)]">
-                    {card.first.last_connection_test_ok == null ? "Not run yet" : card.first.last_connection_test_ok ? "OK" : "Failed"}
+                    {card.first.last_connection_test_ok == null
+                      ? "Not run yet"
+                      : card.first.last_connection_test_ok
+                        ? "OK"
+                        : "Failed"}
                   </span>
                 </p>
                 <p>
-                  <span className="text-[var(--mm-text3)]">Cleanup rules on:</span>{" "}
-                  <span className="font-medium text-[var(--mm-text1)]">{card.activeRules}</span>
+                  <span className="text-[var(--mm-text3)]">
+                    Cleanup rules on:
+                  </span>{" "}
+                  <span className="font-medium text-[var(--mm-text1)]">
+                    {card.activeRules}
+                  </span>
                 </p>
                 <p>
-                  <span className="text-[var(--mm-text3)]">Last library scan:</span>{" "}
+                  <span className="text-[var(--mm-text3)]">
+                    Last library scan:
+                  </span>{" "}
                   <span className="font-medium text-[var(--mm-text1)]">
                     {card.latestPreview
                       ? `${card.latestPreview.media_scope === "tv" ? "TV" : "Movies"} · ${scanOutcomeReadable(card.latestPreview.last_preview_outcome)}`
@@ -787,7 +936,10 @@ function TopLevelOverview({
                 </p>
               </div>
             ) : (
-              <p className="text-[var(--mm-text2)]">No server saved yet. Add the address and key on that provider’s Connection tab.</p>
+              <p className="text-[var(--mm-text2)]">
+                No server saved yet. Add the address and key on that provider’s
+                Connection tab.
+              </p>
             );
             return (
               <MmAtGlanceCard
@@ -798,11 +950,20 @@ function TopLevelOverview({
                 gridClassName={providerGridClass}
                 footer={
                   card.provider === "emby" ? (
-                    <MmNextStepsButton label="Open Emby" onClick={() => onNavigateTopTab("emby")} />
+                    <MmNextStepsButton
+                      label="Open Emby"
+                      onClick={() => onNavigateTopTab("emby")}
+                    />
                   ) : card.provider === "jellyfin" ? (
-                    <MmNextStepsButton label="Open Jellyfin" onClick={() => onNavigateTopTab("jellyfin")} />
+                    <MmNextStepsButton
+                      label="Open Jellyfin"
+                      onClick={() => onNavigateTopTab("jellyfin")}
+                    />
                   ) : (
-                    <MmNextStepsButton label="Open Plex" onClick={() => onNavigateTopTab("plex")} />
+                    <MmNextStepsButton
+                      label="Open Plex"
+                      onClick={() => onNavigateTopTab("plex")}
+                    />
                   )
                 }
               />
@@ -811,7 +972,10 @@ function TopLevelOverview({
         </MmAtGlanceGrid>
       </MmOverviewSection>
 
-      <PrunerOverviewNeedsAttention items={attentionItems} onOpenProviderTab={onOpenProviderTab} />
+      <PrunerOverviewNeedsAttention
+        items={attentionItems}
+        onOpenProviderTab={onOpenProviderTab}
+      />
 
       <PrunerOverviewNextSteps onNavigate={onNavigateTopTab} />
     </section>
@@ -871,7 +1035,8 @@ function PrunerGlobalScheduleRow({
 
   const scheduleFieldsDirty =
     scopeRow != null &&
-    (schedHoursLimited !== (scopeRow.scheduled_preview_hours_limited ?? false) ||
+    (schedHoursLimited !==
+      (scopeRow.scheduled_preview_hours_limited ?? false) ||
       schedDays !== (scopeRow.scheduled_preview_days ?? "") ||
       schedStart !== (scopeRow.scheduled_preview_start ?? "00:00") ||
       schedEnd !== (scopeRow.scheduled_preview_end ?? "23:59") ||
@@ -881,7 +1046,9 @@ function PrunerGlobalScheduleRow({
     if (!scopeRow) return;
     if (!persistable) {
       setMsg(null);
-      setErr("Save a server on the Connection tab first, then you can save this schedule to that server.");
+      setErr(
+        "Save a server on the Connection tab first, then you can save this schedule to that server.",
+      );
       return;
     }
     setMsg(null);
@@ -892,7 +1059,8 @@ function PrunerGlobalScheduleRow({
       const cap = Math.max(1, Math.min(5000, Number(previewCap) || 500));
       await patchPrunerScope(instance!.id, scope, {
         scheduled_preview_enabled: scopeRow.scheduled_preview_enabled,
-        scheduled_preview_interval_seconds: scopeRow.scheduled_preview_interval_seconds,
+        scheduled_preview_interval_seconds:
+          scopeRow.scheduled_preview_interval_seconds,
         scheduled_preview_hours_limited: schedHoursLimited,
         scheduled_preview_days: schedDays,
         scheduled_preview_start: schedStart,
@@ -914,78 +1082,108 @@ function PrunerGlobalScheduleRow({
   const testId = `pruner-schedule-row-${provider}-${scope}`;
   const idPrefix = `pruner-sched-${provider}-${scope}`;
 
-  const saveScheduleLabel = scope === "tv" ? "Save TV schedule" : "Save Movies schedule";
+  const saveScheduleLabel =
+    scope === "tv" ? "Save TV schedule" : "Save Movies schedule";
 
-  const laneTitle = scope === "tv" ? "TV automatic scan window" : "Movies automatic scan window";
+  const laneTitle =
+    scope === "tv"
+      ? "TV automatic scan window"
+      : "Movies automatic scan window";
   const laneIntro =
     scope === "tv"
       ? "Limit which days and times Pruner may run scheduled TV cleanup previews for this provider."
       : "Limit which days and times Pruner may run scheduled Movies cleanup previews for this provider.";
 
   return (
-    <section className="mm-card mm-dash-card flex h-full min-h-0 min-w-0 flex-col p-6" data-testid={testId}>
+    <section
+      className="mm-card mm-dash-card flex h-full min-h-0 min-w-0 flex-col p-6"
+      data-testid={testId}
+    >
       <div className="mm-card-action-body flex-1 min-h-0">
-      <div>
-        <h3 className="text-base font-semibold text-[var(--mm-text1)]">{laneTitle}</h3>
-        <p className="mt-1 text-sm text-[var(--mm-text2)]">{laneIntro}</p>
-      </div>
-      <div className="space-y-3">
         <div>
-          <span className="text-sm font-medium text-[var(--mm-text1)]">Schedule window</span>
-          <p className="mt-1 text-xs text-[var(--mm-text3)]">{MM_SCHEDULE_TIME_WINDOW_HELPER}</p>
+          <h3 className="text-base font-semibold text-[var(--mm-text1)]">
+            {laneTitle}
+          </h3>
+          <p className="mt-1 text-sm text-[var(--mm-text2)]">{laneIntro}</p>
         </div>
-        <div className="space-y-4">
-          <MmOnOffSwitch
-            id={`${idPrefix}-hours-limited`}
-            label="Limit to these hours"
-            enabled={schedHoursLimited}
-            disabled={controlsDisabled}
-            onChange={setSchedHoursLimited}
-          />
-          <div className="space-y-2">
-            <span className="text-sm font-medium text-[var(--mm-text1)]">Days</span>
-            <MmScheduleDayChips scheduleDaysCsv={schedDays} disabled={controlsDisabled} onChangeCsv={setSchedDays} />
+        <div className="space-y-3">
+          <div>
+            <span className="text-sm font-medium text-[var(--mm-text1)]">
+              Schedule window
+            </span>
+            <p className="mt-1 text-xs text-[var(--mm-text3)]">
+              {MM_SCHEDULE_TIME_WINDOW_HELPER}
+            </p>
           </div>
-          <MmScheduleTimeFields
-            idPrefix={idPrefix}
-            start={schedStart}
-            end={schedEnd}
+          <div className="space-y-4">
+            <MmOnOffSwitch
+              id={`${idPrefix}-hours-limited`}
+              label="Limit to these hours"
+              enabled={schedHoursLimited}
+              disabled={controlsDisabled}
+              onChange={setSchedHoursLimited}
+            />
+            <div className="space-y-2">
+              <span className="text-sm font-medium text-[var(--mm-text1)]">
+                Days
+              </span>
+              <MmScheduleDayChips
+                scheduleDaysCsv={schedDays}
+                disabled={controlsDisabled}
+                onChangeCsv={setSchedDays}
+              />
+            </div>
+            <MmScheduleTimeFields
+              idPrefix={idPrefix}
+              start={schedStart}
+              end={schedEnd}
+              disabled={controlsDisabled}
+              onStart={setSchedStart}
+              onEnd={setSchedEnd}
+            />
+          </div>
+        </div>
+        <div>
+          <span className="text-sm font-medium text-[var(--mm-text1)]">
+            Items to scan per run
+          </span>
+          <p className="mt-1 text-xs text-[var(--mm-text3)]">
+            How many items to check each time the scan runs. Higher numbers take
+            longer. Maximum 5,000.
+          </p>
+          <input
+            type="number"
+            min={1}
+            max={5000}
+            className="mm-input mt-2 w-full"
+            value={previewCap}
             disabled={controlsDisabled}
-            onStart={setSchedStart}
-            onEnd={setSchedEnd}
+            onChange={(e) =>
+              setPreviewCap(
+                Math.max(1, Math.min(5000, Number(e.target.value) || 500)),
+              )
+            }
+            aria-label="Items to scan per run"
           />
         </div>
-      </div>
-      <div>
-        <span className="text-sm font-medium text-[var(--mm-text1)]">Items to scan per run</span>
-        <p className="mt-1 text-xs text-[var(--mm-text3)]">
-          How many items to check each time the scan runs. Higher numbers take longer. Maximum 5,000.
+        <p className="text-xs text-[var(--mm-text3)]">
+          Last automatic scan:{" "}
+          <span className="font-medium text-[var(--mm-text1)]">
+            {scopeRow?.last_scheduled_preview_enqueued_at
+              ? formatPrunerDateTime(
+                  scopeRow.last_scheduled_preview_enqueued_at,
+                )
+              : "Never run"}
+          </span>
         </p>
-        <input
-          type="number"
-          min={1}
-          max={5000}
-          className="mm-input mt-2 w-full"
-          value={previewCap}
-          disabled={controlsDisabled}
-          onChange={(e) => setPreviewCap(Math.max(1, Math.min(5000, Number(e.target.value) || 500)))}
-          aria-label="Items to scan per run"
-        />
-      </div>
-      <p className="text-xs text-[var(--mm-text3)]">
-        Last automatic scan:{" "}
-        <span className="font-medium text-[var(--mm-text1)]">
-          {scopeRow?.last_scheduled_preview_enqueued_at
-            ? formatPrunerDateTime(scopeRow.last_scheduled_preview_enqueued_at)
-            : "Never run"}
-        </span>
-      </p>
-      {!canOperate && msg ? <p className="text-xs text-green-600">{msg}</p> : null}
-      {!canOperate && err ? (
-        <p className="text-xs text-red-500" role="alert">
-          {err}
-        </p>
-      ) : null}
+        {!canOperate && msg ? (
+          <p className="text-xs text-green-600">{msg}</p>
+        ) : null}
+        {!canOperate && err ? (
+          <p className="text-xs text-red-500" role="alert">
+            {err}
+          </p>
+        ) : null}
       </div>
       {canOperate ? (
         <div className="mm-card-action-footer">
@@ -1007,10 +1205,13 @@ function PrunerGlobalScheduleRow({
       ) : null}
 
       <div className="mt-4 border-t border-[var(--mm-border)] pt-6">
-        <h4 className="text-base font-semibold text-[var(--mm-text1)]">Run now</h4>
+        <h4 className="text-base font-semibold text-[var(--mm-text1)]">
+          Run now
+        </h4>
         <p className="mt-1 text-xs text-[var(--mm-text3)]">
-          Scan your saved cleanup criteria immediately without waiting for the schedule. This creates review snapshots;
-          deletion still requires a saved snapshot confirmation.
+          Scan your saved cleanup criteria immediately without waiting for the
+          schedule. This creates review snapshots; deletion still requires a
+          saved snapshot confirmation.
         </p>
         <div className="mt-4">
           <PrunerDryRunControls
@@ -1032,13 +1233,18 @@ function PrunerGlobalScheduleRow({
 function TopLevelJobs({ instances }: { instances: PrunerServerInstance[] }) {
   const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
   const jobsQ = usePrunerJobsInspectionQuery(100);
-  const byId = useMemo(() => new Map(instances.map((x) => [x.id, x])), [instances]);
+  const byId = useMemo(
+    () => new Map(instances.map((x) => [x.id, x])),
+    [instances],
+  );
   const [statusFilter, setStatusFilter] = useState("recent");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(PAGE_SIZE_OPTIONS[0]);
   const filterLabelId = useId();
   const jobs =
-    statusFilter === "recent" ? (jobsQ.data?.jobs ?? []) : (jobsQ.data?.jobs ?? []).filter((j) => j.status === statusFilter);
+    statusFilter === "recent"
+      ? (jobsQ.data?.jobs ?? [])
+      : (jobsQ.data?.jobs ?? []).filter((j) => j.status === statusFilter);
   const totalPages = Math.max(1, Math.ceil(jobs.length / pageSize));
   const pagedRows = jobs.slice((page - 1) * pageSize, page * pageSize);
 
@@ -1057,74 +1263,111 @@ function TopLevelJobs({ instances }: { instances: PrunerServerInstance[] }) {
       data-testid="pruner-top-jobs-tab"
     >
       <header className="border-b border-[var(--mm-border)] bg-black/10 px-4 py-3.5 sm:px-5 sm:py-4">
-        <h2 className="text-lg font-semibold tracking-tight text-[var(--mm-text)]">Jobs</h2>
-        <p className="mt-1 text-sm text-[var(--mm-text2)]">Pending, running, and recent Pruner work.</p>
+        <h2 className="text-lg font-semibold tracking-tight text-[var(--mm-text)]">
+          Jobs
+        </h2>
+        <p className="mt-1 text-sm text-[var(--mm-text2)]">
+          Pending, running, and recent Pruner work.
+        </p>
       </header>
       <div className="space-y-4 px-4 py-4 sm:px-5 sm:py-5">
         <div className="flex flex-col gap-3 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-3.5 py-3.5 sm:flex-row sm:items-end sm:justify-between sm:px-5 sm:py-4">
           <label className="block min-w-0 flex-1">
-            <span id={filterLabelId} className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+            <span
+              id={filterLabelId}
+              className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]"
+            >
               Show jobs
             </span>
             <MmListboxPicker
               className="mt-2 max-w-xl"
               ariaLabelledBy={filterLabelId}
               placeholder="Recent (all statuses, newest first)"
-              options={PRUNER_JOB_FILTER_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+              options={PRUNER_JOB_FILTER_OPTIONS.map((o) => ({
+                value: o.value,
+                label: o.label,
+              }))}
               value={statusFilter}
               onChange={(v) => setStatusFilter(v)}
             />
           </label>
         </div>
-        {jobsQ.isLoading ? <p className="text-sm text-[var(--mm-text2)]">Loading jobs…</p> : null}
-        {jobsQ.isError ? <p className="text-sm text-red-600">{(jobsQ.error as Error).message}</p> : null}
+        {jobsQ.isLoading ? (
+          <p className="text-sm text-[var(--mm-text2)]">Loading jobs…</p>
+        ) : null}
+        {jobsQ.isError ? (
+          <p className="text-sm text-red-600">
+            {(jobsQ.error as Error).message}
+          </p>
+        ) : null}
         {jobs.length ? (
           <>
             <div className="overflow-x-auto rounded-md border border-[var(--mm-border)]">
-            <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
-              <thead className="bg-black/20 text-[var(--mm-text2)]">
-              <tr>
-                <th className="sticky left-0 top-0 z-30 bg-black/20 px-3 py-2 font-medium">Id</th>
-                <th className="sticky top-0 z-20 bg-black/20 px-3 py-2 font-medium">What ran</th>
-                <th className="sticky top-0 z-20 bg-black/20 px-3 py-2 font-medium">Status</th>
-                <th className="sticky top-0 z-20 bg-black/20 px-3 py-2 font-medium">Server</th>
-                <th className="sticky top-0 z-20 bg-black/20 px-3 py-2 font-medium">Updated</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pagedRows.map((job) => {
-                const sid = parseServerInstanceId(job);
-                const inst = sid ? byId.get(sid) : undefined;
-                return (
-                  <tr key={job.id} className="border-t border-[var(--mm-border)]">
-                    <td className="sticky left-0 z-[1] bg-[var(--mm-card-bg)] px-3 py-2 align-top font-mono text-xs text-[var(--mm-text1)]">
-                      #{job.id}
-                    </td>
-                    <td className="max-w-[14rem] break-words px-3 py-2 align-top text-xs">{prunerJobKindOperatorLabel(job.job_kind)}</td>
-                    <td className="whitespace-nowrap px-3 py-2 align-top">
-                      <span
-                        className={
-                          job.status === "completed"
-                            ? "text-emerald-500"
-                            : job.status === "failed"
-                              ? "text-red-400"
-                              : job.status === "running"
-                                ? "text-amber-400"
-                                : "text-[var(--mm-text2)]"
-                        }
-                      >
-                        {job.status}
-                      </span>
-                    </td>
-                    <td className="max-w-[14rem] break-words px-3 py-2 align-top text-xs">
-                      {inst ? inst.display_name : sid ? `Server #${sid}` : "—"}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2 align-top text-xs text-[var(--mm-text2)]">{job.updated_at}</td>
+              <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
+                <thead className="bg-black/20 text-[var(--mm-text2)]">
+                  <tr>
+                    <th className="sticky left-0 top-0 z-30 bg-black/20 px-3 py-2 font-medium">
+                      Id
+                    </th>
+                    <th className="sticky top-0 z-20 bg-black/20 px-3 py-2 font-medium">
+                      What ran
+                    </th>
+                    <th className="sticky top-0 z-20 bg-black/20 px-3 py-2 font-medium">
+                      Status
+                    </th>
+                    <th className="sticky top-0 z-20 bg-black/20 px-3 py-2 font-medium">
+                      Server
+                    </th>
+                    <th className="sticky top-0 z-20 bg-black/20 px-3 py-2 font-medium">
+                      Updated
+                    </th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {pagedRows.map((job) => {
+                    const sid = parseServerInstanceId(job);
+                    const inst = sid ? byId.get(sid) : undefined;
+                    return (
+                      <tr
+                        key={job.id}
+                        className="border-t border-[var(--mm-border)]"
+                      >
+                        <td className="sticky left-0 z-[1] bg-[var(--mm-card-bg)] px-3 py-2 align-top font-mono text-xs text-[var(--mm-text1)]">
+                          #{job.id}
+                        </td>
+                        <td className="max-w-[14rem] break-words px-3 py-2 align-top text-xs">
+                          {prunerJobKindOperatorLabel(job.job_kind)}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 align-top">
+                          <span
+                            className={
+                              job.status === "completed"
+                                ? "text-emerald-500"
+                                : job.status === "failed"
+                                  ? "text-red-400"
+                                  : job.status === "running"
+                                    ? "text-amber-400"
+                                    : "text-[var(--mm-text2)]"
+                            }
+                          >
+                            {job.status}
+                          </span>
+                        </td>
+                        <td className="max-w-[14rem] break-words px-3 py-2 align-top text-xs">
+                          {inst
+                            ? inst.display_name
+                            : sid
+                              ? `Server #${sid}`
+                              : "—"}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 align-top text-xs text-[var(--mm-text2)]">
+                          {job.updated_at}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
             <MmJobsPagination
               page={page}
@@ -1137,7 +1380,9 @@ function TopLevelJobs({ instances }: { instances: PrunerServerInstance[] }) {
           </>
         ) : jobsQ.data ? (
           <div className="space-y-1 rounded border border-[var(--mm-border)] bg-black/10 px-5 py-10 text-center">
-            <p className="text-sm font-medium text-[var(--mm-text)]">No jobs match this view</p>
+            <p className="text-sm font-medium text-[var(--mm-text)]">
+              No jobs match this view
+            </p>
             <p className="text-xs text-[var(--mm-text2)]">
               {statusFilter !== "recent"
                 ? `Nothing with status "${statusFilter}" yet. Try Recent (all statuses) for the latest rows.`
@@ -1147,7 +1392,10 @@ function TopLevelJobs({ instances }: { instances: PrunerServerInstance[] }) {
         ) : null}
         <p className="text-xs text-[var(--mm-text2)]">
           Full detail on what was deleted, skipped, or failed is in the{" "}
-          <Link to="/app/activity" className="font-semibold text-[var(--mm-accent)] underline-offset-2 hover:underline">
+          <Link
+            to="/app/activity"
+            className="font-semibold text-[var(--mm-accent)] underline-offset-2 hover:underline"
+          >
             Activity log
           </Link>
           .
@@ -1167,10 +1415,11 @@ export function PrunerInstancesListPage() {
         <p className="mm-page__eyebrow">MediaMop</p>
         <h1 className="mm-page__title">Pruner</h1>
         <p className="mm-page__subtitle max-w-3xl">
-          Library cleanup for <strong className="text-[var(--mm-text)]">Emby</strong>,{" "}
+          Library cleanup for{" "}
+          <strong className="text-[var(--mm-text)]">Emby</strong>,{" "}
           <strong className="text-[var(--mm-text)]">Jellyfin</strong>, and{" "}
-          <strong className="text-[var(--mm-text)]">Plex</strong>. Each provider tab has Connection, Cleanup, and Schedule
-          for that server.
+          <strong className="text-[var(--mm-text)]">Plex</strong>. Each provider
+          tab has Connection, Cleanup, and Schedule for that server.
         </p>
       </header>
 
@@ -1179,19 +1428,25 @@ export function PrunerInstancesListPage() {
         aria-label="Pruner sections"
         data-testid="pruner-top-level-tabs"
       >
-        {([
-          ["overview", "Overview"],
-          ["emby", "Emby"],
-          ["jellyfin", "Jellyfin"],
-          ["plex", "Plex"],
-          ["jobs", "Jobs"],
-        ] as const).map(([id, label]) => (
+        {(
+          [
+            ["overview", "Overview"],
+            ["emby", "Emby"],
+            ["jellyfin", "Jellyfin"],
+            ["plex", "Plex"],
+            ["jobs", "Jobs"],
+          ] as const
+        ).map(([id, label]) => (
           <button
             key={id}
             type="button"
             role="tab"
-            aria-selected={topTab === id || (topTab === "schedule" && id === "emby")}
-            className={mmSectionTabClass(topTab === id || (topTab === "schedule" && id === "emby"))}
+            aria-selected={
+              topTab === id || (topTab === "schedule" && id === "emby")
+            }
+            className={mmSectionTabClass(
+              topTab === id || (topTab === "schedule" && id === "emby"),
+            )}
             onClick={() => setTopTab(id)}
           >
             {label}
@@ -1215,12 +1470,23 @@ export function PrunerInstancesListPage() {
           )[topTab]
         }
       >
-        <div className={mmModuleTabBlurbBandClass} data-testid="pruner-tab-blurb">
-          <p className={mmModuleTabBlurbTextClass}>{PRUNER_TAB_BLURBS[topTab]}</p>
+        <div
+          className={mmModuleTabBlurbBandClass}
+          data-testid="pruner-tab-blurb"
+        >
+          <p className={mmModuleTabBlurbTextClass}>
+            {PRUNER_TAB_BLURBS[topTab]}
+          </p>
         </div>
         <div className="min-w-0">
-          {q.isLoading ? <p className="text-sm text-[var(--mm-text2)]">Loading provider instances…</p> : null}
-          {q.isError ? <p className="text-sm text-red-600">{(q.error as Error).message}</p> : null}
+          {q.isLoading ? (
+            <p className="text-sm text-[var(--mm-text2)]">
+              Loading provider instances…
+            </p>
+          ) : null}
+          {q.isError ? (
+            <p className="text-sm text-red-600">{(q.error as Error).message}</p>
+          ) : null}
           {!q.isLoading && !q.isError ? (
             topTab === "overview" ? (
               <TopLevelOverview
@@ -1231,9 +1497,16 @@ export function PrunerInstancesListPage() {
             ) : topTab === "jobs" ? (
               <TopLevelJobs instances={instances} />
             ) : topTab === "schedule" ? (
-              <ProviderConfigurationWorkspace provider="emby" allInstances={instances} initialSection="schedule" />
+              <ProviderConfigurationWorkspace
+                provider="emby"
+                allInstances={instances}
+                initialSection="schedule"
+              />
             ) : (
-              <ProviderConfigurationWorkspace provider={topTab} allInstances={instances} />
+              <ProviderConfigurationWorkspace
+                provider={topTab}
+                allInstances={instances}
+              />
             )
           ) : null}
         </div>

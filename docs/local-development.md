@@ -39,6 +39,7 @@ Or manually:
 ```powershell
 cd apps/backend
 $env:PYTHONPATH = "src"
+alembic check
 alembic upgrade head
 ```
 
@@ -83,7 +84,7 @@ The default SQLite file is **`{MEDIAMOP_HOME}/data/mediamop.sqlite3`** unless **
 
 The **`Test`** workflow (`.github/workflows/ci.yml`):
 
-1. Runs **`apps/backend`** tests with **`MEDIAMOP_HOME`** on the runner temp dir, **`alembic upgrade head`**, then **`pytest`** (no Postgres service).
+1. Runs **`apps/backend`** tests with **`MEDIAMOP_HOME`** on the runner temp dir, **`alembic check`**, **`alembic upgrade head`**, then **`pytest`** (no Postgres service).
 2. Runs **`npm ci` → `npm run build` → `npm run test`** in **`apps/web`**.
 3. Runs **E2E** with **`MEDIAMOP_E2E=1`**, **`MEDIAMOP_HOME`** on a temp dir, uvicorn + **`vite preview`** + Playwright (from repo-root **`tests/e2e/mediamop/`**, same as local optional E2E below).
 

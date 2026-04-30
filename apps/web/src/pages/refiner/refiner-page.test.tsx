@@ -12,7 +12,10 @@ import {
   refinerPathSettingsQueryKey,
   refinerRemuxRulesSettingsQueryKey,
 } from "../../lib/refiner/queries";
-import type { RefinerPathSettingsOut, RefinerRemuxRulesSettingsOut } from "../../lib/refiner/types";
+import type {
+  RefinerPathSettingsOut,
+  RefinerRemuxRulesSettingsOut,
+} from "../../lib/refiner/types";
 import { RefinerPage } from "./refiner-page";
 
 const operatorMe: UserPublic = { id: 1, username: "alice", role: "operator" };
@@ -23,14 +26,18 @@ const minimalRefinerPathSettings: RefinerPathSettingsOut = {
   refiner_watched_folder_exists: false,
   refiner_work_folder: null,
   refiner_output_folder: "",
-  resolved_default_work_folder: "C:\\ProgramData\\MediaMop\\refiner\\refiner-movie-work",
-  effective_work_folder: "C:\\ProgramData\\MediaMop\\refiner\\refiner-movie-work",
+  resolved_default_work_folder:
+    "C:\\ProgramData\\MediaMop\\refiner\\refiner-movie-work",
+  effective_work_folder:
+    "C:\\ProgramData\\MediaMop\\refiner\\refiner-movie-work",
   refiner_tv_watched_folder: null,
   refiner_tv_watched_folder_exists: false,
   refiner_tv_work_folder: null,
   refiner_tv_output_folder: null,
-  resolved_default_tv_work_folder: "C:\\ProgramData\\MediaMop\\refiner\\refiner-tv-work",
-  effective_tv_work_folder: "C:\\ProgramData\\MediaMop\\refiner\\refiner-tv-work",
+  resolved_default_tv_work_folder:
+    "C:\\ProgramData\\MediaMop\\refiner\\refiner-tv-work",
+  effective_tv_work_folder:
+    "C:\\ProgramData\\MediaMop\\refiner\\refiner-tv-work",
   movie_watched_folder_check_interval_seconds: 300,
   tv_watched_folder_check_interval_seconds: 300,
   updated_at: "2026-04-11T00:00:00Z",
@@ -99,7 +106,10 @@ function seedRefinerQueries(qc: QueryClient) {
     updated_at: "2026-04-11T00:00:00Z",
   });
   qc.setQueryData(refinerRemuxRulesSettingsQueryKey, minimalRefinerRemuxRules);
-  qc.setQueryData(refinerJobsInspectionQueryKey("recent"), { jobs: [], default_recent_slice: true });
+  qc.setQueryData(refinerJobsInspectionQueryKey("recent"), {
+    jobs: [],
+    default_recent_slice: true,
+  });
   qc.setQueryData(refinerJobsInspectionQueryKey("pending"), { jobs: [] });
   qc.setQueryData(refinerJobsInspectionQueryKey("leased"), { jobs: [] });
   qc.setQueryData(refinerJobsInspectionQueryKey("failed"), { jobs: [] });
@@ -125,11 +135,15 @@ describe("RefinerPage", () => {
   it("Overview is the default tab, stays Refiner-scoped, and links Activity without leaking env keys", () => {
     renderRefinerPage();
     expect(screen.getByTestId("refiner-overview-panel")).toBeInTheDocument();
-    const overview = screen.getByTestId("refiner-overview-panel").textContent ?? "";
+    const overview =
+      screen.getByTestId("refiner-overview-panel").textContent ?? "";
     expect(overview).toMatch(/At a glance/i);
     expect(overview).not.toMatch(/MEDIAMOP_/i);
     expect(overview).not.toMatch(/refiner_jobs/i);
-    expect(screen.getByRole("link", { name: "Activity" })).toHaveAttribute("href", "/app/activity");
+    expect(screen.getByRole("link", { name: "Activity" })).toHaveAttribute(
+      "href",
+      "/app/activity",
+    );
   });
 
   it("Overview surfaces saved audio/subtitle defaults at a glance", () => {
@@ -159,7 +173,9 @@ describe("RefinerPage", () => {
     openTab("Jobs");
     const block = screen.getByTestId("refiner-jobs-inspection-section");
     expect(block.textContent).toMatch(/Activity/i);
-    expect(block.textContent).toMatch(/Pending, running, and recent Refiner work/i);
+    expect(block.textContent).toMatch(
+      /Pending, running, and recent Refiner work/i,
+    );
   });
 
   it("Libraries tab shows processing settings controls", () => {
@@ -208,8 +224,12 @@ describe("RefinerPage", () => {
   it("Schedules includes independent TV and Movies scan-now actions", () => {
     renderRefinerPage();
     openTab("Schedules");
-    expect(screen.getByRole("button", { name: "Scan TV now" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Scan Movies now" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Scan TV now" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Scan Movies now" }),
+    ).toBeInTheDocument();
   });
 
   it("Schedules tab has no master scheduled-processing toggle (folder poll is under Libraries)", () => {
@@ -221,6 +241,8 @@ describe("RefinerPage", () => {
   it("Schedules tab has no suite timezone preamble banner", () => {
     renderRefinerPage();
     openTab("Schedules");
-    expect(screen.queryByText("Suite time zone for schedule windows")).toBeNull();
+    expect(
+      screen.queryByText("Suite time zone for schedule windows"),
+    ).toBeNull();
   });
 });

@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -21,7 +27,9 @@ function wrap(ui: ReactNode, client: QueryClient) {
 
 describe("PrunerInstancesListPage", () => {
   beforeEach(() => {
-    vi.spyOn(prunerApi, "fetchPrunerStudios").mockResolvedValue({ studios: ["Acme Studio", "Beta Pictures"] });
+    vi.spyOn(prunerApi, "fetchPrunerStudios").mockResolvedValue({
+      studios: ["Acme Studio", "Beta Pictures"],
+    });
     vi.spyOn(prunerApi, "fetchPrunerOverviewStats").mockResolvedValue({
       window_days: 30,
       items_removed: 0,
@@ -39,11 +47,16 @@ describe("PrunerInstancesListPage", () => {
   it("renders top-level tabs Overview, Emby, Jellyfin, Plex, Jobs without Connections or Schedules", async () => {
     const client = new QueryClient();
     vi.spyOn(prunerApi, "fetchPrunerInstances").mockResolvedValue([]);
-    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({ jobs: [], default_recent_slice: true });
+    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({
+      jobs: [],
+      default_recent_slice: true,
+    });
 
     render(wrap(<PrunerInstancesListPage />, client));
 
-    await waitFor(() => expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument(),
+    );
     const tabs = screen.getByTestId("pruner-top-level-tabs");
     expect(tabs.textContent).toMatch(/Overview/);
     expect(tabs.textContent).not.toMatch(/Connections/);
@@ -57,20 +70,39 @@ describe("PrunerInstancesListPage", () => {
   it("each provider tab exposes Connection, Cleanup, and Schedule sub-tabs with a credential panel on Connection", async () => {
     const client = new QueryClient();
     vi.spyOn(prunerApi, "fetchPrunerInstances").mockResolvedValue([]);
-    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({ jobs: [], default_recent_slice: true });
+    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({
+      jobs: [],
+      default_recent_slice: true,
+    });
 
     render(wrap(<PrunerInstancesListPage />, client));
 
-    await waitFor(() => expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument(),
+    );
 
     for (const name of ["Emby", "Jellyfin", "Plex"] as const) {
       fireEvent.click(screen.getByRole("tab", { name }));
-      await waitFor(() => expect(screen.getByTestId(`pruner-provider-tab-${name.toLowerCase()}`)).toBeInTheDocument());
-      const sub = screen.getByTestId(`pruner-provider-subnav-${name.toLowerCase()}`);
-      expect(within(sub).getByRole("button", { name: "Connection" })).toBeInTheDocument();
-      expect(within(sub).getByRole("button", { name: "Cleanup" })).toBeInTheDocument();
-      expect(within(sub).getByRole("button", { name: "Schedule" })).toBeInTheDocument();
-      expect(screen.getByTestId(`pruner-connection-panel-${name.toLowerCase()}`)).toBeInTheDocument();
+      await waitFor(() =>
+        expect(
+          screen.getByTestId(`pruner-provider-tab-${name.toLowerCase()}`),
+        ).toBeInTheDocument(),
+      );
+      const sub = screen.getByTestId(
+        `pruner-provider-subnav-${name.toLowerCase()}`,
+      );
+      expect(
+        within(sub).getByRole("button", { name: "Connection" }),
+      ).toBeInTheDocument();
+      expect(
+        within(sub).getByRole("button", { name: "Cleanup" }),
+      ).toBeInTheDocument();
+      expect(
+        within(sub).getByRole("button", { name: "Schedule" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId(`pruner-connection-panel-${name.toLowerCase()}`),
+      ).toBeInTheDocument();
       expect(screen.getByLabelText(/^Base URL$/i)).toBeInTheDocument();
     }
   });
@@ -78,15 +110,24 @@ describe("PrunerInstancesListPage", () => {
   it("Plex Connection sub-tab uses Token label, not API key", async () => {
     const client = new QueryClient();
     vi.spyOn(prunerApi, "fetchPrunerInstances").mockResolvedValue([]);
-    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({ jobs: [], default_recent_slice: true });
+    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({
+      jobs: [],
+      default_recent_slice: true,
+    });
 
     render(wrap(<PrunerInstancesListPage />, client));
 
     fireEvent.click(screen.getByRole("tab", { name: "Plex" }));
-    await waitFor(() => expect(screen.getByTestId("pruner-connection-panel-plex")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-connection-panel-plex"),
+      ).toBeInTheDocument(),
+    );
     const plexPanel = screen.getByTestId("pruner-connection-panel-plex");
     expect(within(plexPanel).getByLabelText(/^Token$/i)).toBeInTheDocument();
-    expect(within(plexPanel).queryByLabelText(/^API key$/i)).not.toBeInTheDocument();
+    expect(
+      within(plexPanel).queryByLabelText(/^API key$/i),
+    ).not.toBeInTheDocument();
   });
 
   it("Emby tab shows Cleanup sub-navigation, TV/Movies columns, and no nested top-level tabs inside the workspace", async () => {
@@ -137,32 +178,74 @@ describe("PrunerInstancesListPage", () => {
         scopes: [scope("tv"), scope("movies")],
       },
     ]);
-    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({ jobs: [], default_recent_slice: true });
+    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({
+      jobs: [],
+      default_recent_slice: true,
+    });
 
     render(wrap(<PrunerInstancesListPage />, client));
 
-    await waitFor(() => expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByRole("tab", { name: "Emby" }));
-    await waitFor(() => expect(screen.getByTestId("pruner-provider-tab-emby")).toBeInTheDocument());
-    expect(screen.getByTestId("pruner-provider-subnav-emby")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Connection" })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-provider-tab-emby"),
+      ).toBeInTheDocument(),
+    );
+    expect(
+      screen.getByTestId("pruner-provider-subnav-emby"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Connection" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cleanup" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Filters" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Filters" }),
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Cleanup" }));
-    await waitFor(() => expect(screen.getByTestId("pruner-provider-configuration-emby")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-provider-configuration-emby"),
+      ).toBeInTheDocument(),
+    );
     const rulesCard = screen.getByTestId("pruner-provider-configuration-emby");
-    expect(within(screen.getByTestId("pruner-provider-tab-emby")).queryByRole("heading", { level: 2, name: /^Emby$/ })).not.toBeInTheDocument();
-    expect(within(rulesCard).getAllByText(/^TV$/).length).toBeGreaterThanOrEqual(1);
-    expect(within(rulesCard).getAllByText(/^Movies$/).length).toBeGreaterThanOrEqual(1);
+    expect(
+      within(screen.getByTestId("pruner-provider-tab-emby")).queryByRole(
+        "heading",
+        { level: 2, name: /^Emby$/ },
+      ),
+    ).not.toBeInTheDocument();
+    expect(
+      within(rulesCard).getAllByText(/^TV$/).length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      within(rulesCard).getAllByText(/^Movies$/).length,
+    ).toBeGreaterThanOrEqual(1);
     expect(rulesCard).toBeInTheDocument();
     expect(within(rulesCard).queryByRole("tab")).toBeNull();
-    expect(screen.queryByRole("button", { name: /Save watched TV rule/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save TV settings" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save Movies settings" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Save watched TV rule/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Save TV settings" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Save Movies settings" }),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Schedule" }));
-    await waitFor(() => expect(screen.getByTestId("pruner-provider-schedule-wrap")).toBeInTheDocument());
-    expect(screen.getByTestId("pruner-schedule-emby-run-tv-btn")).toBeInTheDocument();
-    expect(screen.getByTestId("pruner-schedule-emby-run-movies-btn")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-provider-schedule-wrap"),
+      ).toBeInTheDocument(),
+    );
+    expect(
+      screen.getByTestId("pruner-schedule-emby-run-tv-btn"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("pruner-schedule-emby-run-movies-btn"),
+    ).toBeInTheDocument();
   });
 
   it("Cleanup tab shows TV and Movies people fields; Schedule tab shows run controls", async () => {
@@ -213,26 +296,59 @@ describe("PrunerInstancesListPage", () => {
         scopes: [scope("tv"), scope("movies")],
       },
     ]);
-    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({ jobs: [], default_recent_slice: true });
+    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({
+      jobs: [],
+      default_recent_slice: true,
+    });
 
     render(wrap(<PrunerInstancesListPage />, client));
 
-    await waitFor(() => expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByRole("tab", { name: "Emby" }));
-    await waitFor(() => expect(screen.getByTestId("pruner-provider-tab-emby")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-provider-tab-emby"),
+      ).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Cleanup" }));
-    await waitFor(() => expect(screen.getByTestId("pruner-provider-configuration-emby")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-provider-configuration-emby"),
+      ).toBeInTheDocument(),
+    );
     const cleanupWrap = screen.getByTestId("pruner-provider-cleanup-wrap");
-    expect(within(cleanupWrap).queryByTestId("pruner-provider-inline-connection-status")).not.toBeInTheDocument();
+    expect(
+      within(cleanupWrap).queryByTestId(
+        "pruner-provider-inline-connection-status",
+      ),
+    ).not.toBeInTheDocument();
     const card = screen.getByTestId("pruner-provider-configuration-emby");
-    expect(within(card).getAllByPlaceholderText(/Alex Carter/i)).toHaveLength(2);
+    expect(within(card).getAllByPlaceholderText(/Alex Carter/i)).toHaveLength(
+      2,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Schedule" }));
-    await waitFor(() => expect(screen.getByTestId("pruner-provider-schedule-wrap")).toBeInTheDocument());
-    expect(screen.getAllByText(/creates review snapshots/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByRole("button", { name: "Scan TV for cleanup review" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Scan Movies for cleanup review" })).toBeInTheDocument();
-    expect(screen.getByTestId("pruner-schedule-emby-run-tv-btn")).toBeInTheDocument();
-    expect(screen.getByTestId("pruner-schedule-emby-run-movies-btn")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-provider-schedule-wrap"),
+      ).toBeInTheDocument(),
+    );
+    expect(
+      screen.getAllByText(/creates review snapshots/i).length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getByRole("button", { name: "Scan TV for cleanup review" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Scan Movies for cleanup review" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("pruner-schedule-emby-run-tv-btn"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("pruner-schedule-emby-run-movies-btn"),
+    ).toBeInTheDocument();
   });
 
   it("Connection sub-tab shows Connected in status when last Emby test passed", async () => {
@@ -283,14 +399,23 @@ describe("PrunerInstancesListPage", () => {
         scopes: [scope("tv"), scope("movies")],
       },
     ]);
-    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({ jobs: [], default_recent_slice: true });
+    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({
+      jobs: [],
+      default_recent_slice: true,
+    });
 
     render(wrap(<PrunerInstancesListPage />, client));
 
-    await waitFor(() => expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByRole("tab", { name: "Emby" }));
     fireEvent.click(screen.getByRole("button", { name: "Connection" }));
-    await waitFor(() => expect(screen.getByTestId("pruner-connection-panel-emby")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-connection-panel-emby"),
+      ).toBeInTheDocument(),
+    );
     const statusBox = screen.getByTestId("pruner-connection-status-emby");
     expect(within(statusBox).getByText("Connected")).toBeInTheDocument();
   });
@@ -299,19 +424,38 @@ describe("PrunerInstancesListPage", () => {
     const client = new QueryClient();
     client.setQueryData(qk.me, adminUser);
     vi.spyOn(prunerApi, "fetchPrunerInstances").mockResolvedValue([]);
-    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({ jobs: [], default_recent_slice: true });
+    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({
+      jobs: [],
+      default_recent_slice: true,
+    });
 
     render(wrap(<PrunerInstancesListPage />, client));
 
     fireEvent.click(screen.getByRole("tab", { name: "Emby" }));
-    await waitFor(() => expect(screen.getByTestId("pruner-provider-tab-emby")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-provider-tab-emby"),
+      ).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Cleanup" }));
-    await waitFor(() => expect(screen.getByTestId("pruner-provider-configuration-emby")).toBeInTheDocument());
-    expect(screen.queryByTestId("pruner-provider-inline-connection-status")).not.toBeInTheDocument();
-    expect(screen.queryByText(/Save a connection first to enable these settings/i)).not.toBeInTheDocument();
-    const disabledFieldsets = screen.getByTestId("pruner-provider-configuration-emby").querySelectorAll("fieldset[disabled]");
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-provider-configuration-emby"),
+      ).toBeInTheDocument(),
+    );
+    expect(
+      screen.queryByTestId("pruner-provider-inline-connection-status"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Save a connection first to enable these settings/i),
+    ).not.toBeInTheDocument();
+    const disabledFieldsets = screen
+      .getByTestId("pruner-provider-configuration-emby")
+      .querySelectorAll("fieldset[disabled]");
     expect(disabledFieldsets.length).toBe(0);
-    expect(screen.getByText(/Delete TV episodes you have already watched/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Delete TV episodes you have already watched/i),
+    ).toBeInTheDocument();
   });
 
   it("Plex Cleanup tab shows only supported controls: TV missing-primary + filters + people; Movies without missing-primary toggle", async () => {
@@ -394,26 +538,57 @@ describe("PrunerInstancesListPage", () => {
         ],
       },
     ]);
-    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({ jobs: [], default_recent_slice: true });
+    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({
+      jobs: [],
+      default_recent_slice: true,
+    });
 
     render(wrap(<PrunerInstancesListPage />, client));
 
     fireEvent.click(screen.getByRole("tab", { name: "Plex" }));
-    await waitFor(() => expect(screen.getByTestId("pruner-provider-tab-plex")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-provider-tab-plex"),
+      ).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Cleanup" }));
-    await waitFor(() => expect(screen.getByTestId("pruner-provider-configuration-plex")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-provider-configuration-plex"),
+      ).toBeInTheDocument(),
+    );
     const plexTvNote = screen.getByTestId("pruner-plex-tv-rules-scope-note");
     expect(plexTvNote).toHaveTextContent(/Plex TV — limited options/i);
-    expect(plexTvNote).toHaveTextContent(/missing poster rule is available here/i);
-    expect(screen.queryByTestId("pruner-provider-plex-tv-unsupported-rules")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("pruner-plex-tv-filters-scope-note")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("pruner-plex-other-rules-note")).not.toBeInTheDocument();
+    expect(plexTvNote).toHaveTextContent(
+      /missing poster rule is available here/i,
+    );
+    expect(
+      screen.queryByTestId("pruner-provider-plex-tv-unsupported-rules"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("pruner-plex-tv-filters-scope-note"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("pruner-plex-other-rules-note"),
+    ).not.toBeInTheDocument();
     const tvSection = screen.getByTestId("pruner-provider-tv-config-plex");
-    expect(within(tvSection).queryByText(/Delete TV episodes you have already watched/i)).not.toBeInTheDocument();
-    expect(within(tvSection).getByTestId("pruner-provider-tv-people-plex")).toBeInTheDocument();
-    const moviesSection = screen.getByTestId("pruner-provider-movies-config-plex");
-    expect(within(moviesSection).getByText(/Plex audience rating/i)).toBeInTheDocument();
-    expect(within(moviesSection).queryByText(/Delete movies missing a main poster/i)).not.toBeInTheDocument();
+    expect(
+      within(tvSection).queryByText(
+        /Delete TV episodes you have already watched/i,
+      ),
+    ).not.toBeInTheDocument();
+    expect(
+      within(tvSection).getByTestId("pruner-provider-tv-people-plex"),
+    ).toBeInTheDocument();
+    const moviesSection = screen.getByTestId(
+      "pruner-provider-movies-config-plex",
+    );
+    expect(
+      within(moviesSection).getByText(/Plex audience rating/i),
+    ).toBeInTheDocument();
+    expect(
+      within(moviesSection).queryByText(/Delete movies missing a main poster/i),
+    ).not.toBeInTheDocument();
   });
 
   it("Plex Cleanup tab TV people roles show Cast, Directors, and Writers only", async () => {
@@ -465,18 +640,33 @@ describe("PrunerInstancesListPage", () => {
         scopes: [scope("tv"), scope("movies")],
       },
     ]);
-    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({ jobs: [], default_recent_slice: true });
+    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({
+      jobs: [],
+      default_recent_slice: true,
+    });
 
     render(wrap(<PrunerInstancesListPage />, client));
 
-    await waitFor(() => expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByRole("tab", { name: "Plex" }));
-    await waitFor(() => expect(screen.getByTestId("pruner-provider-tab-plex")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-provider-tab-plex"),
+      ).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Cleanup" }));
-    await waitFor(() => expect(screen.getByTestId("pruner-provider-configuration-plex")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-provider-configuration-plex"),
+      ).toBeInTheDocument(),
+    );
     const card = screen.getByTestId("pruner-provider-configuration-plex");
     expect(within(card).getAllByText("Cast (actors)")).toHaveLength(2);
-    const tvRoles = within(card).getByTestId("pruner-provider-tv-people-roles-plex");
+    const tvRoles = within(card).getByTestId(
+      "pruner-provider-tv-people-roles-plex",
+    );
     expect(within(tvRoles).getByText("Directors")).toBeInTheDocument();
     expect(within(tvRoles).getByText("Writers")).toBeInTheDocument();
     expect(within(card).queryByText(/Producers/i)).not.toBeInTheDocument();
@@ -563,38 +753,72 @@ describe("PrunerInstancesListPage", () => {
         ],
       },
     ]);
-    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({ jobs: [], default_recent_slice: true });
+    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({
+      jobs: [],
+      default_recent_slice: true,
+    });
     vi.spyOn(prunerApi, "fetchPrunerPreviewRuns").mockResolvedValue([]);
 
     render(wrap(<PrunerInstancesListPage />, client));
 
     fireEvent.click(screen.getByRole("tab", { name: "Emby" }));
-    await waitFor(() => expect(screen.getByTestId("pruner-provider-tab-emby")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-provider-tab-emby"),
+      ).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Cleanup" }));
-    await waitFor(() => expect(screen.getByTestId("pruner-provider-movies-config-emby")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-provider-movies-config-emby"),
+      ).toBeInTheDocument(),
+    );
     const movies = screen.getByTestId("pruner-provider-movies-config-emby");
     expect(within(movies).getByText(/community rating/i)).toBeInTheDocument();
-    expect(within(movies).queryByText(/Plex audienceRating/i)).not.toBeInTheDocument();
+    expect(
+      within(movies).queryByText(/Plex audienceRating/i),
+    ).not.toBeInTheDocument();
   });
 
   it("Emby Schedule sub-tab shows TV/Movies schedule cards when no instances exist", async () => {
     const client = new QueryClient();
     client.setQueryData(qk.me, adminUser);
     vi.spyOn(prunerApi, "fetchPrunerInstances").mockResolvedValue([]);
-    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({ jobs: [], default_recent_slice: true });
+    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({
+      jobs: [],
+      default_recent_slice: true,
+    });
 
     render(wrap(<PrunerInstancesListPage />, client));
 
-    await waitFor(() => expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByRole("tab", { name: "Emby" }));
     fireEvent.click(screen.getByRole("button", { name: "Schedule" }));
-    await waitFor(() => expect(screen.getByTestId("pruner-provider-schedule-wrap")).toBeInTheDocument());
-    expect(screen.queryByTestId("pruner-provider-schedule-hint")).not.toBeInTheDocument();
-    await waitFor(() => expect(screen.getByTestId("pruner-schedule-row-emby-tv")).toBeInTheDocument());
-    expect(screen.getByTestId("pruner-schedule-row-emby-movies")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-provider-schedule-wrap"),
+      ).toBeInTheDocument(),
+    );
+    expect(
+      screen.queryByTestId("pruner-provider-schedule-hint"),
+    ).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-schedule-row-emby-tv"),
+      ).toBeInTheDocument(),
+    );
+    expect(
+      screen.getByTestId("pruner-schedule-row-emby-movies"),
+    ).toBeInTheDocument();
     const tvCard = screen.getByTestId("pruner-schedule-row-emby-tv");
-    expect(within(tvCard).getAllByText("Schedule window").length).toBeGreaterThanOrEqual(1);
-    expect(within(tvCard).queryByLabelText(/Run interval in minutes/i)).not.toBeInTheDocument();
+    expect(
+      within(tvCard).getAllByText("Schedule window").length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      within(tvCard).queryByLabelText(/Run interval in minutes/i),
+    ).not.toBeInTheDocument();
   });
 
   it("each provider Schedule sub-tab renders TV and Movies schedule rows when instances exist", async () => {
@@ -667,23 +891,38 @@ describe("PrunerInstancesListPage", () => {
         scopes: [scope("tv"), scope("movies")],
       },
     ]);
-    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({ jobs: [], default_recent_slice: true });
+    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({
+      jobs: [],
+      default_recent_slice: true,
+    });
 
     render(wrap(<PrunerInstancesListPage />, client));
 
-    await waitFor(() => expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument(),
+    );
     for (const label of ["Emby", "Jellyfin", "Plex"] as const) {
       fireEvent.click(screen.getByRole("tab", { name: label }));
       fireEvent.click(screen.getByRole("button", { name: "Schedule" }));
       const p = label.toLowerCase();
-      await waitFor(() => expect(screen.getByTestId(`pruner-schedule-row-${p}-tv`)).toBeInTheDocument());
-      expect(screen.getByTestId(`pruner-schedule-row-${p}-movies`)).toBeInTheDocument();
+      await waitFor(() =>
+        expect(
+          screen.getByTestId(`pruner-schedule-row-${p}-tv`),
+        ).toBeInTheDocument(),
+      );
+      expect(
+        screen.getByTestId(`pruner-schedule-row-${p}-movies`),
+      ).toBeInTheDocument();
     }
   });
 
   it("Emby Schedule sub-tab save PATCHes schedule window fields", async () => {
-    const csrfSpy = vi.spyOn(authApi, "fetchCsrfToken").mockResolvedValue("csrf-test");
-    const patchSpy = vi.spyOn(prunerApi, "patchPrunerScope").mockResolvedValue({} as never);
+    const csrfSpy = vi
+      .spyOn(authApi, "fetchCsrfToken")
+      .mockResolvedValue("csrf-test");
+    const patchSpy = vi
+      .spyOn(prunerApi, "patchPrunerScope")
+      .mockResolvedValue({} as never);
     const client = new QueryClient();
     client.setQueryData(qk.me, adminUser);
     const scope = (media_scope: "tv" | "movies") => ({
@@ -753,19 +992,32 @@ describe("PrunerInstancesListPage", () => {
         scopes: [scope("tv"), scope("movies")],
       },
     ]);
-    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({ jobs: [], default_recent_slice: true });
+    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({
+      jobs: [],
+      default_recent_slice: true,
+    });
 
     render(wrap(<PrunerInstancesListPage />, client));
 
-    await waitFor(() => expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("pruner-top-level-tabs")).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByRole("tab", { name: "Emby" }));
     fireEvent.click(screen.getByRole("button", { name: "Schedule" }));
-    await waitFor(() => expect(screen.getByTestId("pruner-schedule-row-emby-tv")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-schedule-row-emby-tv"),
+      ).toBeInTheDocument(),
+    );
 
     const embyTv = screen.getByTestId("pruner-schedule-row-emby-tv");
-    const hoursGroup = within(embyTv).getByRole("radiogroup", { name: /Limit to these hours/i });
+    const hoursGroup = within(embyTv).getByRole("radiogroup", {
+      name: /Limit to these hours/i,
+    });
     fireEvent.click(within(hoursGroup).getByRole("radio", { name: "On" }));
-    fireEvent.click(within(embyTv).getByRole("button", { name: /Save TV schedule/i }));
+    fireEvent.click(
+      within(embyTv).getByRole("button", { name: /Save TV schedule/i }),
+    );
 
     await waitFor(() => {
       expect(patchSpy).toHaveBeenCalledWith(
@@ -791,12 +1043,21 @@ describe("PrunerInstancesListPage", () => {
   it("Overview shows At a glance cards without connection forms", async () => {
     const client = new QueryClient();
     vi.spyOn(prunerApi, "fetchPrunerInstances").mockResolvedValue([]);
-    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({ jobs: [], default_recent_slice: true });
+    vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({
+      jobs: [],
+      default_recent_slice: true,
+    });
 
     render(wrap(<PrunerInstancesListPage />, client));
 
-    await waitFor(() => expect(screen.getByTestId("pruner-overview-at-a-glance")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-overview-at-a-glance"),
+      ).toBeInTheDocument(),
+    );
     expect(screen.getByText(/At a glance/i)).toBeInTheDocument();
-    expect(screen.queryByTestId("pruner-connection-panel-emby")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("pruner-connection-panel-emby"),
+    ).not.toBeInTheDocument();
   });
 });

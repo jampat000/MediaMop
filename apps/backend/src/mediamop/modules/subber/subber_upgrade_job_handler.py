@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Callable
 
 from sqlalchemy.orm import Session, sessionmaker
@@ -17,6 +18,8 @@ from mediamop.modules.subber.worker_loop import SubberJobWorkContext
 from mediamop.platform.activity import constants as C
 from mediamop.platform.observability.diagnostics import DiagnosticAction, DiagnosticModule, DiagnosticResult, DiagnosticTrigger
 from mediamop.platform.observability.operator_messages import activity_detail_envelope
+
+logger = logging.getLogger(__name__)
 
 
 def make_subber_subtitle_upgrade_handler(
@@ -71,6 +74,7 @@ def make_subber_subtitle_upgrade_handler(
                     return
                 interval_sec = max(60, int(settings_row.upgrade_schedule_interval_seconds or 604800))
                 since_days = max(1, int(interval_sec // 86400) or 7)
+                logger.debug("Subber subtitle upgrade scanning candidates from the last %s day(s).", since_days)
                 for row in get_candidates_for_upgrade(session, since_days):
                     attempted += 1
                     try:

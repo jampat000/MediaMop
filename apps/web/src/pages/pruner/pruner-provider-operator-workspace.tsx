@@ -1,4 +1,11 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { fetchCsrfToken } from "../../lib/api/auth-api";
@@ -14,7 +21,10 @@ import {
 import type { PrunerServerInstance } from "../../lib/pruner/api";
 import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
-import { PrunerGenreMultiSelect, prunerGenresFromApi } from "./pruner-genre-multi-select";
+import {
+  PrunerGenreMultiSelect,
+  prunerGenresFromApi,
+} from "./pruner-genre-multi-select";
 import { PrunerStudioMultiSelect } from "./pruner-studio-multi-select";
 import {
   PrunerPeopleRoleCheckboxes,
@@ -42,7 +52,10 @@ import {
 
 type ProviderKey = "emby" | "jellyfin" | "plex";
 
-function scopeRow(inst: PrunerServerInstance | undefined, media_scope: "tv" | "movies") {
+function scopeRow(
+  inst: PrunerServerInstance | undefined,
+  media_scope: "tv" | "movies",
+) {
   return inst?.scopes.find((s) => s.media_scope === media_scope);
 }
 
@@ -71,18 +84,27 @@ async function evaluateEligibilityForSnapshots(
   instanceId: number,
   mediaScope: "tv" | "movies",
   snaps: PreviewSnapshot[],
-): Promise<{ elig: Record<string, boolean>; reasons: Record<string, string[]> }> {
+): Promise<{
+  elig: Record<string, boolean>;
+  reasons: Record<string, string[]>;
+}> {
   const elig: Record<string, boolean> = {};
   const reasons: Record<string, string[]> = {};
   for (const s of snaps) {
     if (s.outcome !== "success" || s.rows.length === 0) continue;
     try {
-      const r = await fetchPrunerApplyEligibility(instanceId, mediaScope, s.previewRunId);
+      const r = await fetchPrunerApplyEligibility(
+        instanceId,
+        mediaScope,
+        s.previewRunId,
+      );
       elig[s.previewRunId] = r.eligible;
       reasons[s.previewRunId] = r.reasons;
     } catch {
       elig[s.previewRunId] = false;
-      reasons[s.previewRunId] = ["Could not confirm whether these items can be deleted safely."];
+      reasons[s.previewRunId] = [
+        "Could not confirm whether these items can be deleted safely.",
+      ];
     }
   }
   return { elig, reasons };
@@ -103,11 +125,17 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
   } = props;
   const qc = useQueryClient();
   void onDryRunEnabledChange;
-  const [phase, setPhase] = useState<"idle" | "scanning" | "results" | "deleting">("idle");
+  const [phase, setPhase] = useState<
+    "idle" | "scanning" | "results" | "deleting"
+  >("idle");
   const [err, setErr] = useState<string | null>(null);
   const [snapshots, setSnapshots] = useState<PreviewSnapshot[]>([]);
-  const [deleteEligible, setDeleteEligible] = useState<Record<string, boolean>>({});
-  const [deleteReasons, setDeleteReasons] = useState<Record<string, string[]>>({});
+  const [deleteEligible, setDeleteEligible] = useState<Record<string, boolean>>(
+    {},
+  );
+  const [deleteReasons, setDeleteReasons] = useState<Record<string, string[]>>(
+    {},
+  );
   const [applySummary, setApplySummary] = useState<string | null>(null);
 
   const allRows = useMemo(() => {
@@ -131,15 +159,21 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
     setEmptyBecauseNoRules(false);
     try {
       await ensureSaved();
-      await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+      await qc.invalidateQueries({
+        queryKey: ["pruner", "instances", instanceId],
+      });
       const fresh = await fetchPrunerInstance(instanceId);
       const tv = scopeRow(fresh, "tv");
       const movies = scopeRow(fresh, "movies");
       if (!tv || !movies) {
-        throw new Error("TV and movie settings for this server are missing. Try reloading the page.");
+        throw new Error(
+          "TV and movie settings for this server are missing. Try reloading the page.",
+        );
       }
       const families =
-        mediaScope === "tv" ? tvRuleFamiliesToScan(fresh.provider, tv) : moviesRuleFamiliesToScan(movies);
+        mediaScope === "tv"
+          ? tvRuleFamiliesToScan(fresh.provider, tv)
+          : moviesRuleFamiliesToScan(movies);
       if (families.length === 0) {
         setSnapshots([]);
         setEmptyBecauseNoRules(true);
@@ -148,7 +182,11 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
       }
       const collected: PreviewSnapshot[] = [];
       for (const ruleFamilyId of families) {
-        const { pruner_job_id } = await postPrunerPreview(instanceId, mediaScope, { rule_family_id: ruleFamilyId });
+        const { pruner_job_id } = await postPrunerPreview(
+          instanceId,
+          mediaScope,
+          { rule_family_id: ruleFamilyId },
+        );
         let terminal: "completed" | "failed";
         try {
           terminal = await waitForPrunerJobTerminal(pruner_job_id, {
@@ -156,7 +194,9 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
             timeoutMs: PRUNER_SCAN_TIMEOUT_MS,
           });
         } catch {
-          setErr("Scan is taking longer than expected. Check Activity for results.");
+          setErr(
+            "Scan is taking longer than expected. Check Activity for results.",
+          );
           setPhase("idle");
           return;
         }
@@ -165,12 +205,19 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
           setPhase("idle");
           return;
         }
-        const previewRunId = await resolvePreviewRunIdForJob(instanceId, mediaScope, pruner_job_id, {
-          pollMs: PRUNER_SCAN_POLL_MS,
-          timeoutMs: PRUNER_SCAN_TIMEOUT_MS,
-        });
+        const previewRunId = await resolvePreviewRunIdForJob(
+          instanceId,
+          mediaScope,
+          pruner_job_id,
+          {
+            pollMs: PRUNER_SCAN_POLL_MS,
+            timeoutMs: PRUNER_SCAN_TIMEOUT_MS,
+          },
+        );
         if (!previewRunId) {
-          setErr("Scan is taking longer than expected. Check Activity for results.");
+          setErr(
+            "Scan is taking longer than expected. Check Activity for results.",
+          );
           setPhase("idle");
           return;
         }
@@ -190,31 +237,44 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
         });
       }
 
-      const { elig, reasons } = await evaluateEligibilityForSnapshots(instanceId, mediaScope, collected);
+      const { elig, reasons } = await evaluateEligibilityForSnapshots(
+        instanceId,
+        mediaScope,
+        collected,
+      );
       setSnapshots(collected);
       setDeleteEligible(elig);
       setDeleteReasons(reasons);
 
       const rowsCount = collected.reduce((acc, s) => acc + s.rows.length, 0);
       const eligibleAny = collected.some(
-        (s) => s.outcome === "success" && s.rows.length > 0 && elig[s.previewRunId] === true,
+        (s) =>
+          s.outcome === "success" &&
+          s.rows.length > 0 &&
+          elig[s.previewRunId] === true,
       );
 
-      if (dryRunEnabled || true) {
+      if (dryRunEnabled) {
         setPhase("results");
-        await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+        await qc.invalidateQueries({
+          queryKey: ["pruner", "instances", instanceId],
+        });
         return;
       }
 
       if (rowsCount === 0) {
         setPhase("results");
-        await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+        await qc.invalidateQueries({
+          queryKey: ["pruner", "instances", instanceId],
+        });
         return;
       }
 
       if (!eligibleAny) {
         setPhase("results");
-        await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+        await qc.invalidateQueries({
+          queryKey: ["pruner", "instances", instanceId],
+        });
         return;
       }
 
@@ -225,7 +285,11 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
       for (const s of collected) {
         if (s.outcome !== "success" || s.rows.length === 0) continue;
         if (!elig[s.previewRunId]) continue;
-        const { pruner_job_id } = await postPrunerApplyFromPreview(instanceId, mediaScope, s.previewRunId);
+        const { pruner_job_id } = await postPrunerApplyFromPreview(
+          instanceId,
+          mediaScope,
+          s.previewRunId,
+        );
         try {
           await waitForPrunerJobTerminal(pruner_job_id, {
             pollMs: PRUNER_SCAN_POLL_MS,
@@ -236,7 +300,9 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
             "Delete is taking longer than expected. Check Activity — your server may still be processing items.",
           );
           setPhase("results");
-          await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+          await qc.invalidateQueries({
+            queryKey: ["pruner", "instances", instanceId],
+          });
           await qc.invalidateQueries({ queryKey: ["activity"] });
           return;
         }
@@ -251,9 +317,13 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
       setSnapshots([]);
       setDeleteEligible({});
       setDeleteReasons({});
-      setApplySummary(`Deleted ${removed} items. Skipped ${skipped}. Failed ${failed}.`);
+      setApplySummary(
+        `Deleted ${removed} items. Skipped ${skipped}. Failed ${failed}.`,
+      );
       setPhase("results");
-      await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+      await qc.invalidateQueries({
+        queryKey: ["pruner", "instances", instanceId],
+      });
       await qc.invalidateQueries({ queryKey: ["activity"] });
     } catch (e) {
       setErr((e as Error).message);
@@ -261,15 +331,22 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
     }
   }
 
-  const runLabel = mediaScope === "tv" ? "Scan TV for cleanup review" : "Scan Movies for cleanup review";
+  const runLabel =
+    mediaScope === "tv"
+      ? "Scan TV for cleanup review"
+      : "Scan Movies for cleanup review";
   const runBusy = phase === "scanning" || phase === "deleting";
   const runBtnDisabled = runDisabled || controlsDisabled || runBusy;
 
   return (
-    <div className="min-w-0 space-y-4" data-testid={`${testIdPrefix}-run-${mediaScope}`}>
+    <div
+      className="min-w-0 space-y-4"
+      data-testid={`${testIdPrefix}-run-${mediaScope}`}
+    >
       <p className="text-xs text-[var(--mm-text3)]">
-        This scans your saved rules and creates a review snapshot. Nothing is deleted from this button; deletion only
-        happens when you open and confirm a saved snapshot.
+        This scans your saved rules and creates a review snapshot. Nothing is
+        deleted from this button; deletion only happens when you open and
+        confirm a saved snapshot.
       </p>
       <div>
         <button
@@ -294,27 +371,46 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
       {phase === "results" || phase === "deleting" ? (
         <div className="mt-4 space-y-3">
           {phase === "deleting" ? (
-            <p className="text-sm font-medium text-[var(--mm-text1)]">Deleting…</p>
-          ) : null}
-          {snapshots.length === 0 && phase === "results" && !err && emptyBecauseNoRules ? (
-            <p className="text-sm text-[var(--mm-text2)]">
-              No cleanup rules are turned on for this column, so there is nothing to scan.
+            <p className="text-sm font-medium text-[var(--mm-text1)]">
+              Deleting…
             </p>
           ) : null}
-          {!dryRunEnabled && phase === "results" && snapshots.length > 0 && totalCount === 0 ? (
-            <p className="text-sm text-[var(--mm-text2)]">No items matched your criteria.</p>
+          {snapshots.length === 0 &&
+          phase === "results" &&
+          !err &&
+          emptyBecauseNoRules ? (
+            <p className="text-sm text-[var(--mm-text2)]">
+              No cleanup rules are turned on for this column, so there is
+              nothing to scan.
+            </p>
+          ) : null}
+          {!dryRunEnabled &&
+          phase === "results" &&
+          snapshots.length > 0 &&
+          totalCount === 0 ? (
+            <p className="text-sm text-[var(--mm-text2)]">
+              No items matched your criteria.
+            </p>
           ) : null}
           {(dryRunEnabled || !applySummary) &&
             snapshots.map((s) => (
-              <div key={s.previewRunId} className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-surface2)]/30 p-3">
+              <div
+                key={s.previewRunId}
+                className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-surface2)]/30 p-3"
+              >
                 <p className="text-sm font-medium text-[var(--mm-text1)]">
                   {s.ruleLabel}
                   {s.outcome === "unsupported" ? (
-                    <span className="ml-2 text-xs font-normal text-[var(--mm-text3)]"> — not available for this scan</span>
+                    <span className="ml-2 text-xs font-normal text-[var(--mm-text3)]">
+                      {" "}
+                      — not available for this scan
+                    </span>
                   ) : null}
                 </p>
                 {s.outcome === "unsupported" && s.unsupportedDetail ? (
-                  <p className="mt-1 text-xs text-[var(--mm-text3)]">{s.unsupportedDetail}</p>
+                  <p className="mt-1 text-xs text-[var(--mm-text3)]">
+                    {s.unsupportedDetail}
+                  </p>
                 ) : null}
                 {s.outcome === "failed" && s.errorMessage ? (
                   <p className="mt-1 text-xs text-red-400">{s.errorMessage}</p>
@@ -322,7 +418,9 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
                 {s.outcome === "success" ? (
                   <p className="mt-1 text-xs text-[var(--mm-text2)]">
                     {s.rows.length} item{s.rows.length === 1 ? "" : "s"} matched
-                    {s.truncated ? " (list stopped at your scan limit — more may exist on the server)" : ""}
+                    {s.truncated
+                      ? " (list stopped at your scan limit — more may exist on the server)"
+                      : ""}
                   </p>
                 ) : null}
               </div>
@@ -331,30 +429,51 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
             totalCount > 0 ? (
               <>
                 <p className="text-sm text-[var(--mm-text1)]">
-                  <span className="font-semibold">{totalCount}</span> item{totalCount === 1 ? "" : "s"} matched your
-                  criteria.
+                  <span className="font-semibold">{totalCount}</span> item
+                  {totalCount === 1 ? "" : "s"} matched your criteria.
                 </p>
                 <ul className="max-h-64 divide-y divide-[var(--mm-border)] overflow-y-auto rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] text-sm">
                   {allRows.map((r) => (
-                    <li key={r.key} className="flex flex-col gap-0.5 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                    <li
+                      key={r.key}
+                      className="flex flex-col gap-0.5 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                    >
                       <span className="text-[var(--mm-text1)]">{r.title}</span>
-                      <span className="text-xs text-[var(--mm-text3)]">{r.ruleLabel}</span>
+                      <span className="text-xs text-[var(--mm-text3)]">
+                        {r.ruleLabel}
+                      </span>
                     </li>
                   ))}
                 </ul>
               </>
             ) : (
-              <p className="text-sm text-[var(--mm-text2)]">No items matched your criteria.</p>
+              <p className="text-sm text-[var(--mm-text2)]">
+                No items matched your criteria.
+              </p>
             )
           ) : null}
-          {!dryRunEnabled && snapshots.some((s) => s.outcome === "success" && s.rows.length > 0 && deleteEligible[s.previewRunId] === false) ? (
+          {!dryRunEnabled &&
+          snapshots.some(
+            (s) =>
+              s.outcome === "success" &&
+              s.rows.length > 0 &&
+              deleteEligible[s.previewRunId] === false,
+          ) ? (
             <div className="text-xs text-[var(--mm-text3)]">
               {snapshots.map((s) => {
-                if (s.outcome !== "success" || s.rows.length === 0 || deleteEligible[s.previewRunId] !== false) return null;
+                if (
+                  s.outcome !== "success" ||
+                  s.rows.length === 0 ||
+                  deleteEligible[s.previewRunId] !== false
+                )
+                  return null;
                 const rs = deleteReasons[s.previewRunId] ?? [];
                 return (
                   <p key={s.previewRunId} className="mt-1">
-                    <span className="font-medium text-[var(--mm-text2)]">{s.ruleLabel}:</span> {rs.join(" ")}
+                    <span className="font-medium text-[var(--mm-text2)]">
+                      {s.ruleLabel}:
+                    </span>{" "}
+                    {rs.join(" ")}
                   </p>
                 );
               })}
@@ -367,7 +486,10 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
               ) : (
                 <>
                   {applySummary}{" "}
-                  <Link to="/app/activity" className="font-semibold text-[var(--mm-accent)] underline-offset-2 hover:underline">
+                  <Link
+                    to="/app/activity"
+                    className="font-semibold text-[var(--mm-accent)] underline-offset-2 hover:underline"
+                  >
                     Activity log
                   </Link>{" "}
                   has full detail.
@@ -378,7 +500,10 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
           {dryRunEnabled && phase === "results" && totalCount > 0 ? (
             <p className="text-xs text-[var(--mm-text3)]">
               Full detail:{" "}
-              <Link to="/app/activity" className="font-medium text-[var(--mm-accent)] underline-offset-2 hover:underline">
+              <Link
+                to="/app/activity"
+                className="font-medium text-[var(--mm-accent)] underline-offset-2 hover:underline"
+              >
                 Activity log
               </Link>
             </p>
@@ -400,8 +525,10 @@ export type PrunerProviderRulesCardHandle = {
   ensureMoviesSaved: () => Promise<void>;
 };
 
-export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle, RulesCardProps>(
-  function PrunerProviderRulesCard({ provider, instanceId, instance }, ref) {
+export const PrunerProviderRulesCard = forwardRef<
+  PrunerProviderRulesCardHandle,
+  RulesCardProps
+>(function PrunerProviderRulesCard({ provider, instanceId, instance }, ref) {
   const qc = useQueryClient();
   const me = useMeQuery();
   const canOperate = me.data?.role === "admin" || me.data?.role === "operator";
@@ -442,13 +569,25 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
     if (!tv) return;
     setMissingPrimaryTv(tv.missing_primary_media_reported_enabled);
     setWatchedTv(tv.watched_tv_reported_enabled);
-    setNeverTvDays(!tv.never_played_stale_reported_enabled ? "0" : String(tv.never_played_min_age_days));
+    setNeverTvDays(
+      !tv.never_played_stale_reported_enabled
+        ? "0"
+        : String(tv.never_played_min_age_days),
+    );
     setGenreTv(prunerGenresFromApi(tv.preview_include_genres));
-    setYearMinTv(tv.preview_year_min != null ? String(tv.preview_year_min) : "");
-    setYearMaxTv(tv.preview_year_max != null ? String(tv.preview_year_max) : "");
+    setYearMinTv(
+      tv.preview_year_min != null ? String(tv.preview_year_min) : "",
+    );
+    setYearMaxTv(
+      tv.preview_year_max != null ? String(tv.preview_year_max) : "",
+    );
     setStudioTv([...(tv.preview_include_studios ?? [])]);
     setTvPeople(((tv.preview_include_people ?? []) as string[]).join("\n"));
-    setTvRoles(isPlex ? peopleRolesForPlexUiState(tv.preview_include_people_roles) : normalizePeopleRolesFromApi(tv.preview_include_people_roles));
+    setTvRoles(
+      isPlex
+        ? peopleRolesForPlexUiState(tv.preview_include_people_roles)
+        : normalizePeopleRolesFromApi(tv.preview_include_people_roles),
+    );
   }, [tv, isPlex]);
 
   useEffect(() => {
@@ -464,14 +603,26 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               : movies.watched_movie_low_rating_max_jellyfin_emby_community_rating,
           ),
     );
-    setUnwatchedDays(!movies.unwatched_movie_stale_reported_enabled ? "0" : String(movies.unwatched_movie_stale_min_age_days));
+    setUnwatchedDays(
+      !movies.unwatched_movie_stale_reported_enabled
+        ? "0"
+        : String(movies.unwatched_movie_stale_min_age_days),
+    );
     setGenreMovies(prunerGenresFromApi(movies.preview_include_genres));
-    setYearMinMovies(movies.preview_year_min != null ? String(movies.preview_year_min) : "");
-    setYearMaxMovies(movies.preview_year_max != null ? String(movies.preview_year_max) : "");
+    setYearMinMovies(
+      movies.preview_year_min != null ? String(movies.preview_year_min) : "",
+    );
+    setYearMaxMovies(
+      movies.preview_year_max != null ? String(movies.preview_year_max) : "",
+    );
     setStudioMovies([...(movies.preview_include_studios ?? [])]);
-    setMoviesPeople(((movies.preview_include_people ?? []) as string[]).join("\n"));
+    setMoviesPeople(
+      ((movies.preview_include_people ?? []) as string[]).join("\n"),
+    );
     setMoviesRoles(
-      isPlex ? peopleRolesForPlexUiState(movies.preview_include_people_roles) : normalizePeopleRolesFromApi(movies.preview_include_people_roles),
+      isPlex
+        ? peopleRolesForPlexUiState(movies.preview_include_people_roles)
+        : normalizePeopleRolesFromApi(movies.preview_include_people_roles),
     );
     setMoviesCollections((movies.preview_include_collections ?? []).join(", "));
   }, [movies, isPlex]);
@@ -487,17 +638,27 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
     const yMin = parseYear(yMinStr);
     const yMax = parseYear(yMaxStrStr);
     if (yMin === "bad" || yMax === "bad") {
-      throw new Error("Each year must be a whole number between 1900 and 2100, or left empty.");
+      throw new Error(
+        "Each year must be a whole number between 1900 and 2100, or left empty.",
+      );
     }
     if (yMin != null && yMax != null && yMin > yMax) {
-      throw new Error("Minimum year must be less than or equal to maximum year.");
+      throw new Error(
+        "Minimum year must be less than or equal to maximum year.",
+      );
     }
     return {
       preview_include_genres: [...genres],
       preview_year_min: yMinStr.trim() ? yMin : null,
       preview_year_max: yMaxStrStr.trim() ? yMax : null,
       preview_include_studios: [...studios],
-      ...(isPlex && scope === "movies" ? { preview_include_collections: parseCommaTokens(collectionsText ?? "") } : {}),
+      ...(isPlex && scope === "movies"
+        ? {
+            preview_include_collections: parseCommaTokens(
+              collectionsText ?? "",
+            ),
+          }
+        : {}),
     };
   }
 
@@ -507,8 +668,16 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
     const raw = parseInt(neverTvDays.trim(), 10);
     const neverOn = !isPlex && Number.isFinite(raw) && raw >= 7;
     const neverDays = neverOn ? Math.max(7, Math.min(3650, raw)) : 90;
-    const filters = buildFilterPatch("tv", genreTv, yearMinTv, yearMaxTv, studioTv);
-    const rolesPersist = isPlex ? peopleRolesForPlexPersist(tvRoles) : [...tvRoles];
+    const filters = buildFilterPatch(
+      "tv",
+      genreTv,
+      yearMinTv,
+      yearMaxTv,
+      studioTv,
+    );
+    const rolesPersist = isPlex
+      ? peopleRolesForPlexPersist(tvRoles)
+      : [...tvRoles];
     await patchPrunerScope(instanceId, "tv", {
       missing_primary_media_reported_enabled: missingPrimaryTv,
       watched_tv_reported_enabled: watchedTv,
@@ -519,7 +688,9 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
       preview_include_people_roles: rolesPersist,
       csrf_token,
     });
-    await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+    await qc.invalidateQueries({
+      queryKey: ["pruner", "instances", instanceId],
+    });
   }
 
   async function persistMovies(): Promise<void> {
@@ -531,8 +702,17 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
     const uwRaw = parseInt(unwatchedDays.trim(), 10);
     const uwOn = Number.isFinite(uwRaw) && uwRaw >= 7;
     const uwDays = uwOn ? Math.max(7, Math.min(3650, uwRaw)) : 90;
-    const filters = buildFilterPatch("movies", genreMovies, yearMinMovies, yearMaxMovies, studioMovies, moviesCollections);
-    const rolesPersist = isPlex ? peopleRolesForPlexPersist(moviesRoles) : [...moviesRoles];
+    const filters = buildFilterPatch(
+      "movies",
+      genreMovies,
+      yearMinMovies,
+      yearMaxMovies,
+      studioMovies,
+      moviesCollections,
+    );
+    const rolesPersist = isPlex
+      ? peopleRolesForPlexPersist(moviesRoles)
+      : [...moviesRoles];
     await patchPrunerScope(instanceId, "movies", {
       missing_primary_media_reported_enabled: missingPrimaryMovies,
       watched_movies_reported_enabled: watchedMovies,
@@ -547,7 +727,9 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
       ...filters,
       csrf_token,
     });
-    await qc.invalidateQueries({ queryKey: ["pruner", "instances", instanceId] });
+    await qc.invalidateQueries({
+      queryKey: ["pruner", "instances", instanceId],
+    });
   }
 
   async function saveTv() {
@@ -580,17 +762,13 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
     }
   }
 
-  const persistTvRef = useRef(persistTv);
-  persistTvRef.current = persistTv;
-  const persistMoviesRef = useRef(persistMovies);
-  persistMoviesRef.current = persistMovies;
   useImperativeHandle(
     ref,
     () => ({
-      ensureTvSaved: () => persistTvRef.current(),
-      ensureMoviesSaved: () => persistMoviesRef.current(),
+      ensureTvSaved: persistTv,
+      ensureMoviesSaved: persistMovies,
     }),
-    [],
+    [persistMovies, persistTv],
   );
 
   const tvControlsDisabled = !canOperate || busyTv || busyMovies;
@@ -598,7 +776,8 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
   const saveDisabledTv = busyTv || !canOperate || instanceId <= 0;
   const saveDisabledMovies = busyMovies || !canOperate || instanceId <= 0;
 
-  const narrowingLabelClass = "text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]";
+  const narrowingLabelClass =
+    "text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]";
 
   return (
     <div
@@ -606,14 +785,19 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
       data-testid={`pruner-provider-configuration-${provider}`}
       data-provider-section="cleanup"
     >
-        <fieldset
-          disabled={tvControlsDisabled}
-          className="mm-card mm-dash-card min-w-0 border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 sm:p-6"
+      <fieldset
+        disabled={tvControlsDisabled}
+        className="mm-card mm-dash-card min-w-0 border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 sm:p-6"
+      >
+        <div
+          className="flex min-h-0 min-w-0 flex-1 flex-col"
+          data-testid={`pruner-provider-tv-config-${provider}`}
         >
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col" data-testid={`pruner-provider-tv-config-${provider}`}>
-            <div className="mm-card-action-body min-h-0 flex-1">
+          <div className="mm-card-action-body min-h-0 flex-1">
             <div className="space-y-1 border-b border-[var(--mm-border)] pb-2">
-              <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">TV</span>
+              <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">
+                TV
+              </span>
             </div>
             <p className={narrowingLabelClass}>Rules</p>
             {isPlex ? (
@@ -622,7 +806,9 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
                 data-testid="pruner-plex-tv-rules-scope-note"
                 role="note"
               >
-                <p className="font-semibold text-amber-100">Plex TV — limited options</p>
+                <p className="font-semibold text-amber-100">
+                  Plex TV — limited options
+                </p>
                 <p className="mt-2 text-sm text-[var(--mm-text2)]">
                   {
                     "Plex doesn't provide a watched signal for TV shows, so only the missing poster rule is available here. Watched TV cleanup is not supported on Plex."
@@ -663,10 +849,15 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               onChange={setMissingPrimaryTv}
             />
 
-            <div className="border-t border-[var(--mm-border)] pt-4 mt-1" aria-hidden="true" />
+            <div
+              className="border-t border-[var(--mm-border)] pt-4 mt-1"
+              aria-hidden="true"
+            />
 
             <div className="space-y-1">
-              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Delete content in these genres</span>
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">
+                Delete content in these genres
+              </span>
               <PrunerGenreMultiSelect
                 value={genreTv}
                 onChange={setGenreTv}
@@ -674,8 +865,13 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
                 testId={`pruner-rules-genre-tv-${provider}`}
               />
             </div>
-            <label className="block text-sm text-[var(--mm-text2)]" data-testid={`pruner-provider-tv-people-${provider}`}>
-              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Delete content involving these people</span>
+            <label
+              className="block text-sm text-[var(--mm-text2)]"
+              data-testid={`pruner-provider-tv-people-${provider}`}
+            >
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">
+                Delete content involving these people
+              </span>
               <textarea
                 className="mm-input min-h-[6rem] w-full font-sans text-sm"
                 rows={5}
@@ -684,7 +880,9 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
                 disabled={tvControlsDisabled}
                 onChange={(e) => setTvPeople(e.target.value)}
               />
-              <span className="mt-1 block text-xs text-[var(--mm-text3)]">Leave empty to skip.</span>
+              <span className="mt-1 block text-xs text-[var(--mm-text3)]">
+                Leave empty to skip.
+              </span>
             </label>
             <PrunerPeopleRoleCheckboxes
               value={tvRoles}
@@ -695,7 +893,9 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               rolesHeading="Check these credits when matching names"
             />
             <div className="space-y-1">
-              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Delete content from these studios</span>
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">
+                Delete content from these studios
+              </span>
               <PrunerStudioMultiSelect
                 value={studioTv}
                 onChange={setStudioTv}
@@ -714,41 +914,48 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               title="Delete content released in these years"
               helperText="Leave empty to skip."
             />
-
-            </div>
-            <div className="mm-card-action-footer">
-              {canOperate ? (
-                <button
-                  type="button"
-                  className={mmActionButtonClass({ variant: "primary", disabled: saveDisabledTv })}
-                  disabled={saveDisabledTv}
-                  onClick={() => void saveTv()}
-                >
-                  {busyTv ? "Saving…" : "Save TV settings"}
-                </button>
-              ) : null}
-              {msgTv ? (
-                <p className="text-sm text-green-600" role="status">
-                  {msgTv}
-                </p>
-              ) : null}
-              {errTv ? (
-                <p className="text-sm text-red-500" role="alert">
-                  {errTv}
-                </p>
-              ) : null}
-            </div>
           </div>
-        </fieldset>
+          <div className="mm-card-action-footer">
+            {canOperate ? (
+              <button
+                type="button"
+                className={mmActionButtonClass({
+                  variant: "primary",
+                  disabled: saveDisabledTv,
+                })}
+                disabled={saveDisabledTv}
+                onClick={() => void saveTv()}
+              >
+                {busyTv ? "Saving…" : "Save TV settings"}
+              </button>
+            ) : null}
+            {msgTv ? (
+              <p className="text-sm text-green-600" role="status">
+                {msgTv}
+              </p>
+            ) : null}
+            {errTv ? (
+              <p className="text-sm text-red-500" role="alert">
+                {errTv}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </fieldset>
 
-        <fieldset
-          disabled={moviesControlsDisabled}
-          className="mm-card mm-dash-card min-w-0 border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 sm:p-6"
+      <fieldset
+        disabled={moviesControlsDisabled}
+        className="mm-card mm-dash-card min-w-0 border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-5 sm:p-6"
+      >
+        <div
+          className="flex min-h-0 min-w-0 flex-1 flex-col"
+          data-testid={`pruner-provider-movies-config-${provider}`}
         >
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col" data-testid={`pruner-provider-movies-config-${provider}`}>
-            <div className="mm-card-action-body min-h-0 flex-1">
+          <div className="mm-card-action-body min-h-0 flex-1">
             <div className="flex items-center gap-2 border-b border-[var(--mm-border)] pb-2">
-              <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">Movies</span>
+              <span className="text-sm font-semibold uppercase tracking-wide text-[var(--mm-text1)]">
+                Movies
+              </span>
             </div>
             <p className={narrowingLabelClass}>Rules</p>
             <MmOnOffSwitch
@@ -758,7 +965,10 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               disabled={moviesControlsDisabled}
               onChange={setWatchedMovies}
             />
-            <label className="block text-sm text-[var(--mm-text1)]" htmlFor={`pruner-op-mov-lowrating-${provider}`}>
+            <label
+              className="block text-sm text-[var(--mm-text1)]"
+              htmlFor={`pruner-op-mov-lowrating-${provider}`}
+            >
               <span className="mb-1 block text-xs text-[var(--mm-text3)]">
                 {isPlex
                   ? "Delete watched movies rated below this score — uses Plex audience rating (0–10, 0 = off)"
@@ -778,7 +988,8 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
             </label>
             <label className="block text-sm text-[var(--mm-text2)]">
               <span className="mb-1 block text-xs text-[var(--mm-text3)]">
-                Delete movies you have not watched that are older than ___ days (0 = off)
+                Delete movies you have not watched that are older than ___ days
+                (0 = off)
               </span>
               <input
                 type="number"
@@ -800,10 +1011,15 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               />
             ) : null}
 
-            <div className="border-t border-[var(--mm-border)] pt-4 mt-1" aria-hidden="true" />
+            <div
+              className="border-t border-[var(--mm-border)] pt-4 mt-1"
+              aria-hidden="true"
+            />
 
             <div className="space-y-1">
-              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Delete content in these genres</span>
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">
+                Delete content in these genres
+              </span>
               <PrunerGenreMultiSelect
                 value={genreMovies}
                 onChange={setGenreMovies}
@@ -811,8 +1027,13 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
                 testId={`pruner-rules-genre-movies-${provider}`}
               />
             </div>
-            <label className="block text-sm text-[var(--mm-text2)]" data-testid={`pruner-provider-movies-people-${provider}`}>
-              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Delete content involving these people</span>
+            <label
+              className="block text-sm text-[var(--mm-text2)]"
+              data-testid={`pruner-provider-movies-people-${provider}`}
+            >
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">
+                Delete content involving these people
+              </span>
               <textarea
                 className="mm-input min-h-[6rem] w-full font-sans text-sm"
                 rows={5}
@@ -821,7 +1042,9 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
                 disabled={moviesControlsDisabled}
                 onChange={(e) => setMoviesPeople(e.target.value)}
               />
-              <span className="mt-1 block text-xs text-[var(--mm-text3)]">Leave empty to skip.</span>
+              <span className="mt-1 block text-xs text-[var(--mm-text3)]">
+                Leave empty to skip.
+              </span>
             </label>
             <PrunerPeopleRoleCheckboxes
               value={moviesRoles}
@@ -832,7 +1055,9 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
               rolesHeading="Check these credits when matching names"
             />
             <div className="space-y-1">
-              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">Delete content from these studios</span>
+              <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">
+                Delete content from these studios
+              </span>
               <PrunerStudioMultiSelect
                 value={studioMovies}
                 onChange={setStudioMovies}
@@ -861,36 +1086,37 @@ export const PrunerProviderRulesCard = forwardRef<PrunerProviderRulesCardHandle,
                 disabled={moviesControlsDisabled}
               />
             ) : null}
-
-            </div>
-            <div className="mm-card-action-footer">
-              {canOperate ? (
-                <button
-                  type="button"
-                  className={mmActionButtonClass({ variant: "primary", disabled: saveDisabledMovies })}
-                  disabled={saveDisabledMovies}
-                  onClick={() => void saveMovies()}
-                >
-                  {busyMovies ? "Saving…" : "Save Movies settings"}
-                </button>
-              ) : null}
-              {msgMovies ? (
-                <p className="text-sm text-green-600" role="status">
-                  {msgMovies}
-                </p>
-              ) : null}
-              {errMovies ? (
-                <p className="text-sm text-red-500" role="alert">
-                  {errMovies}
-                </p>
-              ) : null}
-            </div>
           </div>
-        </fieldset>
+          <div className="mm-card-action-footer">
+            {canOperate ? (
+              <button
+                type="button"
+                className={mmActionButtonClass({
+                  variant: "primary",
+                  disabled: saveDisabledMovies,
+                })}
+                disabled={saveDisabledMovies}
+                onClick={() => void saveMovies()}
+              >
+                {busyMovies ? "Saving…" : "Save Movies settings"}
+              </button>
+            ) : null}
+            {msgMovies ? (
+              <p className="text-sm text-green-600" role="status">
+                {msgMovies}
+              </p>
+            ) : null}
+            {errMovies ? (
+              <p className="text-sm text-red-500" role="alert">
+                {errMovies}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </fieldset>
     </div>
   );
-  },
-);
+});
 
 /**
  * People controls were merged into {@link PrunerProviderRulesCard}. Kept as a no-op export for compatibility with
@@ -917,7 +1143,9 @@ function CommaField({
 }) {
   return (
     <label className="block text-sm text-[var(--mm-text2)]">
-      <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">{label}</span>
+      <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">
+        {label}
+      </span>
       <input
         type="text"
         className="mm-input w-full"
@@ -926,7 +1154,9 @@ function CommaField({
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
       />
-      <span className="mt-1 block text-xs text-[var(--mm-text3)]">{helper}</span>
+      <span className="mt-1 block text-xs text-[var(--mm-text3)]">
+        {helper}
+      </span>
     </label>
   );
 }
@@ -951,18 +1181,36 @@ function YearRange({
 }) {
   return (
     <div className="space-y-1">
-      <span className="text-xs font-medium text-[var(--mm-text3)]">{title ?? "Only these years"}</span>
+      <span className="text-xs font-medium text-[var(--mm-text3)]">
+        {title ?? "Only these years"}
+      </span>
       <div className="flex flex-wrap items-end gap-3">
         <label className="text-sm text-[var(--mm-text2)]">
           Min year
-          <input type="text" inputMode="numeric" className="mm-input ml-2 w-28" value={min} disabled={disabled} onChange={(e) => onMin(e.target.value)} />
+          <input
+            type="text"
+            inputMode="numeric"
+            className="mm-input ml-2 w-28"
+            value={min}
+            disabled={disabled}
+            onChange={(e) => onMin(e.target.value)}
+          />
         </label>
         <label className="text-sm text-[var(--mm-text2)]">
           Max year
-          <input type="text" inputMode="numeric" className="mm-input ml-2 w-28" value={max} disabled={disabled} onChange={(e) => onMax(e.target.value)} />
+          <input
+            type="text"
+            inputMode="numeric"
+            className="mm-input ml-2 w-28"
+            value={max}
+            disabled={disabled}
+            onChange={(e) => onMax(e.target.value)}
+          />
         </label>
       </div>
-      <p className="text-xs text-[var(--mm-text3)]">{helperText ?? "Leave blank for all years."}</p>
+      <p className="text-xs text-[var(--mm-text3)]">
+        {helperText ?? "Leave blank for all years."}
+      </p>
     </div>
   );
 }

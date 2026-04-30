@@ -80,11 +80,50 @@ begin
   );
 end;
 
+function QueryProcessRunning(ProcessName: String): Boolean;
+var
+  ResultCode: Integer;
+  OutputPath: String;
+  TasklistOk: Boolean;
+  OutputText: AnsiString;
+begin
+  OutputPath := ExpandConstant('{tmp}\mm-tasklist.txt');
+  DeleteFile(OutputPath);
+  TasklistOk := Exec(
+    ExpandConstant('{cmd}'),
+    '/C ""' + ExpandConstant('{sys}\tasklist.exe') + '" /FI "IMAGENAME eq ' + ProcessName + '" /NH > "' + OutputPath + '""',
+    '',
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode
+  );
+  if (not TasklistOk) or (ResultCode <> 0) or (not LoadStringFromFile(OutputPath, OutputText)) then
+  begin
+    Result := False;
+    Exit;
+  end;
+  Result := Pos(LowerCase(ProcessName), LowerCase(String(OutputText))) > 0;
+end;
+
+procedure WaitForMediaMopProcessesToExit();
+var
+  Attempts: Integer;
+begin
+  Attempts := 40;
+  while Attempts > 0 do
+  begin
+    if (not QueryProcessRunning('MediaMop.exe')) and (not QueryProcessRunning('MediaMopServer.exe')) then
+      Exit;
+    Sleep(250);
+    Attempts := Attempts - 1;
+  end;
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   StopMediaMopProcess('MediaMop.exe');
   StopMediaMopProcess('MediaMopServer.exe');
-  Sleep(1000);
+  WaitForMediaMopProcessesToExit();
   Result := '';
 end;
 
@@ -127,11 +166,9 @@ procedure InstallUpgradeTask();
 var
   ResultCode: Integer;
   TaskCommand: String;
-  UserName: String;
 begin
-  UserName := ExpandConstant('{username}');
   TaskCommand :=
-    '/Create /TN "MediaMop Upgrade" /SC ONDEMAND /RL HIGHEST /IT /F /RU "' + UserName +
+    '/Create /TN "MediaMop Upgrade" /SC ONDEMAND /RL HIGHEST /IT /F ' +
     '" /TR "\"' + ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe') +
     '\" -NoProfile -ExecutionPolicy Bypass -File \"' + ExpandConstant('{app}\MediaMopUpgrade.ps1') + '\""';
 

@@ -52,7 +52,8 @@ vi.mock("react-router-dom", async (importOriginal) => {
 });
 
 vi.mock("../../lib/suite/queries", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/suite/queries")>();
+  const actual =
+    await importOriginal<typeof import("../../lib/suite/queries")>();
   return {
     ...actual,
     useSuiteSettingsSaveMutation: () => ({
@@ -97,7 +98,8 @@ vi.mock("../../lib/pruner/api", () => ({
 }));
 
 vi.mock("../../lib/api/auth-api", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/api/auth-api")>();
+  const actual =
+    await importOriginal<typeof import("../../lib/api/auth-api")>();
   return {
     ...actual,
     fetchCsrfToken: vi.fn().mockResolvedValue("csrf-token"),
@@ -113,7 +115,9 @@ function wrap(ui: ReactNode, client: QueryClient) {
 }
 
 function renderWizard() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
   client.setQueryData(qk.me, { id: 1, username: "admin", role: "admin" });
   client.setQueryData(suiteSettingsQueryKey, {
     product_display_name: "MediaMop",
@@ -164,13 +168,27 @@ describe("SetupWizardPage", () => {
   it("completes and saves backup plus module starter settings", async () => {
     renderWizard();
 
-    fireEvent.change(screen.getByDisplayValue("02:00"), { target: { value: "03:30" } });
-    fireEvent.change(screen.getByPlaceholderText("Movies watched folder"), { target: { value: "D:\\Movies" } });
-    fireEvent.change(screen.getByPlaceholderText("Movies output folder"), { target: { value: "E:\\MoviesOut" } });
-    fireEvent.change(screen.getByPlaceholderText("http://127.0.0.1:8989"), { target: { value: "http://sonarr:8989" } });
-    fireEvent.change(screen.getByPlaceholderText("Sonarr API key"), { target: { value: "sonarr-key" } });
-    fireEvent.change(screen.getByPlaceholderText("http://127.0.0.1:8096"), { target: { value: "http://jf:8096" } });
-    fireEvent.change(screen.getByPlaceholderText("API key"), { target: { value: "jf-key" } });
+    fireEvent.change(screen.getByDisplayValue("02:00"), {
+      target: { value: "03:30" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Movies watched folder"), {
+      target: { value: "D:\\Movies" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Movies output folder"), {
+      target: { value: "E:\\MoviesOut" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("http://127.0.0.1:8989"), {
+      target: { value: "http://sonarr:8989" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Sonarr API key"), {
+      target: { value: "sonarr-key" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("http://127.0.0.1:8096"), {
+      target: { value: "http://jf:8096" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("API key"), {
+      target: { value: "jf-key" },
+    });
     fireEvent.click(screen.getByText("Refiner"));
     fireEvent.click(screen.getByRole("button", { name: "Finish setup" }));
 
@@ -203,7 +221,9 @@ describe("SetupWizardPage", () => {
       }),
     );
     await waitFor(() => {
-      expect(navigateMock).toHaveBeenCalledWith("/app/refiner", { replace: true });
+      expect(navigateMock).toHaveBeenCalledWith("/app/refiner", {
+        replace: true,
+      });
     });
   });
 });

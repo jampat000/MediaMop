@@ -150,12 +150,16 @@ export type RefinerRemuxRulesScopeSettings = {
   subtitle_langs_csv: string;
   preserve_forced_subs: boolean;
   preserve_default_subs: boolean;
-  audio_preference_mode: "preferred_langs_quality" | "preferred_langs_strict" | "quality_all_languages";
+  audio_preference_mode:
+    | "preferred_langs_quality"
+    | "preferred_langs_strict"
+    | "quality_all_languages";
 };
 
-export type RefinerRemuxRulesSettingsPutBody = RefinerRemuxRulesScopeSettings & {
-  media_scope: "movie" | "tv";
-};
+export type RefinerRemuxRulesSettingsPutBody =
+  RefinerRemuxRulesScopeSettings & {
+    media_scope: "movie" | "tv";
+  };
 
 /** POST /api/v1/refiner/jobs/file-remux-pass/enqueue */
 

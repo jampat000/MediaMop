@@ -90,7 +90,10 @@ vi.mock("../lib/auth/queries", async (importOriginal) => {
   const original = (await importOriginal()) as Record<string, unknown>;
   return {
     ...original,
-    useMeQuery: vi.fn(() => ({ isPending: false, data: { id: 1, username: "admin", role: "admin" } })),
+    useMeQuery: vi.fn(() => ({
+      isPending: false,
+      data: { id: 1, username: "admin", role: "admin" },
+    })),
   };
 });
 
@@ -104,7 +107,11 @@ function withProviders(ui: ReactNode) {
 }
 
 function setViewport(width: number) {
-  Object.defineProperty(window, "innerWidth", { configurable: true, writable: true, value: width });
+  Object.defineProperty(window, "innerWidth", {
+    configurable: true,
+    writable: true,
+    value: width,
+  });
   window.dispatchEvent(new Event("resize"));
 }
 
@@ -118,7 +125,9 @@ describe("responsive smoke", () => {
   it.each(VIEWPORTS)("renders Refiner jobs at %ipx", (width) => {
     setViewport(width);
     render(withProviders(<RefinerJobsInspectionSection />));
-    expect(screen.getByTestId("refiner-jobs-inspection-section")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("refiner-jobs-inspection-section"),
+    ).toBeInTheDocument();
     expect(screen.getByText("Jobs")).toBeInTheDocument();
   });
 

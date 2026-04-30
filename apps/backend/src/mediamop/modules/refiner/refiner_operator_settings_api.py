@@ -18,6 +18,7 @@ from mediamop.modules.refiner.schemas_refiner_operator_settings import (
 from mediamop.platform.auth.authorization import RequireOperatorDep
 from mediamop.platform.auth.deps_auth import UserPublicDep
 from mediamop.platform.auth.csrf import (
+    current_raw_session_token,
     require_session_secret,
     validate_browser_post_origin,
     verify_csrf_token,
@@ -45,7 +46,7 @@ def put_refiner_operator_settings(
 ) -> RefinerOperatorSettingsOut:
     validate_browser_post_origin(request, settings)
     secret = require_session_secret(settings)
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired CSRF token.")
     try:
         row = apply_refiner_operator_settings_put(db, body)

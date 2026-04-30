@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from collections.abc import Callable
 from typing import Any
@@ -49,6 +50,8 @@ from mediamop.platform.activity import constants as C
 from mediamop.platform.activity.service import record_activity_event
 from mediamop.platform.observability.diagnostics import DiagnosticAction, DiagnosticModule, DiagnosticResult, DiagnosticTrigger
 from mediamop.platform.observability.operator_messages import activity_detail_envelope, provider_label, scan_title
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_payload(payload_json: str | None) -> dict[str, Any]:
@@ -195,6 +198,12 @@ def make_pruner_candidate_removal_preview_handler(
             trunc = False
             cand_json = "[]"
             err = str(exc)[:10_000]
+            logger.exception(
+                "Pruner preview failed server_instance_id=%s media_scope=%s rule_family_id=%s",
+                sid,
+                scope,
+                rule_family_id,
+            )
 
         run_uuid = str(uuid.uuid4())
         label_scope = "TV (episodes)" if scope == "tv" else "Movies (one row per movie item)"

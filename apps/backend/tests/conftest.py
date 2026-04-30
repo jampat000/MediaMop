@@ -12,6 +12,7 @@ from alembic.config import Config
 from starlette.testclient import TestClient
 
 from mediamop.api.factory import create_app
+from mediamop.platform.jobs.worker_health import reset_worker_health_for_tests
 from tests.integration_helpers import seed_admin_user, seed_viewer_user
 
 
@@ -41,8 +42,15 @@ def ensure_session_secret(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
+@pytest.fixture(autouse=True)
+def _reset_worker_health_state() -> Iterator[None]:
+    reset_worker_health_for_tests()
+    yield
+    reset_worker_health_for_tests()
+
+
 @pytest.fixture
-def client_with_admin() -> TestClient:
+def client_with_admin() -> Iterator[TestClient]:
     seed_admin_user()
     app = create_app()
     with TestClient(app) as c:
@@ -50,7 +58,7 @@ def client_with_admin() -> TestClient:
 
 
 @pytest.fixture
-def client_with_viewer() -> TestClient:
+def client_with_viewer() -> Iterator[TestClient]:
     seed_viewer_user()
     app = create_app()
     with TestClient(app) as c:

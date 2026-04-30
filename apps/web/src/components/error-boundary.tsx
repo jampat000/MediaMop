@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { isRouteErrorResponse, useRouteError } from "react-router-dom";
 
 type ErrorBoundaryState = {
   error: Error | null;
@@ -9,7 +10,10 @@ type ErrorBoundaryProps = {
   fallback?: ReactNode | ((error: Error) => ReactNode);
 };
 
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+export class ErrorBoundary extends Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
   state: ErrorBoundaryState = { error: null };
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
@@ -33,7 +37,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 }
 
-export function AppErrorScreen({ error, onReload }: { error: Error; onReload?: () => void }) {
+export function AppErrorScreen({
+  error,
+  onReload,
+}: {
+  error: Error;
+  onReload?: () => void;
+}) {
   const reload = onReload ?? (() => window.location.reload());
 
   return (
@@ -56,10 +66,14 @@ export function AppErrorScreen({ error, onReload }: { error: Error; onReload?: (
           <p className="mm-section-kicker">Application recovery</p>
           <h1 id="app-error-title">Something went wrong</h1>
           <p className="mm-muted">
-            MediaMop hit a screen error before it could finish loading this view. Reloading usually clears a
-            temporary browser state problem.
+            MediaMop hit a screen error before it could finish loading this
+            view. Reloading usually clears a temporary browser state problem.
           </p>
-          <button className="mm-btn mm-btn-primary" type="button" onClick={reload}>
+          <button
+            className="mm-btn mm-btn-primary"
+            type="button"
+            onClick={reload}
+          >
             Reload MediaMop
           </button>
           <details className="mm-error-details">
@@ -70,4 +84,24 @@ export function AppErrorScreen({ error, onReload }: { error: Error; onReload?: (
       </div>
     </main>
   );
+}
+
+function routeErrorToError(error: unknown): Error {
+  if (error instanceof Error) {
+    return error;
+  }
+  if (isRouteErrorResponse(error)) {
+    return new Error(
+      error.statusText || error.data || `Route error ${error.status}`,
+    );
+  }
+  if (typeof error === "string" && error.trim()) {
+    return new Error(error);
+  }
+  return new Error("Unknown route error");
+}
+
+export function RouteErrorScreen() {
+  const routeError = useRouteError();
+  return <AppErrorScreen error={routeErrorToError(routeError)} />;
 }

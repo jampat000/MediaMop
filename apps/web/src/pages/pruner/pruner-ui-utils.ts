@@ -30,7 +30,9 @@ export function previewRunRowCaption(row: PrunerPreviewRunSummary): string {
 }
 
 /** Maps internal job kind strings to short operator-facing labels (never shows raw API identifiers). */
-export function prunerJobKindOperatorLabel(jobKind: string | null | undefined): string {
+export function prunerJobKindOperatorLabel(
+  jobKind: string | null | undefined,
+): string {
   if (!jobKind?.trim()) return "—";
   const k = jobKind.toLowerCase();
   if (k.includes("apply")) return "Delete run";
@@ -44,7 +46,10 @@ export type PrunerScopeMedia = "tv" | "movies";
 /** Rule families that have no honest preview on Plex for the given scope (operator-facing). */
 export function plexUnsupportedRuleFamilies(scope: PrunerScopeMedia): string[] {
   if (scope === "tv") {
-    return ["TV shows never started, older than your age setting", "Watched TV episodes"];
+    return [
+      "TV shows never started, older than your age setting",
+      "Watched TV episodes",
+    ];
   }
   return [];
 }

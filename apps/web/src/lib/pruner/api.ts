@@ -91,24 +91,34 @@ export type PrunerApplyEligibility = {
   apply_operator_label: string;
 };
 
-export const RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED = "missing_primary_media_reported";
-export const RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED = "never_played_stale_reported";
+export const RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED =
+  "missing_primary_media_reported";
+export const RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED =
+  "never_played_stale_reported";
 export const RULE_FAMILY_WATCHED_TV_REPORTED = "watched_tv_reported";
 export const RULE_FAMILY_WATCHED_MOVIES_REPORTED = "watched_movies_reported";
-export const RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED = "watched_movie_low_rating_reported";
-export const RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED = "unwatched_movie_stale_reported";
+export const RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED =
+  "watched_movie_low_rating_reported";
+export const RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED =
+  "unwatched_movie_stale_reported";
 export const RULE_FAMILY_GENRE_MATCH_REPORTED = "genre_match_reported";
 export const RULE_FAMILY_STUDIO_MATCH_REPORTED = "studio_match_reported";
 export const RULE_FAMILY_PEOPLE_MATCH_REPORTED = "people_match_reported";
-export const RULE_FAMILY_YEAR_RANGE_MATCH_REPORTED = "year_range_match_reported";
+export const RULE_FAMILY_YEAR_RANGE_MATCH_REPORTED =
+  "year_range_match_reported";
 
-export const PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL = "Delete items missing a main poster or episode image";
+export const PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL =
+  "Delete items missing a main poster or episode image";
 export const PRUNER_REMOVE_STALE_NEVER_PLAYED_LIBRARY_ENTRIES_LABEL =
   "Delete never-started TV or movies older than your age setting";
-export const PRUNER_REMOVE_WATCHED_TV_ENTRIES_LABEL = "Delete watched TV episodes";
-export const PRUNER_REMOVE_WATCHED_MOVIES_ENTRIES_LABEL = "Delete watched movies";
-export const PRUNER_REMOVE_WATCHED_LOW_RATING_MOVIE_ENTRIES_LABEL = "Delete watched movies below your score";
-export const PRUNER_REMOVE_UNWATCHED_STALE_MOVIE_ENTRIES_LABEL = "Delete unwatched movies older than your age setting";
+export const PRUNER_REMOVE_WATCHED_TV_ENTRIES_LABEL =
+  "Delete watched TV episodes";
+export const PRUNER_REMOVE_WATCHED_MOVIES_ENTRIES_LABEL =
+  "Delete watched movies";
+export const PRUNER_REMOVE_WATCHED_LOW_RATING_MOVIE_ENTRIES_LABEL =
+  "Delete watched movies below your score";
+export const PRUNER_REMOVE_UNWATCHED_STALE_MOVIE_ENTRIES_LABEL =
+  "Delete unwatched movies older than your age setting";
 
 export function prunerApplyLabelForRuleFamily(ruleFamilyId: string): string {
   if (ruleFamilyId === RULE_FAMILY_WATCHED_TV_REPORTED) {
@@ -183,7 +193,11 @@ export async function fetchPrunerApplyEligibility(
   media_scope: "tv" | "movies",
   previewRunId: string,
 ): Promise<PrunerApplyEligibility> {
-  const path = prunerApplyEligibilityPath(instanceId, media_scope, previewRunId);
+  const path = prunerApplyEligibilityPath(
+    instanceId,
+    media_scope,
+    previewRunId,
+  );
   const r = await apiFetch(path);
   await requireOk(path, r, "Could not load Pruner apply eligibility");
   return readJson<PrunerApplyEligibility>(r);
@@ -224,7 +238,9 @@ export async function fetchPrunerInstances(): Promise<PrunerServerInstance[]> {
   return readJson<PrunerServerInstance[]>(r);
 }
 
-export async function fetchPrunerInstance(id: number): Promise<PrunerServerInstance> {
+export async function fetchPrunerInstance(
+  id: number,
+): Promise<PrunerServerInstance> {
   const path = `/api/v1/pruner/instances/${id}`;
   const r = await apiFetch(path);
   await requireOk(path, r, "Could not load Pruner server");
@@ -234,9 +250,14 @@ export async function fetchPrunerInstance(id: number): Promise<PrunerServerInsta
 export type PrunerStudiosResponse = { studios: string[] };
 
 /** Read-only studio list for Cleanup UI; returns an empty list on any failure (never throws). */
-export async function fetchPrunerStudios(instanceId: number, scope: "tv" | "movies"): Promise<PrunerStudiosResponse> {
+export async function fetchPrunerStudios(
+  instanceId: number,
+  scope: "tv" | "movies",
+): Promise<PrunerStudiosResponse> {
   try {
-    const r = await apiFetch(`/api/v1/pruner/instances/${instanceId}/studios?scope=${encodeURIComponent(scope)}`);
+    const r = await apiFetch(
+      `/api/v1/pruner/instances/${instanceId}/studios?scope=${encodeURIComponent(scope)}`,
+    );
     if (!r.ok) {
       return { studios: [] };
     }
@@ -293,7 +314,9 @@ export async function fetchPrunerPreviewRun(
   return readJson<PrunerPreviewRun>(r);
 }
 
-export async function postPrunerConnectionTest(instanceId: number): Promise<{ pruner_job_id: number }> {
+export async function postPrunerConnectionTest(
+  instanceId: number,
+): Promise<{ pruner_job_id: number }> {
   const csrf_token = await fetchCsrfToken();
   const path = `/api/v1/pruner/instances/${instanceId}/connection-test`;
   const r = await apiFetch(path, {
@@ -384,7 +407,9 @@ export async function postPrunerPreview(
   return readJson<{ pruner_job_id: number }>(r);
 }
 
-export async function fetchPrunerJobsInspection(limit = 50): Promise<PrunerJobsInspectionOut> {
+export async function fetchPrunerJobsInspection(
+  limit = 50,
+): Promise<PrunerJobsInspectionOut> {
   const params = new URLSearchParams({ limit: String(limit) });
   const path = `/api/v1/pruner/jobs/inspection?${params.toString()}`;
   const r = await apiFetch(path);

@@ -9,7 +9,10 @@ import {
   MmStatTile,
   MmStatTileRow,
 } from "../../components/overview/mm-overview-cards";
-import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
+import {
+  isHttpErrorFromApi,
+  isLikelyNetworkFailure,
+} from "../../lib/api/error-guards";
 import {
   useSubberOverviewQuery,
   useSubberProvidersQuery,
@@ -19,7 +22,10 @@ function formatWhen(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.valueOf())) return "—";
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(d);
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(d);
 }
 
 type AttentionTarget = "settings" | "tv" | "movies";
@@ -29,7 +35,11 @@ type SubberOverviewNavTab = "settings" | "tv" | "movies" | "schedule" | "jobs";
 const SUBBER_NEXT_STEPS_BODY =
   "Use Settings to connect OpenSubtitles, Sonarr, and Radarr. Check TV and Movies to see your library and search for missing subtitles. Use Schedule to automate searches and Jobs for recent activity.";
 
-function SubberOverviewNextSteps({ onOpenTab }: { onOpenTab?: (tab: SubberOverviewNavTab) => void }) {
+function SubberOverviewNextSteps({
+  onOpenTab,
+}: {
+  onOpenTab?: (tab: SubberOverviewNavTab) => void;
+}) {
   return (
     <MmOverviewSection
       headingId="subber-overview-next-steps-heading"
@@ -41,10 +51,19 @@ function SubberOverviewNextSteps({ onOpenTab }: { onOpenTab?: (tab: SubberOvervi
         <p className="leading-relaxed">{SUBBER_NEXT_STEPS_BODY}</p>
         {onOpenTab ? (
           <div className="flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">
-            <MmNextStepsButton label="Settings" onClick={() => onOpenTab("settings")} />
+            <MmNextStepsButton
+              label="Settings"
+              onClick={() => onOpenTab("settings")}
+            />
             <MmNextStepsButton label="TV" onClick={() => onOpenTab("tv")} />
-            <MmNextStepsButton label="Movies" onClick={() => onOpenTab("movies")} />
-            <MmNextStepsButton label="Schedule" onClick={() => onOpenTab("schedule")} />
+            <MmNextStepsButton
+              label="Movies"
+              onClick={() => onOpenTab("movies")}
+            />
+            <MmNextStepsButton
+              label="Schedule"
+              onClick={() => onOpenTab("schedule")}
+            />
             <MmNextStepsButton label="Jobs" onClick={() => onOpenTab("jobs")} />
           </div>
         ) : null}
@@ -76,14 +95,16 @@ function buildSubberNeedsAttention(args: {
     });
   }
 
-  const sonConnected = Boolean(s.sonarr_base_url?.trim()) && Boolean(s.sonarr_api_key_set);
+  const sonConnected =
+    Boolean(s.sonarr_base_url?.trim()) && Boolean(s.sonarr_api_key_set);
   if (!sonConnected) {
     items.push({
       text: "Connect Sonarr in Settings to track your TV library.",
       target: "settings",
     });
   }
-  const radConnected = Boolean(s.radarr_base_url?.trim()) && Boolean(s.radarr_api_key_set);
+  const radConnected =
+    Boolean(s.radarr_base_url?.trim()) && Boolean(s.radarr_api_key_set);
   if (!radConnected) {
     items.push({
       text: "Connect Radarr in Settings to track your Movies library.",
@@ -136,7 +157,11 @@ function SubberOverviewLoadError({ err }: { err: unknown }) {
             ? "The server refused this request. Sign in again or check API logs."
             : "Could not load Subber overview."}
       </p>
-      {err instanceof Error ? <p className="mm-page__lead font-mono text-sm text-[var(--mm-text3)]">{err.message}</p> : null}
+      {err instanceof Error ? (
+        <p className="mm-page__lead font-mono text-sm text-[var(--mm-text3)]">
+          {err.message}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -174,13 +199,21 @@ export function SubberOverviewTab({
   const plist = providersQ.data;
   const st = overviewQ.data;
 
-  const sonConnected = Boolean(s.sonarr_base_url?.trim() && s.sonarr_api_key_set);
-  const radConnected = Boolean(s.radarr_base_url?.trim() && s.radarr_api_key_set);
+  const sonConnected = Boolean(
+    s.sonarr_base_url?.trim() && s.sonarr_api_key_set,
+  );
+  const radConnected = Boolean(
+    s.radarr_base_url?.trim() && s.radarr_api_key_set,
+  );
   const enabledProviders = plist.filter((p) => p.enabled).length;
   const providerTotal = plist.length;
   const enabledProviderList = plist.filter((p) => p.enabled);
 
-  const attentionItems = buildSubberNeedsAttention({ settings: s, providers: plist, stats: st });
+  const attentionItems = buildSubberNeedsAttention({
+    settings: s,
+    providers: plist,
+    stats: st,
+  });
 
   const providersGlanceBody = (
     <div className="space-y-1.5">
@@ -206,15 +239,21 @@ export function SubberOverviewTab({
     <div className="space-y-1.5">
       <p>
         <span className="text-[var(--mm-text3)]">Status:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">{sonConnected ? "Credentials saved" : "Not configured"}</span>
+        <span className="font-medium text-[var(--mm-text1)]">
+          {sonConnected ? "Credentials saved" : "Not configured"}
+        </span>
       </p>
       <p>
         <span className="text-[var(--mm-text3)]">TV tracked:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">{st.tv_tracked} episodes</span>
+        <span className="font-medium text-[var(--mm-text1)]">
+          {st.tv_tracked} episodes
+        </span>
       </p>
       <p>
         <span className="text-[var(--mm-text3)]">Last sync:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">{formatWhen(s.tv_last_scheduled_scan_enqueued_at)}</span>
+        <span className="font-medium text-[var(--mm-text1)]">
+          {formatWhen(s.tv_last_scheduled_scan_enqueued_at)}
+        </span>
       </p>
     </div>
   );
@@ -223,15 +262,21 @@ export function SubberOverviewTab({
     <div className="space-y-1.5">
       <p>
         <span className="text-[var(--mm-text3)]">Status:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">{radConnected ? "Credentials saved" : "Not configured"}</span>
+        <span className="font-medium text-[var(--mm-text1)]">
+          {radConnected ? "Credentials saved" : "Not configured"}
+        </span>
       </p>
       <p>
         <span className="text-[var(--mm-text3)]">Movies tracked:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">{st.movies_tracked} movies</span>
+        <span className="font-medium text-[var(--mm-text1)]">
+          {st.movies_tracked} movies
+        </span>
       </p>
       <p>
         <span className="text-[var(--mm-text3)]">Last sync:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">{formatWhen(s.movies_last_scheduled_scan_enqueued_at)}</span>
+        <span className="font-medium text-[var(--mm-text1)]">
+          {formatWhen(s.movies_last_scheduled_scan_enqueued_at)}
+        </span>
       </p>
     </div>
   );
@@ -244,13 +289,19 @@ export function SubberOverviewTab({
         <MmStatTile label="Not found" value={st.not_found_last_30_days} />
       </MmStatTileRow>
       <MmStatCaption>
-        {st.upgrades_last_30_days === 1 ? "1 upgrade" : `${st.upgrades_last_30_days} upgrades`} downloaded · last 30 days
+        {st.upgrades_last_30_days === 1
+          ? "1 upgrade"
+          : `${st.upgrades_last_30_days} upgrades`}{" "}
+        downloaded · last 30 days
       </MmStatCaption>
     </div>
   );
 
   return (
-    <div data-testid="subber-overview-tab" className="mm-bubble-stack w-full min-w-0">
+    <div
+      data-testid="subber-overview-tab"
+      className="mm-bubble-stack w-full min-w-0"
+    >
       <MmOverviewSection
         headingId="subber-overview-at-a-glance-heading"
         heading="At a glance"
@@ -271,7 +322,12 @@ export function SubberOverviewTab({
             body={sonarrBody}
             gridClassName="lg:col-span-4"
             footer={
-              onOpenTab ? <MmNextStepsButton label="Settings" onClick={() => onOpenTab("settings")} /> : undefined
+              onOpenTab ? (
+                <MmNextStepsButton
+                  label="Settings"
+                  onClick={() => onOpenTab("settings")}
+                />
+              ) : undefined
             }
           />
           <MmAtGlanceCard
@@ -280,7 +336,12 @@ export function SubberOverviewTab({
             body={radarrBody}
             gridClassName="lg:col-span-4"
             footer={
-              onOpenTab ? <MmNextStepsButton label="Settings" onClick={() => onOpenTab("settings")} /> : undefined
+              onOpenTab ? (
+                <MmNextStepsButton
+                  label="Settings"
+                  onClick={() => onOpenTab("settings")}
+                />
+              ) : undefined
             }
           />
           <MmAtGlanceCard
@@ -289,7 +350,12 @@ export function SubberOverviewTab({
             body={providersGlanceBody}
             gridClassName="sm:col-span-2 lg:col-span-12"
             footer={
-              onOpenTab ? <MmNextStepsButton label="Open Settings" onClick={() => onOpenTab("settings")} /> : undefined
+              onOpenTab ? (
+                <MmNextStepsButton
+                  label="Open Settings"
+                  onClick={() => onOpenTab("settings")}
+                />
+              ) : undefined
             }
           />
         </MmAtGlanceGrid>
@@ -305,7 +371,10 @@ export function SubberOverviewTab({
           items={attentionItems.map((row) => row.text)}
           actions={
             onOpenTab && attentionItems.length > 0 ? (
-              <MmNextStepsButton label="Open Settings" onClick={() => onOpenTab("settings")} />
+              <MmNextStepsButton
+                label="Open Settings"
+                onClick={() => onOpenTab("settings")}
+              />
             ) : undefined
           }
         />

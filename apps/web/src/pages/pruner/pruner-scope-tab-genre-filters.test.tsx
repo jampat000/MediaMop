@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import * as authApi from "../../lib/api/auth-api";
@@ -83,16 +89,24 @@ const jf: PrunerServerInstance = {
 
 describe("PrunerScopeTab genre filters", () => {
   it("saves preview_include_genres via scope PATCH", async () => {
-    const csrfSpy = vi.spyOn(authApi, "fetchCsrfToken").mockResolvedValue("csrf-test");
-    const spyRuns = vi.spyOn(prunerApi, "fetchPrunerPreviewRuns").mockResolvedValue([]);
-    const spyInst = vi.spyOn(prunerApi, "fetchPrunerInstance").mockResolvedValue(jf);
+    const csrfSpy = vi
+      .spyOn(authApi, "fetchCsrfToken")
+      .mockResolvedValue("csrf-test");
+    const spyRuns = vi
+      .spyOn(prunerApi, "fetchPrunerPreviewRuns")
+      .mockResolvedValue([]);
+    const spyInst = vi
+      .spyOn(prunerApi, "fetchPrunerInstance")
+      .mockResolvedValue(jf);
     const spyPatch = vi.spyOn(prunerApi, "patchPrunerScope").mockResolvedValue({
       ...jf.scopes[0],
       preview_include_genres: ["Drama", "Noir"],
       preview_include_people: [],
     });
     try {
-      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const qc = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
       qc.setQueryData(qk.me, operator);
       qc.setQueryData(["pruner", "instances", 51], jf);
 
@@ -113,18 +127,32 @@ describe("PrunerScopeTab genre filters", () => {
         </QueryClientProvider>,
       );
 
-      await waitFor(() => expect(screen.getByTestId("pruner-genre-filters-panel")).toBeInTheDocument());
+      await waitFor(() =>
+        expect(
+          screen.getByTestId("pruner-genre-filters-panel"),
+        ).toBeInTheDocument(),
+      );
       const multi = screen.getByTestId("pruner-genre-multiselect-51-tv");
-      expect(within(multi).queryByRole("button", { name: /^Comedy$/ })).not.toBeInTheDocument();
+      expect(
+        within(multi).queryByRole("button", { name: /^Comedy$/ }),
+      ).not.toBeInTheDocument();
       fireEvent.click(within(multi).getByRole("button", { name: /^Drama$/ }));
-      await waitFor(() => expect(screen.getByRole("option", { name: /^Comedy$/ })).toBeInTheDocument());
+      await waitFor(() =>
+        expect(
+          screen.getByRole("option", { name: /^Comedy$/ }),
+        ).toBeInTheDocument(),
+      );
       fireEvent.click(screen.getByRole("option", { name: /^Comedy$/ }));
-      fireEvent.click(screen.getByRole("button", { name: /save genre filters/i }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /save genre filters/i }),
+      );
       await waitFor(() => {
         expect(spyPatch).toHaveBeenCalledWith(
           51,
           "tv",
-          expect.objectContaining({ preview_include_genres: ["Drama", "Comedy"] }),
+          expect.objectContaining({
+            preview_include_genres: ["Drama", "Comedy"],
+          }),
         );
       });
     } finally {

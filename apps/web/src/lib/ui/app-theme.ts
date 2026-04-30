@@ -28,4 +28,3 @@ export function persistAppTheme(theme: AppTheme): void {
   }
   applyAppThemeToDocument(theme);
 }
-

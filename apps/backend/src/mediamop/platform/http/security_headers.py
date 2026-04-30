@@ -24,12 +24,12 @@ _API_CSP = (
 )
 
 # HTML baseline for the bundled SPA shell/static assets.
-# Keep this narrow but allow first-party JS/CSS plus Google Fonts used by index.html.
+# Keep this narrow and first-party only; the web app self-hosts its fonts.
 _HTML_CSP = (
     "default-src 'self'; "
     "script-src 'self'; "
-    "style-src 'self' https://fonts.googleapis.com; "
-    "font-src 'self' https://fonts.gstatic.com data:; "
+    "style-src 'self'; "
+    "font-src 'self' data:; "
     "img-src 'self' data: blob:; "
     "connect-src 'self'; "
     "base-uri 'none'; "

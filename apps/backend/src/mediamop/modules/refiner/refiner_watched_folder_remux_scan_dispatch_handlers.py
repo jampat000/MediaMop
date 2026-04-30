@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from collections.abc import Callable
 from pathlib import Path
@@ -27,6 +28,8 @@ from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_ops imp
     retry_completed_movie_source_cleanup,
 )
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_job_payload(payload_json: str | None) -> dict[str, Any]:
@@ -116,9 +119,15 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                         try:
                             size_bytes = int(file_path.stat().st_size)
                         except OSError:
+                            logger.debug("Refiner scan skipped size check because file metadata could not be read: %s", file_path)
                             continue
                         if size_bytes < min_size_mb * 1024 * 1024:
                             summary["skipped_below_minimum_file_size"] += 1
+                            logger.debug(
+                                "Refiner scan skipped %s because it is below the minimum input size (%s MB).",
+                                file_path,
+                                min_size_mb,
+                            )
                             continue
 
                     verdict = evaluate_watched_media_file_for_dispatch(
@@ -166,6 +175,10 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                                 summary["completed_source_cleanup_retry_deleted"] += 1
                             else:
                                 summary["completed_source_cleanup_retry_failed"] += 1
+                                logger.warning(
+                                    "Refiner completed-output source cleanup retry failed for %s",
+                                    file_path,
+                                )
                         continue
 
                     payload = json.dumps(

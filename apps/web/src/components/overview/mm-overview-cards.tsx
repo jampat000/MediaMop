@@ -37,7 +37,9 @@ export function MmAtGlanceCard({
       className={[
         "flex min-h-0 min-w-0 flex-col rounded-md border border-[var(--mm-border)] text-sm 2xl:text-[0.9375rem] 2xl:leading-relaxed min-[1760px]:text-base min-[1760px]:leading-relaxed",
         fillRowHeight ? "h-full" : "h-auto self-start w-full",
-        large ? "gap-4 p-5 lg:gap-5 lg:p-6 2xl:gap-5 2xl:p-6" : "gap-3.5 p-5 lg:gap-4 lg:p-6 2xl:gap-4 2xl:p-6",
+        large
+          ? "gap-4 p-5 lg:gap-5 lg:p-6 2xl:gap-5 2xl:p-6"
+          : "gap-3.5 p-5 lg:gap-4 lg:p-6 2xl:gap-4 2xl:p-6",
         emphasis
           ? "bg-[var(--mm-card-bg)] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]"
           : "bg-[var(--mm-card-bg)]/70",
@@ -67,7 +69,10 @@ export function MmAtGlanceCard({
       </div>
       {footer ? (
         <div
-          className={["mt-auto border-t border-[var(--mm-border)]", large ? "pt-4 lg:pt-5" : "pt-3"].join(" ")}
+          className={[
+            "mt-auto border-t border-[var(--mm-border)]",
+            large ? "pt-4 lg:pt-5" : "pt-3",
+          ].join(" ")}
         >
           {footer}
         </div>
@@ -138,7 +143,10 @@ export function MmOverviewSection({
       data-testid={dataTestId}
       data-overview-order={dataOverviewOrder}
     >
-      <h2 id={headingId} className="mm-card__title text-lg 2xl:text-xl min-[1760px]:text-2xl">
+      <h2
+        id={headingId}
+        className="mm-card__title text-lg 2xl:text-xl min-[1760px]:text-2xl"
+      >
         {heading}
       </h2>
       <div className="mm-card__body mt-5">{children}</div>
@@ -181,7 +189,9 @@ export function MmNeedsAttentionList({
 }) {
   if (items.length === 0) {
     return (
-      <p className="text-sm text-[var(--mm-text1)] 2xl:text-[0.9375rem] min-[1760px]:text-base">{emptyMessage}</p>
+      <p className="text-sm text-[var(--mm-text1)] 2xl:text-[0.9375rem] min-[1760px]:text-base">
+        {emptyMessage}
+      </p>
     );
   }
   return (
@@ -196,7 +206,11 @@ export function MmNeedsAttentionList({
           </li>
         ))}
       </ul>
-      {actions ? <div className="mt-5 flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">{actions}</div> : null}
+      {actions ? (
+        <div className="mt-5 flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">
+          {actions}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -211,7 +225,11 @@ export function MmNextStepsButton({
   onClick: () => void;
 }) {
   return (
-    <button type="button" className={mmActionButtonClass({ variant: "secondary" })} onClick={onClick}>
+    <button
+      type="button"
+      className={mmActionButtonClass({ variant: "secondary" })}
+      onClick={onClick}
+    >
       {label}
     </button>
   );

@@ -39,7 +39,10 @@ export type SubberMovieRow = {
   languages: SubberSubtitleLangState[];
 };
 
-export type SubberMoviesLibraryOut = { movies: SubberMovieRow[]; total: number };
+export type SubberMoviesLibraryOut = {
+  movies: SubberMovieRow[];
+  total: number;
+};
 
 /** Flat JSON from GET/PUT ``/api/v1/subber/settings``; field groups mirror ``subber_settings_schema_sections`` on the server and the Subber Settings tab UI. */
 export type SubberSettingsOut = {
@@ -172,6 +175,8 @@ export type SubberProviderOut = {
   priority: number | null;
   requires_account: boolean;
   has_credentials: boolean;
+  available: boolean;
+  availability_note: string | null;
 };
 
 export type SubberProviderPutIn = {
@@ -195,7 +200,10 @@ export type SubberJobsInspectionRow = {
   updated_at: string;
 };
 
-export type SubberJobsInspectionOut = { jobs: SubberJobsInspectionRow[]; default_recent_slice: boolean };
+export type SubberJobsInspectionOut = {
+  jobs: SubberJobsInspectionRow[];
+  default_recent_slice: boolean;
+};
 
 export async function fetchSubberSettings(): Promise<SubberSettingsOut> {
   const path = "/api/v1/subber/settings";
@@ -204,7 +212,9 @@ export async function fetchSubberSettings(): Promise<SubberSettingsOut> {
   return readJson<SubberSettingsOut>(r);
 }
 
-export async function putSubberSettings(body: SubberSettingsPutIn): Promise<SubberSettingsOut> {
+export async function putSubberSettings(
+  body: SubberSettingsPutIn,
+): Promise<SubberSettingsOut> {
   const path = "/api/v1/subber/settings";
   const r = await apiFetch(path, {
     method: "PUT",
@@ -322,7 +332,9 @@ export async function fetchSubberLibraryMovies(params: {
   return readJson<SubberMoviesLibraryOut>(r);
 }
 
-export async function postSubberSearchNow(stateId: number): Promise<{ status: string }> {
+export async function postSubberSearchNow(
+  stateId: number,
+): Promise<{ status: string }> {
   const csrf = await fetchCsrfToken();
   const path = `/api/v1/subber/library/${stateId}/search-now`;
   const r = await apiFetch(path, {
@@ -334,7 +346,9 @@ export async function postSubberSearchNow(stateId: number): Promise<{ status: st
   return readJson(r);
 }
 
-export async function postSubberSearchAllMissingTv(): Promise<{ status: string }> {
+export async function postSubberSearchAllMissingTv(): Promise<{
+  status: string;
+}> {
   const csrf = await fetchCsrfToken();
   const path = "/api/v1/subber/library/search-all-missing/tv";
   const r = await apiFetch(path, {
@@ -346,7 +360,9 @@ export async function postSubberSearchAllMissingTv(): Promise<{ status: string }
   return readJson(r);
 }
 
-export async function postSubberSearchAllMissingMovies(): Promise<{ status: string }> {
+export async function postSubberSearchAllMissingMovies(): Promise<{
+  status: string;
+}> {
   const csrf = await fetchCsrfToken();
   const path = "/api/v1/subber/library/search-all-missing/movies";
   const r = await apiFetch(path, {
@@ -370,7 +386,9 @@ export async function postSubberLibrarySyncTv(): Promise<{ status: string }> {
   return readJson(r);
 }
 
-export async function postSubberLibrarySyncMovies(): Promise<{ status: string }> {
+export async function postSubberLibrarySyncMovies(): Promise<{
+  status: string;
+}> {
   const csrf = await fetchCsrfToken();
   const path = "/api/v1/subber/library/sync/movies";
   const r = await apiFetch(path, {
@@ -389,7 +407,10 @@ export async function fetchSubberProviders(): Promise<SubberProviderOut[]> {
   return readJson<SubberProviderOut[]>(r);
 }
 
-export async function putSubberProvider(providerKey: string, body: SubberProviderPutIn): Promise<SubberProviderOut> {
+export async function putSubberProvider(
+  providerKey: string,
+  body: SubberProviderPutIn,
+): Promise<SubberProviderOut> {
   const pk = encodeURIComponent(providerKey);
   const path = `/api/v1/subber/providers/${pk}`;
   const r = await apiFetch(path, {
@@ -401,7 +422,9 @@ export async function putSubberProvider(providerKey: string, body: SubberProvide
   return readJson<SubberProviderOut>(r);
 }
 
-export async function postSubberProviderTest(providerKey: string): Promise<SubberTestConnectionOut> {
+export async function postSubberProviderTest(
+  providerKey: string,
+): Promise<SubberTestConnectionOut> {
   const csrf = await fetchCsrfToken();
   const pk = encodeURIComponent(providerKey);
   const path = `/api/v1/subber/providers/${pk}/test`;
@@ -414,7 +437,9 @@ export async function postSubberProviderTest(providerKey: string): Promise<Subbe
   return readJson<SubberTestConnectionOut>(r);
 }
 
-export async function fetchSubberJobs(limit = 50): Promise<SubberJobsInspectionOut> {
+export async function fetchSubberJobs(
+  limit = 50,
+): Promise<SubberJobsInspectionOut> {
   const path = `/api/v1/subber/jobs?limit=${encodeURIComponent(String(limit))}`;
   const r = await apiFetch(path);
   await requireOk(path, r, "Could not load Subber jobs");

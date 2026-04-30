@@ -6,10 +6,16 @@ import {
   RefinerFileProcessingProgressDetail,
   RefinerFileRemuxPassActivityDetail,
 } from "../../lib/activity/refiner-file-remux-pass-detail";
-import { activityRecentKey, useActivityRecentQuery } from "../../lib/activity/queries";
+import {
+  activityRecentKey,
+  useActivityRecentQuery,
+} from "../../lib/activity/queries";
 import { useActivityStreamInvalidation } from "../../lib/activity/use-activity-stream-invalidation";
 import type { ActivityEventItem } from "../../lib/api/types";
-import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
+import {
+  isHttpErrorFromApi,
+  isLikelyNetworkFailure,
+} from "../../lib/api/error-guards";
 import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 
@@ -57,9 +63,11 @@ const EVENT_LABELS: Record<string, string> = {
   "auth.password_changed": "Password changed",
   "arr_library.connection_test_succeeded": "Connection check finished",
   "arr_library.connection_test_failed": "Connection check failed",
-  "refiner.supplied_payload_evaluation_completed": "Manual queue check finished",
+  "refiner.supplied_payload_evaluation_completed":
+    "Manual queue check finished",
   "refiner.candidate_gate_completed": "Queue check finished",
-  "refiner.watched_folder_remux_scan_dispatch_completed": "Watched-folder scan finished",
+  "refiner.watched_folder_remux_scan_dispatch_completed":
+    "Watched-folder scan finished",
   "refiner.file_processing_progress": "File processing",
   "refiner.file_remux_pass_completed": "File processing finished",
   "refiner.work_temp_stale_sweep_completed": "Temporary files cleanup finished",
@@ -79,7 +87,10 @@ const EVENT_LABELS: Record<string, string> = {
 };
 
 function eventOptionLabel(eventType: string): string {
-  return EVENT_LABELS[eventType] ?? eventType.split(".").slice(-1)[0].replaceAll("_", " ");
+  return (
+    EVENT_LABELS[eventType] ??
+    eventType.split(".").slice(-1)[0].replaceAll("_", " ")
+  );
 }
 
 function titleCase(value: string): string {
@@ -96,7 +107,9 @@ function parseDetail(detail: string | null | undefined): ParsedDetail | null {
   if (!detail?.trim().startsWith("{")) return null;
   try {
     const parsed = JSON.parse(detail) as unknown;
-    return parsed && typeof parsed === "object" ? (parsed as ParsedDetail) : null;
+    return parsed && typeof parsed === "object"
+      ? (parsed as ParsedDetail)
+      : null;
   } catch {
     return null;
   }
@@ -110,7 +123,12 @@ function asString(value: unknown): string | null {
 
 function asNumber(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) return Number(value);
+  if (
+    typeof value === "string" &&
+    value.trim() !== "" &&
+    Number.isFinite(Number(value))
+  )
+    return Number(value);
   return null;
 }
 
@@ -161,7 +179,9 @@ function chipToneClasses(tone: ActivityTone): string {
 
 function normalizeSubberSummary(ev: ActivityEventItem): ActivityDisplay | null {
   const parsed = parseDetail(ev.detail);
-  const mediaScope = asString(parsed?.media_scope) ?? (/movie/i.test(ev.title) ? "movies" : "tv");
+  const mediaScope =
+    asString(parsed?.media_scope) ??
+    (/movie/i.test(ev.title) ? "movies" : "tv");
   const prettyScope = scopeLabel(mediaScope);
   const enqueued = asNumber(parsed?.enqueued);
   const reason = asString(parsed?.reason);
@@ -295,24 +315,42 @@ function normalizePrunerSummary(ev: ActivityEventItem): ActivityDisplay | null {
     };
   }
 
-  if (ev.event_type === "pruner.apply_library_removal_completed" || ev.event_type === "pruner.apply_library_removal_failed") {
+  if (
+    ev.event_type === "pruner.apply_library_removal_completed" ||
+    ev.event_type === "pruner.apply_library_removal_failed"
+  ) {
     return {
       title: "Cleanup finished",
       summary: "Cleanup run result",
       detail: error ?? ev.detail,
-      chip: ev.event_type === "pruner.apply_library_removal_failed" ? "Cleanup failed" : "Cleanup complete",
-      tone: ev.event_type === "pruner.apply_library_removal_failed" ? "error" : "success",
+      chip:
+        ev.event_type === "pruner.apply_library_removal_failed"
+          ? "Cleanup failed"
+          : "Cleanup complete",
+      tone:
+        ev.event_type === "pruner.apply_library_removal_failed"
+          ? "error"
+          : "success",
       compact: true,
     };
   }
 
-  if (ev.event_type === "pruner.connection_test_succeeded" || ev.event_type === "pruner.connection_test_failed") {
+  if (
+    ev.event_type === "pruner.connection_test_succeeded" ||
+    ev.event_type === "pruner.connection_test_failed"
+  ) {
     return {
       title: "Media server connection check",
       summary: "Media server connection check",
       detail: ev.detail,
-      chip: ev.event_type === "pruner.connection_test_failed" ? "Connection failed" : "Connection checked",
-      tone: ev.event_type === "pruner.connection_test_failed" ? "warning" : "success",
+      chip:
+        ev.event_type === "pruner.connection_test_failed"
+          ? "Connection failed"
+          : "Connection checked",
+      tone:
+        ev.event_type === "pruner.connection_test_failed"
+          ? "warning"
+          : "success",
       compact: false,
     };
   }
@@ -320,12 +358,18 @@ function normalizePrunerSummary(ev: ActivityEventItem): ActivityDisplay | null {
   return null;
 }
 
-function normalizeRefinerSummary(ev: ActivityEventItem): ActivityDisplay | null {
+function normalizeRefinerSummary(
+  ev: ActivityEventItem,
+): ActivityDisplay | null {
   if (ev.event_type === REFINER_FILE_PROCESSING_PROGRESS_EVENT) {
     const parsed = parseDetail(ev.detail);
     const status = asString(parsed?.status);
     const percent = asNumber(parsed?.percent);
-    const name = asString(parsed?.relative_media_path)?.split(/[\\/]/).filter(Boolean).at(-1) ?? "file";
+    const name =
+      asString(parsed?.relative_media_path)
+        ?.split(/[\\/]/)
+        .filter(Boolean)
+        .at(-1) ?? "file";
     return {
       title:
         status === "finished"
@@ -338,8 +382,18 @@ function normalizeRefinerSummary(ev: ActivityEventItem): ActivityDisplay | null 
           ? "Refiner is preparing the cleaned-up file"
           : `Refiner is writing the cleaned-up file (${Math.round(percent)}%)`,
       detail: ev.detail,
-      chip: status === "failed" ? "Processing stopped" : status === "finished" ? "Processing finished" : "Processing now",
-      tone: status === "failed" ? "error" : status === "finished" ? "success" : "info",
+      chip:
+        status === "failed"
+          ? "Processing stopped"
+          : status === "finished"
+            ? "Processing finished"
+            : "Processing now",
+      tone:
+        status === "failed"
+          ? "error"
+          : status === "finished"
+            ? "success"
+            : "info",
       compact: false,
     };
   }
@@ -348,8 +402,14 @@ function normalizeRefinerSummary(ev: ActivityEventItem): ActivityDisplay | null 
     const outcome = asString(parsed?.outcome);
     const remuxNeeded = asBoolean(parsed?.remux_required);
     const fileName =
-      asString(parsed?.relative_media_path)?.split(/[\\/]/).filter(Boolean).at(-1) ??
-      asString(parsed?.inspected_source_path)?.split(/[\\/]/).filter(Boolean).at(-1) ??
+      asString(parsed?.relative_media_path)
+        ?.split(/[\\/]/)
+        .filter(Boolean)
+        .at(-1) ??
+      asString(parsed?.inspected_source_path)
+        ?.split(/[\\/]/)
+        .filter(Boolean)
+        .at(-1) ??
       "File";
     return {
       title:
@@ -373,7 +433,7 @@ function normalizeRefinerSummary(ev: ActivityEventItem): ActivityDisplay | null 
           : outcome?.startsWith("failed")
             ? "Processing failed"
             : "File processed",
-      tone: ev.detail?.includes("\"ok\":false") ? "error" : "success",
+      tone: ev.detail?.includes('"ok":false') ? "error" : "success",
       compact: false,
     };
   }
@@ -397,7 +457,9 @@ function normalizeRefinerSummary(ev: ActivityEventItem): ActivityDisplay | null 
       compact: true,
     };
   }
-  if (ev.event_type === "refiner.watched_folder_remux_scan_dispatch_completed") {
+  if (
+    ev.event_type === "refiner.watched_folder_remux_scan_dispatch_completed"
+  ) {
     const parsed = parseDetail(ev.detail);
     const queued = asNumber(parsed?.remux_jobs_enqueued) ?? 0;
     const seen = asNumber(parsed?.media_candidates_seen) ?? 0;
@@ -406,7 +468,11 @@ function normalizeRefinerSummary(ev: ActivityEventItem): ActivityDisplay | null 
     const waitingMessage = asString(parsed?.waiting_message);
     const label = asString(parsed?.scan_result_label);
     const paths = asStringArray(parsed?.enqueued_relative_paths_sample);
-    const details = [userMessage, waitingMessage, paths.length ? `Added: ${paths.join(", ")}` : null]
+    const details = [
+      userMessage,
+      waitingMessage,
+      paths.length ? `Added: ${paths.join(", ")}` : null,
+    ]
       .filter(Boolean)
       .join(" ");
     return {
@@ -448,16 +514,20 @@ function normalizeRefinerSummary(ev: ActivityEventItem): ActivityDisplay | null 
 }
 
 function normalizeAuthSummary(ev: ActivityEventItem): ActivityDisplay | null {
-  if (!ev.module.startsWith("auth") && !ev.module.startsWith("arr_library")) return null;
+  if (!ev.module.startsWith("auth") && !ev.module.startsWith("arr_library"))
+    return null;
   return {
     title: eventOptionLabel(ev.event_type),
-    summary: ev.module.startsWith("arr_library") ? "Service connection check" : "Account and sign-in activity",
+    summary: ev.module.startsWith("arr_library")
+      ? "Service connection check"
+      : "Account and sign-in activity",
     detail: ev.detail,
     chip: "System event",
     tone:
       ev.event_type.includes("failed") || ev.event_type.includes("denied")
         ? "warning"
-        : ev.event_type.includes("succeeded") || ev.event_type.includes("changed")
+        : ev.event_type.includes("succeeded") ||
+            ev.event_type.includes("changed")
           ? "success"
           : "info",
     compact: false,
@@ -499,20 +569,40 @@ function eventDisplay(ev: ActivityEventItem): ActivityDisplay {
   };
 }
 
-function ActivitySummaryCard({ label, value }: { label: string; value: string }) {
+function ActivitySummaryCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
   return (
     <section className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text3)]">{label}</p>
-      <p className="mt-1 text-lg font-semibold text-[var(--mm-text1)]">{value}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+        {label}
+      </p>
+      <p className="mt-1 text-lg font-semibold text-[var(--mm-text1)]">
+        {value}
+      </p>
     </section>
   );
 }
 
-function StructuredMetric({ label, value }: { label: string; value: string | number }) {
+function StructuredMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
   return (
     <div className="rounded-md border border-[var(--mm-border)] bg-black/10 px-3 py-2">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text3)]">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-[var(--mm-text1)]">{value}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-semibold text-[var(--mm-text1)]">
+        {value}
+      </p>
     </div>
   );
 }
@@ -521,10 +611,15 @@ function ChipsRow({ label, items }: { label: string; items: string[] }) {
   if (items.length === 0) return null;
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--mm-text3)]">{label}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+        {label}
+      </p>
       <div className="flex flex-wrap gap-2">
         {items.map((item) => (
-          <span key={`${label}-${item}`} className="rounded-full border border-[var(--mm-border)] bg-black/10 px-2.5 py-1 text-xs text-[var(--mm-text2)]">
+          <span
+            key={`${label}-${item}`}
+            className="rounded-full border border-[var(--mm-border)] bg-black/10 px-2.5 py-1 text-xs text-[var(--mm-text2)]"
+          >
             {item}
           </span>
         ))}
@@ -551,35 +646,74 @@ function StructuredActivityDetails({ ev }: { ev: ActivityEventItem }) {
     return (
       <div className="space-y-3 rounded-md border border-[var(--mm-border)] bg-black/10 p-3">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <StructuredMetric label="Candidates" value={asNumber(parsed.candidate_count) ?? 0} />
-          <StructuredMetric label="Trigger" value={asString(parsed.trigger) ?? "Manual"} />
-          <StructuredMetric label="Scope" value={scopeLabel(asString(parsed.media_scope))} />
-          <StructuredMetric label="Rule" value={asString(parsed.rule_family_id) ?? "General preview"} />
+          <StructuredMetric
+            label="Candidates"
+            value={asNumber(parsed.candidate_count) ?? 0}
+          />
+          <StructuredMetric
+            label="Trigger"
+            value={asString(parsed.trigger) ?? "Manual"}
+          />
+          <StructuredMetric
+            label="Scope"
+            value={scopeLabel(asString(parsed.media_scope))}
+          />
+          <StructuredMetric
+            label="Rule"
+            value={asString(parsed.rule_family_id) ?? "General preview"}
+          />
         </div>
         {filters.length > 0 ? (
           <details className="rounded-md border border-[var(--mm-border)] bg-black/10 px-3 py-2">
-            <summary className="cursor-pointer text-sm font-medium text-[var(--mm-text2)]">Show preview filters</summary>
+            <summary className="cursor-pointer text-sm font-medium text-[var(--mm-text2)]">
+              Show preview filters
+            </summary>
             <div className="mt-3">
               <ChipsRow label="Applied filters" items={filters} />
             </div>
           </details>
         ) : null}
-        {asString(parsed.error) ? <p className="text-sm text-red-200">{asString(parsed.error)}</p> : null}
-        {asString(parsed.unsupported_detail) ? <p className="text-sm text-amber-100">{asString(parsed.unsupported_detail)}</p> : null}
+        {asString(parsed.error) ? (
+          <p className="text-sm text-red-200">{asString(parsed.error)}</p>
+        ) : null}
+        {asString(parsed.unsupported_detail) ? (
+          <p className="text-sm text-amber-100">
+            {asString(parsed.unsupported_detail)}
+          </p>
+        ) : null}
       </div>
     );
   }
 
-  if (ev.event_type === "pruner.apply_library_removal_completed" || ev.event_type === "pruner.apply_library_removal_failed") {
+  if (
+    ev.event_type === "pruner.apply_library_removal_completed" ||
+    ev.event_type === "pruner.apply_library_removal_failed"
+  ) {
     return (
       <div className="space-y-3 rounded-md border border-[var(--mm-border)] bg-black/10 p-3">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <StructuredMetric label="Removed" value={asNumber(parsed.removed) ?? 0} />
-          <StructuredMetric label="Skipped" value={asNumber(parsed.skipped) ?? 0} />
-          <StructuredMetric label="Failed" value={asNumber(parsed.failed) ?? 0} />
-          <StructuredMetric label="Action" value={asString(parsed.action) ?? "Delete"} />
+          <StructuredMetric
+            label="Removed"
+            value={asNumber(parsed.removed) ?? 0}
+          />
+          <StructuredMetric
+            label="Skipped"
+            value={asNumber(parsed.skipped) ?? 0}
+          />
+          <StructuredMetric
+            label="Failed"
+            value={asNumber(parsed.failed) ?? 0}
+          />
+          <StructuredMetric
+            label="Action"
+            value={asString(parsed.action) ?? "Delete"}
+          />
         </div>
-        {asString(parsed.note) ? <p className="text-sm text-[var(--mm-text2)]">{asString(parsed.note)}</p> : null}
+        {asString(parsed.note) ? (
+          <p className="text-sm text-[var(--mm-text2)]">
+            {asString(parsed.note)}
+          </p>
+        ) : null}
       </div>
     );
   }
@@ -590,16 +724,38 @@ function StructuredActivityDetails({ ev }: { ev: ActivityEventItem }) {
     const series = asNumber(parsed.series);
     const episodes = asNumber(parsed.episodes);
     const found = asNumber(parsed.subtitles_found);
-    if (movies != null) metrics.push({ label: "Movies processed", value: movies });
-    if (series != null) metrics.push({ label: "Series processed", value: series });
-    if (episodes != null) metrics.push({ label: "Episodes with files", value: episodes });
+    if (movies != null)
+      metrics.push({ label: "Movies processed", value: movies });
+    if (series != null)
+      metrics.push({ label: "Series processed", value: series });
+    if (episodes != null)
+      metrics.push({ label: "Episodes with files", value: episodes });
     if (found != null) metrics.push({ label: "Subtitles found", value: found });
-    if (metrics.length === 0 && !asString(parsed.error) && !asString(parsed.reason)) return null;
+    if (
+      metrics.length === 0 &&
+      !asString(parsed.error) &&
+      !asString(parsed.reason)
+    )
+      return null;
     return (
       <div className="space-y-3 rounded-md border border-[var(--mm-border)] bg-black/10 p-3">
-        {metrics.length > 0 ? <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{metrics.map((row) => <StructuredMetric key={row.label} label={row.label} value={row.value} />)}</div> : null}
-        {asString(parsed.reason) ? <p className="text-sm text-amber-100">{asString(parsed.reason)}</p> : null}
-        {asString(parsed.error) ? <p className="text-sm text-red-200">{asString(parsed.error)}</p> : null}
+        {metrics.length > 0 ? (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {metrics.map((row) => (
+              <StructuredMetric
+                key={row.label}
+                label={row.label}
+                value={row.value}
+              />
+            ))}
+          </div>
+        ) : null}
+        {asString(parsed.reason) ? (
+          <p className="text-sm text-amber-100">{asString(parsed.reason)}</p>
+        ) : null}
+        {asString(parsed.error) ? (
+          <p className="text-sm text-red-200">{asString(parsed.error)}</p>
+        ) : null}
       </div>
     );
   }
@@ -607,8 +763,14 @@ function StructuredActivityDetails({ ev }: { ev: ActivityEventItem }) {
   if (ev.event_type === "subber.subtitle_search_completed") {
     return (
       <div className="grid gap-3 rounded-md border border-[var(--mm-border)] bg-black/10 p-3 sm:grid-cols-2 xl:grid-cols-3">
-        <StructuredMetric label="Scope" value={scopeLabel(asString(parsed.media_scope))} />
-        <StructuredMetric label="State ID" value={asNumber(parsed.state_id) ?? "-"} />
+        <StructuredMetric
+          label="Scope"
+          value={scopeLabel(asString(parsed.media_scope))}
+        />
+        <StructuredMetric
+          label="State ID"
+          value={asNumber(parsed.state_id) ?? "-"}
+        />
         <StructuredMetric
           label="Outcome"
           value={
@@ -626,8 +788,14 @@ function StructuredActivityDetails({ ev }: { ev: ActivityEventItem }) {
   if (ev.event_type === "subber.subtitle_upgrade_completed") {
     return (
       <div className="grid gap-3 rounded-md border border-[var(--mm-border)] bg-black/10 p-3 sm:grid-cols-2">
-        <StructuredMetric label="Checked" value={asNumber(parsed.attempted) ?? 0} />
-        <StructuredMetric label="Upgraded" value={asNumber(parsed.upgraded) ?? 0} />
+        <StructuredMetric
+          label="Checked"
+          value={asNumber(parsed.attempted) ?? 0}
+        />
+        <StructuredMetric
+          label="Upgraded"
+          value={asNumber(parsed.upgraded) ?? 0}
+        />
       </div>
     );
   }
@@ -636,10 +804,20 @@ function StructuredActivityDetails({ ev }: { ev: ActivityEventItem }) {
     return (
       <div className="space-y-3 rounded-md border border-[var(--mm-border)] bg-black/10 p-3">
         <div className="grid gap-3 sm:grid-cols-2">
-          <StructuredMetric label="Queued" value={asNumber(parsed.enqueued) ?? 0} />
-          <StructuredMetric label="Scope" value={scopeLabel(asString(parsed.media_scope))} />
+          <StructuredMetric
+            label="Queued"
+            value={asNumber(parsed.enqueued) ?? 0}
+          />
+          <StructuredMetric
+            label="Scope"
+            value={scopeLabel(asString(parsed.media_scope))}
+          />
         </div>
-        {asString(parsed.file_path) ? <p className="text-sm text-[var(--mm-text2)] break-all">{asString(parsed.file_path)}</p> : null}
+        {asString(parsed.file_path) ? (
+          <p className="text-sm text-[var(--mm-text2)] break-all">
+            {asString(parsed.file_path)}
+          </p>
+        ) : null}
       </div>
     );
   }
@@ -647,7 +825,13 @@ function StructuredActivityDetails({ ev }: { ev: ActivityEventItem }) {
   return null;
 }
 
-function ActivityEventDetails({ ev, display }: { ev: ActivityEventItem; display: ActivityDisplay }) {
+function ActivityEventDetails({
+  ev,
+  display,
+}: {
+  ev: ActivityEventItem;
+  display: ActivityDisplay;
+}) {
   if (!display.detail) return null;
   if (ev.event_type === REFINER_FILE_PROCESSING_PROGRESS_EVENT) {
     return <RefinerFileProcessingProgressDetail detail={display.detail} />;
@@ -660,17 +844,27 @@ function ActivityEventDetails({ ev, display }: { ev: ActivityEventItem; display:
     return structured;
   }
   if (!display.compact) {
-    return <p className="text-sm leading-6 text-[var(--mm-text2)]">{display.detail}</p>;
+    return (
+      <p className="text-sm leading-6 text-[var(--mm-text2)]">
+        {display.detail}
+      </p>
+    );
   }
   return (
     <details className="rounded-md border border-[var(--mm-border)] bg-black/10 px-3 py-2">
-      <summary className="cursor-pointer text-sm font-medium text-[var(--mm-text2)]">Show event detail</summary>
-      <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[var(--mm-text2)]">{display.detail}</p>
+      <summary className="cursor-pointer text-sm font-medium text-[var(--mm-text2)]">
+        Show event detail
+      </summary>
+      <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[var(--mm-text2)]">
+        {display.detail}
+      </p>
     </details>
   );
 }
 
-function collectEventOptions(items: ActivityEventItem[]): ActivityEventOption[] {
+function collectEventOptions(
+  items: ActivityEventItem[],
+): ActivityEventOption[] {
   const seen = new Map<string, string>();
   for (const item of items) {
     if (!seen.has(item.event_type)) {
@@ -734,7 +928,9 @@ export function ActivityPage() {
           </p>
         </header>
         {err instanceof Error ? (
-          <p className="mm-page__lead font-mono text-sm text-[var(--mm-text3)]">{err.message}</p>
+          <p className="mm-page__lead font-mono text-sm text-[var(--mm-text3)]">
+            {err.message}
+          </p>
         ) : null}
       </div>
     );
@@ -742,24 +938,42 @@ export function ActivityPage() {
 
   const items = recent.data.items;
   const eventOptions = collectEventOptions(items);
-  const filtersActive = Boolean(applied.eventType || applied.search.trim() || applied.from || applied.to || applied.module !== "all");
+  const filtersActive = Boolean(
+    applied.eventType ||
+    applied.search.trim() ||
+    applied.from ||
+    applied.to ||
+    applied.module !== "all",
+  );
 
   return (
     <div className="mm-page">
       <header className="mm-page__intro">
         <p className="mm-page__eyebrow">Overview</p>
         <h1 className="mm-page__title">Activity</h1>
-        <p className="mm-page__subtitle">Live activity timeline for MediaMop, newest first.</p>
+        <p className="mm-page__subtitle">
+          Live activity timeline for MediaMop, newest first.
+        </p>
         <p className="mm-page__lead">
-          Use this page to understand what just happened across Refiner, Pruner, Subber, and the platform. It updates
-          live and keeps the language focused on what the action means.
+          Use this page to understand what just happened across Refiner, Pruner,
+          Subber, and the platform. It updates live and keeps the language
+          focused on what the action means.
         </p>
       </header>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <ActivitySummaryCard label="Showing now" value={`${items.length} events`} />
-        <ActivitySummaryCard label="Matches in store" value={`${recent.data.total} events`} />
-        <ActivitySummaryCard label="System events" value={String(recent.data.system_events)} />
+        <ActivitySummaryCard
+          label="Showing now"
+          value={`${items.length} events`}
+        />
+        <ActivitySummaryCard
+          label="Matches in store"
+          value={`${recent.data.total} events`}
+        />
+        <ActivitySummaryCard
+          label="System events"
+          value={String(recent.data.system_events)}
+        />
         <ActivitySummaryCard label="Refresh" value="Live" />
       </section>
 
@@ -770,7 +984,12 @@ export function ActivityPage() {
             <select
               className="mm-input"
               value={filters.module}
-              onChange={(e) => setFilters((prev) => ({ ...prev, module: e.target.value as ActivityModuleFilter }))}
+              onChange={(e) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  module: e.target.value as ActivityModuleFilter,
+                }))
+              }
             >
               {MODULE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -784,7 +1003,9 @@ export function ActivityPage() {
             <select
               className="mm-input"
               value={filters.eventType}
-              onChange={(e) => setFilters((prev) => ({ ...prev, eventType: e.target.value }))}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, eventType: e.target.value }))
+              }
             >
               <option value="">All events</option>
               {eventOptions.map((option) => (
@@ -799,7 +1020,9 @@ export function ActivityPage() {
             <input
               className="mm-input"
               value={filters.search}
-              onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, search: e.target.value }))
+              }
               placeholder="Search titles and details"
             />
           </label>
@@ -809,7 +1032,9 @@ export function ActivityPage() {
               type="datetime-local"
               className="mm-input"
               value={filters.from}
-              onChange={(e) => setFilters((prev) => ({ ...prev, from: e.target.value }))}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, from: e.target.value }))
+              }
             />
           </label>
           <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
@@ -818,7 +1043,9 @@ export function ActivityPage() {
               type="datetime-local"
               className="mm-input"
               value={filters.to}
-              onChange={(e) => setFilters((prev) => ({ ...prev, to: e.target.value }))}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, to: e.target.value }))
+              }
             />
           </label>
           <div className="flex items-end gap-2">
@@ -831,10 +1058,19 @@ export function ActivityPage() {
             </button>
             <button
               type="button"
-              className={mmActionButtonClass({ variant: "tertiary", disabled: !filtersActive })}
+              className={mmActionButtonClass({
+                variant: "tertiary",
+                disabled: !filtersActive,
+              })}
               disabled={!filtersActive}
               onClick={() => {
-                const reset = { module: "all", eventType: "", search: "", from: "", to: "" } as ActivityFiltersState;
+                const reset = {
+                  module: "all",
+                  eventType: "",
+                  search: "",
+                  from: "",
+                  to: "",
+                } as ActivityFiltersState;
                 setFilters(reset);
                 setApplied(reset);
               }}
@@ -873,16 +1109,28 @@ export function ActivityPage() {
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-gold)]">
-                        {ev.module === "system" || ev.module === "auth" || ev.module === "arr_library" ? "System" : titleCase(ev.module)}
+                        {ev.module === "system" ||
+                        ev.module === "auth" ||
+                        ev.module === "arr_library"
+                          ? "System"
+                          : titleCase(ev.module)}
                       </span>
-                      <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${chipToneClasses(display.tone)}`}>
+                      <span
+                        className={`rounded-full border px-2.5 py-1 text-xs font-medium ${chipToneClasses(display.tone)}`}
+                      >
                         {display.chip}
                       </span>
                     </div>
-                    <h2 className="text-lg font-semibold text-[var(--mm-text1)]">{display.title}</h2>
-                    <p className="text-sm text-[var(--mm-text3)]">{display.summary}</p>
+                    <h2 className="text-lg font-semibold text-[var(--mm-text1)]">
+                      {display.title}
+                    </h2>
+                    <p className="text-sm text-[var(--mm-text3)]">
+                      {display.summary}
+                    </p>
                   </div>
-                  <time className="text-sm text-[var(--mm-text3)]">{fmt(ev.created_at)}</time>
+                  <time className="text-sm text-[var(--mm-text3)]">
+                    {fmt(ev.created_at)}
+                  </time>
                 </div>
                 <div className="mt-3">
                   <ActivityEventDetails ev={ev} display={display} />

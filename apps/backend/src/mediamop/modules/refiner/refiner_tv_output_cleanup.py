@@ -27,6 +27,7 @@ from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRu
 from mediamop.modules.refiner.refiner_remux_rules import is_refiner_media_candidate
 
 logger = logging.getLogger(__name__)
+_SONARR_PAGE_SIZE = 200_000
 
 
 def _normalize_media_scope(raw: str | None) -> str:
@@ -92,7 +93,8 @@ def fetch_sonarr_library_episodefiles(
     """GET ``/api/v3/episodefile`` — full library episode file list (Refiner-owned stdlib HTTP)."""
 
     base = base_url.rstrip("/")
-    url = f"{base}/api/v3/episodefile?pageSize=200000"
+    # Sonarr's episodefile endpoint is treated as a full library listing here; use a very high cap.
+    url = f"{base}/api/v3/episodefile?pageSize={_SONARR_PAGE_SIZE}"
     req = urllib.request.Request(
         url,
         method="GET",

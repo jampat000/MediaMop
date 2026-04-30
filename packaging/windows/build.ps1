@@ -13,6 +13,9 @@ $distRoot = Join-Path $repoRoot "dist\\windows"
 $ffmpegVendorDir = Join-Path $PSScriptRoot "vendor\\ffmpeg"
 $venvScriptsDir = Join-Path $backendDir ".venv\\Scripts"
 $py = Join-Path $venvScriptsDir "python.exe"
+$ffmpegArchiveName = "ffmpeg-N-124254-g397c7c7524-win64-lgpl.zip"
+$ffmpegArchiveUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-04-29-13-28/$ffmpegArchiveName"
+$ffmpegArchiveSha256 = "42f9457901fcc1928834ded69f0fc4903bd16c9a41c185234a40490060bda9fb"
 
 function Resolve-VenvExecutable {
   param(
@@ -113,14 +116,17 @@ function Ensure-WindowsFfmpegRuntime {
   }
 
   $downloadRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("mediamop-ffmpeg-" + [System.Guid]::NewGuid().ToString("N"))
-  $archivePath = Join-Path $downloadRoot "ffmpeg.zip"
+  $archivePath = Join-Path $downloadRoot $ffmpegArchiveName
   $extractRoot = Join-Path $downloadRoot "extract"
-  $url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-lgpl.zip"
   try {
     New-Item -ItemType Directory -Path $downloadRoot | Out-Null
     New-Item -ItemType Directory -Path $extractRoot | Out-Null
     Write-Host "Downloading Windows FFmpeg runtime..."
-    Invoke-WebRequest -Uri $url -OutFile $archivePath -UseBasicParsing
+    Invoke-WebRequest -Uri $ffmpegArchiveUrl -OutFile $archivePath -UseBasicParsing
+    $actualSha256 = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($actualSha256 -ne $ffmpegArchiveSha256) {
+      throw "Downloaded FFmpeg archive hash mismatch. Expected $ffmpegArchiveSha256 but got $actualSha256."
+    }
     Expand-Archive -LiteralPath $archivePath -DestinationPath $extractRoot -Force
     $binDir = Get-ChildItem -Path $extractRoot -Recurse -Directory |
       Where-Object {

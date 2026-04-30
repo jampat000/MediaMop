@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import urllib.error
 from collections.abc import Callable, Sequence
 from typing import Any
@@ -35,6 +36,8 @@ from mediamop.modules.pruner.pruner_plex_missing_thumb_candidates import (
     _section_matches_scope,
 )
 from mediamop.modules.pruner.pruner_studio_collection_filters import jellyfin_emby_item_studio_names
+
+logger = logging.getLogger(__name__)
 
 def _jf_emby_truncated(
     *,
@@ -97,6 +100,7 @@ def list_jf_emby_genre_match_candidates(
         assert data is not None
         items = data.get("Items")
         if not isinstance(items, list):
+            logger.debug("Pruner genre-match preview stopped because Jellyfin/Emby Items payload had no list.")
             break
         fetched = len(items)
         if "TotalRecordCount" in data and isinstance(data["TotalRecordCount"], int):
@@ -192,6 +196,7 @@ def list_jf_emby_studio_match_candidates(
         assert data is not None
         items = data.get("Items")
         if not isinstance(items, list):
+            logger.debug("Pruner studio-match preview stopped because Jellyfin/Emby Items payload had no list.")
             break
         fetched = len(items)
         if "TotalRecordCount" in data and isinstance(data["TotalRecordCount"], int):
@@ -289,6 +294,7 @@ def list_jf_emby_people_match_candidates(
         assert data is not None
         items = data.get("Items")
         if not isinstance(items, list):
+            logger.debug("Pruner people-match preview stopped because Jellyfin/Emby Items payload had no list.")
             break
         fetched = len(items)
         if "TotalRecordCount" in data and isinstance(data["TotalRecordCount"], int):
@@ -388,6 +394,7 @@ def list_jf_emby_year_range_match_candidates(
         assert data is not None
         items = data.get("Items")
         if not isinstance(items, list):
+            logger.debug("Pruner year-range preview stopped because Jellyfin/Emby Items payload had no list.")
             break
         fetched = len(items)
         if "TotalRecordCount" in data and isinstance(data["TotalRecordCount"], int):

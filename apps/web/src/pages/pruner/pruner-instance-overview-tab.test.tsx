@@ -96,13 +96,17 @@ function OverviewLayout({ instance }: { instance: PrunerServerInstance }) {
 
 describe("PrunerInstanceOverviewTab", () => {
   it("renders TV and Movies cards with active rules, filter counts, and last preview for Jellyfin", async () => {
-    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
     const router = createMemoryRouter(
       [
         {
           path: "/instances/:instanceId",
           element: <OverviewLayout instance={jellyfinInstance} />,
-          children: [{ path: "overview", element: <PrunerInstanceOverviewTab /> }],
+          children: [
+            { path: "overview", element: <PrunerInstanceOverviewTab /> },
+          ],
         },
       ],
       { initialEntries: ["/instances/77/overview"] },
@@ -114,26 +118,42 @@ describe("PrunerInstanceOverviewTab", () => {
       </QueryClientProvider>,
     );
 
-    await waitFor(() => expect(screen.getByTestId("pruner-instance-overview")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-instance-overview"),
+      ).toBeInTheDocument(),
+    );
     expect(screen.getByTestId("pruner-overview-scope-tv")).toBeInTheDocument();
-    expect(screen.getByTestId("pruner-overview-scope-movies")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("pruner-overview-scope-movies"),
+    ).toBeInTheDocument();
     expect(screen.getByText(/Delete watched TV episodes/)).toBeInTheDocument();
     const tvCard = screen.getByTestId("pruner-overview-scope-tv");
     expect(tvCard.textContent).toMatch(/success/);
     expect(tvCard.textContent).toMatch(/2026/);
     expect(tvCard.textContent).toMatch(/Automatic previews are off/i);
-    expect(screen.getByRole("link", { name: /open activity/i })).toHaveAttribute("href", "/app/activity");
-    expect(screen.getByText(/Removed, skipped, and failed counts for each cleanup run/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /open activity/i }),
+    ).toHaveAttribute("href", "/app/activity");
+    expect(
+      screen.getByText(
+        /Removed, skipped, and failed counts for each cleanup run/i,
+      ),
+    ).toBeInTheDocument();
   });
 
   it("shows Plex-only unsupported callouts on the TV scope card", async () => {
-    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
     const router = createMemoryRouter(
       [
         {
           path: "/instances/:instanceId",
           element: <OverviewLayout instance={plexInstance} />,
-          children: [{ path: "overview", element: <PrunerInstanceOverviewTab /> }],
+          children: [
+            { path: "overview", element: <PrunerInstanceOverviewTab /> },
+          ],
         },
       ],
       { initialEntries: ["/instances/88/overview"] },
@@ -145,7 +165,11 @@ describe("PrunerInstanceOverviewTab", () => {
       </QueryClientProvider>,
     );
 
-    await waitFor(() => expect(screen.getByTestId("pruner-overview-scope-tv")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-overview-scope-tv"),
+      ).toBeInTheDocument(),
+    );
     const tvCard = screen.getByTestId("pruner-overview-scope-tv");
     expect(tvCard.textContent).toMatch(/Not available for this Plex library/i);
     expect(tvCard.textContent).toMatch(/Watched TV episodes/i);

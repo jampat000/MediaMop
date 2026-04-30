@@ -31,15 +31,26 @@ describe("ErrorBoundary", () => {
       </ErrorBoundary>,
     );
 
-    expect(screen.getByRole("heading", { name: "Something went wrong" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Something went wrong" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Route render failed")).toBeInTheDocument();
-    expect(screen.getByRole("navigation", { name: "Unavailable sections" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Reload MediaMop" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("navigation", { name: "Unavailable sections" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Reload MediaMop" }),
+    ).toBeInTheDocument();
   });
 
   it("lets the user trigger reload from the fallback", () => {
     const onReload = vi.fn();
-    render(<AppErrorScreen error={new Error("Bad route state")} onReload={onReload} />);
+    render(
+      <AppErrorScreen
+        error={new Error("Bad route state")}
+        onReload={onReload}
+      />,
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Reload MediaMop" }));
 

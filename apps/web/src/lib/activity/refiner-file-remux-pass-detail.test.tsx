@@ -24,10 +24,14 @@ describe("RefinerFileRemuxPassActivityDetail", () => {
       ffmpeg_argv: ["/bin/ffmpeg", "-i", "a.mkv", "out.mkv"],
     });
     render(<RefinerFileRemuxPassActivityDetail detail={detail} />);
-    expect(screen.getByTestId("refiner-remux-activity-detail")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("refiner-remux-activity-detail"),
+    ).toBeInTheDocument();
     expect(screen.getByText("Outcome")).toBeInTheDocument();
     expect(screen.getByText("File processed")).toBeInTheDocument();
-    expect(screen.getByText("Show track and cleanup details")).toBeInTheDocument();
+    expect(
+      screen.getByText("Show track and cleanup details"),
+    ).toBeInTheDocument();
     expect(screen.getByText("/data/movies/a.mkv")).toBeInTheDocument();
     expect(screen.getByText("Audio in file")).toBeInTheDocument();
     expect(screen.getByText("A before")).toBeInTheDocument();
@@ -36,7 +40,9 @@ describe("RefinerFileRemuxPassActivityDetail", () => {
 
   it("falls back to raw string when detail is not JSON", () => {
     render(<RefinerFileRemuxPassActivityDetail detail="not-json" />);
-    expect(screen.getByTestId("refiner-remux-activity-detail-raw")).toHaveTextContent("not-json");
+    expect(
+      screen.getByTestId("refiner-remux-activity-detail-raw"),
+    ).toHaveTextContent("not-json");
   });
 
   it("renders live Refiner processing progress in plain language", () => {
@@ -52,16 +58,24 @@ describe("RefinerFileRemuxPassActivityDetail", () => {
       message: "Refiner is writing the cleaned-up file.",
     });
     render(<RefinerFileProcessingProgressDetail detail={detail} />);
-    expect(screen.getByTestId("refiner-processing-progress-detail")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("refiner-processing-progress-detail"),
+    ).toBeInTheDocument();
     expect(screen.getByText("Processing")).toBeInTheDocument();
     expect(screen.getByText("42%")).toBeInTheDocument();
     expect(screen.getByText(/About 1m 11s left/i)).toBeInTheDocument();
-    expect(screen.getByText(/Processing speed 16x realtime/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Processing speed 16x realtime/i),
+    ).toBeInTheDocument();
   });
 
   it("preserves full Refiner speed precision and standardizes realtime units", () => {
-    expect(formatRefinerProcessingSpeed("123.456789x")).toBe("123.456789x realtime");
-    expect(formatRefinerProcessingSpeed(" 0.987654x ")).toBe("0.987654x realtime");
+    expect(formatRefinerProcessingSpeed("123.456789x")).toBe(
+      "123.456789x realtime",
+    );
+    expect(formatRefinerProcessingSpeed(" 0.987654x ")).toBe(
+      "0.987654x realtime",
+    );
     expect(formatRefinerProcessingSpeed("N/A")).toBe("N/A");
   });
 
@@ -79,7 +93,9 @@ describe("RefinerFileRemuxPassActivityDetail", () => {
 
     expect(card).toHaveClass("mm-activity-processing--finished");
     expect(screen.getAllByText("Finished")).toHaveLength(2);
-    expect(screen.getByText("Refiner finished processing this file.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Refiner finished processing this file."),
+    ).toBeInTheDocument();
     expect(screen.getByText("100%")).toBeInTheDocument();
     expect(screen.queryByText(/About 0s left/i)).not.toBeInTheDocument();
   });
@@ -93,8 +109,12 @@ describe("RefinerFileRemuxPassActivityDetail", () => {
     });
     render(<RefinerFileProcessingProgressDetail detail={detail} />);
 
-    expect(screen.getByTestId("refiner-processing-progress-detail")).toHaveClass("mm-activity-processing--failed");
+    expect(
+      screen.getByTestId("refiner-processing-progress-detail"),
+    ).toHaveClass("mm-activity-processing--failed");
     expect(screen.getAllByText("Stopped")).toHaveLength(2);
-    expect(screen.getByText("ffmpeg stopped unexpectedly.")).toBeInTheDocument();
+    expect(
+      screen.getByText("ffmpeg stopped unexpectedly."),
+    ).toBeInTheDocument();
   });
 });

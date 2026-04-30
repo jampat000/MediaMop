@@ -19,8 +19,16 @@ type DevPortsFile = {
   };
 };
 
-const devPortsPath = path.join(__dirname, "..", "..", "scripts", "dev-ports.json");
-const devPorts = JSON.parse(readFileSync(devPortsPath, "utf-8")) as DevPortsFile;
+const devPortsPath = path.join(
+  __dirname,
+  "..",
+  "..",
+  "scripts",
+  "dev-ports.json",
+);
+const devPorts = JSON.parse(
+  readFileSync(devPortsPath, "utf-8"),
+) as DevPortsFile;
 const dev = devPorts.development;
 
 /** ``run-dev-stack.mjs`` may bump the port when the default from ``dev-ports.json`` is busy. */
@@ -37,13 +45,17 @@ const devWebPort = (() => {
 
 function apiProxyTarget(mode: string, envDir: string): string {
   // Takes precedence over .env* (loadEnv) so automation can pin /api to a known backend.
-  const forced = (process.env.MEDIAMOP_SCREENSHOT_API_PROXY_TARGET || "").trim();
+  const forced = (
+    process.env.MEDIAMOP_SCREENSHOT_API_PROXY_TARGET || ""
+  ).trim();
   if (forced) {
     return forced;
   }
   // ``run-dev-stack.mjs`` sets this when the default API port holds an outdated build but a
   // fresh uvicorn is started on another port (see stale Subber route probe).
-  const devStackProxy = (process.env.MEDIAMOP_DEV_STACK_API_PROXY_TARGET || "").trim();
+  const devStackProxy = (
+    process.env.MEDIAMOP_DEV_STACK_API_PROXY_TARGET || ""
+  ).trim();
   if (devStackProxy) {
     return devStackProxy;
   }
@@ -79,6 +91,9 @@ export default defineConfig(({ mode }) => {
       __WEB_PACKAGE_VERSION__: JSON.stringify(packageJson.version),
     },
     plugins: [react()],
+    build: {
+      sourcemap: "hidden",
+    },
     server: {
       // ``true`` = listen on all interfaces (0.0.0.0). Required so **http://localhost:<port>**
       // works on Windows: ``localhost`` often resolves to ``::1`` (IPv6) while binding only

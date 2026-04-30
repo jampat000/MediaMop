@@ -21,7 +21,13 @@ describe("StartupGate", () => {
           ready: false,
           status: "starting",
           startup_seconds: 0.1,
-          steps: [{ name: "database", status: "starting", detail: "Preparing database." }],
+          steps: [
+            {
+              name: "database",
+              status: "starting",
+              detail: "Preparing database.",
+            },
+          ],
         }),
       })),
     );
@@ -60,7 +66,9 @@ describe("StartupGate", () => {
       </StartupGate>,
     );
 
-    await waitFor(() => expect(screen.getByText("App mounted")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("App mounted")).toBeInTheDocument(),
+    );
     expect(screen.queryByText("Starting MediaMop...")).not.toBeInTheDocument();
   });
 });

@@ -22,6 +22,7 @@ from mediamop.platform.auth.bootstrap_status_db import (
     raise_http_for_bootstrap_status_sqlalchemy,
 )
 from mediamop.platform.auth.csrf import (
+    current_raw_session_token,
     issue_csrf_token,
     require_session_secret,
     validate_browser_post_origin,
@@ -49,9 +50,12 @@ def _csrf_from_header_or_body(
 
 
 @router.get("/csrf", response_model=schemas.CsrfOut)
-def get_csrf(settings: SettingsDep) -> schemas.CsrfOut:
+def get_csrf(request: Request, db: DbSessionDep, settings: SettingsDep) -> schemas.CsrfOut:
     secret = require_session_secret(settings)
-    return schemas.CsrfOut(csrf_token=issue_csrf_token(secret))
+    raw_session_token = current_raw_session_token(request, settings)
+    if raw_session_token and auth_service.load_valid_session_for_request(db, raw_session_token, settings) is None:
+        raw_session_token = None
+    return schemas.CsrfOut(csrf_token=issue_csrf_token(secret, raw_session_token))
 
 
 @router.post("/login", response_model=schemas.LoginOut)
@@ -65,7 +69,12 @@ def post_login(
     raise_if_login_rate_limited(request)
     secret = require_session_secret(settings)
     validate_browser_post_origin(request, settings)
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(
+        secret,
+        body.csrf_token,
+        raw_session_token=current_raw_session_token(request, settings),
+        allow_anonymous=True,
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired CSRF token.",
@@ -196,7 +205,7 @@ def post_bootstrap(
     raise_if_bootstrap_rate_limited(request)
     secret = require_session_secret(settings)
     validate_browser_post_origin(request, settings)
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(secret, body.csrf_token, allow_anonymous=True):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired CSRF token.",
@@ -255,7 +264,8 @@ def post_logout(
     secret = require_session_secret(settings)
     validate_browser_post_origin(request, settings)
     token = _csrf_from_header_or_body(x_csrf_token, body.csrf_token if body else None)
-    if not verify_csrf_token(secret, token):
+    raw_session_token = current_raw_session_token(request, settings)
+    if not verify_csrf_token(secret, token, raw_session_token=raw_session_token, allow_anonymous=raw_session_token is None):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired CSRF token.",
@@ -297,7 +307,7 @@ def get_me(current: UserPublicDep) -> schemas.MeOut:
     return schemas.MeOut(user=current)
 
 
-@router.get("/admin/ping")
+@router.get("/admin/ping", include_in_schema=False)
 def admin_ping(_admin: RequireAdminDep) -> dict[str, bool]:
     """Minimal authenticated probe for the admin-only dependency (Phase 6 tests + ops)."""
 
@@ -316,7 +326,7 @@ def post_change_password(
 
     secret = require_session_secret(settings)
     validate_browser_post_origin(request, settings)
-    if not verify_csrf_token(secret, body.csrf_token):
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired CSRF token.",

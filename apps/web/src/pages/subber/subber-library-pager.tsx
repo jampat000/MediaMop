@@ -59,10 +59,14 @@ export function SubberLibraryPager({
           <>No {itemLabel} match the current filters.</>
         ) : (
           <>
-            Showing <span className="font-medium text-[var(--mm-text)]">{start}</span>
+            Showing{" "}
+            <span className="font-medium text-[var(--mm-text)]">{start}</span>
             {"–"}
-            <span className="font-medium text-[var(--mm-text)]">{end}</span> of{" "}
-            <span className="font-medium text-[var(--mm-text)]">{total}</span> {itemLabel}
+            <span className="font-medium text-[var(--mm-text)]">
+              {end}
+            </span> of{" "}
+            <span className="font-medium text-[var(--mm-text)]">{total}</span>{" "}
+            {itemLabel}
           </>
         )}
       </p>

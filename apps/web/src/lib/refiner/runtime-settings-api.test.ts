@@ -3,6 +3,8 @@ import { refinerRuntimeSettingsPath } from "./runtime-settings-api";
 
 describe("refinerRuntimeSettingsPath", () => {
   it("uses Refiner runtime-settings route", () => {
-    expect(refinerRuntimeSettingsPath()).toBe("/api/v1/refiner/runtime-settings");
+    expect(refinerRuntimeSettingsPath()).toBe(
+      "/api/v1/refiner/runtime-settings",
+    );
   });
 });

@@ -6,7 +6,8 @@ const useActivityRecentQuery = vi.fn();
 
 vi.mock("../../lib/activity/queries", () => ({
   activityRecentKey: ["activity", "recent"],
-  useActivityRecentQuery: (...args: unknown[]) => useActivityRecentQuery(...args),
+  useActivityRecentQuery: (...args: unknown[]) =>
+    useActivityRecentQuery(...args),
 }));
 
 vi.mock("../../lib/activity/use-activity-stream-invalidation", () => ({
@@ -60,7 +61,9 @@ describe("ActivityPage", () => {
     expect(screen.getByDisplayValue("All modules")).toBeInTheDocument();
     expect(screen.getByDisplayValue("All events")).toBeInTheDocument();
     expect(screen.getByText("Movies library scan checked")).toBeInTheDocument();
-    expect(screen.getByText("No new movies needed a subtitle scan.")).toBeInTheDocument();
+    expect(
+      screen.getByText("No new movies needed a subtitle scan."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Nothing new found")).toBeInTheDocument();
   });
 
@@ -74,7 +77,9 @@ describe("ActivityPage", () => {
     render(<ActivityPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "Apply filters" }));
-    expect(screen.getByText("No activity matched the current filters.")).toBeInTheDocument();
+    expect(
+      screen.getByText("No activity matched the current filters."),
+    ).toBeInTheDocument();
   });
 
   it("includes system in the module filter", () => {

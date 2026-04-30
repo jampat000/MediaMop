@@ -12,7 +12,15 @@ export const MM_SCHEDULE_TIME_WINDOW_HELPER =
 export const MM_SCHEDULE_DAYS_HELPER =
   "Use a shortcut for common patterns, or tap days to turn them on or off. Every day means this window applies all week.";
 
-export const SCHEDULE_WEEKDAY_TOKENS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+export const SCHEDULE_WEEKDAY_TOKENS = [
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+  "Sun",
+] as const;
 
 export type ScheduleWeekdayToken = (typeof SCHEDULE_WEEKDAY_TOKENS)[number];
 
@@ -27,7 +35,9 @@ export function normalizeScheduleTimeForInput(hhmm: string): string {
   return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
 }
 
-export function daySelectionFromScheduleDaysCsv(csv: string): Set<ScheduleWeekdayToken> {
+export function daySelectionFromScheduleDaysCsv(
+  csv: string,
+): Set<ScheduleWeekdayToken> {
   const raw = csv.trim();
   if (!raw) {
     return new Set(SCHEDULE_WEEKDAY_TOKENS);
@@ -42,7 +52,9 @@ export function daySelectionFromScheduleDaysCsv(csv: string): Set<ScheduleWeekda
   return next.size > 0 ? next : new Set(SCHEDULE_WEEKDAY_TOKENS);
 }
 
-export function scheduleCsvFromDaySelection(selected: Set<ScheduleWeekdayToken>): string {
+export function scheduleCsvFromDaySelection(
+  selected: Set<ScheduleWeekdayToken>,
+): string {
   if (selected.size === 0 || selected.size === SCHEDULE_WEEKDAY_TOKENS.length) {
     return "";
   }
@@ -137,7 +149,9 @@ export function MmScheduleDayChips({
           Clear
         </button>
       </div>
-      <p className="text-xs text-[var(--mm-text3)]">{MM_SCHEDULE_DAYS_HELPER}</p>
+      <p className="text-xs text-[var(--mm-text3)]">
+        {MM_SCHEDULE_DAYS_HELPER}
+      </p>
     </div>
   );
 }
@@ -160,7 +174,9 @@ export function MmScheduleTimeFields({
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       <label className="block text-sm text-[var(--mm-text2)]">
-        <span className="mb-1 block text-xs text-[var(--mm-text3)]">Start time (24-hour)</span>
+        <span className="mb-1 block text-xs text-[var(--mm-text3)]">
+          Start time (24-hour)
+        </span>
         <input
           id={`${idPrefix}-time-start`}
           type="time"
@@ -172,7 +188,9 @@ export function MmScheduleTimeFields({
         />
       </label>
       <label className="block text-sm text-[var(--mm-text2)]">
-        <span className="mb-1 block text-xs text-[var(--mm-text3)]">End time (24-hour)</span>
+        <span className="mb-1 block text-xs text-[var(--mm-text3)]">
+          End time (24-hour)
+        </span>
         <input
           id={`${idPrefix}-time-end`}
           type="time"

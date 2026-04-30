@@ -1,14 +1,35 @@
 import { Link } from "react-router-dom";
 import { PageLoading } from "../../components/shared/page-loading";
-import { activityRecentKey, useActivityRecentQuery } from "../../lib/activity/queries";
+import {
+  activityRecentKey,
+  useActivityRecentQuery,
+} from "../../lib/activity/queries";
 import { useActivityStreamInvalidations } from "../../lib/activity/use-activity-stream-invalidation";
 import type { ActivityEventItem } from "../../lib/api/types";
-import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
-import { dashboardStatusKey, useDashboardStatusQuery } from "../../lib/dashboard/queries";
-import { usePrunerInstancesQuery, usePrunerJobsInspectionQuery, usePrunerOverviewStatsQuery } from "../../lib/pruner/queries";
+import {
+  isHttpErrorFromApi,
+  isLikelyNetworkFailure,
+} from "../../lib/api/error-guards";
+import {
+  dashboardStatusKey,
+  useDashboardStatusQuery,
+} from "../../lib/dashboard/queries";
+import {
+  usePrunerInstancesQuery,
+  usePrunerJobsInspectionQuery,
+  usePrunerOverviewStatsQuery,
+} from "../../lib/pruner/queries";
 import { useRefinerJobsInspectionQuery } from "../../lib/refiner/jobs-inspection/queries";
-import { useRefinerOverviewStatsQuery, useRefinerPathSettingsQuery } from "../../lib/refiner/queries";
-import { useSubberJobsQuery, useSubberOverviewQuery, useSubberProvidersQuery, useSubberSettingsQuery } from "../../lib/subber/subber-queries";
+import {
+  useRefinerOverviewStatsQuery,
+  useRefinerPathSettingsQuery,
+} from "../../lib/refiner/queries";
+import {
+  useSubberJobsQuery,
+  useSubberOverviewQuery,
+  useSubberProvidersQuery,
+  useSubberSettingsQuery,
+} from "../../lib/subber/subber-queries";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
 
@@ -65,15 +86,20 @@ const REFINER_DASHBOARD_JOB_KINDS = new Set([
   "refiner.supplied_payload_evaluation.v1",
 ]);
 
-function shortLastActivity(items: ActivityEventItem[], fmt: (iso: string) => string): string {
+function shortLastActivity(
+  items: ActivityEventItem[],
+  fmt: (iso: string) => string,
+): string {
   if (items.length === 0) return "No recent activity";
   const ev = items[0];
   return `${ev.title} - ${fmt(ev.created_at)}`;
 }
 
 function healthTone(status: ModuleStatus): string {
-  if (status === "Review needed") return "border-amber-400/30 bg-amber-400/10 text-amber-100";
-  if (status === "Active") return "border-sky-400/30 bg-sky-400/10 text-sky-100";
+  if (status === "Review needed")
+    return "border-amber-400/30 bg-amber-400/10 text-amber-100";
+  if (status === "Active")
+    return "border-sky-400/30 bg-sky-400/10 text-sky-100";
   return "border-emerald-500/30 bg-emerald-500/10 text-emerald-100";
 }
 
@@ -109,22 +135,41 @@ function formatPercent(value: number): string {
 
 function describeNetSizeChange(bytes: number, percent: number): string {
   if (!Number.isFinite(bytes) || bytes === 0) return "No net size change";
-  if (Number.isFinite(percent) && (Math.abs(percent) < 0.1 || Math.abs(bytes) < 1024 * 1024)) {
+  if (
+    Number.isFinite(percent) &&
+    (Math.abs(percent) < 0.1 || Math.abs(bytes) < 1024 * 1024)
+  ) {
     return bytes > 0
       ? `Size basically unchanged (${formatBytesCompact(bytes)} saved)`
       : `Size basically unchanged (${formatBytesCompact(Math.abs(bytes))} container overhead)`;
   }
-  if (bytes > 0) return `Saved ${formatBytesCompact(bytes)} (${formatPercent(percent)})`;
+  if (bytes > 0)
+    return `Saved ${formatBytesCompact(bytes)} (${formatPercent(percent)})`;
   return `Grew by ${formatBytesCompact(Math.abs(bytes))} (${formatPercent(Math.abs(percent))})`;
 }
 
-function MetricCard({ label, value, detail }: { label: string; value: string; detail?: string }) {
+function MetricCard({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail?: string;
+}) {
   return (
     <section className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text3)]">{label}</p>
-      <p className="mt-1 text-lg font-semibold text-[var(--mm-text1)]">{value}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+        {label}
+      </p>
+      <p className="mt-1 text-lg font-semibold text-[var(--mm-text1)]">
+        {value}
+      </p>
       {detail ? (
-        <p className="mt-1 truncate text-xs text-[var(--mm-text3)]" title={detail}>
+        <p
+          className="mt-1 truncate text-xs text-[var(--mm-text3)]"
+          title={detail}
+        >
           {detail}
         </p>
       ) : null}
@@ -136,8 +181,14 @@ function ModuleCard({ card }: { card: ModuleCardData }) {
   return (
     <article className="mm-card mm-dash-card flex h-full flex-col gap-4">
       <div className="flex items-start justify-between gap-2">
-        <h2 className="text-lg font-semibold text-[var(--mm-text1)]">{card.name}</h2>
-        <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${healthTone(card.status)}`}>{card.status}</span>
+        <h2 className="text-lg font-semibold text-[var(--mm-text1)]">
+          {card.name}
+        </h2>
+        <span
+          className={`rounded-full border px-2.5 py-1 text-xs font-medium ${healthTone(card.status)}`}
+        >
+          {card.status}
+        </span>
       </div>
       <p className="text-sm leading-6 text-[var(--mm-text2)]">{card.summary}</p>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -146,9 +197,17 @@ function ModuleCard({ card }: { card: ModuleCardData }) {
             key={`${card.key}-${metric.label}`}
             className="rounded-lg border border-[var(--mm-border)] bg-black/10 px-3 py-2.5"
           >
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text3)]">{metric.label}</p>
-            <p className="mt-1 text-base font-semibold text-[var(--mm-text1)]">{metric.value}</p>
-            {metric.detail ? <p className="mt-1 text-xs text-[var(--mm-text3)]">{metric.detail}</p> : null}
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+              {metric.label}
+            </p>
+            <p className="mt-1 text-base font-semibold text-[var(--mm-text1)]">
+              {metric.value}
+            </p>
+            {metric.detail ? (
+              <p className="mt-1 text-xs text-[var(--mm-text3)]">
+                {metric.detail}
+              </p>
+            ) : null}
           </section>
         ))}
       </div>
@@ -158,7 +217,10 @@ function ModuleCard({ card }: { card: ModuleCardData }) {
         ))}
       </div>
       <div className="mt-auto pt-2">
-        <Link to={card.actionTo} className={mmActionButtonClass({ variant: "secondary" })}>
+        <Link
+          to={card.actionTo}
+          className={mmActionButtonClass({ variant: "secondary" })}
+        >
           {card.actionLabel}
         </Link>
       </div>
@@ -189,7 +251,8 @@ function isDashboardVisibleRefinerJob(jobKind: string): boolean {
 function refinerJobTitle(jobKind: string): string {
   if (jobKind === REFINER_FILE_REMUX_PASS_JOB_KIND) return "Process file";
   if (jobKind === "refiner.candidate_gate.v1") return "Check file readiness";
-  if (jobKind === "refiner.supplied_payload_evaluation.v1") return "Check new media";
+  if (jobKind === "refiner.supplied_payload_evaluation.v1")
+    return "Check new media";
   return "Refiner job";
 }
 
@@ -221,7 +284,11 @@ function buildRefinerCard(args: {
   tvFolder: string | null | undefined;
 }): ModuleCardData {
   const attention = !args.movieFolder && !args.tvFolder;
-  const active = args.processed > 0 || args.failed > 0 || args.outputWritten > 0 || args.alreadyOptimized > 0;
+  const active =
+    args.processed > 0 ||
+    args.failed > 0 ||
+    args.outputWritten > 0 ||
+    args.alreadyOptimized > 0;
 
   return {
     key: "refiner",
@@ -235,9 +302,24 @@ function buildRefinerCard(args: {
           ? "Remux activity and watched-folder processing are active."
           : "Ready. No recent remux work recorded.",
     metrics: [
-      { label: "Completed jobs", value: formatCount(args.processed), detail: `Success rate ${formatPercent(args.successRatePercent)}` },
-      { label: "Output written", value: formatCount(args.outputWritten), detail: `No-change files ${formatCount(args.alreadyOptimized)}` },
-      { label: "Net space saved", value: formatBytesCompact(args.netSpaceSavedBytes), detail: describeNetSizeChange(args.netSpaceSavedBytes, args.netSpaceSavedPercent) },
+      {
+        label: "Completed jobs",
+        value: formatCount(args.processed),
+        detail: `Success rate ${formatPercent(args.successRatePercent)}`,
+      },
+      {
+        label: "Output written",
+        value: formatCount(args.outputWritten),
+        detail: `No-change files ${formatCount(args.alreadyOptimized)}`,
+      },
+      {
+        label: "Net space saved",
+        value: formatBytesCompact(args.netSpaceSavedBytes),
+        detail: describeNetSizeChange(
+          args.netSpaceSavedBytes,
+          args.netSpaceSavedPercent,
+        ),
+      },
       { label: "Failures", value: formatCount(args.failed) },
     ],
     facts: [
@@ -259,9 +341,11 @@ function buildPrunerCard(args: {
   failedApplies: number;
 }): ModuleCardData {
   const attention = args.enabledServers === 0 || args.failedApplies > 0;
-  const active = args.previewRuns > 0 || args.applyRuns > 0 || args.itemsRemoved > 0;
+  const active =
+    args.previewRuns > 0 || args.applyRuns > 0 || args.itemsRemoved > 0;
   const reviewedItems = args.itemsRemoved + args.itemsSkipped;
-  const removalRate = reviewedItems > 0 ? (args.itemsRemoved / reviewedItems) * 100.0 : 0;
+  const removalRate =
+    reviewedItems > 0 ? (args.itemsRemoved / reviewedItems) * 100.0 : 0;
 
   return {
     key: "pruner",
@@ -277,9 +361,21 @@ function buildPrunerCard(args: {
             : "Ready. No recent preview or delete work recorded.",
     metrics: [
       { label: "Items removed", value: formatCount(args.itemsRemoved) },
-      { label: "Cleanup runs", value: formatCount(args.applyRuns), detail: `Failed cleanups ${formatCount(args.failedApplies)}` },
-      { label: "Candidates reviewed", value: formatCount(reviewedItems), detail: `Preview runs ${formatCount(args.previewRuns)}` },
-      { label: "Removal rate", value: formatPercent(removalRate), detail: `${formatCount(args.itemsRemoved)} removed - ${formatCount(args.itemsSkipped)} skipped` },
+      {
+        label: "Cleanup runs",
+        value: formatCount(args.applyRuns),
+        detail: `Failed cleanups ${formatCount(args.failedApplies)}`,
+      },
+      {
+        label: "Candidates reviewed",
+        value: formatCount(reviewedItems),
+        detail: `Preview runs ${formatCount(args.previewRuns)}`,
+      },
+      {
+        label: "Removal rate",
+        value: formatPercent(removalRate),
+        detail: `${formatCount(args.itemsRemoved)} removed - ${formatCount(args.itemsSkipped)} skipped`,
+      },
     ],
     facts: [
       `Servers enabled: ${formatCount(args.enabledServers)} of ${formatCount(args.totalServers)}`,
@@ -305,11 +401,16 @@ function buildSubberCard(args: {
   tvMissing: number;
   moviesMissing: number;
 }): ModuleCardData {
-  const attention = !args.sonarrConfigured || !args.radarrConfigured || args.enabledProviders === 0;
+  const attention =
+    !args.sonarrConfigured ||
+    !args.radarrConfigured ||
+    args.enabledProviders === 0;
   const trackedTotal = args.tvTracked + args.moviesTracked;
-  const active = trackedTotal > 0 || args.downloaded > 0 || args.foundRecently > 0;
+  const active =
+    trackedTotal > 0 || args.downloaded > 0 || args.foundRecently > 0;
   const coveredItems = Math.max(0, trackedTotal - args.stillMissing);
-  const coveragePercent = trackedTotal > 0 ? (coveredItems / trackedTotal) * 100.0 : 0;
+  const coveragePercent =
+    trackedTotal > 0 ? (coveredItems / trackedTotal) * 100.0 : 0;
 
   return {
     key: "subber",
@@ -323,8 +424,16 @@ function buildSubberCard(args: {
     metrics: [
       { label: "Downloaded", value: formatCount(args.downloaded) },
       { label: "Still missing", value: formatCount(args.stillMissing) },
-      { label: "Coverage", value: formatPercent(coveragePercent), detail: `${formatCount(coveredItems)} of ${formatCount(trackedTotal)} covered` },
-      { label: "Found recently", value: formatCount(args.foundRecently), detail: `Not found ${formatCount(args.notFoundRecently)} - Upgrades ${formatCount(args.upgradesRecently)}` },
+      {
+        label: "Coverage",
+        value: formatPercent(coveragePercent),
+        detail: `${formatCount(coveredItems)} of ${formatCount(trackedTotal)} covered`,
+      },
+      {
+        label: "Found recently",
+        value: formatCount(args.foundRecently),
+        detail: `Not found ${formatCount(args.notFoundRecently)} - Upgrades ${formatCount(args.upgradesRecently)}`,
+      },
     ],
     facts: [
       `TV missing: ${formatCount(args.tvMissing)} - Movies missing: ${formatCount(args.moviesMissing)}`,
@@ -388,7 +497,8 @@ export function DashboardPage() {
     tvFolder: refinerPaths.data?.refiner_tv_watched_folder,
   });
   const prunerCard = buildPrunerCard({
-    enabledServers: prunerInstances.data?.filter((row) => row.enabled).length ?? 0,
+    enabledServers:
+      prunerInstances.data?.filter((row) => row.enabled).length ?? 0,
     totalServers: prunerInstances.data?.length ?? 0,
     previewRuns: prunerStats.data?.preview_runs ?? 0,
     applyRuns: prunerStats.data?.apply_runs ?? 0,
@@ -397,9 +507,16 @@ export function DashboardPage() {
     failedApplies: prunerStats.data?.failed_applies ?? 0,
   });
   const subberCard = buildSubberCard({
-    sonarrConfigured: Boolean(subberSettings.data?.sonarr_base_url?.trim() && subberSettings.data?.sonarr_api_key_set),
-    radarrConfigured: Boolean(subberSettings.data?.radarr_base_url?.trim() && subberSettings.data?.radarr_api_key_set),
-    enabledProviders: subberProviders.data?.filter((row) => row.enabled).length ?? 0,
+    sonarrConfigured: Boolean(
+      subberSettings.data?.sonarr_base_url?.trim() &&
+      subberSettings.data?.sonarr_api_key_set,
+    ),
+    radarrConfigured: Boolean(
+      subberSettings.data?.radarr_base_url?.trim() &&
+      subberSettings.data?.radarr_api_key_set,
+    ),
+    enabledProviders:
+      subberProviders.data?.filter((row) => row.enabled).length ?? 0,
     providerTotal: subberProviders.data?.length ?? 0,
     tvTracked: subberOverview.data?.tv_tracked ?? 0,
     moviesTracked: subberOverview.data?.movies_tracked ?? 0,
@@ -412,7 +529,9 @@ export function DashboardPage() {
     moviesMissing: subberOverview.data?.movies_missing ?? 0,
   });
 
-  const refinerFileOutcomes = (refinerStats.data?.output_written_count ?? 0) + (refinerStats.data?.already_optimized_count ?? 0);
+  const refinerFileOutcomes =
+    (refinerStats.data?.output_written_count ?? 0) +
+    (refinerStats.data?.already_optimized_count ?? 0);
   const refinerCardForDashboard = {
     ...refinerCard,
     metrics: refinerCard.metrics.map((metric) =>
@@ -430,22 +549,41 @@ export function DashboardPage() {
   };
 
   const moduleCards = [refinerCardForDashboard, prunerCard, subberCard];
-  const modulesNeedingAttentionTotal = moduleCards.filter((m) => m.status === "Review needed").length;
-  const activeModuleCount = moduleCards.filter((m) => m.status === "Active").length;
-  const workerIssues = (dash.data.system.worker_health ?? []).filter((row) => row.status === "degraded");
+  const modulesNeedingAttentionTotal = moduleCards.filter(
+    (m) => m.status === "Review needed",
+  ).length;
+  const activeModuleCount = moduleCards.filter(
+    (m) => m.status === "Active",
+  ).length;
+  const workerIssues = (dash.data.system.worker_health ?? []).filter(
+    (row) => row.status === "degraded",
+  );
   const attentionItems = [
-    ...moduleCards.filter((m) => m.status === "Review needed").map((m) => `${m.name}: ${m.summary}`),
-    ...workerIssues.map((row) => `${row.module[0].toUpperCase()}${row.module.slice(1)} workers: ${row.detail}`),
+    ...moduleCards
+      .filter((m) => m.status === "Review needed")
+      .map((m) => `${m.name}: ${m.summary}`),
+    ...workerIssues.map(
+      (row) =>
+        `${row.module[0].toUpperCase()}${row.module.slice(1)} workers: ${row.detail}`,
+    ),
   ];
-  const activeItems = moduleCards.filter((m) => m.status === "Active").map((m) => `${m.name}: ${m.summary}`);
+  const activeItems = moduleCards
+    .filter((m) => m.status === "Active")
+    .map((m) => `${m.name}: ${m.summary}`);
   const overallStatus =
-    !dash.data.system.healthy || modulesNeedingAttentionTotal > 0 || workerIssues.length > 0
+    !dash.data.system.healthy ||
+    modulesNeedingAttentionTotal > 0 ||
+    workerIssues.length > 0
       ? "Review needed"
       : activeModuleCount > 0
         ? "Active"
         : "Healthy";
-  const moduleAttentionNames = moduleCards.filter((m) => m.status === "Review needed").map((m) => m.name);
-  const workerIssueNames = workerIssues.map((row) => `${row.module[0].toUpperCase()}${row.module.slice(1)} workers`);
+  const moduleAttentionNames = moduleCards
+    .filter((m) => m.status === "Review needed")
+    .map((m) => m.name);
+  const workerIssueNames = workerIssues.map(
+    (row) => `${row.module[0].toUpperCase()}${row.module.slice(1)} workers`,
+  );
   const overallStatusDetail =
     moduleAttentionNames.length > 0 && workerIssueNames.length > 0
       ? `Needs setup: ${moduleAttentionNames.join(", ")}. Worker issues: ${workerIssueNames.join(", ")}.`
@@ -453,23 +591,25 @@ export function DashboardPage() {
         ? `Needs setup: ${moduleAttentionNames.join(", ")}.`
         : workerIssueNames.length > 0
           ? `Worker issues: ${workerIssueNames.join(", ")}.`
-      : activeItems.length > 0
-        ? `Active: ${moduleCards
-            .filter((m) => m.status === "Active")
-            .map((m) => m.name)
-            .join(", ")}.`
-        : "No module or worker issues detected.";
+          : activeItems.length > 0
+            ? `Active: ${moduleCards
+                .filter((m) => m.status === "Active")
+                .map((m) => m.name)
+                .join(", ")}.`
+            : "No module or worker issues detected.";
 
-  const refinerDashboardJobs: DashboardJobRow[] = (refinerJobs.data?.jobs ?? []).filter((job) =>
-    isDashboardVisibleRefinerJob(job.job_kind),
-  );
+  const refinerDashboardJobs: DashboardJobRow[] = (
+    refinerJobs.data?.jobs ?? []
+  ).filter((job) => isDashboardVisibleRefinerJob(job.job_kind));
   const globalJobs: GlobalJobRow[] = [
     ...(refinerDashboardJobs.slice(0, 4).map((job) => ({
       key: `refiner-${job.id}`,
       module: "Refiner",
       status: jobStatusLabel(job.status),
       title: refinerJobTitle(job.job_kind),
-      detail: job.last_error ? job.last_error : `${refinerJobTitle(job.job_kind)} is ${jobStatusLabel(job.status).toLowerCase()}.`,
+      detail: job.last_error
+        ? job.last_error
+        : `${refinerJobTitle(job.job_kind)} is ${jobStatusLabel(job.status).toLowerCase()}.`,
       updatedAt: job.updated_at,
     })) ?? []),
     ...(prunerJobs.data?.jobs.slice(0, 4).map((job) => ({
@@ -477,7 +617,9 @@ export function DashboardPage() {
       module: "Pruner",
       status: jobStatusLabel(job.status),
       title: prunerJobTitle(job.job_kind),
-      detail: job.last_error ? job.last_error : `${prunerJobTitle(job.job_kind)} is ${jobStatusLabel(job.status).toLowerCase()}.`,
+      detail: job.last_error
+        ? job.last_error
+        : `${prunerJobTitle(job.job_kind)} is ${jobStatusLabel(job.status).toLowerCase()}.`,
       updatedAt: job.updated_at,
     })) ?? []),
     ...(subberJobs.data?.jobs.slice(0, 4).map((job) => ({
@@ -485,7 +627,9 @@ export function DashboardPage() {
       module: "Subber",
       status: jobStatusLabel(job.status),
       title: subberJobTitle(job.job_kind),
-      detail: job.last_error ? job.last_error : `${subberJobTitle(job.job_kind)} is ${jobStatusLabel(job.status).toLowerCase()}.`,
+      detail: job.last_error
+        ? job.last_error
+        : `${subberJobTitle(job.job_kind)} is ${jobStatusLabel(job.status).toLowerCase()}.`,
       updatedAt: job.updated_at,
     })) ?? []),
   ]
@@ -496,65 +640,120 @@ export function DashboardPage() {
     <div className="mm-page" data-testid="dashboard-page">
       <header className="mm-page__intro">
         <h1 className="mm-page__title">Dashboard</h1>
-        <p className="mm-page__lead">See what needs attention across MediaMop and what the modules are doing right now.</p>
+        <p className="mm-page__lead">
+          See what needs attention across MediaMop and what the modules are
+          doing right now.
+        </p>
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" data-testid="dashboard-status-strip">
-        <MetricCard label="Overall status" value={overallStatus} detail={overallStatusDetail} />
+      <section
+        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+        data-testid="dashboard-status-strip"
+      >
+        <MetricCard
+          label="Overall status"
+          value={overallStatus}
+          detail={overallStatusDetail}
+        />
         <MetricCard
           label="Modules needing attention"
-          value={modulesNeedingAttentionTotal === 0 ? "None detected" : String(modulesNeedingAttentionTotal)}
+          value={
+            modulesNeedingAttentionTotal === 0
+              ? "None detected"
+              : String(modulesNeedingAttentionTotal)
+          }
         />
-        <MetricCard label="Active modules" value={activeModuleCount === 0 ? "None" : String(activeModuleCount)} />
-        <MetricCard label="Last activity" value={shortLastActivity(recentItems, fmt)} />
+        <MetricCard
+          label="Active modules"
+          value={activeModuleCount === 0 ? "None" : String(activeModuleCount)}
+        />
+        <MetricCard
+          label="Last activity"
+          value={shortLastActivity(recentItems, fmt)}
+        />
       </section>
 
-      <section className="mt-5 grid gap-4 xl:grid-cols-3" data-testid="dashboard-module-cards">
+      <section
+        className="mt-5 grid gap-4 xl:grid-cols-3"
+        data-testid="dashboard-module-cards"
+      >
         {moduleCards.map((card) => (
           <ModuleCard key={card.key} card={card} />
         ))}
       </section>
 
       <section className="mt-6 grid gap-4 xl:grid-cols-2">
-        <article className="mm-card mm-dash-card" data-testid="dashboard-needs-attention">
+        <article
+          className="mm-card mm-dash-card"
+          data-testid="dashboard-needs-attention"
+        >
           <h2 className="mm-card__title">Needs attention</h2>
           <div className="mm-card__body space-y-2 text-sm text-[var(--mm-text2)]">
-            {attentionItems.length > 0 ? attentionItems.map((line) => <p key={line}>{line}</p>) : <p>Nothing needs attention right now.</p>}
+            {attentionItems.length > 0 ? (
+              attentionItems.map((line) => <p key={line}>{line}</p>)
+            ) : (
+              <p>Nothing needs attention right now.</p>
+            )}
           </div>
         </article>
-        <article className="mm-card mm-dash-card" data-testid="dashboard-active-work">
+        <article
+          className="mm-card mm-dash-card"
+          data-testid="dashboard-active-work"
+        >
           <h2 className="mm-card__title">Active work</h2>
           <div className="mm-card__body space-y-2 text-sm text-[var(--mm-text2)]">
-            {activeItems.length > 0 ? activeItems.map((line) => <p key={line}>{line}</p>) : <p>No modules are actively processing right now.</p>}
+            {activeItems.length > 0 ? (
+              activeItems.map((line) => <p key={line}>{line}</p>)
+            ) : (
+              <p>No modules are actively processing right now.</p>
+            )}
           </div>
         </article>
       </section>
 
-      <section className="mm-card mm-dash-card mt-6" data-testid="dashboard-global-jobs">
+      <section
+        className="mm-card mm-dash-card mt-6"
+        data-testid="dashboard-global-jobs"
+      >
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="mm-card__title">Global jobs</h2>
-            <p className="mt-1 text-sm text-[var(--mm-text2)]">Recent background work across Refiner, Pruner, and Subber.</p>
+            <p className="mt-1 text-sm text-[var(--mm-text2)]">
+              Recent background work across Refiner, Pruner, and Subber.
+            </p>
           </div>
         </div>
         <div className="mm-card__body space-y-3">
           {globalJobs.length === 0 ? (
-            <p className="text-sm text-[var(--mm-text2)]">No recent jobs are recorded.</p>
+            <p className="text-sm text-[var(--mm-text2)]">
+              No recent jobs are recorded.
+            </p>
           ) : (
             globalJobs.map((job) => (
-              <article key={job.key} className="rounded-lg border border-[var(--mm-border)] bg-black/10 p-3">
+              <article
+                key={job.key}
+                className="rounded-lg border border-[var(--mm-border)] bg-black/10 p-3"
+              >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-gold)]">{job.module}</span>
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-gold)]">
+                        {job.module}
+                      </span>
                       <span className="rounded-full border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-2 py-0.5 text-xs text-[var(--mm-text2)]">
                         {job.status}
                       </span>
                     </div>
-                    <h3 className="text-sm font-semibold text-[var(--mm-text1)]">{job.title}</h3>
-                    <p className="text-sm text-[var(--mm-text2)]">{job.detail}</p>
+                    <h3 className="text-sm font-semibold text-[var(--mm-text1)]">
+                      {job.title}
+                    </h3>
+                    <p className="text-sm text-[var(--mm-text2)]">
+                      {job.detail}
+                    </p>
                   </div>
-                  <time className="text-sm text-[var(--mm-text3)]">{fmt(job.updatedAt)}</time>
+                  <time className="text-sm text-[var(--mm-text3)]">
+                    {fmt(job.updatedAt)}
+                  </time>
                 </div>
               </article>
             ))

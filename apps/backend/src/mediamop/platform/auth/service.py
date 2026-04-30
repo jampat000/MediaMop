@@ -14,7 +14,12 @@ from sqlalchemy.orm import Session
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.datetime_util import as_utc
 from mediamop.platform.auth.models import User, UserSession
-from mediamop.platform.auth.password import hash_password, validate_password_strength, verify_password
+from mediamop.platform.auth.password import (
+    DUMMY_PASSWORD_HASH,
+    hash_password,
+    validate_password_strength,
+    verify_password,
+)
 from mediamop.platform.auth.sessions import (
     compute_absolute_expiry,
     generate_raw_session_token,
@@ -33,6 +38,7 @@ def authenticate_user(db: Session, username: str, password: str) -> User | None:
     stmt = select(User).where(User.username == username)
     user = db.scalars(stmt).first()
     if user is None or not user.is_active:
+        verify_password(password, DUMMY_PASSWORD_HASH)
         return None
     if not verify_password(password, user.password_hash):
         return None

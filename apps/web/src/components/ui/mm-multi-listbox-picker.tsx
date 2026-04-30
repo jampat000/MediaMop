@@ -17,7 +17,11 @@ function useCloseOnOutsideAndEscape(
     }
     const onPointerDown = (event: MouseEvent) => {
       const target = event.target as Node | null;
-      if (containerRef.current && target && !containerRef.current.contains(target)) {
+      if (
+        containerRef.current &&
+        target &&
+        !containerRef.current.contains(target)
+      ) {
         setOpen(false);
       }
     };
@@ -68,9 +72,15 @@ export function MmMultiListboxPicker({
   useCloseOnOutsideAndEscape(open, setOpen, containerRef);
 
   const selectedSet = new Set(values);
-  const selectedLabels = options.filter((o) => selectedSet.has(o.value)).map((o) => o.label);
+  const selectedLabels = options
+    .filter((o) => selectedSet.has(o.value))
+    .map((o) => o.label);
   const triggerLabel =
-    summaryText !== undefined ? summaryText : selectedLabels.length > 0 ? selectedLabels.join(", ") : placeholder;
+    summaryText !== undefined
+      ? summaryText
+      : selectedLabels.length > 0
+        ? selectedLabels.join(", ")
+        : placeholder;
   const triggerSurface = [
     mmPickerTriggerClass,
     "flex min-h-[2.5rem] items-center justify-between gap-2",
@@ -82,7 +92,10 @@ export function MmMultiListboxPicker({
     .join(" ");
 
   return (
-    <div ref={containerRef} className={["relative", className].filter(Boolean).join(" ")}>
+    <div
+      ref={containerRef}
+      className={["relative", className].filter(Boolean).join(" ")}
+    >
       <button
         type="button"
         className={triggerSurface}
@@ -99,12 +112,15 @@ export function MmMultiListboxPicker({
           }
         }}
       >
-        <span className="min-w-0 flex-1 truncate text-left">{triggerLabel}</span>
+        <span className="min-w-0 flex-1 truncate text-left">
+          {triggerLabel}
+        </span>
         <svg
           aria-hidden
-          className={["h-4 w-4 shrink-0 text-[var(--mm-text3)] transition-transform", open ? "rotate-180" : ""].join(
-            " ",
-          )}
+          className={[
+            "h-4 w-4 shrink-0 text-[var(--mm-text3)] transition-transform",
+            open ? "rotate-180" : "",
+          ].join(" ")}
           viewBox="0 0 20 20"
           fill="currentColor"
         >
@@ -112,7 +128,12 @@ export function MmMultiListboxPicker({
         </svg>
       </button>
       {open ? (
-        <div id={listboxId} className={mmListboxPanelClass} role="listbox" aria-multiselectable="true">
+        <div
+          id={listboxId}
+          className={mmListboxPanelClass}
+          role="listbox"
+          aria-multiselectable="true"
+        >
           {options.map((opt) => {
             const checked = selectedSet.has(opt.value);
             return (
@@ -134,11 +155,19 @@ export function MmMultiListboxPicker({
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  const next = checked ? values.filter((v) => v !== opt.value) : [...values, opt.value];
+                  const next = checked
+                    ? values.filter((v) => v !== opt.value)
+                    : [...values, opt.value];
                   onChange(next);
                 }}
               >
-                <input type="checkbox" readOnly checked={checked} className={mmCheckboxControlClass} tabIndex={-1} />
+                <input
+                  type="checkbox"
+                  readOnly
+                  checked={checked}
+                  className={mmCheckboxControlClass}
+                  tabIndex={-1}
+                />
                 <span>{opt.label}</span>
               </button>
             );

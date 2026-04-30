@@ -37,6 +37,7 @@ from mediamop.platform.activity import constants as act_c
 from mediamop.platform.activity.service import record_activity_event
 from mediamop.platform.auth.authorization import RequireOperatorDep
 from mediamop.platform.auth.csrf import (
+    current_raw_session_token,
     require_session_secret,
     validate_browser_post_origin,
     verify_csrf_token,
@@ -58,7 +59,7 @@ class ArrSearchLaneKey(str, Enum):
 def _verify_csrf(request: Request, settings: MediaMopSettings, token: str) -> None:
     validate_browser_post_origin(request, settings)
     secret = require_session_secret(settings)
-    if not verify_csrf_token(secret, token):
+    if not verify_csrf_token(secret, token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired CSRF token.",

@@ -11,3 +11,11 @@ FFmpeg is a third-party project and is not owned by MediaMop. FFmpeg licensing d
 - Project: https://ffmpeg.org/
 - Windows build source: https://github.com/BtbN/FFmpeg-Builds
 - License information: https://ffmpeg.org/legal.html
+
+## Outfit font
+
+The web app bundles the Outfit typeface locally via the `@fontsource/outfit` package. Outfit is distributed under the SIL Open Font License 1.1.
+
+- Project: https://github.com/Outfitio/Outfit-Fonts
+- Package source: https://www.npmjs.com/package/@fontsource/outfit
+- License: https://openfontlicense.org/

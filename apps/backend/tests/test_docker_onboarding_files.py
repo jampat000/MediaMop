@@ -30,3 +30,10 @@ def test_docker_entrypoint_generates_persistent_session_secret() -> None:
     assert "session.secret" in entrypoint
     assert "export MEDIAMOP_SESSION_SECRET" in entrypoint
     assert "must be at least 32 characters" in entrypoint
+
+
+def test_dockerfile_runs_as_non_root_user() -> None:
+    dockerfile = (REPO_ROOT / "Dockerfile").read_text(encoding="utf-8")
+
+    assert "useradd --system --uid 1000" in dockerfile
+    assert "USER mediamop" in dockerfile

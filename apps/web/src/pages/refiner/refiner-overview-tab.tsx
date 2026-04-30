@@ -9,7 +9,10 @@ import {
   MmStatTileRow,
 } from "../../components/overview/mm-overview-cards";
 import { PageLoading } from "../../components/shared/page-loading";
-import { isHttpErrorFromApi, isLikelyNetworkFailure } from "../../lib/api/error-guards";
+import {
+  isHttpErrorFromApi,
+  isLikelyNetworkFailure,
+} from "../../lib/api/error-guards";
 import { useRefinerJobsInspectionQuery } from "../../lib/refiner/jobs-inspection/queries";
 import {
   useRefinerOperatorSettingsQuery,
@@ -21,9 +24,15 @@ import { refinerStreamLanguageLabel } from "../../lib/refiner/stream-language-op
 import type { RefinerRemuxRulesScopeSettings } from "../../lib/refiner/types";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 
-export type RefinerOverviewOpenTab = "libraries" | "audio-subtitles" | "jobs" | "schedules";
+export type RefinerOverviewOpenTab =
+  | "libraries"
+  | "audio-subtitles"
+  | "jobs"
+  | "schedules";
 
-function remuxDefaultsGlanceBody(rem: RefinerRemuxRulesScopeSettings): ReactNode {
+function remuxDefaultsGlanceBody(
+  rem: RefinerRemuxRulesScopeSettings,
+): ReactNode {
   const pri = refinerStreamLanguageLabel(rem.primary_audio_lang);
   const sec = (rem.secondary_audio_lang ?? "").trim()
     ? refinerStreamLanguageLabel(rem.secondary_audio_lang)
@@ -64,7 +73,10 @@ function remuxDefaultsGlanceBody(rem: RefinerRemuxRulesScopeSettings): ReactNode
   );
 }
 
-function buildNeedsAttention(args: { failedCount: number; watchedSet: boolean }): { text: string; target?: RefinerOverviewOpenTab }[] {
+function buildNeedsAttention(args: {
+  failedCount: number;
+  watchedSet: boolean;
+}): { text: string; target?: RefinerOverviewOpenTab }[] {
   const items: { text: string; target?: RefinerOverviewOpenTab }[] = [];
   if (args.failedCount > 0) {
     items.push({
@@ -101,7 +113,12 @@ function tabActionLabel(id: RefinerOverviewOpenTab): string {
   }
 }
 
-const NEEDS_ATTENTION_ORDER: RefinerOverviewOpenTab[] = ["libraries", "audio-subtitles", "schedules", "jobs"];
+const NEEDS_ATTENTION_ORDER: RefinerOverviewOpenTab[] = [
+  "libraries",
+  "audio-subtitles",
+  "schedules",
+  "jobs",
+];
 
 function RefinerOverviewNeedsAttention({
   items,
@@ -110,7 +127,9 @@ function RefinerOverviewNeedsAttention({
   items: { text: string; target?: RefinerOverviewOpenTab }[];
   onOpenTab?: (t: RefinerOverviewOpenTab) => void;
 }) {
-  const actionTargets = NEEDS_ATTENTION_ORDER.filter((t) => items.some((row) => row.target === t));
+  const actionTargets = NEEDS_ATTENTION_ORDER.filter((t) =>
+    items.some((row) => row.target === t),
+  );
 
   return (
     <MmOverviewSection
@@ -170,7 +189,11 @@ export function RefinerOverviewTab({
   const leased = useRefinerJobsInspectionQuery("leased");
   const failed = useRefinerJobsInspectionQuery("failed");
 
-  const blocking = pathSettings.isError ? pathSettings.error : operatorSettings.isError ? operatorSettings.error : null;
+  const blocking = pathSettings.isError
+    ? pathSettings.error
+    : operatorSettings.isError
+      ? operatorSettings.error
+      : null;
 
   if (blocking) {
     return <RefinerOverviewLoadError err={blocking} />;
@@ -187,9 +210,15 @@ export function RefinerOverviewTab({
   const watchedSet =
     Boolean((pathSettings.data.refiner_watched_folder ?? "").trim()) ||
     Boolean((pathSettings.data.refiner_tv_watched_folder ?? "").trim());
-  const outputSet = Boolean((pathSettings.data.refiner_output_folder ?? "").trim());
-  const tvWatchedSet = Boolean((pathSettings.data.refiner_tv_watched_folder ?? "").trim());
-  const tvOutputSet = Boolean((pathSettings.data.refiner_tv_output_folder ?? "").trim());
+  const outputSet = Boolean(
+    (pathSettings.data.refiner_output_folder ?? "").trim(),
+  );
+  const tvWatchedSet = Boolean(
+    (pathSettings.data.refiner_tv_watched_folder ?? "").trim(),
+  );
+  const tvOutputSet = Boolean(
+    (pathSettings.data.refiner_tv_output_folder ?? "").trim(),
+  );
 
   const pendingN = pending.data?.jobs.length ?? 0;
   const leasedN = leased.data?.jobs.length ?? 0;
@@ -197,17 +226,24 @@ export function RefinerOverviewTab({
   const failedReady = !failed.isPending && !failed.isError;
 
   const workerBody = (
-      <div className="space-y-3 lg:space-y-3.5">
-        <p className="font-medium text-[var(--mm-text1)]">
-          Up to {operatorSettings.data.max_concurrent_files} file
-          {operatorSettings.data.max_concurrent_files === 1 ? "" : "s"} at once
-        </p>
-        <div className="space-y-2 text-xs leading-relaxed text-[var(--mm-text3)] lg:space-y-2.5 lg:text-sm">
+    <div className="space-y-3 lg:space-y-3.5">
+      <p className="font-medium text-[var(--mm-text1)]">
+        Up to {operatorSettings.data.max_concurrent_files} file
+        {operatorSettings.data.max_concurrent_files === 1 ? "" : "s"} at once
+      </p>
+      <div className="space-y-2 text-xs leading-relaxed text-[var(--mm-text3)] lg:space-y-2.5 lg:text-sm">
         <p>
-          <span className="font-medium text-[var(--mm-text2)]">Folder checks:</span> TV every{" "}
-          {pathSettings.data.tv_watched_folder_check_interval_seconds}s · Movies every{" "}
-          {pathSettings.data.movie_watched_folder_check_interval_seconds}s (under Libraries). Files must sit unchanged at
-          least {operatorSettings.data.min_file_age_seconds}s before watched-folder scans enqueue them. The same minimum also applies when TV season cleanup checks episodes Refiner never finished and Sonarr is not tracking in its queue.
+          <span className="font-medium text-[var(--mm-text2)]">
+            Folder checks:
+          </span>{" "}
+          TV every {pathSettings.data.tv_watched_folder_check_interval_seconds}s
+          · Movies every{" "}
+          {pathSettings.data.movie_watched_folder_check_interval_seconds}s
+          (under Libraries). Files must sit unchanged at least{" "}
+          {operatorSettings.data.min_file_age_seconds}s before watched-folder
+          scans enqueue them. The same minimum also applies when TV season
+          cleanup checks episodes Refiner never finished and Sonarr is not
+          tracking in its queue.
         </p>
       </div>
     </div>
@@ -216,27 +252,39 @@ export function RefinerOverviewTab({
   const foldersBody = (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-6">
       <div className="min-w-0 space-y-2">
-        <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">TV</p>
-        <p>
-          <span className="text-[var(--mm-text3)]">Watched · </span>
-          <span className="font-medium text-[var(--mm-text1)]">{tvWatchedSet ? "Set" : "Not set"}</span>
+        <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+          TV
         </p>
-        <p>
-          <span className="text-[var(--mm-text3)]">Output · </span>
-          <span className="font-medium text-[var(--mm-text1)]">{tvOutputSet ? "Set" : "Not set"}</span>
-        </p>
-      </div>
-      <div className="min-w-0 space-y-2">
-        <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">Movies</p>
         <p>
           <span className="text-[var(--mm-text3)]">Watched · </span>
           <span className="font-medium text-[var(--mm-text1)]">
-            {(pathSettings.data.refiner_watched_folder ?? "").trim() ? "Set" : "Not set"}
+            {tvWatchedSet ? "Set" : "Not set"}
           </span>
         </p>
         <p>
           <span className="text-[var(--mm-text3)]">Output · </span>
-          <span className="font-medium text-[var(--mm-text1)]">{outputSet ? "Set" : "Not set"}</span>
+          <span className="font-medium text-[var(--mm-text1)]">
+            {tvOutputSet ? "Set" : "Not set"}
+          </span>
+        </p>
+      </div>
+      <div className="min-w-0 space-y-2">
+        <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+          Movies
+        </p>
+        <p>
+          <span className="text-[var(--mm-text3)]">Watched · </span>
+          <span className="font-medium text-[var(--mm-text1)]">
+            {(pathSettings.data.refiner_watched_folder ?? "").trim()
+              ? "Set"
+              : "Not set"}
+          </span>
+        </p>
+        <p>
+          <span className="text-[var(--mm-text3)]">Output · </span>
+          <span className="font-medium text-[var(--mm-text1)]">
+            {outputSet ? "Set" : "Not set"}
+          </span>
         </p>
       </div>
     </div>
@@ -246,11 +294,15 @@ export function RefinerOverviewTab({
     <div className="space-y-1.5">
       <p>
         <span className="text-[var(--mm-text3)]">Waiting:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">{pendingN === 0 ? "None" : `${pendingN} job(s)`}</span>
+        <span className="font-medium text-[var(--mm-text1)]">
+          {pendingN === 0 ? "None" : `${pendingN} job(s)`}
+        </span>
       </p>
       <p>
         <span className="text-[var(--mm-text3)]">Running:</span>{" "}
-        <span className="font-medium text-[var(--mm-text1)]">{leasedN === 0 ? "None" : `${leasedN} job(s)`}</span>
+        <span className="font-medium text-[var(--mm-text1)]">
+          {leasedN === 0 ? "None" : `${leasedN} job(s)`}
+        </span>
       </p>
       <p>
         <span className="text-[var(--mm-text3)]">Failed list:</span>{" "}
@@ -267,41 +319,50 @@ export function RefinerOverviewTab({
     </div>
   );
 
-
-  const remuxBody =
-    remuxRules.isPending ? (
-      <p className="text-[var(--mm-text3)]">Loading…</p>
-    ) : remuxRules.isError ? (
-      <p className="text-[var(--mm-text3)]">Could not load defaults.</p>
-    ) : remuxRules.data ? (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-5 lg:gap-x-6 lg:gap-y-1">
-        <div className="min-w-0 space-y-2 lg:space-y-2.5">
-          <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)] lg:text-xs">TV</p>
-          {remuxDefaultsGlanceBody(remuxRules.data.tv)}
-        </div>
-        <div className="min-w-0 space-y-2 lg:space-y-2.5">
-          <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)] lg:text-xs">
-            Movies
-          </p>
-          {remuxDefaultsGlanceBody(remuxRules.data.movie)}
-        </div>
+  const remuxBody = remuxRules.isPending ? (
+    <p className="text-[var(--mm-text3)]">Loading…</p>
+  ) : remuxRules.isError ? (
+    <p className="text-[var(--mm-text3)]">Could not load defaults.</p>
+  ) : remuxRules.data ? (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-5 lg:gap-x-6 lg:gap-y-1">
+      <div className="min-w-0 space-y-2 lg:space-y-2.5">
+        <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)] lg:text-xs">
+          TV
+        </p>
+        {remuxDefaultsGlanceBody(remuxRules.data.tv)}
       </div>
-    ) : (
-      <p className="text-[var(--mm-text3)]">—</p>
-    );
+      <div className="min-w-0 space-y-2 lg:space-y-2.5">
+        <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)] lg:text-xs">
+          Movies
+        </p>
+        {remuxDefaultsGlanceBody(remuxRules.data.movie)}
+      </div>
+    </div>
+  ) : (
+    <p className="text-[var(--mm-text3)]">—</p>
+  );
   const statsBody =
     overviewStats.isPending || overviewStats.isError || !overviewStats.data ? (
       <p className="text-[var(--mm-text3)]">Loading…</p>
     ) : (
       <div>
         <MmStatTileRow>
-          <MmStatTile label="Completed jobs" value={overviewStats.data.files_processed} />
-          <MmStatTile label="Failed jobs" value={overviewStats.data.files_failed} />
-          <MmStatTile label="Success" value={`${overviewStats.data.success_rate_percent}%`} />
+          <MmStatTile
+            label="Completed jobs"
+            value={overviewStats.data.files_processed}
+          />
+          <MmStatTile
+            label="Failed jobs"
+            value={overviewStats.data.files_failed}
+          />
+          <MmStatTile
+            label="Success"
+            value={`${overviewStats.data.success_rate_percent}%`}
+          />
         </MmStatTileRow>
         <MmStatCaption>
-          Counts completed and terminal-failed remux jobs in the overview window. Success rate = completed / (completed +
-          failed).
+          Counts completed and terminal-failed remux jobs in the overview
+          window. Success rate = completed / (completed + failed).
         </MmStatCaption>
       </div>
     );
@@ -312,7 +373,10 @@ export function RefinerOverviewTab({
   });
 
   return (
-    <div data-testid="refiner-overview-panel" className="mm-bubble-stack w-full min-w-0">
+    <div
+      data-testid="refiner-overview-panel"
+      className="mm-bubble-stack w-full min-w-0"
+    >
       <MmOverviewSection
         headingId="refiner-overview-at-a-glance-heading"
         heading="At a glance"
@@ -327,8 +391,18 @@ export function RefinerOverviewTab({
             data-testid="refiner-overview-last-30-days"
             gridClassName="lg:col-span-4"
           />
-          <MmAtGlanceCard glanceOrder="2" title="Libraries" body={foldersBody} gridClassName="lg:col-span-4" />
-          <MmAtGlanceCard glanceOrder="3" title="Job queue" body={queueBody} gridClassName="lg:col-span-4" />
+          <MmAtGlanceCard
+            glanceOrder="2"
+            title="Libraries"
+            body={foldersBody}
+            gridClassName="lg:col-span-4"
+          />
+          <MmAtGlanceCard
+            glanceOrder="3"
+            title="Job queue"
+            body={queueBody}
+            gridClassName="lg:col-span-4"
+          />
           <MmAtGlanceCard
             glanceOrder="4"
             title="Throughput & safety"
@@ -337,7 +411,11 @@ export function RefinerOverviewTab({
             size="large"
             footer={
               onOpenTab ? (
-                <button type="button" className={mmActionButtonClass({ variant: "secondary" })} onClick={() => onOpenTab("schedules")}>
+                <button
+                  type="button"
+                  className={mmActionButtonClass({ variant: "secondary" })}
+                  onClick={() => onOpenTab("schedules")}
+                >
                   Open Schedules
                 </button>
               ) : undefined
@@ -365,7 +443,10 @@ export function RefinerOverviewTab({
         </MmAtGlanceGrid>
       </MmOverviewSection>
 
-      <RefinerOverviewNeedsAttention items={attentionItems} onOpenTab={onOpenTab} />
+      <RefinerOverviewNeedsAttention
+        items={attentionItems}
+        onOpenTab={onOpenTab}
+      />
 
       <MmOverviewSection
         headingId="refiner-overview-next-heading"
@@ -374,12 +455,18 @@ export function RefinerOverviewTab({
       >
         <div className="mm-bubble-stack">
           <p className="leading-relaxed">
-            Finished work is summarized on Activity. Use Libraries for paths, folder timers, and minimum file age. Use Schedules for optional hour
-            limits and to run library scans on demand. Use Audio & subtitles for defaults, and Jobs for the queue on this server.
+            Finished work is summarized on Activity. Use Libraries for paths,
+            folder timers, and minimum file age. Use Schedules for optional hour
+            limits and to run library scans on demand. Use Audio & subtitles for
+            defaults, and Jobs for the queue on this server.
           </p>
           {onOpenTab ? (
             <div className="flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">
-              <button type="button" className={mmActionButtonClass({ variant: "secondary" })} onClick={() => onOpenTab("libraries")}>
+              <button
+                type="button"
+                className={mmActionButtonClass({ variant: "secondary" })}
+                onClick={() => onOpenTab("libraries")}
+              >
                 Libraries
               </button>
               <button
@@ -389,10 +476,18 @@ export function RefinerOverviewTab({
               >
                 Audio & subtitles
               </button>
-              <button type="button" className={mmActionButtonClass({ variant: "secondary" })} onClick={() => onOpenTab("schedules")}>
+              <button
+                type="button"
+                className={mmActionButtonClass({ variant: "secondary" })}
+                onClick={() => onOpenTab("schedules")}
+              >
                 Schedules
               </button>
-              <button type="button" className={mmActionButtonClass({ variant: "secondary" })} onClick={() => onOpenTab("jobs")}>
+              <button
+                type="button"
+                className={mmActionButtonClass({ variant: "secondary" })}
+                onClick={() => onOpenTab("jobs")}
+              >
                 Jobs
               </button>
             </div>

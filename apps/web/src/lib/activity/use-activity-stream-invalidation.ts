@@ -41,7 +41,9 @@ function ensureActivityStream(): EventSource | null {
   return source;
 }
 
-function subscribeActivityLatest(subscriber: ActivityLatestSubscriber): () => void {
+function subscribeActivityLatest(
+  subscriber: ActivityLatestSubscriber,
+): () => void {
   subscribers.add(subscriber);
   ensureActivityStream();
 
@@ -64,7 +66,9 @@ export function useActivityStreamInvalidation(queryKey: QueryKey): void {
   }, [qc, queryKey]);
 }
 
-export function useActivityStreamInvalidations(queryKeys: readonly QueryKey[]): void {
+export function useActivityStreamInvalidations(
+  queryKeys: readonly QueryKey[],
+): void {
   const qc = useQueryClient();
 
   useEffect(() => {

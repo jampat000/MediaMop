@@ -10,8 +10,11 @@ export function AppProviders({ children }: { children: ReactNode }) {
         defaultOptions: {
           queries: {
             staleTime: 30_000,
-            retry: false,
+            retry: 1,
             refetchOnWindowFocus: true,
+          },
+          mutations: {
+            retry: false,
           },
         },
       }),
@@ -21,7 +24,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
       client.setQueryData(qk.me, null);
       void client.cancelQueries({ queryKey: qk.me });
       if (window.location.pathname.startsWith("/app")) {
-        window.location.assign("/login?session=expired");
+        window.history.replaceState(null, "", "/login?session=expired");
+        window.dispatchEvent(new PopStateEvent("popstate"));
       }
     });
     return () => setUnauthorizedHandler(null);

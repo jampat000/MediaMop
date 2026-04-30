@@ -88,11 +88,13 @@ def test_windows_installer_installs_dedicated_upgrade_task() -> None:
     assert "procedure InstallUpgradeTask()" in text
     assert '/TN "MediaMop Upgrade"' in text
     assert "/RL HIGHEST" in text
+    assert '/RU "' not in text
     assert "MediaMopUpgrade.ps1" in text
     assert 'Filename: "{sys}\\schtasks.exe"; Parameters: "/Delete /TN ""MediaMop Upgrade"" /F"' in text
     assert "https://api.github.com/repos/jampat000/MediaMop/releases/latest" in script_text
     assert "MediaMopSetup.exe" in script_text
     assert "/CLOSEAPPLICATIONS" in script_text
+    assert "WaitForMediaMopProcessesToExit" in text
 
 
 def test_windows_package_uses_dedicated_tray_icon_assets() -> None:
@@ -120,7 +122,9 @@ def test_windows_package_includes_ffmpeg_runtime_assets() -> None:
     assert 'FFMPEG_VENDOR = ROOT / "packaging" / "windows" / "vendor" / "ffmpeg"' in spec_text
     assert '(str(FFMPEG_VENDOR), "bin/ffmpeg")' in spec_text
     assert "Ensure-WindowsFfmpegRuntime" in build_text
-    assert "ffmpeg-master-latest-win64-lgpl.zip" in build_text
+    assert "autobuild-2026-04-29-13-28" in build_text
+    assert "ffmpeg-N-124254-g397c7c7524-win64-lgpl.zip" in build_text
+    assert "Get-FileHash" in build_text
 
 
 def test_packaged_server_binds_to_lan_interfaces() -> None:

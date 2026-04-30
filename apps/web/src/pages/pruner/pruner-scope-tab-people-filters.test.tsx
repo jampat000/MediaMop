@@ -83,15 +83,23 @@ const jf: PrunerServerInstance = {
 
 describe("PrunerScopeTab people filters", () => {
   it("saves preview_include_people via scope PATCH and shows Jellyfin note", async () => {
-    const csrfSpy = vi.spyOn(authApi, "fetchCsrfToken").mockResolvedValue("csrf-test");
-    const spyRuns = vi.spyOn(prunerApi, "fetchPrunerPreviewRuns").mockResolvedValue([]);
-    const spyInst = vi.spyOn(prunerApi, "fetchPrunerInstance").mockResolvedValue(jf);
+    const csrfSpy = vi
+      .spyOn(authApi, "fetchCsrfToken")
+      .mockResolvedValue("csrf-test");
+    const spyRuns = vi
+      .spyOn(prunerApi, "fetchPrunerPreviewRuns")
+      .mockResolvedValue([]);
+    const spyInst = vi
+      .spyOn(prunerApi, "fetchPrunerInstance")
+      .mockResolvedValue(jf);
     const spyPatch = vi.spyOn(prunerApi, "patchPrunerScope").mockResolvedValue({
       ...jf.scopes[0],
       preview_include_people: ["Ada Lovelace", "Grace Hopper"],
     });
     try {
-      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const qc = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
       qc.setQueryData(qk.me, operator);
       qc.setQueryData(["pruner", "instances", 61], jf);
 
@@ -112,12 +120,24 @@ describe("PrunerScopeTab people filters", () => {
         </QueryClientProvider>,
       );
 
-      await waitFor(() => expect(screen.getByTestId("pruner-people-filters-panel")).toBeInTheDocument());
-      expect(screen.getByTestId("pruner-people-jf-emby-note")).toBeInTheDocument();
-      expect(screen.queryByTestId("pruner-people-plex-note")).not.toBeInTheDocument();
+      await waitFor(() =>
+        expect(
+          screen.getByTestId("pruner-people-filters-panel"),
+        ).toBeInTheDocument(),
+      );
+      expect(
+        screen.getByTestId("pruner-people-jf-emby-note"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("pruner-people-plex-note"),
+      ).not.toBeInTheDocument();
       const input = screen.getByPlaceholderText(/Alex Carter/i);
-      fireEvent.change(input, { target: { value: "Ada Lovelace, Grace Hopper" } });
-      fireEvent.click(screen.getByRole("button", { name: /save people filters/i }));
+      fireEvent.change(input, {
+        target: { value: "Ada Lovelace, Grace Hopper" },
+      });
+      fireEvent.click(
+        screen.getByRole("button", { name: /save people filters/i }),
+      );
       await waitFor(() => {
         expect(spyPatch).toHaveBeenCalledWith(
           61,
@@ -205,10 +225,16 @@ describe("PrunerScopeTab people filters", () => {
         },
       ],
     };
-    const spyRuns = vi.spyOn(prunerApi, "fetchPrunerPreviewRuns").mockResolvedValue([]);
-    const spyInst = vi.spyOn(prunerApi, "fetchPrunerInstance").mockResolvedValue(plex);
+    const spyRuns = vi
+      .spyOn(prunerApi, "fetchPrunerPreviewRuns")
+      .mockResolvedValue([]);
+    const spyInst = vi
+      .spyOn(prunerApi, "fetchPrunerInstance")
+      .mockResolvedValue(plex);
     try {
-      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const qc = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
       qc.setQueryData(qk.me, operator);
       qc.setQueryData(["pruner", "instances", 62], plex);
 
@@ -229,9 +255,17 @@ describe("PrunerScopeTab people filters", () => {
         </QueryClientProvider>,
       );
 
-      await waitFor(() => expect(screen.getByTestId("pruner-people-plex-note")).toBeInTheDocument());
-      expect(screen.getByTestId("pruner-people-plex-note").textContent).toMatch(/Role|Writer|Director|allLeaves/i);
-      expect(screen.queryByTestId("pruner-people-jf-emby-note")).not.toBeInTheDocument();
+      await waitFor(() =>
+        expect(
+          screen.getByTestId("pruner-people-plex-note"),
+        ).toBeInTheDocument(),
+      );
+      expect(screen.getByTestId("pruner-people-plex-note").textContent).toMatch(
+        /Role|Writer|Director|allLeaves/i,
+      );
+      expect(
+        screen.queryByTestId("pruner-people-jf-emby-note"),
+      ).not.toBeInTheDocument();
     } finally {
       spyRuns.mockRestore();
       spyInst.mockRestore();

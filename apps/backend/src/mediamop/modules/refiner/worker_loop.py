@@ -261,7 +261,10 @@ async def refiner_worker_run_forever(
             worker_heartbeat("refiner", worker_index)
             if max_concurrent_files_getter is not None:
                 try:
-                    max_concurrent = max(1, min(8, int(max_concurrent_files_getter())))
+                    max_concurrent_raw = await asyncio.to_thread(
+                        max_concurrent_files_getter
+                    )
+                    max_concurrent = max(1, min(8, int(max_concurrent_raw)))
                 except Exception:
                     max_concurrent = 1
                 if worker_index >= max_concurrent:

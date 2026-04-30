@@ -42,8 +42,10 @@ def test_credentials_secret_decouples_pruner_subber_and_arr_from_session_rotatio
     assert decrypt_pruner_credentials_json(s2, pruner) == '{"api_key":"p"}'
     assert decrypt_subber_credentials_json(s2, subber) == '{"api_key":"s"}'
     assert decrypt_arr_api_key(s2, arr) == "arr-key"
-    assert json.loads(pruner)["key_id"] == "credentials:v1"
-    assert json.loads(subber)["key_id"] == "credentials:v1"
+    assert json.loads(pruner)["key_id"] == "credentials:hkdf:v1"
+    assert json.loads(pruner)["version"] == 3
+    assert json.loads(subber)["key_id"] == "credentials:hkdf:v1"
+    assert json.loads(subber)["version"] == 3
     assert json.loads(arr)["key_id"] == "credentials:v1"
 
 
@@ -72,6 +74,8 @@ def test_legacy_session_secret_ciphertexts_can_be_rewrapped(monkeypatch, tmp_pat
     assert pruner_new is not None
     assert subber_new is not None
     assert arr_new is not None
+    assert json.loads(pruner_new)["key_id"] == "credentials:hkdf:v1"
+    assert json.loads(subber_new)["key_id"] == "credentials:hkdf:v1"
     assert decrypt_pruner_credentials_json(rotated, pruner_new) == '{"api_key":"p"}'
     assert decrypt_subber_credentials_json(rotated, subber_new) == '{"api_key":"s"}'
     assert decrypt_arr_api_key(rotated, arr_new) == "arr-key"
@@ -103,6 +107,8 @@ def test_previous_credentials_secret_allows_safe_secret_rotation(monkeypatch, tm
     assert pruner_new is not None
     assert subber_new is not None
     assert arr_new is not None
+    assert json.loads(pruner_new)["key_id"] == "credentials:hkdf:v1"
+    assert json.loads(subber_new)["key_id"] == "credentials:hkdf:v1"
     assert decrypt_pruner_credentials_json(new_only, pruner_new) == '{"api_key":"p"}'
     assert decrypt_subber_credentials_json(new_only, subber_new) == '{"api_key":"s"}'
     assert decrypt_arr_api_key(new_only, arr_new) == "arr-key"

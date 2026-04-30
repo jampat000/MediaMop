@@ -29,7 +29,9 @@ describe("PrunerInstanceShell", () => {
         {
           path: "/instances/:instanceId/*",
           element: <PrunerInstanceShell />,
-          children: [{ path: "overview", element: <div>Overview content</div> }],
+          children: [
+            { path: "overview", element: <div>Overview content</div> },
+          ],
         },
       ],
       { initialEntries: ["/instances/9/overview"] },
@@ -41,14 +43,26 @@ describe("PrunerInstanceShell", () => {
       </QueryClientProvider>,
     );
 
-    await waitFor(() => expect(screen.getByTestId("pruner-instance-section-tabs")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-instance-section-tabs"),
+      ).toBeInTheDocument(),
+    );
     const tabs = screen.getByTestId("pruner-instance-section-tabs");
     expect(tabs.textContent).toMatch(/Overview/);
     expect(tabs.textContent).toMatch(/Movies/);
     expect(tabs.textContent).toMatch(/TV/);
     expect(tabs.textContent).toMatch(/Connection/);
-    expect(screen.getByRole("link", { name: "Movies" })).toHaveAttribute("href", "/app/pruner/instances/9/movies");
-    expect(screen.getByRole("link", { name: "TV" })).toHaveAttribute("href", "/app/pruner/instances/9/tv");
-    expect(screen.getByTestId("pruner-instance-shell").textContent ?? "").toMatch(/Emby, Jellyfin, and Plex/i);
+    expect(screen.getByRole("link", { name: "Movies" })).toHaveAttribute(
+      "href",
+      "/app/pruner/instances/9/movies",
+    );
+    expect(screen.getByRole("link", { name: "TV" })).toHaveAttribute(
+      "href",
+      "/app/pruner/instances/9/tv",
+    );
+    expect(
+      screen.getByTestId("pruner-instance-shell").textContent ?? "",
+    ).toMatch(/Emby, Jellyfin, and Plex/i);
   });
 });

@@ -1,11 +1,20 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { qk } from "../../lib/auth/queries";
 import type { UserPublic } from "../../lib/api/types";
 import * as prunerApi from "../../lib/pruner/api";
-import type { PrunerPreviewRunSummary, PrunerServerInstance } from "../../lib/pruner/api";
+import type {
+  PrunerPreviewRunSummary,
+  PrunerServerInstance,
+} from "../../lib/pruner/api";
 import {
   PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL,
   PRUNER_REMOVE_STALE_NEVER_PLAYED_LIBRARY_ENTRIES_LABEL,
@@ -114,24 +123,28 @@ const embyInstance: PrunerServerInstance = {
 
 describe("PrunerScopeTab apply (preview → apply)", () => {
   it("exposes Remove broken library entries only on preview history for Jellyfin success rows", async () => {
-    const spyElig = vi.spyOn(prunerApi, "fetchPrunerApplyEligibility").mockResolvedValue({
-      eligible: true,
-      reasons: [],
-      apply_feature_enabled: true,
-      preview_run_id: runId,
-      server_instance_id: 2,
-      media_scope: "tv",
-      provider: "jellyfin",
-      display_name: "JF Home",
-      preview_created_at: previewRun.created_at,
-      candidate_count: 2,
-      preview_outcome: "success",
-      rule_family_id: "missing_primary_media_reported",
-      apply_operator_label: PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL,
-    });
+    const spyElig = vi
+      .spyOn(prunerApi, "fetchPrunerApplyEligibility")
+      .mockResolvedValue({
+        eligible: true,
+        reasons: [],
+        apply_feature_enabled: true,
+        preview_run_id: runId,
+        server_instance_id: 2,
+        media_scope: "tv",
+        provider: "jellyfin",
+        display_name: "JF Home",
+        preview_created_at: previewRun.created_at,
+        candidate_count: 2,
+        preview_outcome: "success",
+        rule_family_id: "missing_primary_media_reported",
+        apply_operator_label: PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL,
+      });
     try {
       const qc = new QueryClient({
-        defaultOptions: { queries: { retry: false, staleTime: 60_000, refetchOnMount: false } },
+        defaultOptions: {
+          queries: { retry: false, staleTime: 60_000, refetchOnMount: false },
+        },
       });
       qc.setQueryData(qk.me, operator);
       await qc.prefetchQuery({
@@ -161,22 +174,28 @@ describe("PrunerScopeTab apply (preview → apply)", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId("pruner-preview-runs-history")).toBeInTheDocument();
+        expect(
+          screen.getByTestId("pruner-preview-runs-history"),
+        ).toBeInTheDocument();
       });
 
       const openBtn = screen.getByTestId(`pruner-apply-open-${runId}`);
-      expect(openBtn.textContent).toBe(PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL);
+      expect(openBtn.textContent).toBe(
+        PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL,
+      );
 
       fireEvent.click(openBtn);
 
       const modal = await screen.findByTestId("pruner-apply-modal");
       await waitFor(() => {
-        expect(within(modal).getByRole("heading", { level: 3 })).toHaveTextContent(
-          PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL,
-        );
+        expect(
+          within(modal).getByRole("heading", { level: 3 }),
+        ).toHaveTextContent(PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL);
       });
 
-      const titles = screen.getAllByText(PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL);
+      const titles = screen.getAllByText(
+        PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL,
+      );
       expect(titles.length).toBeGreaterThanOrEqual(2);
       expect(modal.textContent).toMatch(/saved list/i);
       expect(modal.textContent).toMatch(/saved list of up to/i);
@@ -190,7 +209,8 @@ describe("PrunerScopeTab apply (preview → apply)", () => {
       ...previewRun,
       preview_run_id: "660e8400-e29b-41d4-a716-446655440001",
       outcome: "unsupported",
-      unsupported_detail: "Plex: never-played stale library candidacy is not implemented on MediaMop",
+      unsupported_detail:
+        "Plex: never-played stale library candidacy is not implemented on MediaMop",
       candidate_count: 0,
     };
     const emptyOk: PrunerPreviewRunSummary = {
@@ -201,7 +221,9 @@ describe("PrunerScopeTab apply (preview → apply)", () => {
       unsupported_detail: null,
     };
     const qc = new QueryClient({
-      defaultOptions: { queries: { retry: false, staleTime: 60_000, refetchOnMount: false } },
+      defaultOptions: {
+        queries: { retry: false, staleTime: 60_000, refetchOnMount: false },
+      },
     });
     qc.setQueryData(qk.me, operator);
     await qc.prefetchQuery({
@@ -230,34 +252,45 @@ describe("PrunerScopeTab apply (preview → apply)", () => {
       </QueryClientProvider>,
     );
 
-    await waitFor(() => expect(screen.getByTestId("pruner-preview-runs-history")).toBeInTheDocument());
-    expect(screen.getByTestId(`pruner-preview-run-caption-${unsupportedRun.preview_run_id}`).textContent).toMatch(
-      /Not available on this server/i,
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("pruner-preview-runs-history"),
+      ).toBeInTheDocument(),
     );
-    expect(screen.getByTestId(`pruner-preview-run-caption-${emptyOk.preview_run_id}`).textContent).toMatch(
-      /nothing matched/i,
-    );
+    expect(
+      screen.getByTestId(
+        `pruner-preview-run-caption-${unsupportedRun.preview_run_id}`,
+      ).textContent,
+    ).toMatch(/Not available on this server/i);
+    expect(
+      screen.getByTestId(`pruner-preview-run-caption-${emptyOk.preview_run_id}`)
+        .textContent,
+    ).toMatch(/nothing matched/i);
   });
 
   it("exposes Remove broken library entries for eligible Emby preview history rows", async () => {
-    const spyElig = vi.spyOn(prunerApi, "fetchPrunerApplyEligibility").mockResolvedValue({
-      eligible: true,
-      reasons: [],
-      apply_feature_enabled: true,
-      preview_run_id: runId,
-      server_instance_id: 3,
-      media_scope: "tv",
-      provider: "emby",
-      display_name: "Emby Home",
-      preview_created_at: previewRun.created_at,
-      candidate_count: 2,
-      preview_outcome: "success",
-      rule_family_id: "missing_primary_media_reported",
-      apply_operator_label: PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL,
-    });
+    const spyElig = vi
+      .spyOn(prunerApi, "fetchPrunerApplyEligibility")
+      .mockResolvedValue({
+        eligible: true,
+        reasons: [],
+        apply_feature_enabled: true,
+        preview_run_id: runId,
+        server_instance_id: 3,
+        media_scope: "tv",
+        provider: "emby",
+        display_name: "Emby Home",
+        preview_created_at: previewRun.created_at,
+        candidate_count: 2,
+        preview_outcome: "success",
+        rule_family_id: "missing_primary_media_reported",
+        apply_operator_label: PRUNER_REMOVE_BROKEN_LIBRARY_ENTRIES_LABEL,
+      });
     try {
       const qc = new QueryClient({
-        defaultOptions: { queries: { retry: false, staleTime: 60_000, refetchOnMount: false } },
+        defaultOptions: {
+          queries: { retry: false, staleTime: 60_000, refetchOnMount: false },
+        },
       });
       qc.setQueryData(qk.me, operator);
       await qc.prefetchQuery({
@@ -287,7 +320,9 @@ describe("PrunerScopeTab apply (preview → apply)", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId(`pruner-apply-open-${runId}`)).toBeInTheDocument();
+        expect(
+          screen.getByTestId(`pruner-apply-open-${runId}`),
+        ).toBeInTheDocument();
       });
     } finally {
       spyElig.mockRestore();
@@ -296,24 +331,29 @@ describe("PrunerScopeTab apply (preview → apply)", () => {
 
   it("uses Remove stale never-played library entries for never-played preview rows", async () => {
     const neverRunId = "22222222-2222-4222-8222-222222222222";
-    const spyElig = vi.spyOn(prunerApi, "fetchPrunerApplyEligibility").mockResolvedValue({
-      eligible: true,
-      reasons: [],
-      apply_feature_enabled: true,
-      preview_run_id: neverRunId,
-      server_instance_id: 2,
-      media_scope: "tv",
-      provider: "jellyfin",
-      display_name: "JF Home",
-      preview_created_at: previewRun.created_at,
-      candidate_count: 1,
-      preview_outcome: "success",
-      rule_family_id: "never_played_stale_reported",
-      apply_operator_label: PRUNER_REMOVE_STALE_NEVER_PLAYED_LIBRARY_ENTRIES_LABEL,
-    });
+    const spyElig = vi
+      .spyOn(prunerApi, "fetchPrunerApplyEligibility")
+      .mockResolvedValue({
+        eligible: true,
+        reasons: [],
+        apply_feature_enabled: true,
+        preview_run_id: neverRunId,
+        server_instance_id: 2,
+        media_scope: "tv",
+        provider: "jellyfin",
+        display_name: "JF Home",
+        preview_created_at: previewRun.created_at,
+        candidate_count: 1,
+        preview_outcome: "success",
+        rule_family_id: "never_played_stale_reported",
+        apply_operator_label:
+          PRUNER_REMOVE_STALE_NEVER_PLAYED_LIBRARY_ENTRIES_LABEL,
+      });
     try {
       const qc = new QueryClient({
-        defaultOptions: { queries: { retry: false, staleTime: 60_000, refetchOnMount: false } },
+        defaultOptions: {
+          queries: { retry: false, staleTime: 60_000, refetchOnMount: false },
+        },
       });
       qc.setQueryData(qk.me, operator);
       await qc.prefetchQuery({
@@ -351,14 +391,20 @@ describe("PrunerScopeTab apply (preview → apply)", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId(`pruner-apply-open-${neverRunId}`)).toBeInTheDocument();
+        expect(
+          screen.getByTestId(`pruner-apply-open-${neverRunId}`),
+        ).toBeInTheDocument();
       });
       const openBtn = screen.getByTestId(`pruner-apply-open-${neverRunId}`);
-      expect(openBtn.textContent).toBe(PRUNER_REMOVE_STALE_NEVER_PLAYED_LIBRARY_ENTRIES_LABEL);
+      expect(openBtn.textContent).toBe(
+        PRUNER_REMOVE_STALE_NEVER_PLAYED_LIBRARY_ENTRIES_LABEL,
+      );
       fireEvent.click(openBtn);
       const modal = await screen.findByTestId("pruner-apply-modal");
       await waitFor(() => {
-        expect(within(modal).getByRole("heading", { level: 3 })).toHaveTextContent(
+        expect(
+          within(modal).getByRole("heading", { level: 3 }),
+        ).toHaveTextContent(
           PRUNER_REMOVE_STALE_NEVER_PLAYED_LIBRARY_ENTRIES_LABEL,
         );
       });
@@ -369,24 +415,28 @@ describe("PrunerScopeTab apply (preview → apply)", () => {
 
   it("uses Remove watched TV entries for watched TV preview rows", async () => {
     const watchedRunId = "33333333-3333-4333-8333-333333333333";
-    const spyElig = vi.spyOn(prunerApi, "fetchPrunerApplyEligibility").mockResolvedValue({
-      eligible: true,
-      reasons: [],
-      apply_feature_enabled: true,
-      preview_run_id: watchedRunId,
-      server_instance_id: 2,
-      media_scope: "tv",
-      provider: "jellyfin",
-      display_name: "JF Home",
-      preview_created_at: previewRun.created_at,
-      candidate_count: 1,
-      preview_outcome: "success",
-      rule_family_id: RULE_FAMILY_WATCHED_TV_REPORTED,
-      apply_operator_label: PRUNER_REMOVE_WATCHED_TV_ENTRIES_LABEL,
-    });
+    const spyElig = vi
+      .spyOn(prunerApi, "fetchPrunerApplyEligibility")
+      .mockResolvedValue({
+        eligible: true,
+        reasons: [],
+        apply_feature_enabled: true,
+        preview_run_id: watchedRunId,
+        server_instance_id: 2,
+        media_scope: "tv",
+        provider: "jellyfin",
+        display_name: "JF Home",
+        preview_created_at: previewRun.created_at,
+        candidate_count: 1,
+        preview_outcome: "success",
+        rule_family_id: RULE_FAMILY_WATCHED_TV_REPORTED,
+        apply_operator_label: PRUNER_REMOVE_WATCHED_TV_ENTRIES_LABEL,
+      });
     try {
       const qc = new QueryClient({
-        defaultOptions: { queries: { retry: false, staleTime: 60_000, refetchOnMount: false } },
+        defaultOptions: {
+          queries: { retry: false, staleTime: 60_000, refetchOnMount: false },
+        },
       });
       qc.setQueryData(qk.me, operator);
       await qc.prefetchQuery({
@@ -424,16 +474,18 @@ describe("PrunerScopeTab apply (preview → apply)", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId(`pruner-apply-open-${watchedRunId}`)).toBeInTheDocument();
+        expect(
+          screen.getByTestId(`pruner-apply-open-${watchedRunId}`),
+        ).toBeInTheDocument();
       });
       const openBtn = screen.getByTestId(`pruner-apply-open-${watchedRunId}`);
       expect(openBtn.textContent).toBe(PRUNER_REMOVE_WATCHED_TV_ENTRIES_LABEL);
       fireEvent.click(openBtn);
       const modal = await screen.findByTestId("pruner-apply-modal");
       await waitFor(() => {
-        expect(within(modal).getByRole("heading", { level: 3 })).toHaveTextContent(
-          PRUNER_REMOVE_WATCHED_TV_ENTRIES_LABEL,
-        );
+        expect(
+          within(modal).getByRole("heading", { level: 3 }),
+        ).toHaveTextContent(PRUNER_REMOVE_WATCHED_TV_ENTRIES_LABEL);
       });
     } finally {
       spyElig.mockRestore();
@@ -442,24 +494,28 @@ describe("PrunerScopeTab apply (preview → apply)", () => {
 
   it("uses Remove watched movie entries for watched movies preview rows (Movies tab)", async () => {
     const moviesRunId = "44444444-4444-4444-8444-444444444444";
-    const spyElig = vi.spyOn(prunerApi, "fetchPrunerApplyEligibility").mockResolvedValue({
-      eligible: true,
-      reasons: [],
-      apply_feature_enabled: true,
-      preview_run_id: moviesRunId,
-      server_instance_id: 2,
-      media_scope: "movies",
-      provider: "jellyfin",
-      display_name: "JF Home",
-      preview_created_at: previewRun.created_at,
-      candidate_count: 1,
-      preview_outcome: "success",
-      rule_family_id: RULE_FAMILY_WATCHED_MOVIES_REPORTED,
-      apply_operator_label: PRUNER_REMOVE_WATCHED_MOVIES_ENTRIES_LABEL,
-    });
+    const spyElig = vi
+      .spyOn(prunerApi, "fetchPrunerApplyEligibility")
+      .mockResolvedValue({
+        eligible: true,
+        reasons: [],
+        apply_feature_enabled: true,
+        preview_run_id: moviesRunId,
+        server_instance_id: 2,
+        media_scope: "movies",
+        provider: "jellyfin",
+        display_name: "JF Home",
+        preview_created_at: previewRun.created_at,
+        candidate_count: 1,
+        preview_outcome: "success",
+        rule_family_id: RULE_FAMILY_WATCHED_MOVIES_REPORTED,
+        apply_operator_label: PRUNER_REMOVE_WATCHED_MOVIES_ENTRIES_LABEL,
+      });
     try {
       const qc = new QueryClient({
-        defaultOptions: { queries: { retry: false, staleTime: 60_000, refetchOnMount: false } },
+        defaultOptions: {
+          queries: { retry: false, staleTime: 60_000, refetchOnMount: false },
+        },
       });
       qc.setQueryData(qk.me, operator);
       await qc.prefetchQuery({
@@ -484,7 +540,9 @@ describe("PrunerScopeTab apply (preview → apply)", () => {
           {
             path: "/instances/:instanceId",
             element: <PrunerInstanceShell />,
-            children: [{ path: "movies", element: <PrunerScopeTab scope="movies" /> }],
+            children: [
+              { path: "movies", element: <PrunerScopeTab scope="movies" /> },
+            ],
           },
         ],
         { initialEntries: ["/instances/2/movies"] },
@@ -497,16 +555,20 @@ describe("PrunerScopeTab apply (preview → apply)", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId(`pruner-apply-open-${moviesRunId}`)).toBeInTheDocument();
+        expect(
+          screen.getByTestId(`pruner-apply-open-${moviesRunId}`),
+        ).toBeInTheDocument();
       });
       const openBtn = screen.getByTestId(`pruner-apply-open-${moviesRunId}`);
-      expect(openBtn.textContent).toBe(PRUNER_REMOVE_WATCHED_MOVIES_ENTRIES_LABEL);
+      expect(openBtn.textContent).toBe(
+        PRUNER_REMOVE_WATCHED_MOVIES_ENTRIES_LABEL,
+      );
       fireEvent.click(openBtn);
       const modal = await screen.findByTestId("pruner-apply-modal");
       await waitFor(() => {
-        expect(within(modal).getByRole("heading", { level: 3 })).toHaveTextContent(
-          PRUNER_REMOVE_WATCHED_MOVIES_ENTRIES_LABEL,
-        );
+        expect(
+          within(modal).getByRole("heading", { level: 3 }),
+        ).toHaveTextContent(PRUNER_REMOVE_WATCHED_MOVIES_ENTRIES_LABEL);
       });
     } finally {
       spyElig.mockRestore();
@@ -583,7 +645,9 @@ describe("PrunerScopeTab apply (preview → apply)", () => {
       ],
     };
     const qc = new QueryClient({
-      defaultOptions: { queries: { retry: false, staleTime: 60_000, refetchOnMount: false } },
+      defaultOptions: {
+        queries: { retry: false, staleTime: 60_000, refetchOnMount: false },
+      },
     });
     qc.setQueryData(qk.me, operator);
     await qc.prefetchQuery({
@@ -622,7 +686,9 @@ describe("PrunerScopeTab apply (preview → apply)", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("pruner-preview-runs-history")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("pruner-preview-runs-history"),
+      ).toBeInTheDocument();
     });
 
     expect(screen.queryByTestId(`pruner-apply-open-${runId}`)).toBeNull();

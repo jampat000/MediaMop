@@ -18,12 +18,14 @@ const useSubberJobsQuery = vi.fn();
 
 vi.mock("../../lib/activity/queries", () => ({
   activityRecentKey: ["activity", "recent"],
-  useActivityRecentQuery: (...args: unknown[]) => useActivityRecentQuery(...args),
+  useActivityRecentQuery: (...args: unknown[]) =>
+    useActivityRecentQuery(...args),
 }));
 
 vi.mock("../../lib/dashboard/queries", () => ({
   dashboardStatusKey: ["dashboard", "status"],
-  useDashboardStatusQuery: (...args: unknown[]) => useDashboardStatusQuery(...args),
+  useDashboardStatusQuery: (...args: unknown[]) =>
+    useDashboardStatusQuery(...args),
 }));
 
 vi.mock("../../lib/activity/use-activity-stream-invalidation", () => ({
@@ -32,24 +34,33 @@ vi.mock("../../lib/activity/use-activity-stream-invalidation", () => ({
 }));
 
 vi.mock("../../lib/refiner/queries", () => ({
-  useRefinerOverviewStatsQuery: (...args: unknown[]) => useRefinerOverviewStatsQuery(...args),
-  useRefinerPathSettingsQuery: (...args: unknown[]) => useRefinerPathSettingsQuery(...args),
+  useRefinerOverviewStatsQuery: (...args: unknown[]) =>
+    useRefinerOverviewStatsQuery(...args),
+  useRefinerPathSettingsQuery: (...args: unknown[]) =>
+    useRefinerPathSettingsQuery(...args),
 }));
 
 vi.mock("../../lib/refiner/jobs-inspection/queries", () => ({
-  useRefinerJobsInspectionQuery: (...args: unknown[]) => useRefinerJobsInspectionQuery(...args),
+  useRefinerJobsInspectionQuery: (...args: unknown[]) =>
+    useRefinerJobsInspectionQuery(...args),
 }));
 
 vi.mock("../../lib/pruner/queries", () => ({
-  usePrunerOverviewStatsQuery: (...args: unknown[]) => usePrunerOverviewStatsQuery(...args),
-  usePrunerInstancesQuery: (...args: unknown[]) => usePrunerInstancesQuery(...args),
-  usePrunerJobsInspectionQuery: (...args: unknown[]) => usePrunerJobsInspectionQuery(...args),
+  usePrunerOverviewStatsQuery: (...args: unknown[]) =>
+    usePrunerOverviewStatsQuery(...args),
+  usePrunerInstancesQuery: (...args: unknown[]) =>
+    usePrunerInstancesQuery(...args),
+  usePrunerJobsInspectionQuery: (...args: unknown[]) =>
+    usePrunerJobsInspectionQuery(...args),
 }));
 
 vi.mock("../../lib/subber/subber-queries", () => ({
-  useSubberOverviewQuery: (...args: unknown[]) => useSubberOverviewQuery(...args),
-  useSubberSettingsQuery: (...args: unknown[]) => useSubberSettingsQuery(...args),
-  useSubberProvidersQuery: (...args: unknown[]) => useSubberProvidersQuery(...args),
+  useSubberOverviewQuery: (...args: unknown[]) =>
+    useSubberOverviewQuery(...args),
+  useSubberSettingsQuery: (...args: unknown[]) =>
+    useSubberSettingsQuery(...args),
+  useSubberProvidersQuery: (...args: unknown[]) =>
+    useSubberProvidersQuery(...args),
   useSubberJobsQuery: (...args: unknown[]) => useSubberJobsQuery(...args),
 }));
 
@@ -128,7 +139,14 @@ describe("DashboardPage", () => {
         upgrades_last_30_days: 0,
       },
     });
-    useSubberSettingsQuery.mockReturnValue({ data: { sonarr_base_url: "", sonarr_api_key_set: false, radarr_base_url: "", radarr_api_key_set: false } });
+    useSubberSettingsQuery.mockReturnValue({
+      data: {
+        sonarr_base_url: "",
+        sonarr_api_key_set: false,
+        radarr_base_url: "",
+        radarr_api_key_set: false,
+      },
+    });
     useSubberProvidersQuery.mockReturnValue({ data: [] });
     useSubberJobsQuery.mockReturnValue({ data: { jobs: [] } });
   });
@@ -144,11 +162,15 @@ describe("DashboardPage", () => {
     expect(screen.getByTestId("dashboard-needs-attention")).toBeInTheDocument();
     expect(screen.getByTestId("dashboard-active-work")).toBeInTheDocument();
     expect(screen.getByTestId("dashboard-global-jobs")).toBeInTheDocument();
-    expect(screen.queryByTestId("dashboard-runtime-health")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("dashboard-runtime-health"),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("Refiner")).toBeInTheDocument();
     expect(screen.getByText("Pruner")).toBeInTheDocument();
     expect(screen.getByText("Subber")).toBeInTheDocument();
-    expect(screen.getByText("Needs setup: Refiner, Pruner, Subber.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Needs setup: Refiner, Pruner, Subber."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Net space saved")).toBeInTheDocument();
     expect(screen.getByText("Removal rate")).toBeInTheDocument();
     expect(screen.getByText("Coverage")).toBeInTheDocument();
@@ -216,7 +238,9 @@ describe("DashboardPage", () => {
     );
 
     expect(screen.getByText("Files handled")).toBeInTheDocument();
-    expect(screen.getByText("2 changed - 0 needed no changes")).toBeInTheDocument();
+    expect(
+      screen.getByText("2 changed - 0 needed no changes"),
+    ).toBeInTheDocument();
     expect(screen.queryByText("Scan watched folders")).not.toBeInTheDocument();
     expect(screen.getByText("Process file")).toBeInTheDocument();
   });
@@ -239,7 +263,8 @@ describe("DashboardPage", () => {
               stale_workers: 1,
               stopped_workers: 0,
               status: "degraded",
-              detail: "Refiner expected 1 worker(s), but 1 are stale, stopped, or missing.",
+              detail:
+                "Refiner expected 1 worker(s), but 1 are stale, stopped, or missing.",
             },
           ],
         },
@@ -254,6 +279,8 @@ describe("DashboardPage", () => {
     );
 
     expect(screen.getAllByText("Review needed").length).toBeGreaterThan(0);
-    expect(screen.getByText(/Refiner workers: Refiner expected 1 worker/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Refiner workers: Refiner expected 1 worker/),
+    ).toBeInTheDocument();
   });
 });

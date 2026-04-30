@@ -5,8 +5,14 @@ import { MmListboxPicker } from "../../components/ui/mm-listbox-picker";
 import { ServerFolderPickerButton } from "../../components/ui/server-folder-picker-button";
 import type { MmListboxOption } from "../../components/ui/mm-listbox-picker";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
-import { SUBBER_LANGUAGE_OPTIONS, subberLanguageLabel } from "../../lib/subber/subber-languages";
-import { usePutSubberSettingsMutation, useSubberSettingsQuery } from "../../lib/subber/subber-queries";
+import {
+  SUBBER_LANGUAGE_OPTIONS,
+  subberLanguageLabel,
+} from "../../lib/subber/subber-languages";
+import {
+  usePutSubberSettingsMutation,
+  useSubberSettingsQuery,
+} from "../../lib/subber/subber-queries";
 
 function SaveFeedback({ ok, err }: { ok: boolean; err: string | null }) {
   if (err) {
@@ -53,7 +59,9 @@ function SubberSettingsSection({
     >
       <header className="shrink-0 border-b border-[var(--mm-border)] bg-black/10 px-5 py-4">
         {eyebrow ? (
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text2)]">{eyebrow}</p>
+          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text2)]">
+            {eyebrow}
+          </p>
         ) : null}
         <h2
           className={
@@ -64,7 +72,11 @@ function SubberSettingsSection({
         >
           {title}
         </h2>
-        {description ? <div className="mt-2 text-sm leading-relaxed text-[var(--mm-text2)]">{description}</div> : null}
+        {description ? (
+          <div className="mt-2 text-sm leading-relaxed text-[var(--mm-text2)]">
+            {description}
+          </div>
+        ) : null}
       </header>
       <div className="flex min-h-0 flex-1 flex-col px-5 py-5">
         <div className="mm-card-action-body min-h-0 flex-1">{children}</div>
@@ -93,15 +105,29 @@ export function SubberPreferencesTab({ canOperate }: { canOperate: boolean }) {
   const [adaptDirty, setAdaptDirty] = useState(false);
   const [upgradeDirty, setUpgradeDirty] = useState(false);
 
-  const [saveLang, setSaveLang] = useState({ ok: false, err: null as string | null });
-  const [savePrefs, setSavePrefs] = useState({ ok: false, err: null as string | null });
-  const [saveFreq, setSaveFreq] = useState({ ok: false, err: null as string | null });
-  const [saveUpgrade, setSaveUpgrade] = useState({ ok: false, err: null as string | null });
+  const [saveLang, setSaveLang] = useState({
+    ok: false,
+    err: null as string | null,
+  });
+  const [savePrefs, setSavePrefs] = useState({
+    ok: false,
+    err: null as string | null,
+  });
+  const [saveFreq, setSaveFreq] = useState({
+    ok: false,
+    err: null as string | null,
+  });
+  const [saveUpgrade, setSaveUpgrade] = useState({
+    ok: false,
+    err: null as string | null,
+  });
 
   useEffect(() => {
     const d = q.data;
     if (!d) return;
-    setLangs(d.language_preferences?.length ? [...d.language_preferences] : ["en"]);
+    setLangs(
+      d.language_preferences?.length ? [...d.language_preferences] : ["en"],
+    );
     setFolder(d.subtitle_folder ?? "");
     setEnabled(d.enabled);
     setExcludeHi(Boolean(d.exclude_hearing_impaired));
@@ -110,7 +136,12 @@ export function SubberPreferencesTab({ canOperate }: { canOperate: boolean }) {
     setAdaptDelayH(d.adaptive_searching_delay_hours ?? 168);
     setAdaptPerm(d.permanent_skip_after_attempts ?? 10);
     setUpEn(Boolean(d.upgrade_enabled));
-    setUpIntervalMin(Math.max(60, Math.round((d.upgrade_schedule_interval_seconds ?? 604800) / 60)));
+    setUpIntervalMin(
+      Math.max(
+        60,
+        Math.round((d.upgrade_schedule_interval_seconds ?? 604800) / 60),
+      ),
+    );
     setLangDirty(false);
     setPrefsDirty(false);
     setAdaptDirty(false);
@@ -178,7 +209,10 @@ export function SubberPreferencesTab({ canOperate }: { canOperate: boolean }) {
       await put.mutateAsync({
         csrf_token,
         upgrade_enabled: upEn,
-        upgrade_schedule_interval_seconds: Math.max(60, Math.min(365 * 24 * 3600, upIntervalMin * 60)),
+        upgrade_schedule_interval_seconds: Math.max(
+          60,
+          Math.min(365 * 24 * 3600, upIntervalMin * 60),
+        ),
       });
       flashSave(setSaveUpgrade);
       setUpgradeDirty(false);
@@ -187,8 +221,10 @@ export function SubberPreferencesTab({ canOperate }: { canOperate: boolean }) {
     }
   }
 
-  if (q.isLoading) return <p className="text-sm text-[var(--mm-text2)]">Loading settings…</p>;
-  if (q.isError) return <p className="text-sm text-red-600">{(q.error as Error).message}</p>;
+  if (q.isLoading)
+    return <p className="text-sm text-[var(--mm-text2)]">Loading settings…</p>;
+  if (q.isError)
+    return <p className="text-sm text-red-600">{(q.error as Error).message}</p>;
 
   return (
     <div className="mm-bubble-stack" data-testid="subber-preferences-tab">
@@ -196,94 +232,110 @@ export function SubberPreferencesTab({ canOperate }: { canOperate: boolean }) {
       <div className="mm-bubble-grid min-w-0 lg:grid-cols-2">
         <section className="order-1 flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] shadow-sm lg:order-none">
           <header className="shrink-0 border-b border-[var(--mm-border)] bg-black/10 px-5 py-4">
-            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text2)]">Search order</p>
-            <h2 className="mt-1 text-lg font-semibold tracking-tight text-[var(--mm-text)]">Subtitle languages</h2>
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text2)]">
+              Search order
+            </p>
+            <h2 className="mt-1 text-lg font-semibold tracking-tight text-[var(--mm-text)]">
+              Subtitle languages
+            </h2>
             <div className="mt-2 text-sm leading-relaxed text-[var(--mm-text2)]">
-              Subber tries languages in this order. If the first is not found it tries the next automatically.
+              Subber tries languages in this order. If the first is not found it
+              tries the next automatically.
             </div>
           </header>
           <div className="flex min-h-0 flex-1 flex-col px-5 py-5">
             <div className="mm-card-action-body min-h-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 {langs.map((code, idx) => (
-                <span
-                  key={`${code}-${idx}`}
-                  className="inline-flex items-center gap-1 rounded-full border border-[var(--mm-border)] bg-black/15 px-2.5 py-1 text-sm text-[var(--mm-text)]"
-                >
-                  <span>{subberLanguageLabel(code)}</span>
-                  <span className="flex items-center gap-0.5 border-l border-[var(--mm-border)] pl-1.5">
+                  <span
+                    key={`${code}-${idx}`}
+                    className="inline-flex items-center gap-1 rounded-full border border-[var(--mm-border)] bg-black/15 px-2.5 py-1 text-sm text-[var(--mm-text)]"
+                  >
+                    <span>{subberLanguageLabel(code)}</span>
+                    <span className="flex items-center gap-0.5 border-l border-[var(--mm-border)] pl-1.5">
+                      <button
+                        type="button"
+                        className="rounded px-1 text-xs text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)] disabled:opacity-30"
+                        disabled={dis || idx === 0}
+                        aria-label={`Move ${code} up`}
+                        onClick={() => {
+                          const n = [...langs];
+                          [n[idx - 1], n[idx]] = [n[idx], n[idx - 1]];
+                          setLangs(n);
+                          setLangDirty(true);
+                        }}
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded px-1 text-xs text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)] disabled:opacity-30"
+                        disabled={dis || idx >= langs.length - 1}
+                        aria-label={`Move ${code} down`}
+                        onClick={() => {
+                          const n = [...langs];
+                          [n[idx + 1], n[idx]] = [n[idx], n[idx + 1]];
+                          setLangs(n);
+                          setLangDirty(true);
+                        }}
+                      >
+                        ↓
+                      </button>
+                    </span>
                     <button
                       type="button"
-                      className="rounded px-1 text-xs text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)] disabled:opacity-30"
-                      disabled={dis || idx === 0}
-                      aria-label={`Move ${code} up`}
+                      className="ml-0.5 rounded px-1.5 text-base leading-none text-[var(--mm-text2)] hover:bg-red-950/30 hover:text-red-300"
+                      disabled={dis}
+                      aria-label={`Remove ${subberLanguageLabel(code)}`}
                       onClick={() => {
-                        const n = [...langs];
-                        [n[idx - 1], n[idx]] = [n[idx], n[idx - 1]];
-                        setLangs(n);
+                        setLangs(langs.filter((_, i) => i !== idx));
                         setLangDirty(true);
                       }}
                     >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded px-1 text-xs text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)] disabled:opacity-30"
-                      disabled={dis || idx >= langs.length - 1}
-                      aria-label={`Move ${code} down`}
-                      onClick={() => {
-                        const n = [...langs];
-                        [n[idx + 1], n[idx]] = [n[idx], n[idx + 1]];
-                        setLangs(n);
-                        setLangDirty(true);
-                      }}
-                    >
-                      ↓
+                      ×
                     </button>
                   </span>
-                  <button
-                    type="button"
-                    className="ml-0.5 rounded px-1.5 text-base leading-none text-[var(--mm-text2)] hover:bg-red-950/30 hover:text-red-300"
-                    disabled={dis}
-                    aria-label={`Remove ${subberLanguageLabel(code)}`}
-                    onClick={() => {
-                      setLangs(langs.filter((_, i) => i !== idx));
-                      setLangDirty(true);
-                    }}
-                  >
-                    ×
-                  </button>
-                </span>
                 ))}
               </div>
               <div>
-              <span id="subber-add-language-label" className="block text-sm text-[var(--mm-text2)]">
-                Add language
-              </span>
-              <MmListboxPicker
-                className="mt-1 max-w-xs"
-                ariaLabelledBy="subber-add-language-label"
-                placeholder="Choose…"
-                disabled={dis}
-                options={[
-                  { value: "", label: "Choose…" },
-                  ...SUBBER_LANGUAGE_OPTIONS.filter((o) => !langs.includes(o.code)).map(
-                    (o): MmListboxOption => ({ value: o.code, label: o.label }),
-                  ),
-                ]}
-                value=""
-                onChange={(v) => {
-                  if (!v || langs.includes(v)) return;
-                  setLangs([...langs, v]);
-                  setLangDirty(true);
-                }}
-              />
+                <span
+                  id="subber-add-language-label"
+                  className="block text-sm text-[var(--mm-text2)]"
+                >
+                  Add language
+                </span>
+                <MmListboxPicker
+                  className="mt-1 max-w-xs"
+                  ariaLabelledBy="subber-add-language-label"
+                  placeholder="Choose…"
+                  disabled={dis}
+                  options={[
+                    { value: "", label: "Choose…" },
+                    ...SUBBER_LANGUAGE_OPTIONS.filter(
+                      (o) => !langs.includes(o.code),
+                    ).map(
+                      (o): MmListboxOption => ({
+                        value: o.code,
+                        label: o.label,
+                      }),
+                    ),
+                  ]}
+                  value=""
+                  onChange={(v) => {
+                    if (!v || langs.includes(v)) return;
+                    setLangs([...langs, v]);
+                    setLangDirty(true);
+                  }}
+                />
               </div>
             </div>
             <div className="mm-card-action-footer">
               <button
                 type="button"
-                className={mmActionButtonClass({ variant: langDirty ? "primary" : "secondary", disabled: dis || !langDirty })}
+                className={mmActionButtonClass({
+                  variant: langDirty ? "primary" : "secondary",
+                  disabled: dis || !langDirty,
+                })}
                 disabled={dis || !langDirty}
                 onClick={() => void saveLanguages()}
                 data-testid="subber-save-languages"
@@ -304,7 +356,10 @@ export function SubberPreferencesTab({ canOperate }: { canOperate: boolean }) {
             <>
               <button
                 type="button"
-                className={mmActionButtonClass({ variant: adaptDirty ? "primary" : "secondary", disabled: dis || !adaptDirty })}
+                className={mmActionButtonClass({
+                  variant: adaptDirty ? "primary" : "secondary",
+                  disabled: dis || !adaptDirty,
+                })}
                 disabled={dis || !adaptDirty}
                 onClick={() => void saveSearchFrequency()}
               >
@@ -327,7 +382,9 @@ export function SubberPreferencesTab({ canOperate }: { canOperate: boolean }) {
           {adaptEn ? (
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-[var(--mm-text2)]">Back off after</span>
+                <span className="text-sm text-[var(--mm-text2)]">
+                  Back off after
+                </span>
                 <input
                   type="number"
                   className="mm-input max-w-24"
@@ -340,7 +397,9 @@ export function SubberPreferencesTab({ canOperate }: { canOperate: boolean }) {
                     setAdaptDirty(true);
                   }}
                 />
-                <span className="text-sm text-[var(--mm-text2)]">failed attempts</span>
+                <span className="text-sm text-[var(--mm-text2)]">
+                  failed attempts
+                </span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm text-[var(--mm-text2)]">Wait</span>
@@ -356,10 +415,14 @@ export function SubberPreferencesTab({ canOperate }: { canOperate: boolean }) {
                     setAdaptDirty(true);
                   }}
                 />
-                <span className="text-sm text-[var(--mm-text2)]">hours before retrying</span>
+                <span className="text-sm text-[var(--mm-text2)]">
+                  hours before retrying
+                </span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-[var(--mm-text2)]">Give up after</span>
+                <span className="text-sm text-[var(--mm-text2)]">
+                  Give up after
+                </span>
                 <input
                   type="number"
                   className="mm-input max-w-24"
@@ -372,7 +435,9 @@ export function SubberPreferencesTab({ canOperate }: { canOperate: boolean }) {
                     setAdaptDirty(true);
                   }}
                 />
-                <span className="text-sm text-[var(--mm-text2)]">total attempts</span>
+                <span className="text-sm text-[var(--mm-text2)]">
+                  total attempts
+                </span>
               </div>
             </div>
           ) : null}
@@ -387,7 +452,10 @@ export function SubberPreferencesTab({ canOperate }: { canOperate: boolean }) {
             <>
               <button
                 type="button"
-                className={mmActionButtonClass({ variant: prefsDirty ? "primary" : "secondary", disabled: dis || !prefsDirty })}
+                className={mmActionButtonClass({
+                  variant: prefsDirty ? "primary" : "secondary",
+                  disabled: dis || !prefsDirty,
+                })}
                 disabled={dis || !prefsDirty}
                 onClick={() => void savePreferences()}
                 data-testid="subber-save-subtitle-folder"
@@ -399,7 +467,10 @@ export function SubberPreferencesTab({ canOperate }: { canOperate: boolean }) {
           }
         >
           <div>
-            <label className="block text-sm font-medium text-[var(--mm-text)]" htmlFor="subber-subtitle-folder">
+            <label
+              className="block text-sm font-medium text-[var(--mm-text)]"
+              htmlFor="subber-subtitle-folder"
+            >
               Subtitle folder
             </label>
             <input
@@ -425,8 +496,8 @@ export function SubberPreferencesTab({ canOperate }: { canOperate: boolean }) {
               />
             </div>
             <p className="mt-1 text-xs text-[var(--mm-text2)]">
-              Leave empty to save subtitles next to your media file. Subtitles are named to match — Movie.2023.en.srt alongside
-              Movie.2023.mkv.
+              Leave empty to save subtitles next to your media file. Subtitles
+              are named to match — Movie.2023.en.srt alongside Movie.2023.mkv.
             </p>
           </div>
           <div className="space-y-2">
@@ -442,7 +513,8 @@ export function SubberPreferencesTab({ canOperate }: { canOperate: boolean }) {
               }}
             />
             <p className="max-w-xl text-xs text-[var(--mm-text2)]">
-              When on, skips subtitles with sound descriptions like [DOOR CREAKS] or [TENSE MUSIC].
+              When on, skips subtitles with sound descriptions like [DOOR
+              CREAKS] or [TENSE MUSIC].
             </p>
           </div>
           <div className="space-y-2">
@@ -458,7 +530,9 @@ export function SubberPreferencesTab({ canOperate }: { canOperate: boolean }) {
               }}
             />
             <p className="max-w-xl text-xs text-[var(--mm-text2)]">
-              {enabled ? "Subber is on. Searches run on import and schedule." : "Subber is off. No automatic searches will run."}
+              {enabled
+                ? "Subber is on. Searches run on import and schedule."
+                : "Subber is off. No automatic searches will run."}
             </p>
           </div>
         </SubberSettingsSection>
@@ -472,7 +546,10 @@ export function SubberPreferencesTab({ canOperate }: { canOperate: boolean }) {
             <>
               <button
                 type="button"
-                className={mmActionButtonClass({ variant: upgradeDirty ? "primary" : "secondary", disabled: dis || !upgradeDirty })}
+                className={mmActionButtonClass({
+                  variant: upgradeDirty ? "primary" : "secondary",
+                  disabled: dis || !upgradeDirty,
+                })}
                 disabled={dis || !upgradeDirty}
                 onClick={() => void saveUpgradePrefs()}
               >
@@ -507,7 +584,12 @@ export function SubberPreferencesTab({ canOperate }: { canOperate: boolean }) {
                 className="mm-input mt-1 w-full max-w-xs"
                 value={upIntervalMin}
                 onChange={(e) => {
-                  setUpIntervalMin(Math.max(60, Math.min(525600, Number(e.target.value) || 60)));
+                  setUpIntervalMin(
+                    Math.max(
+                      60,
+                      Math.min(525600, Number(e.target.value) || 60),
+                    ),
+                  );
                   setUpgradeDirty(true);
                 }}
                 disabled={dis}

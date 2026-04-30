@@ -16,7 +16,11 @@ function useCloseOnOutsideAndEscape(
     }
     const onPointerDown = (event: MouseEvent) => {
       const target = event.target as Node | null;
-      if (containerRef.current && target && !containerRef.current.contains(target)) {
+      if (
+        containerRef.current &&
+        target &&
+        !containerRef.current.contains(target)
+      ) {
         setOpen(false);
       }
     };
@@ -84,7 +88,10 @@ export function MmListboxPicker({
     .join(" ");
 
   return (
-    <div ref={containerRef} className={["relative", className].filter(Boolean).join(" ")}>
+    <div
+      ref={containerRef}
+      className={["relative", className].filter(Boolean).join(" ")}
+    >
       <button
         type="button"
         className={triggerSurface}
@@ -101,12 +108,15 @@ export function MmListboxPicker({
           }
         }}
       >
-        <span className="min-w-0 flex-1 truncate text-left">{triggerLabel}</span>
+        <span className="min-w-0 flex-1 truncate text-left">
+          {triggerLabel}
+        </span>
         <svg
           aria-hidden
-          className={["h-4 w-4 shrink-0 text-[var(--mm-text3)] transition-transform", open ? "rotate-180" : ""].join(
-            " ",
-          )}
+          className={[
+            "h-4 w-4 shrink-0 text-[var(--mm-text3)] transition-transform",
+            open ? "rotate-180" : "",
+          ].join(" ")}
           viewBox="0 0 20 20"
           fill="currentColor"
         >

@@ -60,10 +60,16 @@ const embyInstance: PrunerServerInstance = {
 
 describe("PrunerScopeTab scheduled preview", () => {
   it("shows per-tab schedule controls without a global shortcut", async () => {
-    const spyRuns = vi.spyOn(prunerApi, "fetchPrunerPreviewRuns").mockResolvedValue([]);
-    const spyInst = vi.spyOn(prunerApi, "fetchPrunerInstance").mockResolvedValue(embyInstance);
+    const spyRuns = vi
+      .spyOn(prunerApi, "fetchPrunerPreviewRuns")
+      .mockResolvedValue([]);
+    const spyInst = vi
+      .spyOn(prunerApi, "fetchPrunerInstance")
+      .mockResolvedValue(embyInstance);
     try {
-      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const qc = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
       qc.setQueryData(qk.me, operator);
 
       const router = createMemoryRouter(
@@ -84,12 +90,16 @@ describe("PrunerScopeTab scheduled preview", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId("pruner-scope-scheduled-preview")).toBeInTheDocument();
+        expect(
+          screen.getByTestId("pruner-scope-scheduled-preview"),
+        ).toBeInTheDocument();
       });
       const block = screen.getByTestId("pruner-scope-scheduled-preview");
       expect(block.textContent).toMatch(/TV shows/i);
       expect(block.textContent).not.toMatch(/both scopes/i);
-      expect(screen.getByRole("button", { name: /save tv schedule/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /save tv schedule/i }),
+      ).toBeInTheDocument();
     } finally {
       spyRuns.mockRestore();
       spyInst.mockRestore();

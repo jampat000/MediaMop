@@ -1,8 +1,12 @@
 import { fetchCsrfToken } from "../api/auth-api";
 import { apiFetch, readJson, requireOk } from "../api/client";
-import type { RefinerRemuxRulesSettingsOut, RefinerRemuxRulesSettingsPutBody } from "./types";
+import type {
+  RefinerRemuxRulesSettingsOut,
+  RefinerRemuxRulesSettingsPutBody,
+} from "./types";
 
-export const refinerRemuxRulesSettingsPath = () => "/api/v1/refiner/remux-rules-settings";
+export const refinerRemuxRulesSettingsPath = () =>
+  "/api/v1/refiner/remux-rules-settings";
 
 export async function fetchRefinerRemuxRulesSettings(): Promise<RefinerRemuxRulesSettingsOut> {
   const path = refinerRemuxRulesSettingsPath();

@@ -2,7 +2,9 @@ import type { ReactNode } from "react";
 import type { SubberSubtitleLangState } from "../../lib/subber/subber-api";
 import { subberLanguageLabel } from "../../lib/subber/subber-languages";
 
-export function subberProviderDisplayLabel(key: string | null | undefined): string {
+export function subberProviderDisplayLabel(
+  key: string | null | undefined,
+): string {
   if (!key) return "—";
   const labels: Record<string, string> = {
     opensubtitles_org: "OpenSubtitles.org",
@@ -14,11 +16,21 @@ export function subberProviderDisplayLabel(key: string | null | undefined): stri
   return labels[key] ?? key;
 }
 
-function DetailField({ label, children }: { label: string; children: ReactNode }) {
+function DetailField({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
   return (
     <div className="min-w-0">
-      <div className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text2)]">{label}</div>
-      <div className="mt-1 text-sm leading-snug text-[var(--mm-text)]">{children}</div>
+      <div className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text2)]">
+        {label}
+      </div>
+      <div className="mt-1 text-sm leading-snug text-[var(--mm-text)]">
+        {children}
+      </div>
     </div>
   );
 }
@@ -27,7 +39,9 @@ function DetailField({ label, children }: { label: string; children: ReactNode }
 export function SubberMediaFilePathBlock({ path }: { path: string }) {
   return (
     <section className="space-y-1.5">
-      <h4 className="text-[0.7rem] font-semibold uppercase tracking-wide text-[var(--mm-text2)]">Media file</h4>
+      <h4 className="text-[0.7rem] font-semibold uppercase tracking-wide text-[var(--mm-text2)]">
+        Media file
+      </h4>
       <div className="max-w-full overflow-x-auto rounded-md border border-[var(--mm-border)] bg-black/20 px-2.5 py-2 font-mono text-xs leading-relaxed text-[var(--mm-text)]">
         {path}
       </div>
@@ -35,10 +49,16 @@ export function SubberMediaFilePathBlock({ path }: { path: string }) {
   );
 }
 
-export function SubberLanguageTracksDetails({ languages }: { languages: SubberSubtitleLangState[] }) {
+export function SubberLanguageTracksDetails({
+  languages,
+}: {
+  languages: SubberSubtitleLangState[];
+}) {
   return (
     <section className="space-y-2">
-      <h4 className="text-[0.7rem] font-semibold uppercase tracking-wide text-[var(--mm-text2)]">Per-language state</h4>
+      <h4 className="text-[0.7rem] font-semibold uppercase tracking-wide text-[var(--mm-text2)]">
+        Per-language state
+      </h4>
       <ul className="space-y-2.5">
         {languages.map((l) => (
           <li
@@ -47,18 +67,28 @@ export function SubberLanguageTracksDetails({ languages }: { languages: SubberSu
           >
             <p className="border-b border-[var(--mm-border)]/80 pb-2 text-sm font-medium text-[var(--mm-text)]">
               {subberLanguageLabel(l.language_code)}
-              <span className="ml-1.5 text-xs font-normal text-[var(--mm-text2)]">({l.language_code})</span>
+              <span className="ml-1.5 text-xs font-normal text-[var(--mm-text2)]">
+                ({l.language_code})
+              </span>
             </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <DetailField label="Subtitle file">
-                <span className="break-all font-mono text-xs">{l.subtitle_path ?? "—"}</span>
+                <span className="break-all font-mono text-xs">
+                  {l.subtitle_path ?? "—"}
+                </span>
               </DetailField>
-              <DetailField label="Last search">{l.last_searched_at ?? "—"}</DetailField>
+              <DetailField label="Last search">
+                {l.last_searched_at ?? "—"}
+              </DetailField>
               <DetailField label="Search count">{l.search_count}</DetailField>
               <DetailField label="Source">{l.source ?? "—"}</DetailField>
-              <DetailField label="Provider">{subberProviderDisplayLabel(l.provider_key)}</DetailField>
+              <DetailField label="Provider">
+                {subberProviderDisplayLabel(l.provider_key)}
+              </DetailField>
               <DetailField label="Upgrades">
-                {(l.upgrade_count ?? 0) > 0 ? `${l.upgrade_count} time(s)` : "None"}
+                {(l.upgrade_count ?? 0) > 0
+                  ? `${l.upgrade_count} time(s)`
+                  : "None"}
               </DetailField>
             </div>
           </li>
