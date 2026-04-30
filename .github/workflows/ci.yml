@@ -60,8 +60,8 @@ jobs:
         env:
           MEDIAMOP_HOME: ${{ runner.temp }}/mediamop-ci
         run: |
-          alembic check
           alembic upgrade head
+          alembic check
           pytest -q --cov=mediamop --cov-fail-under=70
 
       - uses: actions/setup-node@v6
