@@ -104,13 +104,13 @@ def refiner_completed_remux_output_exists_for_relative_path(
     """
 
     want_scope = media_scope if media_scope in ("movie", "tv") else "movie"
-    escaped_relative_posix = relative_posix.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    escaped_relative_posix = relative_posix.replace("^", "^^").replace("%", "^%").replace("_", "^_")
     rows = session.scalars(
         select(ActivityEvent)
         .where(
             ActivityEvent.module == "refiner",
             ActivityEvent.event_type == "refiner.file_remux_pass_completed",
-            ActivityEvent.detail.like(f"%{escaped_relative_posix}%", escape="\\"),
+            ActivityEvent.detail.like(f"%{escaped_relative_posix}%", escape="^"),
         )
         .order_by(ActivityEvent.id.desc())
         .limit(50),
