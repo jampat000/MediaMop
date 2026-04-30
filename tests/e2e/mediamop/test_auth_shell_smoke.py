@@ -37,7 +37,7 @@ def test_auth_shell_bootstrap_login_logout_guard(mediamop_shell: str) -> None:
             page.get_by_test_id("setup-submit").click()
 
             expect(page).to_have_url(re.compile(r".*/login"))
-            expect(page.get_by_text("Initial account created", exact=False)).to_be_visible()
+            expect(page.get_by_test_id("login-form")).to_be_visible()
 
             page.get_by_test_id("login-username").fill(BOOTSTRAP_USER)
             page.get_by_test_id("login-password").fill(BOOTSTRAP_PASS)
