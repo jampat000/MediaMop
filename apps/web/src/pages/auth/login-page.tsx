@@ -76,6 +76,7 @@ export function LoginPage() {
   const fieldId = useId();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [trustedDevice, setTrustedDevice] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
 
   if (me.isPending || boot.isPending) {
@@ -101,7 +102,11 @@ export function LoginPage() {
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      await login.mutateAsync({ username: username.trim(), password });
+      await login.mutateAsync({
+        username: username.trim(),
+        password,
+        trustedDevice,
+      });
       navigate("/app", { replace: true });
     } catch {
       /* mutation error surfaces below */
@@ -225,6 +230,23 @@ export function LoginPage() {
                 {loginErrorMessage}
               </p>
             ) : null}
+            <label className="flex items-start gap-3 rounded-md border border-[var(--mm-line)] bg-[var(--mm-surface-2)] px-3 py-3 text-sm text-[var(--mm-text2)]">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4"
+                aria-label="Trust this device"
+                checked={trustedDevice}
+                onChange={(e) => setTrustedDevice(e.target.checked)}
+              />
+              <span>
+                <span className="block font-medium text-[var(--mm-text1)]">
+                  Trust this device
+                </span>
+                <span className="block">
+                  Keep this browser signed in longer on this machine.
+                </span>
+              </span>
+            </label>
             <button
               type="submit"
               data-testid="login-submit"

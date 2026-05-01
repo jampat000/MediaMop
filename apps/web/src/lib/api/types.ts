@@ -4,6 +4,15 @@ export type UserPublic = {
   role: string;
 };
 
+export type CurrentSession = {
+  trusted_device: boolean;
+  created_at: string;
+  last_seen_at: string;
+  absolute_expires_at: string;
+  idle_timeout_minutes: number;
+  absolute_timeout_days: number;
+};
+
 export type BootstrapStatus = {
   bootstrap_allowed: boolean;
   reason: string;

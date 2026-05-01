@@ -126,6 +126,18 @@ class SuiteSecurityOverviewOut(BaseModel):
     )
     sign_in_cookie_https_only: bool = Field(description="Whether the sign-in cookie is marked for HTTPS only.")
     sign_in_cookie_same_site: str = Field(description="How strictly the browser limits the sign-in cookie.")
+    standard_session_idle_timeout_plain: str = Field(
+        description="How long a standard device can stay idle before sign-in expires.",
+    )
+    standard_session_absolute_timeout_plain: str = Field(
+        description="Maximum lifetime of a standard sign-in, even if active.",
+    )
+    trusted_session_idle_timeout_plain: str = Field(
+        description="How long a trusted device can stay idle before sign-in expires.",
+    )
+    trusted_session_absolute_timeout_plain: str = Field(
+        description="Maximum lifetime of a trusted-device sign-in, even if active.",
+    )
     extra_https_hardening_enabled: bool = Field(
         description="Whether strict transport (HSTS) extra protection is enabled for browser responses.",
     )

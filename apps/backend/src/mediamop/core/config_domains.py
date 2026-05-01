@@ -13,6 +13,8 @@ class SessionSettings:
     cookie_samesite: str
     idle_minutes: int
     absolute_days: int
+    trusted_idle_minutes: int
+    trusted_absolute_days: int
 
 
 @dataclass(frozen=True, slots=True)

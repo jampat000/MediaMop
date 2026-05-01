@@ -86,6 +86,7 @@ def post_login(
         username=uname,
         password=body.password,
         settings=settings,
+        trusted_device=body.trusted_device,
     )
     if result is None:
         logger.warning("auth event: login failed")
@@ -95,7 +96,7 @@ def post_login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password.",
         )
-    user, raw = result
+    user, session_row, raw = result
     logger.info("auth event: login succeeded (user_id=%s)", user.id)
     activity_service.record_activity_event(
         db,
@@ -108,7 +109,7 @@ def post_login(
     response.set_cookie(
         key=settings.session_cookie_name,
         value=raw,
-        max_age=settings.session_absolute_days * 86400,
+        max_age=auth_service.session_public(session_row, settings=settings)["absolute_timeout_days"] * 86400,
         httponly=True,
         secure=settings.session_cookie_secure,
         samesite=settings.session_cookie_samesite,  # type: ignore[arg-type]
@@ -305,6 +306,23 @@ def post_logout(
 @router.get("/me", response_model=schemas.MeOut)
 def get_me(current: UserPublicDep) -> schemas.MeOut:
     return schemas.MeOut(user=current)
+
+
+@router.get("/session", response_model=schemas.CurrentSessionOut)
+def get_current_session(
+    request: Request,
+    db: DbSessionDep,
+    settings: SettingsDep,
+) -> schemas.CurrentSessionOut:
+    raw = current_raw_session_token(request, settings)
+    pair = auth_service.load_valid_session_for_request(db, raw, settings)
+    if pair is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated.",
+        )
+    session_row, _user = pair
+    return schemas.CurrentSessionOut(**auth_service.session_public(session_row, settings=settings))
 
 
 @router.get("/admin/ping", include_in_schema=False)

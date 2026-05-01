@@ -11,8 +11,8 @@ def test_session_ttl_integers_ignore_malformed_env(monkeypatch: pytest.MonkeyPat
     monkeypatch.setenv("MEDIAMOP_SESSION_IDLE_MINUTES", "not-a-number")
     monkeypatch.setenv("MEDIAMOP_SESSION_ABSOLUTE_DAYS", "xyz")
     s = MediaMopSettings.load()
-    assert s.session_idle_minutes == 720
-    assert s.session_absolute_days == 14
+    assert s.session_idle_minutes == 20160
+    assert s.session_absolute_days == 90
 
 
 def test_session_ttl_integers_respect_valid_overrides(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 from datetime import timedelta
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import and_, delete, func, select, update
 from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
@@ -22,6 +22,7 @@ from mediamop.platform.auth.password import (
 )
 from mediamop.platform.auth.sessions import (
     compute_absolute_expiry,
+    effective_idle_timeout,
     generate_raw_session_token,
     hash_session_token,
     session_invalid_reason,
@@ -61,11 +62,23 @@ def cleanup_inactive_sessions(db: Session, *, settings: MediaMopSettings, now=No
 
     n = now or utcnow()
     idle_cutoff = n - timedelta(minutes=settings.session_idle_minutes)
+    trusted_idle_cutoff = n - timedelta(minutes=settings.session_trusted_idle_minutes)
     result = db.execute(
         delete(UserSession).where(
             (UserSession.revoked_at.is_not(None))
             | (UserSession.absolute_expires_at <= n)
-            | (UserSession.last_seen_at < idle_cutoff),
+            | (
+                and_(
+                    UserSession.is_trusted_device.is_(False),
+                    UserSession.last_seen_at < idle_cutoff,
+                )
+            )
+            | (
+                and_(
+                    UserSession.is_trusted_device.is_(True),
+                    UserSession.last_seen_at < trusted_idle_cutoff,
+                )
+            ),
         )
     )
     return int(result.rowcount or 0)
@@ -114,18 +127,26 @@ def create_user_session(
     user: User,
     *,
     settings: MediaMopSettings,
+    trusted_device: bool = False,
 ) -> tuple[UserSession, str]:
     """Persist session row and return (row, raw_cookie_token)— hash only in DB."""
 
     raw = generate_raw_session_token()
     th = hash_session_token(raw)
-    abs_ttl = timedelta(days=settings.session_absolute_days)
+    abs_ttl = timedelta(
+        days=(
+            settings.session_trusted_absolute_days
+            if trusted_device
+            else settings.session_absolute_days
+        )
+    )
     now = utcnow()
     row = UserSession(
         user_id=user.id,
         token_hash=th,
         created_at=now,
         absolute_expires_at=compute_absolute_expiry(now=now, ttl=abs_ttl),
+        is_trusted_device=trusted_device,
         last_seen_at=now,
     )
     db.add(row)
@@ -133,7 +154,12 @@ def create_user_session(
     revoked = enforce_session_limit_for_user(db, user.id)
     if revoked:
         logger.info("auth event: oldest sessions revoked after session cap (user_id=%s, count=%s)", user.id, revoked)
-    logger.info("auth event: session created (user_id=%s, absolute_expires_at=%s)", user.id, row.absolute_expires_at)
+    logger.info(
+        "auth event: session created (user_id=%s, trusted_device=%s, absolute_expires_at=%s)",
+        user.id,
+        trusted_device,
+        row.absolute_expires_at,
+    )
     return row, raw
 
 
@@ -143,14 +169,20 @@ def login_user(
     username: str,
     password: str,
     settings: MediaMopSettings,
-) -> tuple[User, str] | None:
+    trusted_device: bool = False,
+) -> tuple[User, UserSession, str] | None:
     """Verify credentials and create a new server-side session. Returns user + raw token."""
 
     user = authenticate_user(db, username, password)
     if user is None:
         return None
-    _row, raw = create_user_session(db, user, settings=settings)
-    return user, raw
+    row, raw = create_user_session(
+        db,
+        user,
+        settings=settings,
+        trusted_device=trusted_device,
+    )
+    return user, row, raw
 
 
 def _session_last_seen_touch_gap(idle: timedelta) -> timedelta:
@@ -178,7 +210,7 @@ def load_valid_session_for_request(
     row = db.scalars(select(UserSession).where(UserSession.token_hash == th)).first()
     if row is None:
         return None
-    idle = timedelta(minutes=settings.session_idle_minutes)
+    idle = effective_idle_timeout(row, settings=settings)
     now = utcnow()
     reason = session_invalid_reason(row, idle=idle, now=now)
     if reason is not None:
@@ -212,6 +244,27 @@ def logout_by_cookie(
 
 def user_public(user: User) -> dict:
     return {"id": user.id, "username": user.username, "role": user.role}
+
+
+def session_public(session: UserSession, *, settings: MediaMopSettings) -> dict:
+    idle_minutes = (
+        settings.session_trusted_idle_minutes
+        if session.is_trusted_device
+        else settings.session_idle_minutes
+    )
+    absolute_days = (
+        settings.session_trusted_absolute_days
+        if session.is_trusted_device
+        else settings.session_absolute_days
+    )
+    return {
+        "trusted_device": session.is_trusted_device,
+        "created_at": session.created_at,
+        "last_seen_at": session.last_seen_at,
+        "absolute_expires_at": session.absolute_expires_at,
+        "idle_timeout_minutes": idle_minutes,
+        "absolute_timeout_days": absolute_days,
+    }
 
 
 def change_password_for_user(

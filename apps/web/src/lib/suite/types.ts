@@ -32,6 +32,10 @@ export type SuiteSecurityOverviewOut = {
   session_signing_configured: boolean;
   sign_in_cookie_https_only: boolean;
   sign_in_cookie_same_site: string;
+  standard_session_idle_timeout_plain: string;
+  standard_session_absolute_timeout_plain: string;
+  trusted_session_idle_timeout_plain: string;
+  trusted_session_absolute_timeout_plain: string;
   extra_https_hardening_enabled: boolean;
   sign_in_attempt_limit: number;
   sign_in_attempt_window_plain: string;

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -47,5 +47,15 @@ describe("LoginPage", () => {
         "Initial account created. Sign in with the credentials you chose.",
       ),
     ).toBeVisible();
+  });
+
+  it("offers trust this device and enables it by default", () => {
+    render(wrap(<LoginPage />));
+
+    const checkbox = screen.getByLabelText("Trust this device") as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
+
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(false);
   });
 });
