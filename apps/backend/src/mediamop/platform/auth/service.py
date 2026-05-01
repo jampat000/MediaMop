@@ -154,12 +154,7 @@ def create_user_session(
     revoked = enforce_session_limit_for_user(db, user.id)
     if revoked:
         logger.info("auth event: oldest sessions revoked after session cap (user_id=%s, count=%s)", user.id, revoked)
-    logger.info(
-        "auth event: session created (user_id=%s, trusted_device=%s, absolute_expires_at=%s)",
-        user.id,
-        trusted_device,
-        row.absolute_expires_at,
-    )
+    logger.info("auth event: session created")
     return row, raw
 
 
