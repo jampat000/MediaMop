@@ -220,7 +220,9 @@ describe("SettingsPage (suite settings)", () => {
     fireEvent.change(screen.getByLabelText("Preferred backup time"), {
       target: { value: "03:30" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save backup schedule" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Save backup schedule" }),
+    );
 
     await waitFor(() => {
       expect(putSuiteSettingsSpy).toHaveBeenCalledTimes(1);
@@ -238,7 +240,9 @@ describe("SettingsPage (suite settings)", () => {
       target: { value: "04:15" },
     });
 
-    const saveButton = screen.getByRole("button", { name: "Save backup schedule" });
+    const saveButton = screen.getByRole("button", {
+      name: "Save backup schedule",
+    });
     expect(saveButton).toBeEnabled();
     fireEvent.click(saveButton);
 

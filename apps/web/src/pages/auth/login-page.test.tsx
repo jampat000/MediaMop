@@ -52,7 +52,9 @@ describe("LoginPage", () => {
   it("offers trust this device and enables it by default", () => {
     render(wrap(<LoginPage />));
 
-    const checkbox = screen.getByLabelText("Trust this device") as HTMLInputElement;
+    const checkbox = screen.getByLabelText(
+      "Trust this device",
+    ) as HTMLInputElement;
     expect(checkbox.checked).toBe(true);
 
     fireEvent.click(checkbox);

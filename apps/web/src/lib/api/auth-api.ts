@@ -49,7 +49,12 @@ export async function postLogin(
   const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password, csrf_token, trusted_device: trustedDevice }),
+    body: JSON.stringify({
+      username,
+      password,
+      csrf_token,
+      trusted_device: trustedDevice,
+    }),
   });
   await requireOk(path, r, "Could not sign in");
   return readJson<LoginResult>(r);
