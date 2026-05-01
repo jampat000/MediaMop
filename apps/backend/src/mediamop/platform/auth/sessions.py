@@ -76,6 +76,15 @@ def is_idle_expired(
     return (now or utcnow()) > as_utc(session_row.last_seen_at) + idle
 
 
+def effective_idle_timeout(session_row: UserSession, *, settings) -> timedelta:
+    minutes = (
+        settings.session_trusted_idle_minutes
+        if session_row.is_trusted_device
+        else settings.session_idle_minutes
+    )
+    return timedelta(minutes=minutes)
+
+
 def session_is_valid(
     session_row: UserSession,
     *,

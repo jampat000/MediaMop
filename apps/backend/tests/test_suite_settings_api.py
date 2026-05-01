@@ -102,6 +102,8 @@ def test_suite_security_overview_get_ok(client_with_admin: TestClient) -> None:
     assert "restart_required_note" in body
     assert "session_signing_configured" in body
     assert "allowed_browser_origins_count" in body
+    assert "standard_session_idle_timeout_plain" in body
+    assert "trusted_session_absolute_timeout_plain" in body
 
 
 def test_suite_settings_put_persists(client_with_admin: TestClient) -> None:

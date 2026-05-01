@@ -44,6 +44,9 @@ def test_login_me_logout_flow(client_with_admin: TestClient) -> None:
     r_me = client_with_admin.get("/api/v1/auth/me")
     assert r_me.status_code == 200
     assert r_me.json()["user"]["username"] == "alice"
+    r_session = client_with_admin.get("/api/v1/auth/session")
+    assert r_session.status_code == 200
+    assert r_session.json()["trusted_device"] is False
 
     csrf2 = fetch_csrf(client_with_admin)
     r_out = auth_post(
@@ -242,6 +245,36 @@ def test_login_cookie_has_explicit_lifetime(client_with_admin: TestClient) -> No
     assert "Max-Age=" in set_cookie
     assert "HttpOnly" in set_cookie
     assert "SameSite=" in set_cookie
+
+
+def test_trusted_device_login_uses_extended_session_policy(client_with_admin: TestClient) -> None:
+    csrf = fetch_csrf(client_with_admin)
+    response = auth_post(
+        client_with_admin,
+        "/api/v1/auth/login",
+        json={
+            "username": "alice",
+            "password": "test-password-strong",
+            "csrf_token": csrf,
+            "trusted_device": True,
+        },
+    )
+    assert response.status_code == 200, response.text
+
+    session_response = client_with_admin.get("/api/v1/auth/session")
+    assert session_response.status_code == 200, session_response.text
+    body = session_response.json()
+    assert body["trusted_device"] is True
+    assert body["idle_timeout_minutes"] == 60 * 1440
+    assert body["absolute_timeout_days"] == 365
+
+    settings = MediaMopSettings.load()
+    eng = create_db_engine(settings)
+    fac = create_session_factory(eng)
+    with fac() as db:
+        row = db.scalars(select(UserSession).order_by(UserSession.created_at.desc())).first()
+        assert row is not None
+        assert row.is_trusted_device is True
 
 
 def test_session_cookie_survives_backend_app_restart() -> None:

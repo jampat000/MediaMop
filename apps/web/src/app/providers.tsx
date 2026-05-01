@@ -22,7 +22,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
   useEffect(() => {
     setUnauthorizedHandler(() => {
       client.setQueryData(qk.me, null);
+      client.setQueryData(qk.session, null);
       void client.cancelQueries({ queryKey: qk.me });
+      void client.cancelQueries({ queryKey: qk.session });
       if (window.location.pathname.startsWith("/app")) {
         window.history.replaceState(null, "", "/login?session=expired");
         window.dispatchEvent(new PopStateEvent("popstate"));

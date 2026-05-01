@@ -36,6 +36,8 @@ def _csrf_settings(**overrides: object) -> MediaMopSettings:
         session_cookie_samesite="lax",
         session_idle_minutes=720,
         session_absolute_days=14,
+        session_trusted_idle_minutes=60 * 1440,
+        session_trusted_absolute_days=365,
         trusted_browser_origins_override=(),
         trusted_proxy_ips=(),
         auth_login_rate_max_attempts=30,

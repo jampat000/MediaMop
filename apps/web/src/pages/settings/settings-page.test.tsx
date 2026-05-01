@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DISPLAY_DENSITY_STORAGE_KEY } from "../../lib/ui/display-density";
-import type { UserPublic } from "../../lib/api/types";
+import type { CurrentSession, UserPublic } from "../../lib/api/types";
 import { qk } from "../../lib/auth/queries";
+import * as suiteSettingsApi from "../../lib/suite/suite-settings-api";
 import {
   suiteConfigurationBackupsQueryKey,
   suiteLogsQueryKey,
@@ -34,6 +35,7 @@ const minimalSuiteSettings: SuiteSettingsOut = {
   log_retention_days: 30,
   configuration_backup_enabled: false,
   configuration_backup_interval_hours: 24,
+  configuration_backup_preferred_time: "02:00",
   configuration_backup_last_run_at: null,
   updated_at: "2026-04-11T00:00:00Z",
 };
@@ -59,6 +61,10 @@ const minimalSecurity: SuiteSecurityOverviewOut = {
   session_signing_configured: true,
   sign_in_cookie_https_only: false,
   sign_in_cookie_same_site: "Lax (recommended for most setups)",
+  standard_session_idle_timeout_plain: "14 days",
+  standard_session_absolute_timeout_plain: "90 days",
+  trusted_session_idle_timeout_plain: "60 days",
+  trusted_session_absolute_timeout_plain: "365 days",
   extra_https_hardening_enabled: false,
   sign_in_attempt_limit: 30,
   sign_in_attempt_window_plain: "1 minute",
@@ -67,6 +73,15 @@ const minimalSecurity: SuiteSecurityOverviewOut = {
   allowed_browser_origins_count: 1,
   restart_required_note:
     "These safety options are read when the app starts from the server configuration file. To change them, ask whoever runs the server to edit that file and restart the app.",
+};
+
+const minimalCurrentSession: CurrentSession = {
+  trusted_device: true,
+  created_at: "2026-04-11T00:00:00Z",
+  last_seen_at: "2026-04-11T00:05:00Z",
+  absolute_expires_at: "2027-04-11T00:00:00Z",
+  idle_timeout_minutes: 86400,
+  absolute_timeout_days: 365,
 };
 
 const minimalLogs: SuiteLogsOut = {
@@ -106,6 +121,7 @@ function renderSettings(
   qc.setQueryData(suiteSettingsQueryKey, minimalSuiteSettings);
   qc.setQueryData(suiteSecurityOverviewQueryKey, minimalSecurity);
   qc.setQueryData(qk.me, me);
+  qc.setQueryData(qk.session, minimalCurrentSession);
   qc.setQueryData(suiteConfigurationBackupsQueryKey, {
     directory: "C:/MediaMop/backups/suite-configuration",
     items: [],
@@ -167,6 +183,76 @@ describe("SettingsPage (suite settings)", () => {
     expect(
       screen.queryByTestId("suite-settings-history-reset"),
     ).not.toBeInTheDocument();
+  });
+
+  it("allows changing and saving backup schedule more than once", async () => {
+    let currentSavedSettings: SuiteSettingsOut = {
+      ...minimalSuiteSettings,
+      configuration_backup_enabled: true,
+      configuration_backup_interval_hours: 24,
+      configuration_backup_preferred_time: "02:00",
+    };
+    vi.spyOn(suiteSettingsApi, "fetchSuiteSettings").mockImplementation(
+      async () => currentSavedSettings,
+    );
+    const putSuiteSettingsSpy = vi
+      .spyOn(suiteSettingsApi, "putSuiteSettings")
+      .mockImplementation(async (body) => {
+        currentSavedSettings = {
+          ...currentSavedSettings,
+          configuration_backup_enabled:
+            body.configuration_backup_enabled ?? false,
+          configuration_backup_interval_hours:
+            body.configuration_backup_interval_hours ?? 24,
+          configuration_backup_preferred_time:
+            body.configuration_backup_preferred_time ?? "02:00",
+          updated_at: "2026-04-12T00:00:00Z",
+        };
+        return currentSavedSettings;
+      });
+
+    renderSettings(operatorMe);
+    fireEvent.click(screen.getByRole("tab", { name: "Backup and restore" }));
+
+    fireEvent.change(screen.getByLabelText("Minimum time between runs"), {
+      target: { value: "12" },
+    });
+    fireEvent.change(screen.getByLabelText("Preferred backup time"), {
+      target: { value: "03:30" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Save backup schedule" }),
+    );
+
+    await waitFor(() => {
+      expect(putSuiteSettingsSpy).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Save backup schedule" }),
+      ).toBeDisabled();
+    });
+
+    fireEvent.change(screen.getByLabelText("Minimum time between runs"), {
+      target: { value: "24" },
+    });
+    fireEvent.change(screen.getByLabelText("Preferred backup time"), {
+      target: { value: "04:15" },
+    });
+
+    const saveButton = screen.getByRole("button", {
+      name: "Save backup schedule",
+    });
+    expect(saveButton).toBeEnabled();
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(putSuiteSettingsSpy).toHaveBeenCalledTimes(2);
+    });
+    expect(putSuiteSettingsSpy.mock.calls[1]?.[0]).toMatchObject({
+      configuration_backup_interval_hours: 24,
+      configuration_backup_preferred_time: "04:15",
+    });
   });
 
   it("hides configuration backup for viewers", () => {

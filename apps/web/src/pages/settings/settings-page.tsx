@@ -7,8 +7,11 @@ import {
   isHttpErrorFromApi,
   isLikelyNetworkFailure,
 } from "../../lib/api/error-guards";
-import { useChangePasswordMutation } from "../../lib/auth/queries";
-import { useMeQuery } from "../../lib/auth/queries";
+import {
+  useChangePasswordMutation,
+  useCurrentSessionQuery,
+  useMeQuery,
+} from "../../lib/auth/queries";
 import {
   CURATED_TIMEZONE_ID_SET,
   curatedTimezoneOptionsSorted,
@@ -28,6 +31,7 @@ import {
   useSuiteLogsQuery,
   useSuiteMetricsQuery,
   useSuiteOperationalHistoryResetMutation,
+  useSuiteSecurityOverviewQuery,
   useSuiteSettingsQuery,
   useSuiteSettingsSaveMutation,
   useSuiteUpdateNowMutation,
@@ -96,6 +100,18 @@ function formatBackupBytes(n: number): string {
     return `${(n / 1024).toFixed(1)} KB`;
   }
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatSessionTimeout(minutes: number): string {
+  if (minutes % 1440 === 0) {
+    const days = minutes / 1440;
+    return `${days} day${days === 1 ? "" : "s"}`;
+  }
+  if (minutes % 60 === 0) {
+    const hours = minutes / 60;
+    return `${hours} hour${hours === 1 ? "" : "s"}`;
+  }
+  return `${minutes} minute${minutes === 1 ? "" : "s"}`;
 }
 
 function logCardTone(level: string): string {
@@ -177,9 +193,11 @@ function renderLogTechnicalDetails(entry: SuiteLogEntry) {
 function SettingsSummaryCard({
   label,
   value,
+  detail,
 }: {
   label: string;
   value: string;
+  detail?: string;
 }) {
   return (
     <section className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3">
@@ -189,6 +207,9 @@ function SettingsSummaryCard({
       <p className="mt-1 text-lg font-semibold text-[var(--mm-text1)]">
         {value}
       </p>
+      {detail ? (
+        <p className="mt-1 text-sm text-[var(--mm-text2)]">{detail}</p>
+      ) : null}
     </section>
   );
 }
@@ -240,7 +261,9 @@ export function SettingsPage() {
   const formatDateTime = useAppDateFormatter();
   const me = useMeQuery();
   const changePassword = useChangePasswordMutation();
+  const currentSessionQ = useCurrentSessionQuery();
   const settingsQ = useSuiteSettingsQuery();
+  const securityOverviewQ = useSuiteSecurityOverviewQuery();
   const save = useSuiteSettingsSaveMutation();
   const updateNow = useSuiteUpdateNowMutation();
   const resetHistory = useSuiteOperationalHistoryResetMutation();
@@ -328,6 +351,8 @@ export function SettingsPage() {
   const metricsQ = useSuiteMetricsQuery(
     tab === "logs" && Boolean(settingsQ.data),
   );
+  const currentSession = currentSessionQ.data;
+  const securityOverview = securityOverviewQ.data;
 
   const serverCuratedTimezone =
     settingsQ.data &&
@@ -1552,6 +1577,75 @@ export function SettingsPage() {
                 they are not edited in this UI.
               </p>
             </div>
+            <section
+              className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+              aria-label="Current sign-in"
+            >
+              <SettingsSummaryCard
+                label="This browser"
+                value={
+                  currentSession
+                    ? currentSession.trusted_device
+                      ? "Trusted"
+                      : "Standard"
+                    : currentSessionQ.isError
+                      ? "Unavailable"
+                      : "Loading..."
+                }
+                detail={
+                  currentSession
+                    ? currentSession.trusted_device
+                      ? "Long-lived sign-in for this device"
+                      : "Normal sign-in lifetime"
+                    : currentSessionQ.isError
+                      ? "Could not read the current sign-in session."
+                      : "Checking the current sign-in session."
+                }
+              />
+              <SettingsSummaryCard
+                label="Idle timeout"
+                value={
+                  currentSession
+                    ? formatSessionTimeout(currentSession.idle_timeout_minutes)
+                    : securityOverview
+                      ? securityOverview.standard_session_idle_timeout_plain
+                      : "Loading..."
+                }
+                detail={
+                  currentSession?.trusted_device
+                    ? "Trusted-device idle timeout"
+                    : "Standard idle timeout"
+                }
+              />
+              <SettingsSummaryCard
+                label="Max sign-in age"
+                value={
+                  currentSession
+                    ? `${currentSession.absolute_timeout_days} days`
+                    : securityOverview
+                      ? securityOverview.standard_session_absolute_timeout_plain
+                      : "Loading..."
+                }
+                detail={
+                  currentSession?.trusted_device
+                    ? "Trusted-device maximum session age"
+                    : "Standard maximum session age"
+                }
+              />
+              <SettingsSummaryCard
+                label="Trusted devices"
+                value={
+                  securityOverview
+                    ? securityOverview.trusted_session_absolute_timeout_plain
+                    : "Loading..."
+                }
+                detail={
+                  securityOverview
+                    ? `Idle timeout ${securityOverview.trusted_session_idle_timeout_plain}`
+                    : "Loading trusted-device policy."
+                }
+              />
+            </section>
             <section
               className="mm-card w-full"
               aria-labelledby="suite-security-change-password-heading"

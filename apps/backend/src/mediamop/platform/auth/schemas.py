@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 from mediamop.platform.auth.password import MIN_PASSWORD_LENGTH
@@ -15,6 +17,7 @@ class LoginIn(BaseModel):
     username: str = Field(..., min_length=1, max_length=64)
     password: str = Field(..., min_length=1)
     csrf_token: str = Field(..., min_length=1)
+    trusted_device: bool = False
 
 
 class UserPublic(BaseModel):
@@ -35,6 +38,15 @@ class LogoutIn(BaseModel):
 
 class MeOut(BaseModel):
     user: UserPublic
+
+
+class CurrentSessionOut(BaseModel):
+    trusted_device: bool
+    created_at: datetime
+    last_seen_at: datetime
+    absolute_expires_at: datetime
+    idle_timeout_minutes: int = Field(ge=1)
+    absolute_timeout_days: int = Field(ge=1)
 
 
 class BootstrapStatusOut(BaseModel):

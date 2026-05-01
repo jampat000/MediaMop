@@ -110,8 +110,9 @@ export function useSuiteSettingsSaveMutation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: SuiteSettingsPutBody) => putSuiteSettings(body),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       qc.setQueryData(suiteSettingsQueryKey, data);
+      await qc.invalidateQueries({ queryKey: suiteSettingsQueryKey });
     },
   });
 }

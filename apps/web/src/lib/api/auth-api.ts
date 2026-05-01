@@ -1,5 +1,5 @@
 import { apiFetch, readJson, requireOk } from "./client";
-import type { BootstrapStatus, UserPublic } from "./types";
+import type { BootstrapStatus, CurrentSession, UserPublic } from "./types";
 
 export async function fetchCsrfToken(): Promise<string> {
   const path = "/api/v1/auth/csrf";
@@ -20,6 +20,16 @@ export async function fetchMe(): Promise<UserPublic | null> {
   return data.user;
 }
 
+export async function fetchCurrentSession(): Promise<CurrentSession | null> {
+  const path = "/api/v1/auth/session";
+  const r = await apiFetch(path);
+  if (r.status === 401) {
+    return null;
+  }
+  await requireOk(path, r, "Could not load the current session");
+  return readJson<CurrentSession>(r);
+}
+
 export async function fetchBootstrapStatus(): Promise<BootstrapStatus> {
   const path = "/api/v1/auth/bootstrap/status";
   const r = await apiFetch(path);
@@ -32,13 +42,19 @@ export type LoginResult = { user: UserPublic };
 export async function postLogin(
   username: string,
   password: string,
+  trustedDevice: boolean,
 ): Promise<LoginResult> {
   const csrf_token = await fetchCsrfToken();
   const path = "/api/v1/auth/login";
   const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password, csrf_token }),
+    body: JSON.stringify({
+      username,
+      password,
+      csrf_token,
+      trusted_device: trustedDevice,
+    }),
   });
   await requireOk(path, r, "Could not sign in");
   return readJson<LoginResult>(r);

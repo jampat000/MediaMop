@@ -121,6 +121,8 @@ class MediaMopSettings:
     session_cookie_samesite: str
     session_idle_minutes: int
     session_absolute_days: int
+    session_trusted_idle_minutes: int
+    session_trusted_absolute_days: int
     trusted_browser_origins_override: tuple[str, ...]
     trusted_proxy_ips: tuple[str, ...]
     auth_login_rate_max_attempts: int
@@ -213,6 +215,8 @@ class MediaMopSettings:
             cookie_samesite=self.session_cookie_samesite,
             idle_minutes=self.session_idle_minutes,
             absolute_days=self.session_absolute_days,
+            trusted_idle_minutes=self.session_trusted_idle_minutes,
+            trusted_absolute_days=self.session_trusted_absolute_days,
         )
 
     @property
@@ -326,8 +330,10 @@ class MediaMopSettings:
             "MEDIAMOP_SESSION_COOKIE_SECURE",
             default=(env == "production"),
         )
-        idle_min = max(1, _env_int("MEDIAMOP_SESSION_IDLE_MINUTES", 720))
-        abs_days = max(1, _env_int("MEDIAMOP_SESSION_ABSOLUTE_DAYS", 14))
+        idle_min = max(1, _env_int("MEDIAMOP_SESSION_IDLE_MINUTES", 20160))
+        abs_days = max(1, _env_int("MEDIAMOP_SESSION_ABSOLUTE_DAYS", 90))
+        trusted_idle_days = max(1, _env_int("MEDIAMOP_SESSION_TRUSTED_IDLE_DAYS", 60))
+        trusted_abs_days = max(1, _env_int("MEDIAMOP_SESSION_TRUSTED_ABSOLUTE_DAYS", 365))
         trusted_override = _parse_csv_urls(
             os.environ.get("MEDIAMOP_TRUSTED_BROWSER_ORIGINS") or "",
         )
@@ -509,6 +515,8 @@ class MediaMopSettings:
             session_cookie_samesite=samesite,
             session_idle_minutes=idle_min,
             session_absolute_days=abs_days,
+            session_trusted_idle_minutes=trusted_idle_days * 1440,
+            session_trusted_absolute_days=trusted_abs_days,
             trusted_browser_origins_override=trusted_override,
             trusted_proxy_ips=trusted_proxy_ips,
             auth_login_rate_max_attempts=login_max,
