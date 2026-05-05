@@ -247,12 +247,17 @@ def _capture_zip() -> Path:
                 page.get_by_test_id("login-username").fill(BOOTSTRAP_USER)
                 page.get_by_test_id("login-password").fill(BOOTSTRAP_PASS)
                 page.get_by_test_id("login-submit").click()
-                page.wait_for_url("**/app", timeout=60_000)
-                page.get_by_test_id("sign-out").wait_for(state="visible", timeout=60_000)
+                try:
+                    page.wait_for_url("**/setup-wizard", timeout=20_000)
+                except Exception:
+                    pass
+                if "/setup-wizard" in page.url:
+                    page.get_by_test_id("setup-wizard-skip").click()
+                page.get_by_test_id("shell-ready").wait_for(state="visible", timeout=60_000)
 
-                page.goto(f"{web_origin}/app", wait_until="domcontentloaded")
+                page.goto(f"{web_origin}/", wait_until="domcontentloaded")
                 page.get_by_role("link", name="Refiner", exact=True).click()
-                page.wait_for_url("**/app/refiner", timeout=60_000)
+                page.wait_for_url("**/refiner", timeout=60_000)
                 page.get_by_role("heading", name="Refiner", exact=True).wait_for(state="visible", timeout=60_000)
                 tab_nav = page.get_by_role("navigation", name="Refiner sections")
                 tab_nav.wait_for(state="visible", timeout=60_000)

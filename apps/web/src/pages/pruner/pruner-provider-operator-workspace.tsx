@@ -487,7 +487,7 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
                 <>
                   {applySummary}{" "}
                   <Link
-                    to="/app/activity"
+                    to="/activity"
                     className="font-semibold text-[var(--mm-accent)] underline-offset-2 hover:underline"
                   >
                     Activity log
@@ -501,7 +501,7 @@ export function PrunerDryRunControls(props: PrunerDryRunControlsProps) {
             <p className="text-xs text-[var(--mm-text3)]">
               Full detail:{" "}
               <Link
-                to="/app/activity"
+                to="/activity"
                 className="font-medium text-[var(--mm-accent)] underline-offset-2 hover:underline"
               >
                 Activity log

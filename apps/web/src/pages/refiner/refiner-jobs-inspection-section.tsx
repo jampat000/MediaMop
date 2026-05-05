@@ -205,7 +205,7 @@ export function RefinerJobsInspectionSection() {
         <p className="text-xs text-[var(--mm-text2)]">
           Full detail on Refiner outcomes is in the{" "}
           <Link
-            to="/app/activity"
+            to="/activity"
             className="text-[var(--mm-accent)] underline"
           >
             Activity log

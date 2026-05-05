@@ -2,7 +2,7 @@
   #define AppName "MediaMop"
 #endif
 #ifndef AppVersion
-  #define AppVersion "1.0.4"
+  #define AppVersion "2.0.0"
 #endif
 #ifndef OutputRoot
   #error OutputRoot must be provided to the installer build.
@@ -201,6 +201,45 @@ var
   StartOk: Boolean;
 begin
   WrapperPath := ExpandConstant('{app}\MediaMopUpdaterService.exe');
+  InstallOk := True;
+  StartOk := True;
+
+  Exec(
+    WrapperPath,
+    'stop',
+    ExpandConstant('{app}'),
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode
+  );
+  Exec(
+    WrapperPath,
+    'uninstall',
+    ExpandConstant('{app}'),
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode
+  );
+
+  InstallOk := Exec(
+    WrapperPath,
+    'install',
+    ExpandConstant('{app}'),
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode
+  ) and (ResultCode = 0);
+  if not InstallOk then
+  begin
+    MsgBox(
+      'MediaMop could not install the required Windows updater service.' + #13#10 + #13#10 +
+      'Remote in-app upgrades depend on that service. Fix the Windows service installation issue and run this installer again as administrator.',
+      mbCriticalError,
+      MB_OK
+    );
+    RaiseException('MediaMop could not install the required Windows updater service.');
+  end;
+
   StartOk := Exec(
     WrapperPath,
     'start',
@@ -208,30 +247,19 @@ begin
     SW_HIDE,
     ewWaitUntilTerminated,
     ResultCode
-  );
-  InstallOk := True;
-  if (not StartOk) or (ResultCode <> 0) then
+  ) and (ResultCode = 0);
+  if not StartOk then
   begin
-    InstallOk := Exec(
-      WrapperPath,
-      'install',
-      ExpandConstant('{app}'),
-      SW_HIDE,
-      ewWaitUntilTerminated,
-      ResultCode
+    MsgBox(
+      'MediaMop could not install the required Windows updater service.' + #13#10 + #13#10 +
+      'Remote in-app upgrades depend on that service. Fix the Windows service installation issue and run this installer again as administrator.',
+      mbCriticalError,
+      MB_OK
     );
-    if InstallOk and (ResultCode = 0) then
-      StartOk := Exec(
-        WrapperPath,
-        'start',
-        ExpandConstant('{app}'),
-        SW_HIDE,
-        ewWaitUntilTerminated,
-        ResultCode
-      );
+    RaiseException('MediaMop could not install the required Windows updater service.');
   end;
 
-  if (not InstallOk) or (not StartOk) or (ResultCode <> 0) or (not UpdaterServiceInstalled()) then
+  if not UpdaterServiceInstalled() then
   begin
     MsgBox(
       'MediaMop could not install the required Windows updater service.' + #13#10 + #13#10 +

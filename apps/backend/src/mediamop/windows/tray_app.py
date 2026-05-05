@@ -148,18 +148,26 @@ def _lan_urls(port: int) -> list[str]:
     return urls
 
 
-def _wait_for_health(port: int, timeout_seconds: float = 30.0) -> None:
+def _wait_for_health(
+    port: int,
+    timeout_seconds: float = 30.0,
+    process: subprocess.Popen[str] | None = None,
+) -> None:
     import http.client
 
     deadline = time.time() + timeout_seconds
     while time.time() < deadline:
+        if process is not None and process.poll() is not None:
+            raise RuntimeError(
+                f"MediaMop server process exited unexpectedly with code {process.returncode} before becoming healthy."
+            )
         try:
             conn = http.client.HTTPConnection("127.0.0.1", port, timeout=2)
             conn.request("GET", "/health")
             response = conn.getresponse()
             if response.status == 200:
                 return
-        except OSError:
+        except (OSError, http.client.HTTPException):
             time.sleep(0.35)
         finally:
             try:
@@ -271,13 +279,39 @@ class _MediaMopTrayApp:
         try:
             self._start_server_process()
             self._log("Waiting for local health endpoint")
-            _wait_for_health(self._port)
+            _wait_for_health(self._port, process=self._server_process)
             self._log(f"MediaMop is healthy on http://127.0.0.1:{self._port}/")
             lan = _lan_urls(self._port)
             if lan:
                 self._log("MediaMop LAN URLs: " + ", ".join(lan))
             _open_browser(self._port)
             self._icon = self._create_icon()
+
+            def _watch_server_process() -> None:
+                while True:
+                    proc = self._server_process
+                    if proc is None:
+                        return
+                    exit_code = proc.poll()
+                    if exit_code is None:
+                        time.sleep(3.0)
+                        continue
+                    self._log(f"Bundled server host exited unexpectedly with code {exit_code}")
+                    try:
+                        self._icon.notify("MediaMop server stopped unexpectedly. Please restart MediaMop.")
+                    except Exception:
+                        pass
+                    try:
+                        self._icon.title = "MediaMop (stopped)"
+                    except Exception:
+                        pass
+                    return
+
+            threading.Thread(
+                target=_watch_server_process,
+                daemon=True,
+                name="mediamop-server-watchdog",
+            ).start()
             self._log("Starting tray icon event loop")
             self._icon.run()
         except Exception:

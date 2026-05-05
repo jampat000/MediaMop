@@ -11,13 +11,6 @@ import { RequireSetupWizard } from "./require-setup-wizard";
 const routeErrorElement = <RouteErrorScreen />;
 const router = createBrowserRouter([
   {
-    path: "/",
-    lazy: async () => ({
-      Component: (await import("../pages/root-entry")).RootEntry,
-    }),
-    errorElement: routeErrorElement,
-  },
-  {
     path: "/login",
     lazy: async () => ({
       Component: (await import("../pages/auth/login-page")).LoginPage,
@@ -32,7 +25,7 @@ const router = createBrowserRouter([
     errorElement: routeErrorElement,
   },
   {
-    path: "/app",
+    path: "/",
     element: <RequireAuth />,
     errorElement: routeErrorElement,
     children: [
@@ -172,7 +165,7 @@ const router = createBrowserRouter([
   },
   {
     path: "*",
-    element: <Navigate to="/" replace />,
+    element: <Navigate to="/login" replace />,
     errorElement: routeErrorElement,
   },
 ]);

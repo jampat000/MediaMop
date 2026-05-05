@@ -77,13 +77,13 @@ async function shotLocator(locator, filePath) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 
   await loginViaApi(page);
-  await page.goto(`${baseUrl}/app`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
   await page.locator('[data-testid="shell-ready"]').waitFor({ timeout: 90000 });
 
   const modules = [
     {
       name: "refiner",
-      path: "/app/refiner",
+      path: "/refiner",
       sections: [
         { testId: "refiner-overview-at-a-glance", file: "refiner-at-a-glance.png" },
         { testId: "refiner-overview-needs-attention", file: "refiner-needs-attention.png" },
@@ -92,7 +92,7 @@ async function shotLocator(locator, filePath) {
     },
     {
       name: "subber",
-      path: "/app/subber",
+      path: "/subber",
       sections: [
         { testId: "subber-overview-at-a-glance", file: "subber-at-a-glance.png" },
         { testId: "subber-overview-needs-attention", file: "subber-needs-attention.png" },
@@ -101,7 +101,7 @@ async function shotLocator(locator, filePath) {
     },
     {
       name: "pruner",
-      path: "/app/pruner",
+      path: "/pruner",
       sections: [
         { testId: "pruner-overview-at-a-glance", file: "pruner-at-a-glance.png" },
         { testId: "pruner-overview-needs-attention", file: "pruner-needs-attention.png" },

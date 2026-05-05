@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import sys
 from pathlib import Path
@@ -14,6 +15,8 @@ from mediamop.core.config import MediaMopSettings
 from mediamop.platform.suite_settings.schemas import SuiteUpdateStartOut, SuiteUpdateStatusOut
 from mediamop.version import __version__
 from mediamop.windows.updater_service import UPDATER_PORT
+
+logger = logging.getLogger(__name__)
 
 GH_REPO = "jampat000/MediaMop"
 GH_RELEASES_LATEST_URL = f"https://api.github.com/repos/{GH_REPO}/releases/latest"
@@ -91,8 +94,18 @@ def _runtime_home(settings: MediaMopSettings | None = None) -> Path:
 
 def _install_root() -> Path:
     if getattr(sys, "frozen", False) and os.name == "nt":
-        return Path(sys.executable).resolve().parent
-    return _runtime_home()
+        resolved = Path(sys.executable).resolve().parent
+        logger.debug("update_service._install_root resolved to %s (frozen)", resolved)
+        return resolved
+    resolved = _runtime_home()
+    logger.debug("update_service._install_root resolved to %s (unfrozen)", resolved)
+    return resolved
+
+
+def _updater_token_path(settings: MediaMopSettings | None = None) -> Path:
+    if getattr(sys, "frozen", False) and os.name == "nt":
+        return _install_root() / "updater.secret"
+    return _runtime_home(settings) / "updater.secret"
 
 
 def _updater_token_paths(settings: MediaMopSettings | None = None) -> list[Path]:
@@ -131,6 +144,11 @@ def _windows_updater_service_ready(settings: MediaMopSettings | None = None) -> 
         return False
     headers = _updater_headers(settings)
     if not headers:
+        logger.warning(
+            "MediaMop updater service token not found at %s; in-app upgrade will be unavailable. "
+            "Ensure the updater service has been installed by running the MediaMop installer as administrator.",
+            _updater_token_path(settings),
+        )
         return False
     try:
         response = httpx.get(f"{_updater_base_url()}/api/v1/status", headers=headers, timeout=3.0)

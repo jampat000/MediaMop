@@ -4,7 +4,7 @@ import { MediaMopLogo } from "./mediamop-logo";
 type Props = { to?: string; productTitle?: string };
 
 export function BrandHeaderLink({
-  to = "/app",
+  to = "/",
   productTitle = "MediaMop",
 }: Props) {
   const label = `${productTitle} home`;

@@ -511,7 +511,7 @@ function PrunerConnectionCredentialPanel({
         <p className="mt-2 text-xs text-[var(--mm-text3)]">
           Each test adds a line to{" "}
           <Link
-            to="/app/activity"
+            to="/activity"
             className="text-[var(--mm-accent)] underline-offset-2 hover:underline"
           >
             Activity
@@ -1393,7 +1393,7 @@ function TopLevelJobs({ instances }: { instances: PrunerServerInstance[] }) {
         <p className="text-xs text-[var(--mm-text2)]">
           Full detail on what was deleted, skipped, or failed is in the{" "}
           <Link
-            to="/app/activity"
+            to="/activity"
             className="font-semibold text-[var(--mm-accent)] underline-offset-2 hover:underline"
           >
             Activity log

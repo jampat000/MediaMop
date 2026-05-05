@@ -177,7 +177,7 @@ export function SubberJobsTab() {
           Full detail on every subtitle search, sync result, and any errors is
           in the{" "}
           <Link
-            to="/app/activity"
+            to="/activity"
             className="text-[var(--mm-accent)] underline"
           >
             Activity log

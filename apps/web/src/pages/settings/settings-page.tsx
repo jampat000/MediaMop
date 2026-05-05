@@ -601,7 +601,7 @@ export function SettingsPage() {
       setUpgradeMsg(result.message);
       if (result.status === "started") {
         window.setTimeout(() => {
-          window.location.assign("/app/settings");
+          window.location.assign("/settings");
         }, 30_000);
       } else {
         void queryClient.invalidateQueries({
@@ -752,7 +752,7 @@ export function SettingsPage() {
                         disabled: false,
                       })}
                       data-testid="suite-settings-open-setup-wizard"
-                      onClick={() => navigate("/app/setup-wizard")}
+                      onClick={() => navigate("/setup-wizard")}
                     >
                       Open setup wizard
                     </button>

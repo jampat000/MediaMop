@@ -118,7 +118,7 @@ export function PrunerConnectionTab(props: { contextOverride?: Ctx }) {
         Job outcomes:{" "}
         <Link
           className="font-semibold text-[var(--mm-accent)] underline-offset-2 hover:underline"
-          to="/app/activity"
+          to="/activity"
         >
           Activity
         </Link>

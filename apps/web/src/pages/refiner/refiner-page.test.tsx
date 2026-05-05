@@ -142,7 +142,7 @@ describe("RefinerPage", () => {
     expect(overview).not.toMatch(/refiner_jobs/i);
     expect(screen.getByRole("link", { name: "Activity" })).toHaveAttribute(
       "href",
-      "/app/activity",
+      "/activity",
     );
   });
 

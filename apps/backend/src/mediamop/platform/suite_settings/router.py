@@ -183,7 +183,7 @@ def get_suite_update_status(_user: UserPublicDep, settings: SettingsDep) -> Suit
 def get_suite_update_now_redirect() -> RedirectResponse:
     """If a browser lands on the upgrade API after restart, send it back to the app."""
 
-    return RedirectResponse(url="/app/settings", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url="/settings", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/suite/update-now", response_model=SuiteUpdateStartOut)

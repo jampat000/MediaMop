@@ -55,11 +55,11 @@ describe("PrunerInstanceShell", () => {
     expect(tabs.textContent).toMatch(/Connection/);
     expect(screen.getByRole("link", { name: "Movies" })).toHaveAttribute(
       "href",
-      "/app/pruner/instances/9/movies",
+      "/pruner/instances/9/movies",
     );
     expect(screen.getByRole("link", { name: "TV" })).toHaveAttribute(
       "href",
-      "/app/pruner/instances/9/tv",
+      "/pruner/instances/9/tv",
     );
     expect(
       screen.getByTestId("pruner-instance-shell").textContent ?? "",

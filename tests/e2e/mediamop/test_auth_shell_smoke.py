@@ -43,11 +43,11 @@ def test_auth_shell_bootstrap_login_logout_guard(mediamop_shell: str) -> None:
             page.get_by_test_id("login-password").fill(BOOTSTRAP_PASS)
             page.get_by_test_id("login-submit").click()
 
-            expect(page).to_have_url(re.compile(r".*/app/setup-wizard"))
+            expect(page).to_have_url(re.compile(r".*/setup-wizard"))
             expect(page.get_by_text("Setup wizard", exact=False)).to_be_visible()
             page.get_by_test_id("setup-wizard-skip").click()
 
-            expect(page).to_have_url(re.compile(r".*/app"))
+            expect(page).to_have_url(re.compile(r".*/(?:$|[/?#])"))
             expect(page.get_by_test_id("shell-ready")).to_be_visible()
 
             with page.expect_response(
@@ -58,7 +58,7 @@ def test_auth_shell_bootstrap_login_logout_guard(mediamop_shell: str) -> None:
             assert logout_response.value.ok
             expect(page).to_have_url(re.compile(r".*/login"), timeout=_URL_ASSERT_MS)
 
-            page.goto(f"{base}/app", wait_until="domcontentloaded")
+            page.goto(f"{base}/", wait_until="domcontentloaded")
             expect(page).to_have_url(re.compile(r".*/login"), timeout=_URL_ASSERT_MS)
         finally:
             browser.close()

@@ -37,10 +37,10 @@ import {
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 
 const LANDING_OPTIONS = [
-  { value: "/app", label: "Dashboard" },
-  { value: "/app/refiner", label: "Refiner" },
-  { value: "/app/pruner", label: "Pruner" },
-  { value: "/app/subber", label: "Subber" },
+  { value: "/", label: "Dashboard" },
+  { value: "/refiner", label: "Refiner" },
+  { value: "/pruner", label: "Pruner" },
+  { value: "/subber", label: "Subber" },
 ] as const;
 
 const BACKUP_INTERVAL_OPTIONS = [
@@ -117,7 +117,7 @@ export function SetupWizardPage() {
   const [displayDensity, setDisplayDensity] = useState<DisplayDensity>(() =>
     readStoredDisplayDensity(),
   );
-  const [landingPath, setLandingPath] = useState<string>("/app");
+  const [landingPath, setLandingPath] = useState<string>("/");
   const [backupEnabled, setBackupEnabled] = useState(false);
   const [backupIntervalHours, setBackupIntervalHours] = useState("24");
   const [backupPreferredTime, setBackupPreferredTime] = useState("02:00");
@@ -225,7 +225,7 @@ export function SetupWizardPage() {
               Settings later and try again.
             </p>
             <p className="mm-auth-footer-link">
-              <Link to="/app">Continue to the app</Link>
+              <Link to="/">Continue to the app</Link>
             </p>
           </div>
         </div>

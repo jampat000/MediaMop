@@ -34,8 +34,12 @@ def _runtime_home() -> Path:
 
 def _install_root() -> Path:
     if getattr(sys, "frozen", False) and os.name == "nt":
-        return Path(sys.executable).resolve().parent
-    return _runtime_home()
+        resolved = Path(sys.executable).resolve().parent
+        _append_service_log(f"updater_service._install_root resolved to {resolved} (frozen)")
+        return resolved
+    resolved = _runtime_home()
+    _append_service_log(f"updater_service._install_root resolved to {resolved} (unfrozen)")
+    return resolved
 
 
 def _upgrade_root() -> Path:

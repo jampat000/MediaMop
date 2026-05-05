@@ -327,7 +327,7 @@ function buildRefinerCard(args: {
       `Movies watched folder: ${args.movieFolder?.trim() ? "Configured" : "Not set"}`,
     ],
     actionLabel: "Open Refiner",
-    actionTo: "/app/refiner",
+    actionTo: "/refiner",
   };
 }
 
@@ -382,7 +382,7 @@ function buildPrunerCard(args: {
       `Last 30 days: ${formatCount(args.previewRuns)} previews and ${formatCount(args.applyRuns)} cleanup ${args.applyRuns === 1 ? "run" : "runs"}`,
     ],
     actionLabel: "Open Pruner",
-    actionTo: "/app/pruner",
+    actionTo: "/pruner",
   };
 }
 
@@ -441,7 +441,7 @@ function buildSubberCard(args: {
       `Providers enabled: ${formatCount(args.enabledProviders)} of ${formatCount(args.providerTotal)}`,
     ],
     actionLabel: "Open Subber",
-    actionTo: "/app/subber",
+    actionTo: "/subber",
   };
 }
 

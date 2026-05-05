@@ -22,6 +22,7 @@ Optional env:
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import signal
 import socket
@@ -312,12 +313,17 @@ def main() -> int:
                 page.get_by_test_id("login-password").fill("test-password-strong")
                 page.get_by_test_id("login-submit").click()
                 try:
-                    page.wait_for_url("**/app**", timeout=90_000)
+                    page.wait_for_url(
+                        re.compile(r".*/(?:setup-wizard)?(?:$|[/?#])"),
+                        timeout=90_000,
+                    )
                 except PlaywrightTimeoutError as e:
                     raise RuntimeError(
-                        "Timed out waiting for post-login navigation to /app. "
+                        "Timed out waiting for post-login navigation to shell routes. "
                         + _playwright_failure_hint(page, out_dir, "post-login-url"),
                     ) from e
+                if "/setup-wizard" in page.url:
+                    page.get_by_test_id("setup-wizard-skip").click()
                 try:
                     page.wait_for_selector('[data-testid="shell-ready"]', timeout=90_000)
                 except PlaywrightTimeoutError as e:
