@@ -16,7 +16,12 @@ MediaMop is released under AGPL-3.0-or-later. Release artifacts are built from t
    - `apps/backend/pyproject.toml`
    - `apps/web/package.json`
 2. Merge to `main` after `Test / mediamop` passes.
-3. Create an annotated tag on the merge commit:
+3. Create user-facing release notes for the target tag before pushing it:
+
+   - Create `docs/release-notes/vX.Y.Z.md` using `docs/release-notes/TEMPLATE.md`.
+   - Keep wording operator-friendly and focused on what changed for users.
+
+4. Create an annotated tag on the merge commit:
 
    ```bash
    git fetch origin
@@ -26,7 +31,8 @@ MediaMop is released under AGPL-3.0-or-later. Release artifacts are built from t
    git push origin vX.Y.Z
    ```
 
-4. Pushing `v*` triggers `.github/workflows/release.yml`.
+5. Pushing `v*` triggers `.github/workflows/release.yml`.
+6. The release workflow requires `docs/release-notes/vX.Y.Z.md` for the tag and publishes that file as the GitHub Release body.
 
 Local Docker is not required for this release path. Docker build, publish,
 manifest verification, and container smoke testing all run on GitHub-hosted

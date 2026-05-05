@@ -8,6 +8,7 @@ This directory is the repository-local system of record. Keep durable decisions 
 - [`triage.md`](triage.md) - issue labels, impact triage, and backlog expectations.
 - [`release-governance.md`](release-governance.md) - release controls and pre/post-release gates.
 - [`release.md`](release.md) - release procedure and artifacts.
+- [`release-notes/TEMPLATE.md`](release-notes/TEMPLATE.md) - required plain-language release notes template.
 - [`smoke-checklists.md`](smoke-checklists.md) - Windows and Docker smoke paths.
 
 ## Architecture And Runtime
