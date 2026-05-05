@@ -270,7 +270,7 @@ export function TopLevelOverview({
               </div>
             ) : (
               <p className="text-[var(--mm-text2)]">
-                No server saved yet. Add the address and key on that provider's
+                No server saved yet. Add the address and key on that provider&apos;s
                 Connection tab.
               </p>
             );
