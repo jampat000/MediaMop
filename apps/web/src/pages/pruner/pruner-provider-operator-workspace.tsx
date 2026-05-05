@@ -1,7 +1,7 @@
 export {
   PrunerDryRunControls,
   type PrunerDryRunControlsProps,
-} from "./pruner-dry-run-controls";
+} from "./pruner-preview-controls";
 export {
   PrunerProviderPeopleCard,
   PrunerProviderRulesCard,

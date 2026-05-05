@@ -27,7 +27,7 @@ import {
   type CandidateDisplayRow,
   type PreviewSnapshot,
 } from "./pruner-operator-scan-utils";
-import { PrunerDryRunResults } from "./pruner-dry-run-results";
+import { PrunerDryRunResults } from "./pruner-preview-results";
 
 function scopeRow(
   inst: PrunerServerInstance | undefined,
