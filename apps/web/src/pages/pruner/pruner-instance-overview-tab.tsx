@@ -121,7 +121,7 @@ function ScopeWorkspaceCard({
           </p>
         </div>
         <Link
-          to={`/app/pruner/instances/${instanceId}/${toTab}`}
+          to={`/pruner/instances/${instanceId}/${toTab}`}
           className="text-xs font-semibold text-[var(--mm-accent)] underline-offset-2 hover:underline"
         >
           Open tab
@@ -301,7 +301,7 @@ export function PrunerInstanceOverviewTab(props: { contextOverride?: Ctx }) {
         <p className="mt-2">
           <Link
             className="font-semibold text-[var(--mm-accent)] underline-offset-2 hover:underline"
-            to="/app/activity"
+            to="/activity"
           >
             Open Activity
           </Link>

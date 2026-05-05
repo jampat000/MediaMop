@@ -29,7 +29,7 @@ describe("resolveEntryDecision", () => {
         user: { id: 1, username: "a", role: "admin" },
         bootstrapAllowed: true,
       }),
-    ).toEqual({ kind: "redirect", to: "/app" });
+    ).toEqual({ kind: "redirect", to: "/" });
   });
 
   it("sends guests to setup when bootstrap is open", () => {

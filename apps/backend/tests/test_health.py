@@ -77,7 +77,7 @@ def test_unknown_upgrade_api_browser_landing_redirects_to_settings() -> None:
     response = client.get("/api/v1/suite/upgrade-now", follow_redirects=False)
 
     assert response.status_code == 303
-    assert response.headers["location"] == "/app/settings"
+    assert response.headers["location"] == "/settings"
 
 
 def test_regular_unknown_api_path_still_returns_json_404() -> None:
@@ -96,7 +96,11 @@ def test_packaged_app_routes_refresh_to_react_shell(tmp_path: Path, monkeypatch)
     monkeypatch.setenv("MEDIAMOP_WEB_DIST", str(web_dist))
     client = TestClient(create_app())
 
-    response = client.get("/app/settings", follow_redirects=False)
+    response = client.get(
+        "/settings",
+        follow_redirects=False,
+        headers={"Accept": "text/html"},
+    )
 
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]

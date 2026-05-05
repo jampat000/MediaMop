@@ -339,7 +339,7 @@ def test_suite_update_now_get_redirects_back_to_settings(client_with_admin: Test
     r = client_with_admin.get("/api/v1/suite/update-now", follow_redirects=False)
 
     assert r.status_code == 303
-    assert r.headers["location"] == "/app/settings"
+    assert r.headers["location"] == "/settings"
 
 
 def test_suite_update_status_not_published_when_release_missing(

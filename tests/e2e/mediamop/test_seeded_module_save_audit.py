@@ -37,10 +37,10 @@ def test_saved_state_persists_across_settings_refiner_pruner_and_subber(
             open_sidebar(page, "Settings")
             expect(page.get_by_test_id("suite-settings-global")).to_be_visible()
             page.get_by_test_id("suite-settings-open-setup-wizard").click()
-            expect(page).to_have_url(re.compile(r".*/app/setup-wizard"))
+            expect(page).to_have_url(re.compile(r".*/setup-wizard"))
             page.get_by_label("Display density").get_by_text("Comfortable").click()
             page.get_by_test_id("setup-wizard-skip").click()
-            expect(page).to_have_url(re.compile(r".*/app(?:$|[/?#])"))
+            expect(page).to_have_url(re.compile(r".*/(?:$|[/?#])"))
             expect(page.locator("html")).to_have_attribute("data-mm-density", "comfortable")
 
             open_sidebar(page, "Refiner")
@@ -66,9 +66,11 @@ def test_saved_state_persists_across_settings_refiner_pruner_and_subber(
             page.get_by_role("tab", name="Emby", exact=True).click()
             emby_panel = page.get_by_test_id("pruner-connection-panel-emby")
             emby_panel.get_by_label("Base URL", exact=True).fill("http://emby.test:8096")
-            emby_panel.get_by_label("API key", exact=True).fill("emby-token")
+            emby_panel.get_by_placeholder("Enter API key", exact=True).fill("emby-token")
             emby_panel.get_by_role("button", name="Save Emby", exact=True).click()
-            expect(page.get_by_test_id("pruner-connection-save-ok-emby")).to_be_visible()
+            expect(page.get_by_test_id("pruner-connection-status-emby")).to_contain_text(
+                "Not tested yet",
+            )
             open_sidebar(page, "Dashboard")
             open_sidebar(page, "Pruner")
             page.get_by_role("tab", name="Emby", exact=True).click()

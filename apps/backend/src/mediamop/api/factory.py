@@ -42,18 +42,6 @@ def _mount_web_spa_if_configured(application: FastAPI) -> None:
     application.mount("/", StaticFiles(directory=str(root), html=True), name="web")
 
 
-def _register_web_spa_history_fallback(application: FastAPI) -> None:
-    """Return the React shell for browser refreshes on client-side app routes."""
-
-    @application.get("/app", include_in_schema=False)
-    @application.get("/app/{spa_path:path}", include_in_schema=False)
-    def _web_spa_history_fallback() -> FileResponse:
-        root = _web_dist_root()
-        if root is None:
-            raise StarletteHTTPException(status_code=status.HTTP_404_NOT_FOUND)
-        return FileResponse(root / "index.html", media_type="text/html")
-
-
 def _is_browser_document_request(request: Request) -> bool:
     accept = (request.headers.get("accept") or "").lower()
     if "text/html" in accept:
@@ -111,7 +99,7 @@ def create_app() -> FastAPI:
     @application.exception_handler(StarletteHTTPException)
     async def _friendly_upgrade_landing_handler(request: Request, exc: StarletteHTTPException):
         if _is_upgrade_browser_landing_404(request, exc):
-            return RedirectResponse(url="/app/settings", status_code=status.HTTP_303_SEE_OTHER)
+            return RedirectResponse(url="/settings", status_code=status.HTTP_303_SEE_OTHER)
         if _is_spa_history_404(request, exc):
             root = _web_dist_root()
             if root is not None:
@@ -131,7 +119,6 @@ def create_app() -> FastAPI:
     application.include_router(readiness_router)
     application.include_router(metrics_router)
     application.include_router(build_v1_router())
-    _register_web_spa_history_fallback(application)
     _mount_web_spa_if_configured(application)
 
     return application

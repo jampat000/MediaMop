@@ -23,7 +23,7 @@ export function SetupPage() {
   }
 
   if (me.data) {
-    return <Navigate to="/app" replace />;
+    return <Navigate to="/" replace />;
   }
 
   if (boot.isError) {

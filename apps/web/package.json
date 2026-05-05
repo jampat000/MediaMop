@@ -1,7 +1,7 @@
 {
   "name": "mediamop-web",
   "private": true,
-  "version": "1.0.33",
+  "version": "2.0.0",
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "engines": {
@@ -25,16 +25,16 @@
   "dependencies": {
     "@fontsource/outfit": "^5.2.8",
     "@tanstack/react-query": "^5.62.8",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
     "react-router-dom": "^6.28.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.0.1",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.39.4",

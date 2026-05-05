@@ -221,7 +221,7 @@ describe("SetupWizardPage", () => {
       }),
     );
     await waitFor(() => {
-      expect(navigateMock).toHaveBeenCalledWith("/app/refiner", {
+      expect(navigateMock).toHaveBeenCalledWith("/refiner", {
         replace: true,
       });
     });

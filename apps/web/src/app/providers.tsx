@@ -25,7 +25,10 @@ export function AppProviders({ children }: { children: ReactNode }) {
       client.setQueryData(qk.session, null);
       void client.cancelQueries({ queryKey: qk.me });
       void client.cancelQueries({ queryKey: qk.session });
-      if (window.location.pathname.startsWith("/app")) {
+      if (
+        window.location.pathname !== "/login" &&
+        window.location.pathname !== "/setup"
+      ) {
         window.history.replaceState(null, "", "/login?session=expired");
         window.dispatchEvent(new PopStateEvent("popstate"));
       }

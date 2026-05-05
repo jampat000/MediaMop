@@ -6,7 +6,7 @@ import time
 from dataclasses import dataclass
 from threading import RLock
 
-WORKER_HEARTBEAT_STALE_SECONDS = 30.0
+WORKER_HEARTBEAT_STALE_SECONDS = 360.0
 
 
 @dataclass(frozen=True, slots=True)

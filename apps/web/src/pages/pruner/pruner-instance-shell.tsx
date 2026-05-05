@@ -15,7 +15,7 @@ export function PrunerInstanceShell() {
     );
   }
 
-  const base = `/app/pruner/instances/${id}`;
+  const base = `/pruner/instances/${id}`;
 
   return (
     <div className="mm-page w-full min-w-0" data-testid="pruner-instance-shell">

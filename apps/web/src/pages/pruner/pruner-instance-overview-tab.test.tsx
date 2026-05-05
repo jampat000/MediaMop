@@ -134,7 +134,7 @@ describe("PrunerInstanceOverviewTab", () => {
     expect(tvCard.textContent).toMatch(/Automatic previews are off/i);
     expect(
       screen.getByRole("link", { name: /open activity/i }),
-    ).toHaveAttribute("href", "/app/activity");
+    ).toHaveAttribute("href", "/activity");
     expect(
       screen.getByText(
         /Removed, skipped, and failed counts for each cleanup run/i,

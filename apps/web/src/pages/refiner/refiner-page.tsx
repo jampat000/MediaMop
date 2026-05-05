@@ -67,7 +67,7 @@ export function RefinerPage() {
           When jobs finish, details are on{" "}
           <Link
             className="font-semibold text-[var(--mm-text)] underline-offset-2 hover:underline"
-            to="/app/activity"
+            to="/activity"
           >
             Activity
           </Link>

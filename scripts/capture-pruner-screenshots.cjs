@@ -99,7 +99,7 @@ async function clickProviderSub(page, provider, label) {
   const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
 
   await loginViaApi(page);
-  await page.goto(`${baseUrl}/app/pruner`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${baseUrl}/pruner`, { waitUntil: "domcontentloaded" });
   await page.getByTestId("pruner-top-level-tabs").waitFor({ timeout: 30000 });
 
   await shot(page, "01-overview.png");

@@ -6,7 +6,7 @@
 
 ## Stack
 
-- React 18, React Router 6, TanStack Query
+- React 19, React Router 6, TanStack Query
 - Tailwind CSS (minimal tokens in `tailwind.config.js`); **shell look** is owned by `src/styles/mediamop-tokens.css` and `src/styles/mediamop-shell.css` - **warm charcoal base + gold accent** product language (approved one-pager direction); indigo only as a restrained depth veil in tokens.
 - Vitest + Testing Library for small unit tests
 
@@ -48,11 +48,11 @@ Then set in this app:
 
 | Path | Purpose |
 |------|---------|
-| `/` | Resolves to `/app`, `/setup`, or `/login` from `/me` + bootstrap status |
+| `/` | Authenticated app shell root (dashboard), guarded by session + setup wizard checks |
 | `/setup` | First-run admin creation (`POST /api/v1/auth/bootstrap`) while allowed; otherwise redirects |
 | `/login` | Session login (`POST /api/v1/auth/login`) |
-| `/app` | Dashboard placeholder (authenticated shell) |
-| `/app/settings` | Suite settings: Global (saved in-app) and Security (read-only startup snapshot) |
+| `/setup-wizard` | First-run setup wizard for signed-in users before normal module access |
+| `/settings` | Suite settings: Global (saved in-app) and Security (read-only startup snapshot) |
 
 ## API usage
 

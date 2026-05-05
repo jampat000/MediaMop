@@ -16,8 +16,8 @@ export function RequireSetupWizard() {
   const wizardState = (settingsQ.data.setup_wizard_state || "pending")
     .trim()
     .toLowerCase();
-  if (wizardState === "pending" && location.pathname !== "/app/setup-wizard") {
-    return <Navigate to="/app/setup-wizard" replace />;
+  if (wizardState === "pending" && location.pathname !== "/setup-wizard") {
+    return <Navigate to="/setup-wizard" replace />;
   }
 
   return <Outlet />;

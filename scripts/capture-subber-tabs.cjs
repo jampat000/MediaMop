@@ -69,9 +69,9 @@ function slug(label) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 
   await loginViaApi(page);
-  await page.goto(`${baseUrl}/app`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
   await page.locator('[data-testid="shell-ready"]').waitFor({ timeout: 90000 });
-  await page.goto(`${baseUrl}/app/subber`, { waitUntil: "domcontentloaded", timeout: 120000 });
+  await page.goto(`${baseUrl}/subber`, { waitUntil: "domcontentloaded", timeout: 120000 });
   await page.locator('[data-testid="subber-scope-page"]').waitFor({ timeout: 60000 });
 
   for (const label of TAB_LABELS) {

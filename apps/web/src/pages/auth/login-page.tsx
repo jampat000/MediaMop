@@ -83,7 +83,7 @@ export function LoginPage() {
     return <PageLoading />;
   }
   if (me.data) {
-    return <Navigate to="/app" replace />;
+    return <Navigate to="/" replace />;
   }
   if (me.isError || boot.isError) {
     const err = boot.error ?? me.error;
@@ -98,6 +98,9 @@ export function LoginPage() {
       </main>
     );
   }
+  if (boot.data?.bootstrap_allowed && !fromSetup) {
+    return <Navigate to="/setup" replace />;
+  }
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -107,7 +110,7 @@ export function LoginPage() {
         password,
         trustedDevice,
       });
-      navigate("/app", { replace: true });
+      navigate("/", { replace: true });
     } catch {
       /* mutation error surfaces below */
     }

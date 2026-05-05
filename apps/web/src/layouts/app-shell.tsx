@@ -44,16 +44,16 @@ export function AppShell() {
   return (
     <div className="mm-app-layout" data-testid="shell-ready">
       <aside className="mm-sidebar" aria-label="Product">
-        <BrandHeaderLink to="/app" productTitle={productTitle} />
+        <BrandHeaderLink to="/" productTitle={productTitle} />
         <nav className="mm-sidebar-nav" aria-label="Primary">
           <p className="mm-sidebar-section-label">Overview</p>
-          <NavLink to="/app" end className={sidebarNavClass}>
+          <NavLink to="/" end className={sidebarNavClass}>
             <span className="mm-sidebar-link-icon" aria-hidden="true">
               <NavIconDashboard />
             </span>
             <span className="mm-sidebar-link-label">Dashboard</span>
           </NavLink>
-          <NavLink to="/app/activity" className={sidebarNavClass}>
+          <NavLink to="/activity" className={sidebarNavClass}>
             <span className="mm-sidebar-link-icon" aria-hidden="true">
               <NavIconActivity />
             </span>
@@ -61,19 +61,19 @@ export function AppShell() {
           </NavLink>
 
           <p className="mm-sidebar-section-label">Modules</p>
-          <NavLink to="/app/refiner" className={sidebarNavClass}>
+          <NavLink to="/refiner" className={sidebarNavClass}>
             <span className="mm-sidebar-link-icon" aria-hidden="true">
               <NavIconRefiner />
             </span>
             <span className="mm-sidebar-link-label">Refiner</span>
           </NavLink>
-          <NavLink to="/app/pruner" className={sidebarNavClass}>
+          <NavLink to="/pruner" className={sidebarNavClass}>
             <span className="mm-sidebar-link-icon" aria-hidden="true">
               <NavIconPruner />
             </span>
             <span className="mm-sidebar-link-label">Pruner</span>
           </NavLink>
-          <NavLink to="/app/subber" className={sidebarNavClass}>
+          <NavLink to="/subber" className={sidebarNavClass}>
             <span className="mm-sidebar-link-icon" aria-hidden="true">
               <NavIconSubber />
             </span>
@@ -81,7 +81,7 @@ export function AppShell() {
           </NavLink>
 
           <p className="mm-sidebar-section-label">System</p>
-          <NavLink to="/app/settings" className={sidebarNavClass}>
+          <NavLink to="/settings" className={sidebarNavClass}>
             <span className="mm-sidebar-link-icon" aria-hidden="true">
               <NavIconSettings />
             </span>

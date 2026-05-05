@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from datetime import datetime
 
@@ -30,6 +32,8 @@ _VALID_SESSION_ROLES = frozenset(
 _STREAM_RETRY_MS = 5000
 _STREAM_POLL_SECONDS = 2.0
 _STREAM_KEEPALIVE_EVERY_POLLS = 8
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/activity", tags=["activity"])
 
@@ -144,7 +148,12 @@ async def iter_activity_latest_sse(
     while True:
         if await is_disconnected():
             break
-        latest_id = read_latest_id()
+        try:
+            latest_id = read_latest_id()
+        except Exception:
+            logger.warning("SSE activity stream: read_latest_id failed, retrying after back-off")
+            await asyncio.sleep(poll_seconds)
+            continue
         if latest_id is not None and latest_id != last_sent_id:
             last_sent_id = latest_id
             _notifier_latest_id, notifier_version = activity_latest_notifier.snapshot()
