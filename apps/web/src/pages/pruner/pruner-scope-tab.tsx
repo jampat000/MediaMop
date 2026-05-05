@@ -22,15 +22,7 @@ import {
 import type { PrunerServerInstance } from "../../lib/pruner/api";
 import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
 import {
-  MM_SCHEDULE_TIME_WINDOW_HELPER,
-  MmScheduleDayChips,
-  MmScheduleTimeFields,
-} from "../../components/ui/mm-schedule-window-controls";
-import {
-  committedPrunerRunIntervalMinutes,
   finalizePrunerRunIntervalMinutesDraft,
-  PRUNER_RUN_INTERVAL_MAX_MINUTES,
-  PRUNER_RUN_INTERVAL_MIN_MINUTES,
 } from "../../lib/ui/pruner-schedule-interval";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 import {
@@ -45,23 +37,15 @@ import {
   type PrunerPeopleRoleId,
 } from "./pruner-people-roles";
 import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
-import { formatPrunerDateTime, previewRunRowCaption } from "./pruner-ui-utils";
+import { formatPrunerDateTime } from "./pruner-ui-utils";
 import { PrunerProviderSection } from "./pruner-scope-tab-sections";
+import {
+  PrunerScopeApplyModal,
+  PrunerScopePreviewRunsHistory,
+} from "./pruner-scope-tab-history-modal";
+import { PrunerScopeScheduleCard } from "./pruner-scope-tab-schedule-card";
 
 type Ctx = { instanceId: number; instance: PrunerServerInstance | undefined };
-
-function canApplyFromPreviewSnapshot(
-  provider: string | undefined,
-  row: { outcome: string; candidate_count: number; rule_family_id: string },
-): boolean {
-  if (!provider || row.outcome !== "success" || row.candidate_count <= 0)
-    return false;
-  if (provider === "jellyfin" || provider === "emby") return true;
-  return (
-    provider === "plex" &&
-    row.rule_family_id === RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED
-  );
-}
 
 export function PrunerScopeTab(props: {
   scope: "tv" | "movies";
@@ -2480,360 +2464,58 @@ export function PrunerScopeTab(props: {
             Sign in as an operator to run scans.
           </p>
         )}
-        <div
-          className="mm-card mm-dash-card flex min-h-0 flex-col p-6"
-          data-testid="pruner-scope-scheduled-preview"
-        >
-          <div className="mm-card-action-body flex-1 min-h-0">
-            <div>
-              <h3 className="text-base font-semibold text-[var(--mm-text1)]">
-                Automatic scans ({props.scope === "tv" ? "TV shows" : "Movies"})
-              </h3>
-              <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                The schedule runs your saved criteria automatically and records
-                a review snapshot. Deleting only happens when automatic apply is
-                enabled for this library and uses that saved snapshot.
-              </p>
-            </div>
-            {showInteractiveControls ? (
-              <>
-                <MmOnOffSwitch
-                  id={`pruner-scope-${instanceId}-${props.scope}-timed`}
-                  label="Enable timed scans"
-                  enabled={schedEnabled}
-                  disabled={busy}
-                  onChange={setSchedEnabled}
-                />
-                <div>
-                  <span className="text-sm font-medium text-[var(--mm-text1)]">
-                    Run interval (minutes)
-                  </span>
-                  <p className="mt-1 text-xs text-[var(--mm-text3)]">
-                    How often this search runs automatically.
-                  </p>
-                  <input
-                    type="number"
-                    min={PRUNER_RUN_INTERVAL_MIN_MINUTES}
-                    max={PRUNER_RUN_INTERVAL_MAX_MINUTES}
-                    className="mm-input mt-2 w-full"
-                    value={
-                      schedIntervalMinDraft !== null
-                        ? schedIntervalMinDraft
-                        : committedPrunerRunIntervalMinutes(schedIntervalSec)
-                    }
-                    onFocus={() =>
-                      setSchedIntervalMinDraft(
-                        committedPrunerRunIntervalMinutes(schedIntervalSec),
-                      )
-                    }
-                    onChange={(e) => setSchedIntervalMinDraft(e.target.value)}
-                    onBlur={() => setSchedIntervalMinDraft(null)}
-                    disabled={busy}
-                    aria-label="Run interval in minutes"
-                  />
-                </div>
-                <div className="space-y-3">
-                  <div>
-                    <span className="text-sm font-medium text-[var(--mm-text1)]">
-                      Schedule window
-                    </span>
-                    <p className="mt-1 text-xs text-[var(--mm-text3)]">
-                      {MM_SCHEDULE_TIME_WINDOW_HELPER}
-                    </p>
-                  </div>
-                  <div className="space-y-4">
-                    <MmOnOffSwitch
-                      id={`pruner-scope-${instanceId}-${props.scope}-hours`}
-                      label="Limit to these hours"
-                      enabled={schedHoursLimited}
-                      disabled={busy}
-                      onChange={setSchedHoursLimited}
-                    />
-                    <div className="space-y-2">
-                      <span className="text-sm font-medium text-[var(--mm-text1)]">
-                        Days
-                      </span>
-                      <MmScheduleDayChips
-                        scheduleDaysCsv={schedDays}
-                        disabled={busy}
-                        onChangeCsv={setSchedDays}
-                      />
-                    </div>
-                    <MmScheduleTimeFields
-                      idPrefix={`pruner-scope-${instanceId}-${props.scope}`}
-                      start={schedStart}
-                      end={schedEnd}
-                      disabled={busy}
-                      onStart={setSchedStart}
-                      onEnd={setSchedEnd}
-                    />
-                  </div>
-                </div>
-              </>
-            ) : (
-              <p className="text-sm text-[var(--mm-text2)]">
-                Timed scans are{" "}
-                <strong>
-                  {scopeRow?.scheduled_preview_enabled ? "on" : "off"}
-                </strong>
-                {scopeRow ? (
-                  <>
-                    {" "}
-                    (every{" "}
-                    {Math.round(
-                      scopeRow.scheduled_preview_interval_seconds / 60,
-                    )}{" "}
-                    minutes). Sign in as an operator to change it.
-                  </>
-                ) : null}
-              </p>
-            )}
-            <p className="text-xs text-[var(--mm-text3)]">
-              Last automatic scan:{" "}
-              <span className="font-medium text-[var(--mm-text1)]">
-                {scopeRow?.last_scheduled_preview_enqueued_at
-                  ? fmt(scopeRow.last_scheduled_preview_enqueued_at)
-                  : "Never run"}
-              </span>
-            </p>
-          </div>
-          {showInteractiveControls ? (
-            <div className="mm-card-action-footer">
-              <button
-                type="button"
-                className={`${mmActionButtonClass({ variant: "primary", disabled: busy })} w-full`}
-                disabled={busy}
-                onClick={() => void saveSchedule()}
-              >
-                {props.scope === "tv"
-                  ? "Save TV schedule window"
-                  : "Save Movies schedule window"}
-              </button>
-              {schedMsg ? (
-                <p className="text-xs text-green-600">{schedMsg}</p>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-        {!isProvider ? (
-          <div className="space-y-2" data-testid="pruner-preview-runs-history">
-            <h3 className="text-sm font-semibold text-[var(--mm-text)]">
-              Recent scans ({props.scope === "tv" ? "TV shows" : "Movies"})
-            </h3>
-            {runsQuery.isLoading ? (
-              <p className="text-sm text-[var(--mm-text2)]">Loading history…</p>
-            ) : runsQuery.isError ? (
-              <p className="text-sm text-red-600" role="alert">
-                {(runsQuery.error as Error).message}
-              </p>
-            ) : runsQuery.data?.length ? (
-              <div className="overflow-x-auto rounded-md border border-[var(--mm-border)]">
-                <table className="w-full min-w-[30rem] border-collapse text-left text-sm text-[var(--mm-text)]">
-                  <thead className="border-b border-[var(--mm-border)] bg-[var(--mm-surface2)] text-xs uppercase text-[var(--mm-text2)]">
-                    <tr>
-                      <th className="px-2 py-2">#</th>
-                      <th className="px-2 py-2">Cleanup type</th>
-                      <th className="px-2 py-2">When</th>
-                      <th className="px-2 py-2">Result</th>
-                      <th className="px-2 py-2">What it means</th>
-                      <th className="px-2 py-2">Items</th>
-                      <th className="px-2 py-2"> </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {runsQuery.data.map((row, idx) => (
-                      <tr
-                        key={row.preview_run_id}
-                        className="border-b border-[var(--mm-border)] align-top"
-                      >
-                        <td className="px-2 py-2 text-xs text-[var(--mm-text2)]">
-                          {idx + 1}
-                        </td>
-                        <td className="px-2 py-2 text-xs text-[var(--mm-text2)]">
-                          {ruleFamilyColumnLabel(row.rule_family_id)}
-                        </td>
-                        <td className="whitespace-nowrap px-2 py-2 text-xs text-[var(--mm-text2)]">
-                          {fmt(row.created_at)}
-                        </td>
-                        <td className="max-w-[14rem] break-words px-2 py-2 text-xs">
-                          <span className="font-medium">{row.outcome}</span>
-                          {row.unsupported_detail ? (
-                            <div className="mt-1 text-[var(--mm-text2)]">
-                              {row.unsupported_detail}
-                            </div>
-                          ) : null}
-                          {row.error_message ? (
-                            <div className="mt-1 text-red-600">
-                              {row.error_message}
-                            </div>
-                          ) : null}
-                        </td>
-                        <td
-                          className="px-2 py-2 align-top text-[0.7rem] leading-snug text-[var(--mm-text2)]"
-                          data-testid={`pruner-preview-run-caption-${row.preview_run_id}`}
-                        >
-                          {previewRunRowCaption(row)}
-                        </td>
-                        <td className="whitespace-nowrap px-2 py-2 text-xs">
-                          {row.candidate_count}
-                          {row.truncated ? " (list stopped at limit)" : ""}
-                        </td>
-                        <td className="px-2 py-2 space-y-1">
-                          <button
-                            type="button"
-                            className="rounded border border-[var(--mm-border)] px-2 py-1 text-xs font-medium text-[var(--mm-text)] disabled:opacity-50"
-                            disabled={busy}
-                            onClick={() => void loadJsonFor(row.preview_run_id)}
-                          >
-                            Raw
-                          </button>
-                          {canOperate &&
-                          canApplyFromPreviewSnapshot(
-                            instance?.provider,
-                            row,
-                          ) ? (
-                            <div>
-                              <button
-                                type="button"
-                                className="mt-1 block w-full rounded border border-red-900/50 bg-red-950/30 px-2 py-1 text-left text-xs font-medium text-red-100 disabled:opacity-50"
-                                data-testid={`pruner-apply-open-${row.preview_run_id}`}
-                                disabled={busy}
-                                onClick={() =>
-                                  openApplyModal(row.preview_run_id)
-                                }
-                              >
-                                {prunerApplyLabelForRuleFamily(
-                                  row.rule_family_id,
-                                )}
-                              </button>
-                            </div>
-                          ) : null}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p
-                className="text-sm text-[var(--mm-text2)]"
-                data-testid="pruner-preview-runs-empty"
-              >
-                No scans yet for this library. Run a scan from a rule panel
-                above; when it finishes, rows appear here with the result, how
-                many items matched, and a short explanation (including rules
-                Plex does not support).
-              </p>
-            )}
-          </div>
-        ) : null}
-        {applyModalRunId ? (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="pruner-apply-modal-title"
-            data-testid="pruner-apply-modal"
-          >
-            <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-4 shadow-xl">
-              <h3
-                id="pruner-apply-modal-title"
-                className="text-base font-semibold text-[var(--mm-text)]"
-              >
-                {applySnapshotOperatorLabel ?? "Delete from last scan"}
-              </h3>
-              <p className="mt-2 text-sm text-[var(--mm-text2)]">
-                This deletes <strong>only</strong> the titles from the saved
-                list you opened — MediaMop does not run a new scan or add
-                titles. Items already removed on the server are usually counted
-                as skipped; full counts appear in Activity when the job
-                finishes.
-              </p>
-              {applyEligQuery.isLoading ? (
-                <p className="mt-3 text-sm text-[var(--mm-text2)]">
-                  Checking whether deletion is allowed…
-                </p>
-              ) : applyEligQuery.isError ? (
-                <p className="mt-3 text-sm text-red-600" role="alert">
-                  {(applyEligQuery.error as Error).message}
-                </p>
-              ) : applyEligQuery.data ? (
-                <ul className="mt-3 list-inside list-disc space-y-1 text-sm text-[var(--mm-text)]">
-                  <li>
-                    Server: <strong>{applyEligQuery.data.display_name}</strong>{" "}
-                    ({applyEligQuery.data.provider})
-                  </li>
-                  <li>
-                    Library type:{" "}
-                    <strong>
-                      {applyEligQuery.data.media_scope === "tv"
-                        ? "TV shows"
-                        : "Movies"}
-                    </strong>
-                  </li>
-                  <li>
-                    Scan time:{" "}
-                    {applyEligQuery.data.preview_created_at
-                      ? fmt(applyEligQuery.data.preview_created_at)
-                      : "—"}
-                  </li>
-                  <li>
-                    Items in this list:{" "}
-                    <strong>{applyEligQuery.data.candidate_count}</strong>
-                  </li>
-                </ul>
-              ) : null}
-              {applyEligQuery.data && !applyEligQuery.data.eligible ? (
-                <p className="mt-3 text-sm text-amber-700" role="status">
-                  {applyEligQuery.data.reasons.length
-                    ? applyEligQuery.data.reasons.join(" ")
-                    : "These items cannot be deleted right now."}
-                </p>
-              ) : null}
-              {applyEligQuery.data?.eligible ? (
-                <label className="mt-4 flex cursor-pointer items-start gap-2 text-sm text-[var(--mm-text)]">
-                  <input
-                    type="checkbox"
-                    className="mt-1"
-                    checked={applySnapshotConfirmed}
-                    onChange={(e) =>
-                      setApplySnapshotConfirmed(e.target.checked)
-                    }
-                  />
-                  <span>
-                    I confirm <strong>{applySnapshotOperatorLabel}</strong> for
-                    this saved list of up to{" "}
-                    {applyEligQuery.data.candidate_count} titles.
-                  </span>
-                </label>
-              ) : null}
-              <div className="mt-4 flex flex-wrap justify-end gap-2">
-                <button
-                  type="button"
-                  className="rounded-md border border-[var(--mm-border)] px-3 py-1.5 text-sm font-medium text-[var(--mm-text)]"
-                  onClick={() => closeApplyModal()}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="rounded-md bg-red-800 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-                  data-testid="pruner-apply-confirm"
-                  disabled={
-                    busy ||
-                    !applyEligQuery.data?.eligible ||
-                    !applySnapshotConfirmed ||
-                    applyEligQuery.isLoading ||
-                    applyEligQuery.isError
-                  }
-                  onClick={() => void confirmApplyFromSnapshot()}
-                >
-                  {applySnapshotOperatorLabel ?? "Confirm delete"}
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
+        <PrunerScopeScheduleCard
+          instanceId={instanceId}
+          scope={props.scope}
+          showInteractiveControls={showInteractiveControls}
+          busy={busy}
+          scopeRow={scopeRow}
+          schedEnabled={schedEnabled}
+          setSchedEnabled={setSchedEnabled}
+          schedIntervalSec={schedIntervalSec}
+          schedIntervalMinDraft={schedIntervalMinDraft}
+          setSchedIntervalMinDraft={setSchedIntervalMinDraft}
+          schedHoursLimited={schedHoursLimited}
+          setSchedHoursLimited={setSchedHoursLimited}
+          schedDays={schedDays}
+          setSchedDays={setSchedDays}
+          schedStart={schedStart}
+          setSchedStart={setSchedStart}
+          schedEnd={schedEnd}
+          setSchedEnd={setSchedEnd}
+          fmt={fmt}
+          schedMsg={schedMsg}
+          saveSchedule={saveSchedule}
+        />
+        <PrunerScopePreviewRunsHistory
+          isProvider={isProvider}
+          scope={props.scope}
+          runs={runsQuery.data}
+          runsLoading={runsQuery.isLoading}
+          runsError={runsQuery.isError ? (runsQuery.error as Error) : null}
+          fmt={fmt}
+          busy={busy}
+          canOperate={canOperate}
+          provider={instance?.provider}
+          ruleFamilyColumnLabel={ruleFamilyColumnLabel}
+          loadJsonFor={loadJsonFor}
+          openApplyModal={openApplyModal}
+        />
+        <PrunerScopeApplyModal
+          runId={applyModalRunId}
+          operatorLabel={applySnapshotOperatorLabel}
+          applyEligibilityLoading={applyEligQuery.isLoading}
+          applyEligibilityError={
+            applyEligQuery.isError ? (applyEligQuery.error as Error) : null
+          }
+          applyEligibilityData={applyEligQuery.data}
+          fmt={fmt}
+          applySnapshotConfirmed={applySnapshotConfirmed}
+          setApplySnapshotConfirmed={setApplySnapshotConfirmed}
+          busy={busy}
+          onCancel={closeApplyModal}
+          onConfirm={confirmApplyFromSnapshot}
+        />
         {err ? (
           <p className="text-sm text-red-600" role="alert">
             {err}
