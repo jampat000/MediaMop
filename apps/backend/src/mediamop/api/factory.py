@@ -34,6 +34,34 @@ def _web_dist_root() -> Path | None:
     return root
 
 
+def _index_no_cache_headers() -> dict[str, str]:
+    return {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
+    }
+
+
+def _serve_index_with_no_cache(application: FastAPI) -> None:
+    """Serve index.html with cache-busting headers.
+
+    StaticFiles does not support per-file headers, so intercept index.html
+    directly. Hashed JS/CSS/static assets remain served by StaticFiles.
+    """
+
+    @application.get("/", include_in_schema=False)
+    @application.get("/index.html", include_in_schema=False)
+    def _index() -> FileResponse:
+        root = _web_dist_root()
+        if root is None:
+            raise StarletteHTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        return FileResponse(
+            root / "index.html",
+            media_type="text/html",
+            headers=_index_no_cache_headers(),
+        )
+
+
 def _mount_web_spa_if_configured(application: FastAPI) -> None:
     """Serve the Vite production bundle from disk when ``MEDIAMOP_WEB_DIST`` is set."""
     root = _web_dist_root()
@@ -103,7 +131,11 @@ def create_app() -> FastAPI:
         if _is_spa_history_404(request, exc):
             root = _web_dist_root()
             if root is not None:
-                return FileResponse(root / "index.html", media_type="text/html")
+                return FileResponse(
+                    root / "index.html",
+                    media_type="text/html",
+                    headers=_index_no_cache_headers(),
+                )
         return await http_exception_handler(request, exc)
 
     if settings.cors_origins:
@@ -119,6 +151,7 @@ def create_app() -> FastAPI:
     application.include_router(readiness_router)
     application.include_router(metrics_router)
     application.include_router(build_v1_router())
+    _serve_index_with_no_cache(application)
     _mount_web_spa_if_configured(application)
 
     return application
