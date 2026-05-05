@@ -183,27 +183,20 @@ jobs:
         if: always()
         run: docker rm -f mediamop-release-smoke >/dev/null 2>&1 || true
 
+      - name: Prepare user-facing release notes
+        run: |
+          notes_file="docs/release-notes/${GITHUB_REF_NAME}.md"
+          if [ ! -f "$notes_file" ]; then
+            echo "::error::Missing required release notes file: $notes_file"
+            echo "::error::Create it from docs/release-notes/TEMPLATE.md before tagging."
+            exit 1
+          fi
+          cp "$notes_file" "$GITHUB_WORKSPACE/release-notes.md"
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           files: |
             mediamop-web-dist.zip
             windows-artifact/MediaMopSetup.exe
-          generate_release_notes: true
-          body: |
-            **MediaMop** release `${{ github.ref_name }}`.
-
-            **Included artifacts**
-            - `mediamop-web-dist.zip` - production web bundle from `apps/web/dist`
-            - `MediaMopSetup.exe` - Windows desktop installer with tray host and bundled web UI
-
-            **Container image**
-            - `ghcr.io/${{ github.repository }}:${{ github.ref_name }}`
-            - `ghcr.io/${{ github.repository }}:latest`
-
-            **Registry publishing**
-            - workflow publishes with the repository `GITHUB_TOKEN`
-
-            **Run instructions**
-            - Windows installer and release notes: `docs/release.md`
-            - Docker: `docker/README.md`
+          body_path: release-notes.md

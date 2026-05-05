@@ -23,13 +23,15 @@ This is the canonical governance checklist for keeping MediaMop releases control
 3. Confirm `.github/workflows/ci.yml` and `.github/workflows/release.yml` still expose the required check names listed above.
 4. Confirm Dependabot has no stale action-runtime holds that conflict with the workflow pins.
 5. Confirm open issues tagged `priority: critical` or `priority: high` are either fixed, intentionally deferred, or not release-blocking.
-6. Run the release path from `docs/release.md`.
+6. Create `docs/release-notes/vX.Y.Z.md` from `docs/release-notes/TEMPLATE.md` with plain-language user-facing notes.
+7. Run the release path from `docs/release.md`.
 
 ## After every release
 
 1. Confirm the GitHub Release exists for the pushed tag.
 2. Confirm `MediaMopSetup.exe` is attached to the release.
-3. Confirm the release notes/install guidance explicitly tell Windows users to run `MediaMopSetup.exe` as administrator, and note the one-time updater-service bootstrap requirement for older installs.
-4. Confirm the GHCR image exists for both `vX.Y.Z` and `latest`.
-5. Confirm the release workflow completed `mediamop`, Docker publish, Docker smoke, and Windows package jobs.
-6. Open a follow-up issue for any manual smoke-test failure.
+3. Confirm the published release body is plain-language and matches the approved `docs/release-notes/vX.Y.Z.md` content.
+4. Confirm the release notes/install guidance explicitly tell Windows users to run `MediaMopSetup.exe` as administrator, and note the one-time updater-service bootstrap requirement for older installs.
+5. Confirm the GHCR image exists for both `vX.Y.Z` and `latest`.
+6. Confirm the release workflow completed `mediamop`, Docker publish, Docker smoke, and Windows package jobs.
+7. Open a follow-up issue for any manual smoke-test failure.
