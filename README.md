@@ -28,11 +28,25 @@ The app ships as a FastAPI + SQLite backend with a React + Vite web UI.
 
 ## Screenshots
 
+### Dashboard and activity
+
 ![Dashboard](screenshots/dashboard.png)
 
 ![Activity](screenshots/activity.png)
 
 ![Refiner activity detail](screenshots/refiner-activity.png)
+
+### Refiner tabs
+
+![Refiner overview tab](screenshots/refiner-tabs/01-overview.png)
+
+![Refiner libraries tab](screenshots/refiner-tabs/02-libraries.png)
+
+![Refiner audio and subtitles tab](screenshots/refiner-tabs/03-audio-subtitles.png)
+
+![Refiner schedules tab](screenshots/refiner-tabs/04-schedules.png)
+
+![Refiner jobs tab](screenshots/refiner-tabs/05-jobs.png)
 
 ## Quick start
 
