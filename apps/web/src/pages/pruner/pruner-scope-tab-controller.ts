@@ -29,7 +29,10 @@ import {
 } from "./pruner-people-roles";
 import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
 
-export type Ctx = { instanceId: number; instance: PrunerServerInstance | undefined };
+export type Ctx = {
+  instanceId: number;
+  instance: PrunerServerInstance | undefined;
+};
 
 export type PrunerScopeTabProps = {
   scope: "tv" | "movies";
@@ -942,7 +945,6 @@ export function usePrunerScopeTabController(props: PrunerScopeTabProps) {
       setBusy(false);
     }
   }
-
 
   return {
     props,

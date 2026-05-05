@@ -1,6 +1,4 @@
-import {
-  PrunerGenreMultiSelect,
-} from "./pruner-genre-multi-select";
+import { PrunerGenreMultiSelect } from "./pruner-genre-multi-select";
 import {
   PrunerPeopleRoleCheckboxes,
   type PrunerPeopleRoleId,
@@ -116,7 +114,9 @@ export function PrunerScopeTabDefaultFilters({
             >
               Save genre filters
             </button>
-            {genreMsg ? <p className="text-xs text-green-600">{genreMsg}</p> : null}
+            {genreMsg ? (
+              <p className="text-xs text-green-600">{genreMsg}</p>
+            ) : null}
           </div>
         ) : (
           <p className="text-xs text-[var(--mm-text2)]">
@@ -137,14 +137,22 @@ export function PrunerScopeTabDefaultFilters({
         <p className="text-sm font-semibold text-[var(--mm-text)]">
           Optional cast and crew names (this {libraryTabPhrase} only)
         </p>
-        <p className="text-xs text-[var(--mm-text2)]">Comma-separated full names.</p>
+        <p className="text-xs text-[var(--mm-text2)]">
+          Comma-separated full names.
+        </p>
         {isPlex ? (
-          <p className="text-xs text-[var(--mm-text2)]" data-testid="pruner-people-plex-note">
+          <p
+            className="text-xs text-[var(--mm-text2)]"
+            data-testid="pruner-people-plex-note"
+          >
             Plex: names apply to broken-poster scans plus the movie scans above.
             They come from cast, writer, and director lines on each title.
           </p>
         ) : (
-          <p className="text-xs text-[var(--mm-text2)]" data-testid="pruner-people-jf-emby-note">
+          <p
+            className="text-xs text-[var(--mm-text2)]"
+            data-testid="pruner-people-jf-emby-note"
+          >
             Jellyfin / Emby: names come from each item’s People list on the
             server and apply to every scan for this library.
           </p>
@@ -177,7 +185,9 @@ export function PrunerScopeTabDefaultFilters({
             >
               Save people filters
             </button>
-            {peopleMsg ? <p className="text-xs text-green-600">{peopleMsg}</p> : null}
+            {peopleMsg ? (
+              <p className="text-xs text-green-600">{peopleMsg}</p>
+            ) : null}
           </div>
         ) : (
           <p className="text-xs text-[var(--mm-text2)]">
@@ -235,13 +245,16 @@ export function PrunerScopeTabDefaultFilters({
             >
               Save year bounds
             </button>
-            {yearMsg ? <p className="w-full text-xs text-green-600">{yearMsg}</p> : null}
+            {yearMsg ? (
+              <p className="w-full text-xs text-green-600">{yearMsg}</p>
+            ) : null}
           </div>
         ) : (
           <p className="text-xs text-[var(--mm-text2)]">
             Current bounds:{" "}
             <strong>
-              {scopeRow.preview_year_min ?? "—"} to {scopeRow.preview_year_max ?? "—"}
+              {scopeRow.preview_year_min ?? "—"} to{" "}
+              {scopeRow.preview_year_max ?? "—"}
             </strong>
             . Sign in as an operator to edit.
           </p>
@@ -254,7 +267,9 @@ export function PrunerScopeTabDefaultFilters({
         <p className="text-sm font-semibold text-[var(--mm-text)]">
           Optional studios (this {libraryTabPhrase} only)
         </p>
-        <p className="text-xs text-[var(--mm-text2)]">Comma-separated studio names.</p>
+        <p className="text-xs text-[var(--mm-text2)]">
+          Comma-separated studio names.
+        </p>
         {showInteractiveControls ? (
           <div className="space-y-2">
             <input
@@ -273,7 +288,9 @@ export function PrunerScopeTabDefaultFilters({
             >
               Save studio filters
             </button>
-            {studioMsg ? <p className="text-xs text-green-600">{studioMsg}</p> : null}
+            {studioMsg ? (
+              <p className="text-xs text-green-600">{studioMsg}</p>
+            ) : null}
           </div>
         ) : (
           <p className="text-xs text-[var(--mm-text2)]">
@@ -316,7 +333,9 @@ export function PrunerScopeTabDefaultFilters({
               >
                 Save collection filters
               </button>
-              {collectionMsg ? <p className="text-xs text-green-600">{collectionMsg}</p> : null}
+              {collectionMsg ? (
+                <p className="text-xs text-green-600">{collectionMsg}</p>
+              ) : null}
             </div>
           ) : (
             <p className="text-xs text-[var(--mm-text2)]">

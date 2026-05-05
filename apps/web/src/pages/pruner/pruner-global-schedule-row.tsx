@@ -71,7 +71,8 @@ export function PrunerGlobalScheduleRow({
 
   const scheduleFieldsDirty =
     scopeRow != null &&
-    (schedHoursLimited !== (scopeRow.scheduled_preview_hours_limited ?? false) ||
+    (schedHoursLimited !==
+      (scopeRow.scheduled_preview_hours_limited ?? false) ||
       schedDays !== (scopeRow.scheduled_preview_days ?? "") ||
       schedStart !== (scopeRow.scheduled_preview_start ?? "00:00") ||
       schedEnd !== (scopeRow.scheduled_preview_end ?? "23:59") ||
@@ -194,7 +195,9 @@ export function PrunerGlobalScheduleRow({
             value={previewCap}
             disabled={controlsDisabled}
             onChange={(e) =>
-              setPreviewCap(Math.max(1, Math.min(5000, Number(e.target.value) || 500)))
+              setPreviewCap(
+                Math.max(1, Math.min(5000, Number(e.target.value) || 500)),
+              )
             }
             aria-label="Items to scan per run"
           />
@@ -203,11 +206,15 @@ export function PrunerGlobalScheduleRow({
           Last automatic scan:{" "}
           <span className="font-medium text-[var(--mm-text1)]">
             {scopeRow?.last_scheduled_preview_enqueued_at
-              ? formatPrunerDateTime(scopeRow.last_scheduled_preview_enqueued_at)
+              ? formatPrunerDateTime(
+                  scopeRow.last_scheduled_preview_enqueued_at,
+                )
               : "Never run"}
           </span>
         </p>
-        {!canOperate && msg ? <p className="text-xs text-green-600">{msg}</p> : null}
+        {!canOperate && msg ? (
+          <p className="text-xs text-green-600">{msg}</p>
+        ) : null}
         {!canOperate && err ? (
           <p className="text-xs text-red-500" role="alert">
             {err}
@@ -234,7 +241,9 @@ export function PrunerGlobalScheduleRow({
       ) : null}
 
       <div className="mt-4 border-t border-[var(--mm-border)] pt-6">
-        <h4 className="text-base font-semibold text-[var(--mm-text1)]">Run now</h4>
+        <h4 className="text-base font-semibold text-[var(--mm-text1)]">
+          Run now
+        </h4>
         <p className="mt-1 text-xs text-[var(--mm-text3)]">
           Scan your saved cleanup criteria immediately without waiting for the
           schedule. This creates review snapshots; deletion still requires a

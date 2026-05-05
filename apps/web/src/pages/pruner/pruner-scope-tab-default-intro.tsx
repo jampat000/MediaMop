@@ -124,8 +124,8 @@ export function PrunerScopeTabDefaultIntro({
           data-testid="pruner-plex-preview-cap-note"
         >
           Plex stops each scan at the smaller of your per-tab item limit and a
-          built-in safety cap. If a scan says the list was shortened, there
-          were more matches than MediaMop showed this time.
+          built-in safety cap. If a scan says the list was shortened, there were
+          more matches than MediaMop showed this time.
         </p>
       ) : null}
       <div>

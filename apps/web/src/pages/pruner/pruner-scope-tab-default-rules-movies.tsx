@@ -107,7 +107,11 @@ export function PrunerScopeTabDefaultRulesMovies({
               type="button"
               className="rounded-md bg-[var(--mm-surface2)] px-3 py-1.5 text-sm font-medium text-[var(--mm-text)] ring-1 ring-[var(--mm-border)] disabled:opacity-50"
               disabled={busy || !watchedMoviesEnabled}
-              title={!watchedMoviesEnabled ? "Turn the rule on and save before running this scan." : undefined}
+              title={
+                !watchedMoviesEnabled
+                  ? "Turn the rule on and save before running this scan."
+                  : undefined
+              }
               onClick={() => void runWatchedMoviesPreview()}
             >
               Scan for watched movies
@@ -116,7 +120,9 @@ export function PrunerScopeTabDefaultRulesMovies({
         ) : (
           <p className="text-xs text-[var(--mm-text2)]">
             Watched movies rule is{" "}
-            <strong>{scopeRow?.watched_movies_reported_enabled ? "on" : "off"}</strong>{" "}
+            <strong>
+              {scopeRow?.watched_movies_reported_enabled ? "on" : "off"}
+            </strong>{" "}
             for this library. Sign in as an operator to change it.
           </p>
         )}
@@ -131,7 +137,9 @@ export function PrunerScopeTabDefaultRulesMovies({
             : "Delete low-score watched movies — Jellyfin / Emby"}
         </p>
         <p className="text-xs text-[var(--mm-text2)]">
-          {isPlex ? "Uses Plex audience rating." : "Uses your server’s community rating."}
+          {isPlex
+            ? "Uses Plex audience rating."
+            : "Uses your server’s community rating."}
         </p>
         {showInteractiveControls ? (
           <div className="space-y-2">
@@ -167,12 +175,18 @@ export function PrunerScopeTabDefaultRulesMovies({
             >
               Save low-rating rule
             </button>
-            {lowRatingMsg ? <p className="text-xs text-green-600">{lowRatingMsg}</p> : null}
+            {lowRatingMsg ? (
+              <p className="text-xs text-green-600">{lowRatingMsg}</p>
+            ) : null}
             <button
               type="button"
               className="rounded-md bg-[var(--mm-surface2)] px-3 py-1.5 text-sm font-medium text-[var(--mm-text)] ring-1 ring-[var(--mm-border)] disabled:opacity-50"
               disabled={busy || !lowRatingEnabled}
-              title={!lowRatingEnabled ? "Turn the rule on and save before running this scan." : undefined}
+              title={
+                !lowRatingEnabled
+                  ? "Turn the rule on and save before running this scan."
+                  : undefined
+              }
               onClick={() => void runLowRatingMoviesPreview()}
             >
               Scan for low-score watched movies
@@ -182,7 +196,9 @@ export function PrunerScopeTabDefaultRulesMovies({
           <p className="text-xs text-[var(--mm-text2)]">
             Low-score rule is{" "}
             <strong>
-              {scopeRow?.watched_movie_low_rating_reported_enabled ? "on" : "off"}
+              {scopeRow?.watched_movie_low_rating_reported_enabled
+                ? "on"
+                : "off"}
             </strong>
             {scopeRow?.watched_movie_low_rating_reported_enabled ? (
               <>
@@ -232,7 +248,9 @@ export function PrunerScopeTabDefaultRulesMovies({
                 className="w-24 rounded border border-[var(--mm-border)] bg-[var(--mm-surface2)] px-2 py-1 text-sm text-[var(--mm-text)]"
                 value={unwatchedStaleDays}
                 disabled={busy}
-                onChange={(e) => setUnwatchedStaleDays(parseInt(e.target.value, 10) || 90)}
+                onChange={(e) =>
+                  setUnwatchedStaleDays(parseInt(e.target.value, 10) || 90)
+                }
               />
             </label>
             <button
@@ -250,7 +268,11 @@ export function PrunerScopeTabDefaultRulesMovies({
               type="button"
               className="rounded-md bg-[var(--mm-surface2)] px-3 py-1.5 text-sm font-medium text-[var(--mm-text)] ring-1 ring-[var(--mm-border)] disabled:opacity-50"
               disabled={busy || !unwatchedStaleEnabled}
-              title={!unwatchedStaleEnabled ? "Turn the rule on and save before running this scan." : undefined}
+              title={
+                !unwatchedStaleEnabled
+                  ? "Turn the rule on and save before running this scan."
+                  : undefined
+              }
               onClick={() => void runUnwatchedStaleMoviesPreview()}
             >
               Scan for old unwatched movies
@@ -259,7 +281,9 @@ export function PrunerScopeTabDefaultRulesMovies({
         ) : (
           <p className="text-xs text-[var(--mm-text2)]">
             Unwatched stale rule is{" "}
-            <strong>{scopeRow?.unwatched_movie_stale_reported_enabled ? "on" : "off"}</strong>{" "}
+            <strong>
+              {scopeRow?.unwatched_movie_stale_reported_enabled ? "on" : "off"}
+            </strong>{" "}
             (min age {scopeRow?.unwatched_movie_stale_min_age_days} days). Sign
             in as an operator to change it.
           </p>

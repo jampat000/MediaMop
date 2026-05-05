@@ -14,7 +14,8 @@ function canApplyFromPreviewSnapshot(
     return false;
   if (provider === "jellyfin" || provider === "emby") return true;
   return (
-    provider === "plex" && row.rule_family_id === "missing_primary_media_reported"
+    provider === "plex" &&
+    row.rule_family_id === "missing_primary_media_reported"
   );
 }
 
@@ -96,7 +97,9 @@ export function PrunerScopePreviewRunsHistory({
                       </div>
                     ) : null}
                     {row.error_message ? (
-                      <div className="mt-1 text-red-600">{row.error_message}</div>
+                      <div className="mt-1 text-red-600">
+                        {row.error_message}
+                      </div>
                     ) : null}
                   </td>
                   <td
@@ -143,9 +146,10 @@ export function PrunerScopePreviewRunsHistory({
           className="text-sm text-[var(--mm-text2)]"
           data-testid="pruner-preview-runs-empty"
         >
-          No scans yet for this library. Run a scan from a rule panel above; when
-          it finishes, rows appear here with the result, how many items matched,
-          and a short explanation (including rules Plex does not support).
+          No scans yet for this library. Run a scan from a rule panel above;
+          when it finishes, rows appear here with the result, how many items
+          matched, and a short explanation (including rules Plex does not
+          support).
         </p>
       )}
     </div>
@@ -198,8 +202,8 @@ export function PrunerScopeApplyModal({
         <p className="mt-2 text-sm text-[var(--mm-text2)]">
           This deletes <strong>only</strong> the titles from the saved list you
           opened - MediaMop does not run a new scan or add titles. Items already
-          removed on the server are usually counted as skipped; full counts appear
-          in Activity when the job finishes.
+          removed on the server are usually counted as skipped; full counts
+          appear in Activity when the job finishes.
         </p>
         {applyEligibilityLoading ? (
           <p className="mt-3 text-sm text-[var(--mm-text2)]">
@@ -218,7 +222,9 @@ export function PrunerScopeApplyModal({
             <li>
               Library type:{" "}
               <strong>
-                {applyEligibilityData.media_scope === "tv" ? "TV shows" : "Movies"}
+                {applyEligibilityData.media_scope === "tv"
+                  ? "TV shows"
+                  : "Movies"}
               </strong>
             </li>
             <li>
@@ -249,8 +255,8 @@ export function PrunerScopeApplyModal({
               onChange={(e) => setApplySnapshotConfirmed(e.target.checked)}
             />
             <span>
-              I confirm <strong>{operatorLabel}</strong> for this saved list of up
-              to {applyEligibilityData.candidate_count} titles.
+              I confirm <strong>{operatorLabel}</strong> for this saved list of
+              up to {applyEligibilityData.candidate_count} titles.
             </span>
           </label>
         ) : null}

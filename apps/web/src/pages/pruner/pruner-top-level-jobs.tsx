@@ -8,7 +8,11 @@ import { PRUNER_JOB_FILTER_OPTIONS } from "./pruner-page-constants";
 import { parseServerInstanceId } from "./pruner-page-utils";
 import { prunerJobKindOperatorLabel } from "./pruner-ui-utils";
 
-export function TopLevelJobs({ instances }: { instances: PrunerServerInstance[] }) {
+export function TopLevelJobs({
+  instances,
+}: {
+  instances: PrunerServerInstance[];
+}) {
   const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
   const jobsQ = usePrunerJobsInspectionQuery(100);
   const byId = useMemo(
@@ -74,7 +78,9 @@ export function TopLevelJobs({ instances }: { instances: PrunerServerInstance[] 
           <p className="text-sm text-[var(--mm-text2)]">Loading jobs...</p>
         ) : null}
         {jobsQ.isError ? (
-          <p className="text-sm text-red-600">{(jobsQ.error as Error).message}</p>
+          <p className="text-sm text-red-600">
+            {(jobsQ.error as Error).message}
+          </p>
         ) : null}
         {jobs.length ? (
           <>
@@ -104,7 +110,10 @@ export function TopLevelJobs({ instances }: { instances: PrunerServerInstance[] 
                     const sid = parseServerInstanceId(job);
                     const inst = sid ? byId.get(sid) : undefined;
                     return (
-                      <tr key={job.id} className="border-t border-[var(--mm-border)]">
+                      <tr
+                        key={job.id}
+                        className="border-t border-[var(--mm-border)]"
+                      >
                         <td className="sticky left-0 z-[1] bg-[var(--mm-card-bg)] px-3 py-2 align-top font-mono text-xs text-[var(--mm-text1)]">
                           #{job.id}
                         </td>
@@ -127,7 +136,11 @@ export function TopLevelJobs({ instances }: { instances: PrunerServerInstance[] 
                           </span>
                         </td>
                         <td className="max-w-[14rem] break-words px-3 py-2 align-top text-xs">
-                          {inst ? inst.display_name : sid ? `Server #${sid}` : "\u2014"}
+                          {inst
+                            ? inst.display_name
+                            : sid
+                              ? `Server #${sid}`
+                              : "\u2014"}
                         </td>
                         <td className="whitespace-nowrap px-3 py-2 align-top text-xs text-[var(--mm-text2)]">
                           {job.updated_at}

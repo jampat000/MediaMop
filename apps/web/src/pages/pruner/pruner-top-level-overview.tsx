@@ -84,7 +84,9 @@ function PrunerLast30StatsTiles({
         <MmStatTile label="Preview" value={previewRuns} />
         <MmStatTile label="Failed" value={failedApplies} />
       </MmStatTileRow>
-      <MmStatCaption>Library cleanup activity \u00b7 last 30 days</MmStatCaption>
+      <MmStatCaption>
+        Library cleanup activity \u00b7 last 30 days
+      </MmStatCaption>
     </div>
   );
 }
@@ -92,7 +94,11 @@ function PrunerLast30StatsTiles({
 const PRUNER_NEXT_STEPS_BODY =
   "Use Emby, Jellyfin, or Plex to connect your media server and configure cleanup rules. Check Jobs for recent activity. Use Schedule for timed scans and optional hour limits.";
 
-function PrunerOverviewNextSteps({ onNavigate }: { onNavigate: (tab: TopTab) => void }) {
+function PrunerOverviewNextSteps({
+  onNavigate,
+}: {
+  onNavigate: (tab: TopTab) => void;
+}) {
   return (
     <MmOverviewSection
       headingId="pruner-overview-next-steps-heading"
@@ -179,15 +185,18 @@ export function TopLevelOverview({
     );
     const previews = scopeRows.filter((scope) => scope.last_preview_at);
     const latestPreview = previews.sort((a, b) =>
-      String(b.last_preview_at ?? "").localeCompare(String(a.last_preview_at ?? "")),
+      String(b.last_preview_at ?? "").localeCompare(
+        String(a.last_preview_at ?? ""),
+      ),
     )[0];
     const providerJobs = jobsQ.data?.jobs?.filter((j) => {
       const sid = parseServerInstanceId(j);
       return sid != null && rows.some((row) => row.id === sid);
     });
     const latestApplyLike =
-      providerJobs?.find((j) => String(j.job_kind).toLowerCase().includes("apply")) ??
-      providerJobs?.[0];
+      providerJobs?.find((j) =>
+        String(j.job_kind).toLowerCase().includes("apply"),
+      ) ?? providerJobs?.[0];
     return {
       provider,
       first,
@@ -236,7 +245,9 @@ export function TopLevelOverview({
             const body = card.first ? (
               <div className="space-y-1.5">
                 <p>
-                  <span className="text-[var(--mm-text3)]">Connection test:</span>{" "}
+                  <span className="text-[var(--mm-text3)]">
+                    Connection test:
+                  </span>{" "}
                   <span className="font-medium text-[var(--mm-text1)]">
                     {card.first.last_connection_test_ok == null
                       ? "Not run yet"
@@ -246,13 +257,17 @@ export function TopLevelOverview({
                   </span>
                 </p>
                 <p>
-                  <span className="text-[var(--mm-text3)]">Cleanup rules on:</span>{" "}
+                  <span className="text-[var(--mm-text3)]">
+                    Cleanup rules on:
+                  </span>{" "}
                   <span className="font-medium text-[var(--mm-text1)]">
                     {card.activeRules}
                   </span>
                 </p>
                 <p>
-                  <span className="text-[var(--mm-text3)]">Last library scan:</span>{" "}
+                  <span className="text-[var(--mm-text3)]">
+                    Last library scan:
+                  </span>{" "}
                   <span className="font-medium text-[var(--mm-text1)]">
                     {card.latestPreview
                       ? `${card.latestPreview.media_scope === "tv" ? "TV" : "Movies"} \u00b7 ${scanOutcomeReadable(card.latestPreview.last_preview_outcome)}`
@@ -270,8 +285,8 @@ export function TopLevelOverview({
               </div>
             ) : (
               <p className="text-[var(--mm-text2)]">
-                No server saved yet. Add the address and key on that provider&apos;s
-                Connection tab.
+                No server saved yet. Add the address and key on that
+                provider&apos;s Connection tab.
               </p>
             );
             return (

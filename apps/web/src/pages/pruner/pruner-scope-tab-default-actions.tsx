@@ -31,7 +31,9 @@ type PrunerScopeTabDefaultActionsProps = {
   setSchedStart: (value: string) => void;
   schedEnd: string;
   setSchedEnd: (value: string) => void;
-  fmt: ReturnType<typeof import("../../lib/ui/mm-format-date").useAppDateFormatter>;
+  fmt: ReturnType<
+    typeof import("../../lib/ui/mm-format-date").useAppDateFormatter
+  >;
   schedMsg: string | null;
   saveSchedule: () => Promise<void>;
   runs: unknown;
@@ -111,8 +113,8 @@ export function PrunerScopeTabDefaultActions({
             Latest automatic scan (this {libraryTabPhrase})
           </h3>
           <p className="mt-1 text-xs text-[var(--mm-text2)]">
-            Quick readout from the last finished scan — use the history table for
-            older runs.
+            Quick readout from the last finished scan — use the history table
+            for older runs.
           </p>
           <dl className="mt-2 space-y-1 text-xs sm:text-sm">
             <div>
@@ -234,7 +236,9 @@ export function PrunerScopeTabDefaultActions({
           {err}
         </p>
       ) : null}
-      {preview ? <p className="text-sm text-[var(--mm-text)]">{preview}</p> : null}
+      {preview ? (
+        <p className="text-sm text-[var(--mm-text)]">{preview}</p>
+      ) : null}
       {jsonPreview ? (
         <pre className="max-h-96 overflow-auto rounded-md border border-[var(--mm-border)] bg-[var(--mm-surface2)] p-3 text-xs">
           {jsonPreview}

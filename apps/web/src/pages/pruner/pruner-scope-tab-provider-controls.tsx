@@ -104,7 +104,9 @@ export function renderProviderRulesControls(
           ) : (
             <p className="text-xs text-[var(--mm-text2)]">
               Watched TV removal:{" "}
-              <strong>{scopeRow?.watched_tv_reported_enabled ? "On" : "Off"}</strong>
+              <strong>
+                {scopeRow?.watched_tv_reported_enabled ? "On" : "Off"}
+              </strong>
             </p>
           )}
           <p className="mt-2 text-xs leading-relaxed text-[var(--mm-text3)]">
@@ -159,7 +161,9 @@ export function renderProviderRulesControls(
         ) : (
           <p className="text-xs text-[var(--mm-text2)]">
             Watched movies removal:{" "}
-            <strong>{scopeRow?.watched_movies_reported_enabled ? "On" : "Off"}</strong>
+            <strong>
+              {scopeRow?.watched_movies_reported_enabled ? "On" : "Off"}
+            </strong>
           </p>
         )}
         <p className="mt-2 text-xs leading-relaxed text-[var(--mm-text3)]">

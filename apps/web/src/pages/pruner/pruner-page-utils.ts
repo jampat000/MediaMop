@@ -10,7 +10,9 @@ export function providerLabel(p: ProviderTab): string {
   return "Plex";
 }
 
-export function parseServerInstanceId(job: PrunerJobsInspectionRow): number | null {
+export function parseServerInstanceId(
+  job: PrunerJobsInspectionRow,
+): number | null {
   if (!job.payload_json) return null;
   try {
     const parsed = JSON.parse(job.payload_json) as {
@@ -72,7 +74,9 @@ export function defaultScope(scope: "tv" | "movies") {
   };
 }
 
-export function providerDisabledInstance(provider: ProviderTab): PrunerServerInstance {
+export function providerDisabledInstance(
+  provider: ProviderTab,
+): PrunerServerInstance {
   return {
     id: 0,
     provider,

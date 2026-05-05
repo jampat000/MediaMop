@@ -1,6 +1,4 @@
-import {
-  PrunerPeopleRoleCheckboxes,
-} from "./pruner-people-roles";
+import { PrunerPeopleRoleCheckboxes } from "./pruner-people-roles";
 import type { PrunerScopeProviderSubsectionProps } from "./pruner-scope-tab-provider-controls";
 
 export function renderProviderPeopleControls(

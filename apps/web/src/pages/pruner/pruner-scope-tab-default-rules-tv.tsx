@@ -93,12 +93,18 @@ export function PrunerScopeTabDefaultRulesTv({
                 Save never-watched age rule
               </button>
             </div>
-            {staleNeverMsg ? <p className="text-xs text-green-600">{staleNeverMsg}</p> : null}
+            {staleNeverMsg ? (
+              <p className="text-xs text-green-600">{staleNeverMsg}</p>
+            ) : null}
             <button
               type="button"
               className="rounded-md bg-[var(--mm-surface2)] px-3 py-1.5 text-sm font-medium text-[var(--mm-text)] ring-1 ring-[var(--mm-border)] disabled:opacity-50"
               disabled={busy || !staleNeverEnabled}
-              title={!staleNeverEnabled ? "Turn the rule on and save before running this scan." : undefined}
+              title={
+                !staleNeverEnabled
+                  ? "Turn the rule on and save before running this scan."
+                  : undefined
+              }
               onClick={() => void runStaleNeverPreview()}
             >
               {scope === "tv"
@@ -109,7 +115,9 @@ export function PrunerScopeTabDefaultRulesTv({
         ) : (
           <p className="text-xs text-[var(--mm-text2)]">
             Rule is{" "}
-            <strong>{scopeRow?.never_played_stale_reported_enabled ? "on" : "off"}</strong>
+            <strong>
+              {scopeRow?.never_played_stale_reported_enabled ? "on" : "off"}
+            </strong>
             {scopeRow ? (
               <>
                 {" "}
@@ -150,12 +158,18 @@ export function PrunerScopeTabDefaultRulesTv({
               >
                 Save watched TV rule
               </button>
-              {watchedTvMsg ? <p className="text-xs text-green-600">{watchedTvMsg}</p> : null}
+              {watchedTvMsg ? (
+                <p className="text-xs text-green-600">{watchedTvMsg}</p>
+              ) : null}
               <button
                 type="button"
                 className="rounded-md bg-[var(--mm-surface2)] px-3 py-1.5 text-sm font-medium text-[var(--mm-text)] ring-1 ring-[var(--mm-border)] disabled:opacity-50"
                 disabled={busy || !watchedTvEnabled}
-                title={!watchedTvEnabled ? "Turn the rule on and save before running this scan." : undefined}
+                title={
+                  !watchedTvEnabled
+                    ? "Turn the rule on and save before running this scan."
+                    : undefined
+                }
                 onClick={() => void runWatchedTvPreview()}
               >
                 Scan for watched TV shows
@@ -164,7 +178,9 @@ export function PrunerScopeTabDefaultRulesTv({
           ) : (
             <p className="text-xs text-[var(--mm-text2)]">
               Watched TV rule is{" "}
-              <strong>{scopeRow?.watched_tv_reported_enabled ? "on" : "off"}</strong>{" "}
+              <strong>
+                {scopeRow?.watched_tv_reported_enabled ? "on" : "off"}
+              </strong>{" "}
               for this {libraryTabPhrase}. Sign in as an operator to change it.
             </p>
           )}

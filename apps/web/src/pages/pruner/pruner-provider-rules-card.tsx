@@ -1,26 +1,23 @@
-import {
-  forwardRef,
-  useEffect,
-  useImperativeHandle,
-  useState,
-} from "react";
+import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { fetchCsrfToken } from "../../lib/api/auth-api";
 import { useMeQuery } from "../../lib/auth/queries";
-import { patchPrunerScope, type PrunerServerInstance } from "../../lib/pruner/api";
 import {
-  prunerGenresFromApi,
-} from "./pruner-genre-multi-select";
+  patchPrunerScope,
+  type PrunerServerInstance,
+} from "../../lib/pruner/api";
+import { prunerGenresFromApi } from "./pruner-genre-multi-select";
 import {
   normalizePeopleRolesFromApi,
   peopleRolesForPlexPersist,
   peopleRolesForPlexUiState,
   type PrunerPeopleRoleId,
 } from "./pruner-people-roles";
+import { PrunerProviderPeopleCard } from "./pruner-provider-people-card";
 import {
-  PrunerProviderPeopleCard,
-} from "./pruner-provider-people-card";
-import { parseCommaTokens, parsePeopleLines } from "./pruner-operator-scan-utils";
+  parseCommaTokens,
+  parsePeopleLines,
+} from "./pruner-operator-scan-utils";
 import { PrunerProviderRulesMoviesCard } from "./pruner-provider-rules-movies-card";
 import { PrunerProviderRulesTvCard } from "./pruner-provider-rules-tv-card";
 
@@ -384,4 +381,3 @@ export const PrunerProviderRulesCard = forwardRef<
     </div>
   );
 });
-

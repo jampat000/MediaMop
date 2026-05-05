@@ -1,7 +1,10 @@
 import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 import { PrunerGenreMultiSelect } from "./pruner-genre-multi-select";
-import { PrunerPeopleRoleCheckboxes, type PrunerPeopleRoleId } from "./pruner-people-roles";
+import {
+  PrunerPeopleRoleCheckboxes,
+  type PrunerPeopleRoleId,
+} from "./pruner-people-roles";
 import { CommaField, YearRange } from "./pruner-provider-people-card";
 import { PrunerStudioMultiSelect } from "./pruner-studio-multi-select";
 
@@ -122,7 +125,8 @@ export function PrunerProviderRulesMoviesCard({
           </label>
           <label className="block text-sm text-[var(--mm-text2)]">
             <span className="mb-1 block text-xs text-[var(--mm-text3)]">
-              Delete movies you have not watched that are older than ___ days (0 = off)
+              Delete movies you have not watched that are older than ___ days (0
+              = off)
             </span>
             <input
               type="number"
@@ -144,7 +148,10 @@ export function PrunerProviderRulesMoviesCard({
             />
           ) : null}
 
-          <div className="border-t border-[var(--mm-border)] pt-4 mt-1" aria-hidden="true" />
+          <div
+            className="border-t border-[var(--mm-border)] pt-4 mt-1"
+            aria-hidden="true"
+          />
 
           <div className="space-y-1">
             <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">

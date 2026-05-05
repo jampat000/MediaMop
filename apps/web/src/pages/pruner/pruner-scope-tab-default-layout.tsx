@@ -93,7 +93,9 @@ type PrunerScopeTabDefaultLayoutProps = {
   setSchedStart: (value: string) => void;
   schedEnd: string;
   setSchedEnd: (value: string) => void;
-  fmt: ReturnType<typeof import("../../lib/ui/mm-format-date").useAppDateFormatter>;
+  fmt: ReturnType<
+    typeof import("../../lib/ui/mm-format-date").useAppDateFormatter
+  >;
   schedMsg: string | null;
   saveSchedule: () => Promise<void>;
   runs: unknown;
@@ -117,7 +119,9 @@ type PrunerScopeTabDefaultLayoutProps = {
   jsonPreview: string | null;
 };
 
-export function PrunerScopeTabDefaultLayout(props: PrunerScopeTabDefaultLayoutProps) {
+export function PrunerScopeTabDefaultLayout(
+  props: PrunerScopeTabDefaultLayoutProps,
+) {
   return (
     <>
       <PrunerScopeTabDefaultIntro

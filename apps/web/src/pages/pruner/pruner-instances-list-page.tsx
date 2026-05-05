@@ -48,7 +48,9 @@ export function PrunerInstancesListPage() {
             key={id}
             type="button"
             role="tab"
-            aria-selected={topTab === id || (topTab === "schedule" && id === "emby")}
+            aria-selected={
+              topTab === id || (topTab === "schedule" && id === "emby")
+            }
             className={mmSectionTabClass(
               topTab === id || (topTab === "schedule" && id === "emby"),
             )}
@@ -75,8 +77,13 @@ export function PrunerInstancesListPage() {
           )[topTab]
         }
       >
-        <div className={mmModuleTabBlurbBandClass} data-testid="pruner-tab-blurb">
-          <p className={mmModuleTabBlurbTextClass}>{PRUNER_TAB_BLURBS[topTab]}</p>
+        <div
+          className={mmModuleTabBlurbBandClass}
+          data-testid="pruner-tab-blurb"
+        >
+          <p className={mmModuleTabBlurbTextClass}>
+            {PRUNER_TAB_BLURBS[topTab]}
+          </p>
         </div>
         <div className="min-w-0">
           {q.isLoading ? (
@@ -103,7 +110,10 @@ export function PrunerInstancesListPage() {
                 initialSection="schedule"
               />
             ) : (
-              <ProviderConfigurationWorkspace provider={topTab} allInstances={instances} />
+              <ProviderConfigurationWorkspace
+                provider={topTab}
+                allInstances={instances}
+              />
             )
           ) : null}
         </div>

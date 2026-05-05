@@ -7,7 +7,10 @@ import {
 } from "./pruner-provider-operator-workspace";
 import { PrunerConnectionCredentialPanel } from "./pruner-connection-credential-panel";
 import { PrunerGlobalScheduleRow } from "./pruner-global-schedule-row";
-import type { ProviderTab, ProviderWorkspaceSection } from "./pruner-page-types";
+import type {
+  ProviderTab,
+  ProviderWorkspaceSection,
+} from "./pruner-page-types";
 import { providerDisabledInstance, providerLabel } from "./pruner-page-utils";
 
 type ProviderConfigurationWorkspaceProps = {
@@ -38,7 +41,8 @@ export function ProviderConfigurationWorkspace({
 
   useEffect(() => {
     setSelectedInstanceId((prev) => {
-      if (prev != null && providerInstances.some((x) => x.id === prev)) return prev;
+      if (prev != null && providerInstances.some((x) => x.id === prev))
+        return prev;
       return providerInstances[0]?.id ?? null;
     });
   }, [provider, providerInstances]);
@@ -63,7 +67,9 @@ export function ProviderConfigurationWorkspace({
     >
       {providerInstances.length > 1 ? (
         <label className="block max-w-md text-sm text-[var(--mm-text2)]">
-          <span className="mb-1 block text-xs text-[var(--mm-text3)]">Server</span>
+          <span className="mb-1 block text-xs text-[var(--mm-text3)]">
+            Server
+          </span>
           <select
             className="mm-input mt-1 w-full"
             value={selectedInstance?.id ?? ""}
@@ -131,7 +137,10 @@ export function ProviderConfigurationWorkspace({
         ) : null}
 
         {providerSection === "schedule" ? (
-          <div className="mm-dash-grid" data-testid="pruner-provider-schedule-wrap">
+          <div
+            className="mm-dash-grid"
+            data-testid="pruner-provider-schedule-wrap"
+          >
             <PrunerGlobalScheduleRow
               provider={provider}
               scope="tv"

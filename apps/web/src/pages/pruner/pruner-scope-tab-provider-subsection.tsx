@@ -16,8 +16,15 @@ function ProviderSaveFooter(props: {
   bundleMsg: string | null;
   err: string | null;
 }) {
-  const { showInteractiveControls, saveDisabled, busy, saveLabel, onSave, bundleMsg, err } =
-    props;
+  const {
+    showInteractiveControls,
+    saveDisabled,
+    busy,
+    saveLabel,
+    onSave,
+    bundleMsg,
+    err,
+  } = props;
   if (showInteractiveControls) {
     return (
       <div className="mm-card-action-footer">
@@ -32,7 +39,9 @@ function ProviderSaveFooter(props: {
         >
           {busy ? "Saving..." : saveLabel}
         </button>
-        {bundleMsg ? <p className="text-sm text-green-600">{bundleMsg}</p> : null}
+        {bundleMsg ? (
+          <p className="text-sm text-green-600">{bundleMsg}</p>
+        ) : null}
         {err ? (
           <p className="text-sm text-red-600" role="alert">
             {err}
@@ -43,7 +52,9 @@ function ProviderSaveFooter(props: {
   }
   return (
     <>
-      {bundleMsg ? <p className="mt-3 text-sm text-green-600">{bundleMsg}</p> : null}
+      {bundleMsg ? (
+        <p className="mt-3 text-sm text-green-600">{bundleMsg}</p>
+      ) : null}
       {err ? (
         <p className="mt-2 text-sm text-red-600" role="alert">
           {err}
@@ -74,8 +85,11 @@ export function PrunerScopeProviderSubsection(
   if (provSub === "rules") {
     const saveLabel = scope === "tv" ? "Save TV rules" : "Save Movies rules";
     const onSave =
-      scope === "tv" ? saveProviderTvRulesBundle : saveProviderMoviesRulesBundle;
-    const saveDisabled = busy || !showInteractiveControls || (isPlex && scope === "tv");
+      scope === "tv"
+        ? saveProviderTvRulesBundle
+        : saveProviderMoviesRulesBundle;
+    const saveDisabled =
+      busy || !showInteractiveControls || (isPlex && scope === "tv");
     return (
       <PrunerProviderSection scope={scope} section="rules">
         <fieldset
@@ -100,7 +114,8 @@ export function PrunerScopeProviderSubsection(
   }
 
   if (provSub === "filters") {
-    const saveLabel = scope === "tv" ? "Save TV filters" : "Save Movies filters";
+    const saveLabel =
+      scope === "tv" ? "Save TV filters" : "Save Movies filters";
     return (
       <PrunerProviderSection scope={scope} section="filters">
         <fieldset
@@ -155,8 +170,8 @@ export function PrunerScopeProviderSubsection(
       role="alert"
       data-testid="pruner-provider-subsection-missing"
     >
-      Something is misconfigured. Try reloading the page or opening the
-      provider tab again.
+      Something is misconfigured. Try reloading the page or opening the provider
+      tab again.
     </p>
   );
 }

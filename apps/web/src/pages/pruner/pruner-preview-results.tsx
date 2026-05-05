@@ -33,9 +33,14 @@ export function PrunerDryRunResults({
   return (
     <div className="mt-4 space-y-3">
       {phase === "deleting" ? (
-        <p className="text-sm font-medium text-[var(--mm-text1)]">Deleting...</p>
+        <p className="text-sm font-medium text-[var(--mm-text1)]">
+          Deleting...
+        </p>
       ) : null}
-      {snapshots.length === 0 && phase === "results" && !err && emptyBecauseNoRules ? (
+      {snapshots.length === 0 &&
+      phase === "results" &&
+      !err &&
+      emptyBecauseNoRules ? (
         <p className="text-sm text-[var(--mm-text2)]">
           No cleanup rules are turned on for this column, so there is nothing to
           scan.
@@ -45,7 +50,9 @@ export function PrunerDryRunResults({
       phase === "results" &&
       snapshots.length > 0 &&
       totalCount === 0 ? (
-        <p className="text-sm text-[var(--mm-text2)]">No items matched your criteria.</p>
+        <p className="text-sm text-[var(--mm-text2)]">
+          No items matched your criteria.
+        </p>
       ) : null}
       {(dryRunEnabled || !applySummary) &&
         snapshots.map((s) => (
@@ -102,7 +109,9 @@ export function PrunerDryRunResults({
             </ul>
           </>
         ) : (
-          <p className="text-sm text-[var(--mm-text2)]">No items matched your criteria.</p>
+          <p className="text-sm text-[var(--mm-text2)]">
+            No items matched your criteria.
+          </p>
         )
       ) : null}
       {!dryRunEnabled &&

@@ -1,7 +1,10 @@
 import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 import { PrunerGenreMultiSelect } from "./pruner-genre-multi-select";
-import { PrunerPeopleRoleCheckboxes, type PrunerPeopleRoleId } from "./pruner-people-roles";
+import {
+  PrunerPeopleRoleCheckboxes,
+  type PrunerPeopleRoleId,
+} from "./pruner-people-roles";
 import { PrunerStudioMultiSelect } from "./pruner-studio-multi-select";
 import { YearRange } from "./pruner-provider-people-card";
 
@@ -90,9 +93,13 @@ export function PrunerProviderRulesTvCard({
               data-testid="pruner-plex-tv-rules-scope-note"
               role="note"
             >
-              <p className="font-semibold text-amber-100">Plex TV — limited options</p>
+              <p className="font-semibold text-amber-100">
+                Plex TV — limited options
+              </p>
               <p className="mt-2 text-sm text-[var(--mm-text2)]">
-                {"Plex doesn't provide a watched signal for TV shows, so only the missing poster rule is available here. Watched TV cleanup is not supported on Plex."}
+                {
+                  "Plex doesn't provide a watched signal for TV shows, so only the missing poster rule is available here. Watched TV cleanup is not supported on Plex."
+                }
               </p>
             </div>
           ) : null}
@@ -129,7 +136,10 @@ export function PrunerProviderRulesTvCard({
             onChange={setMissingPrimaryTv}
           />
 
-          <div className="border-t border-[var(--mm-border)] pt-4 mt-1" aria-hidden="true" />
+          <div
+            className="border-t border-[var(--mm-border)] pt-4 mt-1"
+            aria-hidden="true"
+          />
 
           <div className="space-y-1">
             <span className="mb-1 block text-xs font-medium text-[var(--mm-text3)]">

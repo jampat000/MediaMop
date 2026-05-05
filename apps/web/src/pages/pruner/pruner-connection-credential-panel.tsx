@@ -182,7 +182,9 @@ export function PrunerConnectionCredentialPanel({
   }
 
   const saveLabel = saveJustSucceeded ? "Saved" : `Save ${providerName}`;
-  const testLabel = testJustSucceeded ? "Test complete" : `Test ${providerName}`;
+  const testLabel = testJustSucceeded
+    ? "Test complete"
+    : `Test ${providerName}`;
 
   return (
     <section

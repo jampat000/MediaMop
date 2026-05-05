@@ -153,11 +153,16 @@ export function PrunerScopeScheduleCard({
         ) : (
           <p className="text-sm text-[var(--mm-text2)]">
             Timed scans are{" "}
-            <strong>{scopeRow?.scheduled_preview_enabled ? "on" : "off"}</strong>
+            <strong>
+              {scopeRow?.scheduled_preview_enabled ? "on" : "off"}
+            </strong>
             {scopeRow ? (
               <>
                 {" "}
-                (every {Math.round(scopeRow.scheduled_preview_interval_seconds / 60)}{" "}
+                (every{" "}
+                {Math.round(
+                  scopeRow.scheduled_preview_interval_seconds / 60,
+                )}{" "}
                 minutes). Sign in as an operator to change it.
               </>
             ) : null}
@@ -180,9 +185,13 @@ export function PrunerScopeScheduleCard({
             disabled={busy}
             onClick={() => void saveSchedule()}
           >
-            {scope === "tv" ? "Save TV schedule window" : "Save Movies schedule window"}
+            {scope === "tv"
+              ? "Save TV schedule window"
+              : "Save Movies schedule window"}
           </button>
-          {schedMsg ? <p className="text-xs text-green-600">{schedMsg}</p> : null}
+          {schedMsg ? (
+            <p className="text-xs text-green-600">{schedMsg}</p>
+          ) : null}
         </div>
       ) : null}
     </div>

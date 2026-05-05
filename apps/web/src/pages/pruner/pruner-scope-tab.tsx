@@ -55,8 +55,14 @@ export function PrunerScopeTab(props: PrunerScopeTabProps) {
   }
 
   return (
-    <section className="mm-bubble-stack max-w-3xl" aria-labelledby="pruner-scope-heading">
-      <fieldset disabled={Boolean(props.disabledMode)} className="mm-bubble-stack">
+    <section
+      className="mm-bubble-stack max-w-3xl"
+      aria-labelledby="pruner-scope-heading"
+    >
+      <fieldset
+        disabled={Boolean(props.disabledMode)}
+        className="mm-bubble-stack"
+      >
         <PrunerScopeTabDefaultLayout
           instanceId={c.instanceId}
           scope={props.scope}
@@ -154,7 +160,9 @@ export function PrunerScopeTab(props: PrunerScopeTabProps) {
           applyModalRunId={c.applyModalRunId}
           applySnapshotOperatorLabel={c.applySnapshotOperatorLabel}
           applyEligibilityLoading={c.applyEligQuery.isLoading}
-          applyEligibilityError={c.applyEligQuery.isError ? (c.applyEligQuery.error as Error) : null}
+          applyEligibilityError={
+            c.applyEligQuery.isError ? (c.applyEligQuery.error as Error) : null
+          }
           applyEligibilityData={c.applyEligQuery.data}
           applySnapshotConfirmed={c.applySnapshotConfirmed}
           setApplySnapshotConfirmed={c.setApplySnapshotConfirmed}
