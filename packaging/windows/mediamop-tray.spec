@@ -104,6 +104,6 @@ coll = COLLECT(
     updater_analysis.binaries,
     strip=False,
     upx=True,
-    upx_exclude=[],
+    upx_exclude=["*.pyd", "python*.dll", "vcruntime*.dll"],
     name="MediaMop",
 )
