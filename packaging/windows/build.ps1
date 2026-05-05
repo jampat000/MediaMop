@@ -145,7 +145,13 @@ function Ensure-WindowsFfmpegRuntime {
       Remove-Item -LiteralPath $ffmpegVendorDir -Recurse -Force
     }
     New-Item -ItemType Directory -Path $ffmpegVendorDir | Out-Null
-    Copy-Item -Path (Join-Path $binDir.FullName "*") -Destination $ffmpegVendorDir -Recurse -Force
+    foreach ($name in @("ffmpeg.exe", "ffprobe.exe")) {
+      $src = Join-Path $binDir.FullName $name
+      if (-not (Test-Path -LiteralPath $src)) {
+        throw "Expected $name was not found in the downloaded FFmpeg archive at $src"
+      }
+      Copy-Item -LiteralPath $src -Destination (Join-Path $ffmpegVendorDir $name) -Force
+    }
   } finally {
     if (Test-Path $downloadRoot) {
       Remove-Item -LiteralPath $downloadRoot -Recurse -Force -ErrorAction SilentlyContinue
@@ -259,6 +265,11 @@ if (Test-Path $distRoot) {
   Remove-Item -LiteralPath $distRoot -Recurse -Force
 }
 New-Item -ItemType Directory -Path $distRoot | Out-Null
+
+if (Test-Path -LiteralPath $ffmpegVendorDir) {
+  Write-Host "Cleaning stale FFmpeg vendor folder..."
+  Remove-Item -LiteralPath $ffmpegVendorDir -Recurse -Force
+}
 
 Ensure-WindowsFfmpegRuntime
 Ensure-WindowsServiceWrapper
