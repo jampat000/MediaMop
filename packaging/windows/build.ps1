@@ -276,7 +276,7 @@ Ensure-WindowsServiceWrapper
 
 Push-Location $repoRoot
 try {
-  Invoke-Native -FilePath $pyinstaller -ArgumentList @("--noconfirm", "--clean", "--distpath", $distRoot, "--workpath", (Join-Path $distRoot "build"), $specPath)
+  Invoke-Native -FilePath $py -ArgumentList @("-m", "PyInstaller", "--noconfirm", "--clean", "--distpath", $distRoot, "--workpath", (Join-Path $distRoot "build"), $specPath)
 } finally {
   Pop-Location
 }
