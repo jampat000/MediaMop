@@ -50,7 +50,7 @@ jobs:
           backend = tomllib.loads(Path("apps/backend/pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
           web = json.loads(Path("apps/web/package.json").read_text(encoding="utf-8"))["version"]
           iss = Path("packaging/windows/MediaMop.iss").read_text(encoding="utf-8")
-          match = re.search(r'#define\\s+AppVersion\\s+"([^"]+)"', iss)
+          match = re.search(r'#define\s+AppVersion\s+"([^"]+)"', iss)
           if not match:
               print("ERROR: Could not find AppVersion define in packaging/windows/MediaMop.iss", file=sys.stderr)
               raise SystemExit(1)
