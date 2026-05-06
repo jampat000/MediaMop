@@ -4,11 +4,13 @@ import os
 import re
 import sys
 import tomllib
+import logging
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 
 _DIST_INFO_RE = re.compile(r"^mediamop_backend-(?P<version>\d+(?:\.\d+)*)(?:[^\d].*)?\.dist-info$")
+logger = logging.getLogger(__name__)
 
 
 def _version_key(raw: str) -> tuple[int, ...]:
@@ -59,7 +61,8 @@ def _source_tree_version() -> str | None:
     try:
         data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
         project_version = str(data.get("project", {}).get("version") or "").strip()
-    except Exception:
+    except Exception as exc:
+        logger.warning("MediaMop source-tree version lookup failed: %s", exc)
         return None
     return project_version or None
 
@@ -80,9 +83,10 @@ def get_version() -> str:
             return pkg_version
     except PackageNotFoundError:
         pass
-    except Exception:
-        pass
-    return "1.0.0"
+    except Exception as exc:
+        logger.warning("MediaMop package metadata version lookup failed: %s", exc)
+    logger.warning("MediaMop version resolution fell back to 0.0.0 (metadata unavailable).")
+    return "0.0.0"
 
 
 __version__ = get_version()

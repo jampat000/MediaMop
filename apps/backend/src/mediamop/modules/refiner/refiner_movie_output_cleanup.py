@@ -23,6 +23,7 @@ from mediamop.platform.arr_library import resolve_radarr_http_credentials
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.refiner_file_remux_pass_job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
+from mediamop.platform.outbound_http import normalize_local_service_base_url
 
 logger = logging.getLogger(__name__)
 _RADARR_PAGE_SIZE = 200_000
@@ -60,7 +61,7 @@ def fetch_radarr_library_movies(
 ) -> list[dict[str, Any]]:
     """GET ``/api/v3/movie`` (Refiner-owned stdlib HTTP; same style as queue fetch)."""
 
-    base = base_url.rstrip("/")
+    base = normalize_local_service_base_url(base_url)
     # Radarr's movie endpoint effectively behaves as an unpaginated library listing; use a very high cap.
     url = f"{base}/api/v3/movie?pageSize={_RADARR_PAGE_SIZE}"
     req = urllib.request.Request(

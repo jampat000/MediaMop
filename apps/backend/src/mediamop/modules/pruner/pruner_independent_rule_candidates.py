@@ -97,7 +97,8 @@ def list_jf_emby_genre_match_candidates(
             )
         except urllib.error.HTTPError:
             raise
-        assert data is not None
+        if data is None:
+            raise RuntimeError("Jellyfin/Emby Items query returned no payload.")
         items = data.get("Items")
         if not isinstance(items, list):
             logger.debug("Pruner genre-match preview stopped because Jellyfin/Emby Items payload had no list.")
@@ -193,7 +194,8 @@ def list_jf_emby_studio_match_candidates(
             )
         except urllib.error.HTTPError:
             raise
-        assert data is not None
+        if data is None:
+            raise RuntimeError("Jellyfin/Emby Items query returned no payload.")
         items = data.get("Items")
         if not isinstance(items, list):
             logger.debug("Pruner studio-match preview stopped because Jellyfin/Emby Items payload had no list.")
@@ -291,7 +293,8 @@ def list_jf_emby_people_match_candidates(
             )
         except urllib.error.HTTPError:
             raise
-        assert data is not None
+        if data is None:
+            raise RuntimeError("Jellyfin/Emby Items query returned no payload.")
         items = data.get("Items")
         if not isinstance(items, list):
             logger.debug("Pruner people-match preview stopped because Jellyfin/Emby Items payload had no list.")
@@ -391,7 +394,8 @@ def list_jf_emby_year_range_match_candidates(
             )
         except urllib.error.HTTPError:
             raise
-        assert data is not None
+        if data is None:
+            raise RuntimeError("Jellyfin/Emby Items query returned no payload.")
         items = data.get("Items")
         if not isinstance(items, list):
             logger.debug("Pruner year-range preview stopped because Jellyfin/Emby Items payload had no list.")

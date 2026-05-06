@@ -1,4 +1,10 @@
-import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useState,
+} from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { fetchCsrfToken } from "../../lib/api/auth-api";
 import { useMeQuery } from "../../lib/auth/queries";
@@ -153,42 +159,45 @@ export const PrunerProviderRulesCard = forwardRef<
     setMoviesCollections((movies.preview_include_collections ?? []).join(", "));
   }, [movies, isPlex]);
 
-  function buildFilterPatch(
-    scope: "tv" | "movies",
-    genres: string[],
-    yMinStr: string,
-    yMaxStrStr: string,
-    studios: string[],
-    collectionsText?: string,
-  ) {
-    const yMin = parseYear(yMinStr);
-    const yMax = parseYear(yMaxStrStr);
-    if (yMin === "bad" || yMax === "bad") {
-      throw new Error(
-        "Each year must be a whole number between 1900 and 2100, or left empty.",
-      );
-    }
-    if (yMin != null && yMax != null && yMin > yMax) {
-      throw new Error(
-        "Minimum year must be less than or equal to maximum year.",
-      );
-    }
-    return {
-      preview_include_genres: [...genres],
-      preview_year_min: yMinStr.trim() ? yMin : null,
-      preview_year_max: yMaxStrStr.trim() ? yMax : null,
-      preview_include_studios: [...studios],
-      ...(isPlex && scope === "movies"
-        ? {
-            preview_include_collections: parseCommaTokens(
-              collectionsText ?? "",
-            ),
-          }
-        : {}),
-    };
-  }
+  const buildFilterPatch = useCallback(
+    (
+      scope: "tv" | "movies",
+      genres: string[],
+      yMinStr: string,
+      yMaxStrStr: string,
+      studios: string[],
+      collectionsText?: string,
+    ) => {
+      const yMin = parseYear(yMinStr);
+      const yMax = parseYear(yMaxStrStr);
+      if (yMin === "bad" || yMax === "bad") {
+        throw new Error(
+          "Each year must be a whole number between 1900 and 2100, or left empty.",
+        );
+      }
+      if (yMin != null && yMax != null && yMin > yMax) {
+        throw new Error(
+          "Minimum year must be less than or equal to maximum year.",
+        );
+      }
+      return {
+        preview_include_genres: [...genres],
+        preview_year_min: yMinStr.trim() ? yMin : null,
+        preview_year_max: yMaxStrStr.trim() ? yMax : null,
+        preview_include_studios: [...studios],
+        ...(isPlex && scope === "movies"
+          ? {
+              preview_include_collections: parseCommaTokens(
+                collectionsText ?? "",
+              ),
+            }
+          : {}),
+      };
+    },
+    [isPlex],
+  );
 
-  async function persistTv(): Promise<void> {
+  const persistTv = useCallback(async (): Promise<void> => {
     if (!tv) return;
     const csrf_token = await fetchCsrfToken();
     const raw = parseInt(neverTvDays.trim(), 10);
@@ -217,9 +226,24 @@ export const PrunerProviderRulesCard = forwardRef<
     await qc.invalidateQueries({
       queryKey: ["pruner", "instances", instanceId],
     });
-  }
+  }, [
+    buildFilterPatch,
+    tv,
+    neverTvDays,
+    genreTv,
+    yearMinTv,
+    yearMaxTv,
+    studioTv,
+    tvRoles,
+    isPlex,
+    instanceId,
+    missingPrimaryTv,
+    watchedTv,
+    qc,
+    tvPeople,
+  ]);
 
-  async function persistMovies(): Promise<void> {
+  const persistMovies = useCallback(async (): Promise<void> => {
     if (!movies) return;
     const csrf_token = await fetchCsrfToken();
     const lowRaw = Number.parseFloat(lowRatingMovies.trim());
@@ -256,7 +280,24 @@ export const PrunerProviderRulesCard = forwardRef<
     await qc.invalidateQueries({
       queryKey: ["pruner", "instances", instanceId],
     });
-  }
+  }, [
+    buildFilterPatch,
+    movies,
+    lowRatingMovies,
+    unwatchedDays,
+    genreMovies,
+    yearMinMovies,
+    yearMaxMovies,
+    studioMovies,
+    moviesCollections,
+    moviesRoles,
+    isPlex,
+    instanceId,
+    missingPrimaryMovies,
+    watchedMovies,
+    qc,
+    moviesPeople,
+  ]);
 
   async function saveTv() {
     if (!tv) return;

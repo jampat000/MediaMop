@@ -60,14 +60,7 @@ export function PrunerGlobalScheduleRow({
     setSchedStart(scopeRow.scheduled_preview_start ?? "00:00");
     setSchedEnd(scopeRow.scheduled_preview_end ?? "23:59");
     setPreviewCap(scopeRow.preview_max_items);
-  }, [
-    scopeRow?.scheduled_preview_hours_limited,
-    scopeRow?.scheduled_preview_days,
-    scopeRow?.scheduled_preview_start,
-    scopeRow?.scheduled_preview_end,
-    scopeRow?.preview_max_items,
-    instance?.id,
-  ]);
+  }, [scopeRow, instance?.id]);
 
   const scheduleFieldsDirty =
     scopeRow != null &&

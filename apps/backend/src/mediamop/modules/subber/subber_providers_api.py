@@ -26,6 +26,7 @@ from mediamop.modules.subber.subber_providers_service import (
     upsert_provider_settings,
 )
 from mediamop.modules.subber.subber_schemas import SubberProviderOut, SubberProviderPutIn, SubberTestConnectionOut
+from mediamop.platform.outbound_http import validate_external_provider_url
 from mediamop.platform.auth.authorization import RequireOperatorDep
 from mediamop.platform.auth.csrf import current_raw_session_token, verify_csrf_token
 
@@ -151,8 +152,9 @@ def post_subber_provider_test(
         if pk == "podnapisi":
             import urllib.request
 
+            probe_url = validate_external_provider_url(LIST_BASE + "?keywords=test")
             req = urllib.request.Request(  # noqa: S310
-                LIST_BASE + "?keywords=test",
+                probe_url,
                 headers={"User-Agent": "MediaMop/1.0", "Accept": "application/json"},
                 method="GET",
             )

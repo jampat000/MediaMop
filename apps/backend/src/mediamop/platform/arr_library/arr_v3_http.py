@@ -8,18 +8,18 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
+from mediamop.platform.outbound_http import normalize_local_service_base_url
+
 
 class ArrLibraryV3HttpError(RuntimeError):
     """Raised when an Arr HTTP call fails."""
 
 
 def _validated_base_url(raw: str) -> str:
-    parsed = urllib.parse.urlsplit(raw.strip().rstrip("/"))
-    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-        raise ArrLibraryV3HttpError("Sonarr/Radarr base URL must be a valid http(s) URL.")
-    if parsed.username or parsed.password or parsed.query or parsed.fragment:
-        raise ArrLibraryV3HttpError("Sonarr/Radarr base URL must not include credentials, query strings, or fragments.")
-    return urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, parsed.path.rstrip("/"), "", ""))
+    try:
+        return normalize_local_service_base_url(raw)
+    except ValueError as exc:
+        raise ArrLibraryV3HttpError(str(exc)) from exc
 
 
 class ArrLibraryV3Client:

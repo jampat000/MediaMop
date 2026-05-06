@@ -228,6 +228,7 @@ export function usePrunerScopeTabController(props: PrunerScopeTabProps) {
       );
     }
   }, [
+    scopeRow,
     scopeRow?.scheduled_preview_enabled,
     scopeRow?.scheduled_preview_interval_seconds,
     scopeRow?.scheduled_preview_hours_limited,

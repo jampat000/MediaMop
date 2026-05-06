@@ -62,9 +62,10 @@ export function PrunerConnectionCredentialPanel({
     () => allInstances.filter((x) => x.provider === provider),
     [allInstances, provider],
   );
+  const firstProviderInstanceId = providerInstances[0]?.id ?? null;
   const [internalSelectedInstanceId, setInternalSelectedInstanceId] = useState<
     number | null
-  >(providerInstances[0]?.id ?? null);
+  >(firstProviderInstanceId);
   const controlled = Boolean(instanceSelection);
   const selectedInstanceId = controlled
     ? instanceSelection!.selectedId
@@ -110,8 +111,8 @@ export function PrunerConnectionCredentialPanel({
 
   useEffect(() => {
     if (controlled) return;
-    setInternalSelectedInstanceId(providerInstances[0]?.id ?? null);
-  }, [controlled, providerInstances.length, provider]);
+    setInternalSelectedInstanceId(firstProviderInstanceId);
+  }, [controlled, firstProviderInstanceId]);
 
   useEffect(() => {
     setBaseUrlDraft(selectedInstance?.base_url ?? "");
@@ -120,7 +121,7 @@ export function PrunerConnectionCredentialPanel({
     setErr(null);
     setSaveJustSucceeded(false);
     setTestJustSucceeded(false);
-  }, [selectedInstance?.id, provider]);
+  }, [provider, selectedInstance?.id, selectedInstance?.base_url]);
 
   async function saveConnection() {
     setSavePending(true);

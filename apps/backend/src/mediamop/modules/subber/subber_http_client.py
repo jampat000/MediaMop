@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import base64
-import ipaddress
 import json
 from typing import Any
-from urllib.parse import urlparse
 
 import httpx
+from mediamop.platform.outbound_http import validate_external_provider_url
 
 DEFAULT_USER_AGENT = "MediaMop/1.0"
 HTML_USER_AGENT = "Mozilla/5.0 (compatible; MediaMop/1.0)"
@@ -92,18 +91,4 @@ def decode_http_error_json(exc: httpx.HTTPStatusError) -> dict[str, Any] | None:
 
 
 def safe_provider_url(url: str) -> str:
-    parsed = urlparse(url.strip())
-    if parsed.scheme not in {"http", "https"}:
-        raise ValueError(f"Blocked provider URL scheme: {parsed.scheme or '<missing>'}")
-    host = (parsed.hostname or "").strip().lower()
-    if not host:
-        raise ValueError("Blocked provider URL host: <missing>")
-    if host in {"localhost", "127.0.0.1", "::1", "0.0.0.0"}:
-        raise ValueError(f"Blocked provider URL host: {host}")
-    try:
-        ip = ipaddress.ip_address(host)
-    except ValueError:
-        return url
-    if ip.is_loopback or ip.is_link_local or ip.is_private or ip.is_multicast or ip.is_reserved or ip.is_unspecified:
-        raise ValueError(f"Blocked provider URL host: {host}")
-    return url
+    return validate_external_provider_url(url)
