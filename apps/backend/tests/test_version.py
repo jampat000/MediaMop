@@ -35,7 +35,7 @@ def test_get_version_prefers_source_tree_over_stale_editable_dist_info(tmp_path,
 
     monkeypatch.delenv("MEDIAMOP_VERSION", raising=False)
     monkeypatch.setattr(sys, "frozen", False, raising=False)
-    monkeypatch.setattr(version_module, "__file__", str(package_dir / "version.py"))
+    monkeypatch.setattr(version_module, "__file__", (package_dir / "version.py").as_posix())
     monkeypatch.setattr(version_module, "version", lambda _name: "1.0.25")
 
     assert get_version() == "1.0.28"
@@ -74,7 +74,7 @@ def test_source_tree_version_logs_when_pyproject_is_invalid(tmp_path, monkeypatc
         warnings.append(msg % args if args else msg)
 
     monkeypatch.setattr(sys, "frozen", False, raising=False)
-    monkeypatch.setattr(version_module, "__file__", str(package_dir / "version.py"))
+    monkeypatch.setattr(version_module, "__file__", (package_dir / "version.py").as_posix())
     monkeypatch.setattr(version_module.logger, "warning", _warn)
 
     assert version_module._source_tree_version() is None

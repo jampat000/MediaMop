@@ -33,28 +33,30 @@ def test_windows_updater_service_ready_requires_authenticated_status(monkeypatch
         observed["timeout"] = timeout
         return _Resp()
 
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.os.name", "nt", raising=False)
-    monkeypatch.setattr(
-        "mediamop.platform.suite_settings.update_service._updater_headers",
-        lambda _settings=None: {"X-MediaMop-Updater-Token": "token-value"},
-    )
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.httpx.get", _fake_get)
+    with monkeypatch.context() as scoped:
+        scoped.setattr("mediamop.platform.suite_settings.update_service.os.name", "nt", raising=False)
+        scoped.setattr(
+            "mediamop.platform.suite_settings.update_service._updater_headers",
+            lambda _settings=None: {"X-MediaMop-Updater-Token": "token-value"},
+        )
+        scoped.setattr("mediamop.platform.suite_settings.update_service.httpx.get", _fake_get)
 
-    assert update_service._windows_updater_service_ready() is True
-    assert observed["url"] == f"{update_service._updater_base_url()}/api/v1/status"
-    assert observed["headers"] == {"X-MediaMop-Updater-Token": "token-value"}
-    assert observed["timeout"] == 3.0
+        assert update_service._windows_updater_service_ready() is True
+        assert observed["url"] == f"{update_service._updater_base_url()}/api/v1/status"
+        assert observed["headers"] == {"X-MediaMop-Updater-Token": "token-value"}
+        assert observed["timeout"] == 3.0
 
 
 def test_windows_updater_service_ready_false_on_unauthorized(monkeypatch: pytest.MonkeyPatch) -> None:
     class _Resp:
         status_code = 401
 
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.os.name", "nt", raising=False)
-    monkeypatch.setattr(
-        "mediamop.platform.suite_settings.update_service._updater_headers",
-        lambda _settings=None: {"X-MediaMop-Updater-Token": "bad-token"},
-    )
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.httpx.get", lambda *_args, **_kwargs: _Resp())
+    with monkeypatch.context() as scoped:
+        scoped.setattr("mediamop.platform.suite_settings.update_service.os.name", "nt", raising=False)
+        scoped.setattr(
+            "mediamop.platform.suite_settings.update_service._updater_headers",
+            lambda _settings=None: {"X-MediaMop-Updater-Token": "bad-token"},
+        )
+        scoped.setattr("mediamop.platform.suite_settings.update_service.httpx.get", lambda *_args, **_kwargs: _Resp())
 
-    assert update_service._windows_updater_service_ready() is False
+        assert update_service._windows_updater_service_ready() is False
