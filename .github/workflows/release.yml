@@ -31,6 +31,51 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Validate release version alignment
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import re
+          import sys
+          import tomllib
+          from pathlib import Path
+
+          tag_version = os.environ["TAG_VERSION"].strip()
+          if tag_version.startswith("v"):
+              tag_version = tag_version[1:]
+
+          backend = tomllib.loads(Path("apps/backend/pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+          web = json.loads(Path("apps/web/package.json").read_text(encoding="utf-8"))["version"]
+          iss = Path("packaging/windows/MediaMop.iss").read_text(encoding="utf-8")
+          match = re.search(r'#define\\s+AppVersion\\s+"([^"]+)"', iss)
+          if not match:
+              print("ERROR: Could not find AppVersion define in packaging/windows/MediaMop.iss", file=sys.stderr)
+              raise SystemExit(1)
+          installer = match.group(1)
+
+          mismatches = []
+          for name, value in [
+              ("apps/backend/pyproject.toml [project].version", backend),
+              ("apps/web/package.json version", web),
+              ("packaging/windows/MediaMop.iss AppVersion", installer),
+          ]:
+              if value != tag_version:
+                  mismatches.append((name, value))
+
+          if mismatches:
+              print(f"ERROR: Release tag v{tag_version} does not match versioned files:", file=sys.stderr)
+              for name, value in mismatches:
+                  print(f"  - {name}: {value}", file=sys.stderr)
+              raise SystemExit(1)
+
+          print(f"Release versions aligned at {tag_version}.")
+          PY
+        env:
+          TAG_VERSION: ${{ github.ref_name }}
+
       - uses: actions/setup-node@v6
         with:
           node-version: "20"

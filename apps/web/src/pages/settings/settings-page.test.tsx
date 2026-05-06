@@ -337,6 +337,26 @@ describe("SettingsPage (suite settings)", () => {
     ).toBeInTheDocument();
   });
 
+  it("does not show one-time bootstrap guidance when updater service is installed but unreachable", () => {
+    renderSettings(operatorMe, {
+      updateStatus: {
+        ...minimalUpdateStatus,
+        install_type: "windows",
+        status: "update_available",
+        in_app_upgrade_supported: false,
+        in_app_upgrade_summary:
+          "Remote in-app upgrade is unavailable because MediaMop could not reach the local updater service. Ensure the MediaMop Updater service is running on this computer, then click Check again.",
+      },
+    });
+    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
+    expect(
+      screen.queryByText("One-time setup required"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/could not reach the local updater service/i),
+    ).toBeInTheDocument();
+  });
+
   it("shows change password only on Security tab", () => {
     renderSettings(operatorMe);
     fireEvent.click(screen.getByRole("tab", { name: "Security" }));
