@@ -183,11 +183,10 @@ def _launch_installer_detached(installer_path: Path) -> subprocess.Popen[bytes]:
     if os.name != "nt":
         msg = "Windows only"
         raise OSError(msg)
-    create_breakaway_from_job = 0x01000000
-    detached_process = 0x00000008
+    # Keep installer launch semantics aligned with Start-Process behavior.
+    # Aggressive detached flags can cause the installer to exit immediately
+    # on some hosts without producing a setup log.
     create_new_process_group = 0x00000200
-    create_no_window = 0x08000000
-    flags = create_breakaway_from_job | detached_process | create_new_process_group | create_no_window
     cmd = [
         str(installer_path.resolve()),
         "/VERYSILENT",
@@ -195,12 +194,12 @@ def _launch_installer_detached(installer_path: Path) -> subprocess.Popen[bytes]:
         "/NORESTART",
         "/CLOSEAPPLICATIONS",
         "/RESTARTAPPLICATIONS",
-        f'/LOG="{_setup_log_path()}"',
+        f"/LOG={_setup_log_path()}",
     ]
     return subprocess.Popen(
         cmd,
         close_fds=True,
-        creationflags=flags,
+        creationflags=create_new_process_group,
         cwd=str(installer_path.parent),
         stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,

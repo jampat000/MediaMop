@@ -53,6 +53,7 @@ import {
   type DisplayDensity,
 } from "../../lib/ui/display-density";
 import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
+import { SHOW_SUPPORT_URL_PLACEHOLDER, SUPPORT_URL } from "../../lib/support";
 
 function canEditSuiteGlobal(role: string | undefined): boolean {
   return role === "operator" || role === "admin";
@@ -1056,6 +1057,54 @@ export function SettingsPage() {
                       ))}
                     </div>
                   </fieldset>
+                </section>
+                <section
+                  className={SUITE_SETTINGS_DASH_CARD_CLASS}
+                  data-testid="suite-settings-support"
+                  aria-labelledby="suite-settings-support-heading"
+                >
+                  <div className="mm-card-action-body">
+                    <div>
+                      <h3
+                        id="suite-settings-support-heading"
+                        className="text-base font-semibold text-[var(--mm-text1)]"
+                      >
+                        Support MediaMop
+                      </h3>
+                      <p className="mt-1 text-sm text-[var(--mm-text2)]">
+                        MediaMop is free to use. If it saves you time, you can
+                        support development and help keep updates coming.
+                      </p>
+                    </div>
+                    <p className="text-sm text-[var(--mm-text3)]">
+                      Supporter licence (optional, future): this space is
+                      reserved for future supporter acknowledgement details.
+                      There are no licence checks or feature limits in this
+                      release.
+                    </p>
+                    {SHOW_SUPPORT_URL_PLACEHOLDER ? (
+                      <p className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-3 py-2 text-xs text-[var(--mm-text3)]">
+                        Development note: set <code>VITE_SUPPORT_URL</code> to
+                        show the support button.
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="mm-card-action-footer">
+                    {SUPPORT_URL ? (
+                      <a
+                        href={SUPPORT_URL}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={mmActionButtonClass({
+                          variant: "secondary",
+                          disabled: false,
+                        })}
+                        data-testid="suite-settings-support-button"
+                      >
+                        Support MediaMop
+                      </a>
+                    ) : null}
+                  </div>
                 </section>
               </div>
             </div>

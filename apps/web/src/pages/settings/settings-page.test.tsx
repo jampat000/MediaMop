@@ -161,6 +161,19 @@ describe("SettingsPage (suite settings)", () => {
     expect(screen.getByTestId("suite-settings-global")).toBeTruthy();
   });
 
+  it("shows support copy and avoids a broken support button when no URL is configured", () => {
+    renderSettings(operatorMe);
+    expect(screen.getByTestId("suite-settings-support")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "MediaMop is free to use. If it saves you time, you can support development and help keep updates coming.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Support MediaMop" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("hides save for viewers", () => {
     renderSettings(viewerMe);
     expect(screen.getByTestId("suite-settings-save-timezone")).toBeDisabled();
