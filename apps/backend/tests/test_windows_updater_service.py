@@ -16,31 +16,32 @@ def _configure_runtime_home(tmp_path: Path, monkeypatch) -> None:
 def test_apply_update_releases_lock_when_thread_start_fails(tmp_path: Path, monkeypatch) -> None:
     _configure_runtime_home(tmp_path, monkeypatch)
     monkeypatch.setattr(updater_service, "_JOB_LOCK", threading.Lock())
-    monkeypatch.setattr(updater_service.os, "name", "nt")
-    monkeypatch.setattr(updater_service, "_load_or_create_token", lambda: "token")
-    monkeypatch.setattr(updater_service, "_validate_installer_url", lambda url: url)
+    with monkeypatch.context() as scoped:
+        scoped.setattr(updater_service.os, "name", "nt")
+        scoped.setattr(updater_service, "_load_or_create_token", lambda: "token")
+        scoped.setattr(updater_service, "_validate_installer_url", lambda url: url)
 
-    class _BrokenThread:
-        def __init__(self, *args, **kwargs) -> None:  # noqa: ANN002, ANN003
-            pass
+        class _BrokenThread:
+            def __init__(self, *args, **kwargs) -> None:  # noqa: ANN002, ANN003
+                pass
 
-        def start(self) -> None:
-            raise RuntimeError("thread start failed")
+            def start(self) -> None:
+                raise RuntimeError("thread start failed")
 
-    monkeypatch.setattr(updater_service.threading, "Thread", _BrokenThread)
+        scoped.setattr(updater_service.threading, "Thread", _BrokenThread)
 
-    app = updater_service.create_updater_app()
-    with TestClient(app) as client:
-        res = client.post(
-            "/api/v1/apply",
-            headers={"X-MediaMop-Updater-Token": "token"},
-            json={
-                "installer_url": "https://github.com/jampat000/MediaMop/releases/download/v2.0.3/MediaMopSetup.exe",
-                "target_version": "2.0.3",
-            },
-        )
+        app = updater_service.create_updater_app()
+        with TestClient(app) as client:
+            res = client.post(
+                "/api/v1/apply",
+                headers={"X-MediaMop-Updater-Token": "token"},
+                json={
+                    "installer_url": "https://github.com/jampat000/MediaMop/releases/download/v2.0.3/MediaMopSetup.exe",
+                    "target_version": "2.0.3",
+                },
+            )
 
-    assert res.status_code == 500
+        assert res.status_code == 500
     assert updater_service._JOB_LOCK.locked() is False
 
 
