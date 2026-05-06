@@ -160,6 +160,32 @@ def _append_service_log(message: str) -> None:
         handle.write(f"[{stamp}] {message}\n")
 
 
+def _reconcile_post_restart_state() -> None:
+    try:
+        state = _read_state()
+    except NotImplementedError:
+        return
+    phase = str(state.get("phase") or "").strip().lower()
+    if phase != "installer_running":
+        return
+    target_version = str(state.get("target_version") or "").strip()
+    if not target_version or target_version != __version__:
+        return
+    installer_log_path = str(state.get("installer_log_path") or _setup_log_path())
+    _append_service_log(
+        "Detected updater service restart after successful install; "
+        f"marking upgrade completed for {target_version}.",
+    )
+    _write_state(
+        phase="completed",
+        message=f"MediaMop {target_version} upgrade completed.",
+        target_version=target_version,
+        installer_log_path=installer_log_path,
+        last_completed_at=_iso_now(),
+        last_error=None,
+    )
+
+
 def _validate_installer_url(installer_url: str) -> str:
     parsed = urlparse(installer_url)
     host = (parsed.hostname or "").lower()
@@ -323,6 +349,7 @@ class ApplyRequest(BaseModel):
 
 def create_updater_app() -> FastAPI:
     app = FastAPI(title="MediaMop Updater Service", version=__version__)
+    _reconcile_post_restart_state()
     shared_token = _load_or_create_token()
 
     def _require_token(x_mediamop_updater_token: str | None = Header(default=None, alias="X-MediaMop-Updater-Token")) -> None:
