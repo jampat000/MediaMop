@@ -26,6 +26,7 @@ _WINDOWS_LEGACY_UPGRADE_SUMMARY = (
     "This Windows install does not have the MediaMop updater service yet. "
     "Remote in-app upgrade is not available until one newer installer has been run locally as administrator."
 )
+_WINDOWS_UPDATER_READY_SUMMARY = "Remote in-app upgrade is ready on this Windows install."
 
 
 def _detect_install_type() -> str:
@@ -140,8 +141,13 @@ def _updater_headers(settings: MediaMopSettings | None = None) -> dict[str, str]
 
 
 def _windows_updater_service_ready(settings: MediaMopSettings | None = None) -> bool:
+    ready, _summary = _windows_updater_service_state(settings)
+    return ready
+
+
+def _windows_updater_service_state(settings: MediaMopSettings | None = None) -> tuple[bool, str]:
     if os.name != "nt":
-        return False
+        return False, _WINDOWS_LEGACY_UPGRADE_SUMMARY
     headers = _updater_headers(settings)
     if not headers:
         logger.warning(
@@ -149,12 +155,27 @@ def _windows_updater_service_ready(settings: MediaMopSettings | None = None) -> 
             "Ensure the updater service has been installed by running the MediaMop installer as administrator.",
             _updater_token_path(settings),
         )
-        return False
+        return False, _WINDOWS_LEGACY_UPGRADE_SUMMARY
     try:
         response = httpx.get(f"{_updater_base_url()}/api/v1/status", headers=headers, timeout=3.0)
-        return response.status_code == 200
     except Exception:
-        return False
+        return (
+            False,
+            "Remote in-app upgrade is unavailable because MediaMop could not reach the local updater service. "
+            "Ensure the MediaMop Updater service is running on this computer, then click Check again.",
+        )
+    if response.status_code == 200:
+        return True, _WINDOWS_UPDATER_READY_SUMMARY
+    if response.status_code in {401, 403}:
+        return (
+            False,
+            "Remote in-app upgrade is unavailable because the local updater service token did not match this app "
+            "install. Run the latest MediaMop installer locally once as administrator to repair updater pairing.",
+        )
+    return (
+        False,
+        f"Remote in-app upgrade is unavailable because the local updater service returned HTTP {response.status_code}.",
+    )
 
 
 def _assert_safe_installer_url(installer_url: str) -> str:
@@ -211,7 +232,10 @@ def _start_windows_updater_service_apply(
 def build_suite_update_status(settings: MediaMopSettings | None = None) -> SuiteUpdateStatusOut:
     install_type = _detect_install_type()
     current_version = __version__ or "1.0.0"
-    windows_updater_ready = install_type == "windows" and _windows_updater_service_ready(settings)
+    windows_updater_ready = False
+    windows_upgrade_summary: str | None = None
+    if install_type == "windows":
+        windows_updater_ready, windows_upgrade_summary = _windows_updater_service_state(settings)
     try:
         payload = _fetch_latest_release_payload()
     except httpx.HTTPStatusError as exc:
@@ -223,15 +247,7 @@ def build_suite_update_status(settings: MediaMopSettings | None = None) -> Suite
                 summary="No public MediaMop release is published yet.",
                 docker_image=DOCKER_IMAGE if install_type == "docker" else None,
                 in_app_upgrade_supported=windows_updater_ready,
-                in_app_upgrade_summary=(
-                    None
-                    if install_type != "windows"
-                    else (
-                        "Remote in-app upgrade is ready on this Windows install."
-                        if windows_updater_ready
-                        else _WINDOWS_LEGACY_UPGRADE_SUMMARY
-                    )
-                ),
+                in_app_upgrade_summary=windows_upgrade_summary,
             )
         return SuiteUpdateStatusOut(
             current_version=current_version,
@@ -240,15 +256,7 @@ def build_suite_update_status(settings: MediaMopSettings | None = None) -> Suite
             summary="Could not check for updates right now.",
             docker_image=DOCKER_IMAGE if install_type == "docker" else None,
             in_app_upgrade_supported=windows_updater_ready,
-            in_app_upgrade_summary=(
-                None
-                if install_type != "windows"
-                else (
-                    "Remote in-app upgrade is ready on this Windows install."
-                    if windows_updater_ready
-                    else _WINDOWS_LEGACY_UPGRADE_SUMMARY
-                )
-            ),
+            in_app_upgrade_summary=windows_upgrade_summary,
         )
     except Exception:
         return SuiteUpdateStatusOut(
@@ -258,15 +266,7 @@ def build_suite_update_status(settings: MediaMopSettings | None = None) -> Suite
             summary="Could not check for updates right now.",
             docker_image=DOCKER_IMAGE if install_type == "docker" else None,
             in_app_upgrade_supported=windows_updater_ready,
-            in_app_upgrade_summary=(
-                None
-                if install_type != "windows"
-                else (
-                    "Remote in-app upgrade is ready on this Windows install."
-                    if windows_updater_ready
-                    else _WINDOWS_LEGACY_UPGRADE_SUMMARY
-                )
-            ),
+            in_app_upgrade_summary=windows_upgrade_summary,
         )
 
     tag_name = str(payload.get("tag_name") or "").strip()
@@ -309,15 +309,7 @@ def build_suite_update_status(settings: MediaMopSettings | None = None) -> Suite
         docker_tag=docker_tag,
         docker_update_command=docker_update_command,
         in_app_upgrade_supported=windows_updater_ready,
-        in_app_upgrade_summary=(
-            None
-            if install_type != "windows"
-            else (
-                "Remote in-app upgrade is ready on this Windows install."
-                if windows_updater_ready
-                else _WINDOWS_LEGACY_UPGRADE_SUMMARY
-            )
-        ),
+        in_app_upgrade_summary=windows_upgrade_summary,
     )
 
 

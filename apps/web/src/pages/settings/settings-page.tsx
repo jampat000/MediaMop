@@ -377,6 +377,12 @@ export function SettingsPage() {
         ((
           settingsQ.data.configuration_backup_preferred_time || "02:00"
         ).trim() || "02:00"));
+  const upgradeBootstrapRequired =
+    updateStatusQ.data?.install_type === "windows" &&
+    !updateStatusQ.data.in_app_upgrade_supported &&
+    (updateStatusQ.data.in_app_upgrade_summary || "")
+      .toLowerCase()
+      .includes("does not have the mediamop updater service yet");
 
   const loadingAny = settingsQ.isPending || me.isPending;
 
@@ -1447,8 +1453,7 @@ export function SettingsPage() {
                     <h4 className="text-sm font-semibold text-[var(--mm-text1)]">
                       What happens next
                     </h4>
-                    {updateStatusQ.data.install_type === "windows" &&
-                    !updateStatusQ.data.in_app_upgrade_supported ? (
+                    {upgradeBootstrapRequired ? (
                       <div className="rounded-lg border border-amber-400/25 bg-amber-400/[0.06] px-3 py-2">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
                           One-time setup required

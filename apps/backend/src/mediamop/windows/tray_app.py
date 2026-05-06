@@ -150,7 +150,7 @@ def _lan_urls(port: int) -> list[str]:
 
 def _wait_for_health(
     port: int,
-    timeout_seconds: float = 30.0,
+    timeout_seconds: float = 60.0,
     process: subprocess.Popen[str] | None = None,
 ) -> None:
     import http.client
@@ -163,12 +163,12 @@ def _wait_for_health(
             )
         try:
             conn = http.client.HTTPConnection("127.0.0.1", port, timeout=2)
-            conn.request("GET", "/health")
+            conn.request("GET", "/ready")
             response = conn.getresponse()
             if response.status == 200:
                 return
         except (OSError, http.client.HTTPException):
-            time.sleep(0.35)
+            time.sleep(0.25)
         finally:
             try:
                 conn.close()
