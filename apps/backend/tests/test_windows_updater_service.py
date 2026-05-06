@@ -31,7 +31,7 @@ def test_apply_update_releases_lock_when_thread_start_fails(tmp_path: Path, monk
         scoped.setattr(updater_service.threading, "Thread", _BrokenThread)
 
         app = updater_service.create_updater_app()
-        with TestClient(app) as client:
+        with TestClient(app, raise_server_exceptions=False) as client:
             res = client.post(
                 "/api/v1/apply",
                 headers={"X-MediaMop-Updater-Token": "token"},
