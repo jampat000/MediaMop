@@ -12,7 +12,7 @@ TRAY_ICON_ICO = ROOT / "packaging" / "windows" / "assets" / "mediamop-tray-icon.
 FFMPEG_VENDOR = ROOT / "packaging" / "windows" / "vendor" / "ffmpeg"
 THIRD_PARTY_NOTICES = ROOT / "THIRD_PARTY_NOTICES.md"
 
-hiddenimports = collect_submodules("mediamop")
+hiddenimports = collect_submodules("mediamop") + collect_submodules("uvicorn")
 datas = [
     (str(BACKEND / "alembic"), "alembic"),
     (str(BACKEND / "alembic.ini"), "."),
