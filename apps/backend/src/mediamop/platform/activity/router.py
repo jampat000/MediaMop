@@ -109,7 +109,11 @@ def _authenticate_stream_user(request: Request, settings) -> None:
     factory = _get_session_factory_or_503(request)
     raw = (request.cookies.get(settings.session_cookie_name) or "").strip() or None
     with factory() as db:
-        assert isinstance(db, Session)
+        if not isinstance(db, Session):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Database session is unavailable for the activity stream.",
+            )
         pair = auth_service.load_valid_session_for_request(db, raw, settings)
         if pair is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated.")
@@ -124,7 +128,8 @@ def _authenticate_stream_user(request: Request, settings) -> None:
 def _latest_event_id_once(request: Request) -> int | None:
     factory = _get_session_factory_or_503(request)
     with factory() as db:
-        assert isinstance(db, Session)
+        if not isinstance(db, Session):
+            raise RuntimeError("Activity stream database session is unavailable.")
         return get_latest_activity_event_id(db)
 
 

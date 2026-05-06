@@ -8,6 +8,8 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
+from mediamop.platform.outbound_http import normalize_local_service_base_url
+
 
 DEFAULT_TIMEOUT_SEC = 20.0
 
@@ -95,7 +97,7 @@ def http_delete(
 
 
 def join_base_path(base_url: str, path: str, params: dict[str, str] | None = None) -> str:
-    root = base_url.rstrip("/") + "/"
+    root = normalize_local_service_base_url(base_url).rstrip("/") + "/"
     rel = path.lstrip("/")
     u = urllib.parse.urljoin(root, rel)
     if params:

@@ -8,6 +8,9 @@ busy timeout, and a sane synchronous mode.
 
 from __future__ import annotations
 
+import sqlite3
+from datetime import date, datetime
+
 from sqlalchemy import MetaData, create_engine, event, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
@@ -22,6 +25,7 @@ _NAMING_CONVENTION: dict[str, str] = {
     "fk": "fk_%(table_name)s_%(referred_table_name)s_%(column_0_N_name)s",
     "pk": "pk_%(table_name)s",
 }
+_SQLITE_ADAPTERS_REGISTERED = False
 
 
 class Base(DeclarativeBase):
@@ -45,12 +49,25 @@ def _register_sqlite_pragmas(engine: Engine) -> None:
             cursor.close()
 
 
+def _register_sqlite_datetime_adapters() -> None:
+    """Register explicit sqlite3 datetime adapters to avoid deprecated defaults."""
+
+    global _SQLITE_ADAPTERS_REGISTERED
+    if _SQLITE_ADAPTERS_REGISTERED:
+        return
+
+    sqlite3.register_adapter(datetime, lambda value: value.isoformat(sep=" "))
+    sqlite3.register_adapter(date, lambda value: value.isoformat())
+    _SQLITE_ADAPTERS_REGISTERED = True
+
+
 def create_db_engine(settings: MediaMopSettings) -> Engine:
     """Return a sync SQLite engine for the configured database path."""
 
     url = settings.sqlalchemy_database_url
     if not url.startswith("sqlite:"):
         raise RuntimeError("MediaMop is SQLite-only; expected sqlalchemy_database_url to be sqlite:…")
+    _register_sqlite_datetime_adapters()
     engine = create_engine(
         url,
         connect_args={

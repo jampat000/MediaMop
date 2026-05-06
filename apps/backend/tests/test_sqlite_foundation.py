@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import os
+import sqlite3
 import stat
 import sys
+import warnings
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -33,6 +36,26 @@ def test_engine_applies_sqlite_hardening_pragmas(monkeypatch: pytest.MonkeyPatch
         assert p["foreign_keys"] == "1"
         assert int(p["busy_timeout"]) == 5000
         assert p["synchronous"] == "1"
+    finally:
+        engine.dispose()
+
+
+def test_create_db_engine_registers_sqlite_datetime_adapter(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("MEDIAMOP_HOME", str(tmp_path))
+    monkeypatch.delenv("MEDIAMOP_DB_PATH", raising=False)
+    settings = MediaMopSettings.load()
+    engine = create_db_engine(settings)
+    try:
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always", DeprecationWarning)
+            with sqlite3.connect(":memory:") as conn:
+                conn.execute("create table t(v text)")
+                conn.execute("insert into t(v) values (?)", (datetime.now(timezone.utc),))
+                conn.commit()
+        assert not [w for w in caught if issubclass(w.category, DeprecationWarning)]
     finally:
         engine.dispose()
 

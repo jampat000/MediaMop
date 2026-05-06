@@ -8,6 +8,8 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
+from mediamop.platform.outbound_http import normalize_local_service_base_url
+
 USER_AGENT = "MediaMop/1.0"
 _DEFAULT_TIMEOUT_SEC = 120
 
@@ -47,7 +49,7 @@ def get_radarr_movies(base_url: str, api_key: str) -> list[dict]:
 
     Each has: id, title, year, hasFile, movieFile.path (when hasFile)
     """
-    url = base_url.rstrip("/") + "/api/v3/movie"
+    url = normalize_local_service_base_url(base_url) + "/api/v3/movie"
     data = _get_json(url, api_key)
     if not isinstance(data, list):
         raise SubberArrClientError("expected JSON array from Radarr /api/v3/movie")
@@ -59,7 +61,7 @@ def get_sonarr_series(base_url: str, api_key: str) -> list[dict]:
 
     Each has: id, title
     """
-    url = base_url.rstrip("/") + "/api/v3/series"
+    url = normalize_local_service_base_url(base_url) + "/api/v3/series"
     data = _get_json(url, api_key)
     if not isinstance(data, list):
         raise SubberArrClientError("expected JSON array from Sonarr /api/v3/series")
@@ -73,7 +75,7 @@ def get_sonarr_episodes(base_url: str, api_key: str, series_id: int) -> list[dic
     hasFile, episodeFile.path (when hasFile)
     """
     q = urllib.parse.urlencode({"seriesId": str(int(series_id))})
-    url = base_url.rstrip("/") + "/api/v3/episode?" + q
+    url = normalize_local_service_base_url(base_url) + "/api/v3/episode?" + q
     data = _get_json(url, api_key)
     if not isinstance(data, list):
         raise SubberArrClientError("expected JSON array from Sonarr /api/v3/episode")
@@ -86,7 +88,7 @@ def get_sonarr_episode_files(base_url: str, api_key: str, series_id: int) -> lis
     Each has: id, path, seriesId
     """
     q = urllib.parse.urlencode({"seriesId": str(int(series_id))})
-    url = base_url.rstrip("/") + "/api/v3/episodefile?" + q
+    url = normalize_local_service_base_url(base_url) + "/api/v3/episodefile?" + q
     data = _get_json(url, api_key)
     if not isinstance(data, list):
         raise SubberArrClientError("expected JSON array from Sonarr /api/v3/episodefile")

@@ -209,7 +209,8 @@ def list_missing_primary_candidates(
                 total_hits = None
                 continue
             raise
-        assert data is not None
+        if data is None:
+            raise RuntimeError("Jellyfin/Emby Items query returned no payload.")
         items = data.get("Items")
         if not isinstance(items, list):
             break
@@ -356,7 +357,8 @@ def list_watched_tv_episode_candidates(
                 total_hits = None
                 continue
             raise
-        assert data is not None
+        if data is None:
+            raise RuntimeError("Jellyfin/Emby Items query returned no payload.")
         items = data.get("Items")
         if not isinstance(items, list):
             break
@@ -442,7 +444,8 @@ def list_watched_movie_candidates(
                 total_hits = None
                 continue
             raise
-        assert data is not None
+        if data is None:
+            raise RuntimeError("Jellyfin/Emby Items query returned no payload.")
         items = data.get("Items")
         if not isinstance(items, list):
             break
@@ -532,7 +535,8 @@ def list_watched_movie_low_rating_candidates(
                 total_hits = None
                 continue
             raise
-        assert data is not None
+        if data is None:
+            raise RuntimeError("Jellyfin/Emby Items query returned no payload.")
         items = data.get("Items")
         if not isinstance(items, list):
             break
@@ -626,7 +630,8 @@ def list_unwatched_movie_stale_candidates(
                 total_hits = None
                 continue
             raise
-        assert data is not None
+        if data is None:
+            raise RuntimeError("Jellyfin/Emby Items query returned no payload.")
         items = data.get("Items")
         if not isinstance(items, list):
             break
@@ -722,7 +727,8 @@ def list_never_played_stale_candidates(
                 total_hits = None
                 continue
             raise
-        assert data is not None
+        if data is None:
+            raise RuntimeError("Jellyfin/Emby Items query returned no payload.")
         items = data.get("Items")
         if not isinstance(items, list):
             break

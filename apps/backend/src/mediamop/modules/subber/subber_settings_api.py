@@ -34,6 +34,7 @@ from mediamop.modules.subber.subber_settings_service import (
     language_preferences_list,
     set_language_preferences_json,
 )
+from mediamop.platform.outbound_http import normalize_local_service_base_url
 from mediamop.platform.auth.authorization import RequireOperatorDep
 from mediamop.platform.auth.csrf import current_raw_session_token, verify_csrf_token
 
@@ -326,7 +327,11 @@ def post_test_opensubtitles(
 
 
 def _arr_status_probe(base_url: str, api_key: str) -> tuple[bool, str]:
-    u = base_url.rstrip("/") + "/api/v3/system/status"
+    try:
+        root = normalize_local_service_base_url(base_url)
+    except ValueError as exc:
+        return False, str(exc)
+    u = root + "/api/v3/system/status"
     req = urllib.request.Request(  # noqa: S310
         u,
         headers={"X-Api-Key": api_key, "User-Agent": USER_AGENT},
@@ -355,7 +360,11 @@ def _arr_api_key(settings: MediaMopSettings, ciphertext: str | None) -> str:
 
 
 def _arr_root_folders(base_url: str, api_key: str) -> tuple[bool, str, list[SubberArrRootFolderOut]]:
-    u = base_url.rstrip("/") + "/api/v3/rootfolder"
+    try:
+        root = normalize_local_service_base_url(base_url)
+    except ValueError as exc:
+        return False, str(exc), []
+    u = root + "/api/v3/rootfolder"
     req = urllib.request.Request(  # noqa: S310
         u,
         headers={"X-Api-Key": api_key, "User-Agent": USER_AGENT},

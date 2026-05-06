@@ -100,6 +100,7 @@ def _default_state() -> dict[str, object]:
         "phase": "idle",
         "message": "Updater ready.",
         "target_version": None,
+        "installer_log_path": str(_setup_log_path()),
         "last_started_at": None,
         "last_completed_at": None,
         "last_error": None,
@@ -110,10 +111,32 @@ def _read_state() -> dict[str, object]:
     path = _state_path()
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
+    except FileNotFoundError:
         return _default_state()
+    except OSError as exc:
+        _append_service_log(f"Updater state read failed at {path}: {exc}")
+        return {
+            **_default_state(),
+            "phase": "state_corrupt",
+            "message": "Updater state file is unreadable.",
+            "last_error": f"Could not read updater state file: {exc}",
+        }
+    except json.JSONDecodeError as exc:
+        _append_service_log(f"Updater state parse failed at {path}: {exc}")
+        return {
+            **_default_state(),
+            "phase": "state_corrupt",
+            "message": "Updater state file is unreadable.",
+            "last_error": f"Could not parse updater state file: {exc}",
+        }
     if not isinstance(raw, dict):
-        return _default_state()
+        _append_service_log(f"Updater state parse failed at {path}: expected JSON object.")
+        return {
+            **_default_state(),
+            "phase": "state_corrupt",
+            "message": "Updater state file is unreadable.",
+            "last_error": "Could not parse updater state file: expected a JSON object.",
+        }
     return {**_default_state(), **raw}
 
 
@@ -156,7 +179,7 @@ def _validate_installer_url(installer_url: str) -> str:
     return installer_url
 
 
-def _launch_installer_detached(installer_path: Path) -> None:
+def _launch_installer_detached(installer_path: Path) -> subprocess.Popen[bytes]:
     if os.name != "nt":
         msg = "Windows only"
         raise OSError(msg)
@@ -174,7 +197,7 @@ def _launch_installer_detached(installer_path: Path) -> None:
         "/RESTARTAPPLICATIONS",
         f'/LOG="{_setup_log_path()}"',
     ]
-    subprocess.Popen(
+    return subprocess.Popen(
         cmd,
         close_fds=True,
         creationflags=flags,
@@ -213,10 +236,14 @@ def _download_installer(installer_url: str, target_version: str) -> Path:
 def _apply_update_job(installer_url: str, target_version: str) -> None:
     try:
         _append_service_log(f"Upgrade request accepted for {target_version}.")
+        installer_log_path = _setup_log_path()
+        installer_log_path.parent.mkdir(parents=True, exist_ok=True)
+        installer_log_path.unlink(missing_ok=True)
         _write_state(
             phase="downloading",
             message=f"Downloading MediaMop {target_version}.",
             target_version=target_version,
+            installer_log_path=str(installer_log_path),
             last_started_at=_iso_now(),
             last_error=None,
         )
@@ -226,21 +253,68 @@ def _apply_update_job(installer_url: str, target_version: str) -> None:
             phase="installer_started",
             message=f"Launching MediaMop {target_version} installer.",
             target_version=target_version,
+            installer_log_path=str(installer_log_path),
             last_error=None,
         )
-        _launch_installer_detached(installer_path)
-        _append_service_log("Installer launched.")
+        process = _launch_installer_detached(installer_path)
+        _append_service_log(f"Installer launched (pid={process.pid}).")
+        _write_state(
+            phase="installer_running",
+            message=f"MediaMop {target_version} installer is running.",
+            target_version=target_version,
+            installer_log_path=str(installer_log_path),
+            last_error=None,
+        )
+        exit_code = process.wait(timeout=3600)
+        if exit_code != 0:
+            msg = f"Installer exited with code {exit_code}."
+            _append_service_log(msg)
+            _write_state(
+                phase="failed",
+                message="Upgrade failed.",
+                target_version=target_version,
+                installer_log_path=str(installer_log_path),
+                last_completed_at=_iso_now(),
+                last_error=msg,
+            )
+            return
+        if not installer_log_path.is_file():
+            msg = (
+                "Installer exited successfully but did not produce installer-latest.log. "
+                "Upgrade outcome cannot be verified."
+            )
+            _append_service_log(msg)
+            _write_state(
+                phase="failed",
+                message="Upgrade failed.",
+                target_version=target_version,
+                installer_log_path=str(installer_log_path),
+                last_completed_at=_iso_now(),
+                last_error=msg,
+            )
+            return
+        _append_service_log("Installer completed successfully.")
+        _write_state(
+            phase="completed",
+            message=f"MediaMop {target_version} upgrade completed.",
+            target_version=target_version,
+            installer_log_path=str(installer_log_path),
+            last_completed_at=_iso_now(),
+            last_error=None,
+        )
     except Exception as exc:
         _append_service_log(f"Upgrade failed: {exc}")
         _write_state(
             phase="failed",
             message="Upgrade failed.",
             target_version=target_version,
+            installer_log_path=str(_setup_log_path()),
             last_completed_at=_iso_now(),
             last_error=str(exc),
         )
     finally:
-        _JOB_LOCK.release()
+        if _JOB_LOCK.locked():
+            _JOB_LOCK.release()
 
 
 class ApplyRequest(BaseModel):
@@ -289,7 +363,20 @@ def create_updater_app() -> FastAPI:
             daemon=True,
             name="mediamop-updater-apply",
         )
-        thread.start()
+        try:
+            thread.start()
+        except Exception as exc:
+            _JOB_LOCK.release()
+            _append_service_log(f"Upgrade failed to start worker thread: {exc}")
+            _write_state(
+                phase="failed",
+                message="Upgrade failed before launch.",
+                target_version=body.target_version,
+                installer_log_path=str(_setup_log_path()),
+                last_completed_at=_iso_now(),
+                last_error=f"Failed to start updater worker thread: {exc}",
+            )
+            raise HTTPException(status_code=500, detail="Failed to start MediaMop updater worker.") from exc
         return {
             "accepted": True,
             "message": "Upgrade started using the MediaMop updater service. MediaMop will close, install the update, and reopen.",

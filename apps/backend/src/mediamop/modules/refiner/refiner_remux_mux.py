@@ -286,7 +286,9 @@ def run_ffmpeg(
         encoding="utf-8",
         errors="replace",
     )
-    assert proc.stdout is not None
+    if proc.stdout is None:
+        proc.kill()
+        raise RuntimeError("ffmpeg progress stream is unavailable")
     try:
         for raw in proc.stdout:
             if timeout_s is not None and time.monotonic() - started > timeout_s:

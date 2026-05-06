@@ -25,6 +25,7 @@ from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.refiner_file_remux_pass_job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
 from mediamop.modules.refiner.refiner_remux_rules import is_refiner_media_candidate
+from mediamop.platform.outbound_http import normalize_local_service_base_url
 
 logger = logging.getLogger(__name__)
 _SONARR_PAGE_SIZE = 200_000
@@ -92,7 +93,7 @@ def fetch_sonarr_library_episodefiles(
 ) -> list[dict[str, Any]]:
     """GET ``/api/v3/episodefile`` — full library episode file list (Refiner-owned stdlib HTTP)."""
 
-    base = base_url.rstrip("/")
+    base = normalize_local_service_base_url(base_url)
     # Sonarr's episodefile endpoint is treated as a full library listing here; use a very high cap.
     url = f"{base}/api/v3/episodefile?pageSize={_SONARR_PAGE_SIZE}"
     req = urllib.request.Request(
