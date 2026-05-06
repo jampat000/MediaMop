@@ -87,6 +87,14 @@ MediaMop is licensed under the GNU Affero General Public License v3.0 or later (
 
 You can use, study, modify, and redistribute it under the license terms. If you distribute a modified version or run a modified version as a network service, the AGPL requires you to make the corresponding source code available under the same license.
 
+## Support MediaMop
+
+MediaMop is free to use. Support is optional.
+
+If MediaMop saves you time, you can support development from the in-app **Support MediaMop** card in Settings.
+
+For this repository, the support button is driven by `VITE_SUPPORT_URL` in `apps/web/.env` (or your deployment environment). If that value is not set, the app stays fully usable and the support button is hidden in production.
+
 ## Verification
 
 Optional local verification:
