@@ -1074,6 +1074,121 @@ def test_status_endpoint_reports_reconciled_legacy_state_as_non_active(
     assert "could not prove" in body["stale_reason"].lower()
 
 
+def test_maybe_reconcile_pending_attempt_archives_superseded_failed_attempt(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    updater_service._persist_state(
+        {
+            **updater_service._fresh_attempt_state("2.1.4", "attempt-123"),
+            "phase": "failed",
+            "message": "Upgrade failed.",
+            "last_error": "'httpx.Response' object does not support the context manager protocol",
+        }
+    )
+    monkeypatch.setattr(
+        updater_service,
+        "_state_matches_installed_target",
+        lambda target_version: (
+            True,
+            {
+                "backend_version": target_version,
+                "packaged_version": target_version,
+                "missing_required_files": [],
+            },
+        ),
+    )
+
+    updater_service._maybe_reconcile_pending_attempt()
+    state = updater_service._read_state()
+
+    assert state["phase"] == "idle"
+    assert state["attempt_id"] is None
+    assert state["target_version"] is None
+    assert state["current_version_seen"] == "2.1.4"
+    assert state["last_error"] is None
+    assert state["diagnostics"]["archived_superseded_attempt"] is True
+    assert state["diagnostics"]["archived_target_version"] == "2.1.4"
+    assert "already installed and running" in state["diagnostics"]["stale_reason"].lower()
+
+
+def test_maybe_reconcile_pending_attempt_archives_failed_attempt_when_running_version_is_newer(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    updater_service._persist_state(
+        {
+            **updater_service._fresh_attempt_state("2.1.4", "attempt-123"),
+            "phase": "failed",
+            "message": "Upgrade failed.",
+            "last_error": "historical failure",
+        }
+    )
+    monkeypatch.setattr(updater_service, "_state_matches_installed_target", lambda _target_version: (False, {}))
+    monkeypatch.setattr(
+        updater_service,
+        "_state_running_version_exceeds_target",
+        lambda target_version: (
+            True,
+            {"backend_version": "2.1.5", "packaged_version": "2.1.5"},
+            "2.1.5",
+        ),
+    )
+
+    updater_service._maybe_reconcile_pending_attempt()
+    state = updater_service._read_state()
+
+    assert state["phase"] == "idle"
+    assert state["current_version_seen"] == "2.1.5"
+    assert state["diagnostics"]["archived_superseded_attempt"] is True
+    assert "newer version 2.1.5" in state["diagnostics"]["stale_reason"].lower()
+
+
+def test_status_endpoint_hides_superseded_failed_attempt(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    updater_service._persist_state(
+        {
+            **updater_service._fresh_attempt_state("2.1.4", "attempt-123"),
+            "phase": "failed",
+            "message": "Upgrade failed.",
+            "last_error": "historical failure",
+        }
+    )
+    monkeypatch.setattr(
+        updater_service,
+        "_state_matches_installed_target",
+        lambda target_version: (
+            True,
+            {
+                "backend_version": target_version,
+                "packaged_version": target_version,
+                "missing_required_files": [],
+            },
+        ),
+    )
+    with monkeypatch.context() as scoped:
+        scoped.setattr(updater_service.os, "name", "nt")
+        scoped.setattr(updater_service, "_load_or_create_token", lambda: "token")
+        app = updater_service.create_updater_app()
+        with TestClient(app, raise_server_exceptions=False) as client:
+            res = client.get(
+                "/api/v1/status",
+                headers={"X-MediaMop-Updater-Token": "token"},
+            )
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["phase"] == "idle"
+    assert body["is_active"] is False
+    assert body["blocks_new_update"] is False
+    assert body["attempt_id"] is None
+
+
 @pytest.mark.parametrize("phase", ["installer_running", "restarting", "verifying_install"])
 def test_maybe_reconcile_pending_attempt_resumes_verification_for_recoverable_phases(
     tmp_path: Path,
