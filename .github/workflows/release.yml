@@ -113,20 +113,36 @@ jobs:
           $hash = (Get-FileHash -LiteralPath "dist/windows/MediaMopSetup.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  MediaMopSetup.exe" | Set-Content -LiteralPath "dist/windows/MediaMopSetup.exe.sha256" -Encoding ascii
 
+      - name: Detect Windows code signing configuration
+        id: codesign
+        shell: bash
+        env:
+          WINDOWS_CODESIGN_PFX_BASE64: ${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 }}
+          WINDOWS_CODESIGN_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PASSWORD }}
+        run: |
+          if [[ -n "${WINDOWS_CODESIGN_PFX_BASE64}" && -n "${WINDOWS_CODESIGN_PASSWORD}" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Sign MediaMop Windows installer
-        if: ${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 != '' && secrets.WINDOWS_CODESIGN_PASSWORD != '' }}
+        if: ${{ steps.codesign.outputs.enabled == 'true' }}
         shell: powershell
+        env:
+          WINDOWS_CODESIGN_PFX_BASE64: ${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 }}
+          WINDOWS_CODESIGN_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PASSWORD }}
         run: |
           $pfxPath = Join-Path $env:RUNNER_TEMP "mediamop-codesign.pfx"
-          [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String("${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 }}"))
+          [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_CODESIGN_PFX_BASE64))
           $signtool = (Get-Command signtool.exe -ErrorAction Stop).Source
-          & $signtool sign /f $pfxPath /p "${{ secrets.WINDOWS_CODESIGN_PASSWORD }}" /fd sha256 /tr http://timestamp.digicert.com /td sha256 "dist/windows/MediaMopSetup.exe"
+          & $signtool sign /f $pfxPath /p $env:WINDOWS_CODESIGN_PASSWORD /fd sha256 /tr http://timestamp.digicert.com /td sha256 "dist/windows/MediaMopSetup.exe"
           if ($LASTEXITCODE -ne 0) {
             throw "signtool failed with exit code $LASTEXITCODE"
           }
 
       - name: Verify MediaMop Windows installer signature
-        if: ${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 != '' && secrets.WINDOWS_CODESIGN_PASSWORD != '' }}
+        if: ${{ steps.codesign.outputs.enabled == 'true' }}
         shell: powershell
         run: |
           $signature = Get-AuthenticodeSignature -FilePath "dist/windows/MediaMopSetup.exe"

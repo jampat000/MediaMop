@@ -154,6 +154,9 @@ def test_release_workflow_generates_checksum_and_uses_normalized_semver() -> Non
     assert "MEDIAMOP_BUILD_VERSION: ${{ steps.version.outputs.plain }}" in text
     assert 'scripts/smoke-windows-package.ps1 -ExpectedVersion "${{ steps.version.outputs.plain }}"' in text
     assert 'MediaMopSetup.exe.sha256' in text
+    assert 'id: codesign' in text
+    assert "steps.codesign.outputs.enabled == 'true'" in text
+    assert "if: ${{ secrets." not in text
     assert "Get-AuthenticodeSignature" in text
 
 
