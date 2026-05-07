@@ -92,7 +92,11 @@ const REFINER_DASHBOARD_JOB_KINDS = new Set([
   "refiner.supplied_payload_evaluation.v1",
 ]);
 
-function compactMetricText(text: string, maxLength = 84, tailLength = 28): string {
+function compactMetricText(
+  text: string,
+  maxLength = 84,
+  tailLength = 28,
+): string {
   const normalized = text.trim();
   if (normalized.length <= maxLength) {
     return normalized;
