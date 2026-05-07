@@ -347,12 +347,12 @@ function describeUpgradeProgress(
   const progressIsActive = isUpgradeProgressActive(progress);
   const hideHistoricalCompletedSummary = Boolean(
     progress &&
-      progress.phase === "completed" &&
-      status &&
-      progress.target_version &&
-      status.current_version === progress.target_version &&
-      status.status === "update_available" &&
-      !monitor?.active,
+    progress.phase === "completed" &&
+    status &&
+    progress.target_version &&
+    status.current_version === progress.target_version &&
+    status.status === "update_available" &&
+    !monitor?.active,
   );
   if (monitor?.timedOutReason) {
     return {
@@ -1963,9 +1963,7 @@ export function SettingsPage() {
                                 upgradeMonitor?.attemptId}
                             </p>
                           ) : null}
-                          <p>
-                            Status: {upgradeProgressSummary.label}
-                          </p>
+                          <p>Status: {upgradeProgressSummary.label}</p>
                           {activeUpgradeProgress?.current_version_seen ||
                           updateStatusQ.data.current_version ? (
                             <p>
