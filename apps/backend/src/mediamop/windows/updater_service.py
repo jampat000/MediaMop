@@ -15,7 +15,7 @@ import threading
 import time
 import uuid
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PosixPath, WindowsPath
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
@@ -69,17 +69,22 @@ def _append_service_log(message: str) -> None:
         handle.write(f"[{stamp}] {message}\n")
 
 
+def _host_path(raw: str | os.PathLike[str]) -> Path:
+    path_cls = WindowsPath if sys.platform == "win32" else PosixPath
+    return path_cls(os.fspath(raw))
+
+
 def _runtime_home() -> Path:
     raw = (os.environ.get("MEDIAMOP_HOME") or "").strip()
     if raw:
-        return Path(raw).expanduser().resolve()
+        return _host_path(raw).expanduser().resolve()
     program_data = (os.environ.get("PROGRAMDATA") or r"C:\ProgramData").strip()
-    return Path(program_data) / "MediaMop"
+    return _host_path(program_data) / "MediaMop"
 
 
 def _install_root() -> Path:
     if getattr(sys, "frozen", False) and os.name == "nt":
-        resolved = Path(sys.executable).resolve().parent
+        resolved = _host_path(sys.executable).resolve().parent
         _append_service_log(f"updater_service._install_root resolved to {resolved} (frozen)")
         return resolved
     resolved = _runtime_home()
@@ -574,7 +579,7 @@ def _verify_authenticode_signature(path: Path) -> tuple[bool, str]:
 
 def _helper_command(attempt_id: str) -> list[str]:
     if getattr(sys, "frozen", False):
-        return [str(Path(sys.executable).resolve()), "--run-upgrade-helper", attempt_id]
+        return [str(_host_path(sys.executable).resolve()), "--run-upgrade-helper", attempt_id]
     return [sys.executable, "-m", "mediamop.windows.updater_service", "--run-upgrade-helper", attempt_id]
 
 
@@ -770,7 +775,7 @@ def _perform_upgrade_attempt(attempt_id: str) -> None:
             diagnostics={"attempt_id": attempt_id},
         )
         return
-    installer_log = Path(str(state.get("installer_log_path") or _installer_log_path(attempt_id)))
+    installer_log = _host_path(str(state.get("installer_log_path") or _installer_log_path(attempt_id)))
     installer_log.parent.mkdir(parents=True, exist_ok=True)
     installer_log.unlink(missing_ok=True)
     try:
@@ -945,7 +950,7 @@ def _reconcile_attempt_worker(attempt_id: str) -> None:
                 diagnostics={"attempt_id": attempt_id},
             )
             return
-        installer_log = Path(str(state.get("installer_log_path") or ""))
+        installer_log = _host_path(str(state.get("installer_log_path") or ""))
         if not installer_log.is_file():
             _mark_failed(
                 message="Upgrade failed.",

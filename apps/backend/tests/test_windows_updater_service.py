@@ -420,20 +420,22 @@ def test_packaged_helper_exits_after_launch_and_reconciliation_completes(
     class _LaunchedProcess:
         pid = 6789
 
-    monkeypatch.setattr(
-        updater_service,
-        "fetch_release_record_by_version",
-        lambda version, user_agent_version: _release_with_assets(version),
-    )
-    monkeypatch.setattr(updater_service, "_download_text", lambda _url: "a" * 64 + "  MediaMopSetup.exe")
-    monkeypatch.setattr(updater_service, "_download_installer", lambda _url, target_version, attempt_id: installer)
-    monkeypatch.setattr(updater_service, "_sha256_for_path", lambda _path: "a" * 64)
-    monkeypatch.setattr(updater_service, "_verify_authenticode_signature", lambda _path: (True, "not required"))
-    monkeypatch.setattr(updater_service, "_launch_installer", lambda _path, installer_log_path: _LaunchedProcess())
-    monkeypatch.setattr(updater_service.sys, "frozen", True, raising=False)
+    with monkeypatch.context() as scoped:
+        scoped.setattr(updater_service.os, "name", "nt")
+        scoped.setattr(
+            updater_service,
+            "fetch_release_record_by_version",
+            lambda version, user_agent_version: _release_with_assets(version),
+        )
+        scoped.setattr(updater_service, "_download_text", lambda _url: "a" * 64 + "  MediaMopSetup.exe")
+        scoped.setattr(updater_service, "_download_installer", lambda _url, target_version, attempt_id: installer)
+        scoped.setattr(updater_service, "_sha256_for_path", lambda _path: "a" * 64)
+        scoped.setattr(updater_service, "_verify_authenticode_signature", lambda _path: (True, "not required"))
+        scoped.setattr(updater_service, "_launch_installer", lambda _path, installer_log_path: _LaunchedProcess())
+        scoped.setattr(updater_service.sys, "frozen", True, raising=False)
 
-    updater_service._perform_upgrade_attempt(attempt_id)
-    launch_state = updater_service._read_state()
+        updater_service._perform_upgrade_attempt(attempt_id)
+        launch_state = updater_service._read_state()
 
     assert launch_state["phase"] == "installer_running"
     assert launch_state["diagnostics"]["installer_pid"] == 6789
