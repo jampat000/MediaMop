@@ -30,6 +30,7 @@ from mediamop.platform.suite_settings.release_catalog import (
     WINDOWS_INSTALLER_SHA256_ASSET_NAME,
     fetch_release_record_by_version,
     normalize_release_version,
+    parse_version_key,
 )
 from mediamop.version import __version__, resolve_packaged_version
 
@@ -59,6 +60,7 @@ _TRUSTED_RELEASE_DOWNLOAD_HOSTS = {
     "release-assets.githubusercontent.com",
 }
 _REDIRECT_STATUS_CODES = {301, 302, 303, 307, 308}
+_PROCESS_IDENTITY_SKEW_SECONDS = 5.0
 
 
 def _append_service_log(message: str) -> None:
@@ -156,6 +158,107 @@ def _pid_is_running(pid: object) -> bool:
     except PermissionError:
         return True
     except OSError:
+        return False
+    return True
+
+
+def _normalize_executable_path(raw: object) -> str | None:
+    if raw is None:
+        return None
+    text = str(raw).strip()
+    if not text:
+        return None
+    if ":" in text or "\\" in text:
+        return text.replace("/", "\\").rstrip("\\").casefold()
+    return os.path.normcase(os.path.normpath(text))
+
+
+def _read_process_snapshot(pid: object) -> dict[str, object] | None:
+    try:
+        numeric = int(pid)
+    except (TypeError, ValueError):
+        return None
+    if numeric <= 0:
+        return None
+    if os.name != "nt":
+        if not _pid_is_running(numeric):
+            return None
+        return {"pid": numeric}
+    script = (
+        f"$row = Get-CimInstance Win32_Process -Filter \"ProcessId = {numeric}\" | "
+        "Select-Object Name, ProcessId, ExecutablePath, CommandLine, "
+        "@{Name='CreationTimeUtc';Expression={ if ($_.CreationDate) { $_.CreationDate.ToUniversalTime().ToString('o') } else { $null } }}; "
+        "if ($null -eq $row) { exit 3 }; "
+        "$row | ConvertTo-Json -Compress"
+    )
+    try:
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", script],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except Exception as exc:
+        _append_service_log(f"Could not read process snapshot for pid={numeric}: {exc}")
+        return None
+    raw = (result.stdout or "").strip()
+    if result.returncode != 0 or not raw:
+        return None
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        _append_service_log(f"Could not parse process snapshot for pid={numeric}.")
+        return None
+    if not isinstance(payload, dict):
+        return None
+    return {
+        "pid": payload.get("ProcessId"),
+        "name": str(payload.get("Name") or "").strip() or None,
+        "executable_path": str(payload.get("ExecutablePath") or "").strip() or None,
+        "command_line": str(payload.get("CommandLine") or "").strip() or None,
+        "creation_time_utc": str(payload.get("CreationTimeUtc") or "").strip() or None,
+    }
+
+
+def _state_attempt_started_at(state: dict[str, object]) -> datetime | None:
+    return _parse_iso(state.get("last_started_at")) or _parse_iso(state.get("last_updated_at"))
+
+
+def _process_started_after_attempt(snapshot: dict[str, object], attempt_started_at: datetime | None) -> bool:
+    if attempt_started_at is None:
+        return False
+    created_at = _parse_iso(snapshot.get("creation_time_utc"))
+    if created_at is None:
+        return False
+    return created_at.timestamp() + _PROCESS_IDENTITY_SKEW_SECONDS >= attempt_started_at.timestamp()
+
+
+def _process_matches_attempt(
+    pid: object,
+    *,
+    expected_path: object | None,
+    attempt_started_at: datetime | None,
+    expected_command_fragments: tuple[str, ...] = (),
+) -> bool:
+    snapshot = _read_process_snapshot(pid)
+    if snapshot is None:
+        return False
+    if not _process_started_after_attempt(snapshot, attempt_started_at):
+        return False
+    normalized_expected = _normalize_executable_path(expected_path)
+    normalized_command_line = str(snapshot.get("command_line") or "").strip().casefold()
+    if normalized_expected is None:
+        return False
+    normalized_actual = _normalize_executable_path(snapshot.get("executable_path"))
+    path_matches = normalized_actual == normalized_expected
+    command_matches_path = normalized_expected in normalized_command_line if normalized_command_line else False
+    if not path_matches and not command_matches_path:
+        return False
+    if expected_command_fragments and normalized_command_line:
+        if not all(fragment.casefold() in normalized_command_line for fragment in expected_command_fragments):
+            return False
+    elif expected_command_fragments:
         return False
     return True
 
@@ -470,6 +573,7 @@ def _fresh_attempt_state(target_version: str, attempt_id: str) -> dict[str, obje
             "last_error": None,
             "diagnostics": {
                 "helper_pid": None,
+                "helper_executable_path": None,
                 "installer_pid": None,
                 "restarted_server_pid": None,
                 "release_tag": f"v{target_version}",
@@ -479,16 +583,97 @@ def _fresh_attempt_state(target_version: str, attempt_id: str) -> dict[str, obje
     return state
 
 
+def _installer_process_is_running(state: dict[str, object]) -> bool:
+    diagnostics = state.get("diagnostics") if isinstance(state.get("diagnostics"), dict) else {}
+    installer_pid = diagnostics.get("installer_pid") if isinstance(diagnostics, dict) else None
+    installer_path = state.get("downloaded_installer_path")
+    return _process_matches_attempt(
+        installer_pid,
+        expected_path=installer_path,
+        attempt_started_at=_state_attempt_started_at(state),
+    )
+
+
+def _helper_process_is_running(state: dict[str, object]) -> bool:
+    diagnostics = state.get("diagnostics") if isinstance(state.get("diagnostics"), dict) else {}
+    helper_pid = diagnostics.get("helper_pid") if isinstance(diagnostics, dict) else None
+    helper_path = diagnostics.get("helper_executable_path") if isinstance(diagnostics, dict) else None
+    attempt_id = str(state.get("attempt_id") or "").strip()
+    fragments = ("--run-upgrade-helper", attempt_id) if attempt_id else ()
+    return _process_matches_attempt(
+        helper_pid,
+        expected_path=helper_path,
+        attempt_started_at=_state_attempt_started_at(state),
+        expected_command_fragments=fragments,
+    )
+
+
+def _state_matches_installed_target(target_version: str) -> tuple[bool, dict[str, object]]:
+    diagnostics = _collect_install_diagnostics(target_version, port=_read_runtime_port())
+    packaged_version = str(diagnostics.get("packaged_version") or "").strip() or None
+    backend_version = str(diagnostics.get("backend_version") or "").strip() or None
+    backend_ready = bool(diagnostics.get("backend_ready"))
+    missing_required = diagnostics.get("missing_required_files")
+    matched = (
+        packaged_version == target_version
+        and backend_ready
+        and backend_version == target_version
+        and not missing_required
+    )
+    return matched, diagnostics
+
+
+def _state_running_version_exceeds_target(
+    target_version: str,
+) -> tuple[bool, dict[str, object], str | None]:
+    diagnostics = _collect_install_diagnostics(target_version, port=_read_runtime_port())
+    target_key = parse_version_key(target_version)
+    if target_key is None:
+        return False, diagnostics, None
+    for field_name in ("backend_version", "packaged_version"):
+        observed_version = str(diagnostics.get(field_name) or "").strip() or None
+        observed_key = parse_version_key(observed_version) if observed_version else None
+        if observed_key and observed_key > target_key:
+            return True, diagnostics, observed_version
+    return False, diagnostics, None
+
+
+def _mark_attempt_completed(
+    *,
+    target_version: str,
+    diagnostics: dict[str, object],
+    message: str | None = None,
+    stale_reason: str | None = None,
+) -> dict[str, object]:
+    merged_diagnostics = dict(diagnostics)
+    if stale_reason:
+        merged_diagnostics["stale_reason"] = stale_reason
+    return _transition_state(
+        "completed",
+        message or f"Upgrade completed. Running version: {target_version}.",
+        target_version=target_version,
+        current_version_seen=target_version,
+        last_completed_at=_iso_now(),
+        last_error=None,
+        diagnostics=merged_diagnostics,
+    )
+
+
 def _stable_or_active_attempt_exists(state: dict[str, object]) -> bool:
     phase = str(state.get("phase") or "").strip().lower()
     if phase not in _ACTIVE_PHASES:
         return False
     attempt_id = str(state.get("attempt_id") or "").strip()
-    diagnostics = state.get("diagnostics") if isinstance(state.get("diagnostics"), dict) else {}
-    helper_pid = diagnostics.get("helper_pid") if isinstance(diagnostics, dict) else None
-    installer_pid = diagnostics.get("installer_pid") if isinstance(diagnostics, dict) else None
-    if _pid_is_running(helper_pid) or _pid_is_running(installer_pid):
+    if _helper_process_is_running(state) or _installer_process_is_running(state):
         return True
+    target_version = normalize_release_version(str(state.get("target_version") or ""))
+    if target_version:
+        matched, _diagnostics = _state_matches_installed_target(target_version)
+        if matched:
+            return False
+        exceeded, _diagnostics, _observed_version = _state_running_version_exceeds_target(target_version)
+        if exceeded:
+            return False
     age = _state_age_seconds(state)
     if age is None:
         return bool(attempt_id)
@@ -1137,27 +1322,75 @@ def _reconcile_attempt_worker(attempt_id: str) -> None:
         state = _read_state()
         if str(state.get("attempt_id") or "").strip() != attempt_id:
             return
+        attempt_label = attempt_id or "legacy-state"
         phase = str(state.get("phase") or "").strip().lower()
         if phase not in _RECOVERABLE_PHASES:
             return
         diagnostics = state.get("diagnostics") if isinstance(state.get("diagnostics"), dict) else {}
         installer_pid = diagnostics.get("installer_pid") if isinstance(diagnostics, dict) else None
-        if _pid_is_running(installer_pid):
+        target_version = normalize_release_version(str(state.get("target_version") or ""))
+        if target_version:
+            matched, install_diagnostics = _state_matches_installed_target(target_version)
+            if matched and not _installer_process_is_running(state):
+                stale_reason = (
+                    "Persisted updater state could not prove the original installer process was still active, "
+                    f"but MediaMop {target_version} is already installed and running."
+                )
+                installer_log = _host_path(str(state.get("installer_log_path") or ""))
+                if installer_log.is_file():
+                    _copy_latest_installer_log(installer_log)
+                _append_service_log(
+                    "Upgrade reconciliation found the requested target version already running; "
+                    f"marking attempt {attempt_label} completed."
+                )
+                _mark_attempt_completed(
+                    target_version=target_version,
+                    diagnostics={
+                        **install_diagnostics,
+                        "reconciled_after_restart": True,
+                        "reconciled_from_phase": phase,
+                    },
+                    stale_reason=stale_reason,
+                )
+                return
+            exceeded, install_diagnostics, observed_version = _state_running_version_exceeds_target(target_version)
+            if exceeded and not _installer_process_is_running(state):
+                stale_reason = (
+                    f"Persisted updater state still targeted {target_version}, but MediaMop is already running "
+                    f"newer version {observed_version or 'unknown'}."
+                )
+                _append_service_log(
+                    "Upgrade reconciliation found an obsolete target version in persisted updater state; "
+                    f"marking attempt {attempt_label} failed."
+                )
+                _mark_failed(
+                    message="Upgrade failed.",
+                    last_error=stale_reason,
+                    target_version=target_version,
+                    current_version_seen=observed_version,
+                    diagnostics={
+                        **install_diagnostics,
+                        "reconciled_after_restart": True,
+                        "reconciled_from_phase": phase,
+                        "stale_reason": stale_reason,
+                    },
+                )
+                return
+        if _installer_process_is_running(state):
             deadline = time.time() + _INSTALLER_WAIT_TIMEOUT_SECONDS
-            while time.time() < deadline and _pid_is_running(installer_pid):
+            while time.time() < deadline and _installer_process_is_running(state):
                 time.sleep(_BACKEND_POLL_INTERVAL_SECONDS)
-            if _pid_is_running(installer_pid):
+            if _installer_process_is_running(state):
                 _mark_failed(
                     message="Upgrade failed.",
                     last_error="Installer did not exit before the reconciliation timeout elapsed.",
-                    target_version=str(state.get("target_version") or "").strip() or None,
+                    target_version=target_version or None,
                     diagnostics={
                         "reconciled_after_restart": True,
                         "installer_pid": installer_pid,
                     },
                 )
                 return
-        target_version = normalize_release_version(str(state.get("target_version") or ""))
         if not target_version:
             _mark_failed(
                 message="Upgrade failed.",
@@ -1189,15 +1422,7 @@ def _reconcile_attempt_worker(attempt_id: str) -> None:
         )
         verified, diagnostics, message = _verify_install(target_version)
         if verified:
-            _transition_state(
-                "completed",
-                message,
-                target_version=target_version,
-                current_version_seen=target_version,
-                last_completed_at=_iso_now(),
-                last_error=None,
-                diagnostics=diagnostics,
-            )
+            _mark_attempt_completed(target_version=target_version, diagnostics=diagnostics)
             return
         _mark_failed(
             message="Upgrade failed.",
@@ -1219,29 +1444,77 @@ def _maybe_reconcile_pending_attempt() -> None:
     phase = str(state.get("phase") or "").strip().lower()
     if phase not in _ACTIVE_PHASES:
         return
+    if _helper_process_is_running(state):
+        return
     attempt_id = str(state.get("attempt_id") or "").strip()
-    if not attempt_id:
-        return
-    diagnostics = state.get("diagnostics") if isinstance(state.get("diagnostics"), dict) else {}
-    helper_pid = diagnostics.get("helper_pid") if isinstance(diagnostics, dict) else None
-    installer_pid = diagnostics.get("installer_pid") if isinstance(diagnostics, dict) else None
-    if _pid_is_running(helper_pid):
-        return
+    attempt_label = attempt_id or "legacy-state"
+    target_version = normalize_release_version(str(state.get("target_version") or ""))
+    installer_running = _installer_process_is_running(state)
+    if target_version and phase in _RECOVERABLE_PHASES and not installer_running:
+        matched, install_diagnostics = _state_matches_installed_target(target_version)
+        if matched:
+            stale_reason = (
+                "Persisted updater state could not prove the original installer process was still active, "
+                f"but MediaMop {target_version} is already installed and running."
+            )
+            installer_log = _host_path(str(state.get("installer_log_path") or ""))
+            if installer_log.is_file():
+                _copy_latest_installer_log(installer_log)
+            _append_service_log(
+                "Updater status found an active attempt whose target version is already running; "
+                f"marking attempt {attempt_label} completed."
+            )
+            _mark_attempt_completed(
+                target_version=target_version,
+                diagnostics={
+                    **install_diagnostics,
+                    "reconciled_after_restart": True,
+                    "reconciled_from_phase": phase,
+                },
+                stale_reason=stale_reason,
+            )
+            return
+        exceeded, install_diagnostics, observed_version = _state_running_version_exceeds_target(target_version)
+        if exceeded:
+            stale_reason = (
+                f"Persisted updater state still targeted {target_version}, but MediaMop is already running "
+                f"newer version {observed_version or 'unknown'}."
+            )
+            _append_service_log(
+                "Updater status found an obsolete target version in persisted updater state; "
+                f"marking attempt {attempt_label} failed."
+            )
+            _mark_failed(
+                message="Upgrade failed.",
+                last_error=stale_reason,
+                target_version=target_version,
+                current_version_seen=observed_version,
+                diagnostics={
+                    **install_diagnostics,
+                    "reconciled_after_restart": True,
+                    "reconciled_from_phase": phase,
+                    "stale_reason": stale_reason,
+                },
+            )
+            return
     age = _state_age_seconds(state)
     if (
         age is not None
         and age >= _STALE_ATTEMPT_SECONDS
-        and not _pid_is_running(installer_pid)
+        and not installer_running
     ):
         _mark_failed(
             message="Upgrade failed.",
             last_error=f"Upgrade attempt stalled during {phase}.",
-            target_version=str(state.get("target_version") or "").strip() or None,
+            target_version=target_version or None,
             diagnostics={
                 "stalled_phase": phase,
                 "state_age_seconds": age,
+                "stale_reason": f"Persisted updater state remained in {phase} without a verified live installer process.",
             },
         )
+        return
+    if not attempt_id:
         return
     if phase in _RECOVERABLE_PHASES:
         if _RECONCILE_LOCK.acquire(blocking=False):
@@ -1253,6 +1526,27 @@ def _maybe_reconcile_pending_attempt() -> None:
             )
             thread.start()
         return
+
+
+def _status_view() -> dict[str, object]:
+    state = _read_state()
+    diagnostics = state.get("diagnostics") if isinstance(state.get("diagnostics"), dict) else {}
+    raw_phase = (
+        str(diagnostics.get("reconciled_from_phase") or state.get("phase") or "unknown").strip().lower()
+        or "unknown"
+    )
+    stale_reason = str(state.get("stale_reason") or diagnostics.get("stale_reason") or "").strip() or None
+    is_stale = stale_reason is not None
+    current_phase = str(state.get("phase") or "unknown").strip().lower() or "unknown"
+    is_active = current_phase in _ACTIVE_PHASES and not is_stale
+    return {
+        **state,
+        "raw_phase": raw_phase,
+        "is_active": is_active,
+        "is_stale": is_stale,
+        "blocks_new_update": is_active,
+        "stale_reason": stale_reason,
+    }
 
 
 class ApplyRequest(BaseModel):
@@ -1284,7 +1578,7 @@ def create_updater_app() -> FastAPI:
     def status(x_mediamop_updater_token: str | None = Header(default=None, alias="X-MediaMop-Updater-Token")) -> dict[str, object]:
         _require_token(x_mediamop_updater_token)
         _maybe_reconcile_pending_attempt()
-        return _read_state()
+        return _status_view()
 
     @app.post("/api/v1/apply")
     def apply_update(
@@ -1304,6 +1598,7 @@ def create_updater_app() -> FastAPI:
             attempt_id = uuid.uuid4().hex
             with _STATE_LOCK:
                 _persist_state(_fresh_attempt_state(target_version, attempt_id))
+            helper_command = _helper_command(attempt_id)
             try:
                 helper = _launch_helper(attempt_id)
             except Exception as exc:
@@ -1314,7 +1609,12 @@ def create_updater_app() -> FastAPI:
                     diagnostics={"attempt_id": attempt_id},
                 )
                 raise HTTPException(status_code=500, detail="Failed to start MediaMop upgrade helper.") from exc
-            _write_state(diagnostics={"helper_pid": helper.pid})
+            _write_state(
+                diagnostics={
+                    "helper_pid": helper.pid,
+                    "helper_executable_path": helper_command[0],
+                }
+            )
             _append_service_log(f"Upgrade helper launched for {target_version} (attempt_id={attempt_id}, pid={helper.pid}).")
             return {
                 "accepted": True,

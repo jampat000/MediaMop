@@ -86,7 +86,12 @@ export type SuiteUpdateStartOut = {
 
 export type SuiteUpgradeProgressOut = {
   phase: string;
+  raw_phase?: string | null;
   message: string;
+  is_active?: boolean;
+  is_stale?: boolean;
+  blocks_new_update?: boolean;
+  stale_reason?: string | null;
   attempt_id?: string | null;
   target_version?: string | null;
   current_version_seen?: string | null;
