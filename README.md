@@ -28,9 +28,19 @@ The app ships as a FastAPI + SQLite backend with a React + Vite web UI.
 
 ## Screenshots
 
-![Dashboard](screenshots/dashboard.png)
+| Dashboard | Activity |
+| --- | --- |
+| ![Dashboard](screenshots/dashboard.png) | ![Activity](screenshots/activity.png) |
 
-![Activity](screenshots/activity.png)
+| Refiner | Pruner |
+| --- | --- |
+| ![Refiner](screenshots/refiner.png) | ![Pruner](screenshots/pruner.png) |
+
+| Subber | Settings |
+| --- | --- |
+| ![Subber](screenshots/subber.png) | ![Settings](screenshots/settings.png) |
+
+### Refiner activity detail
 
 ![Refiner activity detail](screenshots/refiner-activity.png)
 
