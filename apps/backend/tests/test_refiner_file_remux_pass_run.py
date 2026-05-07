@@ -11,6 +11,7 @@ import pytest
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner import refiner_file_remux_pass_run as runmod
+from mediamop.modules.refiner.refiner_remux_rules import PlannedTrack, RemuxPlan
 from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
 from mediamop.modules.refiner.refiner_file_remux_pass_visibility import (
     REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
@@ -113,6 +114,49 @@ def test_live_skips_when_no_remux_required_copies_to_output_and_deletes_release_
     assert r.get("source_folder_deleted") is True
     assert not mkv.exists()
     assert not release.exists()
+
+
+def test_live_result_keeps_removed_track_lists_for_activity_detail(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    media = tmp_path / "media"
+    media.mkdir()
+    release = media / "ReleaseTitle"
+    release.mkdir()
+    mkv = release / "one.mkv"
+    mkv.write_bytes(b"x" * 2000)
+    out = tmp_path / "out"
+    out.mkdir()
+
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    rt = _runtime(media=media, home=home, out=out)
+
+    monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(
+        runmod,
+        "plan_remux",
+        lambda **_kwargs: RemuxPlan(
+            video_indices=[0],
+            audio=[PlannedTrack(input_index=1, lang_label="eng", kind="audio")],
+            subtitles=[],
+            removed_audio=["Director commentary", "Japanese stereo"],
+            removed_subtitles=["spa", "fre"],
+        ),
+    )
+    monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
+
+    r = runmod.run_refiner_file_remux_pass(
+        settings=settings,
+        path_runtime=rt,
+        relative_media_path="ReleaseTitle/one.mkv",
+    )
+    assert r["ok"] is True
+    assert r["removed_audio"] == ["Director commentary", "Japanese stereo"]
+    assert r["removed_subtitles"] == ["spa", "fre"]
 
 
 def test_live_skips_when_no_remux_required_replaces_existing_output_before_cleanup(

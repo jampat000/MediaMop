@@ -28,8 +28,13 @@ export const suiteUpdateNowPaths = [
   "/api/v1/suite/update-now",
   "/api/v1/suite/settings/update-now",
 ] as const;
+export const suiteUpdateDiagnosticsPaths = [
+  "/api/v1/suite/update-diagnostics",
+  "/api/v1/suite/settings/update-diagnostics",
+] as const;
 export const suiteUpdateStatusPath = () => suiteUpdateStatusPaths[0];
 export const suiteUpdateNowPath = () => suiteUpdateNowPaths[0];
+export const suiteUpdateDiagnosticsPath = () => suiteUpdateDiagnosticsPaths[0];
 export const suiteLogsPath = () => "/api/v1/suite/logs";
 export const suiteMetricsPath = () => "/api/v1/suite/metrics";
 export const suiteOperationalHistoryResetPath = () =>

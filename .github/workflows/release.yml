@@ -27,6 +27,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Normalize tag version
+        id: version
+        shell: bash
+        run: echo "plain=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
@@ -96,17 +101,63 @@ jobs:
 
       - name: Build MediaMop Windows installer
         env:
-          MEDIAMOP_BUILD_VERSION: ${{ github.ref_name }}
+          MEDIAMOP_BUILD_VERSION: ${{ steps.version.outputs.plain }}
         run: powershell -ExecutionPolicy Bypass -File packaging/windows/build.ps1
 
       - name: Smoke test packaged Windows server
-        run: powershell -ExecutionPolicy Bypass -File scripts/smoke-windows-package.ps1
+        run: powershell -ExecutionPolicy Bypass -File scripts/smoke-windows-package.ps1 -ExpectedVersion "${{ steps.version.outputs.plain }}"
+
+      - name: Generate installer checksum manifest
+        shell: powershell
+        run: |
+          $hash = (Get-FileHash -LiteralPath "dist/windows/MediaMopSetup.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  MediaMopSetup.exe" | Set-Content -LiteralPath "dist/windows/MediaMopSetup.exe.sha256" -Encoding ascii
+
+      - name: Detect Windows code signing configuration
+        id: codesign
+        shell: bash
+        env:
+          WINDOWS_CODESIGN_PFX_BASE64: ${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 }}
+          WINDOWS_CODESIGN_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PASSWORD }}
+        run: |
+          if [[ -n "${WINDOWS_CODESIGN_PFX_BASE64}" && -n "${WINDOWS_CODESIGN_PASSWORD}" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Sign MediaMop Windows installer
+        if: ${{ steps.codesign.outputs.enabled == 'true' }}
+        shell: powershell
+        env:
+          WINDOWS_CODESIGN_PFX_BASE64: ${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 }}
+          WINDOWS_CODESIGN_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PASSWORD }}
+        run: |
+          $pfxPath = Join-Path $env:RUNNER_TEMP "mediamop-codesign.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_CODESIGN_PFX_BASE64))
+          $signtool = (Get-Command signtool.exe -ErrorAction Stop).Source
+          & $signtool sign /f $pfxPath /p $env:WINDOWS_CODESIGN_PASSWORD /fd sha256 /tr http://timestamp.digicert.com /td sha256 "dist/windows/MediaMopSetup.exe"
+          if ($LASTEXITCODE -ne 0) {
+            throw "signtool failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Verify MediaMop Windows installer signature
+        if: ${{ steps.codesign.outputs.enabled == 'true' }}
+        shell: powershell
+        run: |
+          $signature = Get-AuthenticodeSignature -FilePath "dist/windows/MediaMopSetup.exe"
+          if ($signature.Status -ne "Valid") {
+            throw "Installer signature verification failed: $($signature.Status) $($signature.StatusMessage)"
+          }
 
       - name: Upload MediaMop Windows installer
         uses: actions/upload-artifact@v7
         with:
           name: mediamop-windows-installer
-          path: dist/windows/MediaMopSetup.exe
+          if-no-files-found: error
+          path: |
+            dist/windows/MediaMopSetup.exe
+            dist/windows/MediaMopSetup.exe.sha256
 
   tagged-release:
     runs-on: ubuntu-latest
@@ -174,6 +225,10 @@ jobs:
         id: image
         run: echo "name=${REGISTRY}/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
+      - name: Normalize tag version
+        id: version
+        run: echo "plain=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
       - name: Download MediaMop Windows installer
         uses: actions/download-artifact@v8
         with:
@@ -198,12 +253,12 @@ jobs:
           provenance: true
           sbom: true
           tags: |
-            ${{ steps.image.outputs.name }}:${{ github.ref_name }}
+            ${{ steps.image.outputs.name }}:${{ steps.version.outputs.plain }}
             ${{ steps.image.outputs.name }}:latest
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.version=${{ github.ref_name }}
+            org.opencontainers.image.version=${{ steps.version.outputs.plain }}
 
       - name: Verify published Docker manifest
         run: docker manifest inspect "${{ steps.image.outputs.name }}:latest"
@@ -244,4 +299,5 @@ jobs:
           files: |
             mediamop-web-dist.zip
             windows-artifact/MediaMopSetup.exe
+            windows-artifact/MediaMopSetup.exe.sha256
           body_path: release-notes.md

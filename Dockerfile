@@ -23,6 +23,7 @@ RUN apt-get update \
     ca-certificates \
     curl \
     ffmpeg \
+    gosu \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/mediamop
@@ -47,8 +48,6 @@ ENV MEDIAMOP_ENV=production
 # never be sent on http://, which breaks sign-in. Set MEDIAMOP_SESSION_COOKIE_SECURE=true when
 # browsers always use HTTPS (e.g. TLS terminated at a reverse proxy in front of this container).
 ENV MEDIAMOP_SESSION_COOKIE_SECURE=false
-
-USER mediamop
 
 EXPOSE 8788
 

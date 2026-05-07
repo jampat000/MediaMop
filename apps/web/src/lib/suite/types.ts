@@ -72,14 +72,36 @@ export type SuiteUpdateStatusOut = {
   docker_update_command?: string | null;
   in_app_upgrade_supported?: boolean;
   in_app_upgrade_summary?: string | null;
+  upgrade?: SuiteUpgradeProgressOut | null;
 };
 
 export type SuiteUpdateStartOut = {
   status: "started" | "manual_required" | "unavailable" | string;
   message: string;
+  attempt_id?: string | null;
   target_version?: string | null;
   installer_path?: string | null;
   log_path?: string | null;
+};
+
+export type SuiteUpgradeProgressOut = {
+  phase: string;
+  message: string;
+  attempt_id?: string | null;
+  target_version?: string | null;
+  current_version_seen?: string | null;
+  downloaded_installer_path?: string | null;
+  installer_sha256?: string | null;
+  expected_sha256?: string | null;
+  installer_log_path?: string | null;
+  service_log_path?: string | null;
+  install_root?: string | null;
+  runtime_home?: string | null;
+  last_started_at?: string | null;
+  last_updated_at?: string | null;
+  last_completed_at?: string | null;
+  last_error?: string | null;
+  diagnostics?: Record<string, unknown>;
 };
 
 export type SuiteOperationalHistoryResetOut = {

@@ -194,6 +194,12 @@ $buildVersion = if ($env:MEDIAMOP_BUILD_VERSION) {
 } else {
   $backendProjectVersion
 }
+if ($buildVersion.StartsWith("v")) {
+  $buildVersion = $buildVersion.Substring(1)
+}
+if ($buildVersion -ne $backendProjectVersion) {
+  throw "MEDIAMOP_BUILD_VERSION '$buildVersion' does not match backend project version '$backendProjectVersion'."
+}
 
 if (-not (Test-Path $py)) {
   $systemPython = Resolve-SystemPython
@@ -287,6 +293,31 @@ try {
   Invoke-Native -FilePath $py -ArgumentList @("-m", "PyInstaller", "--noconfirm", "--clean", "--distpath", $distRoot, "--workpath", (Join-Path $distRoot "build"), $specPath)
 } finally {
   Pop-Location
+}
+
+$packageDir = Join-Path $distRoot "MediaMop"
+$serverExe = Join-Path $packageDir "MediaMopServer.exe"
+$updaterExe = Join-Path $packageDir "MediaMopUpdater.exe"
+$updaterServiceXml = Join-Path $packageDir "MediaMopUpdaterService.xml"
+$updaterServiceExe = Join-Path $packageDir "MediaMopUpdaterService.exe"
+
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot "MediaMopUpdaterService.xml") -Destination $updaterServiceXml -Force
+Copy-Item -LiteralPath (Join-Path $winswVendorDir "WinSW-x64.exe") -Destination $updaterServiceExe -Force
+
+foreach ($exePath in @($serverExe, $updaterExe)) {
+  if (-not (Test-Path -LiteralPath $exePath)) {
+    throw "Expected packaged executable was not found: $exePath"
+  }
+}
+
+$serverVersion = (& $serverExe --version).Trim()
+if ($serverVersion -ne $buildVersion) {
+  throw "Packaged MediaMopServer.exe reports version '$serverVersion' but expected build version is '$buildVersion'."
+}
+
+$updaterVersion = (& $updaterExe --version).Trim()
+if ($updaterVersion -ne $buildVersion) {
+  throw "Packaged MediaMopUpdater.exe reports version '$updaterVersion' but expected build version is '$buildVersion'."
 }
 
 if (-not $SkipInstaller) {

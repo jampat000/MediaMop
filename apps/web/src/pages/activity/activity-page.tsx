@@ -61,6 +61,7 @@ const EVENT_LABELS: Record<string, string> = {
   "auth.bootstrap_succeeded": "First admin created",
   "auth.bootstrap_denied": "First-time setup blocked",
   "auth.password_changed": "Password changed",
+  "system.reconciliation.repair": "System repair finished",
   "arr_library.connection_test_succeeded": "Connection check finished",
   "arr_library.connection_test_failed": "Connection check failed",
   "refiner.supplied_payload_evaluation_completed":
@@ -262,12 +263,30 @@ function normalizeSubberSummary(ev: ActivityEventItem): ActivityDisplay | null {
   }
 
   if (ev.event_type === "subber.subtitle_upgrade_completed") {
+    const result = asString(parsed?.result);
+    const userMessage = asString(parsed?.user_message);
+    const nextAction = asString(parsed?.next_action);
     return {
-      title: "Subtitle upgrade finished",
+      title:
+        result === "skipped"
+          ? "Subtitle upgrade skipped"
+          : result === "failed"
+            ? "Subtitle upgrade failed"
+            : "Subtitle upgrade finished",
       summary: "Subtitle upgrade result",
-      detail: ev.detail,
-      chip: "Upgrade complete",
-      tone: "success",
+      detail: userMessage ?? nextAction ?? ev.detail,
+      chip:
+        result === "skipped"
+          ? "Upgrade skipped"
+          : result === "failed"
+            ? "Upgrade failed"
+            : "Upgrade complete",
+      tone:
+        result === "skipped"
+          ? "warning"
+          : result === "failed"
+            ? "error"
+            : "success",
       compact: true,
     };
   }
@@ -786,16 +805,58 @@ function StructuredActivityDetails({ ev }: { ev: ActivityEventItem }) {
   }
 
   if (ev.event_type === "subber.subtitle_upgrade_completed") {
+    const result = asString(parsed.result);
+    const counts =
+      parsed.counts && typeof parsed.counts === "object"
+        ? (parsed.counts as ParsedDetail)
+        : null;
+    const skipped = asNumber(counts?.skipped);
     return (
-      <div className="grid gap-3 rounded-md border border-[var(--mm-border)] bg-black/10 p-3 sm:grid-cols-2">
-        <StructuredMetric
-          label="Checked"
-          value={asNumber(parsed.attempted) ?? 0}
-        />
-        <StructuredMetric
-          label="Upgraded"
-          value={asNumber(parsed.upgraded) ?? 0}
-        />
+      <div className="space-y-3 rounded-md border border-[var(--mm-border)] bg-black/10 p-3">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <StructuredMetric
+            label="Result"
+            value={
+              result === "skipped"
+                ? "Skipped"
+                : result === "failed"
+                  ? "Failed"
+                  : "Completed"
+            }
+          />
+          <StructuredMetric
+            label="Checked"
+            value={asNumber(parsed.attempted) ?? 0}
+          />
+          <StructuredMetric
+            label="Upgraded"
+            value={asNumber(parsed.upgraded) ?? 0}
+          />
+          {skipped != null ? (
+            <StructuredMetric label="Skipped" value={skipped} />
+          ) : null}
+        </div>
+        {asString(parsed.user_message) ? (
+          <p className="text-sm text-[var(--mm-text2)]">
+            {asString(parsed.user_message)}
+          </p>
+        ) : null}
+        {asString(parsed.next_action) ? (
+          <p className="text-sm text-amber-100">
+            {asString(parsed.next_action)}
+          </p>
+        ) : null}
+        {asString(parsed.error) ? (
+          <p className="text-sm text-red-200">{asString(parsed.error)}</p>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (ev.event_type === "system.reconciliation.repair") {
+    return (
+      <div className="rounded-md border border-[var(--mm-border)] bg-black/10 p-3">
+        <p className="text-sm leading-6 text-[var(--mm-text2)]">{ev.detail}</p>
       </div>
     );
   }

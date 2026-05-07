@@ -146,8 +146,6 @@ jobs:
         run: choco install innosetup --no-progress -y
 
       - name: Build MediaMop Windows installer
-        env:
-          MEDIAMOP_BUILD_VERSION: ci-${{ github.run_number }}
         run: powershell -ExecutionPolicy Bypass -File packaging/windows/build.ps1
 
       - name: Smoke test packaged Windows server

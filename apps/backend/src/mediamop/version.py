@@ -30,8 +30,7 @@ def _packaged_resource_root() -> Path | None:
     return executable_dir
 
 
-def _packaged_dist_info_version() -> str | None:
-    root = _packaged_resource_root()
+def resolve_packaged_version(root: Path | None) -> str | None:
     if root is None or not root.is_dir():
         return None
 
@@ -43,6 +42,10 @@ def _packaged_dist_info_version() -> str | None:
     if not versions:
         return None
     return sorted(versions, key=_version_key)[-1]
+
+
+def _packaged_dist_info_version() -> str | None:
+    return resolve_packaged_version(_packaged_resource_root())
 
 
 def _source_tree_version() -> str | None:

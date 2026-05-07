@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_submodules, copy_metadata
 
 ROOT = Path.cwd()
 BACKEND = ROOT / "apps" / "backend"
@@ -22,6 +22,7 @@ datas = [
     (str(TRAY_ICON_ICO), "assets"),
     (str(THIRD_PARTY_NOTICES), "."),
 ]
+datas += copy_metadata("mediamop-backend")
 if FFMPEG_VENDOR.is_dir():
     datas.append((str(FFMPEG_VENDOR), "bin/ffmpeg"))
 

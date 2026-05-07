@@ -27,6 +27,7 @@ import {
 } from "../../lib/ui/mm-module-tab-blurb";
 import {
   suiteConfigurationBackupsQueryKey,
+  suiteUpdateStatusQueryKey,
   useSuiteConfigurationBackupsQuery,
   useSuiteLogsQuery,
   useSuiteMetricsQuery,
@@ -40,11 +41,14 @@ import {
 import type {
   SuiteLogEntry,
   SuiteSettingsPutBody,
+  SuiteUpdateStatusOut,
+  SuiteUpgradeProgressOut,
 } from "../../lib/suite/types";
 import {
   fetchConfigurationBundle,
   fetchStoredConfigurationBackupBlob,
   putConfigurationBundle,
+  suiteUpdateDiagnosticsPath,
   type ConfigurationBundle,
 } from "../../lib/suite/suite-settings-api";
 import {
@@ -53,7 +57,11 @@ import {
   type DisplayDensity,
 } from "../../lib/ui/display-density";
 import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
-import { SHOW_SUPPORT_URL_PLACEHOLDER, SUPPORT_URL } from "../../lib/support";
+import {
+  SHOW_SUPPORT_CARD,
+  SHOW_SUPPORT_URL_PLACEHOLDER,
+  SUPPORT_URL,
+} from "../../lib/support";
 
 function canEditSuiteGlobal(role: string | undefined): boolean {
   return role === "operator" || role === "admin";
@@ -90,8 +98,41 @@ const SUITE_SETTINGS_PREMIUM_PANEL_CLASS =
 const SUITE_SETTINGS_PREMIUM_TILE_CLASS =
   "rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/80 px-4 py-3 shadow-[var(--mm-shadow-card-inner)]";
 const CONFIGURATION_BACKUP_INTERVAL_HOURS = [6, 12, 24, 48, 72, 168] as const;
+const UPGRADE_VERIFICATION_TIMEOUT_MS = 8 * 60_000;
+
+type UpgradeMonitor = {
+  attemptId: string | null;
+  targetVersion: string;
+  disconnects: number;
+  active: boolean;
+  startedAtMs: number;
+  timedOutReason: string | null;
+};
+
+type UpgradeNotice = {
+  tone: "info" | "success" | "error";
+  text: string;
+};
 
 type LogLevelFilter = "" | "INFO" | "WARNING" | "ERROR";
+
+function parseUpgradeTime(raw: string | null | undefined): number | null {
+  if (!raw) {
+    return null;
+  }
+  const parsed = Date.parse(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function upgradeNoticeClass(tone: UpgradeNotice["tone"]): string {
+  if (tone === "error") {
+    return "rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200";
+  }
+  if (tone === "success") {
+    return "rounded-md border border-emerald-500/30 bg-emerald-950/20 px-3 py-2 text-sm text-emerald-200";
+  }
+  return "rounded-md border border-amber-400/25 bg-amber-400/[0.06] px-3 py-2 text-sm text-[var(--mm-text2)]";
+}
 
 function formatBackupBytes(n: number): string {
   if (n < 1024) {
@@ -255,6 +296,135 @@ function requestIssueSummary(
   return { value: "No request issues", detail };
 }
 
+function isUpgradeActivePhase(phase: string | null | undefined): boolean {
+  return (
+    phase === "checking" ||
+    phase === "downloading" ||
+    phase === "verifying_download" ||
+    phase === "installer_started" ||
+    phase === "installer_running" ||
+    phase === "restarting" ||
+    phase === "verifying_install"
+  );
+}
+
+function upgradePhaseTone(
+  status: SuiteUpdateStatusOut | undefined,
+  progress: SuiteUpgradeProgressOut | null | undefined,
+  monitor: UpgradeMonitor | null,
+): string {
+  if (monitor?.timedOutReason || progress?.phase === "failed") {
+    return "border-red-500/40 bg-red-950/25";
+  }
+  if (
+    progress?.phase === "completed" &&
+    progress.target_version &&
+    status?.current_version === progress.target_version
+  ) {
+    return "border-emerald-500/30 bg-emerald-950/20";
+  }
+  return "border-amber-400/25 bg-amber-400/[0.06]";
+}
+
+function describeUpgradeProgress(
+  status: SuiteUpdateStatusOut | undefined,
+  progress: SuiteUpgradeProgressOut | null | undefined,
+  monitor: UpgradeMonitor | null,
+  disconnected: boolean,
+): { label: string; body: string } | null {
+  if (monitor?.timedOutReason) {
+    return {
+      label: "Failed",
+      body: monitor.timedOutReason,
+    };
+  }
+  if (disconnected && monitor?.active) {
+    return {
+      label: "Reconnecting",
+      body: "MediaMop is reconnecting and verifying the installed version.",
+    };
+  }
+  if (!progress) {
+    if (!monitor?.active) {
+      return null;
+    }
+    return {
+      label: "Waiting",
+      body: "Upgrade request accepted. MediaMop is checking release metadata.",
+    };
+  }
+  switch (progress.phase) {
+    case "checking":
+      return {
+        label: "Checking release",
+        body:
+          progress.message ||
+          "Upgrade request accepted. MediaMop is checking release metadata.",
+      };
+    case "downloading":
+      return {
+        label: "Downloading",
+        body:
+          progress.message ||
+          "Upgrade request accepted. MediaMop is downloading the installer.",
+      };
+    case "verifying_download":
+      return {
+        label: "Verifying installer",
+        body: progress.message || "Installer is being verified.",
+      };
+    case "installer_started":
+      return {
+        label: "Starting installer",
+        body: progress.message || "Installer is starting.",
+      };
+    case "installer_running":
+      return {
+        label: "Installer running",
+        body:
+          progress.message ||
+          "Installer is running. MediaMop may temporarily disconnect.",
+      };
+    case "restarting":
+    case "verifying_install":
+      return {
+        label: "Verifying installed version",
+        body:
+          progress.message ||
+          "MediaMop is reconnecting and verifying the installed version.",
+      };
+    case "completed":
+      if (
+        status &&
+        progress.target_version &&
+        status.current_version === progress.target_version
+      ) {
+        return {
+          label: "Completed",
+          body:
+            progress.message ||
+            `Upgrade completed. Running version: ${status.current_version}.`,
+        };
+      }
+      return {
+        label: "Verifying installed version",
+        body: "Upgrade reported completed, but the running version has not been confirmed yet.",
+      };
+    case "failed":
+      return {
+        label: "Failed",
+        body: progress.last_error
+          ? `Upgrade failed: ${progress.last_error}`
+          : progress.message || "Upgrade failed.",
+      };
+    default:
+      return {
+        label: "Upgrade status",
+        body: progress.message || "Updater status is available.",
+      };
+  }
+}
+
 /** Settings: General (timezone, display density, configuration export), Security, Logs (retention + recent events). */
 export function SettingsPage() {
   const navigate = useNavigate();
@@ -289,7 +459,13 @@ export function SettingsPage() {
   const [backupBusy, setBackupBusy] = useState(false);
   const [backupMsg, setBackupMsg] = useState<string | null>(null);
   const [backupErr, setBackupErr] = useState<string | null>(null);
-  const [upgradeMsg, setUpgradeMsg] = useState<string | null>(null);
+  const [upgradeNotice, setUpgradeNotice] = useState<UpgradeNotice | null>(
+    null,
+  );
+  const [upgradeMonitor, setUpgradeMonitor] = useState<UpgradeMonitor | null>(
+    null,
+  );
+  const [upgradePollActive, setUpgradePollActive] = useState(false);
   const [resetHistoryMsg, setResetHistoryMsg] = useState<string | null>(null);
   const [resetHistoryConfirm, setResetHistoryConfirm] = useState("");
   const [configurationBackupEnabled, setConfigurationBackupEnabled] =
@@ -337,8 +513,13 @@ export function SettingsPage() {
   const backupsQ = useSuiteConfigurationBackupsQuery(
     editable && tab === "backup" && Boolean(settingsQ.data),
   );
+  const upgradePollingMs =
+    tab === "upgrade" && (upgradeMonitor?.active || upgradePollActive)
+      ? Math.min(10_000, 1500 * ((upgradeMonitor?.disconnects ?? 0) + 1))
+      : false;
   const updateStatusQ = useSuiteUpdateStatusQuery(
     tab === "upgrade" && Boolean(settingsQ.data),
+    upgradePollingMs,
   );
   const logsQ = useSuiteLogsQuery(
     {
@@ -384,6 +565,167 @@ export function SettingsPage() {
     (updateStatusQ.data.in_app_upgrade_summary || "")
       .toLowerCase()
       .includes("does not have the mediamop updater service yet");
+  const activeUpgradeProgress = updateStatusQ.data?.upgrade;
+  const upgradeConnectionLost =
+    Boolean(upgradeMonitor?.active) && updateStatusQ.isError;
+  const upgradeProgressSummary = describeUpgradeProgress(
+    updateStatusQ.data,
+    activeUpgradeProgress,
+    upgradeMonitor,
+    upgradeConnectionLost,
+  );
+  const upgradeInProgress =
+    !upgradeMonitor?.timedOutReason &&
+    (Boolean(upgradeMonitor?.active) ||
+      isUpgradeActivePhase(activeUpgradeProgress?.phase));
+
+  useEffect(() => {
+    if (isUpgradeActivePhase(activeUpgradeProgress?.phase)) {
+      setUpgradePollActive(true);
+      return;
+    }
+    if (!upgradeMonitor?.active) {
+      setUpgradePollActive(false);
+    }
+  }, [activeUpgradeProgress?.phase, upgradeMonitor?.active]);
+
+  useEffect(() => {
+    if (!updateStatusQ.data?.upgrade) {
+      return;
+    }
+    const progress = updateStatusQ.data.upgrade;
+    if (!isUpgradeActivePhase(progress.phase)) {
+      return;
+    }
+    setUpgradeMonitor((current) => {
+      if (
+        current?.active &&
+        current.attemptId === (progress.attempt_id ?? null) &&
+        current.targetVersion === (progress.target_version || "").trim()
+      ) {
+        return current;
+      }
+      return {
+        attemptId: progress.attempt_id ?? null,
+        targetVersion: (progress.target_version || "").trim(),
+        disconnects: 0,
+        active: true,
+        startedAtMs:
+          parseUpgradeTime(progress.last_started_at) ??
+          parseUpgradeTime(progress.last_updated_at) ??
+          Date.now(),
+        timedOutReason: null,
+      };
+    });
+  }, [updateStatusQ.data]);
+
+  useEffect(() => {
+    if (!upgradeMonitor?.active || updateStatusQ.errorUpdatedAt === 0) {
+      return;
+    }
+    setUpgradeMonitor((current) => {
+      if (!current?.active) {
+        return current;
+      }
+      return {
+        ...current,
+        disconnects: Math.min(current.disconnects + 1, 6),
+      };
+    });
+  }, [upgradeMonitor?.active, updateStatusQ.errorUpdatedAt]);
+
+  useEffect(() => {
+    if (!upgradeMonitor || !updateStatusQ.data) {
+      return;
+    }
+    const progress = updateStatusQ.data.upgrade;
+    setUpgradeMonitor((current) => {
+      if (!current?.active) {
+        return current;
+      }
+      if (current.disconnects === 0) {
+        return current;
+      }
+      return { ...current, disconnects: 0 };
+    });
+    if (progress?.phase === "failed") {
+      setUpgradePollActive(false);
+      setUpgradeMonitor((current) =>
+        current ? { ...current, active: false, timedOutReason: null } : current,
+      );
+      setUpgradeNotice({
+        tone: "error",
+        text: progress.last_error
+          ? `Upgrade failed: ${progress.last_error}`
+          : progress.message || "Upgrade failed.",
+      });
+      return;
+    }
+    const targetVersion = (
+      progress?.target_version ||
+      upgradeMonitor.targetVersion ||
+      ""
+    ).trim();
+    if (
+      targetVersion &&
+      updateStatusQ.data.current_version === targetVersion &&
+      (progress?.phase === "completed" || !progress)
+    ) {
+      setUpgradePollActive(false);
+      setUpgradeMonitor((current) =>
+        current ? { ...current, active: false, timedOutReason: null } : current,
+      );
+      setUpgradeNotice({
+        tone: "success",
+        text:
+          progress?.message ||
+          `Upgrade completed. Running version: ${updateStatusQ.data.current_version}.`,
+      });
+    }
+  }, [upgradeMonitor, updateStatusQ.data]);
+
+  useEffect(() => {
+    if (!upgradeMonitor?.active) {
+      return;
+    }
+    const targetVersion = upgradeMonitor.targetVersion.trim();
+    if (!targetVersion || !updateStatusQ.data) {
+      return;
+    }
+    if (updateStatusQ.data.current_version === targetVersion) {
+      return;
+    }
+    const elapsed = Date.now() - upgradeMonitor.startedAtMs;
+    if (elapsed < UPGRADE_VERIFICATION_TIMEOUT_MS) {
+      return;
+    }
+    const currentVersionSeen =
+      activeUpgradeProgress?.current_version_seen ||
+      updateStatusQ.data.current_version ||
+      "unknown";
+    const reason =
+      `Upgrade failed: MediaMop did not verify version ${targetVersion} within ${Math.floor(UPGRADE_VERIFICATION_TIMEOUT_MS / 60_000)} minutes. ` +
+      `The running app still reports ${currentVersionSeen}.`;
+    setUpgradePollActive(false);
+    setUpgradeMonitor((current) =>
+      current
+        ? {
+            ...current,
+            active: false,
+            timedOutReason: reason,
+          }
+        : current,
+    );
+    setUpgradeNotice({
+      tone: "error",
+      text: reason,
+    });
+  }, [
+    activeUpgradeProgress?.current_version_seen,
+    activeUpgradeProgress?.phase,
+    updateStatusQ.data,
+    upgradeMonitor,
+  ]);
 
   const loadingAny = settingsQ.isPending || me.isPending;
 
@@ -602,17 +944,33 @@ export function SettingsPage() {
   }
 
   async function handleUpgradeNow() {
-    setUpgradeMsg(null);
+    setUpgradeNotice(null);
     try {
       const result = await updateNow.mutateAsync();
-      setUpgradeMsg(result.message);
       if (result.status === "started") {
-        window.setTimeout(() => {
-          window.location.assign("/settings");
-        }, 30_000);
+        setUpgradePollActive(true);
+        setUpgradeMonitor({
+          attemptId: result.attempt_id ?? null,
+          targetVersion: (
+            result.target_version ||
+            updateStatusQ.data?.latest_version ||
+            ""
+          ).trim(),
+          disconnects: 0,
+          active: true,
+          startedAtMs: Date.now(),
+          timedOutReason: null,
+        });
+        await queryClient.invalidateQueries({
+          queryKey: suiteUpdateStatusQueryKey,
+        });
       } else {
+        setUpgradeNotice({
+          tone: "info",
+          text: result.message,
+        });
         void queryClient.invalidateQueries({
-          queryKey: ["suite", "update-status"],
+          queryKey: suiteUpdateStatusQueryKey,
         });
       }
     } catch {
@@ -1058,54 +1416,50 @@ export function SettingsPage() {
                     </div>
                   </fieldset>
                 </section>
-                <section
-                  className={SUITE_SETTINGS_DASH_CARD_CLASS}
-                  data-testid="suite-settings-support"
-                  aria-labelledby="suite-settings-support-heading"
-                >
-                  <div className="mm-card-action-body">
-                    <div>
-                      <h3
-                        id="suite-settings-support-heading"
-                        className="text-base font-semibold text-[var(--mm-text1)]"
-                      >
-                        Support MediaMop
-                      </h3>
-                      <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                        MediaMop is free to use. If it saves you time, you can
-                        support development and help keep updates coming.
-                      </p>
+                {SHOW_SUPPORT_CARD ? (
+                  <section
+                    className={SUITE_SETTINGS_DASH_CARD_CLASS}
+                    data-testid="suite-settings-support"
+                    aria-labelledby="suite-settings-support-heading"
+                  >
+                    <div className="mm-card-action-body">
+                      <div>
+                        <h3
+                          id="suite-settings-support-heading"
+                          className="text-base font-semibold text-[var(--mm-text1)]"
+                        >
+                          Support MediaMop
+                        </h3>
+                        <p className="mt-1 text-sm text-[var(--mm-text2)]">
+                          MediaMop is free to use. If it saves you time, you can
+                          support development and help keep updates coming.
+                        </p>
+                      </div>
+                      {SHOW_SUPPORT_URL_PLACEHOLDER ? (
+                        <p className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-3 py-2 text-xs text-[var(--mm-text3)]">
+                          Development note: set <code>VITE_SUPPORT_URL</code> to
+                          show the support button.
+                        </p>
+                      ) : null}
                     </div>
-                    <p className="text-sm text-[var(--mm-text3)]">
-                      Supporter licence (optional, future): this space is
-                      reserved for future supporter acknowledgement details.
-                      There are no licence checks or feature limits in this
-                      release.
-                    </p>
-                    {SHOW_SUPPORT_URL_PLACEHOLDER ? (
-                      <p className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-3 py-2 text-xs text-[var(--mm-text3)]">
-                        Development note: set <code>VITE_SUPPORT_URL</code> to
-                        show the support button.
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="mm-card-action-footer">
-                    {SUPPORT_URL ? (
-                      <a
-                        href={SUPPORT_URL}
-                        target="_blank"
-                        rel="noreferrer"
-                        className={mmActionButtonClass({
-                          variant: "secondary",
-                          disabled: false,
-                        })}
-                        data-testid="suite-settings-support-button"
-                      >
-                        Support MediaMop
-                      </a>
-                    ) : null}
-                  </div>
-                </section>
+                    <div className="mm-card-action-footer">
+                      {SUPPORT_URL ? (
+                        <a
+                          href={SUPPORT_URL}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={mmActionButtonClass({
+                            variant: "secondary",
+                            disabled: false,
+                          })}
+                          data-testid="suite-settings-support-button"
+                        >
+                          Support MediaMop
+                        </a>
+                      ) : null}
+                    </div>
+                  </section>
+                ) : null}
               </div>
             </div>
           </div>
@@ -1430,15 +1784,33 @@ export function SettingsPage() {
                 <p className="text-sm text-[var(--mm-text3)]">
                   Checking for updates…
                 </p>
-              ) : updateStatusQ.isError || !updateStatusQ.data ? (
-                <p
-                  className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
-                  role="alert"
-                >
-                  {updateStatusQ.error instanceof Error
-                    ? updateStatusQ.error.message
-                    : "Could not check for updates right now."}
-                </p>
+              ) : !updateStatusQ.data ? (
+                upgradeConnectionLost ? (
+                  <div
+                    className={`rounded-lg border px-3 py-3 ${upgradePhaseTone(
+                      undefined,
+                      null,
+                      upgradeMonitor,
+                    )}`}
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
+                      Reconnecting
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-[var(--mm-text2)]">
+                      MediaMop is reconnecting and verifying the installed
+                      version.
+                    </p>
+                  </div>
+                ) : (
+                  <p
+                    className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
+                    role="alert"
+                  >
+                    {updateStatusQ.error instanceof Error
+                      ? updateStatusQ.error.message
+                      : "Could not check for updates right now."}
+                  </p>
+                )
               ) : (
                 <>
                   <div
@@ -1519,9 +1891,9 @@ export function SettingsPage() {
                     updateStatusQ.data.status === "update_available" ? (
                       updateStatusQ.data.in_app_upgrade_supported ? (
                         <p className="text-sm leading-6 text-[var(--mm-text2)]">
-                          Upgrade now downloads the installer, closes MediaMop,
-                          installs the update, reopens the app, and refreshes
-                          this page after the server comes back.
+                          Upgrade now downloads the trusted installer, verifies
+                          it, runs the installer, and waits for MediaMop to
+                          reconnect and prove the running version changed.
                         </p>
                       ) : (
                         <p className="text-sm leading-6 text-[var(--mm-text2)]">
@@ -1543,6 +1915,88 @@ export function SettingsPage() {
                     ) : null}
                   </div>
 
+                  {upgradeProgressSummary ? (
+                    <div
+                      className={`rounded-lg border px-3 py-3 ${upgradePhaseTone(
+                        updateStatusQ.data,
+                        activeUpgradeProgress,
+                        upgradeMonitor,
+                      )}`}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
+                            {upgradeProgressSummary.label}
+                          </p>
+                          <p className="mt-1 text-sm leading-6 text-[var(--mm-text2)]">
+                            {upgradeProgressSummary.body}
+                          </p>
+                        </div>
+                        {activeUpgradeProgress?.target_version ? (
+                          <span className="rounded-full border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-2.5 py-1 text-xs font-medium text-[var(--mm-text2)]">
+                            Target {activeUpgradeProgress.target_version}
+                          </span>
+                        ) : null}
+                      </div>
+                      {activeUpgradeProgress?.attempt_id ||
+                      upgradeMonitor?.attemptId ||
+                      activeUpgradeProgress?.current_version_seen ||
+                      updateStatusQ.data.current_version ||
+                      activeUpgradeProgress?.installer_log_path ||
+                      activeUpgradeProgress?.service_log_path ||
+                      activeUpgradeProgress?.phase === "failed" ||
+                      Boolean(upgradeMonitor?.timedOutReason) ? (
+                        <div className="mt-3 space-y-1 text-xs text-[var(--mm-text3)]">
+                          {activeUpgradeProgress?.attempt_id ||
+                          upgradeMonitor?.attemptId ? (
+                            <p>
+                              Attempt ID:{" "}
+                              {activeUpgradeProgress?.attempt_id ||
+                                upgradeMonitor?.attemptId}
+                            </p>
+                          ) : null}
+                          <p>
+                            Phase:{" "}
+                            {upgradeMonitor?.timedOutReason
+                              ? "verification_timeout"
+                              : activeUpgradeProgress?.phase || "unknown"}
+                          </p>
+                          {activeUpgradeProgress?.current_version_seen ||
+                          updateStatusQ.data.current_version ? (
+                            <p>
+                              Current version seen:{" "}
+                              {activeUpgradeProgress?.current_version_seen ||
+                                updateStatusQ.data.current_version}
+                            </p>
+                          ) : null}
+                          {activeUpgradeProgress?.installer_log_path ? (
+                            <p>
+                              Installer log:{" "}
+                              {activeUpgradeProgress.installer_log_path}
+                            </p>
+                          ) : null}
+                          {activeUpgradeProgress?.service_log_path ? (
+                            <p>
+                              Service log:{" "}
+                              {activeUpgradeProgress.service_log_path}
+                            </p>
+                          ) : null}
+                          {(activeUpgradeProgress?.phase === "failed" ||
+                            upgradeMonitor?.timedOutReason) && (
+                            <a
+                              className="text-[var(--mm-link)] underline-offset-2 hover:underline"
+                              href={suiteUpdateDiagnosticsPath()}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Open updater diagnostics
+                            </a>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+
                   <div className="mt-auto flex flex-wrap gap-2 border-t border-[var(--mm-border)] pt-4">
                     <button
                       type="button"
@@ -1557,20 +2011,21 @@ export function SettingsPage() {
                     </button>
                     {updateStatusQ.data.install_type === "windows" &&
                     updateStatusQ.data.status === "update_available" &&
-                    updateStatusQ.data.in_app_upgrade_supported &&
-                    updateStatusQ.data.windows_installer_url ? (
+                    updateStatusQ.data.in_app_upgrade_supported ? (
                       <button
                         type="button"
                         className={mmActionButtonClass({
                           variant: "primary",
-                          disabled: updateNow.isPending,
+                          disabled: updateNow.isPending || upgradeInProgress,
                         })}
-                        disabled={updateNow.isPending}
+                        disabled={updateNow.isPending || upgradeInProgress}
                         onClick={() => void handleUpgradeNow()}
                       >
                         {updateNow.isPending
                           ? "Starting upgrade…"
-                          : "Upgrade now"}
+                          : upgradeInProgress
+                            ? "Upgrade in progressâ€¦"
+                            : "Upgrade now"}
                       </button>
                     ) : null}
                     {updateStatusQ.data.windows_installer_url ? (
@@ -1600,9 +2055,9 @@ export function SettingsPage() {
                       </a>
                     ) : null}
                   </div>
-                  {upgradeMsg ? (
-                    <p className="rounded-md border border-emerald-500/30 bg-emerald-950/20 px-3 py-2 text-sm text-emerald-200">
-                      {upgradeMsg}
+                  {upgradeNotice ? (
+                    <p className={upgradeNoticeClass(upgradeNotice.tone)}>
+                      {upgradeNotice.text}
                     </p>
                   ) : null}
                   {updateNow.isError ? (

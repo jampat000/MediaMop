@@ -19,6 +19,8 @@ describe("RefinerFileRemuxPassActivityDetail", () => {
       audio_after: "A after",
       subs_before: "S before",
       subs_after: "S after",
+      removed_audio: ["Director commentary", "Japanese stereo"],
+      removed_subtitles: ["spa", "fre"],
       after_track_lines_meaning: "Planned only.",
       remux_required: true,
       ffmpeg_argv: ["/bin/ffmpeg", "-i", "a.mkv", "out.mkv"],
@@ -35,6 +37,10 @@ describe("RefinerFileRemuxPassActivityDetail", () => {
     expect(screen.getByText("/data/movies/a.mkv")).toBeInTheDocument();
     expect(screen.getByText("Audio in file")).toBeInTheDocument();
     expect(screen.getByText("A before")).toBeInTheDocument();
+    expect(screen.getByText("Director commentary")).toBeInTheDocument();
+    expect(screen.getByText("Japanese stereo")).toBeInTheDocument();
+    expect(screen.getByText("spa")).toBeInTheDocument();
+    expect(screen.queryByText("None removed")).not.toBeInTheDocument();
     expect(screen.getByText(/ffmpeg command line/i)).toBeInTheDocument();
   });
 

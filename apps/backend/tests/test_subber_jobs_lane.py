@@ -121,3 +121,4 @@ def test_webhook_import_tv_runs_on_subber_lane_records_activity(session_factory)
         ).first()
         assert ev is not None
         assert ev.module == "subber"
+        assert json.loads(ev.detail or "{}")["media_scope"] == "tv"
