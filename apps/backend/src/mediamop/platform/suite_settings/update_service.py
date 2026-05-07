@@ -43,6 +43,15 @@ _WINDOWS_UPDATER_UNREACHABLE_SUMMARY = (
     "Remote in-app upgrade is unavailable because MediaMop could not reach the local updater service. "
     "Ensure the MediaMop Updater service is running on this computer, then click Check again."
 )
+_WINDOWS_ACTIVE_UPGRADE_PHASES = {
+    "checking",
+    "downloading",
+    "verifying_download",
+    "installer_started",
+    "installer_running",
+    "restarting",
+    "verifying_install",
+}
 _REQUIRED_WINDOWS_FILES: tuple[tuple[str, str], ...] = (
     ("MediaMop.exe", "MediaMop.exe"),
     ("MediaMopServer.exe", "MediaMopServer.exe"),
@@ -135,10 +144,28 @@ def _safe_response_json(response: httpx.Response) -> dict[str, Any]:
 def _coerce_upgrade_progress(payload: dict[str, Any] | None) -> SuiteUpgradeProgressOut | None:
     if not payload:
         return None
+    phase = str(payload.get("phase") or "unknown").strip().lower()
+    if phase == "idle":
+        return None
     diagnostics = payload.get("diagnostics")
+    diagnostics_dict = diagnostics if isinstance(diagnostics, dict) else {}
+    stale_reason = (
+        str(payload.get("stale_reason") or diagnostics_dict.get("stale_reason") or "").strip()
+        or None
+    )
+    is_stale = bool(payload.get("is_stale")) or stale_reason is not None
+    is_active = bool(payload.get("is_active"))
+    if payload.get("is_active") is None:
+        is_active = phase in _WINDOWS_ACTIVE_UPGRADE_PHASES and not is_stale
+    blocks_new_update = bool(payload.get("blocks_new_update")) if payload.get("blocks_new_update") is not None else is_active
     return SuiteUpgradeProgressOut(
-        phase=str(payload.get("phase") or "unknown"),
+        phase=phase or "unknown",
+        raw_phase=str(payload.get("raw_phase") or phase or "unknown").strip() or None,
         message=str(payload.get("message") or "Updater status unavailable."),
+        is_active=is_active,
+        is_stale=is_stale,
+        blocks_new_update=blocks_new_update,
+        stale_reason=stale_reason,
         attempt_id=str(payload.get("attempt_id") or "").strip() or None,
         target_version=normalize_release_version(str(payload.get("target_version") or "")),
         current_version_seen=str(payload.get("current_version_seen") or "").strip() or None,
@@ -153,7 +180,7 @@ def _coerce_upgrade_progress(payload: dict[str, Any] | None) -> SuiteUpgradeProg
         last_updated_at=payload.get("last_updated_at"),
         last_completed_at=payload.get("last_completed_at"),
         last_error=str(payload.get("last_error") or "").strip() or None,
-        diagnostics=diagnostics if isinstance(diagnostics, dict) else {},
+        diagnostics=diagnostics_dict,
     )
 
 

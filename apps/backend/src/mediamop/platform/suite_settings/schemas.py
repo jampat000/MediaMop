@@ -202,7 +202,12 @@ class SuiteUpgradeProgressOut(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     phase: str = Field(min_length=1)
+    raw_phase: str | None = None
     message: str = Field(min_length=1)
+    is_active: bool = False
+    is_stale: bool = False
+    blocks_new_update: bool = False
+    stale_reason: str | None = None
     attempt_id: str | None = None
     target_version: str | None = None
     current_version_seen: str | None = None

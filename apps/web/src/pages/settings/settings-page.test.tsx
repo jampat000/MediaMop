@@ -599,6 +599,107 @@ describe("SettingsPage (suite settings)", () => {
         "Installer is running. MediaMop may temporarily disconnect.",
       ),
     ).toBeInTheDocument();
+    expect(screen.queryByText("installer_running")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Phase:/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the refresh button stable while upgrade polling is active", () => {
+    renderSettings(operatorMe, {
+      updateStatus: {
+        ...windowsUpdateAvailableStatus,
+        upgrade: {
+          phase: "installer_running",
+          message: "Installer is running. MediaMop may temporarily disconnect.",
+          attempt_id: "attempt-123",
+          target_version: "2.0.8",
+        },
+      },
+    });
+    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
+    expect(
+      screen.getByRole("button", { name: "Checking progress..." }),
+    ).toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: "Check again" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the refresh button label stable while refetching with stable status data", async () => {
+    vi.spyOn(suiteSettingsApi, "fetchSuiteUpdateStatus").mockImplementation(
+      () => new Promise(() => {}),
+    );
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 0 } },
+    });
+    qc.setQueryData(suiteSettingsQueryKey, minimalSuiteSettings);
+    qc.setQueryData(suiteSecurityOverviewQueryKey, minimalSecurity);
+    qc.setQueryData(qk.me, operatorMe);
+    qc.setQueryData(qk.session, minimalCurrentSession);
+    qc.setQueryData(suiteConfigurationBackupsQueryKey, {
+      directory: "C:/MediaMop/backups/suite-configuration",
+      items: [],
+    });
+    qc.setQueryData(suiteUpdateStatusQueryKey, windowsUpdateAvailableStatus);
+    qc.setQueryData(
+      [
+        ...suiteLogsQueryKey,
+        {
+          level: undefined,
+          search: undefined,
+          has_exception: undefined,
+          limit: 100,
+        },
+      ],
+      minimalLogs,
+    );
+    qc.setQueryData(suiteMetricsQueryKey, minimalMetrics);
+
+    render(wrap(<SettingsPage />, qc));
+    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
+    fireEvent.click(screen.getByRole("button", { name: "Check again" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Check again" }),
+      ).toBeDisabled();
+    });
+    expect(
+      screen.queryByRole("button", { name: "Checking..." }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not render a stale old upgrade state as active when a newer release is available", () => {
+    renderSettings(operatorMe, {
+      updateStatus: {
+        ...windowsUpdateAvailableStatus,
+        current_version: "2.1.0",
+        latest_version: "2.1.2",
+        latest_name: "MediaMop 2.1.2",
+        summary: "MediaMop 2.1.2 is available.",
+        upgrade: {
+          phase: "completed",
+          raw_phase: "installer_running",
+          message: "Upgrade completed. Running version: 2.1.0.",
+          is_active: false,
+          is_stale: true,
+          blocks_new_update: false,
+          stale_reason:
+            "Persisted updater state could not prove the original installer process was still active.",
+          target_version: "2.1.0",
+          current_version_seen: "2.1.0",
+        },
+      },
+    });
+    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
+
+    expect(
+      screen.getByRole("button", { name: "Upgrade now" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Installer running")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Upgrade completed. Running version: 2.1.0."),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("installer_running")).not.toBeInTheDocument();
   });
 
   it("does not treat completed phase as success until the running version matches the target", () => {
@@ -710,9 +811,18 @@ describe("SettingsPage (suite settings)", () => {
         "Upgrade failed: MediaMop did not verify version 2.0.8 within 8 minutes. The running app still reports 2.0.7.",
       ),
     ).toHaveLength(2);
-    expect(screen.getByText("Phase: verification_timeout")).toBeInTheDocument();
+    expect(screen.getByText("Status: Failed")).toBeInTheDocument();
     expect(screen.getByText("Attempt ID: attempt-123")).toBeInTheDocument();
     expect(screen.getByText("Current version seen: 2.0.7")).toBeInTheDocument();
+  });
+
+  it("does not render mojibake in the upgrade panel", () => {
+    renderSettings(operatorMe, { updateStatus: windowsUpdateAvailableStatus });
+    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
+
+    expect(document.body.textContent).not.toContain("â");
+    expect(document.body.textContent).not.toContain("Ã");
+    expect(document.body.textContent).not.toContain("�");
   });
 
   it("shows change password only on Security tab", () => {

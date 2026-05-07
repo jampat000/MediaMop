@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -104,6 +105,114 @@ def test_apply_update_starts_helper_and_returns_attempt_id(tmp_path: Path, monke
     assert state["attempt_id"] == "attempt-123"
     assert state["target_version"] == "2.0.8"
     assert state["diagnostics"]["helper_pid"] == 4321
+
+
+def test_process_matches_attempt_rejects_reused_pid_with_wrong_path(monkeypatch) -> None:
+    started_at = datetime(2026, 5, 7, 4, 39, 51, tzinfo=UTC)
+    monkeypatch.setattr(
+        updater_service,
+        "_read_process_snapshot",
+        lambda _pid: {
+            "pid": 4321,
+            "executable_path": r"C:\Windows\System32\notepad.exe",
+            "command_line": r'"C:\Windows\System32\notepad.exe"',
+            "creation_time_utc": (started_at + timedelta(seconds=20)).isoformat(),
+        },
+    )
+
+    assert (
+        updater_service._process_matches_attempt(
+            4321,
+            expected_path=r"C:\ProgramData\MediaMop\upgrades\MediaMopSetup-2.1.0.exe",
+            attempt_started_at=started_at,
+        )
+        is False
+    )
+
+
+def test_process_matches_attempt_rejects_matching_path_with_older_creation_time(monkeypatch) -> None:
+    started_at = datetime(2026, 5, 7, 4, 39, 51, tzinfo=UTC)
+    expected_path = r"C:\ProgramData\MediaMop\upgrades\MediaMopSetup-2.1.0.exe"
+    monkeypatch.setattr(
+        updater_service,
+        "_read_process_snapshot",
+        lambda _pid: {
+            "pid": 4321,
+            "executable_path": expected_path,
+            "command_line": f'"{expected_path}" /VERYSILENT',
+            "creation_time_utc": (started_at - timedelta(minutes=5)).isoformat(),
+        },
+    )
+
+    assert (
+        updater_service._process_matches_attempt(
+            4321,
+            expected_path=expected_path,
+            attempt_started_at=started_at,
+        )
+        is False
+    )
+
+
+def test_process_matches_attempt_accepts_matching_path_after_attempt_start(monkeypatch) -> None:
+    started_at = datetime(2026, 5, 7, 4, 39, 51, tzinfo=UTC)
+    expected_path = r"C:\ProgramData\MediaMop\upgrades\MediaMopSetup-2.1.0.exe"
+    monkeypatch.setattr(
+        updater_service,
+        "_read_process_snapshot",
+        lambda _pid: {
+            "pid": 4321,
+            "executable_path": expected_path,
+            "command_line": f'"{expected_path}" /VERYSILENT',
+            "creation_time_utc": (started_at + timedelta(seconds=10)).isoformat(),
+        },
+    )
+
+    assert (
+        updater_service._process_matches_attempt(
+            4321,
+            expected_path=expected_path,
+            attempt_started_at=started_at,
+        )
+        is True
+    )
+
+
+def test_process_matches_attempt_accepts_matching_command_line_when_path_missing(monkeypatch) -> None:
+    started_at = datetime(2026, 5, 7, 4, 39, 51, tzinfo=UTC)
+    expected_path = r"C:\ProgramData\MediaMop\upgrades\MediaMopSetup-2.1.0.exe"
+    monkeypatch.setattr(
+        updater_service,
+        "_read_process_snapshot",
+        lambda _pid: {
+            "pid": 4321,
+            "executable_path": None,
+            "command_line": f'"{expected_path}" /VERYSILENT',
+            "creation_time_utc": (started_at + timedelta(seconds=10)).isoformat(),
+        },
+    )
+
+    assert (
+        updater_service._process_matches_attempt(
+            4321,
+            expected_path=expected_path,
+            attempt_started_at=started_at,
+        )
+        is True
+    )
+
+
+def test_process_matches_attempt_returns_false_when_snapshot_is_unverifiable(monkeypatch) -> None:
+    monkeypatch.setattr(updater_service, "_read_process_snapshot", lambda _pid: None)
+
+    assert (
+        updater_service._process_matches_attempt(
+            4321,
+            expected_path=r"C:\ProgramData\MediaMop\upgrades\MediaMopSetup-2.1.0.exe",
+            attempt_started_at=datetime(2026, 5, 7, 4, 39, 51, tzinfo=UTC),
+        )
+        is False
+    )
 
 
 def test_perform_upgrade_attempt_marks_completed_only_after_verified_version(
@@ -594,10 +703,13 @@ def test_reconcile_attempt_worker_fails_when_installer_does_not_exit_in_time(
     monkeypatch,
 ) -> None:
     _configure_runtime_home(tmp_path, monkeypatch)
+    installer = tmp_path / "MediaMopSetup-2.0.8-attempt-123.exe"
+    installer.write_bytes(b"installer")
     updater_service._persist_state(
         {
             **updater_service._fresh_attempt_state("2.0.8", "attempt-123"),
             "phase": "installer_running",
+            "downloaded_installer_path": str(installer),
             "diagnostics": {"helper_pid": None, "installer_pid": 6789},
         }
     )
@@ -605,7 +717,7 @@ def test_reconcile_attempt_worker_fails_when_installer_does_not_exit_in_time(
 
     monkeypatch.setattr(updater_service.time, "time", lambda: next(clock))
     monkeypatch.setattr(updater_service.time, "sleep", lambda _seconds: None)
-    monkeypatch.setattr(updater_service, "_pid_is_running", lambda pid: pid == 6789)
+    monkeypatch.setattr(updater_service, "_installer_process_is_running", lambda _state: True)
 
     updater_service._reconcile_attempt_worker("attempt-123")
     state = updater_service._read_state()
@@ -651,6 +763,56 @@ def test_apply_update_persists_state_before_launching_helper(tmp_path: Path, mon
     }
 
 
+def test_stable_or_active_attempt_exists_does_not_block_completed_target_version(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    installer = tmp_path / "MediaMopSetup-2.0.8-attempt-123.exe"
+    installer.write_bytes(b"installer")
+    state = {
+        **updater_service._fresh_attempt_state("2.0.8", "attempt-123"),
+        "phase": "installer_running",
+        "downloaded_installer_path": str(installer),
+        "diagnostics": {"helper_pid": None, "installer_pid": 6789},
+    }
+    monkeypatch.setattr(updater_service, "_installer_process_is_running", lambda _state: False)
+    monkeypatch.setattr(
+        updater_service,
+        "_state_matches_installed_target",
+        lambda target_version: (
+            True,
+            {"backend_version": target_version, "packaged_version": target_version},
+        ),
+    )
+
+    assert updater_service._stable_or_active_attempt_exists(state) is False
+
+
+def test_stable_or_active_attempt_exists_does_not_block_when_running_version_exceeds_target(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    installer = tmp_path / "MediaMopSetup-2.1.0-attempt-123.exe"
+    installer.write_bytes(b"installer")
+    state = {
+        **updater_service._fresh_attempt_state("2.1.0", "attempt-123"),
+        "phase": "installer_running",
+        "downloaded_installer_path": str(installer),
+        "diagnostics": {"helper_pid": None, "installer_pid": 6789},
+    }
+    monkeypatch.setattr(updater_service, "_installer_process_is_running", lambda _state: False)
+    monkeypatch.setattr(updater_service, "_state_matches_installed_target", lambda _target_version: (False, {}))
+    monkeypatch.setattr(
+        updater_service,
+        "_state_running_version_exceeds_target",
+        lambda target_version: (True, {"backend_version": "2.1.2"}, "2.1.2"),
+    )
+
+    assert updater_service._stable_or_active_attempt_exists(state) is False
+
+
 def test_maybe_reconcile_pending_attempt_marks_stale_attempt_failed(tmp_path: Path, monkeypatch) -> None:
     _configure_runtime_home(tmp_path, monkeypatch)
     state_path = updater_service._state_path()
@@ -675,6 +837,196 @@ def test_maybe_reconcile_pending_attempt_marks_stale_attempt_failed(tmp_path: Pa
 
     assert state["phase"] == "failed"
     assert "stalled during downloading" in str(state["last_error"]).lower()
+
+
+def test_maybe_reconcile_pending_attempt_marks_already_running_target_completed(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    installer = tmp_path / "MediaMopSetup-2.0.8-attempt-123.exe"
+    installer.write_bytes(b"installer")
+    updater_service._persist_state(
+        {
+            **updater_service._fresh_attempt_state("2.0.8", "attempt-123"),
+            "phase": "installer_running",
+            "downloaded_installer_path": str(installer),
+            "diagnostics": {"helper_pid": None, "installer_pid": 6789},
+        }
+    )
+    Path(updater_service._read_state()["installer_log_path"]).write_text("installer log", encoding="utf-8")
+    monkeypatch.setattr(updater_service, "_installer_process_is_running", lambda _state: False)
+    monkeypatch.setattr(
+        updater_service,
+        "_state_matches_installed_target",
+        lambda target_version: (
+            True,
+            {
+                "backend_version": target_version,
+                "packaged_version": target_version,
+                "missing_required_files": [],
+            },
+        ),
+    )
+
+    updater_service._maybe_reconcile_pending_attempt()
+    state = updater_service._read_state()
+
+    assert state["phase"] == "completed"
+    assert state["current_version_seen"] == "2.0.8"
+    assert state["diagnostics"]["reconciled_after_restart"] is True
+
+
+def test_maybe_reconcile_pending_attempt_reconciles_unverifiable_installer_identity(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    installer = tmp_path / "MediaMopSetup-2.0.8-attempt-123.exe"
+    installer.write_bytes(b"installer")
+    updater_service._persist_state(
+        {
+            **updater_service._fresh_attempt_state("2.0.8", "attempt-123"),
+            "phase": "installer_running",
+            "downloaded_installer_path": str(installer),
+            "diagnostics": {"helper_pid": None, "installer_pid": 6789},
+        }
+    )
+    Path(updater_service._read_state()["installer_log_path"]).write_text("installer log", encoding="utf-8")
+    monkeypatch.setattr(updater_service, "_read_process_snapshot", lambda _pid: None)
+    monkeypatch.setattr(
+        updater_service,
+        "_state_matches_installed_target",
+        lambda target_version: (
+            True,
+            {
+                "backend_version": target_version,
+                "packaged_version": target_version,
+                "missing_required_files": [],
+            },
+        ),
+    )
+
+    updater_service._maybe_reconcile_pending_attempt()
+    state = updater_service._read_state()
+
+    assert state["phase"] == "completed"
+    assert "could not prove" in str(state["diagnostics"]["stale_reason"]).lower()
+
+
+def test_maybe_reconcile_pending_attempt_recovers_legacy_active_state_without_attempt_id(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    updater_service._persist_state(
+        {
+            "phase": "installer_running",
+            "message": "MediaMop 2.1.0 installer is running.",
+            "target_version": "2.1.0",
+            "last_started_at": "2026-05-07T04:39:51+00:00",
+            "installer_log_path": str(tmp_path / "installer-latest.log"),
+        }
+    )
+    monkeypatch.setattr(
+        updater_service,
+        "_state_matches_installed_target",
+        lambda target_version: (
+            True,
+            {
+                "backend_version": target_version,
+                "packaged_version": target_version,
+                "missing_required_files": [],
+            },
+        ),
+    )
+
+    updater_service._maybe_reconcile_pending_attempt()
+    state = updater_service._read_state()
+
+    assert state["phase"] == "completed"
+    assert state["current_version_seen"] == "2.1.0"
+    assert state["diagnostics"]["reconciled_after_restart"] is True
+
+
+def test_maybe_reconcile_pending_attempt_fails_obsolete_legacy_state_without_attempt_id(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    updater_service._persist_state(
+        {
+            "phase": "installer_running",
+            "message": "MediaMop 2.1.0 installer is running.",
+            "target_version": "2.1.0",
+            "last_started_at": "2026-05-07T04:39:51+00:00",
+            "installer_log_path": str(tmp_path / "installer-latest.log"),
+        }
+    )
+    monkeypatch.setattr(updater_service, "_state_matches_installed_target", lambda _target_version: (False, {}))
+    monkeypatch.setattr(
+        updater_service,
+        "_state_running_version_exceeds_target",
+        lambda target_version: (
+            True,
+            {"backend_version": "2.1.2", "packaged_version": "2.1.2"},
+            "2.1.2",
+        ),
+    )
+
+    updater_service._maybe_reconcile_pending_attempt()
+    state = updater_service._read_state()
+
+    assert state["phase"] == "failed"
+    assert state["current_version_seen"] == "2.1.2"
+    assert "still targeted 2.1.0" in str(state["last_error"]).lower()
+    assert state["diagnostics"]["reconciled_from_phase"] == "installer_running"
+
+
+def test_status_endpoint_reports_reconciled_legacy_state_as_non_active(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    updater_service._persist_state(
+        {
+            "phase": "installer_running",
+            "message": "MediaMop 2.1.0 installer is running.",
+            "target_version": "2.1.0",
+            "last_started_at": "2026-05-07T04:39:51+00:00",
+            "installer_log_path": str(tmp_path / "installer-latest.log"),
+        }
+    )
+    monkeypatch.setattr(
+        updater_service,
+        "_state_matches_installed_target",
+        lambda target_version: (
+            True,
+            {
+                "backend_version": target_version,
+                "packaged_version": target_version,
+                "missing_required_files": [],
+            },
+        ),
+    )
+    with monkeypatch.context() as scoped:
+        scoped.setattr(updater_service.os, "name", "nt")
+        scoped.setattr(updater_service, "_load_or_create_token", lambda: "token")
+        app = updater_service.create_updater_app()
+        with TestClient(app, raise_server_exceptions=False) as client:
+            res = client.get(
+                "/api/v1/status",
+                headers={"X-MediaMop-Updater-Token": "token"},
+            )
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["phase"] == "completed"
+    assert body["raw_phase"] == "installer_running"
+    assert body["is_active"] is False
+    assert body["blocks_new_update"] is False
+    assert body["is_stale"] is True
+    assert "could not prove" in body["stale_reason"].lower()
 
 
 @pytest.mark.parametrize("phase", ["installer_running", "restarting", "verifying_install"])

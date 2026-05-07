@@ -16,7 +16,7 @@ vi.mock("../lib/dashboard/queries", () => ({
   useDashboardStatusQuery: () => ({
     data: {
       system: {
-        api_version: "2.1.1",
+        api_version: "2.1.2",
       },
     },
   }),
@@ -46,7 +46,7 @@ describe("AppShell", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("Version 2.1.1")).toBeInTheDocument();
+    expect(screen.getByText("Version 2.1.2")).toBeInTheDocument();
     expect(screen.getByTestId("sign-out")).toBeInTheDocument();
     expect(screen.queryByTestId("sidebar-support")).not.toBeInTheDocument();
     expect(screen.queryByText("Support MediaMop")).not.toBeInTheDocument();

@@ -80,6 +80,8 @@ def test_windows_updater_service_ready_requires_authenticated_status(monkeypatch
         assert summary == "Remote in-app upgrade is ready on this Windows install."
         assert progress is not None
         assert progress.phase == "installer_running"
+        assert progress.is_active is True
+        assert progress.blocks_new_update is True
         assert observed["url"] == f"{update_service._updater_base_url()}/api/v1/status"
         assert observed["headers"] == {"X-MediaMop-Updater-Token": "token-value"}
         assert observed["timeout"] == 3.0
@@ -178,6 +180,78 @@ def test_build_suite_update_status_includes_upgrade_progress(monkeypatch: pytest
     assert status.upgrade is not None
     assert status.upgrade.phase == "verifying_install"
     assert status.upgrade.attempt_id == "attempt-123"
+    assert status.upgrade.is_active is True
+
+
+def test_coerce_upgrade_progress_hides_idle_state() -> None:
+    assert (
+        update_service._coerce_upgrade_progress(
+            {
+                "phase": "idle",
+                "message": "Updater ready.",
+            }
+        )
+        is None
+    )
+
+
+def test_coerce_upgrade_progress_marks_stale_completed_state_non_blocking() -> None:
+    progress = update_service._coerce_upgrade_progress(
+        {
+            "phase": "completed",
+            "raw_phase": "installer_running",
+            "message": "Upgrade completed. Running version: 2.1.0.",
+            "target_version": "2.1.0",
+            "is_active": False,
+            "blocks_new_update": False,
+            "stale_reason": "Persisted updater state could not prove the original installer process was still active.",
+        }
+    )
+
+    assert progress is not None
+    assert progress.phase == "completed"
+    assert progress.raw_phase == "installer_running"
+    assert progress.is_active is False
+    assert progress.is_stale is True
+    assert progress.blocks_new_update is False
+
+
+def test_build_suite_update_status_keeps_newer_release_available_when_old_state_is_stale(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "mediamop.platform.suite_settings.update_service.fetch_latest_release_record",
+        lambda **_kwargs: _release_record("2.1.2"),
+    )
+    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "2.1.0")
+    monkeypatch.setattr("mediamop.platform.suite_settings.update_service._detect_install_type", lambda: "windows")
+    monkeypatch.setattr(
+        "mediamop.platform.suite_settings.update_service._fetch_windows_updater_progress",
+        lambda _settings=None: (
+            True,
+            "Remote in-app upgrade is ready on this Windows install.",
+            update_service._coerce_upgrade_progress(
+                {
+                    "phase": "completed",
+                    "raw_phase": "installer_running",
+                    "message": "Upgrade completed. Running version: 2.1.0.",
+                    "target_version": "2.1.0",
+                    "current_version_seen": "2.1.0",
+                    "is_active": False,
+                    "blocks_new_update": False,
+                    "stale_reason": "Persisted updater state could not prove the original installer process was still active.",
+                }
+            ),
+        ),
+    )
+
+    status = update_service.build_suite_update_status()
+
+    assert status.status == "update_available"
+    assert status.latest_version == "2.1.2"
+    assert status.upgrade is not None
+    assert status.upgrade.is_active is False
+    assert status.upgrade.blocks_new_update is False
 
 
 def test_start_suite_update_now_returns_attempt_id(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

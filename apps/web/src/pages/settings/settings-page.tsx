@@ -308,6 +308,18 @@ function isUpgradeActivePhase(phase: string | null | undefined): boolean {
   );
 }
 
+function isUpgradeProgressActive(
+  progress: SuiteUpgradeProgressOut | null | undefined,
+): boolean {
+  if (!progress) {
+    return false;
+  }
+  if (typeof progress.is_active === "boolean") {
+    return progress.is_active;
+  }
+  return isUpgradeActivePhase(progress.phase) && !progress.is_stale;
+}
+
 function upgradePhaseTone(
   status: SuiteUpdateStatusOut | undefined,
   progress: SuiteUpgradeProgressOut | null | undefined,
@@ -332,6 +344,16 @@ function describeUpgradeProgress(
   monitor: UpgradeMonitor | null,
   disconnected: boolean,
 ): { label: string; body: string } | null {
+  const progressIsActive = isUpgradeProgressActive(progress);
+  const hideHistoricalCompletedSummary = Boolean(
+    progress &&
+      progress.phase === "completed" &&
+      status &&
+      progress.target_version &&
+      status.current_version === progress.target_version &&
+      status.status === "update_available" &&
+      !monitor?.active,
+  );
   if (monitor?.timedOutReason) {
     return {
       label: "Failed",
@@ -352,6 +374,17 @@ function describeUpgradeProgress(
       label: "Waiting",
       body: "Upgrade request accepted. MediaMop is checking release metadata.",
     };
+  }
+  if (
+    !monitor?.active &&
+    progress.phase !== "failed" &&
+    !progressIsActive &&
+    progress.phase !== "completed"
+  ) {
+    return null;
+  }
+  if (hideHistoricalCompletedSummary) {
+    return null;
   }
   switch (progress.phase) {
     case "checking":
@@ -577,24 +610,31 @@ export function SettingsPage() {
   const upgradeInProgress =
     !upgradeMonitor?.timedOutReason &&
     (Boolean(upgradeMonitor?.active) ||
-      isUpgradeActivePhase(activeUpgradeProgress?.phase));
+      isUpgradeProgressActive(activeUpgradeProgress));
+  const hasStableUpdateStatus = Boolean(updateStatusQ.data);
+  const upgradeRefreshBusy = upgradeInProgress || updateStatusQ.isFetching;
+  const upgradeRefreshLabel = upgradeInProgress
+    ? "Checking progress..."
+    : !hasStableUpdateStatus && updateStatusQ.isFetching
+      ? "Checking..."
+      : "Check again";
 
   useEffect(() => {
-    if (isUpgradeActivePhase(activeUpgradeProgress?.phase)) {
+    if (isUpgradeProgressActive(activeUpgradeProgress)) {
       setUpgradePollActive(true);
       return;
     }
     if (!upgradeMonitor?.active) {
       setUpgradePollActive(false);
     }
-  }, [activeUpgradeProgress?.phase, upgradeMonitor?.active]);
+  }, [activeUpgradeProgress, upgradeMonitor?.active]);
 
   useEffect(() => {
     if (!updateStatusQ.data?.upgrade) {
       return;
     }
     const progress = updateStatusQ.data.upgrade;
-    if (!isUpgradeActivePhase(progress.phase)) {
+    if (!isUpgradeProgressActive(progress)) {
       return;
     }
     setUpgradeMonitor((current) => {
@@ -1924,10 +1964,7 @@ export function SettingsPage() {
                             </p>
                           ) : null}
                           <p>
-                            Phase:{" "}
-                            {upgradeMonitor?.timedOutReason
-                              ? "verification_timeout"
-                              : activeUpgradeProgress?.phase || "unknown"}
+                            Status: {upgradeProgressSummary.label}
                           </p>
                           {activeUpgradeProgress?.current_version_seen ||
                           updateStatusQ.data.current_version ? (
@@ -1970,12 +2007,12 @@ export function SettingsPage() {
                       type="button"
                       className={mmActionButtonClass({
                         variant: "secondary",
-                        disabled: updateStatusQ.isFetching,
+                        disabled: upgradeRefreshBusy,
                       })}
-                      disabled={updateStatusQ.isFetching}
+                      disabled={upgradeRefreshBusy}
                       onClick={() => void updateStatusQ.refetch()}
                     >
-                      {updateStatusQ.isFetching ? "Checking…" : "Check again"}
+                      {upgradeRefreshLabel}
                     </button>
                     {updateStatusQ.data.install_type === "windows" &&
                     updateStatusQ.data.status === "update_available" &&
@@ -1990,9 +2027,9 @@ export function SettingsPage() {
                         onClick={() => void handleUpgradeNow()}
                       >
                         {updateNow.isPending
-                          ? "Starting upgrade…"
+                          ? "Starting upgrade..."
                           : upgradeInProgress
-                            ? "Upgrade in progressâ€¦"
+                            ? "Upgrade in progress..."
                             : "Upgrade now"}
                       </button>
                     ) : null}
