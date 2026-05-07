@@ -82,6 +82,19 @@ def test_windows_installer_surfaces_firewall_rule_failures() -> None:
     assert 'Filename: "{sys}\\netsh.exe"; Parameters: "advfirewall firewall add rule' not in text
 
 
+def test_windows_installer_uses_explicit_interactive_launch_check() -> None:
+    installer = Path(__file__).resolve().parents[3] / "packaging" / "windows" / "MediaMop.iss"
+    text = installer.read_text(encoding="utf-8")
+
+    assert "function ShouldLaunchMediaMopAfterInstall(): Boolean;" in text
+    assert (
+        'Filename: "{app}\\{#ExeName}"; Description: "Launch MediaMop"; Flags: nowait postinstall; '
+        "Check: ShouldLaunchMediaMopAfterInstall"
+    ) in text
+    assert "skipifsilent" not in text
+    assert "updater-service relaunch handles post-upgrade startup" in text
+
+
 def test_windows_installer_installs_dedicated_upgrade_task() -> None:
     repo = Path(__file__).resolve().parents[3]
     installer = repo / "packaging" / "windows" / "MediaMop.iss"
@@ -173,3 +186,5 @@ def test_tray_double_click_opens_mediamop() -> None:
 
     assert 'Item("Open MediaMop", self._handle_open, default=True)' in source
     assert 'if "--version" in sys.argv:' in source
+    assert '"--no-browser" in sys.argv' in source
+    assert "open_browser_on_ready=not no_browser" in source

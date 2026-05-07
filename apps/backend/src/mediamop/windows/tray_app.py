@@ -197,12 +197,13 @@ def _load_icon(resource_root: Path) -> Any:
 
 
 class _MediaMopTrayApp:
-    def __init__(self) -> None:
+    def __init__(self, *, open_browser_on_ready: bool = True) -> None:
         self._resource_root = _resource_root()
         self._runtime_home = _runtime_home()
         self._runtime_home.mkdir(parents=True, exist_ok=True)
         self._log_path = self._runtime_home / "tray-host.log"
         self._port = _find_free_port(8788)
+        self._open_browser_on_ready = open_browser_on_ready
         self._log(f"Starting tray host. resource_root={self._resource_root} runtime_home={self._runtime_home}")
         _prepare_environment(self._resource_root, self._runtime_home)
         (self._runtime_home / "current-port.txt").write_text(str(self._port), encoding="utf-8")
@@ -285,7 +286,10 @@ class _MediaMopTrayApp:
             lan = _lan_urls(self._port)
             if lan:
                 self._log("MediaMop LAN URLs: " + ", ".join(lan))
-            _open_browser(self._port)
+            if self._open_browser_on_ready:
+                _open_browser(self._port)
+            else:
+                self._log("Skipping browser auto-open because tray host was launched in no-browser mode.")
             self._icon = self._create_icon()
 
             def _watch_server_process() -> None:
@@ -355,7 +359,8 @@ def main() -> None:
                 port = int(sys.argv[idx + 1])
             _run_server_mode(port)
             return
-        app = _MediaMopTrayApp()
+        no_browser = "--no-browser" in sys.argv
+        app = _MediaMopTrayApp(open_browser_on_ready=not no_browser)
         app.run()
     except Exception:
         _append_fallback_log("Fatal startup error:\n" + traceback.format_exc())

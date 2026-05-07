@@ -160,6 +160,129 @@ def _pid_is_running(pid: object) -> bool:
     return True
 
 
+def _active_interactive_session_id() -> int:
+    import ctypes
+    from ctypes import wintypes
+
+    class _WtsSessionInfo(ctypes.Structure):
+        _fields_ = [
+            ("SessionId", wintypes.DWORD),
+            ("pWinStationName", wintypes.LPWSTR),
+            ("State", wintypes.DWORD),
+        ]
+
+    wtsapi32 = ctypes.WinDLL("wtsapi32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+
+    session_info = ctypes.POINTER(_WtsSessionInfo)()
+    count = wintypes.DWORD()
+    if not wtsapi32.WTSEnumerateSessionsW(0, 0, 1, ctypes.byref(session_info), ctypes.byref(count)):
+        raise OSError(ctypes.get_last_error(), "Could not enumerate Windows Terminal Services sessions.")
+    try:
+        for index in range(int(count.value)):
+            row = session_info[index]
+            if int(row.State) == 0:
+                return int(row.SessionId)
+    finally:
+        wtsapi32.WTSFreeMemory(session_info)
+    active_session = wintypes.DWORD(kernel32.WTSGetActiveConsoleSessionId())
+    if active_session.value != 0xFFFFFFFF:
+        return int(active_session.value)
+    raise RuntimeError("No active interactive Windows session was available for MediaMop relaunch.")
+
+
+def _launch_process_in_active_session(
+    executable: Path,
+    *,
+    args: list[str] | None = None,
+    cwd: Path | None = None,
+) -> int:
+    import ctypes
+    from ctypes import wintypes
+
+    if os.name != "nt":
+        raise RuntimeError("Active-session process launch is only supported on Windows.")
+
+    class _StartupInfo(ctypes.Structure):
+        _fields_ = [
+            ("cb", wintypes.DWORD),
+            ("lpReserved", wintypes.LPWSTR),
+            ("lpDesktop", wintypes.LPWSTR),
+            ("lpTitle", wintypes.LPWSTR),
+            ("dwX", wintypes.DWORD),
+            ("dwY", wintypes.DWORD),
+            ("dwXSize", wintypes.DWORD),
+            ("dwYSize", wintypes.DWORD),
+            ("dwXCountChars", wintypes.DWORD),
+            ("dwYCountChars", wintypes.DWORD),
+            ("dwFillAttribute", wintypes.DWORD),
+            ("dwFlags", wintypes.DWORD),
+            ("wShowWindow", wintypes.WORD),
+            ("cbReserved2", wintypes.WORD),
+            ("lpReserved2", ctypes.POINTER(ctypes.c_byte)),
+            ("hStdInput", wintypes.HANDLE),
+            ("hStdOutput", wintypes.HANDLE),
+            ("hStdError", wintypes.HANDLE),
+        ]
+
+    class _ProcessInformation(ctypes.Structure):
+        _fields_ = [
+            ("hProcess", wintypes.HANDLE),
+            ("hThread", wintypes.HANDLE),
+            ("dwProcessId", wintypes.DWORD),
+            ("dwThreadId", wintypes.DWORD),
+        ]
+
+    wtsapi32 = ctypes.WinDLL("wtsapi32", use_last_error=True)
+    advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+    userenv = ctypes.WinDLL("userenv", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+
+    session_id = _active_interactive_session_id()
+    user_token = wintypes.HANDLE()
+    if not wtsapi32.WTSQueryUserToken(session_id, ctypes.byref(user_token)):
+        raise OSError(ctypes.get_last_error(), f"Could not acquire the token for interactive session {session_id}.")
+
+    environment = ctypes.c_void_p()
+    process_info = _ProcessInformation()
+    try:
+        if not userenv.CreateEnvironmentBlock(ctypes.byref(environment), user_token, False):
+            raise OSError(ctypes.get_last_error(), "Could not create the environment block for interactive relaunch.")
+
+        startup_info = _StartupInfo()
+        startup_info.cb = ctypes.sizeof(_StartupInfo)
+        startup_info.lpDesktop = "winsta0\\default"
+        command = [str(executable.resolve()), *(args or [])]
+        command_line = subprocess.list2cmdline(command)
+        creationflags = int(getattr(subprocess, "CREATE_UNICODE_ENVIRONMENT", 0)) | int(
+            getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+        )
+        if not advapi32.CreateProcessAsUserW(
+            user_token,
+            None,
+            command_line,
+            None,
+            None,
+            False,
+            creationflags,
+            environment,
+            str((cwd or executable.parent).resolve()),
+            ctypes.byref(startup_info),
+            ctypes.byref(process_info),
+        ):
+            raise OSError(ctypes.get_last_error(), "Could not relaunch MediaMop in the active Windows session.")
+        return int(process_info.dwProcessId)
+    finally:
+        if process_info.hThread:
+            kernel32.CloseHandle(process_info.hThread)
+        if process_info.hProcess:
+            kernel32.CloseHandle(process_info.hProcess)
+        if environment:
+            userenv.DestroyEnvironmentBlock(environment)
+        if user_token:
+            kernel32.CloseHandle(user_token)
+
+
 def _running_media_processes() -> list[dict[str, object]]:
     script = (
         "$rows = Get-CimInstance Win32_Process | "
@@ -198,6 +321,30 @@ def _running_media_processes() -> list[dict[str, object]]:
             }
         )
     return out
+
+
+def _media_process_flags(processes: list[dict[str, object]]) -> dict[str, bool]:
+    tray_running = False
+    server_running = False
+    updater_running = False
+    for row in processes:
+        if not isinstance(row, dict):
+            continue
+        name = str(row.get("name") or "").strip().lower()
+        command_line = str(row.get("command_line") or "").strip().lower()
+        executable_path = str(row.get("executable_path") or "").strip().lower()
+        normalized = name or Path(executable_path).name.lower()
+        if normalized == "mediamop.exe":
+            tray_running = True
+        elif normalized == "mediamopserver.exe" or "--serve" in command_line:
+            server_running = True
+        elif normalized in {"mediamopupdater.exe", "mediamopupdaterservice.exe"}:
+            updater_running = True
+    return {
+        "tray_running": tray_running,
+        "server_running": server_running,
+        "updater_running": updater_running,
+    }
 
 
 def _default_state() -> dict[str, object]:
@@ -688,6 +835,15 @@ def _start_packaged_server(port: int) -> subprocess.Popen[bytes]:
     )
 
 
+def _start_packaged_tray_in_active_session(*, open_browser: bool = False) -> int:
+    install_root = _install_root()
+    tray_exe = install_root / "MediaMop.exe"
+    if not tray_exe.is_file():
+        raise FileNotFoundError(f"Bundled tray host is missing: {tray_exe}")
+    args = [] if open_browser else ["--no-browser"]
+    return _launch_process_in_active_session(tray_exe, args=args, cwd=install_root)
+
+
 def _required_install_paths(install_root: Path) -> list[tuple[str, Path]]:
     return [
         ("MediaMop.exe", install_root / "MediaMop.exe"),
@@ -711,6 +867,7 @@ def _collect_install_diagnostics(target_version: str, *, port: int) -> dict[str,
         if not exists:
             missing_labels.append(label)
     backend_ready, backend_version, backend_detail = _probe_running_backend_version(port)
+    running_processes = _running_media_processes()
     return {
         "required_files": required_files,
         "missing_required_files": missing_labels,
@@ -719,7 +876,8 @@ def _collect_install_diagnostics(target_version: str, *, port: int) -> dict[str,
         "backend_ready": backend_ready,
         "backend_version": backend_version,
         "backend_detail": backend_detail,
-        "running_processes": _running_media_processes(),
+        "running_processes": running_processes,
+        **_media_process_flags(running_processes),
         "target_version": target_version,
     }
 
@@ -728,25 +886,70 @@ def _verify_install(target_version: str) -> tuple[bool, dict[str, object], str]:
     port = _read_runtime_port()
     deadline = time.time() + _VERIFY_INSTALL_TIMEOUT_SECONDS
     started_server_pid: int | None = None
+    restarted_tray_pid: int | None = None
+    tray_relaunch_attempted = False
+    tray_relaunch_started_at: float | None = None
+    tray_restart_error: str | None = None
+    server_restart_error: str | None = None
     last_diagnostics: dict[str, object] = _collect_install_diagnostics(target_version, port=port)
     while time.time() < deadline:
         diagnostics = _collect_install_diagnostics(target_version, port=port)
         diagnostics["restarted_server_pid"] = started_server_pid
+        diagnostics["restarted_tray_pid"] = restarted_tray_pid
+        diagnostics["tray_relaunch_attempted"] = tray_relaunch_attempted
+        if tray_restart_error:
+            diagnostics["tray_restart_error"] = tray_restart_error
+        if server_restart_error:
+            diagnostics["server_restart_error"] = server_restart_error
         packaged_version = str(diagnostics.get("packaged_version") or "").strip() or None
         backend_ready = bool(diagnostics.get("backend_ready"))
         backend_version = str(diagnostics.get("backend_version") or "").strip() or None
         missing_required = diagnostics.get("missing_required_files")
         if packaged_version == target_version and not missing_required and backend_ready and backend_version == target_version:
             return True, diagnostics, f"Upgrade completed. Running version: {target_version}."
-        if packaged_version == target_version and not missing_required and started_server_pid is None and not backend_ready:
-            try:
-                process = _start_packaged_server(port)
-            except Exception as exc:
-                diagnostics["server_restart_error"] = str(exc)
-            else:
-                started_server_pid = process.pid
-                diagnostics["restarted_server_pid"] = process.pid
-                _append_service_log(f"Restarted packaged MediaMop server for upgrade verification (pid={process.pid}, port={port}).")
+        if packaged_version == target_version and not missing_required and not backend_ready:
+            if not tray_relaunch_attempted:
+                tray_relaunch_attempted = True
+                tray_relaunch_started_at = time.time()
+                try:
+                    restarted_tray_pid = _start_packaged_tray_in_active_session(open_browser=False)
+                except Exception as exc:
+                    tray_restart_error = str(exc)
+                    diagnostics["tray_restart_error"] = tray_restart_error
+                    _append_service_log(
+                        "Could not relaunch packaged MediaMop tray host in the active session: "
+                        f"{exc}"
+                    )
+                else:
+                    diagnostics["restarted_tray_pid"] = restarted_tray_pid
+                    _append_service_log(
+                        "Relaunched packaged MediaMop tray host for upgrade verification "
+                        f"(pid={restarted_tray_pid}, port={port})."
+                    )
+            should_fallback_to_server = (
+                started_server_pid is None
+                and (
+                    restarted_tray_pid is None
+                    or (
+                        tray_relaunch_started_at is not None
+                        and time.time() - tray_relaunch_started_at >= 15.0
+                        and not bool(diagnostics.get("tray_running"))
+                    )
+                )
+            )
+            if should_fallback_to_server:
+                try:
+                    process = _start_packaged_server(port)
+                except Exception as exc:
+                    server_restart_error = str(exc)
+                    diagnostics["server_restart_error"] = server_restart_error
+                else:
+                    started_server_pid = process.pid
+                    diagnostics["restarted_server_pid"] = process.pid
+                    _append_service_log(
+                        "Restarted packaged MediaMop server for upgrade verification "
+                        f"(pid={process.pid}, port={port})."
+                    )
         last_diagnostics = diagnostics
         time.sleep(_BACKEND_POLL_INTERVAL_SECONDS)
     backend_version = str(last_diagnostics.get("backend_version") or "").strip() or None
@@ -857,9 +1060,10 @@ def _perform_upgrade_attempt(attempt_id: str) -> None:
             },
         )
         if getattr(sys, "frozen", False) and os.name == "nt":
+            _write_state(diagnostics={"helper_pid": None})
             _append_service_log(
                 "Installer launched from packaged updater; helper will exit and let updater-service "
-                "reconciliation finish verification after installer/service restart."
+                "reconciliation relaunch MediaMop and finish verification after installer/service restart."
             )
             return
         exit_code = process.wait(timeout=_INSTALLER_WAIT_TIMEOUT_SECONDS)
@@ -942,6 +1146,17 @@ def _reconcile_attempt_worker(attempt_id: str) -> None:
             deadline = time.time() + _INSTALLER_WAIT_TIMEOUT_SECONDS
             while time.time() < deadline and _pid_is_running(installer_pid):
                 time.sleep(_BACKEND_POLL_INTERVAL_SECONDS)
+            if _pid_is_running(installer_pid):
+                _mark_failed(
+                    message="Upgrade failed.",
+                    last_error="Installer did not exit before the reconciliation timeout elapsed.",
+                    target_version=str(state.get("target_version") or "").strip() or None,
+                    diagnostics={
+                        "reconciled_after_restart": True,
+                        "installer_pid": installer_pid,
+                    },
+                )
+                return
         target_version = normalize_release_version(str(state.get("target_version") or ""))
         if not target_version:
             _mark_failed(

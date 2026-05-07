@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DISPLAY_DENSITY_STORAGE_KEY } from "../../lib/ui/display-density";
 import type { CurrentSession, UserPublic } from "../../lib/api/types";
 import { qk } from "../../lib/auth/queries";
@@ -161,11 +161,66 @@ function renderSettings(
   return render(wrap(<SettingsPage />, qc));
 }
 
+async function renderSettingsWithSupportConfig(
+  me: UserPublic,
+  supportConfig: {
+    showCard: boolean;
+    showPlaceholder: boolean;
+    supportUrl: string | null;
+  },
+  overrides?: { updateStatus?: SuiteUpdateStatusOut },
+) {
+  vi.resetModules();
+  vi.doMock("../../lib/support", () => ({
+    SHOW_SUPPORT_CARD: supportConfig.showCard,
+    SHOW_SUPPORT_URL_PLACEHOLDER: supportConfig.showPlaceholder,
+    SUPPORT_URL: supportConfig.supportUrl,
+  }));
+
+  const { SettingsPage: SettingsPageWithMockedSupport } =
+    await import("./settings-page");
+
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
+  qc.setQueryData(suiteSettingsQueryKey, minimalSuiteSettings);
+  qc.setQueryData(suiteSecurityOverviewQueryKey, minimalSecurity);
+  qc.setQueryData(qk.me, me);
+  qc.setQueryData(qk.session, minimalCurrentSession);
+  qc.setQueryData(suiteConfigurationBackupsQueryKey, {
+    directory: "C:/MediaMop/backups/suite-configuration",
+    items: [],
+  });
+  qc.setQueryData(
+    suiteUpdateStatusQueryKey,
+    overrides?.updateStatus ?? minimalUpdateStatus,
+  );
+  qc.setQueryData(
+    [
+      ...suiteLogsQueryKey,
+      {
+        level: undefined,
+        search: undefined,
+        has_exception: undefined,
+        limit: 100,
+      },
+    ],
+    minimalLogs,
+  );
+  qc.setQueryData(suiteMetricsQueryKey, minimalMetrics);
+  return render(wrap(<SettingsPageWithMockedSupport />, qc));
+}
+
 describe("SettingsPage (suite settings)", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     localStorage.removeItem(DISPLAY_DENSITY_STORAGE_KEY);
     document.documentElement.removeAttribute("data-mm-density");
+  });
+
+  afterEach(() => {
+    vi.doUnmock("../../lib/support");
+    vi.resetModules();
   });
 
   it("does not mention Sonarr or Radarr on the central Settings page", () => {
@@ -177,12 +232,19 @@ describe("SettingsPage (suite settings)", () => {
     expect(screen.getByTestId("suite-settings-global")).toBeTruthy();
   });
 
-  it("shows development support guidance without a button when URL is missing", () => {
+  it("shows development support guidance inside the Support tab without a button when URL is missing", () => {
     renderSettings(operatorMe);
+    expect(
+      screen.queryByTestId("suite-settings-support"),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Support" }));
     expect(screen.getByTestId("suite-settings-support")).toBeInTheDocument();
     expect(
+      screen.getByText("MediaMop is free to use. Support is optional."),
+    ).toBeInTheDocument();
+    expect(
       screen.getByText(
-        "MediaMop is free to use. If it saves you time, you can support development and help keep updates coming.",
+        "If MediaMop saves you time or helps keep your library cleaner, you can support ongoing development.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText(/Development note: set/i)).toBeInTheDocument();
@@ -190,6 +252,52 @@ describe("SettingsPage (suite settings)", () => {
     expect(
       screen.queryByRole("link", { name: "Support MediaMop" }),
     ).not.toBeInTheDocument();
+    expect(screen.queryByText(/supporter licence/i)).not.toBeInTheDocument();
+  });
+
+  it("shows the Support settings destination and button when a valid support URL is configured", async () => {
+    await renderSettingsWithSupportConfig(operatorMe, {
+      showCard: true,
+      showPlaceholder: false,
+      supportUrl: "https://example.com/support",
+    });
+
+    fireEvent.click(screen.getByRole("tab", { name: "Support" }));
+
+    expect(screen.getByTestId("suite-settings-support")).toBeInTheDocument();
+    expect(
+      screen.getByText("MediaMop is free to use. Support is optional."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "If MediaMop saves you time or helps keep your library cleaner, you can support ongoing development.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Support MediaMop" }),
+    ).toHaveAttribute("href", "https://example.com/support");
+    expect(screen.queryByText("VITE_SUPPORT_URL")).not.toBeInTheDocument();
+    expect(screen.queryByText(/supporter licence/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/feature limits/i)).not.toBeInTheDocument();
+  });
+
+  it("hides the Support settings destination in production when the support URL is missing or invalid", async () => {
+    await renderSettingsWithSupportConfig(operatorMe, {
+      showCard: false,
+      showPlaceholder: false,
+      supportUrl: null,
+    });
+
+    expect(
+      screen.queryByRole("tab", { name: "Support" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("suite-settings-support"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Support MediaMop" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("VITE_SUPPORT_URL")).not.toBeInTheDocument();
     expect(screen.queryByText(/supporter licence/i)).not.toBeInTheDocument();
   });
 

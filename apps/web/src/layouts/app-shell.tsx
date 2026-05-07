@@ -12,7 +12,6 @@ import {
 import { useLogoutMutation } from "../lib/auth/queries";
 import { useDashboardStatusQuery } from "../lib/dashboard/queries";
 import { useSuiteSettingsQuery } from "../lib/suite/queries";
-import { SUPPORT_URL } from "../lib/support";
 import {
   persistAppTheme,
   readStoredAppTheme,
@@ -97,28 +96,6 @@ export function AppShell() {
               title="Installed MediaMop version reported by the running server"
             >
               {appVersion ? `Version ${appVersion}` : "Version checking..."}
-            </div>
-            <div className="mm-sidebar-support" data-testid="sidebar-support">
-              <p className="mm-sidebar-support-title">Support MediaMop</p>
-              <p className="mm-sidebar-support-copy">
-                MediaMop is free to use. If it saves you time, you can support
-                development and help keep updates coming.
-              </p>
-              <p className="mm-sidebar-support-note">
-                Supporter licence (optional, future): this space is reserved for
-                future supporter acknowledgement details. There are no licence
-                checks or feature limits in this release.
-              </p>
-              {SUPPORT_URL ? (
-                <a
-                  href={SUPPORT_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mm-sidebar-support-link"
-                >
-                  Support MediaMop
-                </a>
-              ) : null}
             </div>
             <button
               type="button"

@@ -67,7 +67,7 @@ function canEditSuiteGlobal(role: string | undefined): boolean {
   return role === "operator" || role === "admin";
 }
 
-type TabId = "general" | "backup" | "upgrade" | "security" | "logs";
+type TabId = "general" | "backup" | "upgrade" | "security" | "logs" | "support";
 
 const SUITE_PASSWORD_FIELD_CLASS =
   "mm-input w-full min-w-0 flex-1 text-sm tracking-normal text-[var(--mm-text)]";
@@ -996,6 +996,7 @@ export function SettingsPage() {
   const runtimeRequestIssues = requestIssueSummary(
     runtimeMetrics?.status_counts,
   );
+  const showSupportTab = SHOW_SUPPORT_CARD;
 
   return (
     <div className="mm-page" data-testid="suite-settings-page">
@@ -1059,6 +1060,17 @@ export function SettingsPage() {
           >
             Logs
           </button>
+          {showSupportTab ? (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "support"}
+              className={tabButtonClass(tab === "support")}
+              onClick={() => setTab("support")}
+            >
+              Support
+            </button>
+          ) : null}
         </div>
 
         {tab === "general" ? (
@@ -1416,50 +1428,6 @@ export function SettingsPage() {
                     </div>
                   </fieldset>
                 </section>
-                {SHOW_SUPPORT_CARD ? (
-                  <section
-                    className={SUITE_SETTINGS_DASH_CARD_CLASS}
-                    data-testid="suite-settings-support"
-                    aria-labelledby="suite-settings-support-heading"
-                  >
-                    <div className="mm-card-action-body">
-                      <div>
-                        <h3
-                          id="suite-settings-support-heading"
-                          className="text-base font-semibold text-[var(--mm-text1)]"
-                        >
-                          Support MediaMop
-                        </h3>
-                        <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                          MediaMop is free to use. If it saves you time, you can
-                          support development and help keep updates coming.
-                        </p>
-                      </div>
-                      {SHOW_SUPPORT_URL_PLACEHOLDER ? (
-                        <p className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-3 py-2 text-xs text-[var(--mm-text3)]">
-                          Development note: set <code>VITE_SUPPORT_URL</code> to
-                          show the support button.
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="mm-card-action-footer">
-                      {SUPPORT_URL ? (
-                        <a
-                          href={SUPPORT_URL}
-                          target="_blank"
-                          rel="noreferrer"
-                          className={mmActionButtonClass({
-                            variant: "secondary",
-                            disabled: false,
-                          })}
-                          data-testid="suite-settings-support-button"
-                        >
-                          Support MediaMop
-                        </a>
-                      ) : null}
-                    </div>
-                  </section>
-                ) : null}
               </div>
             </div>
           </div>
@@ -2329,6 +2297,64 @@ export function SettingsPage() {
                   {changePassword.isPending ? "Saving…" : "Change password"}
                 </button>
               </div>
+            </section>
+          </div>
+        ) : tab === "support" ? (
+          <div
+            data-testid="suite-settings-support-tab"
+            className="mm-bubble-stack"
+          >
+            <div className={mmModuleTabBlurbBandClass}>
+              <p className={mmModuleTabBlurbTextClass}>
+                Optional support details for MediaMop. Core app features remain
+                fully usable without any support flow.
+              </p>
+            </div>
+
+            <section
+              className={SUITE_SETTINGS_DASH_CARD_CLASS}
+              data-testid="suite-settings-support"
+              aria-labelledby="suite-settings-support-heading"
+            >
+              <div className="mm-card-action-body">
+                <div className="space-y-3">
+                  <h3
+                    id="suite-settings-support-heading"
+                    className="text-base font-semibold text-[var(--mm-text1)]"
+                  >
+                    Support MediaMop
+                  </h3>
+                  <div className="space-y-2 text-sm text-[var(--mm-text2)]">
+                    <p>MediaMop is free to use. Support is optional.</p>
+                    <p>
+                      If MediaMop saves you time or helps keep your library
+                      cleaner, you can support ongoing development.
+                    </p>
+                  </div>
+                </div>
+                {SHOW_SUPPORT_URL_PLACEHOLDER ? (
+                  <p className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-3 py-2 text-xs text-[var(--mm-text3)]">
+                    Development note: set <code>VITE_SUPPORT_URL</code> to show
+                    the support button.
+                  </p>
+                ) : null}
+              </div>
+              {SUPPORT_URL ? (
+                <div className="mm-card-action-footer">
+                  <a
+                    href={SUPPORT_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={mmActionButtonClass({
+                      variant: "secondary",
+                      disabled: false,
+                    })}
+                    data-testid="suite-settings-support-button"
+                  >
+                    Support MediaMop
+                  </a>
+                </div>
+              ) : null}
             </section>
           </div>
         ) : (
