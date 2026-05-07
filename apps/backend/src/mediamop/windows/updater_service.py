@@ -700,6 +700,73 @@ def _mark_failed(
     )
 
 
+def _archive_superseded_failed_attempt() -> None:
+    state = _read_state()
+    phase = str(state.get("phase") or "").strip().lower()
+    if phase != "failed":
+        return
+    target_version = normalize_release_version(str(state.get("target_version") or ""))
+    if not target_version:
+        return
+
+    matched, install_diagnostics = _state_matches_installed_target(target_version)
+    observed_version = target_version
+    archive_reason: str | None = None
+    merged_diagnostics = dict(install_diagnostics)
+
+    if matched:
+        archive_reason = (
+            f"A previous upgrade attempt for MediaMop {target_version} failed, "
+            "but that version is now already installed and running."
+        )
+    else:
+        exceeded, install_diagnostics, newer_version = _state_running_version_exceeds_target(target_version)
+        if not exceeded:
+            return
+        observed_version = newer_version or observed_version
+        archive_reason = (
+            f"A previous upgrade attempt still targeted MediaMop {target_version}, "
+            f"but this install is already running newer version {observed_version}."
+        )
+        merged_diagnostics = dict(install_diagnostics)
+
+    diagnostics = state.get("diagnostics") if isinstance(state.get("diagnostics"), dict) else {}
+    attempt_id = str(state.get("attempt_id") or "").strip() or None
+    archived_diagnostics = dict(diagnostics)
+    archived_diagnostics.update(merged_diagnostics)
+    archived_diagnostics.update(
+        {
+            "archived_superseded_attempt": True,
+            "archived_from_phase": phase,
+            "archived_attempt_id": attempt_id,
+            "archived_target_version": target_version,
+            "archived_last_error": str(state.get("last_error") or "").strip() or None,
+            "archived_message": str(state.get("message") or "").strip() or None,
+            "archived_downloaded_installer_path": str(state.get("downloaded_installer_path") or "").strip() or None,
+            "stale_reason": archive_reason,
+        }
+    )
+    archived_diagnostics = {key: value for key, value in archived_diagnostics.items() if value is not None}
+
+    _append_service_log(
+        "Updater status archived a historical failed attempt because the target version is already installed "
+        f"(attempt_id={attempt_id or 'unknown'}, target_version={target_version}, observed_version={observed_version})."
+    )
+    _transition_state(
+        "idle",
+        "Updater ready.",
+        attempt_id=None,
+        target_version=None,
+        current_version_seen=observed_version,
+        downloaded_installer_path=None,
+        installer_sha256=None,
+        expected_sha256=None,
+        last_completed_at=_iso_now(),
+        last_error=None,
+        diagnostics=archived_diagnostics,
+    )
+
+
 def _harden_token_acl_windows(path: Path) -> None:
     principals = ["SYSTEM", "Administrators", "INTERACTIVE"]
     cmd = ["icacls", str(path), "/inheritance:r"]
@@ -1440,6 +1507,7 @@ def _reconcile_attempt_worker(attempt_id: str) -> None:
 
 
 def _maybe_reconcile_pending_attempt() -> None:
+    _archive_superseded_failed_attempt()
     state = _read_state()
     phase = str(state.get("phase") or "").strip().lower()
     if phase not in _ACTIVE_PHASES:

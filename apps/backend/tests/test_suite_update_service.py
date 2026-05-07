@@ -254,6 +254,37 @@ def test_build_suite_update_status_keeps_newer_release_available_when_old_state_
     assert status.upgrade.blocks_new_update is False
 
 
+def test_build_suite_update_status_hides_archived_idle_upgrade_progress(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "mediamop.platform.suite_settings.update_service.fetch_latest_release_record",
+        lambda **_kwargs: _release_record("2.1.4"),
+    )
+    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "2.1.4")
+    monkeypatch.setattr("mediamop.platform.suite_settings.update_service._detect_install_type", lambda: "windows")
+    monkeypatch.setattr(
+        "mediamop.platform.suite_settings.update_service._fetch_windows_updater_progress",
+        lambda _settings=None: (
+            True,
+            "Remote in-app upgrade is ready on this Windows install.",
+            update_service._coerce_upgrade_progress(
+                {
+                    "phase": "idle",
+                    "message": "Updater ready.",
+                    "current_version_seen": "2.1.4",
+                }
+            ),
+        ),
+    )
+
+    status = update_service.build_suite_update_status()
+
+    assert status.status == "up_to_date"
+    assert status.latest_version == "2.1.4"
+    assert status.upgrade is None
+
+
 def test_start_suite_update_now_returns_attempt_id(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     settings = type("Settings", (), {"mediamop_home": str(tmp_path)})()
     monkeypatch.setenv("MEDIAMOP_RUNTIME", "windows")
