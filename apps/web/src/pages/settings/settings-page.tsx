@@ -408,8 +408,7 @@ function describeUpgradeProgress(
       }
       return {
         label: "Verifying installed version",
-        body:
-          "Upgrade reported completed, but the running version has not been confirmed yet.",
+        body: "Upgrade reported completed, but the running version has not been confirmed yet.",
       };
     case "failed":
       return {
@@ -662,8 +661,11 @@ export function SettingsPage() {
       });
       return;
     }
-    const targetVersion =
-      (progress?.target_version || upgradeMonitor.targetVersion || "").trim();
+    const targetVersion = (
+      progress?.target_version ||
+      upgradeMonitor.targetVersion ||
+      ""
+    ).trim();
     if (
       targetVersion &&
       updateStatusQ.data.current_version === targetVersion &&
@@ -949,8 +951,11 @@ export function SettingsPage() {
         setUpgradePollActive(true);
         setUpgradeMonitor({
           attemptId: result.attempt_id ?? null,
-          targetVersion:
-            (result.target_version || updateStatusQ.data?.latest_version || "").trim(),
+          targetVersion: (
+            result.target_version ||
+            updateStatusQ.data?.latest_version ||
+            ""
+          ).trim(),
           disconnects: 0,
           active: true,
           startedAtMs: Date.now(),
@@ -1426,14 +1431,14 @@ export function SettingsPage() {
                           Support MediaMop
                         </h3>
                         <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                          MediaMop is free to use. If it saves you time, you
-                          can support development and help keep updates coming.
+                          MediaMop is free to use. If it saves you time, you can
+                          support development and help keep updates coming.
                         </p>
                       </div>
                       {SHOW_SUPPORT_URL_PLACEHOLDER ? (
                         <p className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-3 py-2 text-xs text-[var(--mm-text3)]">
-                          Development note: set <code>VITE_SUPPORT_URL</code>{" "}
-                          to show the support button.
+                          Development note: set <code>VITE_SUPPORT_URL</code> to
+                          show the support button.
                         </p>
                       ) : null}
                     </div>
@@ -1972,7 +1977,8 @@ export function SettingsPage() {
                           ) : null}
                           {activeUpgradeProgress?.service_log_path ? (
                             <p>
-                              Service log: {activeUpgradeProgress.service_log_path}
+                              Service log:{" "}
+                              {activeUpgradeProgress.service_log_path}
                             </p>
                           ) : null}
                           {(activeUpgradeProgress?.phase === "failed" ||

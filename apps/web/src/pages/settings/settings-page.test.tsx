@@ -429,7 +429,8 @@ describe("SettingsPage (suite settings)", () => {
       ...windowsUpdateAvailableStatus,
       upgrade: {
         phase: "downloading",
-        message: "Upgrade request accepted. MediaMop is downloading the installer.",
+        message:
+          "Upgrade request accepted. MediaMop is downloading the installer.",
         attempt_id: "attempt-123",
         target_version: "2.0.8",
       },
@@ -466,7 +467,9 @@ describe("SettingsPage (suite settings)", () => {
     });
     fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
     expect(screen.getByText("Verifying installer")).toBeInTheDocument();
-    expect(screen.getByText("Installer is being verified.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Installer is being verified."),
+    ).toBeInTheDocument();
   });
 
   it("shows the installer running phase from real progress", () => {
@@ -504,9 +507,7 @@ describe("SettingsPage (suite settings)", () => {
       },
     });
     fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    expect(
-      screen.getByText("Verifying installed version"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Verifying installed version")).toBeInTheDocument();
     expect(
       screen.getByText(
         "Upgrade reported completed, but the running version has not been confirmed yet.",
@@ -582,13 +583,12 @@ describe("SettingsPage (suite settings)", () => {
         ...windowsUpdateAvailableStatus,
         upgrade: {
           phase: "verifying_install",
-          message: "MediaMop is reconnecting and verifying the installed version.",
+          message:
+            "MediaMop is reconnecting and verifying the installed version.",
           attempt_id: "attempt-123",
           target_version: "2.0.8",
           current_version_seen: "2.0.7",
-          last_started_at: new Date(
-            Date.now() - 9 * 60 * 1000,
-          ).toISOString(),
+          last_started_at: new Date(Date.now() - 9 * 60 * 1000).toISOString(),
           installer_log_path:
             "C:/ProgramData/MediaMop/upgrades/installer-attempt-123.log",
           service_log_path:

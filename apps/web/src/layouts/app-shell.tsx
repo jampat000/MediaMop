@@ -105,9 +105,9 @@ export function AppShell() {
                 development and help keep updates coming.
               </p>
               <p className="mm-sidebar-support-note">
-                Supporter licence (optional, future): this space is reserved
-                for future supporter acknowledgement details. There are no
-                licence checks or feature limits in this release.
+                Supporter licence (optional, future): this space is reserved for
+                future supporter acknowledgement details. There are no licence
+                checks or feature limits in this release.
               </p>
               {SUPPORT_URL ? (
                 <a
