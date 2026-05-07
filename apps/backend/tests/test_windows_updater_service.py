@@ -407,6 +407,134 @@ def test_perform_upgrade_attempt_allows_missing_checksum_only_with_explicit_over
     assert state["installer_sha256"] == "b" * 64
 
 
+def test_verify_install_relaunches_tray_before_marking_upgrade_complete(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    target_version = "2.0.8"
+    observed = {"tray_calls": 0, "server_calls": 0}
+    diagnostics_iter = iter(
+        [
+            {
+                "packaged_version": target_version,
+                "missing_required_files": [],
+                "backend_ready": False,
+                "backend_version": None,
+                "tray_running": False,
+            },
+            {
+                "packaged_version": target_version,
+                "missing_required_files": [],
+                "backend_ready": False,
+                "backend_version": None,
+                "tray_running": False,
+            },
+            {
+                "packaged_version": target_version,
+                "missing_required_files": [],
+                "backend_ready": True,
+                "backend_version": target_version,
+                "tray_running": True,
+            },
+        ]
+    )
+    clock = iter(range(1000))
+
+    monkeypatch.setattr(updater_service, "_read_runtime_port", lambda: 8788)
+    monkeypatch.setattr(
+        updater_service,
+        "_collect_install_diagnostics",
+        lambda _target_version, *, port: next(diagnostics_iter),
+    )
+    monkeypatch.setattr(
+        updater_service,
+        "_start_packaged_tray_in_active_session",
+        lambda *, open_browser=False: observed.__setitem__("tray_calls", observed["tray_calls"] + 1) or 4321,
+    )
+    monkeypatch.setattr(
+        updater_service,
+        "_start_packaged_server",
+        lambda _port: observed.__setitem__("server_calls", observed["server_calls"] + 1),
+    )
+    monkeypatch.setattr(updater_service.time, "time", lambda: float(next(clock)))
+    monkeypatch.setattr(updater_service.time, "sleep", lambda _seconds: None)
+
+    verified, diagnostics, message = updater_service._verify_install(target_version)
+
+    assert verified is True
+    assert message == f"Upgrade completed. Running version: {target_version}."
+    assert observed["tray_calls"] == 1
+    assert observed["server_calls"] == 0
+    assert diagnostics["restarted_tray_pid"] == 4321
+    assert diagnostics["tray_relaunch_attempted"] is True
+
+
+def test_verify_install_falls_back_to_server_when_tray_relaunch_is_unavailable(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    target_version = "2.0.8"
+    observed = {"server_calls": 0}
+    diagnostics_iter = iter(
+        [
+            {
+                "packaged_version": target_version,
+                "missing_required_files": [],
+                "backend_ready": False,
+                "backend_version": None,
+                "tray_running": False,
+            },
+            {
+                "packaged_version": target_version,
+                "missing_required_files": [],
+                "backend_ready": False,
+                "backend_version": None,
+                "tray_running": False,
+            },
+            {
+                "packaged_version": target_version,
+                "missing_required_files": [],
+                "backend_ready": True,
+                "backend_version": target_version,
+                "tray_running": False,
+            },
+        ]
+    )
+    clock = iter(range(1000))
+
+    class _ServerProcess:
+        pid = 5566
+
+    monkeypatch.setattr(updater_service, "_read_runtime_port", lambda: 8788)
+    monkeypatch.setattr(
+        updater_service,
+        "_collect_install_diagnostics",
+        lambda _target_version, *, port: next(diagnostics_iter),
+    )
+    monkeypatch.setattr(
+        updater_service,
+        "_start_packaged_tray_in_active_session",
+        lambda *, open_browser=False: (_ for _ in ()).throw(RuntimeError("no interactive session")),
+    )
+    monkeypatch.setattr(
+        updater_service,
+        "_start_packaged_server",
+        lambda _port: observed.__setitem__("server_calls", observed["server_calls"] + 1) or _ServerProcess(),
+    )
+    monkeypatch.setattr(updater_service.time, "time", lambda: float(next(clock)))
+    monkeypatch.setattr(updater_service.time, "sleep", lambda _seconds: None)
+
+    verified, diagnostics, message = updater_service._verify_install(target_version)
+
+    assert verified is True
+    assert message == f"Upgrade completed. Running version: {target_version}."
+    assert observed["server_calls"] == 1
+    assert diagnostics["restarted_server_pid"] == 5566
+    assert diagnostics["tray_restart_error"] == "no interactive session"
+
+
 def test_packaged_helper_exits_after_launch_and_reconciliation_completes(
     tmp_path: Path,
     monkeypatch,
@@ -439,6 +567,7 @@ def test_packaged_helper_exits_after_launch_and_reconciliation_completes(
 
     assert launch_state["phase"] == "installer_running"
     assert launch_state["diagnostics"]["installer_pid"] == 6789
+    assert launch_state["diagnostics"]["helper_pid"] is None
 
     Path(launch_state["installer_log_path"]).write_text("installer log", encoding="utf-8")
     updater_service._write_state(diagnostics={"helper_pid": None})
@@ -458,6 +587,31 @@ def test_packaged_helper_exits_after_launch_and_reconciliation_completes(
 
     assert state["phase"] == "completed"
     assert state["current_version_seen"] == "2.0.8"
+
+
+def test_reconcile_attempt_worker_fails_when_installer_does_not_exit_in_time(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    updater_service._persist_state(
+        {
+            **updater_service._fresh_attempt_state("2.0.8", "attempt-123"),
+            "phase": "installer_running",
+            "diagnostics": {"helper_pid": None, "installer_pid": 6789},
+        }
+    )
+    clock = iter([0.0, float(updater_service._INSTALLER_WAIT_TIMEOUT_SECONDS + 1)])
+
+    monkeypatch.setattr(updater_service.time, "time", lambda: next(clock))
+    monkeypatch.setattr(updater_service.time, "sleep", lambda _seconds: None)
+    monkeypatch.setattr(updater_service, "_pid_is_running", lambda pid: pid == 6789)
+
+    updater_service._reconcile_attempt_worker("attempt-123")
+    state = updater_service._read_state()
+
+    assert state["phase"] == "failed"
+    assert "reconciliation timeout elapsed" in str(state["last_error"]).lower()
 
 
 def test_apply_update_persists_state_before_launching_helper(tmp_path: Path, monkeypatch) -> None:

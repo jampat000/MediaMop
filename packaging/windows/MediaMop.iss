@@ -2,7 +2,7 @@
   #define AppName "MediaMop"
 #endif
 #ifndef AppVersion
-  #define AppVersion "2.1.0"
+  #define AppVersion "2.1.1"
 #endif
 #ifndef OutputRoot
   #error OutputRoot must be provided to the installer build.
@@ -63,7 +63,7 @@ Name: "{commondesktop}\MediaMop"; Filename: "{app}\{#ExeName}"; Tasks: desktopic
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "MediaMop"; ValueData: """{app}\{#ExeName}"""; Flags: uninsdeletevalue; Tasks: startup
 
 [Run]
-Filename: "{app}\{#ExeName}"; Description: "Launch MediaMop"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#ExeName}"; Description: "Launch MediaMop"; Flags: nowait postinstall; Check: ShouldLaunchMediaMopAfterInstall
 
 [UninstallRun]
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""MediaMop Server"""; Flags: runhidden waituntilterminated
@@ -72,6 +72,13 @@ Filename: "{app}\MediaMopUpdaterService.exe"; Parameters: "uninstall"; Flags: ru
 Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /TN ""MediaMop Upgrade"" /F"; Flags: runhidden waituntilterminated
 
 [Code]
+function ShouldLaunchMediaMopAfterInstall(): Boolean;
+begin
+  Result := not WizardSilent;
+  if not Result then
+    Log('Skipping [Run] MediaMop launch because this install is silent; updater-service relaunch handles post-upgrade startup.');
+end;
+
 procedure ShowInstallNotice(MessageText: String);
 begin
   Log(MessageText);
