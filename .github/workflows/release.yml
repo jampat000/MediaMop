@@ -16,6 +16,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
+  VITE_SUPPORT_URL: ${{ vars.VITE_SUPPORT_URL }}
 
 jobs:
   windows-smoke:
@@ -92,6 +93,8 @@ jobs:
 
       - name: MediaMop web - install and build
         working-directory: apps/web
+        env:
+          VITE_SUPPORT_URL: ${{ env.VITE_SUPPORT_URL }}
         run: |
           npm ci
           npm run build
@@ -102,6 +105,7 @@ jobs:
       - name: Build MediaMop Windows installer
         env:
           MEDIAMOP_BUILD_VERSION: ${{ steps.version.outputs.plain }}
+          VITE_SUPPORT_URL: ${{ env.VITE_SUPPORT_URL }}
         run: powershell -ExecutionPolicy Bypass -File packaging/windows/build.ps1
 
       - name: Smoke test packaged Windows server
@@ -204,6 +208,8 @@ jobs:
 
       - name: MediaMop web - install, build, unit tests
         working-directory: apps/web
+        env:
+          VITE_SUPPORT_URL: ${{ env.VITE_SUPPORT_URL }}
         run: |
           npm ci
           npm run build

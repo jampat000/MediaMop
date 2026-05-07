@@ -1167,7 +1167,7 @@ export function ActivityPage() {
                 data-testid="activity-row"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="space-y-2">
+                  <div className="min-w-0 flex-1 space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-gold)]">
                         {ev.module === "system" ||
@@ -1182,10 +1182,13 @@ export function ActivityPage() {
                         {display.chip}
                       </span>
                     </div>
-                    <h2 className="text-lg font-semibold text-[var(--mm-text1)]">
+                    <h2
+                      className="min-w-0 break-words text-lg font-semibold text-[var(--mm-text1)] [overflow-wrap:anywhere]"
+                      title={display.title}
+                    >
                       {display.title}
                     </h2>
-                    <p className="text-sm text-[var(--mm-text3)]">
+                    <p className="break-words text-sm text-[var(--mm-text3)]">
                       {display.summary}
                     </p>
                   </div>

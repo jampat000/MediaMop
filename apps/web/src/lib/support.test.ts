@@ -20,6 +20,8 @@ describe("support helpers", () => {
     expect(normalizeSupportUrl("   ")).toBeNull();
     expect(normalizeSupportUrl("not-a-url")).toBeNull();
     expect(normalizeSupportUrl("javascript:alert(1)")).toBeNull();
+    expect(normalizeSupportUrl("mailto:support@example.com")).toBeNull();
+    expect(normalizeSupportUrl("file:///tmp/support-link")).toBeNull();
   });
 
   it("only shows placeholder in development when no URL is configured", () => {

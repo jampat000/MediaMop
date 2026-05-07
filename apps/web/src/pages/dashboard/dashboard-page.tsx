@@ -79,6 +79,12 @@ type DashboardJobRow = {
   updated_at: string;
 };
 
+type DashboardMetricValue = {
+  value: string;
+  detail?: string;
+  valueTitle?: string;
+};
+
 const REFINER_FILE_REMUX_PASS_JOB_KIND = "refiner.file.remux_pass.v1";
 const REFINER_DASHBOARD_JOB_KINDS = new Set([
   REFINER_FILE_REMUX_PASS_JOB_KIND,
@@ -86,13 +92,33 @@ const REFINER_DASHBOARD_JOB_KINDS = new Set([
   "refiner.supplied_payload_evaluation.v1",
 ]);
 
+function compactMetricText(
+  text: string,
+  maxLength = 84,
+  tailLength = 28,
+): string {
+  const normalized = text.trim();
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+  const tail = Math.max(12, Math.min(tailLength, maxLength - 16));
+  const head = Math.max(16, maxLength - tail - 1);
+  return `${normalized.slice(0, head).trimEnd()}…${normalized.slice(-tail).trimStart()}`;
+}
+
 function shortLastActivity(
   items: ActivityEventItem[],
   fmt: (iso: string) => string,
-): string {
-  if (items.length === 0) return "No recent activity";
+): DashboardMetricValue {
+  if (items.length === 0) {
+    return { value: "No recent activity" };
+  }
   const ev = items[0];
-  return `${ev.title} - ${fmt(ev.created_at)}`;
+  return {
+    value: compactMetricText(ev.title),
+    detail: fmt(ev.created_at),
+    valueTitle: ev.title,
+  };
 }
 
 function healthTone(status: ModuleStatus): string {
@@ -152,24 +178,26 @@ function MetricCard({
   label,
   value,
   detail,
+  valueTitle,
 }: {
   label: string;
   value: string;
   detail?: string;
+  valueTitle?: string;
 }) {
   return (
-    <section className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3">
+    <section className="min-w-0 rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3">
       <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text3)]">
         {label}
       </p>
-      <p className="mt-1 text-lg font-semibold text-[var(--mm-text1)]">
+      <p
+        className="mt-1 min-w-0 text-lg font-semibold leading-snug text-[var(--mm-text1)] [overflow-wrap:anywhere]"
+        title={valueTitle ?? value}
+      >
         {value}
       </p>
       {detail ? (
-        <p
-          className="mt-1 truncate text-xs text-[var(--mm-text3)]"
-          title={detail}
-        >
+        <p className="mt-1 text-xs text-[var(--mm-text3)]" title={detail}>
           {detail}
         </p>
       ) : null}
@@ -485,6 +513,7 @@ export function DashboardPage() {
   }
 
   const recentItems = recent.data?.items ?? [];
+  const lastActivityMetric = shortLastActivity(recentItems, fmt);
   const refinerCard = buildRefinerCard({
     processed: refinerStats.data?.files_processed ?? 0,
     failed: refinerStats.data?.files_failed ?? 0,
@@ -669,7 +698,9 @@ export function DashboardPage() {
         />
         <MetricCard
           label="Last activity"
-          value={shortLastActivity(recentItems, fmt)}
+          value={lastActivityMetric.value}
+          detail={lastActivityMetric.detail}
+          valueTitle={lastActivityMetric.valueTitle}
         />
       </section>
 

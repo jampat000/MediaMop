@@ -851,15 +851,15 @@ def _download_installer(url: str, *, target_version: str, attempt_id: str) -> Pa
     total = 0
     client, response = _open_trusted_download_stream(url)
     try:
-        with response:
-            tmp.parent.mkdir(parents=True, exist_ok=True)
-            with tmp.open("wb") as handle:
-                for chunk in response.iter_bytes():
-                    if not chunk:
-                        continue
-                    handle.write(chunk)
-                    total += len(chunk)
+        tmp.parent.mkdir(parents=True, exist_ok=True)
+        with tmp.open("wb") as handle:
+            for chunk in response.iter_bytes():
+                if not chunk:
+                    continue
+                handle.write(chunk)
+                total += len(chunk)
     finally:
+        response.close()
         client.close()
     if total < _MIN_INSTALLER_BYTES:
         tmp.unlink(missing_ok=True)

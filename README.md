@@ -105,6 +105,10 @@ If MediaMop saves you time or helps keep your library cleaner, you can support o
 
 Set `VITE_SUPPORT_URL` in `apps/web/.env` or your deployment environment to show the in-app support button.
 
+`VITE_SUPPORT_URL` is a Vite build-time variable. Set it before running `npm run build` or packaging a release. Changing it after the frontend has been built or after a Windows installer has been packaged does not update the installed UI until the frontend is rebuilt and repackaged.
+
+Official GitHub releases should set the repository variable `VITE_SUPPORT_URL` to `https://github.com/sponsors/jampat000` so the packaged production frontend includes **Settings > Support**.
+
 ## Verification
 
 Optional local verification:

@@ -468,6 +468,51 @@ def test_perform_upgrade_attempt_fails_on_sha256_mismatch(
     assert "sha-256 mismatch" in str(state["last_error"]).lower()
 
 
+def test_download_installer_streams_response_without_context_manager(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    monkeypatch.setattr(updater_service, "_MIN_INSTALLER_BYTES", 4)
+
+    class _Client:
+        def __init__(self) -> None:
+            self.closed = False
+
+        def close(self) -> None:
+            self.closed = True
+
+    class _Response:
+        def __init__(self) -> None:
+            self.closed = False
+
+        def iter_bytes(self):
+            yield b"abcd"
+            yield b"efgh"
+
+        def close(self) -> None:
+            self.closed = True
+
+    client = _Client()
+    response = _Response()
+    monkeypatch.setattr(
+        updater_service,
+        "_open_trusted_download_stream",
+        lambda _url: (client, response),
+    )
+
+    downloaded = updater_service._download_installer(
+        "https://github.com/jampat000/MediaMop/releases/download/v2.1.2/MediaMopSetup.exe",
+        target_version="2.1.2",
+        attempt_id="attempt-123",
+    )
+
+    assert downloaded.exists()
+    assert downloaded.read_bytes() == b"abcdefgh"
+    assert response.closed is True
+    assert client.closed is True
+
+
 def test_perform_upgrade_attempt_allows_missing_checksum_only_with_explicit_override(
     tmp_path: Path,
     monkeypatch,
