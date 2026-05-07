@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from mediamop.api.deps import DbSessionDep
+from mediamop.platform.activity import constants as C
 from mediamop.platform.activity.service import record_activity_event
 from mediamop.platform.auth.authorization import RequireOperatorDep
 from mediamop.platform.reconciliation.service import build_reconciliation_report, repair_reconciliation_issue
@@ -51,7 +52,7 @@ def post_reconciliation_repair(
 
     record_activity_event(
         db,
-        event_type="system.reconciliation.repair",
+        event_type=C.SYSTEM_RECONCILIATION_REPAIR,
         module="system",
         title="System repair action completed" if result.get("applied") else "System repair action skipped",
         detail=f"{body.action}: {result.get('message', '')}",

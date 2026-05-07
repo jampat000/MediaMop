@@ -23,10 +23,21 @@ export function shouldShowSupportPlaceholder(
   return isDev && supportUrl === null;
 }
 
+export function shouldShowSupportCard(
+  isDev: boolean,
+  supportUrl: string | null,
+): boolean {
+  return supportUrl !== null || shouldShowSupportPlaceholder(isDev, supportUrl);
+}
+
 export const SUPPORT_URL = normalizeSupportUrl(
   import.meta.env.VITE_SUPPORT_URL,
 );
 export const SHOW_SUPPORT_URL_PLACEHOLDER = shouldShowSupportPlaceholder(
+  import.meta.env.DEV,
+  SUPPORT_URL,
+);
+export const SHOW_SUPPORT_CARD = shouldShowSupportCard(
   import.meta.env.DEV,
   SUPPORT_URL,
 );

@@ -20,6 +20,8 @@ from mediamop.modules.subber.subber_jobs_ops import subber_enqueue_or_get_job
 from mediamop.modules.subber.subber_settings_model import SubberSettingsRow
 from mediamop.modules.subber.subber_subtitle_state_model import SubberSubtitleState
 from mediamop.modules.subber.worker_loop import process_one_subber_job
+from mediamop.platform.activity import constants as C
+from mediamop.platform.activity.models import ActivityEvent
 
 import mediamop.modules.subber.subber_jobs_model  # noqa: F401
 import mediamop.modules.subber.subber_settings_model  # noqa: F401
@@ -116,6 +118,18 @@ def test_upgrade_handler_skips_when_subber_disabled(mock_dl, session_factory) ->
     t0 = datetime(2026, 1, 2, tzinfo=timezone.utc)
     process_one_subber_job(session_factory, lease_owner="u3", job_handlers=handlers, now=t0, lease_seconds=600)
     assert not mock_dl.called
+    with session_factory() as s:
+        ev = s.scalars(
+            select(ActivityEvent)
+            .where(ActivityEvent.event_type == C.SUBBER_SUBTITLE_UPGRADE_COMPLETED)
+            .order_by(ActivityEvent.id.desc()),
+        ).first()
+        assert ev is not None
+        detail = json.loads(ev.detail or "{}")
+        assert detail["result"] == "skipped"
+        assert detail["user_message"] == "Subtitle upgrade is turned off in Subber settings."
+        assert detail["attempted"] == 0
+        assert detail["upgraded"] == 0
 
 
 def test_upgrade_handler_runs_when_enabled_with_candidates(session_factory, tmp_path: Path) -> None:

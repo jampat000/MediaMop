@@ -56,3 +56,19 @@ def test_remux_pass_result_to_activity_detail_is_valid_json() -> None:
         {"ok": True, "outcome": REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN, "relative_media_path": "x.mkv"},
     )
     assert '"outcome":"live_output_written"' in detail
+
+
+def test_remux_pass_result_to_activity_detail_keeps_removed_track_lists_and_counts() -> None:
+    detail = remux_pass_result_to_activity_detail(
+        {
+            "ok": True,
+            "outcome": REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN,
+            "relative_media_path": "movies/sample.mkv",
+            "removed_audio": ["eng commentary", "jpn stereo"],
+            "removed_subtitles": ["spa", "fre"],
+        },
+    )
+    assert '"removed_audio":["eng commentary","jpn stereo"]' in detail
+    assert '"removed_subtitles":["spa","fre"]' in detail
+    assert '"audio_removed":2' in detail
+    assert '"subtitles_removed":2' in detail

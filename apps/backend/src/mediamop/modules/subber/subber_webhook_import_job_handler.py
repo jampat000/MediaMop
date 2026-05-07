@@ -92,7 +92,11 @@ def make_subber_webhook_import_handler(
                     session,
                     event_type=C.SUBBER_WEBHOOK_IMPORT_ENQUEUED,
                     title=f"Subber webhook import ({media_scope})",
-                    detail={"enqueued": enqueued, "file_path": file_path},
+                    detail={
+                        "enqueued": enqueued,
+                        "file_path": file_path,
+                        "media_scope": media_scope,
+                    },
                 )
 
     _ = webhook_job_kind

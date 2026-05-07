@@ -21,6 +21,10 @@ def test_docker_env_example_documents_required_and_recommended_values() -> None:
     assert "MEDIAMOP_CREDENTIALS_SECRET" in example
     assert "openssl rand -hex 32" in example
     assert "MEDIAMOP_HOME" in example
+    assert "MEDIAMOP_PUID" in example
+    assert "MEDIAMOP_PGID" in example
+    assert "MEDIAMOP_CHOWN_OUTPUT" in example
+    assert "MEDIAMOP_DIR_MODE_OUTPUT" in example
 
 
 def test_docker_entrypoint_generates_persistent_session_secret() -> None:
@@ -30,10 +34,13 @@ def test_docker_entrypoint_generates_persistent_session_secret() -> None:
     assert "session.secret" in entrypoint
     assert "export MEDIAMOP_SESSION_SECRET" in entrypoint
     assert "must be at least 32 characters" in entrypoint
+    assert "MEDIAMOP_PUID" in entrypoint
+    assert "MEDIAMOP_CHOWN_OUTPUT" in entrypoint
+    assert "gosu mediamop" in entrypoint
 
 
-def test_dockerfile_runs_as_non_root_user() -> None:
+def test_dockerfile_provisions_gosu_and_unprivileged_runtime_user() -> None:
     dockerfile = (REPO_ROOT / "Dockerfile").read_text(encoding="utf-8")
 
     assert "useradd --system --uid 1000" in dockerfile
-    assert "USER mediamop" in dockerfile
+    assert "gosu" in dockerfile

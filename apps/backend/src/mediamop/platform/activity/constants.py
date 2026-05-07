@@ -7,6 +7,7 @@ AUTH_LOGOUT = "auth.logout"
 AUTH_BOOTSTRAP_SUCCEEDED = "auth.bootstrap_succeeded"
 AUTH_BOOTSTRAP_DENIED = "auth.bootstrap_denied"
 AUTH_PASSWORD_CHANGED = "auth.password_changed"
+SYSTEM_RECONCILIATION_REPAIR = "system.reconciliation.repair"
 
 # Shared *arr library (Sonarr/Radarr) — operator-triggered connection checks
 ARR_LIBRARY_CONNECTION_TEST_SUCCEEDED = "arr_library.connection_test_succeeded"

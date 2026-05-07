@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 from mediamop.windows import tray_app
 
@@ -71,7 +72,12 @@ def test_windows_installer_surfaces_firewall_rule_failures() -> None:
 
     assert "procedure InstallFirewallRule()" in text
     assert "profile=private,domain" in text
-    assert "MsgBox(" in text
+    assert "procedure ShowInstallNotice" in text
+    assert "SuppressibleMsgBox(" in text
+    assert re.search(r"(?<!Suppressible)MsgBox\(", text) is None
+    assert "TaskDialogMsgBox(" not in text
+    assert "SuppressibleTaskDialogMsgBox(" not in text
+    assert "WizardSilent" in text
     assert "Windows did not allow Setup to add the firewall rule" in text
     assert 'Filename: "{sys}\\netsh.exe"; Parameters: "advfirewall firewall add rule' not in text
 
@@ -88,9 +94,9 @@ def test_windows_installer_installs_dedicated_upgrade_task() -> None:
     assert 'Source: "{#RepoRoot}\\packaging\\windows\\vendor\\winsw\\WinSW-x64.exe"; DestDir: "{app}"; DestName: "MediaMopUpdaterService.exe"; Flags: ignoreversion' in text
     assert "function UpdaterServiceInstalled(): Boolean;" in text
     assert "procedure InstallUpdaterService();" in text
+    assert "procedure FailInstall" in text
     assert "MediaMopUpdaterService.exe" in text
     assert "Remote in-app upgrades depend on that service." in text
-    assert "RaiseException('MediaMop could not install the required Windows updater service.');" in text
     assert 'Filename: "{sys}\\schtasks.exe"; Parameters: "/Delete /TN ""MediaMop Upgrade"" /F"' in text
     assert "<id>MediaMopUpdater</id>" in service_text
     assert "<name>MediaMop Updater</name>" in service_text
@@ -110,6 +116,7 @@ def test_windows_package_uses_dedicated_tray_icon_assets() -> None:
     assert "(str(TRAY_ICON_PNG), \"assets\")" in text
     assert "(str(TRAY_ICON_ICO), \"assets\")" in text
     assert "(str(THIRD_PARTY_NOTICES), \".\")" in text
+    assert 'copy_metadata("mediamop-backend")' in text
     assert "icon=str(TRAY_ICON_ICO)" in text
     assert 'name="MediaMopUpdater"' in text
     assert 'str(BACKEND / "src" / "mediamop" / "windows" / "updater_service.py")' in text
@@ -131,6 +138,23 @@ def test_windows_package_includes_ffmpeg_runtime_assets() -> None:
     assert "Ensure-WindowsServiceWrapper" in build_text
     assert "https://github.com/winsw/winsw/releases/download/v2.12.0/WinSW-x64.exe" in build_text
     assert "05b82d46ad331cc16bdc00de5c6332c1ef818df8ceefcd49c726553209b3a0da" in build_text
+    assert "MEDIAMOP_BUILD_VERSION" in build_text
+    assert "$buildVersion.StartsWith(\"v\")" in build_text
+    assert "does not match backend project version" in build_text
+    assert "MediaMopServer.exe reports version" in build_text
+    assert "expected build version" in build_text
+    assert "MediaMopUpdater.exe reports version" in build_text
+
+
+def test_release_workflow_generates_checksum_and_uses_normalized_semver() -> None:
+    workflow = Path(__file__).resolve().parents[3] / ".github" / "workflows" / "release.yml"
+    text = workflow.read_text(encoding="utf-8")
+
+    assert 'run: echo "plain=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"' in text
+    assert "MEDIAMOP_BUILD_VERSION: ${{ steps.version.outputs.plain }}" in text
+    assert 'scripts/smoke-windows-package.ps1 -ExpectedVersion "${{ steps.version.outputs.plain }}"' in text
+    assert 'MediaMopSetup.exe.sha256' in text
+    assert "Get-AuthenticodeSignature" in text
 
 
 def test_packaged_server_binds_to_lan_interfaces() -> None:
@@ -145,3 +169,4 @@ def test_tray_double_click_opens_mediamop() -> None:
     source = Path(tray_app.__file__).read_text(encoding="utf-8")
 
     assert 'Item("Open MediaMop", self._handle_open, default=True)' in source
+    assert 'if "--version" in sys.argv:' in source

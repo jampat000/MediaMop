@@ -25,6 +25,7 @@ import uvicorn
 from alembic import command
 from alembic.config import Config
 from mediamop.api.factory import create_app
+from mediamop.version import __version__
 
 _LOG_LOCK = threading.Lock()
 
@@ -342,6 +343,9 @@ def _run_server_mode(port: int) -> None:
 
 def main() -> None:
     try:
+        if "--version" in sys.argv:
+            print(__version__)
+            return
         if "--serve" in sys.argv:
             port = 8788
             if "--port" in sys.argv:

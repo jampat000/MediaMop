@@ -50,6 +50,62 @@ and run `docker compose --env-file .env.mediamop up -d`.
 - `MEDIAMOP_SESSION_COOKIE_SECURE=false` is the default in the image so plain `http://localhost` works
 - set `MEDIAMOP_SESSION_COOKIE_SECURE=true` only when all browser traffic is HTTPS
 
+## Docker ownership controls
+
+The container starts as `root`, reconciles optional filesystem ownership, then launches
+MediaMop as the unprivileged `mediamop` user. This keeps the app itself non-root while
+allowing host-mounted media paths to be aligned with your NAS or Docker user strategy.
+
+Available environment variables:
+
+- `MEDIAMOP_PUID` / `PUID`
+- `MEDIAMOP_PGID` / `PGID`
+- `MEDIAMOP_CHOWN_WATCHED`
+- `MEDIAMOP_CHOWN_TEMP`
+- `MEDIAMOP_CHOWN_OUTPUT`
+- `MEDIAMOP_DIR_MODE_WATCHED`
+- `MEDIAMOP_DIR_MODE_TEMP`
+- `MEDIAMOP_DIR_MODE_OUTPUT`
+
+Defaults:
+
+- `MEDIAMOP_PUID=1000`
+- `MEDIAMOP_PGID=1000`
+- all `MEDIAMOP_CHOWN_*` flags default to `false`
+- directory modes are unset unless you opt in
+
+The `MEDIAMOP_CHOWN_*` flags recursively chown the configured Refiner folders stored in
+MediaMop settings:
+
+- watched = Movies/TV watched folders
+- temp = Movies/TV work folders
+- output = Movies/TV output folders
+
+The `MEDIAMOP_DIR_MODE_*` values are optional octal directory modes such as `2775`. When
+set, they are applied recursively to directories only for the selected folder category.
+
+Example:
+
+```bash
+docker run --rm \
+  -p 8788:8788 \
+  -v mediamop-data:/data/mediamop \
+  -e MEDIAMOP_PUID=1001 \
+  -e MEDIAMOP_PGID=1001 \
+  -e MEDIAMOP_CHOWN_OUTPUT=true \
+  -e MEDIAMOP_DIR_MODE_OUTPUT=2775 \
+  ghcr.io/jampat000/mediamop:latest
+```
+
+Migration note:
+
+- Existing containers keep working with no env changes.
+- If your output or work folders are bind-mounted from the host and MediaMop cannot write to them,
+  set `MEDIAMOP_PUID` / `MEDIAMOP_PGID` to the host owner and enable the matching `MEDIAMOP_CHOWN_*`
+  flag for the folder category you want MediaMop to manage.
+- Leave `MEDIAMOP_CHOWN_WATCHED=false` unless you explicitly want MediaMop to take ownership of
+  your watched/download folders.
+
 ## Health
 
 The image exposes `GET /health` and includes a Docker `HEALTHCHECK`.

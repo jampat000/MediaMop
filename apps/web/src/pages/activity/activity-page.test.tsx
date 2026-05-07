@@ -94,4 +94,68 @@ describe("ActivityPage", () => {
     const options = within(select.closest("label")!).getAllByRole("option");
     expect(options.map((option) => option.textContent)).toContain("System");
   });
+
+  it("renders skipped subtitle upgrades as warning activity, not success", () => {
+    useActivityRecentQuery.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: {
+        items: [
+          {
+            id: 1,
+            created_at: "2026-05-07T00:00:00Z",
+            event_type: "subber.subtitle_upgrade_completed",
+            module: "subber",
+            title: "Subtitle upgrade skipped because it is turned off",
+            detail:
+              '{"result":"skipped","user_message":"Subtitle upgrade is turned off in Subber settings.","counts":{"checked":0,"upgraded":0,"skipped":0},"attempted":0,"upgraded":0}',
+          },
+        ],
+        total: 1,
+        system_events: 0,
+      },
+    });
+
+    render(<ActivityPage />);
+
+    expect(screen.getByText("Subtitle upgrade skipped")).toBeInTheDocument();
+    expect(screen.getByText("Upgrade skipped")).toBeInTheDocument();
+    expect(
+      screen.getByText("Subtitle upgrade is turned off in Subber settings."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Result")).toBeInTheDocument();
+  });
+
+  it("renders explicit labels for system repair activity", () => {
+    useActivityRecentQuery.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: {
+        items: [
+          {
+            id: 2,
+            created_at: "2026-05-07T00:10:00Z",
+            event_type: "system.reconciliation.repair",
+            module: "system",
+            title: "System repair action completed",
+            detail:
+              "remove_refiner_temp_artifact: Removed the Refiner temp artifact.",
+          },
+        ],
+        total: 1,
+        system_events: 1,
+      },
+    });
+
+    render(<ActivityPage />);
+
+    expect(
+      screen.getByRole("heading", { name: "System repair finished" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "remove_refiner_temp_artifact: Removed the Refiner temp artifact.",
+      ),
+    ).toBeInTheDocument();
+  });
 });

@@ -19,6 +19,17 @@ services:
       - "8788:8788"
     environment:
       MEDIAMOP_HOME: ${MEDIAMOP_HOME:-/data/mediamop}
+      # Optional UID/GID remap for the runtime account inside the container.
+      # MEDIAMOP_PUID: ${MEDIAMOP_PUID:-1000}
+      # MEDIAMOP_PGID: ${MEDIAMOP_PGID:-1000}
+      # Optional Refiner path ownership policies for configured watched/work/output folders.
+      # MEDIAMOP_CHOWN_WATCHED: ${MEDIAMOP_CHOWN_WATCHED:-false}
+      # MEDIAMOP_CHOWN_TEMP: ${MEDIAMOP_CHOWN_TEMP:-false}
+      # MEDIAMOP_CHOWN_OUTPUT: ${MEDIAMOP_CHOWN_OUTPUT:-false}
+      # Optional directory-only modes (octal) applied recursively to configured folders.
+      # MEDIAMOP_DIR_MODE_WATCHED: ${MEDIAMOP_DIR_MODE_WATCHED:-}
+      # MEDIAMOP_DIR_MODE_TEMP: ${MEDIAMOP_DIR_MODE_TEMP:-}
+      # MEDIAMOP_DIR_MODE_OUTPUT: ${MEDIAMOP_DIR_MODE_OUTPUT:-}
       # Optional. If omitted, the container generates and persists /data/mediamop/session.secret.
       # To provide your own value, generate one with: openssl rand -hex 32
       # MEDIAMOP_SESSION_SECRET: ${MEDIAMOP_SESSION_SECRET}

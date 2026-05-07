@@ -374,6 +374,56 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   opacity: 0.9;
 }
 
+.mm-sidebar-support {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+.mm-sidebar-support-title {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mm-text1);
+}
+
+.mm-sidebar-support-copy {
+  margin: 6px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--mm-text2);
+}
+
+.mm-sidebar-support-note {
+  margin: 6px 0 0;
+  font-size: 0.71875rem;
+  line-height: 1.45;
+  color: var(--mm-text3);
+}
+
+.mm-sidebar-support-link {
+  display: inline-flex;
+  margin-top: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--mm-gold);
+  text-decoration: none;
+}
+
+.mm-sidebar-support-link:hover {
+  color: var(--mm-accent-bright);
+  text-decoration: underline;
+}
+
+.mm-sidebar-support-link:focus-visible {
+  outline: 2px solid var(--mm-accent-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
 .mm-sidebar-signout {
   display: inline-flex;
   align-self: stretch;

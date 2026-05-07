@@ -50,12 +50,16 @@ export function useSuiteConfigurationBackupsQuery(enabled: boolean) {
   });
 }
 
-export function useSuiteUpdateStatusQuery(enabled = true) {
+export function useSuiteUpdateStatusQuery(
+  enabled = true,
+  refetchInterval: number | false = false,
+) {
   return useQuery({
     queryKey: suiteUpdateStatusQueryKey,
     queryFn: () => fetchSuiteUpdateStatus(),
     enabled,
-    staleTime: 60_000,
+    staleTime: enabled && refetchInterval ? 0 : 60_000,
+    refetchInterval,
     retry: false,
   });
 }

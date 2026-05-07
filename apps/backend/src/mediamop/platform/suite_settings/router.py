@@ -20,6 +20,7 @@ from mediamop.platform.suite_settings.schemas import (
     ConfigurationBundleImportIn,
     SuiteConfigurationBackupItemOut,
     SuiteConfigurationBackupListOut,
+    SuiteUpdateDiagnosticsOut,
     SuiteLogCountsOut,
     SuiteLogEntryOut,
     SuiteLogsOut,
@@ -43,7 +44,11 @@ from mediamop.platform.suite_settings.suite_configuration_backup_service import 
     get_suite_configuration_backup_file_path,
     list_suite_configuration_backups,
 )
-from mediamop.platform.suite_settings.update_service import build_suite_update_status, start_suite_update_now
+from mediamop.platform.suite_settings.update_service import (
+    build_suite_update_diagnostics,
+    build_suite_update_status,
+    start_suite_update_now,
+)
 
 router = APIRouter(tags=["suite"])
 
@@ -176,6 +181,14 @@ def get_suite_update_status(_user: UserPublicDep, settings: SettingsDep) -> Suit
     """Read-only update check for the signed-in Settings page."""
 
     return build_suite_update_status(settings)
+
+
+@router.get("/suite/update-diagnostics", response_model=SuiteUpdateDiagnosticsOut)
+@router.get("/suite/settings/update-diagnostics", response_model=SuiteUpdateDiagnosticsOut)
+def get_suite_update_diagnostics(_user: RequireOperatorDep, settings: SettingsDep) -> SuiteUpdateDiagnosticsOut:
+    """Operator-facing updater diagnostics for Windows package troubleshooting."""
+
+    return build_suite_update_diagnostics(settings)
 
 
 @router.get("/suite/update-now")

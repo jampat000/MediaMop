@@ -82,8 +82,8 @@ def clip_remux_pass_payload_for_activity(payload: dict[str, Any]) -> dict[str, A
             result=result,
             media_scope=out.get("media_scope") if isinstance(out.get("media_scope"), str) else None,
             counts={
-                "audio_removed": len(out.get("audio_removed") or []),
-                "subtitles_removed": len(out.get("subtitles_removed") or []),
+                "audio_removed": len(out.get("removed_audio") or []),
+                "subtitles_removed": len(out.get("removed_subtitles") or []),
             },
             user_message=remux_pass_activity_title(out),
             next_action=str(out.get("reason") or "") if result == DiagnosticResult.FAILED else None,

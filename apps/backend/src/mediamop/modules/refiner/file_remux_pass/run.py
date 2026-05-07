@@ -515,6 +515,8 @@ def run_refiner_file_remux_pass(
         "audio_after": after_a,
         "subs_before": before_s,
         "subs_after": after_s,
+        "removed_audio": list(plan.removed_audio),
+        "removed_subtitles": list(plan.removed_subtitles),
         "after_track_lines_meaning": "Planned output layout for this live pass.",
         "remux_required": remux_needed,
         "ffmpeg_argv": [str(x) for x in argv],

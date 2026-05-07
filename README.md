@@ -91,9 +91,9 @@ You can use, study, modify, and redistribute it under the license terms. If you 
 
 MediaMop is free to use. Support is optional.
 
-If MediaMop saves you time, you can support development from the in-app **Support MediaMop** card in Settings.
+If MediaMop saves you time or helps keep your library cleaner, you can support ongoing development.
 
-For this repository, the support button is driven by `VITE_SUPPORT_URL` in `apps/web/.env` (or your deployment environment). If that value is not set, the app stays fully usable and the support button is hidden in production.
+Set `VITE_SUPPORT_URL` in `apps/web/.env` or your deployment environment to show the in-app support button.
 
 ## Verification
 
@@ -140,5 +140,9 @@ docker compose up -d
 
 No env file is required for the default Docker path. The container will generate and persist
 its own session secret if you do not provide one.
+
+If you need the container to write as a specific NAS or host user, set `MEDIAMOP_PUID` /
+`MEDIAMOP_PGID` and the relevant `MEDIAMOP_CHOWN_*` flags for Refiner watched/work/output
+folders. Full examples and migration notes live in [`docker/README.md`](docker/README.md).
 
 Full Docker instructions: [`docker/README.md`](docker/README.md)
