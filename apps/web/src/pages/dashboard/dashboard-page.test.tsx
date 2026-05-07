@@ -283,4 +283,36 @@ describe("DashboardPage", () => {
       screen.getByText(/Refiner workers: Refiner expected 1 worker/),
     ).toBeInTheDocument();
   });
+
+  it("keeps long last-activity file names compact without losing the full title", () => {
+    const longTitle =
+      "Fantastic.Beasts.The.Secrets.of.Dumbledore.2022.UHD.BluRay.2160p.TrueHD.Atmos.FraMeSToR.mkv was processed successfully";
+    useActivityRecentQuery.mockReturnValue({
+      data: {
+        items: [
+          {
+            id: 1,
+            created_at: "2026-05-07T15:45:00Z",
+            event_type: "refiner.file.remux_pass_completed",
+            module: "refiner",
+            title: longTitle,
+            detail: null,
+          },
+        ],
+        total: 1,
+        system_events: 0,
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    const compactValue = screen.getByTitle(longTitle);
+    expect(compactValue).toHaveTextContent("…");
+    expect(compactValue.textContent).not.toBe(longTitle);
+    expect(screen.getByText("2026-05-07T15:45:00Z")).toBeInTheDocument();
+  });
 });

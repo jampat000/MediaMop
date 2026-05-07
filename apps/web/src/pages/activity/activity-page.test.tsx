@@ -158,4 +158,37 @@ describe("ActivityPage", () => {
       ),
     ).toBeInTheDocument();
   });
+
+  it("keeps long activity titles wrappable while preserving the full title", () => {
+    const fileName =
+      "Fantastic.Beasts.The.Secrets.of.Dumbledore.2022.UHD.BluRay.2160p.TrueHD.Atmos.FraMeSToR.mkv";
+    const longTitle = `${fileName} was processed successfully`;
+    useActivityRecentQuery.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: {
+        items: [
+          {
+            id: 3,
+            created_at: "2026-05-07T03:45:00Z",
+            event_type: "refiner.file_remux_pass_completed",
+            module: "refiner",
+            title: longTitle,
+            detail: JSON.stringify({
+              outcome: "ok",
+              relative_media_path: fileName,
+            }),
+          },
+        ],
+        total: 1,
+        system_events: 0,
+      },
+    });
+
+    render(<ActivityPage />);
+
+    const heading = screen.getByRole("heading", { name: longTitle });
+    expect(heading).toHaveAttribute("title", longTitle);
+    expect(heading.className).toContain("[overflow-wrap:anywhere]");
+  });
 });

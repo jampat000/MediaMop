@@ -54,6 +54,8 @@ The `Release` workflow:
 - runs the published Docker image and waits for `/health`
 - creates the GitHub Release
 
+`VITE_SUPPORT_URL` is a Vite build-time variable. Official releases should set the GitHub Actions repository variable `VITE_SUPPORT_URL` to `https://github.com/sponsors/jampat000` so the production frontend and packaged Windows installer include **Settings -> Support**. If that variable is missing, release builds still succeed, but production safely hides the Support tab.
+
 ## Registry authentication
 
 The release workflow publishes GHCR images with the repository `GITHUB_TOKEN` and
@@ -72,6 +74,13 @@ The release workflow publishes GHCR images with the repository `GITHUB_TOKEN` an
 ## Windows installer
 
 `MediaMopSetup.exe` is the supported Windows release artifact.
+
+If you build the Windows package locally and want the installer to include **Settings -> Support**, set `VITE_SUPPORT_URL` before running `packaging/windows/build.ps1`:
+
+```powershell
+$env:VITE_SUPPORT_URL = "https://github.com/sponsors/jampat000"
+powershell -ExecutionPolicy Bypass -File packaging/windows/build.ps1
+```
 
 Important upgrade requirement:
 
