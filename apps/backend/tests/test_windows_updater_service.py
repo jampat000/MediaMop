@@ -796,8 +796,71 @@ def test_launch_process_in_active_session_via_schtasks_creates_and_runs_launcher
     )
 
     assert pid == 0
+    assert any(command[:2] == ["schtasks", "/Query"] for command in created_commands)
     assert any(command[:2] == ["schtasks", "/Create"] for command in created_commands)
     assert any(command[:2] == ["schtasks", "/Run"] for command in created_commands)
+    assert any(command[:2] == ["schtasks", "/Delete"] for command in created_commands)
+
+
+def test_launch_process_in_active_session_via_schtasks_removes_stale_tasks_and_scripts(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    executable = tmp_path / "MediaMop.exe"
+    executable.write_text("binary", encoding="utf-8")
+    monkeypatch.setattr(updater_service, "_active_interactive_session_user", lambda: "APP-SERVER\\Administrator")
+    upgrades_dir = tmp_path / "upgrades"
+    upgrades_dir.mkdir(parents=True, exist_ok=True)
+    stale_scripts = [
+        upgrades_dir / "relaunch-MediaMop-Relaunch-old-a.cmd",
+        upgrades_dir / "relaunch-MediaMop-Relaunch-old-b.cmd",
+    ]
+    for script_path in stale_scripts:
+        script_path.write_text("@echo off\n", encoding="ascii")
+
+    observed_commands: list[list[str]] = []
+
+    class _Result:
+        def __init__(self, returncode: int = 0, stdout: str = "", stderr: str = "") -> None:
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+    def _fake_run(command: list[str], **kwargs):
+        observed_commands.append(command)
+        if command[:3] == ["schtasks", "/Query", "/FO"]:
+            return _Result(
+                stdout=(
+                    "TaskName:                             \\MediaMop-Relaunch-old-a\r\n"
+                    "TaskName:                             \\UnrelatedTask\r\n"
+                    "TaskName:                             \\MediaMop-Relaunch-old-b\r\n"
+                )
+            )
+        return _Result()
+
+    monkeypatch.setattr(updater_service.subprocess, "run", _fake_run)
+
+    updater_service._launch_process_in_active_session_via_schtasks(
+        executable,
+        args=["--no-browser"],
+        cwd=tmp_path,
+    )
+
+    for stale_script in stale_scripts:
+        assert stale_script.exists() is False
+    assert any(
+        command[:5] == ["schtasks", "/Delete", "/TN", "MediaMop-Relaunch-old-a", "/F"]
+        for command in observed_commands
+    )
+    assert any(
+        command[:5] == ["schtasks", "/Delete", "/TN", "MediaMop-Relaunch-old-b", "/F"]
+        for command in observed_commands
+    )
+    assert any(
+        command[:5] == ["schtasks", "/Delete", "/TN", "MediaMop-Relaunch", "/F"]
+        for command in observed_commands
+    )
 
 
 def test_packaged_helper_exits_after_launch_and_reconciliation_completes(

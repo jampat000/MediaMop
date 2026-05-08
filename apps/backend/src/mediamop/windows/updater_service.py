@@ -61,6 +61,9 @@ _TRUSTED_RELEASE_DOWNLOAD_HOSTS = {
 }
 _REDIRECT_STATUS_CODES = {301, 302, 303, 307, 308}
 _PROCESS_IDENTITY_SKEW_SECONDS = 5.0
+_RELAUNCH_TASK_NAME = "MediaMop-Relaunch"
+_RELAUNCH_TASK_PREFIX = f"\\{_RELAUNCH_TASK_NAME}"
+_RELAUNCH_SCRIPT_GLOB = "relaunch-MediaMop-Relaunch*.cmd"
 
 
 def _append_service_log(message: str) -> None:
@@ -331,15 +334,54 @@ def _active_interactive_session_user() -> str:
     return f"{domain}\\{username}" if domain else username
 
 
+def _delete_relaunch_schtask(task_name: str) -> None:
+    subprocess.run(
+        ["schtasks", "/Delete", "/TN", task_name, "/F"],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+
+def _cleanup_stale_relaunch_artifacts(upgrades_dir: Path) -> None:
+    for script_path in upgrades_dir.glob(_RELAUNCH_SCRIPT_GLOB):
+        try:
+            script_path.unlink()
+        except OSError as exc:
+            _append_service_log(f"Could not remove stale relaunch script {script_path}: {exc}")
+    query_result = subprocess.run(
+        ["schtasks", "/Query", "/FO", "LIST"],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if query_result.returncode != 0:
+        detail = (query_result.stderr or query_result.stdout or "").strip()
+        _append_service_log(f"Could not query scheduled tasks before tray relaunch: {detail}")
+        return
+    for raw_line in query_result.stdout.splitlines():
+        line = raw_line.strip()
+        if not line.lower().startswith("taskname:"):
+            continue
+        _, _, raw_task_name = line.partition(":")
+        task_name = raw_task_name.strip()
+        if not task_name.startswith(_RELAUNCH_TASK_PREFIX):
+            continue
+        _delete_relaunch_schtask(task_name.lstrip("\\"))
+
+
 def _launch_process_in_active_session_via_schtasks(
     executable: Path,
     *,
     args: list[str] | None = None,
     cwd: Path | None = None,
 ) -> int:
-    task_name = f"MediaMop-Relaunch-{uuid.uuid4().hex}"
+    task_name = _RELAUNCH_TASK_NAME
     upgrades_dir = _runtime_home() / "upgrades"
     upgrades_dir.mkdir(parents=True, exist_ok=True)
+    _cleanup_stale_relaunch_artifacts(upgrades_dir)
     launcher_script = upgrades_dir / f"relaunch-{task_name}.cmd"
     working_directory = (cwd or executable.parent).resolve()
     command = subprocess.list2cmdline([str(executable.resolve()), *(args or [])])
@@ -373,6 +415,7 @@ def _launch_process_in_active_session_via_schtasks(
             "HIGHEST",
             "/TR",
             str(launcher_script),
+            "/Z",
             "/F",
         ],
         check=False,
@@ -383,16 +426,19 @@ def _launch_process_in_active_session_via_schtasks(
     if create_result.returncode != 0:
         detail = (create_result.stderr or create_result.stdout or "").strip()
         raise OSError(create_result.returncode, f"Could not create MediaMop relaunch task. {detail}")
-    run_result = subprocess.run(
-        ["schtasks", "/Run", "/TN", task_name],
-        check=False,
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
-    if run_result.returncode != 0:
-        detail = (run_result.stderr or run_result.stdout or "").strip()
-        raise OSError(run_result.returncode, f"Could not run MediaMop relaunch task. {detail}")
+    try:
+        run_result = subprocess.run(
+            ["schtasks", "/Run", "/TN", task_name],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if run_result.returncode != 0:
+            detail = (run_result.stderr or run_result.stdout or "").strip()
+            raise OSError(run_result.returncode, f"Could not run MediaMop relaunch task. {detail}")
+    finally:
+        _delete_relaunch_schtask(task_name)
     return 0
 
 

@@ -2,7 +2,7 @@
   #define AppName "MediaMop"
 #endif
 #ifndef AppVersion
-#define AppVersion "2.1.12"
+#define AppVersion "2.1.13"
 #endif
 #ifndef OutputRoot
   #error OutputRoot must be provided to the installer build.
