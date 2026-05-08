@@ -294,6 +294,108 @@ def _active_interactive_session_id() -> int:
     raise RuntimeError("No active interactive Windows session was available for MediaMop relaunch.")
 
 
+def _active_interactive_session_user() -> str:
+    import ctypes
+    from ctypes import wintypes
+
+    WTSUserName = 5
+    WTSDomainName = 7
+
+    wtsapi32 = ctypes.WinDLL("wtsapi32", use_last_error=True)
+    session_id = _active_interactive_session_id()
+
+    def _query_session_string(info_class: int) -> str | None:
+        buffer = wintypes.LPWSTR()
+        bytes_returned = wintypes.DWORD()
+        if not wtsapi32.WTSQuerySessionInformationW(
+            0,
+            session_id,
+            info_class,
+            ctypes.byref(buffer),
+            ctypes.byref(bytes_returned),
+        ):
+            raise OSError(
+                ctypes.get_last_error(),
+                f"Could not query Windows session information class {info_class} for session {session_id}.",
+            )
+        try:
+            return str(buffer.value or "").strip() or None
+        finally:
+            if buffer:
+                wtsapi32.WTSFreeMemory(buffer)
+
+    username = _query_session_string(WTSUserName)
+    if not username:
+        raise RuntimeError(f"Interactive Windows session {session_id} does not have a logged-in user.")
+    domain = _query_session_string(WTSDomainName)
+    return f"{domain}\\{username}" if domain else username
+
+
+def _launch_process_in_active_session_via_schtasks(
+    executable: Path,
+    *,
+    args: list[str] | None = None,
+    cwd: Path | None = None,
+) -> int:
+    task_name = f"MediaMop-Relaunch-{uuid.uuid4().hex}"
+    upgrades_dir = _runtime_home() / "upgrades"
+    upgrades_dir.mkdir(parents=True, exist_ok=True)
+    launcher_script = upgrades_dir / f"relaunch-{task_name}.cmd"
+    working_directory = (cwd or executable.parent).resolve()
+    command = subprocess.list2cmdline([str(executable.resolve()), *(args or [])])
+    launcher_script.write_text(
+        "\n".join(
+            [
+                "@echo off",
+                f'cd /d "{working_directory}"',
+                f"start \"\" {command}",
+                "exit /b 0",
+            ]
+        )
+        + "\n",
+        encoding="ascii",
+    )
+    session_user = _active_interactive_session_user()
+    create_result = subprocess.run(
+        [
+            "schtasks",
+            "/Create",
+            "/TN",
+            task_name,
+            "/SC",
+            "ONCE",
+            "/ST",
+            "23:59",
+            "/RU",
+            session_user,
+            "/IT",
+            "/RL",
+            "HIGHEST",
+            "/TR",
+            str(launcher_script),
+            "/F",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if create_result.returncode != 0:
+        detail = (create_result.stderr or create_result.stdout or "").strip()
+        raise OSError(create_result.returncode, f"Could not create MediaMop relaunch task. {detail}")
+    run_result = subprocess.run(
+        ["schtasks", "/Run", "/TN", task_name],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if run_result.returncode != 0:
+        detail = (run_result.stderr or run_result.stdout or "").strip()
+        raise OSError(run_result.returncode, f"Could not run MediaMop relaunch task. {detail}")
+    return 0
+
+
 def _launch_process_in_active_session(
     executable: Path,
     *,
@@ -423,6 +525,8 @@ def _launch_process_in_active_session(
                     f"{create_process_error.strerror} {fallback_error.strerror}",
                 )
         return int(process_info.dwProcessId)
+    except OSError:
+        return _launch_process_in_active_session_via_schtasks(executable, args=args, cwd=cwd)
     finally:
         if process_info.hThread:
             kernel32.CloseHandle(process_info.hThread)
@@ -671,6 +775,29 @@ def _state_matches_installed_target(target_version: str) -> tuple[bool, dict[str
         and not missing_required
     )
     return matched, diagnostics
+
+
+def _diagnostics_prove_completed_desktop_upgrade(
+    target_version: str,
+    diagnostics: dict[str, object],
+) -> bool:
+    packaged_version = str(diagnostics.get("packaged_version") or "").strip() or None
+    backend_version = str(diagnostics.get("backend_version") or "").strip() or None
+    backend_ready = bool(diagnostics.get("backend_ready"))
+    missing_required = diagnostics.get("missing_required_files")
+    tray_running = bool(diagnostics.get("tray_running"))
+    interactive_session_available = bool(
+        diagnostics.get("interactive_session_available")
+        if "interactive_session_available" in diagnostics
+        else _interactive_session_available()
+    )
+    return (
+        packaged_version == target_version
+        and backend_ready
+        and backend_version == target_version
+        and not missing_required
+        and (not interactive_session_available or tray_running)
+    )
 
 
 def _state_running_version_exceeds_target(
@@ -1222,13 +1349,7 @@ def _verify_install(target_version: str) -> tuple[bool, dict[str, object], str]:
         backend_version = str(diagnostics.get("backend_version") or "").strip() or None
         tray_running = bool(diagnostics.get("tray_running"))
         missing_required = diagnostics.get("missing_required_files")
-        if (
-            packaged_version == target_version
-            and not missing_required
-            and backend_ready
-            and backend_version == target_version
-            and (not interactive_session_available or tray_running)
-        ):
+        if _diagnostics_prove_completed_desktop_upgrade(target_version, diagnostics):
             return True, diagnostics, f"Upgrade completed. Running version: {target_version}."
         if packaged_version == target_version and not missing_required and (
             not backend_ready or (interactive_session_available and not tray_running)
@@ -1473,7 +1594,11 @@ def _reconcile_attempt_worker(attempt_id: str) -> None:
         target_version = normalize_release_version(str(state.get("target_version") or ""))
         if target_version:
             matched, install_diagnostics = _state_matches_installed_target(target_version)
-            if matched and not _installer_process_is_running(state):
+            if (
+                matched
+                and not _installer_process_is_running(state)
+                and _diagnostics_prove_completed_desktop_upgrade(target_version, install_diagnostics)
+            ):
                 stale_reason = (
                     "Persisted updater state could not prove the original installer process was still active, "
                     f"but MediaMop {target_version} is already installed and running."
@@ -1595,7 +1720,7 @@ def _maybe_reconcile_pending_attempt() -> None:
     installer_running = _installer_process_is_running(state)
     if target_version and phase in _RECOVERABLE_PHASES and not installer_running:
         matched, install_diagnostics = _state_matches_installed_target(target_version)
-        if matched:
+        if matched and _diagnostics_prove_completed_desktop_upgrade(target_version, install_diagnostics):
             stale_reason = (
                 "Persisted updater state could not prove the original installer process was still active, "
                 f"but MediaMop {target_version} is already installed and running."
@@ -1615,6 +1740,22 @@ def _maybe_reconcile_pending_attempt() -> None:
                     "reconciled_from_phase": phase,
                 },
                 stale_reason=stale_reason,
+            )
+            return
+        if matched and not attempt_id:
+            _mark_failed(
+                message="Upgrade failed.",
+                last_error=(
+                    f"MediaMop {target_version} is installed, but the desktop tray host is not running "
+                    "in the active Windows session."
+                ),
+                target_version=target_version,
+                current_version_seen=target_version,
+                diagnostics={
+                    **install_diagnostics,
+                    "reconciled_after_restart": True,
+                    "reconciled_from_phase": phase,
+                },
             )
             return
         exceeded, install_diagnostics, observed_version = _state_running_version_exceeds_target(target_version)
