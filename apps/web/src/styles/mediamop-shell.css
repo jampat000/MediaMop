@@ -178,10 +178,10 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   align-items: flex-start;
   text-align: left;
   padding: 0 calc(16px * var(--mm-density-ui-scale))
-    calc(8px * var(--mm-density-ui-scale));
+    calc(22px * var(--mm-density-ui-scale));
   border-bottom: 1px solid var(--mm-border);
   margin: 0 calc(10px * var(--mm-density-ui-scale))
-    calc(6px * var(--mm-density-ui-scale));
+    calc(10px * var(--mm-density-ui-scale));
   text-decoration: none;
   color: inherit;
   transition: opacity 0.15s ease;
