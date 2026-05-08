@@ -13,7 +13,6 @@ export function BrandHeaderLink({
       <div className="mm-sidebar-brand-logo">
         <MediaMopLogo variant="sidebar" />
       </div>
-      <p className="mm-sidebar-product-title">{productTitle}</p>
       <p className="mm-sidebar-tagline">
         Keep your library clean and under control.
       </p>

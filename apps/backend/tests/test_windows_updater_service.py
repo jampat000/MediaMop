@@ -839,6 +839,11 @@ def test_packaged_helper_exits_after_launch_and_reconciliation_completes(
     monkeypatch.setattr(updater_service, "_pid_is_running", lambda _pid: False)
     monkeypatch.setattr(
         updater_service,
+        "_state_running_version_exceeds_target",
+        lambda _target_version: (False, {}, None),
+    )
+    monkeypatch.setattr(
+        updater_service,
         "_verify_install",
         lambda target_version: (
             True,
@@ -869,11 +874,18 @@ def test_reconcile_attempt_worker_fails_when_installer_does_not_exit_in_time(
             "diagnostics": {"helper_pid": None, "installer_pid": 6789},
         }
     )
-    clock = iter([0.0, float(updater_service._INSTALLER_WAIT_TIMEOUT_SECONDS + 1)])
+    timeout_time = float(updater_service._INSTALLER_WAIT_TIMEOUT_SECONDS + 1)
+    clock = iter([0.0, timeout_time])
 
-    monkeypatch.setattr(updater_service.time, "time", lambda: next(clock))
+    monkeypatch.setattr(updater_service.time, "time", lambda: next(clock, timeout_time))
     monkeypatch.setattr(updater_service.time, "sleep", lambda _seconds: None)
     monkeypatch.setattr(updater_service, "_installer_process_is_running", lambda _state: True)
+    monkeypatch.setattr(updater_service, "_state_matches_installed_target", lambda _target_version: (False, {}))
+    monkeypatch.setattr(
+        updater_service,
+        "_state_running_version_exceeds_target",
+        lambda _target_version: (False, {}, None),
+    )
 
     updater_service._reconcile_attempt_worker("attempt-123")
     state = updater_service._read_state()
@@ -1212,6 +1224,11 @@ def test_maybe_reconcile_pending_attempt_does_not_mark_completed_without_tray_in
     monkeypatch.setattr(updater_service, "_installer_process_is_running", lambda _state: False)
     monkeypatch.setattr(updater_service, "_interactive_session_available", lambda: True)
     monkeypatch.setattr(updater_service, "_RECONCILE_LOCK", threading.Lock())
+    monkeypatch.setattr(
+        updater_service,
+        "_state_running_version_exceeds_target",
+        lambda _target_version: (False, {}, None),
+    )
 
     class _ImmediateThread:
         def __init__(self, *, target, args, daemon, name) -> None:
@@ -1505,6 +1522,12 @@ def test_maybe_reconcile_pending_attempt_resumes_verification_for_recoverable_ph
     monkeypatch.setattr(updater_service, "_pid_is_running", lambda _pid: False)
     monkeypatch.setattr(updater_service, "_RECONCILE_LOCK", threading.Lock())
     monkeypatch.setattr(updater_service.threading, "Thread", _ImmediateThread)
+    monkeypatch.setattr(updater_service, "_state_matches_installed_target", lambda _target_version: (False, {}))
+    monkeypatch.setattr(
+        updater_service,
+        "_state_running_version_exceeds_target",
+        lambda _target_version: (False, {}, None),
+    )
     monkeypatch.setattr(
         updater_service,
         "_verify_install",
@@ -1543,6 +1566,12 @@ def test_maybe_reconcile_pending_attempt_fails_stale_recoverable_phases(
         lambda _state: updater_service._STALE_ATTEMPT_SECONDS + 5,
     )
     monkeypatch.setattr(updater_service, "_pid_is_running", lambda _pid: False)
+    monkeypatch.setattr(updater_service, "_state_matches_installed_target", lambda _target_version: (False, {}))
+    monkeypatch.setattr(
+        updater_service,
+        "_state_running_version_exceeds_target",
+        lambda _target_version: (False, {}, None),
+    )
 
     updater_service._maybe_reconcile_pending_attempt()
     state = updater_service._read_state()
