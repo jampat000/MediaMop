@@ -340,6 +340,16 @@ def _launch_process_in_active_session(
     advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
     userenv = ctypes.WinDLL("userenv", use_last_error=True)
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    secur32 = ctypes.WinDLL("advapi32", use_last_error=True)
+
+    TOKEN_ASSIGN_PRIMARY = 0x0001
+    TOKEN_DUPLICATE = 0x0002
+    TOKEN_QUERY = 0x0008
+    TOKEN_ADJUST_DEFAULT = 0x0080
+    TOKEN_ADJUST_SESSIONID = 0x0100
+    SecurityImpersonation = 2
+    TokenPrimary = 1
+    LOGON_WITH_PROFILE = 0x00000001
 
     session_id = _active_interactive_session_id()
     user_token = wintypes.HANDLE()
@@ -348,8 +358,19 @@ def _launch_process_in_active_session(
 
     environment = ctypes.c_void_p()
     process_info = _ProcessInformation()
+    primary_token = wintypes.HANDLE()
     try:
-        if not userenv.CreateEnvironmentBlock(ctypes.byref(environment), user_token, False):
+        if not secur32.DuplicateTokenEx(
+            user_token,
+            TOKEN_ASSIGN_PRIMARY | TOKEN_DUPLICATE | TOKEN_QUERY | TOKEN_ADJUST_DEFAULT | TOKEN_ADJUST_SESSIONID,
+            None,
+            SecurityImpersonation,
+            TokenPrimary,
+            ctypes.byref(primary_token),
+        ):
+            raise OSError(ctypes.get_last_error(), "Could not create a primary token for interactive relaunch.")
+
+        if not userenv.CreateEnvironmentBlock(ctypes.byref(environment), primary_token, False):
             raise OSError(ctypes.get_last_error(), "Could not create the environment block for interactive relaunch.")
 
         startup_info = _StartupInfo()
@@ -357,23 +378,50 @@ def _launch_process_in_active_session(
         startup_info.lpDesktop = "winsta0\\default"
         command = [str(executable.resolve()), *(args or [])]
         command_line = subprocess.list2cmdline(command)
+        command_line_buffer = ctypes.create_unicode_buffer(command_line)
+        working_directory = str((cwd or executable.parent).resolve())
         creationflags = int(getattr(subprocess, "CREATE_UNICODE_ENVIRONMENT", 0)) | int(
             getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
         )
+        create_process_error: OSError | None = None
         if not advapi32.CreateProcessAsUserW(
-            user_token,
+            primary_token,
             None,
-            command_line,
+            command_line_buffer,
             None,
             None,
             False,
             creationflags,
             environment,
-            str((cwd or executable.parent).resolve()),
+            working_directory,
             ctypes.byref(startup_info),
             ctypes.byref(process_info),
         ):
-            raise OSError(ctypes.get_last_error(), "Could not relaunch MediaMop in the active Windows session.")
+            create_process_error = OSError(
+                ctypes.get_last_error(),
+                "Could not relaunch MediaMop in the active Windows session via CreateProcessAsUserW.",
+            )
+            process_info = _ProcessInformation()
+            fallback_command_line_buffer = ctypes.create_unicode_buffer(command_line)
+            if not advapi32.CreateProcessWithTokenW(
+                primary_token,
+                LOGON_WITH_PROFILE,
+                None,
+                fallback_command_line_buffer,
+                creationflags,
+                environment,
+                working_directory,
+                ctypes.byref(startup_info),
+                ctypes.byref(process_info),
+            ):
+                fallback_error = OSError(
+                    ctypes.get_last_error(),
+                    "Could not relaunch MediaMop in the active Windows session via CreateProcessWithTokenW.",
+                )
+                raise OSError(
+                    fallback_error.errno or create_process_error.errno or ctypes.get_last_error(),
+                    f"{create_process_error.strerror} {fallback_error.strerror}",
+                )
         return int(process_info.dwProcessId)
     finally:
         if process_info.hThread:
@@ -382,6 +430,8 @@ def _launch_process_in_active_session(
             kernel32.CloseHandle(process_info.hProcess)
         if environment:
             userenv.DestroyEnvironmentBlock(environment)
+        if primary_token:
+            kernel32.CloseHandle(primary_token)
         if user_token:
             kernel32.CloseHandle(user_token)
 
@@ -1096,6 +1146,16 @@ def _start_packaged_tray_in_active_session(*, open_browser: bool = False) -> int
     return _launch_process_in_active_session(tray_exe, args=args, cwd=install_root)
 
 
+def _interactive_session_available() -> bool:
+    if os.name != "nt":
+        return False
+    try:
+        _active_interactive_session_id()
+    except Exception:
+        return False
+    return True
+
+
 def _required_install_paths(install_root: Path) -> list[tuple[str, Path]]:
     return [
         ("MediaMop.exe", install_root / "MediaMop.exe"),
@@ -1143,12 +1203,14 @@ def _verify_install(target_version: str) -> tuple[bool, dict[str, object], str]:
     tray_relaunch_started_at: float | None = None
     tray_restart_error: str | None = None
     server_restart_error: str | None = None
+    interactive_session_available = _interactive_session_available()
     last_diagnostics: dict[str, object] = _collect_install_diagnostics(target_version, port=port)
     while time.time() < deadline:
         diagnostics = _collect_install_diagnostics(target_version, port=port)
         diagnostics["restarted_server_pid"] = started_server_pid
         diagnostics["restarted_tray_pid"] = restarted_tray_pid
         diagnostics["tray_relaunch_attempted"] = tray_relaunch_attempted
+        diagnostics["interactive_session_available"] = interactive_session_available
         if tray_restart_error:
             diagnostics["tray_restart_error"] = tray_restart_error
         if server_restart_error:
@@ -1156,10 +1218,19 @@ def _verify_install(target_version: str) -> tuple[bool, dict[str, object], str]:
         packaged_version = str(diagnostics.get("packaged_version") or "").strip() or None
         backend_ready = bool(diagnostics.get("backend_ready"))
         backend_version = str(diagnostics.get("backend_version") or "").strip() or None
+        tray_running = bool(diagnostics.get("tray_running"))
         missing_required = diagnostics.get("missing_required_files")
-        if packaged_version == target_version and not missing_required and backend_ready and backend_version == target_version:
+        if (
+            packaged_version == target_version
+            and not missing_required
+            and backend_ready
+            and backend_version == target_version
+            and (not interactive_session_available or tray_running)
+        ):
             return True, diagnostics, f"Upgrade completed. Running version: {target_version}."
-        if packaged_version == target_version and not missing_required and not backend_ready:
+        if packaged_version == target_version and not missing_required and (
+            not backend_ready or (interactive_session_available and not tray_running)
+        ):
             if not tray_relaunch_attempted:
                 tray_relaunch_attempted = True
                 tray_relaunch_started_at = time.time()
@@ -1210,6 +1281,8 @@ def _verify_install(target_version: str) -> tuple[bool, dict[str, object], str]:
         reason = (
             f"Installed package metadata still reports {packaged_version or 'unknown'} instead of {target_version}."
         )
+    elif interactive_session_available and not bool(last_diagnostics.get("tray_running")):
+        reason = "MediaMop upgraded successfully, but the desktop tray host did not relaunch in the active Windows session."
     elif backend_version != target_version:
         reason = f"Running backend still reports {backend_version or 'unknown'} instead of {target_version}."
     else:

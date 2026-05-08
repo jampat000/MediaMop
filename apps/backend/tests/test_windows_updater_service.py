@@ -596,6 +596,7 @@ def test_verify_install_relaunches_tray_before_marking_upgrade_complete(
     clock = iter(range(1000))
 
     monkeypatch.setattr(updater_service, "_read_runtime_port", lambda: 8788)
+    monkeypatch.setattr(updater_service, "_interactive_session_available", lambda: True)
     monkeypatch.setattr(
         updater_service,
         "_collect_install_diagnostics",
@@ -662,6 +663,7 @@ def test_verify_install_falls_back_to_server_when_tray_relaunch_is_unavailable(
         pid = 5566
 
     monkeypatch.setattr(updater_service, "_read_runtime_port", lambda: 8788)
+    monkeypatch.setattr(updater_service, "_interactive_session_available", lambda: False)
     monkeypatch.setattr(
         updater_service,
         "_collect_install_diagnostics",
@@ -687,6 +689,79 @@ def test_verify_install_falls_back_to_server_when_tray_relaunch_is_unavailable(
     assert observed["server_calls"] == 1
     assert diagnostics["restarted_server_pid"] == 5566
     assert diagnostics["tray_restart_error"] == "no interactive session"
+
+
+def test_verify_install_fails_when_active_session_exists_but_tray_does_not_relaunch(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    target_version = "2.1.5"
+    observed = {"server_calls": 0}
+    diagnostics_iter = iter(
+        [
+            {
+                "packaged_version": target_version,
+                "missing_required_files": [],
+                "backend_ready": False,
+                "backend_version": None,
+                "tray_running": False,
+            },
+            {
+                "packaged_version": target_version,
+                "missing_required_files": [],
+                "backend_ready": False,
+                "backend_version": None,
+                "tray_running": False,
+            },
+            {
+                "packaged_version": target_version,
+                "missing_required_files": [],
+                "backend_ready": True,
+                "backend_version": target_version,
+                "tray_running": False,
+            },
+            {
+                "packaged_version": target_version,
+                "missing_required_files": [],
+                "backend_ready": True,
+                "backend_version": target_version,
+                "tray_running": False,
+            },
+        ]
+    )
+    clock = iter([0.0, 1.0, 2.0, float(updater_service._VERIFY_INSTALL_TIMEOUT_SECONDS + 5)])
+
+    class _ServerProcess:
+        pid = 5566
+
+    monkeypatch.setattr(updater_service, "_read_runtime_port", lambda: 8788)
+    monkeypatch.setattr(updater_service, "_interactive_session_available", lambda: True)
+    monkeypatch.setattr(
+        updater_service,
+        "_collect_install_diagnostics",
+        lambda _target_version, *, port: next(diagnostics_iter),
+    )
+    monkeypatch.setattr(
+        updater_service,
+        "_start_packaged_tray_in_active_session",
+        lambda *, open_browser=False: (_ for _ in ()).throw(OSError(87, "Could not relaunch MediaMop in the active Windows session.")),
+    )
+    monkeypatch.setattr(
+        updater_service,
+        "_start_packaged_server",
+        lambda _port: observed.__setitem__("server_calls", observed["server_calls"] + 1) or _ServerProcess(),
+    )
+    monkeypatch.setattr(updater_service.time, "time", lambda: float(next(clock)))
+    monkeypatch.setattr(updater_service.time, "sleep", lambda _seconds: None)
+
+    verified, diagnostics, message = updater_service._verify_install(target_version)
+
+    assert verified is False
+    assert observed["server_calls"] == 1
+    assert diagnostics["restarted_server_pid"] == 5566
+    assert diagnostics["interactive_session_available"] is True
+    assert "desktop tray host did not relaunch" in message.lower()
 
 
 def test_packaged_helper_exits_after_launch_and_reconciliation_completes(
