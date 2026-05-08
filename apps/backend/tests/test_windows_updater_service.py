@@ -1264,6 +1264,109 @@ def test_status_endpoint_hides_superseded_failed_attempt(
     assert body["attempt_id"] is None
 
 
+def test_maybe_reconcile_pending_attempt_archives_superseded_completed_attempt_when_running_version_is_newer(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    updater_service._persist_state(
+        {
+            **updater_service._fresh_attempt_state("2.1.5", "attempt-123"),
+            "phase": "completed",
+            "message": "Upgrade completed. Running version: 2.1.5.",
+            "current_version_seen": "2.1.5",
+            "last_completed_at": "2026-05-08T00:02:11+00:00",
+        }
+    )
+    monkeypatch.setattr(updater_service, "_state_matches_installed_target", lambda _target_version: (False, {}))
+    monkeypatch.setattr(
+        updater_service,
+        "_state_running_version_exceeds_target",
+        lambda target_version: (
+            True,
+            {"backend_version": "2.1.6", "packaged_version": "2.1.6"},
+            "2.1.6",
+        ),
+    )
+
+    updater_service._maybe_reconcile_pending_attempt()
+    state = updater_service._read_state()
+
+    assert state["phase"] == "idle"
+    assert state["attempt_id"] is None
+    assert state["target_version"] is None
+    assert state["current_version_seen"] == "2.1.6"
+    assert state["diagnostics"]["archived_superseded_attempt"] is True
+    assert state["diagnostics"]["archived_from_phase"] == "completed"
+    assert state["diagnostics"]["archived_target_version"] == "2.1.5"
+    assert "newer version 2.1.6" in state["diagnostics"]["stale_reason"].lower()
+
+
+def test_status_endpoint_hides_superseded_completed_attempt(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    updater_service._persist_state(
+        {
+            **updater_service._fresh_attempt_state("2.1.5", "attempt-123"),
+            "phase": "completed",
+            "message": "Upgrade completed. Running version: 2.1.5.",
+            "current_version_seen": "2.1.5",
+            "last_completed_at": "2026-05-08T00:02:11+00:00",
+        }
+    )
+    monkeypatch.setattr(updater_service, "_state_matches_installed_target", lambda _target_version: (False, {}))
+    monkeypatch.setattr(
+        updater_service,
+        "_state_running_version_exceeds_target",
+        lambda target_version: (
+            True,
+            {"backend_version": "2.1.6", "packaged_version": "2.1.6"},
+            "2.1.6",
+        ),
+    )
+    with monkeypatch.context() as scoped:
+        scoped.setattr(updater_service.os, "name", "nt")
+        scoped.setattr(updater_service, "_load_or_create_token", lambda: "token")
+        app = updater_service.create_updater_app()
+        with TestClient(app, raise_server_exceptions=False) as client:
+            res = client.get(
+                "/api/v1/status",
+                headers={"X-MediaMop-Updater-Token": "token"},
+            )
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["phase"] == "idle"
+    assert body["is_active"] is False
+    assert body["blocks_new_update"] is False
+    assert body["attempt_id"] is None
+
+
+def test_read_state_accepts_utf8_bom(tmp_path: Path, monkeypatch) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    state_path = updater_service._state_path()
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_bytes(
+        (
+            "\ufeff"
+            + json.dumps(
+                {
+                    "phase": "completed",
+                    "message": "Upgrade completed. Running version: 2.1.5.",
+                    "target_version": "2.1.5",
+                }
+            )
+        ).encode("utf-8")
+    )
+
+    state = updater_service._read_state()
+
+    assert state["phase"] == "completed"
+    assert state["target_version"] == "2.1.5"
+
+
 @pytest.mark.parametrize("phase", ["installer_running", "restarting", "verifying_install"])
 def test_maybe_reconcile_pending_attempt_resumes_verification_for_recoverable_phases(
     tmp_path: Path,

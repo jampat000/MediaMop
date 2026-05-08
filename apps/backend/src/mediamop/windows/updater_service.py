@@ -525,7 +525,7 @@ def _default_state() -> dict[str, object]:
 def _read_state_unlocked() -> dict[str, object]:
     path = _state_path()
     try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
+        raw = json.loads(path.read_text(encoding="utf-8-sig"))
     except FileNotFoundError:
         return _default_state()
     except OSError as exc:
@@ -750,10 +750,10 @@ def _mark_failed(
     )
 
 
-def _archive_superseded_failed_attempt() -> None:
+def _archive_superseded_terminal_attempt() -> None:
     state = _read_state()
     phase = str(state.get("phase") or "").strip().lower()
-    if phase != "failed":
+    if phase not in {"failed", "completed"}:
         return
     target_version = normalize_release_version(str(state.get("target_version") or ""))
     if not target_version:
@@ -765,6 +765,8 @@ def _archive_superseded_failed_attempt() -> None:
     merged_diagnostics = dict(install_diagnostics)
 
     if matched:
+        if phase == "completed":
+            return
         archive_reason = (
             f"A previous upgrade attempt for MediaMop {target_version} failed, "
             "but that version is now already installed and running."
@@ -799,8 +801,8 @@ def _archive_superseded_failed_attempt() -> None:
     archived_diagnostics = {key: value for key, value in archived_diagnostics.items() if value is not None}
 
     _append_service_log(
-        "Updater status archived a historical failed attempt because the target version is already installed "
-        f"(attempt_id={attempt_id or 'unknown'}, target_version={target_version}, observed_version={observed_version})."
+        "Updater status archived a historical terminal attempt because the target version is no longer current "
+        f"(phase={phase}, attempt_id={attempt_id or 'unknown'}, target_version={target_version}, observed_version={observed_version})."
     )
     _transition_state(
         "idle",
@@ -1580,7 +1582,7 @@ def _reconcile_attempt_worker(attempt_id: str) -> None:
 
 
 def _maybe_reconcile_pending_attempt() -> None:
-    _archive_superseded_failed_attempt()
+    _archive_superseded_terminal_attempt()
     state = _read_state()
     phase = str(state.get("phase") or "").strip().lower()
     if phase not in _ACTIVE_PHASES:
