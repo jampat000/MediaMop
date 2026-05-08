@@ -22,7 +22,7 @@ import type {
   SuiteSettingsOut,
   SuiteUpdateStatusOut,
 } from "../../lib/suite/types";
-import { SettingsPage } from "./settings-page";
+import { SettingsPage, verifiedUpgradeRefreshKey } from "./settings-page";
 
 const operatorMe: UserPublic = { id: 1, username: "alice", role: "operator" };
 const viewerMe: UserPublic = { id: 2, username: "bob", role: "viewer" };
@@ -747,6 +747,57 @@ describe("SettingsPage (suite settings)", () => {
     expect(
       screen.getByText("Upgrade completed. Running version: 2.0.8."),
     ).toBeInTheDocument();
+  });
+
+  it("computes a refresh key only after a verified Windows upgrade completes", () => {
+    expect(
+      verifiedUpgradeRefreshKey(
+        {
+          ...windowsUpdateAvailableStatus,
+          current_version: "2.0.8",
+          status: "up_to_date",
+          summary: "This install is already on MediaMop 2.0.8.",
+        },
+        {
+          phase: "completed",
+          message: "Upgrade completed. Running version: 2.0.8.",
+          attempt_id: "attempt-verified",
+          target_version: "2.0.8",
+          current_version_seen: "2.0.8",
+        },
+        {
+          attemptId: "attempt-verified",
+          targetVersion: "2.0.8",
+          disconnects: 0,
+          active: true,
+          startedAtMs: Date.now(),
+          timedOutReason: null,
+        },
+      ),
+    ).toBe("attempt-verified:2.0.8");
+  });
+
+  it("does not compute a refresh key before the running version matches the verified target", () => {
+    expect(
+      verifiedUpgradeRefreshKey(
+        windowsUpdateAvailableStatus,
+        {
+          phase: "completed",
+          message: "Upgrade completed. Running version: 2.0.8.",
+          attempt_id: "attempt-unverified",
+          target_version: "2.0.8",
+          current_version_seen: "2.0.7",
+        },
+        {
+          attemptId: "attempt-unverified",
+          targetVersion: "2.0.8",
+          disconnects: 0,
+          active: true,
+          startedAtMs: Date.now(),
+          timedOutReason: null,
+        },
+      ),
+    ).toBeNull();
   });
 
   it("shows failed upgrade diagnostics with log paths", () => {

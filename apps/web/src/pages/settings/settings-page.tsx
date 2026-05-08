@@ -3,6 +3,7 @@ import type { ChangeEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageLoading } from "../../components/shared/page-loading";
+import { browserWindow } from "../../lib/browser-window";
 import {
   isHttpErrorFromApi,
   isLikelyNetworkFailure,
@@ -458,6 +459,31 @@ function describeUpgradeProgress(
   }
 }
 
+export function verifiedUpgradeRefreshKey(
+  status: SuiteUpdateStatusOut | undefined,
+  progress: SuiteUpgradeProgressOut | null | undefined,
+  monitor: UpgradeMonitor | null,
+): string | null {
+  if (!status || status.install_type !== "windows" || !monitor?.active) {
+    return null;
+  }
+  const targetVersion = (
+    progress?.target_version ||
+    monitor.targetVersion ||
+    ""
+  ).trim();
+  if (!targetVersion || status.current_version !== targetVersion) {
+    return null;
+  }
+  if (progress && progress.phase !== "completed") {
+    return null;
+  }
+  return [
+    progress?.attempt_id || monitor.attemptId || "unknown-attempt",
+    targetVersion,
+  ].join(":");
+}
+
 /** Settings: General (timezone, display density, configuration export), Security, Logs (retention + recent events). */
 export function SettingsPage() {
   const navigate = useNavigate();
@@ -518,6 +544,7 @@ export function SettingsPage() {
   const [logLevel, setLogLevel] = useState<LogLevelFilter>("");
   const [tracebacksOnly, setTracebacksOnly] = useState(false);
   const restoreInputRef = useRef<HTMLInputElement>(null);
+  const upgradeRefreshTriggeredRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!settingsQ.data) {
@@ -701,16 +728,12 @@ export function SettingsPage() {
       });
       return;
     }
-    const targetVersion = (
-      progress?.target_version ||
-      upgradeMonitor.targetVersion ||
-      ""
-    ).trim();
-    if (
-      targetVersion &&
-      updateStatusQ.data.current_version === targetVersion &&
-      (progress?.phase === "completed" || !progress)
-    ) {
+    const refreshAttemptKey = verifiedUpgradeRefreshKey(
+      updateStatusQ.data,
+      progress,
+      upgradeMonitor,
+    );
+    if (refreshAttemptKey) {
       setUpgradePollActive(false);
       setUpgradeMonitor((current) =>
         current ? { ...current, active: false, timedOutReason: null } : current,
@@ -721,6 +744,10 @@ export function SettingsPage() {
           progress?.message ||
           `Upgrade completed. Running version: ${updateStatusQ.data.current_version}.`,
       });
+      if (upgradeRefreshTriggeredRef.current !== refreshAttemptKey) {
+        upgradeRefreshTriggeredRef.current = refreshAttemptKey;
+        browserWindow.reloadCurrentPage();
+      }
     }
   }, [upgradeMonitor, updateStatusQ.data]);
 
@@ -985,6 +1012,7 @@ export function SettingsPage() {
 
   async function handleUpgradeNow() {
     setUpgradeNotice(null);
+    upgradeRefreshTriggeredRef.current = null;
     try {
       const result = await updateNow.mutateAsync();
       if (result.status === "started") {

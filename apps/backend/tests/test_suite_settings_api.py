@@ -7,9 +7,10 @@ from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from starlette.testclient import TestClient
 
+from mediamop.api.factory import create_app
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.platform.activity import constants as act_c
@@ -20,7 +21,9 @@ from mediamop.platform.suite_settings.release_catalog import (
     GitHubReleaseRecord,
 )
 from mediamop.platform.suite_settings.model import SuiteSettingsRow
-from mediamop.platform.suite_settings.service import apply_suite_settings_put
+from mediamop.platform.suite_settings.service import apply_suite_settings_put, ensure_suite_settings_row
+from mediamop.platform.auth.models import User
+from mediamop.platform.auth.password import hash_password
 from mediamop.platform.suite_settings.suite_configuration_backup_periodic import run_suite_configuration_backup_tick
 from mediamop.platform.suite_settings.suite_configuration_backup_service import list_suite_configuration_backups
 from mediamop.platform.suite_settings.logs_retention_periodic import (
@@ -29,7 +32,12 @@ from mediamop.platform.suite_settings.logs_retention_periodic import (
 )
 from mediamop.platform.suite_settings.update_service import start_suite_update_now
 
-from tests.integration_helpers import auth_post, csrf as fetch_csrf, trusted_browser_origin_headers
+from tests.integration_helpers import (
+    auth_post,
+    csrf as fetch_csrf,
+    reset_user_tables,
+    trusted_browser_origin_headers,
+)
 
 
 def _release_record(version: str = "1.2.3") -> GitHubReleaseRecord:
@@ -96,6 +104,59 @@ def test_suite_settings_get_default_shape(client_with_admin: TestClient) -> None
     assert body["configuration_backup_preferred_time"] == "02:00"
     assert body["configuration_backup_last_run_at"] is None
     assert "updated_at" in body
+
+
+def test_ensure_suite_settings_row_defaults_to_skipped_for_existing_install() -> None:
+    settings = MediaMopSettings.load()
+    fac = create_session_factory(create_db_engine(settings))
+    with fac() as db:
+        db.execute(delete(SuiteSettingsRow))
+        db.add(
+            User(
+                username="existing-admin",
+                password_hash=hash_password("existing-admin-password"),
+                role="admin",
+                is_active=True,
+            )
+        )
+        db.flush()
+
+        row = ensure_suite_settings_row(db)
+
+        assert row.setup_wizard_state == "skipped"
+
+
+def test_bootstrap_explicitly_keeps_setup_wizard_pending_for_true_first_run(
+) -> None:
+    reset_user_tables()
+    with TestClient(create_app()) as client:
+        bootstrap_csrf = fetch_csrf(client)
+        response = auth_post(
+            client,
+            "/api/v1/auth/bootstrap",
+            json={
+                "username": "fresh-admin",
+                "password": "bootstrap-password-strong",
+                "csrf_token": bootstrap_csrf,
+            },
+        )
+        assert response.status_code == 200, response.text
+
+        login_csrf = fetch_csrf(client)
+        login_response = auth_post(
+            client,
+            "/api/v1/auth/login",
+            json={
+                "username": "fresh-admin",
+                "password": "bootstrap-password-strong",
+                "csrf_token": login_csrf,
+            },
+        )
+        assert login_response.status_code == 200, login_response.text
+
+        settings_response = client.get("/api/v1/suite/settings")
+        assert settings_response.status_code == 200, settings_response.text
+        assert settings_response.json()["setup_wizard_state"] == "pending"
 
 
 def test_log_retention_tick_runs_once_per_day(monkeypatch: pytest.MonkeyPatch) -> None:

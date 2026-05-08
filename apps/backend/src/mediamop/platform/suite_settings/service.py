@@ -6,11 +6,19 @@ from datetime import time
 from zoneinfo import ZoneInfo
 from zoneinfo import ZoneInfoNotFoundError
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from mediamop.platform.auth.models import User
 from mediamop.platform.suite_settings.model import SuiteSettingsRow
 from mediamop.platform.suite_settings.schemas import SuiteSettingsOut
+
+
+def _default_setup_wizard_state(session: Session) -> str:
+    """Avoid reopening first-run setup on an established install if the singleton row is recreated."""
+
+    existing_users = session.scalar(select(func.count()).select_from(User)) or 0
+    return "skipped" if int(existing_users) > 0 else "pending"
 
 
 def ensure_suite_settings_row(session: Session) -> SuiteSettingsRow:
@@ -20,7 +28,7 @@ def ensure_suite_settings_row(session: Session) -> SuiteSettingsRow:
             id=1,
             product_display_name="MediaMop",
             signed_in_home_notice=None,
-            setup_wizard_state="pending",
+            setup_wizard_state=_default_setup_wizard_state(session),
             app_timezone="UTC",
             log_retention_days=30,
             configuration_backup_enabled=False,

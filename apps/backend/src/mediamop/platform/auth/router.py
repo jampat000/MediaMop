@@ -31,6 +31,7 @@ from mediamop.platform.auth.csrf import (
 from mediamop.platform.activity import constants as activity_constants
 from mediamop.platform.activity import service as activity_service
 from mediamop.platform.auth.deps_auth import UserPublicDep
+from mediamop.platform.suite_settings.service import ensure_suite_settings_row
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = logging.getLogger(__name__)
@@ -247,6 +248,8 @@ def post_bootstrap(
         title="Initial admin created",
         detail=user.username,
     )
+    suite_settings = ensure_suite_settings_row(db)
+    suite_settings.setup_wizard_state = "pending"
     return schemas.BootstrapOut(
         message="Bootstrap complete. Sign in with POST /api/v1/auth/login.",
         username=user.username,
