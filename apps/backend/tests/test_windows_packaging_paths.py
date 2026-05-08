@@ -188,3 +188,14 @@ def test_tray_double_click_opens_mediamop() -> None:
     assert 'if "--version" in sys.argv:' in source
     assert '"--no-browser" in sys.argv' in source
     assert "open_browser_on_ready=not no_browser" in source
+
+
+def test_tray_open_action_debounces_duplicate_open_requests() -> None:
+    assert tray_app._is_recent_browser_open(10.0, 10.8) is True
+    assert tray_app._is_recent_browser_open(10.0, 11.5) is False
+
+
+def test_tray_open_action_uses_browser_window_reuse_mode() -> None:
+    source = Path(tray_app.__file__).read_text(encoding="utf-8")
+
+    assert "webbrowser.open(f\"http://127.0.0.1:{port}/\", new=0)" in source

@@ -128,7 +128,12 @@ def _run_migrations(resource_root: Path) -> None:
 
 
 def _open_browser(port: int) -> None:
-    webbrowser.open(f"http://127.0.0.1:{port}/", new=2)
+    # Prefer reusing an existing browser window/tab when possible.
+    webbrowser.open(f"http://127.0.0.1:{port}/", new=0)
+
+
+def _is_recent_browser_open(last_open_at: float, now: float, cooldown_seconds: float = 1.25) -> bool:
+    return (now - last_open_at) < cooldown_seconds
 
 
 def _lan_urls(port: int) -> list[str]:
@@ -211,6 +216,7 @@ class _MediaMopTrayApp:
         _run_migrations(self._resource_root)
         self._log("Database migrations completed")
         self._icon: Any = None
+        self._last_browser_open_at = 0.0
         executable_dir = Path(sys.executable).resolve().parent
         self._server_exe = executable_dir / "MediaMopServer.exe"
         self._server_process: subprocess.Popen[str] | None = None
@@ -222,6 +228,12 @@ class _MediaMopTrayApp:
                 handle.write(f"[{timestamp}] {message}\n")
 
     def _handle_open(self, icon: Any, item: Any) -> None:  # noqa: ARG002
+        now = time.monotonic()
+        if _is_recent_browser_open(self._last_browser_open_at, now):
+            self._log("Ignoring duplicate tray open request within debounce window.")
+            return
+        self._last_browser_open_at = now
+        self._log(f"Opening MediaMop in browser on port {self._port}")
         _open_browser(self._port)
 
     def _handle_open_data_folder(self, icon: Any, item: Any) -> None:  # noqa: ARG002
