@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { browserWindow } from "../../lib/browser-window";
 import { DISPLAY_DENSITY_STORAGE_KEY } from "../../lib/ui/display-density";
 import type { CurrentSession, UserPublic } from "../../lib/api/types";
 import { qk } from "../../lib/auth/queries";
@@ -747,6 +748,55 @@ describe("SettingsPage (suite settings)", () => {
     expect(
       screen.getByText("Upgrade completed. Running version: 2.0.8."),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Refresh browser now" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "If this tab still looks stale, refresh the browser to load the upgraded MediaMop UI.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("does not show the refresh browser prompt before the running version matches the target", () => {
+    renderSettings(operatorMe, {
+      updateStatus: {
+        ...windowsUpdateAvailableStatus,
+        upgrade: {
+          phase: "completed",
+          message: "Upgrade completed. Running version: 2.0.8.",
+          target_version: "2.0.8",
+        },
+      },
+    });
+    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
+    expect(
+      screen.queryByRole("button", { name: "Refresh browser now" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("lets the user manually refresh the browser from the completed upgrade state", () => {
+    const reloadSpy = vi
+      .spyOn(browserWindow, "reloadCurrentPage")
+      .mockImplementation(() => undefined);
+    renderSettings(operatorMe, {
+      updateStatus: {
+        ...windowsUpdateAvailableStatus,
+        current_version: "2.0.8",
+        status: "up_to_date",
+        summary: "This install is already on MediaMop 2.0.8.",
+        upgrade: {
+          phase: "completed",
+          message: "Upgrade completed. Running version: 2.0.8.",
+          target_version: "2.0.8",
+        },
+      },
+    });
+    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Refresh browser now" }),
+    );
+    expect(reloadSpy).toHaveBeenCalledTimes(1);
   });
 
   it("computes a refresh key only after a verified Windows upgrade completes", () => {

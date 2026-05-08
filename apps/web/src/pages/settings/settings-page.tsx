@@ -484,6 +484,24 @@ export function verifiedUpgradeRefreshKey(
   ].join(":");
 }
 
+function completedUpgradeRefreshKey(
+  status: SuiteUpdateStatusOut | undefined,
+  progress: SuiteUpgradeProgressOut | null | undefined,
+): string | null {
+  if (!status || status.install_type !== "windows" || !progress) {
+    return null;
+  }
+  const targetVersion = progress.target_version?.trim();
+  if (
+    !targetVersion ||
+    progress.phase !== "completed" ||
+    status.current_version !== targetVersion
+  ) {
+    return null;
+  }
+  return [progress.attempt_id || "unknown-attempt", targetVersion].join(":");
+}
+
 /** Settings: General (timezone, display density, configuration export), Security, Logs (retention + recent events). */
 export function SettingsPage() {
   const navigate = useNavigate();
@@ -638,6 +656,10 @@ export function SettingsPage() {
     !upgradeMonitor?.timedOutReason &&
     (Boolean(upgradeMonitor?.active) ||
       isUpgradeProgressActive(activeUpgradeProgress));
+  const completedUpgradeRefreshPromptKey = completedUpgradeRefreshKey(
+    updateStatusQ.data,
+    activeUpgradeProgress,
+  );
   const hasStableUpdateStatus = Boolean(updateStatusQ.data);
   const upgradeRefreshBusy = upgradeInProgress || updateStatusQ.isFetching;
   const upgradeRefreshLabel = upgradeInProgress
@@ -2090,6 +2112,26 @@ export function SettingsPage() {
                     <p className={upgradeNoticeClass(upgradeNotice.tone)}>
                       {upgradeNotice.text}
                     </p>
+                  ) : null}
+                  {completedUpgradeRefreshPromptKey ? (
+                    <div className="rounded-md border border-emerald-500/30 bg-emerald-950/15 px-3 py-3 text-sm text-emerald-100">
+                      <p>
+                        If this tab still looks stale, refresh the browser to
+                        load the upgraded MediaMop UI.
+                      </p>
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          className={mmActionButtonClass({
+                            variant: "secondary",
+                            disabled: false,
+                          })}
+                          onClick={() => browserWindow.reloadCurrentPage()}
+                        >
+                          Refresh browser now
+                        </button>
+                      </div>
+                    </div>
                   ) : null}
                   {updateNow.isError ? (
                     <p
