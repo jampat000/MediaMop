@@ -793,7 +793,9 @@ describe("SettingsPage (suite settings)", () => {
       },
     });
     fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    fireEvent.click(screen.getByRole("button", { name: "Refresh browser now" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Refresh browser now" }),
+    );
     expect(reloadSpy).toHaveBeenCalledTimes(1);
   });
 
