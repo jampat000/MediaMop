@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import time
+import threading
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -764,6 +766,40 @@ def test_verify_install_fails_when_active_session_exists_but_tray_does_not_relau
     assert "desktop tray host did not relaunch" in message.lower()
 
 
+def test_launch_process_in_active_session_via_schtasks_creates_and_runs_launcher_task(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    executable = tmp_path / "MediaMop.exe"
+    executable.write_text("binary", encoding="utf-8")
+    monkeypatch.setattr(updater_service, "_active_interactive_session_user", lambda: "APP-SERVER\\Administrator")
+
+    created_commands: list[list[str]] = []
+
+    class _Result:
+        def __init__(self, returncode: int = 0, stdout: str = "", stderr: str = "") -> None:
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+    def _fake_run(command: list[str], **kwargs):
+        created_commands.append(command)
+        return _Result()
+
+    monkeypatch.setattr(updater_service.subprocess, "run", _fake_run)
+
+    pid = updater_service._launch_process_in_active_session_via_schtasks(
+        executable,
+        args=["--no-browser"],
+        cwd=tmp_path,
+    )
+
+    assert pid == 0
+    assert any(command[:2] == ["schtasks", "/Create"] for command in created_commands)
+    assert any(command[:2] == ["schtasks", "/Run"] for command in created_commands)
+
+
 def test_packaged_helper_exits_after_launch_and_reconciliation_completes(
     tmp_path: Path,
     monkeypatch,
@@ -976,18 +1012,20 @@ def test_maybe_reconcile_pending_attempt_marks_already_running_target_completed(
     )
     Path(updater_service._read_state()["installer_log_path"]).write_text("installer log", encoding="utf-8")
     monkeypatch.setattr(updater_service, "_installer_process_is_running", lambda _state: False)
+    monkeypatch.setattr(updater_service, "_interactive_session_available", lambda: False)
     monkeypatch.setattr(
         updater_service,
         "_state_matches_installed_target",
         lambda target_version: (
             True,
-            {
-                "backend_version": target_version,
-                "packaged_version": target_version,
-                "missing_required_files": [],
-            },
-        ),
-    )
+                {
+                    "backend_version": target_version,
+                    "packaged_version": target_version,
+                    "backend_ready": True,
+                    "missing_required_files": [],
+                },
+            ),
+        )
 
     updater_service._maybe_reconcile_pending_attempt()
     state = updater_service._read_state()
@@ -1014,18 +1052,20 @@ def test_maybe_reconcile_pending_attempt_reconciles_unverifiable_installer_ident
     )
     Path(updater_service._read_state()["installer_log_path"]).write_text("installer log", encoding="utf-8")
     monkeypatch.setattr(updater_service, "_read_process_snapshot", lambda _pid: None)
+    monkeypatch.setattr(updater_service, "_interactive_session_available", lambda: False)
     monkeypatch.setattr(
         updater_service,
         "_state_matches_installed_target",
         lambda target_version: (
             True,
-            {
-                "backend_version": target_version,
-                "packaged_version": target_version,
-                "missing_required_files": [],
-            },
-        ),
-    )
+                {
+                    "backend_version": target_version,
+                    "packaged_version": target_version,
+                    "backend_ready": True,
+                    "missing_required_files": [],
+                },
+            ),
+        )
 
     updater_service._maybe_reconcile_pending_attempt()
     state = updater_service._read_state()
@@ -1048,18 +1088,20 @@ def test_maybe_reconcile_pending_attempt_recovers_legacy_active_state_without_at
             "installer_log_path": str(tmp_path / "installer-latest.log"),
         }
     )
+    monkeypatch.setattr(updater_service, "_interactive_session_available", lambda: False)
     monkeypatch.setattr(
         updater_service,
         "_state_matches_installed_target",
         lambda target_version: (
             True,
-            {
-                "backend_version": target_version,
-                "packaged_version": target_version,
-                "missing_required_files": [],
-            },
-        ),
-    )
+                {
+                    "backend_version": target_version,
+                    "packaged_version": target_version,
+                    "backend_ready": True,
+                    "missing_required_files": [],
+                },
+            ),
+        )
 
     updater_service._maybe_reconcile_pending_attempt()
     state = updater_service._read_state()
@@ -1117,18 +1159,20 @@ def test_status_endpoint_reports_reconciled_legacy_state_as_non_active(
             "installer_log_path": str(tmp_path / "installer-latest.log"),
         }
     )
+    monkeypatch.setattr(updater_service, "_interactive_session_available", lambda: False)
     monkeypatch.setattr(
         updater_service,
         "_state_matches_installed_target",
         lambda target_version: (
             True,
-            {
-                "backend_version": target_version,
-                "packaged_version": target_version,
-                "missing_required_files": [],
-            },
-        ),
-    )
+                {
+                    "backend_version": target_version,
+                    "packaged_version": target_version,
+                    "backend_ready": True,
+                    "missing_required_files": [],
+                },
+            ),
+        )
     with monkeypatch.context() as scoped:
         scoped.setattr(updater_service.os, "name", "nt")
         scoped.setattr(updater_service, "_load_or_create_token", lambda: "token")
@@ -1147,6 +1191,71 @@ def test_status_endpoint_reports_reconciled_legacy_state_as_non_active(
     assert body["blocks_new_update"] is False
     assert body["is_stale"] is True
     assert "could not prove" in body["stale_reason"].lower()
+
+
+def test_maybe_reconcile_pending_attempt_does_not_mark_completed_without_tray_in_active_session(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    installer = tmp_path / "MediaMopSetup-2.1.7-attempt-123.exe"
+    installer.write_bytes(b"installer")
+    updater_service._persist_state(
+        {
+            **updater_service._fresh_attempt_state("2.1.7", "attempt-123"),
+            "phase": "installer_running",
+            "downloaded_installer_path": str(installer),
+            "diagnostics": {"helper_pid": None, "installer_pid": 6789},
+        }
+    )
+    Path(updater_service._read_state()["installer_log_path"]).write_text("installer log", encoding="utf-8")
+    monkeypatch.setattr(updater_service, "_installer_process_is_running", lambda _state: False)
+    monkeypatch.setattr(updater_service, "_interactive_session_available", lambda: True)
+    monkeypatch.setattr(updater_service, "_RECONCILE_LOCK", threading.Lock())
+
+    class _ImmediateThread:
+        def __init__(self, *, target, args, daemon, name) -> None:
+            self._target = target
+            self._args = args
+
+        def start(self) -> None:
+            self._target(*self._args)
+
+    monkeypatch.setattr(updater_service.threading, "Thread", _ImmediateThread)
+    monkeypatch.setattr(
+        updater_service,
+        "_state_matches_installed_target",
+        lambda target_version: (
+            True,
+            {
+                "backend_version": target_version,
+                "packaged_version": target_version,
+                "missing_required_files": [],
+                "backend_ready": True,
+                "tray_running": False,
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        updater_service,
+        "_verify_install",
+        lambda target_version: (
+            False,
+            {
+                "backend_version": target_version,
+                "packaged_version": target_version,
+                "backend_ready": True,
+                "tray_running": False,
+            },
+            "MediaMop upgraded successfully, but the desktop tray host did not relaunch in the active Windows session.",
+        ),
+    )
+
+    updater_service._maybe_reconcile_pending_attempt()
+    state = updater_service._read_state()
+
+    assert state["phase"] == "failed"
+    assert "desktop tray host did not relaunch" in str(state["last_error"]).lower()
 
 
 def test_maybe_reconcile_pending_attempt_archives_superseded_failed_attempt(
@@ -1394,6 +1503,7 @@ def test_maybe_reconcile_pending_attempt_resumes_verification_for_recoverable_ph
 
     monkeypatch.setattr(updater_service, "_state_age_seconds", lambda _state: 5)
     monkeypatch.setattr(updater_service, "_pid_is_running", lambda _pid: False)
+    monkeypatch.setattr(updater_service, "_RECONCILE_LOCK", threading.Lock())
     monkeypatch.setattr(updater_service.threading, "Thread", _ImmediateThread)
     monkeypatch.setattr(
         updater_service,
