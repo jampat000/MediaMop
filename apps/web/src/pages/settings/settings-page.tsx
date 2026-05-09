@@ -680,7 +680,6 @@ export function SettingsPage() {
   const [logLevel, setLogLevel] = useState<LogLevelFilter>("");
   const [tracebacksOnly, setTracebacksOnly] = useState(false);
   const restoreInputRef = useRef<HTMLInputElement>(null);
-  const upgradeRefreshTriggeredRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!settingsQ.data) {
@@ -914,10 +913,6 @@ export function SettingsPage() {
           progress?.message ||
           `Upgrade completed. Running version: ${updateStatusQ.data.current_version}.`,
       });
-      if (upgradeRefreshTriggeredRef.current !== refreshAttemptKey) {
-        upgradeRefreshTriggeredRef.current = refreshAttemptKey;
-        browserWindow.reloadCurrentPage();
-      }
     }
   }, [upgradeMonitor, updateStatusQ.data]);
 
@@ -1191,7 +1186,6 @@ export function SettingsPage() {
 
   async function handleUpgradeNow() {
     setUpgradeNotice(null);
-    upgradeRefreshTriggeredRef.current = null;
     try {
       const result = await updateNow.mutateAsync();
       if (result.status === "started") {
@@ -2476,10 +2470,7 @@ export function SettingsPage() {
                   ) : null}
                   {completedUpgradeRefreshPromptKey ? (
                     <div className="rounded-md border border-emerald-500/30 bg-emerald-950/15 px-3 py-3 text-sm text-emerald-100">
-                      <p>
-                        If this tab still looks stale, refresh the browser to
-                        load the upgraded MediaMop UI.
-                      </p>
+                      <p>Reload to continue in the updated session.</p>
                       <div className="mt-3">
                         <button
                           type="button"
@@ -2489,7 +2480,7 @@ export function SettingsPage() {
                           })}
                           onClick={() => browserWindow.reloadCurrentPage()}
                         >
-                          Refresh browser now
+                          Reload now
                         </button>
                       </div>
                     </div>

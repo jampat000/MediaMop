@@ -1394,7 +1394,7 @@ def _restart_packaged_runtime_for_verification(
     try:
         if interactive_session_available:
             restart_diag["restart_action"] = "start_tray"
-            tray_pid = _start_packaged_tray_in_active_session(open_browser=True)
+            tray_pid = _start_packaged_tray_in_active_session(open_browser=False)
             restart_diag["restarted_tray_pid"] = tray_pid
             _append_service_log(
                 "Started packaged MediaMop tray host after backend version mismatch "
@@ -1505,22 +1505,6 @@ def _verify_install(target_version: str) -> tuple[bool, dict[str, object], str]:
             and backend_key < target_key
         )
         if _diagnostics_prove_completed_desktop_upgrade(target_version, diagnostics):
-            if interactive_session_available and not tray_relaunch_attempted:
-                diagnostics["browser_reopen_requested"] = True
-                try:
-                    reopen_pid = _start_packaged_tray_in_active_session(open_browser=True)
-                except Exception as exc:
-                    diagnostics["browser_reopen_error"] = str(exc)
-                    _append_service_log(
-                        "Upgrade verification completed, but browser reopen request failed: "
-                        f"{exc}"
-                    )
-                else:
-                    diagnostics["browser_reopen_pid"] = reopen_pid
-                    _append_service_log(
-                        "Upgrade verification completed; requested browser reopen in active session "
-                        f"(pid={reopen_pid})."
-                    )
             return True, diagnostics, f"Upgrade completed. Running version: {target_version}."
         if packaged_version == target_version and not missing_required and backend_lagging:
             if version_mismatch_started_at is None:
@@ -1552,7 +1536,7 @@ def _verify_install(target_version: str) -> tuple[bool, dict[str, object], str]:
                 tray_relaunch_attempted = True
                 tray_relaunch_started_at = time.time()
                 try:
-                    restarted_tray_pid = _start_packaged_tray_in_active_session(open_browser=True)
+                    restarted_tray_pid = _start_packaged_tray_in_active_session(open_browser=False)
                 except Exception as exc:
                     tray_restart_error = str(exc)
                     diagnostics["tray_restart_error"] = tray_restart_error

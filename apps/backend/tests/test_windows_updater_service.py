@@ -624,13 +624,13 @@ def test_verify_install_relaunches_tray_before_marking_upgrade_complete(
     assert verified is True
     assert message == f"Upgrade completed. Running version: {target_version}."
     assert observed["tray_calls"] == 1
-    assert observed["last_open_browser"] is True
+    assert observed["last_open_browser"] is False
     assert observed["server_calls"] == 0
     assert diagnostics["restarted_tray_pid"] == 4321
     assert diagnostics["tray_relaunch_attempted"] is True
 
 
-def test_restart_packaged_runtime_relaunches_tray_with_browser_when_session_is_interactive(
+def test_restart_packaged_runtime_relaunches_tray_without_browser_when_session_is_interactive(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -650,16 +650,16 @@ def test_restart_packaged_runtime_relaunches_tray_with_browser_when_session_is_i
 
     assert diagnostics["restart_action"] == "start_tray"
     assert diagnostics["restarted_tray_pid"] == 1234
-    assert observed["open_browser"] is True
+    assert observed["open_browser"] is False
 
 
-def test_verify_install_requests_browser_reopen_when_completed_with_existing_tray(
+def test_verify_install_does_not_request_browser_reopen_when_completed_with_existing_tray(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
     _configure_runtime_home(tmp_path, monkeypatch)
     target_version = "2.2.3"
-    observed: dict[str, object] = {"calls": 0, "open_browser": None}
+    observed: dict[str, object] = {"calls": 0}
 
     monkeypatch.setattr(updater_service, "_read_runtime_port", lambda: 8788)
     monkeypatch.setattr(updater_service, "_interactive_session_available", lambda: True)
@@ -678,7 +678,6 @@ def test_verify_install_requests_browser_reopen_when_completed_with_existing_tra
         updater_service,
         "_start_packaged_tray_in_active_session",
         lambda *, open_browser=False: observed.__setitem__("calls", int(observed["calls"]) + 1)
-        or observed.__setitem__("open_browser", open_browser)
         or 6789,
     )
     monkeypatch.setattr(updater_service.time, "time", lambda: 1234.0)
@@ -687,10 +686,9 @@ def test_verify_install_requests_browser_reopen_when_completed_with_existing_tra
 
     assert verified is True
     assert message == f"Upgrade completed. Running version: {target_version}."
-    assert observed["calls"] == 1
-    assert observed["open_browser"] is True
-    assert diagnostics["browser_reopen_requested"] is True
-    assert diagnostics["browser_reopen_pid"] == 6789
+    assert observed["calls"] == 0
+    assert diagnostics.get("browser_reopen_requested") is None
+    assert diagnostics.get("browser_reopen_pid") is None
 
 
 def test_verify_install_falls_back_to_server_when_tray_relaunch_is_unavailable(
