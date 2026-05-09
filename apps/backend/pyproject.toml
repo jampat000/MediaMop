@@ -48,12 +48,23 @@ line-length = 120
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E9", "F63", "F7", "F82"]
+select = ["E9", "F63", "F7", "F82", "B", "C4"]
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/test_csrf_unit.py" = ["C408"]
 
 [tool.mypy]
 python_version = "3.11"
 ignore_missing_imports = true
-follow_imports = "skip"
-check_untyped_defs = false
-warn_unused_ignores = false
+follow_imports = "normal"
+check_untyped_defs = true
+warn_unused_ignores = true
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+  "mediamop.modules.refiner.*",
+  "mediamop.windows.*",
+]
 ignore_errors = true

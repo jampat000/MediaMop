@@ -80,11 +80,11 @@ def _strictly_behind_head(script: ScriptDirectory, *, head: str, current: str) -
         dr = rev.down_revision
         if dr is None:
             break
-        if isinstance(dr, tuple):
+        if isinstance(dr, tuple | list):
             return False
         if dr == current:
             return True
-        rev = script.get_revision(dr)
+        rev = script.get_revision(str(dr))
     return False
 
 

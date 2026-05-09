@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 from sqlalchemy import DateTime, delete, inspect, select
+from sqlalchemy.orm import Mapper
 from sqlalchemy.orm import Session
 
 from mediamop.modules.pruner.pruner_scope_settings_model import PrunerScopeSettings
@@ -31,7 +32,7 @@ def _serialize_cell(value: Any) -> Any:
 
 
 def orm_row_to_dict(obj: Any) -> dict[str, Any]:
-    mapper = inspect(obj.__class__).mapper
+    mapper = cast(Mapper[Any], inspect(obj.__class__, raiseerr=True))
     out: dict[str, Any] = {}
     for col in mapper.columns:
         key = col.key
@@ -51,7 +52,7 @@ def _parse_datetime(raw: Any) -> datetime | None:
 
 
 def dict_to_model_kwargs(model_cls: type[T], data: dict[str, Any]) -> dict[str, Any]:
-    mapper = inspect(model_cls).mapper
+    mapper = cast(Mapper[Any], inspect(model_cls, raiseerr=True))
     cols = {c.key: c for c in mapper.columns}
     out: dict[str, Any] = {}
     for key, raw in data.items():

@@ -15,9 +15,9 @@ from mediamop.core.credentials_rotation import credential_secret_candidates
 
 _HKDF_INFO = b"mediamop.subber.credentials.v1.fernet"
 _ENVELOPE_VERSION = 3
-_CREDENTIALS_KEY_ID = "credentials:hkdf:v1"
+_CREDENTIALS_KEY_ID: Literal["credentials:hkdf:v1"] = "credentials:hkdf:v1"
 _CREDENTIALS_KEY_ID_LEGACY = "credentials:v1"
-_SESSION_LEGACY_KEY_ID = "session-legacy:v1"
+_SESSION_LEGACY_KEY_ID: Literal["session-legacy:v1"] = "session-legacy:v1"
 
 
 def _fernet_for_secret_hkdf(secret: str | None) -> Fernet | None:
@@ -86,23 +86,24 @@ def decrypt_subber_credentials_json(settings: MediaMopSettings, ciphertext: str)
         key_id = str(env.get("key_id") or "")
         if not token:
             return None
+        fernets: list[Fernet]
         if key_id == _CREDENTIALS_KEY_ID:
             fernets = credential_secret_candidates(settings, _fernet_for_secret_hkdf)
         elif key_id == _CREDENTIALS_KEY_ID_LEGACY:
             fernets = credential_secret_candidates(settings, _fernet_for_secret_legacy)
         else:
-            fernets = [f for f in [_legacy_fernet(settings)] if f]
-        for f in fernets:
+            fernets = [candidate for candidate in [_legacy_fernet(settings)] if candidate is not None]
+        for fernet in fernets:
             try:
-                return f.decrypt(token.encode("ascii")).decode("utf-8")
+                return fernet.decrypt(token.encode("ascii")).decode("utf-8")
             except (InvalidToken, ValueError, TypeError):
                 continue
         return None
-    f = _legacy_fernet(settings)
-    if f is None:
+    legacy_fernet = _legacy_fernet(settings)
+    if legacy_fernet is None:
         return None
     try:
-        return f.decrypt(raw.encode("ascii")).decode("utf-8")
+        return legacy_fernet.decrypt(raw.encode("ascii")).decode("utf-8")
     except (InvalidToken, ValueError, TypeError):
         return None
 
@@ -138,7 +139,7 @@ def parse_provider_secrets_json(provider_key: str, plaintext: str | None) -> dic
     from mediamop.modules.subber.subber_provider_registry import PROVIDER_CREDENTIAL_FIELDS
 
     fields = PROVIDER_CREDENTIAL_FIELDS.get(provider_key, [])
-    out = {k: "" for k in fields}
+    out = dict.fromkeys(fields, "")
     if not plaintext or not plaintext.strip():
         return out
     try:

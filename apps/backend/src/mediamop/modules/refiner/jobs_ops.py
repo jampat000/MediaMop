@@ -11,16 +11,26 @@ from typing import Literal
 
 _REFINER_JOB_DEDUPE_KEY_MAX_LEN = 512
 
-from sqlalchemy import select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from mediamop.modules.queue_worker.job_kind_boundaries import validate_refiner_enqueue_job_kind
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.platform.metrics.service import record_module_job_event, set_module_queue_depth
 
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _record_refiner_queue_depth(session: Session) -> None:
+    depth = session.scalar(
+        select(func.count())
+        .select_from(RefinerJob)
+        .where(or_(RefinerJob.status == RefinerJobStatus.PENDING.value, RefinerJob.status == RefinerJobStatus.LEASED.value))
+    )
+    set_module_queue_depth(module="refiner", depth=int(depth or 0))
 
 
 _CLAIM_NEXT_SQL = """
@@ -106,6 +116,7 @@ def refiner_enqueue_or_get_job(
         except IntegrityError:
             pass
         else:
+            _record_refiner_queue_depth(session)
             return row
 
     found = session.scalar(select(RefinerJob).where(RefinerJob.dedupe_key == dedupe_key))
@@ -143,7 +154,10 @@ def claim_next_eligible_refiner_job(
     if row is None:
         return None
     job_id = int(row[0])
-    return session.scalars(select(RefinerJob).where(RefinerJob.id == job_id)).one()
+    claimed = session.scalars(select(RefinerJob).where(RefinerJob.id == job_id)).one()
+    record_module_job_event(module="refiner", event="started")
+    _record_refiner_queue_depth(session)
+    return claimed
 
 
 def complete_claimed_refiner_job(
@@ -170,6 +184,8 @@ def complete_claimed_refiner_job(
     job.lease_owner = None
     job.lease_expires_at = None
     session.flush()
+    record_module_job_event(module="refiner", event="completed")
+    _record_refiner_queue_depth(session)
     return True
 
 
@@ -199,9 +215,11 @@ def fail_claimed_refiner_job(
     job.lease_expires_at = None
     if job.attempt_count >= job.max_attempts:
         job.status = RefinerJobStatus.FAILED.value
+        record_module_job_event(module="refiner", event="failed")
     else:
         job.status = RefinerJobStatus.PENDING.value
     session.flush()
+    _record_refiner_queue_depth(session)
     return True
 
 
@@ -236,6 +254,8 @@ def fail_leased_refiner_job_after_complete_failure(
     job.lease_expires_at = None
     job.last_error = error_message[:10_000]
     session.flush()
+    record_module_job_event(module="refiner", event="failed")
+    _record_refiner_queue_depth(session)
     return True
 
 
@@ -272,4 +292,6 @@ def recover_handler_ok_finalize_failed_to_completed(
     job.lease_owner = None
     job.lease_expires_at = None
     session.flush()
+    record_module_job_event(module="refiner", event="completed")
+    _record_refiner_queue_depth(session)
     return "ok"

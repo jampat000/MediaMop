@@ -9,9 +9,13 @@ import sys
 import warnings
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
+from sqlalchemy.engine import Engine
+
+from mediamop.core import db as db_module
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, verify_sqlite_pragmas
 
@@ -38,6 +42,31 @@ def test_engine_applies_sqlite_hardening_pragmas(monkeypatch: pytest.MonkeyPatch
         assert p["synchronous"] == "1"
     finally:
         engine.dispose()
+
+
+def test_register_sqlite_pragmas_connect_hook_noops_for_non_sqlite_connection(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    def _fake_listens_for(_engine: object, event_name: str):
+        assert event_name == "connect"
+
+        def _decorator(fn):  # noqa: ANN001
+            captured["hook"] = fn
+            return fn
+
+        return _decorator
+
+    monkeypatch.setattr(db_module.event, "listens_for", _fake_listens_for)
+    db_module._register_sqlite_pragmas(cast(Engine, object()))
+
+    hook = captured["hook"]
+
+    class _NotSqliteConnection:
+        pass
+
+    hook(_NotSqliteConnection(), object())
 
 
 def test_create_db_engine_registers_sqlite_datetime_adapter(

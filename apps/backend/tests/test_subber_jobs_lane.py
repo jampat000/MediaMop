@@ -26,6 +26,7 @@ from mediamop.modules.subber.subber_subtitle_state_model import SubberSubtitleSt
 from mediamop.modules.subber.worker_loop import process_one_subber_job
 from mediamop.platform.activity import constants as C
 from mediamop.platform.activity.models import ActivityEvent
+from mediamop.platform.metrics.service import build_runtime_metrics_summary, reset_runtime_metrics_for_tests
 
 import mediamop.modules.subber.subber_jobs_model  # noqa: F401
 import mediamop.modules.subber.subber_settings_model  # noqa: F401
@@ -67,6 +68,7 @@ def test_build_subber_job_handlers_registry_matches_production_kinds(session_fac
 
 
 def test_webhook_import_tv_runs_on_subber_lane_records_activity(session_factory) -> None:
+    reset_runtime_metrics_for_tests()
     t0 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=timezone.utc)
     settings = MediaMopSettings.load()
     payload = {
@@ -122,3 +124,9 @@ def test_webhook_import_tv_runs_on_subber_lane_records_activity(session_factory)
         assert ev is not None
         assert ev.module == "subber"
         assert json.loads(ev.detail or "{}")["media_scope"] == "tv"
+
+    metrics = build_runtime_metrics_summary()
+    subber_counts = metrics["module_job_counts"].get("subber", {})
+    assert subber_counts.get("started", 0) >= 1
+    assert subber_counts.get("completed", 0) >= 1
+    assert metrics["module_queue_depths"].get("subber") == 1

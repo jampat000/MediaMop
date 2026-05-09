@@ -121,9 +121,14 @@ async def _run_periodic_watched_folder_scan_dispatch_enqueue(
                 session.commit()
                 return now_loop + interval, interval
 
-        def _once(now_loop: float) -> tuple[float, float, float]:
-            next_movie, poll_movie = _scope_once("movie", now_loop=now_loop, next_run_loop=next_run_movie)
-            next_tv, poll_tv = _scope_once("tv", now_loop=now_loop, next_run_loop=next_run_tv)
+        def _once(
+            now_loop: float,
+            *,
+            next_movie_loop: float = next_run_movie,
+            next_tv_loop: float = next_run_tv,
+        ) -> tuple[float, float, float]:
+            next_movie, poll_movie = _scope_once("movie", now_loop=now_loop, next_run_loop=next_movie_loop)
+            next_tv, poll_tv = _scope_once("tv", now_loop=now_loop, next_run_loop=next_tv_loop)
             return next_movie, next_tv, min(poll_movie, poll_tv)
 
         try:

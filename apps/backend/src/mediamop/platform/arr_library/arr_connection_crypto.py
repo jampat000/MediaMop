@@ -20,8 +20,8 @@ _ARR_API_KEY_KDF_PEPPER = binascii.a2b_hex(
 )
 _ARR_API_KEY_KDF_ITERATIONS = 390_000
 _ENVELOPE_VERSION = 2
-_CREDENTIALS_KEY_ID = "credentials:v1"
-_SESSION_LEGACY_KEY_ID = "session-legacy:v1"
+_CREDENTIALS_KEY_ID: Literal["credentials:v1"] = "credentials:v1"
+_SESSION_LEGACY_KEY_ID: Literal["session-legacy:v1"] = "session-legacy:v1"
 
 
 def _fernet_for_secret(secret: str | None) -> Fernet | None:
@@ -83,22 +83,22 @@ def decrypt_arr_api_key(settings: MediaMopSettings, ciphertext: str) -> str | No
         key_id = str(env.get("key_id") or "")
         if not token:
             return None
-        fernets = (
+        fernets: list[Fernet] = (
             credential_secret_candidates(settings, _fernet_for_secret)
             if key_id == _CREDENTIALS_KEY_ID
-            else [f for f in [_legacy_fernet(settings)] if f]
+            else [candidate for candidate in [_legacy_fernet(settings)] if candidate is not None]
         )
-        for f in fernets:
+        for fernet in fernets:
             try:
-                return f.decrypt(token.encode("ascii")).decode("utf-8")
+                return fernet.decrypt(token.encode("ascii")).decode("utf-8")
             except (InvalidToken, ValueError, TypeError):
                 continue
         return None
-    f = _legacy_fernet(settings)
-    if f is None:
+    legacy_fernet = _legacy_fernet(settings)
+    if legacy_fernet is None:
         return None
     try:
-        return f.decrypt(raw.encode("ascii")).decode("utf-8")
+        return legacy_fernet.decrypt(raw.encode("ascii")).decode("utf-8")
     except (InvalidToken, ValueError, TypeError):
         return None
 

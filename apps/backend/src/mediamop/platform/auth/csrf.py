@@ -14,6 +14,7 @@ you open.
 from __future__ import annotations
 
 import secrets
+from typing import cast
 from urllib.parse import urlparse
 
 from fastapi import HTTPException, Request, status
@@ -48,9 +49,10 @@ def current_raw_session_token(request: Request, settings: MediaMopSettings) -> s
 def issue_csrf_token(secret: str, raw_session_token: str | None = None) -> str:
     if not secret.strip():
         raise ValueError("session secret required for CSRF")
+    bound_session = (raw_session_token or "").strip()
     payload = (
-        _session_subject_payload(raw_session_token)
-        if (raw_session_token or "").strip()
+        _session_subject_payload(bound_session)
+        if bound_session
         else CSRF_SUBJECT_ANONYMOUS
     )
     return _signer(secret).sign(payload.encode("utf-8")).decode("utf-8")
@@ -75,7 +77,7 @@ def verify_csrf_token(
         return True
     if not (raw_session_token or "").strip():
         return False
-    return secrets.compare_digest(payload, _session_subject_payload(raw_session_token))
+    return secrets.compare_digest(payload, _session_subject_payload(cast(str, raw_session_token)))
 
 
 def validate_browser_post_origin(request: Request, settings: MediaMopSettings) -> None:

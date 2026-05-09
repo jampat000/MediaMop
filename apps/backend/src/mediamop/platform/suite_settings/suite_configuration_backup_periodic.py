@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, time, timezone
+from datetime import datetime, time, timezone, tzinfo
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy.orm import Session, sessionmaker
@@ -46,6 +46,7 @@ def run_suite_configuration_backup_tick(
             interval_seconds = max(3600, min(30 * 24 * 3600, hours * 3600))
             last = getattr(suite, "configuration_backup_last_run_at", None)
             tz_name = str(getattr(suite, "app_timezone", "") or "UTC").strip() or "UTC"
+            app_tz: tzinfo
             try:
                 app_tz = ZoneInfo(tz_name)
             except ZoneInfoNotFoundError:

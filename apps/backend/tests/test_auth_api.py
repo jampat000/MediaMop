@@ -74,6 +74,21 @@ def test_login_invalid_password(client_with_admin: TestClient) -> None:
     assert r.status_code == 401
 
 
+def test_login_rejects_unexpected_fields(client_with_admin: TestClient) -> None:
+    csrf = fetch_csrf(client_with_admin)
+    r = auth_post(
+        client_with_admin,
+        "/api/v1/auth/login",
+        json={
+            "username": "alice",
+            "password": "test-password-strong",
+            "csrf_token": csrf,
+            "unexpected": "value",
+        },
+    )
+    assert r.status_code == 422
+
+
 def test_change_password_requires_current_and_forces_new_login(client_with_admin: TestClient) -> None:
     csrf = fetch_csrf(client_with_admin)
     r_login = auth_post(
@@ -645,7 +660,7 @@ def test_login_rate_limited(monkeypatch: pytest.MonkeyPatch) -> None:
         db.commit()
     app = create_app()
     with TestClient(app) as client:
-        for i in range(3):
+        for _i in range(3):
             csrf = fetch_csrf(client)
             r = auth_post(
                 client,
@@ -855,6 +870,10 @@ def test_security_headers_on_health_and_api(monkeypatch: pytest.MonkeyPatch) -> 
         assert r_csrf.headers.get("Cache-Control", "").startswith("no-store")
         r_system = client.get("/api/v1/system/directories")
         assert r_system.headers.get("Cache-Control", "").startswith("no-store")
+        r_suite_security = client.get("/api/v1/suite/security-overview")
+        assert r_suite_security.headers.get("Cache-Control", "").startswith("no-store")
+        r_suite_update = client.get("/api/v1/suite/update-status")
+        assert r_suite_update.headers.get("Cache-Control", "").startswith("no-store")
         r_metrics = client.get("/metrics")
         assert r_metrics.headers.get("Cache-Control", "").startswith("no-store")
 

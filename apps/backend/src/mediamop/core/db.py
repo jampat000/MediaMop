@@ -39,6 +39,8 @@ def _register_sqlite_pragmas(engine: Engine) -> None:
 
     @event.listens_for(engine, "connect")
     def _sqlite_connect(dbapi_connection: object, _connection_record: object) -> None:
+        if not isinstance(dbapi_connection, sqlite3.Connection):
+            return
         cursor = dbapi_connection.cursor()
         try:
             cursor.execute("PRAGMA journal_mode=WAL")

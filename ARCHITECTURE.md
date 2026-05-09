@@ -18,6 +18,21 @@ MediaMop is a self-hosted media operations app:
 - Packaging: Docker and Windows installer workflows.
 - Runtime data: `MEDIAMOP_HOME`.
 
+```mermaid
+flowchart LR
+  UI["Frontend (React/Vite)"] --> API["FastAPI API Layer"]
+  API --> Core["Core + Platform Services"]
+  Core --> Refiner["Refiner Module"]
+  Core --> Pruner["Pruner Module"]
+  Core --> Subber["Subber Module"]
+  Core --> Dashboard["Dashboard + Activity"]
+  Core --> Integrations["External Integrations (Arr, OpenSubtitles, etc.)"]
+  Core --> DB["SQLite (Alembic managed)"]
+  Refiner --> Lanes["Worker Lanes / Durable Jobs"]
+  Pruner --> Lanes
+  Subber --> Lanes
+```
+
 ## Backend Map
 
 - `mediamop.api`: FastAPI app factory, router composition, request dependencies.
@@ -44,6 +59,16 @@ MediaMop is a self-hosted media operations app:
 - Frontend pages should use typed API/query helpers from `src/lib` rather than ad hoc fetch calls.
 - Cross-cutting runtime concerns belong in `mediamop.platform` or `mediamop.core`, not inside module implementation details.
 - File lifecycle changes must preserve the safety contract in [`docs/file-lifecycle-contract.md`](docs/file-lifecycle-contract.md).
+
+## Job Lifecycle
+
+```mermaid
+flowchart LR
+  Enqueue["Enqueue request"] --> Lane["Module worker lane"]
+  Lane --> Result["Job result (completed/failed/pending retry)"]
+  Result --> Activity["Activity + logs"]
+  Result --> Metrics["Runtime metrics / Prometheus"]
+```
 
 ## Architecture Decision Records
 
