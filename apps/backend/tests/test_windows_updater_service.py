@@ -569,7 +569,7 @@ def test_verify_install_relaunches_tray_before_marking_upgrade_complete(
 ) -> None:
     _configure_runtime_home(tmp_path, monkeypatch)
     target_version = "2.0.8"
-    observed = {"tray_calls": 0, "server_calls": 0}
+    observed = {"tray_calls": 0, "server_calls": 0, "last_open_browser": None}
     diagnostics_iter = iter(
         [
             {
@@ -607,7 +607,9 @@ def test_verify_install_relaunches_tray_before_marking_upgrade_complete(
     monkeypatch.setattr(
         updater_service,
         "_start_packaged_tray_in_active_session",
-        lambda *, open_browser=False: observed.__setitem__("tray_calls", observed["tray_calls"] + 1) or 4321,
+        lambda *, open_browser=False: observed.__setitem__("tray_calls", observed["tray_calls"] + 1)
+        or observed.__setitem__("last_open_browser", open_browser)
+        or 4321,
     )
     monkeypatch.setattr(
         updater_service,
@@ -622,9 +624,73 @@ def test_verify_install_relaunches_tray_before_marking_upgrade_complete(
     assert verified is True
     assert message == f"Upgrade completed. Running version: {target_version}."
     assert observed["tray_calls"] == 1
+    assert observed["last_open_browser"] is True
     assert observed["server_calls"] == 0
     assert diagnostics["restarted_tray_pid"] == 4321
     assert diagnostics["tray_relaunch_attempted"] is True
+
+
+def test_restart_packaged_runtime_relaunches_tray_with_browser_when_session_is_interactive(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    observed: dict[str, object] = {"open_browser": None}
+    monkeypatch.setattr(updater_service, "_running_media_processes", lambda: [])
+    monkeypatch.setattr(
+        updater_service,
+        "_start_packaged_tray_in_active_session",
+        lambda *, open_browser=False: observed.__setitem__("open_browser", open_browser) or 1234,
+    )
+
+    diagnostics = updater_service._restart_packaged_runtime_for_verification(
+        port=8788,
+        interactive_session_available=True,
+    )
+
+    assert diagnostics["restart_action"] == "start_tray"
+    assert diagnostics["restarted_tray_pid"] == 1234
+    assert observed["open_browser"] is True
+
+
+def test_verify_install_requests_browser_reopen_when_completed_with_existing_tray(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    target_version = "2.2.3"
+    observed: dict[str, object] = {"calls": 0, "open_browser": None}
+
+    monkeypatch.setattr(updater_service, "_read_runtime_port", lambda: 8788)
+    monkeypatch.setattr(updater_service, "_interactive_session_available", lambda: True)
+    monkeypatch.setattr(
+        updater_service,
+        "_collect_install_diagnostics",
+        lambda _target_version, *, port: {
+            "packaged_version": target_version,
+            "missing_required_files": [],
+            "backend_ready": True,
+            "backend_version": target_version,
+            "tray_running": True,
+        },
+    )
+    monkeypatch.setattr(
+        updater_service,
+        "_start_packaged_tray_in_active_session",
+        lambda *, open_browser=False: observed.__setitem__("calls", int(observed["calls"]) + 1)
+        or observed.__setitem__("open_browser", open_browser)
+        or 6789,
+    )
+    monkeypatch.setattr(updater_service.time, "time", lambda: 1234.0)
+
+    verified, diagnostics, message = updater_service._verify_install(target_version)
+
+    assert verified is True
+    assert message == f"Upgrade completed. Running version: {target_version}."
+    assert observed["calls"] == 1
+    assert observed["open_browser"] is True
+    assert diagnostics["browser_reopen_requested"] is True
+    assert diagnostics["browser_reopen_pid"] == 6789
 
 
 def test_verify_install_falls_back_to_server_when_tray_relaunch_is_unavailable(

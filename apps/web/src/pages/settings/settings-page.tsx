@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ChangeEvent } from "react";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageLoading } from "../../components/shared/page-loading";
 import { browserWindow } from "../../lib/browser-window";
 import {
@@ -580,9 +580,30 @@ function completedUpgradeRefreshKey(
   return [progress.attempt_id || "unknown-attempt", targetVersion].join(":");
 }
 
+function normalizeSettingsTab(
+  candidate: string | null | undefined,
+  supportEnabled: boolean,
+): TabId {
+  switch ((candidate || "").trim().toLowerCase()) {
+    case "backup":
+      return "backup";
+    case "upgrade":
+      return "upgrade";
+    case "security":
+      return "security";
+    case "logs":
+      return "logs";
+    case "support":
+      return supportEnabled ? "support" : "general";
+    default:
+      return "general";
+  }
+}
+
 /** Settings: General (timezone, display density, configuration export), Security, Logs (retention + recent events). */
 export function SettingsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const formatDateTime = useAppDateFormatter();
   const me = useMeQuery();
@@ -594,7 +615,21 @@ export function SettingsPage() {
   const updateNow = useSuiteUpdateNowMutation();
   const resetHistory = useSuiteOperationalHistoryResetMutation();
 
-  const [tab, setTab] = useState<TabId>("general");
+  const showSupportTab = SHOW_SUPPORT_CARD;
+  const [tab, setTab] = useState<TabId>(() =>
+    normalizeSettingsTab(searchParams.get("tab"), showSupportTab),
+  );
+
+  function setSettingsTab(nextTab: TabId): void {
+    setTab(nextTab);
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextTab === "general") {
+      nextParams.delete("tab");
+    } else {
+      nextParams.set("tab", nextTab);
+    }
+    setSearchParams(nextParams, { replace: true });
+  }
   const [appTimezone, setAppTimezone] = useState<string | null>(null);
   const [logRetentionDaysDraft, setLogRetentionDaysDraft] = useState<
     string | null
@@ -1001,6 +1036,15 @@ export function SettingsPage() {
     }
   }
 
+  useEffect(() => {
+    if (tab === "support" && !showSupportTab) {
+      setTab("general");
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("tab");
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, showSupportTab, tab]);
+
   if (loadingAny) {
     return <PageLoading label="Loading settings" />;
   }
@@ -1205,7 +1249,6 @@ export function SettingsPage() {
   const runtimeRequestIssues = requestIssueSummary(
     runtimeMetrics?.status_counts,
   );
-  const showSupportTab = SHOW_SUPPORT_CARD;
 
   return (
     <div className="mm-page" data-testid="suite-settings-page">
@@ -1229,7 +1272,7 @@ export function SettingsPage() {
             role="tab"
             aria-selected={tab === "general"}
             className={tabButtonClass(tab === "general")}
-            onClick={() => setTab("general")}
+            onClick={() => setSettingsTab("general")}
           >
             General
           </button>
@@ -1238,7 +1281,7 @@ export function SettingsPage() {
             role="tab"
             aria-selected={tab === "security"}
             className={tabButtonClass(tab === "security")}
-            onClick={() => setTab("security")}
+            onClick={() => setSettingsTab("security")}
           >
             Security
           </button>
@@ -1247,7 +1290,7 @@ export function SettingsPage() {
             role="tab"
             aria-selected={tab === "backup"}
             className={tabButtonClass(tab === "backup")}
-            onClick={() => setTab("backup")}
+            onClick={() => setSettingsTab("backup")}
           >
             Backup and restore
           </button>
@@ -1256,7 +1299,7 @@ export function SettingsPage() {
             role="tab"
             aria-selected={tab === "upgrade"}
             className={tabButtonClass(tab === "upgrade")}
-            onClick={() => setTab("upgrade")}
+            onClick={() => setSettingsTab("upgrade")}
           >
             Upgrade
           </button>
@@ -1265,7 +1308,7 @@ export function SettingsPage() {
             role="tab"
             aria-selected={tab === "logs"}
             className={tabButtonClass(tab === "logs")}
-            onClick={() => setTab("logs")}
+            onClick={() => setSettingsTab("logs")}
           >
             Logs
           </button>
@@ -1275,7 +1318,7 @@ export function SettingsPage() {
               role="tab"
               aria-selected={tab === "support"}
               className={tabButtonClass(tab === "support")}
-              onClick={() => setTab("support")}
+              onClick={() => setSettingsTab("support")}
             >
               Support
             </button>
