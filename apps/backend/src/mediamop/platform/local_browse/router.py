@@ -48,7 +48,10 @@ def _list_root_entries() -> list[DirectoryBrowseEntry]:
             try:
                 import ctypes
 
-                drive_type = ctypes.windll.kernel32.GetDriveTypeW(root)
+                windll = getattr(ctypes, "windll", None)
+                if windll is None:
+                    raise RuntimeError("ctypes windll is unavailable")
+                drive_type = windll.kernel32.GetDriveTypeW(root)
                 description = {
                     2: "External drive",
                     3: "Local drive",
