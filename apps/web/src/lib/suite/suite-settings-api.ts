@@ -142,7 +142,11 @@ export async function fetchSuiteUpdateDiagnostics(): Promise<SuiteUpdateDiagnost
       continue;
     }
     if (!r.ok) {
-      await throwApiResponseError(path, r, "Could not load updater diagnostics");
+      await throwApiResponseError(
+        path,
+        r,
+        "Could not load updater diagnostics",
+      );
     }
     return readJson<SuiteUpdateDiagnosticsOut>(r);
   }

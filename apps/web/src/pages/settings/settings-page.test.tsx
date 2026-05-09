@@ -557,13 +557,13 @@ describe("SettingsPage (suite settings)", () => {
     });
     vi.spyOn(suiteSettingsApi, "fetchSuiteUpdateStatus").mockResolvedValue({
       ...windowsUpdateAvailableStatus,
-        upgrade: upgradeProgress({
-          phase: "downloading",
-          message:
-            "Upgrade request accepted. MediaMop is downloading the installer.",
-          attempt_id: "attempt-123",
-          target_version: "2.0.8",
-        }),
+      upgrade: upgradeProgress({
+        phase: "downloading",
+        message:
+          "Upgrade request accepted. MediaMop is downloading the installer.",
+        attempt_id: "attempt-123",
+        target_version: "2.0.8",
+      }),
     });
 
     renderSettings(operatorMe, { updateStatus: windowsUpdateAvailableStatus });
@@ -716,7 +716,9 @@ describe("SettingsPage (suite settings)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Show diagnostics" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Updater service reachable: Yes")).toBeInTheDocument();
+      expect(
+        screen.getByText("Updater service reachable: Yes"),
+      ).toBeInTheDocument();
     });
     expect(
       screen.getByText(

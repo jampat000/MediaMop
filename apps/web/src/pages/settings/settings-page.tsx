@@ -2239,7 +2239,9 @@ export function SettingsPage() {
                                 : "No"}
                             </p>
                             {diagnosticsUpgrade?.stale_reason ? (
-                              <p>Stale reason: {diagnosticsUpgrade.stale_reason}</p>
+                              <p>
+                                Stale reason: {diagnosticsUpgrade.stale_reason}
+                              </p>
                             ) : null}
                             {updateDiagnosticsQ.data.installer_log_path ? (
                               <p>
@@ -2298,8 +2300,8 @@ export function SettingsPage() {
                         )
                       ) : (
                         <p className="text-sm text-[var(--mm-text2)]">
-                          Includes updater reachability, current phase, log paths,
-                          and recent log lines for support triage.
+                          Includes updater reachability, current phase, log
+                          paths, and recent log lines for support triage.
                         </p>
                       )}
                     </div>
