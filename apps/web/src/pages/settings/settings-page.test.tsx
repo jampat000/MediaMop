@@ -498,7 +498,9 @@ describe("SettingsPage (suite settings)", () => {
       "aria-selected",
       "true",
     );
-    expect(screen.getByTestId("suite-settings-upgrade-tab")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("suite-settings-upgrade-tab"),
+    ).toBeInTheDocument();
     expect(
       screen.queryByTestId("suite-settings-global"),
     ).not.toBeInTheDocument();
