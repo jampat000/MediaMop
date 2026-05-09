@@ -12,6 +12,7 @@ from alembic.config import Config
 from starlette.testclient import TestClient
 
 from mediamop.api.factory import create_app
+from mediamop.modules.subber.subber_settings_api import _load_secrets_envelope
 from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_in_process_workers,
     integration_test_quiesce_periodic_enqueue,
@@ -146,6 +147,22 @@ def _put_settings(client_admin: TestClient, payload: dict) -> dict:
     )
     assert r.status_code == 200, r.text
     return r.json()
+
+
+def test_load_secrets_envelope_normalizes_invalid_shapes() -> None:
+    envelope, secrets = _load_secrets_envelope(
+        '{"provider":"legacy","secrets":["bad","shape"],"other":123}',
+        provider="opensubtitles",
+    )
+    assert envelope["provider"] == "opensubtitles"
+    assert secrets == {}
+
+    envelope2, secrets2 = _load_secrets_envelope(
+        '{"secrets":{"username":123,"password":null}}',
+        provider="opensubtitles",
+    )
+    assert envelope2["provider"] == "opensubtitles"
+    assert secrets2 == {"username": "123", "password": ""}
 
 
 def test_put_settings_language_preferences(client_admin: TestClient) -> None:

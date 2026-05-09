@@ -45,6 +45,23 @@ def _masked_set(ciphertext: str | None) -> bool:
     return bool((ciphertext or "").strip())
 
 
+def _load_secrets_envelope(raw: str | None, *, provider: str) -> tuple[dict[str, object], dict[str, str]]:
+    try:
+        decoded = json.loads(raw or "{}")
+    except json.JSONDecodeError:
+        decoded = {}
+    if not isinstance(decoded, dict):
+        decoded = {}
+    envelope: dict[str, object] = dict(decoded)
+    secrets_raw = envelope.get("secrets")
+    secrets: dict[str, str] = {}
+    if isinstance(secrets_raw, dict):
+        for key, value in secrets_raw.items():
+            secrets[str(key)] = str(value or "")
+    envelope["provider"] = provider
+    return envelope, secrets
+
+
 def _settings_out(db, row: SubberSettingsRow, request: Request, settings: MediaMopSettings) -> SubberSettingsOut:
     son_hint, rad_hint = get_arr_library_connection_hints(db)
     _ = request, settings
@@ -132,44 +149,29 @@ def put_subber_settings(
         row.enabled = bool(body.enabled)
     if body.opensubtitles_username is not None:
         row.opensubtitles_username = body.opensubtitles_username.strip()
-        raw_u = decrypt_subber_credentials_json(settings, row.opensubtitles_credentials_ciphertext or "") or "{}"
-        try:
-            cur_u = json.loads(raw_u)
-        except json.JSONDecodeError:
-            cur_u = {"provider": "opensubtitles", "secrets": {}}
-        if not isinstance(cur_u, dict):
-            cur_u = {"provider": "opensubtitles", "secrets": {}}
-        sec_u = cur_u.get("secrets") if isinstance(cur_u.get("secrets"), dict) else {}
-        sec_u["username"] = row.opensubtitles_username
-        cur_u["provider"] = "opensubtitles"
-        cur_u["secrets"] = sec_u
-        row.opensubtitles_credentials_ciphertext = encrypt_subber_credentials_json(settings, json.dumps(cur_u))
+        envelope_u, secrets_u = _load_secrets_envelope(
+            decrypt_subber_credentials_json(settings, row.opensubtitles_credentials_ciphertext or ""),
+            provider="opensubtitles",
+        )
+        secrets_u["username"] = row.opensubtitles_username
+        envelope_u["secrets"] = secrets_u
+        row.opensubtitles_credentials_ciphertext = encrypt_subber_credentials_json(settings, json.dumps(envelope_u))
     if body.opensubtitles_password is not None and body.opensubtitles_password.strip():
-        raw = decrypt_subber_credentials_json(settings, row.opensubtitles_credentials_ciphertext or "") or "{}"
-        try:
-            cur = json.loads(raw)
-        except json.JSONDecodeError:
-            cur = {"provider": "opensubtitles", "secrets": {}}
-        if not isinstance(cur, dict):
-            cur = {"provider": "opensubtitles", "secrets": {}}
-        sec = cur.get("secrets") if isinstance(cur.get("secrets"), dict) else {}
-        sec["password"] = body.opensubtitles_password
-        cur["provider"] = "opensubtitles"
-        cur["secrets"] = sec
-        row.opensubtitles_credentials_ciphertext = encrypt_subber_credentials_json(settings, json.dumps(cur))
+        envelope, secrets = _load_secrets_envelope(
+            decrypt_subber_credentials_json(settings, row.opensubtitles_credentials_ciphertext or ""),
+            provider="opensubtitles",
+        )
+        secrets["password"] = body.opensubtitles_password
+        envelope["secrets"] = secrets
+        row.opensubtitles_credentials_ciphertext = encrypt_subber_credentials_json(settings, json.dumps(envelope))
     if body.opensubtitles_api_key is not None and body.opensubtitles_api_key.strip():
-        raw = decrypt_subber_credentials_json(settings, row.opensubtitles_credentials_ciphertext or "") or "{}"
-        try:
-            cur = json.loads(raw)
-        except json.JSONDecodeError:
-            cur = {"provider": "opensubtitles", "secrets": {}}
-        if not isinstance(cur, dict):
-            cur = {"provider": "opensubtitles", "secrets": {}}
-        sec = cur.get("secrets") if isinstance(cur.get("secrets"), dict) else {}
-        sec["api_key"] = body.opensubtitles_api_key.strip()
-        cur["provider"] = "opensubtitles"
-        cur["secrets"] = sec
-        row.opensubtitles_credentials_ciphertext = encrypt_subber_credentials_json(settings, json.dumps(cur))
+        envelope, secrets = _load_secrets_envelope(
+            decrypt_subber_credentials_json(settings, row.opensubtitles_credentials_ciphertext or ""),
+            provider="opensubtitles",
+        )
+        secrets["api_key"] = body.opensubtitles_api_key.strip()
+        envelope["secrets"] = secrets
+        row.opensubtitles_credentials_ciphertext = encrypt_subber_credentials_json(settings, json.dumps(envelope))
     if body.sonarr_base_url is not None:
         row.sonarr_base_url = body.sonarr_base_url.strip()
     if body.sonarr_api_key is not None and body.sonarr_api_key.strip():

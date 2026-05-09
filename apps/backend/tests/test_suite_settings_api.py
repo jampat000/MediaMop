@@ -30,6 +30,7 @@ from mediamop.platform.suite_settings.logs_retention_periodic import (
     reset_log_retention_periodic_state_for_tests,
     run_log_retention_tick,
 )
+from mediamop.platform.suite_settings.logs_service import ParsedLogEntry
 from mediamop.platform.suite_settings.update_service import start_suite_update_now
 
 from tests.integration_helpers import (
@@ -424,6 +425,53 @@ def test_suite_update_status_alias_ok(client_with_admin: TestClient, monkeypatch
     body = r.json()
     assert body["status"] == "update_available"
     assert body["upgrade"]["phase"] == "installer_running"
+
+
+def test_suite_logs_skips_items_with_invalid_timestamp(
+    client_with_admin: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _login_admin(client_with_admin)
+    monkeypatch.setattr(
+        "mediamop.platform.suite_settings.router.read_suite_logs",
+        lambda *_args, **_kwargs: (
+            [
+                ParsedLogEntry(
+                    timestamp="not-a-time",
+                    level="INFO",
+                    component="System",
+                    message="broken timestamp",
+                    detail=None,
+                    traceback=None,
+                    source=None,
+                    logger="mediamop.platform.suite_settings",
+                    correlation_id=None,
+                    job_id=None,
+                ),
+                ParsedLogEntry(
+                    timestamp="2026-05-09T10:00:00Z",
+                    level="INFO",
+                    component="System",
+                    message="valid timestamp",
+                    detail=None,
+                    traceback=None,
+                    source=None,
+                    logger="mediamop.platform.suite_settings",
+                    correlation_id=None,
+                    job_id=None,
+                ),
+            ],
+            2,
+            {"ERROR": 0, "WARNING": 0, "INFO": 2},
+        ),
+    )
+
+    response = client_with_admin.get("/api/v1/suite/logs")
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert len(body["items"]) == 1
+    assert body["items"][0]["message"] == "valid timestamp"
 
 
 def test_suite_update_now_get_redirects_back_to_settings(client_with_admin: TestClient) -> None:

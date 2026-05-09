@@ -156,6 +156,75 @@ def test_periodic_scheduler_scope_failure_does_not_block_other_scope(
             db.commit()
 
 
+def test_periodic_scheduler_keeps_scope_next_run_values_independent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[str] = []
+
+    class _SessionCtx:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            return None
+
+        def commit(self) -> None:
+            return None
+
+        def rollback(self) -> None:
+            return None
+
+    def _session_factory():
+        return _SessionCtx()
+
+    monkeypatch.setattr(
+        periodic_enqueue,
+        "ensure_refiner_operator_settings_row",
+        lambda _session: SimpleNamespace(movie_schedule_enabled=True, tv_schedule_enabled=True),
+    )
+    monkeypatch.setattr(
+        periodic_enqueue,
+        "ensure_refiner_path_settings_row",
+        lambda _session: SimpleNamespace(),
+    )
+    monkeypatch.setattr(
+        periodic_enqueue,
+        "refiner_periodic_scope_in_schedule_window",
+        lambda _session, _row, *, media_scope: media_scope in {"movie", "tv"},
+    )
+    monkeypatch.setattr(
+        periodic_enqueue,
+        "_watched_folder_scan_interval_seconds",
+        lambda _row, *, media_scope: 1.0 if media_scope == "movie" else 0.25,
+    )
+
+    async def _run() -> None:
+        stop_event = asyncio.Event()
+
+        def _fake_enqueue(_session, _settings, *, media_scope: str = "movie"):
+            calls.append(media_scope)
+            if len(calls) >= 3:
+                stop_event.set()
+            return True, None
+
+        monkeypatch.setattr(
+            periodic_enqueue,
+            "try_enqueue_periodic_watched_folder_remux_scan_dispatch",
+            _fake_enqueue,
+        )
+        await asyncio.wait_for(
+            periodic_enqueue._run_periodic_watched_folder_scan_dispatch_enqueue(
+                _session_factory,
+                stop_event=stop_event,
+                settings=_settings_on(),
+            ),
+            timeout=3.0,
+        )
+
+    asyncio.run(_run())
+    assert calls[:3] == ["movie", "tv", "tv"]
+
+
 def test_queue_has_active_scan_detects_pending_and_leased_per_scope() -> None:
     fac = _fac()
     with fac() as db:

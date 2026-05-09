@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+import logging
+
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from starlette import status
@@ -51,6 +54,14 @@ from mediamop.platform.suite_settings.update_service import (
 )
 
 router = APIRouter(tags=["suite"])
+logger = logging.getLogger(__name__)
+
+
+def _parse_iso8601_timestamp(raw: str) -> datetime | None:
+    try:
+        return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
 
 
 @router.get("/suite/settings", response_model=SuiteSettingsOut)
@@ -275,10 +286,15 @@ def get_suite_logs(
         has_exception=has_exception,
         limit=limit,
     )
-    return SuiteLogsOut(
-        items=[
+    parsed_items: list[SuiteLogEntryOut] = []
+    for item in items:
+        parsed_timestamp = _parse_iso8601_timestamp(item.timestamp)
+        if parsed_timestamp is None:
+            logger.warning("Skipping suite log entry with invalid timestamp: %s", item.timestamp)
+            continue
+        parsed_items.append(
             SuiteLogEntryOut(
-                timestamp=item.timestamp,
+                timestamp=parsed_timestamp,
                 level=item.level,
                 component=item.component,
                 message=item.message,
@@ -289,8 +305,9 @@ def get_suite_logs(
                 correlation_id=item.correlation_id,
                 job_id=item.job_id,
             )
-            for item in items
-        ],
+        )
+    return SuiteLogsOut(
+        items=parsed_items,
         total=total,
         counts=SuiteLogCountsOut(
             error=counts["ERROR"],
@@ -303,18 +320,19 @@ def get_suite_logs(
 @router.get("/suite/metrics", response_model=SuiteMetricsOut)
 def get_suite_metrics(_user: UserPublicDep) -> SuiteMetricsOut:
     summary = build_runtime_metrics_summary()
+    busiest_routes = summary["busiest_routes"]
     return SuiteMetricsOut(
-        uptime_seconds=float(summary["uptime_seconds"]),
-        total_requests=int(summary["total_requests"]),
-        average_response_ms=float(summary["average_response_ms"]),
-        error_log_count=int(summary["error_log_count"]),
-        status_counts={k: int(v) for k, v in dict(summary["status_counts"]).items()},
+        uptime_seconds=summary["uptime_seconds"],
+        total_requests=summary["total_requests"],
+        average_response_ms=summary["average_response_ms"],
+        error_log_count=summary["error_log_count"],
+        status_counts=summary["status_counts"],
         busiest_routes=[
             SuiteMetricsRouteOut(
-                route=str(row["route"]),
-                request_count=int(row["request_count"]),
-                average_response_ms=float(row["average_response_ms"]),
+                route=row["route"],
+                request_count=row["request_count"],
+                average_response_ms=row["average_response_ms"],
             )
-            for row in list(summary["busiest_routes"])
+            for row in busiest_routes
         ],
     )

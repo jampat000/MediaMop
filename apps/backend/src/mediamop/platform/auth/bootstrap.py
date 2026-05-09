@@ -22,6 +22,9 @@ def acquire_bootstrap_transaction_lock(db: Session) -> None:
     """
 
     raw = db.connection().connection.driver_connection
+    if raw is None:
+        msg = "Could not acquire bootstrap transaction lock: database driver connection is unavailable."
+        raise RuntimeError(msg)
     raw.execute("BEGIN IMMEDIATE")
 
 

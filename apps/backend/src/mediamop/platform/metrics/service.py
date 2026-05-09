@@ -6,12 +6,30 @@ import threading
 import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass
+from typing import TypedDict
 
 
 @dataclass
 class RouteMetric:
     count: int = 0
     total_duration_ms: float = 0.0
+
+
+class RouteSummary(TypedDict):
+    route: str
+    request_count: int
+    average_response_ms: float
+
+
+class RuntimeMetricsSummary(TypedDict):
+    uptime_seconds: float
+    total_requests: int
+    average_response_ms: float
+    error_log_count: int
+    status_counts: dict[str, int]
+    busiest_routes: list[RouteSummary]
+    module_job_counts: dict[str, dict[str, int]]
+    module_queue_depths: dict[str, int]
 
 
 class RuntimeMetricsStore:
@@ -23,6 +41,8 @@ class RuntimeMetricsStore:
         self.status_counts: Counter[str] = Counter()
         self.route_metrics: dict[str, RouteMetric] = defaultdict(RouteMetric)
         self.log_counts: Counter[str] = Counter()
+        self.module_job_counts: Counter[tuple[str, str]] = Counter()
+        self.module_queue_depths: dict[str, int] = defaultdict(int)
 
     def record_request(self, *, method: str, route: str, status_code: int, duration_ms: float) -> None:
         bucket = f"{status_code // 100}xx"
@@ -39,7 +59,21 @@ class RuntimeMetricsStore:
         with self._lock:
             self.log_counts[level.upper()] += 1
 
-    def summary(self) -> dict[str, object]:
+    def record_module_job_event(self, *, module: str, event: str) -> None:
+        if not module:
+            return
+        if event not in {"started", "completed", "failed"}:
+            return
+        with self._lock:
+            self.module_job_counts[(module, event)] += 1
+
+    def set_module_queue_depth(self, *, module: str, depth: int) -> None:
+        if not module:
+            return
+        with self._lock:
+            self.module_queue_depths[module] = max(0, int(depth))
+
+    def summary(self) -> RuntimeMetricsSummary:
         with self._lock:
             uptime_seconds = max(time.time() - self.started_at, 0.0)
             average_response_ms = self.http_total_duration_ms / self.http_total if self.http_total else 0.0
@@ -47,6 +81,10 @@ class RuntimeMetricsStore:
                 self.route_metrics.items(),
                 key=lambda item: (-item[1].count, item[0]),
             )[:5]
+            module_job_counts: dict[str, dict[str, int]] = {}
+            for (module, event), count in sorted(self.module_job_counts.items()):
+                bucket = module_job_counts.setdefault(module, {"started": 0, "completed": 0, "failed": 0})
+                bucket[event] = int(count)
             return {
                 "uptime_seconds": uptime_seconds,
                 "total_requests": self.http_total,
@@ -66,10 +104,13 @@ class RuntimeMetricsStore:
                     }
                     for route, metric in busiest
                 ],
+                "module_job_counts": module_job_counts,
+                "module_queue_depths": dict(self.module_queue_depths),
             }
 
     def render_prometheus(self) -> str:
         summary = self.summary()
+        status_counts = summary["status_counts"]
         lines = [
             "# HELP mediamop_process_uptime_seconds Seconds since the current MediaMop process started.",
             "# TYPE mediamop_process_uptime_seconds gauge",
@@ -85,8 +126,13 @@ class RuntimeMetricsStore:
         ]
         for level in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
             lines.append(f'mediamop_log_records_total{{level="{level.lower()}"}} {self.log_counts[level]}')
-        for bucket, count in summary["status_counts"].items():
+        for bucket, count in status_counts.items():
             lines.append(f'mediamop_http_status_total{{status="{bucket}"}} {count}')
+        for module, counts in summary["module_job_counts"].items():
+            for event, count in counts.items():
+                lines.append(f'mediamop_module_jobs_total{{module="{module}",event="{event}"}} {count}')
+        for module, depth in summary["module_queue_depths"].items():
+            lines.append(f'mediamop_module_queue_depth{{module="{module}"}} {depth}')
         return "\n".join(lines) + "\n"
 
 
@@ -101,9 +147,22 @@ def record_log_record(level: str) -> None:
     runtime_metrics.record_log(level)
 
 
-def build_runtime_metrics_summary() -> dict[str, object]:
+def record_module_job_event(*, module: str, event: str) -> None:
+    runtime_metrics.record_module_job_event(module=module, event=event)
+
+
+def set_module_queue_depth(*, module: str, depth: int) -> None:
+    runtime_metrics.set_module_queue_depth(module=module, depth=depth)
+
+
+def build_runtime_metrics_summary() -> RuntimeMetricsSummary:
     return runtime_metrics.summary()
 
 
 def render_prometheus_metrics() -> str:
     return runtime_metrics.render_prometheus()
+
+
+def reset_runtime_metrics_for_tests() -> None:
+    global runtime_metrics
+    runtime_metrics = RuntimeMetricsStore()

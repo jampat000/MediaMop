@@ -227,8 +227,10 @@ def post_arr_library_connection_test(
             )
             record_connection_test_result_sonarr(db, ok=False, detail=detail)
             return ArrLibraryConnectionTestOut(ok=False, message=detail)
+        base_url = (base or "").strip()
+        api_key = (key or "").strip()
         try:
-            ArrLibraryV3Client(base.strip(), key.strip()).health_ok()
+            ArrLibraryV3Client(base_url, api_key).health_ok()
         except ArrLibraryV3HttpError as e:
             msg = (
                 "MediaMop could reach your TV library app, but it did not accept the request. "
@@ -296,8 +298,10 @@ def post_arr_library_connection_test(
         )
         record_connection_test_result_radarr(db, ok=False, detail=detail)
         return ArrLibraryConnectionTestOut(ok=False, message=detail)
+    base_url = (base or "").strip()
+    api_key = (key or "").strip()
     try:
-        ArrLibraryV3Client(base.strip(), key.strip()).health_ok()
+        ArrLibraryV3Client(base_url, api_key).health_ok()
     except ArrLibraryV3HttpError as e:
         msg = (
             "MediaMop could reach your movie library app, but it did not accept the request. "

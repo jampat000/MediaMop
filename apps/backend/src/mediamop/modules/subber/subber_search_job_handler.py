@@ -93,7 +93,7 @@ def make_subber_subtitle_search_handler(
                         state_id,
                     )
                     return
-                provider_events: list[dict[str, str]] = []
+                provider_events: list[dict[str, object]] = []
                 ok = search_and_download_subtitle(
                     settings=settings,
                     settings_row=settings_row,

@@ -108,7 +108,7 @@ def put_subber_provider(
             cur["password"] = body.password
         if body.api_key is not None and body.api_key.strip():
             cur["api_key"] = body.api_key.strip()
-        creds = cur
+        creds = dict(cur)
     row = upsert_provider_settings(
         db,
         settings,

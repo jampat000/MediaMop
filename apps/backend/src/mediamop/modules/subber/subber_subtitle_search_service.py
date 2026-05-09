@@ -796,7 +796,7 @@ def search_and_download_subtitle(
     db: Session,
     providers: list[SubberProviderRow] | None = None,
     retain_found_on_failure: bool = False,
-    provider_events: list[dict[str, str]] | None = None,
+    provider_events: list[dict[str, object]] | None = None,
 ) -> bool:
     """Search providers in order; legacy settings path when ``providers`` is empty.
 

@@ -208,8 +208,8 @@ def repair_reconciliation_issue(
             raise ValueError("confirm=true is required before removing a Refiner temp artifact.")
         if not path or not path.strip():
             raise ValueError("path is required for this repair action.")
-        row = session.get(RefinerPathSettingsRow, 1)
-        roots = _configured_refiner_work_roots(row)
+        path_row = session.get(RefinerPathSettingsRow, 1)
+        roots = _configured_refiner_work_roots(path_row)
         target = Path(path)
         if not _is_temp_artifact(target):
             raise ValueError("Refusing to remove a file that does not look like a temp artifact.")

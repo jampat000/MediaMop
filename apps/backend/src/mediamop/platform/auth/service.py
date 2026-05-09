@@ -81,7 +81,7 @@ def cleanup_inactive_sessions(db: Session, *, settings: MediaMopSettings, now=No
             ),
         )
     )
-    return int(result.rowcount or 0)
+    return int(getattr(result, "rowcount", 0) or 0)
 
 
 def enforce_session_limit_for_user(

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from mediamop.platform.auth.password import MIN_PASSWORD_LENGTH
 
@@ -14,6 +14,8 @@ class CsrfOut(BaseModel):
 
 
 class LoginIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     username: str = Field(..., min_length=1, max_length=64)
     password: str = Field(..., min_length=1)
     csrf_token: str = Field(..., min_length=1)
@@ -32,6 +34,8 @@ class LoginOut(BaseModel):
 
 class LogoutIn(BaseModel):
     """Optional body CSRF fallback when header is awkward for a client."""
+
+    model_config = ConfigDict(extra="forbid")
 
     csrf_token: str | None = None
 
@@ -57,6 +61,8 @@ class BootstrapStatusOut(BaseModel):
 
 
 class BootstrapIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     username: str = Field(..., min_length=1, max_length=64)
     password: str = Field(..., min_length=MIN_PASSWORD_LENGTH, max_length=512)
     csrf_token: str = Field(..., min_length=1)
@@ -68,6 +74,8 @@ class BootstrapOut(BaseModel):
 
 
 class ChangePasswordIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     current_password: str = Field(..., min_length=1)
     new_password: str = Field(..., min_length=MIN_PASSWORD_LENGTH, max_length=512)
     csrf_token: str = Field(..., min_length=1)
