@@ -1,5 +1,7 @@
 /** GET/PUT /api/v1/suite/settings — names and notices stored in the app database. */
 
+import type { components } from "../api/generated/openapi-types";
+
 export type SuiteSettingsOut = {
   product_display_name: string;
   signed_in_home_notice: string | null;
@@ -57,57 +59,14 @@ export type SuiteConfigurationBackupListOut = {
   items: SuiteConfigurationBackupItem[];
 };
 
-export type SuiteUpdateStatusOut = {
-  current_version: string;
-  install_type: string;
-  status: "up_to_date" | "update_available" | "unavailable" | string;
-  summary: string;
-  latest_version?: string | null;
-  latest_name?: string | null;
-  published_at?: string | null;
-  release_url?: string | null;
-  windows_installer_url?: string | null;
-  docker_image?: string | null;
-  docker_tag?: string | null;
-  docker_update_command?: string | null;
-  in_app_upgrade_supported?: boolean;
-  in_app_upgrade_summary?: string | null;
-  upgrade?: SuiteUpgradeProgressOut | null;
-};
+type OpenApiSchemaName = keyof components["schemas"];
+type OpenApiSchema<T extends OpenApiSchemaName> = components["schemas"][T];
 
-export type SuiteUpdateStartOut = {
-  status: "started" | "manual_required" | "unavailable" | string;
-  message: string;
-  attempt_id?: string | null;
-  target_version?: string | null;
-  installer_path?: string | null;
-  log_path?: string | null;
-};
-
-export type SuiteUpgradeProgressOut = {
-  phase: string;
-  raw_phase?: string | null;
-  message: string;
-  is_active?: boolean;
-  is_stale?: boolean;
-  blocks_new_update?: boolean;
-  stale_reason?: string | null;
-  attempt_id?: string | null;
-  target_version?: string | null;
-  current_version_seen?: string | null;
-  downloaded_installer_path?: string | null;
-  installer_sha256?: string | null;
-  expected_sha256?: string | null;
-  installer_log_path?: string | null;
-  service_log_path?: string | null;
-  install_root?: string | null;
-  runtime_home?: string | null;
-  last_started_at?: string | null;
-  last_updated_at?: string | null;
-  last_completed_at?: string | null;
-  last_error?: string | null;
-  diagnostics?: Record<string, unknown>;
-};
+export type SuiteUpdateStatusOut = OpenApiSchema<"SuiteUpdateStatusOut">;
+export type SuiteUpdateStartOut = OpenApiSchema<"SuiteUpdateStartOut">;
+export type SuiteUpgradeProgressOut = OpenApiSchema<"SuiteUpgradeProgressOut">;
+export type SuiteUpdateDiagnosticsOut =
+  OpenApiSchema<"SuiteUpdateDiagnosticsOut">;
 
 export type SuiteOperationalHistoryResetOut = {
   status: "reset" | string;

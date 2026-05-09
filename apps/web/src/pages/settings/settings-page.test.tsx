@@ -21,9 +21,11 @@ import type {
   SuiteMetricsOut,
   SuiteSecurityOverviewOut,
   SuiteSettingsOut,
+  SuiteUpdateDiagnosticsOut,
   SuiteUpdateStatusOut,
 } from "../../lib/suite/types";
 import { SettingsPage, verifiedUpgradeRefreshKey } from "./settings-page";
+const UPGRADE_HISTORY_STORAGE_KEY = "mediamop.upgrade.history.v1";
 
 const operatorMe: UserPublic = { id: 1, username: "alice", role: "operator" };
 const viewerMe: UserPublic = { id: 2, username: "bob", role: "viewer" };
@@ -118,6 +120,24 @@ const minimalMetrics: SuiteMetricsOut = {
   status_counts: { "2xx": 18, "3xx": 0, "4xx": 2, "5xx": 0 },
   busiest_routes: [],
 };
+
+type SuiteUpgradeProgress = NonNullable<SuiteUpdateStatusOut["upgrade"]>;
+
+function upgradeProgress(
+  overrides: Pick<SuiteUpgradeProgress, "phase" | "message"> &
+    Partial<SuiteUpgradeProgress>,
+): SuiteUpgradeProgress {
+  const { phase, message, ...rest } = overrides;
+  const isActiveByDefault = !["completed", "failed", "idle"].includes(phase);
+  return {
+    phase,
+    message,
+    is_active: isActiveByDefault,
+    is_stale: false,
+    blocks_new_update: isActiveByDefault,
+    ...rest,
+  };
+}
 
 function wrap(ui: ReactNode, client: QueryClient) {
   return (
@@ -216,6 +236,7 @@ describe("SettingsPage (suite settings)", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     localStorage.removeItem(DISPLAY_DENSITY_STORAGE_KEY);
+    localStorage.removeItem(UPGRADE_HISTORY_STORAGE_KEY);
     document.documentElement.removeAttribute("data-mm-density");
   });
 
@@ -316,7 +337,7 @@ describe("SettingsPage (suite settings)", () => {
       screen.getByRole("button", { name: "Download configuration now" }),
     ).toBeEnabled();
     expect(
-      screen.getByRole("button", { name: "Restore from file…" }),
+      screen.getByRole("button", { name: "Restore from file..." }),
     ).toBeEnabled();
     expect(
       screen.getByRole("button", { name: "Save backup schedule" }),
@@ -536,13 +557,13 @@ describe("SettingsPage (suite settings)", () => {
     });
     vi.spyOn(suiteSettingsApi, "fetchSuiteUpdateStatus").mockResolvedValue({
       ...windowsUpdateAvailableStatus,
-      upgrade: {
-        phase: "downloading",
-        message:
-          "Upgrade request accepted. MediaMop is downloading the installer.",
-        attempt_id: "attempt-123",
-        target_version: "2.0.8",
-      },
+        upgrade: upgradeProgress({
+          phase: "downloading",
+          message:
+            "Upgrade request accepted. MediaMop is downloading the installer.",
+          attempt_id: "attempt-123",
+          target_version: "2.0.8",
+        }),
     });
 
     renderSettings(operatorMe, { updateStatus: windowsUpdateAvailableStatus });
@@ -566,12 +587,12 @@ describe("SettingsPage (suite settings)", () => {
     renderSettings(operatorMe, {
       updateStatus: {
         ...windowsUpdateAvailableStatus,
-        upgrade: {
+        upgrade: upgradeProgress({
           phase: "verifying_download",
           message: "Installer is being verified.",
           attempt_id: "attempt-123",
           target_version: "2.0.8",
-        },
+        }),
       },
     });
     fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
@@ -585,12 +606,12 @@ describe("SettingsPage (suite settings)", () => {
     renderSettings(operatorMe, {
       updateStatus: {
         ...windowsUpdateAvailableStatus,
-        upgrade: {
+        upgrade: upgradeProgress({
           phase: "installer_running",
           message: "Installer is running. MediaMop may temporarily disconnect.",
           attempt_id: "attempt-123",
           target_version: "2.0.8",
-        },
+        }),
       },
     });
     fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
@@ -608,12 +629,12 @@ describe("SettingsPage (suite settings)", () => {
     renderSettings(operatorMe, {
       updateStatus: {
         ...windowsUpdateAvailableStatus,
-        upgrade: {
+        upgrade: upgradeProgress({
           phase: "installer_running",
           message: "Installer is running. MediaMop may temporarily disconnect.",
           attempt_id: "attempt-123",
           target_version: "2.0.8",
-        },
+        }),
       },
     });
     fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
@@ -669,6 +690,73 @@ describe("SettingsPage (suite settings)", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("shows updater diagnostics details when expanded", async () => {
+    const diagnostics: SuiteUpdateDiagnosticsOut = {
+      current_version: "2.2.0",
+      latest_version: "2.2.2",
+      install_type: "windows",
+      install_root: "C:/Program Files/MediaMop",
+      runtime_home: "C:/ProgramData/MediaMop",
+      updater_service_reachable: true,
+      updater_token_path_present: true,
+      installer_log_path:
+        "C:/ProgramData/MediaMop/upgrades/installer-attempt-123.log",
+      service_log_path: "C:/ProgramData/MediaMop/upgrades/updater-service.log",
+      installer_log_tail: ["installer line 1"],
+      service_log_tail: ["service line 1"],
+      running_processes: [],
+      installed_files: [],
+      upgrade: null,
+    };
+    vi.spyOn(suiteSettingsApi, "fetchSuiteUpdateDiagnostics").mockResolvedValue(
+      diagnostics,
+    );
+    renderSettings(operatorMe, { updateStatus: windowsUpdateAvailableStatus });
+    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show diagnostics" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Updater service reachable: Yes")).toBeInTheDocument();
+    });
+    expect(
+      screen.getByText(
+        "Installer log: C:/ProgramData/MediaMop/upgrades/installer-attempt-123.log",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Open full updater diagnostics" }),
+    ).toHaveAttribute("href", "/api/v1/suite/update-diagnostics");
+  });
+
+  it("records and renders upgrade history entries for operator review", () => {
+    renderSettings(operatorMe, {
+      updateStatus: {
+        ...windowsUpdateAvailableStatus,
+        upgrade: upgradeProgress({
+          phase: "downloading",
+          message:
+            "Upgrade request accepted. MediaMop is downloading the installer.",
+          attempt_id: "attempt-history-1",
+          target_version: "2.0.8",
+          current_version_seen: "2.0.7",
+          last_updated_at: "2026-05-09T03:27:56Z",
+        }),
+      },
+    });
+    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show history" }));
+    expect(screen.getByText("Downloading - downloading")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Upgrade request accepted. MediaMop is downloading the installer.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Attempt ID: attempt-history-1").length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Target: 2.0.8")).toBeInTheDocument();
+  });
+
   it("does not render a stale old upgrade state as active when a newer release is available", () => {
     renderSettings(operatorMe, {
       updateStatus: {
@@ -677,7 +765,7 @@ describe("SettingsPage (suite settings)", () => {
         latest_version: "2.1.2",
         latest_name: "MediaMop 2.1.2",
         summary: "MediaMop 2.1.2 is available.",
-        upgrade: {
+        upgrade: upgradeProgress({
           phase: "completed",
           raw_phase: "installer_running",
           message: "Upgrade completed. Running version: 2.1.0.",
@@ -688,7 +776,7 @@ describe("SettingsPage (suite settings)", () => {
             "Persisted updater state could not prove the original installer process was still active.",
           target_version: "2.1.0",
           current_version_seen: "2.1.0",
-        },
+        }),
       },
     });
     fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
@@ -707,13 +795,13 @@ describe("SettingsPage (suite settings)", () => {
     renderSettings(operatorMe, {
       updateStatus: {
         ...windowsUpdateAvailableStatus,
-        upgrade: {
+        upgrade: upgradeProgress({
           phase: "completed",
           message: "Upgrade completed. Running version: 2.0.8.",
           target_version: "2.0.8",
           installer_log_path:
             "C:/ProgramData/MediaMop/upgrades/installer-attempt-123.log",
-        },
+        }),
       },
     });
     fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
@@ -733,7 +821,7 @@ describe("SettingsPage (suite settings)", () => {
         current_version: "2.0.8",
         status: "up_to_date",
         summary: "This install is already on MediaMop 2.0.8.",
-        upgrade: {
+        upgrade: upgradeProgress({
           phase: "completed",
           message: "Upgrade completed. Running version: 2.0.8.",
           target_version: "2.0.8",
@@ -741,7 +829,7 @@ describe("SettingsPage (suite settings)", () => {
             "C:/ProgramData/MediaMop/upgrades/installer-attempt-123.log",
           service_log_path:
             "C:/ProgramData/MediaMop/upgrades/updater-service.log",
-        },
+        }),
       },
     });
     fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
@@ -762,11 +850,11 @@ describe("SettingsPage (suite settings)", () => {
     renderSettings(operatorMe, {
       updateStatus: {
         ...windowsUpdateAvailableStatus,
-        upgrade: {
+        upgrade: upgradeProgress({
           phase: "completed",
           message: "Upgrade completed. Running version: 2.0.8.",
           target_version: "2.0.8",
-        },
+        }),
       },
     });
     fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
@@ -785,11 +873,11 @@ describe("SettingsPage (suite settings)", () => {
         current_version: "2.0.8",
         status: "up_to_date",
         summary: "This install is already on MediaMop 2.0.8.",
-        upgrade: {
+        upgrade: upgradeProgress({
           phase: "completed",
           message: "Upgrade completed. Running version: 2.0.8.",
           target_version: "2.0.8",
-        },
+        }),
       },
     });
     fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
@@ -808,13 +896,13 @@ describe("SettingsPage (suite settings)", () => {
           status: "up_to_date",
           summary: "This install is already on MediaMop 2.0.8.",
         },
-        {
+        upgradeProgress({
           phase: "completed",
           message: "Upgrade completed. Running version: 2.0.8.",
           attempt_id: "attempt-verified",
           target_version: "2.0.8",
           current_version_seen: "2.0.8",
-        },
+        }),
         {
           attemptId: "attempt-verified",
           targetVersion: "2.0.8",
@@ -831,13 +919,13 @@ describe("SettingsPage (suite settings)", () => {
     expect(
       verifiedUpgradeRefreshKey(
         windowsUpdateAvailableStatus,
-        {
+        upgradeProgress({
           phase: "completed",
           message: "Upgrade completed. Running version: 2.0.8.",
           attempt_id: "attempt-unverified",
           target_version: "2.0.8",
           current_version_seen: "2.0.7",
-        },
+        }),
         {
           attemptId: "attempt-unverified",
           targetVersion: "2.0.8",
@@ -854,7 +942,7 @@ describe("SettingsPage (suite settings)", () => {
     renderSettings(operatorMe, {
       updateStatus: {
         ...windowsUpdateAvailableStatus,
-        upgrade: {
+        upgrade: upgradeProgress({
           phase: "failed",
           message: "Upgrade failed.",
           target_version: "2.0.8",
@@ -863,7 +951,7 @@ describe("SettingsPage (suite settings)", () => {
             "C:/ProgramData/MediaMop/upgrades/installer-attempt-123.log",
           service_log_path:
             "C:/ProgramData/MediaMop/upgrades/updater-service.log",
-        },
+        }),
       },
     });
     fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
@@ -891,7 +979,7 @@ describe("SettingsPage (suite settings)", () => {
     renderSettings(operatorMe, {
       updateStatus: {
         ...windowsUpdateAvailableStatus,
-        upgrade: {
+        upgrade: upgradeProgress({
           phase: "verifying_install",
           message:
             "MediaMop is reconnecting and verifying the installed version.",
@@ -903,7 +991,7 @@ describe("SettingsPage (suite settings)", () => {
             "C:/ProgramData/MediaMop/upgrades/installer-attempt-123.log",
           service_log_path:
             "C:/ProgramData/MediaMop/upgrades/updater-service.log",
-        },
+        }),
       },
     });
     fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));

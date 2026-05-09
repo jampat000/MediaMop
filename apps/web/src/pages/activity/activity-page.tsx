@@ -87,6 +87,16 @@ const EVENT_LABELS: Record<string, string> = {
   "pruner.apply_library_removal_failed": "Cleanup finished",
 };
 
+function compactActivityTitle(text: string, maxLength = 92): string {
+  const normalized = text.trim();
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+  const tail = Math.max(14, Math.min(28, maxLength - 24));
+  const head = Math.max(20, maxLength - tail - 3);
+  return `${normalized.slice(0, head).trimEnd()}...${normalized.slice(-tail).trimStart()}`;
+}
+
 function eventOptionLabel(eventType: string): string {
   return (
     EVENT_LABELS[eventType] ??
@@ -237,7 +247,7 @@ function normalizeSubberSummary(ev: ActivityEventItem): ActivityDisplay | null {
     return {
       title: `${prettyScope} library sync finished`,
       summary: "Library sync result",
-      detail: ev.detail,
+      detail: ev.detail ?? null,
       chip: "Library sync completed",
       tone: "success",
       compact: true,
@@ -255,7 +265,7 @@ function normalizeSubberSummary(ev: ActivityEventItem): ActivityDisplay | null {
             ? "A subtitle was downloaded for this item."
             : ok === false
               ? "No better subtitle was found for this item."
-              : ev.detail,
+              : (ev.detail ?? null),
       chip: ok === true ? "Subtitle downloaded" : "Search complete",
       tone: ok === true ? "success" : reason ? "warning" : "info",
       compact: true,
@@ -274,7 +284,7 @@ function normalizeSubberSummary(ev: ActivityEventItem): ActivityDisplay | null {
             ? "Subtitle upgrade failed"
             : "Subtitle upgrade finished",
       summary: "Subtitle upgrade result",
-      detail: userMessage ?? nextAction ?? ev.detail,
+      detail: userMessage ?? nextAction ?? ev.detail ?? null,
       chip:
         result === "skipped"
           ? "Upgrade skipped"
@@ -295,7 +305,7 @@ function normalizeSubberSummary(ev: ActivityEventItem): ActivityDisplay | null {
     return {
       title: `${prettyScope} webhook import started`,
       summary: "Webhook import result",
-      detail: ev.detail,
+      detail: ev.detail ?? null,
       chip: "Webhook import queued",
       tone: "info",
       compact: true,
@@ -317,7 +327,7 @@ function normalizePrunerSummary(ev: ActivityEventItem): ActivityDisplay | null {
     return {
       title: "Preview finished",
       summary: "Cleanup preview result",
-      detail: error ?? ev.detail,
+      detail: error ?? ev.detail ?? null,
       chip:
         ev.event_type === "pruner.preview_unsupported"
           ? "Preview unsupported"
@@ -341,7 +351,7 @@ function normalizePrunerSummary(ev: ActivityEventItem): ActivityDisplay | null {
     return {
       title: "Cleanup finished",
       summary: "Cleanup run result",
-      detail: error ?? ev.detail,
+      detail: error ?? ev.detail ?? null,
       chip:
         ev.event_type === "pruner.apply_library_removal_failed"
           ? "Cleanup failed"
@@ -361,7 +371,7 @@ function normalizePrunerSummary(ev: ActivityEventItem): ActivityDisplay | null {
     return {
       title: "Media server connection check",
       summary: "Media server connection check",
-      detail: ev.detail,
+      detail: ev.detail ?? null,
       chip:
         ev.event_type === "pruner.connection_test_failed"
           ? "Connection failed"
@@ -400,7 +410,7 @@ function normalizeRefinerSummary(
         percent == null
           ? "Refiner is preparing the cleaned-up file"
           : `Refiner is writing the cleaned-up file (${Math.round(percent)}%)`,
-      detail: ev.detail,
+      detail: ev.detail ?? null,
       chip:
         status === "failed"
           ? "Processing stopped"
@@ -445,7 +455,7 @@ function normalizeRefinerSummary(
             : remuxNeeded === false
               ? "The file already fits your Refiner rules"
               : "Refiner finished writing the cleaned-up file",
-      detail: ev.detail,
+      detail: ev.detail ?? null,
       chip:
         outcome === "live_skipped_not_required"
           ? "No changes needed"
@@ -460,7 +470,7 @@ function normalizeRefinerSummary(
     return {
       title: "Manual queue check finished",
       summary: "Download queue safety check",
-      detail: ev.detail,
+      detail: ev.detail ?? null,
       chip: "Queue check finished",
       tone: "success",
       compact: true,
@@ -470,7 +480,7 @@ function normalizeRefinerSummary(
     return {
       title: "Queue check finished",
       summary: "Download queue safety check",
-      detail: ev.detail,
+      detail: ev.detail ?? null,
       chip: "Queue check finished",
       tone: "success",
       compact: true,
@@ -499,7 +509,7 @@ function normalizeRefinerSummary(
       summary: seen
         ? `${seen} media file${seen === 1 ? "" : "s"} checked`
         : "No media files found",
-      detail: details || ev.detail,
+      detail: details || ev.detail || null,
       chip: queued
         ? `${queued} added to Refiner`
         : waiting
@@ -513,7 +523,7 @@ function normalizeRefinerSummary(
     return {
       title: "Temporary files cleanup finished",
       summary: "Background cleanup result",
-      detail: ev.detail,
+      detail: ev.detail ?? null,
       chip: "Cleanup finished",
       tone: "success",
       compact: true,
@@ -523,7 +533,7 @@ function normalizeRefinerSummary(
     return {
       title: "Failed-remux cleanup finished",
       summary: "Background cleanup result",
-      detail: ev.detail,
+      detail: ev.detail ?? null,
       chip: "Cleanup finished",
       tone: "success",
       compact: true,
@@ -540,7 +550,7 @@ function normalizeAuthSummary(ev: ActivityEventItem): ActivityDisplay | null {
     summary: ev.module.startsWith("arr_library")
       ? "Service connection check"
       : "Account and sign-in activity",
-    detail: ev.detail,
+    detail: ev.detail ?? null,
     chip: "System event",
     tone:
       ev.event_type.includes("failed") || ev.event_type.includes("denied")
@@ -581,7 +591,7 @@ function eventDisplay(ev: ActivityEventItem): ActivityDisplay {
           : ev.module === "subber"
             ? "Subber activity"
             : "System event",
-    detail: ev.detail,
+    detail: ev.detail ?? null,
     chip: eventOptionLabel(ev.event_type),
     tone,
     compact: Boolean(ev.detail && ev.detail.length > 120),
@@ -997,7 +1007,7 @@ export function ActivityPage() {
     );
   }
 
-  const items = recent.data.items;
+  const items = recent.data.items ?? [];
   const eventOptions = collectEventOptions(items);
   const filtersActive = Boolean(
     applied.eventType ||
@@ -1029,11 +1039,11 @@ export function ActivityPage() {
         />
         <ActivitySummaryCard
           label="Matches in store"
-          value={`${recent.data.total} events`}
+          value={`${recent.data.total ?? 0} events`}
         />
         <ActivitySummaryCard
           label="System events"
-          value={String(recent.data.system_events)}
+          value={String(recent.data.system_events ?? 0)}
         />
         <ActivitySummaryCard label="Refresh" value="Live" />
       </section>
@@ -1160,6 +1170,7 @@ export function ActivityPage() {
         ) : (
           items.map((ev) => {
             const display = eventDisplay(ev);
+            const renderedTitle = compactActivityTitle(display.title);
             return (
               <article
                 key={ev.id}
@@ -1186,7 +1197,7 @@ export function ActivityPage() {
                       className="min-w-0 break-words text-lg font-semibold text-[var(--mm-text1)] [overflow-wrap:anywhere]"
                       title={display.title}
                     >
-                      {display.title}
+                      {renderedTitle}
                     </h2>
                     <p className="break-words text-sm text-[var(--mm-text3)]">
                       {display.summary}

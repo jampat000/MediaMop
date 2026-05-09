@@ -311,7 +311,7 @@ describe("DashboardPage", () => {
     );
 
     const compactValue = screen.getByTitle(longTitle);
-    expect(compactValue).toHaveTextContent("…");
+    expect(compactValue).toHaveTextContent("...");
     expect(compactValue.textContent).not.toBe(longTitle);
     expect(screen.getByText("2026-05-07T15:45:00Z")).toBeInTheDocument();
   });

@@ -94,8 +94,8 @@ const REFINER_DASHBOARD_JOB_KINDS = new Set([
 
 function compactMetricText(
   text: string,
-  maxLength = 84,
-  tailLength = 28,
+  maxLength = 60,
+  tailLength = 22,
 ): string {
   const normalized = text.trim();
   if (normalized.length <= maxLength) {
@@ -103,7 +103,7 @@ function compactMetricText(
   }
   const tail = Math.max(12, Math.min(tailLength, maxLength - 16));
   const head = Math.max(16, maxLength - tail - 1);
-  return `${normalized.slice(0, head).trimEnd()}…${normalized.slice(-tail).trimStart()}`;
+  return `${normalized.slice(0, head).trimEnd()}...${normalized.slice(-tail).trimStart()}`;
 }
 
 function shortLastActivity(
@@ -778,7 +778,7 @@ export function DashboardPage() {
                     <h3 className="text-sm font-semibold text-[var(--mm-text1)]">
                       {job.title}
                     </h3>
-                    <p className="text-sm text-[var(--mm-text2)]">
+                    <p className="break-words text-sm text-[var(--mm-text2)] [overflow-wrap:anywhere]">
                       {job.detail}
                     </p>
                   </div>

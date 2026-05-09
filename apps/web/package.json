@@ -20,6 +20,10 @@
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "api:openapi:export": "node ./scripts/export-openapi.mjs",
+    "api:types:generate": "openapi-typescript ./openapi/mediamop-openapi.json -o ./src/lib/api/generated/openapi-types.ts",
+    "api:types:sync": "npm run api:openapi:export && npm run api:types:generate",
+    "api:types:check": "npm run api:types:sync && git diff --exit-code -- openapi/mediamop-openapi.json src/lib/api/generated/openapi-types.ts",
     "ci": "npm run lint && npm run format && npm run build && npm run test"
   },
   "dependencies": {
@@ -44,6 +48,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^16.5.0",
     "jsdom": "^25.0.1",
+    "openapi-typescript": "^7.10.1",
     "postcss": "^8.4.49",
     "prettier": "^3.8.3",
     "tailwindcss": "^3.4.16",

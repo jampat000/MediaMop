@@ -8,6 +8,7 @@ external-drive access.
 from __future__ import annotations
 
 import asyncio
+import ctypes
 import os
 import secrets
 import socket
@@ -28,6 +29,7 @@ from mediamop.api.factory import create_app
 from mediamop.version import __version__
 
 _LOG_LOCK = threading.Lock()
+_ERROR_ALREADY_EXISTS = 183
 
 
 def _fallback_log_path() -> Path:
@@ -130,6 +132,45 @@ def _run_migrations(resource_root: Path) -> None:
 def _open_browser(port: int) -> None:
     # Prefer reusing an existing browser window/tab when possible.
     webbrowser.open(f"http://127.0.0.1:{port}/", new=0)
+
+
+def _maybe_open_existing_instance_browser(runtime_home: Path) -> None:
+    try:
+        port_text = (runtime_home / "current-port.txt").read_text(encoding="utf-8").strip()
+        port = int(port_text)
+    except Exception:
+        return
+    if 1 <= port <= 65535:
+        _open_browser(port)
+
+
+class _WindowsSingleInstanceGuard:
+    """Ensure only one tray-host process owns the desktop icon per session."""
+
+    def __init__(self, name: str) -> None:
+        self._name = name
+        self._handle: int | None = None
+
+    def acquire(self) -> bool:
+        if os.name != "nt":
+            return True
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        kernel32.SetLastError(0)
+        handle = kernel32.CreateMutexW(None, False, self._name)
+        if not handle:
+            return False
+        self._handle = int(handle)
+        return int(kernel32.GetLastError()) != _ERROR_ALREADY_EXISTS
+
+    def release(self) -> None:
+        if os.name != "nt":
+            return
+        if self._handle is None:
+            return
+        try:
+            ctypes.windll.kernel32.CloseHandle(self._handle)  # type: ignore[attr-defined]
+        finally:
+            self._handle = None
 
 
 def _is_recent_browser_open(last_open_at: float, now: float, cooldown_seconds: float = 1.25) -> bool:
@@ -358,6 +399,7 @@ def _run_server_mode(port: int) -> None:
 
 
 def main() -> None:
+    instance_guard = _WindowsSingleInstanceGuard("Local\\MediaMopTrayHostSingleton")
     try:
         if "--version" in sys.argv:
             print(__version__)
@@ -372,11 +414,18 @@ def main() -> None:
             _run_server_mode(port)
             return
         no_browser = "--no-browser" in sys.argv
+        if not instance_guard.acquire():
+            _append_fallback_log("Tray host launch skipped: an existing MediaMop tray instance is already running.")
+            if not no_browser:
+                _maybe_open_existing_instance_browser(_runtime_home())
+            return
         app = _MediaMopTrayApp(open_browser_on_ready=not no_browser)
         app.run()
     except Exception:
         _append_fallback_log("Fatal startup error:\n" + traceback.format_exc())
         raise
+    finally:
+        instance_guard.release()
 
 
 if __name__ == "__main__":

@@ -167,7 +167,7 @@ export async function waitForApplyActivity(
   while (Date.now() < deadline) {
     if (opts.signal?.aborted) throw new Error("Aborted");
     const recent = await fetchActivityRecent();
-    for (const ev of recent.items) {
+    for (const ev of recent.items ?? []) {
       if (!ev.detail) continue;
       try {
         const o = JSON.parse(ev.detail) as Record<string, unknown>;

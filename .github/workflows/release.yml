@@ -96,6 +96,7 @@ jobs:
           VITE_SUPPORT_URL: ${{ vars.VITE_SUPPORT_URL }}
         run: |
           npm ci
+          npm run api:types:check
           npm run build
 
       - name: Install Inno Setup
@@ -209,6 +210,7 @@ jobs:
         working-directory: apps/web
         run: |
           npm ci
+          npm run api:types:check
           npm run test
 
       - name: MediaMop web - production build
