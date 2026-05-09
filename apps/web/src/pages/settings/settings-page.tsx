@@ -28,6 +28,7 @@ import {
 } from "../../lib/ui/mm-module-tab-blurb";
 import {
   suiteConfigurationBackupsQueryKey,
+  suiteUpdateDiagnosticsQueryKey,
   suiteUpdateStatusQueryKey,
   useSuiteConfigurationBackupsQuery,
   useSuiteLogsQuery,
@@ -36,6 +37,7 @@ import {
   useSuiteSecurityOverviewQuery,
   useSuiteSettingsQuery,
   useSuiteSettingsSaveMutation,
+  useSuiteUpdateDiagnosticsQuery,
   useSuiteUpdateNowMutation,
   useSuiteUpdateStatusQuery,
 } from "../../lib/suite/queries";
@@ -100,6 +102,8 @@ const SUITE_SETTINGS_PREMIUM_TILE_CLASS =
   "rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/80 px-4 py-3 shadow-[var(--mm-shadow-card-inner)]";
 const CONFIGURATION_BACKUP_INTERVAL_HOURS = [6, 12, 24, 48, 72, 168] as const;
 const UPGRADE_VERIFICATION_TIMEOUT_MS = 8 * 60_000;
+const UPGRADE_HISTORY_STORAGE_KEY = "mediamop.upgrade.history.v1";
+const UPGRADE_HISTORY_LIMIT = 20;
 
 type UpgradeMonitor = {
   attemptId: string | null;
@@ -115,6 +119,19 @@ type UpgradeNotice = {
   text: string;
 };
 
+type UpgradeHistoryItem = {
+  id: string;
+  recorded_at: string;
+  status_label: string;
+  phase: string;
+  attempt_id: string | null;
+  target_version: string | null;
+  current_version_seen: string | null;
+  message: string;
+  installer_log_path: string | null;
+  service_log_path: string | null;
+};
+
 type LogLevelFilter = "" | "INFO" | "WARNING" | "ERROR";
 
 function parseUpgradeTime(raw: string | null | undefined): number | null {
@@ -123,6 +140,67 @@ function parseUpgradeTime(raw: string | null | undefined): number | null {
   }
   const parsed = Date.parse(raw);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function readUpgradeHistory(): UpgradeHistoryItem[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+  try {
+    const raw = window.localStorage.getItem(UPGRADE_HISTORY_STORAGE_KEY);
+    if (!raw) {
+      return [];
+    }
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.filter((row): row is UpgradeHistoryItem => {
+      if (!row || typeof row !== "object") {
+        return false;
+      }
+      const id = (row as { id?: unknown }).id;
+      return typeof id === "string" && id.trim().length > 0;
+    });
+  } catch {
+    return [];
+  }
+}
+
+function persistUpgradeHistory(items: UpgradeHistoryItem[]): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.setItem(
+    UPGRADE_HISTORY_STORAGE_KEY,
+    JSON.stringify(items.slice(0, UPGRADE_HISTORY_LIMIT)),
+  );
+}
+
+function buildUpgradeHistoryItem(
+  progressSummary: { label: string; body: string },
+  progress: SuiteUpgradeProgressOut,
+): UpgradeHistoryItem {
+  const updatedAt =
+    progress.last_updated_at ||
+    progress.last_completed_at ||
+    progress.last_started_at ||
+    "unknown";
+  const attemptId = progress.attempt_id || null;
+  const phase = progress.phase || "unknown";
+  const dedupeStamp = `${attemptId ?? "no-attempt"}:${phase}:${updatedAt}`;
+  return {
+    id: dedupeStamp,
+    recorded_at: updatedAt,
+    status_label: progressSummary.label,
+    phase,
+    attempt_id: attemptId,
+    target_version: progress.target_version || null,
+    current_version_seen: progress.current_version_seen || null,
+    message: progressSummary.body,
+    installer_log_path: progress.installer_log_path || null,
+    service_log_path: progress.service_log_path || null,
+  };
 }
 
 function upgradeNoticeClass(tone: UpgradeNotice["tone"]): string {
@@ -543,6 +621,11 @@ export function SettingsPage() {
     null,
   );
   const [upgradePollActive, setUpgradePollActive] = useState(false);
+  const [showUpgradeHistory, setShowUpgradeHistory] = useState(false);
+  const [upgradeHistory, setUpgradeHistory] = useState<UpgradeHistoryItem[]>(
+    () => readUpgradeHistory(),
+  );
+  const [showUpgradeDiagnostics, setShowUpgradeDiagnostics] = useState(false);
   const [resetHistoryMsg, setResetHistoryMsg] = useState<string | null>(null);
   const [resetHistoryConfirm, setResetHistoryConfirm] = useState("");
   const [configurationBackupEnabled, setConfigurationBackupEnabled] =
@@ -598,6 +681,12 @@ export function SettingsPage() {
   const updateStatusQ = useSuiteUpdateStatusQuery(
     tab === "upgrade" && Boolean(settingsQ.data),
     upgradePollingMs,
+  );
+  const updateDiagnosticsQ = useSuiteUpdateDiagnosticsQuery(
+    tab === "upgrade" &&
+      showUpgradeDiagnostics &&
+      Boolean(settingsQ.data) &&
+      updateStatusQ.data?.install_type === "windows",
   );
   const logsQ = useSuiteLogsQuery(
     {
@@ -667,6 +756,12 @@ export function SettingsPage() {
     : !hasStableUpdateStatus && updateStatusQ.isFetching
       ? "Checking..."
       : "Check again";
+  const diagnosticsUpgrade =
+    updateDiagnosticsQ.data?.upgrade ?? activeUpgradeProgress ?? null;
+  const installerLogTail = updateDiagnosticsQ.data?.installer_log_tail ?? [];
+  const serviceLogTail = updateDiagnosticsQ.data?.service_log_tail ?? [];
+  const diagnosticsHasLogTail =
+    installerLogTail.length > 0 || serviceLogTail.length > 0;
 
   useEffect(() => {
     if (isUpgradeProgressActive(activeUpgradeProgress)) {
@@ -677,6 +772,24 @@ export function SettingsPage() {
       setUpgradePollActive(false);
     }
   }, [activeUpgradeProgress, upgradeMonitor?.active]);
+
+  useEffect(() => {
+    if (!activeUpgradeProgress || !upgradeProgressSummary) {
+      return;
+    }
+    const item = buildUpgradeHistoryItem(
+      upgradeProgressSummary,
+      activeUpgradeProgress,
+    );
+    setUpgradeHistory((current) => {
+      if (current.some((existing) => existing.id === item.id)) {
+        return current;
+      }
+      const next = [item, ...current].slice(0, UPGRADE_HISTORY_LIMIT);
+      persistUpgradeHistory(next);
+      return next;
+    });
+  }, [activeUpgradeProgress, upgradeProgressSummary]);
 
   useEffect(() => {
     if (!updateStatusQ.data?.upgrade) {
@@ -1054,6 +1167,9 @@ export function SettingsPage() {
         await queryClient.invalidateQueries({
           queryKey: suiteUpdateStatusQueryKey,
         });
+        await queryClient.invalidateQueries({
+          queryKey: suiteUpdateDiagnosticsQueryKey,
+        });
       } else {
         setUpgradeNotice({
           tone: "info",
@@ -1061,6 +1177,9 @@ export function SettingsPage() {
         });
         void queryClient.invalidateQueries({
           queryKey: suiteUpdateStatusQueryKey,
+        });
+        void queryClient.invalidateQueries({
+          queryKey: suiteUpdateDiagnosticsQueryKey,
         });
       }
     } catch {
@@ -1258,7 +1377,7 @@ export function SettingsPage() {
                       id="suite-timezone-hint"
                       className="text-xs text-[var(--mm-text3)]"
                     >
-                      If you do not see your zone, pick the closest match — this
+                      If you do not see your zone, pick the closest match - this
                       only affects how times are labeled in the suite.
                     </p>
                     {save.isError && lastSuiteSaveTarget === "timezone" ? (
@@ -1284,7 +1403,7 @@ export function SettingsPage() {
                       data-testid="suite-settings-save-timezone"
                       onClick={() => void handleSaveTimezone()}
                     >
-                      {save.isPending ? "Saving…" : "Save timezone"}
+                      {save.isPending ? "Saving..." : "Save timezone"}
                     </button>
                   </div>
                 </section>
@@ -1366,7 +1485,7 @@ export function SettingsPage() {
                       data-testid="suite-settings-save-logs"
                       onClick={() => void handleSaveLogs()}
                     >
-                      {save.isPending ? "Saving…" : "Save log retention"}
+                      {save.isPending ? "Saving..." : "Save log retention"}
                     </button>
                   </div>
                 </section>
@@ -1648,7 +1767,7 @@ export function SettingsPage() {
                         }
                         onClick={() => void handleSaveBackupSchedule()}
                       >
-                        {save.isPending ? "Saving…" : "Save backup schedule"}
+                        {save.isPending ? "Saving..." : "Save backup schedule"}
                       </button>
                       {save.isError && lastSuiteSaveTarget === "backup" ? (
                         <p
@@ -1700,7 +1819,7 @@ export function SettingsPage() {
                         disabled={backupBusy || save.isPending}
                         onClick={() => restoreInputRef.current?.click()}
                       >
-                        Restore from file…
+                        Restore from file...
                       </button>
                       <input
                         ref={restoreInputRef}
@@ -1740,7 +1859,7 @@ export function SettingsPage() {
                     <div className="mt-3">
                       {backupsQ.isLoading ? (
                         <p className="text-sm text-[var(--mm-text3)]">
-                          Loading snapshot list…
+                          Loading snapshot list...
                         </p>
                       ) : backupsQ.isError ? (
                         <p
@@ -1840,7 +1959,7 @@ export function SettingsPage() {
 
               {updateStatusQ.isPending ? (
                 <p className="text-sm text-[var(--mm-text3)]">
-                  Checking for updates…
+                  Checking for updates...
                 </p>
               ) : !updateStatusQ.data ? (
                 upgradeConnectionLost ? (
@@ -1967,9 +2086,16 @@ export function SettingsPage() {
                     ) : null}
                     {updateStatusQ.data.install_type === "docker" &&
                     updateStatusQ.data.docker_update_command ? (
-                      <p className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-3 py-2 font-mono text-xs text-[var(--mm-text3)]">
-                        {updateStatusQ.data.docker_update_command}
-                      </p>
+                      <div className="space-y-2">
+                        <p className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-3 py-2 font-mono text-xs text-[var(--mm-text3)]">
+                          {updateStatusQ.data.docker_update_command}
+                        </p>
+                        <p className="text-sm leading-6 text-[var(--mm-text2)]">
+                          Keep the same MEDIAMOP_HOME volume and
+                          MEDIAMOP_SESSION_SECRET value across upgrades so
+                          browser sessions and setup state continue cleanly.
+                        </p>
+                      </div>
                     ) : null}
                   </div>
 
@@ -2049,6 +2175,198 @@ export function SettingsPage() {
                       ) : null}
                     </div>
                   ) : null}
+
+                  {updateStatusQ.data.install_type === "windows" ? (
+                    <div className={SUITE_SETTINGS_PREMIUM_PANEL_CLASS}>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h4 className="text-sm font-semibold text-[var(--mm-text1)]">
+                          Updater diagnostics
+                        </h4>
+                        <button
+                          type="button"
+                          className={mmActionButtonClass({
+                            variant: "tertiary",
+                            disabled: false,
+                          })}
+                          onClick={() =>
+                            setShowUpgradeDiagnostics((current) => !current)
+                          }
+                        >
+                          {showUpgradeDiagnostics
+                            ? "Hide diagnostics"
+                            : "Show diagnostics"}
+                        </button>
+                      </div>
+                      {showUpgradeDiagnostics ? (
+                        updateDiagnosticsQ.isPending ? (
+                          <p className="text-sm text-[var(--mm-text3)]">
+                            Loading diagnostics...
+                          </p>
+                        ) : updateDiagnosticsQ.isError ? (
+                          <p
+                            className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
+                            role="alert"
+                          >
+                            {updateDiagnosticsQ.error instanceof Error
+                              ? updateDiagnosticsQ.error.message
+                              : "Could not load updater diagnostics."}
+                          </p>
+                        ) : updateDiagnosticsQ.data ? (
+                          <div className="space-y-2 text-xs text-[var(--mm-text3)]">
+                            <p>
+                              Running version:{" "}
+                              {updateDiagnosticsQ.data.current_version}
+                            </p>
+                            <p>
+                              Latest version:{" "}
+                              {updateDiagnosticsQ.data.latest_version ||
+                                "Unknown"}
+                            </p>
+                            <p>
+                              Install root:{" "}
+                              {updateDiagnosticsQ.data.install_root ||
+                                "Unavailable"}
+                            </p>
+                            <p>
+                              Runtime home:{" "}
+                              {updateDiagnosticsQ.data.runtime_home ||
+                                "Unavailable"}
+                            </p>
+                            <p>
+                              Updater service reachable:{" "}
+                              {updateDiagnosticsQ.data.updater_service_reachable
+                                ? "Yes"
+                                : "No"}
+                            </p>
+                            {diagnosticsUpgrade?.stale_reason ? (
+                              <p>
+                                Stale reason: {diagnosticsUpgrade.stale_reason}
+                              </p>
+                            ) : null}
+                            {updateDiagnosticsQ.data.installer_log_path ? (
+                              <p>
+                                Installer log:{" "}
+                                {updateDiagnosticsQ.data.installer_log_path}
+                              </p>
+                            ) : null}
+                            {updateDiagnosticsQ.data.service_log_path ? (
+                              <p>
+                                Service log:{" "}
+                                {updateDiagnosticsQ.data.service_log_path}
+                              </p>
+                            ) : null}
+                            <a
+                              className="text-[var(--mm-link)] underline-offset-2 hover:underline"
+                              href={suiteUpdateDiagnosticsPath()}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Open full updater diagnostics
+                            </a>
+                            {diagnosticsHasLogTail ? (
+                              <details className="rounded-md border border-[var(--mm-border)] bg-black/10 px-3 py-2">
+                                <summary className="cursor-pointer text-sm text-[var(--mm-text2)]">
+                                  Recent updater log tail
+                                </summary>
+                                <div className="mt-2 space-y-3">
+                                  {installerLogTail.length > 0 ? (
+                                    <div>
+                                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-gold)]">
+                                        Installer
+                                      </p>
+                                      <pre className="max-h-36 overflow-auto whitespace-pre-wrap text-[11px] leading-5 text-[var(--mm-text3)]">
+                                        {installerLogTail.join("\n")}
+                                      </pre>
+                                    </div>
+                                  ) : null}
+                                  {serviceLogTail.length > 0 ? (
+                                    <div>
+                                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-gold)]">
+                                        Updater service
+                                      </p>
+                                      <pre className="max-h-36 overflow-auto whitespace-pre-wrap text-[11px] leading-5 text-[var(--mm-text3)]">
+                                        {serviceLogTail.join("\n")}
+                                      </pre>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              </details>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-[var(--mm-text3)]">
+                            Diagnostics are unavailable right now.
+                          </p>
+                        )
+                      ) : (
+                        <p className="text-sm text-[var(--mm-text2)]">
+                          Includes updater reachability, current phase, log
+                          paths, and recent log lines for support triage.
+                        </p>
+                      )}
+                    </div>
+                  ) : null}
+
+                  <div className={SUITE_SETTINGS_PREMIUM_PANEL_CLASS}>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h4 className="text-sm font-semibold text-[var(--mm-text1)]">
+                        Upgrade history
+                      </h4>
+                      <button
+                        type="button"
+                        className={mmActionButtonClass({
+                          variant: "tertiary",
+                          disabled: false,
+                        })}
+                        onClick={() =>
+                          setShowUpgradeHistory((current) => !current)
+                        }
+                      >
+                        {showUpgradeHistory ? "Hide history" : "Show history"}
+                      </button>
+                    </div>
+                    {showUpgradeHistory ? (
+                      upgradeHistory.length === 0 ? (
+                        <p className="text-sm text-[var(--mm-text3)]">
+                          No recorded in-app upgrade attempts yet.
+                        </p>
+                      ) : (
+                        <ul className="space-y-2">
+                          {upgradeHistory.map((entry) => (
+                            <li
+                              key={entry.id}
+                              className="rounded-md border border-[var(--mm-border)] bg-black/10 px-3 py-2 text-xs text-[var(--mm-text3)]"
+                            >
+                              <p className="font-semibold text-[var(--mm-text2)]">
+                                {entry.status_label} - {entry.phase}
+                              </p>
+                              <p className="mt-1">{entry.message}</p>
+                              <p className="mt-1">
+                                {formatDateTime(entry.recorded_at)}
+                              </p>
+                              {entry.target_version ? (
+                                <p>Target: {entry.target_version}</p>
+                              ) : null}
+                              {entry.current_version_seen ? (
+                                <p>
+                                  Current version seen:{" "}
+                                  {entry.current_version_seen}
+                                </p>
+                              ) : null}
+                              {entry.attempt_id ? (
+                                <p>Attempt ID: {entry.attempt_id}</p>
+                              ) : null}
+                            </li>
+                          ))}
+                        </ul>
+                      )
+                    ) : (
+                      <p className="text-sm text-[var(--mm-text2)]">
+                        Keeps recent in-app upgrade outcomes for quick operator
+                        review.
+                      </p>
+                    )}
+                  </div>
 
                   <div className="mt-auto flex flex-wrap gap-2 border-t border-[var(--mm-border)] pt-4">
                     <button
@@ -2155,7 +2473,7 @@ export function SettingsPage() {
             <div className={mmModuleTabBlurbBandClass}>
               <p className={mmModuleTabBlurbTextClass}>
                 Change your MediaMop password here. Sign-in cookie, HTTPS, and
-                rate-limit settings follow the server configuration at startup —
+                rate-limit settings follow the server configuration at startup -
                 they are not edited in this UI.
               </p>
             </div>
@@ -2399,7 +2717,7 @@ export function SettingsPage() {
                     }
                   }}
                 >
-                  {changePassword.isPending ? "Saving…" : "Change password"}
+                  {changePassword.isPending ? "Saving..." : "Change password"}
                 </button>
               </div>
             </section>

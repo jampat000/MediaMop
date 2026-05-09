@@ -187,7 +187,8 @@ describe("ActivityPage", () => {
 
     render(<ActivityPage />);
 
-    const heading = screen.getByRole("heading", { name: longTitle });
+    const heading = screen.getByTitle(longTitle);
+    expect(heading.tagName).toBe("H2");
     expect(heading).toHaveAttribute("title", longTitle);
     expect(heading.className).toContain("[overflow-wrap:anywhere]");
   });

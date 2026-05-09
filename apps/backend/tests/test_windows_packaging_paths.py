@@ -199,3 +199,22 @@ def test_tray_open_action_uses_browser_window_reuse_mode() -> None:
     source = Path(tray_app.__file__).read_text(encoding="utf-8")
 
     assert "webbrowser.open(f\"http://127.0.0.1:{port}/\", new=0)" in source
+
+
+def test_tray_duplicate_launch_opens_existing_instance_browser(monkeypatch, tmp_path: Path) -> None:
+    runtime_home = tmp_path / "runtime"
+    runtime_home.mkdir(parents=True, exist_ok=True)
+    (runtime_home / "current-port.txt").write_text("8799", encoding="utf-8")
+    observed: dict[str, int | None] = {"port": None}
+    monkeypatch.setattr(tray_app, "_open_browser", lambda port: observed.__setitem__("port", port))
+
+    tray_app._maybe_open_existing_instance_browser(runtime_home)
+
+    assert observed["port"] == 8799
+
+
+def test_tray_uses_single_instance_guard_for_desktop_icon() -> None:
+    source = Path(tray_app.__file__).read_text(encoding="utf-8")
+
+    assert "Local\\\\MediaMopTrayHostSingleton" in source
+    assert "Tray host launch skipped: an existing MediaMop tray instance is already running." in source

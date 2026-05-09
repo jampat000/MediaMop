@@ -15,6 +15,7 @@ import type {
   SuiteSettingsPutBody,
   SuiteUpdateStartOut,
   SuiteUpdateStatusOut,
+  SuiteUpdateDiagnosticsOut,
 } from "./types";
 
 export const suiteSettingsPath = () => "/api/v1/suite/settings";
@@ -129,6 +130,30 @@ export async function startSuiteUpdateNow(): Promise<SuiteUpdateStartOut> {
     suiteUpdateNowPath(),
     last!,
     "Could not start upgrade",
+  );
+}
+
+export async function fetchSuiteUpdateDiagnostics(): Promise<SuiteUpdateDiagnosticsOut> {
+  let last: Response | undefined;
+  for (const path of suiteUpdateDiagnosticsPaths) {
+    const r = await apiFetch(path);
+    last = r;
+    if (r.status === 404) {
+      continue;
+    }
+    if (!r.ok) {
+      await throwApiResponseError(
+        path,
+        r,
+        "Could not load updater diagnostics",
+      );
+    }
+    return readJson<SuiteUpdateDiagnosticsOut>(r);
+  }
+  return throwApiResponseError(
+    suiteUpdateDiagnosticsPath(),
+    last!,
+    "Could not load updater diagnostics",
   );
 }
 

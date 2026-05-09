@@ -75,6 +75,7 @@ jobs:
         working-directory: apps/web
         run: |
           npm ci
+          npm run api:types:check
           npm run lint
           npm run format
           npm run build
@@ -140,6 +141,7 @@ jobs:
         working-directory: apps/web
         run: |
           npm ci
+          npm run api:types:check
           npm run build
 
       - name: Install Inno Setup

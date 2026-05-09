@@ -1,60 +1,13 @@
-export type UserPublic = {
-  id: number;
-  username: string;
-  role: string;
-};
+import type { components } from "./generated/openapi-types";
 
-export type CurrentSession = {
-  trusted_device: boolean;
-  created_at: string;
-  last_seen_at: string;
-  absolute_expires_at: string;
-  idle_timeout_minutes: number;
-  absolute_timeout_days: number;
-};
+type OpenApiSchemaName = keyof components["schemas"];
+type OpenApiSchema<T extends OpenApiSchemaName> = components["schemas"][T];
 
-export type BootstrapStatus = {
-  bootstrap_allowed: boolean;
-  reason: string;
-};
-
-export type DashboardSystemStatus = {
-  api_version: string;
-  environment: string;
-  healthy: boolean;
-  worker_health?: Array<{
-    module: string;
-    expected_workers: number;
-    active_workers: number;
-    stale_workers: number;
-    stopped_workers: number;
-    status: string;
-    detail: string;
-  }>;
-};
-
-export type ActivityEventItem = {
-  id: number;
-  created_at: string;
-  event_type: string;
-  module: string;
-  title: string;
-  detail: string | null;
-};
-
-export type DashboardActivitySummary = {
-  events_last_24h: number;
-  latest: ActivityEventItem | null;
-};
-
-export type DashboardStatus = {
-  scope_note: string;
-  system: DashboardSystemStatus;
-  activity_summary: DashboardActivitySummary;
-};
-
-export type ActivityRecentResponse = {
-  items: ActivityEventItem[];
-  total: number;
-  system_events: number;
-};
+export type UserPublic = OpenApiSchema<"UserPublic">;
+export type CurrentSession = OpenApiSchema<"CurrentSessionOut">;
+export type BootstrapStatus = OpenApiSchema<"BootstrapStatusOut">;
+export type DashboardSystemStatus = OpenApiSchema<"SystemStatusOut">;
+export type ActivityEventItem = OpenApiSchema<"ActivityEventItemOut">;
+export type DashboardActivitySummary = OpenApiSchema<"ActivitySummaryOut">;
+export type DashboardStatus = OpenApiSchema<"DashboardStatusOut">;
+export type ActivityRecentResponse = OpenApiSchema<"ActivityRecentOut">;
