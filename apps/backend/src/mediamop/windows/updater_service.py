@@ -52,6 +52,7 @@ _INSTALLER_WAIT_TIMEOUT_SECONDS = 90 * 60
 _VERIFY_INSTALL_TIMEOUT_SECONDS = 5 * 60
 _STALE_ATTEMPT_SECONDS = 30 * 60
 _BACKEND_POLL_INTERVAL_SECONDS = 2.0
+_VERSION_MISMATCH_RECOVERY_GRACE_SECONDS = 12.0
 _MIN_INSTALLER_BYTES = 512 * 1024
 _SHA256_RE = re.compile(r"\b([0-9a-fA-F]{64})\b")
 _TRUSTED_RELEASE_DOWNLOAD_HOSTS = {
@@ -1321,6 +1322,91 @@ def _start_packaged_tray_in_active_session(*, open_browser: bool = False) -> int
     return _launch_process_in_active_session(tray_exe, args=args, cwd=install_root)
 
 
+def _terminate_pid(pid: object) -> str | None:
+    try:
+        numeric = int(pid)
+    except (TypeError, ValueError):
+        return "Invalid PID."
+    if numeric <= 0:
+        return "Invalid PID."
+    try:
+        result = subprocess.run(
+            ["taskkill", "/PID", str(numeric), "/T", "/F"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=20,
+        )
+    except Exception as exc:
+        return str(exc)
+    if result.returncode in {0, 128}:
+        return None
+    detail = (result.stderr or result.stdout or "").strip()
+    return detail or f"taskkill exited with {result.returncode}."
+
+
+def _restart_packaged_runtime_for_verification(
+    *,
+    port: int,
+    interactive_session_available: bool,
+) -> dict[str, object]:
+    install_root = _install_root()
+    install_root_norm = _normalize_executable_path(install_root) or ""
+    killed_processes: list[dict[str, object]] = []
+    kill_errors: list[dict[str, object]] = []
+    restart_diag: dict[str, object] = {
+        "killed_processes": killed_processes,
+        "kill_errors": kill_errors,
+        "restart_action": None,
+        "restart_error": None,
+        "restarted_tray_pid": None,
+        "restarted_server_pid": None,
+    }
+
+    for row in _running_media_processes():
+        if not isinstance(row, dict):
+            continue
+        name = str(row.get("name") or "").strip().lower()
+        pid = row.get("pid")
+        if name not in {"mediamop.exe", "mediamopserver.exe"}:
+            continue
+        executable_path = _normalize_executable_path(row.get("executable_path"))
+        command_line = str(row.get("command_line") or "").strip().casefold()
+        path_match = executable_path is not None and install_root_norm and executable_path.startswith(install_root_norm)
+        command_match = install_root_norm in command_line if install_root_norm and command_line else False
+        if not path_match and not command_match:
+            continue
+        error = _terminate_pid(pid)
+        if error:
+            kill_errors.append({"pid": pid, "name": name, "error": error})
+            _append_service_log(f"Could not terminate {name} pid={pid} before runtime restart: {error}")
+            continue
+        killed_processes.append({"pid": pid, "name": name})
+        _append_service_log(f"Terminated {name} pid={pid} before runtime restart.")
+
+    try:
+        if interactive_session_available:
+            restart_diag["restart_action"] = "start_tray"
+            tray_pid = _start_packaged_tray_in_active_session(open_browser=False)
+            restart_diag["restarted_tray_pid"] = tray_pid
+            _append_service_log(
+                "Started packaged MediaMop tray host after backend version mismatch "
+                f"(pid={tray_pid}, port={port})."
+            )
+        else:
+            restart_diag["restart_action"] = "start_server"
+            process = _start_packaged_server(port)
+            restart_diag["restarted_server_pid"] = process.pid
+            _append_service_log(
+                "Started packaged MediaMop server after backend version mismatch "
+                f"(pid={process.pid}, port={port})."
+            )
+    except Exception as exc:
+        restart_diag["restart_error"] = str(exc)
+        _append_service_log(f"Could not restart packaged runtime after version mismatch: {exc}")
+    return restart_diag
+
+
 def _interactive_session_available() -> bool:
     if os.name != "nt":
         return False
@@ -1376,27 +1462,66 @@ def _verify_install(target_version: str) -> tuple[bool, dict[str, object], str]:
     restarted_tray_pid: int | None = None
     tray_relaunch_attempted = False
     tray_relaunch_started_at: float | None = None
+    version_mismatch_started_at: float | None = None
+    mismatch_runtime_restart_attempted = False
     tray_restart_error: str | None = None
     server_restart_error: str | None = None
+    mismatch_restart_error: str | None = None
     interactive_session_available = _interactive_session_available()
     last_diagnostics: dict[str, object] = _collect_install_diagnostics(target_version, port=port)
+    target_key = parse_version_key(target_version)
     while time.time() < deadline:
         diagnostics = _collect_install_diagnostics(target_version, port=port)
         diagnostics["restarted_server_pid"] = started_server_pid
         diagnostics["restarted_tray_pid"] = restarted_tray_pid
         diagnostics["tray_relaunch_attempted"] = tray_relaunch_attempted
+        diagnostics["mismatch_runtime_restart_attempted"] = mismatch_runtime_restart_attempted
         diagnostics["interactive_session_available"] = interactive_session_available
         if tray_restart_error:
             diagnostics["tray_restart_error"] = tray_restart_error
         if server_restart_error:
             diagnostics["server_restart_error"] = server_restart_error
+        if mismatch_restart_error:
+            diagnostics["mismatch_restart_error"] = mismatch_restart_error
         packaged_version = str(diagnostics.get("packaged_version") or "").strip() or None
         backend_ready = bool(diagnostics.get("backend_ready"))
         backend_version = str(diagnostics.get("backend_version") or "").strip() or None
         tray_running = bool(diagnostics.get("tray_running"))
         missing_required = diagnostics.get("missing_required_files")
+        backend_key = parse_version_key(backend_version) if backend_version else None
+        backend_lagging = (
+            backend_ready
+            and backend_version is not None
+            and backend_version != target_version
+            and backend_key is not None
+            and target_key is not None
+            and backend_key < target_key
+        )
         if _diagnostics_prove_completed_desktop_upgrade(target_version, diagnostics):
             return True, diagnostics, f"Upgrade completed. Running version: {target_version}."
+        if packaged_version == target_version and not missing_required and backend_lagging:
+            if version_mismatch_started_at is None:
+                version_mismatch_started_at = time.time()
+            if (
+                not mismatch_runtime_restart_attempted
+                and time.time() - version_mismatch_started_at >= _VERSION_MISMATCH_RECOVERY_GRACE_SECONDS
+            ):
+                mismatch_runtime_restart_attempted = True
+                restart_diag = _restart_packaged_runtime_for_verification(
+                    port=port,
+                    interactive_session_available=interactive_session_available,
+                )
+                diagnostics["mismatch_restart"] = restart_diag
+                if restart_diag.get("restarted_tray_pid"):
+                    restarted_tray_pid = int(restart_diag["restarted_tray_pid"])
+                if restart_diag.get("restarted_server_pid"):
+                    started_server_pid = int(restart_diag["restarted_server_pid"])
+                if restart_diag.get("restart_error"):
+                    mismatch_restart_error = str(restart_diag["restart_error"])
+                else:
+                    mismatch_restart_error = None
+        else:
+            version_mismatch_started_at = None
         if packaged_version == target_version and not missing_required and (
             not backend_ready or (interactive_session_available and not tray_running)
         ):

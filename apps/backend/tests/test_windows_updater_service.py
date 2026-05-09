@@ -766,6 +766,73 @@ def test_verify_install_fails_when_active_session_exists_but_tray_does_not_relau
     assert "desktop tray host did not relaunch" in message.lower()
 
 
+def test_verify_install_restarts_runtime_when_backend_version_lags_target(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    target_version = "2.2.0"
+    restart_calls = {"count": 0}
+    diagnostics_iter = iter(
+        [
+            {
+                "packaged_version": target_version,
+                "missing_required_files": [],
+                "backend_ready": True,
+                "backend_version": "2.1.13",
+                "tray_running": True,
+            },
+            {
+                "packaged_version": target_version,
+                "missing_required_files": [],
+                "backend_ready": True,
+                "backend_version": "2.1.13",
+                "tray_running": True,
+            },
+            {
+                "packaged_version": target_version,
+                "missing_required_files": [],
+                "backend_ready": True,
+                "backend_version": target_version,
+                "tray_running": True,
+            },
+        ]
+    )
+    clock = iter(range(1000))
+
+    monkeypatch.setattr(updater_service, "_read_runtime_port", lambda: 8788)
+    monkeypatch.setattr(updater_service, "_interactive_session_available", lambda: True)
+    monkeypatch.setattr(updater_service, "_VERSION_MISMATCH_RECOVERY_GRACE_SECONDS", 0.0)
+    monkeypatch.setattr(
+        updater_service,
+        "_collect_install_diagnostics",
+        lambda _target_version, *, port: next(diagnostics_iter),
+    )
+    monkeypatch.setattr(updater_service.time, "time", lambda: float(next(clock)))
+    monkeypatch.setattr(updater_service.time, "sleep", lambda _seconds: None)
+
+    def _restart_runtime(*, port: int, interactive_session_available: bool) -> dict[str, object]:
+        restart_calls["count"] += 1
+        return {
+            "killed_processes": [{"pid": 111, "name": "MediaMopServer.exe"}],
+            "kill_errors": [],
+            "restart_action": "start_tray",
+            "restart_error": None,
+            "restarted_tray_pid": 222,
+            "restarted_server_pid": None,
+        }
+
+    monkeypatch.setattr(updater_service, "_restart_packaged_runtime_for_verification", _restart_runtime)
+
+    verified, diagnostics, message = updater_service._verify_install(target_version)
+
+    assert verified is True
+    assert message == f"Upgrade completed. Running version: {target_version}."
+    assert restart_calls["count"] == 1
+    assert diagnostics["mismatch_runtime_restart_attempted"] is True
+    assert diagnostics["restarted_tray_pid"] == 222
+
+
 def test_launch_process_in_active_session_via_schtasks_creates_and_runs_launcher_task(
     tmp_path: Path,
     monkeypatch,
