@@ -869,9 +869,7 @@ describe("SettingsPage (suite settings)", () => {
       screen.getByRole("button", { name: "Reload now" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Reload to continue in the updated session.",
-      ),
+      screen.getByText("Reload to continue in the updated session."),
     ).toBeInTheDocument();
   });
 
@@ -910,9 +908,7 @@ describe("SettingsPage (suite settings)", () => {
       },
     });
     fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    fireEvent.click(
-      screen.getByRole("button", { name: "Reload now" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Reload now" }));
     expect(reloadSpy).toHaveBeenCalledTimes(1);
   });
 
