@@ -867,6 +867,8 @@ def test_launch_process_in_active_session_via_schtasks_creates_and_runs_launcher
     assert any(command[:2] == ["schtasks", "/Create"] for command in created_commands)
     assert any(command[:2] == ["schtasks", "/Run"] for command in created_commands)
     assert any(command[:2] == ["schtasks", "/Delete"] for command in created_commands)
+    create_command = next(command for command in created_commands if command[:2] == ["schtasks", "/Create"])
+    assert "/Z" not in create_command
 
 
 def test_launch_process_in_active_session_via_schtasks_removes_stale_tasks_and_scripts(
@@ -928,6 +930,42 @@ def test_launch_process_in_active_session_via_schtasks_removes_stale_tasks_and_s
         command[:5] == ["schtasks", "/Delete", "/TN", "MediaMop-Relaunch", "/F"]
         for command in observed_commands
     )
+
+
+def test_launch_process_in_active_session_via_schtasks_surfaces_task_creation_error(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _configure_runtime_home(tmp_path, monkeypatch)
+    executable = tmp_path / "MediaMop.exe"
+    executable.write_text("binary", encoding="utf-8")
+    monkeypatch.setattr(updater_service, "_active_interactive_session_user", lambda: "APP-SERVER\\Administrator")
+
+    class _Result:
+        def __init__(self, returncode: int = 0, stdout: str = "", stderr: str = "") -> None:
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+    def _fake_run(command: list[str], **kwargs):
+        if command[:2] == ["schtasks", "/Create"]:
+            return _Result(
+                returncode=1,
+                stderr="ERROR: The task XML is missing a required element or attribute. (45,4):EndBoundary:",
+            )
+        return _Result()
+
+    monkeypatch.setattr(updater_service.subprocess, "run", _fake_run)
+
+    with pytest.raises(OSError) as excinfo:
+        updater_service._launch_process_in_active_session_via_schtasks(
+            executable,
+            args=["--no-browser"],
+            cwd=tmp_path,
+        )
+
+    assert "Could not create MediaMop relaunch task." in str(excinfo.value)
+    assert "EndBoundary" in str(excinfo.value)
 
 
 def test_packaged_helper_exits_after_launch_and_reconciliation_completes(

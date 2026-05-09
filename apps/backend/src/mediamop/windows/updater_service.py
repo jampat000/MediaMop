@@ -416,7 +416,6 @@ def _launch_process_in_active_session_via_schtasks(
             "HIGHEST",
             "/TR",
             str(launcher_script),
-            "/Z",
             "/F",
         ],
         check=False,
