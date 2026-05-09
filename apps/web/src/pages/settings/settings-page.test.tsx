@@ -866,12 +866,10 @@ describe("SettingsPage (suite settings)", () => {
       screen.getByText("Upgrade completed. Running version: 2.0.8."),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Refresh browser now" }),
+      screen.getByRole("button", { name: "Reload now" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "If this tab still looks stale, refresh the browser to load the upgraded MediaMop UI.",
-      ),
+      screen.getByText("Reload to continue in the updated session."),
     ).toBeInTheDocument();
   });
 
@@ -888,7 +886,7 @@ describe("SettingsPage (suite settings)", () => {
     });
     fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
     expect(
-      screen.queryByRole("button", { name: "Refresh browser now" }),
+      screen.queryByRole("button", { name: "Reload now" }),
     ).not.toBeInTheDocument();
   });
 
@@ -910,10 +908,29 @@ describe("SettingsPage (suite settings)", () => {
       },
     });
     fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    fireEvent.click(
-      screen.getByRole("button", { name: "Refresh browser now" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Reload now" }));
     expect(reloadSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not auto-refresh the browser when upgrade verification completes", () => {
+    const reloadSpy = vi
+      .spyOn(browserWindow, "reloadCurrentPage")
+      .mockImplementation(() => undefined);
+    renderSettings(operatorMe, {
+      updateStatus: {
+        ...windowsUpdateAvailableStatus,
+        current_version: "2.0.8",
+        status: "up_to_date",
+        summary: "This install is already on MediaMop 2.0.8.",
+        upgrade: upgradeProgress({
+          phase: "completed",
+          message: "Upgrade completed. Running version: 2.0.8.",
+          target_version: "2.0.8",
+        }),
+      },
+    });
+    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
+    expect(reloadSpy).not.toHaveBeenCalled();
   });
 
   it("computes a refresh key only after a verified Windows upgrade completes", () => {
