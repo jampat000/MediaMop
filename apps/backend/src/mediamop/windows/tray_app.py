@@ -258,6 +258,7 @@ class _MediaMopTrayApp:
         self._log("Database migrations completed")
         self._icon: Any = None
         self._last_browser_open_at = 0.0
+        self._browser_open_lock = threading.Lock()
         executable_dir = Path(sys.executable).resolve().parent
         self._server_exe = executable_dir / "MediaMopServer.exe"
         self._server_process: subprocess.Popen[str] | None = None
@@ -268,14 +269,21 @@ class _MediaMopTrayApp:
             with self._log_path.open("a", encoding="utf-8") as handle:
                 handle.write(f"[{timestamp}] {message}\n")
 
-    def _handle_open(self, icon: Any, item: Any) -> None:  # noqa: ARG002
+    def _open_browser_with_debounce(self, *, source: str) -> None:
         now = time.monotonic()
-        if _is_recent_browser_open(self._last_browser_open_at, now):
-            self._log("Ignoring duplicate tray open request within debounce window.")
-            return
-        self._last_browser_open_at = now
-        self._log(f"Opening MediaMop in browser on port {self._port}")
+        with self._browser_open_lock:
+            if _is_recent_browser_open(self._last_browser_open_at, now):
+                self._log(
+                    "Ignoring duplicate browser open request within debounce window "
+                    f"(source={source})."
+                )
+                return
+            self._last_browser_open_at = now
+        self._log(f"Opening MediaMop in browser on port {self._port} (source={source})")
         _open_browser(self._port)
+
+    def _handle_open(self, icon: Any, item: Any) -> None:  # noqa: ARG002
+        self._open_browser_with_debounce(source="tray")
 
     def _handle_open_data_folder(self, icon: Any, item: Any) -> None:  # noqa: ARG002
         os.startfile(str(self._runtime_home))  # type: ignore[attr-defined]
@@ -340,7 +348,7 @@ class _MediaMopTrayApp:
             if lan:
                 self._log("MediaMop LAN URLs: " + ", ".join(lan))
             if self._open_browser_on_ready:
-                _open_browser(self._port)
+                self._open_browser_with_debounce(source="startup")
             else:
                 self._log("Skipping browser auto-open because tray host was launched in no-browser mode.")
             self._icon = self._create_icon()

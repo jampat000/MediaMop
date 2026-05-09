@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import re
+import threading
 
 from mediamop.windows import tray_app
 
@@ -193,6 +194,21 @@ def test_tray_double_click_opens_mediamop() -> None:
 def test_tray_open_action_debounces_duplicate_open_requests() -> None:
     assert tray_app._is_recent_browser_open(10.0, 10.8) is True
     assert tray_app._is_recent_browser_open(10.0, 11.5) is False
+
+
+def test_tray_open_handler_ignores_duplicate_callbacks_within_cooldown(monkeypatch) -> None:
+    app = tray_app._MediaMopTrayApp.__new__(tray_app._MediaMopTrayApp)
+    app._port = 8788
+    app._last_browser_open_at = 0.0
+    app._browser_open_lock = threading.Lock()
+    app._log = lambda _message: None
+    opened_ports: list[int] = []
+    monkeypatch.setattr(tray_app, "_open_browser", lambda port: opened_ports.append(port))
+
+    app._open_browser_with_debounce(source="tray")
+    app._open_browser_with_debounce(source="tray")
+
+    assert opened_ports == [8788]
 
 
 def test_tray_open_action_uses_browser_window_reuse_mode() -> None:

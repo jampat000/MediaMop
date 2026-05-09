@@ -149,7 +149,10 @@ function wrap(ui: ReactNode, client: QueryClient) {
 
 function renderSettings(
   me: UserPublic,
-  overrides?: { updateStatus?: SuiteUpdateStatusOut },
+  overrides?: {
+    updateStatus?: SuiteUpdateStatusOut;
+    initialEntries?: string[];
+  },
 ) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
@@ -179,7 +182,13 @@ function renderSettings(
     minimalLogs,
   );
   qc.setQueryData(suiteMetricsQueryKey, minimalMetrics);
-  return render(wrap(<SettingsPage />, qc));
+  return render(
+    <QueryClientProvider client={qc}>
+      <MemoryRouter initialEntries={overrides?.initialEntries}>
+        <SettingsPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
 }
 
 async function renderSettingsWithSupportConfig(
@@ -476,6 +485,24 @@ describe("SettingsPage (suite settings)", () => {
     ).not.toBeInTheDocument();
     expect(
       screen.queryByText("Optional home dashboard notice"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps Upgrade selected when the URL tab query is upgrade", () => {
+    renderSettings(operatorMe, {
+      updateStatus: windowsUpdateAvailableStatus,
+      initialEntries: ["/settings?tab=upgrade"],
+    });
+
+    expect(screen.getByRole("tab", { name: "Upgrade" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(
+      screen.getByTestId("suite-settings-upgrade-tab"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("suite-settings-global"),
     ).not.toBeInTheDocument();
   });
 
