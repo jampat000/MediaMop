@@ -4,7 +4,6 @@ This file is the short entry point for coding agents. Keep detailed rules in lin
 
 ## Repository Boundaries
 
-- Canonical checkout: `C:\Users\User\Projects\MediaMop`.
 - Do not use old duplicate checkouts or copied source trees.
 - Treat `main` as protected. Use short-lived branches and pull requests.
 - Never revert user changes unless the user explicitly asks for that exact revert.
