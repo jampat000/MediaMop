@@ -154,7 +154,7 @@ class _WindowsSingleInstanceGuard:
     def acquire(self) -> bool:
         if os.name != "nt":
             return True
-        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        kernel32 = ctypes.windll.kernel32
         kernel32.SetLastError(0)
         handle = kernel32.CreateMutexW(None, False, self._name)
         if not handle:
@@ -168,7 +168,7 @@ class _WindowsSingleInstanceGuard:
         if self._handle is None:
             return
         try:
-            ctypes.windll.kernel32.CloseHandle(self._handle)  # type: ignore[attr-defined]
+            ctypes.windll.kernel32.CloseHandle(self._handle)
         finally:
             self._handle = None
 
@@ -198,7 +198,7 @@ def _lan_urls(port: int) -> list[str]:
 def _wait_for_health(
     port: int,
     timeout_seconds: float = 60.0,
-    process: subprocess.Popen[str] | None = None,
+    process: subprocess.Popen[bytes] | None = None,
 ) -> None:
     import http.client
 
@@ -261,7 +261,7 @@ class _MediaMopTrayApp:
         self._browser_open_lock = threading.Lock()
         executable_dir = Path(sys.executable).resolve().parent
         self._server_exe = executable_dir / "MediaMopServer.exe"
-        self._server_process: subprocess.Popen[str] | None = None
+        self._server_process: subprocess.Popen[bytes] | None = None
 
     def _log(self, message: str) -> None:
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -286,7 +286,7 @@ class _MediaMopTrayApp:
         self._open_browser_with_debounce(source="tray")
 
     def _handle_open_data_folder(self, icon: Any, item: Any) -> None:  # noqa: ARG002
-        os.startfile(str(self._runtime_home))  # type: ignore[attr-defined]
+        os.startfile(str(self._runtime_home))
 
     def _handle_quit(self, icon: Any, item: Any) -> None:  # noqa: ARG002
         self._log("Quit requested from tray icon")
