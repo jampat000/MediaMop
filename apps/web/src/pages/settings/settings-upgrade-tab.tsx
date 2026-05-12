@@ -1,6 +1,10 @@
 import { browserWindow } from "../../lib/browser-window";
 import type { SuiteUpgradeProgressOut } from "../../lib/suite/types";
-import type { useSuiteUpdateDiagnosticsQuery, useSuiteUpdateNowMutation, useSuiteUpdateStatusQuery } from "../../lib/suite/queries";
+import type {
+  useSuiteUpdateDiagnosticsQuery,
+  useSuiteUpdateNowMutation,
+  useSuiteUpdateStatusQuery,
+} from "../../lib/suite/queries";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 import {
   mmModuleTabBlurbBandClass,
@@ -73,10 +77,7 @@ export function SettingsUpgradeTab({
   const formatDateTime = useAppDateFormatter();
 
   return (
-    <div
-      data-testid="suite-settings-upgrade-tab"
-      className="mm-bubble-stack"
-    >
+    <div data-testid="suite-settings-upgrade-tab" className="mm-bubble-stack">
       <div className={mmModuleTabBlurbBandClass}>
         <p className={mmModuleTabBlurbTextClass}>
           Check the installed version, see the latest release, and start a
@@ -97,8 +98,8 @@ export function SettingsUpgradeTab({
             Upgrade
           </h3>
           <p className="mt-1 text-sm text-[var(--mm-text2)]">
-            Check the running MediaMop version and install the latest
-            release for this install type.
+            Check the running MediaMop version and install the latest release
+            for this install type.
           </p>
         </div>
 
@@ -119,8 +120,7 @@ export function SettingsUpgradeTab({
                 Reconnecting
               </p>
               <p className="mt-1 text-sm leading-6 text-[var(--mm-text2)]">
-                MediaMop is reconnecting and verifying the installed
-                version.
+                MediaMop is reconnecting and verifying the installed version.
               </p>
             </div>
           ) : (
@@ -213,9 +213,9 @@ export function SettingsUpgradeTab({
               updateStatusQ.data.status === "update_available" ? (
                 updateStatusQ.data.in_app_upgrade_supported ? (
                   <p className="text-sm leading-6 text-[var(--mm-text2)]">
-                    Upgrade now downloads the trusted installer, verifies
-                    it, runs the installer, and waits for MediaMop to
-                    reconnect and prove the running version changed.
+                    Upgrade now downloads the trusted installer, verifies it,
+                    runs the installer, and waits for MediaMop to reconnect and
+                    prove the running version changed.
                   </p>
                 ) : (
                   <p className="text-sm leading-6 text-[var(--mm-text2)]">
@@ -237,8 +237,8 @@ export function SettingsUpgradeTab({
                   </p>
                   <p className="text-sm leading-6 text-[var(--mm-text2)]">
                     Keep the same MEDIAMOP_HOME volume and
-                    MEDIAMOP_SESSION_SECRET value across upgrades so
-                    browser sessions and setup state continue cleanly.
+                    MEDIAMOP_SESSION_SECRET value across upgrades so browser
+                    sessions and setup state continue cleanly.
                   </p>
                 </div>
               ) : null}
@@ -301,8 +301,7 @@ export function SettingsUpgradeTab({
                     ) : null}
                     {activeUpgradeProgress?.service_log_path ? (
                       <p>
-                        Service log:{" "}
-                        {activeUpgradeProgress.service_log_path}
+                        Service log: {activeUpgradeProgress.service_log_path}
                       </p>
                     ) : null}
                     {(activeUpgradeProgress?.phase === "failed" ||
@@ -364,18 +363,15 @@ export function SettingsUpgradeTab({
                       </p>
                       <p>
                         Latest version:{" "}
-                        {updateDiagnosticsQ.data.latest_version ||
-                          "Unknown"}
+                        {updateDiagnosticsQ.data.latest_version || "Unknown"}
                       </p>
                       <p>
                         Install root:{" "}
-                        {updateDiagnosticsQ.data.install_root ||
-                          "Unavailable"}
+                        {updateDiagnosticsQ.data.install_root || "Unavailable"}
                       </p>
                       <p>
                         Runtime home:{" "}
-                        {updateDiagnosticsQ.data.runtime_home ||
-                          "Unavailable"}
+                        {updateDiagnosticsQ.data.runtime_home || "Unavailable"}
                       </p>
                       <p>
                         Updater service reachable:{" "}
@@ -384,9 +380,7 @@ export function SettingsUpgradeTab({
                           : "No"}
                       </p>
                       {diagnosticsUpgrade?.stale_reason ? (
-                        <p>
-                          Stale reason: {diagnosticsUpgrade.stale_reason}
-                        </p>
+                        <p>Stale reason: {diagnosticsUpgrade.stale_reason}</p>
                       ) : null}
                       {updateDiagnosticsQ.data.installer_log_path ? (
                         <p>
@@ -445,8 +439,8 @@ export function SettingsUpgradeTab({
                   )
                 ) : (
                   <p className="text-sm text-[var(--mm-text2)]">
-                    Includes updater reachability, current phase, log
-                    paths, and recent log lines for support triage.
+                    Includes updater reachability, current phase, log paths, and
+                    recent log lines for support triage.
                   </p>
                 )}
               </div>
@@ -492,8 +486,7 @@ export function SettingsUpgradeTab({
                         ) : null}
                         {entry.current_version_seen ? (
                           <p>
-                            Current version seen:{" "}
-                            {entry.current_version_seen}
+                            Current version seen: {entry.current_version_seen}
                           </p>
                         ) : null}
                         {entry.attempt_id ? (

@@ -1,4 +1,8 @@
-import type { SuiteLogEntry, SuiteUpdateStatusOut, SuiteUpgradeProgressOut } from "../../lib/suite/types";
+import type {
+  SuiteLogEntry,
+  SuiteUpdateStatusOut,
+  SuiteUpgradeProgressOut,
+} from "../../lib/suite/types";
 
 export type UpgradeMonitor = {
   attemptId: string | null;
@@ -35,7 +39,9 @@ export const SUITE_SETTINGS_PREMIUM_PANEL_CLASS =
   "flex min-h-0 min-w-0 flex-col gap-4 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/80 p-4 shadow-[var(--mm-shadow-card-inner)]";
 export const SUITE_SETTINGS_PREMIUM_TILE_CLASS =
   "rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/80 px-4 py-3 shadow-[var(--mm-shadow-card-inner)]";
-export const CONFIGURATION_BACKUP_INTERVAL_HOURS = [6, 12, 24, 48, 72, 168] as const;
+export const CONFIGURATION_BACKUP_INTERVAL_HOURS = [
+  6, 12, 24, 48, 72, 168,
+] as const;
 export const SUITE_PASSWORD_FIELD_CLASS =
   "mm-input w-full min-w-0 flex-1 text-sm tracking-normal text-[var(--mm-text)]";
 
@@ -145,7 +151,9 @@ export function upgradeNoticeClass(tone: UpgradeNotice["tone"]): string {
   return "rounded-md border border-amber-400/25 bg-amber-400/[0.06] px-3 py-2 text-sm text-[var(--mm-text2)]";
 }
 
-export function isUpgradeActivePhase(phase: string | null | undefined): boolean {
+export function isUpgradeActivePhase(
+  phase: string | null | undefined,
+): boolean {
   return (
     phase === "checking" ||
     phase === "downloading" ||

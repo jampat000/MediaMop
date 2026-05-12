@@ -7,7 +7,10 @@ import {
   useTestNotificationChannelMutation,
   useUpdateNotificationChannelMutation,
 } from "../../lib/suite/queries";
-import { mmActionButtonClass, mmEditableTextFieldClass } from "../../lib/ui/mm-control-roles";
+import {
+  mmActionButtonClass,
+  mmEditableTextFieldClass,
+} from "../../lib/ui/mm-control-roles";
 import {
   mmModuleTabBlurbBandClass,
   mmModuleTabBlurbTextClass,
@@ -51,9 +54,13 @@ function ChannelForm({
   saveError,
 }: ChannelFormProps) {
   const [label, setLabel] = useState(initial?.label ?? "");
-  const [provider, setProvider] = useState<string>(initial?.provider ?? "webhook");
+  const [provider, setProvider] = useState<string>(
+    initial?.provider ?? "webhook",
+  );
   const [url, setUrl] = useState(initial?.url ?? "");
-  const [events, setEvents] = useState<string[]>(initial?.events ?? ["job_failed"]);
+  const [events, setEvents] = useState<string[]>(
+    initial?.events ?? ["job_failed"],
+  );
   const [enabled, setEnabled] = useState(initial?.enabled ?? true);
 
   const toggleEvent = (event: string) => {
@@ -163,15 +170,21 @@ function ChannelForm({
           type="submit"
           className={mmActionButtonClass({
             variant: "primary",
-            disabled: saving || !label.trim() || !url.trim() || events.length === 0,
+            disabled:
+              saving || !label.trim() || !url.trim() || events.length === 0,
           })}
-          disabled={saving || !label.trim() || !url.trim() || events.length === 0}
+          disabled={
+            saving || !label.trim() || !url.trim() || events.length === 0
+          }
         >
           {saving ? "Saving..." : "Save channel"}
         </button>
         <button
           type="button"
-          className={mmActionButtonClass({ variant: "tertiary", disabled: saving })}
+          className={mmActionButtonClass({
+            variant: "tertiary",
+            disabled: saving,
+          })}
           disabled={saving}
           onClick={onCancel}
         >
@@ -207,7 +220,9 @@ function ChannelRow({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium text-[var(--mm-text1)]">{channel.label}</span>
+            <span className="font-medium text-[var(--mm-text1)]">
+              {channel.label}
+            </span>
             <span className="rounded-full border border-[var(--mm-border)] px-2 py-0.5 text-xs text-[var(--mm-text3)]">
               {channel.provider}
             </span>
@@ -217,15 +232,23 @@ function ChannelRow({
               </span>
             ) : null}
           </div>
-          <p className="break-all font-mono text-xs text-[var(--mm-text3)]">{channel.url}</p>
+          <p className="break-all font-mono text-xs text-[var(--mm-text3)]">
+            {channel.url}
+          </p>
           <p className="text-xs text-[var(--mm-text3)]">
-            Events: {channel.events.length > 0 ? channel.events.map((e) => EVENT_LABELS[e] ?? e).join(", ") : "None"}
+            Events:{" "}
+            {channel.events.length > 0
+              ? channel.events.map((e) => EVENT_LABELS[e] ?? e).join(", ")
+              : "None"}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            className={mmActionButtonClass({ variant: "tertiary", disabled: testing || deleting })}
+            className={mmActionButtonClass({
+              variant: "tertiary",
+              disabled: testing || deleting,
+            })}
             disabled={testing || deleting}
             onClick={onTest}
           >
@@ -233,7 +256,10 @@ function ChannelRow({
           </button>
           <button
             type="button"
-            className={mmActionButtonClass({ variant: "secondary", disabled: deleting })}
+            className={mmActionButtonClass({
+              variant: "secondary",
+              disabled: deleting,
+            })}
             disabled={deleting}
             onClick={onEdit}
           >
@@ -241,7 +267,10 @@ function ChannelRow({
           </button>
           <button
             type="button"
-            className={mmActionButtonClass({ variant: "tertiary", disabled: deleting })}
+            className={mmActionButtonClass({
+              variant: "tertiary",
+              disabled: deleting,
+            })}
             disabled={deleting}
             onClick={onDelete}
           >
@@ -282,7 +311,8 @@ export function SettingsNotificationsTab() {
     Record<number, { ok: boolean; error: string | null }>
   >({});
 
-  const supportedEvents = channelsQ.data?.supported_events ?? Object.keys(EVENT_LABELS);
+  const supportedEvents =
+    channelsQ.data?.supported_events ?? Object.keys(EVENT_LABELS);
 
   const handleCreate = async (data: NotificationFormData) => {
     await createMutation.mutateAsync(data);
@@ -316,7 +346,10 @@ export function SettingsNotificationsTab() {
     } catch (err) {
       setTestResults((prev) => ({
         ...prev,
-        [id]: { ok: false, error: err instanceof Error ? err.message : "Unknown error" },
+        [id]: {
+          ok: false,
+          error: err instanceof Error ? err.message : "Unknown error",
+        },
       }));
     } finally {
       setTestingId(null);
@@ -327,12 +360,15 @@ export function SettingsNotificationsTab() {
     <div data-testid="suite-settings-notifications" className="mm-bubble-stack">
       <div className={mmModuleTabBlurbBandClass}>
         <p className={mmModuleTabBlurbTextClass}>
-          Send outbound webhook notifications when jobs complete or permanently fail. Supports
-          generic JSON webhooks and Discord.
+          Send outbound webhook notifications when jobs complete or permanently
+          fail. Supports generic JSON webhooks and Discord.
         </p>
       </div>
 
-      <section className={SUITE_SETTINGS_DASH_CARD_CLASS} aria-labelledby="suite-settings-notifications-heading">
+      <section
+        className={SUITE_SETTINGS_DASH_CARD_CLASS}
+        aria-labelledby="suite-settings-notifications-heading"
+      >
         <div className="mm-card-action-body">
           <div>
             <h3
@@ -342,13 +378,15 @@ export function SettingsNotificationsTab() {
               Notification channels
             </h3>
             <p className="mt-1 text-sm text-[var(--mm-text2)]">
-              Each channel routes job events to a webhook URL. Use &ldquo;Send test&rdquo; to verify a channel
-              before relying on it.
+              Each channel routes job events to a webhook URL. Use &ldquo;Send
+              test&rdquo; to verify a channel before relying on it.
             </p>
           </div>
 
           {channelsQ.isLoading ? (
-            <p className="text-sm text-[var(--mm-text3)]">Loading channels...</p>
+            <p className="text-sm text-[var(--mm-text3)]">
+              Loading channels...
+            </p>
           ) : channelsQ.isError ? (
             <p
               className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"

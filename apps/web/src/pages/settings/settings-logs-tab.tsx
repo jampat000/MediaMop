@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { useSuiteLogsQuery, useSuiteMetricsQuery } from "../../lib/suite/queries";
+import {
+  useSuiteLogsQuery,
+  useSuiteMetricsQuery,
+} from "../../lib/suite/queries";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 import { mmEditableTextFieldClass } from "../../lib/ui/mm-control-roles";
 import {
@@ -24,29 +27,26 @@ export function SettingsLogsTab() {
   const [logLevel, setLogLevel] = useState<LogLevelFilter>("");
   const [tracebacksOnly, setTracebacksOnly] = useState(false);
 
-  const logsQ = useSuiteLogsQuery(
-    {
-      level: logLevel || undefined,
-      search: logSearch.trim() || undefined,
-      has_exception: tracebacksOnly ? true : undefined,
-      limit: 100,
-    },
-  );
+  const logsQ = useSuiteLogsQuery({
+    level: logLevel || undefined,
+    search: logSearch.trim() || undefined,
+    has_exception: tracebacksOnly ? true : undefined,
+    limit: 100,
+  });
   const metricsQ = useSuiteMetricsQuery();
 
   const runtimeMetrics = metricsQ.data;
-  const runtimeRequestIssues = requestIssueSummary(runtimeMetrics?.status_counts);
+  const runtimeRequestIssues = requestIssueSummary(
+    runtimeMetrics?.status_counts,
+  );
 
   return (
-    <div
-      data-testid="suite-settings-logs"
-      className="mm-bubble-stack w-full"
-    >
+    <div data-testid="suite-settings-logs" className="mm-bubble-stack w-full">
       <div className={mmModuleTabBlurbBandClass}>
         <p className={mmModuleTabBlurbTextClass}>
-          System event logs from the MediaMop runtime. Use filters to
-          narrow down warnings, failures, and tracebacks. Advanced server
-          diagnostics are available here when troubleshooting.
+          System event logs from the MediaMop runtime. Use filters to narrow
+          down warnings, failures, and tracebacks. Advanced server diagnostics
+          are available here when troubleshooting.
         </p>
       </div>
 
@@ -88,10 +88,9 @@ export function SettingsLogsTab() {
             Server diagnostics
           </summary>
           <p className="mt-2 text-sm text-[var(--mm-text2)]">
-            Advanced counters for troubleshooting. Request issues usually
-            mean a browser or API request was rejected or asked for
-            something that was not found; they are not the same as
-            application failures.
+            Advanced counters for troubleshooting. Request issues usually mean a
+            browser or API request was rejected or asked for something that was
+            not found; they are not the same as application failures.
           </p>
           {metricsQ.isError ? (
             <p
@@ -139,9 +138,7 @@ export function SettingsLogsTab() {
               <SettingsSummaryCard
                 label="Request issues"
                 value={
-                  runtimeMetrics
-                    ? runtimeRequestIssues.value
-                    : "Loading..."
+                  runtimeMetrics ? runtimeRequestIssues.value : "Loading..."
                 }
               />
             </div>
@@ -167,8 +164,8 @@ export function SettingsLogsTab() {
               Search logs
             </h3>
             <p className="mt-1 text-sm text-[var(--mm-text2)]">
-              Search message text, component names, tracebacks, request
-              IDs, and job IDs. This view refreshes while it is open.
+              Search message text, component names, tracebacks, request IDs, and
+              job IDs. This view refreshes while it is open.
             </p>
           </div>
 
@@ -188,9 +185,7 @@ export function SettingsLogsTab() {
               <select
                 className={mmEditableTextFieldClass}
                 value={logLevel}
-                onChange={(e) =>
-                  setLogLevel(e.target.value as LogLevelFilter)
-                }
+                onChange={(e) => setLogLevel(e.target.value as LogLevelFilter)}
               >
                 <option value="">All levels</option>
                 <option value="INFO">Information</option>

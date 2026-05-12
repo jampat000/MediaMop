@@ -151,9 +151,12 @@ export function useSuiteNotificationChannelsQuery(enabled = true) {
 export function useCreateNotificationChannelMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: NotificationChannelIn) => createNotificationChannel(data),
+    mutationFn: (data: NotificationChannelIn) =>
+      createNotificationChannel(data),
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: suiteNotificationChannelsQueryKey });
+      await qc.invalidateQueries({
+        queryKey: suiteNotificationChannelsQueryKey,
+      });
     },
   });
 }
@@ -164,7 +167,9 @@ export function useUpdateNotificationChannelMutation() {
     mutationFn: ({ id, data }: { id: number; data: NotificationChannelIn }) =>
       updateNotificationChannel(id, data),
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: suiteNotificationChannelsQueryKey });
+      await qc.invalidateQueries({
+        queryKey: suiteNotificationChannelsQueryKey,
+      });
     },
   });
 }
@@ -174,7 +179,9 @@ export function useDeleteNotificationChannelMutation() {
   return useMutation({
     mutationFn: (id: number) => deleteNotificationChannel(id),
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: suiteNotificationChannelsQueryKey });
+      await qc.invalidateQueries({
+        queryKey: suiteNotificationChannelsQueryKey,
+      });
     },
   });
 }

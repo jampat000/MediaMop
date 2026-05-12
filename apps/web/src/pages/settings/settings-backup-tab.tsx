@@ -1,7 +1,10 @@
 import type { ChangeEvent } from "react";
 import { useRef } from "react";
 import type { SuiteSettingsOut } from "../../lib/suite/types";
-import type { useSuiteConfigurationBackupsQuery, useSuiteSettingsSaveMutation } from "../../lib/suite/queries";
+import type {
+  useSuiteConfigurationBackupsQuery,
+  useSuiteSettingsSaveMutation,
+} from "../../lib/suite/queries";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 import {
   mmModuleTabBlurbBandClass,
@@ -59,14 +62,10 @@ export function SettingsBackupTab({
   const restoreInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div
-      data-testid="suite-settings-backup-tab"
-      className="mm-bubble-stack"
-    >
+    <div data-testid="suite-settings-backup-tab" className="mm-bubble-stack">
       <div className={mmModuleTabBlurbBandClass}>
         <p className={mmModuleTabBlurbTextClass}>
-          Export, restore, and automatically snapshot MediaMop
-          configuration.
+          Export, restore, and automatically snapshot MediaMop configuration.
         </p>
       </div>
 
@@ -100,8 +99,8 @@ export function SettingsBackupTab({
                     Scheduled snapshots
                   </h4>
                   <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-                    MediaMop keeps the latest five configuration snapshots
-                    using the same restore-safe JSON format.
+                    MediaMop keeps the latest five configuration snapshots using
+                    the same restore-safe JSON format.
                   </p>
                 </div>
                 <label className="flex cursor-pointer items-start gap-2.5 text-sm text-[var(--mm-text2)]">
@@ -180,9 +179,7 @@ export function SettingsBackupTab({
                     disabled:
                       !editable || !backupScheduleDirty || save.isPending,
                   })}
-                  disabled={
-                    !editable || !backupScheduleDirty || save.isPending
-                  }
+                  disabled={!editable || !backupScheduleDirty || save.isPending}
                   onClick={() => onSaveBackupSchedule()}
                 >
                   {save.isPending ? "Saving..." : "Save backup schedule"}

@@ -14,14 +14,11 @@ export { SHOW_SUPPORT_CARD };
 
 export function SettingsSupportTab() {
   return (
-    <div
-      data-testid="suite-settings-support-tab"
-      className="mm-bubble-stack"
-    >
+    <div data-testid="suite-settings-support-tab" className="mm-bubble-stack">
       <div className={mmModuleTabBlurbBandClass}>
         <p className={mmModuleTabBlurbTextClass}>
-          Optional support details for MediaMop. Core app features remain
-          fully usable without any support flow.
+          Optional support details for MediaMop. Core app features remain fully
+          usable without any support flow.
         </p>
       </div>
 
@@ -41,15 +38,15 @@ export function SettingsSupportTab() {
             <div className="space-y-2 text-sm text-[var(--mm-text2)]">
               <p>MediaMop is free to use. Support is optional.</p>
               <p>
-                If MediaMop saves you time or helps keep your library
-                cleaner, you can support ongoing development.
+                If MediaMop saves you time or helps keep your library cleaner,
+                you can support ongoing development.
               </p>
             </div>
           </div>
           {SHOW_SUPPORT_URL_PLACEHOLDER ? (
             <p className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-3 py-2 text-xs text-[var(--mm-text3)]">
-              Development note: set <code>VITE_SUPPORT_URL</code> to show
-              the support button.
+              Development note: set <code>VITE_SUPPORT_URL</code> to show the
+              support button.
             </p>
           ) : null}
         </div>

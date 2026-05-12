@@ -55,7 +55,14 @@ function canEditSuiteGlobal(role: string | undefined): boolean {
   return role === "operator" || role === "admin";
 }
 
-type TabId = "general" | "backup" | "upgrade" | "security" | "logs" | "notifications" | "support";
+type TabId =
+  | "general"
+  | "backup"
+  | "upgrade"
+  | "security"
+  | "logs"
+  | "notifications"
+  | "support";
 
 function tabButtonClass(active: boolean): string {
   return [

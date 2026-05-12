@@ -1,14 +1,23 @@
 import { useNavigate } from "react-router-dom";
 import type { SuiteSettingsOut } from "../../lib/suite/types";
-import type { useSuiteOperationalHistoryResetMutation, useSuiteSettingsSaveMutation } from "../../lib/suite/queries";
+import type {
+  useSuiteOperationalHistoryResetMutation,
+  useSuiteSettingsSaveMutation,
+} from "../../lib/suite/queries";
 import { curatedTimezoneOptionsSorted } from "../../lib/suite/timezone-options";
 import { MmListboxPicker } from "../../components/ui/mm-listbox-picker";
-import { mmActionButtonClass, mmEditableTextFieldClass } from "../../lib/ui/mm-control-roles";
+import {
+  mmActionButtonClass,
+  mmEditableTextFieldClass,
+} from "../../lib/ui/mm-control-roles";
 import {
   mmModuleTabBlurbBandClass,
   mmModuleTabBlurbTextClass,
 } from "../../lib/ui/mm-module-tab-blurb";
-import { persistDisplayDensity, type DisplayDensity } from "../../lib/ui/display-density";
+import {
+  persistDisplayDensity,
+  type DisplayDensity,
+} from "../../lib/ui/display-density";
 import { SUITE_SETTINGS_DASH_CARD_CLASS } from "./settings-shared";
 
 type SettingsGeneralTabProps = {
@@ -63,17 +72,16 @@ export function SettingsGeneralTab({
     <div data-testid="suite-settings-global" className="mm-bubble-stack">
       {!editable ? (
         <p className="text-sm text-[var(--mm-text3)]">
-          Operators and admins can edit General options; everyone can open
-          the Logs tab to read recent events.
+          Operators and admins can edit General options; everyone can open the
+          Logs tab to read recent events.
         </p>
       ) : null}
 
       <div className="grid grid-cols-1 gap-5">
         <div className={mmModuleTabBlurbBandClass}>
           <p className={mmModuleTabBlurbTextClass}>
-            Suite-wide choices saved in the app database. Integration
-            details for Refiner, Pruner, and Subber stay on those module
-            pages.
+            Suite-wide choices saved in the app database. Integration details
+            for Refiner, Pruner, and Subber stay on those module pages.
           </p>
         </div>
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
@@ -90,8 +98,8 @@ export function SettingsGeneralTab({
                   Setup wizard
                 </h3>
                 <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                  Reopen the first-run wizard to adjust the basic suite
-                  setup flow at any time.
+                  Reopen the first-run wizard to adjust the basic suite setup
+                  flow at any time.
                 </p>
               </div>
               <div className="space-y-2 text-sm text-[var(--mm-text2)]">
@@ -102,8 +110,8 @@ export function SettingsGeneralTab({
                   </span>
                 </p>
                 <p>
-                  Use this when you want the guided setup again without
-                  exposing it in the sidebar.
+                  Use this when you want the guided setup again without exposing
+                  it in the sidebar.
                 </p>
               </div>
             </div>
@@ -134,8 +142,8 @@ export function SettingsGeneralTab({
                   Timezone
                 </h3>
                 <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                  Main-country timezones for suite-level time displays.
-                  Use Save timezone when you change the selection.
+                  Main-country timezones for suite-level time displays. Use Save
+                  timezone when you change the selection.
                 </p>
               </div>
               <MmListboxPicker
@@ -154,8 +162,8 @@ export function SettingsGeneralTab({
                 id="suite-timezone-hint"
                 className="text-xs text-[var(--mm-text3)]"
               >
-                If you do not see your zone, pick the closest match - this
-                only affects how times are labeled in the suite.
+                If you do not see your zone, pick the closest match - this only
+                affects how times are labeled in the suite.
               </p>
               {save.isError && lastSuiteSaveTarget === "timezone" ? (
                 <p
@@ -200,8 +208,8 @@ export function SettingsGeneralTab({
                   Log retention
                 </h3>
                 <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                  Decide how long MediaMop keeps persisted system log
-                  entries on disk.
+                  Decide how long MediaMop keeps persisted system log entries on
+                  disk.
                 </p>
               </div>
               <label className="block max-w-md">
@@ -222,9 +230,7 @@ export function SettingsGeneralTab({
                   }
                   onChange={(e) => setLogRetentionDaysDraft(e.target.value)}
                   onBlur={() =>
-                    setLogRetentionDaysDraft(
-                      String(finalizeLogRetentionDays()),
-                    )
+                    setLogRetentionDaysDraft(String(finalizeLogRetentionDays()))
                   }
                   aria-describedby="suite-general-log-retention-hint"
                 />
@@ -232,9 +238,9 @@ export function SettingsGeneralTab({
                   id="suite-general-log-retention-hint"
                   className="mt-1 text-xs text-[var(--mm-text3)]"
                 >
-                  Between 1 and 3650 days. Older system log entries are
-                  removed automatically while MediaMop is running;
-                  activity history is kept until you reset it.
+                  Between 1 and 3650 days. Older system log entries are removed
+                  automatically while MediaMop is running; activity history is
+                  kept until you reset it.
                 </p>
               </label>
               {save.isError && lastSuiteSaveTarget === "logs" ? (
@@ -346,8 +352,8 @@ export function SettingsGeneralTab({
                 Display density (this browser)
               </legend>
               <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                Adjust text, spacing, sidebar width, and card density for
-                this browser. The change applies immediately.
+                Adjust text, spacing, sidebar width, and card density for this
+                browser. The change applies immediately.
               </p>
               <div
                 className="mt-3 flex flex-col gap-2"
