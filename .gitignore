@@ -45,3 +45,6 @@ apps/web/tmp-*.cjs
 
 # Build-time downloaded Windows FFmpeg runtime
 packaging/windows/vendor/
+
+# Claude Code local settings (machine-specific, never commit)
+.claude/settings.local.json
