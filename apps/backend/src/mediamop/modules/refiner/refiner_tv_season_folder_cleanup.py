@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.domain import FileAnchorCandidate, file_is_owned_by_queue
-from mediamop.modules.refiner.refiner_file_remux_pass_visibility import (
+from mediamop.modules.refiner.file_remux_pass.visibility import (
     REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN,
     REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED,
 )
