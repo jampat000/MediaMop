@@ -5,8 +5,13 @@ Shared by API startup and ``scripts/verify_local_db.py``.
 
 from __future__ import annotations
 
+import logging
 import os
+import shutil
+import time
 from pathlib import Path
+
+_log = logging.getLogger(__name__)
 
 from alembic import command
 from alembic.config import Config
@@ -88,9 +93,28 @@ def _strictly_behind_head(script: ScriptDirectory, *, head: str, current: str) -
     return False
 
 
-def _run_alembic_upgrade_head() -> None:
+def _backup_database_before_migration(engine: Engine) -> None:
+    """Copy the SQLite file to a timestamped ``.pre-migration.bak`` before upgrading."""
+
+    db_url = str(engine.url)
+    if not db_url.startswith("sqlite:///"):
+        return
+    db_path = Path(db_url[len("sqlite:///"):])
+    if not db_path.is_file():
+        return
+    ts = time.strftime("%Y%m%dT%H%M%S")
+    bak = db_path.with_name(f"{db_path.name}.{ts}.pre-migration.bak")
+    try:
+        shutil.copy2(db_path, bak)
+        _log.info("Pre-migration database backup created backup=%s", bak)
+    except Exception:
+        _log.warning("Could not create pre-migration backup src=%s", db_path, exc_info=True)
+
+
+def _run_alembic_upgrade_head(engine: Engine) -> None:
     """Run ``alembic upgrade head`` (uses ``env.py`` + ``MediaMopSettings.load()`` for URL)."""
 
+    _backup_database_before_migration(engine)
     cfg = _alembic_config()
     try:
         command.upgrade(cfg, "head")
@@ -137,7 +161,7 @@ def ensure_database_at_application_head(engine: Engine) -> None:
         ) from exc
 
     if _strictly_behind_head(script, head=head, current=current):
-        _run_alembic_upgrade_head()
+        _run_alembic_upgrade_head(engine)
         engine.dispose()
         after = _current_revision(engine)
         if after != head:

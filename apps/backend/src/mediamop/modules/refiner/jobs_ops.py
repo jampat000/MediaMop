@@ -6,7 +6,7 @@ the one-writer rule. Callers should keep transactions short.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 
 _REFINER_JOB_DEDUPE_KEY_MAX_LEN = 512
@@ -43,7 +43,7 @@ SET
   attempt_count = attempt_count + 1
 WHERE id = (
   SELECT id FROM refiner_jobs
-  WHERE status = :pending
+  WHERE (status = :pending AND (not_before IS NULL OR not_before <= :now))
      OR (
        status = :leased
        AND (lease_expires_at IS NULL OR lease_expires_at < :now)
@@ -215,9 +215,12 @@ def fail_claimed_refiner_job(
     job.lease_expires_at = None
     if job.attempt_count >= job.max_attempts:
         job.status = RefinerJobStatus.FAILED.value
+        job.not_before = None
         record_module_job_event(module="refiner", event="failed")
     else:
         job.status = RefinerJobStatus.PENDING.value
+        delay = min(30 * (2 ** (job.attempt_count - 1)), 1800)
+        job.not_before = when + timedelta(seconds=delay)
     session.flush()
     _record_refiner_queue_depth(session)
     return True

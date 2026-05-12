@@ -65,6 +65,10 @@ from mediamop.modules.pruner.worker_loop import (
 )
 from mediamop.platform.auth.rate_limit import SlidingWindowLimiter
 from mediamop.platform.auth.session_cleanup import start_session_cleanup_task, stop_session_cleanup_task
+from mediamop.platform.jobs.job_rows_retention_periodic import (
+    start_job_rows_retention_tasks,
+    stop_job_rows_retention_tasks,
+)
 from mediamop.platform.auth.service import cleanup_inactive_sessions
 from mediamop.platform.jobs.startup_recovery import recover_incomplete_jobs_after_startup
 from mediamop.platform.suite_settings.logs_service import prune_logs_for_retention
@@ -94,6 +98,42 @@ async def _stop_task_group(name: str, step) -> None:
         _lifespan_log.exception("MediaMop shutdown step failed step=%s", name)
 
 
+def _warn_startup_misconfigurations(settings: MediaMopSettings) -> None:
+    """Log actionable warnings for common misconfigurations at startup."""
+
+    if not settings.session_secret:
+        _lifespan_log.warning(
+            "MEDIAMOP_SESSION_SECRET is not set — all authentication endpoints will return HTTP 503. "
+            "Set this to a long random string before starting MediaMop."
+        )
+
+    cred = (settings.credentials_secret or "").strip()
+    if cred and len(cred) < 32:
+        _lifespan_log.warning(
+            "MEDIAMOP_CREDENTIALS_SECRET is set but shorter than 32 characters (%d chars). "
+            "Use a long random string to protect stored credentials.",
+            len(cred),
+        )
+    elif not cred and settings.env == "production":
+        _lifespan_log.warning(
+            "MEDIAMOP_CREDENTIALS_SECRET is not set — stored provider credentials will fall back to "
+            "session-secret encryption. Set a dedicated credentials secret for stronger isolation."
+        )
+
+    if not settings.trusted_browser_origins and settings.env == "production":
+        _lifespan_log.warning(
+            "MEDIAMOP_CORS_ORIGINS is not set — the Origin/Referer CSRF check on auth endpoints is "
+            "disabled. Set MEDIAMOP_CORS_ORIGINS to the MediaMop URL to enable this defence."
+        )
+
+    if not settings.subber_webhook_secret:
+        _lifespan_log.warning(
+            "MEDIAMOP_SUBBER_WEBHOOK_SECRET is not set — Sonarr/Radarr webhook endpoints accept "
+            "unauthenticated requests. Set this to a shared secret and configure it in Sonarr/Radarr "
+            "webhook headers (X-Webhook-Secret) to protect the webhook queue."
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.startup_started_at = time.monotonic()
@@ -109,6 +149,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         window_seconds=float(settings.bootstrap_rate_window_seconds),
     )
     configure_logging(settings)
+    _warn_startup_misconfigurations(settings)
     engine = create_db_engine(settings)
     ensure_database_at_application_head(engine)
     app.state.engine = engine
@@ -132,6 +173,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     stop = asyncio.Event()
     session_cleanup_task = None
     log_retention_tasks: list[asyncio.Task[None]] = []
+    job_rows_retention_tasks: list[asyncio.Task[None]] = []
     refiner_supplied_payload_eval_tasks: list[asyncio.Task[None]] = []
     refiner_watched_folder_scan_dispatch_tasks: list[asyncio.Task[None]] = []
     refiner_work_temp_stale_sweep_tasks: list[asyncio.Task[None]] = []
@@ -164,6 +206,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     def _start_log_retention_tasks() -> None:
         nonlocal log_retention_tasks
         log_retention_tasks = start_log_retention_tasks(session_factory, stop_event=stop, settings=settings)
+
+    def _start_job_rows_retention_tasks() -> None:
+        nonlocal job_rows_retention_tasks
+        job_rows_retention_tasks = start_job_rows_retention_tasks(session_factory, stop_event=stop, settings=settings)
 
     def _start_refiner_supplied_payload_eval_tasks() -> None:
         nonlocal refiner_supplied_payload_eval_tasks
@@ -267,6 +313,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     _run_non_essential_startup_step("session_cleanup_task_start", _start_session_cleanup_task)
     _run_non_essential_startup_step("log_retention_tasks_start", _start_log_retention_tasks)
+    _run_non_essential_startup_step("job_rows_retention_tasks_start", _start_job_rows_retention_tasks)
     _run_non_essential_startup_step("refiner_supplied_payload_eval_start", _start_refiner_supplied_payload_eval_tasks)
     _run_non_essential_startup_step(
         "refiner_watched_folder_scan_dispatch_start",
@@ -320,6 +367,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         if session_cleanup_task is not None:
             await _stop_task_group("session_cleanup_task_stop", lambda: stop_session_cleanup_task(session_cleanup_task))
         await _stop_task_group("log_retention_tasks_stop", lambda: stop_log_retention_tasks(log_retention_tasks))
+        await _stop_task_group(
+            "job_rows_retention_tasks_stop",
+            lambda: stop_job_rows_retention_tasks(job_rows_retention_tasks),
+        )
         if subber_stop is not None:
             await _stop_task_group(
                 "subber_worker_stop",

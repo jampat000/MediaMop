@@ -6,6 +6,10 @@ import {
   throwApiResponseError,
 } from "../api/client";
 import type {
+  NotificationChannelIn,
+  NotificationChannelListOut,
+  NotificationChannelOut,
+  NotificationChannelTestOut,
   SuiteConfigurationBackupListOut,
   SuiteLogsOut,
   SuiteMetricsOut,
@@ -261,4 +265,65 @@ export async function fetchStoredConfigurationBackupBlob(
   const r = await apiFetch(path);
   await requireOk(path, r, "Could not download automatic snapshot");
   return r.blob();
+}
+
+export const notificationChannelsPath = () =>
+  "/api/v1/suite/notification-channels";
+
+export async function fetchNotificationChannels(): Promise<NotificationChannelListOut> {
+  const path = notificationChannelsPath();
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load notification channels");
+  return readJson<NotificationChannelListOut>(r);
+}
+
+export async function createNotificationChannel(
+  data: NotificationChannelIn,
+): Promise<NotificationChannelOut> {
+  const csrf_token = await fetchCsrfToken();
+  const path = notificationChannelsPath();
+  const r = await apiFetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...data, csrf_token }),
+  });
+  await requireOk(path, r, "Could not create notification channel");
+  return readJson<NotificationChannelOut>(r);
+}
+
+export async function updateNotificationChannel(
+  id: number,
+  data: NotificationChannelIn,
+): Promise<NotificationChannelOut> {
+  const csrf_token = await fetchCsrfToken();
+  const path = `${notificationChannelsPath()}/${id}`;
+  const r = await apiFetch(path, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...data, csrf_token }),
+  });
+  await requireOk(path, r, "Could not update notification channel");
+  return readJson<NotificationChannelOut>(r);
+}
+
+export async function deleteNotificationChannel(id: number): Promise<void> {
+  const path = `${notificationChannelsPath()}/${id}`;
+  const r = await apiFetch(path, { method: "DELETE" });
+  if (!r.ok && r.status !== 204) {
+    await requireOk(path, r, "Could not delete notification channel");
+  }
+}
+
+export async function testNotificationChannel(
+  id: number,
+): Promise<NotificationChannelTestOut> {
+  const csrf_token = await fetchCsrfToken();
+  const path = `${notificationChannelsPath()}/${id}/test`;
+  const r = await apiFetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ csrf_token }),
+  });
+  await requireOk(path, r, "Could not test notification channel");
+  return readJson<NotificationChannelTestOut>(r);
 }

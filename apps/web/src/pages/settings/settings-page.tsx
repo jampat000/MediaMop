@@ -49,12 +49,13 @@ import { SettingsUpgradeTab } from "./settings-upgrade-tab";
 import { SettingsSecurityTab } from "./settings-security-tab";
 import { SettingsLogsTab } from "./settings-logs-tab";
 import { SettingsSupportTab } from "./settings-support-tab";
+import { SettingsNotificationsTab } from "./settings-notifications-tab";
 
 function canEditSuiteGlobal(role: string | undefined): boolean {
   return role === "operator" || role === "admin";
 }
 
-type TabId = "general" | "backup" | "upgrade" | "security" | "logs" | "support";
+type TabId = "general" | "backup" | "upgrade" | "security" | "logs" | "notifications" | "support";
 
 function tabButtonClass(active: boolean): string {
   return [
@@ -314,6 +315,8 @@ function normalizeSettingsTab(
       return "security";
     case "logs":
       return "logs";
+    case "notifications":
+      return "notifications";
     case "support":
       return supportEnabled ? "support" : "general";
     default:
@@ -1010,6 +1013,15 @@ export function SettingsPage() {
           >
             Logs
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "notifications"}
+            className={tabButtonClass(tab === "notifications")}
+            onClick={() => setSettingsTab("notifications")}
+          >
+            Notifications
+          </button>
           {showSupportTab ? (
             <button
               type="button"
@@ -1031,7 +1043,6 @@ export function SettingsPage() {
             appTimezone={appTimezone}
             setAppTimezone={setAppTimezone}
             timezoneDirty={timezoneDirty}
-            logRetentionDaysDraft={logRetentionDaysDraft}
             setLogRetentionDaysDraft={setLogRetentionDaysDraft}
             normalizedLogRetentionDraft={normalizedLogRetentionDraft}
             finalizeLogRetentionDays={finalizeLogRetentionDays}
@@ -1105,6 +1116,8 @@ export function SettingsPage() {
           />
         ) : tab === "security" ? (
           <SettingsSecurityTab />
+        ) : tab === "notifications" ? (
+          <SettingsNotificationsTab />
         ) : tab === "support" ? (
           <SettingsSupportTab />
         ) : (

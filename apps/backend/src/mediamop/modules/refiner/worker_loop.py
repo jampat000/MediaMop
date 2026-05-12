@@ -31,6 +31,7 @@ from mediamop.modules.refiner.jobs_ops import (
     fail_leased_refiner_job_after_complete_failure,
 )
 from mediamop.platform.jobs.worker_health import worker_heartbeat, worker_started, worker_stopped
+from mediamop.platform.notifications.dispatch import dispatch_job_notification
 from mediamop.platform.observability.failure_messages import operator_failure_from_exception
 
 logger = logging.getLogger(__name__)
@@ -190,6 +191,7 @@ def process_one_refiner_job(
                 "Refiner fail_claimed_refiner_job failed after handler error job_id=%s",
                 ctx.id,
             )
+        dispatch_job_notification(session_factory, module="refiner", event_kind="failed", job_id=ctx.id, job_kind=ctx.job_kind)
         return "processed"
 
     complete_ok = True
@@ -210,6 +212,9 @@ def process_one_refiner_job(
         complete_ok = False
         logger.exception("Refiner complete_claimed_refiner_job failed job_id=%s", ctx.id)
         complete_err = str(exc)
+
+    if complete_ok:
+        dispatch_job_notification(session_factory, module="refiner", event_kind="completed", job_id=ctx.id, job_kind=ctx.job_kind)
 
     if not complete_ok and complete_err is not None:
         bounded = (REFINER_TERMINALIZATION_FAILURE_PREFIX + complete_err)[:10_000]
@@ -237,6 +242,9 @@ def process_one_refiner_job(
     return "processed"
 
 
+_CONCURRENT_FILES_CACHE_TTL = 30.0
+
+
 def _lease_owner(worker_index: int) -> str:
     return f"{socket.gethostname()}-{os.getpid()}-w{worker_index}"
 
@@ -256,18 +264,21 @@ async def refiner_worker_run_forever(
     owner = _lease_owner(worker_index)
     handlers = job_handlers if job_handlers is not None else default_refiner_job_handler_registry()
     worker_started("refiner", worker_index)
+    _cached_max_concurrent: int = 8
+    _cache_expires_at: float = 0.0
     try:
         while not stop_event.is_set():
             worker_heartbeat("refiner", worker_index)
             if max_concurrent_files_getter is not None:
-                try:
-                    max_concurrent_raw = await asyncio.to_thread(
-                        max_concurrent_files_getter
-                    )
-                    max_concurrent = max(1, min(8, int(max_concurrent_raw)))
-                except Exception:
-                    max_concurrent = 1
-                if worker_index >= max_concurrent:
+                loop = asyncio.get_running_loop()
+                if loop.time() >= _cache_expires_at:
+                    try:
+                        fetched = await asyncio.to_thread(max_concurrent_files_getter)
+                        _cached_max_concurrent = max(1, min(8, int(fetched)))
+                        _cache_expires_at = loop.time() + _CONCURRENT_FILES_CACHE_TTL
+                    except Exception:
+                        pass
+                if worker_index >= _cached_max_concurrent:
                     loop = asyncio.get_running_loop()
                     deadline = loop.time() + idle_sleep_seconds
                     while loop.time() < deadline and not stop_event.is_set():
@@ -275,7 +286,7 @@ async def refiner_worker_run_forever(
                         remaining = deadline - loop.time()
                         if remaining <= 0:
                             break
-                        await asyncio.sleep(min(0.25, remaining))
+                        await asyncio.sleep(min(1.0, remaining))
                     continue
 
             def _tick() -> Literal["idle", "processed"]:
@@ -306,7 +317,7 @@ async def refiner_worker_run_forever(
                     remaining = deadline - loop.time()
                     if remaining <= 0:
                         break
-                    await asyncio.sleep(min(0.25, remaining))
+                    await asyncio.sleep(min(1.0, remaining))
             # processed: tight spin for back-to-back queue drain
     finally:
         worker_stopped("refiner", worker_index)

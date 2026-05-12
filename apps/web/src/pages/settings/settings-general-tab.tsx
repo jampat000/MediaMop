@@ -18,7 +18,6 @@ type SettingsGeneralTabProps = {
   appTimezone: string | null;
   setAppTimezone: (v: string) => void;
   timezoneDirty: boolean;
-  logRetentionDaysDraft: string | null;
   setLogRetentionDaysDraft: (v: string | null) => void;
   normalizedLogRetentionDraft: string;
   finalizeLogRetentionDays: () => number;
@@ -42,7 +41,6 @@ export function SettingsGeneralTab({
   appTimezone,
   setAppTimezone,
   timezoneDirty,
-  logRetentionDaysDraft,
   setLogRetentionDaysDraft,
   normalizedLogRetentionDraft,
   finalizeLogRetentionDays,

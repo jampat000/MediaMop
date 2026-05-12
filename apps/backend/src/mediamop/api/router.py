@@ -24,6 +24,7 @@ from mediamop.platform.reconciliation.router import router as reconciliation_rou
 from mediamop.platform.suite_settings.router import router as suite_settings_router
 from mediamop.platform.arr_library.http_router import router as arr_library_router
 from mediamop.platform.system_configuration.router import router as system_configuration_router
+from mediamop.platform.notifications.router import router as notifications_router
 
 API_V1_PREFIX = "/api/v1"
 
@@ -42,4 +43,5 @@ def build_v1_router() -> APIRouter:
     router.include_router(refiner_router)
     router.include_router(pruner_router)
     router.include_router(subber_router)
+    router.include_router(notifications_router)
     return router

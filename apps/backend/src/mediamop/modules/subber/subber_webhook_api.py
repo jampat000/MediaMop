@@ -1,19 +1,36 @@
-"""Radarr/Sonarr webhooks — no auth."""
+"""Radarr/Sonarr webhooks — validated by shared secret when MEDIAMOP_SUBBER_WEBHOOK_SECRET is set."""
 
 from __future__ import annotations
 
 import json
+import secrets
 import uuid
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Body
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
-from mediamop.api.deps import DbSessionDep
+from mediamop.api.deps import DbSessionDep, SettingsDep
 from mediamop.modules.subber.subber_job_kinds import SUBBER_JOB_KIND_WEBHOOK_IMPORT_MOVIES, SUBBER_JOB_KIND_WEBHOOK_IMPORT_TV
 from mediamop.modules.subber.subber_jobs_ops import subber_enqueue_or_get_job
 
 router = APIRouter(tags=["subber-webhooks"])
+
+
+def _validate_webhook_secret(
+    settings: SettingsDep,
+    x_webhook_secret: Annotated[str | None, Header(alias="X-Webhook-Secret")] = None,
+) -> None:
+    """Reject requests when a webhook secret is configured and the header does not match."""
+    configured = settings.subber_webhook_secret
+    if not configured:
+        return
+    provided = (x_webhook_secret or "").strip()
+    if not provided or not secrets.compare_digest(provided, configured):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing X-Webhook-Secret header.",
+        )
 
 
 def _enqueue_import(
@@ -31,7 +48,7 @@ def _enqueue_import(
     )
 
 
-@router.post("/webhook/sonarr")
+@router.post("/webhook/sonarr", dependencies=[Depends(_validate_webhook_secret)])
 def post_sonarr_webhook(
     db: DbSessionDep,
     payload: Annotated[dict[str, Any], Body(...)],
@@ -66,7 +83,7 @@ def post_sonarr_webhook(
     return {"status": "ok"}
 
 
-@router.post("/webhook/radarr")
+@router.post("/webhook/radarr", dependencies=[Depends(_validate_webhook_secret)])
 def post_radarr_webhook(
     db: DbSessionDep,
     payload: Annotated[dict[str, Any], Body(...)],

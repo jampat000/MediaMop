@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 
 import { AuthBrandStack } from "../../components/brand/auth-brand-stack";
@@ -138,10 +138,16 @@ export function SetupWizardPage() {
   const [languagePreferencesCsv, setLanguagePreferencesCsv] = useState("en");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
+  const seededSettings = useRef(false);
+  const seededRefiner = useRef(false);
+  const seededSubber = useRef(false);
+  const seededPruner = useRef(false);
+
   useEffect(() => {
-    if (!settingsQ.data) {
+    if (!settingsQ.data || seededSettings.current) {
       return;
     }
+    seededSettings.current = true;
     const tz = (settingsQ.data.app_timezone || "UTC").trim() || "UTC";
     setAppTimezone(CURATED_TIMEZONE_ID_SET.has(tz) ? tz : "UTC");
     setBackupEnabled(Boolean(settingsQ.data.configuration_backup_enabled));
@@ -155,9 +161,10 @@ export function SetupWizardPage() {
   }, [settingsQ.data]);
 
   useEffect(() => {
-    if (!refinerQ.data) {
+    if (!refinerQ.data || seededRefiner.current) {
       return;
     }
+    seededRefiner.current = true;
     setMovieWatchedFolder(refinerQ.data.refiner_watched_folder ?? "");
     setMovieOutputFolder(refinerQ.data.refiner_output_folder ?? "");
     setTvWatchedFolder(refinerQ.data.refiner_tv_watched_folder ?? "");
@@ -165,9 +172,10 @@ export function SetupWizardPage() {
   }, [refinerQ.data]);
 
   useEffect(() => {
-    if (!subberQ.data) {
+    if (!subberQ.data || seededSubber.current) {
       return;
     }
+    seededSubber.current = true;
     setSonarrBaseUrl(subberQ.data.sonarr_base_url ?? "");
     setRadarrBaseUrl(subberQ.data.radarr_base_url ?? "");
     setLanguagePreferencesCsv(
@@ -179,13 +187,39 @@ export function SetupWizardPage() {
 
   useEffect(() => {
     const first = prunerInstancesQ.data?.[0];
-    if (!first) {
+    if (!first || seededPruner.current) {
       return;
     }
+    seededPruner.current = true;
     const provider = String(first.provider) as "jellyfin" | "emby" | "plex";
     setPrunerProvider(provider);
     setPrunerBaseUrl(first.base_url || "");
   }, [prunerInstancesQ.data]);
+
+  useEffect(() => {
+    const isLoading =
+      me.isPending ||
+      settingsQ.isPending ||
+      refinerQ.isPending ||
+      subberQ.isPending ||
+      prunerInstancesQ.isPending;
+    const wState = (settingsQ.data?.setup_wizard_state || "pending")
+      .trim()
+      .toLowerCase();
+    if (isLoading || wState !== "pending") return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [
+    me.isPending,
+    settingsQ.isPending,
+    settingsQ.data,
+    refinerQ.isPending,
+    subberQ.isPending,
+    prunerInstancesQ.isPending,
+  ]);
 
   const wizardState = (settingsQ.data?.setup_wizard_state || "pending")
     .trim()

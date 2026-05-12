@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { dashboardStatusKey } from "../dashboard/queries";
 import {
+  createNotificationChannel,
+  deleteNotificationChannel,
   fetchConfigurationBackupList,
+  fetchNotificationChannels,
   fetchSuiteLogs,
   fetchSuiteMetrics,
   fetchSuiteSecurityOverview,
@@ -10,8 +14,10 @@ import {
   putSuiteSettings,
   resetSuiteOperationalHistory,
   startSuiteUpdateNow,
+  testNotificationChannel,
+  updateNotificationChannel,
 } from "./suite-settings-api";
-import type { SuiteSettingsPutBody } from "./types";
+import type { NotificationChannelIn, SuiteSettingsPutBody } from "./types";
 
 export const suiteSettingsQueryKey = ["suite", "settings"] as const;
 export const suiteSecurityOverviewQueryKey = [
@@ -90,7 +96,10 @@ export function useSuiteOperationalHistoryResetMutation() {
   return useMutation({
     mutationFn: (confirm: string) => resetSuiteOperationalHistory(confirm),
     onSuccess: async () => {
-      await qc.invalidateQueries();
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: suiteMetricsQueryKey }),
+        qc.invalidateQueries({ queryKey: dashboardStatusKey }),
+      ]);
     },
   });
 }
@@ -122,6 +131,57 @@ export function useSuiteMetricsQuery(enabled = true) {
     staleTime: 5000,
     refetchInterval: enabled ? 10000 : false,
     retry: false,
+  });
+}
+
+export const suiteNotificationChannelsQueryKey = [
+  "suite",
+  "notification-channels",
+] as const;
+
+export function useSuiteNotificationChannelsQuery(enabled = true) {
+  return useQuery({
+    queryKey: suiteNotificationChannelsQueryKey,
+    queryFn: () => fetchNotificationChannels(),
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
+export function useCreateNotificationChannelMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: NotificationChannelIn) => createNotificationChannel(data),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: suiteNotificationChannelsQueryKey });
+    },
+  });
+}
+
+export function useUpdateNotificationChannelMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: NotificationChannelIn }) =>
+      updateNotificationChannel(id, data),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: suiteNotificationChannelsQueryKey });
+    },
+  });
+}
+
+export function useDeleteNotificationChannelMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => deleteNotificationChannel(id),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: suiteNotificationChannelsQueryKey });
+    },
+  });
+}
+
+export function useTestNotificationChannelMutation() {
+  return useMutation({
+    mutationFn: (id: number) => testNotificationChannel(id),
   });
 }
 

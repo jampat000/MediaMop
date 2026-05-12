@@ -28,7 +28,7 @@ class DirectoryBrowseOut(BaseModel):
 
 
 def _normalize_directory_path(path: str) -> str:
-    full = Path(path).expanduser().resolve(strict=False)
+    full = Path(path).resolve(strict=False)
     value = str(full)
     if os.name == "nt":
         return value.rstrip("\\/") + "\\"
