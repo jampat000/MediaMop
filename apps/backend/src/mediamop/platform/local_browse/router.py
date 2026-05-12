@@ -28,7 +28,16 @@ class DirectoryBrowseOut(BaseModel):
 
 
 def _normalize_directory_path(path: str) -> str:
-    full = Path(path).resolve(strict=False)
+    # Reject null bytes and require an absolute path before resolving to
+    # prevent path-traversal tricks (all UI-generated paths are already absolute).
+    sanitized = path.replace("\x00", "")
+    candidate = Path(sanitized)
+    if not candidate.is_absolute():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Path must be absolute.",
+        )
+    full = candidate.resolve(strict=False)
     value = str(full)
     if os.name == "nt":
         return value.rstrip("\\/") + "\\"
