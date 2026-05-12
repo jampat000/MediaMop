@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router-dom";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { browserWindow } from "../../lib/browser-window";
 import { DISPLAY_DENSITY_STORAGE_KEY } from "../../lib/ui/display-density";
@@ -140,9 +140,10 @@ function upgradeProgress(
 }
 
 function wrap(ui: ReactNode, client: QueryClient) {
+  const router = createMemoryRouter([{ path: "*", element: ui }]);
   return (
     <QueryClientProvider client={client}>
-      <MemoryRouter>{ui}</MemoryRouter>
+      <RouterProvider router={router} />
     </QueryClientProvider>
   );
 }
@@ -182,11 +183,13 @@ function renderSettings(
     minimalLogs,
   );
   qc.setQueryData(suiteMetricsQueryKey, minimalMetrics);
+  const router = createMemoryRouter(
+    [{ path: "*", element: <SettingsPage /> }],
+    overrides?.initialEntries ? { initialEntries: overrides.initialEntries } : undefined,
+  );
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={overrides?.initialEntries}>
-        <SettingsPage />
-      </MemoryRouter>
+      <RouterProvider router={router} />
     </QueryClientProvider>,
   );
 }
