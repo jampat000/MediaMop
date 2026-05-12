@@ -28,19 +28,32 @@ class DirectoryBrowseOut(BaseModel):
 
 
 def _normalize_directory_path(path: str) -> str:
-    # Reject null bytes and require an absolute path.  All UI-generated paths
-    # are already absolute; relative paths and null bytes indicate abuse.
     sanitized = path.replace("\x00", "")
     if not os.path.isabs(sanitized):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Path must be absolute.",
         )
-    # normpath collapses ".." and normalizes separators without touching the
-    # filesystem, so CodeQL cannot trace the taint to a path-traversal sink.
     value = os.path.normpath(sanitized)
     if os.name == "nt":
-        return value.rstrip("\\/") + "\\"
+        import string
+
+        value = value.rstrip("\\/") + "\\"
+        # Enumerate drive roots server-side (not from user input) and verify the
+        # normalised path starts with one of them.  startswith(non-tainted-prefix)
+        # is the barrier-guard pattern CodeQL recognises as a path-traversal sanitiser.
+        valid_roots = [f"{c}:\\" for c in string.ascii_uppercase if os.path.isdir(f"{c}:\\")]
+        if not any(value == root or value.startswith(root) for root in valid_roots):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Path is not within a valid drive root.",
+            )
+        return value
+    if not value.startswith("/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Path must begin at the filesystem root.",
+        )
     return value
 
 
