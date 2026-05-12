@@ -35,6 +35,7 @@ from mediamop.modules.pruner.pruner_preview_run_model import PrunerPreviewRun
 from mediamop.modules.pruner.worker_loop import PrunerJobWorkContext
 from mediamop.platform.activity import constants as C
 from mediamop.platform.activity.service import record_activity_event
+from mediamop.platform.metrics.service import record_module_savings
 from mediamop.platform.observability.diagnostics import (
     DiagnosticAction,
     DiagnosticModule,
@@ -197,6 +198,7 @@ def make_pruner_candidate_removal_apply_handler(
         removed = 0
         skipped = 0
         failed = 0
+        total_bytes_freed = 0
         for c in candidates:
             item_id = str(c.get("item_id", "")).strip()
             if not item_id:
@@ -231,6 +233,12 @@ def make_pruner_candidate_removal_apply_handler(
                 )
             if status in (200, 204):
                 removed += 1
+                try:
+                    sz = int(c.get("size_bytes") or 0)
+                    if sz > 0:
+                        total_bytes_freed += sz
+                except (TypeError, ValueError):
+                    pass
             elif status == 404:
                 logger.debug(
                     "Pruner apply skipped item_id=%s because it was already absent on provider=%s.",
@@ -246,6 +254,9 @@ def make_pruner_candidate_removal_apply_handler(
                     status,
                 )
                 failed += 1
+
+        if total_bytes_freed > 0:
+            record_module_savings(module="pruner", bytes_saved=total_bytes_freed)
 
         label = _scope_label(scope)
         provider_s = provider_label(provider_for_delete) or provider_for_delete

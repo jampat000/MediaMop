@@ -30,6 +30,7 @@ class RuntimeMetricsSummary(TypedDict):
     busiest_routes: list[RouteSummary]
     module_job_counts: dict[str, dict[str, int]]
     module_queue_depths: dict[str, int]
+    module_savings_bytes: dict[str, int]
 
 
 class RuntimeMetricsStore:
@@ -43,6 +44,7 @@ class RuntimeMetricsStore:
         self.log_counts: Counter[str] = Counter()
         self.module_job_counts: Counter[tuple[str, str]] = Counter()
         self.module_queue_depths: dict[str, int] = defaultdict(int)
+        self.module_savings_bytes: Counter[str] = Counter()
 
     def record_request(self, *, method: str, route: str, status_code: int, duration_ms: float) -> None:
         bucket = f"{status_code // 100}xx"
@@ -72,6 +74,14 @@ class RuntimeMetricsStore:
             return
         with self._lock:
             self.module_queue_depths[module] = max(0, int(depth))
+
+    def record_module_savings(self, *, module: str, bytes_saved: int) -> None:
+        if not module:
+            return
+        if bytes_saved <= 0:
+            return
+        with self._lock:
+            self.module_savings_bytes[module] += int(bytes_saved)
 
     def summary(self) -> RuntimeMetricsSummary:
         with self._lock:
@@ -106,6 +116,7 @@ class RuntimeMetricsStore:
                 ],
                 "module_job_counts": module_job_counts,
                 "module_queue_depths": dict(self.module_queue_depths),
+                "module_savings_bytes": {m: int(v) for m, v in self.module_savings_bytes.items()},
             }
 
     def render_prometheus(self) -> str:
@@ -133,6 +144,14 @@ class RuntimeMetricsStore:
                 lines.append(f'mediamop_module_jobs_total{{module="{module}",event="{event}"}} {count}')
         for module, depth in summary["module_queue_depths"].items():
             lines.append(f'mediamop_module_queue_depth{{module="{module}"}} {depth}')
+        savings = summary["module_savings_bytes"]
+        if savings:
+            lines.append(
+                "# HELP mediamop_module_savings_bytes_total Bytes saved by each module (Refiner remux, Pruner removal)."
+            )
+            lines.append("# TYPE mediamop_module_savings_bytes_total counter")
+            for module, total in sorted(savings.items()):
+                lines.append(f'mediamop_module_savings_bytes_total{{module="{module}"}} {total}')
         return "\n".join(lines) + "\n"
 
 
@@ -153,6 +172,10 @@ def record_module_job_event(*, module: str, event: str) -> None:
 
 def set_module_queue_depth(*, module: str, depth: int) -> None:
     runtime_metrics.set_module_queue_depth(module=module, depth=depth)
+
+
+def record_module_savings(*, module: str, bytes_saved: int) -> None:
+    runtime_metrics.record_module_savings(module=module, bytes_saved=bytes_saved)
 
 
 def build_runtime_metrics_summary() -> RuntimeMetricsSummary:
