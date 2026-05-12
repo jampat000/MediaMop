@@ -43,9 +43,9 @@ def test_credentials_secret_decouples_pruner_subber_and_arr_from_session_rotatio
     assert decrypt_subber_credentials_json(s2, subber) == '{"api_key":"s"}'
     assert decrypt_arr_api_key(s2, arr) == "arr-key"
     assert json.loads(pruner)["key_id"] == "credentials:hkdf:v1"
-    assert json.loads(pruner)["version"] == 3
+    assert json.loads(pruner)["version"] == 4
     assert json.loads(subber)["key_id"] == "credentials:hkdf:v1"
-    assert json.loads(subber)["version"] == 3
+    assert json.loads(subber)["version"] == 4
     assert json.loads(arr)["key_id"] == "credentials:v1"
 
 

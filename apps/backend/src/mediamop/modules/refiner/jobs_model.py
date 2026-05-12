@@ -8,7 +8,7 @@ from __future__ import annotations
 import enum
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String, Text, func, text
+from sqlalchemy import DateTime, Index, Integer, String, Text, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from mediamop.core.db import Base
@@ -36,6 +36,7 @@ class RefinerJob(Base):
     """One row of durable Refiner work — claim/lease before execution."""
 
     __tablename__ = "refiner_jobs"
+    __table_args__ = (Index("ix_refiner_jobs_status_id", "status", "id"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     dedupe_key: Mapped[str] = mapped_column(String(512), unique=True, nullable=False)
@@ -62,6 +63,7 @@ class RefinerJob(Base):
         server_default=text("3"),
     )
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    not_before: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

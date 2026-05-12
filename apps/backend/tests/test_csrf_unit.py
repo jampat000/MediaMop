@@ -59,6 +59,7 @@ def _csrf_settings(**overrides: object) -> MediaMopSettings:
         pruner_apply_enabled=False,
         pruner_plex_live_removal_enabled=False,
         pruner_plex_live_abs_max_items=150,
+        subber_webhook_secret=None,
         subber_worker_count=0,
         subber_library_scan_schedule_enqueue_enabled=False,
         subber_library_scan_schedule_scan_interval_seconds=45,
@@ -89,6 +90,8 @@ def _csrf_settings(**overrides: object) -> MediaMopSettings:
         refiner_movie_failure_cleanup_grace_period_seconds=1800,
         refiner_tv_failure_cleanup_grace_period_seconds=1800,
         refiner_remux_media_root=None,
+        job_rows_retention_days=7,
+        job_rows_retention_schedule_interval_seconds=3600,
     )
     base.update(overrides)
     return MediaMopSettings(**base)  # type: ignore[arg-type]

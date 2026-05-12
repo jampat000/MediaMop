@@ -27,6 +27,7 @@ from mediamop.modules.subber.subber_jobs_ops import (
     fail_leased_subber_job_after_complete_failure,
 )
 from mediamop.platform.jobs.worker_health import worker_heartbeat, worker_started, worker_stopped
+from mediamop.platform.notifications.dispatch import dispatch_job_notification
 from mediamop.platform.observability.failure_messages import operator_failure_from_exception
 
 logger = logging.getLogger(__name__)
@@ -166,6 +167,7 @@ def process_one_subber_job(
                     )
         except Exception:
             logger.exception("Subber fail_claimed_subber_job failed after handler error job_id=%s", ctx.id)
+        dispatch_job_notification(session_factory, module="subber", event_kind="failed", job_id=ctx.id, job_kind=ctx.job_kind)
         return "processed"
 
     complete_ok = True
@@ -186,6 +188,9 @@ def process_one_subber_job(
         complete_ok = False
         logger.exception("Subber complete_claimed_subber_job failed job_id=%s", ctx.id)
         complete_err = str(exc)
+
+    if complete_ok:
+        dispatch_job_notification(session_factory, module="subber", event_kind="completed", job_id=ctx.id, job_kind=ctx.job_kind)
 
     if not complete_ok and complete_err is not None:
         bounded = (SUBBER_TERMINALIZATION_FAILURE_PREFIX + complete_err)[:10_000]
@@ -261,7 +266,7 @@ async def subber_worker_run_forever(
                     remaining = deadline - loop.time()
                     if remaining <= 0:
                         break
-                    await asyncio.sleep(min(0.25, remaining))
+                    await asyncio.sleep(min(1.0, remaining))
     finally:
         worker_stopped("subber", worker_index)
 

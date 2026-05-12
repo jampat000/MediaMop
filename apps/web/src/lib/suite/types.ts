@@ -115,6 +115,36 @@ export type SuiteMetricsOut = {
   busiest_routes: SuiteMetricsRoute[];
 };
 
+export type NotificationChannelOut = {
+  id: number;
+  label: string;
+  provider: string;
+  url: string;
+  events: string[];
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type NotificationChannelListOut = {
+  items: NotificationChannelOut[];
+  supported_events: string[];
+  supported_providers: string[];
+};
+
+export type NotificationChannelIn = {
+  label: string;
+  provider: string;
+  url: string;
+  events: string[];
+  enabled: boolean;
+};
+
+export type NotificationChannelTestOut = {
+  ok: boolean;
+  error: string | null;
+};
+
 export function suiteSettingsBackupFieldsPresent(v: SuiteSettingsOut): boolean {
   return (
     typeof v.configuration_backup_enabled === "boolean" &&

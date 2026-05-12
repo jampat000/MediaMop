@@ -1,40 +1,20 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ChangeEvent } from "react";
-import { useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useBlocker, useSearchParams } from "react-router-dom";
 import { PageLoading } from "../../components/shared/page-loading";
-import { browserWindow } from "../../lib/browser-window";
 import {
   isHttpErrorFromApi,
   isLikelyNetworkFailure,
 } from "../../lib/api/error-guards";
-import {
-  useChangePasswordMutation,
-  useCurrentSessionQuery,
-  useMeQuery,
-} from "../../lib/auth/queries";
-import {
-  CURATED_TIMEZONE_ID_SET,
-  curatedTimezoneOptionsSorted,
-} from "../../lib/suite/timezone-options";
-import { MmListboxPicker } from "../../components/ui/mm-listbox-picker";
-import {
-  mmActionButtonClass,
-  mmEditableTextFieldClass,
-} from "../../lib/ui/mm-control-roles";
-import {
-  mmModuleTabBlurbBandClass,
-  mmModuleTabBlurbTextClass,
-} from "../../lib/ui/mm-module-tab-blurb";
+import { useMeQuery } from "../../lib/auth/queries";
+import { CURATED_TIMEZONE_ID_SET } from "../../lib/suite/timezone-options";
 import {
   suiteConfigurationBackupsQueryKey,
   suiteUpdateDiagnosticsQueryKey,
   suiteUpdateStatusQueryKey,
   useSuiteConfigurationBackupsQuery,
-  useSuiteLogsQuery,
-  useSuiteMetricsQuery,
   useSuiteOperationalHistoryResetMutation,
-  useSuiteSecurityOverviewQuery,
   useSuiteSettingsQuery,
   useSuiteSettingsSaveMutation,
   useSuiteUpdateDiagnosticsQuery,
@@ -42,7 +22,6 @@ import {
   useSuiteUpdateStatusQuery,
 } from "../../lib/suite/queries";
 import type {
-  SuiteLogEntry,
   SuiteSettingsPutBody,
   SuiteUpdateStatusOut,
   SuiteUpgradeProgressOut,
@@ -51,39 +30,39 @@ import {
   fetchConfigurationBundle,
   fetchStoredConfigurationBackupBlob,
   putConfigurationBundle,
-  suiteUpdateDiagnosticsPath,
   type ConfigurationBundle,
 } from "../../lib/suite/suite-settings-api";
 import {
-  persistDisplayDensity,
   readStoredDisplayDensity,
   type DisplayDensity,
 } from "../../lib/ui/display-density";
-import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
+import { SHOW_SUPPORT_CARD } from "../../lib/support";
 import {
-  SHOW_SUPPORT_CARD,
-  SHOW_SUPPORT_URL_PLACEHOLDER,
-  SUPPORT_URL,
-} from "../../lib/support";
+  type UpgradeMonitor,
+  type UpgradeNotice,
+  type UpgradeHistoryItem,
+  isUpgradeProgressActive,
+} from "./settings-shared";
+import { SettingsGeneralTab } from "./settings-general-tab";
+import { SettingsBackupTab } from "./settings-backup-tab";
+import { SettingsUpgradeTab } from "./settings-upgrade-tab";
+import { SettingsSecurityTab } from "./settings-security-tab";
+import { SettingsLogsTab } from "./settings-logs-tab";
+import { SettingsSupportTab } from "./settings-support-tab";
+import { SettingsNotificationsTab } from "./settings-notifications-tab";
 
 function canEditSuiteGlobal(role: string | undefined): boolean {
   return role === "operator" || role === "admin";
 }
 
-type TabId = "general" | "backup" | "upgrade" | "security" | "logs" | "support";
-
-const SUITE_PASSWORD_FIELD_CLASS =
-  "mm-input w-full min-w-0 flex-1 text-sm tracking-normal text-[var(--mm-text)]";
-
-function formatChangePasswordMutationError(err: unknown): string {
-  if (err instanceof Error) {
-    return err.message;
-  }
-  if (typeof err === "string") {
-    return err;
-  }
-  return "Could not change password.";
-}
+type TabId =
+  | "general"
+  | "backup"
+  | "upgrade"
+  | "security"
+  | "logs"
+  | "notifications"
+  | "support";
 
 function tabButtonClass(active: boolean): string {
   return [
@@ -94,45 +73,9 @@ function tabButtonClass(active: boolean): string {
   ].join(" ");
 }
 
-const SUITE_SETTINGS_DASH_CARD_CLASS =
-  "mm-card mm-dash-card flex min-h-0 min-w-0 flex-col gap-5";
-const SUITE_SETTINGS_PREMIUM_PANEL_CLASS =
-  "flex min-h-0 min-w-0 flex-col gap-4 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/80 p-4 shadow-[var(--mm-shadow-card-inner)]";
-const SUITE_SETTINGS_PREMIUM_TILE_CLASS =
-  "rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/80 px-4 py-3 shadow-[var(--mm-shadow-card-inner)]";
-const CONFIGURATION_BACKUP_INTERVAL_HOURS = [6, 12, 24, 48, 72, 168] as const;
 const UPGRADE_VERIFICATION_TIMEOUT_MS = 8 * 60_000;
 const UPGRADE_HISTORY_STORAGE_KEY = "mediamop.upgrade.history.v1";
 const UPGRADE_HISTORY_LIMIT = 20;
-
-type UpgradeMonitor = {
-  attemptId: string | null;
-  targetVersion: string;
-  disconnects: number;
-  active: boolean;
-  startedAtMs: number;
-  timedOutReason: string | null;
-};
-
-type UpgradeNotice = {
-  tone: "info" | "success" | "error";
-  text: string;
-};
-
-type UpgradeHistoryItem = {
-  id: string;
-  recorded_at: string;
-  status_label: string;
-  phase: string;
-  attempt_id: string | null;
-  target_version: string | null;
-  current_version_seen: string | null;
-  message: string;
-  installer_log_path: string | null;
-  service_log_path: string | null;
-};
-
-type LogLevelFilter = "" | "INFO" | "WARNING" | "ERROR";
 
 function parseUpgradeTime(raw: string | null | undefined): number | null {
   if (!raw) {
@@ -201,220 +144,6 @@ function buildUpgradeHistoryItem(
     installer_log_path: progress.installer_log_path || null,
     service_log_path: progress.service_log_path || null,
   };
-}
-
-function upgradeNoticeClass(tone: UpgradeNotice["tone"]): string {
-  if (tone === "error") {
-    return "rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200";
-  }
-  if (tone === "success") {
-    return "rounded-md border border-emerald-500/30 bg-emerald-950/20 px-3 py-2 text-sm text-emerald-200";
-  }
-  return "rounded-md border border-amber-400/25 bg-amber-400/[0.06] px-3 py-2 text-sm text-[var(--mm-text2)]";
-}
-
-function formatBackupBytes(n: number): string {
-  if (n < 1024) {
-    return `${n} B`;
-  }
-  if (n < 1024 * 1024) {
-    return `${(n / 1024).toFixed(1)} KB`;
-  }
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function formatSessionTimeout(minutes: number): string {
-  if (minutes % 1440 === 0) {
-    const days = minutes / 1440;
-    return `${days} day${days === 1 ? "" : "s"}`;
-  }
-  if (minutes % 60 === 0) {
-    const hours = minutes / 60;
-    return `${hours} hour${hours === 1 ? "" : "s"}`;
-  }
-  return `${minutes} minute${minutes === 1 ? "" : "s"}`;
-}
-
-function logCardTone(level: string): string {
-  switch (level.toUpperCase()) {
-    case "ERROR":
-    case "CRITICAL":
-      return "border-red-500/35 bg-red-950/20";
-    case "WARNING":
-      return "border-amber-400/35 bg-amber-950/20";
-    default:
-      return "border-[var(--mm-border)] bg-[var(--mm-card-bg)]/50";
-  }
-}
-
-function logLevelBadgeTone(level: string): string {
-  switch (level.toUpperCase()) {
-    case "ERROR":
-    case "CRITICAL":
-      return "border-red-500/40 bg-red-500/10 text-red-100";
-    case "WARNING":
-      return "border-amber-400/40 bg-amber-400/10 text-amber-100";
-    default:
-      return "border-[var(--mm-border)] bg-black/10 text-[var(--mm-text2)]";
-  }
-}
-
-function renderLogTechnicalDetails(entry: SuiteLogEntry) {
-  if (
-    !entry.traceback &&
-    !entry.source &&
-    !entry.logger &&
-    !entry.correlation_id &&
-    !entry.job_id
-  ) {
-    return null;
-  }
-  return (
-    <details className="rounded-md border border-[var(--mm-border)] bg-black/10 px-3 py-2">
-      <summary className="cursor-pointer text-sm font-medium text-[var(--mm-text2)]">
-        Technical details
-      </summary>
-      <div className="mt-3 space-y-2 text-sm text-[var(--mm-text2)]">
-        {entry.source ? (
-          <p>
-            <span className="font-medium text-[var(--mm-text1)]">Source:</span>{" "}
-            {entry.source}
-          </p>
-        ) : null}
-        {entry.logger ? (
-          <p>
-            <span className="font-medium text-[var(--mm-text1)]">Logger:</span>{" "}
-            {entry.logger}
-          </p>
-        ) : null}
-        {entry.correlation_id ? (
-          <p>
-            <span className="font-medium text-[var(--mm-text1)]">
-              Request ID:
-            </span>{" "}
-            {entry.correlation_id}
-          </p>
-        ) : null}
-        {entry.job_id ? (
-          <p>
-            <span className="font-medium text-[var(--mm-text1)]">Job ID:</span>{" "}
-            {entry.job_id}
-          </p>
-        ) : null}
-        {entry.traceback ? (
-          <pre className="overflow-auto rounded-md border border-[var(--mm-border)] bg-black/20 p-3 text-xs leading-5 text-[var(--mm-text2)] whitespace-pre-wrap">
-            {entry.traceback}
-          </pre>
-        ) : null}
-      </div>
-    </details>
-  );
-}
-
-function SettingsSummaryCard({
-  label,
-  value,
-  detail,
-}: {
-  label: string;
-  value: string;
-  detail?: string;
-}) {
-  return (
-    <section className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text3)]">
-        {label}
-      </p>
-      <p className="mt-1 text-lg font-semibold text-[var(--mm-text1)]">
-        {value}
-      </p>
-      {detail ? (
-        <p className="mt-1 text-sm text-[var(--mm-text2)]">{detail}</p>
-      ) : null}
-    </section>
-  );
-}
-
-function formatRuntimeUptime(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds <= 0) return "Just started";
-  const totalSeconds = Math.max(0, Math.floor(seconds));
-  const days = Math.floor(totalSeconds / 86400);
-  const hours = Math.floor((totalSeconds % 86400) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
-}
-
-function formatAverageMs(value: number): string {
-  if (!Number.isFinite(value) || value <= 0) return "0 ms";
-  return `${value >= 100 ? value.toFixed(0) : value.toFixed(1)} ms`;
-}
-
-function requestIssueSummary(
-  statusCounts: Record<string, number> | undefined,
-): { value: string; detail: string } {
-  const counts = statusCounts ?? {};
-  const success = counts["2xx"] ?? 0;
-  const redirects = counts["3xx"] ?? 0;
-  const rejectedOrMissing = counts["4xx"] ?? 0;
-  const serverFailures = counts["5xx"] ?? 0;
-  const detail = `Successful ${success} - Redirected ${redirects} - Rejected or not found ${rejectedOrMissing} - Server failures ${serverFailures}`;
-  if (serverFailures > 0) {
-    return {
-      value: `${serverFailures} server ${serverFailures === 1 ? "failure" : "failures"}`,
-      detail,
-    };
-  }
-  if (rejectedOrMissing > 0) {
-    return {
-      value: `${rejectedOrMissing} request ${rejectedOrMissing === 1 ? "issue" : "issues"}`,
-      detail,
-    };
-  }
-  return { value: "No request issues", detail };
-}
-
-function isUpgradeActivePhase(phase: string | null | undefined): boolean {
-  return (
-    phase === "checking" ||
-    phase === "downloading" ||
-    phase === "verifying_download" ||
-    phase === "installer_started" ||
-    phase === "installer_running" ||
-    phase === "restarting" ||
-    phase === "verifying_install"
-  );
-}
-
-function isUpgradeProgressActive(
-  progress: SuiteUpgradeProgressOut | null | undefined,
-): boolean {
-  if (!progress) {
-    return false;
-  }
-  if (typeof progress.is_active === "boolean") {
-    return progress.is_active;
-  }
-  return isUpgradeActivePhase(progress.phase) && !progress.is_stale;
-}
-
-function upgradePhaseTone(
-  status: SuiteUpdateStatusOut | undefined,
-  progress: SuiteUpgradeProgressOut | null | undefined,
-  monitor: UpgradeMonitor | null,
-): string {
-  if (monitor?.timedOutReason || progress?.phase === "failed") {
-    return "border-red-500/40 bg-red-950/25";
-  }
-  if (
-    progress?.phase === "completed" &&
-    progress.target_version &&
-    status?.current_version === progress.target_version
-  ) {
-    return "border-emerald-500/30 bg-emerald-950/20";
-  }
-  return "border-amber-400/25 bg-amber-400/[0.06]";
 }
 
 function describeUpgradeProgress(
@@ -593,6 +322,8 @@ function normalizeSettingsTab(
       return "security";
     case "logs":
       return "logs";
+    case "notifications":
+      return "notifications";
     case "support":
       return supportEnabled ? "support" : "general";
     default:
@@ -602,15 +333,10 @@ function normalizeSettingsTab(
 
 /** Settings: General (timezone, display density, configuration export), Security, Logs (retention + recent events). */
 export function SettingsPage() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const formatDateTime = useAppDateFormatter();
   const me = useMeQuery();
-  const changePassword = useChangePasswordMutation();
-  const currentSessionQ = useCurrentSessionQuery();
   const settingsQ = useSuiteSettingsQuery();
-  const securityOverviewQ = useSuiteSecurityOverviewQuery();
   const save = useSuiteSettingsSaveMutation();
   const updateNow = useSuiteUpdateNowMutation();
   const resetHistory = useSuiteOperationalHistoryResetMutation();
@@ -632,15 +358,6 @@ export function SettingsPage() {
   }
   const [appTimezone, setAppTimezone] = useState<string | null>(null);
   const [logRetentionDaysDraft, setLogRetentionDaysDraft] = useState<
-    string | null
-  >(null);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [changePasswordStatus, setChangePasswordStatus] = useState<
     string | null
   >(null);
   const [displayDensity, setDisplayDensity] = useState<DisplayDensity>(() =>
@@ -676,10 +393,6 @@ export function SettingsPage() {
   const [lastSuiteSaveTarget, setLastSuiteSaveTarget] = useState<
     "timezone" | "logs" | "backup" | null
   >(null);
-  const [logSearch, setLogSearch] = useState("");
-  const [logLevel, setLogLevel] = useState<LogLevelFilter>("");
-  const [tracebacksOnly, setTracebacksOnly] = useState(false);
-  const restoreInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!settingsQ.data) {
@@ -722,20 +435,6 @@ export function SettingsPage() {
       Boolean(settingsQ.data) &&
       updateStatusQ.data?.install_type === "windows",
   );
-  const logsQ = useSuiteLogsQuery(
-    {
-      level: logLevel || undefined,
-      search: logSearch.trim() || undefined,
-      has_exception: tracebacksOnly ? true : undefined,
-      limit: 100,
-    },
-    tab === "logs" && Boolean(settingsQ.data),
-  );
-  const metricsQ = useSuiteMetricsQuery(
-    tab === "logs" && Boolean(settingsQ.data),
-  );
-  const currentSession = currentSessionQ.data;
-  const securityOverview = securityOverviewQ.data;
 
   const serverCuratedTimezone =
     settingsQ.data &&
@@ -760,6 +459,28 @@ export function SettingsPage() {
         ((
           settingsQ.data.configuration_backup_preferred_time || "02:00"
         ).trim() || "02:00"));
+  const isDirty = timezoneDirty || logsDirty || backupScheduleDirty;
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      isDirty && currentLocation.pathname !== nextLocation.pathname,
+  );
+  useEffect(() => {
+    if (blocker.state !== "blocked") return;
+    if (window.confirm("You have unsaved changes. Leave without saving?")) {
+      blocker.proceed();
+    } else {
+      blocker.reset();
+    }
+  }, [blocker]);
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
+
   const upgradeBootstrapRequired =
     updateStatusQ.data?.install_type === "windows" &&
     !updateStatusQ.data.in_app_upgrade_supported &&
@@ -959,6 +680,15 @@ export function SettingsPage() {
     upgradeMonitor,
   ]);
 
+  useEffect(() => {
+    if (tab === "support" && !showSupportTab) {
+      setTab("general");
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("tab");
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, showSupportTab, tab]);
+
   const loadingAny = settingsQ.isPending || me.isPending;
 
   async function handleDownloadConfiguration() {
@@ -1031,15 +761,6 @@ export function SettingsPage() {
     }
   }
 
-  useEffect(() => {
-    if (tab === "support" && !showSupportTab) {
-      setTab("general");
-      const nextParams = new URLSearchParams(searchParams);
-      nextParams.delete("tab");
-      setSearchParams(nextParams, { replace: true });
-    }
-  }, [searchParams, setSearchParams, showSupportTab, tab]);
-
   if (loadingAny) {
     return <PageLoading label="Loading settings" />;
   }
@@ -1067,7 +788,6 @@ export function SettingsPage() {
     return null;
   }
 
-  const timezoneOptions = curatedTimezoneOptionsSorted();
   const normalizedLogRetentionDraft =
     logRetentionDaysDraft !== null
       ? logRetentionDaysDraft
@@ -1238,12 +958,6 @@ export function SettingsPage() {
     }
   }
 
-  const changePasswordBusy = changePassword.isPending;
-  const runtimeMetrics = metricsQ.data;
-  const runtimeRequestIssues = requestIssueSummary(
-    runtimeMetrics?.status_counts,
-  );
-
   return (
     <div className="mm-page" data-testid="suite-settings-page">
       <header className="mm-page__intro mm-page__intro--suite-settings-rule">
@@ -1306,6 +1020,15 @@ export function SettingsPage() {
           >
             Logs
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "notifications"}
+            className={tabButtonClass(tab === "notifications")}
+            onClick={() => setSettingsTab("notifications")}
+          >
+            Notifications
+          </button>
           {showSupportTab ? (
             <button
               type="button"
@@ -1320,1821 +1043,92 @@ export function SettingsPage() {
         </div>
 
         {tab === "general" ? (
-          <div data-testid="suite-settings-global" className="mm-bubble-stack">
-            {!editable ? (
-              <p className="text-sm text-[var(--mm-text3)]">
-                Operators and admins can edit General options; everyone can open
-                the Logs tab to read recent events.
-              </p>
-            ) : null}
-
-            <div className="grid grid-cols-1 gap-5">
-              <div className={mmModuleTabBlurbBandClass}>
-                <p className={mmModuleTabBlurbTextClass}>
-                  Suite-wide choices saved in the app database. Integration
-                  details for Refiner, Pruner, and Subber stay on those module
-                  pages.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-                <section
-                  className={SUITE_SETTINGS_DASH_CARD_CLASS}
-                  aria-labelledby="suite-settings-wizard-heading"
-                >
-                  <div className="mm-card-action-body">
-                    <div>
-                      <h3
-                        id="suite-settings-wizard-heading"
-                        className="text-base font-semibold text-[var(--mm-text1)]"
-                      >
-                        Setup wizard
-                      </h3>
-                      <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                        Reopen the first-run wizard to adjust the basic suite
-                        setup flow at any time.
-                      </p>
-                    </div>
-                    <div className="space-y-2 text-sm text-[var(--mm-text2)]">
-                      <p>
-                        Current state:{" "}
-                        <span className="font-medium capitalize text-[var(--mm-text1)]">
-                          {settingsQ.data.setup_wizard_state || "pending"}
-                        </span>
-                      </p>
-                      <p>
-                        Use this when you want the guided setup again without
-                        exposing it in the sidebar.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mm-card-action-footer">
-                    <button
-                      type="button"
-                      className={mmActionButtonClass({
-                        variant: "secondary",
-                        disabled: false,
-                      })}
-                      data-testid="suite-settings-open-setup-wizard"
-                      onClick={() => navigate("/setup-wizard")}
-                    >
-                      Open setup wizard
-                    </button>
-                  </div>
-                </section>
-                <section
-                  className={SUITE_SETTINGS_DASH_CARD_CLASS}
-                  aria-labelledby="suite-settings-timezone-heading"
-                >
-                  <div className="mm-card-action-body">
-                    <div>
-                      <h3
-                        id="suite-settings-timezone-heading"
-                        className="text-base font-semibold text-[var(--mm-text1)]"
-                      >
-                        Timezone
-                      </h3>
-                      <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                        Main-country timezones for suite-level time displays.
-                        Use Save timezone when you change the selection.
-                      </p>
-                    </div>
-                    <MmListboxPicker
-                      ariaLabelledBy="suite-settings-timezone-heading"
-                      ariaDescribedBy="suite-timezone-hint"
-                      placeholder="Select timezone"
-                      disabled={!editable || save.isPending}
-                      options={timezoneOptions.map((tz) => ({
-                        value: tz.id,
-                        label: tz.label,
-                      }))}
-                      value={appTimezone ?? ""}
-                      onChange={(v) => setAppTimezone(v)}
-                    />
-                    <p
-                      id="suite-timezone-hint"
-                      className="text-xs text-[var(--mm-text3)]"
-                    >
-                      If you do not see your zone, pick the closest match - this
-                      only affects how times are labeled in the suite.
-                    </p>
-                    {save.isError && lastSuiteSaveTarget === "timezone" ? (
-                      <p
-                        className="text-sm text-red-300"
-                        role="alert"
-                        data-testid="suite-settings-timezone-save-error"
-                      >
-                        {save.error instanceof Error
-                          ? save.error.message
-                          : "Could not save."}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="mm-card-action-footer">
-                    <button
-                      type="button"
-                      className={mmActionButtonClass({
-                        variant: "primary",
-                        disabled: !editable || !timezoneDirty || save.isPending,
-                      })}
-                      disabled={!editable || !timezoneDirty || save.isPending}
-                      data-testid="suite-settings-save-timezone"
-                      onClick={() => void handleSaveTimezone()}
-                    >
-                      {save.isPending ? "Saving..." : "Save timezone"}
-                    </button>
-                  </div>
-                </section>
-              </div>
-
-              <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-                <section
-                  className={SUITE_SETTINGS_DASH_CARD_CLASS}
-                  aria-labelledby="suite-settings-log-retention-heading"
-                >
-                  <div className="mm-card-action-body">
-                    <div>
-                      <h3
-                        id="suite-settings-log-retention-heading"
-                        className="text-base font-semibold text-[var(--mm-text1)]"
-                      >
-                        Log retention
-                      </h3>
-                      <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                        Decide how long MediaMop keeps persisted system log
-                        entries on disk.
-                      </p>
-                    </div>
-                    <label className="block max-w-md">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-                        System log retention (days)
-                      </span>
-                      <input
-                        type="number"
-                        min={1}
-                        max={3650}
-                        className={`${mmEditableTextFieldClass} mt-1`}
-                        value={normalizedLogRetentionDraft}
-                        disabled={!editable || save.isPending}
-                        onFocus={() =>
-                          setLogRetentionDaysDraft(
-                            String(settingsQ.data.log_retention_days),
-                          )
-                        }
-                        onChange={(e) =>
-                          setLogRetentionDaysDraft(e.target.value)
-                        }
-                        onBlur={() =>
-                          setLogRetentionDaysDraft(
-                            String(finalizeLogRetentionDays()),
-                          )
-                        }
-                        aria-describedby="suite-general-log-retention-hint"
-                      />
-                      <p
-                        id="suite-general-log-retention-hint"
-                        className="mt-1 text-xs text-[var(--mm-text3)]"
-                      >
-                        Between 1 and 3650 days. Older system log entries are
-                        removed automatically while MediaMop is running;
-                        activity history is kept until you reset it.
-                      </p>
-                    </label>
-                    {save.isError && lastSuiteSaveTarget === "logs" ? (
-                      <p
-                        className="text-sm text-red-300"
-                        role="alert"
-                        data-testid="suite-settings-logs-save-error"
-                      >
-                        {save.error instanceof Error
-                          ? save.error.message
-                          : "Could not save."}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="mm-card-action-footer">
-                    <button
-                      type="button"
-                      className={mmActionButtonClass({
-                        variant: "primary",
-                        disabled: !editable || !logsDirty || save.isPending,
-                      })}
-                      disabled={!editable || !logsDirty || save.isPending}
-                      data-testid="suite-settings-save-logs"
-                      onClick={() => void handleSaveLogs()}
-                    >
-                      {save.isPending ? "Saving..." : "Save log retention"}
-                    </button>
-                  </div>
-                </section>
-                {editable ? (
-                  <section
-                    className={SUITE_SETTINGS_DASH_CARD_CLASS}
-                    data-testid="suite-settings-history-reset"
-                    aria-labelledby="suite-settings-history-reset-heading"
-                  >
-                    <div className="mm-card-action-body">
-                      <div>
-                        <h3
-                          id="suite-settings-history-reset-heading"
-                          className="text-base font-semibold text-[var(--mm-text1)]"
-                        >
-                          Dashboard and activity history
-                        </h3>
-                        <p className="mt-1 text-sm leading-6 text-[var(--mm-text2)]">
-                          History is kept until you reset it. Sign-outs, expired
-                          sessions, and log retention do not clear this data.
-                        </p>
-                      </div>
-                      <label className="block text-sm text-[var(--mm-text2)]">
-                        <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
-                          Type RESET to confirm
-                        </span>
-                        <input
-                          type="text"
-                          className="mm-input w-full"
-                          value={resetHistoryConfirm}
-                          disabled={resetHistory.isPending}
-                          onChange={(e) =>
-                            setResetHistoryConfirm(e.target.value)
-                          }
-                        />
-                        <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-                          Clears Activity entries and finished job history only.
-                        </p>
-                      </label>
-                      {resetHistoryMsg ? (
-                        <p className="rounded-md border border-emerald-500/30 bg-emerald-950/20 px-3 py-2 text-sm text-emerald-200">
-                          {resetHistoryMsg}
-                        </p>
-                      ) : null}
-                      {resetHistory.isError ? (
-                        <p
-                          className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
-                          role="alert"
-                        >
-                          {resetHistory.error instanceof Error
-                            ? resetHistory.error.message
-                            : "Could not reset dashboard and activity history."}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="mm-card-action-footer">
-                      <button
-                        type="button"
-                        className={mmActionButtonClass({
-                          variant: "tertiary",
-                          disabled:
-                            resetHistory.isPending ||
-                            resetHistoryConfirm.trim().toUpperCase() !==
-                              "RESET",
-                        })}
-                        disabled={
-                          resetHistory.isPending ||
-                          resetHistoryConfirm.trim().toUpperCase() !== "RESET"
-                        }
-                        onClick={() => void handleResetOperationalHistory()}
-                      >
-                        {resetHistory.isPending
-                          ? "Resetting..."
-                          : "Reset history"}
-                      </button>
-                    </div>
-                  </section>
-                ) : null}
-                <section
-                  className={SUITE_SETTINGS_DASH_CARD_CLASS}
-                  aria-labelledby="suite-settings-density-heading"
-                >
-                  <fieldset className="min-w-0 border-0 p-0">
-                    <legend
-                      id="suite-settings-density-heading"
-                      className="text-base font-semibold text-[var(--mm-text1)]"
-                    >
-                      Display density (this browser)
-                    </legend>
-                    <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                      Adjust text, spacing, sidebar width, and card density for
-                      this browser. The change applies immediately.
-                    </p>
-                    <div
-                      className="mt-3 flex flex-col gap-2"
-                      data-testid="suite-settings-display-density"
-                      role="radiogroup"
-                      aria-label="Display density"
-                    >
-                      {(
-                        [
-                          {
-                            id: "compact" as const,
-                            label: "Compact",
-                            hint: "Smaller, tighter app layout",
-                          },
-                          {
-                            id: "default" as const,
-                            label: "Balanced",
-                            hint: "Readable default",
-                          },
-                          {
-                            id: "comfortable" as const,
-                            label: "Comfortable",
-                            hint: "Larger text and controls",
-                          },
-                          {
-                            id: "expanded" as const,
-                            label: "Expanded",
-                            hint: "Big-screen reading mode",
-                          },
-                        ] as const
-                      ).map(({ id, label, hint }) => (
-                        <label
-                          key={id}
-                          className={[
-                            "flex min-w-0 cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2 text-sm transition-colors",
-                            displayDensity === id
-                              ? "border-[var(--mm-accent)] bg-[var(--mm-accent)]/12 text-[var(--mm-text)]"
-                              : "border-[var(--mm-border)] bg-transparent text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)]",
-                          ].join(" ")}
-                        >
-                          <input
-                            type="radio"
-                            name="mm-display-density"
-                            className="h-4 w-4 shrink-0 accent-[var(--mm-accent)]"
-                            checked={displayDensity === id}
-                            onChange={() => {
-                              setDisplayDensity(id);
-                              persistDisplayDensity(id);
-                            }}
-                          />
-                          <span className="min-w-0 font-medium">{label}</span>
-                          <span className="text-xs text-[var(--mm-text3)]">
-                            ({hint})
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
-                </section>
-              </div>
-            </div>
-          </div>
+          <SettingsGeneralTab
+            editable={editable}
+            settingsData={settingsQ.data}
+            save={save}
+            appTimezone={appTimezone}
+            setAppTimezone={setAppTimezone}
+            timezoneDirty={timezoneDirty}
+            setLogRetentionDaysDraft={setLogRetentionDaysDraft}
+            normalizedLogRetentionDraft={normalizedLogRetentionDraft}
+            finalizeLogRetentionDays={finalizeLogRetentionDays}
+            logsDirty={logsDirty}
+            lastSuiteSaveTarget={lastSuiteSaveTarget}
+            displayDensity={displayDensity}
+            setDisplayDensity={setDisplayDensity}
+            resetHistoryConfirm={resetHistoryConfirm}
+            setResetHistoryConfirm={setResetHistoryConfirm}
+            resetHistory={resetHistory}
+            resetHistoryMsg={resetHistoryMsg}
+            onSaveTimezone={() => void handleSaveTimezone()}
+            onSaveLogs={() => void handleSaveLogs()}
+            onResetOperationalHistory={() =>
+              void handleResetOperationalHistory()
+            }
+          />
         ) : tab === "backup" ? (
-          <div
-            data-testid="suite-settings-backup-tab"
-            className="mm-bubble-stack"
-          >
-            <div className={mmModuleTabBlurbBandClass}>
-              <p className={mmModuleTabBlurbTextClass}>
-                Export, restore, and automatically snapshot MediaMop
-                configuration.
-              </p>
-            </div>
-
-            {editable ? (
-              <section
-                className="grid grid-cols-1 gap-5 xl:grid-cols-3"
-                data-testid="suite-settings-backup-restore"
-                aria-labelledby="suite-settings-backup-heading"
-              >
-                <div className="xl:col-span-3">
-                  <h3
-                    id="suite-settings-backup-heading"
-                    className="text-base font-semibold text-[var(--mm-text1)]"
-                  >
-                    Backup and restore
-                  </h3>
-                  <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                    Keep a clean copy of MediaMop settings and restore them if
-                    something goes wrong.
-                  </p>
-                </div>
-
-                <div className="contents">
-                  <section className={SUITE_SETTINGS_DASH_CARD_CLASS}>
-                    <div className="mm-card-action-body">
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
-                          Automatic protection
-                        </p>
-                        <h4 className="mt-1 text-sm font-semibold text-[var(--mm-text1)]">
-                          Scheduled snapshots
-                        </h4>
-                        <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-                          MediaMop keeps the latest five configuration snapshots
-                          using the same restore-safe JSON format.
-                        </p>
-                      </div>
-                      <label className="flex cursor-pointer items-start gap-2.5 text-sm text-[var(--mm-text2)]">
-                        <input
-                          type="checkbox"
-                          className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--mm-accent)]"
-                          checked={configurationBackupEnabled}
-                          disabled={!editable || save.isPending}
-                          onChange={(e) =>
-                            setConfigurationBackupEnabled(e.target.checked)
-                          }
-                        />
-                        <span>Run scheduled configuration backups</span>
-                      </label>
-                      <label className="block text-sm text-[var(--mm-text2)]">
-                        <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
-                          Minimum time between runs
-                        </span>
-                        <select
-                          className="mm-input w-full max-w-xs"
-                          value={configurationBackupIntervalHours}
-                          disabled={!editable || save.isPending}
-                          onChange={(e) =>
-                            setConfigurationBackupIntervalHours(
-                              Number(e.target.value),
-                            )
-                          }
-                        >
-                          {CONFIGURATION_BACKUP_INTERVAL_HOURS.map((h) => (
-                            <option key={h} value={h}>
-                              {h === 168
-                                ? "Every 7 days (168 h)"
-                                : `Every ${h} hours`}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="block text-sm text-[var(--mm-text2)]">
-                        <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
-                          Preferred backup time
-                        </span>
-                        <input
-                          type="time"
-                          className="mm-input w-full max-w-xs"
-                          value={configurationBackupPreferredTime}
-                          disabled={!editable || save.isPending}
-                          onChange={(e) =>
-                            setConfigurationBackupPreferredTime(
-                              e.target.value || "02:00",
-                            )
-                          }
-                        />
-                      </label>
-                      <p className="text-xs text-[var(--mm-text3)]">
-                        <span className="font-medium text-[var(--mm-text2)]">
-                          Last automatic run:
-                        </span>{" "}
-                        {settingsQ.data.configuration_backup_last_run_at
-                          ? new Date(
-                              settingsQ.data.configuration_backup_last_run_at,
-                            ).toLocaleString()
-                          : "—"}
-                      </p>
-                      <p className="text-xs text-[var(--mm-text3)]">
-                        <span className="font-medium text-[var(--mm-text2)]">
-                          Target time:
-                        </span>{" "}
-                        {configurationBackupPreferredTime}
-                      </p>
-                    </div>
-                    <div className="mm-card-action-footer">
-                      <button
-                        type="button"
-                        className={mmActionButtonClass({
-                          variant: "secondary",
-                          disabled:
-                            !editable || !backupScheduleDirty || save.isPending,
-                        })}
-                        disabled={
-                          !editable || !backupScheduleDirty || save.isPending
-                        }
-                        onClick={() => void handleSaveBackupSchedule()}
-                      >
-                        {save.isPending ? "Saving..." : "Save backup schedule"}
-                      </button>
-                      {save.isError && lastSuiteSaveTarget === "backup" ? (
-                        <p
-                          className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
-                          role="alert"
-                          data-testid="suite-settings-backup-save-error"
-                        >
-                          {save.error instanceof Error
-                            ? save.error.message
-                            : "Could not save."}
-                        </p>
-                      ) : null}
-                    </div>
-                  </section>
-
-                  <section className={SUITE_SETTINGS_DASH_CARD_CLASS}>
-                    <div className="mm-card-action-body">
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
-                          Manual control
-                        </p>
-                        <h4 className="mt-1 text-sm font-semibold text-[var(--mm-text1)]">
-                          Export or restore now
-                        </h4>
-                        <p className="mt-1 text-xs leading-relaxed text-[var(--mm-text3)]">
-                          Download a full settings file, or restore a MediaMop
-                          configuration JSON from disk.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mm-card-action-footer">
-                      <button
-                        type="button"
-                        className={mmActionButtonClass({
-                          variant: "secondary",
-                          disabled: backupBusy || save.isPending,
-                        })}
-                        disabled={backupBusy || save.isPending}
-                        onClick={() => void handleDownloadConfiguration()}
-                      >
-                        Download configuration now
-                      </button>
-                      <button
-                        type="button"
-                        className={mmActionButtonClass({
-                          variant: "tertiary",
-                          disabled: backupBusy || save.isPending,
-                        })}
-                        disabled={backupBusy || save.isPending}
-                        onClick={() => restoreInputRef.current?.click()}
-                      >
-                        Restore from file...
-                      </button>
-                      <input
-                        ref={restoreInputRef}
-                        type="file"
-                        accept="application/json,.json"
-                        className="hidden"
-                        aria-label="Choose configuration JSON file to restore"
-                        onChange={(e) => void handleRestoreFileChange(e)}
-                      />
-                    </div>
-                  </section>
-                </div>
-
-                <section className={SUITE_SETTINGS_DASH_CARD_CLASS}>
-                  <div className="mm-card-action-body">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
-                          Snapshot history
-                        </p>
-                        <h4 className="mt-1 text-sm font-semibold text-[var(--mm-text1)]">
-                          Recent automatic snapshots
-                        </h4>
-                      </div>
-                      <span className="rounded-full border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-2.5 py-1 text-xs text-[var(--mm-text2)]">
-                        Keeps latest 5
-                      </span>
-                    </div>
-                    {backupsQ.data ? (
-                      <p
-                        className="mt-1.5 break-all font-mono text-xs leading-snug text-[var(--mm-text2)]"
-                        data-testid="suite-configuration-backup-directory"
-                      >
-                        {backupsQ.data.directory}
-                      </p>
-                    ) : null}
-                    <div className="mt-3">
-                      {backupsQ.isLoading ? (
-                        <p className="text-sm text-[var(--mm-text3)]">
-                          Loading snapshot list...
-                        </p>
-                      ) : backupsQ.isError ? (
-                        <p
-                          className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
-                          role="alert"
-                        >
-                          {(backupsQ.error as Error).message}
-                        </p>
-                      ) : (backupsQ.data?.items.length ?? 0) === 0 ? (
-                        <p className="text-sm text-[var(--mm-text3)]">
-                          No automatic snapshots yet.
-                        </p>
-                      ) : (
-                        <ul className="divide-y divide-[var(--mm-border)] overflow-hidden rounded-md border border-[var(--mm-border)] text-sm">
-                          {backupsQ.data!.items.map((row) => (
-                            <li
-                              key={row.id}
-                              className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
-                            >
-                              <div className="min-w-0 text-[var(--mm-text2)]">
-                                <div className="font-medium text-[var(--mm-text)]">
-                                  {new Date(row.created_at).toLocaleString()}
-                                </div>
-                                <div className="text-xs text-[var(--mm-text3)]">
-                                  {formatBackupBytes(row.size_bytes)}
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                className={mmActionButtonClass({
-                                  variant: "tertiary",
-                                  disabled: backupBusy || save.isPending,
-                                })}
-                                disabled={backupBusy || save.isPending}
-                                onClick={() =>
-                                  void handleDownloadStoredBackup(
-                                    row.id,
-                                    row.file_name,
-                                  )
-                                }
-                              >
-                                Download snapshot
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  </div>
-                </section>
-
-                {backupMsg ? (
-                  <p className="rounded-md border border-emerald-500/30 bg-emerald-950/20 px-3 py-2 text-sm text-emerald-200 xl:col-span-3">
-                    {backupMsg}
-                  </p>
-                ) : null}
-                {backupErr ? (
-                  <p
-                    className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200 xl:col-span-3"
-                    role="alert"
-                  >
-                    {backupErr}
-                  </p>
-                ) : null}
-              </section>
-            ) : null}
-          </div>
+          <SettingsBackupTab
+            editable={editable}
+            settingsData={settingsQ.data}
+            save={save}
+            backupScheduleDirty={backupScheduleDirty}
+            lastSuiteSaveTarget={lastSuiteSaveTarget}
+            configurationBackupEnabled={configurationBackupEnabled}
+            setConfigurationBackupEnabled={setConfigurationBackupEnabled}
+            configurationBackupIntervalHours={configurationBackupIntervalHours}
+            setConfigurationBackupIntervalHours={
+              setConfigurationBackupIntervalHours
+            }
+            configurationBackupPreferredTime={configurationBackupPreferredTime}
+            setConfigurationBackupPreferredTime={
+              setConfigurationBackupPreferredTime
+            }
+            backupsQ={backupsQ}
+            backupBusy={backupBusy}
+            backupMsg={backupMsg}
+            backupErr={backupErr}
+            onSaveBackupSchedule={() => void handleSaveBackupSchedule()}
+            onDownloadConfiguration={() => void handleDownloadConfiguration()}
+            onRestoreFileChange={(e) => void handleRestoreFileChange(e)}
+            onDownloadStoredBackup={(id, fileLabel) =>
+              void handleDownloadStoredBackup(id, fileLabel)
+            }
+          />
         ) : tab === "upgrade" ? (
-          <div
-            data-testid="suite-settings-upgrade-tab"
-            className="mm-bubble-stack"
-          >
-            <div className={mmModuleTabBlurbBandClass}>
-              <p className={mmModuleTabBlurbTextClass}>
-                Check the installed version, see the latest release, and start a
-                guided in-app upgrade when this install type supports it.
-              </p>
-            </div>
-
-            <section
-              className={SUITE_SETTINGS_DASH_CARD_CLASS}
-              data-testid="suite-settings-upgrade"
-              aria-labelledby="suite-settings-upgrade-heading"
-            >
-              <div>
-                <h3
-                  id="suite-settings-upgrade-heading"
-                  className="text-base font-semibold text-[var(--mm-text1)]"
-                >
-                  Upgrade
-                </h3>
-                <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                  Check the running MediaMop version and install the latest
-                  release for this install type.
-                </p>
-              </div>
-
-              {updateStatusQ.isPending ? (
-                <p className="text-sm text-[var(--mm-text3)]">
-                  Checking for updates...
-                </p>
-              ) : !updateStatusQ.data ? (
-                upgradeConnectionLost ? (
-                  <div
-                    className={`rounded-lg border px-3 py-3 ${upgradePhaseTone(
-                      undefined,
-                      null,
-                      upgradeMonitor,
-                    )}`}
-                  >
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
-                      Reconnecting
-                    </p>
-                    <p className="mt-1 text-sm leading-6 text-[var(--mm-text2)]">
-                      MediaMop is reconnecting and verifying the installed
-                      version.
-                    </p>
-                  </div>
-                ) : (
-                  <p
-                    className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
-                    role="alert"
-                  >
-                    {updateStatusQ.error instanceof Error
-                      ? updateStatusQ.error.message
-                      : "Could not check for updates right now."}
-                  </p>
-                )
-              ) : (
-                <>
-                  <div
-                    className={`rounded-xl border p-4 ${
-                      updateStatusQ.data.status === "update_available"
-                        ? "border-amber-400/25 bg-amber-400/[0.06]"
-                        : "border-emerald-500/20 bg-emerald-500/[0.05]"
-                    }`}
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
-                          Release status
-                        </p>
-                        <h4 className="mt-1 text-base font-semibold text-[var(--mm-text1)]">
-                          {updateStatusQ.data.summary}
-                        </h4>
-                      </div>
-                      <span className="rounded-full border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-2.5 py-1 text-xs font-medium capitalize text-[var(--mm-text2)]">
-                        {updateStatusQ.data.status.replaceAll("_", " ")}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <div className={SUITE_SETTINGS_PREMIUM_TILE_CLASS}>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-text3)]">
-                        Installed
-                      </div>
-                      <div className="mt-1 text-base font-semibold text-[var(--mm-text1)]">
-                        {updateStatusQ.data.current_version}
-                      </div>
-                    </div>
-                    <div className={SUITE_SETTINGS_PREMIUM_TILE_CLASS}>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-text3)]">
-                        Latest
-                      </div>
-                      <div className="mt-1 text-base font-semibold text-[var(--mm-text1)]">
-                        {updateStatusQ.data.latest_version || "Unknown"}
-                      </div>
-                    </div>
-                    <div className={SUITE_SETTINGS_PREMIUM_TILE_CLASS}>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-text3)]">
-                        Install type
-                      </div>
-                      <div className="mt-1 text-base font-semibold capitalize text-[var(--mm-text1)]">
-                        {updateStatusQ.data.install_type}
-                      </div>
-                    </div>
-                    <div className={SUITE_SETTINGS_PREMIUM_TILE_CLASS}>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-text3)]">
-                        Status
-                      </div>
-                      <div className="mt-1 text-base font-semibold capitalize text-[var(--mm-text1)]">
-                        {updateStatusQ.data.status.replaceAll("_", " ")}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={SUITE_SETTINGS_PREMIUM_PANEL_CLASS}>
-                    <h4 className="text-sm font-semibold text-[var(--mm-text1)]">
-                      What happens next
-                    </h4>
-                    {upgradeBootstrapRequired ? (
-                      <div className="rounded-lg border border-amber-400/25 bg-amber-400/[0.06] px-3 py-2">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
-                          One-time setup required
-                        </p>
-                        <p className="mt-1 text-sm leading-6 text-[var(--mm-text2)]">
-                          Run the latest MediaMop installer once on the MediaMop
-                          computer as administrator so it can install the local
-                          updater service. After that one admin install, future
-                          upgrades can start remotely from this page.
-                        </p>
-                      </div>
-                    ) : null}
-                    {updateStatusQ.data.install_type === "windows" &&
-                    updateStatusQ.data.status === "update_available" ? (
-                      updateStatusQ.data.in_app_upgrade_supported ? (
-                        <p className="text-sm leading-6 text-[var(--mm-text2)]">
-                          Upgrade now downloads the trusted installer, verifies
-                          it, runs the installer, and waits for MediaMop to
-                          reconnect and prove the running version changed.
-                        </p>
-                      ) : (
-                        <p className="text-sm leading-6 text-[var(--mm-text2)]">
-                          {updateStatusQ.data.in_app_upgrade_summary ||
-                            "This Windows install cannot run a remote in-app upgrade yet. Run the latest installer locally once as administrator first so it can install the local updater service."}
-                        </p>
-                      )
-                    ) : updateStatusQ.data.install_type === "windows" ? (
-                      <p className="text-sm leading-6 text-[var(--mm-text2)]">
-                        {updateStatusQ.data.in_app_upgrade_summary ||
-                          "This Windows install does not need an update right now."}
-                      </p>
-                    ) : null}
-                    {updateStatusQ.data.install_type === "docker" &&
-                    updateStatusQ.data.docker_update_command ? (
-                      <div className="space-y-2">
-                        <p className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-3 py-2 font-mono text-xs text-[var(--mm-text3)]">
-                          {updateStatusQ.data.docker_update_command}
-                        </p>
-                        <p className="text-sm leading-6 text-[var(--mm-text2)]">
-                          Keep the same MEDIAMOP_HOME volume and
-                          MEDIAMOP_SESSION_SECRET value across upgrades so
-                          browser sessions and setup state continue cleanly.
-                        </p>
-                      </div>
-                    ) : null}
-                  </div>
-
-                  {upgradeProgressSummary ? (
-                    <div
-                      className={`rounded-lg border px-3 py-3 ${upgradePhaseTone(
-                        updateStatusQ.data,
-                        activeUpgradeProgress,
-                        upgradeMonitor,
-                      )}`}
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mm-gold)]">
-                            {upgradeProgressSummary.label}
-                          </p>
-                          <p className="mt-1 text-sm leading-6 text-[var(--mm-text2)]">
-                            {upgradeProgressSummary.body}
-                          </p>
-                        </div>
-                        {activeUpgradeProgress?.target_version ? (
-                          <span className="rounded-full border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-2.5 py-1 text-xs font-medium text-[var(--mm-text2)]">
-                            Target {activeUpgradeProgress.target_version}
-                          </span>
-                        ) : null}
-                      </div>
-                      {activeUpgradeProgress?.attempt_id ||
-                      upgradeMonitor?.attemptId ||
-                      activeUpgradeProgress?.current_version_seen ||
-                      updateStatusQ.data.current_version ||
-                      activeUpgradeProgress?.installer_log_path ||
-                      activeUpgradeProgress?.service_log_path ||
-                      activeUpgradeProgress?.phase === "failed" ||
-                      Boolean(upgradeMonitor?.timedOutReason) ? (
-                        <div className="mt-3 space-y-1 text-xs text-[var(--mm-text3)]">
-                          {activeUpgradeProgress?.attempt_id ||
-                          upgradeMonitor?.attemptId ? (
-                            <p>
-                              Attempt ID:{" "}
-                              {activeUpgradeProgress?.attempt_id ||
-                                upgradeMonitor?.attemptId}
-                            </p>
-                          ) : null}
-                          <p>Status: {upgradeProgressSummary.label}</p>
-                          {activeUpgradeProgress?.current_version_seen ||
-                          updateStatusQ.data.current_version ? (
-                            <p>
-                              Current version seen:{" "}
-                              {activeUpgradeProgress?.current_version_seen ||
-                                updateStatusQ.data.current_version}
-                            </p>
-                          ) : null}
-                          {activeUpgradeProgress?.installer_log_path ? (
-                            <p>
-                              Installer log:{" "}
-                              {activeUpgradeProgress.installer_log_path}
-                            </p>
-                          ) : null}
-                          {activeUpgradeProgress?.service_log_path ? (
-                            <p>
-                              Service log:{" "}
-                              {activeUpgradeProgress.service_log_path}
-                            </p>
-                          ) : null}
-                          {(activeUpgradeProgress?.phase === "failed" ||
-                            upgradeMonitor?.timedOutReason) && (
-                            <a
-                              className="text-[var(--mm-link)] underline-offset-2 hover:underline"
-                              href={suiteUpdateDiagnosticsPath()}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              Open updater diagnostics
-                            </a>
-                          )}
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
-
-                  {updateStatusQ.data.install_type === "windows" ? (
-                    <div className={SUITE_SETTINGS_PREMIUM_PANEL_CLASS}>
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <h4 className="text-sm font-semibold text-[var(--mm-text1)]">
-                          Updater diagnostics
-                        </h4>
-                        <button
-                          type="button"
-                          className={mmActionButtonClass({
-                            variant: "tertiary",
-                            disabled: false,
-                          })}
-                          onClick={() =>
-                            setShowUpgradeDiagnostics((current) => !current)
-                          }
-                        >
-                          {showUpgradeDiagnostics
-                            ? "Hide diagnostics"
-                            : "Show diagnostics"}
-                        </button>
-                      </div>
-                      {showUpgradeDiagnostics ? (
-                        updateDiagnosticsQ.isPending ? (
-                          <p className="text-sm text-[var(--mm-text3)]">
-                            Loading diagnostics...
-                          </p>
-                        ) : updateDiagnosticsQ.isError ? (
-                          <p
-                            className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
-                            role="alert"
-                          >
-                            {updateDiagnosticsQ.error instanceof Error
-                              ? updateDiagnosticsQ.error.message
-                              : "Could not load updater diagnostics."}
-                          </p>
-                        ) : updateDiagnosticsQ.data ? (
-                          <div className="space-y-2 text-xs text-[var(--mm-text3)]">
-                            <p>
-                              Running version:{" "}
-                              {updateDiagnosticsQ.data.current_version}
-                            </p>
-                            <p>
-                              Latest version:{" "}
-                              {updateDiagnosticsQ.data.latest_version ||
-                                "Unknown"}
-                            </p>
-                            <p>
-                              Install root:{" "}
-                              {updateDiagnosticsQ.data.install_root ||
-                                "Unavailable"}
-                            </p>
-                            <p>
-                              Runtime home:{" "}
-                              {updateDiagnosticsQ.data.runtime_home ||
-                                "Unavailable"}
-                            </p>
-                            <p>
-                              Updater service reachable:{" "}
-                              {updateDiagnosticsQ.data.updater_service_reachable
-                                ? "Yes"
-                                : "No"}
-                            </p>
-                            {diagnosticsUpgrade?.stale_reason ? (
-                              <p>
-                                Stale reason: {diagnosticsUpgrade.stale_reason}
-                              </p>
-                            ) : null}
-                            {updateDiagnosticsQ.data.installer_log_path ? (
-                              <p>
-                                Installer log:{" "}
-                                {updateDiagnosticsQ.data.installer_log_path}
-                              </p>
-                            ) : null}
-                            {updateDiagnosticsQ.data.service_log_path ? (
-                              <p>
-                                Service log:{" "}
-                                {updateDiagnosticsQ.data.service_log_path}
-                              </p>
-                            ) : null}
-                            <a
-                              className="text-[var(--mm-link)] underline-offset-2 hover:underline"
-                              href={suiteUpdateDiagnosticsPath()}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              Open full updater diagnostics
-                            </a>
-                            {diagnosticsHasLogTail ? (
-                              <details className="rounded-md border border-[var(--mm-border)] bg-black/10 px-3 py-2">
-                                <summary className="cursor-pointer text-sm text-[var(--mm-text2)]">
-                                  Recent updater log tail
-                                </summary>
-                                <div className="mt-2 space-y-3">
-                                  {installerLogTail.length > 0 ? (
-                                    <div>
-                                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-gold)]">
-                                        Installer
-                                      </p>
-                                      <pre className="max-h-36 overflow-auto whitespace-pre-wrap text-[11px] leading-5 text-[var(--mm-text3)]">
-                                        {installerLogTail.join("\n")}
-                                      </pre>
-                                    </div>
-                                  ) : null}
-                                  {serviceLogTail.length > 0 ? (
-                                    <div>
-                                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-gold)]">
-                                        Updater service
-                                      </p>
-                                      <pre className="max-h-36 overflow-auto whitespace-pre-wrap text-[11px] leading-5 text-[var(--mm-text3)]">
-                                        {serviceLogTail.join("\n")}
-                                      </pre>
-                                    </div>
-                                  ) : null}
-                                </div>
-                              </details>
-                            ) : null}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-[var(--mm-text3)]">
-                            Diagnostics are unavailable right now.
-                          </p>
-                        )
-                      ) : (
-                        <p className="text-sm text-[var(--mm-text2)]">
-                          Includes updater reachability, current phase, log
-                          paths, and recent log lines for support triage.
-                        </p>
-                      )}
-                    </div>
-                  ) : null}
-
-                  <div className={SUITE_SETTINGS_PREMIUM_PANEL_CLASS}>
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h4 className="text-sm font-semibold text-[var(--mm-text1)]">
-                        Upgrade history
-                      </h4>
-                      <button
-                        type="button"
-                        className={mmActionButtonClass({
-                          variant: "tertiary",
-                          disabled: false,
-                        })}
-                        onClick={() =>
-                          setShowUpgradeHistory((current) => !current)
-                        }
-                      >
-                        {showUpgradeHistory ? "Hide history" : "Show history"}
-                      </button>
-                    </div>
-                    {showUpgradeHistory ? (
-                      upgradeHistory.length === 0 ? (
-                        <p className="text-sm text-[var(--mm-text3)]">
-                          No recorded in-app upgrade attempts yet.
-                        </p>
-                      ) : (
-                        <ul className="space-y-2">
-                          {upgradeHistory.map((entry) => (
-                            <li
-                              key={entry.id}
-                              className="rounded-md border border-[var(--mm-border)] bg-black/10 px-3 py-2 text-xs text-[var(--mm-text3)]"
-                            >
-                              <p className="font-semibold text-[var(--mm-text2)]">
-                                {entry.status_label} - {entry.phase}
-                              </p>
-                              <p className="mt-1">{entry.message}</p>
-                              <p className="mt-1">
-                                {formatDateTime(entry.recorded_at)}
-                              </p>
-                              {entry.target_version ? (
-                                <p>Target: {entry.target_version}</p>
-                              ) : null}
-                              {entry.current_version_seen ? (
-                                <p>
-                                  Current version seen:{" "}
-                                  {entry.current_version_seen}
-                                </p>
-                              ) : null}
-                              {entry.attempt_id ? (
-                                <p>Attempt ID: {entry.attempt_id}</p>
-                              ) : null}
-                            </li>
-                          ))}
-                        </ul>
-                      )
-                    ) : (
-                      <p className="text-sm text-[var(--mm-text2)]">
-                        Keeps recent in-app upgrade outcomes for quick operator
-                        review.
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="mt-auto flex flex-wrap gap-2 border-t border-[var(--mm-border)] pt-4">
-                    <button
-                      type="button"
-                      className={mmActionButtonClass({
-                        variant: "secondary",
-                        disabled: upgradeRefreshBusy,
-                      })}
-                      disabled={upgradeRefreshBusy}
-                      onClick={() => void updateStatusQ.refetch()}
-                    >
-                      {upgradeRefreshLabel}
-                    </button>
-                    {updateStatusQ.data.install_type === "windows" &&
-                    updateStatusQ.data.status === "update_available" &&
-                    updateStatusQ.data.in_app_upgrade_supported ? (
-                      <button
-                        type="button"
-                        className={mmActionButtonClass({
-                          variant: "primary",
-                          disabled: updateNow.isPending || upgradeInProgress,
-                        })}
-                        disabled={updateNow.isPending || upgradeInProgress}
-                        onClick={() => void handleUpgradeNow()}
-                      >
-                        {updateNow.isPending
-                          ? "Starting upgrade..."
-                          : upgradeInProgress
-                            ? "Upgrade in progress..."
-                            : "Upgrade now"}
-                      </button>
-                    ) : null}
-                    {updateStatusQ.data.windows_installer_url ? (
-                      <a
-                        className={mmActionButtonClass({
-                          variant: "tertiary",
-                          disabled: false,
-                        })}
-                        href={updateStatusQ.data.windows_installer_url}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Download installer
-                      </a>
-                    ) : null}
-                    {updateStatusQ.data.release_url ? (
-                      <a
-                        className={mmActionButtonClass({
-                          variant: "tertiary",
-                          disabled: false,
-                        })}
-                        href={updateStatusQ.data.release_url}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Release notes
-                      </a>
-                    ) : null}
-                  </div>
-                  {upgradeNotice ? (
-                    <p className={upgradeNoticeClass(upgradeNotice.tone)}>
-                      {upgradeNotice.text}
-                    </p>
-                  ) : null}
-                  {completedUpgradeRefreshPromptKey ? (
-                    <div className="rounded-md border border-emerald-500/30 bg-emerald-950/15 px-3 py-3 text-sm text-emerald-100">
-                      <p>Reload to continue in the updated session.</p>
-                      <div className="mt-3">
-                        <button
-                          type="button"
-                          className={mmActionButtonClass({
-                            variant: "secondary",
-                            disabled: false,
-                          })}
-                          onClick={() => browserWindow.reloadCurrentPage()}
-                        >
-                          Reload now
-                        </button>
-                      </div>
-                    </div>
-                  ) : null}
-                  {updateNow.isError ? (
-                    <p
-                      className="rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
-                      role="alert"
-                    >
-                      {updateNow.error instanceof Error
-                        ? updateNow.error.message
-                        : "Could not start the upgrade."}
-                    </p>
-                  ) : null}
-                </>
-              )}
-            </section>
-          </div>
+          <SettingsUpgradeTab
+            upgradeMonitor={upgradeMonitor}
+            upgradeNotice={upgradeNotice}
+            showUpgradeHistory={showUpgradeHistory}
+            setShowUpgradeHistory={setShowUpgradeHistory}
+            upgradeHistory={upgradeHistory}
+            showUpgradeDiagnostics={showUpgradeDiagnostics}
+            setShowUpgradeDiagnostics={setShowUpgradeDiagnostics}
+            upgradeBootstrapRequired={upgradeBootstrapRequired}
+            activeUpgradeProgress={activeUpgradeProgress}
+            upgradeConnectionLost={upgradeConnectionLost}
+            upgradeProgressSummary={upgradeProgressSummary}
+            upgradeInProgress={upgradeInProgress}
+            completedUpgradeRefreshPromptKey={completedUpgradeRefreshPromptKey}
+            upgradeRefreshBusy={upgradeRefreshBusy}
+            upgradeRefreshLabel={upgradeRefreshLabel}
+            diagnosticsUpgrade={diagnosticsUpgrade}
+            installerLogTail={installerLogTail}
+            serviceLogTail={serviceLogTail}
+            diagnosticsHasLogTail={diagnosticsHasLogTail}
+            updateStatusQ={updateStatusQ}
+            updateDiagnosticsQ={updateDiagnosticsQ}
+            updateNow={updateNow}
+            onUpgradeNow={() => void handleUpgradeNow()}
+          />
         ) : tab === "security" ? (
-          <div
-            className="mm-bubble-stack w-full"
-            data-testid="suite-settings-security"
-          >
-            <div className={mmModuleTabBlurbBandClass}>
-              <p className={mmModuleTabBlurbTextClass}>
-                Change your MediaMop password here. Sign-in cookie, HTTPS, and
-                rate-limit settings follow the server configuration at startup -
-                they are not edited in this UI.
-              </p>
-            </div>
-            <section
-              className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-              aria-label="Current sign-in"
-            >
-              <SettingsSummaryCard
-                label="This browser"
-                value={
-                  currentSession
-                    ? currentSession.trusted_device
-                      ? "Trusted"
-                      : "Standard"
-                    : currentSessionQ.isError
-                      ? "Unavailable"
-                      : "Loading..."
-                }
-                detail={
-                  currentSession
-                    ? currentSession.trusted_device
-                      ? "Long-lived sign-in for this device"
-                      : "Normal sign-in lifetime"
-                    : currentSessionQ.isError
-                      ? "Could not read the current sign-in session."
-                      : "Checking the current sign-in session."
-                }
-              />
-              <SettingsSummaryCard
-                label="Idle timeout"
-                value={
-                  currentSession
-                    ? formatSessionTimeout(currentSession.idle_timeout_minutes)
-                    : securityOverview
-                      ? securityOverview.standard_session_idle_timeout_plain
-                      : "Loading..."
-                }
-                detail={
-                  currentSession?.trusted_device
-                    ? "Trusted-device idle timeout"
-                    : "Standard idle timeout"
-                }
-              />
-              <SettingsSummaryCard
-                label="Max sign-in age"
-                value={
-                  currentSession
-                    ? `${currentSession.absolute_timeout_days} days`
-                    : securityOverview
-                      ? securityOverview.standard_session_absolute_timeout_plain
-                      : "Loading..."
-                }
-                detail={
-                  currentSession?.trusted_device
-                    ? "Trusted-device maximum session age"
-                    : "Standard maximum session age"
-                }
-              />
-              <SettingsSummaryCard
-                label="Trusted devices"
-                value={
-                  securityOverview
-                    ? securityOverview.trusted_session_absolute_timeout_plain
-                    : "Loading..."
-                }
-                detail={
-                  securityOverview
-                    ? `Idle timeout ${securityOverview.trusted_session_idle_timeout_plain}`
-                    : "Loading trusted-device policy."
-                }
-              />
-            </section>
-            <section
-              className="mm-card w-full"
-              aria-labelledby="suite-security-change-password-heading"
-            >
-              <h2
-                id="suite-security-change-password-heading"
-                className="mm-card__title"
-              >
-                Change password
-              </h2>
-              <p className="mm-card__body text-sm text-[var(--mm-text2)]">
-                Update your sign-in password. After saving, MediaMop requires a
-                fresh sign-in.
-              </p>
-              <div className="mm-card__body space-y-3">
-                <label className="block">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-                    Current password
-                  </span>
-                  <div className="mt-1 flex flex-wrap gap-2">
-                    <input
-                      type={showCurrentPassword ? "text" : "password"}
-                      className={SUITE_PASSWORD_FIELD_CLASS}
-                      placeholder="Enter current password"
-                      value={currentPassword}
-                      disabled={changePasswordBusy}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setCurrentPassword(v);
-                        if (v.trim() === "") {
-                          setShowCurrentPassword(false);
-                        }
-                      }}
-                      autoComplete="current-password"
-                    />
-                    <button
-                      type="button"
-                      className={mmActionButtonClass({
-                        variant: "tertiary",
-                        disabled: changePasswordBusy,
-                      })}
-                      disabled={changePasswordBusy}
-                      onClick={() => setShowCurrentPassword((prev) => !prev)}
-                    >
-                      {showCurrentPassword ? "Hide" : "Show"}
-                    </button>
-                  </div>
-                </label>
-                <label className="block">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-                    New password
-                  </span>
-                  <div className="mt-1 flex flex-wrap gap-2">
-                    <input
-                      type={showNewPassword ? "text" : "password"}
-                      className={SUITE_PASSWORD_FIELD_CLASS}
-                      placeholder="Enter new password"
-                      value={newPassword}
-                      disabled={changePasswordBusy}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setNewPassword(v);
-                        if (v.trim() === "") {
-                          setShowNewPassword(false);
-                        }
-                      }}
-                      autoComplete="new-password"
-                    />
-                    <button
-                      type="button"
-                      className={mmActionButtonClass({
-                        variant: "tertiary",
-                        disabled: changePasswordBusy,
-                      })}
-                      disabled={changePasswordBusy}
-                      onClick={() => setShowNewPassword((prev) => !prev)}
-                    >
-                      {showNewPassword ? "Hide" : "Show"}
-                    </button>
-                  </div>
-                </label>
-                <label className="block">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-                    Confirm new password
-                  </span>
-                  <div className="mt-1 flex flex-wrap gap-2">
-                    <input
-                      type={showConfirmPassword ? "text" : "password"}
-                      className={SUITE_PASSWORD_FIELD_CLASS}
-                      placeholder="Re-enter new password"
-                      value={confirmPassword}
-                      disabled={changePasswordBusy}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setConfirmPassword(v);
-                        if (v.trim() === "") {
-                          setShowConfirmPassword(false);
-                        }
-                      }}
-                      autoComplete="new-password"
-                    />
-                    <button
-                      type="button"
-                      className={mmActionButtonClass({
-                        variant: "tertiary",
-                        disabled: changePasswordBusy,
-                      })}
-                      disabled={changePasswordBusy}
-                      onClick={() => setShowConfirmPassword((prev) => !prev)}
-                    >
-                      {showConfirmPassword ? "Hide" : "Show"}
-                    </button>
-                  </div>
-                </label>
-                {changePassword.isError ? (
-                  <p className="text-sm text-red-300" role="alert">
-                    {formatChangePasswordMutationError(changePassword.error)}
-                  </p>
-                ) : null}
-                {changePasswordStatus ? (
-                  <p className="text-sm text-[var(--mm-text2)]" role="status">
-                    {typeof changePasswordStatus === "string"
-                      ? changePasswordStatus
-                      : "Password change finished."}
-                  </p>
-                ) : null}
-                <button
-                  type="button"
-                  className={mmActionButtonClass({
-                    variant: "primary",
-                    disabled:
-                      changePasswordBusy ||
-                      currentPassword.trim() === "" ||
-                      newPassword.trim() === "" ||
-                      confirmPassword.trim() === "",
-                  })}
-                  disabled={
-                    changePasswordBusy ||
-                    currentPassword.trim() === "" ||
-                    newPassword.trim() === "" ||
-                    confirmPassword.trim() === ""
-                  }
-                  onClick={async () => {
-                    setChangePasswordStatus(null);
-                    if (newPassword !== confirmPassword) {
-                      setChangePasswordStatus("New passwords do not match.");
-                      return;
-                    }
-                    try {
-                      await changePassword.mutateAsync({
-                        currentPassword,
-                        newPassword,
-                      });
-                      setCurrentPassword("");
-                      setNewPassword("");
-                      setConfirmPassword("");
-                      setShowCurrentPassword(false);
-                      setShowNewPassword(false);
-                      setShowConfirmPassword(false);
-                      setChangePasswordStatus(
-                        "Password changed. Sign in again with your new password.",
-                      );
-                      navigate("/login", { replace: true });
-                    } catch {
-                      setShowCurrentPassword(false);
-                      setShowNewPassword(false);
-                      setShowConfirmPassword(false);
-                      /* surfaced above */
-                    }
-                  }}
-                >
-                  {changePassword.isPending ? "Saving..." : "Change password"}
-                </button>
-              </div>
-            </section>
-          </div>
+          <SettingsSecurityTab />
+        ) : tab === "notifications" ? (
+          <SettingsNotificationsTab />
         ) : tab === "support" ? (
-          <div
-            data-testid="suite-settings-support-tab"
-            className="mm-bubble-stack"
-          >
-            <div className={mmModuleTabBlurbBandClass}>
-              <p className={mmModuleTabBlurbTextClass}>
-                Optional support details for MediaMop. Core app features remain
-                fully usable without any support flow.
-              </p>
-            </div>
-
-            <section
-              className={SUITE_SETTINGS_DASH_CARD_CLASS}
-              data-testid="suite-settings-support"
-              aria-labelledby="suite-settings-support-heading"
-            >
-              <div className="mm-card-action-body">
-                <div className="space-y-3">
-                  <h3
-                    id="suite-settings-support-heading"
-                    className="text-base font-semibold text-[var(--mm-text1)]"
-                  >
-                    Support MediaMop
-                  </h3>
-                  <div className="space-y-2 text-sm text-[var(--mm-text2)]">
-                    <p>MediaMop is free to use. Support is optional.</p>
-                    <p>
-                      If MediaMop saves you time or helps keep your library
-                      cleaner, you can support ongoing development.
-                    </p>
-                  </div>
-                </div>
-                {SHOW_SUPPORT_URL_PLACEHOLDER ? (
-                  <p className="rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-3 py-2 text-xs text-[var(--mm-text3)]">
-                    Development note: set <code>VITE_SUPPORT_URL</code> to show
-                    the support button.
-                  </p>
-                ) : null}
-              </div>
-              {SUPPORT_URL ? (
-                <div className="mm-card-action-footer">
-                  <a
-                    href={SUPPORT_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={mmActionButtonClass({
-                      variant: "secondary",
-                      disabled: false,
-                    })}
-                    data-testid="suite-settings-support-button"
-                  >
-                    Support MediaMop
-                  </a>
-                </div>
-              ) : null}
-            </section>
-          </div>
+          <SettingsSupportTab />
         ) : (
-          <div
-            data-testid="suite-settings-logs"
-            className="mm-bubble-stack w-full"
-          >
-            <div className={mmModuleTabBlurbBandClass}>
-              <p className={mmModuleTabBlurbTextClass}>
-                System event logs from the MediaMop runtime. Use filters to
-                narrow down warnings, failures, and tracebacks. Advanced server
-                diagnostics are available here when troubleshooting.
-              </p>
-            </div>
-
-            <section
-              className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"
-              aria-label="Log summary"
-            >
-              <SettingsSummaryCard
-                label="Showing now"
-                value={`${logsQ.data?.items.length ?? 0} events`}
-              />
-              <SettingsSummaryCard
-                label="Matching events"
-                value={`${logsQ.data?.total ?? 0} events`}
-              />
-              <SettingsSummaryCard
-                label="Errors"
-                value={String(logsQ.data?.counts.error ?? 0)}
-              />
-              <SettingsSummaryCard
-                label="Warnings"
-                value={String(logsQ.data?.counts.warning ?? 0)}
-              />
-              <SettingsSummaryCard
-                label="Information"
-                value={String(logsQ.data?.counts.information ?? 0)}
-              />
-            </section>
-
-            <section
-              className="mm-card mm-dash-card w-full"
-              aria-labelledby="suite-settings-diagnostics-heading"
-            >
-              <details>
-                <summary
-                  id="suite-settings-diagnostics-heading"
-                  className="cursor-pointer text-base font-semibold text-[var(--mm-text1)]"
-                >
-                  Server diagnostics
-                </summary>
-                <p className="mt-2 text-sm text-[var(--mm-text2)]">
-                  Advanced counters for troubleshooting. Request issues usually
-                  mean a browser or API request was rejected or asked for
-                  something that was not found; they are not the same as
-                  application failures.
-                </p>
-                {metricsQ.isError ? (
-                  <p
-                    className="mt-4 rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200"
-                    role="alert"
-                  >
-                    {metricsQ.error instanceof Error
-                      ? metricsQ.error.message
-                      : "Could not load server diagnostics."}
-                  </p>
-                ) : (
-                  <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                    <SettingsSummaryCard
-                      label="Running for"
-                      value={
-                        runtimeMetrics
-                          ? formatRuntimeUptime(runtimeMetrics.uptime_seconds)
-                          : "Loading..."
-                      }
-                    />
-                    <SettingsSummaryCard
-                      label="Requests handled"
-                      value={
-                        runtimeMetrics
-                          ? String(runtimeMetrics.total_requests)
-                          : "Loading..."
-                      }
-                    />
-                    <SettingsSummaryCard
-                      label="Average response"
-                      value={
-                        runtimeMetrics
-                          ? formatAverageMs(runtimeMetrics.average_response_ms)
-                          : "Loading..."
-                      }
-                    />
-                    <SettingsSummaryCard
-                      label="Logged failures"
-                      value={
-                        runtimeMetrics
-                          ? String(runtimeMetrics.error_log_count)
-                          : "Loading..."
-                      }
-                    />
-                    <SettingsSummaryCard
-                      label="Request issues"
-                      value={
-                        runtimeMetrics
-                          ? runtimeRequestIssues.value
-                          : "Loading..."
-                      }
-                    />
-                  </div>
-                )}
-                {runtimeMetrics ? (
-                  <p className="mt-3 text-xs text-[var(--mm-text3)]">
-                    {runtimeRequestIssues.detail}
-                  </p>
-                ) : null}
-              </details>
-            </section>
-
-            <section
-              className="mm-card mm-dash-card w-full"
-              aria-labelledby="suite-settings-logs-filters-heading"
-            >
-              <div className="mm-card__body space-y-4">
-                <div>
-                  <h3
-                    id="suite-settings-logs-filters-heading"
-                    className="text-base font-semibold text-[var(--mm-text1)]"
-                  >
-                    Search logs
-                  </h3>
-                  <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                    Search message text, component names, tracebacks, request
-                    IDs, and job IDs. This view refreshes while it is open.
-                  </p>
-                </div>
-
-                <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_220px_auto_auto]">
-                  <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-                    Search
-                    <input
-                      type="text"
-                      className={mmEditableTextFieldClass}
-                      placeholder="Search message, detail, traceback, logger, or source"
-                      value={logSearch}
-                      onChange={(e) => setLogSearch(e.target.value)}
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-                    Level
-                    <select
-                      className={mmEditableTextFieldClass}
-                      value={logLevel}
-                      onChange={(e) =>
-                        setLogLevel(e.target.value as LogLevelFilter)
-                      }
-                    >
-                      <option value="">All levels</option>
-                      <option value="INFO">Information</option>
-                      <option value="WARNING">Warnings</option>
-                      <option value="ERROR">Errors</option>
-                    </select>
-                  </label>
-                  <div className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-                    <span>Tracebacks only</span>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        className={mmActionButtonClass({
-                          variant: tracebacksOnly ? "primary" : "tertiary",
-                        })}
-                        onClick={() => setTracebacksOnly(true)}
-                      >
-                        On
-                      </button>
-                      <button
-                        type="button"
-                        className={mmActionButtonClass({
-                          variant: !tracebacksOnly ? "primary" : "tertiary",
-                        })}
-                        onClick={() => setTracebacksOnly(false)}
-                      >
-                        Off
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-end gap-2">
-                    <button
-                      type="button"
-                      className={mmActionButtonClass({
-                        variant: "secondary",
-                        disabled: logsQ.isFetching,
-                      })}
-                      disabled={logsQ.isFetching}
-                      onClick={() => void logsQ.refetch()}
-                    >
-                      {logsQ.isFetching ? "Refreshing..." : "Refresh"}
-                    </button>
-                    <button
-                      type="button"
-                      className={mmActionButtonClass({
-                        variant: "tertiary",
-                        disabled:
-                          !logSearch.trim() && !logLevel && !tracebacksOnly,
-                      })}
-                      disabled={
-                        !logSearch.trim() && !logLevel && !tracebacksOnly
-                      }
-                      onClick={() => {
-                        setLogSearch("");
-                        setLogLevel("");
-                        setTracebacksOnly(false);
-                      }}
-                    >
-                      Clear filters
-                    </button>
-                  </div>
-                </div>
-
-                {logSearch.trim() || logLevel || tracebacksOnly ? (
-                  <div className="flex flex-wrap gap-2">
-                    {logSearch.trim() ? (
-                      <span className="rounded-full border border-[var(--mm-border)] bg-black/10 px-2.5 py-1 text-xs text-[var(--mm-text2)]">
-                        Search: {logSearch.trim()}
-                      </span>
-                    ) : null}
-                    {logLevel ? (
-                      <span className="rounded-full border border-[var(--mm-border)] bg-black/10 px-2.5 py-1 text-xs text-[var(--mm-text2)]">
-                        Level: {logLevel === "INFO" ? "Information" : logLevel}
-                      </span>
-                    ) : null}
-                    {tracebacksOnly ? (
-                      <span className="rounded-full border border-[var(--mm-border)] bg-black/10 px-2.5 py-1 text-xs text-[var(--mm-text2)]">
-                        Tracebacks only
-                      </span>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            </section>
-
-            <section
-              className="mm-card mm-dash-card w-full"
-              aria-labelledby="suite-settings-logs-list-heading"
-            >
-              <div className="mm-card__body space-y-4">
-                <div>
-                  <h3
-                    id="suite-settings-logs-list-heading"
-                    className="text-base font-semibold text-[var(--mm-text1)]"
-                  >
-                    System events
-                  </h3>
-                  <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                    Recent runtime events, warnings, and failures captured by
-                    MediaMop.
-                  </p>
-                </div>
-
-                {logsQ.isPending ? (
-                  <div className="rounded-lg border border-[var(--mm-border)] bg-black/10 px-4 py-4 text-sm text-[var(--mm-text3)]">
-                    Loading logs...
-                  </div>
-                ) : logsQ.isError ? (
-                  <div
-                    className="rounded-lg border border-red-500/40 bg-red-950/25 px-4 py-4 text-sm text-red-200"
-                    role="alert"
-                  >
-                    {logsQ.error instanceof Error
-                      ? logsQ.error.message
-                      : "Could not load logs."}
-                  </div>
-                ) : (logsQ.data?.items.length ?? 0) === 0 ? (
-                  <div className="rounded-lg border border-[var(--mm-border)] bg-black/10 px-4 py-4 text-sm text-[var(--mm-text2)]">
-                    No system events matched the current filters.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {logsQ.data?.items.map((entry) => {
-                      const technicalDetails = renderLogTechnicalDetails(entry);
-                      return (
-                        <article
-                          key={`${entry.timestamp}-${entry.level}-${entry.message}`}
-                          className={`rounded-lg border px-4 py-4 ${logCardTone(entry.level)}`}
-                        >
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div className="space-y-2">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-gold)]">
-                                  {entry.component}
-                                </span>
-                                <span
-                                  className={`rounded-full border px-2.5 py-1 text-xs font-medium ${logLevelBadgeTone(entry.level)}`}
-                                >
-                                  {entry.level === "INFO"
-                                    ? "Information"
-                                    : entry.level}
-                                </span>
-                              </div>
-                              <h4 className="text-sm font-semibold text-[var(--mm-text1)]">
-                                {entry.message}
-                              </h4>
-                              {entry.detail ? (
-                                <p className="text-sm leading-6 text-[var(--mm-text2)]">
-                                  {entry.detail}
-                                </p>
-                              ) : null}
-                            </div>
-                            <time className="text-sm text-[var(--mm-text3)]">
-                              {formatDateTime(entry.timestamp)}
-                            </time>
-                          </div>
-                          {technicalDetails ? (
-                            <div className="mt-3">{technicalDetails}</div>
-                          ) : null}
-                        </article>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </section>
-          </div>
+          <SettingsLogsTab />
         )}
       </div>
     </div>

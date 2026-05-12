@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 from typing import Literal
 
 from cryptography.fernet import Fernet, InvalidToken
@@ -14,20 +15,20 @@ from mediamop.core.config import MediaMopSettings
 from mediamop.core.credentials_rotation import credential_secret_candidates
 
 _HKDF_INFO = b"mediamop.pruner.credentials.v1.fernet"
-_ENVELOPE_VERSION = 3
+_ENVELOPE_VERSION = 4
 _CREDENTIALS_KEY_ID: Literal["credentials:hkdf:v1"] = "credentials:hkdf:v1"
 _CREDENTIALS_KEY_ID_LEGACY = "credentials:v1"
 _SESSION_LEGACY_KEY_ID: Literal["session-legacy:v1"] = "session-legacy:v1"
 
 
-def _fernet_for_secret_hkdf(secret: str | None) -> Fernet | None:
+def _fernet_for_secret_hkdf(secret: str | None, *, salt: bytes | None = None) -> Fernet | None:
     raw = (secret or "").strip()
     if not raw:
         return None
     derived = HKDF(
         algorithm=hashes.SHA256(),
         length=32,
-        salt=None,
+        salt=salt,
         info=_HKDF_INFO,
     ).derive(raw.encode("utf-8"))
     key = base64.urlsafe_b64encode(derived)
@@ -45,8 +46,12 @@ def _fernet_for_secret_legacy(secret: str | None) -> Fernet | None:
     return Fernet(key)
 
 
-def _active_fernet(settings: MediaMopSettings) -> tuple[Fernet | None, Literal["credentials:hkdf:v1", "session-legacy:v1"]]:
-    f = _fernet_for_secret_hkdf(settings.credentials_secret)
+def _active_fernet(
+    settings: MediaMopSettings,
+    *,
+    salt: bytes,
+) -> tuple[Fernet | None, Literal["credentials:hkdf:v1", "session-legacy:v1"]]:
+    f = _fernet_for_secret_hkdf(settings.credentials_secret, salt=salt)
     if f is not None:
         return f, _CREDENTIALS_KEY_ID
     return _fernet_for_secret_legacy(settings.session_secret), _SESSION_LEGACY_KEY_ID
@@ -70,12 +75,17 @@ def _decode_envelope(ciphertext: str) -> dict[str, object] | None:
 def encrypt_pruner_credentials_json(settings: MediaMopSettings, plaintext_json: str) -> str:
     """Encrypt UTF-8 JSON text for ``pruner_server_instances.credentials_ciphertext``."""
 
-    f, key_id = _active_fernet(settings)
+    salt = os.urandom(16)
+    f, key_id = _active_fernet(settings, salt=salt)
     if f is None:
         msg = "Cannot store Pruner credentials until MEDIAMOP_CREDENTIALS_SECRET or MEDIAMOP_SESSION_SECRET is set."
         raise ValueError(msg)
     token = f.encrypt(plaintext_json.encode("utf-8")).decode("ascii")
-    return json.dumps({"version": _ENVELOPE_VERSION, "key_id": key_id, "token": token}, separators=(",", ":"))
+    salt_b64 = base64.urlsafe_b64encode(salt).decode("ascii")
+    return json.dumps(
+        {"version": _ENVELOPE_VERSION, "key_id": key_id, "salt": salt_b64, "token": token},
+        separators=(",", ":"),
+    )
 
 
 def decrypt_pruner_credentials_json(settings: MediaMopSettings, ciphertext: str) -> str | None:
@@ -89,7 +99,16 @@ def decrypt_pruner_credentials_json(settings: MediaMopSettings, ciphertext: str)
             return None
         fernets: list[Fernet]
         if key_id == _CREDENTIALS_KEY_ID:
-            fernets = credential_secret_candidates(settings, _fernet_for_secret_hkdf)
+            salt_b64 = env.get("salt")
+            salt: bytes | None = None
+            if salt_b64 and isinstance(salt_b64, str):
+                try:
+                    salt = base64.urlsafe_b64decode(salt_b64.encode("ascii"))
+                except Exception:
+                    salt = None
+            fernets = credential_secret_candidates(
+                settings, lambda s, _salt=salt: _fernet_for_secret_hkdf(s, salt=_salt)  # type: ignore[misc]
+            )
         elif key_id == _CREDENTIALS_KEY_ID_LEGACY:
             fernets = credential_secret_candidates(settings, _fernet_for_secret_legacy)
         else:

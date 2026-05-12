@@ -224,12 +224,14 @@ def test_fail_requeues_until_max_attempts_then_failed(session_factory):
         s.commit()
 
     for round_i in range(2):
+        # Advance clock enough to clear any not_before backoff from the previous failure.
+        now_i = t0 + timedelta(seconds=round_i * 60)
         with fac() as s:
             j = claim_next_eligible_refiner_job(
                 s,
                 lease_owner="w",
                 lease_expires_at=t0 + timedelta(hours=1),
-                now=t0,
+                now=now_i,
             )
             assert j is not None
             assert j.attempt_count == round_i + 1
@@ -239,7 +241,7 @@ def test_fail_requeues_until_max_attempts_then_failed(session_factory):
                 job_id=jid,
                 lease_owner="w",
                 error_message=f"e{round_i}",
-                now=t0,
+                now=now_i,
             )
             assert ok
             s.commit()

@@ -157,6 +157,14 @@ const router = createBrowserRouter([
                 }),
                 errorElement: routeErrorElement,
               },
+              {
+                path: "*",
+                lazy: async () => ({
+                  Component: (await import("../pages/not-found-page"))
+                    .NotFoundPage,
+                }),
+                errorElement: routeErrorElement,
+              },
             ],
           },
         ],

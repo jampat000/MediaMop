@@ -131,6 +131,7 @@ class MediaMopSettings:
     bootstrap_rate_window_seconds: int
     security_enable_hsts: bool
     metrics_bearer_token: str | None
+    subber_webhook_secret: str | None
     mediamop_home: str
     db_path: str
     backup_dir: str
@@ -192,6 +193,9 @@ class MediaMopSettings:
     refiner_tv_failure_cleanup_grace_period_seconds: int
     # Legacy env read for compatibility only; remux path resolution uses saved Refiner path settings (SQLite).
     refiner_remux_media_root: str | None
+    # Job-row retention: delete terminal job rows (completed/failed/cancelled) older than N days (default 7, 1..365).
+    job_rows_retention_days: int
+    job_rows_retention_schedule_interval_seconds: int
     # Shared *arr HTTP (env: MEDIAMOP_ARR_*). SQLite operator settings may override per-request.
     arr_radarr_base_url: str | None
     arr_radarr_api_key: str | None
@@ -347,12 +351,13 @@ class MediaMopSettings:
             )
             raise RuntimeError(msg)
         trusted_proxy_ips = _parse_csv_urls(os.environ.get("MEDIAMOP_TRUSTED_PROXY_IPS") or "")
-        login_max = max(1, _env_int("MEDIAMOP_AUTH_LOGIN_RATE_MAX_ATTEMPTS", 30))
+        login_max = max(1, _env_int("MEDIAMOP_AUTH_LOGIN_RATE_MAX_ATTEMPTS", 10))
         login_win = max(1, _env_int("MEDIAMOP_AUTH_LOGIN_RATE_WINDOW_SECONDS", 60))
         boot_max = max(1, _env_int("MEDIAMOP_BOOTSTRAP_RATE_MAX_ATTEMPTS", 10))
         boot_win = max(1, _env_int("MEDIAMOP_BOOTSTRAP_RATE_WINDOW_SECONDS", 3600))
         enable_hsts = _env_bool("MEDIAMOP_SECURITY_ENABLE_HSTS", default=False)
         metrics_bearer_token = (os.environ.get("MEDIAMOP_METRICS_BEARER_TOKEN") or "").strip() or None
+        subber_webhook_secret = (os.environ.get("MEDIAMOP_SUBBER_WEBHOOK_SECRET") or "").strip() or None
 
         home_path, db_p, backup_p, log_p, temp_p = resolve_all_runtime_paths()
         ensure_runtime_directories(
@@ -494,6 +499,10 @@ class MediaMopSettings:
         )
         refiner_remux_root = (os.environ.get("MEDIAMOP_REFINER_REMUX_MEDIA_ROOT") or "").strip()
         refiner_remux_media_root = str(Path(refiner_remux_root).expanduser()) if refiner_remux_root else None
+        job_rows_retention_days = max(1, min(365, _env_int("MEDIAMOP_JOB_ROWS_RETENTION_DAYS", 7)))
+        job_rows_retention_schedule_iv = max(
+            60, min(86400, _env_int("MEDIAMOP_JOB_ROWS_RETENTION_SCHEDULE_INTERVAL_SECONDS", 3600))
+        )
         arr_radarr_base = (os.environ.get("MEDIAMOP_ARR_RADARR_BASE_URL") or "").strip()
         if arr_radarr_base and not arr_radarr_base.startswith(("http://", "https://")):
             arr_radarr_base = ""
@@ -525,6 +534,7 @@ class MediaMopSettings:
             bootstrap_rate_window_seconds=boot_win,
             security_enable_hsts=enable_hsts,
             metrics_bearer_token=metrics_bearer_token,
+            subber_webhook_secret=subber_webhook_secret,
             mediamop_home=str(home_path),
             db_path=str(db_p),
             backup_dir=str(backup_p),
@@ -564,6 +574,8 @@ class MediaMopSettings:
             refiner_movie_failure_cleanup_grace_period_seconds=refiner_movie_failure_cleanup_grace_period_seconds,
             refiner_tv_failure_cleanup_grace_period_seconds=refiner_tv_failure_cleanup_grace_period_seconds,
             refiner_remux_media_root=refiner_remux_media_root,
+            job_rows_retention_days=job_rows_retention_days,
+            job_rows_retention_schedule_interval_seconds=job_rows_retention_schedule_iv,
             arr_radarr_base_url=arr_radarr_base or None,
             arr_radarr_api_key=arr_radarr_key or None,
             arr_sonarr_base_url=arr_sonarr_base or None,

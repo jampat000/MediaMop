@@ -956,6 +956,183 @@
         "title": "MeOut",
         "type": "object"
       },
+      "NotificationChannelIn": {
+        "properties": {
+          "csrf_token": {
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "events": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "label": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "url": {
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "provider",
+          "url",
+          "csrf_token"
+        ],
+        "title": "NotificationChannelIn",
+        "type": "object"
+      },
+      "NotificationChannelListOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationChannelOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "supported_events": {
+            "default": [
+              "job_completed",
+              "job_failed",
+              "refiner_job_completed",
+              "refiner_job_failed",
+              "pruner_job_completed",
+              "pruner_job_failed",
+              "subber_job_completed",
+              "subber_job_failed"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "title": "Supported Events",
+            "type": "array"
+          },
+          "supported_providers": {
+            "default": [
+              "webhook",
+              "discord"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "title": "Supported Providers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "NotificationChannelListOut",
+        "type": "object"
+      },
+      "NotificationChannelOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "events": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "provider",
+          "url",
+          "events",
+          "enabled",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "NotificationChannelOut",
+        "type": "object"
+      },
+      "NotificationChannelTestIn": {
+        "properties": {
+          "csrf_token": {
+            "title": "Csrf Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrf_token"
+        ],
+        "title": "NotificationChannelTestIn",
+        "type": "object"
+      },
+      "NotificationChannelTestOut": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "NotificationChannelTestOut",
+        "type": "object"
+      },
       "PrunerApplyEligibilityOut": {
         "description": "Read-only: whether apply can be enqueued for this snapshot (not a second scan).",
         "properties": {
@@ -9701,6 +9878,24 @@
     "/api/v1/subber/webhook/radarr": {
       "post": {
         "operationId": "post_radarr_webhook_api_v1_subber_webhook_radarr_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Webhook-Secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Webhook-Secret"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -9749,6 +9944,24 @@
     "/api/v1/subber/webhook/sonarr": {
       "post": {
         "operationId": "post_sonarr_webhook_api_v1_subber_webhook_sonarr_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Webhook-Secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Webhook-Secret"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -10030,6 +10243,203 @@
         "summary": "Get Suite Metrics",
         "tags": [
           "suite"
+        ]
+      }
+    },
+    "/api/v1/suite/notification-channels": {
+      "get": {
+        "operationId": "get_notification_channels_api_v1_suite_notification_channels_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationChannelListOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Notification Channels",
+        "tags": [
+          "notifications"
+        ]
+      },
+      "post": {
+        "operationId": "post_notification_channel_api_v1_suite_notification_channels_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationChannelIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationChannelOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Notification Channel",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/suite/notification-channels/{channel_id}": {
+      "delete": {
+        "operationId": "delete_notification_channel_route_api_v1_suite_notification_channels__channel_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channel_id",
+            "required": true,
+            "schema": {
+              "title": "Channel Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Notification Channel Route",
+        "tags": [
+          "notifications"
+        ]
+      },
+      "put": {
+        "operationId": "put_notification_channel_api_v1_suite_notification_channels__channel_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channel_id",
+            "required": true,
+            "schema": {
+              "title": "Channel Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationChannelIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationChannelOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Notification Channel",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/suite/notification-channels/{channel_id}/test": {
+      "post": {
+        "operationId": "post_notification_channel_test_api_v1_suite_notification_channels__channel_id__test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channel_id",
+            "required": true,
+            "schema": {
+              "title": "Channel Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationChannelTestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationChannelTestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Notification Channel Test",
+        "tags": [
+          "notifications"
         ]
       }
     },

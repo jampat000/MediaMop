@@ -122,6 +122,7 @@ export async function apiFetch(
       signal: signal ?? undefined,
       headers: {
         Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest",
         ...requestInit.headers,
       },
     });

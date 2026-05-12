@@ -21,6 +21,7 @@ from mediamop.platform.health import health_router
 from mediamop.platform.readiness import readiness_router
 from mediamop.platform.http.request_context import RequestContextMiddleware
 from mediamop.platform.http.security_headers import SecurityHeadersMiddleware
+from mediamop.platform.http.xrw_csrf_middleware import XRequestedWithCsrfMiddleware
 from mediamop.platform.metrics.router import router as metrics_router
 
 
@@ -123,6 +124,7 @@ def create_app() -> FastAPI:
 
     application.add_middleware(SecurityHeadersMiddleware)
     application.add_middleware(RequestContextMiddleware)
+    application.add_middleware(XRequestedWithCsrfMiddleware)
 
     @application.exception_handler(StarletteHTTPException)
     async def _friendly_upgrade_landing_handler(request: Request, exc: StarletteHTTPException):
@@ -143,8 +145,8 @@ def create_app() -> FastAPI:
             CORSMiddleware,
             allow_origins=list(settings.cors_origins),
             allow_credentials=True,
-            allow_methods=["GET", "POST", "OPTIONS"],
-            allow_headers=["Content-Type", "Accept", "X-CSRF-Token"],
+            allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+            allow_headers=["Content-Type", "Accept", "X-CSRF-Token", "X-Requested-With"],
         )
 
     application.include_router(health_router)
