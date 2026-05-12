@@ -342,7 +342,7 @@ export function SettingsNotificationsTab() {
               Notification channels
             </h3>
             <p className="mt-1 text-sm text-[var(--mm-text2)]">
-              Each channel routes job events to a webhook URL. Use "Send test" to verify a channel
+              Each channel routes job events to a webhook URL. Use &ldquo;Send test&rdquo; to verify a channel
               before relying on it.
             </p>
           </div>
