@@ -113,7 +113,7 @@ def post_login(
         max_age=auth_service.session_public(session_row, settings=settings)["absolute_timeout_days"] * 86400,
         httponly=True,
         secure=settings.session_cookie_secure,
-        samesite=settings.session_cookie_samesite,
+        samesite=settings.session_cookie_samesite,  # type: ignore[arg-type]
         path="/",
     )
     response.headers.setdefault("Cache-Control", "no-store, private")
@@ -299,7 +299,7 @@ def post_logout(
         path="/",
         httponly=True,
         secure=settings.session_cookie_secure,
-        samesite=settings.session_cookie_samesite,
+        samesite=settings.session_cookie_samesite,  # type: ignore[arg-type]
     )
     response.headers.setdefault("Cache-Control", "no-store, private")
     response.status_code = status.HTTP_204_NO_CONTENT

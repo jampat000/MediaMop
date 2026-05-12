@@ -59,9 +59,9 @@ def prune_job_rows(session: Session, *, cutoff: datetime) -> dict[str, int]:
         )
     )
     return {
-        "refiner": refiner_del.rowcount,
-        "pruner": pruner_del.rowcount,
-        "subber": subber_del.rowcount,
+        "refiner": refiner_del.rowcount,  # type: ignore[attr-defined]
+        "pruner": pruner_del.rowcount,  # type: ignore[attr-defined]
+        "subber": subber_del.rowcount,  # type: ignore[attr-defined]
     }
 
 
