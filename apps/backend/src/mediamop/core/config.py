@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal, cast
 from urllib.parse import urlparse
 
 from mediamop.core.config_domains import (
@@ -118,7 +119,7 @@ class MediaMopSettings:
     previous_credentials_secrets: tuple[str, ...]
     session_cookie_name: str
     session_cookie_secure: bool
-    session_cookie_samesite: str
+    session_cookie_samesite: Literal["strict", "lax", "none"]
     session_idle_minutes: int
     session_absolute_days: int
     session_trusted_idle_minutes: int
@@ -325,11 +326,12 @@ class MediaMopSettings:
             (os.environ.get("MEDIAMOP_SESSION_COOKIE_NAME") or "").strip()
             or "mediamop_session"
         )
-        samesite = (
+        _samesite_raw = (
             (os.environ.get("MEDIAMOP_SESSION_COOKIE_SAMESITE") or "lax").strip().lower()
         )
-        if samesite not in ("lax", "strict", "none"):
-            samesite = "lax"
+        if _samesite_raw not in ("lax", "strict", "none"):
+            _samesite_raw = "lax"
+        samesite = cast(Literal["strict", "lax", "none"], _samesite_raw)
         secure = _env_bool(
             "MEDIAMOP_SESSION_COOKIE_SECURE",
             default=(env == "production"),
