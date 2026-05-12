@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 import logging
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse
@@ -19,11 +19,13 @@ from mediamop.platform.auth.csrf import (
 )
 from mediamop.platform.auth.deps_auth import UserPublicDep
 from mediamop.platform.configuration_bundle.service import apply_configuration_bundle, build_configuration_bundle
+from mediamop.platform.metrics.service import build_runtime_metrics_summary
+from mediamop.platform.suite_settings.logs_service import prune_log_file, read_suite_logs
+from mediamop.platform.suite_settings.operational_history import reset_operational_history
 from mediamop.platform.suite_settings.schemas import (
     ConfigurationBundleImportIn,
     SuiteConfigurationBackupItemOut,
     SuiteConfigurationBackupListOut,
-    SuiteUpdateDiagnosticsOut,
     SuiteLogCountsOut,
     SuiteLogEntryOut,
     SuiteLogsOut,
@@ -34,15 +36,17 @@ from mediamop.platform.suite_settings.schemas import (
     SuiteSecurityOverviewOut,
     SuiteSettingsOut,
     SuiteSettingsPutIn,
+    SuiteUpdateDiagnosticsOut,
     SuiteUpdateStartIn,
     SuiteUpdateStartOut,
     SuiteUpdateStatusOut,
 )
-from mediamop.platform.metrics.service import build_runtime_metrics_summary
-from mediamop.platform.suite_settings.operational_history import reset_operational_history
 from mediamop.platform.suite_settings.security_overview import build_suite_security_overview
-from mediamop.platform.suite_settings.logs_service import prune_log_file, read_suite_logs
-from mediamop.platform.suite_settings.service import apply_suite_settings_put, build_suite_settings_out, ensure_suite_settings_row
+from mediamop.platform.suite_settings.service import (
+    apply_suite_settings_put,
+    build_suite_settings_out,
+    ensure_suite_settings_row,
+)
 from mediamop.platform.suite_settings.suite_configuration_backup_service import (
     get_suite_configuration_backup_file_path,
     list_suite_configuration_backups,

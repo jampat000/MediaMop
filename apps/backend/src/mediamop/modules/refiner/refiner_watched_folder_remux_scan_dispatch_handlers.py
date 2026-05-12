@@ -12,10 +12,10 @@ from typing import Any
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
-from mediamop.modules.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
+from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
+from mediamop.modules.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_evaluate import (
     evaluate_watched_media_file_for_dispatch,
     fetch_radarr_and_sonarr_queue_rows_for_scan,
@@ -111,132 +111,131 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
         rel_this_run: set[str] = set()
         sample_cap = 32
 
-        with session_factory() as session:
-            with session.begin():
-                for file_path in files:
-                    min_size_mb = max(0, int(op_settings.refiner_min_input_file_size_mb))
-                    if min_size_mb > 0:
-                        try:
-                            size_bytes = int(file_path.stat().st_size)
-                        except OSError:
-                            logger.debug("Refiner scan skipped size check because file metadata could not be read: %s", file_path)
-                            continue
-                        if size_bytes < min_size_mb * 1024 * 1024:
-                            summary["skipped_below_minimum_file_size"] += 1
-                            logger.debug(
-                                "Refiner scan skipped %s because it is below the minimum input size (%s MB).",
-                                file_path,
-                                min_size_mb,
-                            )
-                            continue
-
-                    verdict = evaluate_watched_media_file_for_dispatch(
-                        radarr_rows=rad_rows,
-                        sonarr_rows=son_rows,
-                        file_path=file_path,
-                    )
-                    if verdict == "proceed":
-                        summary["verdict_proceed"] += 1
-                    elif verdict == "wait_upstream":
-                        summary["verdict_wait_upstream"] += 1
-                    else:
-                        summary["verdict_not_held"] += 1
-
-                    if verdict != "proceed" or not enqueue_remux_jobs:
+        with session_factory() as session, session.begin():
+            for file_path in files:
+                min_size_mb = max(0, int(op_settings.refiner_min_input_file_size_mb))
+                if min_size_mb > 0:
+                    try:
+                        size_bytes = int(file_path.stat().st_size)
+                    except OSError:
+                        logger.debug("Refiner scan skipped size check because file metadata could not be read: %s", file_path)
+                        continue
+                    if size_bytes < min_size_mb * 1024 * 1024:
+                        summary["skipped_below_minimum_file_size"] += 1
+                        logger.debug(
+                            "Refiner scan skipped %s because it is below the minimum input size (%s MB).",
+                            file_path,
+                            min_size_mb,
+                        )
                         continue
 
-                    rel = relative_posix_path_under_watched(watched_root=watched_path, file_path=file_path)
-                    if rel in rel_this_run:
-                        summary["skipped_duplicate_same_scan"] += 1
-                        continue
-                    rel_this_run.add(rel)
-
-                    if refiner_active_remux_pass_exists_for_relative_path(
-                        session,
-                        relative_posix=rel,
-                        media_scope=media_scope,
-                    ):
-                        summary["skipped_duplicate_active_queue"] += 1
-                        continue
-                    if refiner_completed_remux_output_exists_for_relative_path(
-                        session,
-                        relative_posix=rel,
-                        media_scope=media_scope,
-                        output_root=rt.output_folder,
-                    ):
-                        summary["skipped_existing_completed_output"] += 1
-                        if media_scope == "movie":
-                            summary["completed_source_cleanup_retried"] += 1
-                            cleanup_ok, _cleanup_reason = retry_completed_movie_source_cleanup(
-                                watched_root=watched_path,
-                                file_path=file_path,
-                            )
-                            if cleanup_ok:
-                                summary["completed_source_cleanup_retry_deleted"] += 1
-                            else:
-                                summary["completed_source_cleanup_retry_failed"] += 1
-                                logger.warning(
-                                    "Refiner completed-output source cleanup retry failed for %s",
-                                    file_path,
-                                )
-                        continue
-
-                    payload = json.dumps(
-                        {
-                            "relative_media_path": rel,
-                            "media_scope": media_scope,
-                        },
-                        separators=(",", ":"),
-                    )
-                    dedupe = f"{REFINER_FILE_REMUX_PASS_JOB_KIND}:scan:{uuid.uuid4().hex}"
-                    refiner_enqueue_or_get_job(
-                        session,
-                        dedupe_key=dedupe,
-                        job_kind=REFINER_FILE_REMUX_PASS_JOB_KIND,
-                        payload_json=payload,
-                    )
-                    summary["remux_jobs_enqueued"] += 1
-                    if len(sample_paths) < sample_cap:
-                        sample_paths.append(rel)
-
-                queued = int(summary["remux_jobs_enqueued"])
-                waiting = int(summary["verdict_wait_upstream"])
-                seen = int(summary["media_candidates_seen"])
-                duplicates = (
-                    int(summary["skipped_duplicate_same_scan"])
-                    + int(summary["skipped_duplicate_active_queue"])
-                    + int(summary["skipped_existing_completed_output"])
+                verdict = evaluate_watched_media_file_for_dispatch(
+                    radarr_rows=rad_rows,
+                    sonarr_rows=son_rows,
+                    file_path=file_path,
                 )
-                if queued:
-                    summary["scan_result_label"] = "files_queued"
-                    summary["user_message"] = (
-                        f"{queued} file{' was' if queued == 1 else 's were'} added to Refiner for processing."
-                    )
-                elif waiting:
-                    summary["scan_result_label"] = "waiting_for_files"
-                    summary["user_message"] = (
-                        f"{waiting} file{' looks' if waiting == 1 else 's look'} like it is still being copied or imported, "
-                        "so MediaMop left it alone for now."
-                    )
-                    summary["waiting_message"] = "MediaMop will check again on the next scheduled scan."
-                elif seen and not enqueue_remux_jobs:
-                    summary["scan_result_label"] = "check_only"
-                    summary["user_message"] = (
-                        f"{seen} media file{' was' if seen == 1 else 's were'} found, but this scan was set to check only."
-                    )
-                elif seen and duplicates:
-                    summary["scan_result_label"] = "already_queued"
-                    summary["user_message"] = (
-                        "MediaMop found matching media files, but they were already waiting for Refiner."
-                    )
-                elif seen:
-                    summary["scan_result_label"] = "nothing_new"
-                    summary["user_message"] = "MediaMop found media files, but there was nothing new to queue."
+                if verdict == "proceed":
+                    summary["verdict_proceed"] += 1
+                elif verdict == "wait_upstream":
+                    summary["verdict_wait_upstream"] += 1
                 else:
-                    summary["scan_result_label"] = "no_media_found"
-                    summary["user_message"] = "MediaMop did not find any media files in this watched folder."
+                    summary["verdict_not_held"] += 1
 
-                # File-level processing events now tell the user what happened. Recording a scan
-                # event here makes Activity look backwards when completed file events arrive first.
+                if verdict != "proceed" or not enqueue_remux_jobs:
+                    continue
+
+                rel = relative_posix_path_under_watched(watched_root=watched_path, file_path=file_path)
+                if rel in rel_this_run:
+                    summary["skipped_duplicate_same_scan"] += 1
+                    continue
+                rel_this_run.add(rel)
+
+                if refiner_active_remux_pass_exists_for_relative_path(
+                    session,
+                    relative_posix=rel,
+                    media_scope=media_scope,
+                ):
+                    summary["skipped_duplicate_active_queue"] += 1
+                    continue
+                if refiner_completed_remux_output_exists_for_relative_path(
+                    session,
+                    relative_posix=rel,
+                    media_scope=media_scope,
+                    output_root=rt.output_folder,
+                ):
+                    summary["skipped_existing_completed_output"] += 1
+                    if media_scope == "movie":
+                        summary["completed_source_cleanup_retried"] += 1
+                        cleanup_ok, _cleanup_reason = retry_completed_movie_source_cleanup(
+                            watched_root=watched_path,
+                            file_path=file_path,
+                        )
+                        if cleanup_ok:
+                            summary["completed_source_cleanup_retry_deleted"] += 1
+                        else:
+                            summary["completed_source_cleanup_retry_failed"] += 1
+                            logger.warning(
+                                "Refiner completed-output source cleanup retry failed for %s",
+                                file_path,
+                            )
+                    continue
+
+                payload = json.dumps(
+                    {
+                        "relative_media_path": rel,
+                        "media_scope": media_scope,
+                    },
+                    separators=(",", ":"),
+                )
+                dedupe = f"{REFINER_FILE_REMUX_PASS_JOB_KIND}:scan:{uuid.uuid4().hex}"
+                refiner_enqueue_or_get_job(
+                    session,
+                    dedupe_key=dedupe,
+                    job_kind=REFINER_FILE_REMUX_PASS_JOB_KIND,
+                    payload_json=payload,
+                )
+                summary["remux_jobs_enqueued"] += 1
+                if len(sample_paths) < sample_cap:
+                    sample_paths.append(rel)
+
+            queued = int(summary["remux_jobs_enqueued"])
+            waiting = int(summary["verdict_wait_upstream"])
+            seen = int(summary["media_candidates_seen"])
+            duplicates = (
+                int(summary["skipped_duplicate_same_scan"])
+                + int(summary["skipped_duplicate_active_queue"])
+                + int(summary["skipped_existing_completed_output"])
+            )
+            if queued:
+                summary["scan_result_label"] = "files_queued"
+                summary["user_message"] = (
+                    f"{queued} file{' was' if queued == 1 else 's were'} added to Refiner for processing."
+                )
+            elif waiting:
+                summary["scan_result_label"] = "waiting_for_files"
+                summary["user_message"] = (
+                    f"{waiting} file{' looks' if waiting == 1 else 's look'} like it is still being copied or imported, "
+                    "so MediaMop left it alone for now."
+                )
+                summary["waiting_message"] = "MediaMop will check again on the next scheduled scan."
+            elif seen and not enqueue_remux_jobs:
+                summary["scan_result_label"] = "check_only"
+                summary["user_message"] = (
+                    f"{seen} media file{' was' if seen == 1 else 's were'} found, but this scan was set to check only."
+                )
+            elif seen and duplicates:
+                summary["scan_result_label"] = "already_queued"
+                summary["user_message"] = (
+                    "MediaMop found matching media files, but they were already waiting for Refiner."
+                )
+            elif seen:
+                summary["scan_result_label"] = "nothing_new"
+                summary["user_message"] = "MediaMop found media files, but there was nothing new to queue."
+            else:
+                summary["scan_result_label"] = "no_media_found"
+                summary["user_message"] = "MediaMop did not find any media files in this watched folder."
+
+            # File-level processing events now tell the user what happened. Recording a scan
+            # event here makes Activity look backwards when completed file events arrive first.
 
     return _run

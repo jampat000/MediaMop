@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -180,7 +179,7 @@ class SuiteUpdateStatusOut(BaseModel):
     docker_update_command: str | None = None
     in_app_upgrade_supported: bool = False
     in_app_upgrade_summary: str | None = None
-    upgrade: "SuiteUpgradeProgressOut | None" = None
+    upgrade: SuiteUpgradeProgressOut | None = None
 
 
 class SuiteUpdateStartOut(BaseModel):

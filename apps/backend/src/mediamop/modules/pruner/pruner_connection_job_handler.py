@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from typing import Any
 
 from sqlalchemy.orm import Session, sessionmaker
@@ -16,7 +16,12 @@ from mediamop.modules.pruner.pruner_media_library import test_emby_jellyfin_conn
 from mediamop.modules.pruner.worker_loop import PrunerJobWorkContext
 from mediamop.platform.activity import constants as C
 from mediamop.platform.activity.service import record_activity_event
-from mediamop.platform.observability.diagnostics import DiagnosticAction, DiagnosticModule, DiagnosticResult, DiagnosticTrigger
+from mediamop.platform.observability.diagnostics import (
+    DiagnosticAction,
+    DiagnosticModule,
+    DiagnosticResult,
+    DiagnosticTrigger,
+)
 from mediamop.platform.observability.operator_messages import activity_detail_envelope, connection_test_title
 
 
@@ -72,7 +77,7 @@ def make_pruner_server_connection_test_handler(
         else:
             ok, detail = False, f"unsupported provider {provider!r}"
 
-        when = datetime.now(timezone.utc)
+        when = datetime.now(UTC)
         title = connection_test_title(module_label="Pruner", name=display_name, provider=provider, ok=ok)
         detail_s = (detail or "")[:10_000]
         result_for_message = DiagnosticResult.SUCCESS if ok else DiagnosticResult.FAILED
@@ -88,25 +93,24 @@ def make_pruner_server_connection_test_handler(
             ),
             "detail": detail_s,
         }
-        with session_factory() as session:
-            with session.begin():
-                inst2 = get_server_instance(session, sid)
-                if inst2 is None:
-                    return
-                inst2.last_connection_test_at = when
-                inst2.last_connection_test_ok = ok
-                inst2.last_connection_test_detail = detail_s
-                evt = (
-                    C.PRUNER_CONNECTION_TEST_SUCCEEDED
-                    if ok
-                    else C.PRUNER_CONNECTION_TEST_FAILED
-                )
-                record_activity_event(
-                    session,
-                    event_type=evt,
-                    module="pruner",
-                    title=title,
-                    detail=json.dumps(activity_detail, separators=(",", ":"))[:10_000],
-                )
+        with session_factory() as session, session.begin():
+            inst2 = get_server_instance(session, sid)
+            if inst2 is None:
+                return
+            inst2.last_connection_test_at = when
+            inst2.last_connection_test_ok = ok
+            inst2.last_connection_test_detail = detail_s
+            evt = (
+                C.PRUNER_CONNECTION_TEST_SUCCEEDED
+                if ok
+                else C.PRUNER_CONNECTION_TEST_FAILED
+            )
+            record_activity_event(
+                session,
+                event_type=evt,
+                module="pruner",
+                title=title,
+                detail=json.dumps(activity_detail, separators=(",", ":"))[:10_000],
+            )
 
     return _run

@@ -9,39 +9,38 @@ from typing import Any
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
+from mediamop.modules.refiner.file_remux_pass.run import run_refiner_file_remux_pass
+from mediamop.modules.refiner.file_remux_pass.visibility import (
+    REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
+    remux_pass_activity_title,
+    remux_pass_result_to_activity_detail,
+)
 from mediamop.modules.refiner.refiner_file_remux_pass_activity import (
     complete_refiner_file_processing_activity,
     record_refiner_file_processing_started,
     record_refiner_file_remux_pass_completed,
     update_refiner_file_processing_progress,
 )
-from mediamop.modules.refiner.file_remux_pass.run import run_refiner_file_remux_pass
 from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
 from mediamop.modules.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
 from mediamop.modules.refiner.refiner_remux_rules_settings_service import load_refiner_remux_rules_config
-from mediamop.modules.refiner.file_remux_pass.visibility import (
-    REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
-    remux_pass_activity_title,
-    remux_pass_result_to_activity_detail,
-)
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
 
 
 def _record(session_factory: sessionmaker[Session], *, payload: dict[str, Any], activity_id: int | None = None) -> None:
     detail = remux_pass_result_to_activity_detail(payload)
     title = remux_pass_activity_title(payload)
-    with session_factory() as session:
-        with session.begin():
-            if activity_id is not None:
-                updated = complete_refiner_file_processing_activity(
-                    session,
-                    activity_id=activity_id,
-                    title=title,
-                    detail=detail,
-                )
-                if updated:
-                    return
-            record_refiner_file_remux_pass_completed(session, title=title, detail=detail)
+    with session_factory() as session, session.begin():
+        if activity_id is not None:
+            updated = complete_refiner_file_processing_activity(
+                session,
+                activity_id=activity_id,
+                title=title,
+                detail=detail,
+            )
+            if updated:
+                return
+        record_refiner_file_remux_pass_completed(session, title=title, detail=detail)
 
 
 class RefinerActivityProgressReporter:
@@ -52,12 +51,11 @@ class RefinerActivityProgressReporter:
 
     def __call__(self, payload: dict[str, Any]) -> None:
         body = {"job_id": self._job_id, **payload}
-        with self._session_factory() as session:
-            with session.begin():
-                if self.activity_id is None:
-                    self.activity_id = record_refiner_file_processing_started(session, payload=body)
-                else:
-                    update_refiner_file_processing_progress(session, activity_id=self.activity_id, payload=body)
+        with self._session_factory() as session, session.begin():
+            if self.activity_id is None:
+                self.activity_id = record_refiner_file_processing_started(session, payload=body)
+            else:
+                update_refiner_file_processing_progress(session, activity_id=self.activity_id, payload=body)
 
 
 def _make_progress_reporter(session_factory: sessionmaker[Session], *, job_id: int) -> RefinerActivityProgressReporter:

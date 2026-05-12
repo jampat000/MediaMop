@@ -12,7 +12,8 @@ from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.subber.subber_jobs_model import SubberJob, SubberJobStatus
 from mediamop.platform.activity import constants as activity_constants
 from mediamop.platform.activity.models import ActivityEvent
-from tests.integration_helpers import auth_post, csrf as fetch_csrf
+from tests.integration_helpers import auth_post
+from tests.integration_helpers import csrf as fetch_csrf
 
 
 def _login(client: TestClient) -> str:

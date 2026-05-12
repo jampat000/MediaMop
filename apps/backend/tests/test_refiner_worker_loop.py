@@ -4,29 +4,28 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from unittest.mock import patch
 
 import pytest
 from sqlalchemy.orm import Session, sessionmaker
 
+import mediamop.modules.refiner.jobs_model  # noqa: F401
+import mediamop.platform.activity.models  # noqa: F401
+import mediamop.platform.auth.models  # noqa: F401
 from mediamop.core.config import MediaMopSettings
+from mediamop.core.db import Base
+from mediamop.modules.refiner import worker_loop as refiner_worker_loop_mod
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.modules.refiner.jobs_ops import complete_claimed_refiner_job as real_complete_claimed
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.worker_limits import clamp_refiner_worker_count
-from mediamop.modules.refiner import worker_loop as refiner_worker_loop_mod
-from mediamop.modules.refiner.jobs_ops import complete_claimed_refiner_job as real_complete_claimed
 from mediamop.modules.refiner.worker_loop import (
     process_one_refiner_job,
     refiner_worker_run_forever,
     start_refiner_worker_background_tasks,
     stop_refiner_worker_background_tasks,
 )
-
-import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
-from mediamop.core.db import Base
 
 
 @pytest.fixture
@@ -152,7 +151,7 @@ def test_process_one_idle_when_no_jobs(session_factory) -> None:
 
 
 def test_process_one_completes_with_success_handler(session_factory) -> None:
-    t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=UTC)
     with session_factory() as s:
         refiner_enqueue_or_get_job(s, dedupe_key="d1", job_kind="refiner.test.ok.v1", max_attempts=3)
         s.commit()
@@ -174,7 +173,7 @@ def test_process_one_completes_with_success_handler(session_factory) -> None:
 
 
 def test_process_one_fail_path_on_handler_error(session_factory) -> None:
-    t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=UTC)
     with session_factory() as s:
         refiner_enqueue_or_get_job(
             s,
@@ -203,7 +202,7 @@ def test_process_one_fail_path_on_handler_error(session_factory) -> None:
 
 
 def test_process_one_missing_handler_fails_claimed_job(session_factory) -> None:
-    t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=UTC)
     with session_factory() as s:
         refiner_enqueue_or_get_job(s, dedupe_key="d3", job_kind="refiner.test.unknown.v1")
         s.commit()
@@ -227,7 +226,7 @@ def test_refiner_worker_loop_processes_one_job_then_stops(session_factory, monke
         "mediamop.modules.refiner.worker_loop.REFINER_WORKER_IDLE_SLEEP_SECONDS",
         0.05,
     )
-    t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=UTC)
     with session_factory() as s:
         refiner_enqueue_or_get_job(s, dedupe_key="loop1", job_kind="refiner.test.loop_ok.v1")
         s.commit()
@@ -314,7 +313,7 @@ def test_worker_survives_tick_exception_then_processes_idle(
 
 
 def test_process_one_survives_complete_claim_raises(session_factory) -> None:
-    t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=UTC)
     with session_factory() as s:
         refiner_enqueue_or_get_job(s, dedupe_key="d-complete-raise", job_kind="refiner.test.ok.v1", max_attempts=3)
         s.commit()
@@ -345,7 +344,7 @@ def test_process_one_survives_complete_claim_raises(session_factory) -> None:
 
 
 def test_process_one_complete_refused_triggers_terminalization(session_factory) -> None:
-    t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=UTC)
     with session_factory() as s:
         refiner_enqueue_or_get_job(s, dedupe_key="d-complete-false", job_kind="refiner.test.ok.v1", max_attempts=3)
         s.commit()
@@ -374,7 +373,7 @@ def test_process_one_complete_refused_triggers_terminalization(session_factory) 
 
 
 def test_terminalization_of_first_job_does_not_block_second_job_completion(session_factory) -> None:
-    t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=UTC)
     with session_factory() as s:
         refiner_enqueue_or_get_job(s, dedupe_key="seq-a", job_kind="refiner.test.ok.v1", max_attempts=3)
         refiner_enqueue_or_get_job(s, dedupe_key="seq-b", job_kind="refiner.test.ok.v1", max_attempts=3)
@@ -436,7 +435,7 @@ def test_worker_stays_alive_after_complete_failure_terminalization(
         "REFINER_WORKER_IDLE_SLEEP_SECONDS",
         0.05,
     )
-    t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=UTC)
     with session_factory() as s:
         refiner_enqueue_or_get_job(s, dedupe_key="w-term", job_kind="refiner.test.term.v1", max_attempts=3)
         s.commit()

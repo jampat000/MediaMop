@@ -20,6 +20,5 @@ def test_configuration_backup_download_rejects_path_traversal_file_name() -> Non
         db.commit()
         backup_id = row.id
 
-    with factory() as db:
-        with pytest.raises(ValueError, match="file name is invalid"):
-            get_suite_configuration_backup_file_path(db, settings=settings, backup_id=backup_id)
+    with factory() as db, pytest.raises(ValueError, match="file name is invalid"):
+        get_suite_configuration_backup_file_path(db, settings=settings, backup_id=backup_id)

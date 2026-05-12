@@ -2,19 +2,22 @@
 
 from __future__ import annotations
 
-from enum import Enum
+import enum
 
 from fastapi import APIRouter, HTTPException, Request
 from starlette import status
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
 from mediamop.core.config import MediaMopSettings
+from mediamop.platform.activity import constants as act_c
+from mediamop.platform.activity.service import record_activity_event
 from mediamop.platform.arr_library.arr_http_resolve import (
     preview_radarr_http_credentials_after_put,
     preview_sonarr_http_credentials_after_put,
     resolve_radarr_http_credentials,
     resolve_sonarr_http_credentials,
 )
+from mediamop.platform.arr_library.arr_v3_http import ArrLibraryV3Client, ArrLibraryV3HttpError
 from mediamop.platform.arr_library.operator_settings_schemas import (
     ArrLibraryConnectionPutIn,
     ArrLibraryConnectionTestIn,
@@ -32,9 +35,6 @@ from mediamop.platform.arr_library.operator_settings_service import (
     record_connection_test_result_radarr,
     record_connection_test_result_sonarr,
 )
-from mediamop.platform.arr_library.arr_v3_http import ArrLibraryV3Client, ArrLibraryV3HttpError
-from mediamop.platform.activity import constants as act_c
-from mediamop.platform.activity.service import record_activity_event
 from mediamop.platform.auth.authorization import RequireOperatorDep
 from mediamop.platform.auth.csrf import (
     current_raw_session_token,
@@ -47,7 +47,7 @@ from mediamop.platform.auth.deps_auth import UserPublicDep
 router = APIRouter(tags=["arr-library"])
 
 
-class ArrSearchLaneKey(str, Enum):
+class ArrSearchLaneKey(enum.StrEnum):
     """URL path keys for single-lane search preference saves."""
 
     sonarr_missing = "sonarr_missing"

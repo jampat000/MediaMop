@@ -5,11 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import select
 from starlette.testclient import TestClient
 
+from alembic import command
 from mediamop.api.factory import create_app
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.modules.subber.subber_job_kinds import (

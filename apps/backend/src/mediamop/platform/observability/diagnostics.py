@@ -8,10 +8,9 @@ operator-readable reasons/next actions instead of raw exception-only messages.
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Mapping
-
 
 SECRET_FIELD_FRAGMENTS = ("api_key", "apikey", "authorization", "cookie", "password", "secret", "token")
 SECRET_ASSIGNMENT_RE = re.compile(

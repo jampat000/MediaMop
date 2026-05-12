@@ -11,7 +11,7 @@ import asyncio
 import json
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
@@ -34,9 +34,9 @@ from mediamop.modules.pruner.pruner_constants import (
 )
 from mediamop.modules.pruner.pruner_job_kinds import PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND
 from mediamop.modules.pruner.pruner_jobs_ops import pruner_enqueue_or_get_job
-from mediamop.platform.arr_library.schedule_wall_clock import DAY_NAMES, schedule_time_window_active
 from mediamop.modules.pruner.pruner_scope_settings_model import PrunerScopeSettings
 from mediamop.modules.pruner.pruner_server_instance_model import PrunerServerInstance
+from mediamop.platform.arr_library.schedule_wall_clock import DAY_NAMES, schedule_time_window_active
 from mediamop.platform.suite_settings.service import ensure_suite_settings_row
 
 logger = logging.getLogger(__name__)
@@ -106,12 +106,12 @@ def _scope_row_in_schedule_window(session: Session, sc: PrunerScopeSettings, *, 
 def _scope_row_due(sc: PrunerScopeSettings, *, now: datetime) -> bool:
     """Due using only this row's interval and ``last_scheduled_preview_enqueued_at``."""
 
-    when = now if now.tzinfo else now.replace(tzinfo=timezone.utc)
+    when = now if now.tzinfo else now.replace(tzinfo=UTC)
     interval = clamp_pruner_scheduled_preview_interval_seconds(int(sc.scheduled_preview_interval_seconds))
     last_at = sc.last_scheduled_preview_enqueued_at
     if last_at is None:
         return True
-    last = last_at if last_at.tzinfo else last_at.replace(tzinfo=timezone.utc)
+    last = last_at if last_at.tzinfo else last_at.replace(tzinfo=UTC)
     return (when - last).total_seconds() >= float(interval)
 
 
@@ -126,7 +126,7 @@ def enqueue_due_scheduled_pruner_previews(session: Session, *, now: datetime) ->
     * row's own due-time vs ``last_scheduled_preview_enqueued_at`` and its interval
     """
 
-    when = now if now.tzinfo else now.replace(tzinfo=timezone.utc)
+    when = now if now.tzinfo else now.replace(tzinfo=UTC)
     stmt = (
         select(PrunerScopeSettings)
         .join(
@@ -175,12 +175,11 @@ def run_pruner_preview_schedule_enqueue_tick(
     *,
     now: datetime | None = None,
 ) -> int:
-    when = now if now is not None else datetime.now(timezone.utc)
+    when = now if now is not None else datetime.now(UTC)
     if when.tzinfo is None:
-        when = when.replace(tzinfo=timezone.utc)
-    with session_factory() as session:
-        with session.begin():
-            return enqueue_due_scheduled_pruner_previews(session, now=when)
+        when = when.replace(tzinfo=UTC)
+    with session_factory() as session, session.begin():
+        return enqueue_due_scheduled_pruner_previews(session, now=when)
 
 
 async def _run_pruner_preview_schedule_forever(

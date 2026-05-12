@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -25,7 +25,7 @@ def _count_state(session: Session, *, media_scope: str | None = None, status: st
 
 def build_subber_overview(session: Session, *, window_days: int = 30) -> SubberOverviewOut:
     wd = max(1, int(window_days))
-    since = datetime.now(timezone.utc) - timedelta(days=wd)
+    since = datetime.now(UTC) - timedelta(days=wd)
 
     subtitles_downloaded = _count_state(session, status="found")
     still_missing = _count_state(session, status="missing")

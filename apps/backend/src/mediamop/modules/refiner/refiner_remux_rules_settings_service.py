@@ -5,13 +5,13 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from mediamop.modules.refiner.refiner_remux_rules_settings_model import RefinerRemuxRulesSettingsRow
 from mediamop.modules.refiner.refiner_remux_rules import (
     RefinerRulesConfig,
+    default_refiner_remux_rules_config,
     normalize_audio_preference_mode,
     parse_subtitle_langs_csv,
 )
-from mediamop.modules.refiner.refiner_remux_rules import default_refiner_remux_rules_config
+from mediamop.modules.refiner.refiner_remux_rules_settings_model import RefinerRemuxRulesSettingsRow
 from mediamop.modules.refiner.schemas_refiner_remux_rules_settings import (
     RefinerRemuxRulesScopeOut,
     RefinerRemuxRulesSettingsOut,

@@ -3,25 +3,26 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime, timedelta, timezone
 from types import SimpleNamespace
-from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy.orm import Session
 from starlette.requests import Request
 from starlette.testclient import TestClient
 
-from mediamop.api.factory import create_app
 from mediamop.api.deps import get_db_session
+from mediamop.api.factory import create_app
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.platform.activity import constants as activity_constants
-from mediamop.platform.activity.models import ActivityEvent
-from mediamop.platform.activity.live_stream import activity_latest_notifier
 from mediamop.platform.activity import service as activity_service
+from mediamop.platform.activity.live_stream import activity_latest_notifier
+from mediamop.platform.activity.models import ActivityEvent
 from mediamop.platform.activity.router import get_activity_stream, iter_activity_latest_sse
 from mediamop.platform.suite_settings.service import ensure_suite_settings_row
-from tests.integration_helpers import auth_post, csrf as fetch_csrf
+from tests.integration_helpers import auth_post
+from tests.integration_helpers import csrf as fetch_csrf
 
 
 def _seed_activity_row(*, title: str) -> int:
@@ -96,7 +97,7 @@ def test_record_activity_event_does_not_prune_history_using_log_retention() -> N
             module="refiner",
             title="Old Refiner result that still backs overview history",
             detail="{}",
-            created_at=datetime.now(timezone.utc) - timedelta(days=10),
+            created_at=datetime.now(UTC) - timedelta(days=10),
         )
         db.add(old)
         db.flush()
@@ -192,7 +193,7 @@ async def test_activity_stream_authenticated_emits_latest_format(client_with_adm
         "type": "http",
         "method": "GET",
         "path": "/api/v1/activity/stream",
-        "headers": [(b"cookie", f"{cookie_name}={raw}".encode("utf-8"))],
+        "headers": [(b"cookie", f"{cookie_name}={raw}".encode())],
         "app": app,
     }
 

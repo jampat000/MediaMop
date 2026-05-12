@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 PRUNER_PREVIEW_GENRE_FILTER_MAX_TOKENS = 25
 PRUNER_PREVIEW_GENRE_FILTER_MAX_TOKEN_LEN = 64
@@ -133,7 +134,4 @@ def item_matches_genre_include_filter(
     fl = {str(x).casefold() for x in include_filters if str(x).strip()}
     if not fl:
         return True
-    for g in item_genres:
-        if str(g).casefold() in fl:
-            return True
-    return False
+    return any(str(g).casefold() in fl for g in item_genres)

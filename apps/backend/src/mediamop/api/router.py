@@ -14,17 +14,17 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from mediamop.modules.dashboard.router import router as dashboard_router
+from mediamop.modules.pruner.router import router as pruner_router
 from mediamop.modules.refiner.router import router as refiner_router
 from mediamop.modules.subber.router import router as subber_router
-from mediamop.modules.pruner.router import router as pruner_router
 from mediamop.platform.activity.router import router as activity_router
+from mediamop.platform.arr_library.http_router import router as arr_library_router
 from mediamop.platform.auth.router import router as auth_router
 from mediamop.platform.local_browse.router import router as local_browse_router
+from mediamop.platform.notifications.router import router as notifications_router
 from mediamop.platform.reconciliation.router import router as reconciliation_router
 from mediamop.platform.suite_settings.router import router as suite_settings_router
-from mediamop.platform.arr_library.http_router import router as arr_library_router
 from mediamop.platform.system_configuration.router import router as system_configuration_router
-from mediamop.platform.notifications.router import router as notifications_router
 
 API_V1_PREFIX = "/api/v1"
 

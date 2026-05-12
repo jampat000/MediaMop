@@ -43,19 +43,18 @@ def make_refiner_work_temp_stale_sweep_handler(
 
     def _run(ctx: RefinerJobWorkContext) -> None:
         media_scope = _parse_work_temp_stale_sweep_payload(ctx.payload_json)
-        with session_factory() as session:
-            with session.begin():
-                result: dict[str, Any] = run_refiner_work_temp_stale_sweep_for_scope(
-                    session=session,
-                    settings=settings,
-                    media_scope=media_scope,
-                )
-                result["job_id"] = ctx.id
-                detail = json.dumps(result, separators=(",", ":"), ensure_ascii=True)[:10_000]
-                record_refiner_work_temp_stale_sweep_completed(
-                    session,
-                    media_scope=media_scope,
-                    detail=detail,
-                )
+        with session_factory() as session, session.begin():
+            result: dict[str, Any] = run_refiner_work_temp_stale_sweep_for_scope(
+                session=session,
+                settings=settings,
+                media_scope=media_scope,
+            )
+            result["job_id"] = ctx.id
+            detail = json.dumps(result, separators=(",", ":"), ensure_ascii=True)[:10_000]
+            record_refiner_work_temp_stale_sweep_completed(
+                session,
+                media_scope=media_scope,
+                detail=detail,
+            )
 
     return _run

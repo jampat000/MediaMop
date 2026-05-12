@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from copy import deepcopy
+
 from starlette.testclient import TestClient
 
-from tests.integration_helpers import auth_post, csrf as fetch_csrf, trusted_browser_origin_headers
+from tests.integration_helpers import auth_post, trusted_browser_origin_headers
+from tests.integration_helpers import csrf as fetch_csrf
 
 
 def _login_admin(client: TestClient) -> None:

@@ -10,11 +10,11 @@ import logging
 import os
 import shutil
 import subprocess
-import tempfile
 import sys
+import tempfile
 import time
-from pathlib import Path
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from mediamop.modules.refiner.refiner_remux_rules import RemuxPlan
@@ -222,14 +222,14 @@ def build_ffmpeg_argv(*, ffmpeg_bin: str, src: Path, dst: Path, plan: RemuxPlan)
         args.extend(["-map", f"0:{t.input_index}"])
     args.extend(["-c", "copy"])
     for i, t in enumerate(plan.audio):
-        args.extend(["-disposition:a:%d" % i, "default" if t.default else "0"])
+        args.extend([f"-disposition:a:{i:d}", "default" if t.default else "0"])
     for i, t in enumerate(plan.subtitles):
         flags: list[str] = []
         if t.default:
             flags.append("default")
         if t.forced:
             flags.append("forced")
-        args.extend(["-disposition:s:%d" % i, "+".join(flags) if flags else "0"])
+        args.extend([f"-disposition:s:{i:d}", "+".join(flags) if flags else "0"])
     args.append(str(dst))
     return args
 

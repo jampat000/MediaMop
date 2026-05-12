@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import threading
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+# Register all ORM tables on Base.metadata (create_all parity with Alembic surface).
+import mediamop.modules.refiner.jobs_model  # noqa: F401
+import mediamop.platform.activity.models  # noqa: F401
+import mediamop.platform.auth.models  # noqa: F401
 from mediamop.core.db import Base
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.jobs_ops import (
@@ -20,11 +24,6 @@ from mediamop.modules.refiner.jobs_ops import (
     recover_handler_ok_finalize_failed_to_completed,
     refiner_enqueue_or_get_job,
 )
-
-# Register all ORM tables on Base.metadata (create_all parity with Alembic surface).
-import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
 
 
 @pytest.fixture
@@ -52,7 +51,7 @@ def session_factory(jobs_engine):
 
 
 def _t0() -> datetime:
-    return datetime(2026, 4, 10, 12, 0, 0, tzinfo=timezone.utc)
+    return datetime(2026, 4, 10, 12, 0, 0, tzinfo=UTC)
 
 
 def test_enqueue_duplicate_dedupe_key_returns_same_row(session_factory):

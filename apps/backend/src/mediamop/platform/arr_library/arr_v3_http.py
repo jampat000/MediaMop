@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import urllib.error
 import urllib.parse
@@ -80,10 +81,8 @@ class ArrLibraryV3Client:
                 return json.loads(raw.decode("utf-8"))
         except urllib.error.HTTPError as e:
             body = ""
-            try:
+            with contextlib.suppress(Exception):
                 body = e.read().decode("utf-8", errors="replace")[:500]
-            except Exception:
-                pass
             raise ArrLibraryV3HttpError(f"HTTP {e.code}: {body}") from e
 
     def health_ok(self) -> None:

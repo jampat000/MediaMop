@@ -6,14 +6,18 @@ from pathlib import Path
 
 import pytest
 import sqlalchemy as sa
-from alembic import command
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from starlette.testclient import TestClient
 
+from alembic import command
 from mediamop.api.factory import create_app
-from mediamop.core.alembic_revision_check import DatabaseSchemaMismatch, _script_and_head, ensure_database_at_application_head
+from mediamop.core.alembic_revision_check import (
+    DatabaseSchemaMismatch,
+    _script_and_head,
+    ensure_database_at_application_head,
+)
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine
 
@@ -79,9 +83,8 @@ def test_api_startup_fails_without_migrations(monkeypatch: pytest.MonkeyPatch, t
     monkeypatch.setenv("MEDIAMOP_HOME", str(isolated))
     MediaMopSettings.load()
 
-    with pytest.raises(DatabaseSchemaMismatch) as excinfo:
-        with TestClient(create_app()):
-            pass
+    with pytest.raises(DatabaseSchemaMismatch) as excinfo, TestClient(create_app()):
+        pass
     assert excinfo.value.kind == "unversioned"
 
 

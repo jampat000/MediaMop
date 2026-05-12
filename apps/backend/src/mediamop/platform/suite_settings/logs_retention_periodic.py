@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -31,14 +31,13 @@ def run_log_retention_tick(
     now: datetime | None = None,
 ) -> int:
     global _last_prune_at
-    when = now if now is not None else datetime.now(timezone.utc)
+    when = now if now is not None else datetime.now(UTC)
     if when.tzinfo is None:
-        when = when.replace(tzinfo=timezone.utc)
+        when = when.replace(tzinfo=UTC)
     if _last_prune_at is not None and (when - _last_prune_at).total_seconds() < LOG_RETENTION_MIN_RUN_INTERVAL_SECONDS:
         return 0
-    with session_factory() as session:
-        with session.begin():
-            prune_logs_for_retention(session, settings)
+    with session_factory() as session, session.begin():
+        prune_logs_for_retention(session, settings)
     _last_prune_at = when
     return 1
 

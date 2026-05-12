@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 
 from sqlalchemy import desc, event, func, or_, select
 from sqlalchemy.orm import Session
@@ -20,7 +20,7 @@ _BOOTSTRAP_DENIED_SUPPRESS_SECONDS = 60
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def record_activity_event(

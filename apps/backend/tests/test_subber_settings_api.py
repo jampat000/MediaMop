@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
+import urllib.error
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-import urllib.error
-from alembic import command
 from alembic.config import Config
 from starlette.testclient import TestClient
 
+from alembic import command
 from mediamop.api.factory import create_app
 from mediamop.modules.subber.subber_settings_api import _load_secrets_envelope
 from tests.integration_app_runtime_quiesce import (
@@ -379,7 +379,7 @@ class _JsonResponse:
     def __init__(self, payload: str) -> None:
         self._payload = payload
 
-    def __enter__(self) -> "_JsonResponse":
+    def __enter__(self) -> _JsonResponse:
         return self
 
     def __exit__(self, *_args: object) -> None:

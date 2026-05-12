@@ -7,7 +7,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
@@ -18,6 +17,7 @@ import mediamop.modules.pruner.pruner_scope_settings_model  # noqa: F401
 import mediamop.modules.pruner.pruner_server_instance_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
+from alembic import command
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.modules.pruner.pruner_constants import MEDIA_SCOPE_TV, RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED
@@ -47,25 +47,24 @@ def session_factory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> sessionm
 
 def test_two_emby_connection_tests_hit_distinct_base_urls(session_factory: sessionmaker[Session]) -> None:
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            a = create_server_instance(
-                s,
-                settings,
-                provider="emby",
-                display_name="Emby A",
-                base_url="http://emby-a.test",
-                credentials_secrets={"api_key": "k-a"},
-            )
-            b = create_server_instance(
-                s,
-                settings,
-                provider="emby",
-                display_name="Emby B",
-                base_url="http://emby-b.test",
-                credentials_secrets={"api_key": "k-b"},
-            )
-            id_a, id_b = int(a.id), int(b.id)
+    with session_factory() as s, s.begin():
+        a = create_server_instance(
+            s,
+            settings,
+            provider="emby",
+            display_name="Emby A",
+            base_url="http://emby-a.test",
+            credentials_secrets={"api_key": "k-a"},
+        )
+        b = create_server_instance(
+            s,
+            settings,
+            provider="emby",
+            display_name="Emby B",
+            base_url="http://emby-b.test",
+            credentials_secrets={"api_key": "k-b"},
+        )
+        id_a, id_b = int(a.id), int(b.id)
 
     urls: list[str] = []
 
@@ -96,25 +95,24 @@ def test_two_emby_connection_tests_hit_distinct_base_urls(session_factory: sessi
 
 def test_two_jellyfin_connection_tests_hit_distinct_base_urls(session_factory: sessionmaker[Session]) -> None:
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            a = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="JF A",
-                base_url="http://jf-a.test",
-                credentials_secrets={"api_key": "k-a"},
-            )
-            b = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="JF B",
-                base_url="http://jf-b.test",
-                credentials_secrets={"api_key": "k-b"},
-            )
-            id_a, id_b = int(a.id), int(b.id)
+    with session_factory() as s, s.begin():
+        a = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="JF A",
+            base_url="http://jf-a.test",
+            credentials_secrets={"api_key": "k-a"},
+        )
+        b = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="JF B",
+            base_url="http://jf-b.test",
+            credentials_secrets={"api_key": "k-b"},
+        )
+        id_a, id_b = int(a.id), int(b.id)
 
     urls: list[str] = []
 
@@ -145,25 +143,24 @@ def test_two_jellyfin_connection_tests_hit_distinct_base_urls(session_factory: s
 
 def test_preview_denorm_only_updates_matching_instance_scope(session_factory: sessionmaker[Session]) -> None:
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            a = create_server_instance(
-                s,
-                settings,
-                provider="emby",
-                display_name="A",
-                base_url="http://a.test",
-                credentials_secrets={"api_key": "x"},
-            )
-            b = create_server_instance(
-                s,
-                settings,
-                provider="emby",
-                display_name="B",
-                base_url="http://b.test",
-                credentials_secrets={"api_key": "y"},
-            )
-            id_a, id_b = int(a.id), int(b.id)
+    with session_factory() as s, s.begin():
+        a = create_server_instance(
+            s,
+            settings,
+            provider="emby",
+            display_name="A",
+            base_url="http://a.test",
+            credentials_secrets={"api_key": "x"},
+        )
+        b = create_server_instance(
+            s,
+            settings,
+            provider="emby",
+            display_name="B",
+            base_url="http://b.test",
+            credentials_secrets={"api_key": "y"},
+        )
+        id_a, id_b = int(a.id), int(b.id)
 
     with session_factory() as s:
         with s.begin():

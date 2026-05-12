@@ -1,13 +1,12 @@
 from __future__ import annotations
 
+import logging
 import os
 import re
 import sys
 import tomllib
-import logging
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-
 
 _DIST_INFO_RE = re.compile(r"^mediamop_backend-(?P<version>\d+(?:\.\d+)*)(?:[^\d].*)?\.dist-info$")
 logger = logging.getLogger(__name__)

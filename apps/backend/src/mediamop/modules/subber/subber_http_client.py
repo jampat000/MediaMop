@@ -7,6 +7,7 @@ import json
 from typing import Any
 
 import httpx
+
 from mediamop.platform.outbound_http import validate_external_provider_url
 
 DEFAULT_USER_AGENT = "MediaMop/1.0"

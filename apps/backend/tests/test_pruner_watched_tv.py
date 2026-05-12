@@ -9,7 +9,6 @@ from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
@@ -21,6 +20,7 @@ import mediamop.modules.pruner.pruner_scope_settings_model  # noqa: F401
 import mediamop.modules.pruner.pruner_server_instance_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
+from alembic import command
 from mediamop.api.factory import create_app
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
@@ -43,7 +43,8 @@ from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_periodic_enqueue,
     integration_test_set_home,
 )
-from tests.integration_helpers import auth_post, csrf as fetch_csrf, seed_admin_user
+from tests.integration_helpers import auth_post, seed_admin_user
+from tests.integration_helpers import csrf as fetch_csrf
 
 
 def _login_admin(client: TestClient) -> None:
@@ -205,43 +206,41 @@ def test_watched_tv_preview_denorm_only_affects_target_instance(
     session_factory: sessionmaker[Session],
 ) -> None:
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            a = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="A",
-                base_url="http://jf-a-w.test",
-                credentials_secrets={"api_key": "a"},
-            )
-            b = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="B",
-                base_url="http://jf-b-w.test",
-                credentials_secrets={"api_key": "b"},
-            )
-            id_a, id_b = int(a.id), int(b.id)
+    with session_factory() as s, s.begin():
+        a = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="A",
+            base_url="http://jf-a-w.test",
+            credentials_secrets={"api_key": "a"},
+        )
+        b = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="B",
+            base_url="http://jf-b-w.test",
+            credentials_secrets={"api_key": "b"},
+        )
+        id_a, id_b = int(a.id), int(b.id)
 
     uid = str(uuid.uuid4())
-    with session_factory() as s:
-        with s.begin():
-            insert_preview_run(
-                s,
-                preview_run_uuid=uid,
-                server_instance_id=id_a,
-                media_scope=MEDIA_SCOPE_TV,
-                rule_family_id=RULE_FAMILY_WATCHED_TV_REPORTED,
-                pruner_job_id=None,
-                candidate_count=3,
-                candidates_json="[]",
-                truncated=False,
-                outcome="success",
-                unsupported_detail=None,
-                error_message=None,
-            )
+    with session_factory() as s, s.begin():
+        insert_preview_run(
+            s,
+            preview_run_uuid=uid,
+            server_instance_id=id_a,
+            media_scope=MEDIA_SCOPE_TV,
+            rule_family_id=RULE_FAMILY_WATCHED_TV_REPORTED,
+            pruner_job_id=None,
+            candidate_count=3,
+            candidates_json="[]",
+            truncated=False,
+            outcome="success",
+            unsupported_detail=None,
+            error_message=None,
+        )
 
     with session_factory() as s:
         tv_b = s.scalars(
@@ -255,35 +254,33 @@ def test_watched_tv_preview_denorm_only_affects_target_instance(
 
 def test_watched_tv_preview_denorm_only_updates_tv_scope_row(session_factory: sessionmaker[Session]) -> None:
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="One",
-                base_url="http://jf-one.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="One",
+            base_url="http://jf-one.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
 
     uid = str(uuid.uuid4())
-    with session_factory() as s:
-        with s.begin():
-            insert_preview_run(
-                s,
-                preview_run_uuid=uid,
-                server_instance_id=sid,
-                media_scope=MEDIA_SCOPE_TV,
-                rule_family_id=RULE_FAMILY_WATCHED_TV_REPORTED,
-                pruner_job_id=None,
-                candidate_count=1,
-                candidates_json="[]",
-                truncated=False,
-                outcome="success",
-                unsupported_detail=None,
-                error_message=None,
-            )
+    with session_factory() as s, s.begin():
+        insert_preview_run(
+            s,
+            preview_run_uuid=uid,
+            server_instance_id=sid,
+            media_scope=MEDIA_SCOPE_TV,
+            rule_family_id=RULE_FAMILY_WATCHED_TV_REPORTED,
+            pruner_job_id=None,
+            candidate_count=1,
+            candidates_json="[]",
+            truncated=False,
+            outcome="success",
+            unsupported_detail=None,
+            error_message=None,
+        )
 
     with session_factory() as s:
         tv = s.scalars(
@@ -314,41 +311,39 @@ def test_apply_jellyfin_watched_tv_activity_wording(
         "mediamop.modules.pruner.pruner_apply_job_handler.jellyfin_delete_library_item",
         lambda **kw: (204, None),
     )
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="JF Watch",
-                base_url="http://jf-watch.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            insert_preview_run(
-                s,
-                preview_run_uuid=run_uuid,
-                server_instance_id=sid,
-                media_scope=MEDIA_SCOPE_TV,
-                rule_family_id=RULE_FAMILY_WATCHED_TV_REPORTED,
-                pruner_job_id=None,
-                candidate_count=1,
-                candidates_json='[{"item_id":"ep-x","granularity":"episode"}]',
-                truncated=False,
-                outcome="success",
-                unsupported_detail=None,
-                error_message=None,
-            )
-    with session_factory() as s:
-        with s.begin():
-            job_row = PrunerJob(
-                dedupe_key="apply-watched-jf",
-                job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
-                status=PrunerJobStatus.COMPLETED.value,
-            )
-            s.add(job_row)
-            s.flush()
-            job_id = int(job_row.id)
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="JF Watch",
+            base_url="http://jf-watch.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        insert_preview_run(
+            s,
+            preview_run_uuid=run_uuid,
+            server_instance_id=sid,
+            media_scope=MEDIA_SCOPE_TV,
+            rule_family_id=RULE_FAMILY_WATCHED_TV_REPORTED,
+            pruner_job_id=None,
+            candidate_count=1,
+            candidates_json='[{"item_id":"ep-x","granularity":"episode"}]',
+            truncated=False,
+            outcome="success",
+            unsupported_detail=None,
+            error_message=None,
+        )
+    with session_factory() as s, s.begin():
+        job_row = PrunerJob(
+            dedupe_key="apply-watched-jf",
+            job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
+            status=PrunerJobStatus.COMPLETED.value,
+        )
+        s.add(job_row)
+        s.flush()
+        job_id = int(job_row.id)
 
     handlers = build_pruner_job_handlers(settings, session_factory)
     handlers[PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND](
@@ -392,41 +387,39 @@ def test_apply_emby_watched_tv_activity_names_emby(
         "mediamop.modules.pruner.pruner_apply_job_handler.emby_delete_library_item",
         lambda **kw: (204, None),
     )
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="emby",
-                display_name="Emby Watch",
-                base_url="http://emby-watch.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            insert_preview_run(
-                s,
-                preview_run_uuid=run_uuid,
-                server_instance_id=sid,
-                media_scope=MEDIA_SCOPE_TV,
-                rule_family_id=RULE_FAMILY_WATCHED_TV_REPORTED,
-                pruner_job_id=None,
-                candidate_count=1,
-                candidates_json='[{"item_id":"e1"}]',
-                truncated=False,
-                outcome="success",
-                unsupported_detail=None,
-                error_message=None,
-            )
-    with session_factory() as s:
-        with s.begin():
-            job_row = PrunerJob(
-                dedupe_key="apply-watched-emby",
-                job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
-                status=PrunerJobStatus.COMPLETED.value,
-            )
-            s.add(job_row)
-            s.flush()
-            job_id = int(job_row.id)
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="emby",
+            display_name="Emby Watch",
+            base_url="http://emby-watch.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        insert_preview_run(
+            s,
+            preview_run_uuid=run_uuid,
+            server_instance_id=sid,
+            media_scope=MEDIA_SCOPE_TV,
+            rule_family_id=RULE_FAMILY_WATCHED_TV_REPORTED,
+            pruner_job_id=None,
+            candidate_count=1,
+            candidates_json='[{"item_id":"e1"}]',
+            truncated=False,
+            outcome="success",
+            unsupported_detail=None,
+            error_message=None,
+        )
+    with session_factory() as s, s.begin():
+        job_row = PrunerJob(
+            dedupe_key="apply-watched-emby",
+            job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
+            status=PrunerJobStatus.COMPLETED.value,
+        )
+        s.add(job_row)
+        s.flush()
+        job_id = int(job_row.id)
 
     handlers = build_pruner_job_handlers(settings, session_factory)
     handlers[PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND](

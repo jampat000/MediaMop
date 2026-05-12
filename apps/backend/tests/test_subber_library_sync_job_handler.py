@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -11,11 +11,19 @@ import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
+import mediamop.modules.subber.subber_jobs_model  # noqa: F401
+import mediamop.modules.subber.subber_settings_model  # noqa: F401
+import mediamop.modules.subber.subber_subtitle_state_model  # noqa: F401
+import mediamop.platform.activity.models  # noqa: F401
+import mediamop.platform.auth.models  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
 from mediamop.modules.subber.subber_credentials_crypto import encrypt_subber_credentials_json
 from mediamop.modules.subber.subber_job_handlers import build_subber_job_handlers
-from mediamop.modules.subber.subber_job_kinds import SUBBER_JOB_KIND_LIBRARY_SYNC_MOVIES, SUBBER_JOB_KIND_LIBRARY_SYNC_TV
+from mediamop.modules.subber.subber_job_kinds import (
+    SUBBER_JOB_KIND_LIBRARY_SYNC_MOVIES,
+    SUBBER_JOB_KIND_LIBRARY_SYNC_TV,
+)
 from mediamop.modules.subber.subber_jobs_ops import subber_enqueue_or_get_job
 from mediamop.modules.subber.subber_settings_model import SubberSettingsRow
 from mediamop.modules.subber.subber_subtitle_state_model import SubberSubtitleState
@@ -23,12 +31,6 @@ from mediamop.modules.subber.subber_subtitle_state_service import upsert_subtitl
 from mediamop.modules.subber.worker_loop import process_one_subber_job
 from mediamop.platform.activity import constants as C
 from mediamop.platform.activity.models import ActivityEvent
-
-import mediamop.modules.subber.subber_jobs_model  # noqa: F401
-import mediamop.modules.subber.subber_settings_model  # noqa: F401
-import mediamop.modules.subber.subber_subtitle_state_model  # noqa: F401
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
 
 
 @pytest.fixture
@@ -96,7 +98,7 @@ def test_library_sync_movies_upserts_and_detects_srt(session_factory, tmp_path: 
         s.commit()
 
     handlers = build_subber_job_handlers(settings, session_factory)
-    t0 = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
     with patch("mediamop.modules.subber.subber_library_sync_job_handler.get_radarr_movies", return_value=movies_payload):
         assert (
             process_one_subber_job(
@@ -156,7 +158,7 @@ def test_library_sync_tv_upserts_and_detects_srt(session_factory, tmp_path: Path
     ]
 
     handlers = build_subber_job_handlers(settings, session_factory)
-    t0 = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
     with (
         patch("mediamop.modules.subber.subber_library_sync_job_handler.get_sonarr_series", return_value=series),
         patch("mediamop.modules.subber.subber_library_sync_job_handler.get_sonarr_episodes", return_value=episodes),
@@ -197,7 +199,7 @@ def test_library_sync_movies_skips_without_credentials(session_factory) -> None:
         s.commit()
 
     handlers = build_subber_job_handlers(settings, session_factory)
-    t0 = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
     with patch("mediamop.modules.subber.subber_library_sync_job_handler.get_radarr_movies") as m:
         assert (
             process_one_subber_job(
@@ -248,7 +250,7 @@ def test_upsert_does_not_downgrade_found_to_missing(session_factory) -> None:
         s.commit()
 
     handlers = build_subber_job_handlers(settings, session_factory)
-    t0 = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
     with patch("mediamop.modules.subber.subber_library_sync_job_handler.get_radarr_movies", return_value=movies_payload):
         process_one_subber_job(session_factory, lease_owner="ls4", job_handlers=handlers, now=t0, lease_seconds=600)
 
@@ -288,7 +290,7 @@ def test_library_sync_tv_resolves_path_via_episode_file_table(session_factory, t
     ep_files = [{"id": 555, "path": str(mkv), "seriesId": 1}]
 
     handlers = build_subber_job_handlers(settings, session_factory)
-    t0 = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
     with (
         patch("mediamop.modules.subber.subber_library_sync_job_handler.get_sonarr_series", return_value=series),
         patch("mediamop.modules.subber.subber_library_sync_job_handler.get_sonarr_episodes", return_value=episodes),

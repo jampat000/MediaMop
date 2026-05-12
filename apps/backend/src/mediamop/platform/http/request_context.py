@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import time
 import logging
+import time
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
 from uuid import uuid4

@@ -139,9 +139,7 @@ def is_commentary_audio(stream: dict[str, Any]) -> bool:
     title = (tags.get("title") or "").lower()
     if "commentary" in title:
         return True
-    if tags.get("comment") and "commentary" in (tags.get("comment") or "").lower():
-        return True
-    return False
+    return bool(tags.get("comment") and "commentary" in (tags.get("comment") or "").lower())
 
 
 @dataclass(frozen=True)
@@ -207,9 +205,7 @@ def is_remux_required(plan: RemuxPlan, audio_probe: list[dict[str, Any]], sub_pr
         for s in sub_probe
     ]
     new_sub = [(t.input_index, int(t.forced), int(t.default)) for t in plan.subtitles]
-    if old_sub != new_sub:
-        return True
-    return False
+    return old_sub != new_sub
 
 
 def split_streams(probe: dict[str, Any]) -> tuple[list[dict], list[dict], list[dict]]:

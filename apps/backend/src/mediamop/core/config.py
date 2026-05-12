@@ -7,12 +7,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
 
-from mediamop.core.runtime_paths import (
-    assert_sqlite_db_location_usable,
-    ensure_runtime_directories,
-    resolve_all_runtime_paths,
-    sqlalchemy_sqlite_url,
-)
 from mediamop.core.config_domains import (
     ArrSettings,
     AuthSettings,
@@ -22,13 +16,19 @@ from mediamop.core.config_domains import (
     SessionSettings,
     SubberSettings,
 )
+from mediamop.core.runtime_paths import (
+    assert_sqlite_db_location_usable,
+    ensure_runtime_directories,
+    resolve_all_runtime_paths,
+    sqlalchemy_sqlite_url,
+)
+from mediamop.modules.pruner.worker_limits import clamp_pruner_worker_count
 from mediamop.modules.refiner.refiner_family_intervals import (
     clamp_refiner_min_file_age_seconds,
     clamp_refiner_schedule_interval_seconds,
 )
 from mediamop.modules.refiner.worker_limits import clamp_refiner_worker_count
 from mediamop.modules.subber.worker_limits import clamp_subber_worker_count
-from mediamop.modules.pruner.worker_limits import clamp_pruner_worker_count
 
 
 def _load_backend_dotenv_if_present() -> None:

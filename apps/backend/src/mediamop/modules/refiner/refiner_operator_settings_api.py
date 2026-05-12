@@ -16,13 +16,13 @@ from mediamop.modules.refiner.schemas_refiner_operator_settings import (
     RefinerOperatorSettingsPutIn,
 )
 from mediamop.platform.auth.authorization import RequireOperatorDep
-from mediamop.platform.auth.deps_auth import UserPublicDep
 from mediamop.platform.auth.csrf import (
     current_raw_session_token,
     require_session_secret,
     validate_browser_post_origin,
     verify_csrf_token,
 )
+from mediamop.platform.auth.deps_auth import UserPublicDep
 
 router = APIRouter(tags=["refiner"])
 

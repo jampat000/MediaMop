@@ -16,9 +16,7 @@ def _is_sqlite_schema_missing_message(text: str) -> bool:
     lower = text.lower()
     if "no such table" in lower:
         return True
-    if "no such column" in lower:
-        return True
-    return False
+    return "no such column" in lower
 
 
 def _is_missing_relation_or_schema(exc: ProgrammingError) -> bool:
@@ -32,9 +30,7 @@ def _is_missing_relation_or_schema(exc: ProgrammingError) -> bool:
     msg = str(exc).lower()
     if "no such table" in msg:
         return True
-    if "does not exist" in msg and "relation" in msg:
-        return True
-    return False
+    return "does not exist" in msg and "relation" in msg
 
 
 _SCHEMA_NOT_READY = "Local SQLite schema is not ready (run alembic upgrade head)."

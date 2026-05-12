@@ -7,22 +7,22 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exception_handlers import http_exception_handler
-from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette import status
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from mediamop import __version__
 from mediamop.api.router import build_v1_router
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.lifespan import lifespan
 from mediamop.platform.health import health_router
-from mediamop.platform.readiness import readiness_router
 from mediamop.platform.http.request_context import RequestContextMiddleware
 from mediamop.platform.http.security_headers import SecurityHeadersMiddleware
 from mediamop.platform.http.xrw_csrf_middleware import XRequestedWithCsrfMiddleware
 from mediamop.platform.metrics.router import router as metrics_router
+from mediamop.platform.readiness import readiness_router
 
 
 def _web_dist_root() -> Path | None:

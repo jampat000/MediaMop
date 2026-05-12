@@ -4,16 +4,22 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from starlette.testclient import TestClient
 
+import mediamop.modules.pruner.pruner_jobs_model  # noqa: F401
+import mediamop.modules.pruner.pruner_preview_run_model  # noqa: F401
+import mediamop.modules.pruner.pruner_scope_settings_model  # noqa: F401
+import mediamop.modules.pruner.pruner_server_instance_model  # noqa: F401
+import mediamop.platform.activity.models  # noqa: F401
+import mediamop.platform.auth.models  # noqa: F401
+from alembic import command
 from mediamop.api.factory import create_app
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
@@ -23,14 +29,14 @@ from mediamop.modules.pruner.pruner_constants import (
     RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
     RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED,
 )
+from mediamop.modules.pruner.pruner_instances_service import get_scope_settings, normalize_server_base_url
 from mediamop.modules.pruner.pruner_job_kinds import (
     PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
     PRUNER_SERVER_CONNECTION_TEST_JOB_KIND,
 )
 from mediamop.modules.pruner.pruner_jobs_model import PrunerJob
-from mediamop.modules.pruner.pruner_instances_service import get_scope_settings, normalize_server_base_url
-from mediamop.modules.pruner.pruner_scope_settings_model import PrunerScopeSettings
 from mediamop.modules.pruner.pruner_preview_service import insert_preview_run
+from mediamop.modules.pruner.pruner_scope_settings_model import PrunerScopeSettings
 from mediamop.modules.pruner.pruner_server_instance_model import PrunerServerInstance
 from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_in_process_workers,
@@ -40,17 +46,12 @@ from tests.integration_app_runtime_quiesce import (
 from tests.integration_helpers import (
     auth_patch,
     auth_post,
-    csrf as fetch_csrf,
     seed_admin_user,
     seed_viewer_user,
 )
-
-import mediamop.modules.pruner.pruner_jobs_model  # noqa: F401
-import mediamop.modules.pruner.pruner_preview_run_model  # noqa: F401
-import mediamop.modules.pruner.pruner_scope_settings_model  # noqa: F401
-import mediamop.modules.pruner.pruner_server_instance_model  # noqa: F401
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
+from tests.integration_helpers import (
+    csrf as fetch_csrf,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -541,7 +542,7 @@ def test_post_pruner_preview_does_not_touch_last_scheduled_preview_enqueued_at(
     )
     assert r0.status_code == 200, r0.text
     iid = int(r0.json()["id"])
-    t0 = datetime(2026, 4, 10, 8, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 10, 8, 0, 0, tzinfo=UTC)
     fac = _fac()
     with fac() as db:
         sc = get_scope_settings(db, server_instance_id=iid, media_scope=MEDIA_SCOPE_TV)
@@ -564,7 +565,7 @@ def test_post_pruner_preview_does_not_touch_last_scheduled_preview_enqueued_at(
         assert sc2 is not None
         last = sc2.last_scheduled_preview_enqueued_at
         assert last is not None
-        last_utc = last if last.tzinfo else last.replace(tzinfo=timezone.utc)
+        last_utc = last if last.tzinfo else last.replace(tzinfo=UTC)
         assert last_utc == t0
 
 

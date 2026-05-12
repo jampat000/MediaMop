@@ -42,10 +42,7 @@ def jf_emby_item_passes_preview_filters(
     pf = list(preview_include_people or [])
     if pf:
         roles = list(preview_include_people_roles) if preview_include_people_roles is not None else []
-        if roles:
-            names = jellyfin_emby_people_names_for_roles(it, roles)
-        else:
-            names = jellyfin_emby_item_people_names(it)
+        names = jellyfin_emby_people_names_for_roles(it, roles) if roles else jellyfin_emby_item_people_names(it)
         if not item_matches_people_include_filter(names, pf):
             return False
     if not item_matches_preview_year_filter(
@@ -54,6 +51,4 @@ def jf_emby_item_passes_preview_filters(
         preview_year_max,
     ):
         return False
-    if not item_matches_genre_include_filter(jellyfin_emby_item_studio_names(it), preview_include_studios):
-        return False
-    return True
+    return item_matches_genre_include_filter(jellyfin_emby_item_studio_names(it), preview_include_studios)

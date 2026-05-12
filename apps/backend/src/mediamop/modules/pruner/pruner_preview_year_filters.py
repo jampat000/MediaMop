@@ -42,6 +42,4 @@ def item_matches_preview_year_filter(
         return False
     if year_min is not None and year < year_min:
         return False
-    if year_max is not None and year > year_max:
-        return False
-    return True
+    return not (year_max is not None and year > year_max)

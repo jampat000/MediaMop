@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -20,7 +20,7 @@ def apply_latest_preview_denorm(
 ) -> None:
     """Keep ``last_preview_run_id`` aligned with the newest run for (instance, scope)."""
 
-    when = at if at is not None else datetime.now(timezone.utc)
+    when = at if at is not None else datetime.now(UTC)
     scope_row.last_preview_run_id = int(run.id)
     scope_row.last_preview_at = when
     scope_row.last_preview_candidate_count = int(run.candidate_count)

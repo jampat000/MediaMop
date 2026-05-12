@@ -61,9 +61,7 @@ def _plex_leaf_missing_thumb(meta: dict[str, Any]) -> bool:
     thumb = meta.get("thumb")
     if thumb is None:
         return True
-    if isinstance(thumb, str) and not thumb.strip():
-        return True
-    return False
+    return bool(isinstance(thumb, str) and not thumb.strip())
 
 
 def _rating_key(meta: dict[str, Any]) -> str:
@@ -178,9 +176,7 @@ def list_plex_missing_thumb_candidates(
                 total_i = start + len(metas)
             start += len(metas)
             if stop_after_page:
-                if start < total_i:
-                    truncated = True
-                elif sec_idx < len(section_keys) - 1:
+                if start < total_i or sec_idx < len(section_keys) - 1:
                     truncated = True
                 break
             if start >= total_i or len(metas) == 0:

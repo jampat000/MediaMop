@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from sqlalchemy.orm import Session, sessionmaker
 from starlette.testclient import TestClient
@@ -16,6 +15,7 @@ import mediamop.modules.pruner.pruner_scope_settings_model  # noqa: F401
 import mediamop.modules.pruner.pruner_server_instance_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
+from alembic import command
 from mediamop.api.factory import create_app
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
@@ -32,7 +32,8 @@ from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_periodic_enqueue,
     integration_test_set_home,
 )
-from tests.integration_helpers import auth_post, csrf as fetch_csrf, seed_admin_user
+from tests.integration_helpers import auth_post, seed_admin_user
+from tests.integration_helpers import csrf as fetch_csrf
 
 
 def _login(client: TestClient) -> None:
@@ -62,17 +63,16 @@ def session_factory(_iso) -> sessionmaker[Session]:
 
 def _plex_sid(session_factory: sessionmaker[Session]) -> int:
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="plex",
-                display_name="Plex",
-                base_url="http://plex.test:32400",
-                credentials_secrets={"auth_token": "tok"},
-            )
-            return int(inst.id)
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="plex",
+            display_name="Plex",
+            base_url="http://plex.test:32400",
+            credentials_secrets={"auth_token": "tok"},
+        )
+        return int(inst.id)
 
 
 def test_plex_live_eligibility_is_always_ineligible_with_deprecation_notes(
@@ -102,17 +102,16 @@ def test_plex_live_eligibility_is_always_ineligible_with_deprecation_notes(
 def test_plex_live_post_rejects_jellyfin_instance(session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MEDIAMOP_PRUNER_APPLY_ENABLED", "1")
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="JF",
-                base_url="http://jf.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="JF",
+            base_url="http://jf.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
     seed_admin_user()
     app = create_app()
     with TestClient(app) as client:

@@ -8,7 +8,12 @@ import urllib.parse
 import zipfile
 from typing import Any
 
-from mediamop.modules.subber.subber_http_client import DEFAULT_USER_AGENT, basic_auth_header, request_bytes, request_json
+from mediamop.modules.subber.subber_http_client import (
+    DEFAULT_USER_AGENT,
+    basic_auth_header,
+    request_bytes,
+    request_json,
+)
 
 USER_AGENT = DEFAULT_USER_AGENT
 LIST_BASE = "https://www.podnapisi.net/api/v2/subtitles/list"
@@ -36,10 +41,7 @@ def _item_hearing_impaired(item: dict[str, Any]) -> bool:
             if str(f).lower() in ("hearing_impaired", "hearing impaired"):
                 return True
     attrs = item.get("attributes")
-    if isinstance(attrs, dict):
-        if attrs.get("hearing_impaired") or attrs.get("from_hearing_impaired"):
-            return True
-    return False
+    return bool(isinstance(attrs, dict) and (attrs.get("hearing_impaired") or attrs.get("from_hearing_impaired")))
 
 
 def _item_id_lang(item: dict[str, Any]) -> tuple[str | None, str]:

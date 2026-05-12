@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -39,7 +39,7 @@ def upsert_subtitle_state(
             SubberSubtitleState.language_code == lang,
         ),
     ).one_or_none()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if row is None:
         row = SubberSubtitleState(
             media_scope=media_scope,
@@ -141,7 +141,7 @@ def mark_found(
     row.opensubtitles_file_id = opensubtitles_file_id
     if provider_key is not None:
         row.provider_key = provider_key.strip()[:50] or None
-    row.updated_at = datetime.now(timezone.utc)
+    row.updated_at = datetime.now(UTC)
     session.flush()
 
 
@@ -149,17 +149,17 @@ def mark_for_upgrade(session: Session, state_id: int, *, increment_count: bool =
     row = session.scalars(select(SubberSubtitleState).where(SubberSubtitleState.id == state_id)).one_or_none()
     if row is None:
         return
-    row.upgraded_at = datetime.now(timezone.utc)
+    row.upgraded_at = datetime.now(UTC)
     if increment_count:
         row.upgrade_count = int(row.upgrade_count or 0) + 1
-    row.updated_at = datetime.now(timezone.utc)
+    row.updated_at = datetime.now(UTC)
     session.flush()
 
 
 def get_candidates_for_upgrade(session: Session, since_days: int) -> list[SubberSubtitleState]:
     from datetime import timedelta
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     cutoff = now - timedelta(days=max(1, int(since_days)))
     rows = list(
         session.scalars(
@@ -182,7 +182,7 @@ def get_candidates_for_upgrade(session: Session, since_days: int) -> list[Subber
         if lu is None:
             out.append(r)
             continue
-        luu = lu if lu.tzinfo else lu.replace(tzinfo=timezone.utc)
+        luu = lu if lu.tzinfo else lu.replace(tzinfo=UTC)
         if luu < cutoff:
             out.append(r)
     return out
@@ -194,8 +194,8 @@ def mark_searching(session: Session, state_id: int) -> None:
         return
     row.status = "searching"
     row.search_count = int(row.search_count or 0) + 1
-    row.last_searched_at = datetime.now(timezone.utc)
-    row.updated_at = datetime.now(timezone.utc)
+    row.last_searched_at = datetime.now(UTC)
+    row.updated_at = datetime.now(UTC)
     session.flush()
 
 
@@ -204,7 +204,7 @@ def mark_skipped(session: Session, state_id: int) -> None:
     if row is None:
         return
     row.status = "skipped"
-    row.updated_at = datetime.now(timezone.utc)
+    row.updated_at = datetime.now(UTC)
     session.flush()
 
 
@@ -213,5 +213,5 @@ def mark_missing(session: Session, state_id: int) -> None:
     if row is None:
         return
     row.status = "missing"
-    row.updated_at = datetime.now(timezone.utc)
+    row.updated_at = datetime.now(UTC)
     session.flush()
