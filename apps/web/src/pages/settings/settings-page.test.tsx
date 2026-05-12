@@ -185,7 +185,9 @@ function renderSettings(
   qc.setQueryData(suiteMetricsQueryKey, minimalMetrics);
   const router = createMemoryRouter(
     [{ path: "*", element: <SettingsPage /> }],
-    overrides?.initialEntries ? { initialEntries: overrides.initialEntries } : undefined,
+    overrides?.initialEntries
+      ? { initialEntries: overrides.initialEntries }
+      : undefined,
   );
   return render(
     <QueryClientProvider client={qc}>
