@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from mediamop.modules.refiner.refiner_file_remux_pass_paths import resolve_media_file_under_refiner_root
+from mediamop.modules.refiner.file_remux_pass.paths import resolve_media_file_under_refiner_root
 
 
 def test_resolve_rejects_parent_segments(tmp_path: Path) -> None:

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.db import Base
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.refiner.refiner_file_remux_pass_job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_ops import (
     iter_watched_folder_media_candidate_files,
     refiner_active_remux_pass_exists_for_relative_path,
