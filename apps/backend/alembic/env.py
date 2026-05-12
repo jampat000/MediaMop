@@ -41,6 +41,7 @@ from mediamop.modules.subber import subber_subtitle_state_model as _subber_subti
 from mediamop.modules.subber import subber_providers_model as _subber_providers_orm  # noqa: F401
 from mediamop.platform.suite_settings import model as _suite_settings_orm  # noqa: F401
 import mediamop.platform.suite_settings.suite_configuration_backup_model  # noqa: F401
+from mediamop.platform.notifications import model as _notifications_orm  # noqa: F401
 
 # this is the Alembic Config object, which provides access to the values within alembic.ini
 config = context.config
