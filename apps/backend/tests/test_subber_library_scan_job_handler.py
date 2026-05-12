@@ -3,13 +3,18 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
+import mediamop.modules.subber.subber_jobs_model  # noqa: F401
+import mediamop.modules.subber.subber_settings_model  # noqa: F401
+import mediamop.modules.subber.subber_subtitle_state_model  # noqa: F401
+import mediamop.platform.activity.models  # noqa: F401
+import mediamop.platform.auth.models  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
 from mediamop.modules.subber.subber_job_handlers import build_subber_job_handlers
@@ -19,12 +24,6 @@ from mediamop.modules.subber.subber_jobs_ops import subber_enqueue_or_get_job
 from mediamop.modules.subber.subber_settings_model import SubberSettingsRow
 from mediamop.modules.subber.subber_subtitle_state_model import SubberSubtitleState
 from mediamop.modules.subber.worker_loop import process_one_subber_job
-
-import mediamop.modules.subber.subber_jobs_model  # noqa: F401
-import mediamop.modules.subber.subber_settings_model  # noqa: F401
-import mediamop.modules.subber.subber_subtitle_state_model  # noqa: F401
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
 
 
 @pytest.fixture
@@ -58,7 +57,7 @@ def test_library_scan_enqueues_missing_not_recent(session_factory) -> None:
 
     settings = MediaMopSettings.load()
     handlers = build_subber_job_handlers(settings, session_factory)
-    t0 = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
     process_one_subber_job(session_factory, lease_owner="ls1", job_handlers=handlers, now=t0, lease_seconds=600)
     with session_factory() as s:
         jobs = list(s.scalars(select(SubberJob).order_by(SubberJob.id.asc())).all())
@@ -67,7 +66,7 @@ def test_library_scan_enqueues_missing_not_recent(session_factory) -> None:
 
 
 def test_library_scan_skips_recently_searched(session_factory) -> None:
-    recent = datetime(2026, 6, 1, 11, 0, 0, tzinfo=timezone.utc)
+    recent = datetime(2026, 6, 1, 11, 0, 0, tzinfo=UTC)
     with session_factory() as s:
         s.add(SubberSettingsRow(id=1, enabled=True))
         s.add(
@@ -90,7 +89,7 @@ def test_library_scan_skips_recently_searched(session_factory) -> None:
 
     settings = MediaMopSettings.load()
     handlers = build_subber_job_handlers(settings, session_factory)
-    t0 = datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
     process_one_subber_job(session_factory, lease_owner="ls2", job_handlers=handlers, now=t0, lease_seconds=600)
     with session_factory() as s:
         jobs = list(s.scalars(select(SubberJob)).all())

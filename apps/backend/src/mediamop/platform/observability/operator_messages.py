@@ -12,7 +12,6 @@ from mediamop.platform.observability.diagnostics import (
     severity_for_result,
 )
 
-
 PROVIDER_LABELS = {
     "emby": "Emby",
     "jellyfin": "Jellyfin",

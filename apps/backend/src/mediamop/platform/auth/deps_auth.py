@@ -7,8 +7,8 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
-from mediamop.core.config import MediaMopSettings
 from mediamop.api.deps import get_db_session, get_settings
+from mediamop.core.config import MediaMopSettings
 from mediamop.platform.auth import service as auth_service
 from mediamop.platform.auth.models import UserRole
 from mediamop.platform.auth.schemas import UserPublic

@@ -7,7 +7,6 @@ import uuid
 from pathlib import Path
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
@@ -19,6 +18,7 @@ import mediamop.modules.pruner.pruner_scope_settings_model  # noqa: F401
 import mediamop.modules.pruner.pruner_server_instance_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
+from alembic import command
 from mediamop.api.factory import create_app
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
@@ -39,7 +39,8 @@ from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_periodic_enqueue,
     integration_test_set_home,
 )
-from tests.integration_helpers import auth_post, csrf as fetch_csrf, seed_admin_user
+from tests.integration_helpers import auth_post, seed_admin_user
+from tests.integration_helpers import csrf as fetch_csrf
 
 
 @pytest.fixture(autouse=True)
@@ -64,33 +65,32 @@ def _login(client: TestClient) -> None:
 def _jellyfin_preview_run(session_factory: sessionmaker[Session]) -> tuple[int, str]:
     settings = MediaMopSettings.load()
     run_uuid = str(uuid.uuid4())
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="JF",
-                base_url="http://jf.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            insert_preview_run(
-                s,
-                preview_run_uuid=run_uuid,
-                server_instance_id=sid,
-                media_scope=MEDIA_SCOPE_TV,
-                rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
-                pruner_job_id=None,
-                candidate_count=2,
-                candidates_json=json.dumps(
-                    [{"item_id": "a1", "granularity": "episode"}, {"item_id": "a2", "granularity": "episode"}],
-                ),
-                truncated=False,
-                outcome="success",
-                unsupported_detail=None,
-                error_message=None,
-            )
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="JF",
+            base_url="http://jf.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        insert_preview_run(
+            s,
+            preview_run_uuid=run_uuid,
+            server_instance_id=sid,
+            media_scope=MEDIA_SCOPE_TV,
+            rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+            pruner_job_id=None,
+            candidate_count=2,
+            candidates_json=json.dumps(
+                [{"item_id": "a1", "granularity": "episode"}, {"item_id": "a2", "granularity": "episode"}],
+            ),
+            truncated=False,
+            outcome="success",
+            unsupported_detail=None,
+            error_message=None,
+        )
     return sid, run_uuid
 
 
@@ -141,31 +141,30 @@ def test_apply_post_ok_emby_when_enabled(session_factory: sessionmaker[Session],
     monkeypatch.setenv("MEDIAMOP_PRUNER_APPLY_ENABLED", "1")
     settings = MediaMopSettings.load()
     run_uuid = str(uuid.uuid4())
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="emby",
-                display_name="E",
-                base_url="http://em.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            insert_preview_run(
-                s,
-                preview_run_uuid=run_uuid,
-                server_instance_id=sid,
-                media_scope=MEDIA_SCOPE_TV,
-                rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
-                pruner_job_id=None,
-                candidate_count=1,
-                candidates_json='[{"item_id":"x"}]',
-                truncated=False,
-                outcome="success",
-                unsupported_detail=None,
-                error_message=None,
-            )
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="emby",
+            display_name="E",
+            base_url="http://em.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        insert_preview_run(
+            s,
+            preview_run_uuid=run_uuid,
+            server_instance_id=sid,
+            media_scope=MEDIA_SCOPE_TV,
+            rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+            pruner_job_id=None,
+            candidate_count=1,
+            candidates_json='[{"item_id":"x"}]',
+            truncated=False,
+            outcome="success",
+            unsupported_detail=None,
+            error_message=None,
+        )
     seed_admin_user()
     app = create_app()
     with TestClient(app) as client:
@@ -185,31 +184,30 @@ def test_apply_accepts_plex_missing_primary_snapshot(session_factory: sessionmak
     monkeypatch.setenv("MEDIAMOP_PRUNER_APPLY_ENABLED", "1")
     settings = MediaMopSettings.load()
     run_uuid = str(uuid.uuid4())
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="plex",
-                display_name="P",
-                base_url="http://plex.test:32400",
-                credentials_secrets={"auth_token": "t"},
-            )
-            sid = int(inst.id)
-            insert_preview_run(
-                s,
-                preview_run_uuid=run_uuid,
-                server_instance_id=sid,
-                media_scope=MEDIA_SCOPE_TV,
-                rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
-                pruner_job_id=None,
-                candidate_count=1,
-                candidates_json='[{"item_id":"x","granularity":"episode"}]',
-                truncated=False,
-                outcome="success",
-                unsupported_detail=None,
-                error_message=None,
-            )
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="plex",
+            display_name="P",
+            base_url="http://plex.test:32400",
+            credentials_secrets={"auth_token": "t"},
+        )
+        sid = int(inst.id)
+        insert_preview_run(
+            s,
+            preview_run_uuid=run_uuid,
+            server_instance_id=sid,
+            media_scope=MEDIA_SCOPE_TV,
+            rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+            pruner_job_id=None,
+            candidate_count=1,
+            candidates_json='[{"item_id":"x","granularity":"episode"}]',
+            truncated=False,
+            outcome="success",
+            unsupported_detail=None,
+            error_message=None,
+        )
     seed_admin_user()
     app = create_app()
     with TestClient(app) as client:
@@ -229,31 +227,30 @@ def test_apply_rejects_scope_mismatch_in_url(session_factory: sessionmaker[Sessi
     monkeypatch.setenv("MEDIAMOP_PRUNER_APPLY_ENABLED", "1")
     settings = MediaMopSettings.load()
     run_uuid = str(uuid.uuid4())
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="JF",
-                base_url="http://jf.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            insert_preview_run(
-                s,
-                preview_run_uuid=run_uuid,
-                server_instance_id=sid,
-                media_scope=MEDIA_SCOPE_TV,
-                rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
-                pruner_job_id=None,
-                candidate_count=1,
-                candidates_json="[{\"item_id\":\"x\"}]",
-                truncated=False,
-                outcome="success",
-                unsupported_detail=None,
-                error_message=None,
-            )
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="JF",
+            base_url="http://jf.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        insert_preview_run(
+            s,
+            preview_run_uuid=run_uuid,
+            server_instance_id=sid,
+            media_scope=MEDIA_SCOPE_TV,
+            rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+            pruner_job_id=None,
+            candidate_count=1,
+            candidates_json="[{\"item_id\":\"x\"}]",
+            truncated=False,
+            outcome="success",
+            unsupported_detail=None,
+            error_message=None,
+        )
     seed_admin_user()
     app = create_app()
     with TestClient(app) as client:
@@ -272,31 +269,30 @@ def test_apply_rejects_non_success_preview(session_factory: sessionmaker[Session
     monkeypatch.setenv("MEDIAMOP_PRUNER_APPLY_ENABLED", "1")
     settings = MediaMopSettings.load()
     run_uuid = str(uuid.uuid4())
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="JF",
-                base_url="http://jf.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            insert_preview_run(
-                s,
-                preview_run_uuid=run_uuid,
-                server_instance_id=sid,
-                media_scope=MEDIA_SCOPE_TV,
-                rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
-                pruner_job_id=None,
-                candidate_count=1,
-                candidates_json="[{\"item_id\":\"x\"}]",
-                truncated=False,
-                outcome="failed",
-                unsupported_detail=None,
-                error_message="x",
-            )
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="JF",
+            base_url="http://jf.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        insert_preview_run(
+            s,
+            preview_run_uuid=run_uuid,
+            server_instance_id=sid,
+            media_scope=MEDIA_SCOPE_TV,
+            rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+            pruner_job_id=None,
+            candidate_count=1,
+            candidates_json="[{\"item_id\":\"x\"}]",
+            truncated=False,
+            outcome="failed",
+            unsupported_detail=None,
+            error_message="x",
+        )
     seed_admin_user()
     app = create_app()
     with TestClient(app) as client:
@@ -324,42 +320,40 @@ def test_apply_activity_title_uses_operator_label(
         lambda **kw: (404, None),
     )
 
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="JF",
-                base_url="http://jf.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            insert_preview_run(
-                s,
-                preview_run_uuid=run_uuid,
-                server_instance_id=sid,
-                media_scope=MEDIA_SCOPE_TV,
-                rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
-                pruner_job_id=None,
-                candidate_count=1,
-                candidates_json="[{\"item_id\":\"gone\"}]",
-                truncated=False,
-                outcome="success",
-                unsupported_detail=None,
-                error_message=None,
-            )
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="JF",
+            base_url="http://jf.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        insert_preview_run(
+            s,
+            preview_run_uuid=run_uuid,
+            server_instance_id=sid,
+            media_scope=MEDIA_SCOPE_TV,
+            rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+            pruner_job_id=None,
+            candidate_count=1,
+            candidates_json="[{\"item_id\":\"gone\"}]",
+            truncated=False,
+            outcome="success",
+            unsupported_detail=None,
+            error_message=None,
+        )
 
-    with session_factory() as s:
-        with s.begin():
-            job_row = PrunerJob(
-                dedupe_key="apply-title-test",
-                job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
-                status=PrunerJobStatus.COMPLETED.value,
-            )
-            s.add(job_row)
-            s.flush()
-            job_id = int(job_row.id)
+    with session_factory() as s, s.begin():
+        job_row = PrunerJob(
+            dedupe_key="apply-title-test",
+            job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
+            status=PrunerJobStatus.COMPLETED.value,
+        )
+        s.add(job_row)
+        s.flush()
+        job_id = int(job_row.id)
 
     handlers = build_pruner_job_handlers(settings, session_factory)
     handlers[PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND](
@@ -400,42 +394,40 @@ def test_apply_activity_title_emby_names_provider(
         lambda **kw: (404, None),
     )
 
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="emby",
-                display_name="Emby Lab",
-                base_url="http://emby.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            insert_preview_run(
-                s,
-                preview_run_uuid=run_uuid,
-                server_instance_id=sid,
-                media_scope=MEDIA_SCOPE_TV,
-                rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
-                pruner_job_id=None,
-                candidate_count=1,
-                candidates_json='[{"item_id":"gone"}]',
-                truncated=False,
-                outcome="success",
-                unsupported_detail=None,
-                error_message=None,
-            )
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="emby",
+            display_name="Emby Lab",
+            base_url="http://emby.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        insert_preview_run(
+            s,
+            preview_run_uuid=run_uuid,
+            server_instance_id=sid,
+            media_scope=MEDIA_SCOPE_TV,
+            rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+            pruner_job_id=None,
+            candidate_count=1,
+            candidates_json='[{"item_id":"gone"}]',
+            truncated=False,
+            outcome="success",
+            unsupported_detail=None,
+            error_message=None,
+        )
 
-    with session_factory() as s:
-        with s.begin():
-            job_row = PrunerJob(
-                dedupe_key="apply-title-emby-test",
-                job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
-                status=PrunerJobStatus.COMPLETED.value,
-            )
-            s.add(job_row)
-            s.flush()
-            job_id = int(job_row.id)
+    with session_factory() as s, s.begin():
+        job_row = PrunerJob(
+            dedupe_key="apply-title-emby-test",
+            job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
+            status=PrunerJobStatus.COMPLETED.value,
+        )
+        s.add(job_row)
+        s.flush()
+        job_id = int(job_row.id)
 
     handlers = build_pruner_job_handlers(settings, session_factory)
     handlers[PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND](
@@ -483,42 +475,40 @@ def test_apply_handler_emby_calls_emby_delete_not_jellyfin(
     monkeypatch.setattr("mediamop.modules.pruner.pruner_apply_job_handler.emby_delete_library_item", fake_emby)
     monkeypatch.setattr("mediamop.modules.pruner.pruner_apply_job_handler.jellyfin_delete_library_item", fake_jellyfin)
 
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="emby",
-                display_name="E",
-                base_url="http://e.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            insert_preview_run(
-                s,
-                preview_run_uuid=run_uuid,
-                server_instance_id=sid,
-                media_scope=MEDIA_SCOPE_TV,
-                rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
-                pruner_job_id=None,
-                candidate_count=1,
-                candidates_json='[{"item_id":"e1"}]',
-                truncated=False,
-                outcome="success",
-                unsupported_detail=None,
-                error_message=None,
-            )
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="emby",
+            display_name="E",
+            base_url="http://e.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        insert_preview_run(
+            s,
+            preview_run_uuid=run_uuid,
+            server_instance_id=sid,
+            media_scope=MEDIA_SCOPE_TV,
+            rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+            pruner_job_id=None,
+            candidate_count=1,
+            candidates_json='[{"item_id":"e1"}]',
+            truncated=False,
+            outcome="success",
+            unsupported_detail=None,
+            error_message=None,
+        )
 
-    with session_factory() as s:
-        with s.begin():
-            job_row = PrunerJob(
-                dedupe_key="apply-emby-dispatch-test",
-                job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
-                status=PrunerJobStatus.COMPLETED.value,
-            )
-            s.add(job_row)
-            s.flush()
-            job_id = int(job_row.id)
+    with session_factory() as s, s.begin():
+        job_row = PrunerJob(
+            dedupe_key="apply-emby-dispatch-test",
+            job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
+            status=PrunerJobStatus.COMPLETED.value,
+        )
+        s.add(job_row)
+        s.flush()
+        job_id = int(job_row.id)
 
     handlers = build_pruner_job_handlers(settings, session_factory)
     handlers[PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND](
@@ -547,31 +537,30 @@ def test_get_apply_eligibility_eligible_for_emby_when_enabled(
     monkeypatch.setenv("MEDIAMOP_PRUNER_APPLY_ENABLED", "1")
     settings = MediaMopSettings.load()
     run_uuid = str(uuid.uuid4())
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="emby",
-                display_name="E",
-                base_url="http://em.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            insert_preview_run(
-                s,
-                preview_run_uuid=run_uuid,
-                server_instance_id=sid,
-                media_scope=MEDIA_SCOPE_TV,
-                rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
-                pruner_job_id=None,
-                candidate_count=1,
-                candidates_json='[{"item_id":"a"}]',
-                truncated=False,
-                outcome="success",
-                unsupported_detail=None,
-                error_message=None,
-            )
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="emby",
+            display_name="E",
+            base_url="http://em.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        insert_preview_run(
+            s,
+            preview_run_uuid=run_uuid,
+            server_instance_id=sid,
+            media_scope=MEDIA_SCOPE_TV,
+            rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+            pruner_job_id=None,
+            candidate_count=1,
+            candidates_json='[{"item_id":"a"}]',
+            truncated=False,
+            outcome="success",
+            unsupported_detail=None,
+            error_message=None,
+        )
     seed_admin_user()
     app = create_app()
     with TestClient(app) as client:
@@ -653,44 +642,42 @@ def test_apply_handler_respects_snapshot_cap(
         fake_delete,
     )
 
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="JF",
-                base_url="http://jf.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            insert_preview_run(
-                s,
-                preview_run_uuid=run_uuid,
-                server_instance_id=sid,
-                media_scope=MEDIA_SCOPE_TV,
-                rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
-                pruner_job_id=None,
-                candidate_count=1,
-                candidates_json=json.dumps(
-                    [{"item_id": "only-one"}, {"item_id": "two"}],
-                ),
-                truncated=False,
-                outcome="success",
-                unsupported_detail=None,
-                error_message=None,
-            )
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="JF",
+            base_url="http://jf.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        insert_preview_run(
+            s,
+            preview_run_uuid=run_uuid,
+            server_instance_id=sid,
+            media_scope=MEDIA_SCOPE_TV,
+            rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+            pruner_job_id=None,
+            candidate_count=1,
+            candidates_json=json.dumps(
+                [{"item_id": "only-one"}, {"item_id": "two"}],
+            ),
+            truncated=False,
+            outcome="success",
+            unsupported_detail=None,
+            error_message=None,
+        )
 
-    with session_factory() as s:
-        with s.begin():
-            job_row = PrunerJob(
-                dedupe_key="apply-cap-test",
-                job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
-                status=PrunerJobStatus.COMPLETED.value,
-            )
-            s.add(job_row)
-            s.flush()
-            job_id = int(job_row.id)
+    with session_factory() as s, s.begin():
+        job_row = PrunerJob(
+            dedupe_key="apply-cap-test",
+            job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
+            status=PrunerJobStatus.COMPLETED.value,
+        )
+        s.add(job_row)
+        s.flush()
+        job_id = int(job_row.id)
 
     handlers = build_pruner_job_handlers(settings, session_factory)
     fn = handlers[PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND]
@@ -730,44 +717,42 @@ def test_apply_handler_partial_counts(
         fake_delete,
     )
 
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="JF",
-                base_url="http://jf.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            insert_preview_run(
-                s,
-                preview_run_uuid=run_uuid,
-                server_instance_id=sid,
-                media_scope=MEDIA_SCOPE_TV,
-                rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
-                pruner_job_id=None,
-                candidate_count=3,
-                candidates_json=json.dumps(
-                    [{"item_id": "r"}, {"item_id": "s"}, {"item_id": "f"}],
-                ),
-                truncated=False,
-                outcome="success",
-                unsupported_detail=None,
-                error_message=None,
-            )
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="JF",
+            base_url="http://jf.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        insert_preview_run(
+            s,
+            preview_run_uuid=run_uuid,
+            server_instance_id=sid,
+            media_scope=MEDIA_SCOPE_TV,
+            rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+            pruner_job_id=None,
+            candidate_count=3,
+            candidates_json=json.dumps(
+                [{"item_id": "r"}, {"item_id": "s"}, {"item_id": "f"}],
+            ),
+            truncated=False,
+            outcome="success",
+            unsupported_detail=None,
+            error_message=None,
+        )
 
-    with session_factory() as s:
-        with s.begin():
-            job_row = PrunerJob(
-                dedupe_key="apply-partial-test",
-                job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
-                status=PrunerJobStatus.COMPLETED.value,
-            )
-            s.add(job_row)
-            s.flush()
-            job_id = int(job_row.id)
+    with session_factory() as s, s.begin():
+        job_row = PrunerJob(
+            dedupe_key="apply-partial-test",
+            job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
+            status=PrunerJobStatus.COMPLETED.value,
+        )
+        s.add(job_row)
+        s.flush()
+        job_id = int(job_row.id)
 
     handlers = build_pruner_job_handlers(settings, session_factory)
     handlers[PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND](

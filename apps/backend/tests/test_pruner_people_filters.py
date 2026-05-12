@@ -9,7 +9,6 @@ from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
@@ -21,6 +20,7 @@ import mediamop.modules.pruner.pruner_scope_settings_model  # noqa: F401
 import mediamop.modules.pruner.pruner_server_instance_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
+from alembic import command
 from mediamop.api.factory import create_app
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
@@ -53,7 +53,8 @@ from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_periodic_enqueue,
     integration_test_set_home,
 )
-from tests.integration_helpers import auth_patch, auth_post, csrf as fetch_csrf, seed_admin_user
+from tests.integration_helpers import auth_patch, auth_post, seed_admin_user
+from tests.integration_helpers import csrf as fetch_csrf
 
 
 def test_preview_people_filters_roundtrip_matches_genre_normalization() -> None:
@@ -300,24 +301,23 @@ def session_factory(_iso) -> sessionmaker[Session]:
 
 def test_scope_row_persists_people_filters(session_factory: sessionmaker[Session]) -> None:
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="P",
-                base_url="http://p.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            row = s.scalars(
-                select(PrunerScopeSettings).where(
-                    PrunerScopeSettings.server_instance_id == sid,
-                    PrunerScopeSettings.media_scope == MEDIA_SCOPE_TV,
-                ),
-            ).one()
-            row.preview_include_people_json = preview_people_filters_to_db_column(["Ada Lovelace"])
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="P",
+            base_url="http://p.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        row = s.scalars(
+            select(PrunerScopeSettings).where(
+                PrunerScopeSettings.server_instance_id == sid,
+                PrunerScopeSettings.media_scope == MEDIA_SCOPE_TV,
+            ),
+        ).one()
+        row.preview_include_people_json = preview_people_filters_to_db_column(["Ada Lovelace"])
     with session_factory() as s:
         row2 = s.scalars(
             select(PrunerScopeSettings).where(
@@ -437,49 +437,48 @@ def test_plex_apply_does_not_call_candidate_collector_with_people_filters_on_sco
 ) -> None:
     monkeypatch.setenv("MEDIAMOP_PRUNER_APPLY_ENABLED", "1")
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="plex",
-                display_name="Plex",
-                base_url="http://plex.test:32400",
-                credentials_secrets={"auth_token": "tok"},
-            )
-            sid = int(inst.id)
-            row = s.scalars(
-                select(PrunerScopeSettings).where(
-                    PrunerScopeSettings.server_instance_id == sid,
-                    PrunerScopeSettings.media_scope == MEDIA_SCOPE_TV,
-                ),
-            ).one()
-            row.preview_include_people_json = preview_people_filters_to_db_column(["Anyone"])
-            run_uuid = str(uuid.uuid4())
-            from mediamop.modules.pruner.pruner_preview_service import insert_preview_run
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="plex",
+            display_name="Plex",
+            base_url="http://plex.test:32400",
+            credentials_secrets={"auth_token": "tok"},
+        )
+        sid = int(inst.id)
+        row = s.scalars(
+            select(PrunerScopeSettings).where(
+                PrunerScopeSettings.server_instance_id == sid,
+                PrunerScopeSettings.media_scope == MEDIA_SCOPE_TV,
+            ),
+        ).one()
+        row.preview_include_people_json = preview_people_filters_to_db_column(["Anyone"])
+        run_uuid = str(uuid.uuid4())
+        from mediamop.modules.pruner.pruner_preview_service import insert_preview_run
 
-            insert_preview_run(
-                s,
-                preview_run_uuid=run_uuid,
-                server_instance_id=sid,
-                media_scope=MEDIA_SCOPE_TV,
-                rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
-                pruner_job_id=None,
-                candidate_count=1,
-                candidates_json=json.dumps([{"item_id": "1", "granularity": "episode"}]),
-                truncated=False,
-                outcome="success",
-                unsupported_detail=None,
-                error_message=None,
-            )
-            job_row = PrunerJob(
-                dedupe_key="plex-apply-people-scope-test",
-                job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
-                status=PrunerJobStatus.COMPLETED.value,
-            )
-            s.add(job_row)
-            s.flush()
-            job_id = int(job_row.id)
+        insert_preview_run(
+            s,
+            preview_run_uuid=run_uuid,
+            server_instance_id=sid,
+            media_scope=MEDIA_SCOPE_TV,
+            rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+            pruner_job_id=None,
+            candidate_count=1,
+            candidates_json=json.dumps([{"item_id": "1", "granularity": "episode"}]),
+            truncated=False,
+            outcome="success",
+            unsupported_detail=None,
+            error_message=None,
+        )
+        job_row = PrunerJob(
+            dedupe_key="plex-apply-people-scope-test",
+            job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
+            status=PrunerJobStatus.COMPLETED.value,
+        )
+        s.add(job_row)
+        s.flush()
+        job_id = int(job_row.id)
 
     calls: list[str] = []
 

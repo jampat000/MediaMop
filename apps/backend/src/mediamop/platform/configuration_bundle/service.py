@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from typing import Any, TypeVar, cast
 
 from sqlalchemy import DateTime, delete, inspect, select
-from sqlalchemy.orm import Mapper
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Mapper, Session
 
 from mediamop.modules.pruner.pruner_scope_settings_model import PrunerScopeSettings
 from mediamop.modules.pruner.pruner_server_instance_model import PrunerServerInstance
@@ -27,7 +26,7 @@ T = TypeVar("T")
 
 def _serialize_cell(value: Any) -> Any:
     if isinstance(value, datetime):
-        return value.astimezone(timezone.utc).isoformat()
+        return value.astimezone(UTC).isoformat()
     return value
 
 

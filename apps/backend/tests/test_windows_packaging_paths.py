@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from pathlib import Path
 import re
 import threading
+from pathlib import Path
 
 from mediamop.windows import tray_app
 

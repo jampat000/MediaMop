@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from mediamop.platform.arr_library.arr_operator_settings_model import ArrLibraryOperatorSettingsRow
 from mediamop.modules.subber.subber_settings_model import SubberSettingsRow
+from mediamop.platform.arr_library.arr_operator_settings_model import ArrLibraryOperatorSettingsRow
 
 
 def ensure_subber_settings_row(db: Session) -> SubberSettingsRow:
@@ -44,9 +44,9 @@ def language_preferences_list(row: SubberSettingsRow) -> list[str]:
 def set_language_preferences_json(db: Session, row: SubberSettingsRow, langs: list[str]) -> None:
     norm = [str(x).strip().lower() for x in langs if str(x).strip()]
     row.language_preferences_json = json.dumps(norm or ["en"], separators=(",", ":"))
-    row.updated_at = datetime.now(timezone.utc)
+    row.updated_at = datetime.now(UTC)
     db.flush()
 
 
 def touch_updated_at(row: SubberSettingsRow) -> None:
-    row.updated_at = datetime.now(timezone.utc)
+    row.updated_at = datetime.now(UTC)

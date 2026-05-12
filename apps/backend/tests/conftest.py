@@ -7,10 +7,10 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from starlette.testclient import TestClient
 
+from alembic import command
 from mediamop.api.factory import create_app
 from mediamop.platform.jobs.worker_health import reset_worker_health_for_tests
 from tests.integration_helpers import seed_admin_user, seed_viewer_user

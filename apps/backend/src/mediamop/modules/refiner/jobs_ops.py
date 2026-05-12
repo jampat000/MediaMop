@@ -6,7 +6,7 @@ the one-writer rule. Callers should keep transactions short.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Literal
 
 _REFINER_JOB_DEDUPE_KEY_MAX_LEN = 512
@@ -21,7 +21,7 @@ from mediamop.platform.metrics.service import record_module_job_event, set_modul
 
 
 def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _record_refiner_queue_depth(session: Session) -> None:

@@ -16,8 +16,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.refiner_path_settings_service import (
     effective_tv_work_folder,
     effective_work_folder,
@@ -46,9 +46,7 @@ def is_refiner_owned_temp_work_file(path: Path) -> bool:
     name = path.name
     if name == REFINER_DRY_RUN_FFMPEG_PLACEHOLDER_NAME:
         return True
-    if ".refiner." in name:
-        return True
-    return False
+    return ".refiner." in name
 
 
 def _resolved_movie_and_tv_work_roots(*, session: Session, settings: MediaMopSettings) -> tuple[Path, Path]:

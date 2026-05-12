@@ -12,8 +12,8 @@ from mediamop.modules.refiner.jobs_model import RefinerJob
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_job_kinds import (
     REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
 )
-
-from tests.integration_helpers import auth_post, csrf as fetch_csrf, trusted_browser_origin_headers
+from tests.integration_helpers import auth_post, trusted_browser_origin_headers
+from tests.integration_helpers import csrf as fetch_csrf
 
 
 def _login_admin(client: TestClient) -> None:

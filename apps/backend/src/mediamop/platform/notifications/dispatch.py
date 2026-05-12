@@ -6,12 +6,13 @@ daemon thread. The thread is not joined — callers do not wait.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import threading
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -42,7 +43,7 @@ def _build_webhook_payload(
             "job_kind": job_kind,
             "title": title,
             "detail": detail,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "app": "MediaMop",
         }
     ).encode()
@@ -62,7 +63,7 @@ def _build_discord_payload(*, title: str, detail: str, event: str, module: str, 
                         {"name": "Job ID", "value": str(job_id), "inline": True},
                     ],
                     "footer": {"text": "MediaMop"},
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 }
             ]
         }
@@ -101,7 +102,7 @@ def _post_one(channel: NotificationChannel, *, title: str, detail: str, event: s
         )
 
 
-def _is_permanently_failed(session: "Session", module: str, job_id: int) -> bool:
+def _is_permanently_failed(session: Session, module: str, job_id: int) -> bool:
     """Return True only when the job row has status='failed' (exhausted retries)."""
     from sqlalchemy import text  # local import avoids circular at module level
 
@@ -119,7 +120,7 @@ def _is_permanently_failed(session: "Session", module: str, job_id: int) -> bool
 
 
 def _dispatch_thread(
-    session: "Session",
+    session: Session,
     *,
     event: str,
     module: str,
@@ -144,10 +145,8 @@ def _dispatch_thread(
         session.close()
     except Exception:
         logger.warning("Notification dispatch: failed to read channels for event=%s", event, exc_info=True)
-        try:
+        with contextlib.suppress(Exception):
             session.close()
-        except Exception:
-            pass
         return
 
     for channel in channels:
@@ -155,7 +154,7 @@ def _dispatch_thread(
 
 
 def dispatch_job_notification(
-    session_factory: "sessionmaker[Session]",
+    session_factory: sessionmaker[Session],
     *,
     module: str,
     event_kind: str,

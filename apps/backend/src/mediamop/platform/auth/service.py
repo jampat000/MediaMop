@@ -25,10 +25,10 @@ from mediamop.platform.auth.sessions import (
     effective_idle_timeout,
     generate_raw_session_token,
     hash_session_token,
+    revoke_session,
     session_invalid_reason,
     touch_last_seen,
     utcnow,
-    revoke_session,
 )
 
 logger = logging.getLogger(__name__)

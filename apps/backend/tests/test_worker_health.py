@@ -12,7 +12,10 @@ from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
 from mediamop.modules.dashboard.service import build_dashboard_status
 from mediamop.modules.refiner import worker_loop as refiner_worker_loop
-from mediamop.modules.refiner.worker_loop import start_refiner_worker_background_tasks, stop_refiner_worker_background_tasks
+from mediamop.modules.refiner.worker_loop import (
+    start_refiner_worker_background_tasks,
+    stop_refiner_worker_background_tasks,
+)
 from mediamop.platform.jobs.worker_health import (
     build_worker_health_snapshot,
     reset_worker_health_for_tests,

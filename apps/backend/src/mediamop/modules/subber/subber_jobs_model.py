@@ -11,7 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from mediamop.core.db import Base
 
 
-class SubberJobStatus(str, enum.Enum):
+class SubberJobStatus(enum.StrEnum):
     """Persisted in ``subber_jobs.status`` (VARCHAR)."""
 
     PENDING = "pending"

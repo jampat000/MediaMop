@@ -27,16 +27,25 @@ from mediamop.modules.pruner.pruner_constants import (
     pruner_apply_operator_label,
 )
 from mediamop.modules.pruner.pruner_credentials_envelope import decrypt_and_parse_envelope
-from mediamop.modules.pruner.pruner_instances_service import get_server_instance
 from mediamop.modules.pruner.pruner_emby_library_delete import emby_delete_library_item
+from mediamop.modules.pruner.pruner_instances_service import get_server_instance
 from mediamop.modules.pruner.pruner_jellyfin_library_delete import jellyfin_delete_library_item
 from mediamop.modules.pruner.pruner_plex_library_delete import plex_delete_library_metadata
 from mediamop.modules.pruner.pruner_preview_run_model import PrunerPreviewRun
 from mediamop.modules.pruner.worker_loop import PrunerJobWorkContext
 from mediamop.platform.activity import constants as C
 from mediamop.platform.activity.service import record_activity_event
-from mediamop.platform.observability.diagnostics import DiagnosticAction, DiagnosticModule, DiagnosticResult, DiagnosticTrigger
-from mediamop.platform.observability.operator_messages import activity_detail_envelope, media_scope_label, provider_label
+from mediamop.platform.observability.diagnostics import (
+    DiagnosticAction,
+    DiagnosticModule,
+    DiagnosticResult,
+    DiagnosticTrigger,
+)
+from mediamop.platform.observability.operator_messages import (
+    activity_detail_envelope,
+    media_scope_label,
+    provider_label,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -285,14 +294,13 @@ def make_pruner_candidate_removal_apply_handler(
         evt = C.PRUNER_APPLY_LIBRARY_REMOVAL_COMPLETED
         if removed == 0 and skipped == 0 and failed > 0:
             evt = C.PRUNER_APPLY_LIBRARY_REMOVAL_FAILED
-        with session_factory() as session:
-            with session.begin():
-                record_activity_event(
-                    session,
-                    event_type=evt,
-                    module="pruner",
-                    title=title,
-                    detail=detail,
-                )
+        with session_factory() as session, session.begin():
+            record_activity_event(
+                session,
+                event_type=evt,
+                module="pruner",
+                title=title,
+                detail=detail,
+            )
 
     return _run

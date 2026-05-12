@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 from datetime import time
-from zoneinfo import ZoneInfo
-from zoneinfo import ZoneInfoNotFoundError
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session

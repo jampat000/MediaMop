@@ -7,7 +7,8 @@ from starlette.testclient import TestClient
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.modules.dashboard.service import build_dashboard_status
-from tests.integration_helpers import auth_post, csrf as fetch_csrf
+from tests.integration_helpers import auth_post
+from tests.integration_helpers import csrf as fetch_csrf
 
 
 def _session_factory():

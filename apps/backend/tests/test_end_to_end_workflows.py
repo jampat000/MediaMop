@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import json
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
+from alembic import command
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.modules.pruner.pruner_constants import MEDIA_SCOPE_MOVIES, RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED
@@ -28,9 +28,9 @@ from mediamop.modules.pruner.pruner_overview_stats_service import build_pruner_o
 from mediamop.modules.pruner.pruner_preview_run_model import PrunerPreviewRun
 from mediamop.modules.pruner.worker_loop import process_one_pruner_job
 from mediamop.modules.refiner.file_remux_pass import run as refiner_run
+from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
-from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.refiner_job_handlers import build_refiner_job_handlers
 from mediamop.modules.refiner.refiner_operator_settings_model import RefinerOperatorSettingsRow
 from mediamop.modules.refiner.refiner_overview_stats_service import build_refiner_overview_stats
@@ -96,33 +96,32 @@ def test_refiner_file_reaches_output_cleanup_and_stats(
     source = release / "movie.mkv"
     source.write_bytes(b"x" * 2048)
 
-    with isolated_session_factory() as session:
-        with session.begin():
-            session.merge(
-                RefinerPathSettingsRow(
-                    id=1,
-                    refiner_watched_folder=str(watched),
-                    refiner_work_folder=str(work),
-                    refiner_output_folder=str(output),
-                ),
-            )
-            session.merge(
-                RefinerOperatorSettingsRow(
-                    id=1,
-                    min_file_age_seconds=0,
-                    refiner_min_input_file_size_mb=0,
-                    minimum_free_disk_space_mb=1,
-                ),
-            )
-            refiner_enqueue_or_get_job(
-                session,
-                dedupe_key="e2e-refiner-copy-cleanup",
-                job_kind=REFINER_FILE_REMUX_PASS_JOB_KIND,
-                payload_json=json.dumps(
-                    {"relative_media_path": "Movie.Release/movie.mkv", "media_scope": "movie"},
-                    separators=(",", ":"),
-                ),
-            )
+    with isolated_session_factory() as session, session.begin():
+        session.merge(
+            RefinerPathSettingsRow(
+                id=1,
+                refiner_watched_folder=str(watched),
+                refiner_work_folder=str(work),
+                refiner_output_folder=str(output),
+            ),
+        )
+        session.merge(
+            RefinerOperatorSettingsRow(
+                id=1,
+                min_file_age_seconds=0,
+                refiner_min_input_file_size_mb=0,
+                minimum_free_disk_space_mb=1,
+            ),
+        )
+        refiner_enqueue_or_get_job(
+            session,
+            dedupe_key="e2e-refiner-copy-cleanup",
+            job_kind=REFINER_FILE_REMUX_PASS_JOB_KIND,
+            payload_json=json.dumps(
+                {"relative_media_path": "Movie.Release/movie.mkv", "media_scope": "movie"},
+                separators=(",", ":"),
+            ),
+        )
 
     monkeypatch.setattr(refiner_run, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
     monkeypatch.setattr(refiner_run, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe", "ffmpeg"))
@@ -134,7 +133,7 @@ def test_refiner_file_reaches_output_cleanup_and_stats(
             isolated_session_factory,
             lease_owner="pytest-refiner",
             job_handlers=handlers,
-            now=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            now=datetime(2026, 1, 1, tzinfo=UTC),
         )
         == "processed"
     )
@@ -160,31 +159,30 @@ def test_pruner_preview_apply_reaches_terminal_state_and_stats(
     settings = replace(MediaMopSettings.load(), pruner_apply_enabled=True)
     deleted: list[str] = []
 
-    with isolated_session_factory() as session:
-        with session.begin():
-            inst = create_server_instance(
-                session,
-                settings,
-                provider="plex",
-                display_name="Living room",
-                base_url="http://plex.test:32400",
-                credentials_secrets={"auth_token": "plex-token"},
-            )
-            server_instance_id = int(inst.id)
-            pruner_enqueue_or_get_job(
-                session,
-                dedupe_key="e2e-pruner-preview",
-                job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
-                payload_json=json.dumps(
-                    {
-                        "server_instance_id": server_instance_id,
-                        "media_scope": MEDIA_SCOPE_MOVIES,
-                        "rule_family_id": RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
-                        "trigger": "manual",
-                    },
-                    separators=(",", ":"),
-                ),
-            )
+    with isolated_session_factory() as session, session.begin():
+        inst = create_server_instance(
+            session,
+            settings,
+            provider="plex",
+            display_name="Living room",
+            base_url="http://plex.test:32400",
+            credentials_secrets={"auth_token": "plex-token"},
+        )
+        server_instance_id = int(inst.id)
+        pruner_enqueue_or_get_job(
+            session,
+            dedupe_key="e2e-pruner-preview",
+            job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
+            payload_json=json.dumps(
+                {
+                    "server_instance_id": server_instance_id,
+                    "media_scope": MEDIA_SCOPE_MOVIES,
+                    "rule_family_id": RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+                    "trigger": "manual",
+                },
+                separators=(",", ":"),
+            ),
+        )
 
     monkeypatch.setattr(
         "mediamop.modules.pruner.pruner_preview_job_handler.preview_payload_json",
@@ -202,7 +200,7 @@ def test_pruner_preview_apply_reaches_terminal_state_and_stats(
             isolated_session_factory,
             lease_owner="pytest-pruner-preview",
             job_handlers=handlers,
-            now=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            now=datetime(2026, 1, 1, tzinfo=UTC),
         )
         == "processed"
     )
@@ -237,7 +235,7 @@ def test_pruner_preview_apply_reaches_terminal_state_and_stats(
             isolated_session_factory,
             lease_owner="pytest-pruner-apply",
             job_handlers=handlers,
-            now=datetime(2026, 1, 1, 0, 1, tzinfo=timezone.utc),
+            now=datetime(2026, 1, 1, 0, 1, tzinfo=UTC),
         )
         == "processed"
     )
@@ -263,36 +261,35 @@ def test_subber_search_downloads_subtitle_and_updates_stats(
     media.parent.mkdir(parents=True)
     media.write_bytes(b"movie")
 
-    with isolated_session_factory() as session:
-        with session.begin():
-            session.merge(
-                RefinerOperatorSettingsRow(
-                    id=1,
-                    min_file_age_seconds=0,
-                    refiner_min_input_file_size_mb=0,
-                    minimum_free_disk_space_mb=1,
-                ),
-            )
-            session.merge(SubberSettingsRow(id=1, enabled=True, language_preferences_json='["en"]'))
-            upsert_provider_settings(session, settings, provider_key=PROVIDER_PODNAPISI, enabled=True, priority=0)
-            state = SubberSubtitleState(
-                media_scope="movies",
-                file_path=str(media),
-                movie_title="Example Movie",
-                movie_year=2026,
-                language_code="en",
-                status="missing",
-                search_count=0,
-            )
-            session.add(state)
-            session.flush()
-            state_id = int(state.id)
-            subber_enqueue_or_get_job(
-                session,
-                dedupe_key="e2e-subber-search",
-                job_kind=SUBBER_JOB_KIND_SUBTITLE_SEARCH_MOVIES,
-                payload_json=json.dumps({"state_id": state_id}, separators=(",", ":")),
-            )
+    with isolated_session_factory() as session, session.begin():
+        session.merge(
+            RefinerOperatorSettingsRow(
+                id=1,
+                min_file_age_seconds=0,
+                refiner_min_input_file_size_mb=0,
+                minimum_free_disk_space_mb=1,
+            ),
+        )
+        session.merge(SubberSettingsRow(id=1, enabled=True, language_preferences_json='["en"]'))
+        upsert_provider_settings(session, settings, provider_key=PROVIDER_PODNAPISI, enabled=True, priority=0)
+        state = SubberSubtitleState(
+            media_scope="movies",
+            file_path=str(media),
+            movie_title="Example Movie",
+            movie_year=2026,
+            language_code="en",
+            status="missing",
+            search_count=0,
+        )
+        session.add(state)
+        session.flush()
+        state_id = int(state.id)
+        subber_enqueue_or_get_job(
+            session,
+            dedupe_key="e2e-subber-search",
+            job_kind=SUBBER_JOB_KIND_SUBTITLE_SEARCH_MOVIES,
+            payload_json=json.dumps({"state_id": state_id}, separators=(",", ":")),
+        )
 
     monkeypatch.setattr(
         "mediamop.modules.subber.subber_subtitle_search_service.podnapisi_client.search",
@@ -309,7 +306,7 @@ def test_subber_search_downloads_subtitle_and_updates_stats(
             isolated_session_factory,
             lease_owner="pytest-subber",
             job_handlers=handlers,
-            now=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            now=datetime(2026, 1, 1, tzinfo=UTC),
         )
         == "processed"
     )

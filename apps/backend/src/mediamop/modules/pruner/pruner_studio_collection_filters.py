@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from mediamop.modules.pruner.pruner_genre_filters import normalized_genre_filter_tokens
 

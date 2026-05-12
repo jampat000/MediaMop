@@ -9,8 +9,8 @@ ownership from activity.
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
 # Movie release years only; deterministic cutoffs for 4-digit tokens.
 _YEAR_MIN = 1888

@@ -10,6 +10,11 @@ from types import SimpleNamespace
 import pytest
 from sqlalchemy import delete, select, update
 
+import mediamop.modules.refiner.jobs_model  # noqa: F401
+import mediamop.modules.refiner.refiner_path_settings_model  # noqa: F401
+import mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue as periodic_enqueue
+import mediamop.platform.activity.models  # noqa: F401
+import mediamop.platform.auth.models  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
@@ -18,7 +23,6 @@ from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_enqueue
     refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan,
     try_enqueue_periodic_watched_folder_remux_scan_dispatch,
 )
-import mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue as periodic_enqueue
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_job_kinds import (
     REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
 )
@@ -27,11 +31,6 @@ from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_periodi
     _next_scheduler_sleep_seconds,
     _watched_folder_scan_interval_seconds,
 )
-
-import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.modules.refiner.refiner_path_settings_model  # noqa: F401
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
 
 
 def _fac():

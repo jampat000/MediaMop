@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 
 from sqlalchemy import delete
 from sqlalchemy.orm import Session, sessionmaker
@@ -66,10 +66,9 @@ def prune_job_rows(session: Session, *, cutoff: datetime) -> dict[str, int]:
 
 
 def _run_prune_tick(session_factory: sessionmaker[Session], *, settings: MediaMopSettings) -> dict[str, int]:
-    cutoff = datetime.now(timezone.utc) - timedelta(days=settings.job_rows_retention_days)
-    with session_factory() as session:
-        with session.begin():
-            counts = prune_job_rows(session, cutoff=cutoff)
+    cutoff = datetime.now(UTC) - timedelta(days=settings.job_rows_retention_days)
+    with session_factory() as session, session.begin():
+        counts = prune_job_rows(session, cutoff=cutoff)
     return counts
 
 

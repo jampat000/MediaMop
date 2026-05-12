@@ -9,7 +9,7 @@ from starlette.testclient import TestClient
 from mediamop.api.factory import create_app
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.platform.auth.models import User, UserSession, UserRole
+from mediamop.platform.auth.models import User, UserRole, UserSession
 from mediamop.platform.auth.password import hash_password
 
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -15,7 +15,7 @@ from mediamop.platform.activity.models import ActivityEvent
 
 def build_pruner_overview_stats(db: Session, *, window_days: int = 30) -> PrunerOverviewStatsOut:
     wd = max(1, int(window_days))
-    since = datetime.now(timezone.utc) - timedelta(days=wd)
+    since = datetime.now(UTC) - timedelta(days=wd)
 
     apply_rows = db.execute(
         select(ActivityEvent.detail).where(

@@ -5,6 +5,9 @@ from __future__ import annotations
 from sqlalchemy import delete, select
 from starlette.testclient import TestClient
 
+import mediamop.modules.refiner.jobs_model  # noqa: F401
+import mediamop.platform.activity.models  # noqa: F401
+import mediamop.platform.auth.models  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.modules.refiner.jobs_model import RefinerJob
@@ -12,11 +15,8 @@ from mediamop.modules.refiner.refiner_supplied_payload_evaluation_job_kinds impo
     REFINER_SUPPLIED_PAYLOAD_EVALUATION_DEDUPE_KEY,
     REFINER_SUPPLIED_PAYLOAD_EVALUATION_JOB_KIND,
 )
-from tests.integration_helpers import auth_post, csrf as fetch_csrf
-
-import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
+from tests.integration_helpers import auth_post
+from tests.integration_helpers import csrf as fetch_csrf
 
 
 def _fac():

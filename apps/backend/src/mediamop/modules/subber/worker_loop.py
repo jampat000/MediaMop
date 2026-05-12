@@ -8,13 +8,12 @@ import os
 import socket
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Literal
 
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.platform.http.request_context import job_logging_context
 from mediamop.modules.queue_worker.job_kind_boundaries import (
     SUBBER_QUEUE_JOB_KIND_PREFIX,
     job_kind_forbidden_on_subber_lane,
@@ -26,6 +25,7 @@ from mediamop.modules.subber.subber_jobs_ops import (
     fail_claimed_subber_job,
     fail_leased_subber_job_after_complete_failure,
 )
+from mediamop.platform.http.request_context import job_logging_context
 from mediamop.platform.jobs.worker_health import worker_heartbeat, worker_started, worker_stopped
 from mediamop.platform.notifications.dispatch import dispatch_job_notification
 from mediamop.platform.observability.failure_messages import operator_failure_from_exception
@@ -68,25 +68,24 @@ def process_one_subber_job(
     lease_seconds: int = DEFAULT_SUBBER_JOB_LEASE_SECONDS,
     now: datetime | None = None,
 ) -> Literal["idle", "processed"]:
-    when = now if now is not None else datetime.now(timezone.utc)
+    when = now if now is not None else datetime.now(UTC)
     lease_until = when + timedelta(seconds=lease_seconds)
 
-    with session_factory() as session:
-        with session.begin():
-            job = claim_next_eligible_subber_job(
-                session,
-                lease_owner=lease_owner,
-                lease_expires_at=lease_until,
-                now=when,
-            )
-            if job is None:
-                return "idle"
-            ctx = SubberJobWorkContext(
-                id=job.id,
-                job_kind=job.job_kind,
-                payload_json=job.payload_json,
-                lease_owner=lease_owner,
-            )
+    with session_factory() as session, session.begin():
+        job = claim_next_eligible_subber_job(
+            session,
+            lease_owner=lease_owner,
+            lease_expires_at=lease_until,
+            now=when,
+        )
+        if job is None:
+            return "idle"
+        ctx = SubberJobWorkContext(
+            id=job.id,
+            job_kind=job.job_kind,
+            payload_json=job.payload_json,
+            lease_owner=lease_owner,
+        )
 
     if job_kind_forbidden_on_subber_lane(ctx.job_kind):
         err_text = (
@@ -94,15 +93,14 @@ def process_one_subber_job(
             f"{ctx.job_kind!r} (row id={ctx.id})"
         )[:10_000]
         try:
-            with session_factory() as session:
-                with session.begin():
-                    fail_claimed_subber_job(
-                        session,
-                        job_id=ctx.id,
-                        lease_owner=ctx.lease_owner,
-                        error_message=err_text,
-                        now=when,
-                    )
+            with session_factory() as session, session.begin():
+                fail_claimed_subber_job(
+                    session,
+                    job_id=ctx.id,
+                    lease_owner=ctx.lease_owner,
+                    error_message=err_text,
+                    now=when,
+                )
         except Exception:
             logger.exception("Subber fail_claimed after cross-lane guard job_id=%s", ctx.id)
         return "processed"
@@ -113,15 +111,14 @@ def process_one_subber_job(
             f"{ctx.job_kind!r} (row id={ctx.id})"
         )[:10_000]
         try:
-            with session_factory() as session:
-                with session.begin():
-                    fail_claimed_subber_job(
-                        session,
-                        job_id=ctx.id,
-                        lease_owner=ctx.lease_owner,
-                        error_message=err_text,
-                        now=when,
-                    )
+            with session_factory() as session, session.begin():
+                fail_claimed_subber_job(
+                    session,
+                    job_id=ctx.id,
+                    lease_owner=ctx.lease_owner,
+                    error_message=err_text,
+                    now=when,
+                )
         except Exception:
             logger.exception("Subber fail_claimed after subber.* prefix guard job_id=%s", ctx.id)
         return "processed"
@@ -131,15 +128,14 @@ def process_one_subber_job(
         exc: BaseException = SubberNoHandlerForJobKind(ctx.job_kind)
         err_text = str(exc)[:10_000]
         try:
-            with session_factory() as session:
-                with session.begin():
-                    fail_claimed_subber_job(
-                        session,
-                        job_id=ctx.id,
-                        lease_owner=ctx.lease_owner,
-                        error_message=err_text,
-                        now=when,
-                    )
+            with session_factory() as session, session.begin():
+                fail_claimed_subber_job(
+                    session,
+                    job_id=ctx.id,
+                    lease_owner=ctx.lease_owner,
+                    error_message=err_text,
+                    now=when,
+                )
         except Exception:
             logger.exception("Subber fail_claimed after missing handler job_id=%s", ctx.id)
         return "processed"
@@ -156,15 +152,14 @@ def process_one_subber_job(
             recoverable=False,
         ).message[:10_000]
         try:
-            with session_factory() as session:
-                with session.begin():
-                    fail_claimed_subber_job(
-                        session,
-                        job_id=ctx.id,
-                        lease_owner=ctx.lease_owner,
-                        error_message=err_text,
-                        now=when,
-                    )
+            with session_factory() as session, session.begin():
+                fail_claimed_subber_job(
+                    session,
+                    job_id=ctx.id,
+                    lease_owner=ctx.lease_owner,
+                    error_message=err_text,
+                    now=when,
+                )
         except Exception:
             logger.exception("Subber fail_claimed_subber_job failed after handler error job_id=%s", ctx.id)
         dispatch_job_notification(session_factory, module="subber", event_kind="failed", job_id=ctx.id, job_kind=ctx.job_kind)
@@ -173,17 +168,16 @@ def process_one_subber_job(
     complete_ok = True
     complete_err: str | None = None
     try:
-        with session_factory() as session:
-            with session.begin():
-                ok = complete_claimed_subber_job(
-                    session,
-                    job_id=ctx.id,
-                    lease_owner=ctx.lease_owner,
-                    now=when,
-                )
-                if not ok:
-                    complete_ok = False
-                    complete_err = "complete_claimed_subber_job refused (lease/state mismatch)"
+        with session_factory() as session, session.begin():
+            ok = complete_claimed_subber_job(
+                session,
+                job_id=ctx.id,
+                lease_owner=ctx.lease_owner,
+                now=when,
+            )
+            if not ok:
+                complete_ok = False
+                complete_err = "complete_claimed_subber_job refused (lease/state mismatch)"
     except Exception as exc:
         complete_ok = False
         logger.exception("Subber complete_claimed_subber_job failed job_id=%s", ctx.id)
@@ -195,15 +189,14 @@ def process_one_subber_job(
     if not complete_ok and complete_err is not None:
         bounded = (SUBBER_TERMINALIZATION_FAILURE_PREFIX + complete_err)[:10_000]
         try:
-            with session_factory() as session:
-                with session.begin():
-                    recovered = fail_leased_subber_job_after_complete_failure(
-                        session,
-                        job_id=ctx.id,
-                        lease_owner=ctx.lease_owner,
-                        error_message=bounded,
-                        now=when,
-                    )
+            with session_factory() as session, session.begin():
+                recovered = fail_leased_subber_job_after_complete_failure(
+                    session,
+                    job_id=ctx.id,
+                    lease_owner=ctx.lease_owner,
+                    error_message=bounded,
+                    now=when,
+                )
             if not recovered:
                 logger.warning(
                     "Subber terminalization recovery did not apply job_id=%s owner=%s",

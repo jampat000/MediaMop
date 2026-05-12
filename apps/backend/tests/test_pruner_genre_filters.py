@@ -8,7 +8,6 @@ from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
@@ -20,6 +19,7 @@ import mediamop.modules.pruner.pruner_scope_settings_model  # noqa: F401
 import mediamop.modules.pruner.pruner_server_instance_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
+from alembic import command
 from mediamop.api.factory import create_app
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
@@ -40,7 +40,8 @@ from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_periodic_enqueue,
     integration_test_set_home,
 )
-from tests.integration_helpers import auth_patch, auth_post, csrf as fetch_csrf, seed_admin_user
+from tests.integration_helpers import auth_patch, auth_post, seed_admin_user
+from tests.integration_helpers import csrf as fetch_csrf
 
 
 @pytest.fixture(autouse=True)
@@ -143,24 +144,23 @@ def session_factory(_iso) -> sessionmaker[Session]:
 
 def test_scope_row_persists_genre_filters(session_factory: sessionmaker[Session]) -> None:
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="G",
-                base_url="http://g.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            row = s.scalars(
-                select(PrunerScopeSettings).where(
-                    PrunerScopeSettings.server_instance_id == sid,
-                    PrunerScopeSettings.media_scope == MEDIA_SCOPE_TV,
-                ),
-            ).one()
-            row.preview_include_genres_json = preview_genre_filters_to_db_column(["Noir"])
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="G",
+            base_url="http://g.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        row = s.scalars(
+            select(PrunerScopeSettings).where(
+                PrunerScopeSettings.server_instance_id == sid,
+                PrunerScopeSettings.media_scope == MEDIA_SCOPE_TV,
+            ),
+        ).one()
+        row.preview_include_genres_json = preview_genre_filters_to_db_column(["Noir"])
     with session_factory() as s:
         row2 = s.scalars(
             select(PrunerScopeSettings).where(

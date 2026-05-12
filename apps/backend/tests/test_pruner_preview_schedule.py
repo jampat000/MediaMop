@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 
 def _as_utc(dt: datetime) -> datetime:
-    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
 from pathlib import Path
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
@@ -22,6 +21,7 @@ import mediamop.modules.pruner.pruner_scope_settings_model  # noqa: F401
 import mediamop.modules.pruner.pruner_server_instance_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
+from alembic import command
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.modules.pruner.pruner_constants import (
@@ -67,79 +67,76 @@ def _scope(
 
 def test_scheduled_tick_skips_disabled_instance(session_factory: sessionmaker[Session]) -> None:
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="emby",
-                display_name="Off",
-                base_url="http://off.test",
-                credentials_secrets={"api_key": "x"},
-            )
-            inst.enabled = False
-            sid = int(inst.id)
-            tv = _scope(s, instance_id=sid, media_scope=MEDIA_SCOPE_TV)
-            tv.scheduled_preview_enabled = True
-            tv.scheduled_preview_interval_seconds = 60
-            tv.last_scheduled_preview_enqueued_at = None
-    n = run_pruner_preview_schedule_enqueue_tick(session_factory, now=datetime.now(timezone.utc))
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="emby",
+            display_name="Off",
+            base_url="http://off.test",
+            credentials_secrets={"api_key": "x"},
+        )
+        inst.enabled = False
+        sid = int(inst.id)
+        tv = _scope(s, instance_id=sid, media_scope=MEDIA_SCOPE_TV)
+        tv.scheduled_preview_enabled = True
+        tv.scheduled_preview_interval_seconds = 60
+        tv.last_scheduled_preview_enqueued_at = None
+    n = run_pruner_preview_schedule_enqueue_tick(session_factory, now=datetime.now(UTC))
     assert n == 0
 
 
 def test_scheduled_tick_skips_when_rule_disabled(session_factory: sessionmaker[Session]) -> None:
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="emby",
-                display_name="On",
-                base_url="http://on.test",
-                credentials_secrets={"api_key": "x"},
-            )
-            sid = int(inst.id)
-            tv = _scope(s, instance_id=sid, media_scope=MEDIA_SCOPE_TV)
-            tv.scheduled_preview_enabled = True
-            tv.scheduled_preview_interval_seconds = 60
-            tv.missing_primary_media_reported_enabled = False
-            tv.last_scheduled_preview_enqueued_at = None
-    assert run_pruner_preview_schedule_enqueue_tick(session_factory, now=datetime.now(timezone.utc)) == 0
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="emby",
+            display_name="On",
+            base_url="http://on.test",
+            credentials_secrets={"api_key": "x"},
+        )
+        sid = int(inst.id)
+        tv = _scope(s, instance_id=sid, media_scope=MEDIA_SCOPE_TV)
+        tv.scheduled_preview_enabled = True
+        tv.scheduled_preview_interval_seconds = 60
+        tv.missing_primary_media_reported_enabled = False
+        tv.last_scheduled_preview_enqueued_at = None
+    assert run_pruner_preview_schedule_enqueue_tick(session_factory, now=datetime.now(UTC)) == 0
 
 
 def test_two_same_provider_instances_independent_due(session_factory: sessionmaker[Session]) -> None:
     """Instance B not due must not block instance A from enqueueing."""
 
     settings = MediaMopSettings.load()
-    t0 = datetime(2026, 4, 17, 12, 0, 0, tzinfo=timezone.utc)
-    with session_factory() as s:
-        with s.begin():
-            a = create_server_instance(
-                s,
-                settings,
-                provider="emby",
-                display_name="A",
-                base_url="http://a.test",
-                credentials_secrets={"api_key": "a"},
-            )
-            b = create_server_instance(
-                s,
-                settings,
-                provider="emby",
-                display_name="B",
-                base_url="http://b.test",
-                credentials_secrets={"api_key": "b"},
-            )
-            id_a, id_b = int(a.id), int(b.id)
-            tv_a = _scope(s, instance_id=id_a, media_scope=MEDIA_SCOPE_TV)
-            tv_a.scheduled_preview_enabled = True
-            tv_a.scheduled_preview_interval_seconds = 60
-            tv_a.last_scheduled_preview_enqueued_at = None
-            tv_b = _scope(s, instance_id=id_b, media_scope=MEDIA_SCOPE_TV)
-            tv_b.scheduled_preview_enabled = True
-            tv_b.scheduled_preview_interval_seconds = 3600
-            tv_b.last_scheduled_preview_enqueued_at = t0
+    t0 = datetime(2026, 4, 17, 12, 0, 0, tzinfo=UTC)
+    with session_factory() as s, s.begin():
+        a = create_server_instance(
+            s,
+            settings,
+            provider="emby",
+            display_name="A",
+            base_url="http://a.test",
+            credentials_secrets={"api_key": "a"},
+        )
+        b = create_server_instance(
+            s,
+            settings,
+            provider="emby",
+            display_name="B",
+            base_url="http://b.test",
+            credentials_secrets={"api_key": "b"},
+        )
+        id_a, id_b = int(a.id), int(b.id)
+        tv_a = _scope(s, instance_id=id_a, media_scope=MEDIA_SCOPE_TV)
+        tv_a.scheduled_preview_enabled = True
+        tv_a.scheduled_preview_interval_seconds = 60
+        tv_a.last_scheduled_preview_enqueued_at = None
+        tv_b = _scope(s, instance_id=id_b, media_scope=MEDIA_SCOPE_TV)
+        tv_b.scheduled_preview_enabled = True
+        tv_b.scheduled_preview_interval_seconds = 3600
+        tv_b.last_scheduled_preview_enqueued_at = t0
 
     now = t0.replace(hour=12, minute=2)
     n = run_pruner_preview_schedule_enqueue_tick(session_factory, now=now)
@@ -162,24 +159,23 @@ def test_two_same_provider_instances_independent_due(session_factory: sessionmak
 
 def test_tv_and_movies_same_instance_both_enqueue_when_due(session_factory: sessionmaker[Session]) -> None:
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="Dual",
-                base_url="http://dual.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            for scope in (MEDIA_SCOPE_TV, MEDIA_SCOPE_MOVIES):
-                row = _scope(s, instance_id=sid, media_scope=scope)
-                row.scheduled_preview_enabled = True
-                row.scheduled_preview_interval_seconds = 60
-                row.last_scheduled_preview_enqueued_at = None
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="Dual",
+            base_url="http://dual.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        for scope in (MEDIA_SCOPE_TV, MEDIA_SCOPE_MOVIES):
+            row = _scope(s, instance_id=sid, media_scope=scope)
+            row.scheduled_preview_enabled = True
+            row.scheduled_preview_interval_seconds = 60
+            row.last_scheduled_preview_enqueued_at = None
 
-    n = run_pruner_preview_schedule_enqueue_tick(session_factory, now=datetime.now(timezone.utc))
+    n = run_pruner_preview_schedule_enqueue_tick(session_factory, now=datetime.now(UTC))
     assert n == 2
     with session_factory() as s:
         jobs = s.scalars(select(PrunerJob).where(PrunerJob.job_kind == PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND)).all()
@@ -191,25 +187,24 @@ def test_tv_and_movies_same_instance_both_enqueue_when_due(session_factory: sess
 
 def test_scheduled_tick_enqueues_non_missing_primary_rule_family(session_factory: sessionmaker[Session]) -> None:
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="Movies",
-                base_url="http://movies.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            movies = _scope(s, instance_id=sid, media_scope=MEDIA_SCOPE_MOVIES)
-            movies.scheduled_preview_enabled = True
-            movies.scheduled_preview_interval_seconds = 60
-            movies.missing_primary_media_reported_enabled = False
-            movies.watched_movies_reported_enabled = True
-            movies.last_scheduled_preview_enqueued_at = None
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="Movies",
+            base_url="http://movies.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        movies = _scope(s, instance_id=sid, media_scope=MEDIA_SCOPE_MOVIES)
+        movies.scheduled_preview_enabled = True
+        movies.scheduled_preview_interval_seconds = 60
+        movies.missing_primary_media_reported_enabled = False
+        movies.watched_movies_reported_enabled = True
+        movies.last_scheduled_preview_enqueued_at = None
 
-    n = run_pruner_preview_schedule_enqueue_tick(session_factory, now=datetime.now(timezone.utc))
+    n = run_pruner_preview_schedule_enqueue_tick(session_factory, now=datetime.now(UTC))
 
     assert n == 1
     with session_factory() as s:
@@ -225,25 +220,24 @@ def test_scheduled_tick_enqueues_non_missing_primary_rule_family(session_factory
 
 def test_scheduled_tick_enqueues_one_job_per_enabled_rule_family(session_factory: sessionmaker[Session]) -> None:
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="Multi",
-                base_url="http://multi.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            movies = _scope(s, instance_id=sid, media_scope=MEDIA_SCOPE_MOVIES)
-            movies.scheduled_preview_enabled = True
-            movies.scheduled_preview_interval_seconds = 60
-            movies.missing_primary_media_reported_enabled = True
-            movies.watched_movies_reported_enabled = True
-            movies.last_scheduled_preview_enqueued_at = None
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="Multi",
+            base_url="http://multi.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        movies = _scope(s, instance_id=sid, media_scope=MEDIA_SCOPE_MOVIES)
+        movies.scheduled_preview_enabled = True
+        movies.scheduled_preview_interval_seconds = 60
+        movies.missing_primary_media_reported_enabled = True
+        movies.watched_movies_reported_enabled = True
+        movies.last_scheduled_preview_enqueued_at = None
 
-    n = run_pruner_preview_schedule_enqueue_tick(session_factory, now=datetime.now(timezone.utc))
+    n = run_pruner_preview_schedule_enqueue_tick(session_factory, now=datetime.now(UTC))
 
     assert n == 2
     with session_factory() as s:
@@ -254,22 +248,21 @@ def test_scheduled_tick_enqueues_one_job_per_enabled_rule_family(session_factory
 
 def test_second_tick_not_due_until_own_interval_elapses(session_factory: sessionmaker[Session]) -> None:
     settings = MediaMopSettings.load()
-    t0 = datetime(2026, 4, 17, 10, 0, 0, tzinfo=timezone.utc)
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="emby",
-                display_name="Cadence",
-                base_url="http://cad.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            tv = _scope(s, instance_id=sid, media_scope=MEDIA_SCOPE_TV)
-            tv.scheduled_preview_enabled = True
-            tv.scheduled_preview_interval_seconds = 120
-            tv.last_scheduled_preview_enqueued_at = None
+    t0 = datetime(2026, 4, 17, 10, 0, 0, tzinfo=UTC)
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="emby",
+            display_name="Cadence",
+            base_url="http://cad.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        tv = _scope(s, instance_id=sid, media_scope=MEDIA_SCOPE_TV)
+        tv.scheduled_preview_enabled = True
+        tv.scheduled_preview_interval_seconds = 120
+        tv.last_scheduled_preview_enqueued_at = None
 
     assert run_pruner_preview_schedule_enqueue_tick(session_factory, now=t0) == 1
     assert run_pruner_preview_schedule_enqueue_tick(session_factory, now=t0.replace(minute=1)) == 0

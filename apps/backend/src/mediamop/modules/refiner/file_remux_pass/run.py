@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import shutil
 import time
@@ -22,17 +23,10 @@ from mediamop.modules.refiner.file_remux_pass.visibility import (
     remux_pass_result_to_activity_detail,
     summarize_remux_plan,
 )
-from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
 from mediamop.modules.refiner.refiner_movie_output_cleanup import (
     maybe_run_movie_output_folder_cleanup_after_remux,
 )
-from mediamop.modules.refiner.refiner_tv_output_cleanup import (
-    maybe_run_tv_output_season_folder_cleanup_after_remux,
-)
-from mediamop.modules.refiner.refiner_tv_season_folder_cleanup import (
-    handle_tv_cleanup_after_success,
-    init_tv_season_cleanup_activity_fields,
-)
+from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
 from mediamop.modules.refiner.refiner_remux_mux import (
     build_ffmpeg_argv,
     ffprobe_json,
@@ -52,6 +46,13 @@ from mediamop.modules.refiner.refiner_remux_track_display import (
     audio_before_line_from_probe,
     subtitle_after_line_from_plan,
     subtitle_before_line_from_probe,
+)
+from mediamop.modules.refiner.refiner_tv_output_cleanup import (
+    maybe_run_tv_output_season_folder_cleanup_after_remux,
+)
+from mediamop.modules.refiner.refiner_tv_season_folder_cleanup import (
+    handle_tv_cleanup_after_success,
+    init_tv_season_cleanup_activity_fields,
 )
 from mediamop.platform.file_lifecycle.guardrails import bytes_to_mb, check_minimum_free_disk_space
 from mediamop.platform.file_lifecycle.mutations import safe_copy_to_final, safe_finalize_file, try_hardlink_to_final
@@ -108,19 +109,15 @@ def _probe_duration_seconds(probe: dict[str, Any]) -> float | None:
     candidates: list[float] = []
     fmt = probe.get("format")
     if isinstance(fmt, dict):
-        try:
+        with contextlib.suppress(TypeError, ValueError):
             candidates.append(float(fmt.get("duration") or 0))
-        except (TypeError, ValueError):
-            pass
     streams = probe.get("streams")
     if isinstance(streams, list):
         for stream in streams:
             if not isinstance(stream, dict):
                 continue
-            try:
+            with contextlib.suppress(TypeError, ValueError):
                 candidates.append(float(stream.get("duration") or 0))
-            except (TypeError, ValueError):
-                pass
     valid = [item for item in candidates if item > 0]
     return max(valid) if valid else None
 
@@ -722,10 +719,8 @@ def run_refiner_file_remux_pass(
             required_mb=minimum_free_disk_space_mb,
         )
         if not output_disk.ok:
-            try:
+            with contextlib.suppress(OSError):
                 tmp.unlink(missing_ok=True)
-            except OSError:
-                pass
             return _skip_guardrail(
                 relative_media_path=relative_media_path,
                 inspected_source_path=inspected,

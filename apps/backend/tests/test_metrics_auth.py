@@ -2,7 +2,8 @@ import pytest
 from starlette.testclient import TestClient
 
 from mediamop.api.factory import create_app
-from tests.integration_helpers import auth_post, csrf as fetch_csrf
+from tests.integration_helpers import auth_post
+from tests.integration_helpers import csrf as fetch_csrf
 
 
 def _login_admin(client: TestClient) -> None:

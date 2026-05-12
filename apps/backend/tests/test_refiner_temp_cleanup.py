@@ -16,8 +16,8 @@ import mediamop.modules.refiner.jobs_model  # noqa: F401
 import mediamop.modules.refiner.refiner_temp_cleanup as refiner_temp_cleanup
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.refiner_temp_cleanup import (
     is_refiner_owned_temp_work_file,
     refiner_file_remux_pass_job_active_for_scope,
@@ -333,13 +333,12 @@ def test_file_lock_skip_continues_movie_scope(tmp_path: Path) -> None:
             raise PermissionError("locked")
         return real_unlink(self, *a, **kw)
 
-    with _patch_roots(w_m, w_t):
-        with patch.object(Path, "unlink", _unlink):
-            out = run_refiner_work_temp_stale_sweep_for_scope(
-                session=session,
-                settings=settings,
-                media_scope="movie",
-            )
+    with _patch_roots(w_m, w_t), patch.object(Path, "unlink", _unlink):
+        out = run_refiner_work_temp_stale_sweep_for_scope(
+            session=session,
+            settings=settings,
+            media_scope="movie",
+        )
     assert f1.exists()
     assert not f2.exists()
     assert len(out["temp_cleanup_files_deleted"]) == 1

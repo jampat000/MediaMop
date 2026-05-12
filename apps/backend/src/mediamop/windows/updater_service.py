@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
 import json
 import os
@@ -94,13 +95,13 @@ def _install_root() -> Path:
     if getattr(sys, "frozen", False) and os.name == "nt":
         resolved = _host_path(sys.executable).resolve().parent
         marker = f"frozen:{resolved}"
-        if _LAST_INSTALL_ROOT_LOGGED != marker:
+        if marker != _LAST_INSTALL_ROOT_LOGGED:
             _append_service_log(f"updater_service._install_root resolved to {resolved} (frozen)")
             _LAST_INSTALL_ROOT_LOGGED = marker
         return resolved
     resolved = _runtime_home()
     marker = f"unfrozen:{resolved}"
-    if _LAST_INSTALL_ROOT_LOGGED != marker:
+    if marker != _LAST_INSTALL_ROOT_LOGGED:
         _append_service_log(f"updater_service._install_root resolved to {resolved} (unfrozen)")
         _LAST_INSTALL_ROOT_LOGGED = marker
     return resolved
@@ -1034,10 +1035,8 @@ def _write_private_token(path: Path, value: str) -> None:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             handle.write(value)
     finally:
-        try:
+        with contextlib.suppress(OSError):
             os.chmod(path, 0o600)
-        except OSError:
-            pass
 
 
 def _load_or_create_token() -> str:
@@ -1883,10 +1882,8 @@ def _reconcile_attempt_worker(attempt_id: str) -> None:
         )
     finally:
         if _RECONCILE_LOCK.locked():
-            try:
+            with contextlib.suppress(RuntimeError):
                 _RECONCILE_LOCK.release()
-            except RuntimeError:
-                pass
 
 
 def _maybe_reconcile_pending_attempt() -> None:

@@ -8,7 +8,10 @@ from pydantic import BaseModel, Field
 from mediamop.api.deps import DbSessionDep, SettingsDep
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.subber import subber_opensubtitles_client as os_client
-from mediamop.modules.subber.subber_credentials_crypto import decrypt_subber_credentials_json, parse_provider_secrets_json
+from mediamop.modules.subber.subber_credentials_crypto import (
+    decrypt_subber_credentials_json,
+    parse_provider_secrets_json,
+)
 from mediamop.modules.subber.subber_podnapisi_client import LIST_BASE
 from mediamop.modules.subber.subber_provider_registry import (
     ALL_PROVIDER_KEYS,
@@ -25,9 +28,9 @@ from mediamop.modules.subber.subber_providers_service import (
     upsert_provider_settings,
 )
 from mediamop.modules.subber.subber_schemas import SubberProviderOut, SubberProviderPutIn, SubberTestConnectionOut
-from mediamop.platform.outbound_http import validate_external_provider_url
 from mediamop.platform.auth.authorization import RequireOperatorDep
 from mediamop.platform.auth.csrf import current_raw_session_token, verify_csrf_token
+from mediamop.platform.outbound_http import validate_external_provider_url
 
 router = APIRouter(tags=["subber-providers"])
 

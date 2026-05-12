@@ -5,7 +5,8 @@ Does not read ``movie``; applicability uses ``outputPath`` and ``seriesId`` only
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from mediamop.modules.refiner.arr_queue_plumbing import (
     blocking_suppressed_for_import_wait,

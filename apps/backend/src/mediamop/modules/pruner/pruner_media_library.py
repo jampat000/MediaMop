@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 import urllib.error
-from datetime import datetime, timedelta, timezone
 from collections.abc import Sequence
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
 
 from mediamop.modules.pruner.pruner_constants import (
@@ -21,6 +21,12 @@ from mediamop.modules.pruner.pruner_constants import (
     RULE_FAMILY_WATCHED_MOVIES_REPORTED,
     RULE_FAMILY_WATCHED_TV_REPORTED,
     RULE_FAMILY_YEAR_RANGE_MATCH_REPORTED,
+)
+from mediamop.modules.pruner.pruner_http import (
+    PrunerHttpStatusError,
+    http_get_json,
+    http_get_text,
+    join_base_path,
 )
 from mediamop.modules.pruner.pruner_independent_rule_candidates import (
     list_jf_emby_genre_match_candidates,
@@ -38,12 +44,7 @@ from mediamop.modules.pruner.pruner_plex_movie_rule_candidates import (
     list_plex_watched_movie_candidates,
     list_plex_watched_movie_low_rating_candidates,
 )
-from mediamop.modules.pruner.pruner_http import (
-    PrunerHttpStatusError,
-    http_get_json,
-    http_get_text,
-    join_base_path,
-)
+
 
 def jf_emby_pruner_preview_items_fields_csv() -> str:
     """Comma-separated Jellyfin/Emby ``Fields`` for **all** Pruner preview ``Items`` queries in this module.
@@ -160,9 +161,7 @@ def _items_page(
 def _item_missing_primary(item: dict[str, Any]) -> bool:
     if item.get("ImageTags") and isinstance(item["ImageTags"], dict) and item["ImageTags"].get("Primary"):
         return False
-    if item.get("PrimaryImageItemId"):
-        return False
-    return True
+    return not item.get("PrimaryImageItemId")
 
 
 def list_missing_primary_candidates(
@@ -251,9 +250,7 @@ def list_missing_primary_candidates(
             break
 
     truncated = False
-    if total_hits is not None and len(candidates) < total_hits and len(candidates) >= max_items:
-        truncated = True
-    elif total_hits is not None and start < total_hits and len(candidates) >= max_items:
+    if total_hits is not None and len(candidates) < total_hits and len(candidates) >= max_items or total_hits is not None and start < total_hits and len(candidates) >= max_items:
         truncated = True
 
     return candidates, truncated
@@ -272,8 +269,8 @@ def _parse_item_date_created(raw: object) -> datetime | None:
     try:
         dt = datetime.fromisoformat(s)
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt.astimezone(timezone.utc)
+            dt = dt.replace(tzinfo=UTC)
+        return dt.astimezone(UTC)
     except ValueError:
         return None
 
@@ -391,9 +388,7 @@ def list_watched_tv_episode_candidates(
         if fetched == 0:
             break
         if len(candidates) >= max_items:
-            if total_hits is not None and start < total_hits:
-                truncated = True
-            elif fetched >= page:
+            if total_hits is not None and start < total_hits or fetched >= page:
                 truncated = True
             break
 
@@ -476,9 +471,7 @@ def list_watched_movie_candidates(
         if fetched == 0:
             break
         if len(candidates) >= max_items:
-            if total_hits is not None and start < total_hits:
-                truncated = True
-            elif fetched >= page:
+            if total_hits is not None and start < total_hits or fetched >= page:
                 truncated = True
             break
 
@@ -572,9 +565,7 @@ def list_watched_movie_low_rating_candidates(
         if fetched == 0:
             break
         if len(candidates) >= max_items:
-            if total_hits is not None and start < total_hits:
-                truncated = True
-            elif fetched >= page:
+            if total_hits is not None and start < total_hits or fetched >= page:
                 truncated = True
             break
 
@@ -601,7 +592,7 @@ def list_unwatched_movie_stale_candidates(
         msg = f"unwatched_movie_stale_reported requires media_scope={MEDIA_SCOPE_MOVIES!r}, got {media_scope!r}"
         raise ValueError(msg)
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=max(1, int(min_age_days)))
+    cutoff = datetime.now(UTC) - timedelta(days=max(1, int(min_age_days)))
     include_types = "Movie"
     candidates: list[dict[str, Any]] = []
     start = 0
@@ -667,9 +658,7 @@ def list_unwatched_movie_stale_candidates(
         if fetched == 0:
             break
         if len(candidates) >= max_items:
-            if total_hits is not None and start < total_hits:
-                truncated = True
-            elif fetched >= page:
+            if total_hits is not None and start < total_hits or fetched >= page:
                 truncated = True
             break
 
@@ -699,7 +688,7 @@ def list_never_played_stale_candidates(
         msg = f"unsupported media_scope: {media_scope!r}"
         raise ValueError(msg)
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=max(1, int(min_age_days)))
+    cutoff = datetime.now(UTC) - timedelta(days=max(1, int(min_age_days)))
     candidates: list[dict[str, Any]] = []
     start = 0
     page = min(100, max(1, max_items * 3))
@@ -778,9 +767,7 @@ def list_never_played_stale_candidates(
         if fetched == 0:
             break
         if len(candidates) >= max_items:
-            if total_hits is not None and start < total_hits:
-                truncated = True
-            elif fetched >= page:
+            if total_hits is not None and start < total_hits or fetched >= page:
                 truncated = True
             break
 

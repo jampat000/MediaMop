@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 
 from mediamop.core.datetime_util import as_utc
 from mediamop.platform.auth.models import UserSession
@@ -40,7 +40,7 @@ def hash_session_token(raw_token: str) -> str:
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def compute_absolute_expiry(
@@ -96,9 +96,7 @@ def session_is_valid(
         return False
     if is_past_absolute_expiry(session_row, now=n):
         return False
-    if is_idle_expired(session_row, idle=idle, now=n):
-        return False
-    return True
+    return not is_idle_expired(session_row, idle=idle, now=n)
 
 
 def session_invalid_reason(

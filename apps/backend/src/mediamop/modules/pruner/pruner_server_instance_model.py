@@ -42,7 +42,7 @@ class PrunerServerInstance(Base):
         nullable=False,
     )
 
-    scope_settings: Mapped[list["PrunerScopeSettings"]] = relationship(
+    scope_settings: Mapped[list[PrunerScopeSettings]] = relationship(
         "PrunerScopeSettings",
         back_populates="server_instance",
         cascade="all, delete-orphan",

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -10,6 +10,9 @@ import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
+import mediamop.modules.subber.subber_jobs_model  # noqa: F401
+import mediamop.modules.subber.subber_settings_model  # noqa: F401
+import mediamop.platform.auth.models  # noqa: F401
 from mediamop.core.db import Base
 from mediamop.modules.subber.subber_job_kinds import (
     SUBBER_JOB_KIND_LIBRARY_SCAN_MOVIES,
@@ -17,15 +20,12 @@ from mediamop.modules.subber.subber_job_kinds import (
     SUBBER_JOB_KIND_SUBTITLE_UPGRADE,
 )
 from mediamop.modules.subber.subber_jobs_model import SubberJob
-import mediamop.modules.subber.subber_jobs_model  # noqa: F401
 from mediamop.modules.subber.subber_schedule_enqueue import (
     enqueue_due_subber_movies_scan,
     enqueue_due_subber_tv_scan,
     enqueue_due_subber_upgrade,
 )
 from mediamop.modules.subber.subber_settings_service import ensure_subber_settings_row
-import mediamop.modules.subber.subber_settings_model  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
 
 
 @pytest.fixture
@@ -43,7 +43,7 @@ def _job_kinds(session_factory) -> list[str]:
 
 
 def test_tv_scan_fires_when_enabled(session_factory) -> None:
-    t0 = datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 1, 12, 0, 0, tzinfo=UTC)
     with session_factory() as s:
         with s.begin():
             row = ensure_subber_settings_row(s)
@@ -59,7 +59,7 @@ def test_tv_scan_fires_when_enabled(session_factory) -> None:
 
 
 def test_tv_scan_does_not_fire_when_disabled(session_factory) -> None:
-    t0 = datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 1, 12, 0, 0, tzinfo=UTC)
     with session_factory() as s:
         with s.begin():
             row = ensure_subber_settings_row(s)
@@ -73,7 +73,7 @@ def test_tv_scan_does_not_fire_when_disabled(session_factory) -> None:
 
 
 def test_tv_scan_does_not_fire_before_interval(session_factory) -> None:
-    t0 = datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 1, 12, 0, 0, tzinfo=UTC)
     last = t0 - timedelta(seconds=30)
     with session_factory() as s:
         with s.begin():
@@ -89,24 +89,23 @@ def test_tv_scan_does_not_fire_before_interval(session_factory) -> None:
 
 
 def test_movies_scan_fires_independently_of_tv(session_factory) -> None:
-    t0 = datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
-    with session_factory() as s:
-        with s.begin():
-            row = ensure_subber_settings_row(s)
-            row.enabled = True
-            row.tv_schedule_enabled = False
-            row.movies_schedule_enabled = True
-            row.movies_schedule_interval_seconds = 60
-            row.movies_last_scheduled_scan_enqueued_at = None
-            row.movies_schedule_hours_limited = False
-            assert enqueue_due_subber_tv_scan(s, now=t0) == 0
-            assert enqueue_due_subber_movies_scan(s, now=t0) == 1
+    t0 = datetime(2026, 4, 1, 12, 0, 0, tzinfo=UTC)
+    with session_factory() as s, s.begin():
+        row = ensure_subber_settings_row(s)
+        row.enabled = True
+        row.tv_schedule_enabled = False
+        row.movies_schedule_enabled = True
+        row.movies_schedule_interval_seconds = 60
+        row.movies_last_scheduled_scan_enqueued_at = None
+        row.movies_schedule_hours_limited = False
+        assert enqueue_due_subber_tv_scan(s, now=t0) == 0
+        assert enqueue_due_subber_movies_scan(s, now=t0) == 1
     kinds = _job_kinds(session_factory)
     assert kinds == [SUBBER_JOB_KIND_LIBRARY_SCAN_MOVIES]
 
 
 def test_upgrade_scan_fires_when_both_flags_enabled(session_factory) -> None:
-    t0 = datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 1, 12, 0, 0, tzinfo=UTC)
     with session_factory() as s:
         with s.begin():
             row = ensure_subber_settings_row(s)
@@ -123,7 +122,7 @@ def test_upgrade_scan_fires_when_both_flags_enabled(session_factory) -> None:
 
 
 def test_upgrade_scan_does_not_fire_when_upgrade_disabled(session_factory) -> None:
-    t0 = datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 1, 12, 0, 0, tzinfo=UTC)
     with session_factory() as s:
         with s.begin():
             row = ensure_subber_settings_row(s)
@@ -139,7 +138,7 @@ def test_upgrade_scan_does_not_fire_when_upgrade_disabled(session_factory) -> No
 
 
 def test_upgrade_scan_does_not_fire_when_schedule_disabled(session_factory) -> None:
-    t0 = datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 1, 12, 0, 0, tzinfo=UTC)
     with session_factory() as s:
         with s.begin():
             row = ensure_subber_settings_row(s)
@@ -159,17 +158,16 @@ def test_upgrade_scan_does_not_fire_when_schedule_disabled(session_factory) -> N
     side_effect=RuntimeError("tv tick failed"),
 )
 def test_tv_crash_does_not_affect_movies_enqueue(mock_tv: object, session_factory) -> None:
-    t0 = datetime(2026, 4, 1, 12, 0, 0, tzinfo=timezone.utc)
-    with session_factory() as s:
-        with s.begin():
-            row = ensure_subber_settings_row(s)
-            row.enabled = True
-            row.tv_schedule_enabled = False
-            row.movies_schedule_enabled = True
-            row.movies_schedule_interval_seconds = 60
-            row.movies_last_scheduled_scan_enqueued_at = None
-            row.movies_schedule_hours_limited = False
-            assert enqueue_due_subber_movies_scan(s, now=t0) == 1
+    t0 = datetime(2026, 4, 1, 12, 0, 0, tzinfo=UTC)
+    with session_factory() as s, s.begin():
+        row = ensure_subber_settings_row(s)
+        row.enabled = True
+        row.tv_schedule_enabled = False
+        row.movies_schedule_enabled = True
+        row.movies_schedule_interval_seconds = 60
+        row.movies_last_scheduled_scan_enqueued_at = None
+        row.movies_schedule_hours_limited = False
+        assert enqueue_due_subber_movies_scan(s, now=t0) == 1
     assert mock_tv.call_count == 0
     kinds = _job_kinds(session_factory)
     assert kinds == [SUBBER_JOB_KIND_LIBRARY_SCAN_MOVIES]

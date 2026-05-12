@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import delete
 from starlette.testclient import TestClient
 
+import mediamop.modules.refiner.jobs_model  # noqa: F401
+import mediamop.platform.activity.models  # noqa: F401
+import mediamop.platform.auth.models  # noqa: F401
+from alembic import command
 from mediamop.api.factory import create_app
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
@@ -20,11 +23,8 @@ from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_periodic_enqueue,
     integration_test_set_home,
 )
-from tests.integration_helpers import auth_post, csrf as fetch_csrf, seed_admin_user, seed_viewer_user
-
-import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
+from tests.integration_helpers import auth_post, seed_admin_user, seed_viewer_user
+from tests.integration_helpers import csrf as fetch_csrf
 
 
 @pytest.fixture(autouse=True)
@@ -87,9 +87,9 @@ def _login_viewer(client: TestClient) -> None:
 
 
 def _seed_mixed_status_rows() -> None:
-    t0 = datetime(2026, 4, 11, 10, 0, 0, tzinfo=timezone.utc)
-    t1 = datetime(2026, 4, 11, 11, 0, 0, tzinfo=timezone.utc)
-    t2 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 11, 10, 0, 0, tzinfo=UTC)
+    t1 = datetime(2026, 4, 11, 11, 0, 0, tzinfo=UTC)
+    t2 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=UTC)
     fac = _fac()
     with fac() as db:
         db.execute(delete(RefinerJob))
@@ -238,7 +238,7 @@ def test_refiner_job_cancel_pending_refuses_leased(client_with_admin: TestClient
             job_kind="refiner.candidate_gate.v1",
             status=RefinerJobStatus.LEASED.value,
             lease_owner="w",
-            lease_expires_at=datetime(2099, 1, 1, tzinfo=timezone.utc),
+            lease_expires_at=datetime(2099, 1, 1, tzinfo=UTC),
             attempt_count=1,
         )
         db.add(row)

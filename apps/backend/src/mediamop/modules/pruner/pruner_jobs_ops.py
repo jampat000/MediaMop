@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 
 from sqlalchemy import func, or_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from mediamop.modules.queue_worker.job_kind_boundaries import validate_pruner_enqueue_job_kind
 from mediamop.modules.pruner.pruner_jobs_model import PrunerJob, PrunerJobStatus
+from mediamop.modules.queue_worker.job_kind_boundaries import validate_pruner_enqueue_job_kind
 from mediamop.platform.metrics.service import record_module_job_event, set_module_queue_depth
 
 
 def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _record_pruner_queue_depth(session: Session) -> None:

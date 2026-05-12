@@ -7,12 +7,11 @@ import sqlite3
 import stat
 import sys
 import warnings
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 from typing import Any, cast
 
 import pytest
-
 from sqlalchemy.engine import Engine
 
 from mediamop.core import db as db_module
@@ -82,7 +81,7 @@ def test_create_db_engine_registers_sqlite_datetime_adapter(
             warnings.simplefilter("always", DeprecationWarning)
             with sqlite3.connect(":memory:") as conn:
                 conn.execute("create table t(v text)")
-                conn.execute("insert into t(v) values (?)", (datetime.now(timezone.utc),))
+                conn.execute("insert into t(v) values (?)", (datetime.now(UTC),))
                 conn.commit()
         assert not [w for w in caught if issubclass(w.category, DeprecationWarning)]
     finally:

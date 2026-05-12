@@ -11,7 +11,6 @@ import logging
 import threading
 import time
 from collections import OrderedDict, deque
-from typing import Deque
 
 logger = logging.getLogger(__name__)
 _forwarded_without_trust_warned = False
@@ -33,7 +32,7 @@ class SlidingWindowLimiter:
         self.max_keys = max_keys
         self.window_seconds = float(window_seconds)
         self._lock = threading.Lock()
-        self._buckets: OrderedDict[str, Deque[float]] = OrderedDict()
+        self._buckets: OrderedDict[str, deque[float]] = OrderedDict()
 
     def allow(self, key: str) -> bool:
         """Record one event for ``key``. Return True if allowed, False if limited."""

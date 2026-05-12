@@ -22,11 +22,6 @@ from mediamop.modules.pruner.pruner_people_filters import (
     plex_leaf_person_tags,
     plex_leaf_person_tags_for_roles,
 )
-from mediamop.modules.pruner.pruner_preview_year_filters import (
-    item_matches_preview_year_filter,
-    jellyfin_emby_item_production_year_int,
-    plex_leaf_release_year_int,
-)
 from mediamop.modules.pruner.pruner_plex_missing_thumb_candidates import (
     _as_list,
     _leaf_type_matches,
@@ -34,6 +29,11 @@ from mediamop.modules.pruner.pruner_plex_missing_thumb_candidates import (
     _plex_headers,
     _rating_key,
     _section_matches_scope,
+)
+from mediamop.modules.pruner.pruner_preview_year_filters import (
+    item_matches_preview_year_filter,
+    jellyfin_emby_item_production_year_int,
+    plex_leaf_release_year_int,
 )
 from mediamop.modules.pruner.pruner_studio_collection_filters import jellyfin_emby_item_studio_names
 
@@ -49,11 +49,7 @@ def _jf_emby_truncated(
     page: int,
 ) -> bool:
     truncated = False
-    if total_hits is not None and candidates_len < total_hits and candidates_len >= max_items:
-        truncated = True
-    elif total_hits is not None and start < total_hits and candidates_len >= max_items:
-        truncated = True
-    elif fetched >= page and candidates_len >= max_items:
+    if total_hits is not None and candidates_len < total_hits and candidates_len >= max_items or total_hits is not None and start < total_hits and candidates_len >= max_items or fetched >= page and candidates_len >= max_items:
         truncated = True
     return truncated
 
@@ -306,10 +302,7 @@ def list_jf_emby_people_match_candidates(
         for it in items:
             if not isinstance(it, dict):
                 continue
-            if roles:
-                names = jellyfin_emby_people_names_for_roles(it, roles)
-            else:
-                names = jellyfin_emby_item_people_names(it)
+            names = jellyfin_emby_people_names_for_roles(it, roles) if roles else jellyfin_emby_item_people_names(it)
             if not item_matches_people_include_filter(names, pf):
                 continue
             iid = str(it.get("Id", "")).strip()
@@ -540,9 +533,7 @@ def _plex_collect_leaf_matches(
                 total_i = start + len(metas)
             start += len(metas)
             if stop_after_page:
-                if start < total_i:
-                    truncated = True
-                elif sec_idx < len(section_keys) - 1:
+                if start < total_i or sec_idx < len(section_keys) - 1:
                     truncated = True
                 break
             if start >= total_i or len(metas) == 0:
@@ -644,10 +635,7 @@ def list_plex_people_match_candidates(
     roles = list(preview_include_people_roles) if preview_include_people_roles is not None else []
 
     def matches(m: dict[str, Any]) -> bool:
-        if roles:
-            tags = plex_leaf_person_tags_for_roles(m, roles)
-        else:
-            tags = plex_leaf_person_tags(m)
+        tags = plex_leaf_person_tags_for_roles(m, roles) if roles else plex_leaf_person_tags(m)
         return item_matches_people_include_filter(tags, pf)
 
     def build(m: dict[str, Any], rk: str) -> dict[str, Any]:

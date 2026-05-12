@@ -17,7 +17,7 @@ Supported rule families (Movies scope only):
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
 
 from mediamop.modules.pruner.pruner_constants import MEDIA_SCOPE_MOVIES
@@ -87,7 +87,7 @@ def plex_leaf_added_at_utc(meta: dict[str, Any]) -> datetime | None:
     if ts > 10_000_000_000:
         ts = ts // 1000
     try:
-        return datetime.fromtimestamp(ts, tz=timezone.utc)
+        return datetime.fromtimestamp(ts, tz=UTC)
     except (OSError, OverflowError, ValueError):
         return None
 
@@ -178,11 +178,7 @@ def _plex_collect_movie_rows(
                 total_i = start + len(metas)
             start += len(metas)
             if stop_after_page:
-                if start < total_i:
-                    truncated = True
-                elif sec_idx < len(section_keys) - 1:
-                    truncated = True
-                elif page_had_skipped_potential:
+                if start < total_i or sec_idx < len(section_keys) - 1 or page_had_skipped_potential:
                     truncated = True
                 break
             if start >= total_i or len(metas) == 0:
@@ -259,15 +255,13 @@ def list_plex_unwatched_movie_stale_candidates(
     min_age_days: int,
 ) -> tuple[list[dict[str, Any]], bool]:
     age = max(1, int(min_age_days))
-    cutoff = datetime.now(timezone.utc) - timedelta(days=age)
+    cutoff = datetime.now(UTC) - timedelta(days=age)
 
     def pred(m: dict[str, Any]) -> bool:
         if not plex_movie_leaf_unwatched_for_token(m):
             return False
         added = plex_leaf_added_at_utc(m)
-        if added is None or added > cutoff:
-            return False
-        return True
+        return not (added is None or added > cutoff)
 
     def build(m: dict[str, Any], rk: str) -> dict[str, Any]:
         return {

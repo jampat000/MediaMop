@@ -248,10 +248,9 @@ class PrunerScopePatchIn(BaseModel):
 
     @model_validator(mode="after")
     def _preview_year_bounds_order(self) -> Self:
-        if self.preview_year_min is not None and self.preview_year_max is not None:
-            if self.preview_year_min > self.preview_year_max:
-                msg = "preview_year_min must be less than or equal to preview_year_max when both are set."
-                raise ValueError(msg)
+        if self.preview_year_min is not None and self.preview_year_max is not None and self.preview_year_min > self.preview_year_max:
+            msg = "preview_year_min must be less than or equal to preview_year_max when both are set."
+            raise ValueError(msg)
         return self
 
 

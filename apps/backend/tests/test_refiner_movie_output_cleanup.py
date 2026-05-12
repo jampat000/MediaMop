@@ -16,8 +16,8 @@ from sqlalchemy.orm import Session, sessionmaker
 import mediamop.modules.refiner.jobs_model  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.refiner_movie_output_cleanup import (
     maybe_run_movie_output_folder_cleanup_after_remux,
     normalize_relative_media_path_for_match,

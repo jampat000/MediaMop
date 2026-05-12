@@ -14,7 +14,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from mediamop.core.db import Base
 
 
-class RefinerJobStatus(str, enum.Enum):
+class RefinerJobStatus(enum.StrEnum):
     """Persisted in ``refiner_jobs.status`` (VARCHAR).
 
     ``failed`` means the handler (or missing-handler path) failed or exhausted retries.

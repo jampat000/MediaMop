@@ -17,7 +17,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from mediamop.core.db import Base
 
 
-class UserRole(str, enum.Enum):
+class UserRole(enum.StrEnum):
     """Values persisted in ``users.role`` (VARCHAR) — authorization checks use these strings."""
 
     admin = "admin"
@@ -53,7 +53,7 @@ class User(Base):
         nullable=False,
     )
 
-    sessions: Mapped[list["UserSession"]] = relationship(
+    sessions: Mapped[list[UserSession]] = relationship(
         "UserSession",
         back_populates="user",
         cascade="all, delete-orphan",
@@ -90,4 +90,4 @@ class UserSession(Base):
     )
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    user: Mapped["User"] = relationship("User", back_populates="sessions")
+    user: Mapped[User] = relationship("User", back_populates="sessions")

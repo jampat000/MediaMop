@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from mediamop.modules.pruner.pruner_genre_filters import normalized_genre_filter_tokens
 
@@ -232,7 +233,4 @@ def item_matches_people_include_filter(
     fl = {str(x).casefold() for x in include_filters if str(x).strip()}
     if not fl:
         return True
-    for n in item_people:
-        if str(n).casefold() in fl:
-            return True
-    return False
+    return any(str(n).casefold() in fl for n in item_people)

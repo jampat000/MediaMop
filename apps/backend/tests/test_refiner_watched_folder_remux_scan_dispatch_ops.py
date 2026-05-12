@@ -7,9 +7,11 @@ import json
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
+import mediamop.modules.refiner.jobs_model  # noqa: F401
+import mediamop.platform.activity.models  # noqa: F401
 from mediamop.core.db import Base
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_ops import (
     iter_watched_folder_media_candidate_files,
     refiner_active_remux_pass_exists_for_relative_path,
@@ -18,9 +20,6 @@ from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_ops imp
     retry_completed_movie_source_cleanup,
 )
 from mediamop.platform.activity.models import ActivityEvent
-
-import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.platform.activity.models  # noqa: F401
 
 
 def test_iter_watched_folder_media_candidates_sorted(tmp_path) -> None:

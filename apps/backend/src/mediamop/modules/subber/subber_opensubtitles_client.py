@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import urllib.parse
 from typing import Any
@@ -84,10 +85,8 @@ def fetch_user_info(token: str, api_key: str) -> dict[str, Any]:
 
 
 def logout(token: str, api_key: str) -> None:
-    try:
+    with contextlib.suppress(Exception):
         _request("DELETE", "/logout", api_key=api_key, token=token)
-    except Exception:
-        pass
 
 
 def search(

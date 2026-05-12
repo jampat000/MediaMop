@@ -16,28 +16,29 @@ from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.platform.activity import constants as act_c
 from mediamop.platform.activity.models import ActivityEvent
 from mediamop.platform.activity.service import record_activity_event
-from mediamop.platform.suite_settings.release_catalog import (
-    GitHubReleaseAsset,
-    GitHubReleaseRecord,
-)
-from mediamop.platform.suite_settings.model import SuiteSettingsRow
-from mediamop.platform.suite_settings.service import apply_suite_settings_put, ensure_suite_settings_row
 from mediamop.platform.auth.models import User
 from mediamop.platform.auth.password import hash_password
-from mediamop.platform.suite_settings.suite_configuration_backup_periodic import run_suite_configuration_backup_tick
-from mediamop.platform.suite_settings.suite_configuration_backup_service import list_suite_configuration_backups
 from mediamop.platform.suite_settings.logs_retention_periodic import (
     reset_log_retention_periodic_state_for_tests,
     run_log_retention_tick,
 )
 from mediamop.platform.suite_settings.logs_service import ParsedLogEntry
+from mediamop.platform.suite_settings.model import SuiteSettingsRow
+from mediamop.platform.suite_settings.release_catalog import (
+    GitHubReleaseAsset,
+    GitHubReleaseRecord,
+)
+from mediamop.platform.suite_settings.service import apply_suite_settings_put, ensure_suite_settings_row
+from mediamop.platform.suite_settings.suite_configuration_backup_periodic import run_suite_configuration_backup_tick
+from mediamop.platform.suite_settings.suite_configuration_backup_service import list_suite_configuration_backups
 from mediamop.platform.suite_settings.update_service import start_suite_update_now
-
 from tests.integration_helpers import (
     auth_post,
-    csrf as fetch_csrf,
     reset_user_tables,
     trusted_browser_origin_headers,
+)
+from tests.integration_helpers import (
+    csrf as fetch_csrf,
 )
 
 
@@ -342,7 +343,7 @@ def test_log_retention_does_not_prune_activity_history(client_with_admin: TestCl
         assert old is not None
         from datetime import datetime, timedelta, timezone
 
-        old.created_at = datetime.now(timezone.utc) - timedelta(days=40)
+        old.created_at = datetime.now(UTC) - timedelta(days=40)
         db.commit()
 
     tok = fetch_csrf(client_with_admin)

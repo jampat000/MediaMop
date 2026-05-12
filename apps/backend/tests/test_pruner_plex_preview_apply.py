@@ -7,7 +7,6 @@ import uuid
 from pathlib import Path
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
@@ -18,6 +17,7 @@ import mediamop.modules.pruner.pruner_scope_settings_model  # noqa: F401
 import mediamop.modules.pruner.pruner_server_instance_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
+from alembic import command
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.modules.pruner.pruner_apply_eligibility import compute_apply_eligibility
@@ -61,17 +61,16 @@ def session_factory(_iso) -> sessionmaker[Session]:
 
 def _plex_instance(session_factory: sessionmaker[Session], *, label: str = "Plex") -> int:
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="plex",
-                display_name=label,
-                base_url=f"http://plex-{label.lower().replace(' ', '-')}.test:32400",
-                credentials_secrets={"auth_token": "tok"},
-            )
-            return int(inst.id)
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="plex",
+            display_name=label,
+            base_url=f"http://plex-{label.lower().replace(' ', '-')}.test:32400",
+            credentials_secrets={"auth_token": "tok"},
+        )
+        return int(inst.id)
 
 
 def test_plex_apply_does_not_call_candidate_collector(
@@ -110,35 +109,34 @@ def test_plex_apply_does_not_call_candidate_collector(
         _delete,
     )
 
-    with session_factory() as s:
-        with s.begin():
-            insert_preview_run(
-                s,
-                preview_run_uuid=run_uuid,
-                server_instance_id=sid,
-                media_scope=MEDIA_SCOPE_TV,
-                rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
-                pruner_job_id=None,
-                candidate_count=2,
-                candidates_json=json.dumps(
-                    [
-                        {"item_id": "1", "granularity": "episode"},
-                        {"item_id": "2", "granularity": "episode"},
-                    ],
-                ),
-                truncated=False,
-                outcome="success",
-                unsupported_detail=None,
-                error_message=None,
-            )
-            job_row = PrunerJob(
-                dedupe_key="plex-apply-test",
-                job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
-                status=PrunerJobStatus.COMPLETED.value,
-            )
-            s.add(job_row)
-            s.flush()
-            job_id = int(job_row.id)
+    with session_factory() as s, s.begin():
+        insert_preview_run(
+            s,
+            preview_run_uuid=run_uuid,
+            server_instance_id=sid,
+            media_scope=MEDIA_SCOPE_TV,
+            rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+            pruner_job_id=None,
+            candidate_count=2,
+            candidates_json=json.dumps(
+                [
+                    {"item_id": "1", "granularity": "episode"},
+                    {"item_id": "2", "granularity": "episode"},
+                ],
+            ),
+            truncated=False,
+            outcome="success",
+            unsupported_detail=None,
+            error_message=None,
+        )
+        job_row = PrunerJob(
+            dedupe_key="plex-apply-test",
+            job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
+            status=PrunerJobStatus.COMPLETED.value,
+        )
+        s.add(job_row)
+        s.flush()
+        job_id = int(job_row.id)
 
     handlers = build_pruner_job_handlers(settings, session_factory)
     handlers[PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND](
@@ -177,22 +175,21 @@ def test_plex_apply_preview_run_must_match_instance(
     sid_a = _plex_instance(session_factory, label="A")
     sid_b = _plex_instance(session_factory, label="B")
     run_uuid = str(uuid.uuid4())
-    with session_factory() as s:
-        with s.begin():
-            insert_preview_run(
-                s,
-                preview_run_uuid=run_uuid,
-                server_instance_id=sid_b,
-                media_scope=MEDIA_SCOPE_TV,
-                rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
-                pruner_job_id=None,
-                candidate_count=1,
-                candidates_json=json.dumps([{"item_id": "9", "granularity": "episode"}]),
-                truncated=False,
-                outcome="success",
-                unsupported_detail=None,
-                error_message=None,
-            )
+    with session_factory() as s, s.begin():
+        insert_preview_run(
+            s,
+            preview_run_uuid=run_uuid,
+            server_instance_id=sid_b,
+            media_scope=MEDIA_SCOPE_TV,
+            rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+            pruner_job_id=None,
+            candidate_count=1,
+            candidates_json=json.dumps([{"item_id": "9", "granularity": "episode"}]),
+            truncated=False,
+            outcome="success",
+            unsupported_detail=None,
+            error_message=None,
+        )
 
     handlers = build_pruner_job_handlers(settings, session_factory)
     fn = handlers[PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND]
@@ -222,22 +219,21 @@ def test_plex_apply_rejects_scope_mismatch_with_snapshot(
     settings = MediaMopSettings.load()
     sid = _plex_instance(session_factory)
     run_uuid = str(uuid.uuid4())
-    with session_factory() as s:
-        with s.begin():
-            insert_preview_run(
-                s,
-                preview_run_uuid=run_uuid,
-                server_instance_id=sid,
-                media_scope=MEDIA_SCOPE_MOVIES,
-                rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
-                pruner_job_id=None,
-                candidate_count=1,
-                candidates_json=json.dumps([{"item_id": "m1", "granularity": "movie_item"}]),
-                truncated=False,
-                outcome="success",
-                unsupported_detail=None,
-                error_message=None,
-            )
+    with session_factory() as s, s.begin():
+        insert_preview_run(
+            s,
+            preview_run_uuid=run_uuid,
+            server_instance_id=sid,
+            media_scope=MEDIA_SCOPE_MOVIES,
+            rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+            pruner_job_id=None,
+            candidate_count=1,
+            candidates_json=json.dumps([{"item_id": "m1", "granularity": "movie_item"}]),
+            truncated=False,
+            outcome="success",
+            unsupported_detail=None,
+            error_message=None,
+        )
 
     handlers = build_pruner_job_handlers(settings, session_factory)
     fn = handlers[PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND]
@@ -305,22 +301,21 @@ def test_candidates_json_cap_does_not_widen_apply_set(
     sid = _plex_instance(session_factory)
     run_uuid = str(uuid.uuid4())
     wide = [{"item_id": str(i), "granularity": "episode"} for i in range(5)]
-    with session_factory() as s:
-        with s.begin():
-            insert_preview_run(
-                s,
-                preview_run_uuid=run_uuid,
-                server_instance_id=sid,
-                media_scope=MEDIA_SCOPE_TV,
-                rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
-                pruner_job_id=None,
-                candidate_count=2,
-                candidates_json=json.dumps(wide),
-                truncated=False,
-                outcome="success",
-                unsupported_detail=None,
-                error_message=None,
-            )
+    with session_factory() as s, s.begin():
+        insert_preview_run(
+            s,
+            preview_run_uuid=run_uuid,
+            server_instance_id=sid,
+            media_scope=MEDIA_SCOPE_TV,
+            rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+            pruner_job_id=None,
+            candidate_count=2,
+            candidates_json=json.dumps(wide),
+            truncated=False,
+            outcome="success",
+            unsupported_detail=None,
+            error_message=None,
+        )
 
     deleted: list[str] = []
 
@@ -361,22 +356,21 @@ def test_auto_apply_payload_enforces_max_deletes_per_run(
     sid = _plex_instance(session_factory)
     run_uuid = str(uuid.uuid4())
     candidates = [{"item_id": str(i), "granularity": "episode"} for i in range(5)]
-    with session_factory() as s:
-        with s.begin():
-            insert_preview_run(
-                s,
-                preview_run_uuid=run_uuid,
-                server_instance_id=sid,
-                media_scope=MEDIA_SCOPE_TV,
-                rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
-                pruner_job_id=None,
-                candidate_count=5,
-                candidates_json=json.dumps(candidates),
-                truncated=False,
-                outcome="success",
-                unsupported_detail=None,
-                error_message=None,
-            )
+    with session_factory() as s, s.begin():
+        insert_preview_run(
+            s,
+            preview_run_uuid=run_uuid,
+            server_instance_id=sid,
+            media_scope=MEDIA_SCOPE_TV,
+            rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
+            pruner_job_id=None,
+            candidate_count=5,
+            candidates_json=json.dumps(candidates),
+            truncated=False,
+            outcome="success",
+            unsupported_detail=None,
+            error_message=None,
+        )
 
     deleted: list[str] = []
 
@@ -455,16 +449,15 @@ def test_plex_preview_job_passes_effective_cap_to_collector(
         sc.preview_max_items = 500
         s.commit()
 
-    with session_factory() as s:
-        with s.begin():
-            job_row = PrunerJob(
-                dedupe_key="plex-cap-preview",
-                job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
-                status=PrunerJobStatus.COMPLETED.value,
-            )
-            s.add(job_row)
-            s.flush()
-            job_id = int(job_row.id)
+    with session_factory() as s, s.begin():
+        job_row = PrunerJob(
+            dedupe_key="plex-cap-preview",
+            job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
+            status=PrunerJobStatus.COMPLETED.value,
+        )
+        s.add(job_row)
+        s.flush()
+        job_id = int(job_row.id)
 
     handlers = build_pruner_job_handlers(settings, session_factory)
     handlers[PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND](

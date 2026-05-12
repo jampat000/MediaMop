@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -14,7 +14,6 @@ from mediamop.platform.arr_library.arr_http_resolve import (
 )
 from mediamop.platform.arr_library.arr_operator_settings_model import ArrLibraryOperatorSettingsRow
 from mediamop.platform.arr_library.arr_operator_settings_repo import ensure_arr_library_operator_settings_row
-from mediamop.platform.arr_library.schedule_csv_validate import normalize_hhmm, validate_schedule_days_csv
 from mediamop.platform.arr_library.operator_settings_schemas import (
     ArrLibraryConnectionPanelOut,
     ArrLibraryConnectionPutIn,
@@ -23,6 +22,7 @@ from mediamop.platform.arr_library.operator_settings_schemas import (
     ArrLibrarySearchLaneIn,
     ArrLibrarySearchLaneOut,
 )
+from mediamop.platform.arr_library.schedule_csv_validate import normalize_hhmm, validate_schedule_days_csv
 from mediamop.platform.suite_settings.service import ensure_suite_settings_row
 
 
@@ -228,7 +228,7 @@ def record_connection_test_result_sonarr(
 ) -> None:
     row = ensure_arr_library_operator_settings_row(session)
     row.sonarr_last_connection_test_ok = ok
-    row.sonarr_last_connection_test_at = datetime.now(timezone.utc)
+    row.sonarr_last_connection_test_at = datetime.now(UTC)
     row.sonarr_last_connection_test_detail = detail[:2000] if detail else None
     session.flush()
 
@@ -241,6 +241,6 @@ def record_connection_test_result_radarr(
 ) -> None:
     row = ensure_arr_library_operator_settings_row(session)
     row.radarr_last_connection_test_ok = ok
-    row.radarr_last_connection_test_at = datetime.now(timezone.utc)
+    row.radarr_last_connection_test_at = datetime.now(UTC)
     row.radarr_last_connection_test_detail = detail[:2000] if detail else None
     session.flush()
