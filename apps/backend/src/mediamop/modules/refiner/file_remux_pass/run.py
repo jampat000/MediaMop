@@ -56,6 +56,7 @@ from mediamop.modules.refiner.refiner_tv_season_folder_cleanup import (
 )
 from mediamop.platform.file_lifecycle.guardrails import bytes_to_mb, check_minimum_free_disk_space
 from mediamop.platform.file_lifecycle.mutations import safe_copy_to_final, safe_finalize_file, try_hardlink_to_final
+from mediamop.platform.metrics.service import record_module_savings
 
 logger = logging.getLogger(__name__)
 
@@ -790,6 +791,14 @@ def run_refiner_file_remux_pass(
         "Live remux finished; before = source probe; after = planned disposition (copy remux — "
         "ffprobe of the written file was used for validation only)."
     )
+    try:
+        _src_sz = int(src.stat().st_size)
+        _out_sz = int(final.stat().st_size)
+        _saved = _src_sz - _out_sz
+        if _saved > 0:
+            record_module_savings(module="refiner", bytes_saved=_saved)
+    except OSError:
+        pass
     if progress_reporter is not None:
         progress_reporter(
             {
