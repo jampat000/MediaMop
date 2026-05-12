@@ -9,9 +9,9 @@ from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from pydantic import ValidationError
+from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 from starlette.testclient import TestClient
 
@@ -21,11 +21,10 @@ import mediamop.modules.pruner.pruner_scope_settings_model  # noqa: F401
 import mediamop.modules.pruner.pruner_server_instance_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
+from alembic import command
 from mediamop.api.factory import create_app
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from sqlalchemy import select
-
 from mediamop.modules.pruner.pruner_constants import (
     MEDIA_SCOPE_MOVIES,
     MEDIA_SCOPE_TV,
@@ -49,7 +48,8 @@ from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_periodic_enqueue,
     integration_test_set_home,
 )
-from tests.integration_helpers import auth_patch, auth_post, csrf as fetch_csrf, seed_admin_user
+from tests.integration_helpers import auth_patch, auth_post, seed_admin_user
+from tests.integration_helpers import csrf as fetch_csrf
 
 
 def test_jf_emby_pruner_preview_items_fields_csv_includes_people_and_rating() -> None:
@@ -369,41 +369,39 @@ def test_apply_jellyfin_low_rating_movies_skips_404(
         "mediamop.modules.pruner.pruner_apply_job_handler.jellyfin_delete_library_item",
         lambda **kw: (404, None),
     )
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="JF",
-                base_url="http://jf-apply.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            insert_preview_run(
-                s,
-                preview_run_uuid=run_uuid,
-                server_instance_id=sid,
-                media_scope=MEDIA_SCOPE_MOVIES,
-                rule_family_id=RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
-                pruner_job_id=None,
-                candidate_count=1,
-                candidates_json='[{"item_id":"gone"}]',
-                truncated=False,
-                outcome="success",
-                unsupported_detail=None,
-                error_message=None,
-            )
-    with session_factory() as s:
-        with s.begin():
-            job_row = PrunerJob(
-                dedupe_key="apply-low-rating",
-                job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
-                status=PrunerJobStatus.COMPLETED.value,
-            )
-            s.add(job_row)
-            s.flush()
-            job_id = int(job_row.id)
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="JF",
+            base_url="http://jf-apply.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        insert_preview_run(
+            s,
+            preview_run_uuid=run_uuid,
+            server_instance_id=sid,
+            media_scope=MEDIA_SCOPE_MOVIES,
+            rule_family_id=RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
+            pruner_job_id=None,
+            candidate_count=1,
+            candidates_json='[{"item_id":"gone"}]',
+            truncated=False,
+            outcome="success",
+            unsupported_detail=None,
+            error_message=None,
+        )
+    with session_factory() as s, s.begin():
+        job_row = PrunerJob(
+            dedupe_key="apply-low-rating",
+            job_kind=PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND,
+            status=PrunerJobStatus.COMPLETED.value,
+        )
+        s.add(job_row)
+        s.flush()
+        job_id = int(job_row.id)
 
     handlers = build_pruner_job_handlers(settings, session_factory)
     handlers[PRUNER_CANDIDATE_REMOVAL_APPLY_JOB_KIND](

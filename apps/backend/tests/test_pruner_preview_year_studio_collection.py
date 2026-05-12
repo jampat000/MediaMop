@@ -7,7 +7,6 @@ from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 import pytest
-from alembic import command
 from alembic.config import Config
 
 import mediamop.modules.pruner.pruner_jobs_model  # noqa: F401
@@ -16,6 +15,7 @@ import mediamop.modules.pruner.pruner_scope_settings_model  # noqa: F401
 import mediamop.modules.pruner.pruner_server_instance_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
+from alembic import command
 from mediamop.modules.pruner.pruner_constants import MEDIA_SCOPE_MOVIES, RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED
 from mediamop.modules.pruner.pruner_genre_filters import plex_leaf_collection_tags, plex_leaf_studio_tags
 from mediamop.modules.pruner.pruner_media_library import jf_emby_pruner_preview_items_fields_csv, preview_payload_json
@@ -35,6 +35,8 @@ from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_periodic_enqueue,
     integration_test_set_home,
 )
+
+
 @pytest.fixture(autouse=True)
 def _iso(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     integration_test_set_home(tmp_path, monkeypatch, "mmhome_pruner_ysc_filters")

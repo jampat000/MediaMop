@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import io
 import json
 import logging
@@ -14,6 +15,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
+from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
 from mediamop.modules.subber import subber_gestdown_client as gestdown_client
 from mediamop.modules.subber import subber_opensubtitles_client as os_client
 from mediamop.modules.subber import subber_podnapisi_client as podnapisi_client
@@ -21,7 +23,10 @@ from mediamop.modules.subber import subber_subdl_client as subdl_client
 from mediamop.modules.subber import subber_subf2m_client as subf2m_client
 from mediamop.modules.subber import subber_subsource_client as subsource_client
 from mediamop.modules.subber import subber_yify_client as yify_client
-from mediamop.modules.subber.subber_credentials_crypto import decrypt_subber_credentials_json, parse_provider_secrets_json
+from mediamop.modules.subber.subber_credentials_crypto import (
+    decrypt_subber_credentials_json,
+    parse_provider_secrets_json,
+)
 from mediamop.modules.subber.subber_opensubtitles_client import SubberRateLimitError
 from mediamop.modules.subber.subber_provider_registry import (
     PROVIDER_GESTDOWN,
@@ -33,7 +38,6 @@ from mediamop.modules.subber.subber_provider_registry import (
     PROVIDER_SUBSOURCE,
     PROVIDER_YIFY,
 )
-from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
 from mediamop.modules.subber.subber_providers_model import SubberProviderRow
 from mediamop.modules.subber.subber_providers_service import get_enabled_providers_ordered, provider_is_ready_for_search
 from mediamop.modules.subber.subber_settings_model import SubberSettingsRow
@@ -113,10 +117,7 @@ def opensubtitles_configured(settings: MediaMopSettings, row: SubberSettingsRow)
 def subber_any_search_configured(settings: MediaMopSettings, settings_row: SubberSettingsRow, db: Session) -> bool:
     if opensubtitles_configured(settings, settings_row):
         return True
-    for prow in get_enabled_providers_ordered(db):
-        if provider_is_ready_for_search(settings, prow):
-            return True
-    return False
+    return any(provider_is_ready_for_search(settings, prow) for prow in get_enabled_providers_ordered(db))
 
 
 def _search_query(state_row: SubberSubtitleState) -> str:
@@ -324,17 +325,13 @@ def _try_opensubtitles_provider(
         return True
     except SubberRateLimitError:
         if token:
-            try:
+            with contextlib.suppress(Exception):
                 os_client.logout(token, api_key)
-            except Exception:
-                pass
         raise
     finally:
         if token:
-            try:
+            with contextlib.suppress(Exception):
                 os_client.logout(token, api_key)
-            except Exception:
-                pass
 
 
 def _try_podnapisi(
@@ -703,10 +700,8 @@ def _legacy_opensubtitles_search(
         return False
     finally:
         if token:
-            try:
+            with contextlib.suppress(Exception):
                 os_client.logout(token, api_key)
-            except Exception:
-                pass
 
 
 _PROVIDER_HANDLERS: dict[str, ProviderSearchHandler] = {

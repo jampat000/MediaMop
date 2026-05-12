@@ -9,6 +9,9 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
+from mediamop.platform.activity import constants as activity_constants
+from mediamop.platform.activity import service as activity_service
+from mediamop.platform.auth import bootstrap as bootstrap_service
 from mediamop.platform.auth import schemas
 from mediamop.platform.auth import service as auth_service
 from mediamop.platform.auth.abuse import (
@@ -16,7 +19,6 @@ from mediamop.platform.auth.abuse import (
     raise_if_login_rate_limited,
 )
 from mediamop.platform.auth.authorization import RequireAdminDep
-from mediamop.platform.auth import bootstrap as bootstrap_service
 from mediamop.platform.auth.bootstrap_status_db import (
     raise_http_for_bootstrap_status_db,
     raise_http_for_bootstrap_status_sqlalchemy,
@@ -28,8 +30,6 @@ from mediamop.platform.auth.csrf import (
     validate_browser_post_origin,
     verify_csrf_token,
 )
-from mediamop.platform.activity import constants as activity_constants
-from mediamop.platform.activity import service as activity_service
 from mediamop.platform.auth.deps_auth import UserPublicDep
 from mediamop.platform.suite_settings.service import ensure_suite_settings_row
 

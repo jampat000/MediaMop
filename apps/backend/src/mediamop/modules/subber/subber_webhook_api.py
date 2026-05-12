@@ -11,7 +11,10 @@ from fastapi import APIRouter, Body, Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
-from mediamop.modules.subber.subber_job_kinds import SUBBER_JOB_KIND_WEBHOOK_IMPORT_MOVIES, SUBBER_JOB_KIND_WEBHOOK_IMPORT_TV
+from mediamop.modules.subber.subber_job_kinds import (
+    SUBBER_JOB_KIND_WEBHOOK_IMPORT_MOVIES,
+    SUBBER_JOB_KIND_WEBHOOK_IMPORT_TV,
+)
 from mediamop.modules.subber.subber_jobs_ops import subber_enqueue_or_get_job
 
 router = APIRouter(tags=["subber-webhooks"])

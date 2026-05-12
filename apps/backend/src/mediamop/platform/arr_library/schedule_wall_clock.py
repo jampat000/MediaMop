@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, time, timezone
+from datetime import UTC, datetime, time, timezone
 from zoneinfo import ZoneInfo
 
 DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -49,10 +49,7 @@ def schedule_time_window_active(
     except Exception:
         tz = ZoneInfo("UTC")
     cur = now
-    if cur.tzinfo is None:
-        cur = cur.replace(tzinfo=timezone.utc).astimezone(tz)
-    else:
-        cur = cur.astimezone(tz)
+    cur = cur.replace(tzinfo=UTC).astimezone(tz) if cur.tzinfo is None else cur.astimezone(tz)
     day = DAY_NAMES[cur.weekday()]
     allowed_days = _parse_days(schedule_days)
     if day not in allowed_days:

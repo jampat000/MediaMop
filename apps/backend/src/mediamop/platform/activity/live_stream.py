@@ -61,7 +61,7 @@ class ActivityLatestNotifier:
             self._waiters.setdefault(loop, set()).add(future)
         try:
             return await asyncio.wait_for(future, timeout=timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return None
         finally:
             self._discard_waiter(loop, future)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -11,6 +11,10 @@ import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
+import mediamop.modules.refiner.jobs_model  # noqa: F401
+import mediamop.modules.refiner.refiner_path_settings_model  # noqa: F401
+import mediamop.platform.activity.models  # noqa: F401
+import mediamop.platform.auth.models  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
@@ -23,11 +27,6 @@ from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_job_kin
 )
 from mediamop.modules.refiner.worker_loop import process_one_refiner_job
 from mediamop.platform.activity.models import ActivityEvent
-
-import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.modules.refiner.refiner_path_settings_model  # noqa: F401
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
 
 
 @pytest.fixture
@@ -82,7 +81,7 @@ def test_scan_handler_enqueues_remux_when_requested(
     def _fake_fetch(_session: Session, _settings: MediaMopSettings):
         return fake_rad, [], None, None
 
-    t0 = datetime(2026, 4, 12, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 12, 12, 0, 0, tzinfo=UTC)
 
     with session_factory() as s:
         s.merge(
@@ -200,7 +199,7 @@ def test_scan_handler_enqueues_remux_without_arr_connections(
                 session_factory,
                 lease_owner="scan-test",
                 job_handlers=handlers,
-                now=datetime(2026, 4, 12, 12, 0, 0, tzinfo=timezone.utc),
+                now=datetime(2026, 4, 12, 12, 0, 0, tzinfo=UTC),
                 lease_seconds=3600,
             )
             == "processed"
@@ -293,7 +292,7 @@ def test_scan_handler_skips_file_when_previous_success_output_still_exists(
                 session_factory,
                 lease_owner="scan-test",
                 job_handlers=handlers,
-                now=datetime(2026, 4, 12, 12, 0, 0, tzinfo=timezone.utc),
+                now=datetime(2026, 4, 12, 12, 0, 0, tzinfo=UTC),
                 lease_seconds=3600,
             )
             == "processed"
@@ -355,7 +354,7 @@ def test_scan_handler_does_not_record_activity_when_no_files_are_queued(
                 session_factory,
                 lease_owner="scan-test",
                 job_handlers=handlers,
-                now=datetime(2026, 4, 12, 12, 0, 0, tzinfo=timezone.utc),
+                now=datetime(2026, 4, 12, 12, 0, 0, tzinfo=UTC),
                 lease_seconds=3600,
             )
             == "processed"

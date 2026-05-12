@@ -10,12 +10,11 @@ import asyncio
 import json
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.platform.arr_library.schedule_wall_clock import DAY_NAMES, schedule_time_window_active
 from mediamop.modules.subber.subber_job_kinds import (
     SUBBER_JOB_KIND_LIBRARY_SCAN_MOVIES,
     SUBBER_JOB_KIND_LIBRARY_SCAN_TV,
@@ -24,6 +23,7 @@ from mediamop.modules.subber.subber_job_kinds import (
 from mediamop.modules.subber.subber_jobs_ops import subber_enqueue_or_get_job
 from mediamop.modules.subber.subber_settings_model import SubberSettingsRow
 from mediamop.modules.subber.subber_settings_service import ensure_subber_settings_row
+from mediamop.platform.arr_library.schedule_wall_clock import DAY_NAMES, schedule_time_window_active
 from mediamop.platform.suite_settings.service import ensure_suite_settings_row
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ def _branch_due(last_at: datetime | None, interval_seconds: int, *, now: datetim
     iv = _clamp_interval_seconds(interval_seconds)
     if last_at is None:
         return True
-    last = last_at if last_at.tzinfo else last_at.replace(tzinfo=timezone.utc)
+    last = last_at if last_at.tzinfo else last_at.replace(tzinfo=UTC)
     return (now - last).total_seconds() >= float(iv)
 
 
@@ -101,7 +101,7 @@ def _movies_in_window(session: Session, row: SubberSettingsRow, *, when: datetim
 
 
 def enqueue_due_subber_tv_scan(session: Session, *, now: datetime) -> int:
-    when = now if now.tzinfo else now.replace(tzinfo=timezone.utc)
+    when = now if now.tzinfo else now.replace(tzinfo=UTC)
     row = ensure_subber_settings_row(session)
     if not row.enabled:
         return 0
@@ -126,12 +126,11 @@ def run_subber_tv_scan_tick(
     *,
     now: datetime | None = None,
 ) -> int:
-    when = now if now is not None else datetime.now(timezone.utc)
+    when = now if now is not None else datetime.now(UTC)
     if when.tzinfo is None:
-        when = when.replace(tzinfo=timezone.utc)
-    with session_factory() as session:
-        with session.begin():
-            return enqueue_due_subber_tv_scan(session, now=when)
+        when = when.replace(tzinfo=UTC)
+    with session_factory() as session, session.begin():
+        return enqueue_due_subber_tv_scan(session, now=when)
 
 
 async def _run_subber_tv_scan_forever(
@@ -189,7 +188,7 @@ async def stop_subber_tv_scan_schedule_enqueue_tasks(tasks: list[asyncio.Task[No
 
 
 def enqueue_due_subber_movies_scan(session: Session, *, now: datetime) -> int:
-    when = now if now.tzinfo else now.replace(tzinfo=timezone.utc)
+    when = now if now.tzinfo else now.replace(tzinfo=UTC)
     row = ensure_subber_settings_row(session)
     if not row.enabled:
         return 0
@@ -214,12 +213,11 @@ def run_subber_movies_scan_tick(
     *,
     now: datetime | None = None,
 ) -> int:
-    when = now if now is not None else datetime.now(timezone.utc)
+    when = now if now is not None else datetime.now(UTC)
     if when.tzinfo is None:
-        when = when.replace(tzinfo=timezone.utc)
-    with session_factory() as session:
-        with session.begin():
-            return enqueue_due_subber_movies_scan(session, now=when)
+        when = when.replace(tzinfo=UTC)
+    with session_factory() as session, session.begin():
+        return enqueue_due_subber_movies_scan(session, now=when)
 
 
 async def _run_subber_movies_scan_forever(
@@ -277,7 +275,7 @@ async def stop_subber_movies_scan_schedule_enqueue_tasks(tasks: list[asyncio.Tas
 
 
 def enqueue_due_subber_upgrade(session: Session, *, now: datetime) -> int:
-    when = now if now.tzinfo else now.replace(tzinfo=timezone.utc)
+    when = now if now.tzinfo else now.replace(tzinfo=UTC)
     row = ensure_subber_settings_row(session)
     if not row.enabled:
         return 0
@@ -302,12 +300,11 @@ def run_subber_upgrade_tick(
     *,
     now: datetime | None = None,
 ) -> int:
-    when = now if now is not None else datetime.now(timezone.utc)
+    when = now if now is not None else datetime.now(UTC)
     if when.tzinfo is None:
-        when = when.replace(tzinfo=timezone.utc)
-    with session_factory() as session:
-        with session.begin():
-            return enqueue_due_subber_upgrade(session, now=when)
+        when = when.replace(tzinfo=UTC)
+    with session_factory() as session, session.begin():
+        return enqueue_due_subber_upgrade(session, now=when)
 
 
 async def _run_subber_upgrade_forever(

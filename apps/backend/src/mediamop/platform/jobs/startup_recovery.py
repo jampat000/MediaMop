@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from typing import Any
 
 from sqlalchemy import select
@@ -56,7 +56,7 @@ def recover_incomplete_jobs_after_startup(session: Session, *, now: datetime | N
     lease timestamps.
     """
 
-    when = now if now is not None else datetime.now(timezone.utc)
+    when = now if now is not None else datetime.now(UTC)
     rr, rf = _recover_table(
         session,
         model=RefinerJob,

@@ -7,15 +7,15 @@ from pathlib import Path
 from sqlalchemy import delete, select
 from starlette.testclient import TestClient
 
-from mediamop.core.config import MediaMopSettings
-from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.refiner.jobs_model import RefinerJob
-from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
-from tests.integration_helpers import auth_post, csrf as fetch_csrf, trusted_browser_origin_headers
-
 import mediamop.modules.refiner.jobs_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
+from mediamop.core.config import MediaMopSettings
+from mediamop.core.db import create_db_engine, create_session_factory
+from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from mediamop.modules.refiner.jobs_model import RefinerJob
+from tests.integration_helpers import auth_post, trusted_browser_origin_headers
+from tests.integration_helpers import csrf as fetch_csrf
 
 
 def _fac():

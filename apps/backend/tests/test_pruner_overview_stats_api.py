@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from starlette.testclient import TestClient
 
-from tests.integration_helpers import auth_post, csrf as fetch_csrf
+from tests.integration_helpers import auth_post
+from tests.integration_helpers import csrf as fetch_csrf
 
 
 def _login(client: TestClient) -> None:

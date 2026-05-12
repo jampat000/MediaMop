@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.file_remux_pass.visibility import (
     REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN,
     REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED,
 )
+from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.schemas_refiner_overview_stats import RefinerOverviewStatsOut
 from mediamop.platform.activity import constants as activity_constants
 from mediamop.platform.activity.models import ActivityEvent
@@ -37,7 +37,7 @@ def _json_int(value: object) -> int | None:
 
 
 def build_refiner_overview_stats(db: Session, *, window_days: int = 30) -> RefinerOverviewStatsOut:
-    since = datetime.now(timezone.utc) - timedelta(days=max(1, int(window_days)))
+    since = datetime.now(UTC) - timedelta(days=max(1, int(window_days)))
     failed = int(
         db.scalar(
             select(func.count())

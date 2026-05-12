@@ -5,21 +5,23 @@ from __future__ import annotations
 import json
 import os
 import time
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from dataclasses import replace
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+import mediamop.modules.refiner.jobs_model  # noqa: F401
+import mediamop.platform.activity.models  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.file_remux_pass.visibility import (
     REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN,
     REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED,
 )
+from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
 from mediamop.modules.refiner.refiner_tv_season_folder_cleanup import (
     get_tv_episode_set_media_files,
@@ -27,9 +29,6 @@ from mediamop.modules.refiner.refiner_tv_season_folder_cleanup import (
 )
 from mediamop.platform.activity import constants as activity_c
 from mediamop.platform.activity.models import ActivityEvent
-
-import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.platform.activity.models  # noqa: F401
 
 
 def _sqlite_session(tmp_path: Path) -> tuple[sessionmaker[Session], Session]:

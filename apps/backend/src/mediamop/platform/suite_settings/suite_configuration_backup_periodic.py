@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, time, timezone, tzinfo
+from datetime import UTC, datetime, time, timezone, tzinfo
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy.orm import Session, sessionmaker
@@ -34,45 +34,44 @@ def run_suite_configuration_backup_tick(
     settings: MediaMopSettings,
     now: datetime | None = None,
 ) -> int:
-    when = now if now is not None else datetime.now(timezone.utc)
+    when = now if now is not None else datetime.now(UTC)
     if when.tzinfo is None:
-        when = when.replace(tzinfo=timezone.utc)
-    with session_factory() as session:
-        with session.begin():
-            suite = ensure_suite_settings_row(session)
-            if not bool(getattr(suite, "configuration_backup_enabled", False)):
+        when = when.replace(tzinfo=UTC)
+    with session_factory() as session, session.begin():
+        suite = ensure_suite_settings_row(session)
+        if not bool(getattr(suite, "configuration_backup_enabled", False)):
+            return 0
+        hours = int(getattr(suite, "configuration_backup_interval_hours", 24) or 24)
+        interval_seconds = max(3600, min(30 * 24 * 3600, hours * 3600))
+        last = getattr(suite, "configuration_backup_last_run_at", None)
+        tz_name = str(getattr(suite, "app_timezone", "") or "UTC").strip() or "UTC"
+        app_tz: tzinfo
+        try:
+            app_tz = ZoneInfo(tz_name)
+        except ZoneInfoNotFoundError:
+            app_tz = UTC
+        preferred_time = _preferred_backup_time(getattr(suite, "configuration_backup_preferred_time", None))
+        local_now = when.astimezone(app_tz)
+        local_target = local_now.replace(
+            hour=preferred_time.hour,
+            minute=preferred_time.minute,
+            second=0,
+            microsecond=0,
+        )
+        if last is not None:
+            last_at = last if last.tzinfo else last.replace(tzinfo=UTC)
+            if (when - last_at).total_seconds() < float(interval_seconds):
                 return 0
-            hours = int(getattr(suite, "configuration_backup_interval_hours", 24) or 24)
-            interval_seconds = max(3600, min(30 * 24 * 3600, hours * 3600))
-            last = getattr(suite, "configuration_backup_last_run_at", None)
-            tz_name = str(getattr(suite, "app_timezone", "") or "UTC").strip() or "UTC"
-            app_tz: tzinfo
-            try:
-                app_tz = ZoneInfo(tz_name)
-            except ZoneInfoNotFoundError:
-                app_tz = timezone.utc
-            preferred_time = _preferred_backup_time(getattr(suite, "configuration_backup_preferred_time", None))
-            local_now = when.astimezone(app_tz)
-            local_target = local_now.replace(
-                hour=preferred_time.hour,
-                minute=preferred_time.minute,
-                second=0,
-                microsecond=0,
-            )
-            if last is not None:
-                last_at = last if last.tzinfo else last.replace(tzinfo=timezone.utc)
-                if (when - last_at).total_seconds() < float(interval_seconds):
+            if hours >= 24:
+                last_local = last_at.astimezone(app_tz)
+                if last_local.date() == local_now.date():
                     return 0
-                if hours >= 24:
-                    last_local = last_at.astimezone(app_tz)
-                    if last_local.date() == local_now.date():
-                        return 0
-            if hours >= 24 and local_now < local_target:
-                return 0
-            create_suite_configuration_backup(session, settings=settings)
-            suite.configuration_backup_last_run_at = when
-            session.flush()
-            return 1
+        if hours >= 24 and local_now < local_target:
+            return 0
+        create_suite_configuration_backup(session, settings=settings)
+        suite.configuration_backup_last_run_at = when
+        session.flush()
+        return 1
 
 
 async def _run_suite_configuration_backup_forever(

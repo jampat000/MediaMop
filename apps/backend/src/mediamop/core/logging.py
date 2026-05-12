@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 from datetime import UTC, datetime
@@ -49,10 +50,8 @@ def configure_logging(settings: MediaMopSettings) -> None:
     root.setLevel(level)
     for handler in list(root.handlers):
         root.removeHandler(handler)
-        try:
+        with contextlib.suppress(Exception):
             handler.close()
-        except Exception:
-            pass
 
     shared_filter = MediaMopLogFilter()
 

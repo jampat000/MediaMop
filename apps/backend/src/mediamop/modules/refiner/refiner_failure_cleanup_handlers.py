@@ -22,10 +22,7 @@ def _parse_payload(payload_json: str | None, *, default_scope: str) -> str:
     if payload_json and payload_json.strip():
         data = json.loads(payload_json)
         if isinstance(data, dict):
-            if str(data.get("media_scope") or "").strip().lower() == "tv":
-                media_scope = "tv"
-            else:
-                media_scope = "movie"
+            media_scope = "tv" if str(data.get("media_scope") or "").strip().lower() == "tv" else "movie"
     return media_scope
 
 
@@ -37,29 +34,28 @@ def make_refiner_failure_cleanup_handler(
 ) -> Callable[[RefinerJobWorkContext], None]:
     def _run(ctx: RefinerJobWorkContext) -> None:
         media_scope = _parse_payload(ctx.payload_json, default_scope=default_scope)
-        with session_factory() as session:
-            with session.begin():
-                record_refiner_failure_cleanup_sweep_started(
-                    session,
-                    media_scope=media_scope,
-                    detail=json.dumps(
-                        {"job_id": ctx.id, "media_scope": media_scope, "cleanup_run_status": "started"},
-                        separators=(",", ":"),
-                        ensure_ascii=True,
-                    ),
-                )
-                result: dict[str, Any] = run_refiner_failure_cleanup_sweep_for_scope(
-                    session=session,
-                    settings=settings,
-                    media_scope=media_scope,
-                )
-                result["job_id"] = ctx.id
-                detail = json.dumps(result, separators=(",", ":"), ensure_ascii=True)[:10_000]
-                record_refiner_failure_cleanup_sweep_completed(
-                    session,
-                    media_scope=media_scope,
-                    detail=detail,
-                )
+        with session_factory() as session, session.begin():
+            record_refiner_failure_cleanup_sweep_started(
+                session,
+                media_scope=media_scope,
+                detail=json.dumps(
+                    {"job_id": ctx.id, "media_scope": media_scope, "cleanup_run_status": "started"},
+                    separators=(",", ":"),
+                    ensure_ascii=True,
+                ),
+            )
+            result: dict[str, Any] = run_refiner_failure_cleanup_sweep_for_scope(
+                session=session,
+                settings=settings,
+                media_scope=media_scope,
+            )
+            result["job_id"] = ctx.id
+            detail = json.dumps(result, separators=(",", ":"), ensure_ascii=True)[:10_000]
+            record_refiner_failure_cleanup_sweep_completed(
+                session,
+                media_scope=media_scope,
+                detail=detail,
+            )
 
     return _run
 

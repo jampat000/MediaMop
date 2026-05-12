@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 
 from sqlalchemy.orm import Session, sessionmaker
@@ -22,10 +23,8 @@ async def _session_cleanup_loop(
     interval_seconds: float = _INTERVAL_SECONDS,
 ) -> None:
     while not stop_event.is_set():
-        try:
+        with contextlib.suppress(TimeoutError):
             await asyncio.wait_for(stop_event.wait(), timeout=interval_seconds)
-        except TimeoutError:
-            pass
         if stop_event.is_set():
             break
         try:
@@ -54,7 +53,5 @@ def start_session_cleanup_task(
 
 async def stop_session_cleanup_task(task: asyncio.Task) -> None:
     task.cancel()
-    try:
+    with contextlib.suppress(asyncio.CancelledError):
         await task
-    except asyncio.CancelledError:
-        pass

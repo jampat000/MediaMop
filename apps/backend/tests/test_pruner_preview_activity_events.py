@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
@@ -17,6 +16,7 @@ import mediamop.modules.pruner.pruner_scope_settings_model  # noqa: F401
 import mediamop.modules.pruner.pruner_server_instance_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
+from alembic import command
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.modules.pruner.pruner_constants import (
@@ -62,33 +62,31 @@ def test_plex_preview_missing_primary_records_success_activity(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="plex",
-                display_name="Plex",
-                base_url="http://plex.test:32400",
-                credentials_secrets={"auth_token": "t"},
-            )
-            sid = int(inst.id)
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="plex",
+            display_name="Plex",
+            base_url="http://plex.test:32400",
+            credentials_secrets={"auth_token": "t"},
+        )
+        sid = int(inst.id)
 
     monkeypatch.setattr(
         "mediamop.modules.pruner.pruner_media_library.list_plex_missing_thumb_candidates",
         lambda **_kw: ([{"item_id": "42", "granularity": "episode", "episode_title": "Pilot"}], False),
     )
 
-    with session_factory() as s:
-        with s.begin():
-            job_row = PrunerJob(
-                dedupe_key="preview-activity-test-job",
-                job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
-                status=PrunerJobStatus.COMPLETED.value,
-            )
-            s.add(job_row)
-            s.flush()
-            job_id = int(job_row.id)
+    with session_factory() as s, s.begin():
+        job_row = PrunerJob(
+            dedupe_key="preview-activity-test-job",
+            job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
+            status=PrunerJobStatus.COMPLETED.value,
+        )
+        s.add(job_row)
+        s.flush()
+        job_id = int(job_row.id)
 
     handlers = build_pruner_job_handlers(settings, session_factory)
     fn = handlers[PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND]
@@ -127,33 +125,31 @@ def test_scheduled_preview_activity_title_and_detail_trigger(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="plex",
-                display_name="Plex Sched",
-                base_url="http://plex-sched.test:32400",
-                credentials_secrets={"auth_token": "t"},
-            )
-            sid = int(inst.id)
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="plex",
+            display_name="Plex Sched",
+            base_url="http://plex-sched.test:32400",
+            credentials_secrets={"auth_token": "t"},
+        )
+        sid = int(inst.id)
 
     monkeypatch.setattr(
         "mediamop.modules.pruner.pruner_media_library.list_plex_missing_thumb_candidates",
         lambda **_kw: ([], False),
     )
 
-    with session_factory() as s:
-        with s.begin():
-            job_row = PrunerJob(
-                dedupe_key="preview-activity-scheduled-job",
-                job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
-                status=PrunerJobStatus.COMPLETED.value,
-            )
-            s.add(job_row)
-            s.flush()
-            job_id = int(job_row.id)
+    with session_factory() as s, s.begin():
+        job_row = PrunerJob(
+            dedupe_key="preview-activity-scheduled-job",
+            job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
+            status=PrunerJobStatus.COMPLETED.value,
+        )
+        s.add(job_row)
+        s.flush()
+        job_id = int(job_row.id)
 
     handlers = build_pruner_job_handlers(settings, session_factory)
     fn = handlers[PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND]
@@ -185,40 +181,38 @@ def test_scheduled_preview_accepts_non_missing_primary_rule_family(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="JF Sched",
-                base_url="http://jf-sched.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            row_m = s.scalars(
-                select(PrunerScopeSettings).where(
-                    PrunerScopeSettings.server_instance_id == sid,
-                    PrunerScopeSettings.media_scope == MEDIA_SCOPE_MOVIES,
-                ),
-            ).one()
-            row_m.watched_movies_reported_enabled = True
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="JF Sched",
+            base_url="http://jf-sched.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        row_m = s.scalars(
+            select(PrunerScopeSettings).where(
+                PrunerScopeSettings.server_instance_id == sid,
+                PrunerScopeSettings.media_scope == MEDIA_SCOPE_MOVIES,
+            ),
+        ).one()
+        row_m.watched_movies_reported_enabled = True
 
     monkeypatch.setattr(
         "mediamop.modules.pruner.pruner_preview_job_handler.preview_payload_json",
         lambda **kwargs: ("success", "", [{"granularity": "movie_item", "item_id": "9"}], False),
     )
 
-    with session_factory() as s:
-        with s.begin():
-            job_row = PrunerJob(
-                dedupe_key="preview-activity-scheduled-watched-movies",
-                job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
-                status=PrunerJobStatus.COMPLETED.value,
-            )
-            s.add(job_row)
-            s.flush()
-            job_id = int(job_row.id)
+    with session_factory() as s, s.begin():
+        job_row = PrunerJob(
+            dedupe_key="preview-activity-scheduled-watched-movies",
+            job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
+            status=PrunerJobStatus.COMPLETED.value,
+        )
+        s.add(job_row)
+        s.flush()
+        job_id = int(job_row.id)
 
     handlers = build_pruner_job_handlers(settings, session_factory)
     fn = handlers[PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND]
@@ -257,25 +251,24 @@ def test_scheduled_preview_auto_apply_enqueues_snapshot_apply_job(
 ) -> None:
     monkeypatch.setenv("MEDIAMOP_PRUNER_APPLY_ENABLED", "1")
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="JF Auto",
-                base_url="http://jf-auto.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            row_m = s.scalars(
-                select(PrunerScopeSettings).where(
-                    PrunerScopeSettings.server_instance_id == sid,
-                    PrunerScopeSettings.media_scope == MEDIA_SCOPE_MOVIES,
-                ),
-            ).one()
-            row_m.auto_apply_enabled = True
-            row_m.max_deletes_per_run = 3
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="JF Auto",
+            base_url="http://jf-auto.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        row_m = s.scalars(
+            select(PrunerScopeSettings).where(
+                PrunerScopeSettings.server_instance_id == sid,
+                PrunerScopeSettings.media_scope == MEDIA_SCOPE_MOVIES,
+            ),
+        ).one()
+        row_m.auto_apply_enabled = True
+        row_m.max_deletes_per_run = 3
 
     monkeypatch.setattr(
         "mediamop.modules.pruner.pruner_preview_job_handler.preview_payload_json",
@@ -287,16 +280,15 @@ def test_scheduled_preview_auto_apply_enqueues_snapshot_apply_job(
         ),
     )
 
-    with session_factory() as s:
-        with s.begin():
-            job_row = PrunerJob(
-                dedupe_key="preview-auto-apply-scheduled",
-                job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
-                status=PrunerJobStatus.COMPLETED.value,
-            )
-            s.add(job_row)
-            s.flush()
-            job_id = int(job_row.id)
+    with session_factory() as s, s.begin():
+        job_row = PrunerJob(
+            dedupe_key="preview-auto-apply-scheduled",
+            job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
+            status=PrunerJobStatus.COMPLETED.value,
+        )
+        s.add(job_row)
+        s.flush()
+        job_id = int(job_row.id)
 
     handlers = build_pruner_job_handlers(settings, session_factory)
     handlers[PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND](
@@ -333,40 +325,38 @@ def test_plex_preview_zero_candidates_with_genres_records_operator_note(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="plex",
-                display_name="Plex",
-                base_url="http://plex.test:32400",
-                credentials_secrets={"auth_token": "t"},
-            )
-            sid = int(inst.id)
-            row = s.scalars(
-                select(PrunerScopeSettings).where(
-                    PrunerScopeSettings.server_instance_id == sid,
-                    PrunerScopeSettings.media_scope == "tv",
-                ),
-            ).one()
-            row.preview_include_genres_json = preview_genre_filters_to_db_column(["Drama"])
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="plex",
+            display_name="Plex",
+            base_url="http://plex.test:32400",
+            credentials_secrets={"auth_token": "t"},
+        )
+        sid = int(inst.id)
+        row = s.scalars(
+            select(PrunerScopeSettings).where(
+                PrunerScopeSettings.server_instance_id == sid,
+                PrunerScopeSettings.media_scope == "tv",
+            ),
+        ).one()
+        row.preview_include_genres_json = preview_genre_filters_to_db_column(["Drama"])
 
     monkeypatch.setattr(
         "mediamop.modules.pruner.pruner_media_library.list_plex_missing_thumb_candidates",
         lambda **_kw: ([], False),
     )
 
-    with session_factory() as s:
-        with s.begin():
-            job_row = PrunerJob(
-                dedupe_key="preview-activity-genre-zero",
-                job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
-                status=PrunerJobStatus.COMPLETED.value,
-            )
-            s.add(job_row)
-            s.flush()
-            job_id = int(job_row.id)
+    with session_factory() as s, s.begin():
+        job_row = PrunerJob(
+            dedupe_key="preview-activity-genre-zero",
+            job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
+            status=PrunerJobStatus.COMPLETED.value,
+        )
+        s.add(job_row)
+        s.flush()
+        job_id = int(job_row.id)
 
     handlers = build_pruner_job_handlers(settings, session_factory)
     fn = handlers[PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND]
@@ -399,40 +389,38 @@ def test_jellyfin_preview_activity_collection_ignored_note_when_tokens_stored(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     settings = MediaMopSettings.load()
-    with session_factory() as s:
-        with s.begin():
-            inst = create_server_instance(
-                s,
-                settings,
-                provider="jellyfin",
-                display_name="JF Coll Note",
-                base_url="http://jf-coll-note.test",
-                credentials_secrets={"api_key": "k"},
-            )
-            sid = int(inst.id)
-            row = s.scalars(
-                select(PrunerScopeSettings).where(
-                    PrunerScopeSettings.server_instance_id == sid,
-                    PrunerScopeSettings.media_scope == "movies",
-                ),
-            ).one()
-            row.preview_include_collections_json = '["MCU"]'
+    with session_factory() as s, s.begin():
+        inst = create_server_instance(
+            s,
+            settings,
+            provider="jellyfin",
+            display_name="JF Coll Note",
+            base_url="http://jf-coll-note.test",
+            credentials_secrets={"api_key": "k"},
+        )
+        sid = int(inst.id)
+        row = s.scalars(
+            select(PrunerScopeSettings).where(
+                PrunerScopeSettings.server_instance_id == sid,
+                PrunerScopeSettings.media_scope == "movies",
+            ),
+        ).one()
+        row.preview_include_collections_json = '["MCU"]'
 
     monkeypatch.setattr(
         "mediamop.modules.pruner.pruner_preview_job_handler.preview_payload_json",
         lambda **kwargs: ("success", "", [], False),
     )
 
-    with session_factory() as s:
-        with s.begin():
-            job_row = PrunerJob(
-                dedupe_key="preview-activity-jf-coll-ignored",
-                job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
-                status=PrunerJobStatus.COMPLETED.value,
-            )
-            s.add(job_row)
-            s.flush()
-            job_id = int(job_row.id)
+    with session_factory() as s, s.begin():
+        job_row = PrunerJob(
+            dedupe_key="preview-activity-jf-coll-ignored",
+            job_kind=PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND,
+            status=PrunerJobStatus.COMPLETED.value,
+        )
+        s.add(job_row)
+        s.flush()
+        job_id = int(job_row.id)
 
     handlers = build_pruner_job_handlers(settings, session_factory)
     fn = handlers[PRUNER_CANDIDATE_REMOVAL_PREVIEW_JOB_KIND]

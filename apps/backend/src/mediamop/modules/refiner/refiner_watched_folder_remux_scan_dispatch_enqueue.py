@@ -56,10 +56,7 @@ def refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan(
             ),
         ),
     ).all()
-    for job in rows:
-        if _scan_job_media_scope(job.payload_json) == want:
-            return True
-    return False
+    return any(_scan_job_media_scope(job.payload_json) == want for job in rows)
 
 
 def validate_watched_folder_scan_dispatch_prerequisites(

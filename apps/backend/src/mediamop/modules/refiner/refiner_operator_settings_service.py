@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from typing import cast
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from mediamop.platform.arr_library.schedule_csv_validate import normalize_hhmm, validate_schedule_days_csv
-from mediamop.platform.arr_library.schedule_wall_clock import schedule_time_window_active
 from mediamop.modules.refiner.refiner_operator_settings_model import RefinerOperatorSettingsRow
 from mediamop.modules.refiner.schemas_refiner_operator_settings import (
     RefinerOperatorSettingsOut,
     RefinerOperatorSettingsPutIn,
 )
+from mediamop.platform.arr_library.schedule_csv_validate import normalize_hhmm, validate_schedule_days_csv
+from mediamop.platform.arr_library.schedule_wall_clock import schedule_time_window_active
 from mediamop.platform.suite_settings.service import ensure_suite_settings_row
 
 
@@ -64,7 +64,7 @@ def refiner_periodic_scope_in_schedule_window(
 ) -> bool:
     """True when a periodic Refiner watched-folder scan may run for this scope."""
 
-    when = now if now is not None else datetime.now(timezone.utc)
+    when = now if now is not None else datetime.now(UTC)
     if media_scope == "movie":
         if not bool(row.movie_schedule_hours_limited):
             return True

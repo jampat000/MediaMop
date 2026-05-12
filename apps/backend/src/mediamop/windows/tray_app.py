@@ -8,6 +8,7 @@ external-drive access.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import ctypes
 import os
 import secrets
@@ -23,8 +24,9 @@ from pathlib import Path
 from typing import Any
 
 import uvicorn
-from alembic import command
 from alembic.config import Config
+
+from alembic import command
 from mediamop.api.factory import create_app
 from mediamop.version import __version__
 
@@ -40,9 +42,8 @@ def _append_fallback_log(message: str) -> None:
     path = _fallback_log_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    with _LOG_LOCK:
-        with path.open("a", encoding="utf-8") as handle:
-            handle.write(f"[{timestamp}] {message}\n")
+    with _LOG_LOCK, path.open("a", encoding="utf-8") as handle:
+        handle.write(f"[{timestamp}] {message}\n")
 
 
 def _resource_root() -> Path:
@@ -99,10 +100,8 @@ def _write_private_runtime_token(path: Path, value: str) -> None:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             handle.write(value)
     finally:
-        try:
+        with contextlib.suppress(OSError):
             os.chmod(path, 0o600)
-        except OSError:
-            pass
 
 
 def _prepare_environment(resource_root: Path, runtime_home: Path) -> Path:
@@ -217,10 +216,8 @@ def _wait_for_health(
         except (OSError, http.client.HTTPException):
             time.sleep(0.25)
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 conn.close()
-            except Exception:
-                pass
     raise RuntimeError("MediaMop did not start listening on localhost in time.")
 
 
@@ -265,9 +262,8 @@ class _MediaMopTrayApp:
 
     def _log(self, message: str) -> None:
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-        with _LOG_LOCK:
-            with self._log_path.open("a", encoding="utf-8") as handle:
-                handle.write(f"[{timestamp}] {message}\n")
+        with _LOG_LOCK, self._log_path.open("a", encoding="utf-8") as handle:
+            handle.write(f"[{timestamp}] {message}\n")
 
     def _open_browser_with_debounce(self, *, source: str) -> None:
         now = time.monotonic()
@@ -363,14 +359,10 @@ class _MediaMopTrayApp:
                         time.sleep(3.0)
                         continue
                     self._log(f"Bundled server host exited unexpectedly with code {exit_code}")
-                    try:
+                    with contextlib.suppress(Exception):
                         self._icon.notify("MediaMop server stopped unexpectedly. Please restart MediaMop.")
-                    except Exception:
-                        pass
-                    try:
+                    with contextlib.suppress(Exception):
                         self._icon.title = "MediaMop (stopped)"
-                    except Exception:
-                        pass
                     return
 
             threading.Thread(

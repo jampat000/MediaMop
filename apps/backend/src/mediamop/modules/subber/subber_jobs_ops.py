@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 
 from sqlalchemy import func, or_, select, text
 from sqlalchemy.exc import IntegrityError
@@ -14,7 +14,7 @@ from mediamop.platform.metrics.service import record_module_job_event, set_modul
 
 
 def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _record_subber_queue_depth(session: Session) -> None:

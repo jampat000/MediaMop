@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pytest
@@ -45,7 +45,7 @@ def test_plex_leaf_audience_rating_float() -> None:
 def test_plex_leaf_added_at_utc_seconds_and_ms() -> None:
     dt = plex_leaf_added_at_utc({"addedAt": 1_450_147_195})
     assert dt is not None
-    assert dt.tzinfo == timezone.utc
+    assert dt.tzinfo == UTC
     dt_ms = plex_leaf_added_at_utc({"addedAt": 1_450_147_195_000})
     assert dt_ms is not None
     assert abs((dt_ms - dt).total_seconds()) < 2
@@ -165,7 +165,7 @@ def test_list_plex_low_rating_requires_audience_rating() -> None:
 
 
 def test_list_plex_unwatched_stale_uses_added_at() -> None:
-    old_ts = int((datetime.now(timezone.utc) - timedelta(days=100)).timestamp())
+    old_ts = int((datetime.now(UTC) - timedelta(days=100)).timestamp())
 
     def fake_get_json(url: str, headers: dict[str, str]) -> tuple[int, dict]:  # noqa: ARG001
         if "allLeaves" not in url:

@@ -7,7 +7,12 @@ from pathlib import Path
 from typing import Any
 
 from mediamop.modules.refiner.refiner_remux_rules import RemuxPlan
-from mediamop.platform.observability.diagnostics import DiagnosticAction, DiagnosticModule, DiagnosticResult, DiagnosticTrigger
+from mediamop.platform.observability.diagnostics import (
+    DiagnosticAction,
+    DiagnosticModule,
+    DiagnosticResult,
+    DiagnosticTrigger,
+)
 from mediamop.platform.observability.operator_messages import activity_detail_envelope
 
 # Persisted on activity detail JSON — keep aligned with web ``REFINER_FILE_REMUX_PASS_EVENT_TYPE`` consumers.

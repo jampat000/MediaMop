@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -13,6 +13,7 @@ from starlette.testclient import TestClient
 
 from mediamop.api.factory import create_app
 from mediamop.core.config import MediaMopSettings
+from mediamop.core.datetime_util import as_utc
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.platform.activity import constants as activity_constants
 from mediamop.platform.activity.models import ActivityEvent
@@ -20,8 +21,8 @@ from mediamop.platform.auth import service as auth_service
 from mediamop.platform.auth.models import User, UserRole, UserSession
 from mediamop.platform.auth.password import hash_password
 from mediamop.platform.auth.sessions import revoke_session
-from mediamop.core.datetime_util import as_utc
-from tests.integration_helpers import auth_post, csrf as fetch_csrf, reset_user_tables, seed_admin_user
+from tests.integration_helpers import auth_post, reset_user_tables, seed_admin_user
+from tests.integration_helpers import csrf as fetch_csrf
 
 
 def test_login_me_logout_flow(client_with_admin: TestClient) -> None:
@@ -413,15 +414,14 @@ def test_session_limit_ignores_absolute_expired_sessions() -> None:
     settings = MediaMopSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
-    base = datetime(2026, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
-    with patch("mediamop.platform.auth.service.utcnow", return_value=base):
-        with fac() as db:
-            user = db.scalars(select(User).where(User.username == "alice")).one()
-            for _ in range(5):
-                row, _raw = auth_service.create_user_session(db, user, settings=settings)
-                row.absolute_expires_at = base - timedelta(seconds=1)
-            live, _raw = auth_service.create_user_session(db, user, settings=settings)
-            db.commit()
+    base = datetime(2026, 1, 15, 10, 0, 0, tzinfo=UTC)
+    with patch("mediamop.platform.auth.service.utcnow", return_value=base), fac() as db:
+        user = db.scalars(select(User).where(User.username == "alice")).one()
+        for _ in range(5):
+            row, _raw = auth_service.create_user_session(db, user, settings=settings)
+            row.absolute_expires_at = base - timedelta(seconds=1)
+        live, _raw = auth_service.create_user_session(db, user, settings=settings)
+        db.commit()
 
     with fac() as db:
         live_row = db.get(UserSession, live.id)
@@ -758,15 +758,14 @@ def test_load_valid_session_throttles_last_seen_persistence(monkeypatch: pytest.
     settings = MediaMopSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
-    base = datetime(2026, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+    base = datetime(2026, 1, 15, 10, 0, 0, tzinfo=UTC)
     sid: int
     raw: str
-    with patch("mediamop.platform.auth.service.utcnow", return_value=base):
-        with fac() as db:
-            user = db.scalars(select(User).where(User.username == "alice")).one()
-            row, raw = auth_service.create_user_session(db, user, settings=settings)
-            sid = row.id
-            db.commit()
+    with patch("mediamop.platform.auth.service.utcnow", return_value=base), fac() as db:
+        user = db.scalars(select(User).where(User.username == "alice")).one()
+        row, raw = auth_service.create_user_session(db, user, settings=settings)
+        sid = row.id
+        db.commit()
 
     def read_last_seen() -> datetime:
         with fac() as db:
@@ -779,20 +778,18 @@ def test_load_valid_session_throttles_last_seen_persistence(monkeypatch: pytest.
     with patch(
         "mediamop.platform.auth.service.utcnow",
         return_value=base + timedelta(seconds=30),
-    ):
-        with fac() as db:
-            pair = auth_service.load_valid_session_for_request(db, raw, settings)
-            assert pair is not None
-            db.commit()
+    ), fac() as db:
+        pair = auth_service.load_valid_session_for_request(db, raw, settings)
+        assert pair is not None
+        db.commit()
 
     assert read_last_seen() == base
 
     later = base + timedelta(seconds=61)
-    with patch("mediamop.platform.auth.service.utcnow", return_value=later):
-        with fac() as db:
-            pair = auth_service.load_valid_session_for_request(db, raw, settings)
-            assert pair is not None
-            db.commit()
+    with patch("mediamop.platform.auth.service.utcnow", return_value=later), fac() as db:
+        pair = auth_service.load_valid_session_for_request(db, raw, settings)
+        assert pair is not None
+        db.commit()
 
     assert read_last_seen() == later
 
@@ -803,19 +800,17 @@ def test_expired_session_is_rejected_and_revoked(monkeypatch: pytest.MonkeyPatch
     settings = MediaMopSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
-    base = datetime(2026, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+    base = datetime(2026, 1, 15, 10, 0, 0, tzinfo=UTC)
 
-    with patch("mediamop.platform.auth.service.utcnow", return_value=base):
-        with fac() as db:
-            user = db.scalars(select(User).where(User.username == "alice")).one()
-            row, raw = auth_service.create_user_session(db, user, settings=settings)
-            sid = row.id
-            db.commit()
+    with patch("mediamop.platform.auth.service.utcnow", return_value=base), fac() as db:
+        user = db.scalars(select(User).where(User.username == "alice")).one()
+        row, raw = auth_service.create_user_session(db, user, settings=settings)
+        sid = row.id
+        db.commit()
 
-    with patch("mediamop.platform.auth.service.utcnow", return_value=base + timedelta(days=settings.session_absolute_days + 1)):
-        with fac() as db:
-            pair = auth_service.load_valid_session_for_request(db, raw, settings)
-            db.commit()
+    with patch("mediamop.platform.auth.service.utcnow", return_value=base + timedelta(days=settings.session_absolute_days + 1)), fac() as db:
+        pair = auth_service.load_valid_session_for_request(db, raw, settings)
+        db.commit()
 
     assert pair is None
     with fac() as db:
@@ -830,17 +825,16 @@ def test_session_cleanup_deletes_revoked_and_expired_sessions(monkeypatch: pytes
     settings = MediaMopSettings.load()
     eng = create_db_engine(settings)
     fac = create_session_factory(eng)
-    base = datetime(2026, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+    base = datetime(2026, 1, 15, 10, 0, 0, tzinfo=UTC)
 
-    with patch("mediamop.platform.auth.service.utcnow", return_value=base):
-        with fac() as db:
-            user = db.scalars(select(User).where(User.username == "alice")).one()
-            revoked, _ = auth_service.create_user_session(db, user, settings=settings)
-            expired, _ = auth_service.create_user_session(db, user, settings=settings)
-            active, _ = auth_service.create_user_session(db, user, settings=settings)
-            revoke_session(revoked, at=base)
-            expired.absolute_expires_at = base - timedelta(seconds=1)
-            db.commit()
+    with patch("mediamop.platform.auth.service.utcnow", return_value=base), fac() as db:
+        user = db.scalars(select(User).where(User.username == "alice")).one()
+        revoked, _ = auth_service.create_user_session(db, user, settings=settings)
+        expired, _ = auth_service.create_user_session(db, user, settings=settings)
+        active, _ = auth_service.create_user_session(db, user, settings=settings)
+        revoke_session(revoked, at=base)
+        expired.absolute_expires_at = base - timedelta(seconds=1)
+        db.commit()
 
     with fac() as db:
         removed = auth_service.cleanup_inactive_sessions(db, settings=settings, now=base)

@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Literal, Mapping, Sequence
+from typing import Any, Literal
 
 from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.platform.arr_library import resolve_radarr_http_credentials, resolve_sonarr_http_credentials
 from mediamop.modules.refiner.domain import (
     FileAnchorCandidate,
     RefinerQueueRowView,
@@ -18,6 +18,7 @@ from mediamop.modules.refiner.domain import (
 from mediamop.modules.refiner.radarr_queue_adapter import map_radarr_queue_row_to_refiner_view
 from mediamop.modules.refiner.refiner_candidate_gate_queue_fetch import fetch_arr_v3_queue_rows
 from mediamop.modules.refiner.sonarr_queue_adapter import map_sonarr_queue_row_to_refiner_view
+from mediamop.platform.arr_library import resolve_radarr_http_credentials, resolve_sonarr_http_credentials
 
 Verdict = Literal["proceed", "wait_upstream", "not_held"]
 

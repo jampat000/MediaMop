@@ -30,7 +30,7 @@ def test_fetch_release_record_by_version_rejects_wrong_returned_tag(monkeypatch:
             return payload
 
     class _Client:
-        def __enter__(self) -> "_Client":
+        def __enter__(self) -> _Client:
             return self
 
         def __exit__(self, exc_type, exc, tb) -> None:
@@ -67,7 +67,7 @@ def test_fetch_release_record_by_version_rejects_prerelease(monkeypatch: pytest.
             return payload
 
     class _Client:
-        def __enter__(self) -> "_Client":
+        def __enter__(self) -> _Client:
             return self
 
         def __exit__(self, exc_type, exc, tb) -> None:

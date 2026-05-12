@@ -9,8 +9,8 @@ from typing import Literal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.refiner_failure_cleanup_job_kinds import (
     REFINER_MOVIE_FAILURE_CLEANUP_SWEEP_DEDUPE_KEY,
     REFINER_MOVIE_FAILURE_CLEANUP_SWEEP_JOB_KIND,

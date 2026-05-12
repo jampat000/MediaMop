@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -110,7 +110,7 @@ def upsert_provider_settings(
     row = get_provider_by_key(session, provider_key)
     if row is None:
         raise ValueError(f"Unknown provider_key {provider_key!r}")
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Auto-assign priority when enabling; clear when disabling
     if enabled is True and row.priority is None:

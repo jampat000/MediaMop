@@ -3,20 +3,25 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
 from mediamop import __version__
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.dashboard.schemas import ActivitySummaryOut, DashboardStatusOut, SystemStatusOut, WorkerLaneHealthOut
-from mediamop.platform.activity.schemas import ActivityEventItemOut
+from mediamop.modules.dashboard.schemas import (
+    ActivitySummaryOut,
+    DashboardStatusOut,
+    SystemStatusOut,
+    WorkerLaneHealthOut,
+)
 from mediamop.platform.activity import service as activity_service
+from mediamop.platform.activity.schemas import ActivityEventItemOut
 from mediamop.platform.jobs.worker_health import build_worker_health_snapshot
 
 
 def _build_activity_summary(db: Session) -> ActivitySummaryOut:
-    since = datetime.now(timezone.utc) - timedelta(hours=24)
+    since = datetime.now(UTC) - timedelta(hours=24)
     n = activity_service.count_activity_events_since(db, since=since)
     latest_row = activity_service.get_latest_activity_event(db)
     latest = ActivityEventItemOut.model_validate(latest_row) if latest_row else None

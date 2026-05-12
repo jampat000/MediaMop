@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -11,6 +11,11 @@ import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
+import mediamop.modules.subber.subber_jobs_model  # noqa: F401
+import mediamop.modules.subber.subber_settings_model  # noqa: F401
+import mediamop.modules.subber.subber_subtitle_state_model  # noqa: F401
+import mediamop.platform.activity.models  # noqa: F401
+import mediamop.platform.auth.models  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
 from mediamop.modules.subber.subber_job_handlers import build_subber_job_handlers
@@ -22,12 +27,6 @@ from mediamop.modules.subber.subber_subtitle_state_model import SubberSubtitleSt
 from mediamop.modules.subber.worker_loop import process_one_subber_job
 from mediamop.platform.activity import constants as C
 from mediamop.platform.activity.models import ActivityEvent
-
-import mediamop.modules.subber.subber_jobs_model  # noqa: F401
-import mediamop.modules.subber.subber_settings_model  # noqa: F401
-import mediamop.modules.subber.subber_subtitle_state_model  # noqa: F401
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
 
 
 @pytest.fixture
@@ -52,7 +51,7 @@ def test_upgrade_job_noop_when_disabled(mock_dl, session_factory) -> None:
         s.commit()
     settings = MediaMopSettings.load()
     handlers = build_subber_job_handlers(settings, session_factory)
-    t0 = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    t0 = datetime(2026, 1, 1, tzinfo=UTC)
     process_one_subber_job(session_factory, lease_owner="u1", job_handlers=handlers, now=t0, lease_seconds=600)
     assert not mock_dl.called
 
@@ -86,7 +85,7 @@ def test_upgrade_runs_when_enabled(mock_dl, _mock_cfg, mock_cand, session_factor
         s.commit()
     settings = MediaMopSettings.load()
     handlers = build_subber_job_handlers(settings, session_factory)
-    t0 = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    t0 = datetime(2026, 1, 1, tzinfo=UTC)
     process_one_subber_job(session_factory, lease_owner="u2", job_handlers=handlers, now=t0, lease_seconds=600)
     assert mock_dl.called
     assert mock_cand.called
@@ -115,7 +114,7 @@ def test_upgrade_handler_skips_when_subber_disabled(mock_dl, session_factory) ->
         s.commit()
     settings = MediaMopSettings.load()
     handlers = build_subber_job_handlers(settings, session_factory)
-    t0 = datetime(2026, 1, 2, tzinfo=timezone.utc)
+    t0 = datetime(2026, 1, 2, tzinfo=UTC)
     process_one_subber_job(session_factory, lease_owner="u3", job_handlers=handlers, now=t0, lease_seconds=600)
     assert not mock_dl.called
     with session_factory() as s:
@@ -167,7 +166,7 @@ def test_upgrade_handler_runs_when_enabled_with_candidates(session_factory, tmp_
 
     settings = MediaMopSettings.load()
     handlers = build_subber_job_handlers(settings, session_factory)
-    t0 = datetime(2026, 1, 3, tzinfo=timezone.utc)
+    t0 = datetime(2026, 1, 3, tzinfo=UTC)
     with (
         patch(
             "mediamop.modules.subber.subber_upgrade_job_handler.search_and_download_subtitle",

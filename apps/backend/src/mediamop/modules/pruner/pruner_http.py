@@ -10,7 +10,6 @@ from typing import Any
 
 from mediamop.platform.outbound_http import normalize_local_service_base_url
 
-
 DEFAULT_TIMEOUT_SEC = 20.0
 
 

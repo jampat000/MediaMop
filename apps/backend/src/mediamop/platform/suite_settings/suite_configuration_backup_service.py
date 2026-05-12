@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 
 from sqlalchemy import select
@@ -57,7 +58,7 @@ def get_suite_configuration_backup_file_path(
 def create_suite_configuration_backup(session: Session, *, settings: MediaMopSettings) -> SuiteConfigurationBackupRow:
     backup_root = _backup_dir(settings)
     backup_root.mkdir(parents=True, exist_ok=True)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     bundle = build_configuration_bundle(session)
     stamp = now.strftime("%Y%m%d-%H%M%S")
     fname = f"suite-configuration-{stamp}.json"
@@ -92,16 +93,12 @@ def _prune_old_backups(session: Session, *, settings: MediaMopSettings) -> None:
     backup_root = _backup_dir(settings)
     keep_names = {r.file_name for r in keep}
     for r in drop:
-        try:
+        with contextlib.suppress(OSError):
             (backup_root / r.file_name).unlink(missing_ok=True)
-        except OSError:
-            pass
         session.delete(r)
     # Clean up orphan files too.
     if backup_root.is_dir():
         for p in backup_root.glob("suite-configuration-*.json"):
             if p.name not in keep_names:
-                try:
+                with contextlib.suppress(OSError):
                     p.unlink(missing_ok=True)
-                except OSError:
-                    pass

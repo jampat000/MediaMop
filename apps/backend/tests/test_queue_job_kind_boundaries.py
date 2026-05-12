@@ -3,18 +3,28 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
+import mediamop.modules.pruner.pruner_jobs_model  # noqa: F401
+import mediamop.modules.refiner.jobs_model  # noqa: F401
+import mediamop.modules.subber.subber_jobs_model  # noqa: F401
+import mediamop.platform.activity.models  # noqa: F401
+import mediamop.platform.auth.models  # noqa: F401
 from mediamop.core.config import MediaMopSettings
+from mediamop.core.db import Base
+from mediamop.modules.pruner.pruner_job_handlers import build_pruner_job_handlers
+from mediamop.modules.pruner.pruner_jobs_model import PrunerJob, PrunerJobStatus
+from mediamop.modules.pruner.pruner_jobs_ops import pruner_enqueue_or_get_job
+from mediamop.modules.pruner.worker_loop import process_one_pruner_job
 from mediamop.modules.queue_worker.job_kind_boundaries import (
     job_kind_forbidden_on_refiner_lane,
+    validate_pruner_worker_handler_registry,
     validate_refiner_worker_handler_registry,
     validate_subber_worker_handler_registry,
-    validate_pruner_worker_handler_registry,
 )
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
@@ -27,17 +37,6 @@ from mediamop.modules.subber.subber_job_kinds import SUBBER_JOB_KIND_SUBTITLE_SE
 from mediamop.modules.subber.subber_jobs_model import SubberJob, SubberJobStatus
 from mediamop.modules.subber.subber_jobs_ops import subber_enqueue_or_get_job
 from mediamop.modules.subber.worker_loop import process_one_subber_job
-from mediamop.modules.pruner.pruner_job_handlers import build_pruner_job_handlers
-from mediamop.modules.pruner.pruner_jobs_model import PrunerJob, PrunerJobStatus
-from mediamop.modules.pruner.pruner_jobs_ops import pruner_enqueue_or_get_job
-from mediamop.modules.pruner.worker_loop import process_one_pruner_job
-
-import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.modules.subber.subber_jobs_model  # noqa: F401
-import mediamop.modules.pruner.pruner_jobs_model  # noqa: F401
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
-from mediamop.core.db import Base
 
 # Legacy lane prefix still blocked on sibling queues (see ``job_kind_boundaries``).
 _LEGACY_TRIMMER_JOB = "trimmer.radarr.cleanup_drive.v1"
@@ -76,25 +75,21 @@ def test_default_refiner_handler_registry_has_no_foreign_lane_keys() -> None:
 
 
 def test_refiner_enqueue_rejects_foreign_namespaces(session_factory) -> None:
-    with session_factory() as s:
-        with pytest.raises(ValueError, match="refiner_enqueue_or_get_job refuses"):
-            refiner_enqueue_or_get_job(s, dedupe_key="t", job_kind="pruner.probe.v1")
-    with session_factory() as s:
-        with pytest.raises(ValueError, match="refiner_enqueue_or_get_job refuses"):
-            refiner_enqueue_or_get_job(s, dedupe_key="legacy", job_kind="trimmer.legacy.v1")
-    with session_factory() as s:
-        with pytest.raises(ValueError, match="refiner_enqueue_or_get_job refuses"):
-            refiner_enqueue_or_get_job(
-                s,
-                dedupe_key="s",
-                job_kind=SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV,
-            )
+    with session_factory() as s, pytest.raises(ValueError, match="refiner_enqueue_or_get_job refuses"):
+        refiner_enqueue_or_get_job(s, dedupe_key="t", job_kind="pruner.probe.v1")
+    with session_factory() as s, pytest.raises(ValueError, match="refiner_enqueue_or_get_job refuses"):
+        refiner_enqueue_or_get_job(s, dedupe_key="legacy", job_kind="trimmer.legacy.v1")
+    with session_factory() as s, pytest.raises(ValueError, match="refiner_enqueue_or_get_job refuses"):
+        refiner_enqueue_or_get_job(
+            s,
+            dedupe_key="s",
+            job_kind=SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV,
+        )
 
 
 def test_refiner_enqueue_rejects_unprefixed_job_kind(session_factory) -> None:
-    with session_factory() as s:
-        with pytest.raises(ValueError, match="refiner_enqueue_or_get_job requires job_kind"):
-            refiner_enqueue_or_get_job(s, dedupe_key="u", job_kind="bare.kind")
+    with session_factory() as s, pytest.raises(ValueError, match="refiner_enqueue_or_get_job requires job_kind"):
+        refiner_enqueue_or_get_job(s, dedupe_key="u", job_kind="bare.kind")
 
 
 def test_validate_refiner_worker_handler_registry_rejects_foreign_lane_keys() -> None:
@@ -151,7 +146,7 @@ def test_process_one_refiner_job_fails_claimed_row_in_foreign_lane_without_handl
 def test_process_one_refiner_job_rejects_unprefixed_job_kind_row(session_factory) -> None:
     """Direct-insert legacy rows without ``refiner.*`` must fail safe on the Refiner worker."""
 
-    t0 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=UTC)
     with session_factory() as s:
         s.add(
             RefinerJob(
@@ -179,32 +174,27 @@ def test_process_one_refiner_job_rejects_unprefixed_job_kind_row(session_factory
 
 
 def test_pruner_enqueue_rejects_foreign_namespaces(session_factory) -> None:
-    with session_factory() as s:
-        with pytest.raises(ValueError, match="pruner_enqueue_or_get_job refuses"):
-            pruner_enqueue_or_get_job(s, dedupe_key="x", job_kind="refiner.compact.v1")
-    with session_factory() as s:
-        with pytest.raises(ValueError, match="pruner_enqueue_or_get_job refuses"):
-            pruner_enqueue_or_get_job(
-                s,
-                dedupe_key="y",
-                job_kind=_LEGACY_TRIMMER_JOB,
-            )
-    with session_factory() as s:
-        with pytest.raises(ValueError, match="pruner_enqueue_or_get_job refuses"):
-            pruner_enqueue_or_get_job(
-                s,
-                dedupe_key="z",
-                job_kind=SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV,
-            )
-    with session_factory() as s:
-        with pytest.raises(ValueError, match="pruner_enqueue_or_get_job refuses"):
-            pruner_enqueue_or_get_job(s, dedupe_key="legacy", job_kind="trimmer.legacy.v1")
+    with session_factory() as s, pytest.raises(ValueError, match="pruner_enqueue_or_get_job refuses"):
+        pruner_enqueue_or_get_job(s, dedupe_key="x", job_kind="refiner.compact.v1")
+    with session_factory() as s, pytest.raises(ValueError, match="pruner_enqueue_or_get_job refuses"):
+        pruner_enqueue_or_get_job(
+            s,
+            dedupe_key="y",
+            job_kind=_LEGACY_TRIMMER_JOB,
+        )
+    with session_factory() as s, pytest.raises(ValueError, match="pruner_enqueue_or_get_job refuses"):
+        pruner_enqueue_or_get_job(
+            s,
+            dedupe_key="z",
+            job_kind=SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV,
+        )
+    with session_factory() as s, pytest.raises(ValueError, match="pruner_enqueue_or_get_job refuses"):
+        pruner_enqueue_or_get_job(s, dedupe_key="legacy", job_kind="trimmer.legacy.v1")
 
 
 def test_pruner_enqueue_rejects_unprefixed_job_kind(session_factory) -> None:
-    with session_factory() as s:
-        with pytest.raises(ValueError, match="pruner_enqueue_or_get_job requires job_kind"):
-            pruner_enqueue_or_get_job(s, dedupe_key="u", job_kind="bare.kind")
+    with session_factory() as s, pytest.raises(ValueError, match="pruner_enqueue_or_get_job requires job_kind"):
+        pruner_enqueue_or_get_job(s, dedupe_key="u", job_kind="bare.kind")
 
 
 def test_validate_pruner_worker_handler_registry_rejects_foreign_lane_keys() -> None:
@@ -231,7 +221,7 @@ def test_process_one_pruner_job_fails_claimed_row_with_foreign_lane_job_kind(
 ) -> None:
     """Mis-placed ``pruner_jobs`` rows stamped with another module's prefix must not execute."""
 
-    t0 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=UTC)
     with session_factory() as s:
         s.add(
             PrunerJob(
@@ -263,7 +253,7 @@ def test_process_one_pruner_job_fails_claimed_row_with_foreign_lane_job_kind(
 def test_process_one_pruner_job_rejects_unprefixed_job_kind_row(session_factory, tmp_path) -> None:
     """Direct-insert rows without ``pruner.*`` must fail safe on the Pruner worker."""
 
-    t0 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=UTC)
     with session_factory() as s:
         s.add(
             PrunerJob(
@@ -293,28 +283,23 @@ def test_process_one_pruner_job_rejects_unprefixed_job_kind_row(session_factory,
 
 
 def test_subber_enqueue_rejects_foreign_namespaces(session_factory) -> None:
-    with session_factory() as s:
-        with pytest.raises(ValueError, match="subber_enqueue_or_get_job refuses"):
-            subber_enqueue_or_get_job(s, dedupe_key="x", job_kind="refiner.compact.v1")
-    with session_factory() as s:
-        with pytest.raises(ValueError, match="subber_enqueue_or_get_job refuses"):
-            subber_enqueue_or_get_job(s, dedupe_key="t", job_kind="pruner.probe.v1")
-    with session_factory() as s:
-        with pytest.raises(ValueError, match="subber_enqueue_or_get_job refuses"):
-            subber_enqueue_or_get_job(s, dedupe_key="legacy", job_kind="trimmer.legacy.v1")
-    with session_factory() as s:
-        with pytest.raises(ValueError, match="subber_enqueue_or_get_job refuses"):
-            subber_enqueue_or_get_job(
-                s,
-                dedupe_key="f",
-                job_kind=_LEGACY_TRIMMER_JOB,
-            )
+    with session_factory() as s, pytest.raises(ValueError, match="subber_enqueue_or_get_job refuses"):
+        subber_enqueue_or_get_job(s, dedupe_key="x", job_kind="refiner.compact.v1")
+    with session_factory() as s, pytest.raises(ValueError, match="subber_enqueue_or_get_job refuses"):
+        subber_enqueue_or_get_job(s, dedupe_key="t", job_kind="pruner.probe.v1")
+    with session_factory() as s, pytest.raises(ValueError, match="subber_enqueue_or_get_job refuses"):
+        subber_enqueue_or_get_job(s, dedupe_key="legacy", job_kind="trimmer.legacy.v1")
+    with session_factory() as s, pytest.raises(ValueError, match="subber_enqueue_or_get_job refuses"):
+        subber_enqueue_or_get_job(
+            s,
+            dedupe_key="f",
+            job_kind=_LEGACY_TRIMMER_JOB,
+        )
 
 
 def test_subber_enqueue_rejects_unprefixed_job_kind(session_factory) -> None:
-    with session_factory() as s:
-        with pytest.raises(ValueError, match="subber_enqueue_or_get_job requires job_kind"):
-            subber_enqueue_or_get_job(s, dedupe_key="u", job_kind="bare.kind")
+    with session_factory() as s, pytest.raises(ValueError, match="subber_enqueue_or_get_job requires job_kind"):
+        subber_enqueue_or_get_job(s, dedupe_key="u", job_kind="bare.kind")
 
 
 def test_validate_subber_worker_handler_registry_rejects_foreign_lane_keys() -> None:
@@ -344,7 +329,7 @@ def test_process_one_subber_job_fails_claimed_row_with_foreign_lane_job_kind(
 ) -> None:
     """Mis-placed ``subber_jobs`` rows stamped with another module's prefix must not execute."""
 
-    t0 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=UTC)
     with session_factory() as s:
         s.add(
             SubberJob(
@@ -375,7 +360,7 @@ def test_process_one_subber_job_fails_claimed_row_with_foreign_lane_job_kind(
 def test_process_one_subber_job_rejects_unprefixed_job_kind_row(session_factory) -> None:
     """Direct-insert rows without ``subber.*`` must fail safe on the Subber worker."""
 
-    t0 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=UTC)
     with session_factory() as s:
         s.add(
             SubberJob(

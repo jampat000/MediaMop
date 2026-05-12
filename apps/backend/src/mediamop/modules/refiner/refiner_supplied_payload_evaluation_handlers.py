@@ -70,8 +70,7 @@ def make_refiner_supplied_payload_evaluation_handler(
             "blocked_upstream": blocked,
         }
         detail = json.dumps(detail_obj, separators=(",", ":"))[:10_000]
-        with session_factory() as session:
-            with session.begin():
-                record_refiner_supplied_payload_evaluation_completed(session, detail=detail)
+        with session_factory() as session, session.begin():
+            record_refiner_supplied_payload_evaluation_completed(session, detail=detail)
 
     return _run

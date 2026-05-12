@@ -3,13 +3,18 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
+import mediamop.modules.subber.subber_jobs_model  # noqa: F401
+import mediamop.modules.subber.subber_settings_model  # noqa: F401
+import mediamop.modules.subber.subber_subtitle_state_model  # noqa: F401
+import mediamop.platform.activity.models  # noqa: F401
+import mediamop.platform.auth.models  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
 from mediamop.modules.queue_worker.job_kind_boundaries import validate_subber_worker_handler_registry
@@ -27,12 +32,6 @@ from mediamop.modules.subber.worker_loop import process_one_subber_job
 from mediamop.platform.activity import constants as C
 from mediamop.platform.activity.models import ActivityEvent
 from mediamop.platform.metrics.service import build_runtime_metrics_summary, reset_runtime_metrics_for_tests
-
-import mediamop.modules.subber.subber_jobs_model  # noqa: F401
-import mediamop.modules.subber.subber_settings_model  # noqa: F401
-import mediamop.modules.subber.subber_subtitle_state_model  # noqa: F401
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
 
 
 @pytest.fixture
@@ -69,7 +68,7 @@ def test_build_subber_job_handlers_registry_matches_production_kinds(session_fac
 
 def test_webhook_import_tv_runs_on_subber_lane_records_activity(session_factory) -> None:
     reset_runtime_metrics_for_tests()
-    t0 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=UTC)
     settings = MediaMopSettings.load()
     payload = {
         "file_path": "/media/tv/Pilot.mkv",

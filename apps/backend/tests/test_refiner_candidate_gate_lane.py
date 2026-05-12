@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -11,6 +11,9 @@ import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
+import mediamop.modules.refiner.jobs_model  # noqa: F401
+import mediamop.platform.activity.models  # noqa: F401
+import mediamop.platform.auth.models  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
@@ -20,10 +23,6 @@ from mediamop.modules.refiner.refiner_job_handlers import build_refiner_job_hand
 from mediamop.modules.refiner.worker_loop import process_one_refiner_job
 from mediamop.platform.activity import constants as C
 from mediamop.platform.activity.models import ActivityEvent
-
-import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.platform.activity.models  # noqa: F401
-import mediamop.platform.auth.models  # noqa: F401
 
 
 @pytest.fixture
@@ -69,7 +68,7 @@ def test_candidate_gate_handler_uses_live_queue_shape(
     def _fake_fetch(**_kwargs):
         return fake_rows
 
-    t0 = datetime(2026, 4, 12, 12, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 4, 12, 12, 0, 0, tzinfo=UTC)
     payload = {
         "target": "radarr",
         "release_title": "Gate Test",

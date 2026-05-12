@@ -1,4 +1,9 @@
-from mediamop.platform.observability.diagnostics import DiagnosticAction, DiagnosticModule, DiagnosticResult, DiagnosticTrigger
+from mediamop.platform.observability.diagnostics import (
+    DiagnosticAction,
+    DiagnosticModule,
+    DiagnosticResult,
+    DiagnosticTrigger,
+)
 from mediamop.platform.observability.operator_messages import (
     activity_detail_envelope,
     connection_test_title,

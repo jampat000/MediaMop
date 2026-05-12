@@ -9,11 +9,11 @@ from typing import Any, Literal
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.platform.arr_library import resolve_radarr_http_credentials, resolve_sonarr_http_credentials
 from mediamop.modules.refiner.refiner_candidate_gate_activity import record_refiner_candidate_gate_completed
 from mediamop.modules.refiner.refiner_candidate_gate_evaluate import evaluate_refiner_candidate_gate_from_queue_rows
 from mediamop.modules.refiner.refiner_candidate_gate_queue_fetch import fetch_arr_v3_queue_rows
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
+from mediamop.platform.arr_library import resolve_radarr_http_credentials, resolve_sonarr_http_credentials
 
 
 def _parse_job_payload(payload_json: str | None) -> dict[str, Any]:
@@ -93,8 +93,7 @@ def make_refiner_candidate_gate_handler(
             "reasons": list(outcome.reasons),
         }
         detail = json.dumps(detail_obj, separators=(",", ":"))[:10_000]
-        with session_factory() as session:
-            with session.begin():
-                record_refiner_candidate_gate_completed(session, detail=detail)
+        with session_factory() as session, session.begin():
+            record_refiner_candidate_gate_completed(session, detail=detail)
 
     return _run
