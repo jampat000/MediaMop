@@ -154,7 +154,7 @@ class _WindowsSingleInstanceGuard:
     def acquire(self) -> bool:
         if os.name != "nt":
             return True
-        kernel32 = ctypes.windll.kernel32
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]  # Windows-only ctypes/os API
         kernel32.SetLastError(0)
         handle = kernel32.CreateMutexW(None, False, self._name)
         if not handle:
@@ -168,7 +168,7 @@ class _WindowsSingleInstanceGuard:
         if self._handle is None:
             return
         try:
-            ctypes.windll.kernel32.CloseHandle(self._handle)
+            ctypes.windll.kernel32.CloseHandle(self._handle)  # type: ignore[attr-defined]  # Windows-only ctypes/os API
         finally:
             self._handle = None
 
@@ -286,7 +286,7 @@ class _MediaMopTrayApp:
         self._open_browser_with_debounce(source="tray")
 
     def _handle_open_data_folder(self, icon: Any, item: Any) -> None:  # noqa: ARG002
-        os.startfile(str(self._runtime_home))
+        os.startfile(str(self._runtime_home))  # type: ignore[attr-defined]  # Windows-only ctypes/os API
 
     def _handle_quit(self, icon: Any, item: Any) -> None:  # noqa: ARG002
         self._log("Quit requested from tray icon")
