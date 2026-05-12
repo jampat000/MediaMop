@@ -152,14 +152,14 @@ def make_refiner_file_remux_pass_handler(
                 settings,
                 media_scope=media_scope,
             )
-            if path_err is not None:
+            if path_err is not None or path_runtime is None:
                 _record(
                     session_factory,
                     payload={
                         "job_id": ctx.id,
                         "ok": False,
                         "outcome": REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
-                        "reason": path_err,
+                        "reason": path_err or "path runtime unavailable",
                         "relative_media_path": rel.strip(),
                     },
                 )

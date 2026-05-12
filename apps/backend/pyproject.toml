@@ -62,9 +62,3 @@ check_untyped_defs = true
 warn_unused_ignores = true
 ignore_errors = false
 
-[[tool.mypy.overrides]]
-module = [
-  "mediamop.modules.refiner.*",
-  "mediamop.windows.*",
-]
-ignore_errors = true

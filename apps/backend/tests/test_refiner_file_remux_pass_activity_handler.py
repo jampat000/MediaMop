@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.refiner import refiner_file_remux_pass_handlers as handler_mod
+from mediamop.modules.refiner.file_remux_pass import handlers as handler_mod
 from mediamop.modules.refiner.refiner_file_remux_pass_visibility import REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
 from mediamop.platform.activity import constants as activity_constants

@@ -1,7 +1,6 @@
 """Compatibility alias for Refiner file remux pass handlers."""
 
-import sys
-
-from mediamop.modules.refiner.file_remux_pass import handlers as _handlers
-
-sys.modules[__name__] = _handlers
+from mediamop.modules.refiner.file_remux_pass.handlers import (
+    make_refiner_file_remux_pass_handler as make_refiner_file_remux_pass_handler,
+    RefinerActivityProgressReporter as RefinerActivityProgressReporter,
+)

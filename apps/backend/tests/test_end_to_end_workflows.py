@@ -27,7 +27,7 @@ from mediamop.modules.pruner.pruner_jobs_ops import pruner_enqueue_or_get_job
 from mediamop.modules.pruner.pruner_overview_stats_service import build_pruner_overview_stats
 from mediamop.modules.pruner.pruner_preview_run_model import PrunerPreviewRun
 from mediamop.modules.pruner.worker_loop import process_one_pruner_job
-from mediamop.modules.refiner import refiner_file_remux_pass_run as refiner_run
+from mediamop.modules.refiner.file_remux_pass import run as refiner_run
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.refiner_file_remux_pass_job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND

@@ -160,7 +160,7 @@ def _bool_env(name: str) -> bool:
 
 def _pid_is_running(pid: object) -> bool:
     try:
-        numeric = int(pid)
+        numeric = int(str(pid))
     except (TypeError, ValueError):
         return False
     if numeric <= 0:
@@ -187,7 +187,7 @@ def _normalize_executable_path(raw: object) -> str | None:
 
 def _read_process_snapshot(pid: object) -> dict[str, object] | None:
     try:
-        numeric = int(pid)
+        numeric = int(str(pid))
     except (TypeError, ValueError):
         return None
     if numeric <= 0:
@@ -746,7 +746,8 @@ def _write_state(**updates: object) -> dict[str, object]:
         state = _read_state_unlocked()
         diagnostics_update = updates.pop("diagnostics", None)
         if diagnostics_update is not None:
-            merged = dict(state.get("diagnostics") if isinstance(state.get("diagnostics"), dict) else {})
+            _existing_diag = state.get("diagnostics")
+            merged = dict(_existing_diag) if isinstance(_existing_diag, dict) else {}
             if isinstance(diagnostics_update, dict):
                 merged.update(diagnostics_update)
             else:
@@ -963,7 +964,8 @@ def _archive_superseded_terminal_attempt() -> None:
         )
         merged_diagnostics = dict(install_diagnostics)
 
-    diagnostics = state.get("diagnostics") if isinstance(state.get("diagnostics"), dict) else {}
+    _diag_raw = state.get("diagnostics")
+    diagnostics: dict[str, object] = dict(_diag_raw) if isinstance(_diag_raw, dict) else {}
     attempt_id = str(state.get("attempt_id") or "").strip() or None
     archived_diagnostics = dict(diagnostics)
     archived_diagnostics.update(merged_diagnostics)
@@ -1331,7 +1333,7 @@ def _start_packaged_tray_in_active_session(*, open_browser: bool = False) -> int
 
 def _terminate_pid(pid: object) -> str | None:
     try:
-        numeric = int(pid)
+        numeric = int(str(pid))
     except (TypeError, ValueError):
         return "Invalid PID."
     if numeric <= 0:
@@ -1520,9 +1522,9 @@ def _verify_install(target_version: str) -> tuple[bool, dict[str, object], str]:
                 )
                 diagnostics["mismatch_restart"] = restart_diag
                 if restart_diag.get("restarted_tray_pid"):
-                    restarted_tray_pid = int(restart_diag["restarted_tray_pid"])
+                    restarted_tray_pid = int(str(restart_diag["restarted_tray_pid"]))
                 if restart_diag.get("restarted_server_pid"):
-                    started_server_pid = int(restart_diag["restarted_server_pid"])
+                    started_server_pid = int(str(restart_diag["restarted_server_pid"]))
                 if restart_diag.get("restart_error"):
                     mismatch_restart_error = str(restart_diag["restart_error"])
                 else:
@@ -1992,7 +1994,8 @@ def _maybe_reconcile_pending_attempt() -> None:
 
 def _status_view() -> dict[str, object]:
     state = _read_state()
-    diagnostics = state.get("diagnostics") if isinstance(state.get("diagnostics"), dict) else {}
+    _diag_val = state.get("diagnostics")
+    diagnostics: dict[str, object] = dict(_diag_val) if isinstance(_diag_val, dict) else {}
     raw_phase = (
         str(diagnostics.get("reconciled_from_phase") or state.get("phase") or "unknown").strip().lower()
         or "unknown"

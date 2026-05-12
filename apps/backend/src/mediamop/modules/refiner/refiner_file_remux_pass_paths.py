@@ -1,7 +1,5 @@
 """Compatibility alias for the Refiner file remux pass path helpers."""
 
-import sys
-
-from mediamop.modules.refiner.file_remux_pass import paths as _paths
-
-sys.modules[__name__] = _paths
+from mediamop.modules.refiner.file_remux_pass.paths import (
+    resolve_media_file_under_refiner_root as resolve_media_file_under_refiner_root,
+)

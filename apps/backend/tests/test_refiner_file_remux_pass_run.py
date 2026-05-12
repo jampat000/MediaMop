@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner import refiner_file_remux_pass_run as runmod
+from mediamop.modules.refiner.file_remux_pass import run as runmod
 from mediamop.modules.refiner.refiner_remux_rules import PlannedTrack, RemuxPlan
 from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
 from mediamop.modules.refiner.refiner_file_remux_pass_visibility import (

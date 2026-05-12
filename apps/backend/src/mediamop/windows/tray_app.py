@@ -154,7 +154,7 @@ class _WindowsSingleInstanceGuard:
     def acquire(self) -> bool:
         if os.name != "nt":
             return True
-        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        kernel32 = ctypes.windll.kernel32
         kernel32.SetLastError(0)
         handle = kernel32.CreateMutexW(None, False, self._name)
         if not handle:
@@ -168,7 +168,7 @@ class _WindowsSingleInstanceGuard:
         if self._handle is None:
             return
         try:
-            ctypes.windll.kernel32.CloseHandle(self._handle)  # type: ignore[attr-defined]
+            ctypes.windll.kernel32.CloseHandle(self._handle)
         finally:
             self._handle = None
 
@@ -261,7 +261,7 @@ class _MediaMopTrayApp:
         self._browser_open_lock = threading.Lock()
         executable_dir = Path(sys.executable).resolve().parent
         self._server_exe = executable_dir / "MediaMopServer.exe"
-        self._server_process: subprocess.Popen[str] | None = None
+        self._server_process: subprocess.Popen[Any] | None = None
 
     def _log(self, message: str) -> None:
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -286,7 +286,7 @@ class _MediaMopTrayApp:
         self._open_browser_with_debounce(source="tray")
 
     def _handle_open_data_folder(self, icon: Any, item: Any) -> None:  # noqa: ARG002
-        os.startfile(str(self._runtime_home))  # type: ignore[attr-defined]
+        os.startfile(str(self._runtime_home))
 
     def _handle_quit(self, icon: Any, item: Any) -> None:  # noqa: ARG002
         self._log("Quit requested from tray icon")
@@ -314,12 +314,13 @@ class _MediaMopTrayApp:
             raise RuntimeError(f"Bundled server host is missing: {self._server_exe}")
         self._log(f"Starting bundled server host: {self._server_exe}")
         creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-        self._server_process = subprocess.Popen(
+        proc = subprocess.Popen(
             [str(self._server_exe), "--serve", "--port", str(self._port)],
             cwd=str(self._server_exe.parent),
             creationflags=creationflags,
         )
-        self._log(f"Bundled server host pid={self._server_process.pid}")
+        self._server_process = proc
+        self._log(f"Bundled server host pid={proc.pid}")
 
     def _stop_server_process(self) -> None:
         proc = self._server_process

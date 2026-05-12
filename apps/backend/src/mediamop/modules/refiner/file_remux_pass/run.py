@@ -109,7 +109,9 @@ def _probe_duration_seconds(probe: dict[str, Any]) -> float | None:
     fmt = probe.get("format")
     if isinstance(fmt, dict):
         try:
-            candidates.append(float(fmt.get("duration")))
+            dur = fmt.get("duration")
+            if dur is not None:
+                candidates.append(float(dur))
         except (TypeError, ValueError):
             pass
     streams = probe.get("streams")
@@ -118,7 +120,9 @@ def _probe_duration_seconds(probe: dict[str, Any]) -> float | None:
             if not isinstance(stream, dict):
                 continue
             try:
-                candidates.append(float(stream.get("duration")))
+                dur = stream.get("duration")
+                if dur is not None:
+                    candidates.append(float(dur))
             except (TypeError, ValueError):
                 pass
     valid = [item for item in candidates if item > 0]
@@ -336,7 +340,7 @@ def _handle_refiner_cleanup_after_success(
         return
 
     out["source_folder_path"] = str(movie_folder)
-    cascade: list[str] = out["cascade_folders_deleted"]  # type: ignore[assignment]
+    cascade: list[str] = out["cascade_folders_deleted"]
 
     out_dir = Path(path_runtime.output_folder).resolve()
     if not str(path_runtime.output_folder).strip():
