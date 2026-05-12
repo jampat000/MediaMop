@@ -38,7 +38,17 @@ def ensure_signed_in(page: Page, base_url: str) -> None:
         if "/setup-wizard" in page.url and page.get_by_test_id("setup-wizard-skip").count() > 0:
             expect(page.get_by_text("Setup wizard", exact=False)).to_be_visible()
             page.get_by_test_id("setup-wizard-skip").click()
-            page.wait_for_timeout(500)
+            # Wait for navigation away from setup-wizard.  The skip handler batches
+            # multiple mutations (suite + refiner + subber) that can take 1-3 s when
+            # settings from a prior test run persist in the DB.  A fixed 500 ms sleep
+            # is not enough — the loop would re-click skip before navigation completes,
+            # stacking overlapping saves and eventually timing out.
+            try:
+                page.wait_for_url(
+                    lambda url: "/setup-wizard" not in url, timeout=10_000
+                )
+            except Exception:
+                pass
             continue
 
         if re.search(r"/(?:$|[?#])", page.url) or "/login" in page.url or "/setup" in page.url:
