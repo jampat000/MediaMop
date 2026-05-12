@@ -32,6 +32,10 @@ class XRequestedWithCsrfMiddleware(BaseHTTPMiddleware):
             for prefix in _EXEMPT_PREFIXES:
                 if request.url.path.startswith(prefix):
                     return await call_next(request)
+            # CSRF attacks require a browser, which always sends Origin. Direct API calls
+            # (curl, test clients, server-to-server) don't send Origin — no CSRF risk.
+            if request.headers.get("Origin") is None:
+                return await call_next(request)
             xrw = (request.headers.get("X-Requested-With") or "").strip()
             if xrw.lower() != "xmlhttprequest":
                 return JSONResponse(
