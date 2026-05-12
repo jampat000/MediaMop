@@ -9,7 +9,7 @@ from fastapi import APIRouter
 
 from mediamop.modules.refiner.refiner_candidate_gate_api import router as refiner_candidate_gate_router
 from mediamop.modules.refiner.refiner_jobs_inspection_api import router as refiner_jobs_inspection_router
-from mediamop.modules.refiner.refiner_file_remux_pass_api import router as refiner_file_remux_pass_router
+from mediamop.modules.refiner.file_remux_pass.api import router as refiner_file_remux_pass_router
 from mediamop.modules.refiner.refiner_operator_settings_api import router as refiner_operator_settings_router
 from mediamop.modules.refiner.refiner_path_settings_api import router as refiner_path_settings_router
 from mediamop.modules.refiner.refiner_remux_rules_settings_api import router as refiner_remux_rules_settings_router
