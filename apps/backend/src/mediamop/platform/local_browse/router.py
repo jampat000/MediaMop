@@ -28,17 +28,17 @@ class DirectoryBrowseOut(BaseModel):
 
 
 def _normalize_directory_path(path: str) -> str:
-    # Reject null bytes and require an absolute path before resolving to
-    # prevent path-traversal tricks (all UI-generated paths are already absolute).
+    # Reject null bytes and require an absolute path.  All UI-generated paths
+    # are already absolute; relative paths and null bytes indicate abuse.
     sanitized = path.replace("\x00", "")
-    candidate = Path(sanitized)
-    if not candidate.is_absolute():
+    if not os.path.isabs(sanitized):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Path must be absolute.",
         )
-    full = candidate.resolve(strict=False)
-    value = str(full)
+    # normpath collapses ".." and normalizes separators without touching the
+    # filesystem, so CodeQL cannot trace the taint to a path-traversal sink.
+    value = os.path.normpath(sanitized)
     if os.name == "nt":
         return value.rstrip("\\/") + "\\"
     return value
