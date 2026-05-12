@@ -185,15 +185,15 @@ def dispatch_job_notification(
     t = threading.Thread(
         target=_dispatch_thread,
         args=(session,),
-        kwargs=dict(
-            event=event,
-            module=module,
-            job_id=job_id,
-            job_kind=job_kind,
-            title=title,
-            detail=detail,
-            verify_permanent=(event_kind == "failed"),
-        ),
+        kwargs={
+            "event": event,
+            "module": module,
+            "job_id": job_id,
+            "job_kind": job_kind,
+            "title": title,
+            "detail": detail,
+            "verify_permanent": (event_kind == "failed"),
+        },
         daemon=True,
         name=f"mm-notify-{event}-{job_id}",
     )
