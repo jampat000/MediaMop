@@ -210,9 +210,9 @@ def handle_tv_cleanup_after_success(
     """After a successful live TV pass: optional whole-season-folder removal + show cascade (gates in docstring)."""
 
     init_tv_season_cleanup_activity_fields(out)
-    summary: list[str] = out["tv_episode_check_summary"]  # type: ignore[assignment]
-    completeness: dict[str, str] = out["tv_output_completeness_check"]  # type: ignore[assignment]
-    cascade: list[str] = out["tv_cascade_folders_deleted"]  # type: ignore[assignment]
+    summary: list[str] = out["tv_episode_check_summary"]
+    completeness: dict[str, str] = out["tv_output_completeness_check"]
+    cascade: list[str] = out["tv_cascade_folders_deleted"]
 
     watched_resolved = watched_root.resolve()
     src_resolved = src.resolve()
@@ -317,7 +317,7 @@ def handle_tv_cleanup_after_success(
                 else:
                     expected_out = (out_dir / Path(rel)).resolve()
             chk = _check_output_file_completeness_tv(output_file=expected_out, source_file=ep)
-            completeness[name] = chk["output_completeness_check"]  # type: ignore[index]
+            completeness[name] = chk["output_completeness_check"]
             if chk["output_completeness_check"] != "passed":
                 out["tv_season_folder_skip_reason"] = (
                     chk.get("output_completeness_note")
@@ -335,7 +335,7 @@ def handle_tv_cleanup_after_success(
         elif _activity_documents_tv_live_success(session, relative_posix=rel):
             expected_out = out_dir / Path(rel)
             chk = _check_output_file_completeness_tv(output_file=expected_out, source_file=ep)
-            completeness[name] = chk["output_completeness_check"]  # type: ignore[index]
+            completeness[name] = chk["output_completeness_check"]
             if chk["output_completeness_check"] != "passed":
                 out["tv_season_folder_skip_reason"] = (
                     chk.get("output_completeness_note")

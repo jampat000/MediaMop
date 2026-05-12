@@ -386,7 +386,7 @@ def maybe_run_movie_output_folder_cleanup_after_remux(
         "Radarr reports no library movie file paths inside this folder, so Refiner treated it as safe to remove under the other gates."
     )
 
-    cascade: list[str] = out["movie_output_cascade_folders_deleted"]  # type: ignore[assignment]
+    cascade: list[str] = out["movie_output_cascade_folders_deleted"]
 
     try:
         shutil.rmtree(output_movie_folder)

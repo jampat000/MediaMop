@@ -160,7 +160,7 @@ def _bool_env(name: str) -> bool:
 
 def _pid_is_running(pid: object) -> bool:
     try:
-        numeric = int(pid)
+        numeric = int(str(pid))
     except (TypeError, ValueError):
         return False
     if numeric <= 0:
@@ -187,7 +187,7 @@ def _normalize_executable_path(raw: object) -> str | None:
 
 def _read_process_snapshot(pid: object) -> dict[str, object] | None:
     try:
-        numeric = int(pid)
+        numeric = int(str(pid))
     except (TypeError, ValueError):
         return None
     if numeric <= 0:
@@ -286,13 +286,13 @@ def _active_interactive_session_id() -> int:
             ("State", wintypes.DWORD),
         ]
 
-    wtsapi32 = ctypes.WinDLL("wtsapi32", use_last_error=True)
-    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    wtsapi32 = ctypes.WinDLL("wtsapi32", use_last_error=True)  # type: ignore[attr-defined]  # Windows-only ctypes/os API
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # type: ignore[attr-defined]  # Windows-only ctypes/os API
 
     session_info = ctypes.POINTER(_WtsSessionInfo)()
     count = wintypes.DWORD()
     if not wtsapi32.WTSEnumerateSessionsW(0, 0, 1, ctypes.byref(session_info), ctypes.byref(count)):
-        raise OSError(ctypes.get_last_error(), "Could not enumerate Windows Terminal Services sessions.")
+        raise OSError(ctypes.get_last_error(), "Could not enumerate Windows Terminal Services sessions.")  # type: ignore[attr-defined]  # Windows-only ctypes/os API
     try:
         for index in range(int(count.value)):
             row = session_info[index]
@@ -313,7 +313,7 @@ def _active_interactive_session_user() -> str:
     WTSUserName = 5
     WTSDomainName = 7
 
-    wtsapi32 = ctypes.WinDLL("wtsapi32", use_last_error=True)
+    wtsapi32 = ctypes.WinDLL("wtsapi32", use_last_error=True)  # type: ignore[attr-defined]  # Windows-only ctypes/os API
     session_id = _active_interactive_session_id()
 
     def _query_session_string(info_class: int) -> str | None:
@@ -327,7 +327,7 @@ def _active_interactive_session_user() -> str:
             ctypes.byref(bytes_returned),
         ):
             raise OSError(
-                ctypes.get_last_error(),
+                ctypes.get_last_error(),  # type: ignore[attr-defined]  # Windows-only ctypes/os API
                 f"Could not query Windows session information class {info_class} for session {session_id}.",
             )
         try:
@@ -492,11 +492,11 @@ def _launch_process_in_active_session(
             ("dwThreadId", wintypes.DWORD),
         ]
 
-    wtsapi32 = ctypes.WinDLL("wtsapi32", use_last_error=True)
-    advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
-    userenv = ctypes.WinDLL("userenv", use_last_error=True)
-    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-    secur32 = ctypes.WinDLL("advapi32", use_last_error=True)
+    wtsapi32 = ctypes.WinDLL("wtsapi32", use_last_error=True)  # type: ignore[attr-defined]  # Windows-only ctypes/os API
+    advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)  # type: ignore[attr-defined]  # Windows-only ctypes/os API
+    userenv = ctypes.WinDLL("userenv", use_last_error=True)  # type: ignore[attr-defined]  # Windows-only ctypes/os API
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # type: ignore[attr-defined]  # Windows-only ctypes/os API
+    secur32 = ctypes.WinDLL("advapi32", use_last_error=True)  # type: ignore[attr-defined]  # Windows-only ctypes/os API
 
     TOKEN_ASSIGN_PRIMARY = 0x0001
     TOKEN_DUPLICATE = 0x0002
@@ -510,7 +510,7 @@ def _launch_process_in_active_session(
     session_id = _active_interactive_session_id()
     user_token = wintypes.HANDLE()
     if not wtsapi32.WTSQueryUserToken(session_id, ctypes.byref(user_token)):
-        raise OSError(ctypes.get_last_error(), f"Could not acquire the token for interactive session {session_id}.")
+        raise OSError(ctypes.get_last_error(), f"Could not acquire the token for interactive session {session_id}.")  # type: ignore[attr-defined]  # Windows-only ctypes/os API
 
     environment = ctypes.c_void_p()
     process_info = _ProcessInformation()
@@ -524,10 +524,10 @@ def _launch_process_in_active_session(
             TokenPrimary,
             ctypes.byref(primary_token),
         ):
-            raise OSError(ctypes.get_last_error(), "Could not create a primary token for interactive relaunch.")
+            raise OSError(ctypes.get_last_error(), "Could not create a primary token for interactive relaunch.")  # type: ignore[attr-defined]  # Windows-only ctypes/os API
 
         if not userenv.CreateEnvironmentBlock(ctypes.byref(environment), primary_token, False):
-            raise OSError(ctypes.get_last_error(), "Could not create the environment block for interactive relaunch.")
+            raise OSError(ctypes.get_last_error(), "Could not create the environment block for interactive relaunch.")  # type: ignore[attr-defined]  # Windows-only ctypes/os API
 
         startup_info = _StartupInfo()
         startup_info.cb = ctypes.sizeof(_StartupInfo)
@@ -554,7 +554,7 @@ def _launch_process_in_active_session(
             ctypes.byref(process_info),
         ):
             create_process_error = OSError(
-                ctypes.get_last_error(),
+                ctypes.get_last_error(),  # type: ignore[attr-defined]  # Windows-only ctypes/os API
                 "Could not relaunch MediaMop in the active Windows session via CreateProcessAsUserW.",
             )
             process_info = _ProcessInformation()
@@ -571,11 +571,11 @@ def _launch_process_in_active_session(
                 ctypes.byref(process_info),
             ):
                 fallback_error = OSError(
-                    ctypes.get_last_error(),
+                    ctypes.get_last_error(),  # type: ignore[attr-defined]  # Windows-only ctypes/os API
                     "Could not relaunch MediaMop in the active Windows session via CreateProcessWithTokenW.",
                 )
                 raise OSError(
-                    fallback_error.errno or create_process_error.errno or ctypes.get_last_error(),
+                    fallback_error.errno or create_process_error.errno or ctypes.get_last_error(),  # type: ignore[attr-defined]  # Windows-only ctypes/os API
                     f"{create_process_error.strerror} {fallback_error.strerror}",
                 )
         return int(process_info.dwProcessId)
@@ -746,7 +746,8 @@ def _write_state(**updates: object) -> dict[str, object]:
         state = _read_state_unlocked()
         diagnostics_update = updates.pop("diagnostics", None)
         if diagnostics_update is not None:
-            merged = dict(state.get("diagnostics") if isinstance(state.get("diagnostics"), dict) else {})
+            _diag_raw = state.get("diagnostics")
+            merged = dict(_diag_raw if isinstance(_diag_raw, dict) else {})
             if isinstance(diagnostics_update, dict):
                 merged.update(diagnostics_update)
             else:
@@ -792,7 +793,8 @@ def _fresh_attempt_state(target_version: str, attempt_id: str) -> dict[str, obje
 
 
 def _installer_process_is_running(state: dict[str, object]) -> bool:
-    diagnostics = state.get("diagnostics") if isinstance(state.get("diagnostics"), dict) else {}
+    _diag_raw = state.get("diagnostics")
+    diagnostics: dict[str, object] = _diag_raw if isinstance(_diag_raw, dict) else {}
     installer_pid = diagnostics.get("installer_pid") if isinstance(diagnostics, dict) else None
     installer_path = state.get("downloaded_installer_path")
     return _process_matches_attempt(
@@ -803,7 +805,8 @@ def _installer_process_is_running(state: dict[str, object]) -> bool:
 
 
 def _helper_process_is_running(state: dict[str, object]) -> bool:
-    diagnostics = state.get("diagnostics") if isinstance(state.get("diagnostics"), dict) else {}
+    _diag_raw = state.get("diagnostics")
+    diagnostics: dict[str, object] = _diag_raw if isinstance(_diag_raw, dict) else {}
     helper_pid = diagnostics.get("helper_pid") if isinstance(diagnostics, dict) else None
     helper_path = diagnostics.get("helper_executable_path") if isinstance(diagnostics, dict) else None
     attempt_id = str(state.get("attempt_id") or "").strip()
@@ -963,7 +966,8 @@ def _archive_superseded_terminal_attempt() -> None:
         )
         merged_diagnostics = dict(install_diagnostics)
 
-    diagnostics = state.get("diagnostics") if isinstance(state.get("diagnostics"), dict) else {}
+    _diag_raw = state.get("diagnostics")
+    diagnostics: dict[str, object] = _diag_raw if isinstance(_diag_raw, dict) else {}
     attempt_id = str(state.get("attempt_id") or "").strip() or None
     archived_diagnostics = dict(diagnostics)
     archived_diagnostics.update(merged_diagnostics)
@@ -1331,7 +1335,7 @@ def _start_packaged_tray_in_active_session(*, open_browser: bool = False) -> int
 
 def _terminate_pid(pid: object) -> str | None:
     try:
-        numeric = int(pid)
+        numeric = int(str(pid))
     except (TypeError, ValueError):
         return "Invalid PID."
     if numeric <= 0:
@@ -1520,9 +1524,9 @@ def _verify_install(target_version: str) -> tuple[bool, dict[str, object], str]:
                 )
                 diagnostics["mismatch_restart"] = restart_diag
                 if restart_diag.get("restarted_tray_pid"):
-                    restarted_tray_pid = int(restart_diag["restarted_tray_pid"])
+                    restarted_tray_pid = int(str(restart_diag["restarted_tray_pid"]))
                 if restart_diag.get("restarted_server_pid"):
-                    started_server_pid = int(restart_diag["restarted_server_pid"])
+                    started_server_pid = int(str(restart_diag["restarted_server_pid"]))
                 if restart_diag.get("restart_error"):
                     mismatch_restart_error = str(restart_diag["restart_error"])
                 else:
@@ -1767,8 +1771,9 @@ def _reconcile_attempt_worker(attempt_id: str) -> None:
         phase = str(state.get("phase") or "").strip().lower()
         if phase not in _RECOVERABLE_PHASES:
             return
-        diagnostics = state.get("diagnostics") if isinstance(state.get("diagnostics"), dict) else {}
-        installer_pid = diagnostics.get("installer_pid") if isinstance(diagnostics, dict) else None
+        _diag_raw = state.get("diagnostics")
+        diagnostics: dict[str, object] = _diag_raw if isinstance(_diag_raw, dict) else {}
+        installer_pid = diagnostics.get("installer_pid")
         target_version = normalize_release_version(str(state.get("target_version") or ""))
         if target_version:
             matched, install_diagnostics = _state_matches_installed_target(target_version)
@@ -1992,7 +1997,8 @@ def _maybe_reconcile_pending_attempt() -> None:
 
 def _status_view() -> dict[str, object]:
     state = _read_state()
-    diagnostics = state.get("diagnostics") if isinstance(state.get("diagnostics"), dict) else {}
+    _diag_raw = state.get("diagnostics")
+    diagnostics: dict[str, object] = _diag_raw if isinstance(_diag_raw, dict) else {}
     raw_phase = (
         str(diagnostics.get("reconciled_from_phase") or state.get("phase") or "unknown").strip().lower()
         or "unknown"

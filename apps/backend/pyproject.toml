@@ -63,8 +63,10 @@ warn_unused_ignores = true
 ignore_errors = false
 
 [[tool.mypy.overrides]]
-module = [
-  "mediamop.modules.refiner.*",
-  "mediamop.windows.*",
-]
-ignore_errors = true
+# ctypes.WinDLL / windll / get_last_error and os.startfile are Windows-only APIs.
+# type: ignore[attr-defined] comments on those lines suppress CI (Linux) failures,
+# but on Windows mypy knows the attributes so the comments become "unused-ignore".
+# This narrow override disables only that false-positive for windows-specific code.
+module = ["mediamop.windows.*"]
+disable_error_code = ["unused-ignore"]
+

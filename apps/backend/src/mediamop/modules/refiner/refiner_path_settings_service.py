@@ -223,14 +223,14 @@ def build_refiner_path_settings_get_out(*, row: RefinerPathSettingsRow, settings
     default_tv_work = resolved_default_refiner_tv_work_folder(mediamop_home=settings.mediamop_home)
     return {
         "refiner_watched_folder": row.refiner_watched_folder,
-        "refiner_watched_folder_exists": bool((row.refiner_watched_folder or "").strip() and Path(row.refiner_watched_folder).is_dir()),
+        "refiner_watched_folder_exists": bool((row.refiner_watched_folder or "").strip() and Path(row.refiner_watched_folder or "").is_dir()),
         "refiner_work_folder": row.refiner_work_folder,
         "refiner_output_folder": (row.refiner_output_folder or "").strip() or None,
         "resolved_default_work_folder": default_work,
         "effective_work_folder": work_eff,
         "refiner_tv_watched_folder": row.refiner_tv_watched_folder,
         "refiner_tv_watched_folder_exists": bool(
-            (row.refiner_tv_watched_folder or "").strip() and Path(row.refiner_tv_watched_folder).is_dir()
+            (row.refiner_tv_watched_folder or "").strip() and Path(row.refiner_tv_watched_folder or "").is_dir()
         ),
         "refiner_tv_work_folder": row.refiner_tv_work_folder,
         "refiner_tv_output_folder": (row.refiner_tv_output_folder or "").strip() or None,

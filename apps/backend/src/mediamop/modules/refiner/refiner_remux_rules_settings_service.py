@@ -107,7 +107,7 @@ def _scope_out(
         subtitle_langs_csv=subtitle_langs_csv or "",
         preserve_forced_subs=bool(preserve_forced_subs),
         preserve_default_subs=bool(preserve_default_subs),
-        audio_preference_mode=normalize_audio_preference_mode(audio_preference_mode),  # type: ignore[arg-type]
+        audio_preference_mode=normalize_audio_preference_mode(audio_preference_mode),
     )
 
 

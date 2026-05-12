@@ -440,7 +440,7 @@ def maybe_run_tv_output_season_folder_cleanup_after_remux(
         "Sonarr reports no library episode file paths inside this season folder, so Refiner treated it as safe to remove under the other gates."
     )
 
-    cascade: list[str] = out["tv_output_cascade_folders_deleted"]  # type: ignore[assignment]
+    cascade: list[str] = out["tv_output_cascade_folders_deleted"]
 
     try:
         shutil.rmtree(output_season_folder)

@@ -164,6 +164,7 @@ def make_refiner_file_remux_pass_handler(
                     },
                 )
                 return
+            assert path_runtime is not None
 
             progress_reporter = _make_progress_reporter(session_factory, job_id=ctx.id)
             result = run_refiner_file_remux_pass(
