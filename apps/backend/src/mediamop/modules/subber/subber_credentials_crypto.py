@@ -106,7 +106,7 @@ def decrypt_subber_credentials_json(settings: MediaMopSettings, ciphertext: str)
                 except Exception:
                     salt = None
             fernets = credential_secret_candidates(
-                settings, lambda s, _salt=salt: _fernet_for_secret_hkdf(s, salt=_salt)
+                settings, lambda s, _salt=salt: _fernet_for_secret_hkdf(s, salt=_salt)  # type: ignore[misc]
             )
         elif key_id == _CREDENTIALS_KEY_ID_LEGACY:
             fernets = credential_secret_candidates(settings, _fernet_for_secret_legacy)

@@ -13,7 +13,7 @@ from pathlib import Path
 
 _log = logging.getLogger(__name__)
 
-from alembic import command
+from alembic import command  # type: ignore[attr-defined]
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
