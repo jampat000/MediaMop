@@ -12,8 +12,8 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.refiner_file_remux_pass_paths import resolve_media_file_under_refiner_root
-from mediamop.modules.refiner.refiner_file_remux_pass_visibility import (
+from mediamop.modules.refiner.file_remux_pass.paths import resolve_media_file_under_refiner_root
+from mediamop.modules.refiner.file_remux_pass.visibility import (
     REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
     REMUX_PASS_OUTCOME_FAILED_DURING_EXECUTION,
     REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN,

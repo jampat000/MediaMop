@@ -16,7 +16,7 @@ import mediamop.modules.refiner.jobs_model  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.refiner.refiner_file_remux_pass_job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
 from mediamop.modules.refiner.refiner_tv_output_cleanup import (
     iter_direct_child_refiner_media_candidates,

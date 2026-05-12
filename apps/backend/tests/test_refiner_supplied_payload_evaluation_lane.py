@@ -15,7 +15,7 @@ from mediamop.core.db import Base
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.refiner_candidate_gate_job_kinds import REFINER_CANDIDATE_GATE_JOB_KIND
-from mediamop.modules.refiner.refiner_file_remux_pass_job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.refiner_failure_cleanup_job_kinds import (
     REFINER_MOVIE_FAILURE_CLEANUP_SWEEP_JOB_KIND,
     REFINER_TV_FAILURE_CLEANUP_SWEEP_JOB_KIND,

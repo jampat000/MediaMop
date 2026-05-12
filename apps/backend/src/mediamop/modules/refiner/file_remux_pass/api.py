@@ -11,7 +11,7 @@ from starlette import status
 from mediamop.api.deps import DbSessionDep, SettingsDep
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.refiner_path_settings_service import ensure_refiner_path_settings_row
-from mediamop.modules.refiner.refiner_file_remux_pass_job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.schemas_file_remux_pass_manual import (
     RefinerFileRemuxPassManualEnqueueIn,
     RefinerFileRemuxPassManualEnqueueOut,

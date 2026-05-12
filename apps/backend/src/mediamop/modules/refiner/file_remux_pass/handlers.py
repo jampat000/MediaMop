@@ -15,11 +15,11 @@ from mediamop.modules.refiner.refiner_file_remux_pass_activity import (
     record_refiner_file_remux_pass_completed,
     update_refiner_file_processing_progress,
 )
-from mediamop.modules.refiner.refiner_file_remux_pass_run import run_refiner_file_remux_pass
+from mediamop.modules.refiner.file_remux_pass.run import run_refiner_file_remux_pass
 from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
 from mediamop.modules.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
 from mediamop.modules.refiner.refiner_remux_rules_settings_service import load_refiner_remux_rules_config
-from mediamop.modules.refiner.refiner_file_remux_pass_visibility import (
+from mediamop.modules.refiner.file_remux_pass.visibility import (
     REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
     remux_pass_activity_title,
     remux_pass_result_to_activity_detail,
