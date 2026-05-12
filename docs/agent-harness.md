@@ -44,6 +44,6 @@ This document adapts the harness-engineering model to this repository: humans st
 
 ## What To Encode Next
 
-Use [`exec-plans/tech-debt-tracker.md`](exec-plans/tech-debt-tracker.md) for cleanup candidates that are real but not release blockers.
+Use GitHub Issues (label: `priority: low`) for cleanup candidates that are real but not release blockers.
 
-Promote items from that tracker into issues or execution plans when they become scoped enough to implement.
+Promote items to execution plans when they become scoped enough to implement.
