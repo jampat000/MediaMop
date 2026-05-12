@@ -14,26 +14,22 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.subber import subber_addic7ed_client as addic7ed_client
 from mediamop.modules.subber import subber_gestdown_client as gestdown_client
 from mediamop.modules.subber import subber_opensubtitles_client as os_client
 from mediamop.modules.subber import subber_podnapisi_client as podnapisi_client
 from mediamop.modules.subber import subber_subdl_client as subdl_client
 from mediamop.modules.subber import subber_subf2m_client as subf2m_client
-from mediamop.modules.subber import subber_subscene_client as subscene_client
 from mediamop.modules.subber import subber_subsource_client as subsource_client
 from mediamop.modules.subber import subber_yify_client as yify_client
 from mediamop.modules.subber.subber_credentials_crypto import decrypt_subber_credentials_json, parse_provider_secrets_json
 from mediamop.modules.subber.subber_opensubtitles_client import SubberRateLimitError
 from mediamop.modules.subber.subber_provider_registry import (
-    PROVIDER_ADDIC7ED,
     PROVIDER_GESTDOWN,
     PROVIDER_OPENSUBTITLES_COM,
     PROVIDER_OPENSUBTITLES_ORG,
     PROVIDER_PODNAPISI,
     PROVIDER_SUBDL,
     PROVIDER_SUBF2M,
-    PROVIDER_SUBSCENE,
     PROVIDER_SUBSOURCE,
     PROVIDER_YIFY,
 )
@@ -391,67 +387,6 @@ def _try_podnapisi(
     return True
 
 
-def _try_subscene(
-    *,
-    settings: MediaMopSettings,
-    settings_row: SubberSettingsRow,
-    state_row: SubberSubtitleState,
-    db: Session,
-    prow: SubberProviderRow,
-    prefs: list[str],
-    lang: str,
-    exclude_hi: bool,
-) -> bool:
-    _ = (settings, settings_row, db, prow, exclude_hi)
-    query = _search_query(state_row)
-    season = state_row.season_number if state_row.media_scope == "tv" else None
-    episode = state_row.episode_number if state_row.media_scope == "tv" else None
-    items = subscene_client.search(
-        query=query,
-        season_number=season,
-        episode_number=episode,
-        languages=prefs if prefs else [lang],
-        media_scope=state_row.media_scope,
-    )
-    if not items:
-        logger.debug("Subscene returned no usable subtitle results state_id=%s", state_row.id)
-        return False
-    logger.warning("Subscene provider is unavailable in this release; downloaded results are skipped state_id=%s", state_row.id)
-    return False
-
-
-def _try_addic7ed(
-    *,
-    settings_row: SubberSettingsRow,
-    state_row: SubberSubtitleState,
-    db: Session,
-    prow: SubberProviderRow,
-    settings: MediaMopSettings,
-    prefs: list[str],
-    lang: str,
-    exclude_hi: bool,
-) -> bool:
-    raw = decrypt_subber_credentials_json(settings, prow.credentials_ciphertext or "") or "{}"
-    sec = parse_provider_secrets_json(prow.provider_key, raw)
-    u = str(sec.get("username") or "").strip() or None
-    p = str(sec.get("password") or "").strip() or None
-    items = addic7ed_client.search(
-        query=_search_query(state_row),
-        season_number=state_row.season_number if state_row.media_scope == "tv" else None,
-        episode_number=state_row.episode_number if state_row.media_scope == "tv" else None,
-        languages=prefs if prefs else [lang],
-        media_scope=state_row.media_scope,
-        username=u,
-        password=p,
-    )
-    if not items:
-        logger.debug("Addic7ed returned no usable subtitle results state_id=%s", state_row.id)
-        return False
-    _ = (settings_row, state_row, db, exclude_hi)
-    logger.warning("Addic7ed provider is unavailable in this release; downloaded results are skipped state_id=%s", state_row.id)
-    return False
-
-
 def _try_gestdown(
     *,
     settings: MediaMopSettings,
@@ -778,8 +713,6 @@ _PROVIDER_HANDLERS: dict[str, ProviderSearchHandler] = {
     PROVIDER_OPENSUBTITLES_ORG: _try_opensubtitles_provider,
     PROVIDER_OPENSUBTITLES_COM: _try_opensubtitles_provider,
     PROVIDER_PODNAPISI: _try_podnapisi,
-    PROVIDER_SUBSCENE: _try_subscene,
-    PROVIDER_ADDIC7ED: _try_addic7ed,
     PROVIDER_GESTDOWN: _try_gestdown,
     PROVIDER_SUBDL: _try_subdl,
     PROVIDER_SUBSOURCE: _try_subsource,

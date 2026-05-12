@@ -97,9 +97,8 @@ def test_get_providers_admin_ok(client_admin: TestClient) -> None:
     keys = {x.get("provider_key") for x in rows}
     assert "opensubtitles_org" in keys
     assert "podnapisi" in keys
-    subscene = next(x for x in rows if x.get("provider_key") == "subscene")
-    assert subscene["available"] is False
-    assert subscene["availability_note"] == "Not available in this version."
+    assert "subscene" not in keys
+    assert "addic7ed" not in keys
 
 
 def test_put_settings_roundtrip_enabled(client_admin: TestClient) -> None:
@@ -469,7 +468,7 @@ def test_put_provider_unknown_key_404(client_admin: TestClient) -> None:
     assert r.status_code == 404
 
 
-def test_put_unavailable_provider_enabled_returns_conflict(client_admin: TestClient) -> None:
+def test_put_removed_provider_returns_404(client_admin: TestClient) -> None:
     _login_admin(client_admin)
     tok = csrf(client_admin)
     r = client_admin.put(
@@ -477,8 +476,7 @@ def test_put_unavailable_provider_enabled_returns_conflict(client_admin: TestCli
         json={"enabled": True, "csrf_token": tok},
         headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
     )
-    assert r.status_code == 409
-    assert "not available" in r.json()["detail"].lower()
+    assert r.status_code == 404
 
 
 @patch("urllib.request.urlopen", side_effect=urllib.error.URLError("offline"))

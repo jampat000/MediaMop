@@ -16,7 +16,6 @@ from mediamop.modules.subber.subber_credentials_crypto import (
 )
 from mediamop.modules.subber.subber_provider_registry import (
     ALL_PROVIDER_KEYS,
-    PROVIDER_ADDIC7ED,
     PROVIDER_OPENSUBTITLES_COM,
     PROVIDER_OPENSUBTITLES_ORG,
     PROVIDER_REQUIRES_ACCOUNT,
@@ -82,8 +81,6 @@ def provider_has_stored_credentials(settings: MediaMopSettings, row: SubberProvi
     sec = parse_provider_secrets_json(row.provider_key, raw)
     if row.provider_key in (PROVIDER_OPENSUBTITLES_ORG, PROVIDER_OPENSUBTITLES_COM):
         return bool(sec.get("username") and sec.get("password") and sec.get("api_key"))
-    if row.provider_key == PROVIDER_ADDIC7ED:
-        return bool(sec.get("username") and sec.get("password"))
     if row.provider_key in (PROVIDER_SUBDL, PROVIDER_SUBSOURCE):
         return bool(sec.get("api_key"))
     return bool(raw.strip() and raw.strip() != "{}")
@@ -93,7 +90,7 @@ def provider_is_ready_for_search(settings: MediaMopSettings, row: SubberProvider
     """Whether this enabled provider can participate in a search (anonymous providers ok)."""
 
     pk = row.provider_key
-    if pk in (PROVIDER_OPENSUBTITLES_ORG, PROVIDER_OPENSUBTITLES_COM, PROVIDER_ADDIC7ED):
+    if pk in (PROVIDER_OPENSUBTITLES_ORG, PROVIDER_OPENSUBTITLES_COM):
         return provider_has_stored_credentials(settings, row)
     if not PROVIDER_REQUIRES_ACCOUNT.get(pk, True):
         return True
