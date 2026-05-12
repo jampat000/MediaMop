@@ -6,7 +6,6 @@ Use execution plans for work that is too large or risky for a single conversatio
 
 - `active/` - plans currently being implemented.
 - `completed/` - completed plans retained for decision history.
-- `tech-debt-tracker.md` - known cleanup queue that is not yet an active plan.
 
 ## When To Create A Plan
 

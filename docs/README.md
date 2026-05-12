@@ -37,7 +37,6 @@ This directory is the repository-local system of record. Keep durable decisions 
 ## Execution Plans
 
 - [`exec-plans/README.md`](exec-plans/README.md) - plan format and lifecycle.
-- [`exec-plans/tech-debt-tracker.md`](exec-plans/tech-debt-tracker.md) - durable technical debt and cleanup queue.
 
 ## Maintenance Rule
 

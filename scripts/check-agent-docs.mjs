@@ -12,7 +12,6 @@ const requiredFiles = [
   "docs/README.md",
   "docs/agent-harness.md",
   "docs/exec-plans/README.md",
-  "docs/exec-plans/tech-debt-tracker.md",
   "docs/file-lifecycle-contract.md",
   "docs/release-governance.md",
 ];
@@ -25,7 +24,6 @@ const markdownFiles = [
   "docs/README.md",
   "docs/agent-harness.md",
   "docs/exec-plans/README.md",
-  "docs/exec-plans/tech-debt-tracker.md",
 ];
 
 let failures = 0;

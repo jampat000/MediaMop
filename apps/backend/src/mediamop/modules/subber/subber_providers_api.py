@@ -12,7 +12,6 @@ from mediamop.modules.subber.subber_credentials_crypto import decrypt_subber_cre
 from mediamop.modules.subber.subber_podnapisi_client import LIST_BASE
 from mediamop.modules.subber.subber_provider_registry import (
     ALL_PROVIDER_KEYS,
-    PROVIDER_ADDIC7ED,
     PROVIDER_AVAILABILITY,
     PROVIDER_DISPLAY_NAMES,
     PROVIDER_OPENSUBTITLES_COM,
@@ -163,12 +162,6 @@ def post_subber_provider_test(
             if 200 <= code < 500:
                 return SubberTestConnectionOut(ok=True, message="Podnapisi API reachable.")
             return SubberTestConnectionOut(ok=False, message=f"Unexpected HTTP {code}.")
-        if pk == "subscene":
-            return SubberTestConnectionOut(ok=False, message="Subscene provider not yet implemented.")
-        if pk == PROVIDER_ADDIC7ED:
-            if not (sec.get("username") and sec.get("password")):
-                return SubberTestConnectionOut(ok=False, message="Missing username or password.")
-            return SubberTestConnectionOut(ok=False, message="Addic7ed provider not yet implemented.")
     except Exception as exc:
         return SubberTestConnectionOut(ok=False, message=str(exc)[:500])
     return SubberTestConnectionOut(ok=False, message="Unsupported provider.")
