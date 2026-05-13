@@ -28,13 +28,13 @@ static class Program
             .OnAfterInstallFastCallback((v) =>
             {
                 AppendFallbackLog($"Velopack: after install v{v}");
-                KillLegacyProcesses();
+                KillRunningProcesses();
                 RegisterStartup();
             })
             .OnBeforeUninstallFastCallback((v) =>
             {
                 AppendFallbackLog($"Velopack: before uninstall v{v}");
-                KillLegacyProcesses();
+                KillRunningProcesses();
                 DeregisterStartup();
             })
             .OnBeforeUpdateFastCallback((v) =>
@@ -93,7 +93,7 @@ static class Program
         catch { }
     }
 
-    private static void KillLegacyProcesses()
+    private static void KillRunningProcesses()
     {
         int currentId = Environment.ProcessId;
         foreach (var name in new[] { "MediaMop", "MediaMopServer" })
@@ -105,7 +105,7 @@ static class Program
                 {
                     proc.Kill(entireProcessTree: true);
                     proc.WaitForExit(5_000);
-                    AppendFallbackLog($"Killed legacy process: {name} (pid {proc.Id})");
+                    AppendFallbackLog($"Killed running process: {name} (pid {proc.Id})");
                 }
                 catch (Exception ex)
                 {
@@ -381,8 +381,6 @@ sealed class TrayApp : IDisposable
         else
             Log("Skipping browser auto-open (no-browser mode).");
 
-        DetectLegacyInnoInstall();
-
         _cts = new CancellationTokenSource();
         StartWatchdog();
         InitUpdateService();
@@ -393,96 +391,6 @@ sealed class TrayApp : IDisposable
 
         Log("Starting tray icon event loop");
         Application.Run();
-    }
-
-    // -- Legacy Inno Setup migration detection (remove in v2.4.0) ------------
-
-    private void DetectLegacyInnoInstall()
-    {
-        try
-        {
-            var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-            var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-            bool isLegacyLocation =
-                (!string.IsNullOrEmpty(programFiles) && _installRoot.StartsWith(programFiles, StringComparison.OrdinalIgnoreCase)) ||
-                (!string.IsNullOrEmpty(programFilesX86) && _installRoot.StartsWith(programFilesX86, StringComparison.OrdinalIgnoreCase));
-
-            if (isLegacyLocation)
-            {
-                Log("Legacy Inno Setup install detected — running from Program Files. " +
-                    "Future updates will use Velopack and install to %LocalAppData%\\MediaMop.");
-            }
-
-            var legacyUpdaterService = Path.Combine(_installRoot, "MediaMopUpdaterService.exe");
-            if (File.Exists(legacyUpdaterService))
-            {
-                Log("Legacy WinSW updater service wrapper found. Attempting to stop and uninstall...");
-                try
-                {
-                    RunSilent(legacyUpdaterService, "stop");
-                    RunSilent(legacyUpdaterService, "uninstall");
-                    Log("Legacy updater service stopped and uninstalled.");
-                }
-                catch (Exception ex)
-                {
-                    Log($"Could not remove legacy updater service (non-fatal): {ex.Message}");
-                }
-            }
-
-            RemoveLegacyScheduledTasks();
-        }
-        catch (Exception ex)
-        {
-            Log($"Legacy install detection failed (non-fatal): {ex.Message}");
-        }
-    }
-
-    private void RemoveLegacyScheduledTasks()
-    {
-        try
-        {
-            using var query = Process.Start(new ProcessStartInfo
-            {
-                FileName = "schtasks",
-                Arguments = "/query /FO CSV /NH",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-            });
-            if (query is null) return;
-            var output = query.StandardOutput.ReadToEnd();
-            query.WaitForExit(10_000);
-
-            foreach (var line in output.Split('\n'))
-            {
-                if (string.IsNullOrWhiteSpace(line)) continue;
-                var parts = line.Trim().Split(',');
-                if (parts.Length == 0) continue;
-                var taskName = parts[0].Trim('"', '\\', ' ');
-                if (!taskName.StartsWith("MediaMop-", StringComparison.OrdinalIgnoreCase)) continue;
-                RunSilent("schtasks", $"/delete /TN \"{taskName}\" /F");
-                Log($"Removed legacy scheduled task: {taskName}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Log($"Could not remove legacy scheduled tasks (non-fatal): {ex.Message}");
-        }
-    }
-
-    private static void RunSilent(string exe, string args)
-    {
-        using var proc = Process.Start(new ProcessStartInfo
-        {
-            FileName = exe,
-            Arguments = args,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-        });
-        proc?.WaitForExit(10_000);
     }
 
     // -- Environment setup --------------------------------------------------
