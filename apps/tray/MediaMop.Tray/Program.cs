@@ -27,6 +27,7 @@ static class Program
             .OnAfterInstallFastCallback((v) =>
             {
                 AppendFallbackLog($"Velopack: after install v{v}");
+                KillLegacyProcesses();
             })
             .OnBeforeUninstallFastCallback((v) =>
             {
@@ -85,6 +86,28 @@ static class Program
                 OpenBrowser(port);
         }
         catch { }
+    }
+
+    private static void KillLegacyProcesses()
+    {
+        int currentId = Environment.ProcessId;
+        foreach (var name in new[] { "MediaMop", "MediaMopServer" })
+        {
+            foreach (var proc in Process.GetProcessesByName(name))
+            {
+                if (proc.Id == currentId) continue;
+                try
+                {
+                    proc.Kill(entireProcessTree: true);
+                    proc.WaitForExit(5_000);
+                    AppendFallbackLog($"Killed legacy process: {name} (pid {proc.Id})");
+                }
+                catch (Exception ex)
+                {
+                    AppendFallbackLog($"Could not kill {name} (pid {proc.Id}): {ex.Message}");
+                }
+            }
+        }
     }
 
     internal static string RuntimeHome()
