@@ -19,4 +19,8 @@
     <EmbeddedResource Include="..\..\..\packaging\windows\assets\mediamop-tray-icon.ico" Link="mediamop-tray-icon.ico" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Velopack" Version="0.0.1298" />
+  </ItemGroup>
+
 </Project>

@@ -3,6 +3,10 @@ using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Security.Cryptography;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Velopack;
+using Velopack.Sources;
 
 namespace MediaMop.Tray;
 
@@ -14,10 +18,30 @@ static class Program
     internal const int HealthTimeoutSeconds = 60;
     internal const int ServerStopTimeoutMs = 10_000;
     internal const double BrowserDebounceCooldownMs = 1250;
+    internal const string GitHubRepo = "https://github.com/jampat000/MediaMop";
 
     [STAThread]
     static int Main(string[] args)
     {
+        VelopackApp.Build()
+            .OnAfterInstallFastCallback((v) =>
+            {
+                AppendFallbackLog($"Velopack: after install v{v}");
+            })
+            .OnBeforeUninstallFastCallback((v) =>
+            {
+                AppendFallbackLog($"Velopack: before uninstall v{v}");
+            })
+            .OnBeforeUpdateFastCallback((v) =>
+            {
+                AppendFallbackLog($"Velopack: before update to v{v}");
+            })
+            .OnAfterUpdateFastCallback((v) =>
+            {
+                AppendFallbackLog($"Velopack: after update to v{v}");
+            })
+            .Run();
+
         if (args.Contains("--version"))
         {
             Console.WriteLine(typeof(Program).Assembly
@@ -96,6 +120,142 @@ static class Program
     }
 }
 
+// ---------------------------------------------------------------------------
+// Update settings — persisted as JSON in runtime home
+// ---------------------------------------------------------------------------
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+enum UpdateMode
+{
+    Auto,
+    DownloadOnly,
+    NotifyOnly,
+}
+
+sealed class UpdateSettings
+{
+    public UpdateMode Mode { get; set; } = UpdateMode.Auto;
+    public bool CheckOnStartup { get; set; } = true;
+    public int CheckIntervalMinutes { get; set; } = 60;
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
+
+    internal static UpdateSettings Load(string runtimeHome)
+    {
+        var path = Path.Combine(runtimeHome, "update-settings.json");
+        if (!File.Exists(path)) return new UpdateSettings();
+        try
+        {
+            var json = File.ReadAllText(path);
+            return JsonSerializer.Deserialize<UpdateSettings>(json, JsonOptions) ?? new UpdateSettings();
+        }
+        catch { return new UpdateSettings(); }
+    }
+
+    internal void Save(string runtimeHome)
+    {
+        var path = Path.Combine(runtimeHome, "update-settings.json");
+        Directory.CreateDirectory(runtimeHome);
+        File.WriteAllText(path, JsonSerializer.Serialize(this, JsonOptions));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Update service — manages check / download / apply lifecycle
+// ---------------------------------------------------------------------------
+
+sealed class UpdateService
+{
+    private readonly UpdateManager _mgr;
+    private readonly string _runtimeHome;
+    private readonly Action<string> _log;
+    private UpdateInfo? _pendingUpdate;
+    private bool _downloaded;
+    private int _downloadProgress;
+
+    internal bool HasPendingUpdate => _pendingUpdate is not null;
+    internal bool IsDownloaded => _downloaded;
+    internal int DownloadProgress => _downloadProgress;
+    internal string? PendingVersion => _pendingUpdate?.TargetFullRelease?.Version?.ToString();
+
+    internal UpdateService(string runtimeHome, Action<string> log)
+    {
+        _runtimeHome = runtimeHome;
+        _log = log;
+
+        var source = new GithubSource(Program.GitHubRepo, accessToken: null, prerelease: false);
+        _mgr = new UpdateManager(source);
+    }
+
+    internal bool IsInstalled => _mgr.IsInstalled;
+
+    internal async Task<bool> CheckForUpdateAsync()
+    {
+        try
+        {
+            _log("Checking for updates...");
+            var info = await _mgr.CheckForUpdatesAsync();
+            if (info is null)
+            {
+                _log("No update available.");
+                _pendingUpdate = null;
+                _downloaded = false;
+                return false;
+            }
+            _pendingUpdate = info;
+            _downloaded = false;
+            _downloadProgress = 0;
+            _log($"Update available: v{info.TargetFullRelease.Version}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _log($"Update check failed: {ex.Message}");
+            return false;
+        }
+    }
+
+    internal async Task<bool> DownloadUpdateAsync()
+    {
+        if (_pendingUpdate is null) return false;
+        try
+        {
+            _log($"Downloading update v{_pendingUpdate.TargetFullRelease.Version}...");
+            await _mgr.DownloadUpdatesAsync(_pendingUpdate, p => _downloadProgress = p);
+            _downloaded = true;
+            _log("Update downloaded successfully.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _log($"Update download failed: {ex.Message}");
+            return false;
+        }
+    }
+
+    internal void ApplyAndRestart(string[]? restartArgs = null)
+    {
+        if (!_downloaded || _pendingUpdate is null) return;
+        _log($"Applying update v{_pendingUpdate.TargetFullRelease.Version} and restarting...");
+        _mgr.ApplyUpdatesAndRestart(_pendingUpdate.TargetFullRelease, restartArgs);
+    }
+
+    internal void ApplyOnExit()
+    {
+        if (!_downloaded || _pendingUpdate is null) return;
+        _log($"Scheduling update v{_pendingUpdate.TargetFullRelease.Version} to apply on exit...");
+        _mgr.WaitExitThenApplyUpdates(_pendingUpdate.TargetFullRelease, silent: true, restart: true);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tray application
+// ---------------------------------------------------------------------------
+
 sealed class TrayApp : IDisposable
 {
     private readonly string _runtimeHome;
@@ -107,9 +267,12 @@ sealed class TrayApp : IDisposable
     private readonly object _browserLock = new();
 
     private NotifyIcon? _notifyIcon;
+    private ToolStripMenuItem? _updateMenuItem;
     private Process? _serverProcess;
     private double _lastBrowserOpenTicks;
-    private CancellationTokenSource? _watchdogCts;
+    private CancellationTokenSource? _cts;
+    private UpdateService? _updateService;
+    private UpdateSettings _updateSettings;
 
     public TrayApp(bool openBrowserOnReady)
     {
@@ -120,6 +283,7 @@ sealed class TrayApp : IDisposable
         Directory.CreateDirectory(_runtimeHome);
         _logPath = Path.Combine(_runtimeHome, "tray-host.log");
         _port = FindFreePort(Program.PreferredPort);
+        _updateSettings = UpdateSettings.Load(_runtimeHome);
 
         Log($"Starting tray host. installRoot={_installRoot} runtimeHome={_runtimeHome}");
     }
@@ -140,7 +304,9 @@ sealed class TrayApp : IDisposable
         else
             Log("Skipping browser auto-open (no-browser mode).");
 
+        _cts = new CancellationTokenSource();
         StartWatchdog();
+        InitUpdateService();
 
         ApplicationConfiguration.Initialize();
         _notifyIcon = CreateNotifyIcon();
@@ -149,6 +315,8 @@ sealed class TrayApp : IDisposable
         Log("Starting tray icon event loop");
         Application.Run();
     }
+
+    // -- Environment setup --------------------------------------------------
 
     private void PrepareEnvironment()
     {
@@ -195,6 +363,8 @@ sealed class TrayApp : IDisposable
     {
         File.WriteAllText(Path.Combine(_runtimeHome, "current-port.txt"), _port.ToString());
     }
+
+    // -- Server process management ------------------------------------------
 
     private string FindServerExeDirectory()
     {
@@ -268,9 +438,7 @@ sealed class TrayApp : IDisposable
 
     private void StartWatchdog()
     {
-        _watchdogCts = new CancellationTokenSource();
-        var ct = _watchdogCts.Token;
-
+        var ct = _cts!.Token;
         var thread = new Thread(() =>
         {
             while (!ct.IsCancellationRequested)
@@ -284,8 +452,7 @@ sealed class TrayApp : IDisposable
                     try
                     {
                         _notifyIcon?.ShowBalloonTip(
-                            5000,
-                            "MediaMop",
+                            5000, "MediaMop",
                             "MediaMop server stopped unexpectedly. Please restart MediaMop.",
                             ToolTipIcon.Warning);
                     }
@@ -302,6 +469,195 @@ sealed class TrayApp : IDisposable
         };
         thread.Start();
     }
+
+    private void StopServerProcess()
+    {
+        var proc = _serverProcess;
+        if (proc is null || proc.HasExited) return;
+
+        Log($"Stopping bundled server host pid={proc.Id}");
+        try
+        {
+            proc.CloseMainWindow();
+            if (!proc.WaitForExit(Program.ServerStopTimeoutMs))
+            {
+                Log($"Bundled server host pid={proc.Id} did not exit in time; killing it");
+                proc.Kill(entireProcessTree: true);
+                proc.WaitForExit(5000);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"Error stopping server: {ex.Message}");
+            try { proc.Kill(entireProcessTree: true); } catch { }
+        }
+        finally
+        {
+            _serverProcess = null;
+        }
+    }
+
+    // -- Update management --------------------------------------------------
+
+    private void InitUpdateService()
+    {
+        _updateService = new UpdateService(_runtimeHome, Log);
+
+        if (!_updateService.IsInstalled)
+        {
+            Log("Velopack: not installed (dev mode), skipping update checks.");
+            return;
+        }
+
+        if (_updateSettings.CheckOnStartup)
+            _ = RunUpdateCheckAsync();
+
+        if (_updateSettings.CheckIntervalMinutes > 0)
+            StartPeriodicUpdateCheck();
+    }
+
+    private void StartPeriodicUpdateCheck()
+    {
+        var ct = _cts!.Token;
+        var intervalMs = _updateSettings.CheckIntervalMinutes * 60 * 1000;
+
+        var thread = new Thread(async () =>
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                try { await Task.Delay(intervalMs, ct); } catch (OperationCanceledException) { return; }
+                await RunUpdateCheckAsync();
+            }
+        })
+        {
+            IsBackground = true,
+            Name = "mediamop-update-check",
+        };
+        thread.Start();
+    }
+
+    private async Task RunUpdateCheckAsync()
+    {
+        if (_updateService is null) return;
+
+        bool available = await _updateService.CheckForUpdateAsync();
+        if (!available) return;
+
+        switch (_updateSettings.Mode)
+        {
+            case UpdateMode.Auto:
+                if (await _updateService.DownloadUpdateAsync())
+                    ShowUpdateReady();
+                break;
+
+            case UpdateMode.DownloadOnly:
+                if (await _updateService.DownloadUpdateAsync())
+                    ShowUpdateReady();
+                break;
+
+            case UpdateMode.NotifyOnly:
+                ShowUpdateAvailable();
+                break;
+        }
+    }
+
+    private void ShowUpdateAvailable()
+    {
+        var version = _updateService?.PendingVersion ?? "new version";
+        Log($"Notifying user: update v{version} available.");
+
+        _notifyIcon?.ShowBalloonTip(
+            8000, "MediaMop Update",
+            $"Version {version} is available. Open Settings to update.",
+            ToolTipIcon.Info);
+
+        UpdateTrayMenuState();
+    }
+
+    private void ShowUpdateReady()
+    {
+        var version = _updateService?.PendingVersion ?? "new version";
+        Log($"Notifying user: update v{version} downloaded and ready to install.");
+
+        _notifyIcon?.ShowBalloonTip(
+            8000, "MediaMop Update Ready",
+            $"Version {version} has been downloaded. Click here to restart and update.",
+            ToolTipIcon.Info);
+
+        if (_notifyIcon is not null)
+            _notifyIcon.BalloonTipClicked += OnBalloonClickRestart;
+
+        UpdateTrayMenuState();
+    }
+
+    private void OnBalloonClickRestart(object? sender, EventArgs e)
+    {
+        if (_notifyIcon is not null)
+            _notifyIcon.BalloonTipClicked -= OnBalloonClickRestart;
+
+        ApplyUpdateAndRestart();
+    }
+
+    private void ApplyUpdateAndRestart()
+    {
+        if (_updateService is null || !_updateService.IsDownloaded) return;
+
+        Log("User requested update apply and restart.");
+        StopServerProcess();
+        _notifyIcon!.Visible = false;
+        _updateService.ApplyAndRestart();
+    }
+
+    private void UpdateTrayMenuState()
+    {
+        if (_updateMenuItem is null || _updateService is null) return;
+
+        if (_updateService.IsDownloaded)
+        {
+            _updateMenuItem.Text = $"Restart to update (v{_updateService.PendingVersion})";
+            _updateMenuItem.Enabled = true;
+            _updateMenuItem.Click -= OnUpdateMenuCheckClick;
+            _updateMenuItem.Click += OnUpdateMenuRestartClick;
+        }
+        else if (_updateService.HasPendingUpdate)
+        {
+            _updateMenuItem.Text = $"Download update (v{_updateService.PendingVersion})";
+            _updateMenuItem.Enabled = true;
+            _updateMenuItem.Click -= OnUpdateMenuRestartClick;
+            _updateMenuItem.Click += OnUpdateMenuDownloadClick;
+        }
+        else
+        {
+            _updateMenuItem.Text = "Check for updates";
+            _updateMenuItem.Enabled = true;
+        }
+    }
+
+    private async void OnUpdateMenuCheckClick(object? sender, EventArgs e)
+    {
+        if (_updateMenuItem is not null) _updateMenuItem.Enabled = false;
+        await RunUpdateCheckAsync();
+        if (_updateMenuItem is not null) _updateMenuItem.Enabled = true;
+    }
+
+    private async void OnUpdateMenuDownloadClick(object? sender, EventArgs e)
+    {
+        if (_updateService is null) return;
+        if (_updateMenuItem is not null)
+        {
+            _updateMenuItem.Enabled = false;
+            _updateMenuItem.Text = "Downloading update...";
+        }
+        if (await _updateService.DownloadUpdateAsync())
+            ShowUpdateReady();
+    }
+
+    private void OnUpdateMenuRestartClick(object? sender, EventArgs e)
+    {
+        ApplyUpdateAndRestart();
+    }
+
+    // -- Tray icon ----------------------------------------------------------
 
     private NotifyIcon CreateNotifyIcon()
     {
@@ -323,9 +679,22 @@ sealed class TrayApp : IDisposable
 
         menu.Items.Add(new ToolStripSeparator());
 
+        _updateMenuItem = new ToolStripMenuItem("Check for updates");
+        _updateMenuItem.Click += OnUpdateMenuCheckClick;
+        if (_updateService is null || !_updateService.IsInstalled)
+            _updateMenuItem.Visible = false;
+        menu.Items.Add(_updateMenuItem);
+
+        menu.Items.Add(new ToolStripSeparator());
+
         menu.Items.Add("Quit").Click += (_, _) =>
         {
             Log("Quit requested from tray icon");
+            if (_updateService is { IsDownloaded: true })
+            {
+                _updateService.ApplyOnExit();
+                Log("Update will be applied after exit.");
+            }
             StopServerProcess();
             _notifyIcon!.Visible = false;
             Application.Exit();
@@ -366,6 +735,8 @@ sealed class TrayApp : IDisposable
         return SystemIcons.Application;
     }
 
+    // -- Browser ------------------------------------------------------------
+
     private void OpenBrowserDebounced(string source)
     {
         var now = Environment.TickCount64;
@@ -382,32 +753,7 @@ sealed class TrayApp : IDisposable
         Program.OpenBrowser(_port);
     }
 
-    private void StopServerProcess()
-    {
-        var proc = _serverProcess;
-        if (proc is null || proc.HasExited) return;
-
-        Log($"Stopping bundled server host pid={proc.Id}");
-        try
-        {
-            proc.CloseMainWindow();
-            if (!proc.WaitForExit(Program.ServerStopTimeoutMs))
-            {
-                Log($"Bundled server host pid={proc.Id} did not exit in time; killing it");
-                proc.Kill(entireProcessTree: true);
-                proc.WaitForExit(5000);
-            }
-        }
-        catch (Exception ex)
-        {
-            Log($"Error stopping server: {ex.Message}");
-            try { proc.Kill(entireProcessTree: true); } catch { }
-        }
-        finally
-        {
-            _serverProcess = null;
-        }
-    }
+    // -- Logging ------------------------------------------------------------
 
     private void Log(string message)
     {
@@ -421,6 +767,8 @@ sealed class TrayApp : IDisposable
             catch { }
         }
     }
+
+    // -- Utilities ----------------------------------------------------------
 
     private static int FindFreePort(int preferred)
     {
@@ -439,10 +787,9 @@ sealed class TrayApp : IDisposable
 
     public void Dispose()
     {
-        _watchdogCts?.Cancel();
-        _watchdogCts?.Dispose();
+        _cts?.Cancel();
+        _cts?.Dispose();
         StopServerProcess();
         _notifyIcon?.Dispose();
     }
 }
-
