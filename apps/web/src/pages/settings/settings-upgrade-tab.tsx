@@ -14,9 +14,7 @@ type SettingsUpgradeTabProps = {
   updateStatusQ: ReturnType<typeof useSuiteUpdateStatusQuery>;
 };
 
-export function SettingsUpgradeTab({
-  updateStatusQ,
-}: SettingsUpgradeTabProps) {
+export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
   return (
     <div data-testid="suite-settings-upgrade-tab" className="mm-bubble-stack">
       <div className={mmModuleTabBlurbBandClass}>

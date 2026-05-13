@@ -17,9 +17,7 @@ import {
   useSuiteSettingsSaveMutation,
   useSuiteUpdateStatusQuery,
 } from "../../lib/suite/queries";
-import type {
-  SuiteSettingsPutBody,
-} from "../../lib/suite/types";
+import type { SuiteSettingsPutBody } from "../../lib/suite/types";
 import {
   fetchConfigurationBundle,
   fetchStoredConfigurationBackupBlob,
@@ -584,9 +582,7 @@ export function SettingsPage() {
             }
           />
         ) : tab === "upgrade" ? (
-          <SettingsUpgradeTab
-            updateStatusQ={updateStatusQ}
-          />
+          <SettingsUpgradeTab updateStatusQ={updateStatusQ} />
         ) : tab === "security" ? (
           <SettingsSecurityTab />
         ) : tab === "notifications" ? (

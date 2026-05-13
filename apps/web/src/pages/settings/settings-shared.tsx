@@ -1,6 +1,4 @@
-import type {
-  SuiteLogEntry,
-} from "../../lib/suite/types";
+import type { SuiteLogEntry } from "../../lib/suite/types";
 
 export type LogLevelFilter = "" | "INFO" | "WARNING" | "ERROR";
 
