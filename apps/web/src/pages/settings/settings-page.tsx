@@ -11,21 +11,13 @@ import { useMeQuery } from "../../lib/auth/queries";
 import { CURATED_TIMEZONE_ID_SET } from "../../lib/suite/timezone-options";
 import {
   suiteConfigurationBackupsQueryKey,
-  suiteUpdateDiagnosticsQueryKey,
-  suiteUpdateStatusQueryKey,
   useSuiteConfigurationBackupsQuery,
   useSuiteOperationalHistoryResetMutation,
   useSuiteSettingsQuery,
   useSuiteSettingsSaveMutation,
-  useSuiteUpdateDiagnosticsQuery,
-  useSuiteUpdateNowMutation,
   useSuiteUpdateStatusQuery,
 } from "../../lib/suite/queries";
-import type {
-  SuiteSettingsPutBody,
-  SuiteUpdateStatusOut,
-  SuiteUpgradeProgressOut,
-} from "../../lib/suite/types";
+import type { SuiteSettingsPutBody } from "../../lib/suite/types";
 import {
   fetchConfigurationBundle,
   fetchStoredConfigurationBackupBlob,
@@ -37,12 +29,6 @@ import {
   type DisplayDensity,
 } from "../../lib/ui/display-density";
 import { SHOW_SUPPORT_CARD } from "../../lib/support";
-import {
-  type UpgradeMonitor,
-  type UpgradeNotice,
-  type UpgradeHistoryItem,
-  isUpgradeProgressActive,
-} from "./settings-shared";
 import { SettingsGeneralTab } from "./settings-general-tab";
 import { SettingsBackupTab } from "./settings-backup-tab";
 import { SettingsUpgradeTab } from "./settings-upgrade-tab";
@@ -71,242 +57,6 @@ function tabButtonClass(active: boolean): string {
       ? "border-[var(--mm-accent)] bg-[var(--mm-accent)]/15 text-[var(--mm-text)]"
       : "border-[var(--mm-border)] bg-transparent text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)]",
   ].join(" ");
-}
-
-const UPGRADE_VERIFICATION_TIMEOUT_MS = 8 * 60_000;
-const UPGRADE_HISTORY_STORAGE_KEY = "mediamop.upgrade.history.v1";
-const UPGRADE_HISTORY_LIMIT = 20;
-
-function parseUpgradeTime(raw: string | null | undefined): number | null {
-  if (!raw) {
-    return null;
-  }
-  const parsed = Date.parse(raw);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function readUpgradeHistory(): UpgradeHistoryItem[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-  try {
-    const raw = window.localStorage.getItem(UPGRADE_HISTORY_STORAGE_KEY);
-    if (!raw) {
-      return [];
-    }
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-    return parsed.filter((row): row is UpgradeHistoryItem => {
-      if (!row || typeof row !== "object") {
-        return false;
-      }
-      const id = (row as { id?: unknown }).id;
-      return typeof id === "string" && id.trim().length > 0;
-    });
-  } catch {
-    return [];
-  }
-}
-
-function persistUpgradeHistory(items: UpgradeHistoryItem[]): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-  window.localStorage.setItem(
-    UPGRADE_HISTORY_STORAGE_KEY,
-    JSON.stringify(items.slice(0, UPGRADE_HISTORY_LIMIT)),
-  );
-}
-
-function buildUpgradeHistoryItem(
-  progressSummary: { label: string; body: string },
-  progress: SuiteUpgradeProgressOut,
-): UpgradeHistoryItem {
-  const updatedAt =
-    progress.last_updated_at ||
-    progress.last_completed_at ||
-    progress.last_started_at ||
-    "unknown";
-  const attemptId = progress.attempt_id || null;
-  const phase = progress.phase || "unknown";
-  const dedupeStamp = `${attemptId ?? "no-attempt"}:${phase}:${updatedAt}`;
-  return {
-    id: dedupeStamp,
-    recorded_at: updatedAt,
-    status_label: progressSummary.label,
-    phase,
-    attempt_id: attemptId,
-    target_version: progress.target_version || null,
-    current_version_seen: progress.current_version_seen || null,
-    message: progressSummary.body,
-    installer_log_path: progress.installer_log_path || null,
-    service_log_path: progress.service_log_path || null,
-  };
-}
-
-function describeUpgradeProgress(
-  status: SuiteUpdateStatusOut | undefined,
-  progress: SuiteUpgradeProgressOut | null | undefined,
-  monitor: UpgradeMonitor | null,
-  disconnected: boolean,
-): { label: string; body: string } | null {
-  const progressIsActive = isUpgradeProgressActive(progress);
-  const hideHistoricalCompletedSummary = Boolean(
-    progress &&
-    progress.phase === "completed" &&
-    status &&
-    progress.target_version &&
-    status.current_version === progress.target_version &&
-    status.status === "update_available" &&
-    !monitor?.active,
-  );
-  if (monitor?.timedOutReason) {
-    return {
-      label: "Failed",
-      body: monitor.timedOutReason,
-    };
-  }
-  if (disconnected && monitor?.active) {
-    return {
-      label: "Reconnecting",
-      body: "MediaMop is reconnecting and verifying the installed version.",
-    };
-  }
-  if (!progress) {
-    if (!monitor?.active) {
-      return null;
-    }
-    return {
-      label: "Waiting",
-      body: "Upgrade request accepted. MediaMop is checking release metadata.",
-    };
-  }
-  if (
-    !monitor?.active &&
-    progress.phase !== "failed" &&
-    !progressIsActive &&
-    progress.phase !== "completed"
-  ) {
-    return null;
-  }
-  if (hideHistoricalCompletedSummary) {
-    return null;
-  }
-  switch (progress.phase) {
-    case "checking":
-      return {
-        label: "Checking release",
-        body:
-          progress.message ||
-          "Upgrade request accepted. MediaMop is checking release metadata.",
-      };
-    case "downloading":
-      return {
-        label: "Downloading",
-        body:
-          progress.message ||
-          "Upgrade request accepted. MediaMop is downloading the installer.",
-      };
-    case "verifying_download":
-      return {
-        label: "Verifying installer",
-        body: progress.message || "Installer is being verified.",
-      };
-    case "installer_started":
-      return {
-        label: "Starting installer",
-        body: progress.message || "Installer is starting.",
-      };
-    case "installer_running":
-      return {
-        label: "Installer running",
-        body:
-          progress.message ||
-          "Installer is running. MediaMop may temporarily disconnect.",
-      };
-    case "restarting":
-    case "verifying_install":
-      return {
-        label: "Verifying installed version",
-        body:
-          progress.message ||
-          "MediaMop is reconnecting and verifying the installed version.",
-      };
-    case "completed":
-      if (
-        status &&
-        progress.target_version &&
-        status.current_version === progress.target_version
-      ) {
-        return {
-          label: "Completed",
-          body:
-            progress.message ||
-            `Upgrade completed. Running version: ${status.current_version}.`,
-        };
-      }
-      return {
-        label: "Verifying installed version",
-        body: "Upgrade reported completed, but the running version has not been confirmed yet.",
-      };
-    case "failed":
-      return {
-        label: "Failed",
-        body: progress.last_error
-          ? `Upgrade failed: ${progress.last_error}`
-          : progress.message || "Upgrade failed.",
-      };
-    default:
-      return {
-        label: "Upgrade status",
-        body: progress.message || "Updater status is available.",
-      };
-  }
-}
-
-export function verifiedUpgradeRefreshKey(
-  status: SuiteUpdateStatusOut | undefined,
-  progress: SuiteUpgradeProgressOut | null | undefined,
-  monitor: UpgradeMonitor | null,
-): string | null {
-  if (!status || status.install_type !== "windows" || !monitor?.active) {
-    return null;
-  }
-  const targetVersion = (
-    progress?.target_version ||
-    monitor.targetVersion ||
-    ""
-  ).trim();
-  if (!targetVersion || status.current_version !== targetVersion) {
-    return null;
-  }
-  if (progress && progress.phase !== "completed") {
-    return null;
-  }
-  return [
-    progress?.attempt_id || monitor.attemptId || "unknown-attempt",
-    targetVersion,
-  ].join(":");
-}
-
-function completedUpgradeRefreshKey(
-  status: SuiteUpdateStatusOut | undefined,
-  progress: SuiteUpgradeProgressOut | null | undefined,
-): string | null {
-  if (!status || status.install_type !== "windows" || !progress) {
-    return null;
-  }
-  const targetVersion = progress.target_version?.trim();
-  if (
-    !targetVersion ||
-    progress.phase !== "completed" ||
-    status.current_version !== targetVersion
-  ) {
-    return null;
-  }
-  return [progress.attempt_id || "unknown-attempt", targetVersion].join(":");
 }
 
 function normalizeSettingsTab(
@@ -338,7 +88,6 @@ export function SettingsPage() {
   const me = useMeQuery();
   const settingsQ = useSuiteSettingsQuery();
   const save = useSuiteSettingsSaveMutation();
-  const updateNow = useSuiteUpdateNowMutation();
   const resetHistory = useSuiteOperationalHistoryResetMutation();
 
   const showSupportTab = SHOW_SUPPORT_CARD;
@@ -366,18 +115,6 @@ export function SettingsPage() {
   const [backupBusy, setBackupBusy] = useState(false);
   const [backupMsg, setBackupMsg] = useState<string | null>(null);
   const [backupErr, setBackupErr] = useState<string | null>(null);
-  const [upgradeNotice, setUpgradeNotice] = useState<UpgradeNotice | null>(
-    null,
-  );
-  const [upgradeMonitor, setUpgradeMonitor] = useState<UpgradeMonitor | null>(
-    null,
-  );
-  const [upgradePollActive, setUpgradePollActive] = useState(false);
-  const [showUpgradeHistory, setShowUpgradeHistory] = useState(false);
-  const [upgradeHistory, setUpgradeHistory] = useState<UpgradeHistoryItem[]>(
-    () => readUpgradeHistory(),
-  );
-  const [showUpgradeDiagnostics, setShowUpgradeDiagnostics] = useState(false);
   const [resetHistoryMsg, setResetHistoryMsg] = useState<string | null>(null);
   const [resetHistoryConfirm, setResetHistoryConfirm] = useState("");
   const [configurationBackupEnabled, setConfigurationBackupEnabled] =
@@ -421,19 +158,8 @@ export function SettingsPage() {
   const backupsQ = useSuiteConfigurationBackupsQuery(
     editable && tab === "backup" && Boolean(settingsQ.data),
   );
-  const upgradePollingMs =
-    tab === "upgrade" && (upgradeMonitor?.active || upgradePollActive)
-      ? Math.min(10_000, 1500 * ((upgradeMonitor?.disconnects ?? 0) + 1))
-      : false;
   const updateStatusQ = useSuiteUpdateStatusQuery(
     tab === "upgrade" && Boolean(settingsQ.data),
-    upgradePollingMs,
-  );
-  const updateDiagnosticsQ = useSuiteUpdateDiagnosticsQuery(
-    tab === "upgrade" &&
-      showUpgradeDiagnostics &&
-      Boolean(settingsQ.data) &&
-      updateStatusQ.data?.install_type === "windows",
   );
 
   const serverCuratedTimezone =
@@ -480,205 +206,6 @@ export function SettingsPage() {
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty]);
-
-  const upgradeBootstrapRequired =
-    updateStatusQ.data?.install_type === "windows" &&
-    !updateStatusQ.data.in_app_upgrade_supported &&
-    (updateStatusQ.data.in_app_upgrade_summary || "")
-      .toLowerCase()
-      .includes("does not have the mediamop updater service yet");
-  const activeUpgradeProgress = updateStatusQ.data?.upgrade;
-  const upgradeConnectionLost =
-    Boolean(upgradeMonitor?.active) && updateStatusQ.isError;
-  const upgradeProgressSummary = describeUpgradeProgress(
-    updateStatusQ.data,
-    activeUpgradeProgress,
-    upgradeMonitor,
-    upgradeConnectionLost,
-  );
-  const upgradeInProgress =
-    !upgradeMonitor?.timedOutReason &&
-    (Boolean(upgradeMonitor?.active) ||
-      isUpgradeProgressActive(activeUpgradeProgress));
-  const completedUpgradeRefreshPromptKey = completedUpgradeRefreshKey(
-    updateStatusQ.data,
-    activeUpgradeProgress,
-  );
-  const hasStableUpdateStatus = Boolean(updateStatusQ.data);
-  const upgradeRefreshBusy = upgradeInProgress || updateStatusQ.isFetching;
-  const upgradeRefreshLabel = upgradeInProgress
-    ? "Checking progress..."
-    : !hasStableUpdateStatus && updateStatusQ.isFetching
-      ? "Checking..."
-      : "Check again";
-  const diagnosticsUpgrade =
-    updateDiagnosticsQ.data?.upgrade ?? activeUpgradeProgress ?? null;
-  const installerLogTail = updateDiagnosticsQ.data?.installer_log_tail ?? [];
-  const serviceLogTail = updateDiagnosticsQ.data?.service_log_tail ?? [];
-  const diagnosticsHasLogTail =
-    installerLogTail.length > 0 || serviceLogTail.length > 0;
-
-  useEffect(() => {
-    if (isUpgradeProgressActive(activeUpgradeProgress)) {
-      setUpgradePollActive(true);
-      return;
-    }
-    if (!upgradeMonitor?.active) {
-      setUpgradePollActive(false);
-    }
-  }, [activeUpgradeProgress, upgradeMonitor?.active]);
-
-  useEffect(() => {
-    if (!activeUpgradeProgress || !upgradeProgressSummary) {
-      return;
-    }
-    const item = buildUpgradeHistoryItem(
-      upgradeProgressSummary,
-      activeUpgradeProgress,
-    );
-    setUpgradeHistory((current) => {
-      if (current.some((existing) => existing.id === item.id)) {
-        return current;
-      }
-      const next = [item, ...current].slice(0, UPGRADE_HISTORY_LIMIT);
-      persistUpgradeHistory(next);
-      return next;
-    });
-  }, [activeUpgradeProgress, upgradeProgressSummary]);
-
-  useEffect(() => {
-    if (!updateStatusQ.data?.upgrade) {
-      return;
-    }
-    const progress = updateStatusQ.data.upgrade;
-    if (!isUpgradeProgressActive(progress)) {
-      return;
-    }
-    setUpgradeMonitor((current) => {
-      if (
-        current?.active &&
-        current.attemptId === (progress.attempt_id ?? null) &&
-        current.targetVersion === (progress.target_version || "").trim()
-      ) {
-        return current;
-      }
-      return {
-        attemptId: progress.attempt_id ?? null,
-        targetVersion: (progress.target_version || "").trim(),
-        disconnects: 0,
-        active: true,
-        startedAtMs:
-          parseUpgradeTime(progress.last_started_at) ??
-          parseUpgradeTime(progress.last_updated_at) ??
-          Date.now(),
-        timedOutReason: null,
-      };
-    });
-  }, [updateStatusQ.data]);
-
-  useEffect(() => {
-    if (!upgradeMonitor?.active || updateStatusQ.errorUpdatedAt === 0) {
-      return;
-    }
-    setUpgradeMonitor((current) => {
-      if (!current?.active) {
-        return current;
-      }
-      return {
-        ...current,
-        disconnects: Math.min(current.disconnects + 1, 6),
-      };
-    });
-  }, [upgradeMonitor?.active, updateStatusQ.errorUpdatedAt]);
-
-  useEffect(() => {
-    if (!upgradeMonitor || !updateStatusQ.data) {
-      return;
-    }
-    const progress = updateStatusQ.data.upgrade;
-    setUpgradeMonitor((current) => {
-      if (!current?.active) {
-        return current;
-      }
-      if (current.disconnects === 0) {
-        return current;
-      }
-      return { ...current, disconnects: 0 };
-    });
-    if (progress?.phase === "failed") {
-      setUpgradePollActive(false);
-      setUpgradeMonitor((current) =>
-        current ? { ...current, active: false, timedOutReason: null } : current,
-      );
-      setUpgradeNotice({
-        tone: "error",
-        text: progress.last_error
-          ? `Upgrade failed: ${progress.last_error}`
-          : progress.message || "Upgrade failed.",
-      });
-      return;
-    }
-    const refreshAttemptKey = verifiedUpgradeRefreshKey(
-      updateStatusQ.data,
-      progress,
-      upgradeMonitor,
-    );
-    if (refreshAttemptKey) {
-      setUpgradePollActive(false);
-      setUpgradeMonitor((current) =>
-        current ? { ...current, active: false, timedOutReason: null } : current,
-      );
-      setUpgradeNotice({
-        tone: "success",
-        text:
-          progress?.message ||
-          `Upgrade completed. Running version: ${updateStatusQ.data.current_version}.`,
-      });
-    }
-  }, [upgradeMonitor, updateStatusQ.data]);
-
-  useEffect(() => {
-    if (!upgradeMonitor?.active) {
-      return;
-    }
-    const targetVersion = upgradeMonitor.targetVersion.trim();
-    if (!targetVersion || !updateStatusQ.data) {
-      return;
-    }
-    if (updateStatusQ.data.current_version === targetVersion) {
-      return;
-    }
-    const elapsed = Date.now() - upgradeMonitor.startedAtMs;
-    if (elapsed < UPGRADE_VERIFICATION_TIMEOUT_MS) {
-      return;
-    }
-    const currentVersionSeen =
-      activeUpgradeProgress?.current_version_seen ||
-      updateStatusQ.data.current_version ||
-      "unknown";
-    const reason =
-      `Upgrade failed: MediaMop did not verify version ${targetVersion} within ${Math.floor(UPGRADE_VERIFICATION_TIMEOUT_MS / 60_000)} minutes. ` +
-      `The running app still reports ${currentVersionSeen}.`;
-    setUpgradePollActive(false);
-    setUpgradeMonitor((current) =>
-      current
-        ? {
-            ...current,
-            active: false,
-            timedOutReason: reason,
-          }
-        : current,
-    );
-    setUpgradeNotice({
-      tone: "error",
-      text: reason,
-    });
-  }, [
-    activeUpgradeProgress?.current_version_seen,
-    activeUpgradeProgress?.phase,
-    updateStatusQ.data,
-    upgradeMonitor,
-  ]);
 
   useEffect(() => {
     if (tab === "support" && !showSupportTab) {
@@ -904,47 +431,6 @@ export function SettingsPage() {
     }
   }
 
-  async function handleUpgradeNow() {
-    setUpgradeNotice(null);
-    try {
-      const result = await updateNow.mutateAsync();
-      if (result.status === "started") {
-        setUpgradePollActive(true);
-        setUpgradeMonitor({
-          attemptId: result.attempt_id ?? null,
-          targetVersion: (
-            result.target_version ||
-            updateStatusQ.data?.latest_version ||
-            ""
-          ).trim(),
-          disconnects: 0,
-          active: true,
-          startedAtMs: Date.now(),
-          timedOutReason: null,
-        });
-        await queryClient.invalidateQueries({
-          queryKey: suiteUpdateStatusQueryKey,
-        });
-        await queryClient.invalidateQueries({
-          queryKey: suiteUpdateDiagnosticsQueryKey,
-        });
-      } else {
-        setUpgradeNotice({
-          tone: "info",
-          text: result.message,
-        });
-        void queryClient.invalidateQueries({
-          queryKey: suiteUpdateStatusQueryKey,
-        });
-        void queryClient.invalidateQueries({
-          queryKey: suiteUpdateDiagnosticsQueryKey,
-        });
-      }
-    } catch {
-      /* surfaced below */
-    }
-  }
-
   async function handleResetOperationalHistory() {
     setResetHistoryMsg(null);
     try {
@@ -1096,31 +582,7 @@ export function SettingsPage() {
             }
           />
         ) : tab === "upgrade" ? (
-          <SettingsUpgradeTab
-            upgradeMonitor={upgradeMonitor}
-            upgradeNotice={upgradeNotice}
-            showUpgradeHistory={showUpgradeHistory}
-            setShowUpgradeHistory={setShowUpgradeHistory}
-            upgradeHistory={upgradeHistory}
-            showUpgradeDiagnostics={showUpgradeDiagnostics}
-            setShowUpgradeDiagnostics={setShowUpgradeDiagnostics}
-            upgradeBootstrapRequired={upgradeBootstrapRequired}
-            activeUpgradeProgress={activeUpgradeProgress}
-            upgradeConnectionLost={upgradeConnectionLost}
-            upgradeProgressSummary={upgradeProgressSummary}
-            upgradeInProgress={upgradeInProgress}
-            completedUpgradeRefreshPromptKey={completedUpgradeRefreshPromptKey}
-            upgradeRefreshBusy={upgradeRefreshBusy}
-            upgradeRefreshLabel={upgradeRefreshLabel}
-            diagnosticsUpgrade={diagnosticsUpgrade}
-            installerLogTail={installerLogTail}
-            serviceLogTail={serviceLogTail}
-            diagnosticsHasLogTail={diagnosticsHasLogTail}
-            updateStatusQ={updateStatusQ}
-            updateDiagnosticsQ={updateDiagnosticsQ}
-            updateNow={updateNow}
-            onUpgradeNow={() => void handleUpgradeNow()}
-          />
+          <SettingsUpgradeTab updateStatusQ={updateStatusQ} />
         ) : tab === "security" ? (
           <SettingsSecurityTab />
         ) : tab === "notifications" ? (

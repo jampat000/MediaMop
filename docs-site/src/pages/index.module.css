@@ -1,0 +1,51 @@
+.hero {
+  padding: 4rem 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+@media screen and (max-width: 996px) {
+  .hero {
+    padding: 2rem;
+  }
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.features {
+  display: flex;
+  align-items: stretch;
+  padding: 3rem 0;
+}
+
+.featureCard {
+  text-align: center;
+  padding: 1.5rem;
+}
+
+.featureImage {
+  width: 100%;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.preview {
+  padding: 3rem 0;
+  text-align: center;
+}
+
+.dashboardImage {
+  max-width: 900px;
+  width: 100%;
+  border-radius: 8px;
+  margin-top: 1.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}

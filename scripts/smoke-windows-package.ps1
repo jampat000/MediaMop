@@ -8,18 +8,14 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 if (-not $PackageDir) {
-  $PackageDir = Join-Path $repoRoot "dist\windows\MediaMop"
+  $PackageDir = Join-Path $repoRoot "dist\windows\MediaMopServer"
 }
 $packagePath = (Resolve-Path -LiteralPath $PackageDir).Path
 $backendPyproject = Join-Path $repoRoot "apps\backend\pyproject.toml"
 if (-not $ExpectedVersion) {
   $ExpectedVersion = ((Get-Content -Path $backendPyproject) | Where-Object { $_ -match '^version = ' } | Select-Object -First 1).Split('"')[1]
 }
-$trayExe = Join-Path $packagePath "MediaMop.exe"
 $serverExe = Join-Path $packagePath "MediaMopServer.exe"
-$updaterExe = Join-Path $packagePath "MediaMopUpdater.exe"
-$updaterServiceExe = Join-Path $packagePath "MediaMopUpdaterService.exe"
-$updaterServiceXml = Join-Path $packagePath "MediaMopUpdaterService.xml"
 $internalRoot = Join-Path $packagePath "_internal"
 $webIndex = Join-Path $packagePath "_internal\web-dist\index.html"
 $trayIcon = Join-Path $packagePath "_internal\assets\mediamop-tray-icon.png"
@@ -27,20 +23,8 @@ $alembicIni = Join-Path $packagePath "_internal\alembic.ini"
 $ffmpegExe = Join-Path $packagePath "_internal\bin\ffmpeg\ffmpeg.exe"
 $ffprobeExe = Join-Path $packagePath "_internal\bin\ffmpeg\ffprobe.exe"
 
-if (-not (Test-Path -LiteralPath $trayExe)) {
-  throw "Packaged tray executable not found: $trayExe"
-}
 if (-not (Test-Path -LiteralPath $serverExe)) {
   throw "Packaged server executable not found: $serverExe"
-}
-if (-not (Test-Path -LiteralPath $updaterExe)) {
-  throw "Packaged updater executable not found: $updaterExe"
-}
-if (-not (Test-Path -LiteralPath $updaterServiceExe)) {
-  throw "Packaged updater service wrapper not found: $updaterServiceExe"
-}
-if (-not (Test-Path -LiteralPath $updaterServiceXml)) {
-  throw "Packaged updater service XML not found: $updaterServiceXml"
 }
 if (-not (Test-Path -LiteralPath $webIndex)) {
   throw "Packaged web index not found: $webIndex"
@@ -69,11 +53,6 @@ if ($indexText -notmatch "MediaMop") {
 $serverVersion = (& $serverExe --version).Trim()
 if ($serverVersion -ne $ExpectedVersion) {
   throw "Packaged MediaMopServer.exe reports version '$serverVersion' but expected '$ExpectedVersion'."
-}
-
-$updaterVersion = (& $updaterExe --version).Trim()
-if ($updaterVersion -ne $ExpectedVersion) {
-  throw "Packaged MediaMopUpdater.exe reports version '$updaterVersion' but expected '$ExpectedVersion'."
 }
 
 $runtimeHome = Join-Path ([System.IO.Path]::GetTempPath()) ("mediamop-package-smoke-" + [System.Guid]::NewGuid().ToString("N"))

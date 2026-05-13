@@ -1,6 +1,6 @@
 param(
   [switch]$SkipWebBuild,
-  [switch]$SkipInstaller
+  [switch]$SkipDotnetPublish
 )
 
 $ErrorActionPreference = "Stop"
@@ -8,18 +8,16 @@ $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\\..")).Path
 $backendDir = Join-Path $repoRoot "apps\\backend"
 $webDir = Join-Path $repoRoot "apps\\web"
-$specPath = Join-Path $PSScriptRoot "mediamop-tray.spec"
+$trayDir = Join-Path $repoRoot "apps\\tray\\MediaMop.Tray"
+$serverSpecPath = Join-Path $PSScriptRoot "mediamop-server.spec"
 $distRoot = Join-Path $repoRoot "dist\\windows"
+$velopackOut = Join-Path $distRoot "releases"
 $ffmpegVendorDir = Join-Path $PSScriptRoot "vendor\\ffmpeg"
-$winswVendorDir = Join-Path $PSScriptRoot "vendor\\winsw"
 $venvScriptsDir = Join-Path $backendDir ".venv\\Scripts"
 $py = Join-Path $venvScriptsDir "python.exe"
 $ffmpegArchiveName = "ffmpeg-N-124254-g397c7c7524-win64-lgpl.zip"
 $ffmpegArchiveUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-04-29-13-28/$ffmpegArchiveName"
 $ffmpegArchiveSha256 = "42f9457901fcc1928834ded69f0fc4903bd16c9a41c185234a40490060bda9fb"
-$winswArchiveName = "WinSW-x64.exe"
-$winswArchiveUrl = "https://github.com/winsw/winsw/releases/download/v2.12.0/WinSW-x64.exe"
-$winswArchiveSha256 = "05b82d46ad331cc16bdc00de5c6332c1ef818df8ceefcd49c726553209b3a0da"
 
 function Resolve-VenvExecutable {
   param(
@@ -98,20 +96,6 @@ function Invoke-Native {
   }
 }
 
-function Resolve-IsccPath {
-  $programFilesX86 = [Environment]::GetEnvironmentVariable('ProgramFiles(x86)')
-  $programFiles = [Environment]::GetEnvironmentVariable('ProgramFiles')
-  $rawCandidates = @(
-    $(if ($programFilesX86) { Join-Path $programFilesX86 'Inno Setup 6\\ISCC.exe' }),
-    $(if ($programFiles) { Join-Path $programFiles 'Inno Setup 6\\ISCC.exe' })
-  )
-  $candidates = @($rawCandidates | Where-Object { $_ -and (Test-Path $_) })
-  if ($candidates.Count -gt 0) {
-    return [string](Resolve-Path -LiteralPath $candidates[0]).Path
-  }
-  return $null
-}
-
 function Ensure-WindowsFfmpegRuntime {
   $ffmpegExe = Join-Path $ffmpegVendorDir "ffmpeg.exe"
   $ffprobeExe = Join-Path $ffmpegVendorDir "ffprobe.exe"
@@ -159,35 +143,7 @@ function Ensure-WindowsFfmpegRuntime {
   }
 }
 
-function Ensure-WindowsServiceWrapper {
-  $winswExe = Join-Path $winswVendorDir "WinSW-x64.exe"
-  if (Test-Path -LiteralPath $winswExe) {
-    return
-  }
-
-  $downloadRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("mediamop-winsw-" + [System.Guid]::NewGuid().ToString("N"))
-  $archivePath = Join-Path $downloadRoot $winswArchiveName
-  try {
-    New-Item -ItemType Directory -Path $downloadRoot | Out-Null
-    Write-Host "Downloading WinSW runtime..."
-    Invoke-WebRequest -Uri $winswArchiveUrl -OutFile $archivePath -UseBasicParsing
-    $actualSha256 = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ($actualSha256 -ne $winswArchiveSha256) {
-      throw "Downloaded WinSW binary hash mismatch. Expected $winswArchiveSha256 but got $actualSha256."
-    }
-    if (Test-Path $winswVendorDir) {
-      Remove-Item -LiteralPath $winswVendorDir -Recurse -Force
-    }
-    New-Item -ItemType Directory -Path $winswVendorDir | Out-Null
-    Copy-Item -LiteralPath $archivePath -Destination $winswExe -Force
-  } finally {
-    if (Test-Path $downloadRoot) {
-      Remove-Item -LiteralPath $downloadRoot -Recurse -Force -ErrorAction SilentlyContinue
-    }
-  }
-}
-
-$iscc = Resolve-IsccPath
+# ── Resolve version from backend pyproject.toml ──
 $backendProjectVersion = ((Get-Content -Path (Join-Path $backendDir "pyproject.toml")) | Where-Object { $_ -match '^version = ' } | Select-Object -First 1).Split('"')[1]
 $buildVersion = if ($env:MEDIAMOP_BUILD_VERSION) {
   $env:MEDIAMOP_BUILD_VERSION
@@ -201,6 +157,7 @@ if ($buildVersion -ne $backendProjectVersion) {
   throw "MEDIAMOP_BUILD_VERSION '$buildVersion' does not match backend project version '$backendProjectVersion'."
 }
 
+# ── Python venv ──
 if (-not (Test-Path $py)) {
   $systemPython = Resolve-SystemPython
   Push-Location $backendDir
@@ -211,6 +168,7 @@ if (-not (Test-Path $py)) {
   }
 }
 
+# ── Web build ──
 if (-not $SkipWebBuild) {
   $webBuildRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("mediamop-web-build-" + [System.Guid]::NewGuid().ToString("N"))
   $webBuildWebDir = Join-Path $webBuildRoot "apps\\web"
@@ -256,6 +214,7 @@ if (-not $SkipWebBuild) {
   }
 }
 
+# ── Backend install + PyInstaller (server-only) ──
 Push-Location $backendDir
 try {
   Invoke-Native -FilePath $py -ArgumentList @("-m", "ensurepip", "--upgrade")
@@ -269,63 +228,100 @@ try {
   if ($installedBackendVersion -ne $backendProjectVersion) {
     throw "Installed mediamop-backend version '$installedBackendVersion' does not match backend project version '$backendProjectVersion'."
   }
-  Invoke-Native -FilePath $pip -ArgumentList @("install", "pillow>=11.0.0", "pyinstaller>=6.12.0", "pystray>=0.19.5")
+  Invoke-Native -FilePath $pip -ArgumentList @("install", "pillow>=11.0.0", "pyinstaller>=6.12.0")
   $pyinstaller = Resolve-VenvExecutable -ScriptsDir $venvScriptsDir -NamePattern "pyinstaller*.exe" -MissingMessage "pyinstaller launcher was not installed in the backend virtual environment."
 } finally {
   Pop-Location
 }
 
+# ── Clean dist ──
 if (Test-Path $distRoot) {
   Remove-Item -LiteralPath $distRoot -Recurse -Force
 }
 New-Item -ItemType Directory -Path $distRoot | Out-Null
 
+# ── FFmpeg ──
 if (Test-Path -LiteralPath $ffmpegVendorDir) {
   Write-Host "Cleaning stale FFmpeg vendor folder..."
   Remove-Item -LiteralPath $ffmpegVendorDir -Recurse -Force
 }
-
 Ensure-WindowsFfmpegRuntime
-Ensure-WindowsServiceWrapper
 
+# ── PyInstaller: server-only ──
 Push-Location $repoRoot
 try {
-  Invoke-Native -FilePath $py -ArgumentList @("-m", "PyInstaller", "--noconfirm", "--clean", "--distpath", $distRoot, "--workpath", (Join-Path $distRoot "build"), $specPath)
+  Invoke-Native -FilePath $py -ArgumentList @("-m", "PyInstaller", "--noconfirm", "--clean", "--distpath", $distRoot, "--workpath", (Join-Path $distRoot "build"), $serverSpecPath)
 } finally {
   Pop-Location
 }
 
-$packageDir = Join-Path $distRoot "MediaMop"
-$serverExe = Join-Path $packageDir "MediaMopServer.exe"
-$updaterExe = Join-Path $packageDir "MediaMopUpdater.exe"
-$updaterServiceXml = Join-Path $packageDir "MediaMopUpdaterService.xml"
-$updaterServiceExe = Join-Path $packageDir "MediaMopUpdaterService.exe"
-
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot "MediaMopUpdaterService.xml") -Destination $updaterServiceXml -Force
-Copy-Item -LiteralPath (Join-Path $winswVendorDir "WinSW-x64.exe") -Destination $updaterServiceExe -Force
-
-foreach ($exePath in @($serverExe, $updaterExe)) {
-  if (-not (Test-Path -LiteralPath $exePath)) {
-    throw "Expected packaged executable was not found: $exePath"
-  }
+$serverOutputDir = Join-Path $distRoot "MediaMopServer"
+$serverExe = Join-Path $serverOutputDir "MediaMopServer.exe"
+if (-not (Test-Path -LiteralPath $serverExe)) {
+  throw "Expected packaged executable was not found: $serverExe"
 }
-
 $serverVersion = (& $serverExe --version).Trim()
 if ($serverVersion -ne $buildVersion) {
   throw "Packaged MediaMopServer.exe reports version '$serverVersion' but expected build version is '$buildVersion'."
 }
 
-$updaterVersion = (& $updaterExe --version).Trim()
-if ($updaterVersion -ne $buildVersion) {
-  throw "Packaged MediaMopUpdater.exe reports version '$updaterVersion' but expected build version is '$buildVersion'."
+# ── .NET tray app publish ──
+$trayPublishDir = Join-Path $distRoot "tray-publish"
+if (-not $SkipDotnetPublish) {
+  Write-Host "Publishing .NET tray app..."
+  Invoke-Native -FilePath dotnet -ArgumentList @(
+    "publish", $trayDir,
+    "-c", "Release",
+    "--self-contained",
+    "-r", "win-x64",
+    "-o", $trayPublishDir,
+    "-p:Version=$buildVersion"
+  )
 }
 
-if (-not $SkipInstaller) {
-  if (-not $iscc) {
-    throw "Inno Setup 6 was not found. Install it or rerun with -SkipInstaller."
+# ── Assemble Velopack pack directory ──
+$packDir = Join-Path $distRoot "pack"
+if (Test-Path $packDir) {
+  Remove-Item -LiteralPath $packDir -Recurse -Force
+}
+New-Item -ItemType Directory -Path $packDir | Out-Null
+
+Write-Host "Assembling Velopack pack directory..."
+Copy-Item -Path (Join-Path $trayPublishDir "*") -Destination $packDir -Recurse -Force
+
+$serverDestDir = Join-Path $packDir "server"
+New-Item -ItemType Directory -Path $serverDestDir | Out-Null
+Copy-Item -Path (Join-Path $serverOutputDir "*") -Destination $serverDestDir -Recurse -Force
+
+# ── vpk pack ──
+Write-Host "Running vpk pack..."
+$vpk = Get-Command vpk -ErrorAction SilentlyContinue
+if (-not $vpk) {
+  Write-Host "Installing Velopack CLI tool..."
+  Invoke-Native -FilePath dotnet -ArgumentList @("tool", "install", "-g", "vpk")
+  $vpk = Get-Command vpk -ErrorAction SilentlyContinue
+  if (-not $vpk) {
+    $dotnetToolsPath = Join-Path $env:USERPROFILE ".dotnet\\tools"
+    $vpkPath = Join-Path $dotnetToolsPath "vpk.exe"
+    if (-not (Test-Path $vpkPath)) {
+      throw "vpk CLI was not found after install. Ensure dotnet tools path is on PATH."
+    }
+    $vpk = Get-Item $vpkPath
   }
-  Invoke-Native -FilePath ([string]$iscc) -ArgumentList @("/DRepoRoot=$repoRoot", "/DOutputRoot=$distRoot", "/DAppVersion=$buildVersion", (Join-Path $PSScriptRoot "MediaMop.iss"))
 }
 
-Write-Host "Windows packaging output:"
-Get-ChildItem -Path $distRoot -Recurse | Select-Object FullName
+$vpkExe = if ($vpk -is [System.Management.Automation.ApplicationInfo]) { $vpk.Source } else { $vpk.FullName }
+
+Invoke-Native -FilePath $vpkExe -ArgumentList @(
+  "pack",
+  "--packId", "MediaMop",
+  "--packVersion", $buildVersion,
+  "--packDir", $packDir,
+  "--mainExe", "MediaMop.exe",
+  "--outputDir", $velopackOut,
+  "--icon", (Join-Path $PSScriptRoot "assets\\mediamop-tray-icon.ico")
+)
+
+Write-Host ""
+Write-Host "Velopack packaging output:"
+Get-ChildItem -Path $velopackOut | Select-Object Name, Length

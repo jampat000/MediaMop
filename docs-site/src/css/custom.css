@@ -1,0 +1,44 @@
+:root {
+  --ifm-color-primary: #b8941f;
+  --ifm-color-primary-dark: #a5851c;
+  --ifm-color-primary-darker: #9c7d1a;
+  --ifm-color-primary-darkest: #806716;
+  --ifm-color-primary-light: #cb9f2b;
+  --ifm-color-primary-lighter: #d4a831;
+  --ifm-color-primary-lightest: #dbb84e;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(212, 175, 55, 0.1);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #d4af37;
+  --ifm-color-primary-dark: #c9a22e;
+  --ifm-color-primary-darker: #be962a;
+  --ifm-color-primary-darkest: #9d7c23;
+  --ifm-color-primary-light: #d9b94b;
+  --ifm-color-primary-lighter: #ddbf57;
+  --ifm-color-primary-lightest: #e5cd76;
+  --ifm-background-color: #0b0b10;
+  --ifm-background-surface-color: #1f232a;
+  --docusaurus-highlighted-code-line-bg: rgba(212, 175, 55, 0.15);
+}
+
+.hero {
+  background: linear-gradient(135deg, #0b0b10 0%, #1f232a 100%);
+}
+
+[data-theme='light'] .hero {
+  background: linear-gradient(135deg, #f5f5f7 0%, #e8e8ec 100%);
+}
+
+.button--primary {
+  background-color: var(--ifm-color-primary);
+  border-color: var(--ifm-color-primary);
+  color: #0b0b10;
+}
+
+.button--primary:hover {
+  background-color: var(--ifm-color-primary-dark);
+  border-color: var(--ifm-color-primary-dark);
+  color: #0b0b10;
+}

@@ -3,7 +3,6 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { browserWindow } from "../../lib/browser-window";
 import { DISPLAY_DENSITY_STORAGE_KEY } from "../../lib/ui/display-density";
 import type { CurrentSession, UserPublic } from "../../lib/api/types";
 import { qk } from "../../lib/auth/queries";
@@ -21,11 +20,9 @@ import type {
   SuiteMetricsOut,
   SuiteSecurityOverviewOut,
   SuiteSettingsOut,
-  SuiteUpdateDiagnosticsOut,
   SuiteUpdateStatusOut,
 } from "../../lib/suite/types";
-import { SettingsPage, verifiedUpgradeRefreshKey } from "./settings-page";
-const UPGRADE_HISTORY_STORAGE_KEY = "mediamop.upgrade.history.v1";
+import { SettingsPage } from "./settings-page";
 
 const operatorMe: UserPublic = { id: 1, username: "alice", role: "operator" };
 const viewerMe: UserPublic = { id: 2, username: "bob", role: "viewer" };
@@ -72,7 +69,7 @@ const windowsUpdateAvailableStatus: SuiteUpdateStatusOut = {
     "https://github.com/jampat000/MediaMop/releases/download/v2.0.8/MediaMopSetup.exe",
   in_app_upgrade_supported: true,
   in_app_upgrade_summary:
-    "Remote in-app upgrade is ready on this Windows install.",
+    "Updates are managed by the MediaMop desktop app via Velopack.",
 };
 
 const minimalSecurity: SuiteSecurityOverviewOut = {
@@ -120,24 +117,6 @@ const minimalMetrics: SuiteMetricsOut = {
   status_counts: { "2xx": 18, "3xx": 0, "4xx": 2, "5xx": 0 },
   busiest_routes: [],
 };
-
-type SuiteUpgradeProgress = NonNullable<SuiteUpdateStatusOut["upgrade"]>;
-
-function upgradeProgress(
-  overrides: Pick<SuiteUpgradeProgress, "phase" | "message"> &
-    Partial<SuiteUpgradeProgress>,
-): SuiteUpgradeProgress {
-  const { phase, message, ...rest } = overrides;
-  const isActiveByDefault = !["completed", "failed", "idle"].includes(phase);
-  return {
-    phase,
-    message,
-    is_active: isActiveByDefault,
-    is_stale: false,
-    blocks_new_update: isActiveByDefault,
-    ...rest,
-  };
-}
 
 function wrap(ui: ReactNode, client: QueryClient) {
   const router = createMemoryRouter([{ path: "*", element: ui }]);
@@ -250,7 +229,6 @@ describe("SettingsPage (suite settings)", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     localStorage.removeItem(DISPLAY_DENSITY_STORAGE_KEY);
-    localStorage.removeItem(UPGRADE_HISTORY_STORAGE_KEY);
     document.documentElement.removeAttribute("data-mm-density");
   });
 
@@ -511,179 +489,12 @@ describe("SettingsPage (suite settings)", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows one-time admin bootstrap guidance when Windows updater service is not ready", () => {
-    renderSettings(operatorMe, {
-      updateStatus: {
-        ...minimalUpdateStatus,
-        install_type: "windows",
-        in_app_upgrade_supported: false,
-        in_app_upgrade_summary:
-          "This Windows install does not have the MediaMop updater service yet. Remote in-app upgrade is not available until one newer installer has been run locally as administrator.",
-      },
-    });
-    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    expect(screen.getByText("One-time setup required")).toBeInTheDocument();
-    expect(
-      screen.getByText(/run the latest mediamop installer once/i),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/future upgrades can start remotely from this page/i),
-    ).toBeInTheDocument();
-  });
-
-  it("does not show one-time bootstrap guidance when updater service is installed but unreachable", () => {
-    renderSettings(operatorMe, {
-      updateStatus: {
-        ...minimalUpdateStatus,
-        install_type: "windows",
-        status: "update_available",
-        in_app_upgrade_supported: false,
-        in_app_upgrade_summary:
-          "Remote in-app upgrade is unavailable because MediaMop could not reach the local updater service. Ensure the MediaMop Updater service is running on this computer, then click Check again.",
-      },
-    });
-    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    expect(
-      screen.queryByText("One-time setup required"),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByText(/could not reach the local updater service/i),
-    ).toBeInTheDocument();
-  });
-
-  it("shows reconnecting state instead of blind refresh during upgrade polling disconnects", async () => {
-    vi.spyOn(suiteSettingsApi, "startSuiteUpdateNow").mockResolvedValue({
-      status: "started",
-      message:
-        "Upgrade request accepted. MediaMop is checking release metadata.",
-      attempt_id: "attempt-123",
-      target_version: "2.0.8",
-      log_path: "C:/ProgramData/MediaMop/upgrades/updater-service.log",
-    });
-    vi.spyOn(suiteSettingsApi, "fetchSuiteUpdateStatus").mockRejectedValue(
-      new Error("network down"),
-    );
-
-    renderSettings(operatorMe, { updateStatus: windowsUpdateAvailableStatus });
-    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    fireEvent.click(screen.getByRole("button", { name: "Upgrade now" }));
-
-    await waitFor(() => {
-      expect(screen.getByText("Reconnecting")).toBeInTheDocument();
-      expect(
-        screen.getByText(
-          "MediaMop is reconnecting and verifying the installed version.",
-        ),
-      ).toBeInTheDocument();
-    });
-  });
-
-  it("treats update-now as accepted work, not completed success", async () => {
-    vi.spyOn(suiteSettingsApi, "startSuiteUpdateNow").mockResolvedValue({
-      status: "started",
-      message:
-        "Upgrade request accepted. MediaMop is checking release metadata.",
-      attempt_id: "attempt-123",
-      target_version: "2.0.8",
-      log_path: "C:/ProgramData/MediaMop/upgrades/updater-service.log",
-    });
-    vi.spyOn(suiteSettingsApi, "fetchSuiteUpdateStatus").mockResolvedValue({
-      ...windowsUpdateAvailableStatus,
-      upgrade: upgradeProgress({
-        phase: "downloading",
-        message:
-          "Upgrade request accepted. MediaMop is downloading the installer.",
-        attempt_id: "attempt-123",
-        target_version: "2.0.8",
-      }),
-    });
-
-    renderSettings(operatorMe, { updateStatus: windowsUpdateAvailableStatus });
-    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    fireEvent.click(screen.getByRole("button", { name: "Upgrade now" }));
-
-    await waitFor(() => {
-      expect(screen.getByText("Downloading")).toBeInTheDocument();
-      expect(
-        screen.getByText(
-          "Upgrade request accepted. MediaMop is downloading the installer.",
-        ),
-      ).toBeInTheDocument();
-    });
-    expect(
-      screen.queryByText(/Upgrade completed\. Running version:/i),
-    ).not.toBeInTheDocument();
-  });
-
-  it("shows the verifying installer phase from real progress", () => {
-    renderSettings(operatorMe, {
-      updateStatus: {
-        ...windowsUpdateAvailableStatus,
-        upgrade: upgradeProgress({
-          phase: "verifying_download",
-          message: "Installer is being verified.",
-          attempt_id: "attempt-123",
-          target_version: "2.0.8",
-        }),
-      },
-    });
-    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    expect(screen.getByText("Verifying installer")).toBeInTheDocument();
-    expect(
-      screen.getByText("Installer is being verified."),
-    ).toBeInTheDocument();
-  });
-
-  it("shows the installer running phase from real progress", () => {
-    renderSettings(operatorMe, {
-      updateStatus: {
-        ...windowsUpdateAvailableStatus,
-        upgrade: upgradeProgress({
-          phase: "installer_running",
-          message: "Installer is running. MediaMop may temporarily disconnect.",
-          attempt_id: "attempt-123",
-          target_version: "2.0.8",
-        }),
-      },
-    });
-    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    expect(screen.getByText("Installer running")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Installer is running. MediaMop may temporarily disconnect.",
-      ),
-    ).toBeInTheDocument();
-    expect(screen.queryByText("installer_running")).not.toBeInTheDocument();
-    expect(screen.queryByText(/^Phase:/)).not.toBeInTheDocument();
-  });
-
-  it("keeps the refresh button stable while upgrade polling is active", () => {
-    renderSettings(operatorMe, {
-      updateStatus: {
-        ...windowsUpdateAvailableStatus,
-        upgrade: upgradeProgress({
-          phase: "installer_running",
-          message: "Installer is running. MediaMop may temporarily disconnect.",
-          attempt_id: "attempt-123",
-          target_version: "2.0.8",
-        }),
-      },
-    });
-    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    expect(
-      screen.getByRole("button", { name: "Checking progress..." }),
-    ).toBeDisabled();
-    expect(
-      screen.queryByRole("button", { name: "Check again" }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("keeps the refresh button label stable while refetching with stable status data", async () => {
+  it("shows Checking... and disables button when refetch is in flight", async () => {
     vi.spyOn(suiteSettingsApi, "fetchSuiteUpdateStatus").mockImplementation(
       () => new Promise(() => {}),
     );
     const qc = new QueryClient({
-      defaultOptions: { queries: { retry: false, staleTime: 0 } },
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
     });
     qc.setQueryData(suiteSettingsQueryKey, minimalSuiteSettings);
     qc.setQueryData(suiteSecurityOverviewQueryKey, minimalSecurity);
@@ -710,350 +521,21 @@ describe("SettingsPage (suite settings)", () => {
 
     render(wrap(<SettingsPage />, qc));
     fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
+
+    // staleTime: Infinity means the pre-seeded data is fresh — button shows "Check again"
+    expect(screen.getByRole("button", { name: "Check again" })).toBeEnabled();
+
+    // Trigger a manual refetch (mock never resolves)
     fireEvent.click(screen.getByRole("button", { name: "Check again" }));
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: "Check again" }),
+        screen.getByRole("button", { name: "Checking..." }),
       ).toBeDisabled();
     });
     expect(
-      screen.queryByRole("button", { name: "Checking..." }),
+      screen.queryByRole("button", { name: "Check again" }),
     ).not.toBeInTheDocument();
-  });
-
-  it("shows updater diagnostics details when expanded", async () => {
-    const diagnostics: SuiteUpdateDiagnosticsOut = {
-      current_version: "2.2.0",
-      latest_version: "2.2.2",
-      install_type: "windows",
-      install_root: "C:/Program Files/MediaMop",
-      runtime_home: "C:/ProgramData/MediaMop",
-      updater_service_reachable: true,
-      updater_token_path_present: true,
-      installer_log_path:
-        "C:/ProgramData/MediaMop/upgrades/installer-attempt-123.log",
-      service_log_path: "C:/ProgramData/MediaMop/upgrades/updater-service.log",
-      installer_log_tail: ["installer line 1"],
-      service_log_tail: ["service line 1"],
-      running_processes: [],
-      installed_files: [],
-      upgrade: null,
-    };
-    vi.spyOn(suiteSettingsApi, "fetchSuiteUpdateDiagnostics").mockResolvedValue(
-      diagnostics,
-    );
-    renderSettings(operatorMe, { updateStatus: windowsUpdateAvailableStatus });
-    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    fireEvent.click(screen.getByRole("button", { name: "Show diagnostics" }));
-
-    await waitFor(() => {
-      expect(
-        screen.getByText("Updater service reachable: Yes"),
-      ).toBeInTheDocument();
-    });
-    expect(
-      screen.getByText(
-        "Installer log: C:/ProgramData/MediaMop/upgrades/installer-attempt-123.log",
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Open full updater diagnostics" }),
-    ).toHaveAttribute("href", "/api/v1/suite/update-diagnostics");
-  });
-
-  it("records and renders upgrade history entries for operator review", () => {
-    renderSettings(operatorMe, {
-      updateStatus: {
-        ...windowsUpdateAvailableStatus,
-        upgrade: upgradeProgress({
-          phase: "downloading",
-          message:
-            "Upgrade request accepted. MediaMop is downloading the installer.",
-          attempt_id: "attempt-history-1",
-          target_version: "2.0.8",
-          current_version_seen: "2.0.7",
-          last_updated_at: "2026-05-09T03:27:56Z",
-        }),
-      },
-    });
-    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    fireEvent.click(screen.getByRole("button", { name: "Show history" }));
-    expect(screen.getByText("Downloading - downloading")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Upgrade request accepted. MediaMop is downloading the installer.",
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getAllByText("Attempt ID: attempt-history-1").length,
-    ).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("Target: 2.0.8")).toBeInTheDocument();
-  });
-
-  it("does not render a stale old upgrade state as active when a newer release is available", () => {
-    renderSettings(operatorMe, {
-      updateStatus: {
-        ...windowsUpdateAvailableStatus,
-        current_version: "2.1.0",
-        latest_version: "2.1.2",
-        latest_name: "MediaMop 2.1.2",
-        summary: "MediaMop 2.1.2 is available.",
-        upgrade: upgradeProgress({
-          phase: "completed",
-          raw_phase: "installer_running",
-          message: "Upgrade completed. Running version: 2.1.0.",
-          is_active: false,
-          is_stale: true,
-          blocks_new_update: false,
-          stale_reason:
-            "Persisted updater state could not prove the original installer process was still active.",
-          target_version: "2.1.0",
-          current_version_seen: "2.1.0",
-        }),
-      },
-    });
-    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-
-    expect(
-      screen.getByRole("button", { name: "Upgrade now" }),
-    ).toBeInTheDocument();
-    expect(screen.queryByText("Installer running")).not.toBeInTheDocument();
-    expect(
-      screen.queryByText("Upgrade completed. Running version: 2.1.0."),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByText("installer_running")).not.toBeInTheDocument();
-  });
-
-  it("does not treat completed phase as success until the running version matches the target", () => {
-    renderSettings(operatorMe, {
-      updateStatus: {
-        ...windowsUpdateAvailableStatus,
-        upgrade: upgradeProgress({
-          phase: "completed",
-          message: "Upgrade completed. Running version: 2.0.8.",
-          target_version: "2.0.8",
-          installer_log_path:
-            "C:/ProgramData/MediaMop/upgrades/installer-attempt-123.log",
-        }),
-      },
-    });
-    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    expect(screen.getByText("Verifying installed version")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Upgrade reported completed, but the running version has not been confirmed yet.",
-      ),
-    ).toBeInTheDocument();
-    expect(screen.queryByText("Completed")).not.toBeInTheDocument();
-  });
-
-  it("shows completed only after the running version matches the target", () => {
-    renderSettings(operatorMe, {
-      updateStatus: {
-        ...windowsUpdateAvailableStatus,
-        current_version: "2.0.8",
-        status: "up_to_date",
-        summary: "This install is already on MediaMop 2.0.8.",
-        upgrade: upgradeProgress({
-          phase: "completed",
-          message: "Upgrade completed. Running version: 2.0.8.",
-          target_version: "2.0.8",
-          installer_log_path:
-            "C:/ProgramData/MediaMop/upgrades/installer-attempt-123.log",
-          service_log_path:
-            "C:/ProgramData/MediaMop/upgrades/updater-service.log",
-        }),
-      },
-    });
-    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    expect(
-      screen.getByText("Upgrade completed. Running version: 2.0.8."),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Reload now" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Reload to continue in the updated session."),
-    ).toBeInTheDocument();
-  });
-
-  it("does not show the refresh browser prompt before the running version matches the target", () => {
-    renderSettings(operatorMe, {
-      updateStatus: {
-        ...windowsUpdateAvailableStatus,
-        upgrade: upgradeProgress({
-          phase: "completed",
-          message: "Upgrade completed. Running version: 2.0.8.",
-          target_version: "2.0.8",
-        }),
-      },
-    });
-    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    expect(
-      screen.queryByRole("button", { name: "Reload now" }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("lets the user manually refresh the browser from the completed upgrade state", () => {
-    const reloadSpy = vi
-      .spyOn(browserWindow, "reloadCurrentPage")
-      .mockImplementation(() => undefined);
-    renderSettings(operatorMe, {
-      updateStatus: {
-        ...windowsUpdateAvailableStatus,
-        current_version: "2.0.8",
-        status: "up_to_date",
-        summary: "This install is already on MediaMop 2.0.8.",
-        upgrade: upgradeProgress({
-          phase: "completed",
-          message: "Upgrade completed. Running version: 2.0.8.",
-          target_version: "2.0.8",
-        }),
-      },
-    });
-    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    fireEvent.click(screen.getByRole("button", { name: "Reload now" }));
-    expect(reloadSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it("does not auto-refresh the browser when upgrade verification completes", () => {
-    const reloadSpy = vi
-      .spyOn(browserWindow, "reloadCurrentPage")
-      .mockImplementation(() => undefined);
-    renderSettings(operatorMe, {
-      updateStatus: {
-        ...windowsUpdateAvailableStatus,
-        current_version: "2.0.8",
-        status: "up_to_date",
-        summary: "This install is already on MediaMop 2.0.8.",
-        upgrade: upgradeProgress({
-          phase: "completed",
-          message: "Upgrade completed. Running version: 2.0.8.",
-          target_version: "2.0.8",
-        }),
-      },
-    });
-    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    expect(reloadSpy).not.toHaveBeenCalled();
-  });
-
-  it("computes a refresh key only after a verified Windows upgrade completes", () => {
-    expect(
-      verifiedUpgradeRefreshKey(
-        {
-          ...windowsUpdateAvailableStatus,
-          current_version: "2.0.8",
-          status: "up_to_date",
-          summary: "This install is already on MediaMop 2.0.8.",
-        },
-        upgradeProgress({
-          phase: "completed",
-          message: "Upgrade completed. Running version: 2.0.8.",
-          attempt_id: "attempt-verified",
-          target_version: "2.0.8",
-          current_version_seen: "2.0.8",
-        }),
-        {
-          attemptId: "attempt-verified",
-          targetVersion: "2.0.8",
-          disconnects: 0,
-          active: true,
-          startedAtMs: Date.now(),
-          timedOutReason: null,
-        },
-      ),
-    ).toBe("attempt-verified:2.0.8");
-  });
-
-  it("does not compute a refresh key before the running version matches the verified target", () => {
-    expect(
-      verifiedUpgradeRefreshKey(
-        windowsUpdateAvailableStatus,
-        upgradeProgress({
-          phase: "completed",
-          message: "Upgrade completed. Running version: 2.0.8.",
-          attempt_id: "attempt-unverified",
-          target_version: "2.0.8",
-          current_version_seen: "2.0.7",
-        }),
-        {
-          attemptId: "attempt-unverified",
-          targetVersion: "2.0.8",
-          disconnects: 0,
-          active: true,
-          startedAtMs: Date.now(),
-          timedOutReason: null,
-        },
-      ),
-    ).toBeNull();
-  });
-
-  it("shows failed upgrade diagnostics with log paths", () => {
-    renderSettings(operatorMe, {
-      updateStatus: {
-        ...windowsUpdateAvailableStatus,
-        upgrade: upgradeProgress({
-          phase: "failed",
-          message: "Upgrade failed.",
-          target_version: "2.0.8",
-          last_error: "Running backend still reports 2.0.7 instead of 2.0.8.",
-          installer_log_path:
-            "C:/ProgramData/MediaMop/upgrades/installer-attempt-123.log",
-          service_log_path:
-            "C:/ProgramData/MediaMop/upgrades/updater-service.log",
-        }),
-      },
-    });
-    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    expect(
-      screen.getByText(
-        "Upgrade failed: Running backend still reports 2.0.7 instead of 2.0.8.",
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Installer log: C:/ProgramData/MediaMop/upgrades/installer-attempt-123.log",
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Service log: C:/ProgramData/MediaMop/upgrades/updater-service.log",
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Open updater diagnostics" }),
-    ).toHaveAttribute("href", "/api/v1/suite/update-diagnostics");
-  });
-
-  it("fails the upgrade UI when version verification times out with the old version still running", () => {
-    renderSettings(operatorMe, {
-      updateStatus: {
-        ...windowsUpdateAvailableStatus,
-        upgrade: upgradeProgress({
-          phase: "verifying_install",
-          message:
-            "MediaMop is reconnecting and verifying the installed version.",
-          attempt_id: "attempt-123",
-          target_version: "2.0.8",
-          current_version_seen: "2.0.7",
-          last_started_at: new Date(Date.now() - 9 * 60 * 1000).toISOString(),
-          installer_log_path:
-            "C:/ProgramData/MediaMop/upgrades/installer-attempt-123.log",
-          service_log_path:
-            "C:/ProgramData/MediaMop/upgrades/updater-service.log",
-        }),
-      },
-    });
-    fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    expect(
-      screen.getAllByText(
-        "Upgrade failed: MediaMop did not verify version 2.0.8 within 8 minutes. The running app still reports 2.0.7.",
-      ),
-    ).toHaveLength(2);
-    expect(screen.getByText("Status: Failed")).toBeInTheDocument();
-    expect(screen.getByText("Attempt ID: attempt-123")).toBeInTheDocument();
-    expect(screen.getByText("Current version seen: 2.0.7")).toBeInTheDocument();
   });
 
   it("does not render mojibake in the upgrade panel", () => {

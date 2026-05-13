@@ -48,3 +48,7 @@ packaging/windows/vendor/
 
 # Claude Code local settings (machine-specific, never commit)
 .claude/settings.local.json
+
+# Docusaurus
+docs-site/build/
+docs-site/.docusaurus/

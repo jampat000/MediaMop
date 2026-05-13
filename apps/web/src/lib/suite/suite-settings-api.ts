@@ -5,6 +5,7 @@ import {
   requireOk,
   throwApiResponseError,
 } from "../api/client";
+
 import type {
   NotificationChannelIn,
   NotificationChannelListOut,
@@ -17,9 +18,7 @@ import type {
   SuiteSecurityOverviewOut,
   SuiteSettingsOut,
   SuiteSettingsPutBody,
-  SuiteUpdateStartOut,
   SuiteUpdateStatusOut,
-  SuiteUpdateDiagnosticsOut,
 } from "./types";
 
 export const suiteSettingsPath = () => "/api/v1/suite/settings";
@@ -29,17 +28,7 @@ export const suiteUpdateStatusPaths = [
   "/api/v1/suite/update-status",
   "/api/v1/suite/settings/update-status",
 ] as const;
-export const suiteUpdateNowPaths = [
-  "/api/v1/suite/update-now",
-  "/api/v1/suite/settings/update-now",
-] as const;
-export const suiteUpdateDiagnosticsPaths = [
-  "/api/v1/suite/update-diagnostics",
-  "/api/v1/suite/settings/update-diagnostics",
-] as const;
 export const suiteUpdateStatusPath = () => suiteUpdateStatusPaths[0];
-export const suiteUpdateNowPath = () => suiteUpdateNowPaths[0];
-export const suiteUpdateDiagnosticsPath = () => suiteUpdateDiagnosticsPaths[0];
 export const suiteLogsPath = () => "/api/v1/suite/logs";
 export const suiteMetricsPath = () => "/api/v1/suite/metrics";
 export const suiteOperationalHistoryResetPath = () =>
@@ -109,55 +98,6 @@ export async function fetchSuiteUpdateStatus(): Promise<SuiteUpdateStatusOut> {
     suiteUpdateStatusPath(),
     last!,
     "Could not check for updates",
-  );
-}
-
-export async function startSuiteUpdateNow(): Promise<SuiteUpdateStartOut> {
-  const csrf_token = await fetchCsrfToken();
-  let last: Response | undefined;
-  for (const path of suiteUpdateNowPaths) {
-    const r = await apiFetch(path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ csrf_token }),
-    });
-    last = r;
-    if (r.status === 404) {
-      continue;
-    }
-    if (!r.ok) {
-      await throwApiResponseError(path, r, "Could not start upgrade");
-    }
-    return readJson<SuiteUpdateStartOut>(r);
-  }
-  return throwApiResponseError(
-    suiteUpdateNowPath(),
-    last!,
-    "Could not start upgrade",
-  );
-}
-
-export async function fetchSuiteUpdateDiagnostics(): Promise<SuiteUpdateDiagnosticsOut> {
-  let last: Response | undefined;
-  for (const path of suiteUpdateDiagnosticsPaths) {
-    const r = await apiFetch(path);
-    last = r;
-    if (r.status === 404) {
-      continue;
-    }
-    if (!r.ok) {
-      await throwApiResponseError(
-        path,
-        r,
-        "Could not load updater diagnostics",
-      );
-    }
-    return readJson<SuiteUpdateDiagnosticsOut>(r);
-  }
-  return throwApiResponseError(
-    suiteUpdateDiagnosticsPath(),
-    last!,
-    "Could not load updater diagnostics",
   );
 }
 

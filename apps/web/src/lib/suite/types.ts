@@ -63,10 +63,6 @@ type OpenApiSchemaName = keyof components["schemas"];
 type OpenApiSchema<T extends OpenApiSchemaName> = components["schemas"][T];
 
 export type SuiteUpdateStatusOut = OpenApiSchema<"SuiteUpdateStatusOut">;
-export type SuiteUpdateStartOut = OpenApiSchema<"SuiteUpdateStartOut">;
-export type SuiteUpgradeProgressOut = OpenApiSchema<"SuiteUpgradeProgressOut">;
-export type SuiteUpdateDiagnosticsOut =
-  OpenApiSchema<"SuiteUpdateDiagnosticsOut">;
 
 export type SuiteOperationalHistoryResetOut = {
   status: "reset" | string;

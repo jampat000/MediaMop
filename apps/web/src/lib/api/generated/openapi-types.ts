@@ -1358,50 +1358,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/suite/settings/update-diagnostics": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Suite Update Diagnostics
-     * @description Operator-facing updater diagnostics for Windows package troubleshooting.
-     */
-    get: operations["get_suite_update_diagnostics_api_v1_suite_settings_update_diagnostics_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/suite/settings/update-now": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Suite Update Now Redirect
-     * @description If a browser lands on the upgrade API after restart, send it back to the app.
-     */
-    get: operations["get_suite_update_now_redirect_api_v1_suite_settings_update_now_get"];
-    put?: never;
-    /**
-     * Post Suite Update Now
-     * @description Start an in-place Windows upgrade from the latest published installer.
-     */
-    post: operations["post_suite_update_now_api_v1_suite_settings_update_now_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   "/api/v1/suite/settings/update-status": {
     parameters: {
       query?: never;
@@ -1416,50 +1372,6 @@ export interface paths {
     get: operations["get_suite_update_status_api_v1_suite_settings_update_status_get"];
     put?: never;
     post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/suite/update-diagnostics": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Suite Update Diagnostics
-     * @description Operator-facing updater diagnostics for Windows package troubleshooting.
-     */
-    get: operations["get_suite_update_diagnostics_api_v1_suite_update_diagnostics_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/suite/update-now": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Suite Update Now Redirect
-     * @description If a browser lands on the upgrade API after restart, send it back to the app.
-     */
-    get: operations["get_suite_update_now_redirect_api_v1_suite_update_now_get"];
-    put?: never;
-    /**
-     * Post Suite Update Now
-     * @description Start an in-place Windows upgrade from the latest published installer.
-     */
-    post: operations["post_suite_update_now_api_v1_suite_update_now_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -4155,78 +4067,6 @@ export interface components {
       signed_in_home_notice?: string | null;
     };
     /**
-     * SuiteUpdateDiagnosticsOut
-     * @description Operator-facing updater diagnostic snapshot.
-     */
-    SuiteUpdateDiagnosticsOut: {
-      /** Current Version */
-      current_version: string;
-      /** Install Root */
-      install_root?: string | null;
-      /** Install Type */
-      install_type: string;
-      /** Installed Files */
-      installed_files?: {
-        [key: string]: unknown;
-      }[];
-      /** Installer Log Path */
-      installer_log_path?: string | null;
-      /** Installer Log Tail */
-      installer_log_tail?: string[];
-      /** Latest Version */
-      latest_version?: string | null;
-      /** Running Processes */
-      running_processes?: {
-        [key: string]: unknown;
-      }[];
-      /** Runtime Home */
-      runtime_home?: string | null;
-      /** Service Log Path */
-      service_log_path?: string | null;
-      /** Service Log Tail */
-      service_log_tail?: string[];
-      /**
-       * Updater Service Reachable
-       * @default false
-       */
-      updater_service_reachable: boolean;
-      /**
-       * Updater Token Path Present
-       * @default false
-       */
-      updater_token_path_present: boolean;
-      upgrade?: components["schemas"]["SuiteUpgradeProgressOut"] | null;
-    };
-    /**
-     * SuiteUpdateStartIn
-     * @description Body for ``POST /suite/update-now``.
-     */
-    SuiteUpdateStartIn: {
-      /** Csrf Token */
-      csrf_token: string;
-    };
-    /**
-     * SuiteUpdateStartOut
-     * @description Result of requesting an in-place app upgrade.
-     */
-    SuiteUpdateStartOut: {
-      /** Attempt Id */
-      attempt_id?: string | null;
-      /** Installer Path */
-      installer_path?: string | null;
-      /** Log Path */
-      log_path?: string | null;
-      /** Message */
-      message: string;
-      /**
-       * Status
-       * @description started, manual_required, or unavailable
-       */
-      status: string;
-      /** Target Version */
-      target_version?: string | null;
-    };
-    /**
      * SuiteUpdateStatusOut
      * @description Current app version compared with the latest public release.
      */
@@ -4266,70 +4106,8 @@ export interface components {
       status: string;
       /** Summary */
       summary: string;
-      upgrade?: components["schemas"]["SuiteUpgradeProgressOut"] | null;
       /** Windows Installer Url */
       windows_installer_url?: string | null;
-    };
-    /**
-     * SuiteUpgradeProgressOut
-     * @description Persisted updater progress mirrored from the local Windows updater service.
-     */
-    SuiteUpgradeProgressOut: {
-      /** Attempt Id */
-      attempt_id?: string | null;
-      /**
-       * Blocks New Update
-       * @default false
-       */
-      blocks_new_update: boolean;
-      /** Current Version Seen */
-      current_version_seen?: string | null;
-      /** Diagnostics */
-      diagnostics?: {
-        [key: string]: unknown;
-      };
-      /** Downloaded Installer Path */
-      downloaded_installer_path?: string | null;
-      /** Expected Sha256 */
-      expected_sha256?: string | null;
-      /** Install Root */
-      install_root?: string | null;
-      /** Installer Log Path */
-      installer_log_path?: string | null;
-      /** Installer Sha256 */
-      installer_sha256?: string | null;
-      /**
-       * Is Active
-       * @default false
-       */
-      is_active: boolean;
-      /**
-       * Is Stale
-       * @default false
-       */
-      is_stale: boolean;
-      /** Last Completed At */
-      last_completed_at?: string | null;
-      /** Last Error */
-      last_error?: string | null;
-      /** Last Started At */
-      last_started_at?: string | null;
-      /** Last Updated At */
-      last_updated_at?: string | null;
-      /** Message */
-      message: string;
-      /** Phase */
-      phase: string;
-      /** Raw Phase */
-      raw_phase?: string | null;
-      /** Runtime Home */
-      runtime_home?: string | null;
-      /** Service Log Path */
-      service_log_path?: string | null;
-      /** Stale Reason */
-      stale_reason?: string | null;
-      /** Target Version */
-      target_version?: string | null;
     };
     /** SystemStatusOut */
     SystemStatusOut: {
@@ -6992,79 +6770,6 @@ export interface operations {
       };
     };
   };
-  get_suite_update_diagnostics_api_v1_suite_settings_update_diagnostics_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SuiteUpdateDiagnosticsOut"];
-        };
-      };
-    };
-  };
-  get_suite_update_now_redirect_api_v1_suite_settings_update_now_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": unknown;
-        };
-      };
-    };
-  };
-  post_suite_update_now_api_v1_suite_settings_update_now_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SuiteUpdateStartIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SuiteUpdateStartOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
   get_suite_update_status_api_v1_suite_settings_update_status_get: {
     parameters: {
       query?: never;
@@ -7081,79 +6786,6 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["SuiteUpdateStatusOut"];
-        };
-      };
-    };
-  };
-  get_suite_update_diagnostics_api_v1_suite_update_diagnostics_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SuiteUpdateDiagnosticsOut"];
-        };
-      };
-    };
-  };
-  get_suite_update_now_redirect_api_v1_suite_update_now_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": unknown;
-        };
-      };
-    };
-  };
-  post_suite_update_now_api_v1_suite_update_now_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SuiteUpdateStartIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SuiteUpdateStartOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
