@@ -345,7 +345,7 @@ sealed class TrayApp : IDisposable
 
     private NotifyIcon? _notifyIcon;
     private ToolStripMenuItem? _updateMenuItem;
-    private Process? _serverProcess;
+    private volatile Process? _serverProcess;
     private double _lastBrowserOpenTicks;
     private CancellationTokenSource? _cts;
     private UpdateService? _updateService;
