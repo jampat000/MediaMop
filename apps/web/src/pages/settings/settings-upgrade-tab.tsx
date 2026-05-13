@@ -194,12 +194,17 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                     Could not load update preferences.
                   </p>
                 ) : (
-                  <fieldset className="mt-1 space-y-3">
+                  <fieldset className="mt-1 space-y-2">
                     <legend className="sr-only">Update mode</legend>
                     {UPDATE_MODES.map((opt) => (
                       <label
                         key={opt.value}
-                        className="flex cursor-pointer items-start gap-3"
+                        className={[
+                          "flex min-w-0 cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2.5 text-sm transition-colors",
+                          modeDraft === opt.value
+                            ? "border-[var(--mm-accent)] bg-[var(--mm-accent)]/12 text-[var(--mm-text)]"
+                            : "border-[var(--mm-border)] bg-transparent text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)]",
+                        ].join(" ")}
                       >
                         <input
                           type="radio"
@@ -211,13 +216,11 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                             setSaveMsg(null);
                             saveMode.reset();
                           }}
-                          className="mt-0.5 accent-[var(--mm-accent)]"
+                          className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--mm-accent)]"
                         />
-                        <span>
-                          <span className="block text-sm font-medium text-[var(--mm-text1)]">
-                            {opt.label}
-                          </span>
-                          <span className="block text-sm text-[var(--mm-text2)]">
+                        <span className="min-w-0">
+                          <span className="block font-medium">{opt.label}</span>
+                          <span className="block text-xs text-[var(--mm-text3)]">
                             {opt.description}
                           </span>
                         </span>
