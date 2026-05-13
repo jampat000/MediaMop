@@ -75,7 +75,8 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
 
   const serverMode = updateSettingsQ.data?.mode ?? null;
   const serverCheckOnStartup = updateSettingsQ.data?.check_on_startup ?? true;
-  const serverCheckInterval = updateSettingsQ.data?.check_interval_minutes ?? 60;
+  const serverCheckInterval =
+    updateSettingsQ.data?.check_interval_minutes ?? 60;
   const settingsDirty =
     modeDraft !== null &&
     (modeDraft !== serverMode ||
