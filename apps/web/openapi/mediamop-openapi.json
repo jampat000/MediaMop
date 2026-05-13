@@ -6237,6 +6237,68 @@
         "title": "SystemStatusOut",
         "type": "object"
       },
+      "UpdateSettingsOut": {
+        "additionalProperties": false,
+        "description": "Tray update behaviour persisted in update-settings.json.",
+        "properties": {
+          "check_interval_minutes": {
+            "maximum": 10080.0,
+            "minimum": 1.0,
+            "title": "Check Interval Minutes",
+            "type": "integer"
+          },
+          "check_on_startup": {
+            "default": true,
+            "title": "Check On Startup",
+            "type": "boolean"
+          },
+          "mode": {
+            "description": "Auto, DownloadOnly, or NotifyOnly",
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "check_interval_minutes"
+        ],
+        "title": "UpdateSettingsOut",
+        "type": "object"
+      },
+      "UpdateSettingsPutIn": {
+        "additionalProperties": false,
+        "description": "Body for PUT /suite/update-settings.",
+        "properties": {
+          "check_interval_minutes": {
+            "default": 60,
+            "maximum": 10080.0,
+            "minimum": 1.0,
+            "title": "Check Interval Minutes",
+            "type": "integer"
+          },
+          "check_on_startup": {
+            "default": true,
+            "title": "Check On Startup",
+            "type": "boolean"
+          },
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "mode": {
+            "pattern": "^(Auto|DownloadOnly|NotifyOnly)$",
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrf_token",
+          "mode"
+        ],
+        "title": "UpdateSettingsPutIn",
+        "type": "object"
+      },
       "UserPublic": {
         "properties": {
           "id": {
@@ -10211,6 +10273,68 @@
           }
         },
         "summary": "Get Suite Update Status",
+        "tags": [
+          "suite"
+        ]
+      }
+    },
+    "/api/v1/suite/update-settings": {
+      "get": {
+        "description": "Read the tray update-mode preferences from update-settings.json.",
+        "operationId": "get_suite_update_settings_api_v1_suite_update_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Suite Update Settings",
+        "tags": [
+          "suite"
+        ]
+      },
+      "put": {
+        "description": "Persist tray update-mode preferences to update-settings.json.",
+        "operationId": "put_suite_update_settings_api_v1_suite_update_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSettingsPutIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Suite Update Settings",
         "tags": [
           "suite"
         ]

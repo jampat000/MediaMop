@@ -7,6 +7,7 @@ Settings page can show current vs. latest.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import sys
@@ -23,6 +24,7 @@ from mediamop.platform.suite_settings.release_catalog import (
 )
 from mediamop.platform.suite_settings.schemas import (
     SuiteUpdateStatusOut,
+    UpdateSettingsOut,
 )
 from mediamop.version import __version__
 
@@ -125,4 +127,47 @@ def build_suite_update_status(
     return _build_release_status(
         current_version=current_version,
         install_type=install_type,
+    )
+
+
+_UPDATE_SETTINGS_FILE = "update-settings.json"
+_DEFAULT_UPDATE_SETTINGS = UpdateSettingsOut(
+    mode="Auto",
+    check_on_startup=True,
+    check_interval_minutes=60,
+)
+
+
+def get_update_settings(settings: MediaMopSettings) -> UpdateSettingsOut:
+    path = Path(settings.mediamop_home) / _UPDATE_SETTINGS_FILE
+    if not path.exists():
+        return _DEFAULT_UPDATE_SETTINGS
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        return UpdateSettingsOut(
+            mode=raw.get("mode", "Auto"),
+            check_on_startup=bool(raw.get("checkOnStartup", True)),
+            check_interval_minutes=int(raw.get("checkIntervalMinutes", 60)),
+        )
+    except Exception:
+        return _DEFAULT_UPDATE_SETTINGS
+
+
+def put_update_settings(
+    settings: MediaMopSettings,
+    mode: str,
+    check_on_startup: bool,
+    check_interval_minutes: int,
+) -> UpdateSettingsOut:
+    path = Path(settings.mediamop_home) / _UPDATE_SETTINGS_FILE
+    payload = {
+        "mode": mode,
+        "checkOnStartup": check_on_startup,
+        "checkIntervalMinutes": check_interval_minutes,
+    }
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return UpdateSettingsOut(
+        mode=mode,
+        check_on_startup=check_on_startup,
+        check_interval_minutes=check_interval_minutes,
     )

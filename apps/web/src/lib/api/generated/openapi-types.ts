@@ -1378,6 +1378,30 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/suite/update-settings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Suite Update Settings
+     * @description Read the tray update-mode preferences from update-settings.json.
+     */
+    get: operations["get_suite_update_settings_api_v1_suite_update_settings_get"];
+    /**
+     * Put Suite Update Settings
+     * @description Persist tray update-mode preferences to update-settings.json.
+     */
+    put: operations["put_suite_update_settings_api_v1_suite_update_settings_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/suite/update-status": {
     parameters: {
       query?: never;
@@ -4129,6 +4153,44 @@ export interface components {
       /** Worker Health */
       worker_health?: components["schemas"]["WorkerLaneHealthOut"][];
     };
+    /**
+     * UpdateSettingsOut
+     * @description Tray update behaviour persisted in update-settings.json.
+     */
+    UpdateSettingsOut: {
+      /** Check Interval Minutes */
+      check_interval_minutes: number;
+      /**
+       * Check On Startup
+       * @default true
+       */
+      check_on_startup: boolean;
+      /**
+       * Mode
+       * @description Auto, DownloadOnly, or NotifyOnly
+       */
+      mode: string;
+    };
+    /**
+     * UpdateSettingsPutIn
+     * @description Body for PUT /suite/update-settings.
+     */
+    UpdateSettingsPutIn: {
+      /**
+       * Check Interval Minutes
+       * @default 60
+       */
+      check_interval_minutes: number;
+      /**
+       * Check On Startup
+       * @default true
+       */
+      check_on_startup: boolean;
+      /** Csrf Token */
+      csrf_token: string;
+      /** Mode */
+      mode: string;
+    };
     /** UserPublic */
     UserPublic: {
       /** Id */
@@ -6786,6 +6848,59 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["SuiteUpdateStatusOut"];
+        };
+      };
+    };
+  };
+  get_suite_update_settings_api_v1_suite_update_settings_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UpdateSettingsOut"];
+        };
+      };
+    };
+  };
+  put_suite_update_settings_api_v1_suite_update_settings_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateSettingsPutIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UpdateSettingsOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

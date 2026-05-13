@@ -183,6 +183,27 @@ class SuiteUpdateStatusOut(BaseModel):
     in_app_upgrade_summary: str | None = None
 
 
+class UpdateSettingsOut(BaseModel):
+    """Tray update behaviour persisted in update-settings.json."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    mode: str = Field(description="Auto, DownloadOnly, or NotifyOnly")
+    check_on_startup: bool = True
+    check_interval_minutes: int = Field(ge=1, le=10080)
+
+
+class UpdateSettingsPutIn(BaseModel):
+    """Body for PUT /suite/update-settings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    csrf_token: str = Field(..., min_length=1)
+    mode: str = Field(..., pattern="^(Auto|DownloadOnly|NotifyOnly)$")
+    check_on_startup: bool = True
+    check_interval_minutes: int = Field(default=60, ge=1, le=10080)
+
+
 class SuiteOperationalHistoryResetIn(BaseModel):
     """Body for ``POST /suite/operational-history/reset``."""
 

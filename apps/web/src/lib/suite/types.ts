@@ -64,6 +64,20 @@ type OpenApiSchema<T extends OpenApiSchemaName> = components["schemas"][T];
 
 export type SuiteUpdateStatusOut = OpenApiSchema<"SuiteUpdateStatusOut">;
 
+export type UpdateMode = "Auto" | "DownloadOnly" | "NotifyOnly";
+
+export type UpdateSettingsOut = {
+  mode: UpdateMode;
+  check_on_startup: boolean;
+  check_interval_minutes: number;
+};
+
+export type UpdateSettingsPutBody = {
+  mode: UpdateMode;
+  check_on_startup: boolean;
+  check_interval_minutes: number;
+};
+
 export type SuiteOperationalHistoryResetOut = {
   status: "reset" | string;
   activity_events_deleted: number;
