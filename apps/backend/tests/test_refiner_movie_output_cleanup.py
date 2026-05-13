@@ -525,7 +525,9 @@ def test_rmtree_lock_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> N
     assert "could not remove" in (out.get("movie_output_folder_skip_reason") or "").lower()
 
 
-def test_live_cleanup_runs_even_when_legacy_dry_run_flag_passed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_live_cleanup_runs_even_when_legacy_dry_run_flag_passed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     _, session = _session(tmp_path)
     radarr_calls: list[int] = []
 

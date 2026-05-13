@@ -163,7 +163,9 @@ def _failed_jobs_for_scope(
         try:
             rel, scope, legacy_dry_run = _parse_payload(row.payload_json)
         except (ValueError, json.JSONDecodeError):
-            logger.debug("Refiner failure cleanup ignored malformed failed-job payload job_id=%s", row.id, exc_info=True)
+            logger.debug(
+                "Refiner failure cleanup ignored malformed failed-job payload job_id=%s", row.id, exc_info=True
+            )
             continue
         if scope != media_scope:
             continue
@@ -204,11 +206,15 @@ def run_refiner_failure_cleanup_sweep_for_scope(
     )
     older_than = now - timedelta(seconds=max(0, grace))
     row = ensure_refiner_path_settings_row(session)
-    work_root = Path(
-        effective_tv_work_folder(row=row, mediamop_home=settings.mediamop_home)[0]
-        if ms == "tv"
-        else effective_work_folder(row=row, mediamop_home=settings.mediamop_home)[0]
-    ).expanduser().resolve()
+    work_root = (
+        Path(
+            effective_tv_work_folder(row=row, mediamop_home=settings.mediamop_home)[0]
+            if ms == "tv"
+            else effective_work_folder(row=row, mediamop_home=settings.mediamop_home)[0]
+        )
+        .expanduser()
+        .resolve()
+    )
     watched_raw = (row.refiner_tv_watched_folder if ms == "tv" else row.refiner_watched_folder) or ""
     output_raw = (row.refiner_tv_output_folder if ms == "tv" else row.refiner_output_folder) or ""
     out: dict[str, Any] = {
@@ -261,12 +267,12 @@ def run_refiner_failure_cleanup_sweep_for_scope(
         detail: dict[str, Any] = {
             "job_id": int(job.id),
             "relative_media_path": rel_norm,
-            f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_ran": False,
-            f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_skip_reason": None,
-            f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_dry_run": bool(legacy_dry_run),
-            f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_queue_check": "skipped",
-            f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_temp_files_deleted": [],
-            f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_cascade_folders_deleted": [],
+            f"{'tv' if ms == 'tv' else 'movie'}_failure_cleanup_ran": False,
+            f"{'tv' if ms == 'tv' else 'movie'}_failure_cleanup_skip_reason": None,
+            f"{'tv' if ms == 'tv' else 'movie'}_failure_cleanup_dry_run": bool(legacy_dry_run),
+            f"{'tv' if ms == 'tv' else 'movie'}_failure_cleanup_queue_check": "skipped",
+            f"{'tv' if ms == 'tv' else 'movie'}_failure_cleanup_temp_files_deleted": [],
+            f"{'tv' if ms == 'tv' else 'movie'}_failure_cleanup_cascade_folders_deleted": [],
         }
         out["processed_failed_jobs"] += 1
         out["jobs"].append(detail)
@@ -276,13 +282,13 @@ def run_refiner_failure_cleanup_sweep_for_scope(
                 job.id,
                 rel_norm,
             )
-            detail[f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_skip_reason"] = (
+            detail[f"{'tv' if ms == 'tv' else 'movie'}_failure_cleanup_skip_reason"] = (
                 "Skipped for compatibility: this failed remux row uses legacy dry_run payload format, "
                 "which is not a current Refiner mode."
             )
             continue
         if queue_unreachable:
-            detail[f"{'tv' if ms=='tv' else 'movie'}_failure_cleanup_skip_reason"] = (
+            detail[f"{'tv' if ms == 'tv' else 'movie'}_failure_cleanup_skip_reason"] = (
                 f"ARR queue check was unavailable ({queue_unreachable}), so nothing was removed."
             )
             continue
@@ -296,7 +302,9 @@ def run_refiner_failure_cleanup_sweep_for_scope(
             detail["movie_failure_cleanup_output_folder_path"] = str(out_folder)
             if _movie_queue_contains(radarr_rows=radarr_rows, src_file=src_file):
                 detail["movie_failure_cleanup_queue_check"] = "blocked_in_queue"
-                detail["movie_failure_cleanup_skip_reason"] = "File is still in Radarr queue, so failure cleanup skipped."
+                detail["movie_failure_cleanup_skip_reason"] = (
+                    "File is still in Radarr queue, so failure cleanup skipped."
+                )
                 continue
             detail["movie_failure_cleanup_queue_check"] = "passed_not_in_queue"
             detail["movie_failure_cleanup_ran"] = True
@@ -432,4 +440,3 @@ def run_refiner_failure_cleanup_sweep_for_scope(
                     detail["tv_failure_cleanup_temp_files_deleted"].append(str(temp))
     out["cleanup_run_status"] = "completed"
     return out
-

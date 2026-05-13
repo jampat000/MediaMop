@@ -206,11 +206,7 @@ def test_scan_handler_enqueues_remux_without_arr_connections(
         )
 
     with session_factory() as s:
-        remux = [
-            j
-            for j in s.scalars(select(RefinerJob)).all()
-            if j.job_kind == "refiner.file.remux_pass.v1"
-        ]
+        remux = [j for j in s.scalars(select(RefinerJob)).all() if j.job_kind == "refiner.file.remux_pass.v1"]
         assert len(remux) == 1
         body = json.loads(remux[0].payload_json or "{}")
         assert body.get("relative_media_path") == "Standalone Movie 2026.mkv"
@@ -299,11 +295,7 @@ def test_scan_handler_skips_file_when_previous_success_output_still_exists(
         )
 
     with session_factory() as s:
-        remux = [
-            j
-            for j in s.scalars(select(RefinerJob)).all()
-            if j.job_kind == "refiner.file.remux_pass.v1"
-        ]
+        remux = [j for j in s.scalars(select(RefinerJob)).all() if j.job_kind == "refiner.file.remux_pass.v1"]
         assert remux == []
     assert watch.exists()
     assert not release.exists()

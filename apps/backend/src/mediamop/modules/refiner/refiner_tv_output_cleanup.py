@@ -446,9 +446,7 @@ def maybe_run_tv_output_season_folder_cleanup_after_remux(
         shutil.rmtree(output_season_folder)
     except OSError as exc:
         locked = getattr(exc, "filename", None)
-        human = (
-            f"Refiner could not remove the TV season output folder because a file or folder was in use or blocked ({exc})."
-        )
+        human = f"Refiner could not remove the TV season output folder because a file or folder was in use or blocked ({exc})."
         if locked:
             human += f" Problem path reported by the system: {locked}."
         out["tv_output_season_folder_skip_reason"] = human

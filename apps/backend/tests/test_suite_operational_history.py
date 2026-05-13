@@ -57,8 +57,16 @@ def test_operational_history_reset_clears_history_but_keeps_active_work(client_w
         )
         db.add_all(
             [
-                RefinerJob(dedupe_key="refiner-done", job_kind="refiner.file.remux_pass.v1", status=RefinerJobStatus.COMPLETED.value),
-                RefinerJob(dedupe_key="refiner-pending", job_kind="refiner.file.remux_pass.v1", status=RefinerJobStatus.PENDING.value),
+                RefinerJob(
+                    dedupe_key="refiner-done",
+                    job_kind="refiner.file.remux_pass.v1",
+                    status=RefinerJobStatus.COMPLETED.value,
+                ),
+                RefinerJob(
+                    dedupe_key="refiner-pending",
+                    job_kind="refiner.file.remux_pass.v1",
+                    status=RefinerJobStatus.PENDING.value,
+                ),
                 PrunerJob(dedupe_key="pruner-done", job_kind="pruner.preview", status=PrunerJobStatus.FAILED.value),
                 PrunerJob(dedupe_key="pruner-pending", job_kind="pruner.preview", status=PrunerJobStatus.PENDING.value),
                 SubberJob(dedupe_key="subber-done", job_kind="subber.search", status=SubberJobStatus.COMPLETED.value),

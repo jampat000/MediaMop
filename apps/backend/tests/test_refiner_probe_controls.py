@@ -51,4 +51,3 @@ def test_resolve_ffprobe_ffmpeg_uses_explicit_tool_dir(monkeypatch: pytest.Monke
     monkeypatch.setenv("MEDIAMOP_FFMPEG_DIR", str(tool_dir))
 
     assert resolve_ffprobe_ffmpeg(mediamop_home=str(tmp_path / "home")) == (str(ffprobe), str(ffmpeg))
-

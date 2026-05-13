@@ -100,7 +100,7 @@ def _backup_database_before_migration(engine: Engine) -> None:
     db_url = str(engine.url)
     if not db_url.startswith("sqlite:///"):
         return
-    db_path = Path(db_url[len("sqlite:///"):])
+    db_path = Path(db_url[len("sqlite:///") :])
     if not db_path.is_file():
         return
     ts = time.strftime("%Y%m%dT%H%M%S")
@@ -122,8 +122,7 @@ def _run_alembic_upgrade_head(engine: Engine) -> None:
     except Exception as exc:
         raise DatabaseSchemaMismatch(
             f"Alembic upgrade to head failed: {exc}. "
-            "Fix the error above, or restore a database backup. "
-            + _manual_migration_instructions(),
+            "Fix the error above, or restore a database backup. " + _manual_migration_instructions(),
             kind="upgrade_failed",
         ) from exc
 
@@ -146,8 +145,7 @@ def ensure_database_at_application_head(engine: Engine) -> None:
     if current is None:
         raise DatabaseSchemaMismatch(
             "No Alembic revision is recorded for this database (migrations have not been applied). "
-            f"This build requires schema revision {head!r}. "
-            + migrate_hint,
+            f"This build requires schema revision {head!r}. " + migrate_hint,
             kind="unversioned",
         )
 
@@ -167,8 +165,7 @@ def ensure_database_at_application_head(engine: Engine) -> None:
         after = _current_revision(engine)
         if after != head:
             raise DatabaseSchemaMismatch(
-                f"After upgrade, database revision is {after!r}, expected {head!r}. "
-                + migrate_hint,
+                f"After upgrade, database revision is {after!r}, expected {head!r}. " + migrate_hint,
                 kind="upgrade_failed",
             )
         return

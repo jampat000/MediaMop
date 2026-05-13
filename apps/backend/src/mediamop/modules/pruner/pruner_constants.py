@@ -139,5 +139,6 @@ def clamp_pruner_scheduled_preview_interval_seconds(raw: int) -> int:
         min(PRUNER_SCHEDULED_PREVIEW_INTERVAL_MAX_SECONDS, int(raw)),
     )
 
+
 # TV preview: one row per **episode** missing a primary image (honest granularity for UI + removal).
 # Movies preview: one row per **movie library item** missing a primary image.

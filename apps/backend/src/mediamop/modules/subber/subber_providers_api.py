@@ -98,8 +98,10 @@ def put_subber_provider(
             detail=availability_note or "Provider is not available in this version.",
         )
     creds: dict[str, str | None] | None = None
-    if body.username is not None or (body.password is not None and body.password.strip()) or (
-        body.api_key is not None and body.api_key.strip()
+    if (
+        body.username is not None
+        or (body.password is not None and body.password.strip())
+        or (body.api_key is not None and body.api_key.strip())
     ):
         row0 = get_provider_by_key(db, pk)
         raw_existing = decrypt_subber_credentials_json(settings, row0.credentials_ciphertext or "") if row0 else "{}"

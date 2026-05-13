@@ -18,7 +18,9 @@ class PrunerServerInstance(Base):
     """Operator-registered server; credentials stored as encrypted JSON (see ``pruner_credentials``)."""
 
     __tablename__ = "pruner_server_instances"
-    __table_args__ = (UniqueConstraint("provider", "normalized_base_url", name="uq_pruner_server_provider_normalized_url"),)
+    __table_args__ = (
+        UniqueConstraint("provider", "normalized_base_url", name="uq_pruner_server_provider_normalized_url"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     provider: Mapped[str] = mapped_column(String(16), nullable=False)

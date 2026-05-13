@@ -36,12 +36,18 @@ def test_summarize_remux_plan_includes_streams() -> None:
 
 def test_activity_title_per_outcome() -> None:
     base = {"relative_media_path": "movies/foo.mkv"}
-    assert "processed successfully" in remux_pass_activity_title(
-        {**base, "outcome": REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN},
-    ).lower()
-    assert "no changes needed" in remux_pass_activity_title(
-        {**base, "outcome": REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED},
-    ).lower()
+    assert (
+        "processed successfully"
+        in remux_pass_activity_title(
+            {**base, "outcome": REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN},
+        ).lower()
+    )
+    assert (
+        "no changes needed"
+        in remux_pass_activity_title(
+            {**base, "outcome": REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED},
+        ).lower()
+    )
 
 
 def test_clip_argv_for_activity_truncates_long_lists() -> None:

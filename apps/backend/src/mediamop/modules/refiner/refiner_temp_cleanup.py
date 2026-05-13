@@ -183,9 +183,7 @@ def run_refiner_work_temp_stale_sweep_for_scope(
             path.unlink()
             out["temp_cleanup_files_deleted"].append(str(path))
         except OSError as exc:
-            human = (
-                f"{path} — could not remove this file because the system reported it is in use or locked ({exc})."
-            )
+            human = f"{path} — could not remove this file because the system reported it is in use or locked ({exc})."
             out["temp_cleanup_files_skipped"].append(human)
             logger.warning("Refiner work temp sweep (%s): %s", ms, human)
 

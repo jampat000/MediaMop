@@ -31,13 +31,17 @@ def _settings(monkeypatch, *, session: str, credentials: str | None) -> MediaMop
 
 def test_credentials_secret_decouples_pruner_subber_and_arr_from_session_rotation(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("MEDIAMOP_HOME", str(tmp_path))
-    s1 = _settings(monkeypatch, session="session-secret-a-abcdefghijklmnopqrstuvwxyz", credentials="credentials-secret-a")
+    s1 = _settings(
+        monkeypatch, session="session-secret-a-abcdefghijklmnopqrstuvwxyz", credentials="credentials-secret-a"
+    )
 
     pruner = encrypt_pruner_credentials_json(s1, '{"api_key":"p"}')
     subber = encrypt_subber_credentials_json(s1, '{"api_key":"s"}')
     arr = encrypt_arr_api_key(s1, "arr-key")
 
-    s2 = _settings(monkeypatch, session="session-secret-b-abcdefghijklmnopqrstuvwxyz", credentials="credentials-secret-a")
+    s2 = _settings(
+        monkeypatch, session="session-secret-b-abcdefghijklmnopqrstuvwxyz", credentials="credentials-secret-a"
+    )
 
     assert decrypt_pruner_credentials_json(s2, pruner) == '{"api_key":"p"}'
     assert decrypt_subber_credentials_json(s2, subber) == '{"api_key":"s"}'
@@ -83,7 +87,9 @@ def test_legacy_session_secret_ciphertexts_can_be_rewrapped(monkeypatch, tmp_pat
 
 def test_previous_credentials_secret_allows_safe_secret_rotation(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("MEDIAMOP_HOME", str(tmp_path))
-    old = _settings(monkeypatch, session="session-secret-a-abcdefghijklmnopqrstuvwxyz", credentials="old-credentials-secret")
+    old = _settings(
+        monkeypatch, session="session-secret-a-abcdefghijklmnopqrstuvwxyz", credentials="old-credentials-secret"
+    )
 
     pruner = encrypt_pruner_credentials_json(old, '{"api_key":"p"}')
     subber = encrypt_subber_credentials_json(old, '{"api_key":"s"}')

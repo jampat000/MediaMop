@@ -101,9 +101,7 @@ def test_plex_preview_missing_primary_records_success_activity(
 
     with session_factory() as s:
         evt = s.scalars(
-            select(ActivityEvent)
-            .where(ActivityEvent.module == "pruner")
-            .order_by(ActivityEvent.id.desc()),
+            select(ActivityEvent).where(ActivityEvent.module == "pruner").order_by(ActivityEvent.id.desc()),
         ).first()
         assert evt is not None
         assert evt.event_type == C.PRUNER_PREVIEW_SUCCEEDED
@@ -166,9 +164,7 @@ def test_scheduled_preview_activity_title_and_detail_trigger(
 
     with session_factory() as s:
         evt = s.scalars(
-            select(ActivityEvent)
-            .where(ActivityEvent.module == "pruner")
-            .order_by(ActivityEvent.id.desc()),
+            select(ActivityEvent).where(ActivityEvent.module == "pruner").order_by(ActivityEvent.id.desc()),
         ).first()
         assert evt is not None
         assert evt.title.startswith("Scheduled Pruner preview scan found")
@@ -234,9 +230,7 @@ def test_scheduled_preview_accepts_non_missing_primary_rule_family(
 
     with session_factory() as s:
         evt = s.scalars(
-            select(ActivityEvent)
-            .where(ActivityEvent.module == "pruner")
-            .order_by(ActivityEvent.id.desc()),
+            select(ActivityEvent).where(ActivityEvent.module == "pruner").order_by(ActivityEvent.id.desc()),
         ).first()
         assert evt is not None
         assert evt.title.startswith("Scheduled Pruner preview scan found")
@@ -371,9 +365,7 @@ def test_plex_preview_zero_candidates_with_genres_records_operator_note(
 
     with session_factory() as s:
         evt = s.scalars(
-            select(ActivityEvent)
-            .where(ActivityEvent.module == "pruner")
-            .order_by(ActivityEvent.id.desc()),
+            select(ActivityEvent).where(ActivityEvent.module == "pruner").order_by(ActivityEvent.id.desc()),
         ).first()
         assert evt is not None
         assert evt.event_type == C.PRUNER_PREVIEW_SUCCEEDED
@@ -435,9 +427,7 @@ def test_jellyfin_preview_activity_collection_ignored_note_when_tokens_stored(
 
     with session_factory() as s:
         evt = s.scalars(
-            select(ActivityEvent)
-            .where(ActivityEvent.module == "pruner")
-            .order_by(ActivityEvent.id.desc()),
+            select(ActivityEvent).where(ActivityEvent.module == "pruner").order_by(ActivityEvent.id.desc()),
         ).first()
         assert evt is not None
         detail = json.loads(evt.detail or "{}")

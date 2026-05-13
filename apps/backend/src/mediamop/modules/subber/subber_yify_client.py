@@ -56,5 +56,7 @@ def search(
 
 def download(*, download_url: str) -> bytes:
     """Download subtitle from YifySubtitles."""
-    _code, data = request_bytes(download_url, headers={"User-Agent": USER_AGENT}, timeout=60, validate_provider_url=True)
+    _code, data = request_bytes(
+        download_url, headers={"User-Agent": USER_AGENT}, timeout=60, validate_provider_url=True
+    )
     return data

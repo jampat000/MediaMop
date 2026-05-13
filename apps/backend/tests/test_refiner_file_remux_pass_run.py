@@ -75,6 +75,7 @@ def test_run_fails_when_watched_root_missing(tmp_path: Path) -> None:
     assert r["preflight_status"] == "failed"
     assert "watched folder" in r["reason"].lower()
 
+
 def test_live_skips_when_no_remux_required_copies_to_output_and_deletes_release_folder(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -194,6 +195,7 @@ def test_live_skips_when_no_remux_required_replaces_existing_output_before_clean
     assert r.get("output_replaced_existing") is True
     assert existing.read_bytes() == b"x" * 2000
     assert r.get("source_folder_deleted") is True
+
 
 def test_live_fails_during_ffmpeg_surfaces_outcome(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     home = tmp_path / "home"
@@ -563,7 +565,9 @@ def test_preflight_failure_contract_for_age_gate_has_no_cleanup_mutations(tmp_pa
     src.write_bytes(b"x" * 200)
     out = tmp_path / "out"
     out.mkdir()
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=999_999)
+    settings = replace(
+        MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=999_999
+    )
     rt = _runtime(media=media, home=home, out=out)
 
     r = runmod.run_refiner_file_remux_pass(
@@ -728,5 +732,3 @@ def test_guardrail_skips_before_unchanged_copy_when_output_disk_low(
     assert "insufficient disk space" in r["reason"]
     assert src.exists()
     assert not (out / "copy.mkv").exists()
-
-

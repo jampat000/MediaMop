@@ -137,7 +137,9 @@ def test_apply_post_ok_when_enabled(session_factory: sessionmaker[Session], monk
         assert "pruner_job_id" in r.json()
 
 
-def test_apply_post_ok_emby_when_enabled(session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch) -> None:
+def test_apply_post_ok_emby_when_enabled(
+    session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setenv("MEDIAMOP_PRUNER_APPLY_ENABLED", "1")
     settings = MediaMopSettings.load()
     run_uuid = str(uuid.uuid4())
@@ -180,7 +182,9 @@ def test_apply_post_ok_emby_when_enabled(session_factory: sessionmaker[Session],
         assert "pruner_job_id" in r.json()
 
 
-def test_apply_accepts_plex_missing_primary_snapshot(session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch) -> None:
+def test_apply_accepts_plex_missing_primary_snapshot(
+    session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setenv("MEDIAMOP_PRUNER_APPLY_ENABLED", "1")
     settings = MediaMopSettings.load()
     run_uuid = str(uuid.uuid4())
@@ -223,7 +227,9 @@ def test_apply_accepts_plex_missing_primary_snapshot(session_factory: sessionmak
         assert "pruner_job_id" in r.json()
 
 
-def test_apply_rejects_scope_mismatch_in_url(session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch) -> None:
+def test_apply_rejects_scope_mismatch_in_url(
+    session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setenv("MEDIAMOP_PRUNER_APPLY_ENABLED", "1")
     settings = MediaMopSettings.load()
     run_uuid = str(uuid.uuid4())
@@ -245,7 +251,7 @@ def test_apply_rejects_scope_mismatch_in_url(session_factory: sessionmaker[Sessi
             rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
             pruner_job_id=None,
             candidate_count=1,
-            candidates_json="[{\"item_id\":\"x\"}]",
+            candidates_json='[{"item_id":"x"}]',
             truncated=False,
             outcome="success",
             unsupported_detail=None,
@@ -265,7 +271,9 @@ def test_apply_rejects_scope_mismatch_in_url(session_factory: sessionmaker[Sessi
         assert r.status_code == 422, r.text
 
 
-def test_apply_rejects_non_success_preview(session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch) -> None:
+def test_apply_rejects_non_success_preview(
+    session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setenv("MEDIAMOP_PRUNER_APPLY_ENABLED", "1")
     settings = MediaMopSettings.load()
     run_uuid = str(uuid.uuid4())
@@ -287,7 +295,7 @@ def test_apply_rejects_non_success_preview(session_factory: sessionmaker[Session
             rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
             pruner_job_id=None,
             candidate_count=1,
-            candidates_json="[{\"item_id\":\"x\"}]",
+            candidates_json='[{"item_id":"x"}]',
             truncated=False,
             outcome="failed",
             unsupported_detail=None,
@@ -338,7 +346,7 @@ def test_apply_activity_title_uses_operator_label(
             rule_family_id=RULE_FAMILY_MISSING_PRIMARY_MEDIA_REPORTED,
             pruner_job_id=None,
             candidate_count=1,
-            candidates_json="[{\"item_id\":\"gone\"}]",
+            candidates_json='[{"item_id":"gone"}]',
             truncated=False,
             outcome="success",
             unsupported_detail=None,

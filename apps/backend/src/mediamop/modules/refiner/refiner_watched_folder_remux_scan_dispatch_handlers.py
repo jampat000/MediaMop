@@ -118,7 +118,9 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                     try:
                         size_bytes = int(file_path.stat().st_size)
                     except OSError:
-                        logger.debug("Refiner scan skipped size check because file metadata could not be read: %s", file_path)
+                        logger.debug(
+                            "Refiner scan skipped size check because file metadata could not be read: %s", file_path
+                        )
                         continue
                     if size_bytes < min_size_mb * 1024 * 1024:
                         summary["skipped_below_minimum_file_size"] += 1

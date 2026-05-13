@@ -74,7 +74,9 @@ def test_watched_folder_scan_enqueue_ok(client_with_admin: TestClient, tmp_path:
     assert body["job_kind"] == REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND
 
 
-def test_watched_folder_scan_enqueue_defaults_to_processing_files(client_with_admin: TestClient, tmp_path: Path) -> None:
+def test_watched_folder_scan_enqueue_defaults_to_processing_files(
+    client_with_admin: TestClient, tmp_path: Path
+) -> None:
     _login_admin(client_with_admin)
     w = tmp_path / "w_scan_api_default"
     w.mkdir()

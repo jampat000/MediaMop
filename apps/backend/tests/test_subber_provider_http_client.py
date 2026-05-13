@@ -58,4 +58,7 @@ def test_safe_provider_url_blocks_local_targets() -> None:
 
 
 def test_safe_provider_url_allows_public_https_targets() -> None:
-    assert subber_http_client.safe_provider_url("https://subtitles.example/file.srt") == "https://subtitles.example/file.srt"
+    assert (
+        subber_http_client.safe_provider_url("https://subtitles.example/file.srt")
+        == "https://subtitles.example/file.srt"
+    )

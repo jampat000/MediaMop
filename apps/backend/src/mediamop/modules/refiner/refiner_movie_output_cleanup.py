@@ -247,7 +247,9 @@ def maybe_run_movie_output_folder_cleanup_after_remux(
 
     out_root_raw = (path_runtime.output_folder or "").strip()
     if not out_root_raw:
-        out["movie_output_folder_skip_reason"] = "No Movies output folder is configured, so Refiner did not evaluate output-folder cleanup."
+        out["movie_output_folder_skip_reason"] = (
+            "No Movies output folder is configured, so Refiner did not evaluate output-folder cleanup."
+        )
         out["movie_output_truth_check"] = "skipped"
         out["movie_output_truth_note"] = out["movie_output_folder_skip_reason"]
         return
@@ -261,7 +263,9 @@ def maybe_run_movie_output_folder_cleanup_after_remux(
         return
 
     if not output_root.is_dir():
-        out["movie_output_folder_skip_reason"] = "The Movies output folder is missing on disk, so output-folder cleanup was skipped."
+        out["movie_output_folder_skip_reason"] = (
+            "The Movies output folder is missing on disk, so output-folder cleanup was skipped."
+        )
         out["movie_output_truth_check"] = "skipped"
         out["movie_output_truth_note"] = out["movie_output_folder_skip_reason"]
         return

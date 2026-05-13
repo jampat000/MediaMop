@@ -28,7 +28,9 @@ def _record_refiner_queue_depth(session: Session) -> None:
     depth = session.scalar(
         select(func.count())
         .select_from(RefinerJob)
-        .where(or_(RefinerJob.status == RefinerJobStatus.PENDING.value, RefinerJob.status == RefinerJobStatus.LEASED.value))
+        .where(
+            or_(RefinerJob.status == RefinerJobStatus.PENDING.value, RefinerJob.status == RefinerJobStatus.LEASED.value)
+        )
     )
     set_module_queue_depth(module="refiner", depth=int(depth or 0))
 

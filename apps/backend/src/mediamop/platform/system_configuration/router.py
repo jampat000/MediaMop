@@ -60,7 +60,9 @@ def put_suite_configuration_bundle(
 
 
 @router.get("/suite-configuration-backups", response_model=SuiteConfigurationBackupListOut)
-def get_suite_configuration_backups(_user: RequireOperatorDep, db: DbSessionDep, settings: SettingsDep) -> SuiteConfigurationBackupListOut:
+def get_suite_configuration_backups(
+    _user: RequireOperatorDep, db: DbSessionDep, settings: SettingsDep
+) -> SuiteConfigurationBackupListOut:
     directory, rows = list_suite_configuration_backups(db, settings=settings)
     return SuiteConfigurationBackupListOut(
         directory=directory,

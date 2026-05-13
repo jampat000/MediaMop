@@ -70,12 +70,16 @@ def _build_discord_payload(*, title: str, detail: str, event: str, module: str, 
     ).encode()
 
 
-def _post_one(channel: NotificationChannel, *, title: str, detail: str, event: str, module: str, job_id: int, job_kind: str) -> None:
+def _post_one(
+    channel: NotificationChannel, *, title: str, detail: str, event: str, module: str, job_id: int, job_kind: str
+) -> None:
     try:
         if channel.provider == "discord":
             body = _build_discord_payload(title=title, detail=detail, event=event, module=module, job_id=job_id)
         else:
-            body = _build_webhook_payload(event=event, module=module, job_id=job_id, job_kind=job_kind, title=title, detail=detail)
+            body = _build_webhook_payload(
+                event=event, module=module, job_id=job_id, job_kind=job_kind, title=title, detail=detail
+            )
         req = urllib.request.Request(
             channel.url,
             data=body,

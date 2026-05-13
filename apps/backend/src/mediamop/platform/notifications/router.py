@@ -74,7 +74,10 @@ def post_notification_channel(
     validate_browser_post_origin(request, settings)
     secret = require_session_secret(settings)
     if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Your confirmation token expired. Refresh the page and try again.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Your confirmation token expired. Refresh the page and try again.",
+        )
     try:
         row = create_notification_channel(
             db,
@@ -102,7 +105,10 @@ def put_notification_channel(
     validate_browser_post_origin(request, settings)
     secret = require_session_secret(settings)
     if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Your confirmation token expired. Refresh the page and try again.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Your confirmation token expired. Refresh the page and try again.",
+        )
     try:
         row = update_notification_channel(
             db,
@@ -148,7 +154,10 @@ def post_notification_channel_test(
     validate_browser_post_origin(request, settings)
     secret = require_session_secret(settings)
     if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Your confirmation token expired. Refresh the page and try again.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Your confirmation token expired. Refresh the page and try again.",
+        )
     row = get_notification_channel(db, channel_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification channel not found.")

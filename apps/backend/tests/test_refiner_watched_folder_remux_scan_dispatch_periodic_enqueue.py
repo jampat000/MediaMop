@@ -66,24 +66,33 @@ def test_periodic_scheduler_reports_missed_due_intervals() -> None:
 
 
 def test_periodic_scheduler_sleeps_until_nearest_scope_due() -> None:
-    assert _next_scheduler_sleep_seconds(
-        now_loop=100.0,
-        next_run_movie=104.0,
-        next_run_tv=180.0,
-        poll_seconds=300.0,
-    ) == 4.0
-    assert _next_scheduler_sleep_seconds(
-        now_loop=100.0,
-        next_run_movie=100.0,
-        next_run_tv=180.0,
-        poll_seconds=300.0,
-    ) == 0.25
-    assert _next_scheduler_sleep_seconds(
-        now_loop=100.0,
-        next_run_movie=500.0,
-        next_run_tv=600.0,
-        poll_seconds=60.0,
-    ) == 60.0
+    assert (
+        _next_scheduler_sleep_seconds(
+            now_loop=100.0,
+            next_run_movie=104.0,
+            next_run_tv=180.0,
+            poll_seconds=300.0,
+        )
+        == 4.0
+    )
+    assert (
+        _next_scheduler_sleep_seconds(
+            now_loop=100.0,
+            next_run_movie=100.0,
+            next_run_tv=180.0,
+            poll_seconds=300.0,
+        )
+        == 0.25
+    )
+    assert (
+        _next_scheduler_sleep_seconds(
+            now_loop=100.0,
+            next_run_movie=500.0,
+            next_run_tv=600.0,
+            poll_seconds=60.0,
+        )
+        == 60.0
+    )
 
 
 def test_periodic_scheduler_scope_failure_does_not_block_other_scope(

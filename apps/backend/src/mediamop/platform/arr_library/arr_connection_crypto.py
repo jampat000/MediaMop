@@ -15,9 +15,7 @@ from mediamop.core.config import MediaMopSettings
 from mediamop.core.credentials_rotation import credential_secret_candidates
 
 # Frozen KDF domain bytes (legacy install compatibility). Do not change.
-_ARR_API_KEY_KDF_PEPPER = binascii.a2b_hex(
-    "6d656469616d6f702e666574636865722e6172725f6170695f6b65792e76317c"
-)
+_ARR_API_KEY_KDF_PEPPER = binascii.a2b_hex("6d656469616d6f702e666574636865722e6172725f6170695f6b65792e76317c")
 _ARR_API_KEY_KDF_ITERATIONS = 390_000
 _ENVELOPE_VERSION = 2
 _CREDENTIALS_KEY_ID: Literal["credentials:v1"] = "credentials:v1"

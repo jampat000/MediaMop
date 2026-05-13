@@ -67,7 +67,9 @@ def _lane_out_from_row(row: ArrLibraryOperatorSettingsRow, prefix: str) -> ArrLi
     )
 
 
-def _sonarr_panel(session: Session, settings: MediaMopSettings, row: ArrLibraryOperatorSettingsRow) -> ArrLibraryConnectionPanelOut:
+def _sonarr_panel(
+    session: Session, settings: MediaMopSettings, row: ArrLibraryOperatorSettingsRow
+) -> ArrLibraryConnectionPanelOut:
     eff_b, _eff_k = resolve_sonarr_http_credentials(session, settings)
     return ArrLibraryConnectionPanelOut(
         enabled=bool(row.sonarr_connection_enabled),
@@ -85,7 +87,9 @@ def _sonarr_panel(session: Session, settings: MediaMopSettings, row: ArrLibraryO
     )
 
 
-def _radarr_panel(session: Session, settings: MediaMopSettings, row: ArrLibraryOperatorSettingsRow) -> ArrLibraryConnectionPanelOut:
+def _radarr_panel(
+    session: Session, settings: MediaMopSettings, row: ArrLibraryOperatorSettingsRow
+) -> ArrLibraryConnectionPanelOut:
     eff_b, _eff_k = resolve_radarr_http_credentials(session, settings)
     return ArrLibraryConnectionPanelOut(
         enabled=bool(row.radarr_connection_enabled),
@@ -103,7 +107,9 @@ def _radarr_panel(session: Session, settings: MediaMopSettings, row: ArrLibraryO
     )
 
 
-def build_arr_library_operator_settings_out(session: Session, settings: MediaMopSettings) -> ArrLibraryOperatorSettingsOut:
+def build_arr_library_operator_settings_out(
+    session: Session, settings: MediaMopSettings
+) -> ArrLibraryOperatorSettingsOut:
     row = ensure_arr_library_operator_settings_row(session)
     suite_row = ensure_suite_settings_row(session)
     sb, sk = resolve_sonarr_http_credentials(session, settings)

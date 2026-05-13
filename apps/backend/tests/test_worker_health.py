@@ -39,7 +39,9 @@ def session_factory(tmp_path: Path) -> sessionmaker[Session]:
         future=True,
     )
     Base.metadata.create_all(engine)
-    return sessionmaker(bind=engine, class_=Session, autoflush=False, autocommit=False, expire_on_commit=False, future=True)
+    return sessionmaker(
+        bind=engine, class_=Session, autoflush=False, autocommit=False, expire_on_commit=False, future=True
+    )
 
 
 def test_worker_health_detects_missing_stale_and_stopped_workers() -> None:
@@ -96,7 +98,9 @@ def test_readiness_fails_when_expected_worker_has_no_heartbeat(session_factory) 
     class State:
         startup_started_at = 0.0
         startup_ready = True
-        settings = replace(MediaMopSettings.load(), refiner_worker_count=1, pruner_worker_count=0, subber_worker_count=0)
+        settings = replace(
+            MediaMopSettings.load(), refiner_worker_count=1, pruner_worker_count=0, subber_worker_count=0
+        )
         engine = object()
         session_factory = object()
 

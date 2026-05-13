@@ -126,8 +126,7 @@ def test_ensure_suite_settings_row_defaults_to_skipped_for_existing_install() ->
         assert row.setup_wizard_state == "skipped"
 
 
-def test_bootstrap_explicitly_keeps_setup_wizard_pending_for_true_first_run(
-) -> None:
+def test_bootstrap_explicitly_keeps_setup_wizard_pending_for_true_first_run() -> None:
     reset_user_tables()
     with TestClient(create_app()) as client:
         bootstrap_csrf = fetch_csrf(client)

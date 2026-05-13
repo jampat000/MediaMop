@@ -92,9 +92,7 @@ def _coerce_release_asset(payload: dict[str, Any]) -> GitHubReleaseAsset:
         api_url=api_url,
         browser_download_url=str(payload.get("browser_download_url") or "").strip(),
         size_bytes=int(payload.get("size") or 0),
-        content_type=(
-            str(payload.get("content_type") or "").strip() or None
-        ),
+        content_type=(str(payload.get("content_type") or "").strip() or None),
     )
 
 
@@ -108,9 +106,7 @@ def _coerce_release_payload(payload: dict[str, Any]) -> GitHubReleaseRecord:
     published_at_raw = payload.get("published_at")
     published_at = None
     if isinstance(published_at_raw, str) and published_at_raw.strip():
-        published_at = datetime.fromisoformat(
-            published_at_raw.strip().replace("Z", "+00:00")
-        )
+        published_at = datetime.fromisoformat(published_at_raw.strip().replace("Z", "+00:00"))
     assets_raw = payload.get("assets")
     assets: list[GitHubReleaseAsset] = []
     if isinstance(assets_raw, list):
@@ -155,12 +151,7 @@ def fetch_release_record_by_version(
         response.raise_for_status()
         record = _coerce_release_payload(response.json())
     if record.tag_name != tag:
-        raise ValueError(
-            f"Release tag mismatch for MediaMop update: expected {tag}, got {record.tag_name}."
-        )
+        raise ValueError(f"Release tag mismatch for MediaMop update: expected {tag}, got {record.tag_name}.")
     if record.draft or record.prerelease:
-        raise ValueError(
-            f"MediaMop update {tag} is not a stable published release."
-        )
+        raise ValueError(f"MediaMop update {tag} is not a stable published release.")
     return record
-

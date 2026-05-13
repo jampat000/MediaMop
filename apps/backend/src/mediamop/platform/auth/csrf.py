@@ -50,11 +50,7 @@ def issue_csrf_token(secret: str, raw_session_token: str | None = None) -> str:
     if not secret.strip():
         raise ValueError("session secret required for CSRF")
     bound_session = (raw_session_token or "").strip()
-    payload = (
-        _session_subject_payload(bound_session)
-        if bound_session
-        else CSRF_SUBJECT_ANONYMOUS
-    )
+    payload = _session_subject_payload(bound_session) if bound_session else CSRF_SUBJECT_ANONYMOUS
     return _signer(secret).sign(payload.encode("utf-8")).decode("utf-8")
 
 

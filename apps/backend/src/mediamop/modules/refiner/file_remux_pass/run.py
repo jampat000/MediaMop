@@ -309,7 +309,9 @@ def _handle_refiner_cleanup_after_success(
     try:
         src_resolved.relative_to(watched_resolved)
     except ValueError:
-        out["source_folder_skip_reason"] = "The video file is not under the saved watched folder, so nothing was removed."
+        out["source_folder_skip_reason"] = (
+            "The video file is not under the saved watched folder, so nothing was removed."
+        )
         logger.warning("Refiner Movies cleanup: source not under watched root (%s).", src_resolved)
         out["source_deleted_after_success"] = False
         return
@@ -339,7 +341,9 @@ def _handle_refiner_cleanup_after_success(
     out_dir = Path(path_runtime.output_folder).resolve()
     if not str(path_runtime.output_folder).strip():
         out["output_completeness_check"] = "skipped"
-        out["source_folder_skip_reason"] = "No output folder is configured for Movies, so the release folder was not removed."
+        out["source_folder_skip_reason"] = (
+            "No output folder is configured for Movies, so the release folder was not removed."
+        )
         out["output_completeness_note"] = out["source_folder_skip_reason"]
         out["source_deleted_after_success"] = False
         logger.warning("Refiner Movies cleanup: missing output folder configuration.")
@@ -440,7 +444,11 @@ def run_refiner_file_remux_pass(
             )
     min_age = max(
         0,
-        int(settings.refiner_watched_folder_min_file_age_seconds if min_file_age_seconds is None else min_file_age_seconds),
+        int(
+            settings.refiner_watched_folder_min_file_age_seconds
+            if min_file_age_seconds is None
+            else min_file_age_seconds
+        ),
     )
     if min_age > 0:
         try:
@@ -597,7 +605,9 @@ def run_refiner_file_remux_pass(
                 remux_required=remux_needed,
             )
         try:
-            _copied, output_replaced_existing, unchanged_output_method = _copy_unchanged_source_to_output(src=src, final=final_skip)
+            _copied, output_replaced_existing, unchanged_output_method = _copy_unchanged_source_to_output(
+                src=src, final=final_skip
+            )
         except Exception as exc:
             if progress_reporter is not None:
                 progress_reporter(
@@ -811,7 +821,7 @@ def run_refiner_file_remux_pass(
                 "media_scope": scope,
                 "message": "The cleaned-up file was written. Refiner is doing final safety checks.",
             }
-    )
+        )
     _handle_refiner_cleanup_after_success(
         src=src,
         watched_root=watched_root,

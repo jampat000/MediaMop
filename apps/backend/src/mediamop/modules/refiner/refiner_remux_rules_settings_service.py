@@ -141,7 +141,9 @@ def build_refiner_remux_rules_settings_out(row: RefinerRemuxRulesSettingsRow) ->
     )
 
 
-def apply_refiner_remux_rules_settings_put(db: Session, body: RefinerRemuxRulesSettingsPutIn) -> RefinerRemuxRulesSettingsRow:
+def apply_refiner_remux_rules_settings_put(
+    db: Session, body: RefinerRemuxRulesSettingsPutIn
+) -> RefinerRemuxRulesSettingsRow:
     row = ensure_refiner_remux_rules_settings_row(db)
     if body.subtitle_mode == "keep_selected" and not (body.subtitle_langs_csv or "").strip():
         raise ValueError("When keeping subtitles, set at least one language in subtitle_langs_csv.")

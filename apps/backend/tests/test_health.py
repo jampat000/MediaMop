@@ -62,7 +62,9 @@ def test_readiness_reports_failed_when_worker_heartbeat_missing() -> None:
         startup_ready = True
         engine = None
         session_factory = None
-        settings = replace(MediaMopSettings.load(), refiner_worker_count=1, pruner_worker_count=0, subber_worker_count=0)
+        settings = replace(
+            MediaMopSettings.load(), refiner_worker_count=1, pruner_worker_count=0, subber_worker_count=0
+        )
 
     payload = build_readiness(State())
 

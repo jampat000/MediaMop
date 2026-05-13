@@ -226,6 +226,12 @@ def retry_completed_movie_source_cleanup(
     except OSError as exc:
         locked = getattr(exc, "filename", None)
         if locked:
-            return False, f"Source cleanup retry could not remove the release folder because this path is still locked: {locked}."
-        return False, f"Source cleanup retry could not remove the release folder because it is still locked or blocked ({exc})."
+            return (
+                False,
+                f"Source cleanup retry could not remove the release folder because this path is still locked: {locked}.",
+            )
+        return (
+            False,
+            f"Source cleanup retry could not remove the release folder because it is still locked or blocked ({exc}).",
+        )
     return True, None

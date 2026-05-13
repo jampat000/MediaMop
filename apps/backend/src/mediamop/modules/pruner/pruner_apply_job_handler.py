@@ -139,7 +139,10 @@ def make_pruner_candidate_removal_apply_handler(
             if snap_rule == RULE_FAMILY_WATCHED_MOVIES_REPORTED and str(run.media_scope) != MEDIA_SCOPE_MOVIES:
                 msg = "watched_movies_reported apply requires a Movies scope preview snapshot"
                 raise ValueError(msg)
-            if snap_rule == RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED and str(run.media_scope) != MEDIA_SCOPE_MOVIES:
+            if (
+                snap_rule == RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED
+                and str(run.media_scope) != MEDIA_SCOPE_MOVIES
+            ):
                 msg = "watched_movie_low_rating_reported apply requires a Movies scope preview snapshot"
                 raise ValueError(msg)
             if snap_rule == RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED and str(run.media_scope) != MEDIA_SCOPE_MOVIES:
@@ -261,7 +264,9 @@ def make_pruner_candidate_removal_apply_handler(
         label = _scope_label(scope)
         provider_s = provider_label(provider_for_delete) or provider_for_delete
         scope_s = media_scope_label(scope) or label
-        result_for_message = DiagnosticResult.FAILED if removed == 0 and skipped == 0 and failed > 0 else DiagnosticResult.SUCCESS
+        result_for_message = (
+            DiagnosticResult.FAILED if removed == 0 and skipped == 0 and failed > 0 else DiagnosticResult.SUCCESS
+        )
         if auto_applied:
             title = (
                 f"{action_label}: Pruner automatically removed {removed} {scope_s} item"

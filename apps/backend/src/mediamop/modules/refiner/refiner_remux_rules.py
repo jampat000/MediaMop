@@ -67,9 +67,7 @@ def normalize_audio_preference_mode(raw: str | None) -> AudioSelectionPolicy:
 _MEDIA_EXTENSIONS = frozenset({".mkv", ".mp4", ".m4v", ".webm", ".avi"})
 
 # Historical allowlist marker kept for candidate classification docs/tests.
-REFINER_SOURCE_SIDECAR_CLEANUP_SUFFIXES: frozenset[str] = frozenset(
-    {".par2", ".sfv", ".nzb", ".nfo"}
-)
+REFINER_SOURCE_SIDECAR_CLEANUP_SUFFIXES: frozenset[str] = frozenset({".par2", ".sfv", ".nzb", ".nfo"})
 
 
 def is_refiner_media_candidate(path: Path) -> bool:
@@ -351,9 +349,7 @@ def _select_audio_winner(
             )
             return None, removed_audio, notes
         w = _pick_best(pool, preferred_set=preferred_set, use_fallback_penalty=False)
-        notes.append(
-            f"Selected {_describe_candidate(w)} using primary language only (strict policy)."
-        )
+        notes.append(f"Selected {_describe_candidate(w)} using primary language only (strict policy).")
         return w, removed_audio, notes
 
     # preferred_langs_quality — tier walk then fallback
@@ -406,9 +402,7 @@ def plan_remux(
             tags = _stream_tags(s)
             lang_raw = normalize_lang(tags.get("language"))
             removed_audio.append(f"{lang_raw or 'und'} (commentary excluded — remove commentary enabled)")
-            notes.append(
-                f"Excluded commentary track (stream {int(s['index'])}) because remove commentary is enabled."
-            )
+            notes.append(f"Excluded commentary track (stream {int(s['index'])}) because remove commentary is enabled.")
             continue
         c = _candidate_from_stream(s)
         if c is None:

@@ -20,7 +20,9 @@ class ArrLibraryOperatorSettingsRow(Base):
 
     sonarr_missing_search_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     sonarr_missing_search_max_items_per_run: Mapped[int] = mapped_column(Integer, nullable=False, server_default="50")
-    sonarr_missing_search_retry_delay_minutes: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1440")
+    sonarr_missing_search_retry_delay_minutes: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="1440"
+    )
     sonarr_missing_search_schedule_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     sonarr_missing_search_schedule_days: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     sonarr_missing_search_schedule_start: Mapped[str] = mapped_column(Text, nullable=False, server_default="00:00")
@@ -31,7 +33,9 @@ class ArrLibraryOperatorSettingsRow(Base):
 
     sonarr_upgrade_search_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     sonarr_upgrade_search_max_items_per_run: Mapped[int] = mapped_column(Integer, nullable=False, server_default="50")
-    sonarr_upgrade_search_retry_delay_minutes: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1440")
+    sonarr_upgrade_search_retry_delay_minutes: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="1440"
+    )
     sonarr_upgrade_search_schedule_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     sonarr_upgrade_search_schedule_days: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     sonarr_upgrade_search_schedule_start: Mapped[str] = mapped_column(Text, nullable=False, server_default="00:00")
@@ -42,7 +46,9 @@ class ArrLibraryOperatorSettingsRow(Base):
 
     radarr_missing_search_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     radarr_missing_search_max_items_per_run: Mapped[int] = mapped_column(Integer, nullable=False, server_default="50")
-    radarr_missing_search_retry_delay_minutes: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1440")
+    radarr_missing_search_retry_delay_minutes: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="1440"
+    )
     radarr_missing_search_schedule_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     radarr_missing_search_schedule_days: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     radarr_missing_search_schedule_start: Mapped[str] = mapped_column(Text, nullable=False, server_default="00:00")
@@ -53,7 +59,9 @@ class ArrLibraryOperatorSettingsRow(Base):
 
     radarr_upgrade_search_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     radarr_upgrade_search_max_items_per_run: Mapped[int] = mapped_column(Integer, nullable=False, server_default="50")
-    radarr_upgrade_search_retry_delay_minutes: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1440")
+    radarr_upgrade_search_retry_delay_minutes: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="1440"
+    )
     radarr_upgrade_search_schedule_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     radarr_upgrade_search_schedule_days: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     radarr_upgrade_search_schedule_start: Mapped[str] = mapped_column(Text, nullable=False, server_default="00:00")

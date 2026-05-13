@@ -106,4 +106,3 @@ async def stop_refiner_failure_cleanup_enqueue_tasks(tasks: list[asyncio.Task[No
             t.cancel()
     if tasks:
         await asyncio.gather(*tasks, return_exceptions=True)
-
