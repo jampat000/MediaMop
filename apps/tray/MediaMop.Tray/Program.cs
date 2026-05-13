@@ -820,13 +820,17 @@ sealed class TrayApp : IDisposable
             Application.Exit();
         };
 
-        return new NotifyIcon
+        var notifyIcon = new NotifyIcon
         {
             Icon = icon,
             Text = "MediaMop",
             ContextMenuStrip = menu,
             Visible = false,
         };
+
+        notifyIcon.DoubleClick += (_, _) => OpenBrowserDebounced("tray-dblclick");
+
+        return notifyIcon;
     }
 
     private Icon LoadIcon()
