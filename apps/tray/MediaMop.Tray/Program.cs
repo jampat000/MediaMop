@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Win32;
 using Velopack;
 using Velopack.Sources;
 
@@ -27,10 +28,14 @@ static class Program
             .OnAfterInstallFastCallback((v) =>
             {
                 AppendFallbackLog($"Velopack: after install v{v}");
+                KillRunningProcesses();
+                RegisterStartup();
             })
             .OnBeforeUninstallFastCallback((v) =>
             {
                 AppendFallbackLog($"Velopack: before uninstall v{v}");
+                KillRunningProcesses();
+                DeregisterStartup();
             })
             .OnBeforeUpdateFastCallback((v) =>
             {
@@ -39,6 +44,7 @@ static class Program
             .OnAfterUpdateFastCallback((v) =>
             {
                 AppendFallbackLog($"Velopack: after update to v{v}");
+                RegisterStartup();
             })
             .Run();
 
@@ -85,6 +91,77 @@ static class Program
                 OpenBrowser(port);
         }
         catch { }
+    }
+
+    private static void KillRunningProcesses()
+    {
+        int currentId = Environment.ProcessId;
+        foreach (var name in new[] { "MediaMop", "MediaMopServer" })
+        {
+            foreach (var proc in Process.GetProcessesByName(name))
+            {
+                if (proc.Id == currentId) continue;
+                try
+                {
+                    proc.Kill(entireProcessTree: true);
+                    proc.WaitForExit(5_000);
+                    AppendFallbackLog($"Killed running process: {name} (pid {proc.Id})");
+                }
+                catch (Exception ex)
+                {
+                    AppendFallbackLog($"Could not kill {name} (pid {proc.Id}): {ex.Message}");
+                }
+            }
+        }
+    }
+
+    private static void RegisterStartup()
+    {
+        try
+        {
+            var exe = Environment.ProcessPath;
+            if (string.IsNullOrEmpty(exe)) return;
+            using var key = Registry.CurrentUser.OpenSubKey(
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", writable: true);
+            key?.SetValue("MediaMop", $"\"{exe}\" --no-browser");
+            AppendFallbackLog(@"Registered MediaMop startup (HKCU\Run).");
+
+            // Remove any manually-created startup folder shortcut so there is only one entry.
+            var shortcut = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.Startup), "MediaMop.lnk");
+            if (File.Exists(shortcut))
+            {
+                File.Delete(shortcut);
+                AppendFallbackLog("Removed legacy startup folder shortcut.");
+            }
+        }
+        catch (Exception ex)
+        {
+            AppendFallbackLog($"Could not register startup: {ex.Message}");
+        }
+    }
+
+    private static void DeregisterStartup()
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", writable: true);
+            key?.DeleteValue("MediaMop", throwOnMissingValue: false);
+            AppendFallbackLog(@"Deregistered MediaMop startup (HKCU\Run).");
+
+            var shortcut = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.Startup), "MediaMop.lnk");
+            if (File.Exists(shortcut))
+            {
+                File.Delete(shortcut);
+                AppendFallbackLog("Removed startup folder shortcut.");
+            }
+        }
+        catch (Exception ex)
+        {
+            AppendFallbackLog($"Could not deregister startup: {ex.Message}");
+        }
     }
 
     internal static string RuntimeHome()
@@ -268,7 +345,7 @@ sealed class TrayApp : IDisposable
 
     private NotifyIcon? _notifyIcon;
     private ToolStripMenuItem? _updateMenuItem;
-    private Process? _serverProcess;
+    private volatile Process? _serverProcess;
     private double _lastBrowserOpenTicks;
     private CancellationTokenSource? _cts;
     private UpdateService? _updateService;
@@ -304,8 +381,6 @@ sealed class TrayApp : IDisposable
         else
             Log("Skipping browser auto-open (no-browser mode).");
 
-        DetectLegacyInnoInstall();
-
         _cts = new CancellationTokenSource();
         StartWatchdog();
         InitUpdateService();
@@ -316,60 +391,6 @@ sealed class TrayApp : IDisposable
 
         Log("Starting tray icon event loop");
         Application.Run();
-    }
-
-    // -- Legacy Inno Setup migration detection --------------------------------
-
-    private void DetectLegacyInnoInstall()
-    {
-        try
-        {
-            var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-            var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-            bool isLegacyLocation =
-                (!string.IsNullOrEmpty(programFiles) && _installRoot.StartsWith(programFiles, StringComparison.OrdinalIgnoreCase)) ||
-                (!string.IsNullOrEmpty(programFilesX86) && _installRoot.StartsWith(programFilesX86, StringComparison.OrdinalIgnoreCase));
-
-            if (isLegacyLocation)
-            {
-                Log("Legacy Inno Setup install detected — running from Program Files. " +
-                    "Future updates will use Velopack and install to %LocalAppData%\\MediaMop.");
-            }
-
-            var legacyUpdaterService = Path.Combine(_installRoot, "MediaMopUpdaterService.exe");
-            if (File.Exists(legacyUpdaterService))
-            {
-                Log("Legacy WinSW updater service wrapper found. Attempting to stop and uninstall...");
-                try
-                {
-                    RunSilent(legacyUpdaterService, "stop");
-                    RunSilent(legacyUpdaterService, "uninstall");
-                    Log("Legacy updater service stopped and uninstalled.");
-                }
-                catch (Exception ex)
-                {
-                    Log($"Could not remove legacy updater service (non-fatal): {ex.Message}");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Log($"Legacy install detection failed (non-fatal): {ex.Message}");
-        }
-    }
-
-    private static void RunSilent(string exe, string args)
-    {
-        using var proc = Process.Start(new ProcessStartInfo
-        {
-            FileName = exe,
-            Arguments = args,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-        });
-        proc?.WaitForExit(10_000);
     }
 
     // -- Environment setup --------------------------------------------------
@@ -498,26 +519,52 @@ sealed class TrayApp : IDisposable
         var ct = _cts!.Token;
         var thread = new Thread(() =>
         {
+            int restartCount = 0;
+            const int maxRestarts = 5;
+            int[] backoffMs = [2_000, 5_000, 15_000, 30_000, 60_000];
+
             while (!ct.IsCancellationRequested)
             {
+                Thread.Sleep(3000);
+                if (ct.IsCancellationRequested) return;
+
                 var proc = _serverProcess;
                 if (proc is null) return;
+                if (!proc.HasExited) continue;
 
-                if (proc.HasExited)
+                Log($"Bundled server host exited unexpectedly with code {proc.ExitCode} (restart {restartCount + 1}/{maxRestarts})");
+
+                if (restartCount >= maxRestarts)
                 {
-                    Log($"Bundled server host exited unexpectedly with code {proc.ExitCode}");
+                    Log("Exceeded max restart attempts — giving up.");
                     try
                     {
                         _notifyIcon?.ShowBalloonTip(
-                            5000, "MediaMop",
-                            "MediaMop server stopped unexpectedly. Please restart MediaMop.",
-                            ToolTipIcon.Warning);
+                            8000, "MediaMop",
+                            "MediaMop server failed repeatedly. Please restart MediaMop.",
+                            ToolTipIcon.Error);
                     }
                     catch { }
                     return;
                 }
 
-                Thread.Sleep(3000);
+                int delay = backoffMs[Math.Min(restartCount, backoffMs.Length - 1)];
+                Log($"Waiting {delay}ms before restarting server...");
+                Thread.Sleep(delay);
+                if (ct.IsCancellationRequested) return;
+
+                try
+                {
+                    StartServerProcess();
+                    WaitForHealth();
+                    Log($"Server restarted successfully (attempt {restartCount + 1}).");
+                    restartCount = 0;
+                }
+                catch (Exception ex)
+                {
+                    Log($"Server restart attempt {restartCount + 1} failed: {ex.Message}");
+                    restartCount++;
+                }
             }
         })
         {
