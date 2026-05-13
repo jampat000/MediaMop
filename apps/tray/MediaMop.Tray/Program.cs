@@ -395,7 +395,7 @@ sealed class TrayApp : IDisposable
         Application.Run();
     }
 
-    // -- Legacy Inno Setup migration detection --------------------------------
+    // -- Legacy Inno Setup migration detection (remove in v2.4.0) ------------
 
     private void DetectLegacyInnoInstall()
     {
