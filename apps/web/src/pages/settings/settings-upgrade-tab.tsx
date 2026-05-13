@@ -45,22 +45,42 @@ const UPDATE_MODES: {
   },
 ];
 
+const CHECK_INTERVALS = [
+  { value: 15, label: "Every 15 minutes" },
+  { value: 30, label: "Every 30 minutes" },
+  { value: 60, label: "Every hour" },
+  { value: 120, label: "Every 2 hours" },
+  { value: 360, label: "Every 6 hours" },
+  { value: 720, label: "Every 12 hours" },
+  { value: 1440, label: "Every 24 hours" },
+];
+
 export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
   const updateSettingsQ = useUpdateSettingsQuery(
     updateStatusQ.data?.install_type === "windows",
   );
   const saveMode = useUpdateSettingsMutation();
   const [modeDraft, setModeDraft] = useState<UpdateMode | null>(null);
+  const [checkOnStartupDraft, setCheckOnStartupDraft] = useState(true);
+  const [checkIntervalDraft, setCheckIntervalDraft] = useState(60);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (updateSettingsQ.data) {
       setModeDraft(updateSettingsQ.data.mode);
+      setCheckOnStartupDraft(updateSettingsQ.data.check_on_startup);
+      setCheckIntervalDraft(updateSettingsQ.data.check_interval_minutes);
     }
   }, [updateSettingsQ.data]);
 
   const serverMode = updateSettingsQ.data?.mode ?? null;
-  const modeDirty = modeDraft !== null && modeDraft !== serverMode;
+  const serverCheckOnStartup = updateSettingsQ.data?.check_on_startup ?? true;
+  const serverCheckInterval = updateSettingsQ.data?.check_interval_minutes ?? 60;
+  const settingsDirty =
+    modeDraft !== null &&
+    (modeDraft !== serverMode ||
+      checkOnStartupDraft !== serverCheckOnStartup ||
+      checkIntervalDraft !== serverCheckInterval);
 
   async function handleSaveMode() {
     if (!modeDraft || !updateSettingsQ.data) return;
@@ -69,10 +89,10 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
     try {
       await saveMode.mutateAsync({
         mode: modeDraft,
-        check_on_startup: updateSettingsQ.data.check_on_startup,
-        check_interval_minutes: updateSettingsQ.data.check_interval_minutes,
+        check_on_startup: checkOnStartupDraft,
+        check_interval_minutes: checkIntervalDraft,
       });
-      setSaveMsg("Update mode saved.");
+      setSaveMsg("Update settings saved.");
     } catch {
       /* surfaced via saveMode.isError */
     }
@@ -194,39 +214,80 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                     Could not load update preferences.
                   </p>
                 ) : (
-                  <fieldset className="mt-1 space-y-2">
-                    <legend className="sr-only">Update mode</legend>
-                    {UPDATE_MODES.map((opt) => (
-                      <label
-                        key={opt.value}
-                        className={[
-                          "flex min-w-0 cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2.5 text-sm transition-colors",
-                          modeDraft === opt.value
-                            ? "border-[var(--mm-accent)] bg-[var(--mm-accent)]/12 text-[var(--mm-text)]"
-                            : "border-[var(--mm-border)] bg-transparent text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)]",
-                        ].join(" ")}
-                      >
+                  <>
+                    <fieldset className="mt-1 space-y-2">
+                      <legend className="sr-only">Update mode</legend>
+                      {UPDATE_MODES.map((opt) => (
+                        <label
+                          key={opt.value}
+                          className={[
+                            "flex min-w-0 cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2.5 text-sm transition-colors",
+                            modeDraft === opt.value
+                              ? "border-[var(--mm-accent)] bg-[var(--mm-accent)]/12 text-[var(--mm-text)]"
+                              : "border-[var(--mm-border)] bg-transparent text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)]",
+                          ].join(" ")}
+                        >
+                          <input
+                            type="radio"
+                            name="update-mode"
+                            value={opt.value}
+                            checked={modeDraft === opt.value}
+                            onChange={() => {
+                              setModeDraft(opt.value);
+                              setSaveMsg(null);
+                              saveMode.reset();
+                            }}
+                            className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--mm-accent)]"
+                          />
+                          <span className="min-w-0">
+                            <span className="block font-medium">
+                              {opt.label}
+                            </span>
+                            <span className="block text-xs text-[var(--mm-text3)]">
+                              {opt.description}
+                            </span>
+                          </span>
+                        </label>
+                      ))}
+                    </fieldset>
+
+                    <div className="space-y-3 border-t border-[var(--mm-border)] pt-3">
+                      <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--mm-text2)]">
                         <input
-                          type="radio"
-                          name="update-mode"
-                          value={opt.value}
-                          checked={modeDraft === opt.value}
-                          onChange={() => {
-                            setModeDraft(opt.value);
+                          type="checkbox"
+                          className="h-4 w-4 shrink-0 accent-[var(--mm-accent)]"
+                          checked={checkOnStartupDraft}
+                          onChange={(e) => {
+                            setCheckOnStartupDraft(e.target.checked);
                             setSaveMsg(null);
                             saveMode.reset();
                           }}
-                          className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--mm-accent)]"
                         />
-                        <span className="min-w-0">
-                          <span className="block font-medium">{opt.label}</span>
-                          <span className="block text-xs text-[var(--mm-text3)]">
-                            {opt.description}
-                          </span>
-                        </span>
+                        Check for updates on startup
                       </label>
-                    ))}
-                  </fieldset>
+
+                      <label className="block text-sm text-[var(--mm-text2)]">
+                        <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
+                          Check interval
+                        </span>
+                        <select
+                          className="mm-input w-full max-w-xs"
+                          value={checkIntervalDraft}
+                          onChange={(e) => {
+                            setCheckIntervalDraft(Number(e.target.value));
+                            setSaveMsg(null);
+                            saveMode.reset();
+                          }}
+                        >
+                          {CHECK_INTERVALS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                  </>
                 )}
 
                 {saveMode.isError && (
@@ -236,7 +297,7 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                   >
                     {saveMode.error instanceof Error
                       ? saveMode.error.message
-                      : "Could not save update mode."}
+                      : "Could not save update settings."}
                   </p>
                 )}
                 {saveMsg && !saveMode.isError && (
@@ -249,12 +310,12 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                     className={mmActionButtonClass({
                       variant: "primary",
                       disabled:
-                        !modeDirty ||
+                        !settingsDirty ||
                         saveMode.isPending ||
                         updateSettingsQ.isPending,
                     })}
                     disabled={
-                      !modeDirty ||
+                      !settingsDirty ||
                       saveMode.isPending ||
                       updateSettingsQ.isPending
                     }
@@ -262,7 +323,7 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                   >
                     {saveMode.isPending ? "Saving..." : "Save"}
                   </button>
-                  {modeDirty && (
+                  {settingsDirty && (
                     <button
                       type="button"
                       className={mmActionButtonClass({
@@ -272,6 +333,8 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                       disabled={saveMode.isPending}
                       onClick={() => {
                         setModeDraft(serverMode);
+                        setCheckOnStartupDraft(serverCheckOnStartup);
+                        setCheckIntervalDraft(serverCheckInterval);
                         setSaveMsg(null);
                         saveMode.reset();
                       }}
