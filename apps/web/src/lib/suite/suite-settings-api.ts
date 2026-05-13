@@ -19,6 +19,8 @@ import type {
   SuiteSettingsOut,
   SuiteSettingsPutBody,
   SuiteUpdateStatusOut,
+  UpdateSettingsOut,
+  UpdateSettingsPutBody,
 } from "./types";
 
 export const suiteSettingsPath = () => "/api/v1/suite/settings";
@@ -33,6 +35,7 @@ export const suiteLogsPath = () => "/api/v1/suite/logs";
 export const suiteMetricsPath = () => "/api/v1/suite/metrics";
 export const suiteOperationalHistoryResetPath = () =>
   "/api/v1/suite/operational-history/reset";
+export const suiteUpdateSettingsPath = () => "/api/v1/suite/update-settings";
 
 /**
  * GET/PUT configuration bundle: same handler on the backend, several URL aliases for older builds
@@ -128,6 +131,27 @@ export async function fetchSuiteMetrics(): Promise<SuiteMetricsOut> {
   const r = await apiFetch(path);
   await requireOk(path, r, "Could not load runtime health");
   return readJson<SuiteMetricsOut>(r);
+}
+
+export async function fetchUpdateSettings(): Promise<UpdateSettingsOut> {
+  const path = suiteUpdateSettingsPath();
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load update settings");
+  return readJson<UpdateSettingsOut>(r);
+}
+
+export async function putUpdateSettings(
+  body: UpdateSettingsPutBody,
+): Promise<UpdateSettingsOut> {
+  const csrf_token = await fetchCsrfToken();
+  const path = suiteUpdateSettingsPath();
+  const r = await apiFetch(path, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...body, csrf_token }),
+  });
+  await requireOk(path, r, "Could not save update settings");
+  return readJson<UpdateSettingsOut>(r);
 }
 
 export async function resetSuiteOperationalHistory(

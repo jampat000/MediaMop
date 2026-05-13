@@ -10,12 +10,18 @@ import {
   fetchSuiteSecurityOverview,
   fetchSuiteSettings,
   fetchSuiteUpdateStatus,
+  fetchUpdateSettings,
   putSuiteSettings,
+  putUpdateSettings,
   resetSuiteOperationalHistory,
   testNotificationChannel,
   updateNotificationChannel,
 } from "./suite-settings-api";
-import type { NotificationChannelIn, SuiteSettingsPutBody } from "./types";
+import type {
+  NotificationChannelIn,
+  SuiteSettingsPutBody,
+  UpdateSettingsPutBody,
+} from "./types";
 
 export const suiteSettingsQueryKey = ["suite", "settings"] as const;
 export const suiteSecurityOverviewQueryKey = [
@@ -27,6 +33,10 @@ export const suiteConfigurationBackupsQueryKey = [
   "configuration-backups",
 ] as const;
 export const suiteUpdateStatusQueryKey = ["suite", "update-status"] as const;
+export const suiteUpdateSettingsQueryKey = [
+  "suite",
+  "update-settings",
+] as const;
 export const suiteLogsQueryKey = ["suite", "logs"] as const;
 export const suiteMetricsQueryKey = ["suite", "metrics"] as const;
 
@@ -66,6 +76,26 @@ export function useSuiteUpdateStatusQuery(
     staleTime: enabled && refetchInterval ? 0 : 60_000,
     refetchInterval,
     retry: false,
+  });
+}
+
+export function useUpdateSettingsQuery(enabled = true) {
+  return useQuery({
+    queryKey: suiteUpdateSettingsQueryKey,
+    queryFn: () => fetchUpdateSettings(),
+    enabled,
+    staleTime: 30_000,
+    retry: false,
+  });
+}
+
+export function useUpdateSettingsMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: UpdateSettingsPutBody) => putUpdateSettings(body),
+    onSuccess: (data) => {
+      qc.setQueryData(suiteUpdateSettingsQueryKey, data);
+    },
   });
 }
 

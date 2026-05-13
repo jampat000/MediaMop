@@ -37,6 +37,8 @@ from mediamop.platform.suite_settings.schemas import (
     SuiteSettingsOut,
     SuiteSettingsPutIn,
     SuiteUpdateStatusOut,
+    UpdateSettingsOut,
+    UpdateSettingsPutIn,
 )
 from mediamop.platform.suite_settings.security_overview import build_suite_security_overview
 from mediamop.platform.suite_settings.service import (
@@ -50,6 +52,8 @@ from mediamop.platform.suite_settings.suite_configuration_backup_service import 
 )
 from mediamop.platform.suite_settings.update_service import (
     build_suite_update_status,
+    get_update_settings,
+    put_update_settings,
 )
 
 router = APIRouter(tags=["suite"])
@@ -193,6 +197,32 @@ def get_suite_update_status(_user: UserPublicDep, settings: SettingsDep) -> Suit
     """Read-only update check for the signed-in Settings page."""
 
     return build_suite_update_status(settings)
+
+
+@router.get("/suite/update-settings", response_model=UpdateSettingsOut)
+def get_suite_update_settings(_user: UserPublicDep, settings: SettingsDep) -> UpdateSettingsOut:
+    """Read the tray update-mode preferences from update-settings.json."""
+
+    return get_update_settings(settings)
+
+
+@router.put("/suite/update-settings", response_model=UpdateSettingsOut)
+def put_suite_update_settings(
+    body: UpdateSettingsPutIn,
+    request: Request,
+    _user: RequireOperatorDep,
+    settings: SettingsDep,
+) -> UpdateSettingsOut:
+    """Persist tray update-mode preferences to update-settings.json."""
+
+    validate_browser_post_origin(request, settings)
+    secret = require_session_secret(settings)
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Your confirmation token expired. Refresh the page and try again.",
+        )
+    return put_update_settings(settings, body.mode, body.check_on_startup, body.check_interval_minutes)
 
 
 @router.post("/suite/operational-history/reset", response_model=SuiteOperationalHistoryResetOut)
