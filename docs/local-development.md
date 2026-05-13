@@ -9,6 +9,16 @@ This **MediaMop** repository contains **`apps/backend`** (FastAPI, **SQLite**, c
 - **Python 3.11+**
 - **Node.js LTS** (npm on `PATH`)
 
+## One-time setup (after cloning)
+
+Activate the pre-push hook so ruff, prettier, and the OpenAPI drift check run locally before every push:
+
+```powershell
+git config core.hooksPath .githooks
+```
+
+The hook delegates to `scripts/pre-push-check.ps1`. It skips checks gracefully if the backend venv or `apps/web/node_modules` are not yet installed — set those up first for full coverage.
+
 The backend persists state in **file-backed SQLite** under **`MEDIAMOP_HOME`** (see **`apps/backend/.env.example`**). You do **not** install or run PostgreSQL for normal MediaMop development.
 Docker Desktop is not required for normal local development or for shipping a release.
 
