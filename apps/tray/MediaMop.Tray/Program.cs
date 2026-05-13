@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Win32;
 using Velopack;
 using Velopack.Sources;
 
@@ -28,10 +29,13 @@ static class Program
             {
                 AppendFallbackLog($"Velopack: after install v{v}");
                 KillLegacyProcesses();
+                RegisterStartup();
             })
             .OnBeforeUninstallFastCallback((v) =>
             {
                 AppendFallbackLog($"Velopack: before uninstall v{v}");
+                KillLegacyProcesses();
+                DeregisterStartup();
             })
             .OnBeforeUpdateFastCallback((v) =>
             {
@@ -40,6 +44,7 @@ static class Program
             .OnAfterUpdateFastCallback((v) =>
             {
                 AppendFallbackLog($"Velopack: after update to v{v}");
+                RegisterStartup();
             })
             .Run();
 
@@ -107,6 +112,55 @@ static class Program
                     AppendFallbackLog($"Could not kill {name} (pid {proc.Id}): {ex.Message}");
                 }
             }
+        }
+    }
+
+    private static void RegisterStartup()
+    {
+        try
+        {
+            var exe = Environment.ProcessPath;
+            if (string.IsNullOrEmpty(exe)) return;
+            using var key = Registry.CurrentUser.OpenSubKey(
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", writable: true);
+            key?.SetValue("MediaMop", $"\"{exe}\" --no-browser");
+            AppendFallbackLog(@"Registered MediaMop startup (HKCU\Run).");
+
+            // Remove any manually-created startup folder shortcut so there is only one entry.
+            var shortcut = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.Startup), "MediaMop.lnk");
+            if (File.Exists(shortcut))
+            {
+                File.Delete(shortcut);
+                AppendFallbackLog("Removed legacy startup folder shortcut.");
+            }
+        }
+        catch (Exception ex)
+        {
+            AppendFallbackLog($"Could not register startup: {ex.Message}");
+        }
+    }
+
+    private static void DeregisterStartup()
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", writable: true);
+            key?.DeleteValue("MediaMop", throwOnMissingValue: false);
+            AppendFallbackLog(@"Deregistered MediaMop startup (HKCU\Run).");
+
+            var shortcut = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.Startup), "MediaMop.lnk");
+            if (File.Exists(shortcut))
+            {
+                File.Delete(shortcut);
+                AppendFallbackLog("Removed startup folder shortcut.");
+            }
+        }
+        catch (Exception ex)
+        {
+            AppendFallbackLog($"Could not deregister startup: {ex.Message}");
         }
     }
 
@@ -374,10 +428,46 @@ sealed class TrayApp : IDisposable
                     Log($"Could not remove legacy updater service (non-fatal): {ex.Message}");
                 }
             }
+
+            RemoveLegacyScheduledTasks();
         }
         catch (Exception ex)
         {
             Log($"Legacy install detection failed (non-fatal): {ex.Message}");
+        }
+    }
+
+    private void RemoveLegacyScheduledTasks()
+    {
+        try
+        {
+            using var query = Process.Start(new ProcessStartInfo
+            {
+                FileName = "schtasks",
+                Arguments = "/query /FO CSV /NH",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            });
+            if (query is null) return;
+            var output = query.StandardOutput.ReadToEnd();
+            query.WaitForExit(10_000);
+
+            foreach (var line in output.Split('\n'))
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                var parts = line.Trim().Split(',');
+                if (parts.Length == 0) continue;
+                var taskName = parts[0].Trim('"', '\\', ' ');
+                if (!taskName.StartsWith("MediaMop-", StringComparison.OrdinalIgnoreCase)) continue;
+                RunSilent("schtasks", $"/delete /TN \"{taskName}\" /F");
+                Log($"Removed legacy scheduled task: {taskName}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"Could not remove legacy scheduled tasks (non-fatal): {ex.Message}");
         }
     }
 
