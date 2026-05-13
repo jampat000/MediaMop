@@ -97,7 +97,9 @@ def build_refiner_overview_stats(db: Session, *, window_days: int = 30) -> Refin
     terminal = completed + failed
     rate = round((completed / terminal) * 100.0, 1) if terminal > 0 else 0.0
     net_space_saved_bytes = total_source_bytes - total_output_bytes
-    net_space_saved_percent = round((net_space_saved_bytes / total_source_bytes) * 100.0, 1) if total_source_bytes > 0 else 0.0
+    net_space_saved_percent = (
+        round((net_space_saved_bytes / total_source_bytes) * 100.0, 1) if total_source_bytes > 0 else 0.0
+    )
 
     return RefinerOverviewStatsOut(
         window_days=max(1, int(window_days)),

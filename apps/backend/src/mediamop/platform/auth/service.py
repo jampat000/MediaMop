@@ -95,15 +95,18 @@ def enforce_session_limit_for_user(
     if max_active_sessions < 1:
         max_active_sessions = 1
     now = utcnow()
-    active_count = db.scalar(
-        select(func.count())
-        .select_from(UserSession)
-        .where(
-            UserSession.user_id == user_id,
-            UserSession.revoked_at.is_(None),
-            UserSession.absolute_expires_at > now,
+    active_count = (
+        db.scalar(
+            select(func.count())
+            .select_from(UserSession)
+            .where(
+                UserSession.user_id == user_id,
+                UserSession.revoked_at.is_(None),
+                UserSession.absolute_expires_at > now,
+            )
         )
-    ) or 0
+        or 0
+    )
     overflow = int(active_count) - max_active_sessions
     if overflow <= 0:
         return 0
@@ -134,11 +137,7 @@ def create_user_session(
     raw = generate_raw_session_token()
     th = hash_session_token(raw)
     abs_ttl = timedelta(
-        days=(
-            settings.session_trusted_absolute_days
-            if trusted_device
-            else settings.session_absolute_days
-        )
+        days=(settings.session_trusted_absolute_days if trusted_device else settings.session_absolute_days)
     )
     now = utcnow()
     row = UserSession(
@@ -242,15 +241,9 @@ def user_public(user: User) -> dict:
 
 
 def session_public(session: UserSession, *, settings: MediaMopSettings) -> dict:
-    idle_minutes = (
-        settings.session_trusted_idle_minutes
-        if session.is_trusted_device
-        else settings.session_idle_minutes
-    )
+    idle_minutes = settings.session_trusted_idle_minutes if session.is_trusted_device else settings.session_idle_minutes
     absolute_days = (
-        settings.session_trusted_absolute_days
-        if session.is_trusted_device
-        else settings.session_absolute_days
+        settings.session_trusted_absolute_days if session.is_trusted_device else settings.session_absolute_days
     )
     return {
         "trusted_device": session.is_trusted_device,

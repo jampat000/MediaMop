@@ -28,7 +28,9 @@ def enqueue_refiner_failure_cleanup_sweep_job(
 ) -> tuple[RefinerJob, bool]:
     ms = "tv" if str(media_scope).strip().lower() == "tv" else "movie"
     job_kind = REFINER_TV_FAILURE_CLEANUP_SWEEP_JOB_KIND if ms == "tv" else REFINER_MOVIE_FAILURE_CLEANUP_SWEEP_JOB_KIND
-    dedupe_base = REFINER_TV_FAILURE_CLEANUP_SWEEP_DEDUPE_KEY if ms == "tv" else REFINER_MOVIE_FAILURE_CLEANUP_SWEEP_DEDUPE_KEY
+    dedupe_base = (
+        REFINER_TV_FAILURE_CLEANUP_SWEEP_DEDUPE_KEY if ms == "tv" else REFINER_MOVIE_FAILURE_CLEANUP_SWEEP_DEDUPE_KEY
+    )
     active = session.scalars(
         select(RefinerJob)
         .where(
@@ -48,4 +50,3 @@ def enqueue_refiner_failure_cleanup_sweep_job(
         payload_json=payload_json,
     )
     return job, True
-

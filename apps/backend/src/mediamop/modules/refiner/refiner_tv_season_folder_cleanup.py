@@ -175,7 +175,9 @@ def _tv_cascade_delete_empty_parents(
         try:
             cur.relative_to(root)
         except ValueError:
-            logger.warning("Refiner TV cleanup: stopped cascade because a folder is outside the TV watched folder (%s).", cur)
+            logger.warning(
+                "Refiner TV cleanup: stopped cascade because a folder is outside the TV watched folder (%s).", cur
+            )
             break
         if not cur.is_dir():
             break
@@ -219,7 +221,9 @@ def handle_tv_cleanup_after_success(
     try:
         src_resolved.relative_to(watched_resolved)
     except ValueError:
-        out["tv_season_folder_skip_reason"] = "The video file is not under the saved TV watched folder, so nothing was removed."
+        out["tv_season_folder_skip_reason"] = (
+            "The video file is not under the saved TV watched folder, so nothing was removed."
+        )
         summary.append("Stopped: the processed file is not under the TV watched folder.")
         return
 
@@ -227,7 +231,9 @@ def handle_tv_cleanup_after_success(
     try:
         season_folder.relative_to(watched_resolved)
     except ValueError:
-        out["tv_season_folder_skip_reason"] = "The season folder would sit outside the TV watched folder, so Refiner did nothing."
+        out["tv_season_folder_skip_reason"] = (
+            "The season folder would sit outside the TV watched folder, so Refiner did nothing."
+        )
         summary.append("Stopped: season folder is outside the TV watched folder.")
         return
 
@@ -253,7 +259,9 @@ def handle_tv_cleanup_after_success(
 
     episodes = get_tv_episode_set_media_files(season_folder=season_folder)
     if not episodes:
-        out["tv_season_folder_skip_reason"] = "This season folder has no direct video files Refiner treats as episodes, so nothing was removed."
+        out["tv_season_folder_skip_reason"] = (
+            "This season folder has no direct video files Refiner treats as episodes, so nothing was removed."
+        )
         summary.append("Stopped: no episode media files found as direct children of the season folder.")
         return
 
@@ -291,10 +299,14 @@ def handle_tv_cleanup_after_success(
                 "so the whole season folder was left in place."
             )
             out["tv_season_folder_skip_reason"] = msg
-            line_parts.append("Active Refiner TV job check failed — a TV remux job is pending or running for this path.")
+            line_parts.append(
+                "Active Refiner TV job check failed — a TV remux job is pending or running for this path."
+            )
             summary.append(" ".join(line_parts))
             return
-        line_parts.append("Active Refiner TV job check passed — no other pending or running TV remux job for this path.")
+        line_parts.append(
+            "Active Refiner TV job check passed — no other pending or running TV remux job for this path."
+        )
 
         rel_eq = rel == str(remux_context.get("relative_media_path") or "").strip()
         live_ok = (

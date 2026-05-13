@@ -8,6 +8,8 @@ from datetime import UTC, datetime, timezone
 
 def _as_utc(dt: datetime) -> datetime:
     return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
+
+
 from pathlib import Path
 
 import pytest

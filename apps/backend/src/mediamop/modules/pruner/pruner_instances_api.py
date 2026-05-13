@@ -120,7 +120,9 @@ def _scope_row_out(session: Session, row: PrunerScopeSettings) -> PrunerScopeSum
         preview_year_min=clamp_preview_year_bound(row.preview_year_min),
         preview_year_max=clamp_preview_year_bound(row.preview_year_max),
         preview_include_studios=preview_studio_filters_from_db_column(str(row.preview_include_studios_json)),
-        preview_include_collections=preview_collection_filters_from_db_column(str(row.preview_include_collections_json)),
+        preview_include_collections=preview_collection_filters_from_db_column(
+            str(row.preview_include_collections_json)
+        ),
         scheduled_preview_enabled=bool(row.scheduled_preview_enabled),
         scheduled_preview_interval_seconds=clamp_pruner_scheduled_preview_interval_seconds(
             int(row.scheduled_preview_interval_seconds),
@@ -328,7 +330,9 @@ def get_pruner_scope(
     db: DbSessionDep,
 ) -> PrunerScopeSummaryOut:
     if media_scope not in (MEDIA_SCOPE_TV, MEDIA_SCOPE_MOVIES):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="media_scope must be tv or movies.")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="media_scope must be tv or movies."
+        )
     sc = get_scope_settings(db, server_instance_id=instance_id, media_scope=media_scope)
     if sc is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scope not found.")
@@ -350,7 +354,9 @@ def patch_pruner_scope(
     if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     if media_scope not in (MEDIA_SCOPE_TV, MEDIA_SCOPE_MOVIES):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="media_scope must be tv or movies.")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="media_scope must be tv or movies."
+        )
     sc = get_scope_settings(db, server_instance_id=instance_id, media_scope=media_scope)
     if sc is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scope not found.")
@@ -379,7 +385,9 @@ def patch_pruner_scope(
     if body.unwatched_movie_stale_reported_enabled is not None:
         sc.unwatched_movie_stale_reported_enabled = bool(body.unwatched_movie_stale_reported_enabled)
     if body.unwatched_movie_stale_min_age_days is not None:
-        sc.unwatched_movie_stale_min_age_days = clamp_never_played_min_age_days(int(body.unwatched_movie_stale_min_age_days))
+        sc.unwatched_movie_stale_min_age_days = clamp_never_played_min_age_days(
+            int(body.unwatched_movie_stale_min_age_days)
+        )
     if body.preview_max_items is not None:
         sc.preview_max_items = int(body.preview_max_items)
     if body.preview_include_genres is not None:
@@ -447,7 +455,9 @@ def list_pruner_preview_runs(
     instance_id: Annotated[int, Path(ge=1)],
     _user: UserPublicDep,
     db: DbSessionDep,
-    media_scope: Annotated[str | None, Query(description="`tv` or `movies`; omit for all scopes on this instance.")] = None,
+    media_scope: Annotated[
+        str | None, Query(description="`tv` or `movies`; omit for all scopes on this instance.")
+    ] = None,
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
 ) -> list[PrunerPreviewRunListItemOut]:
     if get_server_instance(db, instance_id) is None:
@@ -505,7 +515,9 @@ def get_pruner_apply_eligibility(
     settings: SettingsDep,
 ) -> PrunerApplyEligibilityOut:
     if media_scope not in (MEDIA_SCOPE_TV, MEDIA_SCOPE_MOVIES):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="media_scope must be tv or movies.")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="media_scope must be tv or movies."
+        )
     if get_server_instance(db, instance_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found.")
     return compute_apply_eligibility(
@@ -537,7 +549,9 @@ def post_pruner_apply_from_preview(
     if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     if media_scope not in (MEDIA_SCOPE_TV, MEDIA_SCOPE_MOVIES):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="media_scope must be tv or movies.")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="media_scope must be tv or movies."
+        )
     if get_server_instance(db, instance_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found.")
     elig = compute_apply_eligibility(
@@ -581,7 +595,9 @@ def get_pruner_plex_live_removal_eligibility(
     settings: SettingsDep,
 ) -> PrunerPlexLiveEligibilityOut:
     if media_scope not in (MEDIA_SCOPE_TV, MEDIA_SCOPE_MOVIES):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="media_scope must be tv or movies.")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="media_scope must be tv or movies."
+        )
     if get_server_instance(db, instance_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found.")
     return compute_plex_live_eligibility(
@@ -611,7 +627,9 @@ def post_pruner_plex_live_removal(
     if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     if media_scope not in (MEDIA_SCOPE_TV, MEDIA_SCOPE_MOVIES):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="media_scope must be tv or movies.")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="media_scope must be tv or movies."
+        )
     inst = get_server_instance(db, instance_id)
     if inst is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found.")

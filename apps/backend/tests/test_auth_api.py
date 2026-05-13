@@ -164,7 +164,9 @@ def test_login_failed_persisted_throttled_per_username(client_with_admin: TestCl
         db.commit()
     with fac() as db:
         before = db.scalar(
-            select(func.count()).select_from(ActivityEvent).where(
+            select(func.count())
+            .select_from(ActivityEvent)
+            .where(
                 ActivityEvent.event_type == activity_constants.AUTH_LOGIN_FAILED,
                 ActivityEvent.detail == "alice",
             ),
@@ -183,7 +185,9 @@ def test_login_failed_persisted_throttled_per_username(client_with_admin: TestCl
         assert r.status_code == 401
     with fac() as db:
         after = db.scalar(
-            select(func.count()).select_from(ActivityEvent).where(
+            select(func.count())
+            .select_from(ActivityEvent)
+            .where(
                 ActivityEvent.event_type == activity_constants.AUTH_LOGIN_FAILED,
                 ActivityEvent.detail == "alice",
             ),
@@ -606,7 +610,9 @@ def test_bootstrap_denied_persisted_throttled(client_with_admin: TestClient) -> 
         db.commit()
     with fac() as db:
         before = db.scalar(
-            select(func.count()).select_from(ActivityEvent).where(
+            select(func.count())
+            .select_from(ActivityEvent)
+            .where(
                 ActivityEvent.event_type == activity_constants.AUTH_BOOTSTRAP_DENIED,
             ),
         )
@@ -634,7 +640,9 @@ def test_bootstrap_denied_persisted_throttled(client_with_admin: TestClient) -> 
     assert r2.status_code == 403
     with fac() as db:
         after = db.scalar(
-            select(func.count()).select_from(ActivityEvent).where(
+            select(func.count())
+            .select_from(ActivityEvent)
+            .where(
                 ActivityEvent.event_type == activity_constants.AUTH_BOOTSTRAP_DENIED,
             ),
         )
@@ -706,9 +714,7 @@ def test_activity_recent_includes_login_event(client_with_admin: TestClient) -> 
     r_act = client_with_admin.get("/api/v1/activity/recent")
     assert r_act.status_code == 200, r_act.text
     items = r_act.json()["items"]
-    assert any(
-        x.get("event_type") == "auth.login_succeeded" and x.get("detail") == "alice" for x in items
-    )
+    assert any(x.get("event_type") == "auth.login_succeeded" and x.get("detail") == "alice" for x in items)
 
 
 def test_activity_recent_includes_logout_event(client_with_admin: TestClient) -> None:
@@ -775,10 +781,13 @@ def test_load_valid_session_throttles_last_seen_persistence(monkeypatch: pytest.
 
     assert read_last_seen() == base
 
-    with patch(
-        "mediamop.platform.auth.service.utcnow",
-        return_value=base + timedelta(seconds=30),
-    ), fac() as db:
+    with (
+        patch(
+            "mediamop.platform.auth.service.utcnow",
+            return_value=base + timedelta(seconds=30),
+        ),
+        fac() as db,
+    ):
         pair = auth_service.load_valid_session_for_request(db, raw, settings)
         assert pair is not None
         db.commit()
@@ -808,7 +817,13 @@ def test_expired_session_is_rejected_and_revoked(monkeypatch: pytest.MonkeyPatch
         sid = row.id
         db.commit()
 
-    with patch("mediamop.platform.auth.service.utcnow", return_value=base + timedelta(days=settings.session_absolute_days + 1)), fac() as db:
+    with (
+        patch(
+            "mediamop.platform.auth.service.utcnow",
+            return_value=base + timedelta(days=settings.session_absolute_days + 1),
+        ),
+        fac() as db,
+    ):
         pair = auth_service.load_valid_session_for_request(db, raw, settings)
         db.commit()
 

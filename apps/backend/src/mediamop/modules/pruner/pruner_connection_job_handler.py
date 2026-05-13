@@ -100,11 +100,7 @@ def make_pruner_server_connection_test_handler(
             inst2.last_connection_test_at = when
             inst2.last_connection_test_ok = ok
             inst2.last_connection_test_detail = detail_s
-            evt = (
-                C.PRUNER_CONNECTION_TEST_SUCCEEDED
-                if ok
-                else C.PRUNER_CONNECTION_TEST_FAILED
-            )
+            evt = C.PRUNER_CONNECTION_TEST_SUCCEEDED if ok else C.PRUNER_CONNECTION_TEST_FAILED
             record_activity_event(
                 session,
                 event_type=evt,

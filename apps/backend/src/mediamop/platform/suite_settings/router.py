@@ -145,7 +145,9 @@ def put_configuration_bundle(
 
 
 @router.get("/suite/configuration-backups", response_model=SuiteConfigurationBackupListOut)
-def get_configuration_backups(_user: RequireOperatorDep, db: DbSessionDep, settings: SettingsDep) -> SuiteConfigurationBackupListOut:
+def get_configuration_backups(
+    _user: RequireOperatorDep, db: DbSessionDep, settings: SettingsDep
+) -> SuiteConfigurationBackupListOut:
     directory, rows = list_suite_configuration_backups(db, settings=settings)
     return SuiteConfigurationBackupListOut(
         directory=directory,
@@ -191,7 +193,6 @@ def get_suite_update_status(_user: UserPublicDep, settings: SettingsDep) -> Suit
     """Read-only update check for the signed-in Settings page."""
 
     return build_suite_update_status(settings)
-
 
 
 @router.post("/suite/operational-history/reset", response_model=SuiteOperationalHistoryResetOut)

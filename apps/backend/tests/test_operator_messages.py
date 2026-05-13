@@ -17,14 +17,17 @@ from mediamop.platform.observability.operator_messages import (
 def test_operator_message_labels_are_plain_language() -> None:
     assert provider_label("jellyfin") == "Jellyfin"
     assert media_scope_label("tv") == "TV episodes"
-    assert scan_title(
-        module_label="Pruner preview",
-        result=DiagnosticResult.SUCCESS,
-        count=2,
-        scope="movies",
-        source="Living room (Jellyfin)",
-        scheduled=True,
-    ) == "Scheduled Pruner preview scan found 2 Movies needing action from Living room (Jellyfin)"
+    assert (
+        scan_title(
+            module_label="Pruner preview",
+            result=DiagnosticResult.SUCCESS,
+            count=2,
+            scope="movies",
+            source="Living room (Jellyfin)",
+            scheduled=True,
+        )
+        == "Scheduled Pruner preview scan found 2 Movies needing action from Living room (Jellyfin)"
+    )
     assert connection_test_title(module_label="Pruner", name="Living room", provider="plex", ok=False) == (
         "Pruner connection test failed for Living room (Plex)"
     )

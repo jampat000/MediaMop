@@ -55,7 +55,9 @@ def _add_failed(session: Session, *, rel: str, scope: str, dry_run: bool = False
         dedupe_key=f"x:{scope}:{rel}",
         job_kind=REFINER_FILE_REMUX_PASS_JOB_KIND,
         status=RefinerJobStatus.FAILED.value,
-        payload_json=json.dumps({"relative_media_path": rel, "media_scope": scope, "dry_run": dry_run}, separators=(",", ":")),
+        payload_json=json.dumps(
+            {"relative_media_path": rel, "media_scope": scope, "dry_run": dry_run}, separators=(",", ":")
+        ),
     )
     session.add(row)
     session.flush()
@@ -91,7 +93,7 @@ def test_failed_movie_older_than_grace_cleans_source_output_and_temp(tmp_path: P
     out.parent.mkdir(parents=True, exist_ok=True)
     src.write_bytes(b"a")
     out.write_bytes(b"b")
-    temp = (tmp_path / "mwork" / "Film.refiner.tmp.mkv")
+    temp = tmp_path / "mwork" / "Film.refiner.tmp.mkv"
     temp.write_bytes(b"c")
     _seed_paths(session, mw=mw, mo=mo, tw=tw, to=to)
     _add_failed(session, rel=rel, scope="movie")
@@ -464,4 +466,3 @@ def test_failure_cleanup_handler_records_started_and_no_eligible_activity(tmp_pa
         titles = [row.title for row in db.query(ActivityEvent).order_by(ActivityEvent.id.asc()).all()]
     assert "Refiner cleanup started for Movies" in titles
     assert "Refiner cleanup checked Movies: no eligible files" in titles
-

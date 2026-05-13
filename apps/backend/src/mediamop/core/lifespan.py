@@ -341,7 +341,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         )
         await _stop_task_group(
             "refiner_watched_folder_scan_dispatch_stop",
-            lambda: stop_refiner_watched_folder_remux_scan_dispatch_enqueue_tasks(refiner_watched_folder_scan_dispatch_tasks),
+            lambda: stop_refiner_watched_folder_remux_scan_dispatch_enqueue_tasks(
+                refiner_watched_folder_scan_dispatch_tasks
+            ),
         )
         await _stop_task_group(
             "refiner_work_temp_stale_sweep_stop",
@@ -351,7 +353,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             "refiner_failure_cleanup_stop",
             lambda: stop_refiner_failure_cleanup_enqueue_tasks(refiner_failure_cleanup_tasks),
         )
-        await _stop_task_group("subber_tv_scan_schedule_stop", lambda: stop_subber_tv_scan_schedule_enqueue_tasks(subber_tv_scan_tasks))
+        await _stop_task_group(
+            "subber_tv_scan_schedule_stop", lambda: stop_subber_tv_scan_schedule_enqueue_tasks(subber_tv_scan_tasks)
+        )
         await _stop_task_group(
             "subber_movies_scan_schedule_stop",
             lambda: stop_subber_movies_scan_schedule_enqueue_tasks(subber_movies_scan_tasks),

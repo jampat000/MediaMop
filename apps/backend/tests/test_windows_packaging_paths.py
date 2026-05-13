@@ -45,7 +45,7 @@ def test_server_spec_uses_dedicated_entry_point_and_assets() -> None:
     assert (repo / "packaging" / "windows" / "assets" / "mediamop-tray-icon.ico").is_file()
     assert 'TRAY_ICON_PNG = ROOT / "packaging" / "windows" / "assets" / "mediamop-tray-icon.png"' in text
     assert 'TRAY_ICON_ICO = ROOT / "packaging" / "windows" / "assets" / "mediamop-tray-icon.ico"' in text
-    assert "(str(THIRD_PARTY_NOTICES), \".\")" in text
+    assert '(str(THIRD_PARTY_NOTICES), ".")' in text
     assert 'copy_metadata("mediamop-backend")' in text
     assert "icon=str(TRAY_ICON_ICO)" in text
     assert 'name="MediaMopServer"' in text
@@ -66,7 +66,7 @@ def test_velopack_build_script_includes_ffmpeg_and_version_validation() -> None:
     assert "ffmpeg-N-124254-g397c7c7524-win64-lgpl.zip" in build_text
     assert "Get-FileHash" in build_text
     assert "MEDIAMOP_BUILD_VERSION" in build_text
-    assert "$buildVersion.StartsWith(\"v\")" in build_text
+    assert '$buildVersion.StartsWith("v")' in build_text
     assert "does not match backend project version" in build_text
     assert "MediaMopServer.exe reports version" in build_text
     assert "vpk" in build_text
@@ -80,7 +80,7 @@ def test_release_workflow_uses_velopack_and_normalized_semver() -> None:
     assert "MEDIAMOP_BUILD_VERSION: ${{ steps.version.outputs.plain }}" in text
     assert 'scripts/smoke-windows-package.ps1 -ExpectedVersion "${{ steps.version.outputs.plain }}"' in text
     assert "SHA256SUMS.txt" in text
-    assert 'id: codesign' in text
+    assert "id: codesign" in text
     assert "steps.codesign.outputs.enabled == 'true'" in text
     assert "if: ${{ secrets." not in text
     assert "Get-AuthenticodeSignature" in text

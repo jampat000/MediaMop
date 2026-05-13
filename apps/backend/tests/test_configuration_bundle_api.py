@@ -68,7 +68,9 @@ def test_configuration_bundle_round_trip_suite_name(client_with_admin: TestClien
         headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
     )
     assert r_restore.status_code == 200, r_restore.text
-    assert r_restore.json()["suite_settings"]["product_display_name"] == bundle["suite_settings"]["product_display_name"]
+    assert (
+        r_restore.json()["suite_settings"]["product_display_name"] == bundle["suite_settings"]["product_display_name"]
+    )
 
 
 def test_configuration_bundle_put_rejects_bad_version(client_with_admin: TestClient) -> None:

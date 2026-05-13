@@ -71,7 +71,9 @@ def get_enabled_providers_ordered(session: Session) -> list[SubberProviderRow]:
 
 def get_provider_by_key(session: Session, provider_key: str) -> SubberProviderRow | None:
     ensure_all_provider_rows(session)
-    return session.scalars(select(SubberProviderRow).where(SubberProviderRow.provider_key == provider_key)).one_or_none()
+    return session.scalars(
+        select(SubberProviderRow).where(SubberProviderRow.provider_key == provider_key)
+    ).one_or_none()
 
 
 def provider_has_stored_credentials(settings: MediaMopSettings, row: SubberProviderRow) -> bool:

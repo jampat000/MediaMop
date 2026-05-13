@@ -737,7 +737,9 @@ def test_get_pruner_instance_studios_not_found(client_with_admin: TestClient) ->
     assert r.status_code == 404
 
 
-def test_get_pruner_instance_studios_returns_list(client_with_admin: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_pruner_instance_studios_returns_list(
+    client_with_admin: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     _login_admin(client_with_admin)
     tok = fetch_csrf(client_with_admin)
     r0 = auth_post(

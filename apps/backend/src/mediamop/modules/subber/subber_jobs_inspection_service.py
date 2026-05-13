@@ -37,10 +37,7 @@ def list_subber_jobs_for_inspection(
 ) -> SubberJobsInspectionOut:
     if statuses:
         stmt = (
-            select(SubberJob)
-            .where(SubberJob.status.in_(statuses))
-            .order_by(SubberJob.updated_at.desc())
-            .limit(limit)
+            select(SubberJob).where(SubberJob.status.in_(statuses)).order_by(SubberJob.updated_at.desc()).limit(limit)
         )
         default_recent_slice = False
     else:

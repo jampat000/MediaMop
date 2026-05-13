@@ -27,10 +27,7 @@ def list_pruner_jobs_for_inspection(
 ) -> PrunerJobsInspectionOut:
     if statuses:
         stmt = (
-            select(PrunerJob)
-            .where(PrunerJob.status.in_(statuses))
-            .order_by(PrunerJob.updated_at.desc())
-            .limit(limit)
+            select(PrunerJob).where(PrunerJob.status.in_(statuses)).order_by(PrunerJob.updated_at.desc()).limit(limit)
         )
         default_recent_slice = False
     else:

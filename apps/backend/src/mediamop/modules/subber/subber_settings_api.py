@@ -209,20 +209,24 @@ def put_subber_settings(
     rad_key = _api_key_from_ciphertext(row.radarr_credentials_ciphertext)
     son_configured = bool((row.sonarr_base_url or "").strip()) and bool(son_key)
     rad_configured = bool((row.radarr_base_url or "").strip()) and bool(rad_key)
-    if (body.sonarr_base_url is not None or (body.sonarr_api_key is not None and body.sonarr_api_key.strip())) and son_configured:
+    if (
+        body.sonarr_base_url is not None or (body.sonarr_api_key is not None and body.sonarr_api_key.strip())
+    ) and son_configured:
         subber_enqueue_or_get_job(
             db,
             dedupe_key=f"subber:libsync:settings:tv:{uuid.uuid4()}",
             job_kind=SUBBER_JOB_KIND_LIBRARY_SYNC_TV,
             payload_json="{}",
         )
-    if (body.radarr_base_url is not None or (body.radarr_api_key is not None and body.radarr_api_key.strip())) and rad_configured:
+    if (
+        body.radarr_base_url is not None or (body.radarr_api_key is not None and body.radarr_api_key.strip())
+    ) and rad_configured:
         subber_enqueue_or_get_job(
             db,
             dedupe_key=f"subber:libsync:settings:movies:{uuid.uuid4()}",
             job_kind=SUBBER_JOB_KIND_LIBRARY_SYNC_MOVIES,
             payload_json="{}",
-            )
+        )
 
     return _settings_out(db, row, request, settings)
 

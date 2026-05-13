@@ -143,7 +143,9 @@ def compute_apply_eligibility(
             reasons.append(
                 f"{apply_label} is not enabled for this scope (watched movies rule toggle).",
             )
-        elif rid == RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED and not bool(sc.watched_movie_low_rating_reported_enabled):
+        elif rid == RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED and not bool(
+            sc.watched_movie_low_rating_reported_enabled
+        ):
             reasons.append(
                 f"{apply_label} is not enabled for this scope (watched low-rating movies rule toggle).",
             )

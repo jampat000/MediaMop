@@ -79,9 +79,7 @@ def _build_release_status(
 
     current_parsed = parse_version_key(current_version)
     latest_parsed = parse_version_key(release.version)
-    update_available = bool(
-        current_parsed and latest_parsed and latest_parsed > current_parsed
-    )
+    update_available = bool(current_parsed and latest_parsed and latest_parsed > current_parsed)
 
     if not release.version:
         status = "unavailable"
@@ -114,9 +112,7 @@ def _build_release_status(
         docker_update_command=docker_update_command,
         in_app_upgrade_supported=install_type == "windows",
         in_app_upgrade_summary=(
-            "Updates are managed by the MediaMop desktop app via Velopack."
-            if install_type == "windows"
-            else None
+            "Updates are managed by the MediaMop desktop app via Velopack." if install_type == "windows" else None
         ),
     )
 

@@ -86,7 +86,9 @@ def _list_root_entries() -> list[DirectoryBrowseEntry]:
                 }.get(int(drive_type), "Drive")
             except Exception:
                 description = "Drive"
-            entries.append(DirectoryBrowseEntry(name=root.rstrip("\\"), path=root, kind="root", description=description))
+            entries.append(
+                DirectoryBrowseEntry(name=root.rstrip("\\"), path=root, kind="root", description=description)
+            )
         return entries
     return [DirectoryBrowseEntry(name="/", path="/", kind="root", description="Filesystem root")]
 
@@ -134,7 +136,6 @@ def get_system_directories(
             detail="Path must begin at the filesystem root.",
         )
 
-
     if not os.path.isdir(normalized):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="The requested directory does not exist.")
 
@@ -157,9 +158,13 @@ def get_system_directories(
                 ),
             )
     except PermissionError as exc:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="MediaMop cannot access this folder.") from exc
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="MediaMop cannot access this folder."
+        ) from exc
     except OSError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="The requested directory cannot be accessed.") from exc
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="The requested directory cannot be accessed."
+        ) from exc
 
     entries.sort(key=lambda entry: entry.name.lower())
     return DirectoryBrowseOut(current_path=normalized, parent_path=parent_path, entries=entries)

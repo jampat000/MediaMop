@@ -89,8 +89,7 @@ def process_one_pruner_job(
 
     if job_kind_forbidden_on_pruner_lane(ctx.job_kind):
         err_text = (
-            "pruner worker refused job_kind reserved for another module lane: "
-            f"{ctx.job_kind!r} (row id={ctx.id})"
+            f"pruner worker refused job_kind reserved for another module lane: {ctx.job_kind!r} (row id={ctx.id})"
         )[:10_000]
         try:
             with session_factory() as session, session.begin():
@@ -107,8 +106,7 @@ def process_one_pruner_job(
 
     if not ctx.job_kind.startswith(PRUNER_QUEUE_JOB_KIND_PREFIX):
         err_text = (
-            "pruner worker refused job_kind missing required pruner.* prefix: "
-            f"{ctx.job_kind!r} (row id={ctx.id})"
+            f"pruner worker refused job_kind missing required pruner.* prefix: {ctx.job_kind!r} (row id={ctx.id})"
         )[:10_000]
         try:
             with session_factory() as session, session.begin():
@@ -162,7 +160,9 @@ def process_one_pruner_job(
                 )
         except Exception:
             logger.exception("Pruner fail_claimed_pruner_job failed after handler error job_id=%s", ctx.id)
-        dispatch_job_notification(session_factory, module="pruner", event_kind="failed", job_id=ctx.id, job_kind=ctx.job_kind)
+        dispatch_job_notification(
+            session_factory, module="pruner", event_kind="failed", job_id=ctx.id, job_kind=ctx.job_kind
+        )
         return "processed"
 
     complete_ok = True
@@ -184,7 +184,9 @@ def process_one_pruner_job(
         complete_err = str(exc)
 
     if complete_ok:
-        dispatch_job_notification(session_factory, module="pruner", event_kind="completed", job_id=ctx.id, job_kind=ctx.job_kind)
+        dispatch_job_notification(
+            session_factory, module="pruner", event_kind="completed", job_id=ctx.id, job_kind=ctx.job_kind
+        )
 
     if not complete_ok and complete_err is not None:
         bounded = (PRUNER_TERMINALIZATION_FAILURE_PREFIX + complete_err)[:10_000]

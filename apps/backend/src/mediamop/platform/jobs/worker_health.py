@@ -104,16 +104,17 @@ def build_worker_health_snapshot(
                 ),
             )
             continue
-        active = sum(1 for row in module_rows if row.status == "running" and now - row.last_seen_at <= stale_after_seconds)
-        stale = sum(1 for row in module_rows if row.status == "running" and now - row.last_seen_at > stale_after_seconds)
+        active = sum(
+            1 for row in module_rows if row.status == "running" and now - row.last_seen_at <= stale_after_seconds
+        )
+        stale = sum(
+            1 for row in module_rows if row.status == "running" and now - row.last_seen_at > stale_after_seconds
+        )
         stopped = sum(1 for row in module_rows if row.status == "stopped")
         missing = max(0, expected - len(module_rows))
         degraded = stale + stopped + missing
         if degraded:
-            detail = (
-                f"{module.title()} expected {expected} worker(s), but "
-                f"{degraded} are stale, stopped, or missing."
-            )
+            detail = f"{module.title()} expected {expected} worker(s), but {degraded} are stale, stopped, or missing."
             status = "degraded"
         else:
             detail = f"{module.title()} worker heartbeats are current."

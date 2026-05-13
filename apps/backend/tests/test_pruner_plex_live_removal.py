@@ -99,7 +99,9 @@ def test_plex_live_eligibility_is_always_ineligible_with_deprecation_notes(
         assert data["live_max_items_cap"] == 2
 
 
-def test_plex_live_post_rejects_jellyfin_instance(session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch) -> None:
+def test_plex_live_post_rejects_jellyfin_instance(
+    session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setenv("MEDIAMOP_PRUNER_APPLY_ENABLED", "1")
     settings = MediaMopSettings.load()
     with session_factory() as s, s.begin():
@@ -126,7 +128,9 @@ def test_plex_live_post_rejects_jellyfin_instance(session_factory: sessionmaker[
         assert r.status_code == 422, r.text
 
 
-def test_plex_live_post_plex_always_422_retired(session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch) -> None:
+def test_plex_live_post_plex_always_422_retired(
+    session_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setenv("MEDIAMOP_PRUNER_APPLY_ENABLED", "1")
     monkeypatch.setenv("MEDIAMOP_PRUNER_PLEX_LIVE_REMOVAL_ENABLED", "1")
     sid = _plex_sid(session_factory)

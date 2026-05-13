@@ -21,7 +21,9 @@ LIST_BASE = "https://www.podnapisi.net/api/v2/subtitles/list"
 logger = logging.getLogger(__name__)
 
 
-def _request_json(url: str, *, username: str | None = None, password: str | None = None) -> dict[str, Any] | list[Any] | None:
+def _request_json(
+    url: str, *, username: str | None = None, password: str | None = None
+) -> dict[str, Any] | list[Any] | None:
     headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
     auth = basic_auth_header(username, password)
     if auth:

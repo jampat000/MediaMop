@@ -89,8 +89,7 @@ def process_one_subber_job(
 
     if job_kind_forbidden_on_subber_lane(ctx.job_kind):
         err_text = (
-            "subber worker refused job_kind reserved for another module lane: "
-            f"{ctx.job_kind!r} (row id={ctx.id})"
+            f"subber worker refused job_kind reserved for another module lane: {ctx.job_kind!r} (row id={ctx.id})"
         )[:10_000]
         try:
             with session_factory() as session, session.begin():
@@ -107,8 +106,7 @@ def process_one_subber_job(
 
     if not ctx.job_kind.startswith(SUBBER_QUEUE_JOB_KIND_PREFIX):
         err_text = (
-            "subber worker refused job_kind missing required subber.* prefix: "
-            f"{ctx.job_kind!r} (row id={ctx.id})"
+            f"subber worker refused job_kind missing required subber.* prefix: {ctx.job_kind!r} (row id={ctx.id})"
         )[:10_000]
         try:
             with session_factory() as session, session.begin():
@@ -162,7 +160,9 @@ def process_one_subber_job(
                 )
         except Exception:
             logger.exception("Subber fail_claimed_subber_job failed after handler error job_id=%s", ctx.id)
-        dispatch_job_notification(session_factory, module="subber", event_kind="failed", job_id=ctx.id, job_kind=ctx.job_kind)
+        dispatch_job_notification(
+            session_factory, module="subber", event_kind="failed", job_id=ctx.id, job_kind=ctx.job_kind
+        )
         return "processed"
 
     complete_ok = True
@@ -184,7 +184,9 @@ def process_one_subber_job(
         complete_err = str(exc)
 
     if complete_ok:
-        dispatch_job_notification(session_factory, module="subber", event_kind="completed", job_id=ctx.id, job_kind=ctx.job_kind)
+        dispatch_job_notification(
+            session_factory, module="subber", event_kind="completed", job_id=ctx.id, job_kind=ctx.job_kind
+        )
 
     if not complete_ok and complete_err is not None:
         bounded = (SUBBER_TERMINALIZATION_FAILURE_PREFIX + complete_err)[:10_000]

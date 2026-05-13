@@ -39,6 +39,7 @@ from mediamop.modules.pruner.pruner_studio_collection_filters import jellyfin_em
 
 logger = logging.getLogger(__name__)
 
+
 def _jf_emby_truncated(
     *,
     total_hits: int | None,
@@ -49,7 +50,16 @@ def _jf_emby_truncated(
     page: int,
 ) -> bool:
     truncated = False
-    if total_hits is not None and candidates_len < total_hits and candidates_len >= max_items or total_hits is not None and start < total_hits and candidates_len >= max_items or fetched >= page and candidates_len >= max_items:
+    if (
+        total_hits is not None
+        and candidates_len < total_hits
+        and candidates_len >= max_items
+        or total_hits is not None
+        and start < total_hits
+        and candidates_len >= max_items
+        or fetched >= page
+        and candidates_len >= max_items
+    ):
         truncated = True
     return truncated
 

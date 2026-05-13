@@ -39,7 +39,9 @@ class XRequestedWithCsrfMiddleware(BaseHTTPMiddleware):
             xrw = (request.headers.get("X-Requested-With") or "").strip()
             if xrw.lower() != "xmlhttprequest":
                 return JSONResponse(
-                    {"detail": "Missing X-Requested-With header. This endpoint requires an authenticated browser session."},
+                    {
+                        "detail": "Missing X-Requested-With header. This endpoint requires an authenticated browser session."
+                    },
                     status_code=403,
                 )
         return await call_next(request)

@@ -196,9 +196,7 @@ def test_resolve_refiner_path_runtime_fails_without_watched_folder(client_with_a
         row = ensure_refiner_path_settings_row(db)
         prev = row.refiner_watched_folder
         db.execute(
-            update(RefinerPathSettingsRow)
-            .where(RefinerPathSettingsRow.id == 1)
-            .values(refiner_watched_folder=None),
+            update(RefinerPathSettingsRow).where(RefinerPathSettingsRow.id == 1).values(refiner_watched_folder=None),
         )
         db.commit()
     try:

@@ -83,6 +83,7 @@ async def _run_suite_configuration_backup_forever(
     loop = asyncio.get_running_loop()
     scan_iv = 60.0
     while not stop_event.is_set():
+
         def _once() -> int:
             return run_suite_configuration_backup_tick(session_factory, settings=settings)
 

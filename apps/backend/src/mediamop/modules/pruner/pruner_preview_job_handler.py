@@ -94,10 +94,14 @@ def make_pruner_candidate_removal_preview_handler(
         if rule_family_id == RULE_FAMILY_WATCHED_MOVIES_REPORTED and scope != MEDIA_SCOPE_MOVIES:
             msg = "watched_movies_reported preview requires media_scope=movies"
             raise ValueError(msg)
-        if rule_family_id in (
-            RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
-            RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED,
-        ) and scope != MEDIA_SCOPE_MOVIES:
+        if (
+            rule_family_id
+            in (
+                RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED,
+                RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED,
+            )
+            and scope != MEDIA_SCOPE_MOVIES
+        ):
             msg = f"{rule_family_id} preview requires media_scope=movies"
             raise ValueError(msg)
 
@@ -130,7 +134,9 @@ def make_pruner_candidate_removal_preview_handler(
                 if not bool(sc.watched_movie_low_rating_reported_enabled):
                     msg = "watched_movie_low_rating_reported_enabled is false for this scope"
                     raise ValueError(msg)
-            elif rule_family_id == RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED and not bool(sc.unwatched_movie_stale_reported_enabled):
+            elif rule_family_id == RULE_FAMILY_UNWATCHED_MOVIE_STALE_REPORTED and not bool(
+                sc.unwatched_movie_stale_reported_enabled
+            ):
                 msg = "unwatched_movie_stale_reported_enabled is false for this scope"
                 raise ValueError(msg)
             max_items = max(1, min(int(sc.preview_max_items), 5000))
@@ -176,7 +182,9 @@ def make_pruner_candidate_removal_preview_handler(
                 secrets=secrets,
                 max_items=max_items,
                 rule_family_id=rule_family_id,
-                never_played_min_age_days=age_days if rule_family_id == RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED else None,
+                never_played_min_age_days=age_days
+                if rule_family_id == RULE_FAMILY_NEVER_PLAYED_STALE_REPORTED
+                else None,
                 preview_include_genres=preview_genres,
                 preview_include_people=preview_people,
                 preview_include_people_roles=preview_people_roles,
@@ -311,12 +319,22 @@ def make_pruner_candidate_removal_preview_handler(
                     "in this slice — the Items API path does not expose per-item library collection membership "
                     "without extra calls."
                 )
-            if outcome == "success" and rule_family_id == RULE_FAMILY_GENRE_MATCH_REPORTED and preview_genres and len(cands) == 0:
+            if (
+                outcome == "success"
+                and rule_family_id == RULE_FAMILY_GENRE_MATCH_REPORTED
+                and preview_genres
+                and len(cands) == 0
+            ):
                 detail_obj["preview_genre_rule_zero_candidates_note"] = (
                     "Zero rows matched your selected genres under the preview cap — the library may still contain "
                     "other genres, or matches may sit beyond the cap (try raising per-tab preview max)."
                 )
-            if outcome == "success" and rule_family_id == RULE_FAMILY_PEOPLE_MATCH_REPORTED and preview_people and len(cands) == 0:
+            if (
+                outcome == "success"
+                and rule_family_id == RULE_FAMILY_PEOPLE_MATCH_REPORTED
+                and preview_people
+                and len(cands) == 0
+            ):
                 detail_obj["preview_people_rule_zero_candidates_note"] = (
                     "Zero rows matched your entered names under the preview cap — widen names, adjust roles "
                     "(Jellyfin/Emby), or raise the per-tab preview max if you expected matches."

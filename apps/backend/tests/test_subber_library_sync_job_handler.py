@@ -99,7 +99,9 @@ def test_library_sync_movies_upserts_and_detects_srt(session_factory, tmp_path: 
 
     handlers = build_subber_job_handlers(settings, session_factory)
     t0 = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
-    with patch("mediamop.modules.subber.subber_library_sync_job_handler.get_radarr_movies", return_value=movies_payload):
+    with patch(
+        "mediamop.modules.subber.subber_library_sync_job_handler.get_radarr_movies", return_value=movies_payload
+    ):
         assert (
             process_one_subber_job(
                 session_factory,
@@ -251,7 +253,9 @@ def test_upsert_does_not_downgrade_found_to_missing(session_factory) -> None:
 
     handlers = build_subber_job_handlers(settings, session_factory)
     t0 = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
-    with patch("mediamop.modules.subber.subber_library_sync_job_handler.get_radarr_movies", return_value=movies_payload):
+    with patch(
+        "mediamop.modules.subber.subber_library_sync_job_handler.get_radarr_movies", return_value=movies_payload
+    ):
         process_one_subber_job(session_factory, lease_owner="ls4", job_handlers=handlers, now=t0, lease_seconds=600)
 
     with session_factory() as s:
@@ -294,7 +298,9 @@ def test_library_sync_tv_resolves_path_via_episode_file_table(session_factory, t
     with (
         patch("mediamop.modules.subber.subber_library_sync_job_handler.get_sonarr_series", return_value=series),
         patch("mediamop.modules.subber.subber_library_sync_job_handler.get_sonarr_episodes", return_value=episodes),
-        patch("mediamop.modules.subber.subber_library_sync_job_handler.get_sonarr_episode_files", return_value=ep_files),
+        patch(
+            "mediamop.modules.subber.subber_library_sync_job_handler.get_sonarr_episode_files", return_value=ep_files
+        ),
     ):
         process_one_subber_job(session_factory, lease_owner="ls5", job_handlers=handlers, now=t0, lease_seconds=600)
 

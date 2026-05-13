@@ -322,13 +322,8 @@ class MediaMopSettings:
             for item in _parse_csv_urls(os.environ.get("MEDIAMOP_PREVIOUS_CREDENTIALS_SECRETS") or "")
             if item and item != credentials_secret
         )
-        cookie_name = (
-            (os.environ.get("MEDIAMOP_SESSION_COOKIE_NAME") or "").strip()
-            or "mediamop_session"
-        )
-        _samesite_raw = (
-            (os.environ.get("MEDIAMOP_SESSION_COOKIE_SAMESITE") or "lax").strip().lower()
-        )
+        cookie_name = (os.environ.get("MEDIAMOP_SESSION_COOKIE_NAME") or "").strip() or "mediamop_session"
+        _samesite_raw = (os.environ.get("MEDIAMOP_SESSION_COOKIE_SAMESITE") or "lax").strip().lower()
         if _samesite_raw not in ("lax", "strict", "none"):
             _samesite_raw = "lax"
         samesite = cast(Literal["strict", "lax", "none"], _samesite_raw)
@@ -387,6 +382,7 @@ class MediaMopSettings:
             min(300, _env_int("MEDIAMOP_SUBBER_LIBRARY_SCAN_SCHEDULE_SCAN_INTERVAL_SECONDS", 45)),
         )
         subber_upgrade_sched_enq = _env_bool("MEDIAMOP_SUBBER_UPGRADE_SCHEDULE_ENQUEUE_ENABLED", True)
+
         def _refiner_supplied_payload_eval_schedule_enabled() -> bool:
             new_k = "MEDIAMOP_REFINER_SUPPLIED_PAYLOAD_EVALUATION_SCHEDULE_ENABLED"
             old_k = "MEDIAMOP_REFINER_LIBRARY_AUDIT_PASS_SCHEDULE_ENABLED"

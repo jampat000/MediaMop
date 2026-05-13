@@ -16,12 +16,7 @@ from starlette.responses import Response
 from mediamop.core.config import MediaMopSettings
 
 # API baseline: no scripts, no frames, no base-tag surprises, no forms to third parties.
-_API_CSP = (
-    "default-src 'none'; "
-    "base-uri 'none'; "
-    "frame-ancestors 'none'; "
-    "form-action 'none'"
-)
+_API_CSP = "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"
 
 # HTML baseline for the bundled SPA shell/static assets.
 # Keep this narrow and first-party only; the web app self-hosts its fonts.

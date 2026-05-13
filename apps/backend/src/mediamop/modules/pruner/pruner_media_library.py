@@ -250,7 +250,14 @@ def list_missing_primary_candidates(
             break
 
     truncated = False
-    if total_hits is not None and len(candidates) < total_hits and len(candidates) >= max_items or total_hits is not None and start < total_hits and len(candidates) >= max_items:
+    if (
+        total_hits is not None
+        and len(candidates) < total_hits
+        and len(candidates) >= max_items
+        or total_hits is not None
+        and start < total_hits
+        and len(candidates) >= max_items
+    ):
         truncated = True
 
     return candidates, truncated

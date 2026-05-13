@@ -47,9 +47,7 @@ def list_notification_channels(session: Session) -> list[NotificationChannel]:
 
 
 def get_notification_channel(session: Session, channel_id: int) -> NotificationChannel | None:
-    return session.scalars(
-        select(NotificationChannel).where(NotificationChannel.id == channel_id)
-    ).one_or_none()
+    return session.scalars(select(NotificationChannel).where(NotificationChannel.id == channel_id)).one_or_none()
 
 
 def create_notification_channel(
@@ -111,9 +109,7 @@ def delete_notification_channel(
 
 def get_channels_for_event(session: Session, event: str) -> list[NotificationChannel]:
     """Return enabled channels whose events_json includes *event* or its wildcard counterpart."""
-    rows = session.scalars(
-        select(NotificationChannel).where(NotificationChannel.enabled.is_(True))
-    ).all()
+    rows = session.scalars(select(NotificationChannel).where(NotificationChannel.enabled.is_(True))).all()
     result = []
     for row in rows:
         subscribed = _parse_events(row.events_json)

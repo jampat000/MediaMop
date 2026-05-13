@@ -140,7 +140,9 @@ class SuiteSecurityOverviewOut(BaseModel):
     extra_https_hardening_enabled: bool = Field(
         description="Whether strict transport (HSTS) extra protection is enabled for browser responses.",
     )
-    sign_in_attempt_limit: int = Field(ge=1, description="How many failed sign-in tries are allowed before cooling off.")
+    sign_in_attempt_limit: int = Field(
+        ge=1, description="How many failed sign-in tries are allowed before cooling off."
+    )
     sign_in_attempt_window_plain: str = Field(
         description="How long the sign-in try window lasts, in everyday wording.",
     )

@@ -186,7 +186,9 @@ def process_one_refiner_job(
                 "Refiner fail_claimed_refiner_job failed after handler error job_id=%s",
                 ctx.id,
             )
-        dispatch_job_notification(session_factory, module="refiner", event_kind="failed", job_id=ctx.id, job_kind=ctx.job_kind)
+        dispatch_job_notification(
+            session_factory, module="refiner", event_kind="failed", job_id=ctx.id, job_kind=ctx.job_kind
+        )
         return "processed"
 
     complete_ok = True
@@ -208,7 +210,9 @@ def process_one_refiner_job(
         complete_err = str(exc)
 
     if complete_ok:
-        dispatch_job_notification(session_factory, module="refiner", event_kind="completed", job_id=ctx.id, job_kind=ctx.job_kind)
+        dispatch_job_notification(
+            session_factory, module="refiner", event_kind="completed", job_id=ctx.id, job_kind=ctx.job_kind
+        )
 
     if not complete_ok and complete_err is not None:
         bounded = (REFINER_TERMINALIZATION_FAILURE_PREFIX + complete_err)[:10_000]

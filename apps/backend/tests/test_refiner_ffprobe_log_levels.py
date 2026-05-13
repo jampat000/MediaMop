@@ -12,8 +12,12 @@ def test_ffprobe_success_diagnostics_are_debug_not_warning(tmp_path: Path, monke
     debug_messages: list[str] = []
     warning_messages: list[str] = []
     monkeypatch.setattr(refiner_remux_mux, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe", "ffmpeg"))
-    monkeypatch.setattr(refiner_remux_mux.logger, "debug", lambda msg, *args, **kwargs: debug_messages.append(msg % args))
-    monkeypatch.setattr(refiner_remux_mux.logger, "warning", lambda msg, *args, **kwargs: warning_messages.append(msg % args))
+    monkeypatch.setattr(
+        refiner_remux_mux.logger, "debug", lambda msg, *args, **kwargs: debug_messages.append(msg % args)
+    )
+    monkeypatch.setattr(
+        refiner_remux_mux.logger, "warning", lambda msg, *args, **kwargs: warning_messages.append(msg % args)
+    )
     monkeypatch.setattr(
         refiner_remux_mux.subprocess,
         "run",
@@ -34,7 +38,9 @@ def test_ffprobe_failure_result_still_warns(tmp_path: Path, monkeypatch) -> None
     warning_messages: list[str] = []
     monkeypatch.setattr(refiner_remux_mux, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe", "ffmpeg"))
     monkeypatch.setattr(refiner_remux_mux.logger, "debug", lambda *args, **kwargs: None)
-    monkeypatch.setattr(refiner_remux_mux.logger, "warning", lambda msg, *args, **kwargs: warning_messages.append(msg % args))
+    monkeypatch.setattr(
+        refiner_remux_mux.logger, "warning", lambda msg, *args, **kwargs: warning_messages.append(msg % args)
+    )
     monkeypatch.setattr(
         refiner_remux_mux.subprocess,
         "run",

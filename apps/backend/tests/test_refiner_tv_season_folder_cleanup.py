@@ -186,7 +186,9 @@ def test_tv_cleanup_not_blocked_by_movie_scope_job_same_path(tmp_path: Path, mon
         RefinerJob(
             dedupe_key="km",
             job_kind=REFINER_FILE_REMUX_PASS_JOB_KIND,
-            payload_json=json.dumps({"relative_media_path": "Serie/S01/e.mkv", "dry_run": False, "media_scope": "movie"}),
+            payload_json=json.dumps(
+                {"relative_media_path": "Serie/S01/e.mkv", "dry_run": False, "media_scope": "movie"}
+            ),
             status=RefinerJobStatus.PENDING.value,
             max_attempts=3,
         ),
@@ -379,7 +381,9 @@ def test_tv_cleanup_blocked_output_too_small_for_prior_pass(tmp_path: Path, monk
     assert sdir.exists()
 
 
-def test_tv_cleanup_blocked_when_sonarr_queue_holds_sibling_episode(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_tv_cleanup_blocked_when_sonarr_queue_holds_sibling_episode(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     _, session = _sqlite_session(tmp_path)
     home = tmp_path / "h"
     home.mkdir()
@@ -530,7 +534,9 @@ def test_tv_cleanup_check4_blocked_when_min_age_not_met(tmp_path: Path, monkeypa
     assert sdir.exists()
 
 
-def test_tv_cleanup_activity_movie_scope_ignored_for_prior_success(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_tv_cleanup_activity_movie_scope_ignored_for_prior_success(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     _, session = _sqlite_session(tmp_path)
     home = tmp_path / "h"
     home.mkdir()
@@ -660,7 +666,9 @@ def test_tv_cleanup_failed_tv_activity_does_not_clear_episode(tmp_path: Path, mo
     assert sdir.exists()
 
 
-def test_tv_cleanup_dry_run_activity_row_does_not_count_as_tv_success(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_tv_cleanup_dry_run_activity_row_does_not_count_as_tv_success(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     _, session = _sqlite_session(tmp_path)
     home = tmp_path / "h"
     home.mkdir()
@@ -726,7 +734,9 @@ def test_tv_cleanup_dry_run_activity_row_does_not_count_as_tv_success(tmp_path: 
     assert sdir.exists()
 
 
-def test_tv_cleanup_blocked_when_prior_tv_success_but_output_missing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_tv_cleanup_blocked_when_prior_tv_success_but_output_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     _, session = _sqlite_session(tmp_path)
     home = tmp_path / "h"
     home.mkdir()

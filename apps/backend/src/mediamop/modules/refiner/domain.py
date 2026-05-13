@@ -233,12 +233,7 @@ def extract_title_year_anchor(
 
 def title_year_anchors_match(a: TitleYearAnchor, b: TitleYearAnchor) -> bool:
     """True when both anchors are usable and agree on title tokens and year."""
-    return (
-        a.is_usable_for_match()
-        and b.is_usable_for_match()
-        and a.title_tokens == b.title_tokens
-        and a.year == b.year
-    )
+    return a.is_usable_for_match() and b.is_usable_for_match() and a.title_tokens == b.title_tokens and a.year == b.year
 
 
 def _row_anchor(row: RefinerQueueRowView) -> TitleYearAnchor | None:

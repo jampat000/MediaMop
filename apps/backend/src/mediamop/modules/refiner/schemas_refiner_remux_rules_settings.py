@@ -27,6 +27,8 @@ class RefinerRemuxRulesScopeOut(BaseModel):
         "preferred_langs_strict",
         "quality_all_languages",
     ]
+
+
 class RefinerRemuxRulesSettingsOut(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

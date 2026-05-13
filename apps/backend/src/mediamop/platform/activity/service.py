@@ -80,6 +80,7 @@ def _publish_committed_activity_events(session: Session) -> None:
 def _clear_pending_activity_events(session: Session) -> None:
     session.info.pop(_PENDING_ACTIVITY_IDS_INFO_KEY, None)
 
+
 def maybe_record_login_failed(db: Session, *, username: str) -> None:
     """One failed-login event per username per short window to limit brute-force noise."""
 
@@ -186,13 +187,17 @@ def count_activity_events(
     date_from: datetime | None = None,
     date_to: datetime | None = None,
 ) -> int:
-    stmt = _filtered_activity_stmt(
-        module=module,
-        event_type=event_type,
-        search=search,
-        date_from=date_from,
-        date_to=date_to,
-    ).with_only_columns(func.count()).order_by(None)
+    stmt = (
+        _filtered_activity_stmt(
+            module=module,
+            event_type=event_type,
+            search=search,
+            date_from=date_from,
+            date_to=date_to,
+        )
+        .with_only_columns(func.count())
+        .order_by(None)
+    )
     return int(db.scalar(stmt) or 0)
 
 

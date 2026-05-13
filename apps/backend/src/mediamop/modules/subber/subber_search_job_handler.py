@@ -54,7 +54,9 @@ def make_subber_subtitle_search_handler(
                 logger.debug("Subber subtitle search skipped because state_id=%s no longer exists.", state_id)
                 return
             if row.status == "found" and row.subtitle_path and os.path.isfile(row.subtitle_path):
-                logger.debug("Subber subtitle search skipped because state_id=%s already has a subtitle file.", state_id)
+                logger.debug(
+                    "Subber subtitle search skipped because state_id=%s already has a subtitle file.", state_id
+                )
                 return
             settings_row = ensure_subber_settings_row(session)
             if not settings_row.enabled:

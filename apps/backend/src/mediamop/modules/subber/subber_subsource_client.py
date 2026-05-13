@@ -62,7 +62,13 @@ def search(
         dl = s.get("download_url") or s.get("url") or s.get("downloadLink") or ""
         lang = str(s.get("lang") or s.get("language") or "").lower()[:10]
         if dl:
-            out.append({"download_url": str(dl), "language": lang, "hearing_impaired": bool(s.get("hi") or s.get("hearing_impaired"))})
+            out.append(
+                {
+                    "download_url": str(dl),
+                    "language": lang,
+                    "hearing_impaired": bool(s.get("hi") or s.get("hearing_impaired")),
+                }
+            )
     return out
 
 

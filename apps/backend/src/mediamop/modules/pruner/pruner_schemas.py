@@ -76,9 +76,7 @@ class PrunerScopeSummaryOut(BaseModel):
     )
     preview_year_max: int | None = Field(
         default=None,
-        description=(
-            "Optional inclusive maximum year for preview narrowing (same semantics as ``preview_year_min``)."
-        ),
+        description=("Optional inclusive maximum year for preview narrowing (same semantics as ``preview_year_min``)."),
     )
     preview_include_studios: list[str] = Field(
         default_factory=list,
@@ -248,7 +246,11 @@ class PrunerScopePatchIn(BaseModel):
 
     @model_validator(mode="after")
     def _preview_year_bounds_order(self) -> Self:
-        if self.preview_year_min is not None and self.preview_year_max is not None and self.preview_year_min > self.preview_year_max:
+        if (
+            self.preview_year_min is not None
+            and self.preview_year_max is not None
+            and self.preview_year_min > self.preview_year_max
+        ):
             msg = "preview_year_min must be less than or equal to preview_year_max when both are set."
             raise ValueError(msg)
         return self
@@ -285,7 +287,10 @@ class PrunerPreviewEnqueueIn(BaseModel):
         if self.rule_family_id == RULE_FAMILY_WATCHED_MOVIES_REPORTED and self.media_scope != MEDIA_SCOPE_MOVIES:
             msg = "watched_movies_reported preview is only available for the Movies tab (media_scope must be movies)."
             raise ValueError(msg)
-        if self.rule_family_id == RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED and self.media_scope != MEDIA_SCOPE_MOVIES:
+        if (
+            self.rule_family_id == RULE_FAMILY_WATCHED_MOVIE_LOW_RATING_REPORTED
+            and self.media_scope != MEDIA_SCOPE_MOVIES
+        ):
             msg = (
                 "watched_movie_low_rating_reported preview is only available for the Movies tab "
                 "(media_scope must be movies)."
@@ -313,12 +318,7 @@ class PrunerServerInstancePatchHttpIn(PrunerServerInstancePatchIn):
 
     @model_validator(mode="after")
     def _at_least_one_field(self) -> PrunerServerInstancePatchHttpIn:
-        if (
-            self.display_name is None
-            and self.base_url is None
-            and self.enabled is None
-            and self.credentials is None
-        ):
+        if self.display_name is None and self.base_url is None and self.enabled is None and self.credentials is None:
             msg = "At least one of display_name, base_url, enabled, or credentials must be provided."
             raise ValueError(msg)
         return self

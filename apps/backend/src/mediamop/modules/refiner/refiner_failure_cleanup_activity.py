@@ -59,4 +59,3 @@ def record_refiner_failure_cleanup_sweep_skipped(
         title=f"Refiner cleanup skipped for {label}",
         detail=detail,
     )
-

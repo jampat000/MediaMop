@@ -58,4 +58,3 @@ def make_refiner_failure_cleanup_handler(
             )
 
     return _run
-

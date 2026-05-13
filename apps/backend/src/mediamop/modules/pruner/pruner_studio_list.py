@@ -151,7 +151,9 @@ def _list_distinct_studios_plex(
             }
             leaves_url = join_base_path(base_url, f"library/sections/{sec_key}/allLeaves", params)
             try:
-                st, page = http_get_json(leaves_url, headers=_plex_headers(auth_token), timeout_sec=min(10.0, remaining))
+                st, page = http_get_json(
+                    leaves_url, headers=_plex_headers(auth_token), timeout_sec=min(10.0, remaining)
+                )
             except (urllib.error.URLError, TimeoutError, OSError, ValueError, TypeError):
                 return []
             except Exception:  # noqa: BLE001
@@ -234,4 +236,3 @@ def list_distinct_studios(
     except Exception:  # noqa: BLE001
         return []
     return []
-

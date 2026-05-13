@@ -34,9 +34,7 @@ class NotificationChannel(Base):
     url: Mapped[str] = mapped_column(Text, nullable=False)
     events_json: Mapped[str] = mapped_column(Text, nullable=False, server_default='["job_failed"]')
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )

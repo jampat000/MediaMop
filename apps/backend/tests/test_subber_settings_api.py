@@ -393,7 +393,9 @@ def test_sonarr_root_folders_uses_saved_connection(client_admin: TestClient) -> 
     _login_admin(client_admin)
     _put_settings(client_admin, {"sonarr_base_url": "http://sonarr.local", "sonarr_api_key": "son-key"})
     tok = csrf(client_admin)
-    with patch("urllib.request.urlopen", return_value=_JsonResponse('[{"path":"/tv","freeSpace":1073741824},{"path":"/tv"}]')) as mocked:
+    with patch(
+        "urllib.request.urlopen", return_value=_JsonResponse('[{"path":"/tv","freeSpace":1073741824},{"path":"/tv"}]')
+    ) as mocked:
         r = client_admin.post(
             "/api/v1/subber/settings/sonarr-root-folders",
             json={"csrf_token": tok},

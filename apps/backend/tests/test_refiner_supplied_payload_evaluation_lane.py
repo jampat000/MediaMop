@@ -149,8 +149,13 @@ def test_refiner_supplied_payload_evaluation_periodic_module_only_imports_core_a
     import mediamop.modules.refiner.refiner_supplied_payload_evaluation_periodic_enqueue as mod
 
     def _allowed_from(m: str) -> bool:
-        return m == "__future__" or m == "mediamop.core.config" or m.startswith("mediamop.modules.refiner.") or m.startswith(
-            "sqlalchemy.",
+        return (
+            m == "__future__"
+            or m == "mediamop.core.config"
+            or m.startswith("mediamop.modules.refiner.")
+            or m.startswith(
+                "sqlalchemy.",
+            )
         )
 
     tree = ast.parse(Path(mod.__file__).read_text(encoding="utf-8"))

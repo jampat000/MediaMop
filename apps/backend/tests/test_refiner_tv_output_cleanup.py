@@ -491,7 +491,9 @@ def test_active_movie_job_does_not_block_tv_output(tmp_path: Path, monkeypatch: 
     assert out["tv_output_season_folder_deleted"] is True
 
 
-def test_live_cleanup_runs_even_when_legacy_dry_run_flag_passed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_live_cleanup_runs_even_when_legacy_dry_run_flag_passed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     _, session = _session(tmp_path)
     calls: list[int] = []
 

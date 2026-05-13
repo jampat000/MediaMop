@@ -122,37 +122,46 @@ def test_jellyfin_emby_people_names_for_roles_filters_by_type() -> None:
 
 def test_jf_emby_preview_people_roles_cast_vs_director() -> None:
     item = {"Genres": [], "People": [{"Name": "Pat", "Type": "Director"}], "ProductionYear": None, "Studios": []}
-    assert jf_emby_item_passes_preview_filters(
-        item,
-        preview_include_genres=[],
-        preview_include_people=["pat"],
-        preview_include_people_roles=["cast"],
-        preview_year_min=None,
-        preview_year_max=None,
-        preview_include_studios=[],
-    ) is False
-    assert jf_emby_item_passes_preview_filters(
-        item,
-        preview_include_genres=[],
-        preview_include_people=["pat"],
-        preview_include_people_roles=["director"],
-        preview_year_min=None,
-        preview_year_max=None,
-        preview_include_studios=[],
-    ) is True
+    assert (
+        jf_emby_item_passes_preview_filters(
+            item,
+            preview_include_genres=[],
+            preview_include_people=["pat"],
+            preview_include_people_roles=["cast"],
+            preview_year_min=None,
+            preview_year_max=None,
+            preview_include_studios=[],
+        )
+        is False
+    )
+    assert (
+        jf_emby_item_passes_preview_filters(
+            item,
+            preview_include_genres=[],
+            preview_include_people=["pat"],
+            preview_include_people_roles=["director"],
+            preview_year_min=None,
+            preview_year_max=None,
+            preview_include_studios=[],
+        )
+        is True
+    )
 
 
 def test_jf_emby_preview_people_roles_empty_searches_all_credits() -> None:
     item = {"Genres": [], "People": [{"Name": "Pat", "Type": "Director"}], "ProductionYear": None, "Studios": []}
-    assert jf_emby_item_passes_preview_filters(
-        item,
-        preview_include_genres=[],
-        preview_include_people=["pat"],
-        preview_include_people_roles=[],
-        preview_year_min=None,
-        preview_year_max=None,
-        preview_include_studios=[],
-    ) is True
+    assert (
+        jf_emby_item_passes_preview_filters(
+            item,
+            preview_include_genres=[],
+            preview_include_people=["pat"],
+            preview_include_people_roles=[],
+            preview_year_min=None,
+            preview_year_max=None,
+            preview_include_studios=[],
+        )
+        is True
+    )
 
 
 def test_preview_people_roles_roundtrip() -> None:

@@ -21,7 +21,9 @@ def _backup_dir(settings: MediaMopSettings) -> Path:
     return (Path(settings.backup_dir) / "suite-configuration").resolve()
 
 
-def list_suite_configuration_backups(session: Session, *, settings: MediaMopSettings) -> tuple[str, list[SuiteConfigurationBackupRow]]:
+def list_suite_configuration_backups(
+    session: Session, *, settings: MediaMopSettings
+) -> tuple[str, list[SuiteConfigurationBackupRow]]:
     rows = list(
         session.scalars(
             select(SuiteConfigurationBackupRow).order_by(

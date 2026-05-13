@@ -1,2 +1,1 @@
 """Local desktop browse helpers."""
-

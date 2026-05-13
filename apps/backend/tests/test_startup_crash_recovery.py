@@ -25,7 +25,9 @@ def _session_factory(tmp_path: Path) -> sessionmaker[Session]:
         future=True,
     )
     Base.metadata.create_all(engine)
-    return sessionmaker(bind=engine, class_=Session, autoflush=False, autocommit=False, expire_on_commit=False, future=True)
+    return sessionmaker(
+        bind=engine, class_=Session, autoflush=False, autocommit=False, expire_on_commit=False, future=True
+    )
 
 
 def test_startup_recovery_requeues_leased_jobs_with_attempts_remaining(tmp_path: Path) -> None:
@@ -124,7 +126,11 @@ def test_startup_refiner_recovery_removes_hidden_partial_outputs(tmp_path: Path)
 
     settings = MediaMopSettings.load()
     with factory() as session, session.begin():
-        session.add(RefinerPathSettingsRow(id=1, refiner_output_folder=str(output), refiner_work_folder="", refiner_watched_folder=""))
+        session.add(
+            RefinerPathSettingsRow(
+                id=1, refiner_output_folder=str(output), refiner_work_folder="", refiner_watched_folder=""
+            )
+        )
 
     with factory() as session:
         removed = cleanup_refiner_partial_output_files(session, settings)

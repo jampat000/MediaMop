@@ -269,7 +269,9 @@ def post_logout(
     validate_browser_post_origin(request, settings)
     token = _csrf_from_header_or_body(x_csrf_token, body.csrf_token if body else None)
     raw_session_token = current_raw_session_token(request, settings)
-    if not verify_csrf_token(secret, token, raw_session_token=raw_session_token, allow_anonymous=raw_session_token is None):
+    if not verify_csrf_token(
+        secret, token, raw_session_token=raw_session_token, allow_anonymous=raw_session_token is None
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired CSRF token.",
