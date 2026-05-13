@@ -4,7042 +4,7020 @@
  */
 
 export interface paths {
-  "/api/v1/activity/recent": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Activity Recent
-     * @description Recent persisted events, newest first — snapshot only (pagination-style read; not a control plane).
-     */
-    get: operations["get_activity_recent_api_v1_activity_recent_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/activity/stream": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Activity Stream
-     * @description Authenticated SSE freshness signal for activity-backed pages.
-     */
-    get: operations["get_activity_stream_api_v1_activity_stream_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/arr-library/arr-connection/radarr": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    /** Put Arr Library Connection Radarr */
-    put: operations["put_arr_library_connection_radarr_api_v1_arr_library_arr_connection_radarr_put"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/arr-library/arr-connection/sonarr": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    /** Put Arr Library Connection Sonarr */
-    put: operations["put_arr_library_connection_sonarr_api_v1_arr_library_arr_connection_sonarr_put"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/arr-library/arr-operator-settings": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Arr Library Operator Settings
-     * @description Shared *arr library: read automatic search lanes and connection panels (saved in this app where applicable).
-     */
-    get: operations["get_arr_library_operator_settings_api_v1_arr_library_arr_operator_settings_get"];
-    /**
-     * Put Arr Library Operator Settings
-     * @description Shared *arr library: save automatic search lane preferences (does not change connection fields on this route).
-     */
-    put: operations["put_arr_library_operator_settings_api_v1_arr_library_arr_operator_settings_put"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/arr-library/arr-operator-settings/connection-test": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Post Arr Library Connection Test
-     * @description Try a reachability check to Sonarr or Radarr; outcome is saved on Activity and on the settings row.
-     *
-     *     When ``enabled`` is present, ``base_url`` and ``api_key`` are interpreted like ``PUT …/arr-connection/*`` (draft
-     *     test without saving). When ``enabled`` is omitted, credentials come only from stored settings and the server file.
-     */
-    post: operations["post_arr_library_connection_test_api_v1_arr_library_arr_operator_settings_connection_test_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/arr-library/arr-operator-settings/lanes/{lane_key}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    /**
-     * Put Arr Library Operator Settings Lane
-     * @description Shared *arr library: save one automatic search lane (missing or upgrade for TV or movies).
-     */
-    put: operations["put_arr_library_operator_settings_lane_api_v1_arr_library_arr_operator_settings_lanes__lane_key__put"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/auth/bootstrap": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Post Bootstrap
-     * @description Create the first ``admin`` user once per MediaMop installation (guarded + rate limited).
-     *
-     *     Requires the same CSRF + Origin/Referer posture as ``POST /login``. After success,
-     *     callers use ``POST /login`` normally. Not available once any ``admin`` user exists.
-     */
-    post: operations["post_bootstrap_api_v1_auth_bootstrap_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/auth/bootstrap/status": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Bootstrap Status
-     * @description Report whether the initial ``admin`` account may still be created (Phase 6).
-     *
-     *     Guest-first endpoint: never return **500**. DB/session failures map to **503** with copy
-     *     operators can act on. Uses a dedicated session + rollback (no ``get_db_session`` post-``commit``
-     *     churn on SQLite read-only paths).
-     */
-    get: operations["get_bootstrap_status_api_v1_auth_bootstrap_status_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/auth/change-password": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Post Change Password
-     * @description Change the signed-in user's password and revoke active sessions (requires new sign-in).
-     */
-    post: operations["post_change_password_api_v1_auth_change_password_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/auth/csrf": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Csrf */
-    get: operations["get_csrf_api_v1_auth_csrf_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/auth/login": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Post Login */
-    post: operations["post_login_api_v1_auth_login_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/auth/logout": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Post Logout */
-    post: operations["post_logout_api_v1_auth_logout_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/auth/me": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Me */
-    get: operations["get_me_api_v1_auth_me_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/auth/session": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Current Session */
-    get: operations["get_current_session_api_v1_auth_session_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/dashboard/status": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Dashboard Status
-     * @description Read-only shell dashboard — system status + persisted activity summary.
-     */
-    get: operations["get_dashboard_status_api_v1_dashboard_status_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/pruner/instances": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** List Pruner Instances */
-    get: operations["list_pruner_instances_api_v1_pruner_instances_get"];
-    put?: never;
-    /** Post Pruner Instance */
-    post: operations["post_pruner_instance_api_v1_pruner_instances_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/pruner/instances/{instance_id}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Pruner Instance */
-    get: operations["get_pruner_instance_api_v1_pruner_instances__instance_id__get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    /** Patch Pruner Instance */
-    patch: operations["patch_pruner_instance_api_v1_pruner_instances__instance_id__patch"];
-    trace?: never;
-  };
-  "/api/v1/pruner/instances/{instance_id}/connection-test": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Post Pruner Connection Test */
-    post: operations["post_pruner_connection_test_api_v1_pruner_instances__instance_id__connection_test_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/pruner/instances/{instance_id}/preview-runs": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List recent preview runs for this instance (metadata only)
-     * @description Returns newest preview runs first. Optional ``media_scope`` filters to one axis (``tv`` vs ``movies``). Candidate payloads are omitted; fetch a single run for JSON.
-     */
-    get: operations["list_pruner_preview_runs_api_v1_pruner_instances__instance_id__preview_runs_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/pruner/instances/{instance_id}/preview-runs/{preview_run_uuid}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Fetch one preview run (source of truth for candidates JSON) */
-    get: operations["get_pruner_preview_run_api_v1_pruner_instances__instance_id__preview_runs__preview_run_uuid__get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/pruner/instances/{instance_id}/previews": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Post Pruner Preview */
-    post: operations["post_pruner_preview_api_v1_pruner_instances__instance_id__previews_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/pruner/instances/{instance_id}/scopes/{media_scope}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Per-scope Pruner settings (TV episodes vs movie items)
-     * @description Jellyfin/Emby: TV scope uses **episode-level** candidates for missing primary art in previews; Movies uses **one row per movie library item**. Plex uses the same preview snapshot model for missing primary art (Plex-specific thumb/leaf discovery — not identical to Jellyfin/Emby primary-image probes).
-     */
-    get: operations["get_pruner_scope_api_v1_pruner_instances__instance_id__scopes__media_scope__get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    /** Patch Pruner Scope */
-    patch: operations["patch_pruner_scope_api_v1_pruner_instances__instance_id__scopes__media_scope__patch"];
-    trace?: never;
-  };
-  "/api/v1/pruner/instances/{instance_id}/scopes/{media_scope}/plex-live-removal": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Plex-only (retired): live removal without a preview snapshot is not supported */
-    post: operations["post_pruner_plex_live_removal_api_v1_pruner_instances__instance_id__scopes__media_scope__plex_live_removal_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/pruner/instances/{instance_id}/scopes/{media_scope}/plex-live-removal-eligibility": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Plex-only (retired): explains why live removal without a snapshot is not available */
-    get: operations["get_pruner_plex_live_removal_eligibility_api_v1_pruner_instances__instance_id__scopes__media_scope__plex_live_removal_eligibility_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/pruner/instances/{instance_id}/scopes/{media_scope}/preview-runs/{preview_run_uuid}/apply": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Enqueue live library removal from one preview snapshot (rule family from snapshot; Jellyfin, Emby, Plex) */
-    post: operations["post_pruner_apply_from_preview_api_v1_pruner_instances__instance_id__scopes__media_scope__preview_runs__preview_run_uuid__apply_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/pruner/instances/{instance_id}/scopes/{media_scope}/preview-runs/{preview_run_uuid}/apply-eligibility": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Whether live apply from this preview snapshot can be enqueued (Jellyfin, Emby, Plex)
-     * @description Read-only gate check for apply-from-preview. This is **not** a second scan — it only reports whether the snapshot is eligible given instance, scope, outcome, and feature flag.
-     */
-    get: operations["get_pruner_apply_eligibility_api_v1_pruner_instances__instance_id__scopes__media_scope__preview_runs__preview_run_uuid__apply_eligibility_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/pruner/instances/{instance_id}/studios": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Distinct studio names from the live library (UI dropdown) */
-    get: operations["get_pruner_instance_studios_api_v1_pruner_instances__instance_id__studios_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/pruner/jobs/inspection": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Pruner Jobs Inspection */
-    get: operations["get_pruner_jobs_inspection_api_v1_pruner_jobs_inspection_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/pruner/overview-stats": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Pruner Overview Stats */
-    get: operations["get_pruner_overview_stats_api_v1_pruner_overview_stats_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/refiner/jobs/candidate-gate/enqueue": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Post Refiner Candidate Gate Enqueue
-     * @description Refiner: enqueue one ownership / upstream-blocking evaluation against the live *arr queue.
-     */
-    post: operations["post_refiner_candidate_gate_enqueue_api_v1_refiner_jobs_candidate_gate_enqueue_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/refiner/jobs/file-remux-pass/enqueue": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Post Refiner File Remux Pass Enqueue
-     * @description Enqueue one live ffprobe + remux-plan + optional ffmpeg pass.
-     */
-    post: operations["post_refiner_file_remux_pass_enqueue_api_v1_refiner_jobs_file_remux_pass_enqueue_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/refiner/jobs/inspection": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Refiner Jobs Inspection
-     * @description Refiner: read-only persisted ``refiner_jobs`` rows (all Refiner ``job_kind`` values on this lane).
-     */
-    get: operations["get_refiner_jobs_inspection_api_v1_refiner_jobs_inspection_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/refiner/jobs/supplied-payload-evaluation/enqueue": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Post Refiner Supplied Payload Evaluation Enqueue
-     * @description Enqueue the supplied-payload evaluation durable job (``refiner_jobs`` only).
-     */
-    post: operations["post_refiner_supplied_payload_evaluation_enqueue_api_v1_refiner_jobs_supplied_payload_evaluation_enqueue_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/refiner/jobs/watched-folder-remux-scan-dispatch/enqueue": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Post Refiner Watched Folder Remux Scan Dispatch Enqueue
-     * @description Enqueue one scan of the saved watched folder (manual trigger; Refiner-local).
-     */
-    post: operations["post_refiner_watched_folder_remux_scan_dispatch_enqueue_api_v1_refiner_jobs_watched_folder_remux_scan_dispatch_enqueue_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/refiner/jobs/{job_id}/cancel-pending": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Post Refiner Job Cancel Pending
-     * @description Abandon a **pending** row only — refuses leased, completed, failed, or cancelled jobs.
-     */
-    post: operations["post_refiner_job_cancel_pending_api_v1_refiner_jobs__job_id__cancel_pending_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/refiner/operator-settings": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Refiner Operator Settings */
-    get: operations["get_refiner_operator_settings_api_v1_refiner_operator_settings_get"];
-    /** Put Refiner Operator Settings */
-    put: operations["put_refiner_operator_settings_api_v1_refiner_operator_settings_put"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/refiner/overview-stats": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Refiner Overview Stats */
-    get: operations["get_refiner_overview_stats_api_v1_refiner_overview_stats_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/refiner/path-settings": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Refiner Path Settings
-     * @description Read saved Refiner path roles plus the resolved default work/temp path (shown before first save).
-     */
-    get: operations["get_refiner_path_settings_api_v1_refiner_path_settings_get"];
-    /**
-     * Put Refiner Path Settings
-     * @description Persist Refiner path settings with hard validation (overlap, existence, required output).
-     */
-    put: operations["put_refiner_path_settings_api_v1_refiner_path_settings_put"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/refiner/remux-rules-settings": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Refiner Remux Rules Settings */
-    get: operations["get_refiner_remux_rules_settings_api_v1_refiner_remux_rules_settings_get"];
-    /** Put Refiner Remux Rules Settings */
-    put: operations["put_refiner_remux_rules_settings_api_v1_refiner_remux_rules_settings_put"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/refiner/runtime-settings": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Refiner Runtime Settings
-     * @description Refiner-only snapshot of configured in-process worker concurrency (env at process start).
-     */
-    get: operations["get_refiner_runtime_settings_api_v1_refiner_runtime_settings_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/subber/jobs": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Subber Jobs */
-    get: operations["get_subber_jobs_api_v1_subber_jobs_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/subber/library/movies": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Subber Library Movies */
-    get: operations["get_subber_library_movies_api_v1_subber_library_movies_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/subber/library/search-all-missing/movies": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Post Subber Search All Missing Movies */
-    post: operations["post_subber_search_all_missing_movies_api_v1_subber_library_search_all_missing_movies_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/subber/library/search-all-missing/tv": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Post Subber Search All Missing Tv */
-    post: operations["post_subber_search_all_missing_tv_api_v1_subber_library_search_all_missing_tv_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/subber/library/sync/movies": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Post Subber Library Sync Movies */
-    post: operations["post_subber_library_sync_movies_api_v1_subber_library_sync_movies_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/subber/library/sync/tv": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Post Subber Library Sync Tv */
-    post: operations["post_subber_library_sync_tv_api_v1_subber_library_sync_tv_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/subber/library/tv": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Subber Library Tv */
-    get: operations["get_subber_library_tv_api_v1_subber_library_tv_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/subber/library/{state_id}/search-now": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Post Subber Search Now */
-    post: operations["post_subber_search_now_api_v1_subber_library__state_id__search_now_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/subber/overview": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Subber Overview */
-    get: operations["get_subber_overview_api_v1_subber_overview_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/subber/providers": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Subber Providers */
-    get: operations["get_subber_providers_api_v1_subber_providers_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/subber/providers/{provider_key}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    /** Put Subber Provider */
-    put: operations["put_subber_provider_api_v1_subber_providers__provider_key__put"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/subber/providers/{provider_key}/test": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Post Subber Provider Test */
-    post: operations["post_subber_provider_test_api_v1_subber_providers__provider_key__test_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/subber/settings": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Subber Settings */
-    get: operations["get_subber_settings_api_v1_subber_settings_get"];
-    /** Put Subber Settings */
-    put: operations["put_subber_settings_api_v1_subber_settings_put"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/subber/settings/radarr-root-folders": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Post Radarr Root Folders */
-    post: operations["post_radarr_root_folders_api_v1_subber_settings_radarr_root_folders_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/subber/settings/sonarr-root-folders": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Post Sonarr Root Folders */
-    post: operations["post_sonarr_root_folders_api_v1_subber_settings_sonarr_root_folders_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/subber/settings/test-opensubtitles": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Post Test Opensubtitles */
-    post: operations["post_test_opensubtitles_api_v1_subber_settings_test_opensubtitles_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/subber/settings/test-radarr": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Post Test Radarr */
-    post: operations["post_test_radarr_api_v1_subber_settings_test_radarr_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/subber/settings/test-sonarr": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Post Test Sonarr */
-    post: operations["post_test_sonarr_api_v1_subber_settings_test_sonarr_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/subber/webhook/radarr": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Post Radarr Webhook */
-    post: operations["post_radarr_webhook_api_v1_subber_webhook_radarr_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/subber/webhook/sonarr": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Post Sonarr Webhook */
-    post: operations["post_sonarr_webhook_api_v1_subber_webhook_sonarr_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/suite/configuration-backups": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Configuration Backups */
-    get: operations["get_configuration_backups_api_v1_suite_configuration_backups_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/suite/configuration-backups/{backup_id}/download": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Download Configuration Backup */
-    get: operations["download_configuration_backup_api_v1_suite_configuration_backups__backup_id__download_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/suite/configuration-bundle": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Configuration Bundle
-     * @description Export suite + module configuration as JSON (operators/admins only — contains secrets).
-     */
-    get: operations["get_configuration_bundle_api_v1_suite_configuration_bundle_get"];
-    /**
-     * Put Configuration Bundle
-     * @description Replace suite + module configuration from a prior export (operators/admins only).
-     */
-    put: operations["put_configuration_bundle_api_v1_suite_configuration_bundle_put"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/suite/logs": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Suite Logs */
-    get: operations["get_suite_logs_api_v1_suite_logs_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/suite/metrics": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Suite Metrics */
-    get: operations["get_suite_metrics_api_v1_suite_metrics_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/suite/notification-channels": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Notification Channels */
-    get: operations["get_notification_channels_api_v1_suite_notification_channels_get"];
-    put?: never;
-    /** Post Notification Channel */
-    post: operations["post_notification_channel_api_v1_suite_notification_channels_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/suite/notification-channels/{channel_id}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    /** Put Notification Channel */
-    put: operations["put_notification_channel_api_v1_suite_notification_channels__channel_id__put"];
-    post?: never;
-    /** Delete Notification Channel Route */
-    delete: operations["delete_notification_channel_route_api_v1_suite_notification_channels__channel_id__delete"];
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/suite/notification-channels/{channel_id}/test": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Post Notification Channel Test */
-    post: operations["post_notification_channel_test_api_v1_suite_notification_channels__channel_id__test_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/suite/operational-history/reset": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Post Suite Operational History Reset
-     * @description Explicitly clear dashboard/activity history without touching settings or active work.
-     */
-    post: operations["post_suite_operational_history_reset_api_v1_suite_operational_history_reset_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/suite/security-overview": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Suite Security Overview
-     * @description Read-only snapshot of sign-in protection (from startup configuration, not the database).
-     */
-    get: operations["get_suite_security_overview_api_v1_suite_security_overview_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/suite/settings": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Suite Settings
-     * @description Names and notices stored in the app database (any signed-in user may read).
-     */
-    get: operations["get_suite_settings_api_v1_suite_settings_get"];
-    /**
-     * Put Suite Settings
-     * @description Update suite display text — operators and admins only.
-     */
-    put: operations["put_suite_settings_api_v1_suite_settings_put"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/suite/settings/configuration-bundle": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Configuration Bundle
-     * @description Export suite + module configuration as JSON (operators/admins only — contains secrets).
-     */
-    get: operations["get_configuration_bundle_api_v1_suite_settings_configuration_bundle_get"];
-    /**
-     * Put Configuration Bundle
-     * @description Replace suite + module configuration from a prior export (operators/admins only).
-     */
-    put: operations["put_configuration_bundle_api_v1_suite_settings_configuration_bundle_put"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/suite/settings/update-status": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Suite Update Status
-     * @description Read-only update check for the signed-in Settings page.
-     */
-    get: operations["get_suite_update_status_api_v1_suite_settings_update_status_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/suite/update-status": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Suite Update Status
-     * @description Read-only update check for the signed-in Settings page.
-     */
-    get: operations["get_suite_update_status_api_v1_suite_update_status_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/system/directories": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get System Directories
-     * @description List server-visible folders for the in-app path browser.
-     */
-    get: operations["get_system_directories_api_v1_system_directories_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/system/reconciliation": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Reconciliation Report
-     * @description Return non-mutating filesystem/database reconciliation findings.
-     */
-    get: operations["get_reconciliation_report_api_v1_system_reconciliation_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/system/reconciliation/repair": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Post Reconciliation Repair
-     * @description Apply one explicit safe repair action.
-     */
-    post: operations["post_reconciliation_repair_api_v1_system_reconciliation_repair_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/system/suite-configuration-backups": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Suite Configuration Backups */
-    get: operations["get_suite_configuration_backups_api_v1_system_suite_configuration_backups_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/system/suite-configuration-backups/{backup_id}/download": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Download Suite Configuration Backup */
-    get: operations["download_suite_configuration_backup_api_v1_system_suite_configuration_backups__backup_id__download_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/system/suite-configuration-bundle": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Suite Configuration Bundle */
-    get: operations["get_suite_configuration_bundle_api_v1_system_suite_configuration_bundle_get"];
-    /** Put Suite Configuration Bundle */
-    put: operations["put_suite_configuration_bundle_api_v1_system_suite_configuration_bundle_put"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/health": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Health */
-    get: operations["health_health_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/ready": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Ready */
-    get: operations["ready_ready_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
+    "/api/v1/activity/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Activity Recent
+         * @description Recent persisted events, newest first — snapshot only (pagination-style read; not a control plane).
+         */
+        get: operations["get_activity_recent_api_v1_activity_recent_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/activity/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Activity Stream
+         * @description Authenticated SSE freshness signal for activity-backed pages.
+         */
+        get: operations["get_activity_stream_api_v1_activity_stream_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/arr-library/arr-connection/radarr": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Arr Library Connection Radarr */
+        put: operations["put_arr_library_connection_radarr_api_v1_arr_library_arr_connection_radarr_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/arr-library/arr-connection/sonarr": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Arr Library Connection Sonarr */
+        put: operations["put_arr_library_connection_sonarr_api_v1_arr_library_arr_connection_sonarr_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/arr-library/arr-operator-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Arr Library Operator Settings
+         * @description Shared *arr library: read automatic search lanes and connection panels (saved in this app where applicable).
+         */
+        get: operations["get_arr_library_operator_settings_api_v1_arr_library_arr_operator_settings_get"];
+        /**
+         * Put Arr Library Operator Settings
+         * @description Shared *arr library: save automatic search lane preferences (does not change connection fields on this route).
+         */
+        put: operations["put_arr_library_operator_settings_api_v1_arr_library_arr_operator_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/arr-library/arr-operator-settings/connection-test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Arr Library Connection Test
+         * @description Try a reachability check to Sonarr or Radarr; outcome is saved on Activity and on the settings row.
+         *
+         *     When ``enabled`` is present, ``base_url`` and ``api_key`` are interpreted like ``PUT …/arr-connection/*`` (draft
+         *     test without saving). When ``enabled`` is omitted, credentials come only from stored settings and the server file.
+         */
+        post: operations["post_arr_library_connection_test_api_v1_arr_library_arr_operator_settings_connection_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/arr-library/arr-operator-settings/lanes/{lane_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Arr Library Operator Settings Lane
+         * @description Shared *arr library: save one automatic search lane (missing or upgrade for TV or movies).
+         */
+        put: operations["put_arr_library_operator_settings_lane_api_v1_arr_library_arr_operator_settings_lanes__lane_key__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Bootstrap
+         * @description Create the first ``admin`` user once per MediaMop installation (guarded + rate limited).
+         *
+         *     Requires the same CSRF + Origin/Referer posture as ``POST /login``. After success,
+         *     callers use ``POST /login`` normally. Not available once any ``admin`` user exists.
+         */
+        post: operations["post_bootstrap_api_v1_auth_bootstrap_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/bootstrap/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Bootstrap Status
+         * @description Report whether the initial ``admin`` account may still be created (Phase 6).
+         *
+         *     Guest-first endpoint: never return **500**. DB/session failures map to **503** with copy
+         *     operators can act on. Uses a dedicated session + rollback (no ``get_db_session`` post-``commit``
+         *     churn on SQLite read-only paths).
+         */
+        get: operations["get_bootstrap_status_api_v1_auth_bootstrap_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Change Password
+         * @description Change the signed-in user's password and revoke active sessions (requires new sign-in).
+         */
+        post: operations["post_change_password_api_v1_auth_change_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/csrf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Csrf */
+        get: operations["get_csrf_api_v1_auth_csrf_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Login */
+        post: operations["post_login_api_v1_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Logout */
+        post: operations["post_logout_api_v1_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Me */
+        get: operations["get_me_api_v1_auth_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Current Session */
+        get: operations["get_current_session_api_v1_auth_session_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Dashboard Status
+         * @description Read-only shell dashboard — system status + persisted activity summary.
+         */
+        get: operations["get_dashboard_status_api_v1_dashboard_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pruner/instances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Pruner Instances */
+        get: operations["list_pruner_instances_api_v1_pruner_instances_get"];
+        put?: never;
+        /** Post Pruner Instance */
+        post: operations["post_pruner_instance_api_v1_pruner_instances_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pruner/instances/{instance_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Pruner Instance */
+        get: operations["get_pruner_instance_api_v1_pruner_instances__instance_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Pruner Instance */
+        patch: operations["patch_pruner_instance_api_v1_pruner_instances__instance_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/pruner/instances/{instance_id}/connection-test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Pruner Connection Test */
+        post: operations["post_pruner_connection_test_api_v1_pruner_instances__instance_id__connection_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pruner/instances/{instance_id}/preview-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List recent preview runs for this instance (metadata only)
+         * @description Returns newest preview runs first. Optional ``media_scope`` filters to one axis (``tv`` vs ``movies``). Candidate payloads are omitted; fetch a single run for JSON.
+         */
+        get: operations["list_pruner_preview_runs_api_v1_pruner_instances__instance_id__preview_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pruner/instances/{instance_id}/preview-runs/{preview_run_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fetch one preview run (source of truth for candidates JSON) */
+        get: operations["get_pruner_preview_run_api_v1_pruner_instances__instance_id__preview_runs__preview_run_uuid__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pruner/instances/{instance_id}/previews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Pruner Preview */
+        post: operations["post_pruner_preview_api_v1_pruner_instances__instance_id__previews_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pruner/instances/{instance_id}/scopes/{media_scope}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Per-scope Pruner settings (TV episodes vs movie items)
+         * @description Jellyfin/Emby: TV scope uses **episode-level** candidates for missing primary art in previews; Movies uses **one row per movie library item**. Plex uses the same preview snapshot model for missing primary art (Plex-specific thumb/leaf discovery — not identical to Jellyfin/Emby primary-image probes).
+         */
+        get: operations["get_pruner_scope_api_v1_pruner_instances__instance_id__scopes__media_scope__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Pruner Scope */
+        patch: operations["patch_pruner_scope_api_v1_pruner_instances__instance_id__scopes__media_scope__patch"];
+        trace?: never;
+    };
+    "/api/v1/pruner/instances/{instance_id}/scopes/{media_scope}/plex-live-removal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Plex-only (retired): live removal without a preview snapshot is not supported */
+        post: operations["post_pruner_plex_live_removal_api_v1_pruner_instances__instance_id__scopes__media_scope__plex_live_removal_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pruner/instances/{instance_id}/scopes/{media_scope}/plex-live-removal-eligibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Plex-only (retired): explains why live removal without a snapshot is not available */
+        get: operations["get_pruner_plex_live_removal_eligibility_api_v1_pruner_instances__instance_id__scopes__media_scope__plex_live_removal_eligibility_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pruner/instances/{instance_id}/scopes/{media_scope}/preview-runs/{preview_run_uuid}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Enqueue live library removal from one preview snapshot (rule family from snapshot; Jellyfin, Emby, Plex) */
+        post: operations["post_pruner_apply_from_preview_api_v1_pruner_instances__instance_id__scopes__media_scope__preview_runs__preview_run_uuid__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pruner/instances/{instance_id}/scopes/{media_scope}/preview-runs/{preview_run_uuid}/apply-eligibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether live apply from this preview snapshot can be enqueued (Jellyfin, Emby, Plex)
+         * @description Read-only gate check for apply-from-preview. This is **not** a second scan — it only reports whether the snapshot is eligible given instance, scope, outcome, and feature flag.
+         */
+        get: operations["get_pruner_apply_eligibility_api_v1_pruner_instances__instance_id__scopes__media_scope__preview_runs__preview_run_uuid__apply_eligibility_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pruner/instances/{instance_id}/studios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Distinct studio names from the live library (UI dropdown) */
+        get: operations["get_pruner_instance_studios_api_v1_pruner_instances__instance_id__studios_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pruner/jobs/inspection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Pruner Jobs Inspection */
+        get: operations["get_pruner_jobs_inspection_api_v1_pruner_jobs_inspection_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pruner/overview-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Pruner Overview Stats */
+        get: operations["get_pruner_overview_stats_api_v1_pruner_overview_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/refiner/jobs/candidate-gate/enqueue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Refiner Candidate Gate Enqueue
+         * @description Refiner: enqueue one ownership / upstream-blocking evaluation against the live *arr queue.
+         */
+        post: operations["post_refiner_candidate_gate_enqueue_api_v1_refiner_jobs_candidate_gate_enqueue_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/refiner/jobs/file-remux-pass/enqueue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Refiner File Remux Pass Enqueue
+         * @description Enqueue one live ffprobe + remux-plan + optional ffmpeg pass.
+         */
+        post: operations["post_refiner_file_remux_pass_enqueue_api_v1_refiner_jobs_file_remux_pass_enqueue_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/refiner/jobs/inspection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Refiner Jobs Inspection
+         * @description Refiner: read-only persisted ``refiner_jobs`` rows (all Refiner ``job_kind`` values on this lane).
+         */
+        get: operations["get_refiner_jobs_inspection_api_v1_refiner_jobs_inspection_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/refiner/jobs/supplied-payload-evaluation/enqueue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Refiner Supplied Payload Evaluation Enqueue
+         * @description Enqueue the supplied-payload evaluation durable job (``refiner_jobs`` only).
+         */
+        post: operations["post_refiner_supplied_payload_evaluation_enqueue_api_v1_refiner_jobs_supplied_payload_evaluation_enqueue_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/refiner/jobs/watched-folder-remux-scan-dispatch/enqueue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Refiner Watched Folder Remux Scan Dispatch Enqueue
+         * @description Enqueue one scan of the saved watched folder (manual trigger; Refiner-local).
+         */
+        post: operations["post_refiner_watched_folder_remux_scan_dispatch_enqueue_api_v1_refiner_jobs_watched_folder_remux_scan_dispatch_enqueue_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/refiner/jobs/{job_id}/cancel-pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Refiner Job Cancel Pending
+         * @description Abandon a **pending** row only — refuses leased, completed, failed, or cancelled jobs.
+         */
+        post: operations["post_refiner_job_cancel_pending_api_v1_refiner_jobs__job_id__cancel_pending_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/refiner/operator-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Refiner Operator Settings */
+        get: operations["get_refiner_operator_settings_api_v1_refiner_operator_settings_get"];
+        /** Put Refiner Operator Settings */
+        put: operations["put_refiner_operator_settings_api_v1_refiner_operator_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/refiner/overview-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Refiner Overview Stats */
+        get: operations["get_refiner_overview_stats_api_v1_refiner_overview_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/refiner/path-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Refiner Path Settings
+         * @description Read saved Refiner path roles plus the resolved default work/temp path (shown before first save).
+         */
+        get: operations["get_refiner_path_settings_api_v1_refiner_path_settings_get"];
+        /**
+         * Put Refiner Path Settings
+         * @description Persist Refiner path settings with hard validation (overlap, existence, required output).
+         */
+        put: operations["put_refiner_path_settings_api_v1_refiner_path_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/refiner/remux-rules-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Refiner Remux Rules Settings */
+        get: operations["get_refiner_remux_rules_settings_api_v1_refiner_remux_rules_settings_get"];
+        /** Put Refiner Remux Rules Settings */
+        put: operations["put_refiner_remux_rules_settings_api_v1_refiner_remux_rules_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/refiner/runtime-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Refiner Runtime Settings
+         * @description Refiner-only snapshot of configured in-process worker concurrency (env at process start).
+         */
+        get: operations["get_refiner_runtime_settings_api_v1_refiner_runtime_settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subber/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Subber Jobs */
+        get: operations["get_subber_jobs_api_v1_subber_jobs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subber/library/movies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Subber Library Movies */
+        get: operations["get_subber_library_movies_api_v1_subber_library_movies_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subber/library/search-all-missing/movies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Subber Search All Missing Movies */
+        post: operations["post_subber_search_all_missing_movies_api_v1_subber_library_search_all_missing_movies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subber/library/search-all-missing/tv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Subber Search All Missing Tv */
+        post: operations["post_subber_search_all_missing_tv_api_v1_subber_library_search_all_missing_tv_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subber/library/sync/movies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Subber Library Sync Movies */
+        post: operations["post_subber_library_sync_movies_api_v1_subber_library_sync_movies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subber/library/sync/tv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Subber Library Sync Tv */
+        post: operations["post_subber_library_sync_tv_api_v1_subber_library_sync_tv_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subber/library/tv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Subber Library Tv */
+        get: operations["get_subber_library_tv_api_v1_subber_library_tv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subber/library/{state_id}/search-now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Subber Search Now */
+        post: operations["post_subber_search_now_api_v1_subber_library__state_id__search_now_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subber/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Subber Overview */
+        get: operations["get_subber_overview_api_v1_subber_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subber/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Subber Providers */
+        get: operations["get_subber_providers_api_v1_subber_providers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subber/providers/{provider_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Subber Provider */
+        put: operations["put_subber_provider_api_v1_subber_providers__provider_key__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subber/providers/{provider_key}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Subber Provider Test */
+        post: operations["post_subber_provider_test_api_v1_subber_providers__provider_key__test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subber/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Subber Settings */
+        get: operations["get_subber_settings_api_v1_subber_settings_get"];
+        /** Put Subber Settings */
+        put: operations["put_subber_settings_api_v1_subber_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subber/settings/radarr-root-folders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Radarr Root Folders */
+        post: operations["post_radarr_root_folders_api_v1_subber_settings_radarr_root_folders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subber/settings/sonarr-root-folders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Sonarr Root Folders */
+        post: operations["post_sonarr_root_folders_api_v1_subber_settings_sonarr_root_folders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subber/settings/test-opensubtitles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Test Opensubtitles */
+        post: operations["post_test_opensubtitles_api_v1_subber_settings_test_opensubtitles_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subber/settings/test-radarr": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Test Radarr */
+        post: operations["post_test_radarr_api_v1_subber_settings_test_radarr_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subber/settings/test-sonarr": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Test Sonarr */
+        post: operations["post_test_sonarr_api_v1_subber_settings_test_sonarr_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subber/webhook/radarr": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Radarr Webhook */
+        post: operations["post_radarr_webhook_api_v1_subber_webhook_radarr_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/subber/webhook/sonarr": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Sonarr Webhook */
+        post: operations["post_sonarr_webhook_api_v1_subber_webhook_sonarr_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suite/configuration-backups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Configuration Backups */
+        get: operations["get_configuration_backups_api_v1_suite_configuration_backups_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suite/configuration-backups/{backup_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Configuration Backup */
+        get: operations["download_configuration_backup_api_v1_suite_configuration_backups__backup_id__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suite/configuration-bundle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Configuration Bundle
+         * @description Export suite + module configuration as JSON (operators/admins only — contains secrets).
+         */
+        get: operations["get_configuration_bundle_api_v1_suite_configuration_bundle_get"];
+        /**
+         * Put Configuration Bundle
+         * @description Replace suite + module configuration from a prior export (operators/admins only).
+         */
+        put: operations["put_configuration_bundle_api_v1_suite_configuration_bundle_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suite/logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Suite Logs */
+        get: operations["get_suite_logs_api_v1_suite_logs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suite/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Suite Metrics */
+        get: operations["get_suite_metrics_api_v1_suite_metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suite/notification-channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Notification Channels */
+        get: operations["get_notification_channels_api_v1_suite_notification_channels_get"];
+        put?: never;
+        /** Post Notification Channel */
+        post: operations["post_notification_channel_api_v1_suite_notification_channels_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suite/notification-channels/{channel_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Notification Channel */
+        put: operations["put_notification_channel_api_v1_suite_notification_channels__channel_id__put"];
+        post?: never;
+        /** Delete Notification Channel Route */
+        delete: operations["delete_notification_channel_route_api_v1_suite_notification_channels__channel_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suite/notification-channels/{channel_id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Notification Channel Test */
+        post: operations["post_notification_channel_test_api_v1_suite_notification_channels__channel_id__test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suite/operational-history/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Suite Operational History Reset
+         * @description Explicitly clear dashboard/activity history without touching settings or active work.
+         */
+        post: operations["post_suite_operational_history_reset_api_v1_suite_operational_history_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suite/security-overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Suite Security Overview
+         * @description Read-only snapshot of sign-in protection (from startup configuration, not the database).
+         */
+        get: operations["get_suite_security_overview_api_v1_suite_security_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suite/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Suite Settings
+         * @description Names and notices stored in the app database (any signed-in user may read).
+         */
+        get: operations["get_suite_settings_api_v1_suite_settings_get"];
+        /**
+         * Put Suite Settings
+         * @description Update suite display text — operators and admins only.
+         */
+        put: operations["put_suite_settings_api_v1_suite_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suite/settings/configuration-bundle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Configuration Bundle
+         * @description Export suite + module configuration as JSON (operators/admins only — contains secrets).
+         */
+        get: operations["get_configuration_bundle_api_v1_suite_settings_configuration_bundle_get"];
+        /**
+         * Put Configuration Bundle
+         * @description Replace suite + module configuration from a prior export (operators/admins only).
+         */
+        put: operations["put_configuration_bundle_api_v1_suite_settings_configuration_bundle_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suite/settings/update-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Suite Update Status
+         * @description Read-only update check for the signed-in Settings page.
+         */
+        get: operations["get_suite_update_status_api_v1_suite_settings_update_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suite/update-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Suite Update Status
+         * @description Read-only update check for the signed-in Settings page.
+         */
+        get: operations["get_suite_update_status_api_v1_suite_update_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/directories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get System Directories
+         * @description List server-visible folders for the in-app path browser.
+         */
+        get: operations["get_system_directories_api_v1_system_directories_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/reconciliation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Reconciliation Report
+         * @description Return non-mutating filesystem/database reconciliation findings.
+         */
+        get: operations["get_reconciliation_report_api_v1_system_reconciliation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/reconciliation/repair": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Reconciliation Repair
+         * @description Apply one explicit safe repair action.
+         */
+        post: operations["post_reconciliation_repair_api_v1_system_reconciliation_repair_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/suite-configuration-backups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Suite Configuration Backups */
+        get: operations["get_suite_configuration_backups_api_v1_system_suite_configuration_backups_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/suite-configuration-backups/{backup_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Suite Configuration Backup */
+        get: operations["download_suite_configuration_backup_api_v1_system_suite_configuration_backups__backup_id__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/suite-configuration-bundle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Suite Configuration Bundle */
+        get: operations["get_suite_configuration_bundle_api_v1_system_suite_configuration_bundle_get"];
+        /** Put Suite Configuration Bundle */
+        put: operations["put_suite_configuration_bundle_api_v1_system_suite_configuration_bundle_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Health */
+        get: operations["health_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ready */
+        get: operations["ready_ready_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-  schemas: {
-    /** ActivityEventItemOut */
-    ActivityEventItemOut: {
-      /**
-       * Created At
-       * Format: date-time
-       */
-      created_at: string;
-      /** Detail */
-      detail?: string | null;
-      /**
-       * Event Type
-       * @description Stable type key, e.g. auth.login_succeeded.
-       */
-      event_type: string;
-      /** Id */
-      id: number;
-      /**
-       * Module
-       * @description Source area, e.g. auth.
-       */
-      module: string;
-      /** Title */
-      title: string;
-    };
-    /** ActivityRecentOut */
-    ActivityRecentOut: {
-      /** Items */
-      items?: components["schemas"]["ActivityEventItemOut"][];
-      /**
-       * System Events
-       * @default 0
-       */
-      system_events: number;
-      /**
-       * Total
-       * @default 0
-       */
-      total: number;
-    };
-    /**
-     * ActivitySummaryOut
-     * @description Derived from persisted ``activity_events`` only — snapshot at request time.
-     */
-    ActivitySummaryOut: {
-      /**
-       * Events Last 24H
-       * @description Count of rows with created_at in the last 24 hours.
-       */
-      events_last_24h: number;
-      /** @description Newest event of any type, if any. */
-      latest?: components["schemas"]["ActivityEventItemOut"] | null;
-    };
-    /** ArrLibraryConnectionPanelOut */
-    ArrLibraryConnectionPanelOut: {
-      /**
-       * Api Key Is Saved
-       * @description Whether an API key is already stored encrypted for this app.
-       */
-      api_key_is_saved: boolean;
-      /**
-       * Base Url
-       * @description Address saved in MediaMop for this app (may be empty to use the server file).
-       */
-      base_url: string;
-      /**
-       * Effective Base Url
-       * @description Address MediaMop will actually use after applying saved values and the server file.
-       */
-      effective_base_url?: string | null;
-      /** Enabled */
-      enabled: boolean;
-      /** Last Test At */
-      last_test_at?: string | null;
-      /** Last Test Detail */
-      last_test_detail?: string | null;
-      /**
-       * Last Test Ok
-       * @description Last in-panel connection check outcome, if any.
-       */
-      last_test_ok: boolean | null;
-      /**
-       * Status Headline
-       * @description Plain-language headline for the connection status area (not checked / not set up / failed / OK).
-       */
-      status_headline: string;
-    };
-    /** ArrLibraryConnectionPutIn */
-    ArrLibraryConnectionPutIn: {
-      /**
-       * Api Key
-       * @description When empty, an existing saved key is kept. When non-empty, replaces the saved key.
-       * @default
-       */
-      api_key: string;
-      /**
-       * Base Url
-       * @default
-       */
-      base_url: string;
-      /** Csrf Token */
-      csrf_token: string;
-      /** Enabled */
-      enabled: boolean;
-    };
-    /** ArrLibraryConnectionTestIn */
-    ArrLibraryConnectionTestIn: {
-      /** Api Key */
-      api_key?: string | null;
-      /**
-       * App
-       * @description sonarr or radarr
-       */
-      app: string;
-      /** Base Url */
-      base_url?: string | null;
-      /** Csrf Token */
-      csrf_token: string;
-      /**
-       * Enabled
-       * @description When set, tests draft fields like PUT …/arr-connection/* (with base_url/api_key); omit for stored settings only.
-       */
-      enabled?: boolean | null;
-    };
-    /** ArrLibraryConnectionTestOut */
-    ArrLibraryConnectionTestOut: {
-      /** Message */
-      message: string;
-      /** Ok */
-      ok: boolean;
-    };
-    /**
-     * ArrLibraryOperatorSettingsLanePutIn
-     * @description Save a single automatic search lane (independent from the other three).
-     */
-    ArrLibraryOperatorSettingsLanePutIn: {
-      /** Csrf Token */
-      csrf_token: string;
-      lane: components["schemas"]["ArrLibrarySearchLaneIn"];
-    };
-    /** ArrLibraryOperatorSettingsOut */
-    ArrLibraryOperatorSettingsOut: {
-      /**
-       * Connection Note
-       * @description Short note on Off vs On, encryption, and fallback to the server configuration file.
-       */
-      connection_note: string;
-      /**
-       * Interval Restart Note
-       * @description Explains that changing how often automatic checks are queued may need an API restart.
-       */
-      interval_restart_note: string;
-      radarr_connection: components["schemas"]["ArrLibraryConnectionPanelOut"];
-      radarr_missing: components["schemas"]["ArrLibrarySearchLaneOut"];
-      /** Radarr Server Configured */
-      radarr_server_configured: boolean;
-      /**
-       * Radarr Server Url
-       * @description Radarr address from configuration (read-only).
-       */
-      radarr_server_url: string | null;
-      radarr_upgrade: components["schemas"]["ArrLibrarySearchLaneOut"];
-      /**
-       * Schedule Timezone
-       * @description Time zone name used for schedule windows (from server configuration).
-       */
-      schedule_timezone: string;
-      sonarr_connection: components["schemas"]["ArrLibraryConnectionPanelOut"];
-      sonarr_missing: components["schemas"]["ArrLibrarySearchLaneOut"];
-      /** Sonarr Server Configured */
-      sonarr_server_configured: boolean;
-      /**
-       * Sonarr Server Url
-       * @description Sonarr address from configuration (read-only).
-       */
-      sonarr_server_url: string | null;
-      sonarr_upgrade: components["schemas"]["ArrLibrarySearchLaneOut"];
-      /**
-       * Updated At
-       * Format: date-time
-       */
-      updated_at: string;
-    };
-    /** ArrLibraryOperatorSettingsPutIn */
-    ArrLibraryOperatorSettingsPutIn: {
-      /** Csrf Token */
-      csrf_token: string;
-      radarr_missing: components["schemas"]["ArrLibrarySearchLaneIn"];
-      radarr_upgrade: components["schemas"]["ArrLibrarySearchLaneIn"];
-      sonarr_missing: components["schemas"]["ArrLibrarySearchLaneIn"];
-      sonarr_upgrade: components["schemas"]["ArrLibrarySearchLaneIn"];
-    };
-    /** ArrLibrarySearchLaneIn */
-    ArrLibrarySearchLaneIn: {
-      /** Enabled */
-      enabled: boolean;
-      /** Max Items Per Run */
-      max_items_per_run: number;
-      /** Retry Delay Minutes */
-      retry_delay_minutes: number;
-      /** Schedule Days */
-      schedule_days: string;
-      /** Schedule Enabled */
-      schedule_enabled: boolean;
-      /** Schedule End */
-      schedule_end: string;
-      /** Schedule Interval Seconds */
-      schedule_interval_seconds: number;
-      /** Schedule Start */
-      schedule_start: string;
-    };
-    /** ArrLibrarySearchLaneOut */
-    ArrLibrarySearchLaneOut: {
-      /**
-       * Enabled
-       * @description Whether this automatic search lane is turned on.
-       */
-      enabled: boolean;
-      /** Max Items Per Run */
-      max_items_per_run: number;
-      /** Retry Delay Minutes */
-      retry_delay_minutes: number;
-      /**
-       * Schedule Days
-       * @description Comma-separated weekdays, e.g. Mon,Tue. Leave empty to mean every day.
-       */
-      schedule_days: string;
-      /**
-       * Schedule Enabled
-       * @description When on, searches only run inside the days and times below.
-       */
-      schedule_enabled: boolean;
-      /** Schedule End */
-      schedule_end: string;
-      /** Schedule Interval Seconds */
-      schedule_interval_seconds: number;
-      /** Schedule Start */
-      schedule_start: string;
-    };
-    /**
-     * ArrSearchLaneKey
-     * @description URL path keys for single-lane search preference saves.
-     * @enum {string}
-     */
-    ArrSearchLaneKey:
-      | "sonarr_missing"
-      | "sonarr_upgrade"
-      | "radarr_missing"
-      | "radarr_upgrade";
-    /** BootstrapIn */
-    BootstrapIn: {
-      /** Csrf Token */
-      csrf_token: string;
-      /** Password */
-      password: string;
-      /** Username */
-      username: string;
-    };
-    /** BootstrapOut */
-    BootstrapOut: {
-      /** Message */
-      message: string;
-      /** Username */
-      username: string;
-    };
-    /**
-     * BootstrapStatusOut
-     * @description Whether first-run bootstrap may create the initial ``admin`` user.
-     */
-    BootstrapStatusOut: {
-      /** Bootstrap Allowed */
-      bootstrap_allowed: boolean;
-      /** Reason */
-      reason: string;
-    };
-    /** ChangePasswordIn */
-    ChangePasswordIn: {
-      /** Csrf Token */
-      csrf_token: string;
-      /** Current Password */
-      current_password: string;
-      /** New Password */
-      new_password: string;
-    };
-    /** ChangePasswordOut */
-    ChangePasswordOut: {
-      /** Message */
-      message: string;
-    };
-    /**
-     * ConfigurationBundleImportIn
-     * @description Restore suite + module settings from a prior configuration bundle export.
-     */
-    ConfigurationBundleImportIn: {
-      /** Bundle */
-      bundle: {
-        [key: string]: unknown;
-      };
-      /** Csrf Token */
-      csrf_token: string;
-    };
-    /** CsrfOut */
-    CsrfOut: {
-      /**
-       * Csrf Token
-       * @description Send on unsafe requests (header X-CSRF-Token or body).
-       */
-      csrf_token: string;
-    };
-    /** CurrentSessionOut */
-    CurrentSessionOut: {
-      /**
-       * Absolute Expires At
-       * Format: date-time
-       */
-      absolute_expires_at: string;
-      /** Absolute Timeout Days */
-      absolute_timeout_days: number;
-      /**
-       * Created At
-       * Format: date-time
-       */
-      created_at: string;
-      /** Idle Timeout Minutes */
-      idle_timeout_minutes: number;
-      /**
-       * Last Seen At
-       * Format: date-time
-       */
-      last_seen_at: string;
-      /** Trusted Device */
-      trusted_device: boolean;
-    };
-    /** DashboardStatusOut */
-    DashboardStatusOut: {
-      activity_summary: components["schemas"]["ActivitySummaryOut"];
-      /**
-       * Scope Note
-       * @description Fixed honesty line for the dashboard slice.
-       * @default Read-only overview. No jobs or settings are changed from this view.
-       */
-      scope_note: string;
-      system: components["schemas"]["SystemStatusOut"];
-    };
-    /** DirectoryBrowseEntry */
-    DirectoryBrowseEntry: {
-      /** Description */
-      description?: string | null;
-      /** Kind */
-      kind: string;
-      /** Name */
-      name: string;
-      /** Path */
-      path: string;
-    };
-    /** DirectoryBrowseOut */
-    DirectoryBrowseOut: {
-      /** Current Path */
-      current_path: string | null;
-      /** Entries */
-      entries: components["schemas"]["DirectoryBrowseEntry"][];
-      /** Parent Path */
-      parent_path: string | null;
-    };
-    /** HTTPValidationError */
-    HTTPValidationError: {
-      /** Detail */
-      detail?: components["schemas"]["ValidationError"][];
-    };
-    /**
-     * HealthResponse
-     * @description Minimal liveness payload for load balancers and ops.
-     */
-    HealthResponse: {
-      /**
-       * Dependencies
-       * @description Basic dependency check states.
-       */
-      dependencies?: {
-        [key: string]: string;
-      };
-      /**
-       * Status
-       * @description Application liveness indicator.
-       */
-      status: string;
-    };
-    /** LoginIn */
-    LoginIn: {
-      /** Csrf Token */
-      csrf_token: string;
-      /** Password */
-      password: string;
-      /**
-       * Trusted Device
-       * @default false
-       */
-      trusted_device: boolean;
-      /** Username */
-      username: string;
-    };
-    /** LoginOut */
-    LoginOut: {
-      user: components["schemas"]["UserPublic"];
-    };
-    /**
-     * LogoutIn
-     * @description Optional body CSRF fallback when header is awkward for a client.
-     */
-    LogoutIn: {
-      /** Csrf Token */
-      csrf_token?: string | null;
-    };
-    /** MeOut */
-    MeOut: {
-      user: components["schemas"]["UserPublic"];
-    };
-    /** NotificationChannelIn */
-    NotificationChannelIn: {
-      /** Csrf Token */
-      csrf_token: string;
-      /**
-       * Enabled
-       * @default true
-       */
-      enabled: boolean;
-      /** Events */
-      events?: string[];
-      /** Label */
-      label: string;
-      /** Provider */
-      provider: string;
-      /** Url */
-      url: string;
-    };
-    /** NotificationChannelListOut */
-    NotificationChannelListOut: {
-      /** Items */
-      items: components["schemas"]["NotificationChannelOut"][];
-      /**
-       * Supported Events
-       * @default [
-       *       "job_completed",
-       *       "job_failed",
-       *       "refiner_job_completed",
-       *       "refiner_job_failed",
-       *       "pruner_job_completed",
-       *       "pruner_job_failed",
-       *       "subber_job_completed",
-       *       "subber_job_failed"
-       *     ]
-       */
-      supported_events: string[];
-      /**
-       * Supported Providers
-       * @default [
-       *       "webhook",
-       *       "discord"
-       *     ]
-       */
-      supported_providers: string[];
-    };
-    /** NotificationChannelOut */
-    NotificationChannelOut: {
-      /**
-       * Created At
-       * Format: date-time
-       */
-      created_at: string;
-      /** Enabled */
-      enabled: boolean;
-      /** Events */
-      events: string[];
-      /** Id */
-      id: number;
-      /** Label */
-      label: string;
-      /** Provider */
-      provider: string;
-      /**
-       * Updated At
-       * Format: date-time
-       */
-      updated_at: string;
-      /** Url */
-      url: string;
-    };
-    /** NotificationChannelTestIn */
-    NotificationChannelTestIn: {
-      /** Csrf Token */
-      csrf_token: string;
-    };
-    /** NotificationChannelTestOut */
-    NotificationChannelTestOut: {
-      /** Error */
-      error?: string | null;
-      /** Ok */
-      ok: boolean;
-    };
-    /**
-     * PrunerApplyEligibilityOut
-     * @description Read-only: whether apply can be enqueued for this snapshot (not a second scan).
-     */
-    PrunerApplyEligibilityOut: {
-      /** Apply Feature Enabled */
-      apply_feature_enabled: boolean;
-      /**
-       * Apply Operator Label
-       * @default
-       */
-      apply_operator_label: string;
-      /**
-       * Candidate Count
-       * @default 0
-       */
-      candidate_count: number;
-      /** Display Name */
-      display_name: string;
-      /** Eligible */
-      eligible: boolean;
-      /** Media Scope */
-      media_scope: string;
-      /** Preview Created At */
-      preview_created_at?: string | null;
-      /**
-       * Preview Outcome
-       * @default
-       */
-      preview_outcome: string;
-      /** Preview Run Id */
-      preview_run_id: string;
-      /** Provider */
-      provider: string;
-      /** Reasons */
-      reasons?: string[];
-      /**
-       * Rule Family Id
-       * @default
-       */
-      rule_family_id: string;
-      /** Server Instance Id */
-      server_instance_id: number;
-    };
-    /** PrunerApplyHttpIn */
-    PrunerApplyHttpIn: {
-      /** Csrf Token */
-      csrf_token: string;
-    };
-    /** PrunerConnectionTestIn */
-    PrunerConnectionTestIn: {
-      /** Csrf Token */
-      csrf_token: string;
-    };
-    /** PrunerEnqueueOut */
-    PrunerEnqueueOut: {
-      /** Pruner Job Id */
-      pruner_job_id: number;
-    };
-    /** PrunerJobsInspectionOut */
-    PrunerJobsInspectionOut: {
-      /** Default Recent Slice */
-      default_recent_slice: boolean;
-      /** Jobs */
-      jobs: components["schemas"]["PrunerJobsInspectionRow"][];
-    };
-    /** PrunerJobsInspectionRow */
-    PrunerJobsInspectionRow: {
-      /** Dedupe Key */
-      dedupe_key: string;
-      /** Id */
-      id: number;
-      /** Job Kind */
-      job_kind: string;
-      /** Last Error */
-      last_error: string | null;
-      /** Payload Json */
-      payload_json: string | null;
-      /** Status */
-      status: string;
-      /**
-       * Updated At
-       * Format: date-time
-       */
-      updated_at: string;
-    };
-    /** PrunerOverviewStatsOut */
-    PrunerOverviewStatsOut: {
-      /**
-       * Apply Runs
-       * @description pruner.apply_library_removal_completed events in window.
-       */
-      apply_runs: number;
-      /**
-       * Failed Applies
-       * @description pruner.apply_library_removal_failed events in window.
-       */
-      failed_applies: number;
-      /**
-       * Items Removed
-       * @description Sum of removed from apply completion detail JSON in window.
-       */
-      items_removed: number;
-      /**
-       * Items Skipped
-       * @description Sum of skipped from apply completion detail JSON in window.
-       */
-      items_skipped: number;
-      /**
-       * Preview Runs
-       * @description Completed pruner.candidate_removal.preview.v1 jobs in window.
-       */
-      preview_runs: number;
-      /**
-       * Window Days
-       * @default 30
-       */
-      window_days: number;
-    };
-    /**
-     * PrunerPlexLiveEligibilityOut
-     * @description Read-only: retired Plex live-removal path; always ineligible with explanatory reasons.
-     */
-    PrunerPlexLiveEligibilityOut: {
-      /** Apply Feature Enabled */
-      apply_feature_enabled: boolean;
-      /** Display Name */
-      display_name: string;
-      /** Eligible */
-      eligible: boolean;
-      /**
-       * Live Max Items Cap
-       * @description Historical field name: Plex missing-primary preview collects at most this many leaf rows per run (min per-scope preview cap, process ceiling MEDIAMOP_PRUNER_PLEX_LIVE_ABS_MAX_ITEMS, and 5k clamp).
-       */
-      live_max_items_cap: number;
-      /** Media Scope */
-      media_scope: string;
-      /**
-       * Plex Live Feature Enabled
-       * @description Legacy name: mirrors deprecated env MEDIAMOP_PRUNER_PLEX_LIVE_REMOVAL_ENABLED only for operator visibility. Plex removal always uses preview → apply-from-preview; this flag does not re-enable live scan.
-       */
-      plex_live_feature_enabled: boolean;
-      /** Provider */
-      provider: string;
-      /** Reasons */
-      reasons?: string[];
-      /** Required Confirmation Phrase */
-      required_confirmation_phrase: string;
-      /** Rule Enabled */
-      rule_enabled: boolean;
-      /** Rule Family Id */
-      rule_family_id: string;
-      /** Server Instance Id */
-      server_instance_id: number;
-    };
-    /** PrunerPreviewEnqueueIn */
-    PrunerPreviewEnqueueIn: {
-      /** Csrf Token */
-      csrf_token: string;
-      /**
-       * Media Scope
-       * @enum {string}
-       */
-      media_scope: "tv" | "movies";
-      /**
-       * Rule Family Id
-       * @default missing_primary_media_reported
-       * @enum {string}
-       */
-      rule_family_id:
-        | "missing_primary_media_reported"
-        | "never_played_stale_reported"
-        | "watched_tv_reported"
-        | "watched_movies_reported"
-        | "watched_movie_low_rating_reported"
-        | "unwatched_movie_stale_reported"
-        | "genre_match_reported"
-        | "studio_match_reported"
-        | "people_match_reported"
-        | "year_range_match_reported";
-    };
-    /**
-     * PrunerPreviewRunListItemOut
-     * @description Preview run metadata without ``candidates_json`` (list endpoint for operator history).
-     */
-    PrunerPreviewRunListItemOut: {
-      /** Candidate Count */
-      candidate_count: number;
-      /**
-       * Created At
-       * Format: date-time
-       */
-      created_at: string;
-      /** Error Message */
-      error_message: string | null;
-      /** Media Scope */
-      media_scope: string;
-      /** Outcome */
-      outcome: string;
-      /** Preview Run Id */
-      preview_run_id: string;
-      /** Pruner Job Id */
-      pruner_job_id?: number | null;
-      /** Rule Family Id */
-      rule_family_id: string;
-      /** Server Instance Id */
-      server_instance_id: number;
-      /** Truncated */
-      truncated: boolean;
-      /** Unsupported Detail */
-      unsupported_detail: string | null;
-    };
-    /** PrunerPreviewRunOut */
-    PrunerPreviewRunOut: {
-      /** Candidate Count */
-      candidate_count: number;
-      /** Candidates Json */
-      candidates_json: string;
-      /**
-       * Created At
-       * Format: date-time
-       */
-      created_at: string;
-      /** Error Message */
-      error_message: string | null;
-      /** Media Scope */
-      media_scope: string;
-      /** Outcome */
-      outcome: string;
-      /** Preview Run Id */
-      preview_run_id: string;
-      /** Rule Family Id */
-      rule_family_id: string;
-      /** Server Instance Id */
-      server_instance_id: number;
-      /** Truncated */
-      truncated: boolean;
-      /** Unsupported Detail */
-      unsupported_detail: string | null;
-    };
-    /** PrunerScopePatchHttpIn */
-    PrunerScopePatchHttpIn: {
-      /** Auto Apply Enabled */
-      auto_apply_enabled?: boolean | null;
-      /** Csrf Token */
-      csrf_token: string;
-      /** Max Deletes Per Run */
-      max_deletes_per_run?: number | null;
-      /** Missing Primary Media Reported Enabled */
-      missing_primary_media_reported_enabled?: boolean | null;
-      /** Never Played Min Age Days */
-      never_played_min_age_days?: number | null;
-      /** Never Played Stale Reported Enabled */
-      never_played_stale_reported_enabled?: boolean | null;
-      /**
-       * Preview Include Collections
-       * @description Replace per-tab collection include list (Plex missing-primary only); omit to leave unchanged.
-       */
-      preview_include_collections?: string[] | null;
-      /**
-       * Preview Include Genres
-       * @description Replace per-tab genre include list; omit field to leave unchanged.
-       */
-      preview_include_genres?: string[] | null;
-      /**
-       * Preview Include People
-       * @description Replace per-tab people-name include list; omit field to leave unchanged.
-       */
-      preview_include_people?: string[] | null;
-      /**
-       * Preview Include People Roles
-       * @description Replace per-tab people credit roles for preview narrowing; omit field to leave unchanged.
-       */
-      preview_include_people_roles?: string[] | null;
-      /**
-       * Preview Include Studios
-       * @description Replace per-tab studio include list; omit field to leave unchanged.
-       */
-      preview_include_studios?: string[] | null;
-      /** Preview Max Items */
-      preview_max_items?: number | null;
-      /** Preview Year Max */
-      preview_year_max?: number | null;
-      /** Preview Year Min */
-      preview_year_min?: number | null;
-      /** Scheduled Preview Days */
-      scheduled_preview_days?: string | null;
-      /** Scheduled Preview Enabled */
-      scheduled_preview_enabled?: boolean | null;
-      /** Scheduled Preview End */
-      scheduled_preview_end?: string | null;
-      /** Scheduled Preview Hours Limited */
-      scheduled_preview_hours_limited?: boolean | null;
-      /** Scheduled Preview Interval Seconds */
-      scheduled_preview_interval_seconds?: number | null;
-      /** Scheduled Preview Start */
-      scheduled_preview_start?: string | null;
-      /** Unwatched Movie Stale Min Age Days */
-      unwatched_movie_stale_min_age_days?: number | null;
-      /** Unwatched Movie Stale Reported Enabled */
-      unwatched_movie_stale_reported_enabled?: boolean | null;
-      /** Watched Movie Low Rating Max Jellyfin Emby Community Rating */
-      watched_movie_low_rating_max_jellyfin_emby_community_rating?:
-        | number
-        | null;
-      /** Watched Movie Low Rating Max Plex Audience Rating */
-      watched_movie_low_rating_max_plex_audience_rating?: number | null;
-      /** Watched Movie Low Rating Reported Enabled */
-      watched_movie_low_rating_reported_enabled?: boolean | null;
-      /** Watched Movies Reported Enabled */
-      watched_movies_reported_enabled?: boolean | null;
-      /** Watched Tv Reported Enabled */
-      watched_tv_reported_enabled?: boolean | null;
-    };
-    /** PrunerScopeSummaryOut */
-    PrunerScopeSummaryOut: {
-      /**
-       * Auto Apply Enabled
-       * @default false
-       */
-      auto_apply_enabled: boolean;
-      /** Last Preview At */
-      last_preview_at?: string | null;
-      /** Last Preview Candidate Count */
-      last_preview_candidate_count?: number | null;
-      /** Last Preview Error */
-      last_preview_error?: string | null;
-      /** Last Preview Outcome */
-      last_preview_outcome?: string | null;
-      /** Last Preview Run Uuid */
-      last_preview_run_uuid?: string | null;
-      /** Last Scheduled Preview Enqueued At */
-      last_scheduled_preview_enqueued_at?: string | null;
-      /**
-       * Max Deletes Per Run
-       * @default 50
-       */
-      max_deletes_per_run: number;
-      /** Media Scope */
-      media_scope: string;
-      /** Missing Primary Media Reported Enabled */
-      missing_primary_media_reported_enabled: boolean;
-      /**
-       * Never Played Min Age Days
-       * @default 90
-       */
-      never_played_min_age_days: number;
-      /**
-       * Never Played Stale Reported Enabled
-       * @default false
-       */
-      never_played_stale_reported_enabled: boolean;
-      /**
-       * Preview Include Collections
-       * @description Optional collection name tokens for preview narrowing. **Plex missing-primary only** in this slice (``Collection`` tags on ``allLeaves`` metadata). Jellyfin/Emby Items rows used here do not expose library collection membership without extra API calls, so this list is ignored on those providers.
-       */
-      preview_include_collections?: string[];
-      /**
-       * Preview Include Genres
-       * @description Optional genre names (per tab) that narrow preview collection only. Empty means no filter. A successful preview with zero candidates can mean no items matched the rule plus filters — not necessarily a clean library.
-       */
-      preview_include_genres?: string[];
-      /**
-       * Preview Include People
-       * @description Optional person display names (per tab) that narrow preview collection only — full-name tokens, case-insensitive exact match against provider-reported names. Empty means no filter. Apply still uses only the frozen snapshot; it does not re-apply people filters.
-       */
-      preview_include_people?: string[];
-      /**
-       * Preview Include People Roles
-       * @description Which credit roles count toward people-name matching for preview narrowing on this library. Jellyfin/Emby match ``People[].Name`` when ``People[].Type`` maps to a selected role. Plex uses Role / Director / Writer tags on allLeaves; producer and guest_star are ignored on Plex. When empty, names match against all credits the provider exposes for this rule (all People on JF/Emby; Role, Director, and Writer tags on Plex).
-       */
-      preview_include_people_roles?: string[];
-      /**
-       * Preview Include Studios
-       * @description Optional studio name tokens (per tab) that narrow preview only — exact normalized match against Jellyfin/Emby ``Studios`` names or Plex ``Studio`` tags on the same leaf rows as other preview filters. This is **not** a separate “network” filter.
-       */
-      preview_include_studios?: string[];
-      /** Preview Max Items */
-      preview_max_items: number;
-      /**
-       * Preview Year Max
-       * @description Optional inclusive maximum year for preview narrowing (same semantics as ``preview_year_min``).
-       */
-      preview_year_max?: number | null;
-      /**
-       * Preview Year Min
-       * @description Optional inclusive minimum **production / release year** for preview narrowing only (1900–2100). Jellyfin/Emby use Items ``ProductionYear``; Plex missing-primary uses leaf ``year`` when present. Items with no year never match when any year bound is set.
-       */
-      preview_year_min?: number | null;
-      /**
-       * Scheduled Preview Days
-       * @default
-       */
-      scheduled_preview_days: string;
-      /**
-       * Scheduled Preview Enabled
-       * @default false
-       */
-      scheduled_preview_enabled: boolean;
-      /**
-       * Scheduled Preview End
-       * @default 23:59
-       */
-      scheduled_preview_end: string;
-      /**
-       * Scheduled Preview Hours Limited
-       * @default false
-       */
-      scheduled_preview_hours_limited: boolean;
-      /**
-       * Scheduled Preview Interval Seconds
-       * @default 3600
-       */
-      scheduled_preview_interval_seconds: number;
-      /**
-       * Scheduled Preview Start
-       * @default 00:00
-       */
-      scheduled_preview_start: string;
-      /**
-       * Unwatched Movie Stale Min Age Days
-       * @default 90
-       */
-      unwatched_movie_stale_min_age_days: number;
-      /**
-       * Unwatched Movie Stale Reported Enabled
-       * @default false
-       */
-      unwatched_movie_stale_reported_enabled: boolean;
-      /**
-       * Watched Movie Low Rating Max Jellyfin Emby Community Rating
-       * @default 4
-       */
-      watched_movie_low_rating_max_jellyfin_emby_community_rating: number;
-      /**
-       * Watched Movie Low Rating Max Plex Audience Rating
-       * @default 4
-       */
-      watched_movie_low_rating_max_plex_audience_rating: number;
-      /**
-       * Watched Movie Low Rating Reported Enabled
-       * @default false
-       */
-      watched_movie_low_rating_reported_enabled: boolean;
-      /**
-       * Watched Movies Reported Enabled
-       * @default false
-       */
-      watched_movies_reported_enabled: boolean;
-      /**
-       * Watched Tv Reported Enabled
-       * @default false
-       */
-      watched_tv_reported_enabled: boolean;
-    };
-    /** PrunerServerInstanceCreateHttpIn */
-    PrunerServerInstanceCreateHttpIn: {
-      /** Base Url */
-      base_url: string;
-      /**
-       * Credentials
-       * @description Provider-specific secret map (e.g. api_key for Emby/Jellyfin; auth_token for Plex).
-       */
-      credentials: {
-        [key: string]: string;
-      };
-      /** Csrf Token */
-      csrf_token: string;
-      /** Display Name */
-      display_name: string;
-      /**
-       * Provider
-       * @enum {string}
-       */
-      provider: "emby" | "jellyfin" | "plex";
-    };
-    /** PrunerServerInstanceOut */
-    PrunerServerInstanceOut: {
-      /** Base Url */
-      base_url: string;
-      /** Display Name */
-      display_name: string;
-      /** Enabled */
-      enabled: boolean;
-      /** Id */
-      id: number;
-      /** Last Connection Test At */
-      last_connection_test_at?: string | null;
-      /** Last Connection Test Detail */
-      last_connection_test_detail?: string | null;
-      /** Last Connection Test Ok */
-      last_connection_test_ok?: boolean | null;
-      /** Provider */
-      provider: string;
-      /** Scopes */
-      scopes?: components["schemas"]["PrunerScopeSummaryOut"][];
-    };
-    /** PrunerServerInstancePatchHttpIn */
-    PrunerServerInstancePatchHttpIn: {
-      /** Base Url */
-      base_url?: string | null;
-      /** Credentials */
-      credentials?: {
-        [key: string]: string;
-      } | null;
-      /** Csrf Token */
-      csrf_token: string;
-      /** Display Name */
-      display_name?: string | null;
-      /** Enabled */
-      enabled?: boolean | null;
-    };
-    /** PrunerStudiosOut */
-    PrunerStudiosOut: {
-      /** Studios */
-      studios?: string[];
-    };
-    /** ReadinessResponse */
-    ReadinessResponse: {
-      /** Ready */
-      ready: boolean;
-      /** Startup Seconds */
-      startup_seconds: number;
-      /** Status */
-      status: string;
-      /** Steps */
-      steps: components["schemas"]["ReadinessStep"][];
-      /** Worker Health */
-      worker_health?: components["schemas"]["ReadinessWorkerOut"][];
-    };
-    /** ReadinessStep */
-    ReadinessStep: {
-      /**
-       * Detail
-       * @description Operator-readable status detail.
-       */
-      detail: string;
-      /**
-       * Name
-       * @description Startup area checked by readiness.
-       */
-      name: string;
-      /**
-       * Status
-       * @description ready, starting, or failed.
-       */
-      status: string;
-    };
-    /** ReadinessWorkerOut */
-    ReadinessWorkerOut: {
-      /** Active Workers */
-      active_workers: number;
-      /** Detail */
-      detail: string;
-      /** Expected Workers */
-      expected_workers: number;
-      /** Module */
-      module: string;
-      /** Stale Workers */
-      stale_workers: number;
-      /** Status */
-      status: string;
-      /** Stopped Workers */
-      stopped_workers: number;
-    };
-    /** ReconciliationRepairIn */
-    ReconciliationRepairIn: {
-      /** Action */
-      action: string;
-      /**
-       * Confirm
-       * @default false
-       */
-      confirm: boolean;
-      /** Db Id */
-      db_id?: number | null;
-      /** Path */
-      path?: string | null;
-    };
-    /**
-     * RefinerCandidateGateManualEnqueueIn
-     * @description Operator supplies a real release candidate; workers compare it to the live download queue.
-     */
-    RefinerCandidateGateManualEnqueueIn: {
-      /** Csrf Token */
-      csrf_token: string;
-      /**
-       * Movie Id
-       * @description Radarr movie id when matching without path
-       */
-      movie_id?: number | null;
-      /** Output Path */
-      output_path?: string | null;
-      /** Release Title */
-      release_title: string;
-      /** Release Year */
-      release_year?: number | null;
-      /**
-       * Series Id
-       * @description Sonarr series id when matching without path
-       */
-      series_id?: number | null;
-      /**
-       * Target
-       * @enum {string}
-       */
-      target: "radarr" | "sonarr";
-    };
-    /** RefinerCandidateGateManualEnqueueOut */
-    RefinerCandidateGateManualEnqueueOut: {
-      /** Dedupe Key */
-      dedupe_key: string;
-      /** Job Id */
-      job_id: number;
-      /** Job Kind */
-      job_kind: string;
-      /**
-       * Ok
-       * @default true
-       */
-      ok: boolean;
-    };
-    /**
-     * RefinerFileRemuxPassManualEnqueueIn
-     * @description Manual ``refiner.file.remux_pass.v1`` enqueue — requires a saved Refiner watched folder before this POST succeeds.
-     */
-    RefinerFileRemuxPassManualEnqueueIn: {
-      /** Csrf Token */
-      csrf_token: string;
-      /**
-       * Media Scope
-       * @description Which saved watched/output tree resolves ``relative_media_path``.
-       * @default movie
-       * @enum {string}
-       */
-      media_scope: "movie" | "tv";
-      /**
-       * Relative Media Path
-       * @description Path relative to the saved Refiner watched folder (no .. segments). The watched folder is not required when saving path settings alone, but it must be configured before enqueue.
-       */
-      relative_media_path: string;
-    };
-    /** RefinerFileRemuxPassManualEnqueueOut */
-    RefinerFileRemuxPassManualEnqueueOut: {
-      /** Dedupe Key */
-      dedupe_key: string;
-      /** Job Id */
-      job_id: number;
-      /** Job Kind */
-      job_kind: string;
-      /**
-       * Ok
-       * @default true
-       */
-      ok: boolean;
-    };
-    /** RefinerJobCancelPendingIn */
-    RefinerJobCancelPendingIn: {
-      /** Csrf Token */
-      csrf_token: string;
-    };
-    /** RefinerJobCancelPendingOut */
-    RefinerJobCancelPendingOut: {
-      /** Job Id */
-      job_id: number;
-      /**
-       * Ok
-       * @default true
-       */
-      ok: boolean;
-      /**
-       * Status
-       * @description Always ``cancelled`` on success.
-       */
-      status: string;
-    };
-    /**
-     * RefinerJobInspectionRow
-     * @description One persisted Refiner durable job row (lifecycle from ``refiner_jobs`` only).
-     */
-    RefinerJobInspectionRow: {
-      /** Attempt Count */
-      attempt_count: number;
-      /**
-       * Created At
-       * Format: date-time
-       */
-      created_at: string;
-      /** Dedupe Key */
-      dedupe_key: string;
-      /** Id */
-      id: number;
-      /** Job Kind */
-      job_kind: string;
-      /** Last Error */
-      last_error: string | null;
-      /** Lease Expires At */
-      lease_expires_at: string | null;
-      /** Lease Owner */
-      lease_owner: string | null;
-      /** Max Attempts */
-      max_attempts: number;
-      /** Payload Json */
-      payload_json?: string | null;
-      /**
-       * Status
-       * @description Persisted status value for this row.
-       */
-      status: string;
-      /**
-       * Updated At
-       * Format: date-time
-       */
-      updated_at: string;
-    };
-    /**
-     * RefinerJobsInspectionOut
-     * @description Bounded list of ``refiner_jobs`` rows, newest ``updated_at`` first.
-     */
-    RefinerJobsInspectionOut: {
-      /**
-       * Default Recent Slice
-       * @description True when no ``status`` filter was applied: the newest rows across all statuses. False when one or more ``status`` query params narrowed the query.
-       */
-      default_recent_slice: boolean;
-      /** Jobs */
-      jobs: components["schemas"]["RefinerJobInspectionRow"][];
-    };
-    /** RefinerOperatorSettingsOut */
-    RefinerOperatorSettingsOut: {
-      /** Max Concurrent Files */
-      max_concurrent_files: number;
-      /** Min File Age Seconds */
-      min_file_age_seconds: number;
-      /**
-       * Minimum Free Disk Space Mb
-       * @description Processing skips before writes when the target drive has less free space than this.
-       */
-      minimum_free_disk_space_mb: number;
-      /** Movie Schedule Days */
-      movie_schedule_days: string;
-      /** Movie Schedule Enabled */
-      movie_schedule_enabled: boolean;
-      /** Movie Schedule End */
-      movie_schedule_end: string;
-      /**
-       * Movie Schedule Hours Limited
-       * @description When true, timed movie scans only enqueue inside the days and times below (suite time zone).
-       */
-      movie_schedule_hours_limited: boolean;
-      /** Movie Schedule Start */
-      movie_schedule_start: string;
-      /**
-       * Refiner Min Input File Size Mb
-       * @description Files smaller than this are skipped before Refiner probes or writes them.
-       */
-      refiner_min_input_file_size_mb: number;
-      /**
-       * Schedule Timezone
-       * @description IANA zone for schedule windows (suite settings).
-       */
-      schedule_timezone: string;
-      /** Tv Schedule Days */
-      tv_schedule_days: string;
-      /** Tv Schedule Enabled */
-      tv_schedule_enabled: boolean;
-      /** Tv Schedule End */
-      tv_schedule_end: string;
-      /** Tv Schedule Hours Limited */
-      tv_schedule_hours_limited: boolean;
-      /** Tv Schedule Start */
-      tv_schedule_start: string;
-      /** Updated At */
-      updated_at: string;
-    };
-    /**
-     * RefinerOperatorSettingsPutIn
-     * @description PUT body supports partial updates: omit a group to leave it unchanged on the server.
-     */
-    RefinerOperatorSettingsPutIn: {
-      /** Csrf Token */
-      csrf_token: string;
-      /** Max Concurrent Files */
-      max_concurrent_files?: number | null;
-      /** Min File Age Seconds */
-      min_file_age_seconds?: number | null;
-      /** Minimum Free Disk Space Mb */
-      minimum_free_disk_space_mb?: number | null;
-      /** Movie Schedule Days */
-      movie_schedule_days?: string | null;
-      /** Movie Schedule Enabled */
-      movie_schedule_enabled?: boolean | null;
-      /** Movie Schedule End */
-      movie_schedule_end?: string | null;
-      /** Movie Schedule Hours Limited */
-      movie_schedule_hours_limited?: boolean | null;
-      /** Movie Schedule Start */
-      movie_schedule_start?: string | null;
-      /** Refiner Min Input File Size Mb */
-      refiner_min_input_file_size_mb?: number | null;
-      /** Tv Schedule Days */
-      tv_schedule_days?: string | null;
-      /** Tv Schedule Enabled */
-      tv_schedule_enabled?: boolean | null;
-      /** Tv Schedule End */
-      tv_schedule_end?: string | null;
-      /** Tv Schedule Hours Limited */
-      tv_schedule_hours_limited?: boolean | null;
-      /** Tv Schedule Start */
-      tv_schedule_start?: string | null;
-    };
-    /** RefinerOverviewStatsOut */
-    RefinerOverviewStatsOut: {
-      /**
-       * Already Optimized Count
-       * @description No-change rows where Refiner copied the unchanged file to output and that output exists.
-       */
-      already_optimized_count: number;
-      /**
-       * Files Failed
-       * @description Terminal-failure refiner.file.remux_pass.v1 jobs in the window (failed + finalize-failed).
-       */
-      files_failed: number;
-      /**
-       * Files Processed
-       * @description Finalized Refiner file outcomes in the window; queued/scanned/attempted jobs are excluded.
-       */
-      files_processed: number;
-      /**
-       * Net Space Saved Bytes
-       * @description Net source-bytes minus output-bytes across output-written remuxes in the window.
-       */
-      net_space_saved_bytes: number;
-      /**
-       * Net Space Saved Percent
-       * @description Net size reduction percentage across output-written remuxes in the window.
-       */
-      net_space_saved_percent: number;
-      /**
-       * Output Written Count
-       * @description Refiner remux activity rows whose output file still exists at the finalized path.
-       */
-      output_written_count: number;
-      /** Success Rate Percent */
-      success_rate_percent: number;
-      /**
-       * Window Days
-       * @default 30
-       */
-      window_days: number;
-    };
-    /** RefinerPathSettingsOut */
-    RefinerPathSettingsOut: {
-      /** Effective Tv Work Folder */
-      effective_tv_work_folder: string;
-      /** Effective Work Folder */
-      effective_work_folder: string;
-      /** Movie Watched Folder Check Interval Seconds */
-      movie_watched_folder_check_interval_seconds: number;
-      /** Refiner Output Folder */
-      refiner_output_folder: string | null;
-      /** Refiner Tv Output Folder */
-      refiner_tv_output_folder: string | null;
-      /** Refiner Tv Watched Folder */
-      refiner_tv_watched_folder: string | null;
-      /** Refiner Tv Watched Folder Exists */
-      refiner_tv_watched_folder_exists: boolean;
-      /** Refiner Tv Work Folder */
-      refiner_tv_work_folder: string | null;
-      /** Refiner Watched Folder */
-      refiner_watched_folder: string | null;
-      /** Refiner Watched Folder Exists */
-      refiner_watched_folder_exists: boolean;
-      /** Refiner Work Folder */
-      refiner_work_folder: string | null;
-      /** Resolved Default Tv Work Folder */
-      resolved_default_tv_work_folder: string;
-      /** Resolved Default Work Folder */
-      resolved_default_work_folder: string;
-      /** Tv Watched Folder Check Interval Seconds */
-      tv_watched_folder_check_interval_seconds: number;
-      /**
-       * Updated At
-       * Format: date-time
-       */
-      updated_at: string;
-    };
-    /** RefinerPathSettingsPutIn */
-    RefinerPathSettingsPutIn: {
-      /** Csrf Token */
-      csrf_token: string;
-      /**
-       * Movie Watched Folder Check Interval Seconds
-       * @description When set, updates Movies watched-folder poll interval (seconds, 10–604800). Omit to leave unchanged.
-       */
-      movie_watched_folder_check_interval_seconds?: number | null;
-      /** Refiner Output Folder */
-      refiner_output_folder?: string | null;
-      /** Refiner Tv Output Folder */
-      refiner_tv_output_folder?: string | null;
-      /**
-       * Refiner Tv Paths Included
-       * @description When true, TV watched/work/output fields are validated and persisted (clear TV by sending empty values). When false, existing TV path columns are left unchanged (backward-compatible movie-only saves).
-       * @default false
-       */
-      refiner_tv_paths_included: boolean;
-      /** Refiner Tv Watched Folder */
-      refiner_tv_watched_folder?: string | null;
-      /** Refiner Tv Work Folder */
-      refiner_tv_work_folder?: string | null;
-      /** Refiner Watched Folder */
-      refiner_watched_folder?: string | null;
-      /** Refiner Work Folder */
-      refiner_work_folder?: string | null;
-      /**
-       * Tv Watched Folder Check Interval Seconds
-       * @description When set, updates TV watched-folder poll interval (seconds, 10–604800). Omit to leave unchanged.
-       */
-      tv_watched_folder_check_interval_seconds?: number | null;
-    };
-    /** RefinerRemuxRulesScopeOut */
-    RefinerRemuxRulesScopeOut: {
-      /**
-       * Audio Preference Mode
-       * @enum {string}
-       */
-      audio_preference_mode:
-        | "preferred_langs_quality"
-        | "preferred_langs_strict"
-        | "quality_all_languages";
-      /**
-       * Default Audio Slot
-       * @enum {string}
-       */
-      default_audio_slot: "primary" | "secondary";
-      /** Preserve Default Subs */
-      preserve_default_subs: boolean;
-      /** Preserve Forced Subs */
-      preserve_forced_subs: boolean;
-      /** Primary Audio Lang */
-      primary_audio_lang: string;
-      /** Remove Commentary */
-      remove_commentary: boolean;
-      /** Secondary Audio Lang */
-      secondary_audio_lang: string;
-      /**
-       * Subtitle Langs Csv
-       * @description Comma-separated ISO-style language tags used when subtitle_mode is keep_selected.
-       */
-      subtitle_langs_csv: string;
-      /**
-       * Subtitle Mode
-       * @enum {string}
-       */
-      subtitle_mode: "remove_all" | "keep_selected";
-      /** Tertiary Audio Lang */
-      tertiary_audio_lang: string;
-    };
-    /** RefinerRemuxRulesSettingsOut */
-    RefinerRemuxRulesSettingsOut: {
-      movie: components["schemas"]["RefinerRemuxRulesScopeOut"];
-      tv: components["schemas"]["RefinerRemuxRulesScopeOut"];
-      /** Updated At */
-      updated_at: string;
-    };
-    /** RefinerRemuxRulesSettingsPutIn */
-    RefinerRemuxRulesSettingsPutIn: {
-      /**
-       * Audio Preference Mode
-       * @default preferred_langs_quality
-       * @enum {string}
-       */
-      audio_preference_mode:
-        | "preferred_langs_quality"
-        | "preferred_langs_strict"
-        | "quality_all_languages";
-      /** Csrf Token */
-      csrf_token: string;
-      /**
-       * Default Audio Slot
-       * @default primary
-       * @enum {string}
-       */
-      default_audio_slot: "primary" | "secondary";
-      /**
-       * Media Scope
-       * @default movie
-       * @enum {string}
-       */
-      media_scope: "movie" | "tv";
-      /**
-       * Preserve Default Subs
-       * @default true
-       */
-      preserve_default_subs: boolean;
-      /**
-       * Preserve Forced Subs
-       * @default true
-       */
-      preserve_forced_subs: boolean;
-      /**
-       * Primary Audio Lang
-       * @default eng
-       */
-      primary_audio_lang: string;
-      /**
-       * Remove Commentary
-       * @default true
-       */
-      remove_commentary: boolean;
-      /**
-       * Secondary Audio Lang
-       * @default jpn
-       */
-      secondary_audio_lang: string;
-      /**
-       * Subtitle Langs Csv
-       * @default
-       */
-      subtitle_langs_csv: string;
-      /**
-       * Subtitle Mode
-       * @default remove_all
-       * @enum {string}
-       */
-      subtitle_mode: "remove_all" | "keep_selected";
-      /**
-       * Tertiary Audio Lang
-       * @default
-       */
-      tertiary_audio_lang: string;
-    };
-    /**
-     * RefinerRuntimeSettingsOut
-     * @description What this API process was configured to run for ``refiner_jobs`` in-process workers only.
-     */
-    RefinerRuntimeSettingsOut: {
-      /**
-       * Configuration Note
-       * @description How operators change the value (env + restart); not an in-app editor.
-       */
-      configuration_note: string;
-      /**
-       * Failure Cleanup Configuration Note
-       * @description How operators change Pass 4 failure-cleanup timers/grace (restart required).
-       */
-      failure_cleanup_configuration_note: string;
-      /**
-       * In Process Refiner Worker Count
-       * @description Mirrors MEDIAMOP_REFINER_WORKER_COUNT after clamping — Refiner lane only.
-       */
-      in_process_refiner_worker_count: number;
-      /**
-       * In Process Workers Disabled
-       * @description True when worker count is 0 (no in-process Refiner worker tasks).
-       */
-      in_process_workers_disabled: boolean;
-      /**
-       * In Process Workers Enabled
-       * @description True when at least one in-process Refiner worker task is configured.
-       */
-      in_process_workers_enabled: boolean;
-      /**
-       * Movie Output Cleanup Configuration Note
-       * @description How operators change Movies output-folder cleanup age gate (restart required).
-       */
-      movie_output_cleanup_configuration_note: string;
-      /**
-       * Refiner Analyze Duration Seconds
-       * @description ffprobe analyze duration in seconds for Refiner preflight analysis.
-       */
-      refiner_analyze_duration_seconds: number;
-      /**
-       * Refiner Movie Failure Cleanup Grace Period Seconds
-       * @description Failed remux age gate for Movies failure cleanup (uses refiner_jobs.updated_at).
-       */
-      refiner_movie_failure_cleanup_grace_period_seconds: number;
-      /**
-       * Refiner Movie Failure Cleanup Schedule Enabled
-       * @description ``MEDIAMOP_REFINER_MOVIE_FAILURE_CLEANUP_SCHEDULE_ENABLED`` at process start.
-       */
-      refiner_movie_failure_cleanup_schedule_enabled: boolean;
-      /**
-       * Refiner Movie Failure Cleanup Schedule Interval Seconds
-       * @description Seconds between Movies-only periodic failed-remux cleanup enqueue ticks.
-       */
-      refiner_movie_failure_cleanup_schedule_interval_seconds: number;
-      /**
-       * Refiner Movie Output Cleanup Min Age Seconds
-       * @description Minimum age (newest file mtime under the folder) before Pass 3a may delete a Movies output folder (1h..30d; default 48h).
-       */
-      refiner_movie_output_cleanup_min_age_seconds: number;
-      /**
-       * Refiner Probe Size Mb
-       * @description ffprobe probe size in MB for Refiner preflight analysis.
-       */
-      refiner_probe_size_mb: number;
-      /**
-       * Refiner Tv Failure Cleanup Grace Period Seconds
-       * @description Failed remux age gate for TV failure cleanup (uses refiner_jobs.updated_at).
-       */
-      refiner_tv_failure_cleanup_grace_period_seconds: number;
-      /**
-       * Refiner Tv Failure Cleanup Schedule Enabled
-       * @description ``MEDIAMOP_REFINER_TV_FAILURE_CLEANUP_SCHEDULE_ENABLED`` at process start.
-       */
-      refiner_tv_failure_cleanup_schedule_enabled: boolean;
-      /**
-       * Refiner Tv Failure Cleanup Schedule Interval Seconds
-       * @description Seconds between TV-only periodic failed-remux cleanup enqueue ticks.
-       */
-      refiner_tv_failure_cleanup_schedule_interval_seconds: number;
-      /**
-       * Refiner Tv Output Cleanup Min Age Seconds
-       * @description Minimum age (direct-child episode media newest mtime) before Pass 3b may delete a TV season output folder (1h..30d; default 48h).
-       */
-      refiner_tv_output_cleanup_min_age_seconds: number;
-      /**
-       * Refiner Watched Folder Min File Age Seconds
-       * @description Minimum file age before watched-folder scan or one-file pass touches media.
-       */
-      refiner_watched_folder_min_file_age_seconds: number;
-      /**
-       * Refiner Watched Folder Remux Scan Dispatch Periodic Enqueue Remux Jobs
-       * @description When true, periodic scans may enqueue ``refiner.file.remux_pass.v1``.
-       */
-      refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs: boolean;
-      /**
-       * Refiner Watched Folder Remux Scan Dispatch Schedule Enabled
-       * @description ``MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED`` at process start.
-       */
-      refiner_watched_folder_remux_scan_dispatch_schedule_enabled: boolean;
-      /**
-       * Refiner Watched Folder Remux Scan Dispatch Schedule Interval Seconds
-       * @description Seconds between periodic enqueue attempts (clamped 60..7d); restart required to change.
-       */
-      refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds: number;
-      /**
-       * Refiner Work Temp Stale Sweep Min Stale Age Seconds
-       * @description Minimum file age before Refiner removes its own stale temp work files (60s..30d). Shared for both scopes (narrow exception: same temp filename semantics).
-       */
-      refiner_work_temp_stale_sweep_min_stale_age_seconds: number;
-      /**
-       * Refiner Work Temp Stale Sweep Movie Schedule Enabled
-       * @description ``MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED`` at process start.
-       */
-      refiner_work_temp_stale_sweep_movie_schedule_enabled: boolean;
-      /**
-       * Refiner Work Temp Stale Sweep Movie Schedule Interval Seconds
-       * @description Seconds between Movies-only periodic stale temp sweep enqueue ticks (clamped 60..7d).
-       */
-      refiner_work_temp_stale_sweep_movie_schedule_interval_seconds: number;
-      /**
-       * Refiner Work Temp Stale Sweep Tv Schedule Enabled
-       * @description ``MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_ENABLED`` at process start.
-       */
-      refiner_work_temp_stale_sweep_tv_schedule_enabled: boolean;
-      /**
-       * Refiner Work Temp Stale Sweep Tv Schedule Interval Seconds
-       * @description Seconds between TV-only periodic stale temp sweep enqueue ticks (clamped 60..7d).
-       */
-      refiner_work_temp_stale_sweep_tv_schedule_interval_seconds: number;
-      /**
-       * Sqlite Throughput Note
-       * @description Honest caveat about SQLite single-writer behavior when count > 1.
-       */
-      sqlite_throughput_note: string;
-      /**
-       * Tv Output Cleanup Configuration Note
-       * @description How operators change TV output-folder cleanup age gate (restart required).
-       */
-      tv_output_cleanup_configuration_note: string;
-      /**
-       * Visibility Note
-       * @description Caveat: from settings loaded at startup — not a live probe of worker threads.
-       */
-      visibility_note: string;
-      /**
-       * Watched Folder Scan Periodic Configuration Note
-       * @description How operators change periodic scan env (restart required).
-       */
-      watched_folder_scan_periodic_configuration_note: string;
-      /**
-       * Work Temp Stale Sweep Periodic Configuration Note
-       * @description How operators change work/temp stale sweep env (restart required).
-       */
-      work_temp_stale_sweep_periodic_configuration_note: string;
-      /**
-       * Worker Mode Summary
-       * @description Plain-language summary for 0 / 1 / >1 Refiner workers.
-       */
-      worker_mode_summary: string;
-    };
-    /**
-     * RefinerSuppliedPayloadEvaluationManualEnqueueIn
-     * @description Operator-triggered enqueue (singleton dedupe; returns existing row when present).
-     */
-    RefinerSuppliedPayloadEvaluationManualEnqueueIn: {
-      /** Csrf Token */
-      csrf_token: string;
-    };
-    /** RefinerSuppliedPayloadEvaluationManualEnqueueOut */
-    RefinerSuppliedPayloadEvaluationManualEnqueueOut: {
-      /** Dedupe Key */
-      dedupe_key: string;
-      /** Job Id */
-      job_id: number;
-      /** Job Kind */
-      job_kind: string;
-      /**
-       * Ok
-       * @default true
-       */
-      ok: boolean;
-    };
-    /**
-     * RefinerWatchedFolderRemuxScanDispatchManualEnqueueIn
-     * @description Queue one watched-folder scan.
-     */
-    RefinerWatchedFolderRemuxScanDispatchManualEnqueueIn: {
-      /** Csrf Token */
-      csrf_token: string;
-      /**
-       * Enqueue Remux Jobs
-       * @description When true, files found in the watched folder are added to Refiner's processing queue. When false, MediaMop only checks the folder and writes an activity summary.
-       * @default true
-       */
-      enqueue_remux_jobs: boolean;
-      /**
-       * Media Scope
-       * @description Which saved watched/output tree this scan uses (Movies vs TV path settings).
-       * @default movie
-       * @enum {string}
-       */
-      media_scope: "movie" | "tv";
-    };
-    /** RefinerWatchedFolderRemuxScanDispatchManualEnqueueOut */
-    RefinerWatchedFolderRemuxScanDispatchManualEnqueueOut: {
-      /** Dedupe Key */
-      dedupe_key: string;
-      /** Job Id */
-      job_id: number;
-      /** Job Kind */
-      job_kind: string;
-      /**
-       * Ok
-       * @default true
-       */
-      ok: boolean;
-    };
-    /** SubberArrRootFolderOut */
-    SubberArrRootFolderOut: {
-      /** Free Space */
-      free_space?: number | null;
-      /** Path */
-      path: string;
-    };
-    /** SubberArrRootFoldersOut */
-    SubberArrRootFoldersOut: {
-      /** Folders */
-      folders?: components["schemas"]["SubberArrRootFolderOut"][];
-      /** Message */
-      message: string;
-      /** Ok */
-      ok: boolean;
-    };
-    /** SubberCsrfBody */
-    SubberCsrfBody: {
-      /** Csrf Token */
-      csrf_token: string;
-    };
-    /** SubberCsrfIn */
-    SubberCsrfIn: {
-      /** Csrf Token */
-      csrf_token: string;
-    };
-    /** SubberJobsInspectionOut */
-    SubberJobsInspectionOut: {
-      /** Default Recent Slice */
-      default_recent_slice: boolean;
-      /** Jobs */
-      jobs: components["schemas"]["SubberJobsInspectionRow"][];
-    };
-    /** SubberJobsInspectionRow */
-    SubberJobsInspectionRow: {
-      /**
-       * Created At
-       * Format: date-time
-       */
-      created_at: string;
-      /** Dedupe Key */
-      dedupe_key: string;
-      /** Id */
-      id: number;
-      /** Job Kind */
-      job_kind: string;
-      /** Last Error */
-      last_error?: string | null;
-      /** Payload Json */
-      payload_json?: string | null;
-      /** Scope */
-      scope?: string | null;
-      /** Status */
-      status: string;
-      /**
-       * Updated At
-       * Format: date-time
-       */
-      updated_at: string;
-    };
-    /** SubberMovieRowOut */
-    SubberMovieRowOut: {
-      /** File Path */
-      file_path: string;
-      /** Languages */
-      languages: components["schemas"]["SubberSubtitleLangStateOut"][];
-      /** Movie Title */
-      movie_title: string | null;
-      /** Movie Year */
-      movie_year: number | null;
-    };
-    /** SubberMoviesLibraryOut */
-    SubberMoviesLibraryOut: {
-      /** Movies */
-      movies: components["schemas"]["SubberMovieRowOut"][];
-      /**
-       * Total
-       * @description Total movies matching filters (before limit/offset).
-       * @default 0
-       */
-      total: number;
-    };
-    /** SubberOverviewOut */
-    SubberOverviewOut: {
-      /**
-       * Found Last 30 Days
-       * @description subtitle_search_completed with detail ok=true.
-       */
-      found_last_30_days: number;
-      /** Movies Found */
-      movies_found: number;
-      /** Movies Missing */
-      movies_missing: number;
-      /**
-       * Movies Tracked
-       * @description Rows with media_scope=movies.
-       */
-      movies_tracked: number;
-      /**
-       * Not Found Last 30 Days
-       * @description subtitle_search_completed with detail ok=false.
-       */
-      not_found_last_30_days: number;
-      /** Searches Last 30 Days */
-      searches_last_30_days: number;
-      /** Skipped */
-      skipped: number;
-      /** Still Missing */
-      still_missing: number;
-      /**
-       * Subtitles Downloaded
-       * @description Rows in subber_subtitle_state with status=found.
-       */
-      subtitles_downloaded: number;
-      /** Tv Found */
-      tv_found: number;
-      /** Tv Missing */
-      tv_missing: number;
-      /**
-       * Tv Tracked
-       * @description Rows with media_scope=tv.
-       */
-      tv_tracked: number;
-      /**
-       * Upgrades Last 30 Days
-       * @description Sum of upgraded from subtitle_upgrade_completed detail.
-       */
-      upgrades_last_30_days: number;
-      /**
-       * Window Days
-       * @default 30
-       */
-      window_days: number;
-    };
-    /** SubberProviderOut */
-    SubberProviderOut: {
-      /** Availability Note */
-      availability_note?: string | null;
-      /**
-       * Available
-       * @default true
-       */
-      available: boolean;
-      /** Display Name */
-      display_name: string;
-      /** Enabled */
-      enabled: boolean;
-      /** Has Credentials */
-      has_credentials: boolean;
-      /** Priority */
-      priority?: number | null;
-      /** Provider Key */
-      provider_key: string;
-      /** Requires Account */
-      requires_account: boolean;
-    };
-    /** SubberProviderPutHttpIn */
-    SubberProviderPutHttpIn: {
-      /** Api Key */
-      api_key?: string | null;
-      /** Csrf Token */
-      csrf_token: string;
-      /** Enabled */
-      enabled?: boolean | null;
-      /** Password */
-      password?: string | null;
-      /** Priority */
-      priority?: number | null;
-      /** Username */
-      username?: string | null;
-    };
-    /**
-     * SubberSettingsOut
-     * @description Aggregated Subber settings (flat JSON for ``GET /api/v1/subber/settings``).
-     */
-    SubberSettingsOut: {
-      /**
-       * Adaptive Searching Delay Hours
-       * @default 168
-       */
-      adaptive_searching_delay_hours: number;
-      /**
-       * Adaptive Searching Enabled
-       * @default true
-       */
-      adaptive_searching_enabled: boolean;
-      /**
-       * Adaptive Searching Max Attempts
-       * @default 3
-       */
-      adaptive_searching_max_attempts: number;
-      /**
-       * Arr Library Radarr Base Url Hint
-       * @default
-       */
-      arr_library_radarr_base_url_hint: string;
-      /**
-       * Arr Library Sonarr Base Url Hint
-       * @default
-       */
-      arr_library_sonarr_base_url_hint: string;
-      /** Enabled */
-      enabled: boolean;
-      /**
-       * Exclude Hearing Impaired
-       * @default false
-       */
-      exclude_hearing_impaired: boolean;
-      /** Language Preferences */
-      language_preferences: string[];
-      /** Movies Last Scheduled Scan Enqueued At */
-      movies_last_scheduled_scan_enqueued_at?: string | null;
-      /** Movies Schedule Days */
-      movies_schedule_days: string;
-      /** Movies Schedule Enabled */
-      movies_schedule_enabled: boolean;
-      /** Movies Schedule End */
-      movies_schedule_end: string;
-      /** Movies Schedule Hours Limited */
-      movies_schedule_hours_limited: boolean;
-      /** Movies Schedule Interval Seconds */
-      movies_schedule_interval_seconds: number;
-      /** Movies Schedule Start */
-      movies_schedule_start: string;
-      /** Opensubtitles Api Key Set */
-      opensubtitles_api_key_set: boolean;
-      /** Opensubtitles Password Set */
-      opensubtitles_password_set: boolean;
-      /** Opensubtitles Username */
-      opensubtitles_username: string;
-      /**
-       * Permanent Skip After Attempts
-       * @default 10
-       */
-      permanent_skip_after_attempts: number;
-      /** Radarr Api Key Set */
-      radarr_api_key_set: boolean;
-      /** Radarr Base Url */
-      radarr_base_url: string;
-      /**
-       * Radarr Path Mapping Enabled
-       * @default false
-       */
-      radarr_path_mapping_enabled: boolean;
-      /**
-       * Radarr Path Radarr
-       * @default
-       */
-      radarr_path_radarr: string;
-      /**
-       * Radarr Path Subber
-       * @default
-       */
-      radarr_path_subber: string;
-      /** Sonarr Api Key Set */
-      sonarr_api_key_set: boolean;
-      /** Sonarr Base Url */
-      sonarr_base_url: string;
-      /**
-       * Sonarr Path Mapping Enabled
-       * @default false
-       */
-      sonarr_path_mapping_enabled: boolean;
-      /**
-       * Sonarr Path Sonarr
-       * @default
-       */
-      sonarr_path_sonarr: string;
-      /**
-       * Sonarr Path Subber
-       * @default
-       */
-      sonarr_path_subber: string;
-      /** Subtitle Folder */
-      subtitle_folder: string;
-      /** Tv Last Scheduled Scan Enqueued At */
-      tv_last_scheduled_scan_enqueued_at?: string | null;
-      /** Tv Schedule Days */
-      tv_schedule_days: string;
-      /** Tv Schedule Enabled */
-      tv_schedule_enabled: boolean;
-      /** Tv Schedule End */
-      tv_schedule_end: string;
-      /** Tv Schedule Hours Limited */
-      tv_schedule_hours_limited: boolean;
-      /** Tv Schedule Interval Seconds */
-      tv_schedule_interval_seconds: number;
-      /** Tv Schedule Start */
-      tv_schedule_start: string;
-      /**
-       * Upgrade Enabled
-       * @default false
-       */
-      upgrade_enabled: boolean;
-      /** Upgrade Last Scheduled At */
-      upgrade_last_scheduled_at?: string | null;
-      /**
-       * Upgrade Schedule Days
-       * @default
-       */
-      upgrade_schedule_days: string;
-      /**
-       * Upgrade Schedule Enabled
-       * @default false
-       */
-      upgrade_schedule_enabled: boolean;
-      /**
-       * Upgrade Schedule End
-       * @default 23:59
-       */
-      upgrade_schedule_end: string;
-      /**
-       * Upgrade Schedule Hours Limited
-       * @default false
-       */
-      upgrade_schedule_hours_limited: boolean;
-      /**
-       * Upgrade Schedule Interval Seconds
-       * @default 604800
-       */
-      upgrade_schedule_interval_seconds: number;
-      /**
-       * Upgrade Schedule Start
-       * @default 00:00
-       */
-      upgrade_schedule_start: string;
-    };
-    /** SubberSettingsPutHttpIn */
-    SubberSettingsPutHttpIn: {
-      /** Adaptive Searching Delay Hours */
-      adaptive_searching_delay_hours?: number | null;
-      /** Adaptive Searching Enabled */
-      adaptive_searching_enabled?: boolean | null;
-      /** Adaptive Searching Max Attempts */
-      adaptive_searching_max_attempts?: number | null;
-      /** Csrf Token */
-      csrf_token: string;
-      /** Enabled */
-      enabled?: boolean | null;
-      /** Exclude Hearing Impaired */
-      exclude_hearing_impaired?: boolean | null;
-      /** Language Preferences */
-      language_preferences?: string[] | null;
-      /** Movies Schedule Days */
-      movies_schedule_days?: string | null;
-      /** Movies Schedule Enabled */
-      movies_schedule_enabled?: boolean | null;
-      /** Movies Schedule End */
-      movies_schedule_end?: string | null;
-      /** Movies Schedule Hours Limited */
-      movies_schedule_hours_limited?: boolean | null;
-      /** Movies Schedule Interval Seconds */
-      movies_schedule_interval_seconds?: number | null;
-      /** Movies Schedule Start */
-      movies_schedule_start?: string | null;
-      /** Opensubtitles Api Key */
-      opensubtitles_api_key?: string | null;
-      /** Opensubtitles Password */
-      opensubtitles_password?: string | null;
-      /** Opensubtitles Username */
-      opensubtitles_username?: string | null;
-      /** Permanent Skip After Attempts */
-      permanent_skip_after_attempts?: number | null;
-      /** Radarr Api Key */
-      radarr_api_key?: string | null;
-      /** Radarr Base Url */
-      radarr_base_url?: string | null;
-      /** Radarr Path Mapping Enabled */
-      radarr_path_mapping_enabled?: boolean | null;
-      /** Radarr Path Radarr */
-      radarr_path_radarr?: string | null;
-      /** Radarr Path Subber */
-      radarr_path_subber?: string | null;
-      /** Sonarr Api Key */
-      sonarr_api_key?: string | null;
-      /** Sonarr Base Url */
-      sonarr_base_url?: string | null;
-      /** Sonarr Path Mapping Enabled */
-      sonarr_path_mapping_enabled?: boolean | null;
-      /** Sonarr Path Sonarr */
-      sonarr_path_sonarr?: string | null;
-      /** Sonarr Path Subber */
-      sonarr_path_subber?: string | null;
-      /** Subtitle Folder */
-      subtitle_folder?: string | null;
-      /** Tv Schedule Days */
-      tv_schedule_days?: string | null;
-      /** Tv Schedule Enabled */
-      tv_schedule_enabled?: boolean | null;
-      /** Tv Schedule End */
-      tv_schedule_end?: string | null;
-      /** Tv Schedule Hours Limited */
-      tv_schedule_hours_limited?: boolean | null;
-      /** Tv Schedule Interval Seconds */
-      tv_schedule_interval_seconds?: number | null;
-      /** Tv Schedule Start */
-      tv_schedule_start?: string | null;
-      /** Upgrade Enabled */
-      upgrade_enabled?: boolean | null;
-      /** Upgrade Schedule Days */
-      upgrade_schedule_days?: string | null;
-      /** Upgrade Schedule Enabled */
-      upgrade_schedule_enabled?: boolean | null;
-      /** Upgrade Schedule End */
-      upgrade_schedule_end?: string | null;
-      /** Upgrade Schedule Hours Limited */
-      upgrade_schedule_hours_limited?: boolean | null;
-      /** Upgrade Schedule Interval Seconds */
-      upgrade_schedule_interval_seconds?: number | null;
-      /** Upgrade Schedule Start */
-      upgrade_schedule_start?: string | null;
-    };
-    /** SubberSubtitleLangStateOut */
-    SubberSubtitleLangStateOut: {
-      /** Language Code */
-      language_code: string;
-      /** Last Searched At */
-      last_searched_at?: string | null;
-      /** Provider Key */
-      provider_key?: string | null;
-      /** Search Count */
-      search_count: number;
-      /** Source */
-      source?: string | null;
-      /** State Id */
-      state_id: number;
-      /** Status */
-      status: string;
-      /** Subtitle Path */
-      subtitle_path?: string | null;
-      /**
-       * Upgrade Count
-       * @default 0
-       */
-      upgrade_count: number;
-    };
-    /** SubberTestConnectionOut */
-    SubberTestConnectionOut: {
-      /** Message */
-      message: string;
-      /** Ok */
-      ok: boolean;
-    };
-    /** SubberTvEpisodeOut */
-    SubberTvEpisodeOut: {
-      /** Episode Number */
-      episode_number: number | null;
-      /** Episode Title */
-      episode_title: string | null;
-      /** File Path */
-      file_path: string;
-      /** Languages */
-      languages: components["schemas"]["SubberSubtitleLangStateOut"][];
-    };
-    /** SubberTvLibraryOut */
-    SubberTvLibraryOut: {
-      /** Shows */
-      shows: components["schemas"]["SubberTvShowOut"][];
-      /**
-       * Total
-       * @description Total episodes matching filters (before limit/offset).
-       * @default 0
-       */
-      total: number;
-    };
-    /** SubberTvSeasonOut */
-    SubberTvSeasonOut: {
-      /** Episodes */
-      episodes: components["schemas"]["SubberTvEpisodeOut"][];
-      /** Season Number */
-      season_number: number | null;
-    };
-    /** SubberTvShowOut */
-    SubberTvShowOut: {
-      /** Seasons */
-      seasons: components["schemas"]["SubberTvSeasonOut"][];
-      /** Show Title */
-      show_title: string;
-    };
-    /** SuiteConfigurationBackupItemOut */
-    SuiteConfigurationBackupItemOut: {
-      /**
-       * Created At
-       * Format: date-time
-       */
-      created_at: string;
-      /** File Name */
-      file_name: string;
-      /** Id */
-      id: number;
-      /** Size Bytes */
-      size_bytes: number;
-    };
-    /** SuiteConfigurationBackupListOut */
-    SuiteConfigurationBackupListOut: {
-      /** Directory */
-      directory: string;
-      /** Items */
-      items: components["schemas"]["SuiteConfigurationBackupItemOut"][];
-    };
-    /** SuiteLogCountsOut */
-    SuiteLogCountsOut: {
-      /** Error */
-      error: number;
-      /** Information */
-      information: number;
-      /** Warning */
-      warning: number;
-    };
-    /** SuiteLogEntryOut */
-    SuiteLogEntryOut: {
-      /** Component */
-      component: string;
-      /** Correlation Id */
-      correlation_id?: string | null;
-      /** Detail */
-      detail?: string | null;
-      /** Job Id */
-      job_id?: string | null;
-      /** Level */
-      level: string;
-      /** Logger */
-      logger: string;
-      /** Message */
-      message: string;
-      /** Source */
-      source?: string | null;
-      /**
-       * Timestamp
-       * Format: date-time
-       */
-      timestamp: string;
-      /** Traceback */
-      traceback?: string | null;
-    };
-    /** SuiteLogsOut */
-    SuiteLogsOut: {
-      counts: components["schemas"]["SuiteLogCountsOut"];
-      /** Items */
-      items: components["schemas"]["SuiteLogEntryOut"][];
-      /** Total */
-      total: number;
-    };
-    /** SuiteMetricsOut */
-    SuiteMetricsOut: {
-      /** Average Response Ms */
-      average_response_ms: number;
-      /** Busiest Routes */
-      busiest_routes: components["schemas"]["SuiteMetricsRouteOut"][];
-      /** Error Log Count */
-      error_log_count: number;
-      /** Status Counts */
-      status_counts: {
-        [key: string]: number;
-      };
-      /** Total Requests */
-      total_requests: number;
-      /** Uptime Seconds */
-      uptime_seconds: number;
-    };
-    /** SuiteMetricsRouteOut */
-    SuiteMetricsRouteOut: {
-      /** Average Response Ms */
-      average_response_ms: number;
-      /** Request Count */
-      request_count: number;
-      /** Route */
-      route: string;
-    };
-    /**
-     * SuiteOperationalHistoryResetIn
-     * @description Body for ``POST /suite/operational-history/reset``.
-     */
-    SuiteOperationalHistoryResetIn: {
-      /** Confirm */
-      confirm: string;
-      /** Csrf Token */
-      csrf_token: string;
-    };
-    /**
-     * SuiteOperationalHistoryResetOut
-     * @description Counts removed by an explicit operator reset.
-     */
-    SuiteOperationalHistoryResetOut: {
-      /** Activity Events Deleted */
-      activity_events_deleted: number;
-      /** Pruner Jobs Deleted */
-      pruner_jobs_deleted: number;
-      /** Refiner Jobs Deleted */
-      refiner_jobs_deleted: number;
-      /** Status */
-      status: string;
-      /** Subber Jobs Deleted */
-      subber_jobs_deleted: number;
-      /** Total Deleted */
-      total_deleted: number;
-    };
-    /**
-     * SuiteSecurityOverviewOut
-     * @description Read-only snapshot from startup configuration — not stored in ``suite_settings``.
-     */
-    SuiteSecurityOverviewOut: {
-      /**
-       * Allowed Browser Origins Count
-       * @description How many website addresses may call this app from a browser.
-       */
-      allowed_browser_origins_count: number;
-      /**
-       * Extra Https Hardening Enabled
-       * @description Whether strict transport (HSTS) extra protection is enabled for browser responses.
-       */
-      extra_https_hardening_enabled: boolean;
-      /**
-       * First Time Setup Attempt Limit
-       * @description How many first-time setup tries are allowed before cooling off.
-       */
-      first_time_setup_attempt_limit: number;
-      /**
-       * First Time Setup Attempt Window Plain
-       * @description How long the first-time setup try window lasts, in everyday wording.
-       */
-      first_time_setup_attempt_window_plain: string;
-      /**
-       * Restart Required Note
-       * @description Plain explanation that these values follow the server configuration file and a restart.
-       */
-      restart_required_note: string;
-      /**
-       * Session Signing Configured
-       * @description Whether the app was started with a sign-in signing key configured.
-       */
-      session_signing_configured: boolean;
-      /**
-       * Sign In Attempt Limit
-       * @description How many failed sign-in tries are allowed before cooling off.
-       */
-      sign_in_attempt_limit: number;
-      /**
-       * Sign In Attempt Window Plain
-       * @description How long the sign-in try window lasts, in everyday wording.
-       */
-      sign_in_attempt_window_plain: string;
-      /**
-       * Sign In Cookie Https Only
-       * @description Whether the sign-in cookie is marked for HTTPS only.
-       */
-      sign_in_cookie_https_only: boolean;
-      /**
-       * Sign In Cookie Same Site
-       * @description How strictly the browser limits the sign-in cookie.
-       */
-      sign_in_cookie_same_site: string;
-      /**
-       * Standard Session Absolute Timeout Plain
-       * @description Maximum lifetime of a standard sign-in, even if active.
-       */
-      standard_session_absolute_timeout_plain: string;
-      /**
-       * Standard Session Idle Timeout Plain
-       * @description How long a standard device can stay idle before sign-in expires.
-       */
-      standard_session_idle_timeout_plain: string;
-      /**
-       * Trusted Session Absolute Timeout Plain
-       * @description Maximum lifetime of a trusted-device sign-in, even if active.
-       */
-      trusted_session_absolute_timeout_plain: string;
-      /**
-       * Trusted Session Idle Timeout Plain
-       * @description How long a trusted device can stay idle before sign-in expires.
-       */
-      trusted_session_idle_timeout_plain: string;
-    };
-    /**
-     * SuiteSettingsOut
-     * @description Values stored in ``suite_settings`` (editable in the app).
-     */
-    SuiteSettingsOut: {
-      /**
-       * App Timezone
-       * @description Suite-wide timezone label used for date/time displays that follow app timezone.
-       */
-      app_timezone: string;
-      /**
-       * Configuration Backup Enabled
-       * @description Whether server-side automatic configuration snapshots are enabled.
-       */
-      configuration_backup_enabled: boolean;
-      /**
-       * Configuration Backup Interval Hours
-       * @description Minimum hours between automatic configuration snapshots.
-       */
-      configuration_backup_interval_hours: number;
-      /**
-       * Configuration Backup Last Run At
-       * @description UTC timestamp of the last successful automatic configuration snapshot run.
-       */
-      configuration_backup_last_run_at?: string | null;
-      /**
-       * Configuration Backup Preferred Time
-       * @description Preferred local backup time in HH:MM for daily-style automatic snapshots.
-       */
-      configuration_backup_preferred_time: string;
-      /**
-       * Log Retention Days
-       * @description How long persisted system logs are kept before automatic cleanup.
-       */
-      log_retention_days: number;
-      /**
-       * Product Display Name
-       * @description Shown in the sidebar and settings.
-       */
-      product_display_name: string;
-      /**
-       * Setup Wizard State
-       * @description First-run wizard state: pending, skipped, or completed.
-       */
-      setup_wizard_state: string;
-      /**
-       * Signed In Home Notice
-       * @description Optional short message on the home dashboard for signed-in users.
-       */
-      signed_in_home_notice?: string | null;
-      /**
-       * Updated At
-       * Format: date-time
-       */
-      updated_at: string;
-    };
-    /**
-     * SuiteSettingsPutIn
-     * @description Body for ``PUT /suite/settings``.
-     *
-     *     ``extra="ignore"`` keeps older browser builds or tools from failing when they send removed keys.
-     *     ``application_logs_enabled`` is accepted for compatibility with pre-0047 APIs but is not persisted.
-     */
-    SuiteSettingsPutIn: {
-      /** App Timezone */
-      app_timezone: string;
-      /**
-       * Application Logs Enabled
-       * @description Deprecated; retained so older clients can POST without changes. Ignored when persisting.
-       */
-      application_logs_enabled?: boolean | null;
-      /**
-       * Configuration Backup Enabled
-       * @description Enable or disable periodic automatic configuration snapshots.
-       */
-      configuration_backup_enabled?: boolean | null;
-      /**
-       * Configuration Backup Interval Hours
-       * @description Minimum hours between automatic configuration snapshots.
-       */
-      configuration_backup_interval_hours?: number | null;
-      /**
-       * Configuration Backup Preferred Time
-       * @description Preferred local backup time in HH:MM for daily-style automatic snapshots.
-       */
-      configuration_backup_preferred_time?: string | null;
-      /** Csrf Token */
-      csrf_token: string;
-      /** Log Retention Days */
-      log_retention_days: number;
-      /** Product Display Name */
-      product_display_name: string;
-      /** Setup Wizard State */
-      setup_wizard_state?: string | null;
-      /** Signed In Home Notice */
-      signed_in_home_notice?: string | null;
-    };
-    /**
-     * SuiteUpdateStatusOut
-     * @description Current app version compared with the latest public release.
-     */
-    SuiteUpdateStatusOut: {
-      /** Current Version */
-      current_version: string;
-      /** Docker Image */
-      docker_image?: string | null;
-      /** Docker Tag */
-      docker_tag?: string | null;
-      /** Docker Update Command */
-      docker_update_command?: string | null;
-      /** In App Upgrade Summary */
-      in_app_upgrade_summary?: string | null;
-      /**
-       * In App Upgrade Supported
-       * @default false
-       */
-      in_app_upgrade_supported: boolean;
-      /**
-       * Install Type
-       * @description windows, docker, or source
-       */
-      install_type: string;
-      /** Latest Name */
-      latest_name?: string | null;
-      /** Latest Version */
-      latest_version?: string | null;
-      /** Published At */
-      published_at?: string | null;
-      /** Release Url */
-      release_url?: string | null;
-      /**
-       * Status
-       * @description up_to_date, update_available, or unavailable
-       */
-      status: string;
-      /** Summary */
-      summary: string;
-      /** Windows Installer Url */
-      windows_installer_url?: string | null;
-    };
-    /** SystemStatusOut */
-    SystemStatusOut: {
-      /**
-       * Api Version
-       * @description MediaMop API package version.
-       */
-      api_version: string;
-      /**
-       * Environment
-       * @description MEDIAMOP_ENV value.
-       */
-      environment: string;
-      /**
-       * Healthy
-       * @description Process liveness (same signal as GET /health).
-       */
-      healthy: boolean;
-      /** Worker Health */
-      worker_health?: components["schemas"]["WorkerLaneHealthOut"][];
-    };
-    /** UserPublic */
-    UserPublic: {
-      /** Id */
-      id: number;
-      /** Role */
-      role: string;
-      /** Username */
-      username: string;
-    };
-    /** ValidationError */
-    ValidationError: {
-      /** Context */
-      ctx?: Record<string, never>;
-      /** Input */
-      input?: unknown;
-      /** Location */
-      loc: (string | number)[];
-      /** Message */
-      msg: string;
-      /** Error Type */
-      type: string;
-    };
-    /** WorkerLaneHealthOut */
-    WorkerLaneHealthOut: {
-      /** Active Workers */
-      active_workers: number;
-      /** Detail */
-      detail: string;
-      /** Expected Workers */
-      expected_workers: number;
-      /** Module */
-      module: string;
-      /** Stale Workers */
-      stale_workers: number;
-      /**
-       * Status
-       * @description healthy, degraded, or disabled.
-       */
-      status: string;
-      /** Stopped Workers */
-      stopped_workers: number;
-    };
-  };
-  responses: never;
-  parameters: never;
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
+    schemas: {
+        /** ActivityEventItemOut */
+        ActivityEventItemOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Detail */
+            detail?: string | null;
+            /**
+             * Event Type
+             * @description Stable type key, e.g. auth.login_succeeded.
+             */
+            event_type: string;
+            /** Id */
+            id: number;
+            /**
+             * Module
+             * @description Source area, e.g. auth.
+             */
+            module: string;
+            /** Title */
+            title: string;
+        };
+        /** ActivityRecentOut */
+        ActivityRecentOut: {
+            /** Items */
+            items?: components["schemas"]["ActivityEventItemOut"][];
+            /**
+             * System Events
+             * @default 0
+             */
+            system_events: number;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+        };
+        /**
+         * ActivitySummaryOut
+         * @description Derived from persisted ``activity_events`` only — snapshot at request time.
+         */
+        ActivitySummaryOut: {
+            /**
+             * Events Last 24H
+             * @description Count of rows with created_at in the last 24 hours.
+             */
+            events_last_24h: number;
+            /** @description Newest event of any type, if any. */
+            latest?: components["schemas"]["ActivityEventItemOut"] | null;
+        };
+        /** ArrLibraryConnectionPanelOut */
+        ArrLibraryConnectionPanelOut: {
+            /**
+             * Api Key Is Saved
+             * @description Whether an API key is already stored encrypted for this app.
+             */
+            api_key_is_saved: boolean;
+            /**
+             * Base Url
+             * @description Address saved in MediaMop for this app (may be empty to use the server file).
+             */
+            base_url: string;
+            /**
+             * Effective Base Url
+             * @description Address MediaMop will actually use after applying saved values and the server file.
+             */
+            effective_base_url?: string | null;
+            /** Enabled */
+            enabled: boolean;
+            /** Last Test At */
+            last_test_at?: string | null;
+            /** Last Test Detail */
+            last_test_detail?: string | null;
+            /**
+             * Last Test Ok
+             * @description Last in-panel connection check outcome, if any.
+             */
+            last_test_ok: boolean | null;
+            /**
+             * Status Headline
+             * @description Plain-language headline for the connection status area (not checked / not set up / failed / OK).
+             */
+            status_headline: string;
+        };
+        /** ArrLibraryConnectionPutIn */
+        ArrLibraryConnectionPutIn: {
+            /**
+             * Api Key
+             * @description When empty, an existing saved key is kept. When non-empty, replaces the saved key.
+             * @default
+             */
+            api_key: string;
+            /**
+             * Base Url
+             * @default
+             */
+            base_url: string;
+            /** Csrf Token */
+            csrf_token: string;
+            /** Enabled */
+            enabled: boolean;
+        };
+        /** ArrLibraryConnectionTestIn */
+        ArrLibraryConnectionTestIn: {
+            /** Api Key */
+            api_key?: string | null;
+            /**
+             * App
+             * @description sonarr or radarr
+             */
+            app: string;
+            /** Base Url */
+            base_url?: string | null;
+            /** Csrf Token */
+            csrf_token: string;
+            /**
+             * Enabled
+             * @description When set, tests draft fields like PUT …/arr-connection/* (with base_url/api_key); omit for stored settings only.
+             */
+            enabled?: boolean | null;
+        };
+        /** ArrLibraryConnectionTestOut */
+        ArrLibraryConnectionTestOut: {
+            /** Message */
+            message: string;
+            /** Ok */
+            ok: boolean;
+        };
+        /**
+         * ArrLibraryOperatorSettingsLanePutIn
+         * @description Save a single automatic search lane (independent from the other three).
+         */
+        ArrLibraryOperatorSettingsLanePutIn: {
+            /** Csrf Token */
+            csrf_token: string;
+            lane: components["schemas"]["ArrLibrarySearchLaneIn"];
+        };
+        /** ArrLibraryOperatorSettingsOut */
+        ArrLibraryOperatorSettingsOut: {
+            /**
+             * Connection Note
+             * @description Short note on Off vs On, encryption, and fallback to the server configuration file.
+             */
+            connection_note: string;
+            /**
+             * Interval Restart Note
+             * @description Explains that changing how often automatic checks are queued may need an API restart.
+             */
+            interval_restart_note: string;
+            radarr_connection: components["schemas"]["ArrLibraryConnectionPanelOut"];
+            radarr_missing: components["schemas"]["ArrLibrarySearchLaneOut"];
+            /** Radarr Server Configured */
+            radarr_server_configured: boolean;
+            /**
+             * Radarr Server Url
+             * @description Radarr address from configuration (read-only).
+             */
+            radarr_server_url: string | null;
+            radarr_upgrade: components["schemas"]["ArrLibrarySearchLaneOut"];
+            /**
+             * Schedule Timezone
+             * @description Time zone name used for schedule windows (from server configuration).
+             */
+            schedule_timezone: string;
+            sonarr_connection: components["schemas"]["ArrLibraryConnectionPanelOut"];
+            sonarr_missing: components["schemas"]["ArrLibrarySearchLaneOut"];
+            /** Sonarr Server Configured */
+            sonarr_server_configured: boolean;
+            /**
+             * Sonarr Server Url
+             * @description Sonarr address from configuration (read-only).
+             */
+            sonarr_server_url: string | null;
+            sonarr_upgrade: components["schemas"]["ArrLibrarySearchLaneOut"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ArrLibraryOperatorSettingsPutIn */
+        ArrLibraryOperatorSettingsPutIn: {
+            /** Csrf Token */
+            csrf_token: string;
+            radarr_missing: components["schemas"]["ArrLibrarySearchLaneIn"];
+            radarr_upgrade: components["schemas"]["ArrLibrarySearchLaneIn"];
+            sonarr_missing: components["schemas"]["ArrLibrarySearchLaneIn"];
+            sonarr_upgrade: components["schemas"]["ArrLibrarySearchLaneIn"];
+        };
+        /** ArrLibrarySearchLaneIn */
+        ArrLibrarySearchLaneIn: {
+            /** Enabled */
+            enabled: boolean;
+            /** Max Items Per Run */
+            max_items_per_run: number;
+            /** Retry Delay Minutes */
+            retry_delay_minutes: number;
+            /** Schedule Days */
+            schedule_days: string;
+            /** Schedule Enabled */
+            schedule_enabled: boolean;
+            /** Schedule End */
+            schedule_end: string;
+            /** Schedule Interval Seconds */
+            schedule_interval_seconds: number;
+            /** Schedule Start */
+            schedule_start: string;
+        };
+        /** ArrLibrarySearchLaneOut */
+        ArrLibrarySearchLaneOut: {
+            /**
+             * Enabled
+             * @description Whether this automatic search lane is turned on.
+             */
+            enabled: boolean;
+            /** Max Items Per Run */
+            max_items_per_run: number;
+            /** Retry Delay Minutes */
+            retry_delay_minutes: number;
+            /**
+             * Schedule Days
+             * @description Comma-separated weekdays, e.g. Mon,Tue. Leave empty to mean every day.
+             */
+            schedule_days: string;
+            /**
+             * Schedule Enabled
+             * @description When on, searches only run inside the days and times below.
+             */
+            schedule_enabled: boolean;
+            /** Schedule End */
+            schedule_end: string;
+            /** Schedule Interval Seconds */
+            schedule_interval_seconds: number;
+            /** Schedule Start */
+            schedule_start: string;
+        };
+        /**
+         * ArrSearchLaneKey
+         * @description URL path keys for single-lane search preference saves.
+         * @enum {string}
+         */
+        ArrSearchLaneKey: "sonarr_missing" | "sonarr_upgrade" | "radarr_missing" | "radarr_upgrade";
+        /** BootstrapIn */
+        BootstrapIn: {
+            /** Csrf Token */
+            csrf_token: string;
+            /** Password */
+            password: string;
+            /** Username */
+            username: string;
+        };
+        /** BootstrapOut */
+        BootstrapOut: {
+            /** Message */
+            message: string;
+            /** Username */
+            username: string;
+        };
+        /**
+         * BootstrapStatusOut
+         * @description Whether first-run bootstrap may create the initial ``admin`` user.
+         */
+        BootstrapStatusOut: {
+            /** Bootstrap Allowed */
+            bootstrap_allowed: boolean;
+            /** Reason */
+            reason: string;
+        };
+        /** ChangePasswordIn */
+        ChangePasswordIn: {
+            /** Csrf Token */
+            csrf_token: string;
+            /** Current Password */
+            current_password: string;
+            /** New Password */
+            new_password: string;
+        };
+        /** ChangePasswordOut */
+        ChangePasswordOut: {
+            /** Message */
+            message: string;
+        };
+        /**
+         * ConfigurationBundleImportIn
+         * @description Restore suite + module settings from a prior configuration bundle export.
+         */
+        ConfigurationBundleImportIn: {
+            /** Bundle */
+            bundle: {
+                [key: string]: unknown;
+            };
+            /** Csrf Token */
+            csrf_token: string;
+        };
+        /** CsrfOut */
+        CsrfOut: {
+            /**
+             * Csrf Token
+             * @description Send on unsafe requests (header X-CSRF-Token or body).
+             */
+            csrf_token: string;
+        };
+        /** CurrentSessionOut */
+        CurrentSessionOut: {
+            /**
+             * Absolute Expires At
+             * Format: date-time
+             */
+            absolute_expires_at: string;
+            /** Absolute Timeout Days */
+            absolute_timeout_days: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Idle Timeout Minutes */
+            idle_timeout_minutes: number;
+            /**
+             * Last Seen At
+             * Format: date-time
+             */
+            last_seen_at: string;
+            /** Trusted Device */
+            trusted_device: boolean;
+        };
+        /** DashboardStatusOut */
+        DashboardStatusOut: {
+            activity_summary: components["schemas"]["ActivitySummaryOut"];
+            /**
+             * Scope Note
+             * @description Fixed honesty line for the dashboard slice.
+             * @default Read-only overview. No jobs or settings are changed from this view.
+             */
+            scope_note: string;
+            system: components["schemas"]["SystemStatusOut"];
+        };
+        /** DirectoryBrowseEntry */
+        DirectoryBrowseEntry: {
+            /** Description */
+            description?: string | null;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Path */
+            path: string;
+        };
+        /** DirectoryBrowseOut */
+        DirectoryBrowseOut: {
+            /** Current Path */
+            current_path: string | null;
+            /** Entries */
+            entries: components["schemas"]["DirectoryBrowseEntry"][];
+            /** Parent Path */
+            parent_path: string | null;
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * HealthResponse
+         * @description Minimal liveness payload for load balancers and ops.
+         */
+        HealthResponse: {
+            /**
+             * Dependencies
+             * @description Basic dependency check states.
+             */
+            dependencies?: {
+                [key: string]: string;
+            };
+            /**
+             * Status
+             * @description Application liveness indicator.
+             */
+            status: string;
+        };
+        /** LoginIn */
+        LoginIn: {
+            /** Csrf Token */
+            csrf_token: string;
+            /** Password */
+            password: string;
+            /**
+             * Trusted Device
+             * @default false
+             */
+            trusted_device: boolean;
+            /** Username */
+            username: string;
+        };
+        /** LoginOut */
+        LoginOut: {
+            user: components["schemas"]["UserPublic"];
+        };
+        /**
+         * LogoutIn
+         * @description Optional body CSRF fallback when header is awkward for a client.
+         */
+        LogoutIn: {
+            /** Csrf Token */
+            csrf_token?: string | null;
+        };
+        /** MeOut */
+        MeOut: {
+            user: components["schemas"]["UserPublic"];
+        };
+        /** NotificationChannelIn */
+        NotificationChannelIn: {
+            /** Csrf Token */
+            csrf_token: string;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Events */
+            events?: string[];
+            /** Label */
+            label: string;
+            /** Provider */
+            provider: string;
+            /** Url */
+            url: string;
+        };
+        /** NotificationChannelListOut */
+        NotificationChannelListOut: {
+            /** Items */
+            items: components["schemas"]["NotificationChannelOut"][];
+            /**
+             * Supported Events
+             * @default [
+             *       "job_completed",
+             *       "job_failed",
+             *       "refiner_job_completed",
+             *       "refiner_job_failed",
+             *       "pruner_job_completed",
+             *       "pruner_job_failed",
+             *       "subber_job_completed",
+             *       "subber_job_failed"
+             *     ]
+             */
+            supported_events: string[];
+            /**
+             * Supported Providers
+             * @default [
+             *       "webhook",
+             *       "discord"
+             *     ]
+             */
+            supported_providers: string[];
+        };
+        /** NotificationChannelOut */
+        NotificationChannelOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Events */
+            events: string[];
+            /** Id */
+            id: number;
+            /** Label */
+            label: string;
+            /** Provider */
+            provider: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Url */
+            url: string;
+        };
+        /** NotificationChannelTestIn */
+        NotificationChannelTestIn: {
+            /** Csrf Token */
+            csrf_token: string;
+        };
+        /** NotificationChannelTestOut */
+        NotificationChannelTestOut: {
+            /** Error */
+            error?: string | null;
+            /** Ok */
+            ok: boolean;
+        };
+        /**
+         * PrunerApplyEligibilityOut
+         * @description Read-only: whether apply can be enqueued for this snapshot (not a second scan).
+         */
+        PrunerApplyEligibilityOut: {
+            /** Apply Feature Enabled */
+            apply_feature_enabled: boolean;
+            /**
+             * Apply Operator Label
+             * @default
+             */
+            apply_operator_label: string;
+            /**
+             * Candidate Count
+             * @default 0
+             */
+            candidate_count: number;
+            /** Display Name */
+            display_name: string;
+            /** Eligible */
+            eligible: boolean;
+            /** Media Scope */
+            media_scope: string;
+            /** Preview Created At */
+            preview_created_at?: string | null;
+            /**
+             * Preview Outcome
+             * @default
+             */
+            preview_outcome: string;
+            /** Preview Run Id */
+            preview_run_id: string;
+            /** Provider */
+            provider: string;
+            /** Reasons */
+            reasons?: string[];
+            /**
+             * Rule Family Id
+             * @default
+             */
+            rule_family_id: string;
+            /** Server Instance Id */
+            server_instance_id: number;
+        };
+        /** PrunerApplyHttpIn */
+        PrunerApplyHttpIn: {
+            /** Csrf Token */
+            csrf_token: string;
+        };
+        /** PrunerConnectionTestIn */
+        PrunerConnectionTestIn: {
+            /** Csrf Token */
+            csrf_token: string;
+        };
+        /** PrunerEnqueueOut */
+        PrunerEnqueueOut: {
+            /** Pruner Job Id */
+            pruner_job_id: number;
+        };
+        /** PrunerJobsInspectionOut */
+        PrunerJobsInspectionOut: {
+            /** Default Recent Slice */
+            default_recent_slice: boolean;
+            /** Jobs */
+            jobs: components["schemas"]["PrunerJobsInspectionRow"][];
+        };
+        /** PrunerJobsInspectionRow */
+        PrunerJobsInspectionRow: {
+            /** Dedupe Key */
+            dedupe_key: string;
+            /** Id */
+            id: number;
+            /** Job Kind */
+            job_kind: string;
+            /** Last Error */
+            last_error: string | null;
+            /** Payload Json */
+            payload_json: string | null;
+            /** Status */
+            status: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** PrunerOverviewStatsOut */
+        PrunerOverviewStatsOut: {
+            /**
+             * Apply Runs
+             * @description pruner.apply_library_removal_completed events in window.
+             */
+            apply_runs: number;
+            /**
+             * Failed Applies
+             * @description pruner.apply_library_removal_failed events in window.
+             */
+            failed_applies: number;
+            /**
+             * Items Removed
+             * @description Sum of removed from apply completion detail JSON in window.
+             */
+            items_removed: number;
+            /**
+             * Items Skipped
+             * @description Sum of skipped from apply completion detail JSON in window.
+             */
+            items_skipped: number;
+            /**
+             * Preview Runs
+             * @description Completed pruner.candidate_removal.preview.v1 jobs in window.
+             */
+            preview_runs: number;
+            /**
+             * Window Days
+             * @default 30
+             */
+            window_days: number;
+        };
+        /**
+         * PrunerPlexLiveEligibilityOut
+         * @description Read-only: retired Plex live-removal path; always ineligible with explanatory reasons.
+         */
+        PrunerPlexLiveEligibilityOut: {
+            /** Apply Feature Enabled */
+            apply_feature_enabled: boolean;
+            /** Display Name */
+            display_name: string;
+            /** Eligible */
+            eligible: boolean;
+            /**
+             * Live Max Items Cap
+             * @description Historical field name: Plex missing-primary preview collects at most this many leaf rows per run (min per-scope preview cap, process ceiling MEDIAMOP_PRUNER_PLEX_LIVE_ABS_MAX_ITEMS, and 5k clamp).
+             */
+            live_max_items_cap: number;
+            /** Media Scope */
+            media_scope: string;
+            /**
+             * Plex Live Feature Enabled
+             * @description Legacy name: mirrors deprecated env MEDIAMOP_PRUNER_PLEX_LIVE_REMOVAL_ENABLED only for operator visibility. Plex removal always uses preview → apply-from-preview; this flag does not re-enable live scan.
+             */
+            plex_live_feature_enabled: boolean;
+            /** Provider */
+            provider: string;
+            /** Reasons */
+            reasons?: string[];
+            /** Required Confirmation Phrase */
+            required_confirmation_phrase: string;
+            /** Rule Enabled */
+            rule_enabled: boolean;
+            /** Rule Family Id */
+            rule_family_id: string;
+            /** Server Instance Id */
+            server_instance_id: number;
+        };
+        /** PrunerPreviewEnqueueIn */
+        PrunerPreviewEnqueueIn: {
+            /** Csrf Token */
+            csrf_token: string;
+            /**
+             * Media Scope
+             * @enum {string}
+             */
+            media_scope: "tv" | "movies";
+            /**
+             * Rule Family Id
+             * @default missing_primary_media_reported
+             * @enum {string}
+             */
+            rule_family_id: "missing_primary_media_reported" | "never_played_stale_reported" | "watched_tv_reported" | "watched_movies_reported" | "watched_movie_low_rating_reported" | "unwatched_movie_stale_reported" | "genre_match_reported" | "studio_match_reported" | "people_match_reported" | "year_range_match_reported";
+        };
+        /**
+         * PrunerPreviewRunListItemOut
+         * @description Preview run metadata without ``candidates_json`` (list endpoint for operator history).
+         */
+        PrunerPreviewRunListItemOut: {
+            /** Candidate Count */
+            candidate_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error Message */
+            error_message: string | null;
+            /** Media Scope */
+            media_scope: string;
+            /** Outcome */
+            outcome: string;
+            /** Preview Run Id */
+            preview_run_id: string;
+            /** Pruner Job Id */
+            pruner_job_id?: number | null;
+            /** Rule Family Id */
+            rule_family_id: string;
+            /** Server Instance Id */
+            server_instance_id: number;
+            /** Truncated */
+            truncated: boolean;
+            /** Unsupported Detail */
+            unsupported_detail: string | null;
+        };
+        /** PrunerPreviewRunOut */
+        PrunerPreviewRunOut: {
+            /** Candidate Count */
+            candidate_count: number;
+            /** Candidates Json */
+            candidates_json: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error Message */
+            error_message: string | null;
+            /** Media Scope */
+            media_scope: string;
+            /** Outcome */
+            outcome: string;
+            /** Preview Run Id */
+            preview_run_id: string;
+            /** Rule Family Id */
+            rule_family_id: string;
+            /** Server Instance Id */
+            server_instance_id: number;
+            /** Truncated */
+            truncated: boolean;
+            /** Unsupported Detail */
+            unsupported_detail: string | null;
+        };
+        /** PrunerScopePatchHttpIn */
+        PrunerScopePatchHttpIn: {
+            /** Auto Apply Enabled */
+            auto_apply_enabled?: boolean | null;
+            /** Csrf Token */
+            csrf_token: string;
+            /** Max Deletes Per Run */
+            max_deletes_per_run?: number | null;
+            /** Missing Primary Media Reported Enabled */
+            missing_primary_media_reported_enabled?: boolean | null;
+            /** Never Played Min Age Days */
+            never_played_min_age_days?: number | null;
+            /** Never Played Stale Reported Enabled */
+            never_played_stale_reported_enabled?: boolean | null;
+            /**
+             * Preview Include Collections
+             * @description Replace per-tab collection include list (Plex missing-primary only); omit to leave unchanged.
+             */
+            preview_include_collections?: string[] | null;
+            /**
+             * Preview Include Genres
+             * @description Replace per-tab genre include list; omit field to leave unchanged.
+             */
+            preview_include_genres?: string[] | null;
+            /**
+             * Preview Include People
+             * @description Replace per-tab people-name include list; omit field to leave unchanged.
+             */
+            preview_include_people?: string[] | null;
+            /**
+             * Preview Include People Roles
+             * @description Replace per-tab people credit roles for preview narrowing; omit field to leave unchanged.
+             */
+            preview_include_people_roles?: string[] | null;
+            /**
+             * Preview Include Studios
+             * @description Replace per-tab studio include list; omit field to leave unchanged.
+             */
+            preview_include_studios?: string[] | null;
+            /** Preview Max Items */
+            preview_max_items?: number | null;
+            /** Preview Year Max */
+            preview_year_max?: number | null;
+            /** Preview Year Min */
+            preview_year_min?: number | null;
+            /** Scheduled Preview Days */
+            scheduled_preview_days?: string | null;
+            /** Scheduled Preview Enabled */
+            scheduled_preview_enabled?: boolean | null;
+            /** Scheduled Preview End */
+            scheduled_preview_end?: string | null;
+            /** Scheduled Preview Hours Limited */
+            scheduled_preview_hours_limited?: boolean | null;
+            /** Scheduled Preview Interval Seconds */
+            scheduled_preview_interval_seconds?: number | null;
+            /** Scheduled Preview Start */
+            scheduled_preview_start?: string | null;
+            /** Unwatched Movie Stale Min Age Days */
+            unwatched_movie_stale_min_age_days?: number | null;
+            /** Unwatched Movie Stale Reported Enabled */
+            unwatched_movie_stale_reported_enabled?: boolean | null;
+            /** Watched Movie Low Rating Max Jellyfin Emby Community Rating */
+            watched_movie_low_rating_max_jellyfin_emby_community_rating?: number | null;
+            /** Watched Movie Low Rating Max Plex Audience Rating */
+            watched_movie_low_rating_max_plex_audience_rating?: number | null;
+            /** Watched Movie Low Rating Reported Enabled */
+            watched_movie_low_rating_reported_enabled?: boolean | null;
+            /** Watched Movies Reported Enabled */
+            watched_movies_reported_enabled?: boolean | null;
+            /** Watched Tv Reported Enabled */
+            watched_tv_reported_enabled?: boolean | null;
+        };
+        /** PrunerScopeSummaryOut */
+        PrunerScopeSummaryOut: {
+            /**
+             * Auto Apply Enabled
+             * @default false
+             */
+            auto_apply_enabled: boolean;
+            /** Last Preview At */
+            last_preview_at?: string | null;
+            /** Last Preview Candidate Count */
+            last_preview_candidate_count?: number | null;
+            /** Last Preview Error */
+            last_preview_error?: string | null;
+            /** Last Preview Outcome */
+            last_preview_outcome?: string | null;
+            /** Last Preview Run Uuid */
+            last_preview_run_uuid?: string | null;
+            /** Last Scheduled Preview Enqueued At */
+            last_scheduled_preview_enqueued_at?: string | null;
+            /**
+             * Max Deletes Per Run
+             * @default 50
+             */
+            max_deletes_per_run: number;
+            /** Media Scope */
+            media_scope: string;
+            /** Missing Primary Media Reported Enabled */
+            missing_primary_media_reported_enabled: boolean;
+            /**
+             * Never Played Min Age Days
+             * @default 90
+             */
+            never_played_min_age_days: number;
+            /**
+             * Never Played Stale Reported Enabled
+             * @default false
+             */
+            never_played_stale_reported_enabled: boolean;
+            /**
+             * Preview Include Collections
+             * @description Optional collection name tokens for preview narrowing. **Plex missing-primary only** in this slice (``Collection`` tags on ``allLeaves`` metadata). Jellyfin/Emby Items rows used here do not expose library collection membership without extra API calls, so this list is ignored on those providers.
+             */
+            preview_include_collections?: string[];
+            /**
+             * Preview Include Genres
+             * @description Optional genre names (per tab) that narrow preview collection only. Empty means no filter. A successful preview with zero candidates can mean no items matched the rule plus filters — not necessarily a clean library.
+             */
+            preview_include_genres?: string[];
+            /**
+             * Preview Include People
+             * @description Optional person display names (per tab) that narrow preview collection only — full-name tokens, case-insensitive exact match against provider-reported names. Empty means no filter. Apply still uses only the frozen snapshot; it does not re-apply people filters.
+             */
+            preview_include_people?: string[];
+            /**
+             * Preview Include People Roles
+             * @description Which credit roles count toward people-name matching for preview narrowing on this library. Jellyfin/Emby match ``People[].Name`` when ``People[].Type`` maps to a selected role. Plex uses Role / Director / Writer tags on allLeaves; producer and guest_star are ignored on Plex. When empty, names match against all credits the provider exposes for this rule (all People on JF/Emby; Role, Director, and Writer tags on Plex).
+             */
+            preview_include_people_roles?: string[];
+            /**
+             * Preview Include Studios
+             * @description Optional studio name tokens (per tab) that narrow preview only — exact normalized match against Jellyfin/Emby ``Studios`` names or Plex ``Studio`` tags on the same leaf rows as other preview filters. This is **not** a separate “network” filter.
+             */
+            preview_include_studios?: string[];
+            /** Preview Max Items */
+            preview_max_items: number;
+            /**
+             * Preview Year Max
+             * @description Optional inclusive maximum year for preview narrowing (same semantics as ``preview_year_min``).
+             */
+            preview_year_max?: number | null;
+            /**
+             * Preview Year Min
+             * @description Optional inclusive minimum **production / release year** for preview narrowing only (1900–2100). Jellyfin/Emby use Items ``ProductionYear``; Plex missing-primary uses leaf ``year`` when present. Items with no year never match when any year bound is set.
+             */
+            preview_year_min?: number | null;
+            /**
+             * Scheduled Preview Days
+             * @default
+             */
+            scheduled_preview_days: string;
+            /**
+             * Scheduled Preview Enabled
+             * @default false
+             */
+            scheduled_preview_enabled: boolean;
+            /**
+             * Scheduled Preview End
+             * @default 23:59
+             */
+            scheduled_preview_end: string;
+            /**
+             * Scheduled Preview Hours Limited
+             * @default false
+             */
+            scheduled_preview_hours_limited: boolean;
+            /**
+             * Scheduled Preview Interval Seconds
+             * @default 3600
+             */
+            scheduled_preview_interval_seconds: number;
+            /**
+             * Scheduled Preview Start
+             * @default 00:00
+             */
+            scheduled_preview_start: string;
+            /**
+             * Unwatched Movie Stale Min Age Days
+             * @default 90
+             */
+            unwatched_movie_stale_min_age_days: number;
+            /**
+             * Unwatched Movie Stale Reported Enabled
+             * @default false
+             */
+            unwatched_movie_stale_reported_enabled: boolean;
+            /**
+             * Watched Movie Low Rating Max Jellyfin Emby Community Rating
+             * @default 4
+             */
+            watched_movie_low_rating_max_jellyfin_emby_community_rating: number;
+            /**
+             * Watched Movie Low Rating Max Plex Audience Rating
+             * @default 4
+             */
+            watched_movie_low_rating_max_plex_audience_rating: number;
+            /**
+             * Watched Movie Low Rating Reported Enabled
+             * @default false
+             */
+            watched_movie_low_rating_reported_enabled: boolean;
+            /**
+             * Watched Movies Reported Enabled
+             * @default false
+             */
+            watched_movies_reported_enabled: boolean;
+            /**
+             * Watched Tv Reported Enabled
+             * @default false
+             */
+            watched_tv_reported_enabled: boolean;
+        };
+        /** PrunerServerInstanceCreateHttpIn */
+        PrunerServerInstanceCreateHttpIn: {
+            /** Base Url */
+            base_url: string;
+            /**
+             * Credentials
+             * @description Provider-specific secret map (e.g. api_key for Emby/Jellyfin; auth_token for Plex).
+             */
+            credentials: {
+                [key: string]: string;
+            };
+            /** Csrf Token */
+            csrf_token: string;
+            /** Display Name */
+            display_name: string;
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "emby" | "jellyfin" | "plex";
+        };
+        /** PrunerServerInstanceOut */
+        PrunerServerInstanceOut: {
+            /** Base Url */
+            base_url: string;
+            /** Display Name */
+            display_name: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Id */
+            id: number;
+            /** Last Connection Test At */
+            last_connection_test_at?: string | null;
+            /** Last Connection Test Detail */
+            last_connection_test_detail?: string | null;
+            /** Last Connection Test Ok */
+            last_connection_test_ok?: boolean | null;
+            /** Provider */
+            provider: string;
+            /** Scopes */
+            scopes?: components["schemas"]["PrunerScopeSummaryOut"][];
+        };
+        /** PrunerServerInstancePatchHttpIn */
+        PrunerServerInstancePatchHttpIn: {
+            /** Base Url */
+            base_url?: string | null;
+            /** Credentials */
+            credentials?: {
+                [key: string]: string;
+            } | null;
+            /** Csrf Token */
+            csrf_token: string;
+            /** Display Name */
+            display_name?: string | null;
+            /** Enabled */
+            enabled?: boolean | null;
+        };
+        /** PrunerStudiosOut */
+        PrunerStudiosOut: {
+            /** Studios */
+            studios?: string[];
+        };
+        /** ReadinessResponse */
+        ReadinessResponse: {
+            /** Ready */
+            ready: boolean;
+            /** Startup Seconds */
+            startup_seconds: number;
+            /** Status */
+            status: string;
+            /** Steps */
+            steps: components["schemas"]["ReadinessStep"][];
+            /** Worker Health */
+            worker_health?: components["schemas"]["ReadinessWorkerOut"][];
+        };
+        /** ReadinessStep */
+        ReadinessStep: {
+            /**
+             * Detail
+             * @description Operator-readable status detail.
+             */
+            detail: string;
+            /**
+             * Name
+             * @description Startup area checked by readiness.
+             */
+            name: string;
+            /**
+             * Status
+             * @description ready, starting, or failed.
+             */
+            status: string;
+        };
+        /** ReadinessWorkerOut */
+        ReadinessWorkerOut: {
+            /** Active Workers */
+            active_workers: number;
+            /** Detail */
+            detail: string;
+            /** Expected Workers */
+            expected_workers: number;
+            /** Module */
+            module: string;
+            /** Stale Workers */
+            stale_workers: number;
+            /** Status */
+            status: string;
+            /** Stopped Workers */
+            stopped_workers: number;
+        };
+        /** ReconciliationRepairIn */
+        ReconciliationRepairIn: {
+            /** Action */
+            action: string;
+            /**
+             * Confirm
+             * @default false
+             */
+            confirm: boolean;
+            /** Db Id */
+            db_id?: number | null;
+            /** Path */
+            path?: string | null;
+        };
+        /**
+         * RefinerCandidateGateManualEnqueueIn
+         * @description Operator supplies a real release candidate; workers compare it to the live download queue.
+         */
+        RefinerCandidateGateManualEnqueueIn: {
+            /** Csrf Token */
+            csrf_token: string;
+            /**
+             * Movie Id
+             * @description Radarr movie id when matching without path
+             */
+            movie_id?: number | null;
+            /** Output Path */
+            output_path?: string | null;
+            /** Release Title */
+            release_title: string;
+            /** Release Year */
+            release_year?: number | null;
+            /**
+             * Series Id
+             * @description Sonarr series id when matching without path
+             */
+            series_id?: number | null;
+            /**
+             * Target
+             * @enum {string}
+             */
+            target: "radarr" | "sonarr";
+        };
+        /** RefinerCandidateGateManualEnqueueOut */
+        RefinerCandidateGateManualEnqueueOut: {
+            /** Dedupe Key */
+            dedupe_key: string;
+            /** Job Id */
+            job_id: number;
+            /** Job Kind */
+            job_kind: string;
+            /**
+             * Ok
+             * @default true
+             */
+            ok: boolean;
+        };
+        /**
+         * RefinerFileRemuxPassManualEnqueueIn
+         * @description Manual ``refiner.file.remux_pass.v1`` enqueue — requires a saved Refiner watched folder before this POST succeeds.
+         */
+        RefinerFileRemuxPassManualEnqueueIn: {
+            /** Csrf Token */
+            csrf_token: string;
+            /**
+             * Media Scope
+             * @description Which saved watched/output tree resolves ``relative_media_path``.
+             * @default movie
+             * @enum {string}
+             */
+            media_scope: "movie" | "tv";
+            /**
+             * Relative Media Path
+             * @description Path relative to the saved Refiner watched folder (no .. segments). The watched folder is not required when saving path settings alone, but it must be configured before enqueue.
+             */
+            relative_media_path: string;
+        };
+        /** RefinerFileRemuxPassManualEnqueueOut */
+        RefinerFileRemuxPassManualEnqueueOut: {
+            /** Dedupe Key */
+            dedupe_key: string;
+            /** Job Id */
+            job_id: number;
+            /** Job Kind */
+            job_kind: string;
+            /**
+             * Ok
+             * @default true
+             */
+            ok: boolean;
+        };
+        /** RefinerJobCancelPendingIn */
+        RefinerJobCancelPendingIn: {
+            /** Csrf Token */
+            csrf_token: string;
+        };
+        /** RefinerJobCancelPendingOut */
+        RefinerJobCancelPendingOut: {
+            /** Job Id */
+            job_id: number;
+            /**
+             * Ok
+             * @default true
+             */
+            ok: boolean;
+            /**
+             * Status
+             * @description Always ``cancelled`` on success.
+             */
+            status: string;
+        };
+        /**
+         * RefinerJobInspectionRow
+         * @description One persisted Refiner durable job row (lifecycle from ``refiner_jobs`` only).
+         */
+        RefinerJobInspectionRow: {
+            /** Attempt Count */
+            attempt_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Dedupe Key */
+            dedupe_key: string;
+            /** Id */
+            id: number;
+            /** Job Kind */
+            job_kind: string;
+            /** Last Error */
+            last_error: string | null;
+            /** Lease Expires At */
+            lease_expires_at: string | null;
+            /** Lease Owner */
+            lease_owner: string | null;
+            /** Max Attempts */
+            max_attempts: number;
+            /** Payload Json */
+            payload_json?: string | null;
+            /**
+             * Status
+             * @description Persisted status value for this row.
+             */
+            status: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * RefinerJobsInspectionOut
+         * @description Bounded list of ``refiner_jobs`` rows, newest ``updated_at`` first.
+         */
+        RefinerJobsInspectionOut: {
+            /**
+             * Default Recent Slice
+             * @description True when no ``status`` filter was applied: the newest rows across all statuses. False when one or more ``status`` query params narrowed the query.
+             */
+            default_recent_slice: boolean;
+            /** Jobs */
+            jobs: components["schemas"]["RefinerJobInspectionRow"][];
+        };
+        /** RefinerOperatorSettingsOut */
+        RefinerOperatorSettingsOut: {
+            /** Max Concurrent Files */
+            max_concurrent_files: number;
+            /** Min File Age Seconds */
+            min_file_age_seconds: number;
+            /**
+             * Minimum Free Disk Space Mb
+             * @description Processing skips before writes when the target drive has less free space than this.
+             */
+            minimum_free_disk_space_mb: number;
+            /** Movie Schedule Days */
+            movie_schedule_days: string;
+            /** Movie Schedule Enabled */
+            movie_schedule_enabled: boolean;
+            /** Movie Schedule End */
+            movie_schedule_end: string;
+            /**
+             * Movie Schedule Hours Limited
+             * @description When true, timed movie scans only enqueue inside the days and times below (suite time zone).
+             */
+            movie_schedule_hours_limited: boolean;
+            /** Movie Schedule Start */
+            movie_schedule_start: string;
+            /**
+             * Refiner Min Input File Size Mb
+             * @description Files smaller than this are skipped before Refiner probes or writes them.
+             */
+            refiner_min_input_file_size_mb: number;
+            /**
+             * Schedule Timezone
+             * @description IANA zone for schedule windows (suite settings).
+             */
+            schedule_timezone: string;
+            /** Tv Schedule Days */
+            tv_schedule_days: string;
+            /** Tv Schedule Enabled */
+            tv_schedule_enabled: boolean;
+            /** Tv Schedule End */
+            tv_schedule_end: string;
+            /** Tv Schedule Hours Limited */
+            tv_schedule_hours_limited: boolean;
+            /** Tv Schedule Start */
+            tv_schedule_start: string;
+            /** Updated At */
+            updated_at: string;
+        };
+        /**
+         * RefinerOperatorSettingsPutIn
+         * @description PUT body supports partial updates: omit a group to leave it unchanged on the server.
+         */
+        RefinerOperatorSettingsPutIn: {
+            /** Csrf Token */
+            csrf_token: string;
+            /** Max Concurrent Files */
+            max_concurrent_files?: number | null;
+            /** Min File Age Seconds */
+            min_file_age_seconds?: number | null;
+            /** Minimum Free Disk Space Mb */
+            minimum_free_disk_space_mb?: number | null;
+            /** Movie Schedule Days */
+            movie_schedule_days?: string | null;
+            /** Movie Schedule Enabled */
+            movie_schedule_enabled?: boolean | null;
+            /** Movie Schedule End */
+            movie_schedule_end?: string | null;
+            /** Movie Schedule Hours Limited */
+            movie_schedule_hours_limited?: boolean | null;
+            /** Movie Schedule Start */
+            movie_schedule_start?: string | null;
+            /** Refiner Min Input File Size Mb */
+            refiner_min_input_file_size_mb?: number | null;
+            /** Tv Schedule Days */
+            tv_schedule_days?: string | null;
+            /** Tv Schedule Enabled */
+            tv_schedule_enabled?: boolean | null;
+            /** Tv Schedule End */
+            tv_schedule_end?: string | null;
+            /** Tv Schedule Hours Limited */
+            tv_schedule_hours_limited?: boolean | null;
+            /** Tv Schedule Start */
+            tv_schedule_start?: string | null;
+        };
+        /** RefinerOverviewStatsOut */
+        RefinerOverviewStatsOut: {
+            /**
+             * Already Optimized Count
+             * @description No-change rows where Refiner copied the unchanged file to output and that output exists.
+             */
+            already_optimized_count: number;
+            /**
+             * Files Failed
+             * @description Terminal-failure refiner.file.remux_pass.v1 jobs in the window (failed + finalize-failed).
+             */
+            files_failed: number;
+            /**
+             * Files Processed
+             * @description Finalized Refiner file outcomes in the window; queued/scanned/attempted jobs are excluded.
+             */
+            files_processed: number;
+            /**
+             * Net Space Saved Bytes
+             * @description Net source-bytes minus output-bytes across output-written remuxes in the window.
+             */
+            net_space_saved_bytes: number;
+            /**
+             * Net Space Saved Percent
+             * @description Net size reduction percentage across output-written remuxes in the window.
+             */
+            net_space_saved_percent: number;
+            /**
+             * Output Written Count
+             * @description Refiner remux activity rows whose output file still exists at the finalized path.
+             */
+            output_written_count: number;
+            /** Success Rate Percent */
+            success_rate_percent: number;
+            /**
+             * Window Days
+             * @default 30
+             */
+            window_days: number;
+        };
+        /** RefinerPathSettingsOut */
+        RefinerPathSettingsOut: {
+            /** Effective Tv Work Folder */
+            effective_tv_work_folder: string;
+            /** Effective Work Folder */
+            effective_work_folder: string;
+            /** Movie Watched Folder Check Interval Seconds */
+            movie_watched_folder_check_interval_seconds: number;
+            /** Refiner Output Folder */
+            refiner_output_folder: string | null;
+            /** Refiner Tv Output Folder */
+            refiner_tv_output_folder: string | null;
+            /** Refiner Tv Watched Folder */
+            refiner_tv_watched_folder: string | null;
+            /** Refiner Tv Watched Folder Exists */
+            refiner_tv_watched_folder_exists: boolean;
+            /** Refiner Tv Work Folder */
+            refiner_tv_work_folder: string | null;
+            /** Refiner Watched Folder */
+            refiner_watched_folder: string | null;
+            /** Refiner Watched Folder Exists */
+            refiner_watched_folder_exists: boolean;
+            /** Refiner Work Folder */
+            refiner_work_folder: string | null;
+            /** Resolved Default Tv Work Folder */
+            resolved_default_tv_work_folder: string;
+            /** Resolved Default Work Folder */
+            resolved_default_work_folder: string;
+            /** Tv Watched Folder Check Interval Seconds */
+            tv_watched_folder_check_interval_seconds: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** RefinerPathSettingsPutIn */
+        RefinerPathSettingsPutIn: {
+            /** Csrf Token */
+            csrf_token: string;
+            /**
+             * Movie Watched Folder Check Interval Seconds
+             * @description When set, updates Movies watched-folder poll interval (seconds, 10–604800). Omit to leave unchanged.
+             */
+            movie_watched_folder_check_interval_seconds?: number | null;
+            /** Refiner Output Folder */
+            refiner_output_folder?: string | null;
+            /** Refiner Tv Output Folder */
+            refiner_tv_output_folder?: string | null;
+            /**
+             * Refiner Tv Paths Included
+             * @description When true, TV watched/work/output fields are validated and persisted (clear TV by sending empty values). When false, existing TV path columns are left unchanged (backward-compatible movie-only saves).
+             * @default false
+             */
+            refiner_tv_paths_included: boolean;
+            /** Refiner Tv Watched Folder */
+            refiner_tv_watched_folder?: string | null;
+            /** Refiner Tv Work Folder */
+            refiner_tv_work_folder?: string | null;
+            /** Refiner Watched Folder */
+            refiner_watched_folder?: string | null;
+            /** Refiner Work Folder */
+            refiner_work_folder?: string | null;
+            /**
+             * Tv Watched Folder Check Interval Seconds
+             * @description When set, updates TV watched-folder poll interval (seconds, 10–604800). Omit to leave unchanged.
+             */
+            tv_watched_folder_check_interval_seconds?: number | null;
+        };
+        /** RefinerRemuxRulesScopeOut */
+        RefinerRemuxRulesScopeOut: {
+            /**
+             * Audio Preference Mode
+             * @enum {string}
+             */
+            audio_preference_mode: "preferred_langs_quality" | "preferred_langs_strict" | "quality_all_languages";
+            /**
+             * Default Audio Slot
+             * @enum {string}
+             */
+            default_audio_slot: "primary" | "secondary";
+            /** Preserve Default Subs */
+            preserve_default_subs: boolean;
+            /** Preserve Forced Subs */
+            preserve_forced_subs: boolean;
+            /** Primary Audio Lang */
+            primary_audio_lang: string;
+            /** Remove Commentary */
+            remove_commentary: boolean;
+            /** Secondary Audio Lang */
+            secondary_audio_lang: string;
+            /**
+             * Subtitle Langs Csv
+             * @description Comma-separated ISO-style language tags used when subtitle_mode is keep_selected.
+             */
+            subtitle_langs_csv: string;
+            /**
+             * Subtitle Mode
+             * @enum {string}
+             */
+            subtitle_mode: "remove_all" | "keep_selected";
+            /** Tertiary Audio Lang */
+            tertiary_audio_lang: string;
+        };
+        /** RefinerRemuxRulesSettingsOut */
+        RefinerRemuxRulesSettingsOut: {
+            movie: components["schemas"]["RefinerRemuxRulesScopeOut"];
+            tv: components["schemas"]["RefinerRemuxRulesScopeOut"];
+            /** Updated At */
+            updated_at: string;
+        };
+        /** RefinerRemuxRulesSettingsPutIn */
+        RefinerRemuxRulesSettingsPutIn: {
+            /**
+             * Audio Preference Mode
+             * @default preferred_langs_quality
+             * @enum {string}
+             */
+            audio_preference_mode: "preferred_langs_quality" | "preferred_langs_strict" | "quality_all_languages";
+            /** Csrf Token */
+            csrf_token: string;
+            /**
+             * Default Audio Slot
+             * @default primary
+             * @enum {string}
+             */
+            default_audio_slot: "primary" | "secondary";
+            /**
+             * Media Scope
+             * @default movie
+             * @enum {string}
+             */
+            media_scope: "movie" | "tv";
+            /**
+             * Preserve Default Subs
+             * @default true
+             */
+            preserve_default_subs: boolean;
+            /**
+             * Preserve Forced Subs
+             * @default true
+             */
+            preserve_forced_subs: boolean;
+            /**
+             * Primary Audio Lang
+             * @default eng
+             */
+            primary_audio_lang: string;
+            /**
+             * Remove Commentary
+             * @default true
+             */
+            remove_commentary: boolean;
+            /**
+             * Secondary Audio Lang
+             * @default jpn
+             */
+            secondary_audio_lang: string;
+            /**
+             * Subtitle Langs Csv
+             * @default
+             */
+            subtitle_langs_csv: string;
+            /**
+             * Subtitle Mode
+             * @default remove_all
+             * @enum {string}
+             */
+            subtitle_mode: "remove_all" | "keep_selected";
+            /**
+             * Tertiary Audio Lang
+             * @default
+             */
+            tertiary_audio_lang: string;
+        };
+        /**
+         * RefinerRuntimeSettingsOut
+         * @description What this API process was configured to run for ``refiner_jobs`` in-process workers only.
+         */
+        RefinerRuntimeSettingsOut: {
+            /**
+             * Configuration Note
+             * @description How operators change the value (env + restart); not an in-app editor.
+             */
+            configuration_note: string;
+            /**
+             * Failure Cleanup Configuration Note
+             * @description How operators change Pass 4 failure-cleanup timers/grace (restart required).
+             */
+            failure_cleanup_configuration_note: string;
+            /**
+             * In Process Refiner Worker Count
+             * @description Mirrors MEDIAMOP_REFINER_WORKER_COUNT after clamping — Refiner lane only.
+             */
+            in_process_refiner_worker_count: number;
+            /**
+             * In Process Workers Disabled
+             * @description True when worker count is 0 (no in-process Refiner worker tasks).
+             */
+            in_process_workers_disabled: boolean;
+            /**
+             * In Process Workers Enabled
+             * @description True when at least one in-process Refiner worker task is configured.
+             */
+            in_process_workers_enabled: boolean;
+            /**
+             * Movie Output Cleanup Configuration Note
+             * @description How operators change Movies output-folder cleanup age gate (restart required).
+             */
+            movie_output_cleanup_configuration_note: string;
+            /**
+             * Refiner Analyze Duration Seconds
+             * @description ffprobe analyze duration in seconds for Refiner preflight analysis.
+             */
+            refiner_analyze_duration_seconds: number;
+            /**
+             * Refiner Movie Failure Cleanup Grace Period Seconds
+             * @description Failed remux age gate for Movies failure cleanup (uses refiner_jobs.updated_at).
+             */
+            refiner_movie_failure_cleanup_grace_period_seconds: number;
+            /**
+             * Refiner Movie Failure Cleanup Schedule Enabled
+             * @description ``MEDIAMOP_REFINER_MOVIE_FAILURE_CLEANUP_SCHEDULE_ENABLED`` at process start.
+             */
+            refiner_movie_failure_cleanup_schedule_enabled: boolean;
+            /**
+             * Refiner Movie Failure Cleanup Schedule Interval Seconds
+             * @description Seconds between Movies-only periodic failed-remux cleanup enqueue ticks.
+             */
+            refiner_movie_failure_cleanup_schedule_interval_seconds: number;
+            /**
+             * Refiner Movie Output Cleanup Min Age Seconds
+             * @description Minimum age (newest file mtime under the folder) before Pass 3a may delete a Movies output folder (1h..30d; default 48h).
+             */
+            refiner_movie_output_cleanup_min_age_seconds: number;
+            /**
+             * Refiner Probe Size Mb
+             * @description ffprobe probe size in MB for Refiner preflight analysis.
+             */
+            refiner_probe_size_mb: number;
+            /**
+             * Refiner Tv Failure Cleanup Grace Period Seconds
+             * @description Failed remux age gate for TV failure cleanup (uses refiner_jobs.updated_at).
+             */
+            refiner_tv_failure_cleanup_grace_period_seconds: number;
+            /**
+             * Refiner Tv Failure Cleanup Schedule Enabled
+             * @description ``MEDIAMOP_REFINER_TV_FAILURE_CLEANUP_SCHEDULE_ENABLED`` at process start.
+             */
+            refiner_tv_failure_cleanup_schedule_enabled: boolean;
+            /**
+             * Refiner Tv Failure Cleanup Schedule Interval Seconds
+             * @description Seconds between TV-only periodic failed-remux cleanup enqueue ticks.
+             */
+            refiner_tv_failure_cleanup_schedule_interval_seconds: number;
+            /**
+             * Refiner Tv Output Cleanup Min Age Seconds
+             * @description Minimum age (direct-child episode media newest mtime) before Pass 3b may delete a TV season output folder (1h..30d; default 48h).
+             */
+            refiner_tv_output_cleanup_min_age_seconds: number;
+            /**
+             * Refiner Watched Folder Min File Age Seconds
+             * @description Minimum file age before watched-folder scan or one-file pass touches media.
+             */
+            refiner_watched_folder_min_file_age_seconds: number;
+            /**
+             * Refiner Watched Folder Remux Scan Dispatch Periodic Enqueue Remux Jobs
+             * @description When true, periodic scans may enqueue ``refiner.file.remux_pass.v1``.
+             */
+            refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs: boolean;
+            /**
+             * Refiner Watched Folder Remux Scan Dispatch Schedule Enabled
+             * @description ``MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED`` at process start.
+             */
+            refiner_watched_folder_remux_scan_dispatch_schedule_enabled: boolean;
+            /**
+             * Refiner Watched Folder Remux Scan Dispatch Schedule Interval Seconds
+             * @description Seconds between periodic enqueue attempts (clamped 60..7d); restart required to change.
+             */
+            refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds: number;
+            /**
+             * Refiner Work Temp Stale Sweep Min Stale Age Seconds
+             * @description Minimum file age before Refiner removes its own stale temp work files (60s..30d). Shared for both scopes (narrow exception: same temp filename semantics).
+             */
+            refiner_work_temp_stale_sweep_min_stale_age_seconds: number;
+            /**
+             * Refiner Work Temp Stale Sweep Movie Schedule Enabled
+             * @description ``MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED`` at process start.
+             */
+            refiner_work_temp_stale_sweep_movie_schedule_enabled: boolean;
+            /**
+             * Refiner Work Temp Stale Sweep Movie Schedule Interval Seconds
+             * @description Seconds between Movies-only periodic stale temp sweep enqueue ticks (clamped 60..7d).
+             */
+            refiner_work_temp_stale_sweep_movie_schedule_interval_seconds: number;
+            /**
+             * Refiner Work Temp Stale Sweep Tv Schedule Enabled
+             * @description ``MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_ENABLED`` at process start.
+             */
+            refiner_work_temp_stale_sweep_tv_schedule_enabled: boolean;
+            /**
+             * Refiner Work Temp Stale Sweep Tv Schedule Interval Seconds
+             * @description Seconds between TV-only periodic stale temp sweep enqueue ticks (clamped 60..7d).
+             */
+            refiner_work_temp_stale_sweep_tv_schedule_interval_seconds: number;
+            /**
+             * Sqlite Throughput Note
+             * @description Honest caveat about SQLite single-writer behavior when count > 1.
+             */
+            sqlite_throughput_note: string;
+            /**
+             * Tv Output Cleanup Configuration Note
+             * @description How operators change TV output-folder cleanup age gate (restart required).
+             */
+            tv_output_cleanup_configuration_note: string;
+            /**
+             * Visibility Note
+             * @description Caveat: from settings loaded at startup — not a live probe of worker threads.
+             */
+            visibility_note: string;
+            /**
+             * Watched Folder Scan Periodic Configuration Note
+             * @description How operators change periodic scan env (restart required).
+             */
+            watched_folder_scan_periodic_configuration_note: string;
+            /**
+             * Work Temp Stale Sweep Periodic Configuration Note
+             * @description How operators change work/temp stale sweep env (restart required).
+             */
+            work_temp_stale_sweep_periodic_configuration_note: string;
+            /**
+             * Worker Mode Summary
+             * @description Plain-language summary for 0 / 1 / >1 Refiner workers.
+             */
+            worker_mode_summary: string;
+        };
+        /**
+         * RefinerSuppliedPayloadEvaluationManualEnqueueIn
+         * @description Operator-triggered enqueue (singleton dedupe; returns existing row when present).
+         */
+        RefinerSuppliedPayloadEvaluationManualEnqueueIn: {
+            /** Csrf Token */
+            csrf_token: string;
+        };
+        /** RefinerSuppliedPayloadEvaluationManualEnqueueOut */
+        RefinerSuppliedPayloadEvaluationManualEnqueueOut: {
+            /** Dedupe Key */
+            dedupe_key: string;
+            /** Job Id */
+            job_id: number;
+            /** Job Kind */
+            job_kind: string;
+            /**
+             * Ok
+             * @default true
+             */
+            ok: boolean;
+        };
+        /**
+         * RefinerWatchedFolderRemuxScanDispatchManualEnqueueIn
+         * @description Queue one watched-folder scan.
+         */
+        RefinerWatchedFolderRemuxScanDispatchManualEnqueueIn: {
+            /** Csrf Token */
+            csrf_token: string;
+            /**
+             * Enqueue Remux Jobs
+             * @description When true, files found in the watched folder are added to Refiner's processing queue. When false, MediaMop only checks the folder and writes an activity summary.
+             * @default true
+             */
+            enqueue_remux_jobs: boolean;
+            /**
+             * Media Scope
+             * @description Which saved watched/output tree this scan uses (Movies vs TV path settings).
+             * @default movie
+             * @enum {string}
+             */
+            media_scope: "movie" | "tv";
+        };
+        /** RefinerWatchedFolderRemuxScanDispatchManualEnqueueOut */
+        RefinerWatchedFolderRemuxScanDispatchManualEnqueueOut: {
+            /** Dedupe Key */
+            dedupe_key: string;
+            /** Job Id */
+            job_id: number;
+            /** Job Kind */
+            job_kind: string;
+            /**
+             * Ok
+             * @default true
+             */
+            ok: boolean;
+        };
+        /** SubberArrRootFolderOut */
+        SubberArrRootFolderOut: {
+            /** Free Space */
+            free_space?: number | null;
+            /** Path */
+            path: string;
+        };
+        /** SubberArrRootFoldersOut */
+        SubberArrRootFoldersOut: {
+            /** Folders */
+            folders?: components["schemas"]["SubberArrRootFolderOut"][];
+            /** Message */
+            message: string;
+            /** Ok */
+            ok: boolean;
+        };
+        /** SubberCsrfBody */
+        SubberCsrfBody: {
+            /** Csrf Token */
+            csrf_token: string;
+        };
+        /** SubberCsrfIn */
+        SubberCsrfIn: {
+            /** Csrf Token */
+            csrf_token: string;
+        };
+        /** SubberJobsInspectionOut */
+        SubberJobsInspectionOut: {
+            /** Default Recent Slice */
+            default_recent_slice: boolean;
+            /** Jobs */
+            jobs: components["schemas"]["SubberJobsInspectionRow"][];
+        };
+        /** SubberJobsInspectionRow */
+        SubberJobsInspectionRow: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Dedupe Key */
+            dedupe_key: string;
+            /** Id */
+            id: number;
+            /** Job Kind */
+            job_kind: string;
+            /** Last Error */
+            last_error?: string | null;
+            /** Payload Json */
+            payload_json?: string | null;
+            /** Scope */
+            scope?: string | null;
+            /** Status */
+            status: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** SubberMovieRowOut */
+        SubberMovieRowOut: {
+            /** File Path */
+            file_path: string;
+            /** Languages */
+            languages: components["schemas"]["SubberSubtitleLangStateOut"][];
+            /** Movie Title */
+            movie_title: string | null;
+            /** Movie Year */
+            movie_year: number | null;
+        };
+        /** SubberMoviesLibraryOut */
+        SubberMoviesLibraryOut: {
+            /** Movies */
+            movies: components["schemas"]["SubberMovieRowOut"][];
+            /**
+             * Total
+             * @description Total movies matching filters (before limit/offset).
+             * @default 0
+             */
+            total: number;
+        };
+        /** SubberOverviewOut */
+        SubberOverviewOut: {
+            /**
+             * Found Last 30 Days
+             * @description subtitle_search_completed with detail ok=true.
+             */
+            found_last_30_days: number;
+            /** Movies Found */
+            movies_found: number;
+            /** Movies Missing */
+            movies_missing: number;
+            /**
+             * Movies Tracked
+             * @description Rows with media_scope=movies.
+             */
+            movies_tracked: number;
+            /**
+             * Not Found Last 30 Days
+             * @description subtitle_search_completed with detail ok=false.
+             */
+            not_found_last_30_days: number;
+            /** Searches Last 30 Days */
+            searches_last_30_days: number;
+            /** Skipped */
+            skipped: number;
+            /** Still Missing */
+            still_missing: number;
+            /**
+             * Subtitles Downloaded
+             * @description Rows in subber_subtitle_state with status=found.
+             */
+            subtitles_downloaded: number;
+            /** Tv Found */
+            tv_found: number;
+            /** Tv Missing */
+            tv_missing: number;
+            /**
+             * Tv Tracked
+             * @description Rows with media_scope=tv.
+             */
+            tv_tracked: number;
+            /**
+             * Upgrades Last 30 Days
+             * @description Sum of upgraded from subtitle_upgrade_completed detail.
+             */
+            upgrades_last_30_days: number;
+            /**
+             * Window Days
+             * @default 30
+             */
+            window_days: number;
+        };
+        /** SubberProviderOut */
+        SubberProviderOut: {
+            /** Availability Note */
+            availability_note?: string | null;
+            /**
+             * Available
+             * @default true
+             */
+            available: boolean;
+            /** Display Name */
+            display_name: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Has Credentials */
+            has_credentials: boolean;
+            /** Priority */
+            priority?: number | null;
+            /** Provider Key */
+            provider_key: string;
+            /** Requires Account */
+            requires_account: boolean;
+        };
+        /** SubberProviderPutHttpIn */
+        SubberProviderPutHttpIn: {
+            /** Api Key */
+            api_key?: string | null;
+            /** Csrf Token */
+            csrf_token: string;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Password */
+            password?: string | null;
+            /** Priority */
+            priority?: number | null;
+            /** Username */
+            username?: string | null;
+        };
+        /**
+         * SubberSettingsOut
+         * @description Aggregated Subber settings (flat JSON for ``GET /api/v1/subber/settings``).
+         */
+        SubberSettingsOut: {
+            /**
+             * Adaptive Searching Delay Hours
+             * @default 168
+             */
+            adaptive_searching_delay_hours: number;
+            /**
+             * Adaptive Searching Enabled
+             * @default true
+             */
+            adaptive_searching_enabled: boolean;
+            /**
+             * Adaptive Searching Max Attempts
+             * @default 3
+             */
+            adaptive_searching_max_attempts: number;
+            /**
+             * Arr Library Radarr Base Url Hint
+             * @default
+             */
+            arr_library_radarr_base_url_hint: string;
+            /**
+             * Arr Library Sonarr Base Url Hint
+             * @default
+             */
+            arr_library_sonarr_base_url_hint: string;
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Exclude Hearing Impaired
+             * @default false
+             */
+            exclude_hearing_impaired: boolean;
+            /** Language Preferences */
+            language_preferences: string[];
+            /** Movies Last Scheduled Scan Enqueued At */
+            movies_last_scheduled_scan_enqueued_at?: string | null;
+            /** Movies Schedule Days */
+            movies_schedule_days: string;
+            /** Movies Schedule Enabled */
+            movies_schedule_enabled: boolean;
+            /** Movies Schedule End */
+            movies_schedule_end: string;
+            /** Movies Schedule Hours Limited */
+            movies_schedule_hours_limited: boolean;
+            /** Movies Schedule Interval Seconds */
+            movies_schedule_interval_seconds: number;
+            /** Movies Schedule Start */
+            movies_schedule_start: string;
+            /** Opensubtitles Api Key Set */
+            opensubtitles_api_key_set: boolean;
+            /** Opensubtitles Password Set */
+            opensubtitles_password_set: boolean;
+            /** Opensubtitles Username */
+            opensubtitles_username: string;
+            /**
+             * Permanent Skip After Attempts
+             * @default 10
+             */
+            permanent_skip_after_attempts: number;
+            /** Radarr Api Key Set */
+            radarr_api_key_set: boolean;
+            /** Radarr Base Url */
+            radarr_base_url: string;
+            /**
+             * Radarr Path Mapping Enabled
+             * @default false
+             */
+            radarr_path_mapping_enabled: boolean;
+            /**
+             * Radarr Path Radarr
+             * @default
+             */
+            radarr_path_radarr: string;
+            /**
+             * Radarr Path Subber
+             * @default
+             */
+            radarr_path_subber: string;
+            /** Sonarr Api Key Set */
+            sonarr_api_key_set: boolean;
+            /** Sonarr Base Url */
+            sonarr_base_url: string;
+            /**
+             * Sonarr Path Mapping Enabled
+             * @default false
+             */
+            sonarr_path_mapping_enabled: boolean;
+            /**
+             * Sonarr Path Sonarr
+             * @default
+             */
+            sonarr_path_sonarr: string;
+            /**
+             * Sonarr Path Subber
+             * @default
+             */
+            sonarr_path_subber: string;
+            /** Subtitle Folder */
+            subtitle_folder: string;
+            /** Tv Last Scheduled Scan Enqueued At */
+            tv_last_scheduled_scan_enqueued_at?: string | null;
+            /** Tv Schedule Days */
+            tv_schedule_days: string;
+            /** Tv Schedule Enabled */
+            tv_schedule_enabled: boolean;
+            /** Tv Schedule End */
+            tv_schedule_end: string;
+            /** Tv Schedule Hours Limited */
+            tv_schedule_hours_limited: boolean;
+            /** Tv Schedule Interval Seconds */
+            tv_schedule_interval_seconds: number;
+            /** Tv Schedule Start */
+            tv_schedule_start: string;
+            /**
+             * Upgrade Enabled
+             * @default false
+             */
+            upgrade_enabled: boolean;
+            /** Upgrade Last Scheduled At */
+            upgrade_last_scheduled_at?: string | null;
+            /**
+             * Upgrade Schedule Days
+             * @default
+             */
+            upgrade_schedule_days: string;
+            /**
+             * Upgrade Schedule Enabled
+             * @default false
+             */
+            upgrade_schedule_enabled: boolean;
+            /**
+             * Upgrade Schedule End
+             * @default 23:59
+             */
+            upgrade_schedule_end: string;
+            /**
+             * Upgrade Schedule Hours Limited
+             * @default false
+             */
+            upgrade_schedule_hours_limited: boolean;
+            /**
+             * Upgrade Schedule Interval Seconds
+             * @default 604800
+             */
+            upgrade_schedule_interval_seconds: number;
+            /**
+             * Upgrade Schedule Start
+             * @default 00:00
+             */
+            upgrade_schedule_start: string;
+        };
+        /** SubberSettingsPutHttpIn */
+        SubberSettingsPutHttpIn: {
+            /** Adaptive Searching Delay Hours */
+            adaptive_searching_delay_hours?: number | null;
+            /** Adaptive Searching Enabled */
+            adaptive_searching_enabled?: boolean | null;
+            /** Adaptive Searching Max Attempts */
+            adaptive_searching_max_attempts?: number | null;
+            /** Csrf Token */
+            csrf_token: string;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Exclude Hearing Impaired */
+            exclude_hearing_impaired?: boolean | null;
+            /** Language Preferences */
+            language_preferences?: string[] | null;
+            /** Movies Schedule Days */
+            movies_schedule_days?: string | null;
+            /** Movies Schedule Enabled */
+            movies_schedule_enabled?: boolean | null;
+            /** Movies Schedule End */
+            movies_schedule_end?: string | null;
+            /** Movies Schedule Hours Limited */
+            movies_schedule_hours_limited?: boolean | null;
+            /** Movies Schedule Interval Seconds */
+            movies_schedule_interval_seconds?: number | null;
+            /** Movies Schedule Start */
+            movies_schedule_start?: string | null;
+            /** Opensubtitles Api Key */
+            opensubtitles_api_key?: string | null;
+            /** Opensubtitles Password */
+            opensubtitles_password?: string | null;
+            /** Opensubtitles Username */
+            opensubtitles_username?: string | null;
+            /** Permanent Skip After Attempts */
+            permanent_skip_after_attempts?: number | null;
+            /** Radarr Api Key */
+            radarr_api_key?: string | null;
+            /** Radarr Base Url */
+            radarr_base_url?: string | null;
+            /** Radarr Path Mapping Enabled */
+            radarr_path_mapping_enabled?: boolean | null;
+            /** Radarr Path Radarr */
+            radarr_path_radarr?: string | null;
+            /** Radarr Path Subber */
+            radarr_path_subber?: string | null;
+            /** Sonarr Api Key */
+            sonarr_api_key?: string | null;
+            /** Sonarr Base Url */
+            sonarr_base_url?: string | null;
+            /** Sonarr Path Mapping Enabled */
+            sonarr_path_mapping_enabled?: boolean | null;
+            /** Sonarr Path Sonarr */
+            sonarr_path_sonarr?: string | null;
+            /** Sonarr Path Subber */
+            sonarr_path_subber?: string | null;
+            /** Subtitle Folder */
+            subtitle_folder?: string | null;
+            /** Tv Schedule Days */
+            tv_schedule_days?: string | null;
+            /** Tv Schedule Enabled */
+            tv_schedule_enabled?: boolean | null;
+            /** Tv Schedule End */
+            tv_schedule_end?: string | null;
+            /** Tv Schedule Hours Limited */
+            tv_schedule_hours_limited?: boolean | null;
+            /** Tv Schedule Interval Seconds */
+            tv_schedule_interval_seconds?: number | null;
+            /** Tv Schedule Start */
+            tv_schedule_start?: string | null;
+            /** Upgrade Enabled */
+            upgrade_enabled?: boolean | null;
+            /** Upgrade Schedule Days */
+            upgrade_schedule_days?: string | null;
+            /** Upgrade Schedule Enabled */
+            upgrade_schedule_enabled?: boolean | null;
+            /** Upgrade Schedule End */
+            upgrade_schedule_end?: string | null;
+            /** Upgrade Schedule Hours Limited */
+            upgrade_schedule_hours_limited?: boolean | null;
+            /** Upgrade Schedule Interval Seconds */
+            upgrade_schedule_interval_seconds?: number | null;
+            /** Upgrade Schedule Start */
+            upgrade_schedule_start?: string | null;
+        };
+        /** SubberSubtitleLangStateOut */
+        SubberSubtitleLangStateOut: {
+            /** Language Code */
+            language_code: string;
+            /** Last Searched At */
+            last_searched_at?: string | null;
+            /** Provider Key */
+            provider_key?: string | null;
+            /** Search Count */
+            search_count: number;
+            /** Source */
+            source?: string | null;
+            /** State Id */
+            state_id: number;
+            /** Status */
+            status: string;
+            /** Subtitle Path */
+            subtitle_path?: string | null;
+            /**
+             * Upgrade Count
+             * @default 0
+             */
+            upgrade_count: number;
+        };
+        /** SubberTestConnectionOut */
+        SubberTestConnectionOut: {
+            /** Message */
+            message: string;
+            /** Ok */
+            ok: boolean;
+        };
+        /** SubberTvEpisodeOut */
+        SubberTvEpisodeOut: {
+            /** Episode Number */
+            episode_number: number | null;
+            /** Episode Title */
+            episode_title: string | null;
+            /** File Path */
+            file_path: string;
+            /** Languages */
+            languages: components["schemas"]["SubberSubtitleLangStateOut"][];
+        };
+        /** SubberTvLibraryOut */
+        SubberTvLibraryOut: {
+            /** Shows */
+            shows: components["schemas"]["SubberTvShowOut"][];
+            /**
+             * Total
+             * @description Total episodes matching filters (before limit/offset).
+             * @default 0
+             */
+            total: number;
+        };
+        /** SubberTvSeasonOut */
+        SubberTvSeasonOut: {
+            /** Episodes */
+            episodes: components["schemas"]["SubberTvEpisodeOut"][];
+            /** Season Number */
+            season_number: number | null;
+        };
+        /** SubberTvShowOut */
+        SubberTvShowOut: {
+            /** Seasons */
+            seasons: components["schemas"]["SubberTvSeasonOut"][];
+            /** Show Title */
+            show_title: string;
+        };
+        /** SuiteConfigurationBackupItemOut */
+        SuiteConfigurationBackupItemOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** File Name */
+            file_name: string;
+            /** Id */
+            id: number;
+            /** Size Bytes */
+            size_bytes: number;
+        };
+        /** SuiteConfigurationBackupListOut */
+        SuiteConfigurationBackupListOut: {
+            /** Directory */
+            directory: string;
+            /** Items */
+            items: components["schemas"]["SuiteConfigurationBackupItemOut"][];
+        };
+        /** SuiteLogCountsOut */
+        SuiteLogCountsOut: {
+            /** Error */
+            error: number;
+            /** Information */
+            information: number;
+            /** Warning */
+            warning: number;
+        };
+        /** SuiteLogEntryOut */
+        SuiteLogEntryOut: {
+            /** Component */
+            component: string;
+            /** Correlation Id */
+            correlation_id?: string | null;
+            /** Detail */
+            detail?: string | null;
+            /** Job Id */
+            job_id?: string | null;
+            /** Level */
+            level: string;
+            /** Logger */
+            logger: string;
+            /** Message */
+            message: string;
+            /** Source */
+            source?: string | null;
+            /**
+             * Timestamp
+             * Format: date-time
+             */
+            timestamp: string;
+            /** Traceback */
+            traceback?: string | null;
+        };
+        /** SuiteLogsOut */
+        SuiteLogsOut: {
+            counts: components["schemas"]["SuiteLogCountsOut"];
+            /** Items */
+            items: components["schemas"]["SuiteLogEntryOut"][];
+            /** Total */
+            total: number;
+        };
+        /** SuiteMetricsOut */
+        SuiteMetricsOut: {
+            /** Average Response Ms */
+            average_response_ms: number;
+            /** Busiest Routes */
+            busiest_routes: components["schemas"]["SuiteMetricsRouteOut"][];
+            /** Error Log Count */
+            error_log_count: number;
+            /** Status Counts */
+            status_counts: {
+                [key: string]: number;
+            };
+            /** Total Requests */
+            total_requests: number;
+            /** Uptime Seconds */
+            uptime_seconds: number;
+        };
+        /** SuiteMetricsRouteOut */
+        SuiteMetricsRouteOut: {
+            /** Average Response Ms */
+            average_response_ms: number;
+            /** Request Count */
+            request_count: number;
+            /** Route */
+            route: string;
+        };
+        /**
+         * SuiteOperationalHistoryResetIn
+         * @description Body for ``POST /suite/operational-history/reset``.
+         */
+        SuiteOperationalHistoryResetIn: {
+            /** Confirm */
+            confirm: string;
+            /** Csrf Token */
+            csrf_token: string;
+        };
+        /**
+         * SuiteOperationalHistoryResetOut
+         * @description Counts removed by an explicit operator reset.
+         */
+        SuiteOperationalHistoryResetOut: {
+            /** Activity Events Deleted */
+            activity_events_deleted: number;
+            /** Pruner Jobs Deleted */
+            pruner_jobs_deleted: number;
+            /** Refiner Jobs Deleted */
+            refiner_jobs_deleted: number;
+            /** Status */
+            status: string;
+            /** Subber Jobs Deleted */
+            subber_jobs_deleted: number;
+            /** Total Deleted */
+            total_deleted: number;
+        };
+        /**
+         * SuiteSecurityOverviewOut
+         * @description Read-only snapshot from startup configuration — not stored in ``suite_settings``.
+         */
+        SuiteSecurityOverviewOut: {
+            /**
+             * Allowed Browser Origins Count
+             * @description How many website addresses may call this app from a browser.
+             */
+            allowed_browser_origins_count: number;
+            /**
+             * Extra Https Hardening Enabled
+             * @description Whether strict transport (HSTS) extra protection is enabled for browser responses.
+             */
+            extra_https_hardening_enabled: boolean;
+            /**
+             * First Time Setup Attempt Limit
+             * @description How many first-time setup tries are allowed before cooling off.
+             */
+            first_time_setup_attempt_limit: number;
+            /**
+             * First Time Setup Attempt Window Plain
+             * @description How long the first-time setup try window lasts, in everyday wording.
+             */
+            first_time_setup_attempt_window_plain: string;
+            /**
+             * Restart Required Note
+             * @description Plain explanation that these values follow the server configuration file and a restart.
+             */
+            restart_required_note: string;
+            /**
+             * Session Signing Configured
+             * @description Whether the app was started with a sign-in signing key configured.
+             */
+            session_signing_configured: boolean;
+            /**
+             * Sign In Attempt Limit
+             * @description How many failed sign-in tries are allowed before cooling off.
+             */
+            sign_in_attempt_limit: number;
+            /**
+             * Sign In Attempt Window Plain
+             * @description How long the sign-in try window lasts, in everyday wording.
+             */
+            sign_in_attempt_window_plain: string;
+            /**
+             * Sign In Cookie Https Only
+             * @description Whether the sign-in cookie is marked for HTTPS only.
+             */
+            sign_in_cookie_https_only: boolean;
+            /**
+             * Sign In Cookie Same Site
+             * @description How strictly the browser limits the sign-in cookie.
+             */
+            sign_in_cookie_same_site: string;
+            /**
+             * Standard Session Absolute Timeout Plain
+             * @description Maximum lifetime of a standard sign-in, even if active.
+             */
+            standard_session_absolute_timeout_plain: string;
+            /**
+             * Standard Session Idle Timeout Plain
+             * @description How long a standard device can stay idle before sign-in expires.
+             */
+            standard_session_idle_timeout_plain: string;
+            /**
+             * Trusted Session Absolute Timeout Plain
+             * @description Maximum lifetime of a trusted-device sign-in, even if active.
+             */
+            trusted_session_absolute_timeout_plain: string;
+            /**
+             * Trusted Session Idle Timeout Plain
+             * @description How long a trusted device can stay idle before sign-in expires.
+             */
+            trusted_session_idle_timeout_plain: string;
+        };
+        /**
+         * SuiteSettingsOut
+         * @description Values stored in ``suite_settings`` (editable in the app).
+         */
+        SuiteSettingsOut: {
+            /**
+             * App Timezone
+             * @description Suite-wide timezone label used for date/time displays that follow app timezone.
+             */
+            app_timezone: string;
+            /**
+             * Configuration Backup Enabled
+             * @description Whether server-side automatic configuration snapshots are enabled.
+             */
+            configuration_backup_enabled: boolean;
+            /**
+             * Configuration Backup Interval Hours
+             * @description Minimum hours between automatic configuration snapshots.
+             */
+            configuration_backup_interval_hours: number;
+            /**
+             * Configuration Backup Last Run At
+             * @description UTC timestamp of the last successful automatic configuration snapshot run.
+             */
+            configuration_backup_last_run_at?: string | null;
+            /**
+             * Configuration Backup Preferred Time
+             * @description Preferred local backup time in HH:MM for daily-style automatic snapshots.
+             */
+            configuration_backup_preferred_time: string;
+            /**
+             * Log Retention Days
+             * @description How long persisted system logs are kept before automatic cleanup.
+             */
+            log_retention_days: number;
+            /**
+             * Product Display Name
+             * @description Shown in the sidebar and settings.
+             */
+            product_display_name: string;
+            /**
+             * Setup Wizard State
+             * @description First-run wizard state: pending, skipped, or completed.
+             */
+            setup_wizard_state: string;
+            /**
+             * Signed In Home Notice
+             * @description Optional short message on the home dashboard for signed-in users.
+             */
+            signed_in_home_notice?: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * SuiteSettingsPutIn
+         * @description Body for ``PUT /suite/settings``.
+         *
+         *     ``extra="ignore"`` keeps older browser builds or tools from failing when they send removed keys.
+         *     ``application_logs_enabled`` is accepted for compatibility with pre-0047 APIs but is not persisted.
+         */
+        SuiteSettingsPutIn: {
+            /** App Timezone */
+            app_timezone: string;
+            /**
+             * Application Logs Enabled
+             * @description Deprecated; retained so older clients can POST without changes. Ignored when persisting.
+             */
+            application_logs_enabled?: boolean | null;
+            /**
+             * Configuration Backup Enabled
+             * @description Enable or disable periodic automatic configuration snapshots.
+             */
+            configuration_backup_enabled?: boolean | null;
+            /**
+             * Configuration Backup Interval Hours
+             * @description Minimum hours between automatic configuration snapshots.
+             */
+            configuration_backup_interval_hours?: number | null;
+            /**
+             * Configuration Backup Preferred Time
+             * @description Preferred local backup time in HH:MM for daily-style automatic snapshots.
+             */
+            configuration_backup_preferred_time?: string | null;
+            /** Csrf Token */
+            csrf_token: string;
+            /** Log Retention Days */
+            log_retention_days: number;
+            /** Product Display Name */
+            product_display_name: string;
+            /** Setup Wizard State */
+            setup_wizard_state?: string | null;
+            /** Signed In Home Notice */
+            signed_in_home_notice?: string | null;
+        };
+        /**
+         * SuiteUpdateStatusOut
+         * @description Current app version compared with the latest public release.
+         */
+        SuiteUpdateStatusOut: {
+            /** Current Version */
+            current_version: string;
+            /** Docker Image */
+            docker_image?: string | null;
+            /** Docker Tag */
+            docker_tag?: string | null;
+            /** Docker Update Command */
+            docker_update_command?: string | null;
+            /** In App Upgrade Summary */
+            in_app_upgrade_summary?: string | null;
+            /**
+             * In App Upgrade Supported
+             * @default false
+             */
+            in_app_upgrade_supported: boolean;
+            /**
+             * Install Type
+             * @description windows, docker, or source
+             */
+            install_type: string;
+            /** Latest Name */
+            latest_name?: string | null;
+            /** Latest Version */
+            latest_version?: string | null;
+            /** Published At */
+            published_at?: string | null;
+            /** Release Url */
+            release_url?: string | null;
+            /**
+             * Status
+             * @description up_to_date, update_available, or unavailable
+             */
+            status: string;
+            /** Summary */
+            summary: string;
+            /** Windows Installer Url */
+            windows_installer_url?: string | null;
+        };
+        /** SystemStatusOut */
+        SystemStatusOut: {
+            /**
+             * Api Version
+             * @description MediaMop API package version.
+             */
+            api_version: string;
+            /**
+             * Environment
+             * @description MEDIAMOP_ENV value.
+             */
+            environment: string;
+            /**
+             * Healthy
+             * @description Process liveness (same signal as GET /health).
+             */
+            healthy: boolean;
+            /** Worker Health */
+            worker_health?: components["schemas"]["WorkerLaneHealthOut"][];
+        };
+        /** UserPublic */
+        UserPublic: {
+            /** Id */
+            id: number;
+            /** Role */
+            role: string;
+            /** Username */
+            username: string;
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+        };
+        /** WorkerLaneHealthOut */
+        WorkerLaneHealthOut: {
+            /** Active Workers */
+            active_workers: number;
+            /** Detail */
+            detail: string;
+            /** Expected Workers */
+            expected_workers: number;
+            /** Module */
+            module: string;
+            /** Stale Workers */
+            stale_workers: number;
+            /**
+             * Status
+             * @description healthy, degraded, or disabled.
+             */
+            status: string;
+            /** Stopped Workers */
+            stopped_workers: number;
+        };
+    };
+    responses: never;
+    parameters: never;
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-  get_activity_recent_api_v1_activity_recent_get: {
-    parameters: {
-      query?: {
-        limit?: number;
-        module?: string | null;
-        event_type?: string | null;
-        search?: string | null;
-        date_from?: string | null;
-        date_to?: string | null;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ActivityRecentOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_activity_stream_api_v1_activity_stream_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": unknown;
-        };
-      };
-    };
-  };
-  put_arr_library_connection_radarr_api_v1_arr_library_arr_connection_radarr_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ArrLibraryConnectionPutIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ArrLibraryOperatorSettingsOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  put_arr_library_connection_sonarr_api_v1_arr_library_arr_connection_sonarr_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ArrLibraryConnectionPutIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ArrLibraryOperatorSettingsOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_arr_library_operator_settings_api_v1_arr_library_arr_operator_settings_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ArrLibraryOperatorSettingsOut"];
-        };
-      };
-    };
-  };
-  put_arr_library_operator_settings_api_v1_arr_library_arr_operator_settings_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ArrLibraryOperatorSettingsPutIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ArrLibraryOperatorSettingsOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_arr_library_connection_test_api_v1_arr_library_arr_operator_settings_connection_test_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ArrLibraryConnectionTestIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ArrLibraryConnectionTestOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  put_arr_library_operator_settings_lane_api_v1_arr_library_arr_operator_settings_lanes__lane_key__put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        lane_key: components["schemas"]["ArrSearchLaneKey"];
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ArrLibraryOperatorSettingsLanePutIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ArrLibraryOperatorSettingsOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_bootstrap_api_v1_auth_bootstrap_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["BootstrapIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["BootstrapOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_bootstrap_status_api_v1_auth_bootstrap_status_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["BootstrapStatusOut"];
-        };
-      };
-    };
-  };
-  post_change_password_api_v1_auth_change_password_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ChangePasswordIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ChangePasswordOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_csrf_api_v1_auth_csrf_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["CsrfOut"];
-        };
-      };
-    };
-  };
-  post_login_api_v1_auth_login_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["LoginIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["LoginOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_logout_api_v1_auth_logout_post: {
-    parameters: {
-      query?: never;
-      header?: {
-        "X-CSRF-Token"?: string | null;
-      };
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: {
-      content: {
-        "application/json": components["schemas"]["LogoutIn"] | null;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_me_api_v1_auth_me_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["MeOut"];
-        };
-      };
-    };
-  };
-  get_current_session_api_v1_auth_session_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["CurrentSessionOut"];
-        };
-      };
-    };
-  };
-  get_dashboard_status_api_v1_dashboard_status_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["DashboardStatusOut"];
-        };
-      };
-    };
-  };
-  list_pruner_instances_api_v1_pruner_instances_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PrunerServerInstanceOut"][];
-        };
-      };
-    };
-  };
-  post_pruner_instance_api_v1_pruner_instances_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["PrunerServerInstanceCreateHttpIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PrunerServerInstanceOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_pruner_instance_api_v1_pruner_instances__instance_id__get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        instance_id: number;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PrunerServerInstanceOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  patch_pruner_instance_api_v1_pruner_instances__instance_id__patch: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        instance_id: number;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["PrunerServerInstancePatchHttpIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PrunerServerInstanceOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_pruner_connection_test_api_v1_pruner_instances__instance_id__connection_test_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        instance_id: number;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["PrunerConnectionTestIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PrunerEnqueueOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  list_pruner_preview_runs_api_v1_pruner_instances__instance_id__preview_runs_get: {
-    parameters: {
-      query?: {
-        /** @description `tv` or `movies`; omit for all scopes on this instance. */
-        media_scope?: string | null;
-        limit?: number;
-      };
-      header?: never;
-      path: {
-        instance_id: number;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PrunerPreviewRunListItemOut"][];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_pruner_preview_run_api_v1_pruner_instances__instance_id__preview_runs__preview_run_uuid__get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        instance_id: number;
-        preview_run_uuid: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PrunerPreviewRunOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_pruner_preview_api_v1_pruner_instances__instance_id__previews_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        instance_id: number;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["PrunerPreviewEnqueueIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PrunerEnqueueOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_pruner_scope_api_v1_pruner_instances__instance_id__scopes__media_scope__get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        instance_id: number;
-        /** @description `tv` or `movies` */
-        media_scope: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PrunerScopeSummaryOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  patch_pruner_scope_api_v1_pruner_instances__instance_id__scopes__media_scope__patch: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        instance_id: number;
-        media_scope: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["PrunerScopePatchHttpIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PrunerScopeSummaryOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_pruner_plex_live_removal_api_v1_pruner_instances__instance_id__scopes__media_scope__plex_live_removal_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        instance_id: number;
-        media_scope: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["PrunerApplyHttpIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PrunerEnqueueOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_pruner_plex_live_removal_eligibility_api_v1_pruner_instances__instance_id__scopes__media_scope__plex_live_removal_eligibility_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        instance_id: number;
-        /** @description `tv` or `movies` */
-        media_scope: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PrunerPlexLiveEligibilityOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_pruner_apply_from_preview_api_v1_pruner_instances__instance_id__scopes__media_scope__preview_runs__preview_run_uuid__apply_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        instance_id: number;
-        media_scope: string;
-        preview_run_uuid: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["PrunerApplyHttpIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PrunerEnqueueOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_pruner_apply_eligibility_api_v1_pruner_instances__instance_id__scopes__media_scope__preview_runs__preview_run_uuid__apply_eligibility_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        instance_id: number;
-        /** @description `tv` or `movies` */
-        media_scope: string;
-        preview_run_uuid: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PrunerApplyEligibilityOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_pruner_instance_studios_api_v1_pruner_instances__instance_id__studios_get: {
-    parameters: {
-      query: {
-        /** @description `tv` or `movies` */
-        scope: string;
-      };
-      header?: never;
-      path: {
-        instance_id: number;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PrunerStudiosOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_pruner_jobs_inspection_api_v1_pruner_jobs_inspection_get: {
-    parameters: {
-      query?: {
-        limit?: number;
-        /** @description Optional filter by persisted status (repeat param). */
-        status?: string[] | null;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PrunerJobsInspectionOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_pruner_overview_stats_api_v1_pruner_overview_stats_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["PrunerOverviewStatsOut"];
-        };
-      };
-    };
-  };
-  post_refiner_candidate_gate_enqueue_api_v1_refiner_jobs_candidate_gate_enqueue_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["RefinerCandidateGateManualEnqueueIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RefinerCandidateGateManualEnqueueOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_refiner_file_remux_pass_enqueue_api_v1_refiner_jobs_file_remux_pass_enqueue_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["RefinerFileRemuxPassManualEnqueueIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RefinerFileRemuxPassManualEnqueueOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_refiner_jobs_inspection_api_v1_refiner_jobs_inspection_get: {
-    parameters: {
-      query?: {
-        /** @description Max rows to return. */
-        limit?: number;
-        /** @description Optional filter by persisted status (repeat param). Omit to return the newest rows across all statuses (pending, leased, terminal, cancelled). */
-        status?: string[] | null;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RefinerJobsInspectionOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_refiner_supplied_payload_evaluation_enqueue_api_v1_refiner_jobs_supplied_payload_evaluation_enqueue_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["RefinerSuppliedPayloadEvaluationManualEnqueueIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RefinerSuppliedPayloadEvaluationManualEnqueueOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_refiner_watched_folder_remux_scan_dispatch_enqueue_api_v1_refiner_jobs_watched_folder_remux_scan_dispatch_enqueue_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["RefinerWatchedFolderRemuxScanDispatchManualEnqueueIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RefinerWatchedFolderRemuxScanDispatchManualEnqueueOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_refiner_job_cancel_pending_api_v1_refiner_jobs__job_id__cancel_pending_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        job_id: number;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["RefinerJobCancelPendingIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RefinerJobCancelPendingOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_refiner_operator_settings_api_v1_refiner_operator_settings_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RefinerOperatorSettingsOut"];
-        };
-      };
-    };
-  };
-  put_refiner_operator_settings_api_v1_refiner_operator_settings_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["RefinerOperatorSettingsPutIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RefinerOperatorSettingsOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_refiner_overview_stats_api_v1_refiner_overview_stats_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RefinerOverviewStatsOut"];
-        };
-      };
-    };
-  };
-  get_refiner_path_settings_api_v1_refiner_path_settings_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RefinerPathSettingsOut"];
-        };
-      };
-    };
-  };
-  put_refiner_path_settings_api_v1_refiner_path_settings_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["RefinerPathSettingsPutIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RefinerPathSettingsOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_refiner_remux_rules_settings_api_v1_refiner_remux_rules_settings_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RefinerRemuxRulesSettingsOut"];
-        };
-      };
-    };
-  };
-  put_refiner_remux_rules_settings_api_v1_refiner_remux_rules_settings_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["RefinerRemuxRulesSettingsPutIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RefinerRemuxRulesSettingsOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_refiner_runtime_settings_api_v1_refiner_runtime_settings_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RefinerRuntimeSettingsOut"];
-        };
-      };
-    };
-  };
-  get_subber_jobs_api_v1_subber_jobs_get: {
-    parameters: {
-      query?: {
-        limit?: number;
-        /** @description Optional filter by persisted status (repeat param). */
-        status?: string[] | null;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SubberJobsInspectionOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_subber_library_movies_api_v1_subber_library_movies_get: {
-    parameters: {
-      query?: {
-        status?: string | null;
-        search?: string | null;
-        language?: string | null;
-        limit?: number;
-        offset?: number;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SubberMoviesLibraryOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_subber_search_all_missing_movies_api_v1_subber_library_search_all_missing_movies_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SubberCsrfBody"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            [key: string]: string;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_subber_search_all_missing_tv_api_v1_subber_library_search_all_missing_tv_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SubberCsrfBody"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            [key: string]: string;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_subber_library_sync_movies_api_v1_subber_library_sync_movies_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SubberCsrfBody"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            [key: string]: string;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_subber_library_sync_tv_api_v1_subber_library_sync_tv_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SubberCsrfBody"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            [key: string]: string;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_subber_library_tv_api_v1_subber_library_tv_get: {
-    parameters: {
-      query?: {
-        status?: string | null;
-        search?: string | null;
-        language?: string | null;
-        limit?: number;
-        offset?: number;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SubberTvLibraryOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_subber_search_now_api_v1_subber_library__state_id__search_now_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        state_id: number;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SubberCsrfBody"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            [key: string]: string;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_subber_overview_api_v1_subber_overview_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SubberOverviewOut"];
-        };
-      };
-    };
-  };
-  get_subber_providers_api_v1_subber_providers_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SubberProviderOut"][];
-        };
-      };
-    };
-  };
-  put_subber_provider_api_v1_subber_providers__provider_key__put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        provider_key: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SubberProviderPutHttpIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SubberProviderOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_subber_provider_test_api_v1_subber_providers__provider_key__test_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        provider_key: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SubberCsrfIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SubberTestConnectionOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_subber_settings_api_v1_subber_settings_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SubberSettingsOut"];
-        };
-      };
-    };
-  };
-  put_subber_settings_api_v1_subber_settings_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SubberSettingsPutHttpIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SubberSettingsOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_radarr_root_folders_api_v1_subber_settings_radarr_root_folders_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SubberCsrfIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SubberArrRootFoldersOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_sonarr_root_folders_api_v1_subber_settings_sonarr_root_folders_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SubberCsrfIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SubberArrRootFoldersOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_test_opensubtitles_api_v1_subber_settings_test_opensubtitles_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SubberCsrfIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SubberTestConnectionOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_test_radarr_api_v1_subber_settings_test_radarr_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SubberCsrfIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SubberTestConnectionOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_test_sonarr_api_v1_subber_settings_test_sonarr_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SubberCsrfIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SubberTestConnectionOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_radarr_webhook_api_v1_subber_webhook_radarr_post: {
-    parameters: {
-      query?: never;
-      header?: {
-        "X-Webhook-Secret"?: string | null;
-      };
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": {
-          [key: string]: unknown;
-        };
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            [key: string]: string;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_sonarr_webhook_api_v1_subber_webhook_sonarr_post: {
-    parameters: {
-      query?: never;
-      header?: {
-        "X-Webhook-Secret"?: string | null;
-      };
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": {
-          [key: string]: unknown;
-        };
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            [key: string]: string;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_configuration_backups_api_v1_suite_configuration_backups_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SuiteConfigurationBackupListOut"];
-        };
-      };
-    };
-  };
-  download_configuration_backup_api_v1_suite_configuration_backups__backup_id__download_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        backup_id: number;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": unknown;
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_configuration_bundle_api_v1_suite_configuration_bundle_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-    };
-  };
-  put_configuration_bundle_api_v1_suite_configuration_bundle_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ConfigurationBundleImportIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_suite_logs_api_v1_suite_logs_get: {
-    parameters: {
-      query?: {
-        level?: string | null;
-        search?: string | null;
-        has_exception?: boolean | null;
-        limit?: number;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SuiteLogsOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_suite_metrics_api_v1_suite_metrics_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SuiteMetricsOut"];
-        };
-      };
-    };
-  };
-  get_notification_channels_api_v1_suite_notification_channels_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["NotificationChannelListOut"];
-        };
-      };
-    };
-  };
-  post_notification_channel_api_v1_suite_notification_channels_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["NotificationChannelIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["NotificationChannelOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  put_notification_channel_api_v1_suite_notification_channels__channel_id__put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        channel_id: number;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["NotificationChannelIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["NotificationChannelOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  delete_notification_channel_route_api_v1_suite_notification_channels__channel_id__delete: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        channel_id: number;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_notification_channel_test_api_v1_suite_notification_channels__channel_id__test_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        channel_id: number;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["NotificationChannelTestIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["NotificationChannelTestOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_suite_operational_history_reset_api_v1_suite_operational_history_reset_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SuiteOperationalHistoryResetIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SuiteOperationalHistoryResetOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_suite_security_overview_api_v1_suite_security_overview_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SuiteSecurityOverviewOut"];
-        };
-      };
-    };
-  };
-  get_suite_settings_api_v1_suite_settings_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SuiteSettingsOut"];
-        };
-      };
-    };
-  };
-  put_suite_settings_api_v1_suite_settings_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SuiteSettingsPutIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SuiteSettingsOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_configuration_bundle_api_v1_suite_settings_configuration_bundle_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-    };
-  };
-  put_configuration_bundle_api_v1_suite_settings_configuration_bundle_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ConfigurationBundleImportIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_suite_update_status_api_v1_suite_settings_update_status_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SuiteUpdateStatusOut"];
-        };
-      };
-    };
-  };
-  get_suite_update_status_api_v1_suite_update_status_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SuiteUpdateStatusOut"];
-        };
-      };
-    };
-  };
-  get_system_directories_api_v1_system_directories_get: {
-    parameters: {
-      query?: {
-        path?: string | null;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["DirectoryBrowseOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_reconciliation_report_api_v1_system_reconciliation_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": unknown;
-        };
-      };
-    };
-  };
-  post_reconciliation_repair_api_v1_system_reconciliation_repair_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ReconciliationRepairIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": unknown;
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_suite_configuration_backups_api_v1_system_suite_configuration_backups_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SuiteConfigurationBackupListOut"];
-        };
-      };
-    };
-  };
-  download_suite_configuration_backup_api_v1_system_suite_configuration_backups__backup_id__download_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        backup_id: number;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": unknown;
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_suite_configuration_bundle_api_v1_system_suite_configuration_bundle_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-    };
-  };
-  put_suite_configuration_bundle_api_v1_system_suite_configuration_bundle_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ConfigurationBundleImportIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  health_health_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HealthResponse"];
-        };
-      };
-    };
-  };
-  ready_ready_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ReadinessResponse"];
-        };
-      };
-    };
-  };
+    get_activity_recent_api_v1_activity_recent_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                module?: string | null;
+                event_type?: string | null;
+                search?: string | null;
+                date_from?: string | null;
+                date_to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityRecentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_activity_stream_api_v1_activity_stream_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    put_arr_library_connection_radarr_api_v1_arr_library_arr_connection_radarr_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArrLibraryConnectionPutIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArrLibraryOperatorSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_arr_library_connection_sonarr_api_v1_arr_library_arr_connection_sonarr_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArrLibraryConnectionPutIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArrLibraryOperatorSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_arr_library_operator_settings_api_v1_arr_library_arr_operator_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArrLibraryOperatorSettingsOut"];
+                };
+            };
+        };
+    };
+    put_arr_library_operator_settings_api_v1_arr_library_arr_operator_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArrLibraryOperatorSettingsPutIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArrLibraryOperatorSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_arr_library_connection_test_api_v1_arr_library_arr_operator_settings_connection_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArrLibraryConnectionTestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArrLibraryConnectionTestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_arr_library_operator_settings_lane_api_v1_arr_library_arr_operator_settings_lanes__lane_key__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lane_key: components["schemas"]["ArrSearchLaneKey"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArrLibraryOperatorSettingsLanePutIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArrLibraryOperatorSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_bootstrap_api_v1_auth_bootstrap_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BootstrapIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BootstrapOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_bootstrap_status_api_v1_auth_bootstrap_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BootstrapStatusOut"];
+                };
+            };
+        };
+    };
+    post_change_password_api_v1_auth_change_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangePasswordOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_csrf_api_v1_auth_csrf_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CsrfOut"];
+                };
+            };
+        };
+    };
+    post_login_api_v1_auth_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_logout_api_v1_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-CSRF-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["LogoutIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_me_api_v1_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeOut"];
+                };
+            };
+        };
+    };
+    get_current_session_api_v1_auth_session_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurrentSessionOut"];
+                };
+            };
+        };
+    };
+    get_dashboard_status_api_v1_dashboard_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardStatusOut"];
+                };
+            };
+        };
+    };
+    list_pruner_instances_api_v1_pruner_instances_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrunerServerInstanceOut"][];
+                };
+            };
+        };
+    };
+    post_pruner_instance_api_v1_pruner_instances_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrunerServerInstanceCreateHttpIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrunerServerInstanceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_pruner_instance_api_v1_pruner_instances__instance_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrunerServerInstanceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_pruner_instance_api_v1_pruner_instances__instance_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrunerServerInstancePatchHttpIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrunerServerInstanceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_pruner_connection_test_api_v1_pruner_instances__instance_id__connection_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrunerConnectionTestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrunerEnqueueOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_pruner_preview_runs_api_v1_pruner_instances__instance_id__preview_runs_get: {
+        parameters: {
+            query?: {
+                /** @description `tv` or `movies`; omit for all scopes on this instance. */
+                media_scope?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                instance_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrunerPreviewRunListItemOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_pruner_preview_run_api_v1_pruner_instances__instance_id__preview_runs__preview_run_uuid__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+                preview_run_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrunerPreviewRunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_pruner_preview_api_v1_pruner_instances__instance_id__previews_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrunerPreviewEnqueueIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrunerEnqueueOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_pruner_scope_api_v1_pruner_instances__instance_id__scopes__media_scope__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+                /** @description `tv` or `movies` */
+                media_scope: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrunerScopeSummaryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_pruner_scope_api_v1_pruner_instances__instance_id__scopes__media_scope__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+                media_scope: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrunerScopePatchHttpIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrunerScopeSummaryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_pruner_plex_live_removal_api_v1_pruner_instances__instance_id__scopes__media_scope__plex_live_removal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+                media_scope: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrunerApplyHttpIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrunerEnqueueOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_pruner_plex_live_removal_eligibility_api_v1_pruner_instances__instance_id__scopes__media_scope__plex_live_removal_eligibility_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+                /** @description `tv` or `movies` */
+                media_scope: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrunerPlexLiveEligibilityOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_pruner_apply_from_preview_api_v1_pruner_instances__instance_id__scopes__media_scope__preview_runs__preview_run_uuid__apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+                media_scope: string;
+                preview_run_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrunerApplyHttpIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrunerEnqueueOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_pruner_apply_eligibility_api_v1_pruner_instances__instance_id__scopes__media_scope__preview_runs__preview_run_uuid__apply_eligibility_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instance_id: number;
+                /** @description `tv` or `movies` */
+                media_scope: string;
+                preview_run_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrunerApplyEligibilityOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_pruner_instance_studios_api_v1_pruner_instances__instance_id__studios_get: {
+        parameters: {
+            query: {
+                /** @description `tv` or `movies` */
+                scope: string;
+            };
+            header?: never;
+            path: {
+                instance_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrunerStudiosOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_pruner_jobs_inspection_api_v1_pruner_jobs_inspection_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                /** @description Optional filter by persisted status (repeat param). */
+                status?: string[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrunerJobsInspectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_pruner_overview_stats_api_v1_pruner_overview_stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrunerOverviewStatsOut"];
+                };
+            };
+        };
+    };
+    post_refiner_candidate_gate_enqueue_api_v1_refiner_jobs_candidate_gate_enqueue_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefinerCandidateGateManualEnqueueIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefinerCandidateGateManualEnqueueOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_refiner_file_remux_pass_enqueue_api_v1_refiner_jobs_file_remux_pass_enqueue_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefinerFileRemuxPassManualEnqueueIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefinerFileRemuxPassManualEnqueueOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_refiner_jobs_inspection_api_v1_refiner_jobs_inspection_get: {
+        parameters: {
+            query?: {
+                /** @description Max rows to return. */
+                limit?: number;
+                /** @description Optional filter by persisted status (repeat param). Omit to return the newest rows across all statuses (pending, leased, terminal, cancelled). */
+                status?: string[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefinerJobsInspectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_refiner_supplied_payload_evaluation_enqueue_api_v1_refiner_jobs_supplied_payload_evaluation_enqueue_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefinerSuppliedPayloadEvaluationManualEnqueueIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefinerSuppliedPayloadEvaluationManualEnqueueOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_refiner_watched_folder_remux_scan_dispatch_enqueue_api_v1_refiner_jobs_watched_folder_remux_scan_dispatch_enqueue_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefinerWatchedFolderRemuxScanDispatchManualEnqueueIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefinerWatchedFolderRemuxScanDispatchManualEnqueueOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_refiner_job_cancel_pending_api_v1_refiner_jobs__job_id__cancel_pending_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefinerJobCancelPendingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefinerJobCancelPendingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_refiner_operator_settings_api_v1_refiner_operator_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefinerOperatorSettingsOut"];
+                };
+            };
+        };
+    };
+    put_refiner_operator_settings_api_v1_refiner_operator_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefinerOperatorSettingsPutIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefinerOperatorSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_refiner_overview_stats_api_v1_refiner_overview_stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefinerOverviewStatsOut"];
+                };
+            };
+        };
+    };
+    get_refiner_path_settings_api_v1_refiner_path_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefinerPathSettingsOut"];
+                };
+            };
+        };
+    };
+    put_refiner_path_settings_api_v1_refiner_path_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefinerPathSettingsPutIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefinerPathSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_refiner_remux_rules_settings_api_v1_refiner_remux_rules_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefinerRemuxRulesSettingsOut"];
+                };
+            };
+        };
+    };
+    put_refiner_remux_rules_settings_api_v1_refiner_remux_rules_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefinerRemuxRulesSettingsPutIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefinerRemuxRulesSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_refiner_runtime_settings_api_v1_refiner_runtime_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefinerRuntimeSettingsOut"];
+                };
+            };
+        };
+    };
+    get_subber_jobs_api_v1_subber_jobs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                /** @description Optional filter by persisted status (repeat param). */
+                status?: string[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubberJobsInspectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_subber_library_movies_api_v1_subber_library_movies_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                search?: string | null;
+                language?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubberMoviesLibraryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_subber_search_all_missing_movies_api_v1_subber_library_search_all_missing_movies_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubberCsrfBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_subber_search_all_missing_tv_api_v1_subber_library_search_all_missing_tv_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubberCsrfBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_subber_library_sync_movies_api_v1_subber_library_sync_movies_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubberCsrfBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_subber_library_sync_tv_api_v1_subber_library_sync_tv_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubberCsrfBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_subber_library_tv_api_v1_subber_library_tv_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                search?: string | null;
+                language?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubberTvLibraryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_subber_search_now_api_v1_subber_library__state_id__search_now_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                state_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubberCsrfBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_subber_overview_api_v1_subber_overview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubberOverviewOut"];
+                };
+            };
+        };
+    };
+    get_subber_providers_api_v1_subber_providers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubberProviderOut"][];
+                };
+            };
+        };
+    };
+    put_subber_provider_api_v1_subber_providers__provider_key__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubberProviderPutHttpIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubberProviderOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_subber_provider_test_api_v1_subber_providers__provider_key__test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubberCsrfIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubberTestConnectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_subber_settings_api_v1_subber_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubberSettingsOut"];
+                };
+            };
+        };
+    };
+    put_subber_settings_api_v1_subber_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubberSettingsPutHttpIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubberSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_radarr_root_folders_api_v1_subber_settings_radarr_root_folders_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubberCsrfIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubberArrRootFoldersOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_sonarr_root_folders_api_v1_subber_settings_sonarr_root_folders_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubberCsrfIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubberArrRootFoldersOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_test_opensubtitles_api_v1_subber_settings_test_opensubtitles_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubberCsrfIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubberTestConnectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_test_radarr_api_v1_subber_settings_test_radarr_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubberCsrfIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubberTestConnectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_test_sonarr_api_v1_subber_settings_test_sonarr_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubberCsrfIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubberTestConnectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_radarr_webhook_api_v1_subber_webhook_radarr_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Webhook-Secret"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_sonarr_webhook_api_v1_subber_webhook_sonarr_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Webhook-Secret"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_configuration_backups_api_v1_suite_configuration_backups_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuiteConfigurationBackupListOut"];
+                };
+            };
+        };
+    };
+    download_configuration_backup_api_v1_suite_configuration_backups__backup_id__download_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                backup_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_configuration_bundle_api_v1_suite_configuration_bundle_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    put_configuration_bundle_api_v1_suite_configuration_bundle_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfigurationBundleImportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_suite_logs_api_v1_suite_logs_get: {
+        parameters: {
+            query?: {
+                level?: string | null;
+                search?: string | null;
+                has_exception?: boolean | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuiteLogsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_suite_metrics_api_v1_suite_metrics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuiteMetricsOut"];
+                };
+            };
+        };
+    };
+    get_notification_channels_api_v1_suite_notification_channels_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationChannelListOut"];
+                };
+            };
+        };
+    };
+    post_notification_channel_api_v1_suite_notification_channels_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationChannelIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationChannelOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_notification_channel_api_v1_suite_notification_channels__channel_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                channel_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationChannelIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationChannelOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_notification_channel_route_api_v1_suite_notification_channels__channel_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                channel_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_notification_channel_test_api_v1_suite_notification_channels__channel_id__test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                channel_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationChannelTestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationChannelTestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_suite_operational_history_reset_api_v1_suite_operational_history_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuiteOperationalHistoryResetIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuiteOperationalHistoryResetOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_suite_security_overview_api_v1_suite_security_overview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuiteSecurityOverviewOut"];
+                };
+            };
+        };
+    };
+    get_suite_settings_api_v1_suite_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuiteSettingsOut"];
+                };
+            };
+        };
+    };
+    put_suite_settings_api_v1_suite_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuiteSettingsPutIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuiteSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_configuration_bundle_api_v1_suite_settings_configuration_bundle_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    put_configuration_bundle_api_v1_suite_settings_configuration_bundle_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfigurationBundleImportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_suite_update_status_api_v1_suite_settings_update_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuiteUpdateStatusOut"];
+                };
+            };
+        };
+    };
+    get_suite_update_status_api_v1_suite_update_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuiteUpdateStatusOut"];
+                };
+            };
+        };
+    };
+    get_system_directories_api_v1_system_directories_get: {
+        parameters: {
+            query?: {
+                path?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DirectoryBrowseOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_reconciliation_report_api_v1_system_reconciliation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    post_reconciliation_repair_api_v1_system_reconciliation_repair_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReconciliationRepairIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_suite_configuration_backups_api_v1_system_suite_configuration_backups_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuiteConfigurationBackupListOut"];
+                };
+            };
+        };
+    };
+    download_suite_configuration_backup_api_v1_system_suite_configuration_backups__backup_id__download_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                backup_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_suite_configuration_bundle_api_v1_system_suite_configuration_bundle_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    put_suite_configuration_bundle_api_v1_system_suite_configuration_bundle_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfigurationBundleImportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    health_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    ready_ready_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadinessResponse"];
+                };
+            };
+        };
+    };
 }
