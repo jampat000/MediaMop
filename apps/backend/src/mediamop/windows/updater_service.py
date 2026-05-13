@@ -688,12 +688,14 @@ def _read_state_unlocked() -> dict[str, object]:
     except FileNotFoundError:
         return _default_state()
     except OSError as exc:
+        # Log the full exception for diagnostics; expose only a safe static
+        # message via the state dict so that str(exc) never reaches HTTP responses.
         _append_service_log(f"Updater state read failed at {path}: {exc}")
         return {
             **_default_state(),
             "phase": "state_corrupt",
             "message": "Updater state file is unreadable.",
-            "last_error": f"Could not read updater state file: {exc}",
+            "last_error": "Could not read updater state file.",
             "last_completed_at": _iso_now(),
         }
     except json.JSONDecodeError as exc:
@@ -702,7 +704,7 @@ def _read_state_unlocked() -> dict[str, object]:
             **_default_state(),
             "phase": "state_corrupt",
             "message": "Updater state file is unreadable.",
-            "last_error": f"Could not parse updater state file: {exc}",
+            "last_error": "Could not parse updater state file.",
             "last_completed_at": _iso_now(),
         }
     if not isinstance(raw, dict):
@@ -1752,10 +1754,25 @@ def _perform_upgrade_attempt(attempt_id: str) -> None:
             current_version_seen=str(diagnostics.get("backend_version") or diagnostics.get("packaged_version") or __version__),
             diagnostics=diagnostics,
         )
-    except Exception as exc:
+    except ValueError as exc:
+        # ValueError messages in this function are written by this module (controlled
+        # strings: missing checksum manifest, SHA-256 mismatch, etc.).  They do not
+        # contain user-tainted data or internal stack frames, so surfacing them in
+        # last_error is safe and lets callers understand why the upgrade was rejected.
+        _append_service_log(f"Upgrade worker validation error: {exc}")
         _mark_failed(
             message="Upgrade failed.",
             last_error=str(exc),
+            target_version=target_version,
+            diagnostics={"helper_pid": os.getpid()},
+        )
+    except Exception as exc:
+        # Log full exception details privately; pass only a safe static message
+        # to _mark_failed so str(exc) never flows into the HTTP-visible state.
+        _append_service_log(f"Upgrade worker unhandled exception: {exc}")
+        _mark_failed(
+            message="Upgrade failed.",
+            last_error="An unexpected error occurred during the upgrade.",
             target_version=target_version,
             diagnostics={"helper_pid": os.getpid()},
         )
@@ -2067,9 +2084,10 @@ def create_updater_app() -> FastAPI:
             try:
                 helper = _launch_helper(attempt_id)
             except Exception as exc:
+                _append_service_log(f"Could not launch upgrade helper: {exc}")
                 _mark_failed(
                     message="Upgrade failed before launch.",
-                    last_error=f"Could not launch upgrade helper: {exc}",
+                    last_error="Could not launch upgrade helper.",
                     target_version=target_version,
                     diagnostics={"attempt_id": attempt_id},
                 )

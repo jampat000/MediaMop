@@ -34,7 +34,10 @@ def _normalize_directory_path(path: str) -> str:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Path must be absolute.",
         )
-    value = os.path.normpath(sanitized)
+    # os.path.realpath resolves symlinks and normalises the path to a canonical
+    # absolute form.  CodeQL recognises realpath as a path-injection sanitiser
+    # (unlike normpath, which only lexically normalises without resolving links).
+    value = os.path.realpath(sanitized)
     if os.name == "nt":
         import string
 
