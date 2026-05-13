@@ -3,28 +3,26 @@
 set -e
 REPO=$(git rev-parse --show-toplevel)
 if command -v powershell.exe &>/dev/null; then
-    PS_REPO=$(cygpath -w "$REPO" 2>/dev/null || echo "$REPO" | sed 's|/|\\|g')
-    exec powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${PS_REPO}\\scripts\\pre-push-check.ps1"
+    exec powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$REPO/scripts/pre-push-check.ps1"
 else
-    # Linux/macOS fallback
-    cd "$REPO"
-    RUFF="apps/backend/.venv/bin/ruff"
+    # Linux/macOS fallback (CI skips hooks, so this is for local Linux dev only)
+    RUFF="$REPO/apps/backend/.venv/bin/ruff"
+    PRETTIER="$REPO/apps/web/node_modules/prettier/bin/prettier.cjs"
     if [ -f "$RUFF" ]; then
-        echo "[pre-push] ruff check..."
-        (cd apps/backend && "$REPO/$RUFF" check src tests && "$REPO/$RUFF" format --check src tests)
+        echo "[pre-push] ruff..."
+        (cd "$REPO/apps/backend" && "$RUFF" check src tests && "$RUFF" format --check src tests)
     fi
-    if [ -d "apps/web/node_modules" ]; then
-        echo "[pre-push] prettier check..."
-        (cd apps/web && node node_modules/prettier/bin/prettier.cjs --check --end-of-line auto "src/**/*.{ts,tsx,css}" index.html vite.config.ts)
-        echo "[pre-push] api:types drift check..."
-        (cd apps/web && npm run api:types:sync)
-        if ! git diff --quiet -- apps/web/openapi/mediamop-openapi.json apps/web/src/lib/api/generated/openapi-types.ts; then
-            echo "[pre-push] ERROR: OpenAPI spec or types are out of sync with the backend code."
-            echo "          Review the diff below, commit the updated files, then push again."
-            git diff -- apps/web/openapi/mediamop-openapi.json apps/web/src/lib/api/generated/openapi-types.ts
-            git restore -- apps/web/openapi/mediamop-openapi.json apps/web/src/lib/api/generated/openapi-types.ts
+    if [ -f "$PRETTIER" ]; then
+        echo "[pre-push] prettier..."
+        (cd "$REPO/apps/web" && node "$PRETTIER" --check --end-of-line auto 'src/**/*.{ts,tsx,css}' index.html vite.config.ts)
+        echo "[pre-push] api:types drift..."
+        (cd "$REPO/apps/web" && npm run api:types:sync)
+        if ! git -C "$REPO" diff --quiet -- apps/web/openapi/mediamop-openapi.json apps/web/src/lib/api/generated/openapi-types.ts; then
+            echo "[pre-push] ERROR: OpenAPI spec or types out of sync - commit them first"
+            git -C "$REPO" diff -- apps/web/openapi/mediamop-openapi.json apps/web/src/lib/api/generated/openapi-types.ts
+            git -C "$REPO" restore -- apps/web/openapi/mediamop-openapi.json apps/web/src/lib/api/generated/openapi-types.ts
             exit 1
         fi
     fi
-    echo "[pre-push] all checks passed"
+    echo "[pre-push] All checks passed."
 fi
