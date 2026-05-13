@@ -651,7 +651,10 @@ sealed class TrayApp : IDisposable
         {
             case UpdateMode.Auto:
                 if (await _updateService.DownloadUpdateAsync())
-                    ShowUpdateReady();
+                {
+                    _updateService.ApplyOnExit();
+                    ShowUpdateScheduled();
+                }
                 break;
 
             case UpdateMode.DownloadOnly:
@@ -673,6 +676,19 @@ sealed class TrayApp : IDisposable
         _notifyIcon?.ShowBalloonTip(
             8000, "MediaMop Update",
             $"Version {version} is available. Open Settings to update.",
+            ToolTipIcon.Info);
+
+        UpdateTrayMenuState();
+    }
+
+    private void ShowUpdateScheduled()
+    {
+        var version = _updateService?.PendingVersion ?? "new version";
+        Log($"Notifying user: update v{version} will apply on next restart.");
+
+        _notifyIcon?.ShowBalloonTip(
+            8000, "MediaMop Update Ready",
+            $"Version {version} has been downloaded and will be applied automatically on next restart.",
             ToolTipIcon.Info);
 
         UpdateTrayMenuState();
