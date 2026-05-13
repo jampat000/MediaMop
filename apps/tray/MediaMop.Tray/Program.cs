@@ -611,26 +611,52 @@ sealed class TrayApp : IDisposable
         var ct = _cts!.Token;
         var thread = new Thread(() =>
         {
+            int restartCount = 0;
+            const int maxRestarts = 5;
+            int[] backoffMs = [2_000, 5_000, 15_000, 30_000, 60_000];
+
             while (!ct.IsCancellationRequested)
             {
+                Thread.Sleep(3000);
+                if (ct.IsCancellationRequested) return;
+
                 var proc = _serverProcess;
                 if (proc is null) return;
+                if (!proc.HasExited) continue;
 
-                if (proc.HasExited)
+                Log($"Bundled server host exited unexpectedly with code {proc.ExitCode} (restart {restartCount + 1}/{maxRestarts})");
+
+                if (restartCount >= maxRestarts)
                 {
-                    Log($"Bundled server host exited unexpectedly with code {proc.ExitCode}");
+                    Log("Exceeded max restart attempts — giving up.");
                     try
                     {
                         _notifyIcon?.ShowBalloonTip(
-                            5000, "MediaMop",
-                            "MediaMop server stopped unexpectedly. Please restart MediaMop.",
-                            ToolTipIcon.Warning);
+                            8000, "MediaMop",
+                            "MediaMop server failed repeatedly. Please restart MediaMop.",
+                            ToolTipIcon.Error);
                     }
                     catch { }
                     return;
                 }
 
-                Thread.Sleep(3000);
+                int delay = backoffMs[Math.Min(restartCount, backoffMs.Length - 1)];
+                Log($"Waiting {delay}ms before restarting server...");
+                Thread.Sleep(delay);
+                if (ct.IsCancellationRequested) return;
+
+                try
+                {
+                    StartServerProcess();
+                    WaitForHealth();
+                    Log($"Server restarted successfully (attempt {restartCount + 1}).");
+                    restartCount = 0;
+                }
+                catch (Exception ex)
+                {
+                    Log($"Server restart attempt {restartCount + 1} failed: {ex.Message}");
+                    restartCount++;
+                }
             }
         })
         {
