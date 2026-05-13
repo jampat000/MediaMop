@@ -1754,6 +1754,18 @@ def _perform_upgrade_attempt(attempt_id: str) -> None:
             current_version_seen=str(diagnostics.get("backend_version") or diagnostics.get("packaged_version") or __version__),
             diagnostics=diagnostics,
         )
+    except ValueError as exc:
+        # ValueError messages in this function are written by this module (controlled
+        # strings: missing checksum manifest, SHA-256 mismatch, etc.).  They do not
+        # contain user-tainted data or internal stack frames, so surfacing them in
+        # last_error is safe and lets callers understand why the upgrade was rejected.
+        _append_service_log(f"Upgrade worker validation error: {exc}")
+        _mark_failed(
+            message="Upgrade failed.",
+            last_error=str(exc),
+            target_version=target_version,
+            diagnostics={"helper_pid": os.getpid()},
+        )
     except Exception as exc:
         # Log full exception details privately; pass only a safe static message
         # to _mark_failed so str(exc) never flows into the HTTP-visible state.
