@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>..\..\..\packaging\windows\assets\mediamop-tray-icon.ico</ApplicationIcon>
+    <AssemblyName>MediaMop</AssemblyName>
+    <RootNamespace>MediaMop.Tray</RootNamespace>
+    <Version>1.0.0</Version>
+    <Company>MediaMop</Company>
+    <Product>MediaMop</Product>
+    <Description>MediaMop desktop tray host</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\..\packaging\windows\assets\mediamop-tray-icon.ico" Link="mediamop-tray-icon.ico" />
+  </ItemGroup>
+
+</Project>
