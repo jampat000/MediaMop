@@ -3,10 +3,10 @@
 MediaMop now ships three release deliverables from a tagged release:
 
 1. a GitHub Release for the tagged source snapshot
-2. a Windows desktop installer (`MediaMopSetup.exe`)
+2. a Windows desktop package (Velopack installer + delta update files)
 3. a Docker image published to GitHub Container Registry
 
-The Windows artifact is an installer-based desktop app with a tray host. It is not a Windows service.
+The Windows artifact is a desktop app with a .NET tray host and Velopack for delta updates. It is not a Windows service.
 
 MediaMop is released under AGPL-3.0-or-later. Release artifacts are built from the tagged source tree and remain subject to that license.
 
@@ -45,7 +45,7 @@ The `Release` workflow:
 - reruns backend tests on Linux
 - reruns web build and unit tests on Linux
 - reruns the E2E auth smoke on Linux
-- builds `MediaMopSetup.exe` on `windows-latest`
+- builds the Velopack Windows package on `windows-latest`
 - publishes `mediamop-web-dist.zip`
 - builds and pushes Docker tags:
   - `ghcr.io/<owner>/<repo>:vX.Y.Z`
@@ -67,38 +67,33 @@ The release workflow publishes GHCR images with the repository `GITHUB_TOKEN` an
 |-------------|---------|
 | `Tag + source tree` | Canonical source snapshot for the release. |
 | `mediamop-web-dist.zip` | Static production build of `apps/web/dist`. Backend still required. |
-| `MediaMopSetup.exe` | Windows desktop installer with tray host, bundled backend runtime, bundled web UI, and Start Menu integration. |
+| `MediaMop-*-win-Setup.exe` | Windows desktop installer (Velopack) with .NET tray host, bundled backend runtime, bundled web UI, and delta update support. |
 | `ghcr.io/<owner>/<repo>:vX.Y.Z` | Versioned all-in-one container image. |
 | `ghcr.io/<owner>/<repo>:latest` | Latest stable container image. |
 
-## Windows installer
+## Windows package
 
-`MediaMopSetup.exe` is the supported Windows release artifact.
+The Velopack-based Windows package is the supported Windows release artifact. Release builds produce a setup exe, full nupkg, and delta nupkg under `dist/windows/releases/`.
 
-If you build the Windows package locally and want the installer to include **Settings -> Support**, set `VITE_SUPPORT_URL` before running `packaging/windows/build.ps1`:
+If you build the Windows package locally and want the installer to include **Settings -> Support**, set `VITE_SUPPORT_URL` before running `packaging/windows/build-velopack.ps1`:
 
 ```powershell
 $env:VITE_SUPPORT_URL = "https://github.com/sponsors/jampat000"
-powershell -ExecutionPolicy Bypass -File packaging/windows/build.ps1
+powershell -ExecutionPolicy Bypass -File packaging/windows/build-velopack.ps1
 ```
 
-Important upgrade requirement:
-
-- Run `MediaMopSetup.exe` as administrator.
-- The installer must successfully install the local `MediaMop Updater` service.
-- Existing Windows installs from before this updater-service model need one manual admin installer run to bootstrap that service.
-- After that one-time bootstrap, future upgrades can start remotely from **Settings -> Upgrade**.
-
-After installing it:
+After installing:
 
 1. Launch `MediaMop` from the Start Menu or desktop shortcut.
 2. MediaMop starts in the user session, not as a Windows service.
-3. The tray icon opens the local app in the browser and exposes `Open MediaMop`, `Open Data Folder`, and `Quit`.
-4. Application binaries install under `C:\Program Files\MediaMop`.
-5. The local runtime root is created under `C:\ProgramData\MediaMop`.
-6. The local `MediaMop Updater` Windows service is installed and started.
+3. The .NET tray app launches the Python backend server as a child process.
+4. The tray icon opens the local app in the browser and exposes `Open MediaMop`, `Open Data Folder`, and `Quit`.
+5. Application binaries install under `%LocalAppData%\MediaMop` (per-user, no admin required).
+6. The local runtime root is created under `C:\ProgramData\MediaMop`.
 
-This design is intentional. Running in the user session avoids common NAS or external-drive access issues that affect Windows services, while keeping writable configuration, logs, backups, and the SQLite database out of the protected application install directory.
+Updates are handled automatically by the .NET tray app via Velopack. Delta updates keep downloads small and rollback is automatic on failure. No separate updater service is needed.
+
+This design is intentional. Running in the user session avoids common NAS or external-drive access issues that affect Windows services, while keeping writable configuration, logs, backups, and the SQLite database out of the application install directory.
 
 ## Docker
 

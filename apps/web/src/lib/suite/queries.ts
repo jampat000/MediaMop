@@ -9,11 +9,9 @@ import {
   fetchSuiteMetrics,
   fetchSuiteSecurityOverview,
   fetchSuiteSettings,
-  fetchSuiteUpdateDiagnostics,
   fetchSuiteUpdateStatus,
   putSuiteSettings,
   resetSuiteOperationalHistory,
-  startSuiteUpdateNow,
   testNotificationChannel,
   updateNotificationChannel,
 } from "./suite-settings-api";
@@ -29,10 +27,6 @@ export const suiteConfigurationBackupsQueryKey = [
   "configuration-backups",
 ] as const;
 export const suiteUpdateStatusQueryKey = ["suite", "update-status"] as const;
-export const suiteUpdateDiagnosticsQueryKey = [
-  "suite",
-  "update-diagnostics",
-] as const;
 export const suiteLogsQueryKey = ["suite", "logs"] as const;
 export const suiteMetricsQueryKey = ["suite", "metrics"] as const;
 
@@ -72,22 +66,6 @@ export function useSuiteUpdateStatusQuery(
     staleTime: enabled && refetchInterval ? 0 : 60_000,
     refetchInterval,
     retry: false,
-  });
-}
-
-export function useSuiteUpdateDiagnosticsQuery(enabled = true) {
-  return useQuery({
-    queryKey: suiteUpdateDiagnosticsQueryKey,
-    queryFn: () => fetchSuiteUpdateDiagnostics(),
-    enabled,
-    staleTime: 5000,
-    retry: false,
-  });
-}
-
-export function useSuiteUpdateNowMutation() {
-  return useMutation({
-    mutationFn: () => startSuiteUpdateNow(),
   });
 }
 

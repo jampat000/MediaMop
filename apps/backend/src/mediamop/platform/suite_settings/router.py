@@ -6,7 +6,7 @@ import logging
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse
 from starlette import status
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
@@ -36,9 +36,6 @@ from mediamop.platform.suite_settings.schemas import (
     SuiteSecurityOverviewOut,
     SuiteSettingsOut,
     SuiteSettingsPutIn,
-    SuiteUpdateDiagnosticsOut,
-    SuiteUpdateStartIn,
-    SuiteUpdateStartOut,
     SuiteUpdateStatusOut,
 )
 from mediamop.platform.suite_settings.security_overview import build_suite_security_overview
@@ -52,9 +49,7 @@ from mediamop.platform.suite_settings.suite_configuration_backup_service import 
     list_suite_configuration_backups,
 )
 from mediamop.platform.suite_settings.update_service import (
-    build_suite_update_diagnostics,
     build_suite_update_status,
-    start_suite_update_now,
 )
 
 router = APIRouter(tags=["suite"])
@@ -197,47 +192,6 @@ def get_suite_update_status(_user: UserPublicDep, settings: SettingsDep) -> Suit
 
     return build_suite_update_status(settings)
 
-
-@router.get("/suite/update-diagnostics", response_model=SuiteUpdateDiagnosticsOut)
-@router.get("/suite/settings/update-diagnostics", response_model=SuiteUpdateDiagnosticsOut)
-def get_suite_update_diagnostics(_user: RequireOperatorDep, settings: SettingsDep) -> SuiteUpdateDiagnosticsOut:
-    """Operator-facing updater diagnostics for Windows package troubleshooting."""
-
-    return build_suite_update_diagnostics(settings)
-
-
-@router.get("/suite/update-now")
-@router.get("/suite/settings/update-now")
-def get_suite_update_now_redirect() -> RedirectResponse:
-    """If a browser lands on the upgrade API after restart, send it back to the app."""
-
-    return RedirectResponse(url="/settings", status_code=status.HTTP_303_SEE_OTHER)
-
-
-@router.post("/suite/update-now", response_model=SuiteUpdateStartOut)
-@router.post("/suite/settings/update-now", response_model=SuiteUpdateStartOut)
-def post_suite_update_now(
-    body: SuiteUpdateStartIn,
-    request: Request,
-    _user: RequireOperatorDep,
-    settings: SettingsDep,
-) -> SuiteUpdateStartOut:
-    """Start an in-place Windows upgrade from the latest published installer."""
-
-    validate_browser_post_origin(request, settings)
-    secret = require_session_secret(settings)
-    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Your confirmation token expired. Refresh the page and try again.",
-        )
-    try:
-        return start_suite_update_now(settings)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Could not start the upgrade: {exc}",
-        ) from exc
 
 
 @router.post("/suite/operational-history/reset", response_model=SuiteOperationalHistoryResetOut)

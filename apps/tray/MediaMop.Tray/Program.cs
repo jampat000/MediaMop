@@ -304,6 +304,8 @@ sealed class TrayApp : IDisposable
         else
             Log("Skipping browser auto-open (no-browser mode).");
 
+        DetectLegacyInnoInstall();
+
         _cts = new CancellationTokenSource();
         StartWatchdog();
         InitUpdateService();
@@ -314,6 +316,60 @@ sealed class TrayApp : IDisposable
 
         Log("Starting tray icon event loop");
         Application.Run();
+    }
+
+    // -- Legacy Inno Setup migration detection --------------------------------
+
+    private void DetectLegacyInnoInstall()
+    {
+        try
+        {
+            var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+            bool isLegacyLocation =
+                (!string.IsNullOrEmpty(programFiles) && _installRoot.StartsWith(programFiles, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrEmpty(programFilesX86) && _installRoot.StartsWith(programFilesX86, StringComparison.OrdinalIgnoreCase));
+
+            if (isLegacyLocation)
+            {
+                Log("Legacy Inno Setup install detected — running from Program Files. " +
+                    "Future updates will use Velopack and install to %LocalAppData%\\MediaMop.");
+            }
+
+            var legacyUpdaterService = Path.Combine(_installRoot, "MediaMopUpdaterService.exe");
+            if (File.Exists(legacyUpdaterService))
+            {
+                Log("Legacy WinSW updater service wrapper found. Attempting to stop and uninstall...");
+                try
+                {
+                    RunSilent(legacyUpdaterService, "stop");
+                    RunSilent(legacyUpdaterService, "uninstall");
+                    Log("Legacy updater service stopped and uninstalled.");
+                }
+                catch (Exception ex)
+                {
+                    Log($"Could not remove legacy updater service (non-fatal): {ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"Legacy install detection failed (non-fatal): {ex.Message}");
+        }
+    }
+
+    private static void RunSilent(string exe, string args)
+    {
+        using var proc = Process.Start(new ProcessStartInfo
+        {
+            FileName = exe,
+            Arguments = args,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        });
+        proc?.WaitForExit(10_000);
     }
 
     // -- Environment setup --------------------------------------------------
@@ -370,6 +426,7 @@ sealed class TrayApp : IDisposable
     {
         var candidates = new[]
         {
+            Path.Combine(_installRoot, "server", "MediaMopServer.exe"),
             Path.Combine(_installRoot, "MediaMopServer.exe"),
             Path.Combine(_installRoot, "..", "MediaMopServer.exe"),
         };

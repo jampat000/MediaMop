@@ -137,6 +137,13 @@ jobs:
         with:
           node-version: "20"
 
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Install Velopack CLI
+        run: dotnet tool install -g vpk
+
       - name: MediaMop web - install and build
         working-directory: apps/web
         run: |
@@ -144,11 +151,8 @@ jobs:
           npm run api:types:check
           npm run build
 
-      - name: Install Inno Setup
-        run: choco install innosetup --no-progress -y
-
-      - name: Build MediaMop Windows installer
-        run: powershell -ExecutionPolicy Bypass -File packaging/windows/build.ps1
+      - name: Build MediaMop Windows package (Velopack)
+        run: powershell -ExecutionPolicy Bypass -File packaging/windows/build-velopack.ps1
 
       - name: Smoke test packaged Windows server
         run: powershell -ExecutionPolicy Bypass -File scripts/smoke-windows-package.ps1

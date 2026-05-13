@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -31,7 +30,6 @@ from mediamop.platform.suite_settings.release_catalog import (
 from mediamop.platform.suite_settings.service import apply_suite_settings_put, ensure_suite_settings_row
 from mediamop.platform.suite_settings.suite_configuration_backup_periodic import run_suite_configuration_backup_tick
 from mediamop.platform.suite_settings.suite_configuration_backup_service import list_suite_configuration_backups
-from mediamop.platform.suite_settings.update_service import start_suite_update_now
 from tests.integration_helpers import (
     auth_post,
     reset_user_tables,
@@ -379,14 +377,6 @@ def test_suite_update_status_ok(client_with_admin: TestClient, monkeypatch: pyte
         lambda **_kwargs: _release_record("1.2.3"),
     )
     monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "1.0.0")
-    monkeypatch.setattr(
-        "mediamop.platform.suite_settings.update_service._fetch_windows_updater_progress",
-        lambda _settings=None: (
-            True,
-            "Remote in-app upgrade is ready on this Windows install.",
-            None,
-        ),
-    )
     monkeypatch.setattr("mediamop.platform.suite_settings.update_service._detect_install_type", lambda: "windows")
 
     r = client_with_admin.get("/api/v1/suite/update-status")
@@ -406,18 +396,6 @@ def test_suite_update_status_alias_ok(client_with_admin: TestClient, monkeypatch
         lambda **_kwargs: _release_record("1.2.3"),
     )
     monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "1.0.0")
-    monkeypatch.setattr(
-        "mediamop.platform.suite_settings.update_service._fetch_windows_updater_progress",
-        lambda _settings=None: (
-            False,
-            "Remote in-app upgrade is unavailable because MediaMop could not reach the local updater service.",
-            {
-                "phase": "installer_running",
-                "message": "Installer is running. MediaMop may temporarily disconnect.",
-                "target_version": "1.2.3",
-            },
-        ),
-    )
     monkeypatch.setattr("mediamop.platform.suite_settings.update_service._detect_install_type", lambda: "windows")
 
     r = client_with_admin.get("/api/v1/suite/settings/update-status")
@@ -425,7 +403,6 @@ def test_suite_update_status_alias_ok(client_with_admin: TestClient, monkeypatch
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["status"] == "update_available"
-    assert body["upgrade"]["phase"] == "installer_running"
 
 
 def test_suite_logs_skips_items_with_invalid_timestamp(
@@ -475,48 +452,6 @@ def test_suite_logs_skips_items_with_invalid_timestamp(
     assert body["items"][0]["message"] == "valid timestamp"
 
 
-def test_suite_update_now_get_redirects_back_to_settings(client_with_admin: TestClient) -> None:
-    _login_admin(client_with_admin)
-
-    r = client_with_admin.get("/api/v1/suite/update-now", follow_redirects=False)
-
-    assert r.status_code == 303
-    assert r.headers["location"] == "/settings"
-
-
-def test_suite_update_diagnostics_requires_operator_and_returns_shape(
-    client_with_admin: TestClient,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _login_admin(client_with_admin)
-    monkeypatch.setattr(
-        "mediamop.platform.suite_settings.router.build_suite_update_diagnostics",
-        lambda _settings=None: {
-            "current_version": "2.0.7",
-            "latest_version": "2.0.8",
-            "install_type": "windows",
-            "install_root": "C:/Program Files/MediaMop",
-            "runtime_home": "C:/ProgramData/MediaMop",
-            "updater_service_reachable": True,
-            "updater_token_path_present": True,
-            "installer_log_path": "C:/ProgramData/MediaMop/upgrades/installer-attempt-123.log",
-            "service_log_path": "C:/ProgramData/MediaMop/upgrades/updater-service.log",
-            "installer_log_tail": [],
-            "service_log_tail": [],
-            "running_processes": [],
-            "installed_files": [],
-            "upgrade": None,
-        },
-    )
-
-    r = client_with_admin.get("/api/v1/suite/update-diagnostics")
-
-    assert r.status_code == 200, r.text
-    body = r.json()
-    assert body["install_type"] == "windows"
-    assert body["updater_service_reachable"] is True
-
-
 def test_suite_update_status_not_published_when_release_missing(
     client_with_admin: TestClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -541,62 +476,6 @@ def test_suite_update_status_not_published_when_release_missing(
     body = r.json()
     assert body["status"] == "not_published"
     assert "no public mediamop release is published yet" in body["summary"].lower()
-
-
-def test_suite_update_now_returns_unavailable_when_updater_service_is_not_ready(
-    tmp_path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(tmp_path))
-    monkeypatch.setenv("MEDIAMOP_RUNTIME", "windows")
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "1.0.0")
-    monkeypatch.setattr(
-        "mediamop.platform.suite_settings.update_service.fetch_latest_release_record",
-        lambda **_kwargs: _release_record("1.2.3"),
-    )
-    monkeypatch.setattr(
-        "mediamop.platform.suite_settings.update_service._start_windows_updater_service_apply",
-        lambda _settings, target_version: (
-            False,
-            "Remote in-app upgrade is unavailable because the local updater service token did not match this app install.",
-            None,
-        ),
-    )
-
-    out = start_suite_update_now(settings)
-
-    assert out.status == "unavailable"
-    assert "local updater service token did not match" in out.message.lower()
-    assert out.installer_path is None
-    assert out.log_path == str(tmp_path / "upgrades" / "updater-service.log")
-
-
-def test_suite_update_now_uses_windows_updater_service_when_available(
-    tmp_path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    settings = replace(MediaMopSettings.load(), mediamop_home=str(tmp_path))
-    monkeypatch.setenv("MEDIAMOP_RUNTIME", "windows")
-    monkeypatch.setattr("mediamop.platform.suite_settings.update_service.__version__", "1.0.0")
-    monkeypatch.setattr(
-        "mediamop.platform.suite_settings.update_service.fetch_latest_release_record",
-        lambda **_kwargs: _release_record("1.2.3"),
-    )
-    monkeypatch.setattr(
-        "mediamop.platform.suite_settings.update_service._start_windows_updater_service_apply",
-        lambda _settings, target_version: (
-            True,
-            "Upgrade request accepted. MediaMop is checking release metadata.",
-            "attempt-123",
-        ),
-    )
-
-    out = start_suite_update_now(settings)
-
-    assert out.status == "started"
-    assert out.attempt_id == "attempt-123"
-    assert out.target_version == "1.2.3"
-    assert out.log_path == str(tmp_path / "upgrades" / "updater-service.log")
 
 
 def test_suite_configuration_backup_tick_creates_snapshot(client_with_admin: TestClient) -> None:

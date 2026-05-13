@@ -43,7 +43,6 @@ jobs:
           python - <<'PY'
           import json
           import os
-          import re
           import sys
           import tomllib
           from pathlib import Path
@@ -54,18 +53,11 @@ jobs:
 
           backend = tomllib.loads(Path("apps/backend/pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
           web = json.loads(Path("apps/web/package.json").read_text(encoding="utf-8"))["version"]
-          iss = Path("packaging/windows/MediaMop.iss").read_text(encoding="utf-8")
-          match = re.search(r'#define\s+AppVersion\s+"([^"]+)"', iss)
-          if not match:
-              print("ERROR: Could not find AppVersion define in packaging/windows/MediaMop.iss", file=sys.stderr)
-              raise SystemExit(1)
-          installer = match.group(1)
 
           mismatches = []
           for name, value in [
               ("apps/backend/pyproject.toml [project].version", backend),
               ("apps/web/package.json version", web),
-              ("packaging/windows/MediaMop.iss AppVersion", installer),
           ]:
               if value != tag_version:
                   mismatches.append((name, value))
@@ -85,6 +77,13 @@ jobs:
         with:
           node-version: "20"
 
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Install Velopack CLI
+        run: dotnet tool install -g vpk
+
       - name: Install MediaMop backend (editable)
         run: |
           python -m pip install --upgrade pip
@@ -99,23 +98,23 @@ jobs:
           npm run api:types:check
           npm run build
 
-      - name: Install Inno Setup
-        run: choco install innosetup --no-progress -y
-
-      - name: Build MediaMop Windows installer
+      - name: Build MediaMop Windows package (Velopack)
         env:
           MEDIAMOP_BUILD_VERSION: ${{ steps.version.outputs.plain }}
           VITE_SUPPORT_URL: ${{ vars.VITE_SUPPORT_URL }}
-        run: powershell -ExecutionPolicy Bypass -File packaging/windows/build.ps1
+        run: powershell -ExecutionPolicy Bypass -File packaging/windows/build-velopack.ps1
 
       - name: Smoke test packaged Windows server
         run: powershell -ExecutionPolicy Bypass -File scripts/smoke-windows-package.ps1 -ExpectedVersion "${{ steps.version.outputs.plain }}"
 
-      - name: Generate installer checksum manifest
+      - name: Generate release artifact checksums
         shell: powershell
         run: |
-          $hash = (Get-FileHash -LiteralPath "dist/windows/MediaMopSetup.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  MediaMopSetup.exe" | Set-Content -LiteralPath "dist/windows/MediaMopSetup.exe.sha256" -Encoding ascii
+          $releasesDir = "dist/windows/releases"
+          Get-ChildItem -Path $releasesDir -File | ForEach-Object {
+            $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)" | Add-Content -LiteralPath (Join-Path $releasesDir "SHA256SUMS.txt") -Encoding ascii
+          }
 
       - name: Detect Windows code signing configuration
         id: codesign
@@ -130,7 +129,7 @@ jobs:
             echo "enabled=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Sign MediaMop Windows installer
+      - name: Sign Velopack release artifacts
         if: ${{ steps.codesign.outputs.enabled == 'true' }}
         shell: powershell
         env:
@@ -140,28 +139,32 @@ jobs:
           $pfxPath = Join-Path $env:RUNNER_TEMP "mediamop-codesign.pfx"
           [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_CODESIGN_PFX_BASE64))
           $signtool = (Get-Command signtool.exe -ErrorAction Stop).Source
-          & $signtool sign /f $pfxPath /p $env:WINDOWS_CODESIGN_PASSWORD /fd sha256 /tr http://timestamp.digicert.com /td sha256 "dist/windows/MediaMopSetup.exe"
-          if ($LASTEXITCODE -ne 0) {
-            throw "signtool failed with exit code $LASTEXITCODE"
+          $setupExe = Get-ChildItem -Path "dist/windows/releases" -Filter "MediaMop-*-win-Setup.exe" | Select-Object -First 1
+          if ($setupExe) {
+            & $signtool sign /f $pfxPath /p $env:WINDOWS_CODESIGN_PASSWORD /fd sha256 /tr http://timestamp.digicert.com /td sha256 $setupExe.FullName
+            if ($LASTEXITCODE -ne 0) {
+              throw "signtool failed with exit code $LASTEXITCODE"
+            }
           }
 
-      - name: Verify MediaMop Windows installer signature
+      - name: Verify Velopack setup signature
         if: ${{ steps.codesign.outputs.enabled == 'true' }}
         shell: powershell
         run: |
-          $signature = Get-AuthenticodeSignature -FilePath "dist/windows/MediaMopSetup.exe"
-          if ($signature.Status -ne "Valid") {
-            throw "Installer signature verification failed: $($signature.Status) $($signature.StatusMessage)"
+          $setupExe = Get-ChildItem -Path "dist/windows/releases" -Filter "MediaMop-*-win-Setup.exe" | Select-Object -First 1
+          if ($setupExe) {
+            $signature = Get-AuthenticodeSignature -FilePath $setupExe.FullName
+            if ($signature.Status -ne "Valid") {
+              throw "Setup signature verification failed: $($signature.Status) $($signature.StatusMessage)"
+            }
           }
 
-      - name: Upload MediaMop Windows installer
+      - name: Upload Velopack release artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: mediamop-windows-installer
+          name: mediamop-windows-velopack
           if-no-files-found: error
-          path: |
-            dist/windows/MediaMopSetup.exe
-            dist/windows/MediaMopSetup.exe.sha256
+          path: dist/windows/releases/*
 
   tagged-release:
     runs-on: ubuntu-latest
@@ -239,10 +242,10 @@ jobs:
         id: version
         run: echo "plain=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Download MediaMop Windows installer
+      - name: Download Velopack release artifacts
         uses: actions/download-artifact@v8
         with:
-          name: mediamop-windows-installer
+          name: mediamop-windows-velopack
           path: ${{ github.workspace }}/windows-artifact
 
       - uses: docker/setup-buildx-action@v4
@@ -308,6 +311,5 @@ jobs:
         with:
           files: |
             mediamop-web-dist.zip
-            windows-artifact/MediaMopSetup.exe
-            windows-artifact/MediaMopSetup.exe.sha256
+            windows-artifact/*
           body_path: release-notes.md

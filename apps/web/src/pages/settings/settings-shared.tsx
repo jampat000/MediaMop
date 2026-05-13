@@ -1,35 +1,6 @@
 import type {
   SuiteLogEntry,
-  SuiteUpdateStatusOut,
-  SuiteUpgradeProgressOut,
 } from "../../lib/suite/types";
-
-export type UpgradeMonitor = {
-  attemptId: string | null;
-  targetVersion: string;
-  disconnects: number;
-  active: boolean;
-  startedAtMs: number;
-  timedOutReason: string | null;
-};
-
-export type UpgradeNotice = {
-  tone: "info" | "success" | "error";
-  text: string;
-};
-
-export type UpgradeHistoryItem = {
-  id: string;
-  recorded_at: string;
-  status_label: string;
-  phase: string;
-  attempt_id: string | null;
-  target_version: string | null;
-  current_version_seen: string | null;
-  message: string;
-  installer_log_path: string | null;
-  service_log_path: string | null;
-};
 
 export type LogLevelFilter = "" | "INFO" | "WARNING" | "ERROR";
 
@@ -139,60 +110,6 @@ export function logLevelBadgeTone(level: string): string {
     default:
       return "border-[var(--mm-border)] bg-black/10 text-[var(--mm-text2)]";
   }
-}
-
-export function upgradeNoticeClass(tone: UpgradeNotice["tone"]): string {
-  if (tone === "error") {
-    return "rounded-md border border-red-500/40 bg-red-950/25 px-3 py-2 text-sm text-red-200";
-  }
-  if (tone === "success") {
-    return "rounded-md border border-emerald-500/30 bg-emerald-950/20 px-3 py-2 text-sm text-emerald-200";
-  }
-  return "rounded-md border border-amber-400/25 bg-amber-400/[0.06] px-3 py-2 text-sm text-[var(--mm-text2)]";
-}
-
-export function isUpgradeActivePhase(
-  phase: string | null | undefined,
-): boolean {
-  return (
-    phase === "checking" ||
-    phase === "downloading" ||
-    phase === "verifying_download" ||
-    phase === "installer_started" ||
-    phase === "installer_running" ||
-    phase === "restarting" ||
-    phase === "verifying_install"
-  );
-}
-
-export function isUpgradeProgressActive(
-  progress: SuiteUpgradeProgressOut | null | undefined,
-): boolean {
-  if (!progress) {
-    return false;
-  }
-  if (typeof progress.is_active === "boolean") {
-    return progress.is_active;
-  }
-  return isUpgradeActivePhase(progress.phase) && !progress.is_stale;
-}
-
-export function upgradePhaseTone(
-  status: SuiteUpdateStatusOut | undefined,
-  progress: SuiteUpgradeProgressOut | null | undefined,
-  monitor: UpgradeMonitor | null,
-): string {
-  if (monitor?.timedOutReason || progress?.phase === "failed") {
-    return "border-red-500/40 bg-red-950/25";
-  }
-  if (
-    progress?.phase === "completed" &&
-    progress.target_version &&
-    status?.current_version === progress.target_version
-  ) {
-    return "border-emerald-500/30 bg-emerald-950/20";
-  }
-  return "border-amber-400/25 bg-amber-400/[0.06]";
 }
 
 export function renderLogTechnicalDetails(entry: SuiteLogEntry) {
