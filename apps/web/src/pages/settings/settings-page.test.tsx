@@ -489,7 +489,7 @@ describe("SettingsPage (suite settings)", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("keeps the refresh button label stable while refetching with stable status data", async () => {
+  it("shows disabled Checking... button while update status fetch is in flight", async () => {
     vi.spyOn(suiteSettingsApi, "fetchSuiteUpdateStatus").mockImplementation(
       () => new Promise(() => {}),
     );
@@ -521,15 +521,14 @@ describe("SettingsPage (suite settings)", () => {
 
     render(wrap(<SettingsPage />, qc));
     fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
-    fireEvent.click(screen.getByRole("button", { name: "Check again" }));
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: "Check again" }),
+        screen.getByRole("button", { name: "Checking..." }),
       ).toBeDisabled();
     });
     expect(
-      screen.queryByRole("button", { name: "Checking..." }),
+      screen.queryByRole("button", { name: "Check again" }),
     ).not.toBeInTheDocument();
   });
 
