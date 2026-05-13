@@ -489,12 +489,12 @@ describe("SettingsPage (suite settings)", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows disabled Checking... button while update status fetch is in flight", async () => {
+  it("shows Checking... and disables button when refetch is in flight", async () => {
     vi.spyOn(suiteSettingsApi, "fetchSuiteUpdateStatus").mockImplementation(
       () => new Promise(() => {}),
     );
     const qc = new QueryClient({
-      defaultOptions: { queries: { retry: false, staleTime: 0 } },
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
     });
     qc.setQueryData(suiteSettingsQueryKey, minimalSuiteSettings);
     qc.setQueryData(suiteSecurityOverviewQueryKey, minimalSecurity);
@@ -521,6 +521,12 @@ describe("SettingsPage (suite settings)", () => {
 
     render(wrap(<SettingsPage />, qc));
     fireEvent.click(screen.getByRole("tab", { name: "Upgrade" }));
+
+    // staleTime: Infinity means the pre-seeded data is fresh — button shows "Check again"
+    expect(screen.getByRole("button", { name: "Check again" })).toBeEnabled();
+
+    // Trigger a manual refetch (mock never resolves)
+    fireEvent.click(screen.getByRole("button", { name: "Check again" }));
 
     await waitFor(() => {
       expect(
