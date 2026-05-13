@@ -359,7 +359,9 @@ export function SetupWizardPage() {
           refiner_tv_watched_folder: tvWatchedFolder.trim()
             ? tvWatchedFolder.trim()
             : null,
-          refiner_tv_work_folder: refinerCurrent.refiner_tv_work_folder,
+          refiner_tv_work_folder: tvWatchedFolder.trim()
+            ? refinerCurrent.refiner_tv_work_folder
+            : null,
           refiner_tv_output_folder: tvOutputFolder.trim()
             ? tvOutputFolder.trim()
             : null,
