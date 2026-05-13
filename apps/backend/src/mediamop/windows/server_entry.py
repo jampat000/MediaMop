@@ -65,8 +65,9 @@ def _prepare_environment(resource_root: Path, runtime_home: Path) -> None:
 
 
 def _run_migrations(resource_root: Path) -> None:
-    from alembic import command
     from alembic.config import Config
+
+    from alembic import command
 
     alembic_ini = resource_root / "alembic.ini"
     alembic_dir = resource_root / "alembic"
