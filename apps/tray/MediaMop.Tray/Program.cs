@@ -709,8 +709,8 @@ sealed class TrayApp : IDisposable
                 if (_updateService?.IsDownloaded != true) continue;
 
                 try { File.Delete(flagPath); } catch { }
-                Log("Apply-now flag detected — applying update and restarting.");
-                _notifyIcon?.Invoke(ApplyUpdateAndRestart);
+                Log("Apply-now flag detected - applying update and restarting.");
+                ApplyUpdateAndRestart();
                 return;
             }
         })
