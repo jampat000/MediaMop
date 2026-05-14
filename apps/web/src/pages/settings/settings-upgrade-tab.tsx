@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import type { useSuiteUpdateStatusQuery } from "../../lib/suite/queries";
 import {
+  useApplyUpdateMutation,
   useUpdateSettingsQuery,
   useUpdateSettingsMutation,
+  useUpdateStateQuery,
 } from "../../lib/suite/queries";
 import type { UpdateMode } from "../../lib/suite/types";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
@@ -56,9 +58,10 @@ const CHECK_INTERVALS = [
 ];
 
 export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
-  const updateSettingsQ = useUpdateSettingsQuery(
-    updateStatusQ.data?.install_type === "windows",
-  );
+  const isWindows = updateStatusQ.data?.install_type === "windows";
+  const updateStateQ = useUpdateStateQuery(isWindows);
+  const applyUpdate = useApplyUpdateMutation();
+  const updateSettingsQ = useUpdateSettingsQuery(isWindows);
   const saveMode = useUpdateSettingsMutation();
   const [modeDraft, setModeDraft] = useState<UpdateMode | null>(null);
   const [checkOnStartupDraft, setCheckOnStartupDraft] = useState(true);
@@ -162,6 +165,45 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                 </span>
               </div>
             </div>
+
+            {isWindows && updateStateQ.data?.downloaded && (
+              <div className="flex items-start justify-between gap-4 rounded-xl border border-emerald-500/40 bg-emerald-500/[0.08] px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-emerald-300">
+                    Update ready to install
+                    {updateStateQ.data.pending_version
+                      ? ` — v${updateStateQ.data.pending_version}`
+                      : ""}
+                  </p>
+                  <p className="mt-0.5 text-xs text-[var(--mm-text3)]">
+                    The update has been downloaded. Restart MediaMop to apply it.
+                  </p>
+                  {applyUpdate.isError && (
+                    <p className="mt-1 text-xs text-red-300" role="alert">
+                      {applyUpdate.error instanceof Error
+                        ? applyUpdate.error.message
+                        : "Could not signal restart."}
+                    </p>
+                  )}
+                  {applyUpdate.isSuccess && (
+                    <p className="mt-1 text-xs text-emerald-400">
+                      Restart signal sent — the tray will apply the update shortly.
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className={mmActionButtonClass({
+                    variant: "primary",
+                    disabled: applyUpdate.isPending || applyUpdate.isSuccess,
+                  })}
+                  disabled={applyUpdate.isPending || applyUpdate.isSuccess}
+                  onClick={() => void applyUpdate.mutateAsync()}
+                >
+                  {applyUpdate.isPending ? "Restarting..." : "Restart to apply"}
+                </button>
+              </div>
+            )}
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div className={SUITE_SETTINGS_PREMIUM_TILE_CLASS}>

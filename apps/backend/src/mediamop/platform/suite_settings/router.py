@@ -23,6 +23,7 @@ from mediamop.platform.metrics.service import build_runtime_metrics_summary
 from mediamop.platform.suite_settings.logs_service import prune_log_file, read_suite_logs
 from mediamop.platform.suite_settings.operational_history import reset_operational_history
 from mediamop.platform.suite_settings.schemas import (
+    ApplyUpdateIn,
     ConfigurationBundleImportIn,
     SuiteConfigurationBackupItemOut,
     SuiteConfigurationBackupListOut,
@@ -39,6 +40,7 @@ from mediamop.platform.suite_settings.schemas import (
     SuiteUpdateStatusOut,
     UpdateSettingsOut,
     UpdateSettingsPutIn,
+    UpdateStateOut,
 )
 from mediamop.platform.suite_settings.security_overview import build_suite_security_overview
 from mediamop.platform.suite_settings.service import (
@@ -53,7 +55,9 @@ from mediamop.platform.suite_settings.suite_configuration_backup_service import 
 from mediamop.platform.suite_settings.update_service import (
     build_suite_update_status,
     get_update_settings,
+    get_update_state,
     put_update_settings,
+    write_apply_update_flag,
 )
 
 router = APIRouter(tags=["suite"])
@@ -223,6 +227,36 @@ def put_suite_update_settings(
             detail="Your confirmation token expired. Refresh the page and try again.",
         )
     return put_update_settings(settings, body.mode, body.check_on_startup, body.check_interval_minutes)
+
+
+@router.get("/suite/update-state", response_model=UpdateStateOut)
+def get_suite_update_state(_user: UserPublicDep, settings: SettingsDep) -> UpdateStateOut:
+    """Read whether a downloaded-but-not-yet-applied update is pending."""
+
+    return get_update_state(settings)
+
+
+@router.post("/suite/apply-update", response_model=UpdateStateOut)
+def post_suite_apply_update(
+    body: ApplyUpdateIn,
+    request: Request,
+    _user: RequireOperatorDep,
+    settings: SettingsDep,
+) -> UpdateStateOut:
+    """Signal the tray to restart and apply the pending update."""
+
+    validate_browser_post_origin(request, settings)
+    secret = require_session_secret(settings)
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Your confirmation token expired. Refresh the page and try again.",
+        )
+    state = get_update_state(settings)
+    if not state.downloaded:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="No downloaded update is pending.")
+    write_apply_update_flag(settings)
+    return state
 
 
 @router.post("/suite/operational-history/reset", response_model=SuiteOperationalHistoryResetOut)

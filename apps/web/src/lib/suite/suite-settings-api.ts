@@ -21,6 +21,7 @@ import type {
   SuiteUpdateStatusOut,
   UpdateSettingsOut,
   UpdateSettingsPutBody,
+  UpdateStateOut,
 } from "./types";
 
 export const suiteSettingsPath = () => "/api/v1/suite/settings";
@@ -36,6 +37,8 @@ export const suiteMetricsPath = () => "/api/v1/suite/metrics";
 export const suiteOperationalHistoryResetPath = () =>
   "/api/v1/suite/operational-history/reset";
 export const suiteUpdateSettingsPath = () => "/api/v1/suite/update-settings";
+export const suiteUpdateStatePath = () => "/api/v1/suite/update-state";
+export const suiteApplyUpdatePath = () => "/api/v1/suite/apply-update";
 
 /**
  * GET/PUT configuration bundle: same handler on the backend, several URL aliases for older builds
@@ -152,6 +155,25 @@ export async function putUpdateSettings(
   });
   await requireOk(path, r, "Could not save update settings");
   return readJson<UpdateSettingsOut>(r);
+}
+
+export async function fetchUpdateState(): Promise<UpdateStateOut> {
+  const path = suiteUpdateStatePath();
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load update state");
+  return readJson<UpdateStateOut>(r);
+}
+
+export async function postApplyUpdate(): Promise<UpdateStateOut> {
+  const csrf_token = await fetchCsrfToken();
+  const path = suiteApplyUpdatePath();
+  const r = await apiFetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ csrf_token }),
+  });
+  await requireOk(path, r, "Could not signal update apply");
+  return readJson<UpdateStateOut>(r);
 }
 
 export async function resetSuiteOperationalHistory(

@@ -204,6 +204,23 @@ class UpdateSettingsPutIn(BaseModel):
     check_interval_minutes: int = Field(default=60, ge=1, le=10080)
 
 
+class UpdateStateOut(BaseModel):
+    """Current state of any downloaded-but-not-yet-applied update (read from update-state.json)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    downloaded: bool = False
+    pending_version: str | None = None
+
+
+class ApplyUpdateIn(BaseModel):
+    """Body for POST /suite/apply-update."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    csrf_token: str = Field(..., min_length=1)
+
+
 class SuiteOperationalHistoryResetIn(BaseModel):
     """Body for ``POST /suite/operational-history/reset``."""
 

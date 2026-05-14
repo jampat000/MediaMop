@@ -11,6 +11,8 @@ import {
   fetchSuiteSettings,
   fetchSuiteUpdateStatus,
   fetchUpdateSettings,
+  fetchUpdateState,
+  postApplyUpdate,
   putSuiteSettings,
   putUpdateSettings,
   resetSuiteOperationalHistory,
@@ -37,6 +39,7 @@ export const suiteUpdateSettingsQueryKey = [
   "suite",
   "update-settings",
 ] as const;
+export const suiteUpdateStateQueryKey = ["suite", "update-state"] as const;
 export const suiteLogsQueryKey = ["suite", "logs"] as const;
 export const suiteMetricsQueryKey = ["suite", "metrics"] as const;
 
@@ -76,6 +79,27 @@ export function useSuiteUpdateStatusQuery(
     staleTime: enabled && refetchInterval ? 0 : 60_000,
     refetchInterval,
     retry: false,
+  });
+}
+
+export function useUpdateStateQuery(enabled = true) {
+  return useQuery({
+    queryKey: suiteUpdateStateQueryKey,
+    queryFn: () => fetchUpdateState(),
+    enabled,
+    staleTime: 0,
+    refetchInterval: enabled ? 10_000 : false,
+    retry: false,
+  });
+}
+
+export function useApplyUpdateMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => postApplyUpdate(),
+    onSuccess: (data) => {
+      qc.setQueryData(suiteUpdateStateQueryKey, data);
+    },
   });
 }
 

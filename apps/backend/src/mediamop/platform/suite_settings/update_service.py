@@ -25,6 +25,7 @@ from mediamop.platform.suite_settings.release_catalog import (
 from mediamop.platform.suite_settings.schemas import (
     SuiteUpdateStatusOut,
     UpdateSettingsOut,
+    UpdateStateOut,
 )
 from mediamop.version import __version__
 
@@ -171,3 +172,26 @@ def put_update_settings(
         check_on_startup=check_on_startup,
         check_interval_minutes=check_interval_minutes,
     )
+
+
+_UPDATE_STATE_FILE = "update-state.json"
+_APPLY_UPDATE_FLAG = "update-apply-now"
+
+
+def get_update_state(settings: MediaMopSettings) -> UpdateStateOut:
+    path = Path(settings.mediamop_home) / _UPDATE_STATE_FILE
+    if not path.exists():
+        return UpdateStateOut()
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        return UpdateStateOut(
+            downloaded=bool(raw.get("downloaded", False)),
+            pending_version=raw.get("version") or None,
+        )
+    except Exception:
+        return UpdateStateOut()
+
+
+def write_apply_update_flag(settings: MediaMopSettings) -> None:
+    path = Path(settings.mediamop_home) / _APPLY_UPDATE_FLAG
+    path.touch()
