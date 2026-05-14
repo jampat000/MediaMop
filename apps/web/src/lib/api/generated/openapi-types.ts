@@ -1125,6 +1125,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/suite/apply-update": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Suite Apply Update
+     * @description Signal the tray to restart and apply the pending update.
+     */
+    post: operations["post_suite_apply_update_api_v1_suite_apply_update_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/suite/configuration-backups": {
     parameters: {
       query?: never;
@@ -1402,6 +1422,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/suite/update-state": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Suite Update State
+     * @description Read whether a downloaded-but-not-yet-applied update is pending.
+     */
+    get: operations["get_suite_update_state_api_v1_suite_update_state_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/suite/update-status": {
     parameters: {
       query?: never;
@@ -1623,6 +1663,14 @@ export interface components {
       events_last_24h: number;
       /** @description Newest event of any type, if any. */
       latest?: components["schemas"]["ActivityEventItemOut"] | null;
+    };
+    /**
+     * ApplyUpdateIn
+     * @description Body for POST /suite/apply-update.
+     */
+    ApplyUpdateIn: {
+      /** Csrf Token */
+      csrf_token: string;
     };
     /** ArrLibraryConnectionPanelOut */
     ArrLibraryConnectionPanelOut: {
@@ -4191,6 +4239,19 @@ export interface components {
       /** Mode */
       mode: string;
     };
+    /**
+     * UpdateStateOut
+     * @description Current state of any downloaded-but-not-yet-applied update (read from update-state.json).
+     */
+    UpdateStateOut: {
+      /**
+       * Downloaded
+       * @default false
+       */
+      downloaded: boolean;
+      /** Pending Version */
+      pending_version?: string | null;
+    };
     /** UserPublic */
     UserPublic: {
       /** Id */
@@ -6355,6 +6416,39 @@ export interface operations {
       };
     };
   };
+  post_suite_apply_update_api_v1_suite_apply_update_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApplyUpdateIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UpdateStateOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   get_configuration_backups_api_v1_suite_configuration_backups_get: {
     parameters: {
       query?: never;
@@ -6901,6 +6995,26 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_suite_update_state_api_v1_suite_update_state_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UpdateStateOut"];
         };
       };
     };

@@ -100,6 +100,22 @@
         "title": "ActivitySummaryOut",
         "type": "object"
       },
+      "ApplyUpdateIn": {
+        "additionalProperties": false,
+        "description": "Body for POST /suite/apply-update.",
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrf_token"
+        ],
+        "title": "ApplyUpdateIn",
+        "type": "object"
+      },
       "ArrLibraryConnectionPanelOut": {
         "additionalProperties": false,
         "properties": {
@@ -6299,6 +6315,30 @@
         "title": "UpdateSettingsPutIn",
         "type": "object"
       },
+      "UpdateStateOut": {
+        "additionalProperties": false,
+        "description": "Current state of any downloaded-but-not-yet-applied update (read from update-state.json).",
+        "properties": {
+          "downloaded": {
+            "default": false,
+            "title": "Downloaded",
+            "type": "boolean"
+          },
+          "pending_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Version"
+          }
+        },
+        "title": "UpdateStateOut",
+        "type": "object"
+      },
       "UserPublic": {
         "properties": {
           "id": {
@@ -9628,6 +9668,48 @@
         ]
       }
     },
+    "/api/v1/suite/apply-update": {
+      "post": {
+        "description": "Signal the tray to restart and apply the pending update.",
+        "operationId": "post_suite_apply_update_api_v1_suite_apply_update_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyUpdateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateStateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Suite Apply Update",
+        "tags": [
+          "suite"
+        ]
+      }
+    },
     "/api/v1/suite/configuration-backups": {
       "get": {
         "operationId": "get_configuration_backups_api_v1_suite_configuration_backups_get",
@@ -10335,6 +10417,28 @@
           }
         },
         "summary": "Put Suite Update Settings",
+        "tags": [
+          "suite"
+        ]
+      }
+    },
+    "/api/v1/suite/update-state": {
+      "get": {
+        "description": "Read whether a downloaded-but-not-yet-applied update is pending.",
+        "operationId": "get_suite_update_state_api_v1_suite_update_state_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateStateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Suite Update State",
         "tags": [
           "suite"
         ]
