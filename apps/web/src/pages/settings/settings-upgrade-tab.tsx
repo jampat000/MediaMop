@@ -176,7 +176,8 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                       : ""}
                   </p>
                   <p className="mt-0.5 text-xs text-[var(--mm-text3)]">
-                    The update has been downloaded. Restart MediaMop to apply it.
+                    The update has been downloaded. Restart MediaMop to apply
+                    it.
                   </p>
                   {applyUpdate.isError && (
                     <p className="mt-1 text-xs text-red-300" role="alert">
@@ -187,7 +188,8 @@ export function SettingsUpgradeTab({ updateStatusQ }: SettingsUpgradeTabProps) {
                   )}
                   {applyUpdate.isSuccess && (
                     <p className="mt-1 text-xs text-emerald-400">
-                      Restart signal sent — the tray will apply the update shortly.
+                      Restart signal sent — the tray will apply the update
+                      shortly.
                     </p>
                   )}
                 </div>
