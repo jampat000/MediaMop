@@ -89,7 +89,7 @@ def test_build_suite_update_status_docker_includes_update_command(monkeypatch: p
 
     assert status.status == "update_available"
     assert status.install_type == "docker"
-    assert status.docker_update_command == "docker compose pull && docker compose up -d"
+    assert status.docker_update_command == "docker pull ghcr.io/jampat000/mediamop:2.0.8 && docker compose up -d"
     assert status.in_app_upgrade_supported is False
     assert status.in_app_upgrade_summary is None
 

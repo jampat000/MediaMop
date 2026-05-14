@@ -97,7 +97,7 @@ def _build_release_status(
     docker_tag = release.version if release.version else None
     docker_update_command = None
     if install_type == "docker" and docker_tag:
-        docker_update_command = "docker compose pull && docker compose up -d"
+        docker_update_command = f"docker pull {DOCKER_IMAGE}:{docker_tag} && docker compose up -d"
 
     return SuiteUpdateStatusOut(
         current_version=current_version,
