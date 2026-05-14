@@ -78,6 +78,11 @@ export type UpdateSettingsPutBody = {
   check_interval_minutes: number;
 };
 
+export type UpdateStateOut = {
+  downloaded: boolean;
+  pending_version: string | null;
+};
+
 export type SuiteOperationalHistoryResetOut = {
   status: "reset" | string;
   activity_events_deleted: number;

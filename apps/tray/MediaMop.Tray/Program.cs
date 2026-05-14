@@ -618,6 +618,8 @@ sealed class TrayApp : IDisposable
 
         if (_updateSettings.CheckIntervalMinutes > 0)
             StartPeriodicUpdateCheck();
+
+        StartApplyWatcher();
     }
 
     private void StartPeriodicUpdateCheck()
@@ -645,13 +647,18 @@ sealed class TrayApp : IDisposable
         if (_updateService is null) return;
 
         bool available = await _updateService.CheckForUpdateAsync();
-        if (!available) return;
+        if (!available)
+        {
+            WriteUpdateState(false);
+            return;
+        }
 
         switch (_updateSettings.Mode)
         {
             case UpdateMode.Auto:
                 if (await _updateService.DownloadUpdateAsync())
                 {
+                    WriteUpdateState(true, _updateService.PendingVersion);
                     _updateService.ApplyOnExit();
                     ShowUpdateScheduled();
                 }
@@ -659,13 +666,59 @@ sealed class TrayApp : IDisposable
 
             case UpdateMode.DownloadOnly:
                 if (await _updateService.DownloadUpdateAsync())
+                {
+                    WriteUpdateState(true, _updateService.PendingVersion);
                     ShowUpdateReady();
+                }
                 break;
 
             case UpdateMode.NotifyOnly:
                 ShowUpdateAvailable();
                 break;
         }
+    }
+
+    private void WriteUpdateState(bool downloaded, string? version = null)
+    {
+        try
+        {
+            var path = Path.Combine(_runtimeHome, "update-state.json");
+            var json = JsonSerializer.Serialize(
+                new { downloaded, version },
+                new JsonSerializerOptions { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+            File.WriteAllText(path, json);
+        }
+        catch (Exception ex)
+        {
+            Log($"Could not write update state: {ex.Message}");
+        }
+    }
+
+    private void StartApplyWatcher()
+    {
+        var ct = _cts!.Token;
+        var flagPath = Path.Combine(_runtimeHome, "update-apply-now");
+
+        var thread = new Thread(async () =>
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                try { await Task.Delay(5_000, ct); } catch (OperationCanceledException) { return; }
+
+                if (!File.Exists(flagPath)) continue;
+                if (_updateService?.IsDownloaded != true) continue;
+
+                try { File.Delete(flagPath); } catch { }
+                Log("Apply-now flag detected - applying update and restarting.");
+                ApplyUpdateAndRestart();
+                return;
+            }
+        })
+        {
+            IsBackground = true,
+            Name = "mediamop-update-apply-watcher",
+        };
+        thread.Start();
     }
 
     private void ShowUpdateAvailable()
