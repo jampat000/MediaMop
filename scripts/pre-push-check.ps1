@@ -75,18 +75,14 @@ if (-not (Test-Path $prettierBin) -or -not (Test-Path $venvPython)) {
 
     $diff = git diff -- openapi/mediamop-openapi.json src/lib/api/generated/openapi-types.ts
     if ($diff) {
-        Write-Host ""
-        Write-Host "[pre-push] OpenAPI spec or types differ from committed versions." -ForegroundColor Yellow
-        Write-Host "[pre-push] Commit the updated files before pushing:" -ForegroundColor Yellow
-        Write-Host "  git add apps/web/openapi/mediamop-openapi.json apps/web/src/lib/api/generated/openapi-types.ts" -ForegroundColor Yellow
-        Write-Host '  git commit -m "chore: sync OpenAPI spec and generated types"' -ForegroundColor Yellow
-        Write-Host ""
-        git diff -- openapi/mediamop-openapi.json src/lib/api/generated/openapi-types.ts
-        git restore -- openapi/mediamop-openapi.json src/lib/api/generated/openapi-types.ts
+        Write-Host "[pre-push] OpenAPI spec or types differ - auto-committing the sync." -ForegroundColor Yellow
         Pop-Location
-        exit 1
+        git -C $REPO add apps/web/openapi/mediamop-openapi.json apps/web/src/lib/api/generated/openapi-types.ts
+        git -C $REPO commit -m "chore: sync OpenAPI spec and generated types"
+        if ($LASTEXITCODE -ne 0) { Fail "Failed to auto-commit OpenAPI sync" }
+    } else {
+        Pop-Location
     }
-    Pop-Location
     Pass "api:types drift check"
 }
 
