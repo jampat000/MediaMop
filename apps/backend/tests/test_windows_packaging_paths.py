@@ -62,8 +62,9 @@ def test_velopack_build_script_includes_ffmpeg_and_version_validation() -> None:
     assert 'FFMPEG_VENDOR = ROOT / "packaging" / "windows" / "vendor" / "ffmpeg"' in spec_text
     assert '(str(FFMPEG_VENDOR), "bin/ffmpeg")' in spec_text
     assert "Ensure-WindowsFfmpegRuntime" in build_text
-    assert "autobuild-2026-04-29-13-28" in build_text
-    assert "ffmpeg-N-124254-g397c7c7524-win64-lgpl.zip" in build_text
+    assert "ffmpeg-master-latest-win64-lgpl.zip" in build_text
+    assert "checksums.sha256" in build_text
+    assert "FFmpeg checksum entry" in build_text
     assert "Get-FileHash" in build_text
     assert "MEDIAMOP_BUILD_VERSION" in build_text
     assert '$buildVersion.StartsWith("v")' in build_text

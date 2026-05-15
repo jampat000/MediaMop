@@ -557,7 +557,7 @@ def test_bootstrap_rejects_short_password() -> None:
         assert r.status_code == 422, r.text
         detail = r.json().get("detail") or []
         assert any(
-            item.get("loc") == ["body", "password"] and "at least 12 characters" in item.get("msg", "")
+            item.get("loc") == ["body", "password"] and "at least 8 characters" in item.get("msg", "")
             for item in detail
             if isinstance(item, dict)
         )

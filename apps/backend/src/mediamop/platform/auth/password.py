@@ -9,7 +9,7 @@ from argon2.exceptions import InvalidHashError, VerifyMismatchError
 
 logger = logging.getLogger(__name__)
 
-MIN_PASSWORD_LENGTH = 12
+MIN_PASSWORD_LENGTH = 8
 _WEAK_PASSWORDS = {
     "admin",
     "changeme",
