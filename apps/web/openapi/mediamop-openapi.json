@@ -588,7 +588,7 @@
           },
           "password": {
             "maxLength": 512,
-            "minLength": 12,
+            "minLength": 8,
             "title": "Password",
             "type": "string"
           },
@@ -659,7 +659,7 @@
           },
           "new_password": {
             "maxLength": 512,
-            "minLength": 12,
+            "minLength": 8,
             "title": "New Password",
             "type": "string"
           }
@@ -6454,7 +6454,7 @@
   },
   "info": {
     "title": "MediaMop API",
-    "version": "2.3.4"
+    "version": "2.3.5"
   },
   "openapi": "3.1.0",
   "paths": {
