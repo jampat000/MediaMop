@@ -41,26 +41,37 @@ const initialCheck: ConnectionCheckState = {
 
 function ConnectionStatusPanel({
   check,
+  configured,
+  dirty,
   idleHelper,
   fmt,
 }: {
   check: ConnectionCheckState;
+  configured: boolean;
+  dirty: boolean;
   idleHelper?: string;
   fmt: (iso: string | null) => string;
 }) {
   const main =
     check.outcome === null
-      ? "Not connected yet"
+      ? configured
+        ? dirty
+          ? "Unsaved changes"
+          : "Connection saved"
+        : "Not connected yet"
       : check.outcome === "ok"
         ? "Connected"
         : "Connection failed";
+  const lastCompleted = check.at
+    ? fmt(check.at)
+    : "Not checked in this session";
   return (
     <div className="mt-4 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-3.5 text-sm text-[var(--mm-text2)]">
       <p className="text-sm font-medium text-[var(--mm-text)]">{main}</p>
       <p className="mt-1 text-xs text-[var(--mm-text2)]">
         Last completed check:{" "}
         <span className="font-medium text-[var(--mm-text)]">
-          {fmt(check.at)}
+          {lastCompleted}
         </span>
       </p>
       {check.outcome === "ok" && check.quotaNote ? (
@@ -72,7 +83,13 @@ function ConnectionStatusPanel({
       {check.outcome === "fail" && check.detail ? (
         <p className="mt-1 text-xs text-red-400">{check.detail}</p>
       ) : null}
-      {check.outcome === null && idleHelper ? (
+      {check.outcome === null && configured ? (
+        <p className="mt-2 text-xs text-[var(--mm-text2)]">
+          Credentials are saved. Run a test to verify the service is reachable
+          now.
+        </p>
+      ) : null}
+      {check.outcome === null && !configured && idleHelper ? (
         <p className="mt-2 text-xs text-[var(--mm-text2)]">{idleHelper}</p>
       ) : null}
     </div>
@@ -391,7 +408,10 @@ export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
   async function runTestSon() {
     const at = new Date().toISOString();
     try {
-      const r = await testSon.mutateAsync();
+      const r = await testSon.mutateAsync({
+        base_url: sonUrl.trim(),
+        ...(sonKey.trim() ? { api_key: sonKey.trim() } : {}),
+      });
       if (r.ok) {
         setSonCheck({ outcome: "ok", at, detail: r.message || "OK" });
       } else {
@@ -409,7 +429,10 @@ export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
   async function runTestRad() {
     const at = new Date().toISOString();
     try {
-      const r = await testRad.mutateAsync();
+      const r = await testRad.mutateAsync({
+        base_url: radUrl.trim(),
+        ...(radKey.trim() ? { api_key: radKey.trim() } : {}),
+      });
       if (r.ok) {
         setRadCheck({ outcome: "ok", at, detail: r.message || "OK" });
       } else {
@@ -463,6 +486,12 @@ export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
 
   const sonHint = (q.data?.arr_library_sonarr_base_url_hint || "").trim();
   const radHint = (q.data?.arr_library_radarr_base_url_hint || "").trim();
+  const sonConfigured = Boolean(
+    (q.data?.sonarr_base_url || "").trim() && q.data?.sonarr_api_key_set,
+  );
+  const radConfigured = Boolean(
+    (q.data?.radarr_base_url || "").trim() && q.data?.radarr_api_key_set,
+  );
 
   return (
     <div className="mm-bubble-stack" data-testid="subber-connections-tab">
@@ -558,6 +587,8 @@ export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
                 <SaveFeedback ok={saveSon.ok} err={saveSon.err} />
                 <ConnectionStatusPanel
                   check={sonCheck}
+                  configured={sonConfigured}
+                  dirty={sonDirty}
                   idleHelper="Save your URL and API key, then run a test to confirm Sonarr is reachable."
                   fmt={fmt}
                 />
@@ -816,6 +847,8 @@ export function SubberConnectionsTab({ canOperate }: { canOperate: boolean }) {
                 <SaveFeedback ok={saveRad.ok} err={saveRad.err} />
                 <ConnectionStatusPanel
                   check={radCheck}
+                  configured={radConfigured}
+                  dirty={radDirty}
                   idleHelper="Save your URL and API key, then run a test to confirm Radarr is reachable."
                   fmt={fmt}
                 />

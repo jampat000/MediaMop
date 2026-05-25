@@ -209,6 +209,39 @@ def test_put_settings_sonarr_api_key_sets_flag(client_admin: TestClient) -> None
     assert body.get("sonarr_api_key_set") is True
 
 
+def test_test_sonarr_accepts_unsaved_draft_connection(client_admin: TestClient) -> None:
+    _login_admin(client_admin)
+    tok = csrf(client_admin)
+    with patch("urllib.request.urlopen", return_value=_JsonResponse('{"version":"4.0.0"}')) as mocked:
+        r = client_admin.post(
+            "/api/v1/subber/settings/test-sonarr",
+            json={"base_url": "http://draft-sonarr.local/", "api_key": "draft-key", "csrf_token": tok},
+            headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
+        )
+    assert r.status_code == 200, r.text
+    assert r.json() == {"ok": True, "message": "OK"}
+    req = mocked.call_args.args[0]
+    assert req.full_url == "http://draft-sonarr.local/api/v3/system/status"
+    assert dict(req.header_items())["X-api-key"] == "draft-key"
+
+
+def test_test_radarr_can_use_draft_url_with_saved_api_key(client_admin: TestClient) -> None:
+    _login_admin(client_admin)
+    _put_settings(client_admin, {"radarr_api_key": "saved-rad-key"})
+    tok = csrf(client_admin)
+    with patch("urllib.request.urlopen", return_value=_JsonResponse('{"version":"4.0.0"}')) as mocked:
+        r = client_admin.post(
+            "/api/v1/subber/settings/test-radarr",
+            json={"base_url": "http://draft-radarr.local", "csrf_token": tok},
+            headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
+        )
+    assert r.status_code == 200, r.text
+    assert r.json() == {"ok": True, "message": "OK"}
+    req = mocked.call_args.args[0]
+    assert req.full_url == "http://draft-radarr.local/api/v3/system/status"
+    assert dict(req.header_items())["X-api-key"] == "saved-rad-key"
+
+
 def test_put_settings_opensubtitles_credentials_set_flag(client_admin: TestClient) -> None:
     _login_admin(client_admin)
     _put_settings(
