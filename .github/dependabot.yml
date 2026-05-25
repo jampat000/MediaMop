@@ -20,3 +20,18 @@ updates:
       actions:
         patterns:
           - "*"
+
+  - package-ecosystem: npm
+    directory: /docs-site
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      docs-site:
+        patterns:
+          - "*"
+    ignore:
+      # webpack-dev-server@5.2.4 depends on sockjs@0.3.24, whose uuid range is
+      # still ^8.3.2. Dependabot cannot resolve the uuid security update until
+      # that upstream dependency chain has a compatible patched release.
+      - dependency-name: uuid
