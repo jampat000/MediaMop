@@ -19,6 +19,7 @@ import {
   postSubberTestSonarr,
   putSubberProvider,
   putSubberSettings,
+  type SubberArrConnectionTestIn,
   type SubberProviderPutIn,
   type SubberSettingsPutIn,
 } from "./subber-api";
@@ -175,11 +176,17 @@ export function useSubberTestOpensubtitlesMutation() {
 }
 
 export function useSubberTestSonarrMutation() {
-  return useMutation({ mutationFn: postSubberTestSonarr });
+  return useMutation({
+    mutationFn: (body?: SubberArrConnectionTestIn) =>
+      postSubberTestSonarr(body),
+  });
 }
 
 export function useSubberTestRadarrMutation() {
-  return useMutation({ mutationFn: postSubberTestRadarr });
+  return useMutation({
+    mutationFn: (body?: SubberArrConnectionTestIn) =>
+      postSubberTestRadarr(body),
+  });
 }
 
 export function useSubberSonarrRootFoldersMutation() {

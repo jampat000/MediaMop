@@ -128,6 +128,11 @@ class SubberCsrfIn(BaseModel):
     csrf_token: str = Field(..., min_length=1)
 
 
+class SubberArrConnectionTestIn(SubberCsrfIn):
+    base_url: str | None = None
+    api_key: str | None = None
+
+
 @router.get("/settings", response_model=SubberSettingsOut)
 def get_subber_settings(
     _user: RequireOperatorDep,
@@ -369,6 +374,20 @@ def _arr_api_key(settings: MediaMopSettings, ciphertext: str | None) -> str:
     return str(sec.get("api_key") or "").strip()
 
 
+def _arr_test_credentials(
+    settings: MediaMopSettings,
+    *,
+    saved_base_url: str,
+    saved_ciphertext: str | None,
+    body: SubberArrConnectionTestIn,
+) -> tuple[str, str]:
+    base_url = body.base_url.strip() if body.base_url is not None else saved_base_url.strip()
+    api_key = body.api_key.strip() if body.api_key is not None and body.api_key.strip() else ""
+    if not api_key:
+        api_key = _arr_api_key(settings, saved_ciphertext)
+    return base_url, api_key
+
+
 def _arr_root_folders(base_url: str, api_key: str) -> tuple[bool, str, list[SubberArrRootFolderOut]]:
     try:
         root = normalize_local_service_base_url(base_url)
@@ -415,22 +434,21 @@ def post_test_sonarr(
     db: DbSessionDep,
     request: Request,
     settings: SettingsDep,
-    body: SubberCsrfIn,
+    body: SubberArrConnectionTestIn,
 ) -> SubberTestConnectionOut:
     secret = settings.session_secret or ""
     if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     row = ensure_subber_settings_row(db)
-    key_raw = decrypt_subber_credentials_json(settings, row.sonarr_credentials_ciphertext or "") or "{}"
-    try:
-        kd = json.loads(key_raw)
-    except json.JSONDecodeError:
-        kd = {}
-    sec = kd.get("secrets") if isinstance(kd.get("secrets"), dict) else {}
-    api_key = str(sec.get("api_key") or "").strip()
-    if not row.sonarr_base_url.strip() or not api_key:
+    base_url, api_key = _arr_test_credentials(
+        settings,
+        saved_base_url=row.sonarr_base_url or "",
+        saved_ciphertext=row.sonarr_credentials_ciphertext,
+        body=body,
+    )
+    if not base_url or not api_key:
         return SubberTestConnectionOut(ok=False, message="Sonarr URL or API key not set.")
-    ok, msg = _arr_status_probe(row.sonarr_base_url, api_key)
+    ok, msg = _arr_status_probe(base_url, api_key)
     return SubberTestConnectionOut(ok=ok, message=msg)
 
 
@@ -459,22 +477,21 @@ def post_test_radarr(
     db: DbSessionDep,
     request: Request,
     settings: SettingsDep,
-    body: SubberCsrfIn,
+    body: SubberArrConnectionTestIn,
 ) -> SubberTestConnectionOut:
     secret = settings.session_secret or ""
     if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid CSRF token.")
     row = ensure_subber_settings_row(db)
-    key_raw = decrypt_subber_credentials_json(settings, row.radarr_credentials_ciphertext or "") or "{}"
-    try:
-        kd = json.loads(key_raw)
-    except json.JSONDecodeError:
-        kd = {}
-    sec = kd.get("secrets") if isinstance(kd.get("secrets"), dict) else {}
-    api_key = str(sec.get("api_key") or "").strip()
-    if not row.radarr_base_url.strip() or not api_key:
+    base_url, api_key = _arr_test_credentials(
+        settings,
+        saved_base_url=row.radarr_base_url or "",
+        saved_ciphertext=row.radarr_credentials_ciphertext,
+        body=body,
+    )
+    if not base_url or not api_key:
         return SubberTestConnectionOut(ok=False, message="Radarr URL or API key not set.")
-    ok, msg = _arr_status_probe(row.radarr_base_url, api_key)
+    ok, msg = _arr_status_probe(base_url, api_key)
     return SubberTestConnectionOut(ok=ok, message=msg)
 
 

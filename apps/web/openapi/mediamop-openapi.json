@@ -4042,6 +4042,42 @@
         "title": "RefinerWatchedFolderRemuxScanDispatchManualEnqueueOut",
         "type": "object"
       },
+      "SubberArrConnectionTestIn": {
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Key"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrf_token"
+        ],
+        "title": "SubberArrConnectionTestIn",
+        "type": "object"
+      },
       "SubberArrRootFolderOut": {
         "properties": {
           "free_space": {
@@ -6454,7 +6490,7 @@
   },
   "info": {
     "title": "MediaMop API",
-    "version": "2.3.5"
+    "version": "2.3.6"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -9459,7 +9495,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SubberCsrfIn"
+                "$ref": "#/components/schemas/SubberArrConnectionTestIn"
               }
             }
           },
@@ -9501,7 +9537,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SubberCsrfIn"
+                "$ref": "#/components/schemas/SubberArrConnectionTestIn"
               }
             }
           },

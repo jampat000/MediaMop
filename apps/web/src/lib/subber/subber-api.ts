@@ -140,6 +140,11 @@ export type SubberSettingsPutIn = {
 
 export type SubberTestConnectionOut = { ok: boolean; message: string };
 
+export type SubberArrConnectionTestIn = {
+  base_url?: string;
+  api_key?: string;
+};
+
 export type SubberArrRootFolderOut = {
   path: string;
   free_space: number | null;
@@ -237,25 +242,29 @@ export async function postSubberTestOpensubtitles(): Promise<SubberTestConnectio
   return readJson<SubberTestConnectionOut>(r);
 }
 
-export async function postSubberTestSonarr(): Promise<SubberTestConnectionOut> {
+export async function postSubberTestSonarr(
+  body: SubberArrConnectionTestIn = {},
+): Promise<SubberTestConnectionOut> {
   const csrf = await fetchCsrfToken();
   const path = "/api/v1/subber/settings/test-sonarr";
   const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ csrf_token: csrf }),
+    body: JSON.stringify({ ...body, csrf_token: csrf }),
   });
   await requireOk(path, r, "Could not test Sonarr");
   return readJson<SubberTestConnectionOut>(r);
 }
 
-export async function postSubberTestRadarr(): Promise<SubberTestConnectionOut> {
+export async function postSubberTestRadarr(
+  body: SubberArrConnectionTestIn = {},
+): Promise<SubberTestConnectionOut> {
   const csrf = await fetchCsrfToken();
   const path = "/api/v1/subber/settings/test-radarr";
   const r = await apiFetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ csrf_token: csrf }),
+    body: JSON.stringify({ ...body, csrf_token: csrf }),
   });
   await requireOk(path, r, "Could not test Radarr");
   return readJson<SubberTestConnectionOut>(r);

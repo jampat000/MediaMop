@@ -3368,6 +3368,15 @@ export interface components {
        */
       ok: boolean;
     };
+    /** SubberArrConnectionTestIn */
+    SubberArrConnectionTestIn: {
+      /** Api Key */
+      api_key?: string | null;
+      /** Base Url */
+      base_url?: string | null;
+      /** Csrf Token */
+      csrf_token: string;
+    };
     /** SubberArrRootFolderOut */
     SubberArrRootFolderOut: {
       /** Free Space */
@@ -6281,7 +6290,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["SubberCsrfIn"];
+        "application/json": components["schemas"]["SubberArrConnectionTestIn"];
       };
     };
     responses: {
@@ -6314,7 +6323,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["SubberCsrfIn"];
+        "application/json": components["schemas"]["SubberArrConnectionTestIn"];
       };
     };
     responses: {
