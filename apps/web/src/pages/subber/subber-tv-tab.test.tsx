@@ -94,11 +94,13 @@ describe("SubberTvTab", () => {
     const client = new QueryClient();
     render(wrap(<SubberTvTab canOperate />, client));
     await waitFor(() => expect(screen.getByText(/Demo/)).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Demo"));
+    fireEvent.click(screen.getByText("Season 1"));
     fireEvent.click(screen.getByTestId("subber-tv-search-now"));
     expect(mutate).toHaveBeenCalledWith(8);
   });
 
-  it("summarizes show, season, and episode subtitle coverage", async () => {
+  it("summarizes shows first, then drills into season and episode coverage", async () => {
     const client = new QueryClient();
     render(wrap(<SubberTvTab canOperate />, client));
 
@@ -107,7 +109,11 @@ describe("SubberTvTab", () => {
     expect(
       screen.getByText("1 episode still needs subtitles"),
     ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Demo"));
     expect(screen.getByText("1 missing, 0 complete")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Season 1"));
     expect(screen.getByText("Needs subtitles")).toBeInTheDocument();
     expect(screen.getByText("Missing FR")).toBeInTheDocument();
   });
