@@ -35,6 +35,12 @@ type SubberOverviewNavTab = "settings" | "tv" | "movies" | "schedule" | "jobs";
 const SUBBER_NEXT_STEPS_BODY =
   "Use Settings to connect OpenSubtitles, Sonarr, and Radarr. Check TV and Movies to see your library and search for missing subtitles. Use Schedule to automate searches and Jobs for recent activity.";
 
+function arrOverviewStatus(configured: boolean, trackedCount: number): string {
+  if (!configured) return "Not configured";
+  if (trackedCount > 0) return "Tracking library";
+  return "Ready to sync";
+}
+
 function SubberOverviewNextSteps({
   onOpenTab,
 }: {
@@ -240,7 +246,7 @@ export function SubberOverviewTab({
       <p>
         <span className="text-[var(--mm-text3)]">Status:</span>{" "}
         <span className="font-medium text-[var(--mm-text1)]">
-          {sonConnected ? "Credentials saved" : "Not configured"}
+          {arrOverviewStatus(sonConnected, st.tv_tracked)}
         </span>
       </p>
       <p>
@@ -263,7 +269,7 @@ export function SubberOverviewTab({
       <p>
         <span className="text-[var(--mm-text3)]">Status:</span>{" "}
         <span className="font-medium text-[var(--mm-text1)]">
-          {radConnected ? "Credentials saved" : "Not configured"}
+          {arrOverviewStatus(radConnected, st.movies_tracked)}
         </span>
       </p>
       <p>

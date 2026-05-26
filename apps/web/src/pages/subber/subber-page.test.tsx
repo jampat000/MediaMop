@@ -190,4 +190,69 @@ describe("SubberPage", () => {
       expect(screen.getByTestId("subber-tv-tab")).toBeInTheDocument(),
     );
   });
+
+  it("summarizes Subber Arr setup as sync state instead of saved credentials", async () => {
+    vi.spyOn(subberQueries, "useSubberSettingsQuery").mockReturnValue({
+      data: {
+        enabled: true,
+        opensubtitles_username: "",
+        opensubtitles_password_set: true,
+        opensubtitles_api_key_set: true,
+        sonarr_base_url: "http://sonarr.local",
+        sonarr_api_key_set: true,
+        radarr_base_url: "http://radarr.local",
+        radarr_api_key_set: true,
+        language_preferences: ["en"],
+        subtitle_folder: "",
+        tv_schedule_enabled: false,
+        tv_schedule_interval_seconds: 3600,
+        tv_schedule_hours_limited: false,
+        tv_schedule_days: "",
+        tv_schedule_start: "00:00",
+        tv_schedule_end: "23:59",
+        movies_schedule_enabled: false,
+        movies_schedule_interval_seconds: 3600,
+        movies_schedule_hours_limited: false,
+        movies_schedule_days: "",
+        movies_schedule_start: "00:00",
+        movies_schedule_end: "23:59",
+        tv_last_scheduled_scan_enqueued_at: null,
+        movies_last_scheduled_scan_enqueued_at: null,
+        arr_library_sonarr_base_url_hint: "",
+        arr_library_radarr_base_url_hint: "",
+      },
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof subberQueries.useSubberSettingsQuery>);
+    vi.spyOn(subberQueries, "useSubberOverviewQuery").mockReturnValue({
+      data: {
+        window_days: 30,
+        subtitles_downloaded: 0,
+        still_missing: 0,
+        skipped: 0,
+        tv_tracked: 12,
+        movies_tracked: 0,
+        tv_found: 0,
+        movies_found: 0,
+        tv_missing: 0,
+        movies_missing: 0,
+        searches_last_30_days: 0,
+        found_last_30_days: 0,
+        not_found_last_30_days: 0,
+        upgrades_last_30_days: 0,
+      },
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof subberQueries.useSubberOverviewQuery>);
+
+    const client = new QueryClient();
+    render(wrap(<SubberPage />, client));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("subber-overview-tab")).toBeInTheDocument(),
+    );
+    expect(screen.getByText("Tracking library")).toBeInTheDocument();
+    expect(screen.getByText("Ready to sync")).toBeInTheDocument();
+    expect(screen.queryByText("Credentials saved")).not.toBeInTheDocument();
+  });
 });
