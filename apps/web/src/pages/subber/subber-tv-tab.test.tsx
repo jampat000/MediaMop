@@ -98,6 +98,20 @@ describe("SubberTvTab", () => {
     expect(mutate).toHaveBeenCalledWith(8);
   });
 
+  it("summarizes show, season, and episode subtitle coverage", async () => {
+    const client = new QueryClient();
+    render(wrap(<SubberTvTab canOperate />, client));
+
+    await waitFor(() => expect(screen.getByText(/Demo/)).toBeInTheDocument());
+
+    expect(
+      screen.getByText("1 episode still needs subtitles"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("1 missing, 0 complete")).toBeInTheDocument();
+    expect(screen.getByText("Needs subtitles")).toBeInTheDocument();
+    expect(screen.getByText("Missing FR")).toBeInTheDocument();
+  });
+
   it("shows empty state when no shows", async () => {
     vi.spyOn(subberQueries, "useSubberLibraryTvQuery").mockReturnValue({
       data: { shows: [], total: 0 },
