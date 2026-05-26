@@ -309,6 +309,55 @@ def test_library_sync_tv_resolves_path_via_episode_file_table(session_factory, t
         assert r.file_path == str(mkv)
 
 
+def test_library_sync_tv_resolves_path_via_top_level_episode_file_id(session_factory, tmp_path: Path) -> None:
+    """Sonarr commonly returns episodeFileId at the episode root instead of nested episodeFile.id."""
+    settings = MediaMopSettings.load()
+    mkv = tmp_path / "top-level-episode-file-id.mkv"
+    mkv.write_bytes(b"x")
+
+    with session_factory() as s:
+        s.add(_sonarr_row(settings))
+        s.commit()
+        subber_enqueue_or_get_job(
+            s,
+            dedupe_key="lsync:tv:top-level-ef",
+            job_kind=SUBBER_JOB_KIND_LIBRARY_SYNC_TV,
+            payload_json="{}",
+        )
+        s.commit()
+
+    series = [{"id": 1, "title": "Top Level Show"}]
+    episodes = [
+        {
+            "id": 201,
+            "title": "B",
+            "seasonNumber": 2,
+            "episodeNumber": 3,
+            "hasFile": True,
+            "episodeFileId": 556,
+        },
+    ]
+    ep_files = [{"id": 556, "path": str(mkv), "seriesId": 1}]
+
+    handlers = build_subber_job_handlers(settings, session_factory)
+    t0 = datetime(2026, 6, 1, 12, 0, 0, tzinfo=UTC)
+    with (
+        patch("mediamop.modules.subber.subber_library_sync_job_handler.get_sonarr_series", return_value=series),
+        patch("mediamop.modules.subber.subber_library_sync_job_handler.get_sonarr_episodes", return_value=episodes),
+        patch(
+            "mediamop.modules.subber.subber_library_sync_job_handler.get_sonarr_episode_files", return_value=ep_files
+        ),
+    ):
+        process_one_subber_job(session_factory, lease_owner="ls6", job_handlers=handlers, now=t0, lease_seconds=600)
+
+    with session_factory() as s:
+        r = s.scalars(select(SubberSubtitleState).where(SubberSubtitleState.sonarr_episode_id == 201)).one()
+        assert r.file_path == str(mkv)
+        assert r.show_title == "Top Level Show"
+        assert r.season_number == 2
+        assert r.episode_number == 3
+
+
 def test_upsert_service_merge_found_over_missing(session_factory) -> None:
     with session_factory() as s:
         s.add(SubberSettingsRow(id=1, enabled=True))
