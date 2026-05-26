@@ -28,7 +28,7 @@ export function writeSubberLibraryPageSize(n: SubberLibraryPageSize): void {
 }
 
 type SubberLibraryPagerProps = {
-  /** Total rows matching filters (movies or TV episodes). */
+  /** Total rows matching filters (movies or TV shows). */
   total: number;
   page: number;
   pageSize: SubberLibraryPageSize;

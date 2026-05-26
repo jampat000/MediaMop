@@ -39,33 +39,6 @@ def _lang_states(rows: Sequence[SubberSubtitleState], lang_filter: str | None) -
     return [r for r in rows if r.language_code.lower() == lf]
 
 
-def _flatten_tv_shows(show_out: list[SubberTvShowOut]) -> list[tuple[str, int | None, SubberTvEpisodeOut]]:
-    flat: list[tuple[str, int | None, SubberTvEpisodeOut]] = []
-    for show in show_out:
-        for season in show.seasons:
-            for ep in season.episodes:
-                flat.append((show.show_title, season.season_number, ep))
-    return flat
-
-
-def _rebuild_tv_shows_from_flat(flat: list[tuple[str, int | None, SubberTvEpisodeOut]]) -> list[SubberTvShowOut]:
-    shows: dict[str, dict[int | None, list[SubberTvEpisodeOut]]] = defaultdict(lambda: defaultdict(list))
-    for show_title, sn, ep in flat:
-        shows[show_title][sn].append(ep)
-    show_out: list[SubberTvShowOut] = []
-    for show_title in sorted(shows.keys(), key=lambda s: s.lower()):
-        seasons_map = shows[show_title]
-        seasons: list[SubberTvSeasonOut] = []
-        for sn in sorted(seasons_map.keys(), key=lambda x: (x is None, x or -1)):
-            eps = sorted(
-                seasons_map[sn],
-                key=lambda e: (e.episode_number is None, e.episode_number or -1, e.file_path),
-            )
-            seasons.append(SubberTvSeasonOut(season_number=sn, episodes=eps))
-        show_out.append(SubberTvShowOut(show_title=show_title, seasons=seasons))
-    return show_out
-
-
 def _episode_status_filter(rows: Sequence[SubberSubtitleState], status: str | None, prefs: list[str]) -> bool:
     if not status or status == "all":
         return True
@@ -140,11 +113,9 @@ def build_tv_library(
             )
             seasons.append(SubberTvSeasonOut(season_number=sn, episodes=eps))
         show_out.append(SubberTvShowOut(show_title=show_title, seasons=seasons))
-    flat = _flatten_tv_shows(show_out)
-    total = len(flat)
+    total = len(show_out)
     if limit is not None:
-        flat = flat[offset : offset + limit]
-        show_out = _rebuild_tv_shows_from_flat(flat)
+        show_out = show_out[offset : offset + limit]
     return SubberTvLibraryOut(shows=show_out, total=total)
 
 
