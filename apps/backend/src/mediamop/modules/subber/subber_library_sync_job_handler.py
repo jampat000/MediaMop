@@ -88,6 +88,9 @@ def _episode_file_path(ep: dict, episode_file_id_to_path: dict[int, str]) -> str
         efid = ef.get("id")
         if efid is not None and str(efid).strip().isdigit():
             return episode_file_id_to_path.get(int(efid), "")
+    efid = ep.get("episodeFileId")
+    if efid is not None and str(efid).strip().isdigit():
+        return episode_file_id_to_path.get(int(efid), "")
     return ""
 
 
