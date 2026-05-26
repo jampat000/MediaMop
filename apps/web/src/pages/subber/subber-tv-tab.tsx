@@ -158,6 +158,23 @@ function CoverageSummaryPill({
   );
 }
 
+function DrilldownChevron({ level }: { level: "show" | "season" }) {
+  const rotateClass =
+    level === "show"
+      ? "group-open/show:rotate-90"
+      : "group-open/season:rotate-90";
+  return (
+    <svg
+      aria-hidden
+      className={`mt-0.5 h-4 w-4 shrink-0 text-[var(--mm-text2)] transition-transform ${rotateClass}`}
+      viewBox="0 0 20 20"
+      fill="currentColor"
+    >
+      <path d="M8 5v10l8-5-8-5z" />
+    </svg>
+  );
+}
+
 function EpisodeStatusPill({ complete }: { complete: boolean }) {
   return (
     <span
@@ -350,64 +367,88 @@ export function SubberTvTab({ canOperate }: { canOperate: boolean }) {
           itemLabel="episodes"
         />
       ) : null}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {libQ.data?.shows.map((show) => {
           const showCounts = countCoverage(showEpisodes(show), prefs);
           return (
-            <section
+            <details
               key={show.show_title}
-              className="overflow-hidden rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/35 shadow-sm"
+              className="group/show overflow-hidden rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)]/35 shadow-sm open:border-[var(--mm-accent)]/30"
             >
-              <header className="flex flex-col gap-3 border-b border-[var(--mm-border)] bg-black/15 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="min-w-0">
-                  <h3 className="truncate text-lg font-semibold leading-tight text-[var(--mm-text)]">
-                    {show.show_title}
-                  </h3>
-                  <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                    {showCounts.missing > 0
-                      ? `${showCounts.missing} episode${
-                          showCounts.missing === 1 ? "" : "s"
-                        } still ${
-                          showCounts.missing === 1 ? "needs" : "need"
-                        } subtitles`
-                      : "All shown episodes have preferred subtitles"}
-                  </p>
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <div className="flex flex-wrap gap-2">
-                    <CoverageSummaryPill
-                      tone="neutral"
-                      label="episodes"
-                      value={showCounts.total}
-                    />
-                    <CoverageSummaryPill
-                      tone="warn"
-                      label="missing"
-                      value={showCounts.missing}
-                    />
+              <summary className="grid cursor-pointer list-none gap-3 bg-black/15 px-4 py-3 outline-none marker:hidden hover:bg-black/20 md:grid-cols-[minmax(16rem,1fr)_auto_minmax(9rem,12rem)] md:items-center [&::-webkit-details-marker]:hidden">
+                <div className="flex min-w-0 items-start gap-2">
+                  <DrilldownChevron level="show" />
+                  <div className="min-w-0">
+                    <h3 className="truncate text-lg font-semibold leading-tight text-[var(--mm-text)]">
+                      {show.show_title}
+                    </h3>
+                    <p className="mt-1 text-sm text-[var(--mm-text2)]">
+                      {showCounts.missing > 0
+                        ? `${showCounts.missing} episode${
+                            showCounts.missing === 1 ? "" : "s"
+                          } still ${
+                            showCounts.missing === 1 ? "needs" : "need"
+                          } subtitles`
+                        : "All shown episodes have preferred subtitles"}
+                    </p>
                   </div>
-                  <CoverageMeter counts={showCounts} />
                 </div>
-              </header>
-              <div className="divide-y divide-[var(--mm-border)]">
+                <div className="flex flex-wrap gap-2 md:justify-end">
+                  <CoverageSummaryPill
+                    tone="neutral"
+                    label="episodes"
+                    value={showCounts.total}
+                  />
+                  <CoverageSummaryPill
+                    tone="good"
+                    label="complete"
+                    value={showCounts.complete}
+                  />
+                  <CoverageSummaryPill
+                    tone="warn"
+                    label="missing"
+                    value={showCounts.missing}
+                  />
+                </div>
+                <CoverageMeter counts={showCounts} />
+              </summary>
+              <div className="space-y-2 border-t border-[var(--mm-border)] p-3">
                 {show.seasons.map((season) => {
                   const seasonCounts = countCoverage(season.episodes, prefs);
                   return (
-                    <section key={String(season.season_number)} className="p-4">
-                      <div className="mb-2.5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <h4 className="text-sm font-semibold text-[var(--mm-text)]">
-                            Season {season.season_number ?? "?"}
-                          </h4>
-                          <p className="text-xs text-[var(--mm-text2)]">
-                            {seasonCounts.missing > 0
-                              ? `${seasonCounts.missing} missing, ${seasonCounts.complete} complete`
-                              : "Season complete"}
-                          </p>
+                    <details
+                      key={String(season.season_number)}
+                      className="group/season rounded-lg border border-[var(--mm-border)] bg-black/10 open:border-[var(--mm-accent)]/25"
+                    >
+                      <summary className="grid cursor-pointer list-none gap-3 px-3 py-2.5 outline-none marker:hidden hover:bg-black/15 sm:grid-cols-[minmax(10rem,1fr)_auto_minmax(9rem,12rem)] sm:items-center [&::-webkit-details-marker]:hidden">
+                        <div className="flex min-w-0 items-start gap-2">
+                          <DrilldownChevron level="season" />
+                          <div>
+                            <h4 className="text-sm font-semibold text-[var(--mm-text)]">
+                              Season {season.season_number ?? "?"}
+                            </h4>
+                            <p className="text-xs text-[var(--mm-text2)]">
+                              {seasonCounts.missing > 0
+                                ? `${seasonCounts.missing} missing, ${seasonCounts.complete} complete`
+                                : "Season complete"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2 sm:justify-end">
+                          <CoverageSummaryPill
+                            tone="neutral"
+                            label="episodes"
+                            value={seasonCounts.total}
+                          />
+                          <CoverageSummaryPill
+                            tone="warn"
+                            label="missing"
+                            value={seasonCounts.missing}
+                          />
                         </div>
                         <CoverageMeter counts={seasonCounts} />
-                      </div>
-                      <ul className="rounded-lg border border-[var(--mm-border)]">
+                      </summary>
+                      <ul className="border-t border-[var(--mm-border)]">
                         {season.episodes.map((ep) => {
                           const sid = pickSearchStateId(ep, prefs);
                           const complete = hasPreferredCoverage(ep, prefs);
@@ -470,11 +511,11 @@ export function SubberTvTab({ canOperate }: { canOperate: boolean }) {
                           );
                         })}
                       </ul>
-                    </section>
+                    </details>
                   );
                 })}
               </div>
-            </section>
+            </details>
           );
         })}
       </div>
