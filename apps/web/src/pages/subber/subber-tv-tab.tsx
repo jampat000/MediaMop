@@ -364,7 +364,7 @@ export function SubberTvTab({ canOperate }: { canOperate: boolean }) {
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
-          itemLabel="episodes"
+          itemLabel="shows"
         />
       ) : null}
       <div className="space-y-2">

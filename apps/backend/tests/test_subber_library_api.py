@@ -245,6 +245,50 @@ def test_get_library_movies_pagination(client_admin: TestClient) -> None:
     assert r1.json()["movies"][0]["file_path"] != j0["movies"][0]["file_path"]
 
 
+def test_get_library_tv_pagination_keeps_whole_shows(client_admin: TestClient) -> None:
+    fac = create_session_factory(create_db_engine(client_admin.app.state.settings))
+    with fac() as db:
+        for ep in range(1, 4):
+            db.add(
+                SubberSubtitleState(
+                    media_scope="tv",
+                    file_path=f"/t/pag/alpha-s01e{ep}.mkv",
+                    language_code="en",
+                    status="missing",
+                    show_title="Pag Alpha",
+                    season_number=1,
+                    episode_number=ep,
+                    episode_title=f"Alpha {ep}",
+                ),
+            )
+        for title in ("Pag Beta", "Pag Gamma"):
+            db.add(
+                SubberSubtitleState(
+                    media_scope="tv",
+                    file_path=f"/t/pag/{title.lower().replace(' ', '-')}.mkv",
+                    language_code="en",
+                    status="missing",
+                    show_title=title,
+                    season_number=1,
+                    episode_number=1,
+                    episode_title="Pilot",
+                ),
+            )
+        db.commit()
+    _login_admin(client_admin)
+
+    r0 = client_admin.get("/api/v1/subber/library/tv", params={"limit": 1, "offset": 0, "search": "Pag"})
+    assert r0.status_code == 200
+    j0 = r0.json()
+    assert j0["total"] == 3
+    assert [s["show_title"] for s in j0["shows"]] == ["Pag Alpha"]
+    assert len(j0["shows"][0]["seasons"][0]["episodes"]) == 3
+
+    r1 = client_admin.get("/api/v1/subber/library/tv", params={"limit": 1, "offset": 1, "search": "Pag"})
+    assert r1.status_code == 200
+    assert [s["show_title"] for s in r1.json()["shows"]] == ["Pag Beta"]
+
+
 def test_get_library_movies_requires_auth(client_admin: TestClient) -> None:
     r = client_admin.get("/api/v1/subber/library/movies")
     assert r.status_code == 401
