@@ -46,6 +46,7 @@ class SubberJobWorkContext:
     job_kind: str
     payload_json: str | None
     lease_owner: str
+    now: datetime
 
 
 class SubberNoHandlerForJobKind(LookupError):
@@ -85,6 +86,7 @@ def process_one_subber_job(
             job_kind=job.job_kind,
             payload_json=job.payload_json,
             lease_owner=lease_owner,
+            now=when,
         )
 
     if job_kind_forbidden_on_subber_lane(ctx.job_kind):

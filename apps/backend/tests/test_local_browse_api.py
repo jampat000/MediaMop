@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import tempfile
+import uuid
+from pathlib import Path
+
 from starlette.testclient import TestClient
 
 from tests.integration_helpers import auth_post
@@ -48,8 +52,9 @@ def test_system_directories_lists_roots(client_with_admin: TestClient) -> None:
 
 def test_system_directories_returns_not_found(client_with_admin: TestClient) -> None:
     _login_admin(client_with_admin)
+    missing_path = Path(tempfile.gettempdir()) / f"mediamop-missing-{uuid.uuid4()}"
 
-    r = client_with_admin.get("/api/v1/system/directories", params={"path": "/definitely-not-real-mediamop-xyz-abc123"})
+    r = client_with_admin.get("/api/v1/system/directories", params={"path": str(missing_path)})
 
     assert r.status_code == 404
     assert r.json()["detail"] == "The requested directory does not exist."

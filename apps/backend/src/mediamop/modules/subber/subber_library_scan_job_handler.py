@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import uuid
 from collections.abc import Callable
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, timedelta
 
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -41,7 +41,7 @@ def make_subber_library_scan_handler(
         payload = json.loads(ctx.payload_json or "{}")
         if str(payload.get("media_scope") or "") != media_scope:
             return
-        when = datetime.now(UTC)
+        when = ctx.now
         default_cutoff = when - timedelta(hours=6)
         enqueued = 0
         with session_factory() as session, session.begin():
