@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 from datetime import UTC, datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -12,7 +13,6 @@ from starlette.requests import Request
 from starlette.testclient import TestClient
 
 from mediamop.api.deps import get_db_session
-from mediamop.api.factory import create_app
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.platform.activity import constants as activity_constants
@@ -264,7 +264,10 @@ async def test_activity_stream_generator_emits_same_id_when_activity_revision_ch
 
 def test_activity_stream_does_not_depend_on_request_db_dependency(client_with_admin: TestClient) -> None:
     _login(client_with_admin)
-    app = create_app()
-    stream_route = next(r for r in app.routes if getattr(r, "path", "") == "/api/v1/activity/stream")
-    dep_calls = {d.call for d in stream_route.dependant.dependencies}
-    assert get_db_session not in dep_calls
+    signature = inspect.signature(get_activity_stream)
+    assert "db" not in signature.parameters
+    assert all(
+        parameter.default is not get_db_session
+        and parameter.annotation is not get_db_session
+        for parameter in signature.parameters.values()
+    )

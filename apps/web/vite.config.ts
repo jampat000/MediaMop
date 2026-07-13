@@ -113,6 +113,11 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       environment: "jsdom",
+      environmentOptions: {
+        jsdom: {
+          url: "http://localhost/",
+        },
+      },
       setupFiles: "./src/test/setup.ts",
       globals: true,
     },
