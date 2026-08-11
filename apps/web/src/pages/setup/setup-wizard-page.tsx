@@ -411,7 +411,7 @@ export function SetupWizardPage() {
         }
       }
 
-      navigate(landingPath, { replace: true });
+      void navigate(landingPath, { replace: true });
     } catch (err) {
       setStatusMessage(
         err instanceof Error ? err.message : "Could not save setup.",

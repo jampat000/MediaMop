@@ -110,7 +110,7 @@ export function LoginPage() {
         password,
         trustedDevice,
       });
-      navigate("/", { replace: true });
+      void navigate("/", { replace: true });
     } catch {
       /* mutation error surfaces below */
     }

@@ -178,21 +178,6 @@ const router = createBrowserRouter([
   },
 ]);
 
-function RouteLoadingScreen() {
-  return (
-    <main className="min-h-screen bg-[var(--mm-bg)] px-6 py-10 text-[var(--mm-text)]">
-      <div className="mx-auto flex min-h-[70vh] max-w-xl flex-col justify-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--mm-accent)]">
-          MediaMop
-        </p>
-        <h1 className="mt-4 text-3xl font-semibold">Loading view...</h1>
-      </div>
-    </main>
-  );
-}
-
 export function AppRouter() {
-  return (
-    <RouterProvider router={router} fallbackElement={<RouteLoadingScreen />} />
-  );
+  return <RouterProvider router={router} />;
 }

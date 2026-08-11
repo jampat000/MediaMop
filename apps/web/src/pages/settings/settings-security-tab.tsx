@@ -280,7 +280,7 @@ export function SettingsSecurityTab() {
                 setChangePasswordStatus(
                   "Password changed. Sign in again with your new password.",
                 );
-                navigate("/login", { replace: true });
+                void navigate("/login", { replace: true });
               } catch {
                 setShowCurrentPassword(false);
                 setShowNewPassword(false);
