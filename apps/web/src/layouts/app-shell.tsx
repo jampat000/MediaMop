@@ -35,10 +35,10 @@ export function AppShell() {
   const handleSignOut = () => {
     logout.mutate(undefined, {
       onSettled: () => {
-        navigate("/login", { replace: true });
+        void navigate("/login", { replace: true });
       },
     });
-    navigate("/login", { replace: true });
+    void navigate("/login", { replace: true });
   };
 
   return (
