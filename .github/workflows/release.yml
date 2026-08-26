@@ -107,6 +107,19 @@ jobs:
           npm run api:types:check
           npm run build
 
+      # FFmpeg is ~46% of this job (203.8s of 444.9s measured on v2.4.1) and the
+      # vendor folder is gitignored, so every run started from nothing. The key
+      # rolls per run and restores the newest previous cache; the build script
+      # still checks the vendored copy against the current upstream checksum, so
+      # a stale restore is refreshed rather than shipped.
+      - name: Cache vendored FFmpeg
+        uses: actions/cache@v4
+        with:
+          path: packaging/windows/vendor/ffmpeg
+          key: ffmpeg-vendor-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            ffmpeg-vendor-${{ runner.os }}-
+
       - name: Build MediaMop Windows package (Velopack)
         env:
           MEDIAMOP_BUILD_VERSION: ${{ steps.version.outputs.plain }}
