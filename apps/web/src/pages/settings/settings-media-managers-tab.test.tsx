@@ -44,7 +44,7 @@ describe("SettingsMediaManagersTab", () => {
     render(<SettingsMediaManagersTab />, { wrapper });
 
     expect(
-      await screen.findByText(/No media managers yet/i),
+      await screen.findByText(/No apps are connected yet/i),
     ).toBeInTheDocument();
   });
 
@@ -62,12 +62,19 @@ describe("SettingsMediaManagersTab", () => {
 
     expect(await screen.findByText("Deluno")).toBeInTheDocument();
     expect(screen.getByText("Radarr")).toBeInTheDocument();
-    expect(
-      screen.getByText("/api/v1/intake/webhook/deluno"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("/api/v1/intake/webhook/radarr"),
-    ).toBeInTheDocument();
+
+    // The card shows a full URL, not the bare path the API returns, because the
+    // operator has to paste it into another app on another machine.
+    const urls = screen
+      .getAllByTestId("media-manager-webhook-url")
+      .map((el) => el.textContent);
+    expect(urls.some((u) => u?.endsWith("/api/v1/intake/webhook/deluno"))).toBe(
+      true,
+    );
+    expect(urls.some((u) => u?.endsWith("/api/v1/intake/webhook/radarr"))).toBe(
+      true,
+    );
+    expect(urls.every((u) => u?.startsWith("http"))).toBe(true);
   });
 
   it("warns when a manager has no secret, since anyone could post as it", async () => {
@@ -76,7 +83,7 @@ describe("SettingsMediaManagersTab", () => {
     ]);
     render(<SettingsMediaManagersTab />, { wrapper });
 
-    expect(await screen.findByText(/No secret set/i)).toBeInTheDocument();
+    expect(await screen.findByText(/no secret yet/i)).toBeInTheDocument();
   });
 
   it("shows a generated secret once, and says that is the only time", async () => {
@@ -98,7 +105,7 @@ describe("SettingsMediaManagersTab", () => {
         "s3cr3t-value",
       ),
     );
-    expect(screen.getByText(/only time it is shown/i)).toBeInTheDocument();
+    expect(screen.getByText(/will not show it again/i)).toBeInTheDocument();
   });
 
   it("reports a failed connection test in the words the API used", async () => {
@@ -106,14 +113,12 @@ describe("SettingsMediaManagersTab", () => {
       connection({
         last_test_ok: false,
         last_test_detail:
-          "http://10.1.1.142:5099 is reachable but rejected the API key.",
+          "MediaMop reached Deluno, but the API key was refused. Check the key and save it again.",
       }),
     ]);
     render(<SettingsMediaManagersTab />, { wrapper });
 
-    expect(
-      await screen.findByText(/rejected the API key/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/API key was refused/i)).toBeInTheDocument();
   });
 
   it("adds a manager of a kind that never had columns of its own", async () => {
