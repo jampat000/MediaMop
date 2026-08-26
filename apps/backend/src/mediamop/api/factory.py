@@ -18,6 +18,7 @@ from mediamop.api.router import build_v1_router
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.lifespan import lifespan
 from mediamop.platform.health import health_router
+from mediamop.platform.http.head_mirrors_get import HeadMirrorsGetMiddleware
 from mediamop.platform.http.request_context import RequestContextMiddleware
 from mediamop.platform.http.security_headers import SecurityHeadersMiddleware
 from mediamop.platform.http.xrw_csrf_middleware import XRequestedWithCsrfMiddleware
@@ -125,6 +126,7 @@ def create_app() -> FastAPI:
     application.add_middleware(SecurityHeadersMiddleware)
     application.add_middleware(RequestContextMiddleware)
     application.add_middleware(XRequestedWithCsrfMiddleware)
+    application.add_middleware(HeadMirrorsGetMiddleware)
 
     @application.exception_handler(StarletteHTTPException)
     async def _friendly_upgrade_landing_handler(request: Request, exc: StarletteHTTPException):

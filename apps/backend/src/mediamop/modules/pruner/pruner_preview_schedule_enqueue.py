@@ -36,7 +36,7 @@ from mediamop.modules.pruner.pruner_job_kinds import PRUNER_CANDIDATE_REMOVAL_PR
 from mediamop.modules.pruner.pruner_jobs_ops import pruner_enqueue_or_get_job
 from mediamop.modules.pruner.pruner_scope_settings_model import PrunerScopeSettings
 from mediamop.modules.pruner.pruner_server_instance_model import PrunerServerInstance
-from mediamop.platform.arr_library.schedule_wall_clock import DAY_NAMES, schedule_time_window_active
+from mediamop.platform.media_managers.schedule_wall_clock import DAY_NAMES, schedule_time_window_active
 from mediamop.platform.suite_settings.service import ensure_suite_settings_row
 
 logger = logging.getLogger(__name__)

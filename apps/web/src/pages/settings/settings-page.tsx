@@ -36,6 +36,7 @@ import { SettingsSecurityTab } from "./settings-security-tab";
 import { SettingsLogsTab } from "./settings-logs-tab";
 import { SettingsSupportTab } from "./settings-support-tab";
 import { SettingsNotificationsTab } from "./settings-notifications-tab";
+import { SettingsMediaManagersTab } from "./settings-media-managers-tab";
 
 function canEditSuiteGlobal(role: string | undefined): boolean {
   return role === "operator" || role === "admin";
@@ -48,6 +49,7 @@ type TabId =
   | "security"
   | "logs"
   | "notifications"
+  | "media-managers"
   | "support";
 
 function tabButtonClass(active: boolean): string {
@@ -74,6 +76,8 @@ function normalizeSettingsTab(
       return "logs";
     case "notifications":
       return "notifications";
+    case "media-managers":
+      return "media-managers";
     case "support":
       return supportEnabled ? "support" : "general";
     default:
@@ -515,6 +519,15 @@ export function SettingsPage() {
           >
             Notifications
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "media-managers"}
+            className={tabButtonClass(tab === "media-managers")}
+            onClick={() => setSettingsTab("media-managers")}
+          >
+            Media managers
+          </button>
           {showSupportTab ? (
             <button
               type="button"
@@ -585,6 +598,8 @@ export function SettingsPage() {
           <SettingsUpgradeTab updateStatusQ={updateStatusQ} />
         ) : tab === "security" ? (
           <SettingsSecurityTab />
+        ) : tab === "media-managers" ? (
+          <SettingsMediaManagersTab />
         ) : tab === "notifications" ? (
           <SettingsNotificationsTab />
         ) : tab === "support" ? (

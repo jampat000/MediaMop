@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from mediamop.platform.arr_library.schedule_wall_clock import DAY_NAMES
+from mediamop.platform.media_managers.schedule_wall_clock import DAY_NAMES
 
 
 def validate_schedule_days_csv(raw: str) -> str:

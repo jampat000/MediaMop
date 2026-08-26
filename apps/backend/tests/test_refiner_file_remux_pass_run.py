@@ -369,7 +369,7 @@ def test_tv_live_skips_movie_folder_cleanup_deletes_season_folder_when_gates_pas
         lambda _s, _settings: ([], [], None, None),
     )
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_sonarr_http_credentials",
+        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_tv_manager_credentials",
         lambda _s, _st: ("http://127.0.0.1:9", "k"),
     )
     monkeypatch.setattr(
