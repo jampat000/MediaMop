@@ -100,7 +100,7 @@ def test_failed_movie_older_than_grace_cleans_source_output_and_temp(tmp_path: P
     settings = replace(_settings(), refiner_movie_failure_cleanup_grace_period_seconds=300)
     with (
         patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_radarr_http_credentials",
+            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_movie_manager_credentials",
             return_value=("http://radarr.local", "abc"),
         ),
         patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
@@ -131,7 +131,7 @@ def test_failed_movie_in_radarr_queue_skips(tmp_path: Path) -> None:
     settings = replace(_settings(), refiner_movie_failure_cleanup_grace_period_seconds=300)
     with (
         patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_radarr_http_credentials",
+            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_movie_manager_credentials",
             return_value=("http://radarr.local", "abc"),
         ),
         patch(
@@ -176,7 +176,7 @@ def test_tv_cleanup_skips_when_any_direct_child_episode_still_in_queue(tmp_path:
     _add_failed(session, rel=rel, scope="tv")
     with (
         patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_sonarr_http_credentials",
+            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_tv_manager_credentials",
             return_value=("http://sonarr.local", "abc"),
         ),
         patch(
@@ -219,7 +219,7 @@ def test_failed_movie_radarr_unreachable_skips(tmp_path: Path) -> None:
     _seed_paths(session, mw=root / "mw", mo=root / "mo", tw=root / "tw", to=root / "to")
     _add_failed(session, rel="Title/Film.mkv", scope="movie")
     with patch(
-        "mediamop.modules.refiner.refiner_failure_cleanup.resolve_radarr_http_credentials",
+        "mediamop.modules.refiner.refiner_failure_cleanup.resolve_movie_manager_credentials",
         return_value=(None, None),
     ):
         result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="movie")
@@ -240,7 +240,7 @@ def test_failed_movie_root_bounds_prevent_root_delete(tmp_path: Path) -> None:
     _add_failed(session, rel="Film.mkv", scope="movie")
     with (
         patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_radarr_http_credentials",
+            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_movie_manager_credentials",
             return_value=("http://radarr.local", "abc"),
         ),
         patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
@@ -267,7 +267,7 @@ def test_tv_pending_or_leased_job_blocks_season_delete(tmp_path: Path) -> None:
     _add_pending(session, rel="Show/Season 1/S01E02.mkv", scope="tv")
     with (
         patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_sonarr_http_credentials",
+            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_tv_manager_credentials",
             return_value=("http://sonarr.local", "abc"),
         ),
         patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
@@ -293,7 +293,7 @@ def test_tv_season_delete_requires_terminal_failed_for_every_direct_child_episod
     _add_failed(session, rel="Show/Season 1/S01E01.mkv", scope="tv")
     with (
         patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_sonarr_http_credentials",
+            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_tv_manager_credentials",
             return_value=("http://sonarr.local", "abc"),
         ),
         patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
@@ -326,7 +326,7 @@ def test_movies_scope_does_not_process_tv_failed_rows(tmp_path: Path) -> None:
     _add_failed(session, rel="Show/Season 1/S01E01.mkv", scope="tv")
     with (
         patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_radarr_http_credentials",
+            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_movie_manager_credentials",
             return_value=("http://radarr.local", "abc"),
         ),
         patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
@@ -344,7 +344,7 @@ def test_tv_scope_does_not_process_movie_failed_rows(tmp_path: Path) -> None:
     _add_failed(session, rel="Title/Film.mkv", scope="movie")
     with (
         patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_sonarr_http_credentials",
+            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_tv_manager_credentials",
             return_value=("http://sonarr.local", "abc"),
         ),
         patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
@@ -369,7 +369,7 @@ def test_lock_failures_non_fatal(tmp_path: Path) -> None:
     _add_failed(session, rel=rel, scope="movie")
     with (
         patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_radarr_http_credentials",
+            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_movie_manager_credentials",
             return_value=("http://radarr.local", "abc"),
         ),
         patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
@@ -400,11 +400,11 @@ def test_per_scope_grace_settings_are_independent(tmp_path: Path) -> None:
     )
     with (
         patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_radarr_http_credentials",
+            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_movie_manager_credentials",
             return_value=("http://radarr.local", "abc"),
         ),
         patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_sonarr_http_credentials",
+            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_tv_manager_credentials",
             return_value=("http://sonarr.local", "abc"),
         ),
         patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),

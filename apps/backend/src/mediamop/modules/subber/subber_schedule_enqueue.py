@@ -23,7 +23,7 @@ from mediamop.modules.subber.subber_job_kinds import (
 from mediamop.modules.subber.subber_jobs_ops import subber_enqueue_or_get_job
 from mediamop.modules.subber.subber_settings_model import SubberSettingsRow
 from mediamop.modules.subber.subber_settings_service import ensure_subber_settings_row
-from mediamop.platform.arr_library.schedule_wall_clock import DAY_NAMES, schedule_time_window_active
+from mediamop.platform.media_managers.schedule_wall_clock import DAY_NAMES, schedule_time_window_active
 from mediamop.platform.suite_settings.service import ensure_suite_settings_row
 
 logger = logging.getLogger(__name__)

@@ -24,7 +24,7 @@ from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMU
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
 from mediamop.modules.refiner.refiner_remux_rules import is_refiner_media_candidate
-from mediamop.platform.arr_library import resolve_sonarr_http_credentials
+from mediamop.platform.media_managers.credentials import resolve_tv_manager_credentials
 from mediamop.platform.outbound_http import normalize_local_service_base_url
 
 logger = logging.getLogger(__name__)
@@ -401,7 +401,7 @@ def maybe_run_tv_output_season_folder_cleanup_after_remux(
         out["tv_output_truth_note"] = out["tv_output_season_folder_skip_reason"]
         return
 
-    base, key = resolve_sonarr_http_credentials(session, settings)
+    base, key = resolve_tv_manager_credentials(session, settings)
     if not base or not key:
         out["tv_output_season_folder_skip_reason"] = (
             "Sonarr URL or API key is not configured in MediaMop, so Refiner could not verify Sonarr episode file paths. "

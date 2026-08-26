@@ -21,7 +21,10 @@ from mediamop.modules.refiner.queue_adapter import (
     map_queue_row_to_refiner_view,
 )
 from mediamop.modules.refiner.refiner_candidate_gate_queue_fetch import fetch_arr_v3_queue_rows
-from mediamop.platform.arr_library import resolve_radarr_http_credentials, resolve_sonarr_http_credentials
+from mediamop.platform.media_managers.credentials import (
+    resolve_movie_manager_credentials,
+    resolve_tv_manager_credentials,
+)
 
 Verdict = Literal["proceed", "wait_upstream", "not_held"]
 
@@ -72,7 +75,7 @@ def fetch_radarr_and_sonarr_queue_rows_for_scan(
     rad_rows: list[dict[str, Any]] = []
     son_rows: list[dict[str, Any]] = []
 
-    r_base, r_key = resolve_radarr_http_credentials(session, settings)
+    r_base, r_key = resolve_movie_manager_credentials(session, settings)
     if r_base and r_key:
         try:
             rad_rows = fetch_arr_v3_queue_rows(base_url=r_base, api_key=r_key, app="radarr")
@@ -81,7 +84,7 @@ def fetch_radarr_and_sonarr_queue_rows_for_scan(
     else:
         rad_err = "Radarr URL/API key not configured (no queue rows loaded)."
 
-    s_base, s_key = resolve_sonarr_http_credentials(session, settings)
+    s_base, s_key = resolve_tv_manager_credentials(session, settings)
     if s_base and s_key:
         try:
             son_rows = fetch_arr_v3_queue_rows(base_url=s_base, api_key=s_key, app="sonarr")
