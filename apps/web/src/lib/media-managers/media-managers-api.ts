@@ -10,7 +10,7 @@ export const MEDIA_MANAGER_KIND_LABELS: Record<MediaManagerKind, string> = {
   radarr: "Radarr",
   sonarr: "Sonarr",
   deluno: "Deluno",
-  native: "Other (MediaMop payload)",
+  native: "Something else",
 };
 
 export interface MediaManagerSearchLane {
