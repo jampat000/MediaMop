@@ -44,7 +44,7 @@ describe("SettingsMediaManagersTab", () => {
     render(<SettingsMediaManagersTab />, { wrapper });
 
     expect(
-      await screen.findByText(/No apps are connected yet/i),
+      await screen.findByText(/Nothing is connected yet/i),
     ).toBeInTheDocument();
   });
 
@@ -108,17 +108,73 @@ describe("SettingsMediaManagersTab", () => {
     expect(screen.getByText(/will not show it again/i)).toBeInTheDocument();
   });
 
-  it("reports a failed connection test in the words the API used", async () => {
+  it("says Connected, not what the endpoint replied", async () => {
+    vi.spyOn(api, "fetchMediaManagerConnections").mockResolvedValue([
+      connection({
+        last_test_ok: true,
+        last_test_at: "2026-08-26T10:00:00Z",
+        last_test_detail: "Connected. MediaMop can reach Deluno.",
+      }),
+    ]);
+    render(<SettingsMediaManagersTab />, { wrapper });
+
+    const status = await screen.findByTestId("media-manager-status");
+    expect(status).toHaveTextContent("Connected");
+    // The headline already says it. Repeating the backend's sentence underneath
+    // would be the same fact twice.
+    expect(status).not.toHaveTextContent("MediaMop can reach");
+  });
+
+  it("shows why a failed test failed, because that is the actionable part", async () => {
     vi.spyOn(api, "fetchMediaManagerConnections").mockResolvedValue([
       connection({
         last_test_ok: false,
+        last_test_at: "2026-08-26T10:00:00Z",
         last_test_detail:
           "MediaMop reached Deluno, but the API key was refused. Check the key and save it again.",
       }),
     ]);
     render(<SettingsMediaManagersTab />, { wrapper });
 
-    expect(await screen.findByText(/API key was refused/i)).toBeInTheDocument();
+    const status = await screen.findByTestId("media-manager-status");
+    expect(status).toHaveTextContent("Connection failed");
+    expect(status).toHaveTextContent(/API key was refused/i);
+  });
+
+  it("says it has not been checked rather than implying a result", async () => {
+    vi.spyOn(api, "fetchMediaManagerConnections").mockResolvedValue([
+      connection({ last_test_ok: null, last_test_at: null }),
+    ]);
+    render(<SettingsMediaManagersTab />, { wrapper });
+
+    const status = await screen.findByTestId("media-manager-status");
+    expect(status).toHaveTextContent("Not checked yet");
+    expect(status).toHaveTextContent("never");
+  });
+
+  it("keeps the address and secret folded away behind a disclosure", async () => {
+    vi.spyOn(api, "fetchMediaManagerConnections").mockResolvedValue([
+      connection(),
+    ]);
+    render(<SettingsMediaManagersTab />, { wrapper });
+
+    // The card answers "is it connected" first; wiring details are one click away.
+    const details = await screen.findByTestId("media-manager-setup-details");
+    expect(details.tagName.toLowerCase()).toBe("details");
+    expect(details).not.toHaveAttribute("open");
+  });
+
+  it("does not name internal modules in the intro", async () => {
+    vi.spyOn(api, "fetchMediaManagerConnections").mockResolvedValue([]);
+    const { container } = render(<SettingsMediaManagersTab />, { wrapper });
+    await screen.findByText(/Nothing is connected yet/i);
+
+    // The intro used to explain Radarr, Sonarr, Deluno, Subber and Refiner in one
+    // breath. None of that helps someone deciding what this screen is for.
+    const text = container.textContent ?? "";
+    for (const word of ["Subber", "Refiner", "Pruner"]) {
+      expect(text).not.toContain(word);
+    }
   });
 
   it("adds a manager of a kind that never had columns of its own", async () => {

@@ -16,7 +16,9 @@ import {
 import {
   mmActionButtonClass,
   mmEditableTextFieldClass,
+  mmTechnicalMonoSmallClass,
 } from "../../lib/ui/mm-control-roles";
+import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
 import {
   mmModuleTabBlurbBandClass,
   mmModuleTabBlurbTextClass,
@@ -25,16 +27,13 @@ import { SUITE_SETTINGS_DASH_CARD_CLASS } from "./settings-shared";
 
 const KINDS: MediaManagerKind[] = ["radarr", "sonarr", "deluno", "native"];
 
-/** What each kind is for, in one line, so the picker is not just four names. */
+/** What choosing each one means, without naming what MediaMop does internally. */
 const KIND_BLURBS: Record<MediaManagerKind, string> = {
-  radarr:
-    "Tells MediaMop when it has added a film, so subtitles can be found for it.",
-  sonarr:
-    "Tells MediaMop when it has added an episode, so subtitles can be found for it.",
+  radarr: "Tells MediaMop when it has added a film.",
+  sonarr: "Tells MediaMop when it has added an episode.",
   deluno:
-    "Passes a finished download to MediaMop to clean up first, and waits to be told the tidied file is ready.",
-  native:
-    "Anything else that can send MediaMop a message. Use this if your app is not listed.",
+    "Hands a file to MediaMop to work on, and waits to be told it is ready.",
+  native: "Anything else that can send MediaMop a message.",
 };
 
 type FormState = {
@@ -52,16 +51,62 @@ const EMPTY_FORM: FormState = {
 };
 
 function webhookUrl(connection: MediaManagerConnection): string {
-  // The API returns a path, but the operator has to paste this into another app on
-  // another machine, so it needs the host MediaMop is actually reachable on.
+  // The API returns a path, but this gets pasted into another app on another
+  // machine, so it needs the host MediaMop is actually reachable on.
   if (typeof window === "undefined") return connection.webhook_url_path;
   return `${window.location.origin}${connection.webhook_url_path}`;
 }
 
-function testTone(connection: MediaManagerConnection): string {
-  if (connection.last_test_ok === true) return "text-emerald-400";
-  if (connection.last_test_ok === false) return "text-red-400";
-  return "text-[var(--mm-text2)]";
+/**
+ * The same shape Subber uses for its connections: a plain headline, when it was
+ * last checked, and the detail underneath. What an operator wants to know here is
+ * "is it connected", not what the endpoint said.
+ */
+function ConnectionStatusPanel({
+  connection,
+  fmt,
+}: {
+  connection: MediaManagerConnection;
+  fmt: (iso: string | null) => string;
+}) {
+  const headline =
+    connection.last_test_ok === null
+      ? "Not checked yet"
+      : connection.last_test_ok
+        ? "Connected"
+        : "Connection failed";
+
+  const tone =
+    connection.last_test_ok === null
+      ? "text-[var(--mm-text)]"
+      : connection.last_test_ok
+        ? "text-emerald-400"
+        : "text-red-400";
+
+  return (
+    <div
+      className="mt-4 rounded-md border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-3.5 text-sm text-[var(--mm-text2)]"
+      data-testid="media-manager-status"
+    >
+      <p className={`text-sm font-medium ${tone}`}>{headline}</p>
+      <p className="mt-1 text-xs text-[var(--mm-text2)]">
+        Last checked:{" "}
+        <span className="font-medium text-[var(--mm-text)]">
+          {connection.last_test_at ? fmt(connection.last_test_at) : "never"}
+        </span>
+      </p>
+      {connection.last_test_ok === false && connection.last_test_detail ? (
+        <p className="mt-1 text-xs text-red-400">
+          {connection.last_test_detail}
+        </p>
+      ) : null}
+      {connection.last_test_ok === null ? (
+        <p className="mt-2 text-xs text-[var(--mm-text2)]">
+          Run a test to check MediaMop can reach it.
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 function AddConnectionForm({ onCancel }: { onCancel: () => void }) {
@@ -118,8 +163,7 @@ function AddConnectionForm({ onCancel }: { onCancel: () => void }) {
             onChange={(e) => setForm({ ...form, base_url: e.target.value })}
           />
           <span className="text-xs text-[var(--mm-text2)]">
-            The address you use to open this app in a browser. MediaMop uses it
-            to check the app is there, and to tell it when work is finished.
+            The address you use to open it in a browser.
           </span>
         </label>
 
@@ -167,8 +211,10 @@ function AddConnectionForm({ onCancel }: { onCancel: () => void }) {
 
 function ConnectionCard({
   connection,
+  fmt,
 }: {
   connection: MediaManagerConnection;
+  fmt: (iso: string | null) => string;
 }) {
   const update = useUpdateMediaManagerConnection();
   const remove = useDeleteMediaManagerConnection();
@@ -182,92 +228,25 @@ function ConnectionCard({
       data-testid="media-manager-card"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <div>
-          <h3 className="text-base font-medium text-[var(--mm-text)]">
-            {connection.name}
-          </h3>
-          <p className="text-xs text-[var(--mm-text2)]">
-            {MEDIA_MANAGER_KIND_LABELS[connection.kind]} ·{" "}
-            {connection.base_url || "no address yet"}
-          </p>
-        </div>
+        <h3 className="text-base font-medium text-[var(--mm-text)]">
+          {connection.name}
+        </h3>
         <span className="text-xs text-[var(--mm-text2)]">
           {connection.enabled ? "Enabled" : "Disabled"}
         </span>
       </div>
 
-      {connection.last_test_detail ? (
-        <p className={`mt-2 text-sm ${testTone(connection)}`}>
-          {connection.last_test_detail}
-        </p>
-      ) : null}
-
-      <div className="mt-3 rounded-md border border-[var(--mm-border)] p-3">
-        <p className="text-sm text-[var(--mm-text)]">
-          Tell {connection.name} to send its files here
-        </p>
-        <code
-          className="mt-1 block break-all text-xs text-[var(--mm-text2)]"
-          data-testid="media-manager-webhook-url"
-        >
-          {webhookUrl(connection)}
-        </code>
-        <p className="mt-1 text-xs text-[var(--mm-text2)]">
-          Copy this into {connection.name}, so it knows where to send a file
-          when it wants MediaMop to work on one.
-        </p>
-        {connection.webhook_secret_is_set ? (
-          <p className="mt-2 text-xs text-[var(--mm-text2)]">
-            {connection.name} also has to send its secret with every file.
-            Anything that turns up without it is ignored.
-          </p>
-        ) : (
-          <p className="mt-2 text-xs text-[var(--mm-text2)]">
-            There is no secret yet, so anything on your network could send files
-            here pretending to be {connection.name}. Generate one below and
-            paste it into {connection.name} as well.
-          </p>
-        )}
-        {revealed ? (
-          <div
-            className="mt-2 rounded bg-[var(--mm-card-bg)] p-2 text-xs"
-            data-testid="media-manager-secret"
-          >
-            <code className="block break-all text-[var(--mm-text)]">
-              {revealed}
-            </code>
-            <span className="mt-1 block text-[var(--mm-text2)]">
-              Copy this into {connection.name} now — MediaMop will not show it
-              again.
-            </span>
-          </div>
-        ) : null}
-      </div>
+      <ConnectionStatusPanel connection={connection} fmt={fmt} />
 
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
           data-testid="media-manager-test"
-          className={mmActionButtonClass({ variant: "secondary" })}
+          className={mmActionButtonClass({ variant: "primary" })}
           disabled={test.isPending}
           onClick={() => test.mutate(connection.id)}
         >
-          {test.isPending ? "Testing…" : "Test"}
-        </button>
-        <button
-          type="button"
-          data-testid="media-manager-generate-secret"
-          className={mmActionButtonClass({ variant: "secondary" })}
-          disabled={secret.isPending}
-          onClick={() =>
-            secret.mutate(connection.id, {
-              onSuccess: (data) => setRevealed(data.webhook_secret),
-            })
-          }
-        >
-          {connection.webhook_secret_is_set
-            ? "Replace the secret"
-            : "Create a secret"}
+          {test.isPending ? "Testing…" : "Test connection"}
         </button>
         <button
           type="button"
@@ -292,23 +271,82 @@ function ConnectionCard({
           Remove
         </button>
       </div>
+
+      {/* The address and secret are needed once, when wiring the other app up.
+          Folded away so the card answers "is it connected" at a glance. */}
+      <details
+        className="group mt-4 rounded-md border border-[var(--mm-border)] bg-black/10 px-4 py-3 text-xs text-[var(--mm-text3)]"
+        data-testid="media-manager-setup-details"
+      >
+        <summary className="cursor-pointer list-none font-medium text-[var(--mm-text2)] marker:hidden [&::-webkit-details-marker]:hidden">
+          <span className="underline-offset-2 group-open:underline">
+            How to point {connection.name} at MediaMop
+          </span>
+        </summary>
+
+        <div className="mt-3 border-t border-[var(--mm-border)] pt-3">
+          <p className="text-[var(--mm-text2)]">
+            In {connection.name}, send files to this address:
+          </p>
+          <code
+            className={`mt-1 block ${mmTechnicalMonoSmallClass}`}
+            data-testid="media-manager-webhook-url"
+          >
+            {webhookUrl(connection)}
+          </code>
+
+          <p className="mt-3 text-[var(--mm-text2)]">
+            {connection.webhook_secret_is_set
+              ? `${connection.name} must send its secret with every file. Anything without it is ignored.`
+              : `There is no secret yet, so anything on your network could send files here pretending to be ${connection.name}.`}
+          </p>
+
+          {revealed ? (
+            <div
+              className="mt-2 rounded bg-[var(--mm-card-bg)] p-2"
+              data-testid="media-manager-secret"
+            >
+              <code className={mmTechnicalMonoSmallClass}>{revealed}</code>
+              <span className="mt-1 block text-[var(--mm-text3)]">
+                Copy this into {connection.name} now — MediaMop will not show it
+                again.
+              </span>
+            </div>
+          ) : null}
+
+          <button
+            type="button"
+            data-testid="media-manager-generate-secret"
+            className={`mt-3 ${mmActionButtonClass({ variant: "secondary" })}`}
+            disabled={secret.isPending}
+            onClick={() =>
+              secret.mutate(connection.id, {
+                onSuccess: (data) => setRevealed(data.webhook_secret),
+              })
+            }
+          >
+            {connection.webhook_secret_is_set
+              ? "Replace the secret"
+              : "Create a secret"}
+          </button>
+        </div>
+      </details>
     </div>
   );
 }
 
-/** Settings: the media managers MediaMop accepts work from and reports back to. */
+/** Settings: the apps that send files to MediaMop. */
 export function SettingsMediaManagersTab() {
   const connections = useMediaManagerConnectionsQuery();
+  const fmt = useAppDateFormatter();
   const [adding, setAdding] = useState(false);
 
   return (
     <div className="grid gap-4">
       <div className={mmModuleTabBlurbBandClass}>
         <p className={mmModuleTabBlurbTextClass}>
-          These are the apps that send files to MediaMop. Radarr and Sonarr tell
-          MediaMop when they have added something, so it can go and find
-          subtitles for it. Deluno passes a file over before adding it, so
-          MediaMop can tidy it up first and say when it is ready.
+          The apps that send files to MediaMop. Connect one so MediaMop knows
+          when there is something to work on.
         </p>
       </div>
 
@@ -318,13 +356,13 @@ export function SettingsMediaManagersTab() {
 
       {connections.data?.length === 0 && !adding ? (
         <p className="text-sm text-[var(--mm-text2)]">
-          No apps are connected yet, so nothing is being sent to MediaMop. Add
-          one below to get started.
+          Nothing is connected yet, so no files are reaching MediaMop. Add an
+          app below to get started.
         </p>
       ) : null}
 
       {connections.data?.map((connection) => (
-        <ConnectionCard key={connection.id} connection={connection} />
+        <ConnectionCard key={connection.id} connection={connection} fmt={fmt} />
       ))}
 
       {adding ? (
@@ -337,7 +375,7 @@ export function SettingsMediaManagersTab() {
             className={mmActionButtonClass({ variant: "primary" })}
             onClick={() => setAdding(true)}
           >
-            Add a media manager
+            Add an app
           </button>
         </div>
       )}
