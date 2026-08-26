@@ -1,4 +1,9 @@
 # Tag-driven release: push tag v* -> full validation, Windows installer, Docker image, GitHub Release.
+#
+# windows-smoke and validate run in parallel: validation does not need the Windows
+# package, and waiting for it wasted about seven minutes of every release. publish
+# needs both, so nothing reaches ghcr or the Releases page unless the installer
+# built and the tests passed.
 name: Release
 
 on:
@@ -35,6 +40,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
+          cache: pip
+          cache-dependency-path: apps/backend/pyproject.toml
 
       - name: Validate release version alignment
         shell: bash
@@ -76,6 +83,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -166,14 +175,14 @@ jobs:
           if-no-files-found: error
           path: dist/windows/releases/*
 
-  tagged-release:
+  validate:
     runs-on: ubuntu-latest
     if: ${{ !contains(github.ref_name, '-') }}
     timeout-minutes: 90
-    needs: windows-smoke
+    # Deliberately no `needs`: none of this touches the Windows package, so it runs
+    # while that builds instead of after it.
     permissions:
-      contents: write
-      packages: write
+      contents: read
     env:
       MEDIAMOP_SESSION_SECRET: ${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-release-session-secret-32chars-min
     steps:
@@ -182,6 +191,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
+          cache: pip
+          cache-dependency-path: apps/backend/pyproject.toml
 
       - name: Install MediaMop backend (editable) and Playwright browser
         run: |
@@ -208,6 +219,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
 
       - name: MediaMop web - install and unit tests
         working-directory: apps/web
@@ -233,6 +246,34 @@ jobs:
           MEDIAMOP_HOME: ${{ runner.temp }}/mediamop-e2e
           PYTHONPATH: ${{ github.workspace }}/apps/backend/src
         run: python -m pytest tests/e2e/mediamop -q --tb=short
+
+      - name: Upload web dist
+        uses: actions/upload-artifact@v7
+        with:
+          name: mediamop-web-dist
+          if-no-files-found: error
+          path: mediamop-web-dist.zip
+
+  publish:
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.ref_name, '-') }}
+    timeout-minutes: 60
+    # Both gates. Publishing on a green validation but a failed installer would put a
+    # Docker image on ghcr for a release that has no Windows build.
+    needs: [windows-smoke, validate]
+    permissions:
+      contents: write
+      packages: write
+    env:
+      MEDIAMOP_SESSION_SECRET: ${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-release-session-secret-32chars-min
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download web dist
+        uses: actions/download-artifact@v8
+        with:
+          name: mediamop-web-dist
+          path: ${{ github.workspace }}
 
       - name: Docker image name
         id: image

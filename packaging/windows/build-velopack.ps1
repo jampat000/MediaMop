@@ -5,6 +5,51 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# ── Phase timing ──
+# The Windows package build is the critical path of every release and nobody knew
+# where its minutes went, so it reports them. Each phase prints its own duration and
+# a summary lands at the end; on Actions the summary is also a ::notice:: so it shows
+# without opening the log.
+$script:PhaseTimings = [ordered]@{}
+$script:PhaseStopwatch = $null
+$script:PhaseName = $null
+
+function Start-BuildPhase {
+  param([Parameter(Mandatory)][string]$Name)
+  Stop-BuildPhase
+  $script:PhaseName = $Name
+  $script:PhaseStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+  Write-Host "--- $Name ---"
+}
+
+function Stop-BuildPhase {
+  if ($null -eq $script:PhaseStopwatch) { return }
+  $script:PhaseStopwatch.Stop()
+  $seconds = [math]::Round($script:PhaseStopwatch.Elapsed.TotalSeconds, 1)
+  $script:PhaseTimings[$script:PhaseName] = $seconds
+  Write-Host ("--- {0}: {1}s ---" -f $script:PhaseName, $seconds)
+  $script:PhaseStopwatch = $null
+  $script:PhaseName = $null
+}
+
+function Write-BuildPhaseSummary {
+  Stop-BuildPhase
+  if ($script:PhaseTimings.Count -eq 0) { return }
+  $total = ($script:PhaseTimings.Values | Measure-Object -Sum).Sum
+  Write-Host ""
+  Write-Host "=== Windows package build timings ==="
+  foreach ($entry in $script:PhaseTimings.GetEnumerator()) {
+    $share = if ($total -gt 0) { [math]::Round(100 * $entry.Value / $total) } else { 0 }
+    Write-Host ("  {0,-38} {1,7}s  {2,3}%" -f $entry.Key, $entry.Value, $share)
+  }
+  Write-Host ("  {0,-38} {1,7}s" -f "TOTAL", [math]::Round($total, 1))
+  if ($env:GITHUB_ACTIONS -eq "true") {
+    $parts = $script:PhaseTimings.GetEnumerator() | ForEach-Object { "$($_.Key) $($_.Value)s" }
+    Write-Host ("::notice title=Windows package build::" + ($parts -join ", "))
+  }
+}
+
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\\..")).Path
 $backendDir = Join-Path $repoRoot "apps\\backend"
 $webDir = Join-Path $repoRoot "apps\\web"
@@ -168,6 +213,7 @@ if ($buildVersion -ne $backendProjectVersion) {
 }
 
 # ── Python venv ──
+Start-BuildPhase "Python venv"
 if (-not (Test-Path $py)) {
   $systemPython = Resolve-SystemPython
   Push-Location $backendDir
@@ -179,6 +225,7 @@ if (-not (Test-Path $py)) {
 }
 
 # ── Web build ──
+Start-BuildPhase "Web build"
 if (-not $SkipWebBuild) {
   $webBuildRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("mediamop-web-build-" + [System.Guid]::NewGuid().ToString("N"))
   $webBuildWebDir = Join-Path $webBuildRoot "apps\\web"
@@ -225,6 +272,7 @@ if (-not $SkipWebBuild) {
 }
 
 # ── Backend install + PyInstaller (server-only) ──
+Start-BuildPhase "Backend pip install"
 Push-Location $backendDir
 try {
   Invoke-Native -FilePath $py -ArgumentList @("-m", "ensurepip", "--upgrade")
@@ -251,6 +299,7 @@ if (Test-Path $distRoot) {
 New-Item -ItemType Directory -Path $distRoot | Out-Null
 
 # ── FFmpeg ──
+Start-BuildPhase "FFmpeg download + vendor"
 if (Test-Path -LiteralPath $ffmpegVendorDir) {
   Write-Host "Cleaning stale FFmpeg vendor folder..."
   Remove-Item -LiteralPath $ffmpegVendorDir -Recurse -Force
@@ -258,6 +307,7 @@ if (Test-Path -LiteralPath $ffmpegVendorDir) {
 Ensure-WindowsFfmpegRuntime
 
 # ── PyInstaller: server-only ──
+Start-BuildPhase "PyInstaller bundle"
 Push-Location $repoRoot
 try {
   Invoke-Native -FilePath $py -ArgumentList @("-m", "PyInstaller", "--noconfirm", "--clean", "--distpath", $distRoot, "--workpath", (Join-Path $distRoot "build"), $serverSpecPath)
@@ -276,6 +326,7 @@ if ($serverVersion -ne $buildVersion) {
 }
 
 # ── .NET tray app publish ──
+Start-BuildPhase ".NET tray publish"
 $trayPublishDir = Join-Path $distRoot "tray-publish"
 if (-not $SkipDotnetPublish) {
   Write-Host "Publishing .NET tray app..."
@@ -290,6 +341,7 @@ if (-not $SkipDotnetPublish) {
 }
 
 # ── Assemble Velopack pack directory ──
+Start-BuildPhase "Assemble pack dir"
 $packDir = Join-Path $distRoot "pack"
 if (Test-Path $packDir) {
   Remove-Item -LiteralPath $packDir -Recurse -Force
@@ -304,6 +356,7 @@ New-Item -ItemType Directory -Path $serverDestDir | Out-Null
 Copy-Item -Path (Join-Path $serverOutputDir "*") -Destination $serverDestDir -Recurse -Force
 
 # ── vpk pack ──
+Start-BuildPhase "vpk pack"
 Write-Host "Running vpk pack..."
 $vpk = Get-Command vpk -ErrorAction SilentlyContinue
 if (-not $vpk) {
@@ -335,3 +388,5 @@ Invoke-Native -FilePath $vpkExe -ArgumentList @(
 Write-Host ""
 Write-Host "Velopack packaging output:"
 Get-ChildItem -Path $velopackOut | Select-Object Name, Length
+
+Write-BuildPhaseSummary
