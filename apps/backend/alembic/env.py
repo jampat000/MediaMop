@@ -27,6 +27,7 @@ from mediamop.core.db import Base
 from mediamop.platform.activity import models as _activity_orm  # noqa: F401
 from mediamop.platform.auth import models as _auth_orm  # noqa: F401
 import mediamop.platform.arr_library.arr_operator_settings_model  # noqa: F401
+import mediamop.platform.media_managers.connection_model  # noqa: F401
 from mediamop.modules.refiner import jobs_model as _refiner_jobs_orm  # noqa: F401
 from mediamop.modules.refiner import refiner_operator_settings_model as _refiner_operator_settings_orm  # noqa: F401
 from mediamop.modules.refiner import refiner_path_settings_model as _refiner_path_settings_orm  # noqa: F401
