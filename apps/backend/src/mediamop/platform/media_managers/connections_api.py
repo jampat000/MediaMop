@@ -278,8 +278,12 @@ _HEALTH_PATHS: dict[str, str] = {
 }
 
 
-def _probe(kind: str, base_url: str, api_key: str | None) -> tuple[bool, str]:
-    """Ask a manager whether it is there, in whichever way that manager answers."""
+def _probe(name: str, kind: str, base_url: str, api_key: str | None) -> tuple[bool, str]:
+    """Ask a manager whether it is there, and say what happened in plain words.
+
+    These strings go straight onto a settings card, so they name the thing the
+    operator recognises and, when something is wrong, what to go and check.
+    """
 
     path = _HEALTH_PATHS.get(kind, "/api/integrations/external/health")
     try:
@@ -288,13 +292,17 @@ def _probe(kind: str, base_url: str, api_key: str | None) -> tuple[bool, str]:
     except MediaManagerHttpError as exc:
         detail = str(exc)
         if "HTTP 401" in detail or "HTTP 403" in detail:
-            return False, f"{base_url} is reachable but rejected the API key."
-        return False, f"MediaMop could not get a healthy answer from {base_url}: {detail}"
-    except OSError as exc:
+            return False, f"MediaMop reached {name}, but the API key was refused. Check the key and save it again."
         return False, (
-            f"MediaMop could not reach {base_url}. Check the address and that the service is running ({exc})."
+            f"MediaMop reached {name} but did not get the answer it expected. "
+            "Check the address points at the app itself, not a page inside it."
         )
-    return True, f"{base_url} answered."
+    except OSError:
+        return False, (
+            f"MediaMop could not reach {name} at {base_url}. "
+            "Check the address is right, and that the app is running and reachable from this machine."
+        )
+    return True, f"Connected. MediaMop can reach {name}."
 
 
 @router.post(
@@ -316,10 +324,10 @@ def post_media_manager_connection_test(
     checked_at = datetime.now(UTC)
 
     if not (row.base_url or "").strip():
-        ok, detail = False, "No address is saved for this manager yet."
+        ok, detail = False, "Add the address where this app can be reached, then test again."
     else:
         api_key = decrypt_arr_api_key(settings, row.api_key_ciphertext) if row.api_key_ciphertext else None
-        ok, detail = _probe(row.kind, row.base_url, api_key)
+        ok, detail = _probe(row.name, row.kind, row.base_url, api_key)
 
     row.last_connection_test_ok = ok
     row.last_connection_test_at = checked_at
