@@ -92,12 +92,13 @@ def create_connection(
     if session.scalars(select(MediaManagerConnectionRow).where(MediaManagerConnectionRow.name == label)).first():
         raise MediaManagerConnectionError(f"A connection named {label!r} already exists.")
 
+    key = (api_key or "").strip()
     row = MediaManagerConnectionRow(
         kind=_validate_kind(kind),
         name=label,
         enabled=enabled,
         base_url=_validate_base_url(base_url),
-        api_key_ciphertext=encrypt_arr_api_key(settings, api_key.strip()) if (api_key or "").strip() else None,
+        api_key_ciphertext=encrypt_arr_api_key(settings, key) if key else None,
     )
     session.add(row)
     session.flush()

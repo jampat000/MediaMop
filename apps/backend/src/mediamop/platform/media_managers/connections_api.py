@@ -8,6 +8,7 @@ not a schema change.
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import cast
 
 from fastapi import APIRouter, HTTPException, Path, Request
 from sqlalchemy import select
@@ -34,6 +35,7 @@ from mediamop.platform.media_managers.connection_schemas import (
     MediaManagerConnectionTestIn,
     MediaManagerConnectionTestOut,
     MediaManagerConnectionUpdateIn,
+    MediaManagerKind,
     MediaManagerSearchLaneIn,
     MediaManagerSearchLaneOut,
     MediaManagerWebhookSecretOut,
@@ -78,7 +80,8 @@ def _webhook_url_path(row: MediaManagerConnectionRow) -> str:
 def _to_out(row: MediaManagerConnectionRow) -> MediaManagerConnectionOut:
     return MediaManagerConnectionOut(
         id=row.id,
-        kind=row.kind,
+        # Stored as text; every write path runs it through _validate_kind first.
+        kind=cast(MediaManagerKind, row.kind),
         name=row.name,
         enabled=row.enabled,
         base_url=row.base_url,
