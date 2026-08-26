@@ -15,9 +15,12 @@ from mediamop.modules.refiner.domain import (
     RefinerQueueRowView,
     should_block_for_upstream,
 )
-from mediamop.modules.refiner.radarr_queue_adapter import map_radarr_queue_row_to_refiner_view
+from mediamop.modules.refiner.queue_adapter import (
+    MOVIE_QUEUE_DIALECT,
+    TV_QUEUE_DIALECT,
+    map_queue_row_to_refiner_view,
+)
 from mediamop.modules.refiner.refiner_candidate_gate_queue_fetch import fetch_arr_v3_queue_rows
-from mediamop.modules.refiner.sonarr_queue_adapter import map_sonarr_queue_row_to_refiner_view
 from mediamop.platform.arr_library import resolve_radarr_http_credentials, resolve_sonarr_http_credentials
 
 Verdict = Literal["proceed", "wait_upstream", "not_held"]
@@ -33,11 +36,11 @@ def merge_queue_views_for_watched_file(
     views: list[RefinerQueueRowView] = []
     for row in radarr_rows:
         views.append(
-            map_radarr_queue_row_to_refiner_view(row, candidate_path=abs_path, candidate_movie_id=None),
+            map_queue_row_to_refiner_view(row, MOVIE_QUEUE_DIALECT, candidate_path=abs_path, candidate_entity_id=None),
         )
     for row in sonarr_rows:
         views.append(
-            map_sonarr_queue_row_to_refiner_view(row, candidate_path=abs_path, candidate_series_id=None),
+            map_queue_row_to_refiner_view(row, TV_QUEUE_DIALECT, candidate_path=abs_path, candidate_entity_id=None),
         )
     return views
 

@@ -32,8 +32,13 @@ from mediamop.modules.refiner.domain import (
     title_year_anchors_match,
     tokenize_normalized,
 )
-from mediamop.modules.refiner.radarr_queue_adapter import map_radarr_queue_row_to_refiner_view
-from mediamop.modules.refiner.sonarr_queue_adapter import map_sonarr_queue_row_to_refiner_view
+from mediamop.modules.refiner.queue_adapter import (
+    MOVIE_QUEUE_DIALECT,
+    TV_QUEUE_DIALECT,
+    QueueDialect,
+    map_queue_row_to_refiner_view,
+    queue_dialect_for_scope,
+)
 
 __all__ = [
     "FileAnchorCandidate",
@@ -42,8 +47,11 @@ __all__ = [
     "extract_title_tokens_and_year",
     "extract_title_year_anchor",
     "file_is_owned_by_queue",
-    "map_radarr_queue_row_to_refiner_view",
-    "map_sonarr_queue_row_to_refiner_view",
+    "MOVIE_QUEUE_DIALECT",
+    "QueueDialect",
+    "TV_QUEUE_DIALECT",
+    "map_queue_row_to_refiner_view",
+    "queue_dialect_for_scope",
     "normalize_storage_path",
     "normalize_titleish",
     "row_owns_by_title_year_anchor",
