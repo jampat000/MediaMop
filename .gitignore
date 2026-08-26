@@ -53,3 +53,8 @@ packaging/windows/vendor/
 # Docusaurus
 docs-site/build/
 docs-site/.docusaurus/
+
+# pytest --cov side effects (the documented backend gate produces these)
+.coverage
+.coverage.*
+htmlcov/

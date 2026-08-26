@@ -44,107 +44,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/arr-library/arr-connection/radarr": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    /** Put Arr Library Connection Radarr */
-    put: operations["put_arr_library_connection_radarr_api_v1_arr_library_arr_connection_radarr_put"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/arr-library/arr-connection/sonarr": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    /** Put Arr Library Connection Sonarr */
-    put: operations["put_arr_library_connection_sonarr_api_v1_arr_library_arr_connection_sonarr_put"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/arr-library/arr-operator-settings": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Arr Library Operator Settings
-     * @description Shared *arr library: read automatic search lanes and connection panels (saved in this app where applicable).
-     */
-    get: operations["get_arr_library_operator_settings_api_v1_arr_library_arr_operator_settings_get"];
-    /**
-     * Put Arr Library Operator Settings
-     * @description Shared *arr library: save automatic search lane preferences (does not change connection fields on this route).
-     */
-    put: operations["put_arr_library_operator_settings_api_v1_arr_library_arr_operator_settings_put"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/arr-library/arr-operator-settings/connection-test": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Post Arr Library Connection Test
-     * @description Try a reachability check to Sonarr or Radarr; outcome is saved on Activity and on the settings row.
-     *
-     *     When ``enabled`` is present, ``base_url`` and ``api_key`` are interpreted like ``PUT …/arr-connection/*`` (draft
-     *     test without saving). When ``enabled`` is omitted, credentials come only from stored settings and the server file.
-     */
-    post: operations["post_arr_library_connection_test_api_v1_arr_library_arr_operator_settings_connection_test_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/arr-library/arr-operator-settings/lanes/{lane_key}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    /**
-     * Put Arr Library Operator Settings Lane
-     * @description Shared *arr library: save one automatic search lane (missing or upgrade for TV or movies).
-     */
-    put: operations["put_arr_library_operator_settings_lane_api_v1_arr_library_arr_operator_settings_lanes__lane_key__put"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   "/api/v1/auth/bootstrap": {
     parameters: {
       query?: never;
@@ -311,6 +210,132 @@ export interface paths {
     get: operations["get_dashboard_status_api_v1_dashboard_status_get"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/intake/webhook/{source_key}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Media Manager Intake
+     * @description Accept one event from a media manager and hand it to whichever module owns it.
+     */
+    post: operations["post_media_manager_intake_api_v1_intake_webhook__source_key__post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/media-managers/connections": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Media Manager Connections
+     * @description Every configured media manager.
+     */
+    get: operations["get_media_manager_connections_api_v1_media_managers_connections_get"];
+    put?: never;
+    /**
+     * Post Media Manager Connection
+     * @description Add a media manager.
+     */
+    post: operations["post_media_manager_connection_api_v1_media_managers_connections_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/media-managers/connections/{connection_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Media Manager Connection */
+    get: operations["get_media_manager_connection_api_v1_media_managers_connections__connection_id__get"];
+    /**
+     * Put Media Manager Connection
+     * @description Change a media manager. Omitting ``api_key`` leaves the saved key alone.
+     */
+    put: operations["put_media_manager_connection_api_v1_media_managers_connections__connection_id__put"];
+    post?: never;
+    /** Delete Media Manager Connection */
+    delete: operations["delete_media_manager_connection_api_v1_media_managers_connections__connection_id__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/media-managers/connections/{connection_id}/lanes/{lane}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Put Media Manager Lane
+     * @description Save one automatic search lane for one manager.
+     */
+    put: operations["put_media_manager_lane_api_v1_media_managers_connections__connection_id__lanes__lane__put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/media-managers/connections/{connection_id}/test": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Media Manager Connection Test
+     * @description Check the saved address and key actually reach the manager.
+     */
+    post: operations["post_media_manager_connection_test_api_v1_media_managers_connections__connection_id__test_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/media-managers/connections/{connection_id}/webhook-secret": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Media Manager Webhook Secret
+     * @description Generate a fresh inbound secret for this manager. Shown once, stored encrypted.
+     */
+    post: operations["post_media_manager_webhook_secret_api_v1_media_managers_connections__connection_id__webhook_secret_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1091,40 +1116,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/subber/webhook/radarr": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Post Radarr Webhook */
-    post: operations["post_radarr_webhook_api_v1_subber_webhook_radarr_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/subber/webhook/sonarr": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Post Sonarr Webhook */
-    post: operations["post_sonarr_webhook_api_v1_subber_webhook_sonarr_post"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   "/api/v1/suite/apply-update": {
     parameters: {
       query?: never;
@@ -1672,202 +1663,6 @@ export interface components {
       /** Csrf Token */
       csrf_token: string;
     };
-    /** ArrLibraryConnectionPanelOut */
-    ArrLibraryConnectionPanelOut: {
-      /**
-       * Api Key Is Saved
-       * @description Whether an API key is already stored encrypted for this app.
-       */
-      api_key_is_saved: boolean;
-      /**
-       * Base Url
-       * @description Address saved in MediaMop for this app (may be empty to use the server file).
-       */
-      base_url: string;
-      /**
-       * Effective Base Url
-       * @description Address MediaMop will actually use after applying saved values and the server file.
-       */
-      effective_base_url?: string | null;
-      /** Enabled */
-      enabled: boolean;
-      /** Last Test At */
-      last_test_at?: string | null;
-      /** Last Test Detail */
-      last_test_detail?: string | null;
-      /**
-       * Last Test Ok
-       * @description Last in-panel connection check outcome, if any.
-       */
-      last_test_ok: boolean | null;
-      /**
-       * Status Headline
-       * @description Plain-language headline for the connection status area (not checked / not set up / failed / OK).
-       */
-      status_headline: string;
-    };
-    /** ArrLibraryConnectionPutIn */
-    ArrLibraryConnectionPutIn: {
-      /**
-       * Api Key
-       * @description When empty, an existing saved key is kept. When non-empty, replaces the saved key.
-       * @default
-       */
-      api_key: string;
-      /**
-       * Base Url
-       * @default
-       */
-      base_url: string;
-      /** Csrf Token */
-      csrf_token: string;
-      /** Enabled */
-      enabled: boolean;
-    };
-    /** ArrLibraryConnectionTestIn */
-    ArrLibraryConnectionTestIn: {
-      /** Api Key */
-      api_key?: string | null;
-      /**
-       * App
-       * @description sonarr or radarr
-       */
-      app: string;
-      /** Base Url */
-      base_url?: string | null;
-      /** Csrf Token */
-      csrf_token: string;
-      /**
-       * Enabled
-       * @description When set, tests draft fields like PUT …/arr-connection/* (with base_url/api_key); omit for stored settings only.
-       */
-      enabled?: boolean | null;
-    };
-    /** ArrLibraryConnectionTestOut */
-    ArrLibraryConnectionTestOut: {
-      /** Message */
-      message: string;
-      /** Ok */
-      ok: boolean;
-    };
-    /**
-     * ArrLibraryOperatorSettingsLanePutIn
-     * @description Save a single automatic search lane (independent from the other three).
-     */
-    ArrLibraryOperatorSettingsLanePutIn: {
-      /** Csrf Token */
-      csrf_token: string;
-      lane: components["schemas"]["ArrLibrarySearchLaneIn"];
-    };
-    /** ArrLibraryOperatorSettingsOut */
-    ArrLibraryOperatorSettingsOut: {
-      /**
-       * Connection Note
-       * @description Short note on Off vs On, encryption, and fallback to the server configuration file.
-       */
-      connection_note: string;
-      /**
-       * Interval Restart Note
-       * @description Explains that changing how often automatic checks are queued may need an API restart.
-       */
-      interval_restart_note: string;
-      radarr_connection: components["schemas"]["ArrLibraryConnectionPanelOut"];
-      radarr_missing: components["schemas"]["ArrLibrarySearchLaneOut"];
-      /** Radarr Server Configured */
-      radarr_server_configured: boolean;
-      /**
-       * Radarr Server Url
-       * @description Radarr address from configuration (read-only).
-       */
-      radarr_server_url: string | null;
-      radarr_upgrade: components["schemas"]["ArrLibrarySearchLaneOut"];
-      /**
-       * Schedule Timezone
-       * @description Time zone name used for schedule windows (from server configuration).
-       */
-      schedule_timezone: string;
-      sonarr_connection: components["schemas"]["ArrLibraryConnectionPanelOut"];
-      sonarr_missing: components["schemas"]["ArrLibrarySearchLaneOut"];
-      /** Sonarr Server Configured */
-      sonarr_server_configured: boolean;
-      /**
-       * Sonarr Server Url
-       * @description Sonarr address from configuration (read-only).
-       */
-      sonarr_server_url: string | null;
-      sonarr_upgrade: components["schemas"]["ArrLibrarySearchLaneOut"];
-      /**
-       * Updated At
-       * Format: date-time
-       */
-      updated_at: string;
-    };
-    /** ArrLibraryOperatorSettingsPutIn */
-    ArrLibraryOperatorSettingsPutIn: {
-      /** Csrf Token */
-      csrf_token: string;
-      radarr_missing: components["schemas"]["ArrLibrarySearchLaneIn"];
-      radarr_upgrade: components["schemas"]["ArrLibrarySearchLaneIn"];
-      sonarr_missing: components["schemas"]["ArrLibrarySearchLaneIn"];
-      sonarr_upgrade: components["schemas"]["ArrLibrarySearchLaneIn"];
-    };
-    /** ArrLibrarySearchLaneIn */
-    ArrLibrarySearchLaneIn: {
-      /** Enabled */
-      enabled: boolean;
-      /** Max Items Per Run */
-      max_items_per_run: number;
-      /** Retry Delay Minutes */
-      retry_delay_minutes: number;
-      /** Schedule Days */
-      schedule_days: string;
-      /** Schedule Enabled */
-      schedule_enabled: boolean;
-      /** Schedule End */
-      schedule_end: string;
-      /** Schedule Interval Seconds */
-      schedule_interval_seconds: number;
-      /** Schedule Start */
-      schedule_start: string;
-    };
-    /** ArrLibrarySearchLaneOut */
-    ArrLibrarySearchLaneOut: {
-      /**
-       * Enabled
-       * @description Whether this automatic search lane is turned on.
-       */
-      enabled: boolean;
-      /** Max Items Per Run */
-      max_items_per_run: number;
-      /** Retry Delay Minutes */
-      retry_delay_minutes: number;
-      /**
-       * Schedule Days
-       * @description Comma-separated weekdays, e.g. Mon,Tue. Leave empty to mean every day.
-       */
-      schedule_days: string;
-      /**
-       * Schedule Enabled
-       * @description When on, searches only run inside the days and times below.
-       */
-      schedule_enabled: boolean;
-      /** Schedule End */
-      schedule_end: string;
-      /** Schedule Interval Seconds */
-      schedule_interval_seconds: number;
-      /** Schedule Start */
-      schedule_start: string;
-    };
-    /**
-     * ArrSearchLaneKey
-     * @description URL path keys for single-lane search preference saves.
-     * @enum {string}
-     */
-    ArrSearchLaneKey:
-      | "sonarr_missing"
-      | "sonarr_upgrade"
-      | "radarr_missing"
-      | "radarr_upgrade";
     /** BootstrapIn */
     BootstrapIn: {
       /** Csrf Token */
@@ -2035,6 +1830,187 @@ export interface components {
     /** MeOut */
     MeOut: {
       user: components["schemas"]["UserPublic"];
+    };
+    /** MediaManagerConnectionCreateIn */
+    MediaManagerConnectionCreateIn: {
+      /**
+       * Api Key
+       * @description Stored encrypted. Empty means no key.
+       * @default
+       */
+      api_key: string;
+      /**
+       * Base Url
+       * @default
+       */
+      base_url: string;
+      /** Csrf Token */
+      csrf_token: string;
+      /**
+       * Enabled
+       * @default true
+       */
+      enabled: boolean;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "radarr" | "sonarr" | "deluno" | "native";
+      /** Name */
+      name: string;
+    };
+    /** MediaManagerConnectionDeleteIn */
+    MediaManagerConnectionDeleteIn: {
+      /** Csrf Token */
+      csrf_token: string;
+    };
+    /** MediaManagerConnectionOut */
+    MediaManagerConnectionOut: {
+      /**
+       * Api Key Is Saved
+       * @description Whether an API key is stored encrypted for this manager.
+       */
+      api_key_is_saved: boolean;
+      /**
+       * Base Url
+       * @description Address MediaMop uses to reach this manager. Empty means not set.
+       */
+      base_url: string;
+      /** Enabled */
+      enabled: boolean;
+      /** Id */
+      id: number;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "radarr" | "sonarr" | "deluno" | "native";
+      /** Lanes */
+      lanes?: components["schemas"]["MediaManagerSearchLaneOut"][];
+      /** Last Test At */
+      last_test_at?: string | null;
+      /** Last Test Detail */
+      last_test_detail?: string | null;
+      /** Last Test Ok */
+      last_test_ok?: boolean | null;
+      /** Name */
+      name: string;
+      /**
+       * Webhook Secret Is Set
+       * @description Whether this manager must present a secret when it posts to the intake webhook.
+       */
+      webhook_secret_is_set: boolean;
+      /**
+       * Webhook Url Path
+       * @description Where this manager should post its events.
+       */
+      webhook_url_path: string;
+    };
+    /** MediaManagerConnectionTestIn */
+    MediaManagerConnectionTestIn: {
+      /** Csrf Token */
+      csrf_token: string;
+    };
+    /** MediaManagerConnectionTestOut */
+    MediaManagerConnectionTestOut: {
+      /**
+       * Checked At
+       * Format: date-time
+       */
+      checked_at: string;
+      /** Connection Id */
+      connection_id: number;
+      /** Detail */
+      detail: string;
+      /** Ok */
+      ok: boolean;
+    };
+    /** MediaManagerConnectionUpdateIn */
+    MediaManagerConnectionUpdateIn: {
+      /**
+       * Api Key
+       * @description Omit to leave the saved key alone. Send an empty string to clear it.
+       */
+      api_key?: string | null;
+      /** Base Url */
+      base_url?: string | null;
+      /** Csrf Token */
+      csrf_token: string;
+      /** Enabled */
+      enabled?: boolean | null;
+      /** Name */
+      name?: string | null;
+    };
+    /** MediaManagerSearchLaneIn */
+    MediaManagerSearchLaneIn: {
+      /** Csrf Token */
+      csrf_token: string;
+      /** Enabled */
+      enabled: boolean;
+      /** Max Items Per Run */
+      max_items_per_run: number;
+      /** Retry Delay Minutes */
+      retry_delay_minutes: number;
+      /** Schedule Days */
+      schedule_days: string;
+      /** Schedule Enabled */
+      schedule_enabled: boolean;
+      /** Schedule End */
+      schedule_end: string;
+      /** Schedule Interval Seconds */
+      schedule_interval_seconds: number;
+      /** Schedule Start */
+      schedule_start: string;
+    };
+    /** MediaManagerSearchLaneOut */
+    MediaManagerSearchLaneOut: {
+      /**
+       * Enabled
+       * @description Whether this automatic search lane is turned on.
+       */
+      enabled: boolean;
+      /**
+       * Lane
+       * @enum {string}
+       */
+      lane: "missing" | "upgrade";
+      /** Max Items Per Run */
+      max_items_per_run: number;
+      /** Retry Delay Minutes */
+      retry_delay_minutes: number;
+      /**
+       * Schedule Days
+       * @description Comma-separated weekdays, e.g. Mon,Tue. Empty means every day.
+       */
+      schedule_days: string;
+      /**
+       * Schedule Enabled
+       * @description When on, searches only run inside the days and times below.
+       */
+      schedule_enabled: boolean;
+      /** Schedule End */
+      schedule_end: string;
+      /** Schedule Interval Seconds */
+      schedule_interval_seconds: number;
+      /** Schedule Start */
+      schedule_start: string;
+    };
+    /**
+     * MediaManagerWebhookSecretOut
+     * @description The generated secret, shown once. MediaMop keeps only the encrypted copy.
+     */
+    MediaManagerWebhookSecretOut: {
+      /** Connection Id */
+      connection_id: number;
+      /**
+       * Header Name
+       * @default X-Webhook-Secret
+       */
+      header_name: string;
+      /** Webhook Secret */
+      webhook_secret: string;
+      /** Webhook Url Path */
+      webhook_url_path: string;
     };
     /** NotificationChannelIn */
     NotificationChannelIn: {
@@ -4368,193 +4344,6 @@ export interface operations {
       };
     };
   };
-  put_arr_library_connection_radarr_api_v1_arr_library_arr_connection_radarr_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ArrLibraryConnectionPutIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ArrLibraryOperatorSettingsOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  put_arr_library_connection_sonarr_api_v1_arr_library_arr_connection_sonarr_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ArrLibraryConnectionPutIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ArrLibraryOperatorSettingsOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_arr_library_operator_settings_api_v1_arr_library_arr_operator_settings_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ArrLibraryOperatorSettingsOut"];
-        };
-      };
-    };
-  };
-  put_arr_library_operator_settings_api_v1_arr_library_arr_operator_settings_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ArrLibraryOperatorSettingsPutIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ArrLibraryOperatorSettingsOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_arr_library_connection_test_api_v1_arr_library_arr_operator_settings_connection_test_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ArrLibraryConnectionTestIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ArrLibraryConnectionTestOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  put_arr_library_operator_settings_lane_api_v1_arr_library_arr_operator_settings_lanes__lane_key__put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        lane_key: components["schemas"]["ArrSearchLaneKey"];
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ArrLibraryOperatorSettingsLanePutIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ArrLibraryOperatorSettingsOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
   post_bootstrap_api_v1_auth_bootstrap_post: {
     parameters: {
       query?: never;
@@ -4783,6 +4572,306 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["DashboardStatusOut"];
+        };
+      };
+    };
+  };
+  post_media_manager_intake_api_v1_intake_webhook__source_key__post: {
+    parameters: {
+      query?: never;
+      header?: {
+        "X-Webhook-Secret"?: string | null;
+      };
+      path: {
+        /** @description Which media manager's payload dialect this body uses. */
+        source_key: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          [key: string]: unknown;
+        };
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_media_manager_connections_api_v1_media_managers_connections_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MediaManagerConnectionOut"][];
+        };
+      };
+    };
+  };
+  post_media_manager_connection_api_v1_media_managers_connections_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MediaManagerConnectionCreateIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MediaManagerConnectionOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_media_manager_connection_api_v1_media_managers_connections__connection_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        connection_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MediaManagerConnectionOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  put_media_manager_connection_api_v1_media_managers_connections__connection_id__put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        connection_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MediaManagerConnectionUpdateIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MediaManagerConnectionOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_media_manager_connection_api_v1_media_managers_connections__connection_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        connection_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MediaManagerConnectionDeleteIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  put_media_manager_lane_api_v1_media_managers_connections__connection_id__lanes__lane__put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        connection_id: number;
+        lane: "missing" | "upgrade";
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MediaManagerSearchLaneIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MediaManagerSearchLaneOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  post_media_manager_connection_test_api_v1_media_managers_connections__connection_id__test_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        connection_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MediaManagerConnectionTestIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MediaManagerConnectionTestOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  post_media_manager_webhook_secret_api_v1_media_managers_connections__connection_id__webhook_secret_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        connection_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MediaManagerConnectionTestIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MediaManagerWebhookSecretOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -6334,84 +6423,6 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["SubberTestConnectionOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_radarr_webhook_api_v1_subber_webhook_radarr_post: {
-    parameters: {
-      query?: never;
-      header?: {
-        "X-Webhook-Secret"?: string | null;
-      };
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": {
-          [key: string]: unknown;
-        };
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            [key: string]: string;
-          };
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_sonarr_webhook_api_v1_subber_webhook_sonarr_post: {
-    parameters: {
-      query?: never;
-      header?: {
-        "X-Webhook-Secret"?: string | null;
-      };
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": {
-          [key: string]: unknown;
-        };
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": {
-            [key: string]: string;
-          };
         };
       };
       /** @description Validation Error */

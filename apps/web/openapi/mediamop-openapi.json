@@ -116,468 +116,6 @@
         "title": "ApplyUpdateIn",
         "type": "object"
       },
-      "ArrLibraryConnectionPanelOut": {
-        "additionalProperties": false,
-        "properties": {
-          "api_key_is_saved": {
-            "description": "Whether an API key is already stored encrypted for this app.",
-            "title": "Api Key Is Saved",
-            "type": "boolean"
-          },
-          "base_url": {
-            "description": "Address saved in MediaMop for this app (may be empty to use the server file).",
-            "title": "Base Url",
-            "type": "string"
-          },
-          "effective_base_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Address MediaMop will actually use after applying saved values and the server file.",
-            "title": "Effective Base Url"
-          },
-          "enabled": {
-            "title": "Enabled",
-            "type": "boolean"
-          },
-          "last_test_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Test At"
-          },
-          "last_test_detail": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Test Detail"
-          },
-          "last_test_ok": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Last in-panel connection check outcome, if any.",
-            "title": "Last Test Ok"
-          },
-          "status_headline": {
-            "description": "Plain-language headline for the connection status area (not checked / not set up / failed / OK).",
-            "title": "Status Headline",
-            "type": "string"
-          }
-        },
-        "required": [
-          "enabled",
-          "base_url",
-          "api_key_is_saved",
-          "last_test_ok",
-          "status_headline"
-        ],
-        "title": "ArrLibraryConnectionPanelOut",
-        "type": "object"
-      },
-      "ArrLibraryConnectionPutIn": {
-        "additionalProperties": false,
-        "properties": {
-          "api_key": {
-            "default": "",
-            "description": "When empty, an existing saved key is kept. When non-empty, replaces the saved key.",
-            "maxLength": 8000,
-            "title": "Api Key",
-            "type": "string"
-          },
-          "base_url": {
-            "default": "",
-            "maxLength": 2000,
-            "title": "Base Url",
-            "type": "string"
-          },
-          "csrf_token": {
-            "minLength": 1,
-            "title": "Csrf Token",
-            "type": "string"
-          },
-          "enabled": {
-            "title": "Enabled",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "csrf_token",
-          "enabled"
-        ],
-        "title": "ArrLibraryConnectionPutIn",
-        "type": "object"
-      },
-      "ArrLibraryConnectionTestIn": {
-        "additionalProperties": false,
-        "properties": {
-          "api_key": {
-            "anyOf": [
-              {
-                "maxLength": 8000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Api Key"
-          },
-          "app": {
-            "description": "sonarr or radarr",
-            "title": "App",
-            "type": "string"
-          },
-          "base_url": {
-            "anyOf": [
-              {
-                "maxLength": 2000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Base Url"
-          },
-          "csrf_token": {
-            "minLength": 1,
-            "title": "Csrf Token",
-            "type": "string"
-          },
-          "enabled": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "When set, tests draft fields like PUT \u2026/arr-connection/* (with base_url/api_key); omit for stored settings only.",
-            "title": "Enabled"
-          }
-        },
-        "required": [
-          "csrf_token",
-          "app"
-        ],
-        "title": "ArrLibraryConnectionTestIn",
-        "type": "object"
-      },
-      "ArrLibraryConnectionTestOut": {
-        "additionalProperties": false,
-        "properties": {
-          "message": {
-            "title": "Message",
-            "type": "string"
-          },
-          "ok": {
-            "title": "Ok",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "ok",
-          "message"
-        ],
-        "title": "ArrLibraryConnectionTestOut",
-        "type": "object"
-      },
-      "ArrLibraryOperatorSettingsLanePutIn": {
-        "additionalProperties": false,
-        "description": "Save a single automatic search lane (independent from the other three).",
-        "properties": {
-          "csrf_token": {
-            "minLength": 1,
-            "title": "Csrf Token",
-            "type": "string"
-          },
-          "lane": {
-            "$ref": "#/components/schemas/ArrLibrarySearchLaneIn"
-          }
-        },
-        "required": [
-          "csrf_token",
-          "lane"
-        ],
-        "title": "ArrLibraryOperatorSettingsLanePutIn",
-        "type": "object"
-      },
-      "ArrLibraryOperatorSettingsOut": {
-        "additionalProperties": false,
-        "properties": {
-          "connection_note": {
-            "description": "Short note on Off vs On, encryption, and fallback to the server configuration file.",
-            "title": "Connection Note",
-            "type": "string"
-          },
-          "interval_restart_note": {
-            "description": "Explains that changing how often automatic checks are queued may need an API restart.",
-            "title": "Interval Restart Note",
-            "type": "string"
-          },
-          "radarr_connection": {
-            "$ref": "#/components/schemas/ArrLibraryConnectionPanelOut"
-          },
-          "radarr_missing": {
-            "$ref": "#/components/schemas/ArrLibrarySearchLaneOut"
-          },
-          "radarr_server_configured": {
-            "title": "Radarr Server Configured",
-            "type": "boolean"
-          },
-          "radarr_server_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Radarr address from configuration (read-only).",
-            "title": "Radarr Server Url"
-          },
-          "radarr_upgrade": {
-            "$ref": "#/components/schemas/ArrLibrarySearchLaneOut"
-          },
-          "schedule_timezone": {
-            "description": "Time zone name used for schedule windows (from server configuration).",
-            "title": "Schedule Timezone",
-            "type": "string"
-          },
-          "sonarr_connection": {
-            "$ref": "#/components/schemas/ArrLibraryConnectionPanelOut"
-          },
-          "sonarr_missing": {
-            "$ref": "#/components/schemas/ArrLibrarySearchLaneOut"
-          },
-          "sonarr_server_configured": {
-            "title": "Sonarr Server Configured",
-            "type": "boolean"
-          },
-          "sonarr_server_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Sonarr address from configuration (read-only).",
-            "title": "Sonarr Server Url"
-          },
-          "sonarr_upgrade": {
-            "$ref": "#/components/schemas/ArrLibrarySearchLaneOut"
-          },
-          "updated_at": {
-            "format": "date-time",
-            "title": "Updated At",
-            "type": "string"
-          }
-        },
-        "required": [
-          "sonarr_missing",
-          "sonarr_upgrade",
-          "radarr_missing",
-          "radarr_upgrade",
-          "schedule_timezone",
-          "sonarr_connection",
-          "radarr_connection",
-          "connection_note",
-          "interval_restart_note",
-          "sonarr_server_configured",
-          "radarr_server_configured",
-          "sonarr_server_url",
-          "radarr_server_url",
-          "updated_at"
-        ],
-        "title": "ArrLibraryOperatorSettingsOut",
-        "type": "object"
-      },
-      "ArrLibraryOperatorSettingsPutIn": {
-        "additionalProperties": false,
-        "properties": {
-          "csrf_token": {
-            "minLength": 1,
-            "title": "Csrf Token",
-            "type": "string"
-          },
-          "radarr_missing": {
-            "$ref": "#/components/schemas/ArrLibrarySearchLaneIn"
-          },
-          "radarr_upgrade": {
-            "$ref": "#/components/schemas/ArrLibrarySearchLaneIn"
-          },
-          "sonarr_missing": {
-            "$ref": "#/components/schemas/ArrLibrarySearchLaneIn"
-          },
-          "sonarr_upgrade": {
-            "$ref": "#/components/schemas/ArrLibrarySearchLaneIn"
-          }
-        },
-        "required": [
-          "csrf_token",
-          "sonarr_missing",
-          "sonarr_upgrade",
-          "radarr_missing",
-          "radarr_upgrade"
-        ],
-        "title": "ArrLibraryOperatorSettingsPutIn",
-        "type": "object"
-      },
-      "ArrLibrarySearchLaneIn": {
-        "additionalProperties": false,
-        "properties": {
-          "enabled": {
-            "title": "Enabled",
-            "type": "boolean"
-          },
-          "max_items_per_run": {
-            "maximum": 1000.0,
-            "minimum": 1.0,
-            "title": "Max Items Per Run",
-            "type": "integer"
-          },
-          "retry_delay_minutes": {
-            "maximum": 525600.0,
-            "minimum": 1.0,
-            "title": "Retry Delay Minutes",
-            "type": "integer"
-          },
-          "schedule_days": {
-            "maxLength": 2000,
-            "title": "Schedule Days",
-            "type": "string"
-          },
-          "schedule_enabled": {
-            "title": "Schedule Enabled",
-            "type": "boolean"
-          },
-          "schedule_end": {
-            "maxLength": 5,
-            "title": "Schedule End",
-            "type": "string"
-          },
-          "schedule_interval_seconds": {
-            "maximum": 604800.0,
-            "minimum": 60.0,
-            "title": "Schedule Interval Seconds",
-            "type": "integer"
-          },
-          "schedule_start": {
-            "maxLength": 5,
-            "title": "Schedule Start",
-            "type": "string"
-          }
-        },
-        "required": [
-          "enabled",
-          "max_items_per_run",
-          "retry_delay_minutes",
-          "schedule_enabled",
-          "schedule_days",
-          "schedule_start",
-          "schedule_end",
-          "schedule_interval_seconds"
-        ],
-        "title": "ArrLibrarySearchLaneIn",
-        "type": "object"
-      },
-      "ArrLibrarySearchLaneOut": {
-        "additionalProperties": false,
-        "properties": {
-          "enabled": {
-            "description": "Whether this automatic search lane is turned on.",
-            "title": "Enabled",
-            "type": "boolean"
-          },
-          "max_items_per_run": {
-            "maximum": 1000.0,
-            "minimum": 1.0,
-            "title": "Max Items Per Run",
-            "type": "integer"
-          },
-          "retry_delay_minutes": {
-            "maximum": 525600.0,
-            "minimum": 1.0,
-            "title": "Retry Delay Minutes",
-            "type": "integer"
-          },
-          "schedule_days": {
-            "description": "Comma-separated weekdays, e.g. Mon,Tue. Leave empty to mean every day.",
-            "title": "Schedule Days",
-            "type": "string"
-          },
-          "schedule_enabled": {
-            "description": "When on, searches only run inside the days and times below.",
-            "title": "Schedule Enabled",
-            "type": "boolean"
-          },
-          "schedule_end": {
-            "maxLength": 5,
-            "title": "Schedule End",
-            "type": "string"
-          },
-          "schedule_interval_seconds": {
-            "maximum": 604800.0,
-            "minimum": 60.0,
-            "title": "Schedule Interval Seconds",
-            "type": "integer"
-          },
-          "schedule_start": {
-            "maxLength": 5,
-            "title": "Schedule Start",
-            "type": "string"
-          }
-        },
-        "required": [
-          "enabled",
-          "max_items_per_run",
-          "retry_delay_minutes",
-          "schedule_enabled",
-          "schedule_days",
-          "schedule_start",
-          "schedule_end",
-          "schedule_interval_seconds"
-        ],
-        "title": "ArrLibrarySearchLaneOut",
-        "type": "object"
-      },
-      "ArrSearchLaneKey": {
-        "description": "URL path keys for single-lane search preference saves.",
-        "enum": [
-          "sonarr_missing",
-          "sonarr_upgrade",
-          "radarr_missing",
-          "radarr_upgrade"
-        ],
-        "title": "ArrSearchLaneKey",
-        "type": "string"
-      },
       "BootstrapIn": {
         "additionalProperties": false,
         "properties": {
@@ -970,6 +508,440 @@
           "user"
         ],
         "title": "MeOut",
+        "type": "object"
+      },
+      "MediaManagerConnectionCreateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "api_key": {
+            "default": "",
+            "description": "Stored encrypted. Empty means no key.",
+            "maxLength": 2000,
+            "title": "Api Key",
+            "type": "string"
+          },
+          "base_url": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Base Url",
+            "type": "string"
+          },
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "radarr",
+              "sonarr",
+              "deluno",
+              "native"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrf_token",
+          "kind",
+          "name"
+        ],
+        "title": "MediaManagerConnectionCreateIn",
+        "type": "object"
+      },
+      "MediaManagerConnectionDeleteIn": {
+        "additionalProperties": false,
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrf_token"
+        ],
+        "title": "MediaManagerConnectionDeleteIn",
+        "type": "object"
+      },
+      "MediaManagerConnectionOut": {
+        "properties": {
+          "api_key_is_saved": {
+            "description": "Whether an API key is stored encrypted for this manager.",
+            "title": "Api Key Is Saved",
+            "type": "boolean"
+          },
+          "base_url": {
+            "description": "Address MediaMop uses to reach this manager. Empty means not set.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "radarr",
+              "sonarr",
+              "deluno",
+              "native"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "lanes": {
+            "items": {
+              "$ref": "#/components/schemas/MediaManagerSearchLaneOut"
+            },
+            "title": "Lanes",
+            "type": "array"
+          },
+          "last_test_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Test At"
+          },
+          "last_test_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Test Detail"
+          },
+          "last_test_ok": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Test Ok"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "webhook_secret_is_set": {
+            "description": "Whether this manager must present a secret when it posts to the intake webhook.",
+            "title": "Webhook Secret Is Set",
+            "type": "boolean"
+          },
+          "webhook_url_path": {
+            "description": "Where this manager should post its events.",
+            "title": "Webhook Url Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "enabled",
+          "base_url",
+          "api_key_is_saved",
+          "webhook_secret_is_set",
+          "webhook_url_path"
+        ],
+        "title": "MediaManagerConnectionOut",
+        "type": "object"
+      },
+      "MediaManagerConnectionTestIn": {
+        "additionalProperties": false,
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrf_token"
+        ],
+        "title": "MediaManagerConnectionTestIn",
+        "type": "object"
+      },
+      "MediaManagerConnectionTestOut": {
+        "properties": {
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "connection_id": {
+            "title": "Connection Id",
+            "type": "integer"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "connection_id",
+          "ok",
+          "detail",
+          "checked_at"
+        ],
+        "title": "MediaManagerConnectionTestOut",
+        "type": "object"
+      },
+      "MediaManagerConnectionUpdateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Omit to leave the saved key alone. Send an empty string to clear it.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "required": [
+          "csrf_token"
+        ],
+        "title": "MediaManagerConnectionUpdateIn",
+        "type": "object"
+      },
+      "MediaManagerSearchLaneIn": {
+        "additionalProperties": false,
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "max_items_per_run": {
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Max Items Per Run",
+            "type": "integer"
+          },
+          "retry_delay_minutes": {
+            "maximum": 525600.0,
+            "minimum": 1.0,
+            "title": "Retry Delay Minutes",
+            "type": "integer"
+          },
+          "schedule_days": {
+            "maxLength": 2000,
+            "title": "Schedule Days",
+            "type": "string"
+          },
+          "schedule_enabled": {
+            "title": "Schedule Enabled",
+            "type": "boolean"
+          },
+          "schedule_end": {
+            "maxLength": 5,
+            "title": "Schedule End",
+            "type": "string"
+          },
+          "schedule_interval_seconds": {
+            "maximum": 604800.0,
+            "minimum": 60.0,
+            "title": "Schedule Interval Seconds",
+            "type": "integer"
+          },
+          "schedule_start": {
+            "maxLength": 5,
+            "title": "Schedule Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrf_token",
+          "enabled",
+          "max_items_per_run",
+          "retry_delay_minutes",
+          "schedule_enabled",
+          "schedule_days",
+          "schedule_start",
+          "schedule_end",
+          "schedule_interval_seconds"
+        ],
+        "title": "MediaManagerSearchLaneIn",
+        "type": "object"
+      },
+      "MediaManagerSearchLaneOut": {
+        "properties": {
+          "enabled": {
+            "description": "Whether this automatic search lane is turned on.",
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "lane": {
+            "enum": [
+              "missing",
+              "upgrade"
+            ],
+            "title": "Lane",
+            "type": "string"
+          },
+          "max_items_per_run": {
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Max Items Per Run",
+            "type": "integer"
+          },
+          "retry_delay_minutes": {
+            "maximum": 525600.0,
+            "minimum": 1.0,
+            "title": "Retry Delay Minutes",
+            "type": "integer"
+          },
+          "schedule_days": {
+            "description": "Comma-separated weekdays, e.g. Mon,Tue. Empty means every day.",
+            "title": "Schedule Days",
+            "type": "string"
+          },
+          "schedule_enabled": {
+            "description": "When on, searches only run inside the days and times below.",
+            "title": "Schedule Enabled",
+            "type": "boolean"
+          },
+          "schedule_end": {
+            "maxLength": 5,
+            "title": "Schedule End",
+            "type": "string"
+          },
+          "schedule_interval_seconds": {
+            "maximum": 604800.0,
+            "minimum": 60.0,
+            "title": "Schedule Interval Seconds",
+            "type": "integer"
+          },
+          "schedule_start": {
+            "maxLength": 5,
+            "title": "Schedule Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lane",
+          "enabled",
+          "max_items_per_run",
+          "retry_delay_minutes",
+          "schedule_enabled",
+          "schedule_days",
+          "schedule_start",
+          "schedule_end",
+          "schedule_interval_seconds"
+        ],
+        "title": "MediaManagerSearchLaneOut",
+        "type": "object"
+      },
+      "MediaManagerWebhookSecretOut": {
+        "description": "The generated secret, shown once. MediaMop keeps only the encrypted copy.",
+        "properties": {
+          "connection_id": {
+            "title": "Connection Id",
+            "type": "integer"
+          },
+          "header_name": {
+            "default": "X-Webhook-Secret",
+            "title": "Header Name",
+            "type": "string"
+          },
+          "webhook_secret": {
+            "title": "Webhook Secret",
+            "type": "string"
+          },
+          "webhook_url_path": {
+            "title": "Webhook Url Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "connection_id",
+          "webhook_secret",
+          "webhook_url_path"
+        ],
+        "title": "MediaManagerWebhookSecretOut",
         "type": "object"
       },
       "NotificationChannelIn": {
@@ -6490,7 +6462,7 @@
   },
   "info": {
     "title": "MediaMop API",
-    "version": "2.3.11"
+    "version": "2.4.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -6643,244 +6615,6 @@
         "summary": "Get Activity Stream",
         "tags": [
           "activity"
-        ]
-      }
-    },
-    "/api/v1/arr-library/arr-connection/radarr": {
-      "put": {
-        "operationId": "put_arr_library_connection_radarr_api_v1_arr_library_arr_connection_radarr_put",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ArrLibraryConnectionPutIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ArrLibraryOperatorSettingsOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Put Arr Library Connection Radarr",
-        "tags": [
-          "arr-library"
-        ]
-      }
-    },
-    "/api/v1/arr-library/arr-connection/sonarr": {
-      "put": {
-        "operationId": "put_arr_library_connection_sonarr_api_v1_arr_library_arr_connection_sonarr_put",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ArrLibraryConnectionPutIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ArrLibraryOperatorSettingsOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Put Arr Library Connection Sonarr",
-        "tags": [
-          "arr-library"
-        ]
-      }
-    },
-    "/api/v1/arr-library/arr-operator-settings": {
-      "get": {
-        "description": "Shared *arr library: read automatic search lanes and connection panels (saved in this app where applicable).",
-        "operationId": "get_arr_library_operator_settings_api_v1_arr_library_arr_operator_settings_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ArrLibraryOperatorSettingsOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Get Arr Library Operator Settings",
-        "tags": [
-          "arr-library"
-        ]
-      },
-      "put": {
-        "description": "Shared *arr library: save automatic search lane preferences (does not change connection fields on this route).",
-        "operationId": "put_arr_library_operator_settings_api_v1_arr_library_arr_operator_settings_put",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ArrLibraryOperatorSettingsPutIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ArrLibraryOperatorSettingsOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Put Arr Library Operator Settings",
-        "tags": [
-          "arr-library"
-        ]
-      }
-    },
-    "/api/v1/arr-library/arr-operator-settings/connection-test": {
-      "post": {
-        "description": "Try a reachability check to Sonarr or Radarr; outcome is saved on Activity and on the settings row.\n\nWhen ``enabled`` is present, ``base_url`` and ``api_key`` are interpreted like ``PUT \u2026/arr-connection/*`` (draft\ntest without saving). When ``enabled`` is omitted, credentials come only from stored settings and the server file.",
-        "operationId": "post_arr_library_connection_test_api_v1_arr_library_arr_operator_settings_connection_test_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ArrLibraryConnectionTestIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ArrLibraryConnectionTestOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Post Arr Library Connection Test",
-        "tags": [
-          "arr-library"
-        ]
-      }
-    },
-    "/api/v1/arr-library/arr-operator-settings/lanes/{lane_key}": {
-      "put": {
-        "description": "Shared *arr library: save one automatic search lane (missing or upgrade for TV or movies).",
-        "operationId": "put_arr_library_operator_settings_lane_api_v1_arr_library_arr_operator_settings_lanes__lane_key__put",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "lane_key",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ArrSearchLaneKey"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ArrLibraryOperatorSettingsLanePutIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ArrLibraryOperatorSettingsOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Put Arr Library Operator Settings Lane",
-        "tags": [
-          "arr-library"
         ]
       }
     },
@@ -7172,6 +6906,461 @@
         "summary": "Get Dashboard Status",
         "tags": [
           "dashboard"
+        ]
+      }
+    },
+    "/api/v1/intake/webhook/{source_key}": {
+      "post": {
+        "description": "Accept one event from a media manager and hand it to whichever module owns it.",
+        "operationId": "post_media_manager_intake_api_v1_intake_webhook__source_key__post",
+        "parameters": [
+          {
+            "description": "Which media manager's payload dialect this body uses.",
+            "in": "path",
+            "name": "source_key",
+            "required": true,
+            "schema": {
+              "description": "Which media manager's payload dialect this body uses.",
+              "title": "Source Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Webhook-Secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Webhook-Secret"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Post Media Manager Intake Api V1 Intake Webhook  Source Key  Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Media Manager Intake",
+        "tags": [
+          "media-manager-intake"
+        ]
+      }
+    },
+    "/api/v1/media-managers/connections": {
+      "get": {
+        "description": "Every configured media manager.",
+        "operationId": "get_media_manager_connections_api_v1_media_managers_connections_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MediaManagerConnectionOut"
+                  },
+                  "title": "Response Get Media Manager Connections Api V1 Media Managers Connections Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Media Manager Connections",
+        "tags": [
+          "media-managers"
+        ]
+      },
+      "post": {
+        "description": "Add a media manager.",
+        "operationId": "post_media_manager_connection_api_v1_media_managers_connections_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MediaManagerConnectionCreateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaManagerConnectionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Media Manager Connection",
+        "tags": [
+          "media-managers"
+        ]
+      }
+    },
+    "/api/v1/media-managers/connections/{connection_id}": {
+      "delete": {
+        "operationId": "delete_media_manager_connection_api_v1_media_managers_connections__connection_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Connection Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MediaManagerConnectionDeleteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Media Manager Connection",
+        "tags": [
+          "media-managers"
+        ]
+      },
+      "get": {
+        "operationId": "get_media_manager_connection_api_v1_media_managers_connections__connection_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Connection Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaManagerConnectionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Media Manager Connection",
+        "tags": [
+          "media-managers"
+        ]
+      },
+      "put": {
+        "description": "Change a media manager. Omitting ``api_key`` leaves the saved key alone.",
+        "operationId": "put_media_manager_connection_api_v1_media_managers_connections__connection_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Connection Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MediaManagerConnectionUpdateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaManagerConnectionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Media Manager Connection",
+        "tags": [
+          "media-managers"
+        ]
+      }
+    },
+    "/api/v1/media-managers/connections/{connection_id}/lanes/{lane}": {
+      "put": {
+        "description": "Save one automatic search lane for one manager.",
+        "operationId": "put_media_manager_lane_api_v1_media_managers_connections__connection_id__lanes__lane__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Connection Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "lane",
+            "required": true,
+            "schema": {
+              "enum": [
+                "missing",
+                "upgrade"
+              ],
+              "title": "Lane",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MediaManagerSearchLaneIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaManagerSearchLaneOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Media Manager Lane",
+        "tags": [
+          "media-managers"
+        ]
+      }
+    },
+    "/api/v1/media-managers/connections/{connection_id}/test": {
+      "post": {
+        "description": "Check the saved address and key actually reach the manager.",
+        "operationId": "post_media_manager_connection_test_api_v1_media_managers_connections__connection_id__test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Connection Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MediaManagerConnectionTestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaManagerConnectionTestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Media Manager Connection Test",
+        "tags": [
+          "media-managers"
+        ]
+      }
+    },
+    "/api/v1/media-managers/connections/{connection_id}/webhook-secret": {
+      "post": {
+        "description": "Generate a fresh inbound secret for this manager. Shown once, stored encrypted.",
+        "operationId": "post_media_manager_webhook_secret_api_v1_media_managers_connections__connection_id__webhook_secret_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Connection Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MediaManagerConnectionTestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaManagerWebhookSecretOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Media Manager Webhook Secret",
+        "tags": [
+          "media-managers"
         ]
       }
     },
@@ -9569,138 +9758,6 @@
         "tags": [
           "subber",
           "subber-settings"
-        ]
-      }
-    },
-    "/api/v1/subber/webhook/radarr": {
-      "post": {
-        "operationId": "post_radarr_webhook_api_v1_subber_webhook_radarr_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-Webhook-Secret",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Webhook-Secret"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "additionalProperties": true,
-                "title": "Payload",
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Post Radarr Webhook Api V1 Subber Webhook Radarr Post",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Post Radarr Webhook",
-        "tags": [
-          "subber",
-          "subber-webhooks"
-        ]
-      }
-    },
-    "/api/v1/subber/webhook/sonarr": {
-      "post": {
-        "operationId": "post_sonarr_webhook_api_v1_subber_webhook_sonarr_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-Webhook-Secret",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Webhook-Secret"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "additionalProperties": true,
-                "title": "Payload",
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "title": "Response Post Sonarr Webhook Api V1 Subber Webhook Sonarr Post",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Post Sonarr Webhook",
-        "tags": [
-          "subber",
-          "subber-webhooks"
         ]
       }
     },

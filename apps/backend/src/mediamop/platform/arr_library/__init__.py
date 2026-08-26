@@ -1,24 +1,26 @@
-"""Sonarr/Radarr library connection settings and HTTP resolution (SQLite + env fallback).
+"""Credential storage and the legacy settings row for media manager connections.
 
-Persistent operator settings use the ``arr_library_operator_settings`` table.
+What used to live here — the Sonarr/Radarr connection routes, their settings service,
+and the per-vendor credential resolvers — now lives in
+:mod:`mediamop.platform.media_managers`, keyed by kind instead of by product name.
+
+What remains is the encryption used for stored keys, whose KDF domain is frozen for
+compatibility with existing installs, and the legacy settings row that migration 0009
+copied out of but did not drop.
 """
 
 from __future__ import annotations
 
-from mediamop.platform.arr_library.arr_http_resolve import (
-    preview_radarr_http_credentials_after_put,
-    preview_sonarr_http_credentials_after_put,
-    resolve_radarr_http_credentials,
-    resolve_sonarr_http_credentials,
+from mediamop.platform.arr_library.arr_connection_crypto import (
+    decrypt_arr_api_key,
+    encrypt_arr_api_key,
+    rewrap_arr_api_key,
 )
-from mediamop.platform.arr_library.arr_operator_settings_model import ArrLibraryOperatorSettingsRow
 from mediamop.platform.arr_library.arr_operator_settings_repo import ensure_arr_library_operator_settings_row
 
 __all__ = [
-    "ArrLibraryOperatorSettingsRow",
+    "decrypt_arr_api_key",
+    "encrypt_arr_api_key",
     "ensure_arr_library_operator_settings_row",
-    "preview_radarr_http_credentials_after_put",
-    "preview_sonarr_http_credentials_after_put",
-    "resolve_radarr_http_credentials",
-    "resolve_sonarr_http_credentials",
+    "rewrap_arr_api_key",
 ]

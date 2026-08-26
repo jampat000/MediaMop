@@ -13,7 +13,10 @@ from mediamop.modules.refiner.refiner_candidate_gate_activity import record_refi
 from mediamop.modules.refiner.refiner_candidate_gate_evaluate import evaluate_refiner_candidate_gate_from_queue_rows
 from mediamop.modules.refiner.refiner_candidate_gate_queue_fetch import fetch_arr_v3_queue_rows
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
-from mediamop.platform.arr_library import resolve_radarr_http_credentials, resolve_sonarr_http_credentials
+from mediamop.platform.media_managers.credentials import (
+    resolve_movie_manager_credentials,
+    resolve_tv_manager_credentials,
+)
 
 
 def _parse_job_payload(payload_json: str | None) -> dict[str, Any]:
@@ -64,9 +67,9 @@ def make_refiner_candidate_gate_handler(
 
         with session_factory() as session:
             if app == "radarr":
-                base, key = resolve_radarr_http_credentials(session, settings)
+                base, key = resolve_movie_manager_credentials(session, settings)
             else:
-                base, key = resolve_sonarr_http_credentials(session, settings)
+                base, key = resolve_tv_manager_credentials(session, settings)
         if not base or not key:
             raise RuntimeError(
                 "Refiner candidate gate needs Radarr/Sonarr URL and API key: set "

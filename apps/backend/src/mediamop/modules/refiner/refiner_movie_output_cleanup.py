@@ -22,7 +22,7 @@ from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
-from mediamop.platform.arr_library import resolve_radarr_http_credentials
+from mediamop.platform.media_managers.credentials import resolve_movie_manager_credentials
 from mediamop.platform.outbound_http import normalize_local_service_base_url
 
 logger = logging.getLogger(__name__)
@@ -351,7 +351,7 @@ def maybe_run_movie_output_folder_cleanup_after_remux(
         out["movie_output_truth_note"] = out["movie_output_folder_skip_reason"]
         return
 
-    base, key = resolve_radarr_http_credentials(session, settings)
+    base, key = resolve_movie_manager_credentials(session, settings)
     if not base or not key:
         out["movie_output_folder_skip_reason"] = (
             "Radarr URL or API key is not configured in MediaMop, so Refiner could not verify Radarr library paths. "

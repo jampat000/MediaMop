@@ -18,3 +18,4 @@ and timing-based pruning must follow [ADR-0009](ADR-0009-suite-wide-timing-isola
 | [ADR-0008](ADR-0008-mediamop-settings-aggregate-runtime-config.md) | `MediaMopSettings` aggregate for runtime configuration |
 | [ADR-0009](ADR-0009-suite-wide-timing-isolation.md) | Suite-wide timing isolation (durable work) |
 | [ADR-0012](ADR-0012-refiner-preflight-parity-boundary.md) | Refiner preflight parity boundary (FileFlows-aligned) |
+| [ADR-0013](ADR-0013-media-managers-are-kinds-not-products.md) | A media manager is a kind, not a product name |

@@ -1,4 +1,10 @@
-"""Minimal synchronous Sonarr/Radarr v3 JSON client (stdlib urllib) for *arr* automation."""
+"""Minimal synchronous JSON client for talking to a media manager (stdlib urllib).
+
+Kept deliberately narrow, and kept guarded: the base URL must be a plain http(s)
+address with no credentials, query or fragment, and a request path must be relative.
+Together those stop a saved connection from being turned into a request against an
+arbitrary host — a cloud metadata endpoint being the obvious one.
+"""
 
 from __future__ import annotations
 
@@ -12,19 +18,19 @@ from typing import Any
 from mediamop.platform.outbound_http import normalize_local_service_base_url
 
 
-class ArrLibraryV3HttpError(RuntimeError):
-    """Raised when an Arr HTTP call fails."""
+class MediaManagerHttpError(RuntimeError):
+    """Raised when a call to a media manager fails."""
 
 
 def _validated_base_url(raw: str) -> str:
     try:
         return normalize_local_service_base_url(raw)
     except ValueError as exc:
-        raise ArrLibraryV3HttpError(str(exc)) from exc
+        raise MediaManagerHttpError(str(exc)) from exc
 
 
-class ArrLibraryV3Client:
-    """Narrow surface: health, wanted pages, catalog walks, tags, commands."""
+class MediaManagerHttpClient:
+    """Narrow surface: whatever a module needs from a manager, over a validated base URL."""
 
     def __init__(self, base_url: str, api_key: str, *, timeout_seconds: float = 30.0) -> None:
         self._base = _validated_base_url(base_url)
@@ -33,7 +39,7 @@ class ArrLibraryV3Client:
 
     def _url(self, path: str, params: dict[str, str] | None = None) -> str:
         if urllib.parse.urlsplit(path).scheme:
-            raise ArrLibraryV3HttpError("Sonarr/Radarr API path must be relative.")
+            raise MediaManagerHttpError("A media manager API path must be relative.")
         p = path if path.startswith("/") else f"/{path}"
         u = f"{self._base}{p}"
         if params:
@@ -75,7 +81,7 @@ class ArrLibraryV3Client:
                 if not raw and allow_empty:
                     return None
                 if resp.status not in (200, 201, 204):
-                    raise ArrLibraryV3HttpError(f"unexpected HTTP {resp.status}")
+                    raise MediaManagerHttpError(f"unexpected HTTP {resp.status}")
                 if not raw:
                     return None
                 return json.loads(raw.decode("utf-8"))
@@ -83,7 +89,9 @@ class ArrLibraryV3Client:
             body = ""
             with contextlib.suppress(Exception):
                 body = e.read().decode("utf-8", errors="replace")[:500]
-            raise ArrLibraryV3HttpError(f"HTTP {e.code}: {body}") from e
+            raise MediaManagerHttpError(f"HTTP {e.code}: {body}") from e
 
-    def health_ok(self) -> None:
-        self.get_json("/api/v3/system/status")
+    def health_ok(self, path: str) -> None:
+        """Ask the manager whether it is there, at whichever path it answers on."""
+
+        self.get_json(path)

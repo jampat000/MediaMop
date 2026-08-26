@@ -12,8 +12,11 @@ from mediamop.modules.refiner.domain import (
     file_is_owned_by_queue,
     should_block_for_upstream,
 )
-from mediamop.modules.refiner.radarr_queue_adapter import map_radarr_queue_row_to_refiner_view
-from mediamop.modules.refiner.sonarr_queue_adapter import map_sonarr_queue_row_to_refiner_view
+from mediamop.modules.refiner.queue_adapter import (
+    MOVIE_QUEUE_DIALECT,
+    TV_QUEUE_DIALECT,
+    map_queue_row_to_refiner_view,
+)
 
 Verdict = Literal["proceed", "wait_upstream", "not_held"]
 
@@ -42,24 +45,17 @@ def evaluate_refiner_candidate_gate_from_queue_rows(
 ) -> RefinerCandidateGateOutcome:
     """Map each live queue row with the same candidate anchors Refiner uses elsewhere, then apply domain."""
 
-    views: list[RefinerQueueRowView] = []
-    for row in queue_rows:
-        if target == "radarr":
-            views.append(
-                map_radarr_queue_row_to_refiner_view(
-                    row,
-                    candidate_path=output_path,
-                    candidate_movie_id=movie_id,
-                ),
-            )
-        else:
-            views.append(
-                map_sonarr_queue_row_to_refiner_view(
-                    row,
-                    candidate_path=output_path,
-                    candidate_series_id=series_id,
-                ),
-            )
+    dialect = MOVIE_QUEUE_DIALECT if target == "radarr" else TV_QUEUE_DIALECT
+    candidate_entity_id = movie_id if target == "radarr" else series_id
+    views: list[RefinerQueueRowView] = [
+        map_queue_row_to_refiner_view(
+            row,
+            dialect,
+            candidate_path=output_path,
+            candidate_entity_id=candidate_entity_id,
+        )
+        for row in queue_rows
+    ]
 
     candidate = FileAnchorCandidate(title=release_title, year=release_year)
     owned = file_is_owned_by_queue(views, file_candidate=candidate)

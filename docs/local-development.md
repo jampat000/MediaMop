@@ -1,6 +1,6 @@
 # MediaMop — local development (backend + web)
 
-This **MediaMop** repository contains **`apps/backend`** (FastAPI, **SQLite**, cookie sessions) and **`apps/web`** (React/Vite). Radarr/Sonarr automation, library connection settings, and failed-import tooling ship as part of the **Refiner** surface and shared **arr library** APIs, not as separate dashboard apps.
+This **MediaMop** repository contains **`apps/backend`** (FastAPI, **SQLite**, cookie sessions) and **`apps/web`** (React/Vite). Media manager connections (Radarr, Sonarr, Deluno, or anything posting MediaMop's own payload) live under **Settings -> Media managers**; inbound events all arrive at `POST /api/v1/intake/webhook/{source}`. Library automation and failed-import tooling ship as part of the **Refiner** surface, not as separate dashboard apps. See [ADR-0013](adr/ADR-0013-media-managers-are-kinds-not-products.md).
 
 **Local web/API ports** are versioned in **`scripts/dev-ports.json`**; the policy is summarized in **[`docs/ports.md`](ports.md)**.
 

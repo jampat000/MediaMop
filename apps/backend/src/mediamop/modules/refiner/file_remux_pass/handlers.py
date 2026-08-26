@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Callable
 from typing import Any
 
@@ -25,6 +26,37 @@ from mediamop.modules.refiner.refiner_operator_settings_service import ensure_re
 from mediamop.modules.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
 from mediamop.modules.refiner.refiner_remux_rules_settings_service import load_refiner_remux_rules_config
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
+from mediamop.platform.media_managers.completion_callback import report_handoff_completion
+
+logger = logging.getLogger(__name__)
+
+
+def _report_back(
+    settings: MediaMopSettings,
+    session_factory: sessionmaker[Session],
+    *,
+    payload_json: str | None,
+    result: dict[str, Any],
+) -> None:
+    """Tell the originating media manager how the pass went, if it asked to be told.
+
+    A hand-off is a loan: the manager is still holding the import open. Reporting is
+    best-effort and never raises, so an unreachable manager cannot fail work that has
+    already succeeded on disk.
+    """
+
+    try:
+        with session_factory() as session:
+            status = report_handoff_completion(
+                session,
+                settings,
+                payload_json=payload_json,
+                result=result,
+            )
+        if not status.startswith("skipped"):
+            logger.info("Refiner hand-off callback: %s", status)
+    except Exception:  # noqa: BLE001 - reporting must never break the job
+        logger.exception("Refiner hand-off callback raised unexpectedly.")
 
 
 def _record(session_factory: sessionmaker[Session], *, payload: dict[str, Any], activity_id: int | None = None) -> None:
@@ -161,6 +193,12 @@ def make_refiner_file_remux_pass_handler(
                         "relative_media_path": rel.strip(),
                     },
                 )
+                _report_back(
+                    settings,
+                    session_factory,
+                    payload_json=ctx.payload_json,
+                    result={"ok": False, "outcome": REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION, "reason": path_err},
+                )
                 return
             assert path_runtime is not None
 
@@ -180,5 +218,6 @@ def make_refiner_file_remux_pass_handler(
             )
             result["job_id"] = ctx.id
         _record(session_factory, payload=result, activity_id=progress_reporter.activity_id)
+        _report_back(settings, session_factory, payload_json=ctx.payload_json, result=result)
 
     return _run

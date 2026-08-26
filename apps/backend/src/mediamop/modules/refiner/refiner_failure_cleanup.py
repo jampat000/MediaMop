@@ -26,7 +26,10 @@ from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_ops imp
     refiner_active_remux_pass_exists_for_relative_path,
     relative_posix_path_under_watched,
 )
-from mediamop.platform.arr_library import resolve_radarr_http_credentials, resolve_sonarr_http_credentials
+from mediamop.platform.media_managers.credentials import (
+    resolve_movie_manager_credentials,
+    resolve_tv_manager_credentials,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -245,7 +248,7 @@ def run_refiner_failure_cleanup_sweep_for_scope(
     sonarr_rows: list[dict[str, Any]] = []
     queue_unreachable: str | None = None
     if ms == "movie":
-        base, key = resolve_radarr_http_credentials(session, settings)
+        base, key = resolve_movie_manager_credentials(session, settings)
         if not base or not key:
             queue_unreachable = "Radarr URL/API key is not configured."
         else:
@@ -254,7 +257,7 @@ def run_refiner_failure_cleanup_sweep_for_scope(
             except RuntimeError as exc:
                 queue_unreachable = str(exc)
     else:
-        base, key = resolve_sonarr_http_credentials(session, settings)
+        base, key = resolve_tv_manager_credentials(session, settings)
         if not base or not key:
             queue_unreachable = "Sonarr URL/API key is not configured."
         else:
