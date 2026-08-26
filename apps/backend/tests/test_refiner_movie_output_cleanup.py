@@ -80,7 +80,7 @@ def test_tv_scope_skips_with_plain_reason(tmp_path: Path) -> None:
 def test_truth_failed_when_radarr_moviefile_inside_folder(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     fac, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_radarr_http_credentials",
+        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_movie_manager_credentials",
         _fake_radarr_creds,
     )
     movies = [{"id": 1, "movieFile": {"path": str((tmp_path / "o" / "Title" / "f.mkv").resolve())}}]
@@ -127,7 +127,7 @@ def test_truth_failed_when_radarr_moviefile_inside_folder(tmp_path: Path, monkey
 def test_deleted_when_radarr_empty_and_age_ok(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_radarr_http_credentials",
+        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_movie_manager_credentials",
         _fake_radarr_creds,
     )
     monkeypatch.setattr(
@@ -174,7 +174,7 @@ def test_deleted_when_radarr_empty_and_age_ok(tmp_path: Path, monkeypatch: pytes
 def test_radarr_unreachable_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_radarr_http_credentials",
+        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_movie_manager_credentials",
         _fake_radarr_creds,
     )
 
@@ -224,7 +224,7 @@ def test_radarr_unreachable_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
 def test_age_gate_blocks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_radarr_http_credentials",
+        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_movie_manager_credentials",
         _fake_radarr_creds,
     )
     monkeypatch.setattr(
@@ -268,7 +268,7 @@ def test_age_gate_blocks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
 def test_active_movies_remux_blocks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     fac, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_radarr_http_credentials",
+        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_movie_manager_credentials",
         _fake_radarr_creds,
     )
     monkeypatch.setattr(
@@ -327,7 +327,7 @@ def test_active_movies_remux_blocks(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 def test_tv_remux_job_does_not_block_movies_output_cleanup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     fac, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_radarr_http_credentials",
+        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_movie_manager_credentials",
         _fake_radarr_creds,
     )
     monkeypatch.setattr(
@@ -385,7 +385,7 @@ def test_tv_remux_job_does_not_block_movies_output_cleanup(tmp_path: Path, monke
 def test_cascade_removes_empty_parent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_radarr_http_credentials",
+        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_movie_manager_credentials",
         _fake_radarr_creds,
     )
     monkeypatch.setattr(
@@ -434,7 +434,7 @@ def test_cascade_removes_empty_parent(tmp_path: Path, monkeypatch: pytest.Monkey
 def test_output_folder_is_root_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_radarr_http_credentials",
+        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_movie_manager_credentials",
         _fake_radarr_creds,
     )
     monkeypatch.setattr(
@@ -478,7 +478,7 @@ def test_output_folder_is_root_skips(tmp_path: Path, monkeypatch: pytest.MonkeyP
 def test_rmtree_lock_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_radarr_http_credentials",
+        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_movie_manager_credentials",
         _fake_radarr_creds,
     )
     monkeypatch.setattr(
@@ -536,7 +536,7 @@ def test_live_cleanup_runs_even_when_legacy_dry_run_flag_passed(
         return []
 
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_radarr_http_credentials",
+        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_movie_manager_credentials",
         _fake_radarr_creds,
     )
     monkeypatch.setattr(

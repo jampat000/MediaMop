@@ -9,6 +9,11 @@ MediaMop is a self-hosted media operations app:
 - **Refiner** remuxes watched media into cleaner outputs.
 - **Pruner** previews and removes media from connected media servers.
 - **Subber** syncs Sonarr/Radarr libraries and manages subtitle coverage.
+- **Media managers** are the products MediaMop accepts work from and reports back to.
+  A connection carries a *kind* (Radarr, Sonarr, Deluno, or anything posting MediaMop's
+  own payload) rather than each product having its own routes and columns; every inbound
+  event arrives at `POST /api/v1/intake/webhook/{source}`. See
+  [ADR-0013](docs/adr/ADR-0013-media-managers-are-kinds-not-products.md).
 - **Dashboard, Activity, and Settings** expose runtime health, history, logs, backups, upgrades, and security posture.
 
 ## Runtime Shape

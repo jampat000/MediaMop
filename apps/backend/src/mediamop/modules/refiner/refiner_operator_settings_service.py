@@ -13,8 +13,8 @@ from mediamop.modules.refiner.schemas_refiner_operator_settings import (
     RefinerOperatorSettingsOut,
     RefinerOperatorSettingsPutIn,
 )
-from mediamop.platform.arr_library.schedule_csv_validate import normalize_hhmm, validate_schedule_days_csv
-from mediamop.platform.arr_library.schedule_wall_clock import schedule_time_window_active
+from mediamop.platform.media_managers.schedule_csv_validate import normalize_hhmm, validate_schedule_days_csv
+from mediamop.platform.media_managers.schedule_wall_clock import schedule_time_window_active
 from mediamop.platform.suite_settings.service import ensure_suite_settings_row
 
 

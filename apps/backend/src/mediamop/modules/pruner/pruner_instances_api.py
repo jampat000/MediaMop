@@ -78,7 +78,6 @@ from mediamop.modules.pruner.pruner_studio_collection_filters import (
     preview_studio_filters_to_db_column,
 )
 from mediamop.modules.pruner.pruner_studio_list import list_distinct_studios
-from mediamop.platform.arr_library.schedule_csv_validate import normalize_hhmm, validate_schedule_days_csv
 from mediamop.platform.auth.authorization import RequireOperatorDep
 from mediamop.platform.auth.csrf import (
     current_raw_session_token,
@@ -87,6 +86,7 @@ from mediamop.platform.auth.csrf import (
     verify_csrf_token,
 )
 from mediamop.platform.auth.deps_auth import UserPublicDep
+from mediamop.platform.media_managers.schedule_csv_validate import normalize_hhmm, validate_schedule_days_csv
 
 router = APIRouter(tags=["pruner"])
 

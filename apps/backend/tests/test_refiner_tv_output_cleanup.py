@@ -81,7 +81,7 @@ def test_movie_scope_skips_with_plain_reason(tmp_path: Path) -> None:
 def test_truth_failed_when_sonarr_episodefile_inside_folder(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_sonarr_http_credentials",
+        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_tv_manager_credentials",
         _fake_sonarr_creds,
     )
     ep_path = (tmp_path / "o" / "Show" / "S01" / "e.mkv").resolve()
@@ -130,7 +130,7 @@ def test_truth_failed_when_sonarr_episodefile_inside_folder(tmp_path: Path, monk
 def test_truth_pass_deletes_season_and_cascades_show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_sonarr_http_credentials",
+        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_tv_manager_credentials",
         _fake_sonarr_creds,
     )
     monkeypatch.setattr(
@@ -180,7 +180,7 @@ def test_truth_pass_deletes_season_and_cascades_show(tmp_path: Path, monkeypatch
 def test_sonarr_unreachable_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_sonarr_http_credentials",
+        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_tv_manager_credentials",
         _fake_sonarr_creds,
     )
 
@@ -230,7 +230,7 @@ def test_sonarr_unreachable_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
 def test_too_young_by_direct_child_episode_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_sonarr_http_credentials",
+        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_tv_manager_credentials",
         _fake_sonarr_creds,
     )
     monkeypatch.setattr(
@@ -276,7 +276,7 @@ def test_age_gate_uses_direct_child_only_not_subfolder_file(tmp_path: Path, monk
 
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_sonarr_http_credentials",
+        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_tv_manager_credentials",
         _fake_sonarr_creds,
     )
     monkeypatch.setattr(
@@ -328,7 +328,7 @@ def test_no_direct_child_media_skips(tmp_path: Path, monkeypatch: pytest.MonkeyP
 
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_sonarr_http_credentials",
+        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_tv_manager_credentials",
         _fake_sonarr_creds,
     )
     watched = tmp_path / "w"
@@ -379,7 +379,7 @@ def test_iter_direct_child_skips_nested_subfolder_files(tmp_path: Path) -> None:
 def test_active_tv_job_same_season_blocks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_sonarr_http_credentials",
+        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_tv_manager_credentials",
         _fake_sonarr_creds,
     )
     monkeypatch.setattr(
@@ -437,7 +437,7 @@ def test_active_tv_job_same_season_blocks(tmp_path: Path, monkeypatch: pytest.Mo
 def test_active_movie_job_does_not_block_tv_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_sonarr_http_credentials",
+        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_tv_manager_credentials",
         _fake_sonarr_creds,
     )
     monkeypatch.setattr(
@@ -502,7 +502,7 @@ def test_live_cleanup_runs_even_when_legacy_dry_run_flag_passed(
         return []
 
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_sonarr_http_credentials",
+        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_tv_manager_credentials",
         _fake_sonarr_creds,
     )
     monkeypatch.setattr(
@@ -546,7 +546,7 @@ def test_live_cleanup_runs_even_when_legacy_dry_run_flag_passed(
 def test_rmtree_failure_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_sonarr_http_credentials",
+        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_tv_manager_credentials",
         _fake_sonarr_creds,
     )
     monkeypatch.setattr(
@@ -667,7 +667,7 @@ def test_season_folder_is_output_root_skips(tmp_path: Path) -> None:
 def test_cascade_stops_at_output_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_sonarr_http_credentials",
+        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_tv_manager_credentials",
         _fake_sonarr_creds,
     )
     monkeypatch.setattr(
