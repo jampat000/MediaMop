@@ -141,11 +141,46 @@ function Invoke-Native {
   }
 }
 
+function Get-ExpectedFfmpegSha256 {
+  # A few KB, against ~90 MB for the archive. Worth fetching every time so the
+  # rolling "latest" build is still tracked, rather than pinning whatever was
+  # vendored first.
+  $checksumsPath = Join-Path ([System.IO.Path]::GetTempPath()) ("mediamop-ffmpeg-checksums-" + [System.Guid]::NewGuid().ToString("N") + ".sha256")
+  try {
+    Invoke-WebRequest -Uri $ffmpegChecksumsUrl -OutFile $checksumsPath -UseBasicParsing
+    $checksumsText = Get-Content -LiteralPath $checksumsPath -Raw
+    $checksumPattern = "(?im)^([a-f0-9]{64})\s+\*?$([regex]::Escape($ffmpegArchiveName))\s*$"
+    $checksumMatch = [regex]::Match($checksumsText, $checksumPattern)
+    if (-not $checksumMatch.Success) {
+      throw "FFmpeg checksum entry for '$ffmpegArchiveName' was not found in checksums.sha256."
+    }
+    return $checksumMatch.Groups[1].Value.ToLowerInvariant()
+  } finally {
+    if (Test-Path -LiteralPath $checksumsPath) {
+      Remove-Item -LiteralPath $checksumsPath -Force -ErrorAction SilentlyContinue
+    }
+  }
+}
+
 function Ensure-WindowsFfmpegRuntime {
   $ffmpegExe = Join-Path $ffmpegVendorDir "ffmpeg.exe"
   $ffprobeExe = Join-Path $ffmpegVendorDir "ffprobe.exe"
-  if ((Test-Path -LiteralPath $ffmpegExe) -and (Test-Path -LiteralPath $ffprobeExe)) {
-    return
+  $stampPath = Join-Path $ffmpegVendorDir ".ffmpeg-archive.sha256"
+
+  Write-Host "Resolving Windows FFmpeg checksum..."
+  $expectedSha256 = Get-ExpectedFfmpegSha256
+
+  # Reuse what is already vendored, but only when it came from exactly this
+  # archive. The stamp is what makes that safe to assert.
+  if ((Test-Path -LiteralPath $ffmpegExe) -and
+      (Test-Path -LiteralPath $ffprobeExe) -and
+      (Test-Path -LiteralPath $stampPath)) {
+    $vendoredSha256 = (Get-Content -LiteralPath $stampPath -Raw).Trim().ToLowerInvariant()
+    if ($vendoredSha256 -eq $expectedSha256) {
+      Write-Host "Vendored FFmpeg already matches upstream ($expectedSha256); skipping download."
+      return
+    }
+    Write-Host "Vendored FFmpeg is stale (have $vendoredSha256, want $expectedSha256); refreshing."
   }
 
   $downloadRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("mediamop-ffmpeg-" + [System.Guid]::NewGuid().ToString("N"))
@@ -155,15 +190,6 @@ function Ensure-WindowsFfmpegRuntime {
   try {
     New-Item -ItemType Directory -Path $downloadRoot | Out-Null
     New-Item -ItemType Directory -Path $extractRoot | Out-Null
-    Write-Host "Resolving Windows FFmpeg checksum..."
-    Invoke-WebRequest -Uri $ffmpegChecksumsUrl -OutFile $checksumsPath -UseBasicParsing
-    $checksumsText = Get-Content -LiteralPath $checksumsPath -Raw
-    $checksumPattern = "(?im)^([a-f0-9]{64})\s+\*?$([regex]::Escape($ffmpegArchiveName))\s*$"
-    $checksumMatch = [regex]::Match($checksumsText, $checksumPattern)
-    if (-not $checksumMatch.Success) {
-      throw "FFmpeg checksum entry for '$ffmpegArchiveName' was not found in checksums.sha256."
-    }
-    $expectedSha256 = $checksumMatch.Groups[1].Value.ToLowerInvariant()
     Write-Host "Downloading Windows FFmpeg runtime..."
     Invoke-WebRequest -Uri $ffmpegArchiveUrl -OutFile $archivePath -UseBasicParsing
     $actualSha256 = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -191,6 +217,9 @@ function Ensure-WindowsFfmpegRuntime {
       }
       Copy-Item -LiteralPath $src -Destination (Join-Path $ffmpegVendorDir $name) -Force
     }
+    # Written last, so a build interrupted mid-copy leaves no stamp and the next
+    # run re-downloads rather than trusting a half-populated folder.
+    Set-Content -LiteralPath (Join-Path $ffmpegVendorDir ".ffmpeg-archive.sha256") -Value $expectedSha256 -Encoding ascii
   } finally {
     if (Test-Path $downloadRoot) {
       Remove-Item -LiteralPath $downloadRoot -Recurse -Force -ErrorAction SilentlyContinue
@@ -300,10 +329,10 @@ New-Item -ItemType Directory -Path $distRoot | Out-Null
 
 # ── FFmpeg ──
 Start-BuildPhase "FFmpeg download + vendor"
-if (Test-Path -LiteralPath $ffmpegVendorDir) {
-  Write-Host "Cleaning stale FFmpeg vendor folder..."
-  Remove-Item -LiteralPath $ffmpegVendorDir -Recurse -Force
-}
+# Deliberately not deleted first. Doing so made the skip inside
+# Ensure-WindowsFfmpegRuntime unreachable and cost 203.8s of a 444.9s build. The
+# function decides for itself, by comparing the vendored copy against the current
+# upstream checksum, so a stale copy is still refreshed.
 Ensure-WindowsFfmpegRuntime
 
 # ── PyInstaller: server-only ──
