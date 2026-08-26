@@ -6462,7 +6462,7 @@
   },
   "info": {
     "title": "MediaMop API",
-    "version": "2.4.0"
+    "version": "2.4.1"
   },
   "openapi": "3.1.0",
   "paths": {
