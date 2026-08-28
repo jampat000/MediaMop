@@ -139,7 +139,11 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                         )
                         continue
 
-                outcome = evaluate_watched_media_file_for_dispatch(signals=signals, file_path=file_path)
+                outcome = evaluate_watched_media_file_for_dispatch(
+                    signals=signals,
+                    media_scope=media_scope,
+                    file_path=file_path,
+                )
                 if outcome.verdict == "proceed":
                     summary["verdict_proceed"] += 1
                 elif outcome.verdict == "wait_upstream":

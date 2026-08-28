@@ -22,6 +22,7 @@ from mediamop.platform.media_managers.manager_port import (
     ALL_MEDIA_SCOPES,
     ManagerCapabilities,
     ManagerLibraryTruth,
+    ManagerQueueRow,
     ManagerQueueSignal,
 )
 
@@ -191,3 +192,73 @@ def test_fan_out_asks_every_connection_covering_the_scope(
     truths = collect_library_truth(session, settings, media_scope="movie")
     assert len(truths) == 2
     assert asked == ["Radarr (1080p):truth", "Deluno (Main):truth"]
+
+
+def test_a_both_scopes_manager_only_answers_about_the_scope_it_was_asked(
+    session: Session,
+    settings: MediaMopSettings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The manager reports its whole instance; the fan-out asked about one library."""
+
+    _add(session, settings, kind="deluno", name="Main")
+
+    class _Port:
+        def capabilities(self):
+            return ManagerCapabilities(
+                scopes=ALL_MEDIA_SCOPES,
+                reports_queue=True,
+                reports_library_truth=False,
+                summary="stub",
+            )
+
+        def queue_rows(self, connection):
+            return ManagerQueueSignal(
+                connection=connection,
+                status="reported",
+                rows=(
+                    ManagerQueueRow(scope="movie", payload={"title": "a film"}),
+                    ManagerQueueRow(scope="tv", payload={"title": "an episode"}),
+                ),
+            )
+
+        def library_truth(self, connection, *, media_scope):
+            return ManagerLibraryTruth(connection=connection, status="no_signal")
+
+    monkeypatch.setattr(f"{_BINDING}.port_for_kind", lambda _kind: _Port())
+
+    movies = collect_queue_signals(session, settings, media_scope="movie")
+    assert [(r.scope, r.payload["title"]) for r in movies[0].rows] == [("movie", "a film")]
+
+    tv = collect_queue_signals(session, settings, media_scope="tv")
+    assert [(r.scope, r.payload["title"]) for r in tv[0].rows] == [("tv", "an episode")]
+
+
+def test_filtering_rows_leaves_a_silent_manager_silent(
+    session: Session,
+    settings: MediaMopSettings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Dropping out-of-scope rows must not turn "could not ask" into "nothing is importing"."""
+
+    _add(session, settings, kind="deluno", name="Main")
+
+    class _Port:
+        def capabilities(self):
+            return ManagerCapabilities(
+                scopes=ALL_MEDIA_SCOPES,
+                reports_queue=True,
+                reports_library_truth=False,
+                summary="stub",
+            )
+
+        def queue_rows(self, connection):
+            return ManagerQueueSignal(connection=connection, status="unreachable", detail="down")
+
+        def library_truth(self, connection, *, media_scope):
+            return ManagerLibraryTruth(connection=connection, status="no_signal")
+
+    monkeypatch.setattr(f"{_BINDING}.port_for_kind", lambda _kind: _Port())
+    signal = collect_queue_signals(session, settings, media_scope="movie")[0]
+    assert signal.status == "unreachable"
+    assert signal.detail == "down"

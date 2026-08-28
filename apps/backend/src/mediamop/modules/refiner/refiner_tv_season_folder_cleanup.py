@@ -165,7 +165,7 @@ def _episode_held_by_any_manager(
 ) -> str | None:
     """The connection still holding this episode, or ``None``. Any manager is enough."""
 
-    rows = merge_queue_views_for_watched_file(signals=signals, file_path=episode_path)
+    rows = merge_queue_views_for_watched_file(signals=signals, media_scope="tv", file_path=episode_path)
     candidate = FileAnchorCandidate(title=episode_path.stem, year=None)
     for row in rows:
         if file_is_owned_by_any_manager([row], candidate=candidate):

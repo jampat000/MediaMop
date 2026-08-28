@@ -43,11 +43,16 @@ class WatchedFileDispatchOutcome:
 def merge_queue_views_for_watched_file(
     *,
     signals: Sequence[ManagerQueueSignal],
+    media_scope: MediaScope,
     file_path: Path,
 ) -> list[AttributedQueueRow]:
-    """Every manager's rows for one file, each still carrying the connection that sent it."""
+    """Every manager's rows for one file, within ``media_scope``, still naming who sent each.
 
-    return attributed_rows_for_file(signals, file_path=file_path)
+    Scope is not optional: a Movies scan must never be held by a manager's in-flight TV
+    import, nor a TV scan by a film.
+    """
+
+    return attributed_rows_for_file(signals, media_scope=media_scope, file_path=file_path)
 
 
 def verdict_for_watched_scan_file(
@@ -86,11 +91,12 @@ def fetch_manager_queue_signals_for_scan(
 def evaluate_watched_media_file_for_dispatch(
     *,
     signals: Sequence[ManagerQueueSignal],
+    media_scope: MediaScope,
     file_path: Path,
 ) -> WatchedFileDispatchOutcome:
     """Ownership + upstream blocking using the same :class:`RefinerQueueRowView` rules as the candidate gate."""
 
-    rows = merge_queue_views_for_watched_file(signals=signals, file_path=file_path)
+    rows = merge_queue_views_for_watched_file(signals=signals, media_scope=media_scope, file_path=file_path)
     candidate = FileAnchorCandidate(title=file_path.stem, year=None)
     return verdict_for_watched_scan_file(rows, candidate=candidate)
 

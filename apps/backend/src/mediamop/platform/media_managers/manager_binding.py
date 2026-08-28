@@ -13,6 +13,8 @@ says so, while anything standing in front of a delete refuses to proceed.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -87,20 +89,40 @@ def all_enabled_connections(session: Session, settings: MediaMopSettings) -> lis
     return [c for c in (_connection_from_row(settings, row) for row in _enabled_rows(session)) if c is not None]
 
 
+def _only_rows_for_scope(signal: ManagerQueueSignal, media_scope: MediaScope) -> ManagerQueueSignal:
+    """Drop rows describing the other kind of library.
+
+    A manager that serves both scopes answers for its whole instance, so a Movies
+    fan-out gets that manager's in-flight TV imports too. Those rows carry a real title
+    and year, so the anchor rules will happily match them against a film with a similar
+    name and hold it — a TV import blocking a movie is never a safety signal, it is a
+    false positive with a plausible-looking reason attached.
+
+    Filtering here rather than in the dialect keeps the dialect an honest mirror of what
+    the manager said, and puts the scope rule in the one place that knows which scope
+    was asked about.
+    """
+
+    if not signal.is_reported:
+        return signal
+    kept = tuple(row for row in signal.rows if row.scope == media_scope)
+    return signal if len(kept) == len(signal.rows) else replace(signal, rows=kept)
+
+
 def collect_queue_signals(
     session: Session,
     settings: MediaMopSettings,
     *,
     media_scope: MediaScope,
 ) -> tuple[ManagerQueueSignal, ...]:
-    """Ask every manager covering ``media_scope`` what it is importing."""
+    """Ask every manager covering ``media_scope`` what it is importing about **that** scope."""
 
     signals: list[ManagerQueueSignal] = []
     for connection in connections_for_scope(session, settings, media_scope=media_scope):
         port = port_for_kind(connection.kind)
         if port is None:
             continue
-        signals.append(port.queue_rows(connection))
+        signals.append(_only_rows_for_scope(port.queue_rows(connection), media_scope))
     return tuple(signals)
 
 

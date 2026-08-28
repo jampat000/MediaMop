@@ -23,7 +23,7 @@ from mediamop.modules.refiner.domain import (
     should_block_for_upstream,
 )
 from mediamop.modules.refiner.queue_adapter import map_queue_row_to_refiner_view, queue_dialect_for_scope
-from mediamop.platform.media_managers.manager_port import ManagerQueueSignal
+from mediamop.platform.media_managers.manager_port import ManagerQueueSignal, MediaScope
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,23 +37,38 @@ class AttributedQueueRow:
 def attributed_queue_rows(
     signals: Sequence[ManagerQueueSignal],
     *,
+    media_scope: MediaScope,
     candidate_path: str | None = None,
     candidate_entity_id: int | None = None,
 ) -> list[AttributedQueueRow]:
-    """Map every reported row through its scope dialect, keeping the reporter's name."""
+    """Map every reported row for ``media_scope`` through its dialect, keeping the reporter's name.
+
+    ``media_scope`` is required, and rows describing the other kind of library are
+    dropped rather than mapped. A manager that serves both scopes reports on its whole
+    instance, and an in-flight TV import carries a title and year that the anchor rules
+    will match against a film with a similar name. A Movies decision is only ever made
+    from Movies rows, and a TV decision only from TV rows.
+
+    :func:`mediamop.platform.media_managers.manager_binding.collect_queue_signals`
+    already filters on the way out; asking for the scope again here means no caller can
+    consume a queue row without having said which library it is deciding about.
+    """
 
     rows: list[AttributedQueueRow] = []
+    dialect = queue_dialect_for_scope(media_scope)
     for signal in signals:
         if not signal.is_reported:
             continue
         label = signal.connection.label
         for row in signal.rows:
+            if row.scope != media_scope:
+                continue
             rows.append(
                 AttributedQueueRow(
                     connection_label=label,
                     view=map_queue_row_to_refiner_view(
                         row.payload,
-                        queue_dialect_for_scope(row.scope),
+                        dialect,
                         candidate_path=candidate_path,
                         candidate_entity_id=candidate_entity_id,
                     ),
@@ -65,11 +80,12 @@ def attributed_queue_rows(
 def attributed_rows_for_file(
     signals: Sequence[ManagerQueueSignal],
     *,
+    media_scope: MediaScope,
     file_path: Path,
 ) -> list[AttributedQueueRow]:
-    """The rows any manager holds against one file on disk."""
+    """The rows any manager holds against one file on disk, within its own scope."""
 
-    return attributed_queue_rows(signals, candidate_path=str(file_path.resolve()))
+    return attributed_queue_rows(signals, media_scope=media_scope, candidate_path=str(file_path.resolve()))
 
 
 def views_of(rows: Sequence[AttributedQueueRow]) -> list[RefinerQueueRowView]:

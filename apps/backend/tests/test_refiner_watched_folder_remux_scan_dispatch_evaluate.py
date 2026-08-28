@@ -23,7 +23,7 @@ def test_verdict_proceeds_when_no_queue_rows(tmp_path) -> None:
     d.mkdir()
     f = d / "Gate Test 2001.mkv"
     f.write_bytes(b"1")
-    rows = merge_queue_views_for_watched_file(signals=[reported([])], file_path=f)
+    rows = merge_queue_views_for_watched_file(signals=[reported([])], media_scope="movie", file_path=f)
     outcome = verdict_for_watched_scan_file(rows, candidate=FileAnchorCandidate(title="Gate Test 2001", year=None))
     assert outcome.verdict == "proceed"
     assert outcome.blocked_reason is None
@@ -58,6 +58,7 @@ def test_verdict_proceed_when_owned_and_not_blocked() -> None:
                 ]
             )
         ],
+        media_scope="movie",
         file_path=f,
     )
     cand = FileAnchorCandidate(title="Gate Test 2001", year=None)
@@ -80,6 +81,7 @@ def test_verdict_wait_upstream_names_the_connection_not_the_vendor() -> None:
                 name="Main",
             )
         ],
+        media_scope="movie",
         file_path=f,
     )
     cand = FileAnchorCandidate(title="Gate Test 2001", year=None)
@@ -117,7 +119,7 @@ def test_a_block_from_any_one_of_two_connections_blocks_the_file() -> None:
         name="4K",
         connection_id=2,
     )
-    outcome = evaluate_watched_media_file_for_dispatch(signals=[quiet, busy], file_path=f)
+    outcome = evaluate_watched_media_file_for_dispatch(signals=[quiet, busy], media_scope="movie", file_path=f)
     assert outcome.verdict == "wait_upstream"
     assert outcome.blocked_reason is not None
     assert "Radarr (4K)" in outcome.blocked_reason
@@ -125,6 +127,76 @@ def test_a_block_from_any_one_of_two_connections_blocks_the_file() -> None:
 
 def test_unreachable_manager_contributes_no_rows_so_the_scan_degrades_rather_than_blocking() -> None:
     f = Path("/movies/Gate Test 2001.mkv")
-    outcome = evaluate_watched_media_file_for_dispatch(signals=[unreachable(name="4K")], file_path=f)
+    outcome = evaluate_watched_media_file_for_dispatch(
+        signals=[unreachable(name="4K")],
+        media_scope="movie",
+        file_path=f,
+    )
     assert outcome.verdict == "proceed"
     assert outcome.blocked_reason is None
+
+
+def test_a_tv_import_never_blocks_a_movie() -> None:
+    """A manager serving both scopes answers for its whole instance.
+
+    Its in-flight TV import carries a title and year, so without a scope rule the anchor
+    match holds a film with a similar name. Movies decisions come from Movies rows only.
+    """
+
+    f = Path("/movies/Gate Test 2001.mkv")
+    tv_import = reported(
+        [
+            {
+                "status": "downloading",
+                "outputPath": str(f.resolve()),
+                "media": {"title": "Gate Test", "year": 2001},
+            },
+        ],
+        scope="tv",
+        kind="deluno",
+        name="Main",
+    )
+    outcome = evaluate_watched_media_file_for_dispatch(signals=[tv_import], media_scope="movie", file_path=f)
+    assert outcome.verdict == "proceed"
+    assert outcome.blocked_reason is None
+
+
+def test_a_movie_import_never_blocks_a_tv_episode() -> None:
+    f = Path("/tv/Gate Test/Gate Test 2001.mkv")
+    movie_import = reported(
+        [
+            {
+                "status": "downloading",
+                "outputPath": str(f.resolve()),
+                "media": {"title": "Gate Test", "year": 2001},
+            },
+        ],
+        scope="movie",
+        kind="deluno",
+        name="Main",
+    )
+    outcome = evaluate_watched_media_file_for_dispatch(signals=[movie_import], media_scope="tv", file_path=f)
+    assert outcome.verdict == "proceed"
+    assert outcome.blocked_reason is None
+
+
+def test_the_same_manager_still_blocks_within_its_own_scope() -> None:
+    """The scope rule must not cost the safety check it exists to protect."""
+
+    f = Path("/movies/Gate Test 2001.mkv")
+    both = reported(
+        [
+            {
+                "status": "downloading",
+                "outputPath": str(f.resolve()),
+                "media": {"title": "Gate Test", "year": 2001},
+            },
+        ],
+        scope="movie",
+        kind="deluno",
+        name="Main",
+    )
+    outcome = evaluate_watched_media_file_for_dispatch(signals=[both], media_scope="movie", file_path=f)
+    assert outcome.verdict == "wait_upstream"
+    assert outcome.blocked_reason is not None
+    assert "Deluno (Main)" in outcome.blocked_reason

@@ -117,14 +117,19 @@ def _job_temp_candidates(*, work_root: Path, rel_norm: str) -> list[Path]:
     return out
 
 
-def _held_by_manager(*, signals: Sequence[ManagerQueueSignal], media_file: Path) -> str | None:
+def _held_by_manager(
+    *,
+    signals: Sequence[ManagerQueueSignal],
+    media_scope: Scope,
+    media_file: Path,
+) -> str | None:
     """The connection whose queue still names this exact file, or ``None``.
 
     Path equality only — failure cleanup deletes folders, so it does not lean on the
     looser title/year anchor that the scan gate uses to decide a wait.
     """
 
-    for row in attributed_rows_for_file(signals, file_path=media_file):
+    for row in attributed_rows_for_file(signals, media_scope=media_scope, file_path=media_file):
         if row.view.applies_to_file:
             return row.connection_label
     return None
@@ -279,7 +284,7 @@ def run_refiner_failure_cleanup_sweep_for_scope(
             detail["movie_failure_cleanup_output_folder_deleted"] = False
             out_folder = (output_root / Path(rel_norm)).resolve().parent
             detail["movie_failure_cleanup_output_folder_path"] = str(out_folder)
-            holder = _held_by_manager(signals=signals, media_file=src_file)
+            holder = _held_by_manager(signals=signals, media_scope=ms, media_file=src_file)
             if holder is not None:
                 detail["movie_failure_cleanup_queue_check"] = "blocked_in_queue"
                 detail["movie_failure_cleanup_skip_reason"] = (
@@ -347,7 +352,7 @@ def run_refiner_failure_cleanup_sweep_for_scope(
                 continue
             blocked = False
             for ep in episodes:
-                if _held_by_manager(signals=signals, media_file=ep) is not None:
+                if _held_by_manager(signals=signals, media_scope=ms, media_file=ep) is not None:
                     blocked = True
                     break
                 try:

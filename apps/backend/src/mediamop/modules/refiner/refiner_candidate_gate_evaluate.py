@@ -55,7 +55,12 @@ def evaluate_refiner_candidate_gate_from_manager_signals(
     """Map every reported row with the same candidate anchors Refiner uses elsewhere, then apply domain."""
 
     report = report_for_signals(signals)
-    rows = attributed_queue_rows(signals, candidate_path=output_path, candidate_entity_id=entity_id)
+    rows = attributed_queue_rows(
+        signals,
+        media_scope=media_scope,
+        candidate_path=output_path,
+        candidate_entity_id=entity_id,
+    )
     candidate = FileAnchorCandidate(title=release_title, year=release_year)
     owned = file_is_owned_by_any_manager(rows, candidate=candidate)
     blocked_by = blocking_connection_label(rows, candidate=candidate)
