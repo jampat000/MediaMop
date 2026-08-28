@@ -15,7 +15,6 @@ from mediamop.core.config_domains import (
     RefinerSettings,
     SecuritySettings,
     SessionSettings,
-    SubberSettings,
 )
 from mediamop.core.runtime_paths import (
     assert_sqlite_db_location_usable,
@@ -29,7 +28,6 @@ from mediamop.modules.refiner.refiner_family_intervals import (
     clamp_refiner_schedule_interval_seconds,
 )
 from mediamop.modules.refiner.worker_limits import clamp_refiner_worker_count
-from mediamop.modules.subber.worker_limits import clamp_subber_worker_count
 
 
 def _load_backend_dotenv_if_present() -> None:
@@ -132,7 +130,10 @@ class MediaMopSettings:
     bootstrap_rate_window_seconds: int
     security_enable_hsts: bool
     metrics_bearer_token: str | None
-    subber_webhook_secret: str | None
+    # Guards POST /api/v1/intake/webhook/{source} for installs with no per-connection
+    # secret yet. Named MEDIAMOP_SUBBER_WEBHOOK_SECRET until Subber moved to Deluno;
+    # the endpoint it protects is Refiner's hand-off intake and outlived the name.
+    media_manager_webhook_secret: str | None
     mediamop_home: str
     db_path: str
     backup_dir: str
@@ -155,13 +156,6 @@ class MediaMopSettings:
     # clamp). Env name keeps ``PLEX_LIVE`` for older installs; it does not re-enable live scan. Loaded from
     # MEDIAMOP_PRUNER_PLEX_LIVE_ABS_MAX_ITEMS.
     pruner_plex_live_abs_max_items: int
-    # 0 = no in-process Subber workers (Subber-owned subber_jobs only); >0 when Subber queues durable work.
-    subber_worker_count: int
-    # Subber library scan periodic enqueue (reads ``subber_settings``; independent of worker count).
-    subber_library_scan_schedule_enqueue_enabled: bool
-    subber_library_scan_schedule_scan_interval_seconds: int
-    # Subber subtitle-upgrade periodic enqueue — separate asyncio task from TV/Movies library scan schedules.
-    subber_upgrade_schedule_enqueue_enabled: bool
     # Refiner supplied payload evaluation (``refiner.supplied_payload_evaluation.v1``) — Refiner-only schedule.
     refiner_supplied_payload_evaluation_schedule_enabled: bool
     refiner_supplied_payload_evaluation_schedule_interval_seconds: int
@@ -282,15 +276,6 @@ class MediaMopSettings:
         )
 
     @property
-    def subber(self) -> SubberSettings:
-        return SubberSettings(
-            worker_count=self.subber_worker_count,
-            library_scan_schedule_enqueue_enabled=self.subber_library_scan_schedule_enqueue_enabled,
-            library_scan_schedule_scan_interval_seconds=self.subber_library_scan_schedule_scan_interval_seconds,
-            upgrade_schedule_enqueue_enabled=self.subber_upgrade_schedule_enqueue_enabled,
-        )
-
-    @property
     def arr(self) -> ArrSettings:
         return ArrSettings(
             radarr_base_url=self.arr_radarr_base_url,
@@ -354,7 +339,12 @@ class MediaMopSettings:
         boot_win = max(1, _env_int("MEDIAMOP_BOOTSTRAP_RATE_WINDOW_SECONDS", 3600))
         enable_hsts = _env_bool("MEDIAMOP_SECURITY_ENABLE_HSTS", default=False)
         metrics_bearer_token = (os.environ.get("MEDIAMOP_METRICS_BEARER_TOKEN") or "").strip() or None
-        subber_webhook_secret = (os.environ.get("MEDIAMOP_SUBBER_WEBHOOK_SECRET") or "").strip() or None
+        media_manager_webhook_secret = (
+            os.environ.get("MEDIAMOP_MEDIA_MANAGER_WEBHOOK_SECRET")
+            # Read second so an install that never renamed it keeps authenticating.
+            or os.environ.get("MEDIAMOP_SUBBER_WEBHOOK_SECRET")
+            or ""
+        ).strip() or None
 
         home_path, db_p, backup_p, log_p, temp_p = resolve_all_runtime_paths()
         ensure_runtime_directories(
@@ -375,13 +365,6 @@ class MediaMopSettings:
         pruner_apply_on = _env_bool("MEDIAMOP_PRUNER_APPLY_ENABLED", False)
         pruner_plex_live_on = _env_bool("MEDIAMOP_PRUNER_PLEX_LIVE_REMOVAL_ENABLED", False)
         pruner_plex_live_abs_max = max(1, min(5000, _env_int("MEDIAMOP_PRUNER_PLEX_LIVE_ABS_MAX_ITEMS", 150)))
-        subber_workers = clamp_subber_worker_count(_env_int("MEDIAMOP_SUBBER_WORKER_COUNT", 1))
-        subber_lib_scan_sched_enq = _env_bool("MEDIAMOP_SUBBER_LIBRARY_SCAN_SCHEDULE_ENQUEUE_ENABLED", True)
-        subber_lib_scan_sched_scan_iv = max(
-            10,
-            min(300, _env_int("MEDIAMOP_SUBBER_LIBRARY_SCAN_SCHEDULE_SCAN_INTERVAL_SECONDS", 45)),
-        )
-        subber_upgrade_sched_enq = _env_bool("MEDIAMOP_SUBBER_UPGRADE_SCHEDULE_ENQUEUE_ENABLED", True)
 
         def _refiner_supplied_payload_eval_schedule_enabled() -> bool:
             new_k = "MEDIAMOP_REFINER_SUPPLIED_PAYLOAD_EVALUATION_SCHEDULE_ENABLED"
@@ -532,7 +515,7 @@ class MediaMopSettings:
             bootstrap_rate_window_seconds=boot_win,
             security_enable_hsts=enable_hsts,
             metrics_bearer_token=metrics_bearer_token,
-            subber_webhook_secret=subber_webhook_secret,
+            media_manager_webhook_secret=media_manager_webhook_secret,
             mediamop_home=str(home_path),
             db_path=str(db_p),
             backup_dir=str(backup_p),
@@ -546,10 +529,6 @@ class MediaMopSettings:
             pruner_apply_enabled=pruner_apply_on,
             pruner_plex_live_removal_enabled=pruner_plex_live_on,
             pruner_plex_live_abs_max_items=pruner_plex_live_abs_max,
-            subber_worker_count=subber_workers,
-            subber_library_scan_schedule_enqueue_enabled=subber_lib_scan_sched_enq,
-            subber_library_scan_schedule_scan_interval_seconds=subber_lib_scan_sched_scan_iv,
-            subber_upgrade_schedule_enqueue_enabled=subber_upgrade_sched_enq,
             refiner_supplied_payload_evaluation_schedule_enabled=refiner_payload_eval_on,
             refiner_supplied_payload_evaluation_schedule_interval_seconds=refiner_payload_eval_iv,
             refiner_watched_folder_remux_scan_dispatch_schedule_enabled=refiner_wf_scan_dispatch_on,

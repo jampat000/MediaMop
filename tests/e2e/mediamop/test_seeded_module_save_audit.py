@@ -18,7 +18,7 @@ pytestmark = [
 ]
 
 
-def test_saved_state_persists_across_settings_refiner_pruner_and_subber(
+def test_saved_state_persists_across_settings_refiner_and_pruner(
     mediamop_shell: str,
     mediamop_home: str,
 ) -> None:
@@ -78,18 +78,5 @@ def test_saved_state_persists_across_settings_refiner_pruner_and_subber(
                 "http://emby.test:8096",
             )
 
-            open_sidebar(page, "Subber")
-            page.get_by_role("tab", name="Connections", exact=True).click()
-            sonarr = page.get_by_test_id("subber-settings-sonarr")
-            sonarr.get_by_label("Base URL", exact=True).fill("http://sonarr.test:8989")
-            sonarr.get_by_label("API key", exact=True).fill("sonarr-token")
-            page.get_by_test_id("subber-save-sonarr").click()
-            expect(sonarr.get_by_role("status")).to_contain_text("Saved.")
-            open_sidebar(page, "Dashboard")
-            open_sidebar(page, "Subber")
-            page.get_by_role("tab", name="Connections", exact=True).click()
-            expect(page.get_by_test_id("subber-settings-sonarr").get_by_label("Base URL", exact=True)).to_have_value(
-                "http://sonarr.test:8989",
-            )
         finally:
             browser.close()

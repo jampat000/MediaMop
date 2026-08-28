@@ -8,8 +8,9 @@ Create Date: 2026-05-12 00:00:00
 from __future__ import annotations
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy import inspect
+
+from alembic import op
 
 revision = "0007_indexes_and_retry_backoff"
 down_revision = "0006_trusted_device_sessions"
@@ -20,8 +21,14 @@ depends_on = None
 def upgrade() -> None:
     bind = op.get_bind()
     insp = inspect(bind)
+    # ``subber_jobs`` only exists on installs created before Subber moved to
+    # Deluno. 0001 builds the schema from the ORM metadata, so a fresh database
+    # never has it, and this migration must not assume otherwise.
+    present = set(insp.get_table_names())
 
     for table in ("refiner_jobs", "pruner_jobs", "subber_jobs"):
+        if table not in present:
+            continue
         cols = {c["name"] for c in insp.get_columns(table)}
         if "not_before" not in cols:
             op.add_column(
@@ -34,6 +41,8 @@ def upgrade() -> None:
         ("pruner_jobs", "ix_pruner_jobs_status_id"),
         ("subber_jobs", "ix_subber_jobs_status_id"),
     ):
+        if table not in present:
+            continue
         idxs = {i["name"] for i in insp.get_indexes(table)}
         if idx_name not in idxs:
             op.create_index(idx_name, table, ["status", "id"])
@@ -48,6 +57,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     bind = op.get_bind()
     insp = inspect(bind)
+    present = set(insp.get_table_names())
 
     for idx_name, table in (
         ("ix_activity_events_module", "activity_events"),
@@ -56,11 +66,15 @@ def downgrade() -> None:
         ("ix_pruner_jobs_status_id", "pruner_jobs"),
         ("ix_refiner_jobs_status_id", "refiner_jobs"),
     ):
+        if table not in present:
+            continue
         idxs = {i["name"] for i in insp.get_indexes(table)}
         if idx_name in idxs:
             op.drop_index(idx_name, table_name=table)
 
     for table in ("subber_jobs", "pruner_jobs", "refiner_jobs"):
+        if table not in present:
+            continue
         cols = {c["name"] for c in insp.get_columns(table)}
         if "not_before" in cols:
             op.drop_column(table, "not_before")

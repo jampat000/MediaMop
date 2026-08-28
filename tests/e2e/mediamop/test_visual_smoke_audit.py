@@ -94,27 +94,3 @@ def test_settings_general_tab_renders(mediamop_shell: str) -> None:
             _save_screenshot(page, "settings-general")
         finally:
             browser.close()
-
-
-def test_subber_providers_tab_renders(mediamop_shell: str) -> None:
-    """Subber page Providers tab loads and is error-free."""
-    base = mediamop_shell.rstrip("/")
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        try:
-            page = browser.new_page()
-            page.set_default_timeout(30_000)
-
-            ensure_signed_in(page, base)
-
-            open_sidebar(page, "Subber")
-            expect(page).to_have_url(re.compile(r".*/subber"))
-            expect(page.get_by_test_id("subber-scope-page")).to_be_visible()
-
-            page.get_by_role("tab", name="Providers", exact=True).click()
-            expect(page.get_by_test_id("subber-providers-tab")).to_be_visible()
-
-            _assert_no_error_state(page)
-            _save_screenshot(page, "subber-providers")
-        finally:
-            browser.close()

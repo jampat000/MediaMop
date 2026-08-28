@@ -9,7 +9,6 @@ MediaMop issues should stay practical and reproducible. Every issue needs a clea
 - `type: docs` - documentation, screenshots, release notes, or support text.
 - `area: refiner` - file remuxing, folder paths, processing events, or Refiner settings.
 - `area: pruner` - media server cleanup previews, deletes, savings, or Pruner settings.
-- `area: subber` - subtitle downloads, Sonarr/Radarr integration, language preferences, or Subber settings.
 - `area: dashboard` - overview, module health, runtime health, and summary metrics.
 - `area: installer` - Windows setup, startup behavior, tray app, or upgrade flow.
 - `area: docker` - image build, runtime config, ports, volumes, or container startup.

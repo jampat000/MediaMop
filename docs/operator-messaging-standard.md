@@ -15,7 +15,7 @@ Normal work must not be logged or displayed as a warning. Provider-level recover
 
 Every operational Activity detail should include stable fields when applicable:
 
-- `module`: `refiner`, `pruner`, `subber`, `auth`, or `system`.
+- `module`: `refiner`, `pruner`, `auth`, or `system`.
 - `action`: plain workflow action such as `scan`, `preview`, `apply`, `remux`, `search`, `sync`, `cleanup`, `connection_test`, or `upgrade`.
 - `trigger`: `manual`, `scheduled`, `startup`, `worker`, `retry`, or `system`.
 - `result`: `success`, `skipped`, `warning`, `retrying`, `running`, or `failed`.
@@ -30,7 +30,7 @@ Every operational Activity detail should include stable fields when applicable:
 
 Failures must use the shared failure helper in `mediamop.platform.observability.failure_messages` before they reach job `last_error`, Activity detail, or provider result arrays.
 
-- Say what failed with module and action, for example `Subber subtitle search`.
+- Say what failed with module and action, for example `Refiner file remux pass`.
 - Say where it failed when known, for example provider, server, or media scope.
 - Classify why it failed as `rate_limit`, `credential`, `auth`, `network`, `validation`, `not_found`, or `internal`.
 - Say what happens next: skipped and continued, will retry, or marked failed.

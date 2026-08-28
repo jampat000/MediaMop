@@ -58,9 +58,9 @@ function webhookUrl(connection: MediaManagerConnection): string {
 }
 
 /**
- * The same shape Subber uses for its connections: a plain headline, when it was
- * last checked, and the detail underneath. What an operator wants to know here is
- * "is it connected", not what the endpoint said.
+ * A plain headline, when it was last checked, and the detail underneath. What
+ * an operator wants to know here is "is it connected", not what the endpoint
+ * said.
  */
 function ConnectionStatusPanel({
   connection,

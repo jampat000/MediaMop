@@ -10,7 +10,7 @@
  * the default API/web ports first so a leftover process is not reused by accident.)
  * Set ``MEDIAMOP_DEV_STACK_ALWAYS_SPAWN_API=1`` to force spawning the API child anyway.
  *
- * If ``/health`` works but required routes (e.g. ``/api/v1/subber/library/sync/movies`` and
+ * If ``/health`` works but required routes (e.g.
  * ``/api/v1/system/suite-configuration-bundle``) return **404**, the default port usually holds an
  * **older** MediaMop build. The local folder picker route is also checked because Windows can leave
  * an unkillable stale listener behind after desktop/dev restarts. We then start this repo's API on
@@ -121,47 +121,6 @@ function probeApiAlreadyServing(apiHost, apiPort) {
     req.on("timeout", () => {
       req.destroy();
       resolve(false);
-    });
-    req.end();
-  });
-}
-
-/**
- * POST-only Subber route: a **current** FastAPI app responds with **405** to GET; an older
- * build without the route returns **404**. Used to avoid reusing a stale uvicorn on the dev port.
- */
-function probeSubberLibrarySyncMoviesRouteNotStale(apiHost, apiPort) {
-  const { hostname, port } = apiConnectTarget(apiHost, apiPort);
-  return new Promise((resolve) => {
-    const req = http.request(
-      {
-        hostname,
-        port,
-        path: "/api/v1/subber/library/sync/movies",
-        method: "GET",
-        timeout: 3000,
-      },
-      (res) => {
-        res.resume();
-        if (res.statusCode === 404) {
-          resolve(false);
-          return;
-        }
-        resolve(true);
-      },
-    );
-    req.on("error", () => {
-      console.error(
-        "[dev-stack] Could not probe Subber library sync route (network error) — assuming API is OK.",
-      );
-      resolve(true);
-    });
-    req.on("timeout", () => {
-      req.destroy();
-      console.error(
-        "[dev-stack] Timed out probing Subber library sync route — assuming API is OK.",
-      );
-      resolve(true);
     });
     req.end();
   });
@@ -303,11 +262,10 @@ async function findFirstTcpPortWithoutHealthyApi(apiHost, startPort, inclusiveMa
 }
 
 async function probeRequiredCurrentApiRoutes(apiHost, apiPort, expectedVersion) {
-  const subberOk = await probeSubberLibrarySyncMoviesRouteNotStale(apiHost, apiPort);
   const configOk = await probeSuiteConfigurationBundleRouteNotStale(apiHost, apiPort);
   const directoryBrowserOk = await probeDirectoryBrowserRouteNotStale(apiHost, apiPort);
   const versionOk = await probeApiVersionMatchesSource(apiHost, apiPort, expectedVersion);
-  return subberOk && configOk && directoryBrowserOk && versionOk;
+  return configOk && directoryBrowserOk && versionOk;
 }
 
 async function findFirstHealthyCurrentApi(apiHost, startPort, inclusiveMax, expectedVersion) {
@@ -526,19 +484,17 @@ async function main() {
   const expectedApiVersion = readExpectedApiVersion();
   const forceSpawn = (process.env.MEDIAMOP_DEV_STACK_ALWAYS_SPAWN_API || "").trim() === "1";
   const healthOk = await probeApiAlreadyServing(apiHost, apiPort);
-  let subberRoutesOk = true;
   let configBundleRouteOk = true;
   let directoryBrowserRouteOk = true;
   let apiVersionOk = true;
   if (healthOk) {
-    subberRoutesOk = await probeSubberLibrarySyncMoviesRouteNotStale(apiHost, apiPort);
     configBundleRouteOk = await probeSuiteConfigurationBundleRouteNotStale(apiHost, apiPort);
     directoryBrowserRouteOk = await probeDirectoryBrowserRouteNotStale(apiHost, apiPort);
     apiVersionOk = await probeApiVersionMatchesSource(apiHost, apiPort, expectedApiVersion);
   }
   /** Stale build on the configured port: required API routes missing on old server code. */
   const staleDefaultApi =
-    healthOk && (!subberRoutesOk || !configBundleRouteOk || !directoryBrowserRouteOk || !apiVersionOk);
+    healthOk && (!configBundleRouteOk || !directoryBrowserRouteOk || !apiVersionOk);
 
   let bindPort = apiPort;
   /** When set, Vite must proxy ``/api`` here (see ``vite.config.ts``). */
@@ -586,7 +542,7 @@ async function main() {
   const apiOriginEnvPatch = buildApiDevOriginEnvPatch(chosenWebPort);
 
   const canReuse =
-    !forceSpawn && healthOk && subberRoutesOk && configBundleRouteOk && directoryBrowserRouteOk && apiVersionOk;
+    !forceSpawn && healthOk && configBundleRouteOk && directoryBrowserRouteOk && apiVersionOk;
 
   if (canReuse || reuseAlternateApi) {
     const reusePort = reuseAlternateApi ? bindPort : apiPort;

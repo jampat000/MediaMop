@@ -169,10 +169,10 @@ describe("SettingsMediaManagersTab", () => {
     const { container } = render(<SettingsMediaManagersTab />, { wrapper });
     await screen.findByText(/Nothing is connected yet/i);
 
-    // The intro used to explain Radarr, Sonarr, Deluno, Subber and Refiner in one
+    // The intro used to explain Radarr, Sonarr, Deluno and Refiner in one
     // breath. None of that helps someone deciding what this screen is for.
     const text = container.textContent ?? "";
-    for (const word of ["Subber", "Refiner", "Pruner"]) {
+    for (const word of ["Refiner", "Pruner"]) {
       expect(text).not.toContain(word);
     }
   });

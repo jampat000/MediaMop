@@ -3,7 +3,7 @@
  * Stops processes **listening** on the dev API port from ``scripts/dev-ports.json``
  * (override with ``MEDIAMOP_DEV_API_PORT``).
  *
- * Use when an old MediaMop ``uvicorn`` is still bound (Subber sync returns 404) or the
+ * Use when an old MediaMop ``uvicorn`` is still bound (a current route returns 404) or the
  * port is stuck. Then run ``npm run dev`` from ``apps/web`` again.
  */
 import { execFileSync } from "node:child_process";

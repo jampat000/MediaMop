@@ -19,7 +19,7 @@ def test_failure_message_maps_credentials_to_actionable_guidance() -> None:
 
 def test_failure_message_marks_rate_limits_as_recoverable() -> None:
     failure = operator_failure_from_exception(
-        module="Subber",
+        module="Refiner",
         action="subtitle search",
         provider="opensubtitles_com",
         exc=RuntimeError("HTTP 429 rate limit"),

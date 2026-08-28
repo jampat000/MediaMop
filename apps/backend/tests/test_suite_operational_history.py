@@ -9,7 +9,6 @@ from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.modules.pruner.pruner_jobs_model import PrunerJob, PrunerJobStatus
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.subber.subber_jobs_model import SubberJob, SubberJobStatus
 from mediamop.platform.activity import constants as activity_constants
 from mediamop.platform.activity.models import ActivityEvent
 from tests.integration_helpers import auth_post
@@ -46,7 +45,6 @@ def test_operational_history_reset_clears_history_but_keeps_active_work(client_w
         db.query(ActivityEvent).delete()
         db.query(RefinerJob).delete()
         db.query(PrunerJob).delete()
-        db.query(SubberJob).delete()
         db.add(
             ActivityEvent(
                 event_type=activity_constants.REFINER_FILE_REMUX_PASS_COMPLETED,
@@ -69,8 +67,6 @@ def test_operational_history_reset_clears_history_but_keeps_active_work(client_w
                 ),
                 PrunerJob(dedupe_key="pruner-done", job_kind="pruner.preview", status=PrunerJobStatus.FAILED.value),
                 PrunerJob(dedupe_key="pruner-pending", job_kind="pruner.preview", status=PrunerJobStatus.PENDING.value),
-                SubberJob(dedupe_key="subber-done", job_kind="subber.search", status=SubberJobStatus.COMPLETED.value),
-                SubberJob(dedupe_key="subber-pending", job_kind="subber.search", status=SubberJobStatus.PENDING.value),
             ]
         )
         db.commit()
@@ -87,13 +83,10 @@ def test_operational_history_reset_clears_history_but_keeps_active_work(client_w
     assert body["activity_events_deleted"] >= 1
     assert body["refiner_jobs_deleted"] == 1
     assert body["pruner_jobs_deleted"] == 1
-    assert body["subber_jobs_deleted"] == 1
 
     with fac() as db:
         assert db.scalars(select(ActivityEvent)).first() is None
         assert db.scalar(select(RefinerJob).where(RefinerJob.dedupe_key == "refiner-done")) is None
         assert db.scalar(select(PrunerJob).where(PrunerJob.dedupe_key == "pruner-done")) is None
-        assert db.scalar(select(SubberJob).where(SubberJob.dedupe_key == "subber-done")) is None
         assert db.scalar(select(RefinerJob).where(RefinerJob.dedupe_key == "refiner-pending")) is not None
         assert db.scalar(select(PrunerJob).where(PrunerJob.dedupe_key == "pruner-pending")) is not None
-        assert db.scalar(select(SubberJob).where(SubberJob.dedupe_key == "subber-pending")) is not None

@@ -14,7 +14,6 @@ from mediamop.modules.pruner.pruner_jobs_model import PrunerJob, PrunerJobStatus
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.refiner_crash_recovery import cleanup_refiner_partial_output_files
 from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
-from mediamop.modules.subber.subber_jobs_model import SubberJob, SubberJobStatus
 from mediamop.platform.jobs.startup_recovery import recover_incomplete_jobs_after_startup
 
 
@@ -54,15 +53,6 @@ def test_startup_recovery_requeues_leased_jobs_with_attempts_remaining(tmp_path:
                     attempt_count=1,
                     max_attempts=2,
                 ),
-                SubberJob(
-                    dedupe_key="subber-recover",
-                    job_kind="subber.test.v1",
-                    status=SubberJobStatus.LEASED.value,
-                    lease_owner="dead-subber",
-                    lease_expires_at=now + timedelta(hours=1),
-                    attempt_count=0,
-                    max_attempts=1,
-                ),
             ],
         )
 
@@ -71,12 +61,10 @@ def test_startup_recovery_requeues_leased_jobs_with_attempts_remaining(tmp_path:
 
     assert result.refiner_requeued == 1
     assert result.pruner_requeued == 1
-    assert result.subber_requeued == 1
     with factory() as session:
         for row in (
             session.get(RefinerJob, 1),
             session.get(PrunerJob, 1),
-            session.get(SubberJob, 1),
         ):
             assert row is not None
             assert row.status == "pending"

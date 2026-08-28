@@ -24,7 +24,7 @@ Use the Velopack setup exe from the release being validated.
 16. Confirm Upgrade shows a meaningful status, even when no update is available.
 17. Open Refiner path inputs and use Browse for a local folder.
 18. Enter a UNC-style path manually and confirm validation warns without blocking legitimate save paths by design.
-19. Confirm Pruner and Subber settings can save required connection/path fields without exposing internal webhook controls.
+19. Confirm Pruner settings can save required connection/path fields without exposing internal webhook controls.
 20. Quit MediaMop from the tray icon.
 21. Relaunch MediaMop and confirm the existing user, settings, and wizard completion state persist.
 22. Install the next version over the current version and confirm Velopack applies a delta update cleanly.

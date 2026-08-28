@@ -17,7 +17,6 @@ from sqlalchemy.orm import Session, sessionmaker
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.pruner.pruner_jobs_model import PrunerJob, PrunerJobStatus
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.subber.subber_jobs_model import SubberJob, SubberJobStatus
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +30,6 @@ _TERMINAL_PRUNER = (
     PrunerJobStatus.COMPLETED.value,
     PrunerJobStatus.FAILED.value,
     PrunerJobStatus.HANDLER_OK_FINALIZE_FAILED.value,
-)
-_TERMINAL_SUBBER = (
-    SubberJobStatus.COMPLETED.value,
-    SubberJobStatus.FAILED.value,
-    SubberJobStatus.HANDLER_OK_FINALIZE_FAILED.value,
 )
 
 
@@ -52,16 +46,9 @@ def prune_job_rows(session: Session, *, cutoff: datetime) -> dict[str, int]:
             PrunerJob.updated_at < cutoff,
         )
     )
-    subber_del = session.execute(
-        delete(SubberJob).where(
-            SubberJob.status.in_(_TERMINAL_SUBBER),
-            SubberJob.updated_at < cutoff,
-        )
-    )
     return {
         "refiner": refiner_del.rowcount,  # type: ignore[attr-defined]
         "pruner": pruner_del.rowcount,  # type: ignore[attr-defined]
-        "subber": subber_del.rowcount,  # type: ignore[attr-defined]
     }
 
 
@@ -86,10 +73,9 @@ async def _run_job_rows_retention_forever(
             total = sum(counts.values())
             if total:
                 logger.info(
-                    "Job-row retention pruned terminal rows refiner=%d pruner=%d subber=%d",
+                    "Job-row retention pruned terminal rows refiner=%d pruner=%d",
                     counts["refiner"],
                     counts["pruner"],
-                    counts["subber"],
                 )
         except asyncio.CancelledError:
             raise

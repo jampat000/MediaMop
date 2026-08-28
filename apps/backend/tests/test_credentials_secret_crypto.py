@@ -8,11 +8,6 @@ from mediamop.modules.pruner.pruner_credentials_crypto import (
     encrypt_pruner_credentials_json,
     rewrap_pruner_credentials_json,
 )
-from mediamop.modules.subber.subber_credentials_crypto import (
-    decrypt_subber_credentials_json,
-    encrypt_subber_credentials_json,
-    rewrap_subber_credentials_json,
-)
 from mediamop.platform.arr_library.arr_connection_crypto import (
     decrypt_arr_api_key,
     encrypt_arr_api_key,
@@ -29,14 +24,13 @@ def _settings(monkeypatch, *, session: str, credentials: str | None) -> MediaMop
     return MediaMopSettings.load()
 
 
-def test_credentials_secret_decouples_pruner_subber_and_arr_from_session_rotation(monkeypatch, tmp_path) -> None:
+def test_credentials_secret_decouples_pruner_and_arr_from_session_rotation(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("MEDIAMOP_HOME", str(tmp_path))
     s1 = _settings(
         monkeypatch, session="session-secret-a-abcdefghijklmnopqrstuvwxyz", credentials="credentials-secret-a"
     )
 
     pruner = encrypt_pruner_credentials_json(s1, '{"api_key":"p"}')
-    subber = encrypt_subber_credentials_json(s1, '{"api_key":"s"}')
     arr = encrypt_arr_api_key(s1, "arr-key")
 
     s2 = _settings(
@@ -44,12 +38,9 @@ def test_credentials_secret_decouples_pruner_subber_and_arr_from_session_rotatio
     )
 
     assert decrypt_pruner_credentials_json(s2, pruner) == '{"api_key":"p"}'
-    assert decrypt_subber_credentials_json(s2, subber) == '{"api_key":"s"}'
     assert decrypt_arr_api_key(s2, arr) == "arr-key"
     assert json.loads(pruner)["key_id"] == "credentials:hkdf:v1"
     assert json.loads(pruner)["version"] == 4
-    assert json.loads(subber)["key_id"] == "credentials:hkdf:v1"
-    assert json.loads(subber)["version"] == 4
     assert json.loads(arr)["key_id"] == "credentials:v1"
 
 
@@ -58,7 +49,6 @@ def test_legacy_session_secret_ciphertexts_can_be_rewrapped(monkeypatch, tmp_pat
     legacy = _settings(monkeypatch, session="legacy-session-secret-abcdefghijklmnopqrstuvwxyz", credentials=None)
 
     pruner_legacy = encrypt_pruner_credentials_json(legacy, '{"api_key":"p"}')
-    subber_legacy = encrypt_subber_credentials_json(legacy, '{"api_key":"s"}')
     arr_legacy = encrypt_arr_api_key(legacy, "arr-key")
 
     migrated = _settings(
@@ -67,7 +57,6 @@ def test_legacy_session_secret_ciphertexts_can_be_rewrapped(monkeypatch, tmp_pat
         credentials="new-credentials-secret",
     )
     pruner_new = rewrap_pruner_credentials_json(migrated, pruner_legacy)
-    subber_new = rewrap_subber_credentials_json(migrated, subber_legacy)
     arr_new = rewrap_arr_api_key(migrated, arr_legacy)
 
     rotated = _settings(
@@ -76,12 +65,9 @@ def test_legacy_session_secret_ciphertexts_can_be_rewrapped(monkeypatch, tmp_pat
         credentials="new-credentials-secret",
     )
     assert pruner_new is not None
-    assert subber_new is not None
     assert arr_new is not None
     assert json.loads(pruner_new)["key_id"] == "credentials:hkdf:v1"
-    assert json.loads(subber_new)["key_id"] == "credentials:hkdf:v1"
     assert decrypt_pruner_credentials_json(rotated, pruner_new) == '{"api_key":"p"}'
-    assert decrypt_subber_credentials_json(rotated, subber_new) == '{"api_key":"s"}'
     assert decrypt_arr_api_key(rotated, arr_new) == "arr-key"
 
 
@@ -92,7 +78,6 @@ def test_previous_credentials_secret_allows_safe_secret_rotation(monkeypatch, tm
     )
 
     pruner = encrypt_pruner_credentials_json(old, '{"api_key":"p"}')
-    subber = encrypt_subber_credentials_json(old, '{"api_key":"s"}')
     arr = encrypt_arr_api_key(old, "arr-key")
 
     monkeypatch.setenv("MEDIAMOP_SESSION_SECRET", "session-secret-b-abcdefghijklmnopqrstuvwxyz")
@@ -101,20 +86,15 @@ def test_previous_credentials_secret_allows_safe_secret_rotation(monkeypatch, tm
     rotated = MediaMopSettings.load()
 
     assert decrypt_pruner_credentials_json(rotated, pruner) == '{"api_key":"p"}'
-    assert decrypt_subber_credentials_json(rotated, subber) == '{"api_key":"s"}'
     assert decrypt_arr_api_key(rotated, arr) == "arr-key"
 
     pruner_new = rewrap_pruner_credentials_json(rotated, pruner)
-    subber_new = rewrap_subber_credentials_json(rotated, subber)
     arr_new = rewrap_arr_api_key(rotated, arr)
 
     monkeypatch.setenv("MEDIAMOP_PREVIOUS_CREDENTIALS_SECRETS", "")
     new_only = MediaMopSettings.load()
     assert pruner_new is not None
-    assert subber_new is not None
     assert arr_new is not None
     assert json.loads(pruner_new)["key_id"] == "credentials:hkdf:v1"
-    assert json.loads(subber_new)["key_id"] == "credentials:hkdf:v1"
     assert decrypt_pruner_credentials_json(new_only, pruner_new) == '{"api_key":"p"}'
-    assert decrypt_subber_credentials_json(new_only, subber_new) == '{"api_key":"s"}'
     assert decrypt_arr_api_key(new_only, arr_new) == "arr-key"

@@ -12,7 +12,7 @@ from mediamop.platform.activity.live_stream import activity_latest_notifier
 from mediamop.platform.activity.models import ActivityEvent
 
 RECENT_DEFAULT_LIMIT = 50
-_SYSTEM_MODULES = frozenset({"refiner", "pruner", "subber"})
+_SYSTEM_MODULES = frozenset({"refiner", "pruner"})
 _PENDING_ACTIVITY_IDS_INFO_KEY = "mediamop_activity_pending_latest_ids"
 
 _LOGIN_FAILED_SUPPRESS_MINUTES = 2

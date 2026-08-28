@@ -58,7 +58,6 @@ export function AppErrorScreen({
             <span className="mm-nav-link">Dashboard</span>
             <span className="mm-nav-link">Refiner</span>
             <span className="mm-nav-link">Pruner</span>
-            <span className="mm-nav-link">Subber</span>
             <span className="mm-nav-link">Settings</span>
           </nav>
         </aside>

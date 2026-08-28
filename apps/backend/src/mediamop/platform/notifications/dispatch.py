@@ -110,7 +110,7 @@ def _is_permanently_failed(session: Session, module: str, job_id: int) -> bool:
     """Return True only when the job row has status='failed' (exhausted retries)."""
     from sqlalchemy import text  # local import avoids circular at module level
 
-    safe_module = module if module in {"refiner", "pruner", "subber"} else None
+    safe_module = module if module in {"refiner", "pruner"} else None
     if safe_module is None:
         return True  # unknown module — let dispatch proceed
     try:

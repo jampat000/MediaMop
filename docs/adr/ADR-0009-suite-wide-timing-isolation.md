@@ -4,6 +4,8 @@
 
 Accepted — **hard rule** for Refiner, Pruner, Subber, and any future module-owned durable-job lanes.
 
+> **Update (2026-08-28): Subber moved to Deluno.** This ADR is left as it was written — an ADR records the decision, not the current file list — but wherever it names Subber, read it as an example rather than as a lane that still exists. The ``subber_jobs`` table is dropped by migration ``0010_drop_subber_tables``, and ``subber.`` is now an abandoned prefix refused on every remaining lane, alongside ``trimmer.``.
+
 ## Context
 
 Operators configure **when** and **how often** background work may run: intervals, schedule windows, cooldowns, retries, and visibility into last completion. If two unrelated job families share one timer, one cooldown bucket, or one pruning rule driven by the other family’s delay, one lane **blocks or suppresses** the other. That violates the operator contract.

@@ -4,10 +4,6 @@ All state-mutating API requests (POST/PUT/PATCH/DELETE to ``/api/``) must includ
 header. Browsers block custom headers in cross-origin requests without a prior CORS
 preflight, so their absence means the request cannot have originated from a regular web
 page on a different origin.
-
-Webhook endpoints (``/api/v1/subber/webhook/``) are exempt because Sonarr/Radarr do not
-send this header, and those endpoints are already separately protected by the optional
-``MEDIAMOP_SUBBER_WEBHOOK_SECRET``.
 """
 
 from __future__ import annotations
@@ -18,7 +14,8 @@ from starlette.responses import JSONResponse, Response
 from starlette.types import ASGIApp
 
 _MUTATING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
-_EXEMPT_PREFIXES = ("/api/v1/subber/webhook/",)
+# No exempt paths: the only ones were the Subber webhooks, and Subber has gone to Deluno.
+_EXEMPT_PREFIXES: tuple[str, ...] = ()
 
 
 class XRequestedWithCsrfMiddleware(BaseHTTPMiddleware):

@@ -35,7 +35,7 @@ def test_operator_message_labels_are_plain_language() -> None:
 
 def test_activity_detail_envelope_uses_standard_fields_and_counts() -> None:
     assert activity_detail_envelope(
-        module=DiagnosticModule.SUBBER,
+        module=DiagnosticModule.REFINER,
         action=DiagnosticAction.SEARCH,
         trigger=DiagnosticTrigger.WORKER,
         result=DiagnosticResult.SKIPPED,
@@ -44,7 +44,7 @@ def test_activity_detail_envelope_uses_standard_fields_and_counts() -> None:
         counts={"checked": 1, "downloaded": 0, "bad_flag": True},
         user_message="No subtitle was found.",
     ) == {
-        "module": "subber",
+        "module": "refiner",
         "action": "search",
         "trigger": "worker",
         "result": "skipped",

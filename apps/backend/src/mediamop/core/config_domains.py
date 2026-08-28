@@ -71,14 +71,6 @@ class PrunerSettings:
 
 
 @dataclass(frozen=True, slots=True)
-class SubberSettings:
-    worker_count: int
-    library_scan_schedule_enqueue_enabled: bool
-    library_scan_schedule_scan_interval_seconds: int
-    upgrade_schedule_enqueue_enabled: bool
-
-
-@dataclass(frozen=True, slots=True)
 class ArrSettings:
     radarr_base_url: str | None
     radarr_api_key: str | None

@@ -31,7 +31,7 @@ MediaMop's security posture and hardening baseline.
 1. Set the new value as `MEDIAMOP_CREDENTIALS_SECRET`
 2. Add the old value to `MEDIAMOP_PREVIOUS_CREDENTIALS_SECRETS`
 3. Restart MediaMop
-4. Re-save all provider credentials (Pruner, Subber, Sonarr, Radarr)
+4. Re-save all provider credentials (Pruner, Sonarr, Radarr)
 5. Remove the old value from `MEDIAMOP_PREVIOUS_CREDENTIALS_SECRETS`
 6. Restart again
 

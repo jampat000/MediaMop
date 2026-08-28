@@ -19,12 +19,6 @@ const features = [
       'Find and safely remove media matching your cleanup rules with preview before deletion.',
     screenshot: '/MediaMop/img/pruner.png',
   },
-  {
-    title: 'Subber',
-    description:
-      'Sync libraries from Sonarr and Radarr, track subtitle state, and manage providers.',
-    screenshot: '/MediaMop/img/subber.png',
-  },
 ];
 
 function Hero(): ReactNode {

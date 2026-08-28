@@ -4,6 +4,8 @@
 
 **Accepted** for the current codebase size. This documents an intentional coupling tradeoff, not an accidental omission.
 
+> **Update (2026-08-28): Subber moved to Deluno.** This ADR is left as it was written — an ADR records the decision, not the current file list — but wherever it names Subber, read it as an example rather than as a lane that still exists. The ``subber_jobs`` table is dropped by migration ``0010_drop_subber_tables``, and ``subber.`` is now an abandoned prefix refused on every remaining lane, alongside ``trimmer.``.
+
 ## Context
 
 `MediaMopSettings` (`mediamop.core.config`) is a frozen dataclass loaded once at process start. It mixes concerns that belong to different product areas: HTTP/session security, SQLite paths, CORS, and **Refiner / Pruner / Subber** worker counts plus shared *arr* HTTP defaults and Refiner-side schedule toggles.

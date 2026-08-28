@@ -88,7 +88,6 @@ export type SuiteOperationalHistoryResetOut = {
   activity_events_deleted: number;
   refiner_jobs_deleted: number;
   pruner_jobs_deleted: number;
-  subber_jobs_deleted: number;
   total_deleted: number;
 };
 

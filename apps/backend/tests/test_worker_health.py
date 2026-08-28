@@ -53,7 +53,7 @@ def test_worker_health_detects_missing_stale_and_stopped_workers() -> None:
     snapshot = {
         row.module: row
         for row in build_worker_health_snapshot(
-            expected_workers={"refiner": 2, "pruner": 1, "subber": 0},
+            expected_workers={"refiner": 2, "pruner": 1},
             stale_after_seconds=-1,
         )
     }
@@ -62,7 +62,6 @@ def test_worker_health_detects_missing_stale_and_stopped_workers() -> None:
     assert snapshot["refiner"].stale_workers == 2
     assert snapshot["pruner"].status == "degraded"
     assert snapshot["pruner"].stopped_workers == 1
-    assert snapshot["subber"].status == "disabled"
 
 
 def test_refiner_worker_emits_heartbeat(session_factory, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -87,7 +86,7 @@ def test_refiner_worker_emits_heartbeat(session_factory, monkeypatch: pytest.Mon
 
 
 def test_dashboard_marks_system_unhealthy_when_worker_degraded(session_factory) -> None:
-    settings = replace(MediaMopSettings.load(), refiner_worker_count=1, pruner_worker_count=0, subber_worker_count=0)
+    settings = replace(MediaMopSettings.load(), refiner_worker_count=1, pruner_worker_count=0)
     with session_factory() as session:
         out = build_dashboard_status(session, settings)
     assert out.system.healthy is False
@@ -98,9 +97,7 @@ def test_readiness_fails_when_expected_worker_has_no_heartbeat(session_factory) 
     class State:
         startup_started_at = 0.0
         startup_ready = True
-        settings = replace(
-            MediaMopSettings.load(), refiner_worker_count=1, pruner_worker_count=0, subber_worker_count=0
-        )
+        settings = replace(MediaMopSettings.load(), refiner_worker_count=1, pruner_worker_count=0)
         engine = object()
         session_factory = object()
 

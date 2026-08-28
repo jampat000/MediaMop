@@ -16,8 +16,6 @@ SUPPORTED_EVENTS = (
     "refiner_job_failed",
     "pruner_job_completed",
     "pruner_job_failed",
-    "subber_job_completed",
-    "subber_job_failed",
 )
 
 SUPPORTED_PROVIDERS = ("webhook", "discord")

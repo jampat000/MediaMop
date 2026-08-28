@@ -26,7 +26,6 @@ def build_readiness(app_state: Any) -> ReadinessResponse:
             expected_workers={
                 "refiner": int(settings.refiner_worker_count),
                 "pruner": int(settings.pruner_worker_count),
-                "subber": int(settings.subber_worker_count),
             },
         )
         worker_health = [ReadinessWorkerOut(**asdict(row)) for row in snapshot]

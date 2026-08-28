@@ -1,4 +1,4 @@
-"""Permanent guards: module-owned ``job_kind`` prefixes vs Refiner/Pruner/Subber lanes."""
+"""Permanent guards: module-owned ``job_kind`` prefixes vs the Refiner and Pruner lanes."""
 
 from __future__ import annotations
 
@@ -11,7 +11,6 @@ from sqlalchemy.orm import Session, sessionmaker
 
 import mediamop.modules.pruner.pruner_jobs_model  # noqa: F401
 import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.modules.subber.subber_jobs_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
 from mediamop.core.config import MediaMopSettings
@@ -24,7 +23,6 @@ from mediamop.modules.queue_worker.job_kind_boundaries import (
     job_kind_forbidden_on_refiner_lane,
     validate_pruner_worker_handler_registry,
     validate_refiner_worker_handler_registry,
-    validate_subber_worker_handler_registry,
 )
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
@@ -32,14 +30,12 @@ from mediamop.modules.refiner.worker_loop import (
     default_refiner_job_handler_registry,
     process_one_refiner_job,
 )
-from mediamop.modules.subber.subber_job_handlers import build_subber_job_handlers
-from mediamop.modules.subber.subber_job_kinds import SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV
-from mediamop.modules.subber.subber_jobs_model import SubberJob, SubberJobStatus
-from mediamop.modules.subber.subber_jobs_ops import subber_enqueue_or_get_job
-from mediamop.modules.subber.worker_loop import process_one_subber_job
 
-# Legacy lane prefix still blocked on sibling queues (see ``job_kind_boundaries``).
+# Legacy lane prefixes still blocked on every queue (see ``job_kind_boundaries``).
+# Subber joined Trimmer here when it moved to Deluno: a row left in an older
+# install's queue must still be refused, not adopted by whichever lane finds it.
 _LEGACY_TRIMMER_JOB = "trimmer.radarr.cleanup_drive.v1"
+_LEGACY_SUBBER_JOB = "subber.subtitle_search.tv.v1"
 
 
 @pytest.fixture
@@ -83,7 +79,7 @@ def test_refiner_enqueue_rejects_foreign_namespaces(session_factory) -> None:
         refiner_enqueue_or_get_job(
             s,
             dedupe_key="s",
-            job_kind=SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV,
+            job_kind=_LEGACY_SUBBER_JOB,
         )
 
 
@@ -101,7 +97,7 @@ def test_validate_refiner_worker_handler_registry_rejects_foreign_lane_keys() ->
         validate_refiner_worker_handler_registry({"pruner.x": lambda _c: None})
     with pytest.raises(ValueError, match="Refiner worker handler registry"):
         validate_refiner_worker_handler_registry(
-            {SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV: lambda _c: None},
+            {_LEGACY_SUBBER_JOB: lambda _c: None},
         )
 
 
@@ -186,7 +182,7 @@ def test_pruner_enqueue_rejects_foreign_namespaces(session_factory) -> None:
         pruner_enqueue_or_get_job(
             s,
             dedupe_key="z",
-            job_kind=SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV,
+            job_kind=_LEGACY_SUBBER_JOB,
         )
     with session_factory() as s, pytest.raises(ValueError, match="pruner_enqueue_or_get_job refuses"):
         pruner_enqueue_or_get_job(s, dedupe_key="legacy", job_kind="trimmer.legacy.v1")
@@ -206,7 +202,7 @@ def test_validate_pruner_worker_handler_registry_rejects_foreign_lane_keys() -> 
         validate_pruner_worker_handler_registry({"refiner.x.v1": lambda _c: None})
     with pytest.raises(ValueError, match="Pruner worker handler registry"):
         validate_pruner_worker_handler_registry(
-            {SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV: lambda _c: None},
+            {_LEGACY_SUBBER_JOB: lambda _c: None},
         )
 
 
@@ -280,109 +276,3 @@ def test_process_one_pruner_job_rejects_unprefixed_job_kind_row(session_factory,
         assert row.status == PrunerJobStatus.PENDING.value
         assert row.last_error is not None
         assert "pruner.* prefix" in row.last_error
-
-
-def test_subber_enqueue_rejects_foreign_namespaces(session_factory) -> None:
-    with session_factory() as s, pytest.raises(ValueError, match="subber_enqueue_or_get_job refuses"):
-        subber_enqueue_or_get_job(s, dedupe_key="x", job_kind="refiner.compact.v1")
-    with session_factory() as s, pytest.raises(ValueError, match="subber_enqueue_or_get_job refuses"):
-        subber_enqueue_or_get_job(s, dedupe_key="t", job_kind="pruner.probe.v1")
-    with session_factory() as s, pytest.raises(ValueError, match="subber_enqueue_or_get_job refuses"):
-        subber_enqueue_or_get_job(s, dedupe_key="legacy", job_kind="trimmer.legacy.v1")
-    with session_factory() as s, pytest.raises(ValueError, match="subber_enqueue_or_get_job refuses"):
-        subber_enqueue_or_get_job(
-            s,
-            dedupe_key="f",
-            job_kind=_LEGACY_TRIMMER_JOB,
-        )
-
-
-def test_subber_enqueue_rejects_unprefixed_job_kind(session_factory) -> None:
-    with session_factory() as s, pytest.raises(ValueError, match="subber_enqueue_or_get_job requires job_kind"):
-        subber_enqueue_or_get_job(s, dedupe_key="u", job_kind="bare.kind")
-
-
-def test_validate_subber_worker_handler_registry_rejects_foreign_lane_keys() -> None:
-    with pytest.raises(ValueError, match="Subber worker handler registry"):
-        validate_subber_worker_handler_registry(
-            {_LEGACY_TRIMMER_JOB: lambda _c: None},
-        )
-    with pytest.raises(ValueError, match="Subber worker handler registry"):
-        validate_subber_worker_handler_registry({"refiner.x.v1": lambda _c: None})
-    with pytest.raises(ValueError, match="Subber worker handler registry"):
-        validate_subber_worker_handler_registry({"pruner.x.v1": lambda _c: None})
-
-
-def test_validate_subber_worker_handler_registry_rejects_unprefixed_keys() -> None:
-    with pytest.raises(ValueError, match="Subber worker handler registry"):
-        validate_subber_worker_handler_registry({"bare.kind": lambda _c: None})
-
-
-def test_validate_subber_worker_handler_registry_accepts_subber_prefixed_keys() -> None:
-    validate_subber_worker_handler_registry(
-        {SUBBER_JOB_KIND_SUBTITLE_SEARCH_TV: lambda _c: None},
-    )
-
-
-def test_process_one_subber_job_fails_claimed_row_with_foreign_lane_job_kind(
-    session_factory,
-) -> None:
-    """Mis-placed ``subber_jobs`` rows stamped with another module's prefix must not execute."""
-
-    t0 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=UTC)
-    with session_factory() as s:
-        s.add(
-            SubberJob(
-                dedupe_key="legacy-subber",
-                job_kind="refiner.leaked_on_subber.v1",
-                status=SubberJobStatus.PENDING.value,
-            ),
-        )
-        s.commit()
-
-    handlers = build_subber_job_handlers(MediaMopSettings.load(), session_factory)
-    out = process_one_subber_job(
-        session_factory,
-        lease_owner="t",
-        job_handlers=handlers,
-        now=t0,
-        lease_seconds=3600,
-    )
-    assert out == "processed"
-    with session_factory() as s:
-        row = s.scalars(select(SubberJob)).first()
-        assert row is not None
-        assert row.status == SubberJobStatus.PENDING.value
-        assert row.last_error is not None
-        assert "subber worker refused" in row.last_error
-
-
-def test_process_one_subber_job_rejects_unprefixed_job_kind_row(session_factory) -> None:
-    """Direct-insert rows without ``subber.*`` must fail safe on the Subber worker."""
-
-    t0 = datetime(2026, 4, 11, 12, 0, 0, tzinfo=UTC)
-    with session_factory() as s:
-        s.add(
-            SubberJob(
-                dedupe_key="legacy-subber-unprefixed",
-                job_kind="legacy.unprefixed",
-                status=SubberJobStatus.PENDING.value,
-            ),
-        )
-        s.commit()
-
-    handlers = build_subber_job_handlers(MediaMopSettings.load(), session_factory)
-    out = process_one_subber_job(
-        session_factory,
-        lease_owner="t",
-        job_handlers=handlers,
-        now=t0,
-        lease_seconds=3600,
-    )
-    assert out == "processed"
-    with session_factory() as s:
-        row = s.scalars(select(SubberJob)).first()
-        assert row is not None
-        assert row.status == SubberJobStatus.PENDING.value
-        assert row.last_error is not None
-        assert "subber.* prefix" in row.last_error

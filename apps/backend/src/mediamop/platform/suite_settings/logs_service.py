@@ -167,8 +167,6 @@ def _component_label(*, logger: str, source: object) -> str:
         return "Refiner"
     if "modules.pruner" in haystack:
         return "Pruner"
-    if "modules.subber" in haystack:
-        return "Subber"
     if "platform.auth" in haystack:
         return "Authentication"
     if "platform.activity" in haystack:

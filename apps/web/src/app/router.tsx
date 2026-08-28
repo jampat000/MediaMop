@@ -142,14 +142,6 @@ const router = createBrowserRouter([
                 ],
               },
               {
-                path: "subber",
-                lazy: async () => ({
-                  Component: (await import("../pages/subber/subber-page"))
-                    .SubberPage,
-                }),
-                errorElement: routeErrorElement,
-              },
-              {
                 path: "settings",
                 lazy: async () => ({
                   Component: (await import("../pages/settings/settings-page"))

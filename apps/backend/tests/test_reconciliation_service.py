@@ -11,7 +11,6 @@ from starlette.testclient import TestClient
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
-from mediamop.modules.subber.subber_subtitle_state_model import SubberSubtitleState
 from mediamop.platform.reconciliation.service import build_reconciliation_report, repair_reconciliation_issue
 from tests.integration_helpers import auth_post
 from tests.integration_helpers import csrf as fetch_csrf
@@ -31,46 +30,6 @@ def _login_admin(client: TestClient) -> None:
         json={"username": "alice", "password": "test-password-strong", "csrf_token": tok},
     )
     assert r.status_code == 200, r.text
-
-
-def test_reconciliation_detects_and_repairs_missing_subtitle_reference(tmp_path: Path) -> None:
-    media = tmp_path / "movie.mkv"
-    media.write_bytes(b"media")
-    missing_subtitle = tmp_path / "movie.en.srt"
-    fac = _fac()
-    with fac() as db:
-        db.execute(delete(SubberSubtitleState))
-        db.add(
-            SubberSubtitleState(
-                media_scope="movies",
-                file_path=str(media),
-                language_code="en",
-                status="found",
-                subtitle_path=str(missing_subtitle),
-            )
-        )
-        db.commit()
-
-    try:
-        with fac() as db:
-            report = build_reconciliation_report(db)
-            issue = next(item for item in report["issues"] if item["kind"] == "db_subtitle_file_missing")
-            result = repair_reconciliation_issue(
-                db,
-                action=str(issue["repair_action"]),
-                db_id=int(issue["db_id"]),
-            )
-            db.commit()
-        assert result["applied"] is True
-
-        with fac() as db:
-            row = db.query(SubberSubtitleState).one()
-            assert row.subtitle_path is None
-            assert row.status == "missing"
-    finally:
-        with fac() as db:
-            db.execute(delete(SubberSubtitleState))
-            db.commit()
 
 
 def test_reconciliation_temp_artifact_repair_requires_confirmation(tmp_path: Path) -> None:

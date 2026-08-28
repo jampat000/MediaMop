@@ -4,6 +4,8 @@
 
 Accepted — **three module lanes** are live at head: ``refiner_jobs``, ``pruner_jobs``, ``subber_jobs`` (see tables below).
 
+> **Update (2026-08-28): Subber moved to Deluno.** This ADR is left as it was written — an ADR records the decision, not the current file list — but wherever it names Subber, read it as an example rather than as a lane that still exists. The ``subber_jobs`` table is dropped by migration ``0010_drop_subber_tables``, and ``subber.`` is now an abandoned prefix refused on every remaining lane, alongside ``trimmer.``.
+
 Reserved non-lane ``job_kind`` prefixes (see ``job_kind_boundaries.py``) must never be enqueued on Refiner, Pruner, or Subber tables.
 
 ## Context
