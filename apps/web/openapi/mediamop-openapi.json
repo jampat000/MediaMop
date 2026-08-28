@@ -3817,6 +3817,14 @@
             "title": "Refiner Analyze Duration Seconds",
             "type": "integer"
           },
+          "refiner_media_extensions": {
+            "description": "File types Refiner will pick up in a watched folder. Anything else is ignored and counted.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Refiner Media Extensions",
+            "type": "array"
+          },
           "refiner_movie_failure_cleanup_grace_period_seconds": {
             "description": "Failed remux age gate for Movies failure cleanup (uses refiner_jobs.updated_at).",
             "maximum": 604800.0,
@@ -3950,6 +3958,7 @@
           "sqlite_throughput_note",
           "configuration_note",
           "visibility_note",
+          "refiner_media_extensions",
           "refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs",
           "refiner_probe_size_mb",
           "refiner_analyze_duration_seconds",

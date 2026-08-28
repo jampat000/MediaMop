@@ -2941,6 +2941,11 @@ export interface components {
        */
       refiner_analyze_duration_seconds: number;
       /**
+       * Refiner Media Extensions
+       * @description File types Refiner will pick up in a watched folder. Anything else is ignored and counted.
+       */
+      refiner_media_extensions: string[];
+      /**
        * Refiner Movie Failure Cleanup Grace Period Seconds
        * @description Failed remux age gate for Movies failure cleanup (uses refiner_jobs.updated_at).
        */
