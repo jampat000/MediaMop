@@ -39,9 +39,13 @@ type FormState = {
   min_file_size_mb: string;
   min_file_age_seconds: string;
   scan_interval_seconds: string;
+  hold_minutes: string;
+  file_detection_interval_seconds: string;
   max_concurrent_files: string;
   exclude_hidden: boolean;
   top_level_only: boolean;
+  ignore_size_changes: boolean;
+  skip_access_tests: boolean;
 };
 
 const EMPTY_FORM: FormState = {
@@ -55,9 +59,13 @@ const EMPTY_FORM: FormState = {
   min_file_size_mb: "0",
   min_file_age_seconds: "60",
   scan_interval_seconds: "300",
+  hold_minutes: "0",
+  file_detection_interval_seconds: "30",
   max_concurrent_files: "1",
   exclude_hidden: true,
   top_level_only: false,
+  ignore_size_changes: false,
+  skip_access_tests: false,
 };
 
 function formFrom(library: RefinerLibrary): FormState {
@@ -72,9 +80,15 @@ function formFrom(library: RefinerLibrary): FormState {
     min_file_size_mb: String(library.min_file_size_mb),
     min_file_age_seconds: String(library.min_file_age_seconds),
     scan_interval_seconds: String(library.scan_interval_seconds),
+    hold_minutes: String(library.hold_minutes),
+    file_detection_interval_seconds: String(
+      library.file_detection_interval_seconds,
+    ),
     max_concurrent_files: String(library.max_concurrent_files),
     exclude_hidden: library.exclude_hidden,
     top_level_only: library.top_level_only,
+    ignore_size_changes: library.ignore_size_changes,
+    skip_access_tests: library.skip_access_tests,
   };
 }
 
@@ -98,9 +112,16 @@ function writeFrom(
     min_file_size_mb: asNumber(form.min_file_size_mb, 0),
     min_file_age_seconds: asNumber(form.min_file_age_seconds, 60),
     scan_interval_seconds: asNumber(form.scan_interval_seconds, 300),
+    hold_minutes: asNumber(form.hold_minutes, 0),
+    file_detection_interval_seconds: asNumber(
+      form.file_detection_interval_seconds,
+      30,
+    ),
     max_concurrent_files: asNumber(form.max_concurrent_files, 1),
     exclude_hidden: form.exclude_hidden,
     top_level_only: form.top_level_only,
+    ignore_size_changes: form.ignore_size_changes,
+    skip_access_tests: form.skip_access_tests,
     rule_set_id: library?.rule_set_id ?? null,
     manager_connection_ids: library?.manager_connection_ids ?? [],
   };
@@ -424,6 +445,18 @@ export function RefinerLibrariesSection() {
               "Check this folder every (seconds)",
               "scan_interval_seconds",
             )}
+            {field(
+              "Park new files for (minutes)",
+              "hold_minutes",
+              "",
+              "A deliberate settling delay. Held files stay visible with the time they are due.",
+            )}
+            {field(
+              "Watch the file size for (seconds)",
+              "file_detection_interval_seconds",
+              "",
+              "How long the size must stay the same before MediaMop treats the file as finished being written. 0 turns this off.",
+            )}
             {field("Files at once", "max_concurrent_files")}
           </div>
           <div className="flex flex-wrap gap-4">
@@ -448,6 +481,28 @@ export function RefinerLibrariesSection() {
                 disabled={!editable}
               />
               Only look in the top folder
+            </label>
+            <label className="flex items-center gap-2 text-sm text-[var(--mm-text2)]">
+              <input
+                type="checkbox"
+                checked={form.ignore_size_changes}
+                onChange={(e) =>
+                  setForm({ ...form, ignore_size_changes: e.target.checked })
+                }
+                disabled={!editable}
+              />
+              Do not watch the file size
+            </label>
+            <label className="flex items-center gap-2 text-sm text-[var(--mm-text2)]">
+              <input
+                type="checkbox"
+                checked={form.skip_access_tests}
+                onChange={(e) =>
+                  setForm({ ...form, skip_access_tests: e.target.checked })
+                }
+                disabled={!editable}
+              />
+              Skip the read and write check
             </label>
           </div>
           <div className="flex gap-2">

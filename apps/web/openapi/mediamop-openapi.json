@@ -2926,6 +2926,19 @@
             "description": "The media manager connection holding this file, when the status is blocked_upstream.",
             "title": "Blocked By Connection"
           },
+          "hold_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When an on-hold file becomes eligible. Null when the hold is waiting on a writer to stop rather than on the clock.",
+            "title": "Hold Until"
+          },
           "id": {
             "title": "Id",
             "type": "integer"
@@ -2969,6 +2982,19 @@
           "size_bytes": {
             "title": "Size Bytes",
             "type": "integer"
+          },
+          "size_changed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When this file's size last changed, as observed across scans.",
+            "title": "Size Changed At"
           },
           "status": {
             "enum": [
@@ -3293,12 +3319,26 @@
             "title": "Exclude Patterns Csv",
             "type": "string"
           },
+          "file_detection_interval_seconds": {
+            "default": 30,
+            "description": "How long this file's size must stay unchanged before MediaMop treats it as finished being written. 0 turns size settling off.",
+            "maximum": 3600.0,
+            "minimum": 0.0,
+            "title": "File Detection Interval Seconds",
+            "type": "integer"
+          },
           "hold_minutes": {
             "default": 0,
             "maximum": 10080.0,
             "minimum": 0.0,
             "title": "Hold Minutes",
             "type": "integer"
+          },
+          "ignore_size_changes": {
+            "default": false,
+            "description": "Skip size settling entirely for this library.",
+            "title": "Ignore Size Changes",
+            "type": "boolean"
           },
           "include_patterns_csv": {
             "default": "",
@@ -3419,6 +3459,12 @@
             "maxLength": 5,
             "title": "Schedule Start",
             "type": "string"
+          },
+          "skip_access_tests": {
+            "default": false,
+            "description": "Skip the read/write probe that runs before a file is queued.",
+            "title": "Skip Access Tests",
+            "type": "boolean"
           },
           "top_level_only": {
             "default": false,
@@ -3536,6 +3582,10 @@
             "title": "Exclude Patterns Csv",
             "type": "string"
           },
+          "file_detection_interval_seconds": {
+            "title": "File Detection Interval Seconds",
+            "type": "integer"
+          },
           "hold_minutes": {
             "title": "Hold Minutes",
             "type": "integer"
@@ -3543,6 +3593,10 @@
           "id": {
             "title": "Id",
             "type": "integer"
+          },
+          "ignore_size_changes": {
+            "title": "Ignore Size Changes",
+            "type": "boolean"
           },
           "include_patterns_csv": {
             "title": "Include Patterns Csv",
@@ -3631,6 +3685,10 @@
             "title": "Schedule Start",
             "type": "string"
           },
+          "skip_access_tests": {
+            "title": "Skip Access Tests",
+            "type": "boolean"
+          },
           "top_level_only": {
             "title": "Top Level Only",
             "type": "boolean"
@@ -3676,6 +3734,9 @@
           "top_level_only",
           "scan_interval_seconds",
           "hold_minutes",
+          "file_detection_interval_seconds",
+          "ignore_size_changes",
+          "skip_access_tests",
           "schedule_enabled",
           "schedule_hours_limited",
           "schedule_days",
@@ -3742,12 +3803,26 @@
             "title": "Exclude Patterns Csv",
             "type": "string"
           },
+          "file_detection_interval_seconds": {
+            "default": 30,
+            "description": "How long this file's size must stay unchanged before MediaMop treats it as finished being written. 0 turns size settling off.",
+            "maximum": 3600.0,
+            "minimum": 0.0,
+            "title": "File Detection Interval Seconds",
+            "type": "integer"
+          },
           "hold_minutes": {
             "default": 0,
             "maximum": 10080.0,
             "minimum": 0.0,
             "title": "Hold Minutes",
             "type": "integer"
+          },
+          "ignore_size_changes": {
+            "default": false,
+            "description": "Skip size settling entirely for this library.",
+            "title": "Ignore Size Changes",
+            "type": "boolean"
           },
           "include_patterns_csv": {
             "default": "",
@@ -3868,6 +3943,12 @@
             "maxLength": 5,
             "title": "Schedule Start",
             "type": "string"
+          },
+          "skip_access_tests": {
+            "default": false,
+            "description": "Skip the read/write probe that runs before a file is queued.",
+            "title": "Skip Access Tests",
+            "type": "boolean"
           },
           "top_level_only": {
             "default": false,

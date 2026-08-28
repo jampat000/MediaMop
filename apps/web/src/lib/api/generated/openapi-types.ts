@@ -2782,6 +2782,11 @@ export interface components {
        * @description The media manager connection holding this file, when the status is blocked_upstream.
        */
       blocked_by_connection?: string | null;
+      /**
+       * Hold Until
+       * @description When an on-hold file becomes eligible. Null when the hold is waiting on a writer to stop rather than on the clock.
+       */
+      hold_until?: string | null;
       /** Id */
       id: number;
       /** Last Attempt At */
@@ -2796,6 +2801,11 @@ export interface components {
       relative_path: string;
       /** Size Bytes */
       size_bytes: number;
+      /**
+       * Size Changed At
+       * @description When this file's size last changed, as observed across scans.
+       */
+      size_changed_at?: string | null;
       /**
        * Status
        * @enum {string}
@@ -2962,10 +2972,22 @@ export interface components {
        */
       exclude_patterns_csv: string;
       /**
+       * File Detection Interval Seconds
+       * @description How long this file's size must stay unchanged before MediaMop treats it as finished being written. 0 turns size settling off.
+       * @default 30
+       */
+      file_detection_interval_seconds: number;
+      /**
        * Hold Minutes
        * @default 0
        */
       hold_minutes: number;
+      /**
+       * Ignore Size Changes
+       * @description Skip size settling entirely for this library.
+       * @default false
+       */
+      ignore_size_changes: boolean;
       /**
        * Include Patterns Csv
        * @default
@@ -3047,6 +3069,12 @@ export interface components {
        * @default 00:00
        */
       schedule_start: string;
+      /**
+       * Skip Access Tests
+       * @description Skip the read/write probe that runs before a file is queued.
+       * @default false
+       */
+      skip_access_tests: boolean;
       /**
        * Top Level Only
        * @default false
@@ -3100,10 +3128,14 @@ export interface components {
       exclude_markers_csv: string;
       /** Exclude Patterns Csv */
       exclude_patterns_csv: string;
+      /** File Detection Interval Seconds */
+      file_detection_interval_seconds: number;
       /** Hold Minutes */
       hold_minutes: number;
       /** Id */
       id: number;
+      /** Ignore Size Changes */
+      ignore_size_changes: boolean;
       /** Include Patterns Csv */
       include_patterns_csv: string;
       /**
@@ -3146,6 +3178,8 @@ export interface components {
       schedule_hours_limited: boolean;
       /** Schedule Start */
       schedule_start: string;
+      /** Skip Access Tests */
+      skip_access_tests: boolean;
       /** Top Level Only */
       top_level_only: boolean;
       /** Updated At */
@@ -3190,10 +3224,22 @@ export interface components {
        */
       exclude_patterns_csv: string;
       /**
+       * File Detection Interval Seconds
+       * @description How long this file's size must stay unchanged before MediaMop treats it as finished being written. 0 turns size settling off.
+       * @default 30
+       */
+      file_detection_interval_seconds: number;
+      /**
        * Hold Minutes
        * @default 0
        */
       hold_minutes: number;
+      /**
+       * Ignore Size Changes
+       * @description Skip size settling entirely for this library.
+       * @default false
+       */
+      ignore_size_changes: boolean;
       /**
        * Include Patterns Csv
        * @default
@@ -3275,6 +3321,12 @@ export interface components {
        * @default 00:00
        */
       schedule_start: string;
+      /**
+       * Skip Access Tests
+       * @description Skip the read/write probe that runs before a file is queued.
+       * @default false
+       */
+      skip_access_tests: boolean;
       /**
        * Top Level Only
        * @default false

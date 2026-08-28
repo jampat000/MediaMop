@@ -34,6 +34,17 @@ const BUCKETS: RefinerFileStatus[] = [
   "processing_failed",
 ];
 
+function holdReleaseLabel(holdUntil: string): string {
+  const at = new Date(holdUntil);
+  if (Number.isNaN(at.getTime())) return "";
+  const seconds = Math.round((at.getTime() - Date.now()) / 1000);
+  if (seconds <= 0) return "Due to be re-checked on the next scan.";
+  if (seconds < 90)
+    return `Ready in about ${seconds}s (${at.toLocaleTimeString()}).`;
+  const minutes = Math.round(seconds / 60);
+  return `Ready in about ${minutes} min (${at.toLocaleTimeString()}).`;
+}
+
 function humanSize(bytes: number): string {
   if (!bytes) return "—";
   const units = ["B", "KB", "MB", "GB", "TB"];
@@ -205,6 +216,17 @@ export function RefinerFilesSection() {
                   <p className="mt-1 text-sm text-[var(--mm-text2)]">
                     {file.status_reason}
                   </p>
+                  {/* A hold with no release time reads as held forever. When MediaMop
+                      knows when the wait ends, it says so; when the wait is on a writer
+                      rather than the clock, hold_until is null and nothing is invented. */}
+                  {file.status === "on_hold" && file.hold_until ? (
+                    <p
+                      className="mt-1 text-xs text-[var(--mm-text3)]"
+                      data-testid={`refiner-file-hold-until-${file.id}`}
+                    >
+                      {holdReleaseLabel(file.hold_until)}
+                    </p>
+                  ) : null}
                 </div>
                 {editable ? (
                   <button

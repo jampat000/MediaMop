@@ -32,6 +32,9 @@ export interface RefinerLibrary {
 
   scan_interval_seconds: number;
   hold_minutes: number;
+  file_detection_interval_seconds: number;
+  ignore_size_changes: boolean;
+  skip_access_tests: boolean;
   schedule_enabled: boolean;
   schedule_hours_limited: boolean;
   schedule_days: string;
@@ -68,6 +71,9 @@ export interface RefinerLibraryWrite {
   top_level_only?: boolean;
   scan_interval_seconds?: number;
   hold_minutes?: number;
+  file_detection_interval_seconds?: number;
+  ignore_size_changes?: boolean;
+  skip_access_tests?: boolean;
   schedule_enabled?: boolean;
   schedule_hours_limited?: boolean;
   schedule_days?: string;

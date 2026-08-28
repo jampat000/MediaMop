@@ -6,16 +6,21 @@ than whichever check happened to run last:
 
 1. **Disabled** — the library is switched off. Nothing else about the file is relevant.
 2. **Out of schedule** — the library is on, but not right now.
-3. **On hold** — the file is too new, or still settling.
+3. **On hold** — the file is still being written to, is too new, or cannot be opened.
 4. **Blocked upstream** — a manager is still importing it.
 
 Only a file that clears all four is unprocessed and eligible.
+
+Within the hold step the order is also deliberate. Size settling is checked before the
+access probe, because a file being written to is normally *also* locked: reporting "still
+being written to" is the true cause, and reporting a permission error instead would send
+an operator looking for a problem that does not exist.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -34,6 +39,9 @@ class FileStateVerdict:
     status: RefinerFileStatus
     reason: str
     blocked_by_connection: str | None = None
+    #: When an on-hold file becomes eligible, when that is known. A hold waiting on a
+    #: writer to stop has no release time, and saying otherwise would be a guess.
+    hold_until: datetime | None = None
 
     @property
     def eligible(self) -> bool:
@@ -50,6 +58,9 @@ def decide_file_state(
     in_schedule_window: bool,
     file_age_seconds: float | None,
     size_is_settling: bool = False,
+    settling_reason: str | None = None,
+    settling_stable_at: datetime | None = None,
+    access_problem: str | None = None,
     blocked_by_connection: str | None = None,
 ) -> FileStateVerdict:
     """Why this file is or is not being worked on, in the order the reasons apply."""
@@ -73,7 +84,9 @@ def decide_file_state(
     if size_is_settling:
         return FileStateVerdict(
             RefinerFileStatus.ON_HOLD,
-            "This file is still being written to, so MediaMop is waiting for it to finish before touching it.",
+            settling_reason
+            or "This file is still being written to, so MediaMop is waiting for it to finish before touching it.",
+            hold_until=settling_stable_at,
         )
     if hold_seconds and file_age_seconds is not None and file_age_seconds < hold_seconds:
         remaining = int(hold_seconds - file_age_seconds)
@@ -83,7 +96,12 @@ def decide_file_state(
                 f"This file changed too recently. MediaMop waits {hold_seconds}s after the last change before "
                 f"processing, so it has about {remaining}s to go."
             ),
+            hold_until=datetime.now(UTC) + timedelta(seconds=remaining),
         )
+    if access_problem:
+        # No release time: this clears when whatever holds the file lets go, and every
+        # scan re-checks it. A countdown here would be a number MediaMop invented.
+        return FileStateVerdict(RefinerFileStatus.ON_HOLD, access_problem)
 
     if blocked_by_connection:
         return FileStateVerdict(
@@ -117,13 +135,24 @@ def library_in_schedule_window(session: Session, library: RefinerLibraryRow) -> 
     return refiner_periodic_scope_in_schedule_window(session, row, media_scope=library.media_scope)
 
 
+def existing_file_row(session: Session, *, library_id: int, relative_path: str) -> RefinerFileRow | None:
+    """The row a previous scan left, or None. Settling compares against this."""
+
+    return session.scalars(
+        select(RefinerFileRow)
+        .where(RefinerFileRow.library_id == library_id)
+        .where(RefinerFileRow.relative_path == relative_path)
+    ).first()
+
+
 def record_file_state(
     session: Session,
     *,
     library: RefinerLibraryRow,
     relative_path: str,
     verdict: FileStateVerdict,
-    size_bytes: int = 0,
+    size_bytes: int | None = None,
+    size_changed_at: datetime | None = None,
     seen_at: datetime | None = None,
     is_attempt: bool = False,
 ) -> RefinerFileRow:
@@ -141,8 +170,14 @@ def record_file_state(
     row.status = verdict.status.value
     row.status_reason = verdict.reason
     row.blocked_by_connection = verdict.blocked_by_connection
-    if size_bytes:
+    row.hold_until = verdict.hold_until
+    # ``None`` means "not supplied", which is distinct from a genuine zero. Treating them
+    # alike would let an empty placeholder look like it never changed, and would blank the
+    # size for callers that only update a status.
+    if size_bytes is not None:
         row.size_bytes = int(size_bytes)
+    if size_changed_at is not None:
+        row.size_changed_at = size_changed_at
     row.last_seen_at = now
     if is_attempt:
         row.last_attempt_at = now
@@ -173,6 +208,8 @@ def mark_file_status(
         row.last_attempt_at = datetime.now(UTC)
     if status is not RefinerFileStatus.BLOCKED_UPSTREAM:
         row.blocked_by_connection = None
+    if status is not RefinerFileStatus.ON_HOLD:
+        row.hold_until = None
     session.flush()
     return row
 

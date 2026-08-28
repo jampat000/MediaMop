@@ -75,6 +75,9 @@ class RefinerLibraryOut(BaseModel):
 
     scan_interval_seconds: int
     hold_minutes: int
+    file_detection_interval_seconds: int
+    ignore_size_changes: bool
+    skip_access_tests: bool
     schedule_enabled: bool
     schedule_hours_limited: bool
     schedule_days: str
@@ -119,6 +122,20 @@ class RefinerLibraryCreateIn(BaseModel):
     top_level_only: bool = False
     scan_interval_seconds: int = Field(300, ge=10, le=604800)
     hold_minutes: int = Field(0, ge=0, le=10080)
+    file_detection_interval_seconds: int = Field(
+        30,
+        ge=0,
+        le=3600,
+        description=(
+            "How long this file's size must stay unchanged before MediaMop treats it as finished being "
+            "written. 0 turns size settling off."
+        ),
+    )
+    ignore_size_changes: bool = Field(False, description="Skip size settling entirely for this library.")
+    skip_access_tests: bool = Field(
+        False,
+        description="Skip the read/write probe that runs before a file is queued.",
+    )
     schedule_enabled: bool = True
     schedule_hours_limited: bool = False
     schedule_days: str = Field("", max_length=200)

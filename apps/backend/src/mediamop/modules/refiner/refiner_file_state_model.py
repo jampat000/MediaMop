@@ -84,6 +84,12 @@ class RefinerFileRow(Base):
     blocked_by_connection: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False, server_default="0")
+    # When ``size_bytes`` last differed from the previous observation. Null until a
+    # second scan has something to compare against.
+    size_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # When an ON_HOLD file becomes eligible. Held without a release time reads as held
+    # forever, which is the complaint the Files screen exists to answer.
+    hold_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
