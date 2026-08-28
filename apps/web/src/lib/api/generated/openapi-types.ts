@@ -736,6 +736,75 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/refiner/libraries": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Refiner Libraries
+     * @description Every configured Refiner library, in display order.
+     */
+    get: operations["get_refiner_libraries_api_v1_refiner_libraries_get"];
+    put?: never;
+    /**
+     * Post Refiner Library
+     * @description Add a Refiner library.
+     */
+    post: operations["post_refiner_library_api_v1_refiner_libraries_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/libraries/reorder": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Refiner Libraries Reorder
+     * @description Set display order. Order decides which library a scope-only payload resolves to.
+     */
+    post: operations["post_refiner_libraries_reorder_api_v1_refiner_libraries_reorder_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/libraries/{library_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Refiner Library */
+    get: operations["get_refiner_library_api_v1_refiner_libraries__library_id__get"];
+    /**
+     * Put Refiner Library
+     * @description Save a Refiner library. Edited whole, so a partial save cannot half-apply.
+     */
+    put: operations["put_refiner_library_api_v1_refiner_libraries__library_id__put"];
+    post?: never;
+    /**
+     * Delete Refiner Library
+     * @description Remove a library. Refused while it still has queued or running work.
+     */
+    delete: operations["delete_refiner_library_api_v1_refiner_libraries__library_id__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/refiner/operator-settings": {
     parameters: {
       query?: never;
@@ -808,6 +877,45 @@ export interface paths {
     put: operations["put_refiner_remux_rules_settings_api_v1_refiner_remux_rules_settings_put"];
     post?: never;
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/rule-sets": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Refiner Rule Sets */
+    get: operations["get_refiner_rule_sets_api_v1_refiner_rule_sets_get"];
+    put?: never;
+    /** Post Refiner Rule Set */
+    post: operations["post_refiner_rule_set_api_v1_refiner_rule_sets_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/rule-sets/{rule_set_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Put Refiner Rule Set */
+    put: operations["put_refiner_rule_set_api_v1_refiner_rule_sets__rule_set_id__put"];
+    post?: never;
+    /**
+     * Delete Refiner Rule Set
+     * @description Remove a rule set. Refused while a library still points at it.
+     */
+    delete: operations["delete_refiner_rule_set_api_v1_refiner_rule_sets__rule_set_id__delete"];
     options?: never;
     head?: never;
     patch?: never;
@@ -2596,6 +2704,350 @@ export interface components {
       /** Jobs */
       jobs: components["schemas"]["RefinerJobInspectionRow"][];
     };
+    /** RefinerLibraryCreateIn */
+    RefinerLibraryCreateIn: {
+      /** Csrf Token */
+      csrf_token: string;
+      /**
+       * Enabled
+       * @default true
+       */
+      enabled: boolean;
+      /**
+       * Exclude Hidden
+       * @default true
+       */
+      exclude_hidden: boolean;
+      /**
+       * Exclude Markers Csv
+       * @default
+       */
+      exclude_markers_csv: string;
+      /**
+       * Exclude Patterns Csv
+       * @default
+       */
+      exclude_patterns_csv: string;
+      /**
+       * Hold Minutes
+       * @default 0
+       */
+      hold_minutes: number;
+      /**
+       * Include Patterns Csv
+       * @default
+       */
+      include_patterns_csv: string;
+      /** Manager Connection Ids */
+      manager_connection_ids?: number[];
+      /**
+       * Max Concurrent Files
+       * @default 1
+       */
+      max_concurrent_files: number;
+      /**
+       * Max File Size Mb
+       * @default 0
+       */
+      max_file_size_mb: number;
+      /**
+       * Media Extensions Csv
+       * @default
+       */
+      media_extensions_csv: string;
+      /**
+       * Media Scope
+       * @enum {string}
+       */
+      media_scope: "movie" | "tv";
+      /**
+       * Min File Age Seconds
+       * @default 60
+       */
+      min_file_age_seconds: number;
+      /**
+       * Min File Size Mb
+       * @default 0
+       */
+      min_file_size_mb: number;
+      /** Name */
+      name: string;
+      /**
+       * Output Folder
+       * @default
+       */
+      output_folder: string;
+      /**
+       * Priority
+       * @default 0
+       */
+      priority: number;
+      /** Rule Set Id */
+      rule_set_id?: number | null;
+      /**
+       * Scan Interval Seconds
+       * @default 300
+       */
+      scan_interval_seconds: number;
+      /**
+       * Schedule Days
+       * @default
+       */
+      schedule_days: string;
+      /**
+       * Schedule Enabled
+       * @default true
+       */
+      schedule_enabled: boolean;
+      /**
+       * Schedule End
+       * @default 23:59
+       */
+      schedule_end: string;
+      /**
+       * Schedule Hours Limited
+       * @default false
+       */
+      schedule_hours_limited: boolean;
+      /**
+       * Schedule Start
+       * @default 00:00
+       */
+      schedule_start: string;
+      /**
+       * Top Level Only
+       * @default false
+       */
+      top_level_only: boolean;
+      /**
+       * Watched Folder
+       * @default
+       */
+      watched_folder: string;
+      /**
+       * Work Folder
+       * @default
+       */
+      work_folder: string;
+    };
+    /** RefinerLibraryDeleteIn */
+    RefinerLibraryDeleteIn: {
+      /** Csrf Token */
+      csrf_token: string;
+    };
+    /** RefinerLibraryOut */
+    RefinerLibraryOut: {
+      /**
+       * Active Job Count
+       * @description Queued or running Refiner jobs for this library. Deletion is refused while this is non-zero.
+       * @default 0
+       */
+      active_job_count: number;
+      /** Discovered From Connection Id */
+      discovered_from_connection_id?: number | null;
+      /** Discovered Library Key */
+      discovered_library_key?: string | null;
+      /** Display Order */
+      display_order: number;
+      /** Enabled */
+      enabled: boolean;
+      /** Exclude Hidden */
+      exclude_hidden: boolean;
+      /** Exclude Markers Csv */
+      exclude_markers_csv: string;
+      /** Exclude Patterns Csv */
+      exclude_patterns_csv: string;
+      /** Hold Minutes */
+      hold_minutes: number;
+      /** Id */
+      id: number;
+      /** Include Patterns Csv */
+      include_patterns_csv: string;
+      /**
+       * Manager Connection Ids
+       * @description Media manager connections covering this library. More than one is allowed and is the edge case.
+       */
+      manager_connection_ids?: number[];
+      /** Max Concurrent Files */
+      max_concurrent_files: number;
+      /** Max File Size Mb */
+      max_file_size_mb: number;
+      /** Media Extensions Csv */
+      media_extensions_csv: string;
+      /**
+       * Media Scope
+       * @enum {string}
+       */
+      media_scope: "movie" | "tv";
+      /** Min File Age Seconds */
+      min_file_age_seconds: number;
+      /** Min File Size Mb */
+      min_file_size_mb: number;
+      /** Name */
+      name: string;
+      /** Output Folder */
+      output_folder: string;
+      /** Priority */
+      priority: number;
+      /** Rule Set Id */
+      rule_set_id?: number | null;
+      /** Scan Interval Seconds */
+      scan_interval_seconds: number;
+      /** Schedule Days */
+      schedule_days: string;
+      /** Schedule Enabled */
+      schedule_enabled: boolean;
+      /** Schedule End */
+      schedule_end: string;
+      /** Schedule Hours Limited */
+      schedule_hours_limited: boolean;
+      /** Schedule Start */
+      schedule_start: string;
+      /** Top Level Only */
+      top_level_only: boolean;
+      /** Updated At */
+      updated_at?: string | null;
+      /** Watched Folder */
+      watched_folder: string;
+      /** Work Folder */
+      work_folder: string;
+    };
+    /** RefinerLibraryReorderIn */
+    RefinerLibraryReorderIn: {
+      /** Csrf Token */
+      csrf_token: string;
+      /** Library Ids In Order */
+      library_ids_in_order: number[];
+    };
+    /**
+     * RefinerLibraryUpdateIn
+     * @description Same shape as create. A library is edited whole, so a partial save cannot half-apply.
+     */
+    RefinerLibraryUpdateIn: {
+      /** Csrf Token */
+      csrf_token: string;
+      /**
+       * Enabled
+       * @default true
+       */
+      enabled: boolean;
+      /**
+       * Exclude Hidden
+       * @default true
+       */
+      exclude_hidden: boolean;
+      /**
+       * Exclude Markers Csv
+       * @default
+       */
+      exclude_markers_csv: string;
+      /**
+       * Exclude Patterns Csv
+       * @default
+       */
+      exclude_patterns_csv: string;
+      /**
+       * Hold Minutes
+       * @default 0
+       */
+      hold_minutes: number;
+      /**
+       * Include Patterns Csv
+       * @default
+       */
+      include_patterns_csv: string;
+      /** Manager Connection Ids */
+      manager_connection_ids?: number[];
+      /**
+       * Max Concurrent Files
+       * @default 1
+       */
+      max_concurrent_files: number;
+      /**
+       * Max File Size Mb
+       * @default 0
+       */
+      max_file_size_mb: number;
+      /**
+       * Media Extensions Csv
+       * @default
+       */
+      media_extensions_csv: string;
+      /**
+       * Media Scope
+       * @enum {string}
+       */
+      media_scope: "movie" | "tv";
+      /**
+       * Min File Age Seconds
+       * @default 60
+       */
+      min_file_age_seconds: number;
+      /**
+       * Min File Size Mb
+       * @default 0
+       */
+      min_file_size_mb: number;
+      /** Name */
+      name: string;
+      /**
+       * Output Folder
+       * @default
+       */
+      output_folder: string;
+      /**
+       * Priority
+       * @default 0
+       */
+      priority: number;
+      /** Rule Set Id */
+      rule_set_id?: number | null;
+      /**
+       * Scan Interval Seconds
+       * @default 300
+       */
+      scan_interval_seconds: number;
+      /**
+       * Schedule Days
+       * @default
+       */
+      schedule_days: string;
+      /**
+       * Schedule Enabled
+       * @default true
+       */
+      schedule_enabled: boolean;
+      /**
+       * Schedule End
+       * @default 23:59
+       */
+      schedule_end: string;
+      /**
+       * Schedule Hours Limited
+       * @default false
+       */
+      schedule_hours_limited: boolean;
+      /**
+       * Schedule Start
+       * @default 00:00
+       */
+      schedule_start: string;
+      /**
+       * Top Level Only
+       * @default false
+       */
+      top_level_only: boolean;
+      /**
+       * Watched Folder
+       * @default
+       */
+      watched_folder: string;
+      /**
+       * Work Folder
+       * @default
+       */
+      work_folder: string;
+    };
     /** RefinerOperatorSettingsOut */
     RefinerOperatorSettingsOut: {
       /** Max Concurrent Files */
@@ -2899,6 +3351,104 @@ export interface components {
        * @default
        */
       tertiary_audio_lang: string;
+    };
+    /** RefinerRuleSetIn */
+    RefinerRuleSetIn: {
+      /**
+       * Audio Preference Mode
+       * @default preferred_langs_quality
+       * @enum {string}
+       */
+      audio_preference_mode:
+        | "preferred_langs_quality"
+        | "preferred_langs_strict"
+        | "quality_all_languages";
+      /** Csrf Token */
+      csrf_token: string;
+      /**
+       * Default Audio Slot
+       * @default primary
+       * @enum {string}
+       */
+      default_audio_slot: "primary" | "secondary" | "tertiary";
+      /** Name */
+      name: string;
+      /**
+       * Preserve Default Subs
+       * @default true
+       */
+      preserve_default_subs: boolean;
+      /**
+       * Preserve Forced Subs
+       * @default true
+       */
+      preserve_forced_subs: boolean;
+      /**
+       * Primary Audio Lang
+       * @default
+       */
+      primary_audio_lang: string;
+      /**
+       * Remove Commentary
+       * @default false
+       */
+      remove_commentary: boolean;
+      /**
+       * Secondary Audio Lang
+       * @default
+       */
+      secondary_audio_lang: string;
+      /**
+       * Subtitle Langs Csv
+       * @default
+       */
+      subtitle_langs_csv: string;
+      /**
+       * Subtitle Mode
+       * @default keep_all
+       * @enum {string}
+       */
+      subtitle_mode: "keep_all" | "keep_listed" | "remove_all";
+      /**
+       * Tertiary Audio Lang
+       * @default
+       */
+      tertiary_audio_lang: string;
+    };
+    /** RefinerRuleSetOut */
+    RefinerRuleSetOut: {
+      /** Audio Preference Mode */
+      audio_preference_mode: string;
+      /** Default Audio Slot */
+      default_audio_slot: string;
+      /** Id */
+      id: number;
+      /** Name */
+      name: string;
+      /** Preserve Default Subs */
+      preserve_default_subs: boolean;
+      /** Preserve Forced Subs */
+      preserve_forced_subs: boolean;
+      /** Primary Audio Lang */
+      primary_audio_lang: string;
+      /** Remove Commentary */
+      remove_commentary: boolean;
+      /** Secondary Audio Lang */
+      secondary_audio_lang: string;
+      /** Subtitle Langs Csv */
+      subtitle_langs_csv: string;
+      /** Subtitle Mode */
+      subtitle_mode: string;
+      /** Tertiary Audio Lang */
+      tertiary_audio_lang: string;
+      /** Updated At */
+      updated_at?: string | null;
+      /**
+       * Used By Library Count
+       * @description How many libraries reference this rule set. Deleting one still in use is refused.
+       * @default 0
+       */
+      used_by_library_count: number;
     };
     /**
      * RefinerRuntimeSettingsOut
@@ -4928,6 +5478,191 @@ export interface operations {
       };
     };
   };
+  get_refiner_libraries_api_v1_refiner_libraries_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerLibraryOut"][];
+        };
+      };
+    };
+  };
+  post_refiner_library_api_v1_refiner_libraries_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RefinerLibraryCreateIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerLibraryOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  post_refiner_libraries_reorder_api_v1_refiner_libraries_reorder_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RefinerLibraryReorderIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerLibraryOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_refiner_library_api_v1_refiner_libraries__library_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerLibraryOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  put_refiner_library_api_v1_refiner_libraries__library_id__put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RefinerLibraryUpdateIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerLibraryOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_refiner_library_api_v1_refiner_libraries__library_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RefinerLibraryDeleteIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   get_refiner_operator_settings_api_v1_refiner_operator_settings_get: {
     parameters: {
       query?: never;
@@ -5095,6 +5830,127 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["RefinerRemuxRulesSettingsOut"];
         };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_refiner_rule_sets_api_v1_refiner_rule_sets_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerRuleSetOut"][];
+        };
+      };
+    };
+  };
+  post_refiner_rule_set_api_v1_refiner_rule_sets_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RefinerRuleSetIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerRuleSetOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  put_refiner_rule_set_api_v1_refiner_rule_sets__rule_set_id__put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        rule_set_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RefinerRuleSetIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerRuleSetOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_refiner_rule_set_api_v1_refiner_rule_sets__rule_set_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        rule_set_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RefinerLibraryDeleteIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       /** @description Validation Error */
       422: {

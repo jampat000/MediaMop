@@ -2996,6 +2996,613 @@
         "title": "RefinerJobsInspectionOut",
         "type": "object"
       },
+      "RefinerLibraryCreateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "exclude_hidden": {
+            "default": true,
+            "title": "Exclude Hidden",
+            "type": "boolean"
+          },
+          "exclude_markers_csv": {
+            "default": "",
+            "maxLength": 1000,
+            "title": "Exclude Markers Csv",
+            "type": "string"
+          },
+          "exclude_patterns_csv": {
+            "default": "",
+            "maxLength": 1000,
+            "title": "Exclude Patterns Csv",
+            "type": "string"
+          },
+          "hold_minutes": {
+            "default": 0,
+            "maximum": 10080.0,
+            "minimum": 0.0,
+            "title": "Hold Minutes",
+            "type": "integer"
+          },
+          "include_patterns_csv": {
+            "default": "",
+            "maxLength": 1000,
+            "title": "Include Patterns Csv",
+            "type": "string"
+          },
+          "manager_connection_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Manager Connection Ids",
+            "type": "array"
+          },
+          "max_concurrent_files": {
+            "default": 1,
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Max Concurrent Files",
+            "type": "integer"
+          },
+          "max_file_size_mb": {
+            "default": 0,
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Max File Size Mb",
+            "type": "integer"
+          },
+          "media_extensions_csv": {
+            "default": "",
+            "maxLength": 1000,
+            "title": "Media Extensions Csv",
+            "type": "string"
+          },
+          "media_scope": {
+            "enum": [
+              "movie",
+              "tv"
+            ],
+            "title": "Media Scope",
+            "type": "string"
+          },
+          "min_file_age_seconds": {
+            "default": 60,
+            "maximum": 604800.0,
+            "minimum": 0.0,
+            "title": "Min File Age Seconds",
+            "type": "integer"
+          },
+          "min_file_size_mb": {
+            "default": 0,
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Min File Size Mb",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "output_folder": {
+            "default": "",
+            "maxLength": 4000,
+            "title": "Output Folder",
+            "type": "string"
+          },
+          "priority": {
+            "default": 0,
+            "maximum": 100.0,
+            "minimum": -100.0,
+            "title": "Priority",
+            "type": "integer"
+          },
+          "rule_set_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule Set Id"
+          },
+          "scan_interval_seconds": {
+            "default": 300,
+            "maximum": 604800.0,
+            "minimum": 10.0,
+            "title": "Scan Interval Seconds",
+            "type": "integer"
+          },
+          "schedule_days": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Schedule Days",
+            "type": "string"
+          },
+          "schedule_enabled": {
+            "default": true,
+            "title": "Schedule Enabled",
+            "type": "boolean"
+          },
+          "schedule_end": {
+            "default": "23:59",
+            "maxLength": 5,
+            "title": "Schedule End",
+            "type": "string"
+          },
+          "schedule_hours_limited": {
+            "default": false,
+            "title": "Schedule Hours Limited",
+            "type": "boolean"
+          },
+          "schedule_start": {
+            "default": "00:00",
+            "maxLength": 5,
+            "title": "Schedule Start",
+            "type": "string"
+          },
+          "top_level_only": {
+            "default": false,
+            "title": "Top Level Only",
+            "type": "boolean"
+          },
+          "watched_folder": {
+            "default": "",
+            "maxLength": 4000,
+            "title": "Watched Folder",
+            "type": "string"
+          },
+          "work_folder": {
+            "default": "",
+            "maxLength": 4000,
+            "title": "Work Folder",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrf_token",
+          "name",
+          "media_scope"
+        ],
+        "title": "RefinerLibraryCreateIn",
+        "type": "object"
+      },
+      "RefinerLibraryDeleteIn": {
+        "additionalProperties": false,
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrf_token"
+        ],
+        "title": "RefinerLibraryDeleteIn",
+        "type": "object"
+      },
+      "RefinerLibraryOut": {
+        "properties": {
+          "active_job_count": {
+            "default": 0,
+            "description": "Queued or running Refiner jobs for this library. Deletion is refused while this is non-zero.",
+            "title": "Active Job Count",
+            "type": "integer"
+          },
+          "discovered_from_connection_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discovered From Connection Id"
+          },
+          "discovered_library_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discovered Library Key"
+          },
+          "display_order": {
+            "title": "Display Order",
+            "type": "integer"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "exclude_hidden": {
+            "title": "Exclude Hidden",
+            "type": "boolean"
+          },
+          "exclude_markers_csv": {
+            "title": "Exclude Markers Csv",
+            "type": "string"
+          },
+          "exclude_patterns_csv": {
+            "title": "Exclude Patterns Csv",
+            "type": "string"
+          },
+          "hold_minutes": {
+            "title": "Hold Minutes",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "include_patterns_csv": {
+            "title": "Include Patterns Csv",
+            "type": "string"
+          },
+          "manager_connection_ids": {
+            "description": "Media manager connections covering this library. More than one is allowed and is the edge case.",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Manager Connection Ids",
+            "type": "array"
+          },
+          "max_concurrent_files": {
+            "title": "Max Concurrent Files",
+            "type": "integer"
+          },
+          "max_file_size_mb": {
+            "title": "Max File Size Mb",
+            "type": "integer"
+          },
+          "media_extensions_csv": {
+            "title": "Media Extensions Csv",
+            "type": "string"
+          },
+          "media_scope": {
+            "enum": [
+              "movie",
+              "tv"
+            ],
+            "title": "Media Scope",
+            "type": "string"
+          },
+          "min_file_age_seconds": {
+            "title": "Min File Age Seconds",
+            "type": "integer"
+          },
+          "min_file_size_mb": {
+            "title": "Min File Size Mb",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "output_folder": {
+            "title": "Output Folder",
+            "type": "string"
+          },
+          "priority": {
+            "title": "Priority",
+            "type": "integer"
+          },
+          "rule_set_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule Set Id"
+          },
+          "scan_interval_seconds": {
+            "title": "Scan Interval Seconds",
+            "type": "integer"
+          },
+          "schedule_days": {
+            "title": "Schedule Days",
+            "type": "string"
+          },
+          "schedule_enabled": {
+            "title": "Schedule Enabled",
+            "type": "boolean"
+          },
+          "schedule_end": {
+            "title": "Schedule End",
+            "type": "string"
+          },
+          "schedule_hours_limited": {
+            "title": "Schedule Hours Limited",
+            "type": "boolean"
+          },
+          "schedule_start": {
+            "title": "Schedule Start",
+            "type": "string"
+          },
+          "top_level_only": {
+            "title": "Top Level Only",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "watched_folder": {
+            "title": "Watched Folder",
+            "type": "string"
+          },
+          "work_folder": {
+            "title": "Work Folder",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "enabled",
+          "media_scope",
+          "display_order",
+          "watched_folder",
+          "work_folder",
+          "output_folder",
+          "media_extensions_csv",
+          "exclude_markers_csv",
+          "include_patterns_csv",
+          "exclude_patterns_csv",
+          "min_file_size_mb",
+          "max_file_size_mb",
+          "min_file_age_seconds",
+          "exclude_hidden",
+          "top_level_only",
+          "scan_interval_seconds",
+          "hold_minutes",
+          "schedule_enabled",
+          "schedule_hours_limited",
+          "schedule_days",
+          "schedule_start",
+          "schedule_end",
+          "max_concurrent_files",
+          "priority"
+        ],
+        "title": "RefinerLibraryOut",
+        "type": "object"
+      },
+      "RefinerLibraryReorderIn": {
+        "additionalProperties": false,
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "library_ids_in_order": {
+            "items": {
+              "type": "integer"
+            },
+            "minItems": 1,
+            "title": "Library Ids In Order",
+            "type": "array"
+          }
+        },
+        "required": [
+          "csrf_token",
+          "library_ids_in_order"
+        ],
+        "title": "RefinerLibraryReorderIn",
+        "type": "object"
+      },
+      "RefinerLibraryUpdateIn": {
+        "additionalProperties": false,
+        "description": "Same shape as create. A library is edited whole, so a partial save cannot half-apply.",
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "exclude_hidden": {
+            "default": true,
+            "title": "Exclude Hidden",
+            "type": "boolean"
+          },
+          "exclude_markers_csv": {
+            "default": "",
+            "maxLength": 1000,
+            "title": "Exclude Markers Csv",
+            "type": "string"
+          },
+          "exclude_patterns_csv": {
+            "default": "",
+            "maxLength": 1000,
+            "title": "Exclude Patterns Csv",
+            "type": "string"
+          },
+          "hold_minutes": {
+            "default": 0,
+            "maximum": 10080.0,
+            "minimum": 0.0,
+            "title": "Hold Minutes",
+            "type": "integer"
+          },
+          "include_patterns_csv": {
+            "default": "",
+            "maxLength": 1000,
+            "title": "Include Patterns Csv",
+            "type": "string"
+          },
+          "manager_connection_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Manager Connection Ids",
+            "type": "array"
+          },
+          "max_concurrent_files": {
+            "default": 1,
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Max Concurrent Files",
+            "type": "integer"
+          },
+          "max_file_size_mb": {
+            "default": 0,
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Max File Size Mb",
+            "type": "integer"
+          },
+          "media_extensions_csv": {
+            "default": "",
+            "maxLength": 1000,
+            "title": "Media Extensions Csv",
+            "type": "string"
+          },
+          "media_scope": {
+            "enum": [
+              "movie",
+              "tv"
+            ],
+            "title": "Media Scope",
+            "type": "string"
+          },
+          "min_file_age_seconds": {
+            "default": 60,
+            "maximum": 604800.0,
+            "minimum": 0.0,
+            "title": "Min File Age Seconds",
+            "type": "integer"
+          },
+          "min_file_size_mb": {
+            "default": 0,
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Min File Size Mb",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "output_folder": {
+            "default": "",
+            "maxLength": 4000,
+            "title": "Output Folder",
+            "type": "string"
+          },
+          "priority": {
+            "default": 0,
+            "maximum": 100.0,
+            "minimum": -100.0,
+            "title": "Priority",
+            "type": "integer"
+          },
+          "rule_set_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule Set Id"
+          },
+          "scan_interval_seconds": {
+            "default": 300,
+            "maximum": 604800.0,
+            "minimum": 10.0,
+            "title": "Scan Interval Seconds",
+            "type": "integer"
+          },
+          "schedule_days": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Schedule Days",
+            "type": "string"
+          },
+          "schedule_enabled": {
+            "default": true,
+            "title": "Schedule Enabled",
+            "type": "boolean"
+          },
+          "schedule_end": {
+            "default": "23:59",
+            "maxLength": 5,
+            "title": "Schedule End",
+            "type": "string"
+          },
+          "schedule_hours_limited": {
+            "default": false,
+            "title": "Schedule Hours Limited",
+            "type": "boolean"
+          },
+          "schedule_start": {
+            "default": "00:00",
+            "maxLength": 5,
+            "title": "Schedule Start",
+            "type": "string"
+          },
+          "top_level_only": {
+            "default": false,
+            "title": "Top Level Only",
+            "type": "boolean"
+          },
+          "watched_folder": {
+            "default": "",
+            "maxLength": 4000,
+            "title": "Watched Folder",
+            "type": "string"
+          },
+          "work_folder": {
+            "default": "",
+            "maxLength": 4000,
+            "title": "Work Folder",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrf_token",
+          "name",
+          "media_scope"
+        ],
+        "title": "RefinerLibraryUpdateIn",
+        "type": "object"
+      },
       "RefinerOperatorSettingsOut": {
         "additionalProperties": false,
         "properties": {
@@ -3773,6 +4380,183 @@
           "csrf_token"
         ],
         "title": "RefinerRemuxRulesSettingsPutIn",
+        "type": "object"
+      },
+      "RefinerRuleSetIn": {
+        "additionalProperties": false,
+        "properties": {
+          "audio_preference_mode": {
+            "default": "preferred_langs_quality",
+            "enum": [
+              "preferred_langs_quality",
+              "preferred_langs_strict",
+              "quality_all_languages"
+            ],
+            "title": "Audio Preference Mode",
+            "type": "string"
+          },
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "default_audio_slot": {
+            "default": "primary",
+            "enum": [
+              "primary",
+              "secondary",
+              "tertiary"
+            ],
+            "title": "Default Audio Slot",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "preserve_default_subs": {
+            "default": true,
+            "title": "Preserve Default Subs",
+            "type": "boolean"
+          },
+          "preserve_forced_subs": {
+            "default": true,
+            "title": "Preserve Forced Subs",
+            "type": "boolean"
+          },
+          "primary_audio_lang": {
+            "default": "",
+            "maxLength": 24,
+            "title": "Primary Audio Lang",
+            "type": "string"
+          },
+          "remove_commentary": {
+            "default": false,
+            "title": "Remove Commentary",
+            "type": "boolean"
+          },
+          "secondary_audio_lang": {
+            "default": "",
+            "maxLength": 24,
+            "title": "Secondary Audio Lang",
+            "type": "string"
+          },
+          "subtitle_langs_csv": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Subtitle Langs Csv",
+            "type": "string"
+          },
+          "subtitle_mode": {
+            "default": "keep_all",
+            "enum": [
+              "keep_all",
+              "keep_listed",
+              "remove_all"
+            ],
+            "title": "Subtitle Mode",
+            "type": "string"
+          },
+          "tertiary_audio_lang": {
+            "default": "",
+            "maxLength": 24,
+            "title": "Tertiary Audio Lang",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrf_token",
+          "name"
+        ],
+        "title": "RefinerRuleSetIn",
+        "type": "object"
+      },
+      "RefinerRuleSetOut": {
+        "properties": {
+          "audio_preference_mode": {
+            "title": "Audio Preference Mode",
+            "type": "string"
+          },
+          "default_audio_slot": {
+            "title": "Default Audio Slot",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "preserve_default_subs": {
+            "title": "Preserve Default Subs",
+            "type": "boolean"
+          },
+          "preserve_forced_subs": {
+            "title": "Preserve Forced Subs",
+            "type": "boolean"
+          },
+          "primary_audio_lang": {
+            "title": "Primary Audio Lang",
+            "type": "string"
+          },
+          "remove_commentary": {
+            "title": "Remove Commentary",
+            "type": "boolean"
+          },
+          "secondary_audio_lang": {
+            "title": "Secondary Audio Lang",
+            "type": "string"
+          },
+          "subtitle_langs_csv": {
+            "title": "Subtitle Langs Csv",
+            "type": "string"
+          },
+          "subtitle_mode": {
+            "title": "Subtitle Mode",
+            "type": "string"
+          },
+          "tertiary_audio_lang": {
+            "title": "Tertiary Audio Lang",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "used_by_library_count": {
+            "default": 0,
+            "description": "How many libraries reference this rule set. Deleting one still in use is refused.",
+            "title": "Used By Library Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "primary_audio_lang",
+          "secondary_audio_lang",
+          "tertiary_audio_lang",
+          "default_audio_slot",
+          "remove_commentary",
+          "subtitle_mode",
+          "subtitle_langs_csv",
+          "preserve_forced_subs",
+          "preserve_default_subs",
+          "audio_preference_mode"
+        ],
+        "title": "RefinerRuleSetOut",
         "type": "object"
       },
       "RefinerRuntimeSettingsOut": {
@@ -7240,6 +8024,264 @@
         ]
       }
     },
+    "/api/v1/refiner/libraries": {
+      "get": {
+        "description": "Every configured Refiner library, in display order.",
+        "operationId": "get_refiner_libraries_api_v1_refiner_libraries_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RefinerLibraryOut"
+                  },
+                  "title": "Response Get Refiner Libraries Api V1 Refiner Libraries Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Refiner Libraries",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      },
+      "post": {
+        "description": "Add a Refiner library.",
+        "operationId": "post_refiner_library_api_v1_refiner_libraries_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefinerLibraryCreateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefinerLibraryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Refiner Library",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/libraries/reorder": {
+      "post": {
+        "description": "Set display order. Order decides which library a scope-only payload resolves to.",
+        "operationId": "post_refiner_libraries_reorder_api_v1_refiner_libraries_reorder_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefinerLibraryReorderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RefinerLibraryOut"
+                  },
+                  "title": "Response Post Refiner Libraries Reorder Api V1 Refiner Libraries Reorder Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Refiner Libraries Reorder",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/libraries/{library_id}": {
+      "delete": {
+        "description": "Remove a library. Refused while it still has queued or running work.",
+        "operationId": "delete_refiner_library_api_v1_refiner_libraries__library_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "library_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Library Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefinerLibraryDeleteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Refiner Library",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      },
+      "get": {
+        "operationId": "get_refiner_library_api_v1_refiner_libraries__library_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "library_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Library Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefinerLibraryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Refiner Library",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      },
+      "put": {
+        "description": "Save a Refiner library. Edited whole, so a partial save cannot half-apply.",
+        "operationId": "put_refiner_library_api_v1_refiner_libraries__library_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "library_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Library Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefinerLibraryUpdateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefinerLibraryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Refiner Library",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
     "/api/v1/refiner/operator-settings": {
       "get": {
         "operationId": "get_refiner_operator_settings_api_v1_refiner_operator_settings_get",
@@ -7444,6 +8486,172 @@
           }
         },
         "summary": "Put Refiner Remux Rules Settings",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/rule-sets": {
+      "get": {
+        "operationId": "get_refiner_rule_sets_api_v1_refiner_rule_sets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RefinerRuleSetOut"
+                  },
+                  "title": "Response Get Refiner Rule Sets Api V1 Refiner Rule Sets Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Refiner Rule Sets",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      },
+      "post": {
+        "operationId": "post_refiner_rule_set_api_v1_refiner_rule_sets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefinerRuleSetIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefinerRuleSetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Refiner Rule Set",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/rule-sets/{rule_set_id}": {
+      "delete": {
+        "description": "Remove a rule set. Refused while a library still points at it.",
+        "operationId": "delete_refiner_rule_set_api_v1_refiner_rule_sets__rule_set_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_set_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Rule Set Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefinerLibraryDeleteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Refiner Rule Set",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      },
+      "put": {
+        "operationId": "put_refiner_rule_set_api_v1_refiner_rule_sets__rule_set_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_set_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Rule Set Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefinerRuleSetIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefinerRuleSetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Refiner Rule Set",
         "tags": [
           "refiner",
           "refiner"

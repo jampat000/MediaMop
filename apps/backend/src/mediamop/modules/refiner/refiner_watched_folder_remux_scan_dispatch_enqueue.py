@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
+from mediamop.modules.refiner.refiner_library_service import resolve_library
 from mediamop.modules.refiner.refiner_path_settings_service import ensure_refiner_path_settings_row
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_job_kinds import (
     REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
@@ -64,9 +65,21 @@ def validate_watched_folder_scan_dispatch_prerequisites(
     *,
     enqueue_remux_jobs: bool,
     media_scope: str = "movie",
+    library_id: int | None = None,
 ) -> tuple[bool, str | None]:
-    """Shared checks for manual HTTP and periodic enqueue (path row; watched; live remux output)."""
+    """Shared checks for manual HTTP and periodic enqueue (library; watched; live remux output)."""
 
+    library = resolve_library(session, library_id=library_id, media_scope=media_scope)
+    if library is not None:
+        if not (library.watched_folder or "").strip():
+            return False, "no_saved_watched_folder"
+        if enqueue_remux_jobs and not (library.output_folder or "").strip():
+            return False, "missing_output_for_live_remux"
+        return True, None
+
+    # No library covers this scope, so this database has not been migrated. Read the
+    # singleton exactly as before rather than refusing every scan (exec plan step 8
+    # removes both this branch and the table).
     row = ensure_refiner_path_settings_row(session)
     scope = (media_scope or "movie").strip().lower()
     if scope == "tv":
@@ -88,14 +101,17 @@ def enqueue_watched_folder_remux_scan_dispatch_job(
     enqueue_remux_jobs: bool,
     scan_trigger: str,
     media_scope: str = "movie",
+    library_id: int | None = None,
 ) -> RefinerJob:
     """Insert one scan job (unique ``dedupe_key``). Caller must commit."""
 
-    payload = {
+    payload: dict[str, object] = {
         "enqueue_remux_jobs": enqueue_remux_jobs,
         "scan_trigger": scan_trigger,
         "media_scope": (media_scope or "movie").strip().lower(),
     }
+    if library_id is not None:
+        payload["library_id"] = library_id
     dedupe_key = f"{REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND}:{uuid4().hex}"
     return refiner_enqueue_or_get_job(
         session,

@@ -14,7 +14,8 @@ MediaMop settings must describe runtime behaviour as shipped, not intended behav
 
 ## Refiner settings
 
-- Libraries/path settings: saved paths are used by new scans and per-file work after save. Missing folders are warnings at runtime, not save blockers.
+- Libraries: each library carries its own folders, file types, exclusions, schedule and guardrails, saved in the database and used by new scans and per-file work after save. Missing folders are warnings at runtime, not save blockers. Removing a library is refused while it still has queued or running work, because those jobs resolve their folders from it.
+- Rule sets: audio and subtitle handling is a named object a library points at, so two libraries can share one. Deleting a rule set a library still references is refused rather than silently stripping that handling.
 - Processing settings: files-at-once and age/size guardrails are database-backed operator settings used by active Refiner worker gating and new watched-folder scans.
 - Audio/subtitle defaults: saved rules are used by new Refiner file passes after save.
 - Runtime settings endpoint: read-only startup configuration. Any value requiring environment changes and restart must remain labelled as restart-required.

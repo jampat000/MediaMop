@@ -22,6 +22,7 @@ from mediamop.modules.refiner.refiner_file_remux_pass_activity import (
     record_refiner_file_remux_pass_completed,
     update_refiner_file_processing_progress,
 )
+from mediamop.modules.refiner.refiner_library_service import resolve_library, rules_config_for
 from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
 from mediamop.modules.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
 from mediamop.modules.refiner.refiner_remux_rules_settings_service import load_refiner_remux_rules_config
@@ -173,14 +174,24 @@ def make_refiner_file_remux_pass_handler(
         media_scope = data.get("media_scope", "movie")
         if not isinstance(media_scope, str) or media_scope not in ("movie", "tv"):
             media_scope = "movie"
+        # Additive, never a new job kind: a payload queued before the upgrade has no
+        # library_id and resolves to the seeded library for its scope (ADR-0014 §5).
+        raw_library_id = data.get("library_id")
+        library_id = (
+            raw_library_id if isinstance(raw_library_id, int) and not isinstance(raw_library_id, bool) else None
+        )
 
         with session_factory() as session:
             op_settings = ensure_refiner_operator_settings_row(session)
-            rules_cfg = load_refiner_remux_rules_config(session, media_scope=media_scope)
+            library = resolve_library(session, library_id=library_id, media_scope=media_scope)
+            rules_cfg = rules_config_for(session, library) if library is not None else None
+            if rules_cfg is None:
+                rules_cfg = load_refiner_remux_rules_config(session, media_scope=media_scope)
             path_runtime, path_err = resolve_refiner_path_runtime_for_remux(
                 session,
                 settings,
                 media_scope=media_scope,
+                library_id=library_id,
             )
             if path_err is not None:
                 _record(

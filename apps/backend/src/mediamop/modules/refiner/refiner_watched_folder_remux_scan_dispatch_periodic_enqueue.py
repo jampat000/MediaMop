@@ -45,6 +45,16 @@ def _next_scheduler_sleep_seconds(
     return max(0.25, min(float(poll_seconds), until_due))
 
 
+def refiner_library_periodic_scan_enabled(library: object) -> bool:
+    """Whether periodic scanning is switched on for one library.
+
+    Supersedes the per-scope operator toggle: a library carries its own switch, so a
+    fourth library is scheduled independently of the seeded two (ADR-0014).
+    """
+
+    return bool(getattr(library, "enabled", False)) and bool(getattr(library, "schedule_enabled", False))
+
+
 def refiner_scope_periodic_scan_enabled(operator_row: object, *, media_scope: str) -> bool:
     """Whether periodic scanning is switched on for one scope.
 
