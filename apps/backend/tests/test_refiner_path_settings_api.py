@@ -204,8 +204,9 @@ def test_resolve_refiner_path_runtime_fails_without_watched_folder(client_with_a
             rt, err = resolve_refiner_path_runtime_for_remux(db, settings, dry_run=True)
         assert rt is None
         assert err is not None
-        assert "watched folder is not set" in err.lower()
-        assert "save" in err.lower() and "enqueue" in err.lower()
+        assert "watched folder" in err.lower()
+        assert "enqueue" in err.lower()
+        assert "settings" in err.lower()
     finally:
         with fac() as db:
             db.execute(

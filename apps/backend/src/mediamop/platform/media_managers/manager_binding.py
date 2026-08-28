@@ -13,6 +13,7 @@ says so, while anything standing in front of a delete refuses to proceed.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import replace
 
 from sqlalchemy import select
@@ -109,16 +110,44 @@ def _only_rows_for_scope(signal: ManagerQueueSignal, media_scope: MediaScope) ->
     return signal if len(kept) == len(signal.rows) else replace(signal, rows=kept)
 
 
+def connections_by_id(
+    session: Session,
+    settings: MediaMopSettings,
+    connection_ids: Sequence[int],
+) -> list[ManagerConnection]:
+    """Exactly the connections named, in id order. Half-configured ones are dropped.
+
+    A Refiner library states which managers cover it (ADR-0014 §4), so this is the path
+    that replaces inferring one from a media scope.
+    """
+
+    wanted = set(connection_ids)
+    if not wanted:
+        return []
+    rows = [row for row in _enabled_rows(session) if row.id in wanted]
+    return [c for c in (_connection_from_row(settings, row) for row in rows) if c is not None]
+
+
 def collect_queue_signals(
     session: Session,
     settings: MediaMopSettings,
     *,
     media_scope: MediaScope,
+    connection_ids: Sequence[int] | None = None,
 ) -> tuple[ManagerQueueSignal, ...]:
-    """Ask every manager covering ``media_scope`` what it is importing about **that** scope."""
+    """Ask the managers covering this work what they are importing about ``media_scope``.
+
+    ``connection_ids`` is what a library names. Without it the scope binding still
+    applies, which is what keeps pre-library callers and payloads working.
+    """
+
+    if connection_ids is not None:
+        resolved = connections_by_id(session, settings, connection_ids)
+    else:
+        resolved = connections_for_scope(session, settings, media_scope=media_scope)
 
     signals: list[ManagerQueueSignal] = []
-    for connection in connections_for_scope(session, settings, media_scope=media_scope):
+    for connection in resolved:
         port = port_for_kind(connection.kind)
         if port is None:
             continue
@@ -131,11 +160,17 @@ def collect_library_truth(
     settings: MediaMopSettings,
     *,
     media_scope: MediaScope,
+    connection_ids: Sequence[int] | None = None,
 ) -> tuple[ManagerLibraryTruth, ...]:
-    """Ask every manager covering ``media_scope`` which library files it still keeps."""
+    """Ask the managers covering this work which library files they still keep."""
+
+    if connection_ids is not None:
+        resolved = connections_by_id(session, settings, connection_ids)
+    else:
+        resolved = connections_for_scope(session, settings, media_scope=media_scope)
 
     answers: list[ManagerLibraryTruth] = []
-    for connection in connections_for_scope(session, settings, media_scope=media_scope):
+    for connection in resolved:
         port = port_for_kind(connection.kind)
         if port is None:
             continue

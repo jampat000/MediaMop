@@ -35,6 +35,7 @@ from mediamop.modules.refiner.refiner_job_handlers import build_refiner_job_hand
 from mediamop.modules.refiner.refiner_operator_settings_model import RefinerOperatorSettingsRow
 from mediamop.modules.refiner.refiner_overview_stats_service import build_refiner_overview_stats
 from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
+from mediamop.modules.refiner.refiner_path_settings_service import mirror_singleton_paths_onto_seeded_libraries
 from mediamop.modules.refiner.worker_loop import process_one_refiner_job
 from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_in_process_workers,
@@ -95,6 +96,10 @@ def test_refiner_file_reaches_output_cleanup_and_stats(
                 refiner_output_folder=str(output),
             ),
         )
+        # Processing resolves paths from refiner_libraries (ADR-0014). This fixture sets
+        # the singleton directly rather than going through the settings API, so it has to
+        # reach the same state that API call would leave behind.
+        mirror_singleton_paths_onto_seeded_libraries(session)
         session.merge(
             RefinerOperatorSettingsRow(
                 id=1,
