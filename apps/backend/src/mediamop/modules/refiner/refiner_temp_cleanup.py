@@ -18,7 +18,9 @@ from sqlalchemy.orm import Session
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.modules.refiner.refiner_library_service import list_libraries, seeded_library_for_scope
 from mediamop.modules.refiner.refiner_path_settings_service import (
+    effective_library_work_folder,
     effective_tv_work_folder,
     effective_work_folder,
     ensure_refiner_path_settings_row,
@@ -50,10 +52,35 @@ def is_refiner_owned_temp_work_file(path: Path) -> bool:
 
 
 def _resolved_movie_and_tv_work_roots(*, session: Session, settings: MediaMopSettings) -> tuple[Path, Path]:
+    """The work roots for the seeded Movies and TV libraries.
+
+    The sweep is still per scope because a temp file's own scope is what decides whether
+    an active pass may be using it; a library with a custom work folder is swept through
+    :func:`resolved_library_work_roots`.
+    """
+
+    movie = seeded_library_for_scope(session, "movie")
+    tv = seeded_library_for_scope(session, "tv")
+    if movie is not None and tv is not None:
+        movie_work, _ = effective_library_work_folder(library=movie, mediamop_home=settings.mediamop_home)
+        tv_work, _ = effective_library_work_folder(library=tv, mediamop_home=settings.mediamop_home)
+        return Path(movie_work).expanduser().resolve(), Path(tv_work).expanduser().resolve()
+
+    # Unmigrated database: read the singleton exactly as before.
     row = ensure_refiner_path_settings_row(session)
     movie_work, _ = effective_work_folder(row=row, mediamop_home=settings.mediamop_home)
     tv_work, _ = effective_tv_work_folder(row=row, mediamop_home=settings.mediamop_home)
     return Path(movie_work).expanduser().resolve(), Path(tv_work).expanduser().resolve()
+
+
+def resolved_library_work_roots(*, session: Session, settings: MediaMopSettings) -> dict[int, Path]:
+    """Every library's work root, so a library with a custom one is not left unswept."""
+
+    out: dict[int, Path] = {}
+    for library in list_libraries(session):
+        work, _ = effective_library_work_folder(library=library, mediamop_home=settings.mediamop_home)
+        out[int(library.id)] = Path(work).expanduser().resolve()
+    return out
 
 
 def refiner_file_remux_pass_job_active_for_scope(session: Session, *, media_scope: str) -> bool:
