@@ -156,15 +156,6 @@ function timezoneOffsetLabel(tz: string): string {
   }
 }
 
-export function curatedTimezoneLabelById(tz: string): string | null {
-  const option = CURATED_TIMEZONE_OPTIONS.find((o) => o.id === tz);
-  if (!option) {
-    return null;
-  }
-  const zone = option.zoneName ? ` (${option.zoneName})` : "";
-  return `${option.country} — ${option.city}${zone} (${timezoneOffsetLabel(option.id)})`;
-}
-
 export function curatedTimezoneOptionsSorted(): Array<{
   id: string;
   label: string;
@@ -176,8 +167,4 @@ export function curatedTimezoneOptionsSorted(): Array<{
       label: `${o.country} — ${o.city}${zone} (${timezoneOffsetLabel(o.id)})`,
     };
   }).sort((a, b) => a.label.localeCompare(b.label));
-}
-
-export function timezoneDisplayLabelForUi(tz: string): string {
-  return curatedTimezoneLabelById(tz) ?? tz;
 }

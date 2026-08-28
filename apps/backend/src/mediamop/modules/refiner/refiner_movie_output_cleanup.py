@@ -217,7 +217,6 @@ def maybe_run_movie_output_folder_cleanup_after_remux(
     watched_root: Path,
     src: Path,
     final_output_file: Path | None,
-    dry_run: bool | None = None,
     relative_media_path: str,
     current_job_id: int | None,
     media_scope: str | None,
@@ -298,6 +297,11 @@ def maybe_run_movie_output_folder_cleanup_after_remux(
         return
 
     output_movie_folder = media_out.parent
+    # Belt-and-braces, not a live gate. The check above already proved ``media_out`` is
+    # under ``output_root``, and the parent of anything strictly under a root is itself
+    # under-or-equal to that root. The only input that reaches this branch is
+    # ``media_out == output_root`` — a caller passing the output root itself as the
+    # finished file — and the ``rmtree`` below is worth the dead guard.
     try:
         output_movie_folder.relative_to(output_root)
     except ValueError:

@@ -6,7 +6,6 @@
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 
 /** Word-for-word match across the Refiner and Pruner schedule UIs. */
-export const MM_SCHEDULE_TIME_WINDOW_HEADING = "Limit to these hours";
 export const MM_SCHEDULE_TIME_WINDOW_HELPER =
   "When on, this only runs inside the hours and days you set below. Turn off to run at any time.";
 export const MM_SCHEDULE_DAYS_HELPER =

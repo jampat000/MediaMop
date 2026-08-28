@@ -66,9 +66,6 @@ def normalize_audio_preference_mode(raw: str | None) -> AudioSelectionPolicy:
 
 _MEDIA_EXTENSIONS = frozenset({".mkv", ".mp4", ".m4v", ".webm", ".avi"})
 
-# Historical allowlist marker kept for candidate classification docs/tests.
-REFINER_SOURCE_SIDECAR_CLEANUP_SUFFIXES: frozenset[str] = frozenset({".par2", ".sfv", ".nzb", ".nfo"})
-
 
 def is_refiner_media_candidate(path: Path) -> bool:
     """Return True only for supported video files Refiner may process.

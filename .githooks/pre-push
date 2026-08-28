@@ -15,6 +15,8 @@ else
     if [ -f "$PRETTIER" ]; then
         echo "[pre-push] prettier..."
         (cd "$REPO/apps/web" && node "$PRETTIER" --check --end-of-line auto 'src/**/*.{ts,tsx,css}' index.html vite.config.ts)
+        echo "[pre-push] dead-code guard..."
+        node "$REPO/scripts/check-dead-code.mjs"
         echo "[pre-push] api:types drift..."
         (cd "$REPO/apps/web" && npm run api:types:sync)
         if ! git -C "$REPO" diff --quiet -- apps/web/openapi/mediamop-openapi.json apps/web/src/lib/api/generated/openapi-types.ts; then

@@ -87,6 +87,10 @@ jobs:
           npm run build
           npm run test
 
+      # After the web install above, so it reuses apps/web/node_modules for ts-prune.
+      - name: MediaMop dead-code guard
+        run: node scripts/check-dead-code.mjs
+
       - name: Frontend dependency vulnerability scan
         working-directory: apps/web
         run: npm audit --audit-level=high

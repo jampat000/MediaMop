@@ -1,0 +1,15 @@
+{
+  "_comment": "Dead code kept on purpose. Every entry states why. Anything not listed fails the build; anything listed that is no longer dead also fails, so this file cannot rot quietly. See scripts/check-dead-code.mjs.",
+  "webExports": {
+    "src/lib/refiner/file-remux-pass-api.ts:11 - postRefinerFileRemuxPassEnqueue": "Thin wrapper over a live v1 endpoint. Its hook was removed in #328; #334/#346 are expected to wire it to a screen.",
+    "src/lib/refiner/runtime-settings-api.ts:7 - fetchRefinerRuntimeSettings": "Thin wrapper over a live v1 endpoint. Its hook was removed in #328; #334/#346 are expected to wire it to a screen."
+  },
+  "backendModules": {
+    "apps/backend/src/mediamop/api/main.py": "ASGI entrypoint. Referenced by string as mediamop.api.main:app from docker/entrypoint.sh, scripts/dev-backend.ps1 and the E2E conftest, never by import.",
+    "apps/backend/src/mediamop/core/exceptions.py": "Declared scaffolding for domain error types. Kept as the agreed home for them rather than re-litigated here.",
+    "apps/backend/src/mediamop/platform/settings/models.py": "Phase 4 placeholder; the module docstring records that no table is introduced yet.",
+    "apps/backend/src/mediamop/platform/settings/router.py": "Deliberately not mounted, so the API does not imply a finished Settings surface.",
+    "apps/backend/src/mediamop/platform/settings/schemas.py": "Placeholder alongside platform/settings/router.py.",
+    "apps/backend/src/mediamop/platform/settings/service.py": "Placeholder alongside platform/settings/router.py."
+  }
+}

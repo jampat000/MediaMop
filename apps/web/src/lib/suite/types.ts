@@ -158,11 +158,3 @@ export type NotificationChannelTestOut = {
   ok: boolean;
   error: string | null;
 };
-
-export function suiteSettingsBackupFieldsPresent(v: SuiteSettingsOut): boolean {
-  return (
-    typeof v.configuration_backup_enabled === "boolean" &&
-    typeof v.configuration_backup_interval_hours === "number" &&
-    typeof v.configuration_backup_preferred_time === "string"
-  );
-}

@@ -6,22 +6,6 @@ type ProviderSectionProps = {
   children: ReactNode;
 };
 
-export function PrunerRulesSection({ children }: { children: ReactNode }) {
-  return <>{children}</>;
-}
-
-export function PrunerFiltersSection({ children }: { children: ReactNode }) {
-  return <>{children}</>;
-}
-
-export function PrunerScheduleSection({ children }: { children: ReactNode }) {
-  return <>{children}</>;
-}
-
-export function PrunerApplySection({ children }: { children: ReactNode }) {
-  return <>{children}</>;
-}
-
 export function PrunerProviderSection({
   scope,
   section,
