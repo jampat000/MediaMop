@@ -227,7 +227,7 @@ jobs:
         run: |
           alembic upgrade head
           alembic check
-          pytest -q --cov=mediamop --cov-fail-under=70
+          pytest -q --cov=mediamop --cov-fail-under=75
 
       - uses: actions/setup-node@v7
         with:
