@@ -159,10 +159,9 @@ class MediaMopSettings:
     # Refiner supplied payload evaluation (``refiner.supplied_payload_evaluation.v1``) — Refiner-only schedule.
     refiner_supplied_payload_evaluation_schedule_enabled: bool
     refiner_supplied_payload_evaluation_schedule_interval_seconds: int
-    # Refiner watched-folder remux scan dispatch (``refiner.watched_folder.remux_scan_dispatch.v1``) — Refiner-only
-    # periodic enqueue (optional). Separate enable/interval from supplied payload evaluation (ADR-0009).
-    refiner_watched_folder_remux_scan_dispatch_schedule_enabled: bool
-    refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds: int
+    # Refiner watched-folder remux scan dispatch (``refiner.watched_folder.remux_scan_dispatch.v1``).
+    # Whether each scope is scheduled, and how often, is stored per scope in the database
+    # (Refiner Libraries tab), not here — see ADR-0009 and docs/settings-truthfulness-audit.md.
     refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs: bool
     # Refiner ffprobe preflight depth (FileFlows-style Video File parity).
     refiner_probe_size_mb: int
@@ -242,8 +241,6 @@ class MediaMopSettings:
             worker_count=self.refiner_worker_count,
             supplied_payload_evaluation_schedule_enabled=self.refiner_supplied_payload_evaluation_schedule_enabled,
             supplied_payload_evaluation_schedule_interval_seconds=self.refiner_supplied_payload_evaluation_schedule_interval_seconds,
-            watched_folder_remux_scan_dispatch_schedule_enabled=self.refiner_watched_folder_remux_scan_dispatch_schedule_enabled,
-            watched_folder_remux_scan_dispatch_schedule_interval_seconds=self.refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds,
             watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs=self.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs,
             probe_size_mb=self.refiner_probe_size_mb,
             analyze_duration_seconds=self.refiner_analyze_duration_seconds,
@@ -386,13 +383,6 @@ class MediaMopSettings:
 
         refiner_payload_eval_on = _refiner_supplied_payload_eval_schedule_enabled()
         refiner_payload_eval_iv = _refiner_supplied_payload_eval_schedule_interval_seconds()
-        refiner_wf_scan_dispatch_on = _env_bool(
-            "MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED",
-            False,
-        )
-        refiner_wf_scan_dispatch_iv = clamp_refiner_schedule_interval_seconds(
-            _env_int("MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_INTERVAL_SECONDS", 3600),
-        )
         refiner_wf_scan_periodic_remux_enq = _env_bool(
             "MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS",
             True,
@@ -531,8 +521,6 @@ class MediaMopSettings:
             pruner_plex_live_abs_max_items=pruner_plex_live_abs_max,
             refiner_supplied_payload_evaluation_schedule_enabled=refiner_payload_eval_on,
             refiner_supplied_payload_evaluation_schedule_interval_seconds=refiner_payload_eval_iv,
-            refiner_watched_folder_remux_scan_dispatch_schedule_enabled=refiner_wf_scan_dispatch_on,
-            refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds=refiner_wf_scan_dispatch_iv,
             refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs=refiner_wf_scan_periodic_remux_enq,
             refiner_probe_size_mb=refiner_probe_size_mb,
             refiner_analyze_duration_seconds=refiner_analyze_duration_seconds,

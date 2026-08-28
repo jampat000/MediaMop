@@ -35,9 +35,11 @@ def test_refiner_runtime_settings_operator_shape(client_with_admin: TestClient) 
     assert "sqlite_throughput_note" in body
     assert "configuration_note" in body
     assert "visibility_note" in body
-    assert "refiner_watched_folder_remux_scan_dispatch_schedule_enabled" in body
-    assert "refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds" in body
     assert "refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs" in body
+    # Removed in #329: both reported themselves as live startup configuration while the
+    # scheduler read the per-scope database toggles instead.
+    assert "refiner_watched_folder_remux_scan_dispatch_schedule_enabled" not in body
+    assert "refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds" not in body
     assert "refiner_probe_size_mb" in body
     assert "refiner_analyze_duration_seconds" in body
     assert "refiner_watched_folder_min_file_age_seconds" in body

@@ -45,6 +45,18 @@ def _next_scheduler_sleep_seconds(
     return max(0.25, min(float(poll_seconds), until_due))
 
 
+def refiner_scope_periodic_scan_enabled(operator_row: object, *, media_scope: str) -> bool:
+    """Whether periodic scanning is switched on for one scope.
+
+    This is the *only* enable check the scheduler makes. It was inline in the tick
+    closure, which meant the shipped behaviour could not be asserted directly and the
+    coverage that existed tested an environment flag the scheduler never read (#329).
+    """
+
+    attr = "tv_schedule_enabled" if media_scope == "tv" else "movie_schedule_enabled"
+    return bool(getattr(operator_row, attr))
+
+
 def _watched_folder_scan_interval_seconds(path_row: object, *, media_scope: str) -> float:
     """Actual watched-folder scan cadence configured on the Refiner Libraries tab."""
 
@@ -89,8 +101,7 @@ async def _run_periodic_watched_folder_scan_dispatch_enqueue(
                 row = ensure_refiner_operator_settings_row(session)
                 path_row = ensure_refiner_path_settings_row(session)
                 interval = _watched_folder_scan_interval_seconds(path_row, media_scope=media_scope)
-                enabled_attr = "tv_schedule_enabled" if media_scope == "tv" else "movie_schedule_enabled"
-                if not bool(getattr(row, enabled_attr)):
+                if not refiner_scope_periodic_scan_enabled(row, media_scope=media_scope):
                     return next_run_loop, interval
                 if now_loop < next_run_loop:
                     return next_run_loop, interval

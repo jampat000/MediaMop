@@ -341,12 +341,13 @@ def start_refiner_worker_background_tasks(
       from the user-facing "Files at once" setting while SQLite still serializes writes.
     """
 
-    if settings.refiner_worker_count > 1:
-        logger.warning(
-            "Refiner refiner_worker_count=%s: multi-worker is a guarded capability under SQLite "
-            "(single-writer database). The user-facing files-at-once setting gates active slots.",
-            settings.refiner_worker_count,
-        )
+    # The shipped default is 8 slots, so warning above 1 warned about the intended
+    # configuration on every startup of every install (#329). The slot cap is not the
+    # concurrency limit — the saved "Files at once" value is — so this is a debug detail.
+    logger.debug(
+        "Refiner worker slot cap is %s; the saved files-at-once setting gates how many are active.",
+        settings.refiner_worker_count,
+    )
 
     handlers: Mapping[str, Callable[[RefinerJobWorkContext], None]]
     if job_handlers is not None:
