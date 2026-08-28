@@ -6,11 +6,15 @@ This is the top-level map for agents and contributors. Deeper decisions live in 
 
 MediaMop is a self-hosted media operations app:
 
-- **Refiner** remuxes watched media into cleaner outputs. It is configured today as two
-  fixed scopes, one movie and one TV, each a singleton settings row.
-  [ADR-0014](docs/adr/ADR-0014-refiner-libraries-replace-fixed-scopes.md) — *proposed,
-  not yet implemented* — replaces those scopes with any number of libraries, each with
-  its own paths, admission rules, remux rules, schedule and media manager.
+- **Refiner** remuxes watched media into cleaner outputs. It is configured as any number
+  of **libraries** — each a row carrying its own paths, admission rules, schedule,
+  guardrails and media manager connections — rather than one fixed movie scope and one
+  fixed TV scope. `media_scope` survives as a property of a library because it still
+  selects the cleanup behaviour, but it is no longer what the module partitions on.
+  Adding a library is a POST. See
+  [ADR-0014](docs/adr/ADR-0014-refiner-libraries-replace-fixed-scopes.md). The singleton
+  settings rows still exist and are read only when no library covers a scope, which is a
+  database that has not been migrated; they are dropped once nothing reads them.
 - **Pruner** previews and removes media from connected media servers.
 - **Media managers** are the products MediaMop accepts work from and reports back to.
   A connection carries a *kind* (Radarr, Sonarr, Deluno, or anything posting MediaMop's
