@@ -31,6 +31,9 @@ class RefinerRuntimeSettingsOut(BaseModel):
     visibility_note: str = Field(
         description="Caveat: from settings loaded at startup — not a live probe of worker threads.",
     )
+    refiner_media_extensions: list[str] = Field(
+        description="File types Refiner will pick up in a watched folder. Anything else is ignored and counted.",
+    )
     refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs: bool = Field(
         description="When true, periodic scans may enqueue ``refiner.file.remux_pass.v1``.",
     )

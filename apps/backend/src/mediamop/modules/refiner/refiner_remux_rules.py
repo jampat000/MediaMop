@@ -64,7 +64,39 @@ def normalize_audio_preference_mode(raw: str | None) -> AudioSelectionPolicy:
     return "preferred_langs_quality"
 
 
-_MEDIA_EXTENSIONS = frozenset({".mkv", ".mp4", ".m4v", ".webm", ".avi"})
+# Containers Refiner can genuinely process: ffprobe reads them and a stream-copy remux
+# to MKV succeeds. Each was verified against ffmpeg rather than assumed (#348).
+#
+# Deliberately absent: ``.h264``, ``.h265`` and ``.mpv``. They remux to MKV perfectly
+# well — but they are raw elementary streams with no audio track, so ``plan_remux``
+# returns None ("no retainable audio"), the pass records a terminal failure, and Pass 4
+# failure cleanup then deletes the source folder once the grace period elapses. Admitting
+# them would turn "silently ignored" into "your folder is gone", which is a worse bug
+# than the one this list is fixing. They belong to whatever handles video-only files.
+REFINER_MEDIA_EXTENSIONS: frozenset[str] = frozenset(
+    {
+        ".mkv",
+        ".mp4",
+        ".m4v",
+        ".webm",
+        ".avi",
+        ".mpe",
+        ".mpeg",
+        ".mpg",
+        ".mov",
+        ".flv",
+        ".wmv",
+        ".avchd",
+    }
+)
+
+_MEDIA_EXTENSIONS = REFINER_MEDIA_EXTENSIONS
+
+
+def refiner_media_extensions_sorted() -> tuple[str, ...]:
+    """The effective allowlist, for operator-facing reporting."""
+
+    return tuple(sorted(REFINER_MEDIA_EXTENSIONS))
 
 
 def is_refiner_media_candidate(path: Path) -> bool:

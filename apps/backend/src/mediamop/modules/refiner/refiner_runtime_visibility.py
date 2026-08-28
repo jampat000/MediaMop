@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from mediamop.core.config import MediaMopSettings
+from mediamop.modules.refiner.refiner_remux_rules import refiner_media_extensions_sorted
 from mediamop.modules.refiner.schemas_refiner_runtime_visibility import RefinerRuntimeSettingsOut
 
 _VISIBILITY_NOTE = (
@@ -109,6 +110,7 @@ def refiner_runtime_settings_from_settings(settings: MediaMopSettings) -> Refine
         sqlite_throughput_note=_SQLITE_THROUGHPUT_NOTE,
         configuration_note=_CONFIGURATION_NOTE,
         visibility_note=_VISIBILITY_NOTE,
+        refiner_media_extensions=list(refiner_media_extensions_sorted()),
         refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs=(
             settings.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs
         ),

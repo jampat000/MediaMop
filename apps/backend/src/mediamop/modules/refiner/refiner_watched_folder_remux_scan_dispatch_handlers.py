@@ -16,12 +16,13 @@ from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMU
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
 from mediamop.modules.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
+from mediamop.modules.refiner.refiner_remux_rules import refiner_media_extensions_sorted
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_evaluate import (
     evaluate_watched_media_file_for_dispatch,
     fetch_manager_queue_signals_for_scan,
 )
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_ops import (
-    iter_watched_folder_media_candidate_files,
+    iter_watched_folder_media_candidates,
     refiner_active_remux_pass_exists_for_relative_path,
     refiner_completed_remux_output_exists_for_relative_path,
     relative_posix_path_under_watched,
@@ -77,10 +78,11 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
             )
 
         watched_path = Path(watched_root)
-        files = iter_watched_folder_media_candidate_files(
+        candidates = iter_watched_folder_media_candidates(
             watched_path,
             min_file_age_seconds=op_settings.min_file_age_seconds,
         )
+        files = candidates.files
 
         sample_paths: list[str] = []
         upstream_block_reasons: list[str] = []
@@ -100,6 +102,9 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
             "manager_queue_signal_notes": list(signal_report.silent_details),
             "upstream_block_reasons": upstream_block_reasons,
             "media_candidates_seen": len(files),
+            "ignored_unsupported_type": candidates.ignored_unsupported_type,
+            "ignored_unsupported_extensions": list(candidates.ignored_unsupported_extensions),
+            "media_extensions_applied": list(refiner_media_extensions_sorted()),
             "verdict_proceed": 0,
             "verdict_wait_upstream": 0,
             "verdict_not_held": 0,
@@ -253,6 +258,16 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
             else:
                 summary["scan_result_label"] = "no_media_found"
                 summary["user_message"] = "MediaMop did not find any media files in this watched folder."
+
+            # Extension mismatch was the one admission decision that said nothing at all.
+            ignored = int(summary["ignored_unsupported_type"])
+            if ignored:
+                kinds = ", ".join(summary["ignored_unsupported_extensions"])
+                summary["user_message"] = (
+                    f"{summary['user_message']} {ignored} file{'' if ignored == 1 else 's'} "
+                    f"{'was' if ignored == 1 else 'were'} ignored because MediaMop does not process "
+                    f"that kind of file ({kinds})."
+                ).strip()
 
             # A manager that could not be reached must never read as "nothing is importing".
             # The scan still runs — the file-settling gates are the fallback — but the
