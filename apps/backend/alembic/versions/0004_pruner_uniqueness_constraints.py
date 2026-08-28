@@ -8,9 +8,9 @@ from __future__ import annotations
 
 from urllib.parse import urlparse, urlunparse
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 revision: str = "0004_pruner_uniqueness_constraints"
 down_revision: str | None = "0003_pruner_auto_apply_snapshot_limits"
@@ -24,7 +24,11 @@ def _normalize(raw: str) -> str:
     path = parsed.path if parsed.netloc else ("/" + parsed.path.split("/", 1)[1] if "/" in parsed.path else "")
     host = (parsed.hostname or netloc.split(":", 1)[0]).lower()
     port = parsed.port
-    canon_netloc = host if port is None or (scheme == "http" and port == 80) or (scheme == "https" and port == 443) else f"{host}:{port}"
+    canon_netloc = (
+        host
+        if port is None or (scheme == "http" and port == 80) or (scheme == "https" and port == 443)
+        else f"{host}:{port}"
+    )
     return urlunparse((scheme, canon_netloc, path.rstrip("/"), "", "", "")).rstrip("/")
 
 
@@ -36,7 +40,9 @@ def upgrade() -> None:
             "pruner_server_instances",
             sa.Column("normalized_base_url", sa.String(length=512), nullable=False, server_default=""),
         )
-    rows = list(bind.execute(sa.text("select id, provider, base_url from pruner_server_instances order by id asc")).mappings())
+    rows = list(
+        bind.execute(sa.text("select id, provider, base_url from pruner_server_instances order by id asc")).mappings()
+    )
     seen: dict[tuple[str, str], int] = {}
     for row in rows:
         norm = _normalize(str(row["base_url"]))
@@ -46,8 +52,12 @@ def upgrade() -> None:
         )
         key = (str(row["provider"]), norm)
         if key in seen:
-            bind.execute(sa.text("delete from pruner_scope_settings where server_instance_id = :id"), {"id": int(row["id"])})
-            bind.execute(sa.text("delete from pruner_preview_runs where server_instance_id = :id"), {"id": int(row["id"])})
+            bind.execute(
+                sa.text("delete from pruner_scope_settings where server_instance_id = :id"), {"id": int(row["id"])}
+            )
+            bind.execute(
+                sa.text("delete from pruner_preview_runs where server_instance_id = :id"), {"id": int(row["id"])}
+            )
             bind.execute(sa.text("delete from pruner_server_instances where id = :id"), {"id": int(row["id"])})
         else:
             seen[key] = int(row["id"])
@@ -55,7 +65,10 @@ def upgrade() -> None:
     inspector = sa.inspect(bind)
     idx = {i["name"] for i in inspector.get_indexes("pruner_server_instances")}
     unique = {u["name"] for u in inspector.get_unique_constraints("pruner_server_instances")}
-    if "uq_pruner_server_provider_normalized_url" not in idx and "uq_pruner_server_provider_normalized_url" not in unique:
+    if (
+        "uq_pruner_server_provider_normalized_url" not in idx
+        and "uq_pruner_server_provider_normalized_url" not in unique
+    ):
         op.create_index(
             "uq_pruner_server_provider_normalized_url",
             "pruner_server_instances",

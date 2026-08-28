@@ -40,7 +40,9 @@ jobs:
 
       - name: MediaMop backend lint
         working-directory: apps/backend
-        run: ruff check src tests
+        run: |
+          ruff check src tests alembic
+          ruff format --check src tests alembic
 
       - name: Backend security scan (bandit)
         working-directory: apps/backend

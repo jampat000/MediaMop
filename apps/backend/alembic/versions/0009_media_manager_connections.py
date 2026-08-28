@@ -18,8 +18,9 @@ Create Date: 2026-08-26 00:00:00
 from __future__ import annotations
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy import inspect
+
+from alembic import op
 
 revision = "0009_media_manager_connections"
 down_revision = "0008_notification_channels"
