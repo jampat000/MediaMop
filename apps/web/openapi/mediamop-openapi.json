@@ -398,6 +398,70 @@
         "title": "DirectoryBrowseOut",
         "type": "object"
       },
+      "DiscoverableLibraryOut": {
+        "description": "One library a connected manager reports.",
+        "properties": {
+          "already_imported": {
+            "title": "Already Imported",
+            "type": "boolean"
+          },
+          "key": {
+            "description": "The manager's own id, kept only as an integration reference.",
+            "title": "Key",
+            "type": "string"
+          },
+          "local_path_problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why that path cannot be used on this machine, shown beside the manager's value.",
+            "title": "Local Path Problem"
+          },
+          "media_scope": {
+            "anyOf": [
+              {
+                "enum": [
+                  "movie",
+                  "tv"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Scope"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "root_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the manager sees this library, on the manager's host.",
+            "title": "Root Path"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "already_imported"
+        ],
+        "title": "DiscoverableLibraryOut",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -432,6 +496,69 @@
           "status"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "LibraryDriftOut": {
+        "description": "A difference between the manager and MediaMop. Reported, never applied.",
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "root_moved",
+              "library_removed",
+              "library_added",
+              "path_not_local"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "library_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Library Id"
+          },
+          "library_name": {
+            "title": "Library Name",
+            "type": "string"
+          },
+          "manager_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Value"
+          },
+          "mediamop_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mediamop Value"
+          }
+        },
+        "required": [
+          "kind",
+          "library_name",
+          "detail"
+        ],
+        "title": "LibraryDriftOut",
         "type": "object"
       },
       "LoginIn": {
@@ -3192,6 +3319,31 @@
           "csrf_token"
         ],
         "title": "RefinerLibraryDeleteIn",
+        "type": "object"
+      },
+      "RefinerLibraryImportIn": {
+        "additionalProperties": false,
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "keys": {
+            "description": "Manager library ids to import.",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Keys",
+            "type": "array"
+          }
+        },
+        "required": [
+          "csrf_token",
+          "keys"
+        ],
+        "title": "RefinerLibraryImportIn",
         "type": "object"
       },
       "RefinerLibraryOut": {
@@ -8092,6 +8244,163 @@
         ]
       }
     },
+    "/api/v1/refiner/libraries/discover/{connection_id}": {
+      "get": {
+        "description": "What this manager says it looks after, and whether MediaMop already has it.",
+        "operationId": "get_refiner_discoverable_libraries_api_v1_refiner_libraries_discover__connection_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Connection Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DiscoverableLibraryOut"
+                  },
+                  "title": "Response Get Refiner Discoverable Libraries Api V1 Refiner Libraries Discover  Connection Id  Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Refiner Discoverable Libraries",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/libraries/discover/{connection_id}/drift": {
+      "get": {
+        "description": "Differences between the manager and MediaMop. Reported only \u2014 nothing is applied.",
+        "operationId": "get_refiner_library_drift_api_v1_refiner_libraries_discover__connection_id__drift_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Connection Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LibraryDriftOut"
+                  },
+                  "title": "Response Get Refiner Library Drift Api V1 Refiner Libraries Discover  Connection Id  Drift Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Refiner Library Drift",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/libraries/discover/{connection_id}/import": {
+      "post": {
+        "description": "Create a Refiner library per selected manager library.",
+        "operationId": "post_refiner_import_libraries_api_v1_refiner_libraries_discover__connection_id__import_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Connection Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefinerLibraryImportIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RefinerLibraryOut"
+                  },
+                  "title": "Response Post Refiner Import Libraries Api V1 Refiner Libraries Discover  Connection Id  Import Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Refiner Import Libraries",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
     "/api/v1/refiner/libraries/reorder": {
       "post": {
         "description": "Set display order. Order decides which library a scope-only payload resolves to.",
@@ -8276,6 +8585,61 @@
           }
         },
         "summary": "Put Refiner Library",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/libraries/{library_id}/unlink": {
+      "post": {
+        "description": "Forget where a library came from. The library itself is untouched.",
+        "operationId": "post_refiner_library_unlink_api_v1_refiner_libraries__library_id__unlink_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "library_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Library Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefinerLibraryDeleteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefinerLibraryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Refiner Library Unlink",
         "tags": [
           "refiner",
           "refiner"
