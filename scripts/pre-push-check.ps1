@@ -32,12 +32,12 @@ if (-not (Test-Path $ruff)) {
 } else {
     Step "ruff"
     Push-Location "$REPO\apps\backend"
-    & $ruff check src tests
+    & $ruff check src tests alembic
     if ($LASTEXITCODE -ne 0) { Pop-Location; Fail "ruff check failed" }
-    & $ruff format --check src tests
+    & $ruff format --check src tests alembic
     if ($LASTEXITCODE -ne 0) {
         Pop-Location
-        Write-Host "  Fix: ruff format src tests" -ForegroundColor Yellow
+        Write-Host "  Fix: ruff format src tests alembic" -ForegroundColor Yellow
         Fail "ruff format --check failed"
     }
     Pop-Location

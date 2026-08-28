@@ -6,9 +6,9 @@ Revises: 0002_mediamop_schema_tip
 
 from __future__ import annotations
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 revision: str = "0003_pruner_auto_apply_snapshot_limits"
 down_revision: str | None = "0002_mediamop_schema_tip"

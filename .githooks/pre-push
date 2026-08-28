@@ -10,7 +10,7 @@ else
     PRETTIER="$REPO/apps/web/node_modules/prettier/bin/prettier.cjs"
     if [ -f "$RUFF" ]; then
         echo "[pre-push] ruff..."
-        (cd "$REPO/apps/backend" && "$RUFF" check src tests && "$RUFF" format --check src tests)
+        (cd "$REPO/apps/backend" && "$RUFF" check src tests alembic && "$RUFF" format --check src tests alembic)
     fi
     if [ -f "$PRETTIER" ]; then
         echo "[pre-push] prettier..."

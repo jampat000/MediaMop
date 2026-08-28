@@ -7,10 +7,10 @@ Create Date: 2026-05-01 09:58:00
 
 from __future__ import annotations
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect
 
+from alembic import op
 
 revision = "0006_trusted_device_sessions"
 down_revision = "0005_refiner_guardrail_settings"

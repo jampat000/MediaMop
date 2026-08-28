@@ -6,9 +6,9 @@ Revises: 0004_pruner_uniqueness_constraints
 
 from __future__ import annotations
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 revision: str = "0005_refiner_guardrail_settings"
 down_revision: str | None = "0004_pruner_uniqueness_constraints"
