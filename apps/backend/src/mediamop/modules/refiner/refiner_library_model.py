@@ -104,6 +104,10 @@ class RefinerLibraryRow(Base):
     # observes writing having stopped rather than predicting when it will.
     file_detection_interval_seconds: Mapped[int] = mapped_column(Integer, nullable=False, server_default="30")
     ignore_size_changes: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    # Filesystem events are the trigger and the periodic scan is the backstop, so this
+    # switches off the trigger, never the safety net. Defaults on; a watcher that cannot
+    # start degrades to the scan and says so.
+    file_system_events_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
     # The read/write probe before queueing. On by default: discovering a file is locked
     # after a job has been enqueued is a failure, discovering it before is a wait.
     skip_access_tests: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")

@@ -35,6 +35,7 @@ export interface RefinerLibrary {
   file_detection_interval_seconds: number;
   ignore_size_changes: boolean;
   skip_access_tests: boolean;
+  file_system_events_enabled: boolean;
   schedule_enabled: boolean;
   schedule_hours_limited: boolean;
   schedule_days: string;
@@ -74,6 +75,7 @@ export interface RefinerLibraryWrite {
   file_detection_interval_seconds?: number;
   ignore_size_changes?: boolean;
   skip_access_tests?: boolean;
+  file_system_events_enabled?: boolean;
   schedule_enabled?: boolean;
   schedule_hours_limited?: boolean;
   schedule_days?: string;

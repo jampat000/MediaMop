@@ -46,6 +46,7 @@ type FormState = {
   top_level_only: boolean;
   ignore_size_changes: boolean;
   skip_access_tests: boolean;
+  file_system_events_enabled: boolean;
 };
 
 const EMPTY_FORM: FormState = {
@@ -66,6 +67,7 @@ const EMPTY_FORM: FormState = {
   top_level_only: false,
   ignore_size_changes: false,
   skip_access_tests: false,
+  file_system_events_enabled: true,
 };
 
 function formFrom(library: RefinerLibrary): FormState {
@@ -89,6 +91,7 @@ function formFrom(library: RefinerLibrary): FormState {
     top_level_only: library.top_level_only,
     ignore_size_changes: library.ignore_size_changes,
     skip_access_tests: library.skip_access_tests,
+    file_system_events_enabled: library.file_system_events_enabled,
   };
 }
 
@@ -122,6 +125,7 @@ function writeFrom(
     top_level_only: form.top_level_only,
     ignore_size_changes: form.ignore_size_changes,
     skip_access_tests: form.skip_access_tests,
+    file_system_events_enabled: form.file_system_events_enabled,
     rule_set_id: library?.rule_set_id ?? null,
     manager_connection_ids: library?.manager_connection_ids ?? [],
   };
@@ -503,6 +507,20 @@ export function RefinerLibrariesSection() {
                 disabled={!editable}
               />
               Skip the read and write check
+            </label>
+            <label className="flex items-center gap-2 text-sm text-[var(--mm-text2)]">
+              <input
+                type="checkbox"
+                checked={form.file_system_events_enabled}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    file_system_events_enabled: e.target.checked,
+                  })
+                }
+                disabled={!editable}
+              />
+              Watch this folder for changes
             </label>
           </div>
           <div className="flex gap-2">

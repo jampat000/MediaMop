@@ -3327,6 +3327,12 @@
             "title": "File Detection Interval Seconds",
             "type": "integer"
           },
+          "file_system_events_enabled": {
+            "default": true,
+            "description": "Watch this folder for changes so new files are picked up within seconds. The periodic scan runs regardless, so switching this off makes MediaMop slower to notice a file, never blind to it.",
+            "title": "File System Events Enabled",
+            "type": "boolean"
+          },
           "hold_minutes": {
             "default": 0,
             "maximum": 10080.0,
@@ -3586,6 +3592,10 @@
             "title": "File Detection Interval Seconds",
             "type": "integer"
           },
+          "file_system_events_enabled": {
+            "title": "File System Events Enabled",
+            "type": "boolean"
+          },
           "hold_minutes": {
             "title": "Hold Minutes",
             "type": "integer"
@@ -3737,6 +3747,7 @@
           "file_detection_interval_seconds",
           "ignore_size_changes",
           "skip_access_tests",
+          "file_system_events_enabled",
           "schedule_enabled",
           "schedule_hours_limited",
           "schedule_days",
@@ -3810,6 +3821,12 @@
             "minimum": 0.0,
             "title": "File Detection Interval Seconds",
             "type": "integer"
+          },
+          "file_system_events_enabled": {
+            "default": true,
+            "description": "Watch this folder for changes so new files are picked up within seconds. The periodic scan runs regardless, so switching this off makes MediaMop slower to notice a file, never blind to it.",
+            "title": "File System Events Enabled",
+            "type": "boolean"
           },
           "hold_minutes": {
             "default": 0,

@@ -6,6 +6,7 @@ import time
 from dataclasses import asdict
 from typing import Any
 
+from mediamop.modules.refiner.refiner_watcher_state import watcher_summary
 from mediamop.platform.health.service import database_is_connected
 from mediamop.platform.jobs.worker_health import build_worker_health_snapshot
 from mediamop.platform.readiness.schemas import ReadinessResponse, ReadinessStep, ReadinessWorkerOut
@@ -55,6 +56,19 @@ def build_readiness(app_state: Any) -> ReadinessResponse:
             ),
         ),
     ]
+
+    # Falling back to the periodic scan is slower, not broken, so this reports rather
+    # than fails: taking an instance out of a load balancer because inotify is
+    # unavailable on an SMB share would be a worse outcome than the delay it describes.
+    watcher_ok, watcher_detail = watcher_summary()
+    steps.append(
+        ReadinessStep(
+            name="filesystem_watcher",
+            status="ready" if watcher_ok else "failed",
+            detail=watcher_detail,
+        )
+    )
+
     ready = all(step.status == "ready" for step in steps)
     status = "ready" if ready else "failed" if any(step.status == "failed" for step in steps) else "starting"
     return ReadinessResponse(

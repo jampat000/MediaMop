@@ -110,6 +110,29 @@ Migration note:
 
 The image exposes `GET /health` and includes a Docker `HEALTHCHECK`.
 
+## Filesystem events on bind mounts
+
+Refiner watches its watched folders so a new file becomes a candidate within seconds, and
+runs its periodic scan as a backstop. **Bind mounts frequently deliver no inotify events**,
+and neither do most SMB and NFS shares — the events happen on the host, and nothing
+forwards them into the container.
+
+This is expected and handled. When the watcher cannot start, MediaMop:
+
+- falls back to the periodic scan, which finds every file exactly as it did before;
+- logs the reason **once**, not once per tick;
+- reports it on `GET /readiness` under the `filesystem_watcher` step.
+
+That step stays `ready`. Falling back is slower, not broken, and failing readiness would
+take a working instance out of a load balancer over a delay.
+
+If you would rather not be told about it for a given library, switch off
+**Watch this folder for changes** on the Refiner Libraries tab. To turn the watcher off
+for the whole instance, set `MEDIAMOP_REFINER_WATCHER_ENABLED=0`.
+
+When events *do* work, `MEDIAMOP_REFINER_WATCHER_DEBOUNCE_SECONDS` (default 3) controls how
+long the tree must be quiet before a burst of writes becomes one scan.
+
 ## Release alignment
 
 - `compose.yaml` defaults to `ghcr.io/jampat000/mediamop:latest`

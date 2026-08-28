@@ -32,6 +32,7 @@ function library(over: Partial<RefinerLibrary> = {}): RefinerLibrary {
     file_detection_interval_seconds: 30,
     ignore_size_changes: false,
     skip_access_tests: false,
+    file_system_events_enabled: true,
     schedule_enabled: true,
     schedule_hours_limited: false,
     schedule_days: "",
