@@ -46,7 +46,6 @@ def _isolated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MEDIAMOP_HOME", str(home))
     monkeypatch.setenv("MEDIAMOP_REFINER_WORKER_COUNT", "0")
     monkeypatch.setenv("MEDIAMOP_PRUNER_WORKER_COUNT", "0")
-    monkeypatch.setenv("MEDIAMOP_SUBBER_WORKER_COUNT", "0")
     backend = Path(__file__).resolve().parents[1]
     command.upgrade(Config(str(backend / "alembic.ini")), "head")
 

@@ -33,7 +33,6 @@ def build_dashboard_status(db: Session, settings: MediaMopSettings) -> Dashboard
         expected_workers={
             "refiner": int(settings.refiner_worker_count),
             "pruner": int(settings.pruner_worker_count),
-            "subber": int(settings.subber_worker_count),
         },
     )
     workers_healthy = all(row.status in {"healthy", "disabled"} for row in worker_health)

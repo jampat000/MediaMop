@@ -8,7 +8,6 @@ MediaMop is a self-hosted media operations app:
 
 - **Refiner** remuxes watched media into cleaner outputs.
 - **Pruner** previews and removes media from connected media servers.
-- **Subber** syncs Sonarr/Radarr libraries and manages subtitle coverage.
 - **Media managers** are the products MediaMop accepts work from and reports back to.
   A connection carries a *kind* (Radarr, Sonarr, Deluno, or anything posting MediaMop's
   own payload) rather than each product having its own routes and columns; every inbound
@@ -29,13 +28,11 @@ flowchart LR
   API --> Core["Core + Platform Services"]
   Core --> Refiner["Refiner Module"]
   Core --> Pruner["Pruner Module"]
-  Core --> Subber["Subber Module"]
   Core --> Dashboard["Dashboard + Activity"]
   Core --> Integrations["External Integrations (Arr, OpenSubtitles, etc.)"]
   Core --> DB["SQLite (Alembic managed)"]
   Refiner --> Lanes["Worker Lanes / Durable Jobs"]
   Pruner --> Lanes
-  Subber --> Lanes
 ```
 
 ## Backend Map
@@ -43,7 +40,7 @@ flowchart LR
 - `mediamop.api`: FastAPI app factory, router composition, request dependencies.
 - `mediamop.core`: config, runtime paths, database setup, lifespan, logging, schema revision checks.
 - `mediamop.platform`: shared product services such as auth, activity, jobs, local browse, settings, observability, and suite settings.
-- `mediamop.modules`: module-owned domains for Refiner, Pruner, Subber, and Dashboard.
+- `mediamop.modules`: module-owned domains for Refiner, Pruner, and Dashboard.
 - `mediamop.integrations`: external service integration code.
 - `mediamop.windows`: Windows tray and package-specific helpers.
 

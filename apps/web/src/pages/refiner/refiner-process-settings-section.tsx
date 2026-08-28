@@ -111,7 +111,7 @@ export function RefinerProcessSettingsSection() {
       </p>
       <p className="mt-2 max-w-3xl text-[var(--mm-text3)]">
         Download-client disk limits are still recommended. MediaMop adds this
-        final safety check before Refiner or Subber writes to a target drive.
+        final safety check before Refiner writes to a target drive.
       </p>
       <div className="mm-card-action-body mt-6 flex-1 min-h-0">
         <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">

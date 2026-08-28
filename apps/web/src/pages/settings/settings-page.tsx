@@ -454,7 +454,7 @@ export function SettingsPage() {
         <p className="mm-page__eyebrow">System</p>
         <h1 className="mm-page__title">Settings</h1>
         <p className="mm-page__lead">
-          MediaMop-wide choices that are not part of Refiner, Pruner, or Subber.
+          MediaMop-wide choices that are not part of Refiner or Pruner.
           Integration details stay on their module pages.
         </p>
       </header>

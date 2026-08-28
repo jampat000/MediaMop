@@ -1,9 +1,13 @@
 """One inbound webhook for every media manager: ``POST /api/v1/intake/webhook/{source}``.
 
 The source in the path selects a payload dialect, nothing more. What MediaMop then does
-is decided by the event, not by who sent it: an ``imported`` event is Subber's cue to go
-looking for subtitles, a ``handoff`` is Refiner's cue to clean the file and report back.
-A manager that does both gets both from the same endpoint.
+is decided by the event, not by who sent it: a ``handoff`` is Refiner's cue to clean the
+file and report back.
+
+``imported`` was Subber's cue to go looking for subtitles. Subber now lives in Deluno,
+which owns its own library and does not need telling, so the event is accepted and
+ignored rather than refused — a manager configured to send it should not start logging
+failed deliveries because a module moved.
 """
 
 from __future__ import annotations
@@ -21,11 +25,6 @@ from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.refiner_path_settings_service import ensure_refiner_path_settings_row
-from mediamop.modules.subber.subber_job_kinds import (
-    SUBBER_JOB_KIND_WEBHOOK_IMPORT_MOVIES,
-    SUBBER_JOB_KIND_WEBHOOK_IMPORT_TV,
-)
-from mediamop.modules.subber.subber_jobs_ops import subber_enqueue_or_get_job
 from mediamop.platform.media_managers.connection_service import (
     connection_for_kind,
     webhook_secret_matches,
@@ -64,7 +63,7 @@ def _authorise(
             )
         return
 
-    configured = settings.subber_webhook_secret
+    configured = settings.media_manager_webhook_secret
     if not configured:
         return
     provided = (presented or "").strip()
@@ -77,17 +76,6 @@ def _authorise(
 
 def _compact_json(payload: dict[str, Any]) -> str:
     return json.dumps(payload, separators=(",", ":"))
-
-
-def _enqueue_subtitle_import(session: Session, event: MediaManagerImportEvent) -> str:
-    job_kind = SUBBER_JOB_KIND_WEBHOOK_IMPORT_TV if event.media_scope == "tv" else SUBBER_JOB_KIND_WEBHOOK_IMPORT_MOVIES
-    subber_enqueue_or_get_job(
-        session,
-        dedupe_key=f"subber:wh:{job_kind}:{uuid.uuid4()}",
-        job_kind=job_kind,
-        payload_json=_compact_json(event.to_subber_job_payload()),
-    )
-    return job_kind
 
 
 def _enqueue_refine(session: Session, event: MediaManagerImportEvent) -> str:
@@ -156,7 +144,12 @@ def post_media_manager_intake(
         # plainly keeps their delivery logs clean instead of showing failed posts.
         return {"status": "ignored", "source": dialect.key}
 
-    enqueued = _enqueue_subtitle_import(db, event) if event.event_kind == "imported" else _enqueue_refine(db, event)
+    if event.event_kind == "imported":
+        # Nothing left in MediaMop acts on an import. Reported the same way as an
+        # event we do not recognise, so the manager's delivery log stays clean.
+        return {"status": "ignored", "source": dialect.key, "event": event.event_kind}
+
+    enqueued = _enqueue_refine(db, event)
     db.commit()
     return {
         "status": "ok",

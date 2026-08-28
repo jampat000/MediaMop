@@ -12,17 +12,14 @@ const {
   navigateMock,
   suiteMutateAsyncMock,
   refinerMutateAsyncMock,
-  subberMutateAsyncMock,
   patchPrunerInstanceMock,
   postPrunerInstanceMock,
   refinerQueryData,
-  subberQueryData,
   prunerQueryData,
 } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
   suiteMutateAsyncMock: vi.fn(),
   refinerMutateAsyncMock: vi.fn(),
-  subberMutateAsyncMock: vi.fn(),
   patchPrunerInstanceMock: vi.fn(),
   postPrunerInstanceMock: vi.fn(),
   refinerQueryData: {
@@ -34,11 +31,6 @@ const {
     refiner_tv_output_folder: "",
     movie_watched_folder_check_interval_seconds: 300,
     tv_watched_folder_check_interval_seconds: 300,
-  },
-  subberQueryData: {
-    sonarr_base_url: "",
-    radarr_base_url: "",
-    language_preferences: ["en"],
   },
   prunerQueryData: [],
 }));
@@ -71,17 +63,6 @@ vi.mock("../../lib/refiner/queries", () => ({
   useRefinerPathSettingsSaveMutation: () => ({
     isPending: false,
     mutateAsync: refinerMutateAsyncMock,
-  }),
-}));
-
-vi.mock("../../lib/subber/subber-queries", () => ({
-  useSubberSettingsQuery: () => ({
-    isPending: false,
-    data: subberQueryData,
-  }),
-  usePutSubberSettingsMutation: () => ({
-    isPending: false,
-    mutateAsync: subberMutateAsyncMock,
   }),
 }));
 
@@ -139,12 +120,10 @@ describe("SetupWizardPage", () => {
     navigateMock.mockReset();
     suiteMutateAsyncMock.mockReset();
     refinerMutateAsyncMock.mockReset();
-    subberMutateAsyncMock.mockReset();
     postPrunerInstanceMock.mockReset();
     patchPrunerInstanceMock.mockReset();
     suiteMutateAsyncMock.mockResolvedValue({});
     refinerMutateAsyncMock.mockResolvedValue({});
-    subberMutateAsyncMock.mockResolvedValue({});
     postPrunerInstanceMock.mockResolvedValue({});
     patchPrunerInstanceMock.mockResolvedValue({});
   });
@@ -177,12 +156,6 @@ describe("SetupWizardPage", () => {
     fireEvent.change(screen.getByPlaceholderText("Movies output folder"), {
       target: { value: "E:\\MoviesOut" },
     });
-    fireEvent.change(screen.getByPlaceholderText("http://127.0.0.1:8989"), {
-      target: { value: "http://sonarr:8989" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("Sonarr API key"), {
-      target: { value: "sonarr-key" },
-    });
     fireEvent.change(screen.getByPlaceholderText("http://127.0.0.1:8096"), {
       target: { value: "http://jf:8096" },
     });
@@ -204,13 +177,6 @@ describe("SetupWizardPage", () => {
       expect.objectContaining({
         refiner_watched_folder: "D:\\Movies",
         refiner_output_folder: "E:\\MoviesOut",
-      }),
-    );
-    expect(subberMutateAsyncMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        sonarr_base_url: "http://sonarr:8989",
-        sonarr_api_key: "sonarr-key",
-        language_preferences: ["en"],
       }),
     );
     expect(postPrunerInstanceMock).toHaveBeenCalledWith(

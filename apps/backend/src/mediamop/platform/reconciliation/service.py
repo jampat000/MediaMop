@@ -10,7 +10,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
-from mediamop.modules.subber.subber_subtitle_state_model import SubberSubtitleState
 from mediamop.platform.file_lifecycle.mutations import safe_unlink_under_roots
 
 TEMP_ARTIFACT_SUFFIXES = (".partial", ".part", ".tmp", ".link")
@@ -73,44 +72,6 @@ def _is_temp_artifact(path: Path) -> bool:
     return name.startswith(".") or name.endswith(TEMP_ARTIFACT_SUFFIXES)
 
 
-def _scan_subber_state(session: Session) -> list[ReconciliationIssue]:
-    issues: list[ReconciliationIssue] = []
-    rows = list(session.scalars(select(SubberSubtitleState).order_by(SubberSubtitleState.id.asc())))
-    for row in rows:
-        if len(issues) >= MAX_ISSUES_PER_CATEGORY:
-            break
-        if not _path_exists(row.file_path):
-            issues.append(
-                ReconciliationIssue(
-                    kind="db_media_file_missing",
-                    module="subber",
-                    severity="warning",
-                    message="Subber has a media row for a file that is no longer on disk.",
-                    path=row.file_path,
-                    db_table="subber_subtitle_state",
-                    db_id=int(row.id),
-                    repair_action="remove_subber_state_row",
-                    requires_confirmation=True,
-                )
-            )
-            continue
-        if row.subtitle_path and not _path_exists(row.subtitle_path):
-            issues.append(
-                ReconciliationIssue(
-                    kind="db_subtitle_file_missing",
-                    module="subber",
-                    severity="warning",
-                    message="Subber points at a subtitle file that is no longer on disk.",
-                    path=row.subtitle_path,
-                    db_table="subber_subtitle_state",
-                    db_id=int(row.id),
-                    repair_action="clear_missing_subtitle_reference",
-                    requires_confirmation=False,
-                )
-            )
-    return issues
-
-
 def _scan_refiner_paths(session: Session) -> list[ReconciliationIssue]:
     row = session.get(RefinerPathSettingsRow, 1)
     if row is None:
@@ -159,7 +120,7 @@ def _scan_refiner_paths(session: Session) -> list[ReconciliationIssue]:
 
 
 def build_reconciliation_report(session: Session) -> dict[str, Any]:
-    issues = [*_scan_subber_state(session), *_scan_refiner_paths(session)]
+    issues = _scan_refiner_paths(session)
     return {
         "ok": len(issues) == 0,
         "issue_count": len(issues),
@@ -176,33 +137,6 @@ def repair_reconciliation_issue(
     path: str | None = None,
     confirm: bool = False,
 ) -> dict[str, Any]:
-    if action == "clear_missing_subtitle_reference":
-        if db_id is None:
-            raise ValueError("db_id is required for this repair action.")
-        row = session.get(SubberSubtitleState, int(db_id))
-        if row is None:
-            return {"applied": False, "message": "Subtitle tracking row is already gone."}
-        if row.subtitle_path and _path_exists(row.subtitle_path):
-            return {"applied": False, "message": "Subtitle file exists now; no repair was applied."}
-        row.subtitle_path = None
-        row.status = "missing"
-        session.flush()
-        return {"applied": True, "message": "Cleared the missing subtitle reference and marked it missing again."}
-
-    if action == "remove_subber_state_row":
-        if not confirm:
-            raise ValueError("confirm=true is required before removing a Subber tracking row.")
-        if db_id is None:
-            raise ValueError("db_id is required for this repair action.")
-        row = session.get(SubberSubtitleState, int(db_id))
-        if row is None:
-            return {"applied": False, "message": "Subber tracking row is already gone."}
-        if _path_exists(row.file_path):
-            return {"applied": False, "message": "Media file exists now; no repair was applied."}
-        session.delete(row)
-        session.flush()
-        return {"applied": True, "message": "Removed the stale Subber tracking row."}
-
     if action == "remove_refiner_temp_artifact":
         if not confirm:
             raise ValueError("confirm=true is required before removing a Refiner temp artifact.")

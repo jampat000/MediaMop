@@ -239,7 +239,6 @@ class SuiteOperationalHistoryResetOut(BaseModel):
     activity_events_deleted: int = Field(ge=0)
     refiner_jobs_deleted: int = Field(ge=0)
     pruner_jobs_deleted: int = Field(ge=0)
-    subber_jobs_deleted: int = Field(ge=0)
     total_deleted: int = Field(ge=0)
 
 

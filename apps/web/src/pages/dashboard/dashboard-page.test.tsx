@@ -11,10 +11,6 @@ const useRefinerJobsInspectionQuery = vi.fn();
 const usePrunerOverviewStatsQuery = vi.fn();
 const usePrunerInstancesQuery = vi.fn();
 const usePrunerJobsInspectionQuery = vi.fn();
-const useSubberOverviewQuery = vi.fn();
-const useSubberSettingsQuery = vi.fn();
-const useSubberProvidersQuery = vi.fn();
-const useSubberJobsQuery = vi.fn();
 
 vi.mock("../../lib/activity/queries", () => ({
   activityRecentKey: ["activity", "recent"],
@@ -52,16 +48,6 @@ vi.mock("../../lib/pruner/queries", () => ({
     usePrunerInstancesQuery(...args),
   usePrunerJobsInspectionQuery: (...args: unknown[]) =>
     usePrunerJobsInspectionQuery(...args),
-}));
-
-vi.mock("../../lib/subber/subber-queries", () => ({
-  useSubberOverviewQuery: (...args: unknown[]) =>
-    useSubberOverviewQuery(...args),
-  useSubberSettingsQuery: (...args: unknown[]) =>
-    useSubberSettingsQuery(...args),
-  useSubberProvidersQuery: (...args: unknown[]) =>
-    useSubberProvidersQuery(...args),
-  useSubberJobsQuery: (...args: unknown[]) => useSubberJobsQuery(...args),
 }));
 
 vi.mock("../../lib/ui/mm-format-date", () => ({
@@ -126,29 +112,6 @@ describe("DashboardPage", () => {
     });
     usePrunerInstancesQuery.mockReturnValue({ data: [] });
     usePrunerJobsInspectionQuery.mockReturnValue({ data: { jobs: [] } });
-    useSubberOverviewQuery.mockReturnValue({
-      data: {
-        subtitles_downloaded: 0,
-        still_missing: 0,
-        tv_tracked: 0,
-        movies_tracked: 0,
-        tv_missing: 0,
-        movies_missing: 0,
-        found_last_30_days: 0,
-        not_found_last_30_days: 0,
-        upgrades_last_30_days: 0,
-      },
-    });
-    useSubberSettingsQuery.mockReturnValue({
-      data: {
-        sonarr_base_url: "",
-        sonarr_api_key_set: false,
-        radarr_base_url: "",
-        radarr_api_key_set: false,
-      },
-    });
-    useSubberProvidersQuery.mockReturnValue({ data: [] });
-    useSubberJobsQuery.mockReturnValue({ data: { jobs: [] } });
   });
 
   it("renders restored dashboard sections", () => {
@@ -167,13 +130,11 @@ describe("DashboardPage", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByText("Refiner")).toBeInTheDocument();
     expect(screen.getByText("Pruner")).toBeInTheDocument();
-    expect(screen.getByText("Subber")).toBeInTheDocument();
     expect(
-      screen.getByText("Needs setup: Refiner, Pruner, Subber."),
+      screen.getByText("Needs setup: Refiner, Pruner."),
     ).toBeInTheDocument();
     expect(screen.getByText("Net space saved")).toBeInTheDocument();
     expect(screen.getByText("Removal rate")).toBeInTheDocument();
-    expect(screen.getByText("Coverage")).toBeInTheDocument();
   });
 
   it("keeps Refiner scan maintenance noise out of the dashboard", () => {

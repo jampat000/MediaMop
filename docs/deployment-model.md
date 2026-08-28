@@ -11,7 +11,7 @@ Horizontal scaling, multiple app processes, and multiple uvicorn workers are not
 
 ## Workers
 
-Module worker settings such as Refiner, Pruner, and Subber worker counts control in-process job slots inside the single application process. They do not make MediaMop multi-node safe.
+Module worker settings such as Refiner and Pruner worker counts control in-process job slots inside the single application process. They do not make MediaMop multi-node safe.
 
 Docker and Windows packaged runtimes start one uvicorn process. Do not add `--workers` to the Docker command or run multiple MediaMop containers against the same SQLite database.
 

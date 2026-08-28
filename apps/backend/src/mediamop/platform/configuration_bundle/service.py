@@ -13,13 +13,11 @@ from mediamop.modules.pruner.pruner_server_instance_model import PrunerServerIns
 from mediamop.modules.refiner.refiner_operator_settings_model import RefinerOperatorSettingsRow
 from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
 from mediamop.modules.refiner.refiner_remux_rules_settings_model import RefinerRemuxRulesSettingsRow
-from mediamop.modules.subber.subber_providers_model import SubberProviderRow
-from mediamop.modules.subber.subber_settings_model import SubberSettingsRow
 from mediamop.platform.arr_library.arr_operator_settings_model import ArrLibraryOperatorSettingsRow
 from mediamop.platform.suite_settings.model import SuiteSettingsRow
 from mediamop.platform.suite_settings.service import apply_suite_settings_put, ensure_suite_settings_row
 
-BUNDLE_FORMAT_VERSION = 2
+BUNDLE_FORMAT_VERSION = 3
 
 T = TypeVar("T")
 
@@ -86,8 +84,6 @@ def build_configuration_bundle(session: Session) -> dict[str, Any]:
     ref_op = session.get(RefinerOperatorSettingsRow, 1)
     ref_path = session.get(RefinerPathSettingsRow, 1)
     ref_remux = session.get(RefinerRemuxRulesSettingsRow, 1)
-    sub_settings = session.get(SubberSettingsRow, 1)
-    sub_providers = list(session.scalars(select(SubberProviderRow).order_by(SubberProviderRow.id)).all())
     pruner_instances = list(session.scalars(select(PrunerServerInstance).order_by(PrunerServerInstance.id)).all())
     pruner_scopes = list(session.scalars(select(PrunerScopeSettings).order_by(PrunerScopeSettings.id)).all())
 
@@ -104,8 +100,6 @@ def build_configuration_bundle(session: Session) -> dict[str, Any]:
         "refiner_operator_settings": orm_row_to_dict(_req(ref_op, "refiner_operator_settings")),
         "refiner_path_settings": orm_row_to_dict(_req(ref_path, "refiner_path_settings")),
         "refiner_remux_rules_settings": orm_row_to_dict(_req(ref_remux, "refiner_remux_rules_settings")),
-        "subber_settings": orm_row_to_dict(_req(sub_settings, "subber_settings")),
-        "subber_providers": [orm_row_to_dict(r) for r in sub_providers],
         "pruner_server_instances": [orm_row_to_dict(r) for r in pruner_instances],
         "pruner_scope_settings": [_sanitize_pruner_scope_export(orm_row_to_dict(r)) for r in pruner_scopes],
     }
@@ -135,8 +129,6 @@ def apply_configuration_bundle(session: Session, bundle: dict[str, Any]) -> None
         "refiner_operator_settings",
         "refiner_path_settings",
         "refiner_remux_rules_settings",
-        "subber_settings",
-        "subber_providers",
         "pruner_server_instances",
         "pruner_scope_settings",
     )
@@ -160,11 +152,6 @@ def apply_configuration_bundle(session: Session, bundle: dict[str, Any]) -> None
     _apply_singleton(session, RefinerOperatorSettingsRow, bundle["refiner_operator_settings"])
     _apply_singleton(session, RefinerPathSettingsRow, bundle["refiner_path_settings"])
     _apply_singleton(session, RefinerRemuxRulesSettingsRow, bundle["refiner_remux_rules_settings"])
-    _apply_singleton(session, SubberSettingsRow, bundle["subber_settings"])
-
-    session.execute(delete(SubberProviderRow))
-    for row in bundle["subber_providers"]:
-        session.add(SubberProviderRow(**dict_to_model_kwargs(SubberProviderRow, row)))
 
     session.execute(delete(PrunerScopeSettings))
     session.execute(delete(PrunerServerInstance))

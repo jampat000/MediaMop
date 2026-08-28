@@ -19,7 +19,7 @@ import {
 import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 
-type ActivityModuleFilter = "all" | "refiner" | "pruner" | "subber" | "system";
+type ActivityModuleFilter = "all" | "refiner" | "pruner" | "system";
 type ActivityTone = "info" | "success" | "warning" | "error";
 
 type ActivityDisplay = {
@@ -50,7 +50,6 @@ const MODULE_OPTIONS: Array<{ value: ActivityModuleFilter; label: string }> = [
   { value: "all", label: "All modules" },
   { value: "refiner", label: "Refiner" },
   { value: "pruner", label: "Pruner" },
-  { value: "subber", label: "Subber" },
   { value: "system", label: "System" },
 ];
 
@@ -73,11 +72,6 @@ const EVENT_LABELS: Record<string, string> = {
   "refiner.file_remux_pass_completed": "File processing finished",
   "refiner.work_temp_stale_sweep_completed": "Temporary files cleanup finished",
   "refiner.failure_cleanup_sweep_completed": "Failed-remux cleanup finished",
-  "subber.library_scan_enqueued": "Library scan checked",
-  "subber.library_sync_completed": "Library sync finished",
-  "subber.subtitle_search_completed": "Subtitle search finished",
-  "subber.subtitle_upgrade_completed": "Subtitle upgrade finished",
-  "subber.webhook_import_enqueued": "Webhook import started",
   "pruner.connection_test_succeeded": "Connection check finished",
   "pruner.connection_test_failed": "Connection check failed",
   "pruner.preview_succeeded": "Preview finished",
@@ -186,133 +180,6 @@ function chipToneClasses(tone: ActivityTone): string {
     default:
       return "border-[var(--mm-border)] bg-black/10 text-[var(--mm-text2)]";
   }
-}
-
-function normalizeSubberSummary(ev: ActivityEventItem): ActivityDisplay | null {
-  const parsed = parseDetail(ev.detail);
-  const mediaScope =
-    asString(parsed?.media_scope) ??
-    (/movie/i.test(ev.title) ? "movies" : "tv");
-  const prettyScope = scopeLabel(mediaScope);
-  const enqueued = asNumber(parsed?.enqueued);
-  const reason = asString(parsed?.reason);
-  const error = asString(parsed?.error);
-  const ok = asBoolean(parsed?.ok);
-
-  if (ev.event_type === "subber.library_scan_enqueued") {
-    if (enqueued === 0) {
-      return {
-        title: `${prettyScope} library scan checked`,
-        summary: "Library scan result",
-        detail: `No new ${mediaScope === "movies" ? "movies" : "TV items"} needed a subtitle scan.`,
-        chip: "Nothing new found",
-        tone: "success",
-        compact: false,
-      };
-    }
-    return {
-      title: `${prettyScope} library scan started`,
-      summary: "Library scan result",
-      detail:
-        enqueued == null
-          ? `${prettyScope} items were added to the subtitle scan queue.`
-          : `${enqueued} ${mediaScope === "movies" ? "movie" : "TV"} ${enqueued === 1 ? "item was" : "items were"} added to the subtitle scan queue.`,
-      chip: "Library scan queued",
-      tone: "info",
-      compact: false,
-    };
-  }
-
-  if (ev.event_type === "subber.library_sync_completed") {
-    if (reason === "not_configured") {
-      return {
-        title: `${prettyScope} library sync skipped`,
-        summary: "Library sync result",
-        detail: `${mediaScope === "movies" ? "Radarr" : "Sonarr"} is not configured yet.`,
-        chip: "Library sync skipped",
-        tone: "warning",
-        compact: false,
-      };
-    }
-    if (error) {
-      return {
-        title: `${prettyScope} library sync failed`,
-        summary: "Library sync result",
-        detail: error,
-        chip: "Library sync failed",
-        tone: "error",
-        compact: false,
-      };
-    }
-    return {
-      title: `${prettyScope} library sync finished`,
-      summary: "Library sync result",
-      detail: ev.detail ?? null,
-      chip: "Library sync completed",
-      tone: "success",
-      compact: true,
-    };
-  }
-
-  if (ev.event_type === "subber.subtitle_search_completed") {
-    return {
-      title: "Subtitle search finished",
-      summary: "Subtitle search result",
-      detail:
-        reason === "search_count"
-          ? "This item was skipped because it already reached the search-attempt limit."
-          : ok === true
-            ? "A subtitle was downloaded for this item."
-            : ok === false
-              ? "No better subtitle was found for this item."
-              : (ev.detail ?? null),
-      chip: ok === true ? "Subtitle downloaded" : "Search complete",
-      tone: ok === true ? "success" : reason ? "warning" : "info",
-      compact: true,
-    };
-  }
-
-  if (ev.event_type === "subber.subtitle_upgrade_completed") {
-    const result = asString(parsed?.result);
-    const userMessage = asString(parsed?.user_message);
-    const nextAction = asString(parsed?.next_action);
-    return {
-      title:
-        result === "skipped"
-          ? "Subtitle upgrade skipped"
-          : result === "failed"
-            ? "Subtitle upgrade failed"
-            : "Subtitle upgrade finished",
-      summary: "Subtitle upgrade result",
-      detail: userMessage ?? nextAction ?? ev.detail ?? null,
-      chip:
-        result === "skipped"
-          ? "Upgrade skipped"
-          : result === "failed"
-            ? "Upgrade failed"
-            : "Upgrade complete",
-      tone:
-        result === "skipped"
-          ? "warning"
-          : result === "failed"
-            ? "error"
-            : "success",
-      compact: true,
-    };
-  }
-
-  if (ev.event_type === "subber.webhook_import_enqueued") {
-    return {
-      title: `${prettyScope} webhook import started`,
-      summary: "Webhook import result",
-      detail: ev.detail ?? null,
-      chip: "Webhook import queued",
-      tone: "info",
-      compact: true,
-    };
-  }
-
-  return null;
 }
 
 function normalizePrunerSummary(ev: ActivityEventItem): ActivityDisplay | null {
@@ -566,8 +433,6 @@ function normalizeAuthSummary(ev: ActivityEventItem): ActivityDisplay | null {
 function eventDisplay(ev: ActivityEventItem): ActivityDisplay {
   const refiner = normalizeRefinerSummary(ev);
   if (refiner) return refiner;
-  const subber = normalizeSubberSummary(ev);
-  if (subber) return subber;
   const pruner = normalizePrunerSummary(ev);
   if (pruner) return pruner;
   const auth = normalizeAuthSummary(ev);
@@ -588,9 +453,7 @@ function eventDisplay(ev: ActivityEventItem): ActivityDisplay {
         ? "Refiner activity"
         : ev.module === "pruner"
           ? "Pruner activity"
-          : ev.module === "subber"
-            ? "Subber activity"
-            : "System event",
+          : "System event",
     detail: ev.detail ?? null,
     chip: eventOptionLabel(ev.event_type),
     tone,
@@ -747,148 +610,10 @@ function StructuredActivityDetails({ ev }: { ev: ActivityEventItem }) {
     );
   }
 
-  if (ev.event_type === "subber.library_sync_completed") {
-    const metrics: Array<{ label: string; value: string | number }> = [];
-    const movies = asNumber(parsed.movies);
-    const series = asNumber(parsed.series);
-    const episodes = asNumber(parsed.episodes);
-    const found = asNumber(parsed.subtitles_found);
-    if (movies != null)
-      metrics.push({ label: "Movies processed", value: movies });
-    if (series != null)
-      metrics.push({ label: "Series processed", value: series });
-    if (episodes != null)
-      metrics.push({ label: "Episodes with files", value: episodes });
-    if (found != null) metrics.push({ label: "Subtitles found", value: found });
-    if (
-      metrics.length === 0 &&
-      !asString(parsed.error) &&
-      !asString(parsed.reason)
-    )
-      return null;
-    return (
-      <div className="space-y-3 rounded-md border border-[var(--mm-border)] bg-black/10 p-3">
-        {metrics.length > 0 ? (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {metrics.map((row) => (
-              <StructuredMetric
-                key={row.label}
-                label={row.label}
-                value={row.value}
-              />
-            ))}
-          </div>
-        ) : null}
-        {asString(parsed.reason) ? (
-          <p className="text-sm text-amber-100">{asString(parsed.reason)}</p>
-        ) : null}
-        {asString(parsed.error) ? (
-          <p className="text-sm text-red-200">{asString(parsed.error)}</p>
-        ) : null}
-      </div>
-    );
-  }
-
-  if (ev.event_type === "subber.subtitle_search_completed") {
-    return (
-      <div className="grid gap-3 rounded-md border border-[var(--mm-border)] bg-black/10 p-3 sm:grid-cols-2 xl:grid-cols-3">
-        <StructuredMetric
-          label="Scope"
-          value={scopeLabel(asString(parsed.media_scope))}
-        />
-        <StructuredMetric
-          label="State ID"
-          value={asNumber(parsed.state_id) ?? "-"}
-        />
-        <StructuredMetric
-          label="Outcome"
-          value={
-            asString(parsed.reason) === "search_count"
-              ? "Skipped"
-              : asBoolean(parsed.ok) === true
-                ? "Subtitle downloaded"
-                : "No change"
-          }
-        />
-      </div>
-    );
-  }
-
-  if (ev.event_type === "subber.subtitle_upgrade_completed") {
-    const result = asString(parsed.result);
-    const counts =
-      parsed.counts && typeof parsed.counts === "object"
-        ? (parsed.counts as ParsedDetail)
-        : null;
-    const skipped = asNumber(counts?.skipped);
-    return (
-      <div className="space-y-3 rounded-md border border-[var(--mm-border)] bg-black/10 p-3">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <StructuredMetric
-            label="Result"
-            value={
-              result === "skipped"
-                ? "Skipped"
-                : result === "failed"
-                  ? "Failed"
-                  : "Completed"
-            }
-          />
-          <StructuredMetric
-            label="Checked"
-            value={asNumber(parsed.attempted) ?? 0}
-          />
-          <StructuredMetric
-            label="Upgraded"
-            value={asNumber(parsed.upgraded) ?? 0}
-          />
-          {skipped != null ? (
-            <StructuredMetric label="Skipped" value={skipped} />
-          ) : null}
-        </div>
-        {asString(parsed.user_message) ? (
-          <p className="text-sm text-[var(--mm-text2)]">
-            {asString(parsed.user_message)}
-          </p>
-        ) : null}
-        {asString(parsed.next_action) ? (
-          <p className="text-sm text-amber-100">
-            {asString(parsed.next_action)}
-          </p>
-        ) : null}
-        {asString(parsed.error) ? (
-          <p className="text-sm text-red-200">{asString(parsed.error)}</p>
-        ) : null}
-      </div>
-    );
-  }
-
   if (ev.event_type === "system.reconciliation.repair") {
     return (
       <div className="rounded-md border border-[var(--mm-border)] bg-black/10 p-3">
         <p className="text-sm leading-6 text-[var(--mm-text2)]">{ev.detail}</p>
-      </div>
-    );
-  }
-
-  if (ev.event_type === "subber.webhook_import_enqueued") {
-    return (
-      <div className="space-y-3 rounded-md border border-[var(--mm-border)] bg-black/10 p-3">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <StructuredMetric
-            label="Queued"
-            value={asNumber(parsed.enqueued) ?? 0}
-          />
-          <StructuredMetric
-            label="Scope"
-            value={scopeLabel(asString(parsed.media_scope))}
-          />
-        </div>
-        {asString(parsed.file_path) ? (
-          <p className="text-sm text-[var(--mm-text2)] break-all">
-            {asString(parsed.file_path)}
-          </p>
-        ) : null}
       </div>
     );
   }
@@ -1027,8 +752,8 @@ export function ActivityPage() {
         </p>
         <p className="mm-page__lead">
           Use this page to understand what just happened across Refiner, Pruner,
-          Subber, and the platform. It updates live and keeps the language
-          focused on what the action means.
+          and the platform. It updates live and keeps the language focused on
+          what the action means.
         </p>
       </header>
 

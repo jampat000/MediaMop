@@ -39,7 +39,6 @@ MediaMop uses cookie-based sessions with CSRF protection:
 |--------|--------|-------------|
 | `/api/v1/refiner/` | Refiner | Media remuxing configuration and jobs |
 | `/api/v1/pruner/` | Pruner | Media cleanup rules and previews |
-| `/api/v1/subber/` | Subber | Subtitle sync and provider management |
 | `/api/v1/dashboard/` | Dashboard | System health and activity |
 
 ### Platform

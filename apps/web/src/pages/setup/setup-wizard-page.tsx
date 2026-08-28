@@ -5,7 +5,6 @@ import { AuthBrandStack } from "../../components/brand/auth-brand-stack";
 import { PageLoading } from "../../components/shared/page-loading";
 import { MmListboxPicker } from "../../components/ui/mm-listbox-picker";
 import { ServerFolderPickerButton } from "../../components/ui/server-folder-picker-button";
-import { fetchCsrfToken } from "../../lib/api/auth-api";
 import { useMeQuery } from "../../lib/auth/queries";
 import {
   patchPrunerInstance,
@@ -26,10 +25,6 @@ import {
   useSuiteSettingsSaveMutation,
 } from "../../lib/suite/queries";
 import {
-  usePutSubberSettingsMutation,
-  useSubberSettingsQuery,
-} from "../../lib/subber/subber-queries";
-import {
   persistDisplayDensity,
   readStoredDisplayDensity,
   type DisplayDensity,
@@ -40,7 +35,6 @@ const LANDING_OPTIONS = [
   { value: "/", label: "Dashboard" },
   { value: "/refiner", label: "Refiner" },
   { value: "/pruner", label: "Pruner" },
-  { value: "/subber", label: "Subber" },
 ] as const;
 
 const BACKUP_INTERVAL_OPTIONS = [
@@ -75,20 +69,6 @@ function WizardSection({
   );
 }
 
-function normalizeCsvLanguages(raw: string): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const part of raw.split(",")) {
-    const value = part.trim().toLowerCase();
-    if (!value || seen.has(value)) {
-      continue;
-    }
-    seen.add(value);
-    out.push(value);
-  }
-  return out;
-}
-
 function labelForPrunerSecret(provider: string): string {
   return provider === "plex" ? "Plex token" : "API key";
 }
@@ -107,11 +87,9 @@ export function SetupWizardPage() {
   const me = useMeQuery();
   const settingsQ = useSuiteSettingsQuery();
   const refinerQ = useRefinerPathSettingsQuery();
-  const subberQ = useSubberSettingsQuery();
   const prunerInstancesQ = usePrunerInstancesQuery();
   const saveSuite = useSuiteSettingsSaveMutation();
   const saveRefiner = useRefinerPathSettingsSaveMutation();
-  const saveSubber = usePutSubberSettingsMutation();
 
   const [appTimezone, setAppTimezone] = useState<string>("UTC");
   const [displayDensity, setDisplayDensity] = useState<DisplayDensity>(() =>
@@ -130,17 +108,10 @@ export function SetupWizardPage() {
   >("jellyfin");
   const [prunerBaseUrl, setPrunerBaseUrl] = useState("");
   const [prunerSecret, setPrunerSecret] = useState("");
-  const [sonarrBaseUrl, setSonarrBaseUrl] = useState("");
-  const [sonarrApiKey, setSonarrApiKey] = useState("");
-  const [radarrBaseUrl, setRadarrBaseUrl] = useState("");
-  const [radarrApiKey, setRadarrApiKey] = useState("");
-  const [openSubtitlesApiKey, setOpenSubtitlesApiKey] = useState("");
-  const [languagePreferencesCsv, setLanguagePreferencesCsv] = useState("en");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const seededSettings = useRef(false);
   const seededRefiner = useRef(false);
-  const seededSubber = useRef(false);
   const seededPruner = useRef(false);
 
   useEffect(() => {
@@ -172,20 +143,6 @@ export function SetupWizardPage() {
   }, [refinerQ.data]);
 
   useEffect(() => {
-    if (!subberQ.data || seededSubber.current) {
-      return;
-    }
-    seededSubber.current = true;
-    setSonarrBaseUrl(subberQ.data.sonarr_base_url ?? "");
-    setRadarrBaseUrl(subberQ.data.radarr_base_url ?? "");
-    setLanguagePreferencesCsv(
-      subberQ.data.language_preferences.length > 0
-        ? subberQ.data.language_preferences.join(", ")
-        : "en",
-    );
-  }, [subberQ.data]);
-
-  useEffect(() => {
     const first = prunerInstancesQ.data?.[0];
     if (!first || seededPruner.current) {
       return;
@@ -201,7 +158,6 @@ export function SetupWizardPage() {
       me.isPending ||
       settingsQ.isPending ||
       refinerQ.isPending ||
-      subberQ.isPending ||
       prunerInstancesQ.isPending;
     const wState = (settingsQ.data?.setup_wizard_state || "pending")
       .trim()
@@ -217,7 +173,6 @@ export function SetupWizardPage() {
     settingsQ.isPending,
     settingsQ.data,
     refinerQ.isPending,
-    subberQ.isPending,
     prunerInstancesQ.isPending,
   ]);
 
@@ -237,7 +192,6 @@ export function SetupWizardPage() {
     me.isPending ||
     settingsQ.isPending ||
     refinerQ.isPending ||
-    subberQ.isPending ||
     prunerInstancesQ.isPending;
 
   if (loading) {
@@ -267,8 +221,7 @@ export function SetupWizardPage() {
     );
   }
 
-  const savePending =
-    saveSuite.isPending || saveRefiner.isPending || saveSubber.isPending;
+  const savePending = saveSuite.isPending || saveRefiner.isPending;
 
   function renderFolderInput({
     value,
@@ -304,7 +257,6 @@ export function SetupWizardPage() {
     setStatusMessage(null);
     const current = settingsQ.data!;
     const refinerCurrent = refinerQ.data;
-    const subberCurrent = subberQ.data;
 
     if (tvWatchedFolder.trim() && !tvOutputFolder.trim()) {
       setStatusMessage(
@@ -369,18 +321,6 @@ export function SetupWizardPage() {
             refinerCurrent.movie_watched_folder_check_interval_seconds,
           tv_watched_folder_check_interval_seconds:
             refinerCurrent.tv_watched_folder_check_interval_seconds,
-        });
-      }
-
-      if (subberCurrent) {
-        await saveSubber.mutateAsync({
-          csrf_token: await fetchCsrfToken(),
-          sonarr_base_url: sonarrBaseUrl.trim(),
-          sonarr_api_key: sonarrApiKey.trim() || undefined,
-          radarr_base_url: radarrBaseUrl.trim(),
-          radarr_api_key: radarrApiKey.trim() || undefined,
-          opensubtitles_api_key: openSubtitlesApiKey.trim() || undefined,
-          language_preferences: normalizeCsvLanguages(languagePreferencesCsv),
         });
       }
 
@@ -691,72 +631,6 @@ export function SetupWizardPage() {
                     value={prunerSecret}
                     onChange={(e) => setPrunerSecret(e.target.value)}
                     placeholder={labelForPrunerSecret(prunerProvider)}
-                  />
-                </label>
-              </div>
-            </WizardSection>
-
-            <WizardSection
-              title="Subber basics"
-              description="Optionally save Sonarr, Radarr, and default subtitle language preferences."
-            >
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-[var(--mm-text1)]">
-                    Sonarr
-                  </h3>
-                  <input
-                    className="mm-input w-full"
-                    value={sonarrBaseUrl}
-                    onChange={(e) => setSonarrBaseUrl(e.target.value)}
-                    placeholder="http://127.0.0.1:8989"
-                  />
-                  <input
-                    className="mm-input w-full"
-                    value={sonarrApiKey}
-                    onChange={(e) => setSonarrApiKey(e.target.value)}
-                    placeholder="Sonarr API key"
-                  />
-                </div>
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-[var(--mm-text1)]">
-                    Radarr
-                  </h3>
-                  <input
-                    className="mm-input w-full"
-                    value={radarrBaseUrl}
-                    onChange={(e) => setRadarrBaseUrl(e.target.value)}
-                    placeholder="http://127.0.0.1:7878"
-                  />
-                  <input
-                    className="mm-input w-full"
-                    value={radarrApiKey}
-                    onChange={(e) => setRadarrApiKey(e.target.value)}
-                    placeholder="Radarr API key"
-                  />
-                </div>
-              </div>
-              <div className="grid gap-4 lg:grid-cols-2">
-                <label className="block text-sm text-[var(--mm-text2)]">
-                  <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
-                    Preferred subtitle languages
-                  </span>
-                  <input
-                    className="mm-input w-full"
-                    value={languagePreferencesCsv}
-                    onChange={(e) => setLanguagePreferencesCsv(e.target.value)}
-                    placeholder="en, es"
-                  />
-                </label>
-                <label className="block text-sm text-[var(--mm-text2)]">
-                  <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
-                    OpenSubtitles API key
-                  </span>
-                  <input
-                    className="mm-input w-full"
-                    value={openSubtitlesApiKey}
-                    onChange={(e) => setOpenSubtitlesApiKey(e.target.value)}
-                    placeholder="Optional provider key"
                   />
                 </label>
               </div>

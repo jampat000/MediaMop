@@ -267,7 +267,6 @@ def test_activity_stream_does_not_depend_on_request_db_dependency(client_with_ad
     signature = inspect.signature(get_activity_stream)
     assert "db" not in signature.parameters
     assert all(
-        parameter.default is not get_db_session
-        and parameter.annotation is not get_db_session
+        parameter.default is not get_db_session and parameter.annotation is not get_db_session
         for parameter in signature.parameters.values()
     )

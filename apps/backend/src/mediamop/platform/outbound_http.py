@@ -1,4 +1,4 @@
-"""Shared outbound HTTP URL policy helpers used by Pruner/Refiner/Subber and ARR clients."""
+"""Shared outbound HTTP URL policy helpers used by Pruner/Refiner and ARR clients."""
 
 from __future__ import annotations
 

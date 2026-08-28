@@ -33,7 +33,7 @@ services:
       # Optional. If omitted, the container generates and persists /data/mediamop/session.secret.
       # To provide your own value, generate one with: openssl rand -hex 32
       # MEDIAMOP_SESSION_SECRET: ${MEDIAMOP_SESSION_SECRET}
-      # Recommended before saving Pruner/Subber/Sonarr/Radarr credentials:
+      # Recommended before saving Pruner/Sonarr/Radarr credentials:
       # MEDIAMOP_CREDENTIALS_SECRET: ${MEDIAMOP_CREDENTIALS_SECRET}
       # Optional bearer token for Prometheus or other machine scrapes of /metrics:
       # MEDIAMOP_METRICS_BEARER_TOKEN: ${MEDIAMOP_METRICS_BEARER_TOKEN}

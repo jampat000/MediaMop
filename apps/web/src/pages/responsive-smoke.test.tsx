@@ -5,7 +5,6 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PrunerInstancesListPage } from "./pruner/pruner-instances-list-page";
 import { RefinerJobsInspectionSection } from "./refiner/refiner-jobs-inspection-section";
-import { SubberJobsTab } from "./subber/subber-jobs-tab";
 
 vi.mock("../lib/refiner/jobs-inspection/queries", () => ({
   useRefinerJobsInspectionQuery: vi.fn(() => ({
@@ -29,24 +28,6 @@ vi.mock("../lib/refiner/jobs-inspection/queries", () => ({
     isPending: false,
     isError: false,
     mutate: vi.fn(),
-  })),
-}));
-
-vi.mock("../lib/subber/subber-queries", () => ({
-  useSubberJobsQuery: vi.fn(() => ({
-    isLoading: false,
-    isError: false,
-    data: {
-      jobs: [
-        {
-          id: 1,
-          job_kind: "subber.library_sync.tv.v1",
-          scope: "tv",
-          status: "completed",
-          updated_at: "2026-04-20T00:00:00Z",
-        },
-      ],
-    },
   })),
 }));
 
@@ -128,13 +109,6 @@ describe("responsive smoke", () => {
     expect(
       screen.getByTestId("refiner-jobs-inspection-section"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Jobs")).toBeInTheDocument();
-  });
-
-  it.each(VIEWPORTS)("renders Subber jobs at %ipx", (width) => {
-    setViewport(width);
-    render(withProviders(<SubberJobsTab />));
-    expect(screen.getByTestId("subber-jobs-tab")).toBeInTheDocument();
     expect(screen.getByText("Jobs")).toBeInTheDocument();
   });
 

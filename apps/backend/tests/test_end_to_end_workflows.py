@@ -36,16 +36,6 @@ from mediamop.modules.refiner.refiner_operator_settings_model import RefinerOper
 from mediamop.modules.refiner.refiner_overview_stats_service import build_refiner_overview_stats
 from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
 from mediamop.modules.refiner.worker_loop import process_one_refiner_job
-from mediamop.modules.subber.subber_job_handlers import build_subber_job_handlers
-from mediamop.modules.subber.subber_job_kinds import SUBBER_JOB_KIND_SUBTITLE_SEARCH_MOVIES
-from mediamop.modules.subber.subber_jobs_model import SubberJob, SubberJobStatus
-from mediamop.modules.subber.subber_jobs_ops import subber_enqueue_or_get_job
-from mediamop.modules.subber.subber_overview_service import build_subber_overview
-from mediamop.modules.subber.subber_provider_registry import PROVIDER_PODNAPISI
-from mediamop.modules.subber.subber_providers_service import upsert_provider_settings
-from mediamop.modules.subber.subber_settings_model import SubberSettingsRow
-from mediamop.modules.subber.subber_subtitle_state_model import SubberSubtitleState
-from mediamop.modules.subber.worker_loop import process_one_subber_job
 from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_in_process_workers,
     integration_test_quiesce_periodic_enqueue,
@@ -249,79 +239,3 @@ def test_pruner_preview_apply_reaches_terminal_state_and_stats(
     assert stats.apply_runs == 1
     assert stats.items_removed == 1
     assert stats.items_skipped == 1
-
-
-def test_subber_search_downloads_subtitle_and_updates_stats(
-    isolated_session_factory: sessionmaker[Session],
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    settings = MediaMopSettings.load()
-    media = tmp_path / "Movies" / "Example Movie.mkv"
-    media.parent.mkdir(parents=True)
-    media.write_bytes(b"movie")
-
-    with isolated_session_factory() as session, session.begin():
-        session.merge(
-            RefinerOperatorSettingsRow(
-                id=1,
-                min_file_age_seconds=0,
-                refiner_min_input_file_size_mb=0,
-                minimum_free_disk_space_mb=1,
-            ),
-        )
-        session.merge(SubberSettingsRow(id=1, enabled=True, language_preferences_json='["en"]'))
-        upsert_provider_settings(session, settings, provider_key=PROVIDER_PODNAPISI, enabled=True, priority=0)
-        state = SubberSubtitleState(
-            media_scope="movies",
-            file_path=str(media),
-            movie_title="Example Movie",
-            movie_year=2026,
-            language_code="en",
-            status="missing",
-            search_count=0,
-        )
-        session.add(state)
-        session.flush()
-        state_id = int(state.id)
-        subber_enqueue_or_get_job(
-            session,
-            dedupe_key="e2e-subber-search",
-            job_kind=SUBBER_JOB_KIND_SUBTITLE_SEARCH_MOVIES,
-            payload_json=json.dumps({"state_id": state_id}, separators=(",", ":")),
-        )
-
-    monkeypatch.setattr(
-        "mediamop.modules.subber.subber_subtitle_search_service.podnapisi_client.search",
-        lambda **_kwargs: [{"id": "sub-1", "language": "en"}],
-    )
-    monkeypatch.setattr(
-        "mediamop.modules.subber.subber_subtitle_search_service.podnapisi_client.download",
-        lambda **_kwargs: b"1\n00:00:00,000 --> 00:00:01,000\nHello\n",
-    )
-
-    handlers = build_subber_job_handlers(settings, isolated_session_factory)
-    assert (
-        process_one_subber_job(
-            isolated_session_factory,
-            lease_owner="pytest-subber",
-            job_handlers=handlers,
-            now=datetime(2026, 1, 1, tzinfo=UTC),
-        )
-        == "processed"
-    )
-
-    subtitle = media.with_suffix(".en.srt")
-    assert subtitle.read_text(encoding="utf-8").startswith("1\n")
-    with isolated_session_factory() as session:
-        job = session.scalars(select(SubberJob)).one()
-        state = session.get(SubberSubtitleState, state_id)
-        stats = build_subber_overview(session)
-    assert job.status == SubberJobStatus.COMPLETED.value
-    assert state is not None
-    assert state.status == "found"
-    assert Path(str(state.subtitle_path)).resolve() == subtitle.resolve()
-    assert stats.subtitles_downloaded == 1
-    assert stats.still_missing == 0
-    assert stats.searches_last_30_days == 1
-    assert stats.found_last_30_days == 1

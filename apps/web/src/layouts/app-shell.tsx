@@ -6,7 +6,6 @@ import {
   NavIconDashboard,
   NavIconRefiner,
   NavIconSettings,
-  NavIconSubber,
   NavIconPruner,
 } from "../components/shell/nav-icons";
 import { useLogoutMutation } from "../lib/auth/queries";
@@ -72,12 +71,6 @@ export function AppShell() {
               <NavIconPruner />
             </span>
             <span className="mm-sidebar-link-label">Pruner</span>
-          </NavLink>
-          <NavLink to="/subber" className={sidebarNavClass}>
-            <span className="mm-sidebar-link-icon" aria-hidden="true">
-              <NavIconSubber />
-            </span>
-            <span className="mm-sidebar-link-label">Subber</span>
           </NavLink>
 
           <p className="mm-sidebar-section-label">System</p>

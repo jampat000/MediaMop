@@ -24,16 +24,10 @@ import {
   useRefinerOverviewStatsQuery,
   useRefinerPathSettingsQuery,
 } from "../../lib/refiner/queries";
-import {
-  useSubberJobsQuery,
-  useSubberOverviewQuery,
-  useSubberProvidersQuery,
-  useSubberSettingsQuery,
-} from "../../lib/subber/subber-queries";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
 
-type ModuleKey = "refiner" | "pruner" | "subber";
+type ModuleKey = "refiner" | "pruner";
 type ModuleStatus = "Healthy" | "Review needed" | "Active";
 
 type ModuleMetric = {
@@ -67,7 +61,6 @@ const DASHBOARD_LIVE_INVALIDATION_KEYS = [
   activityRecentKey,
   ["refiner"] as const,
   ["pruner"] as const,
-  ["subber"] as const,
   ["suite"] as const,
 ] as const;
 
@@ -291,15 +284,6 @@ function prunerJobTitle(jobKind: string): string {
   return "Pruner job";
 }
 
-function subberJobTitle(jobKind: string): string {
-  if (jobKind.includes("library_sync")) return "Sync library";
-  if (jobKind.includes("library_scan")) return "Check library";
-  if (jobKind.includes("search")) return "Search subtitles";
-  if (jobKind.includes("upgrade")) return "Upgrade subtitles";
-  if (jobKind.includes("webhook")) return "Import new file";
-  return "Subber job";
-}
-
 function buildRefinerCard(args: {
   processed: number;
   failed: number;
@@ -414,65 +398,6 @@ function buildPrunerCard(args: {
   };
 }
 
-function buildSubberCard(args: {
-  sonarrConfigured: boolean;
-  radarrConfigured: boolean;
-  enabledProviders: number;
-  providerTotal: number;
-  tvTracked: number;
-  moviesTracked: number;
-  downloaded: number;
-  stillMissing: number;
-  foundRecently: number;
-  notFoundRecently: number;
-  upgradesRecently: number;
-  tvMissing: number;
-  moviesMissing: number;
-}): ModuleCardData {
-  const attention =
-    !args.sonarrConfigured ||
-    !args.radarrConfigured ||
-    args.enabledProviders === 0;
-  const trackedTotal = args.tvTracked + args.moviesTracked;
-  const active =
-    trackedTotal > 0 || args.downloaded > 0 || args.foundRecently > 0;
-  const coveredItems = Math.max(0, trackedTotal - args.stillMissing);
-  const coveragePercent =
-    trackedTotal > 0 ? (coveredItems / trackedTotal) * 100.0 : 0;
-
-  return {
-    key: "subber",
-    name: "Subber",
-    status: statusFromSignals(attention, active),
-    summary: attention
-      ? "One or more connections or providers still need setup."
-      : trackedTotal > 0
-        ? `Tracking ${formatCount(trackedTotal)} library ${trackedTotal === 1 ? "item" : "items"} with ${formatCount(args.stillMissing)} still missing subtitles.`
-        : "Ready. No recent subtitle work recorded.",
-    metrics: [
-      { label: "Downloaded", value: formatCount(args.downloaded) },
-      { label: "Still missing", value: formatCount(args.stillMissing) },
-      {
-        label: "Coverage",
-        value: formatPercent(coveragePercent),
-        detail: `${formatCount(coveredItems)} of ${formatCount(trackedTotal)} covered`,
-      },
-      {
-        label: "Found recently",
-        value: formatCount(args.foundRecently),
-        detail: `Not found ${formatCount(args.notFoundRecently)} - Upgrades ${formatCount(args.upgradesRecently)}`,
-      },
-    ],
-    facts: [
-      `TV missing: ${formatCount(args.tvMissing)} - Movies missing: ${formatCount(args.moviesMissing)}`,
-      `Connections: Sonarr ${args.sonarrConfigured ? "ready" : "not set"} - Radarr ${args.radarrConfigured ? "ready" : "not set"}`,
-      `Providers enabled: ${formatCount(args.enabledProviders)} of ${formatCount(args.providerTotal)}`,
-    ],
-    actionLabel: "Open Subber",
-    actionTo: "/subber",
-  };
-}
-
 export function DashboardPage() {
   const fmt = useAppDateFormatter();
   useActivityStreamInvalidations(DASHBOARD_LIVE_INVALIDATION_KEYS);
@@ -485,10 +410,6 @@ export function DashboardPage() {
   const prunerStats = usePrunerOverviewStatsQuery();
   const prunerInstances = usePrunerInstancesQuery();
   const prunerJobs = usePrunerJobsInspectionQuery(12);
-  const subberOverview = useSubberOverviewQuery();
-  const subberSettings = useSubberSettingsQuery();
-  const subberProviders = useSubberProvidersQuery();
-  const subberJobs = useSubberJobsQuery(12);
 
   if (dash.isPending) {
     return <PageLoading label="Loading dashboard" />;
@@ -535,28 +456,6 @@ export function DashboardPage() {
     itemsSkipped: prunerStats.data?.items_skipped ?? 0,
     failedApplies: prunerStats.data?.failed_applies ?? 0,
   });
-  const subberCard = buildSubberCard({
-    sonarrConfigured: Boolean(
-      subberSettings.data?.sonarr_base_url?.trim() &&
-      subberSettings.data?.sonarr_api_key_set,
-    ),
-    radarrConfigured: Boolean(
-      subberSettings.data?.radarr_base_url?.trim() &&
-      subberSettings.data?.radarr_api_key_set,
-    ),
-    enabledProviders:
-      subberProviders.data?.filter((row) => row.enabled).length ?? 0,
-    providerTotal: subberProviders.data?.length ?? 0,
-    tvTracked: subberOverview.data?.tv_tracked ?? 0,
-    moviesTracked: subberOverview.data?.movies_tracked ?? 0,
-    downloaded: subberOverview.data?.subtitles_downloaded ?? 0,
-    stillMissing: subberOverview.data?.still_missing ?? 0,
-    foundRecently: subberOverview.data?.found_last_30_days ?? 0,
-    notFoundRecently: subberOverview.data?.not_found_last_30_days ?? 0,
-    upgradesRecently: subberOverview.data?.upgrades_last_30_days ?? 0,
-    tvMissing: subberOverview.data?.tv_missing ?? 0,
-    moviesMissing: subberOverview.data?.movies_missing ?? 0,
-  });
 
   const refinerFileOutcomes =
     (refinerStats.data?.output_written_count ?? 0) +
@@ -577,7 +476,7 @@ export function DashboardPage() {
     ),
   };
 
-  const moduleCards = [refinerCardForDashboard, prunerCard, subberCard];
+  const moduleCards = [refinerCardForDashboard, prunerCard];
   const modulesNeedingAttentionTotal = moduleCards.filter(
     (m) => m.status === "Review needed",
   ).length;
@@ -649,16 +548,6 @@ export function DashboardPage() {
       detail: job.last_error
         ? job.last_error
         : `${prunerJobTitle(job.job_kind)} is ${jobStatusLabel(job.status).toLowerCase()}.`,
-      updatedAt: job.updated_at,
-    })) ?? []),
-    ...(subberJobs.data?.jobs.slice(0, 4).map((job) => ({
-      key: `subber-${job.id}`,
-      module: "Subber",
-      status: jobStatusLabel(job.status),
-      title: subberJobTitle(job.job_kind),
-      detail: job.last_error
-        ? job.last_error
-        : `${subberJobTitle(job.job_kind)} is ${jobStatusLabel(job.status).toLowerCase()}.`,
       updatedAt: job.updated_at,
     })) ?? []),
   ]
@@ -750,7 +639,7 @@ export function DashboardPage() {
           <div>
             <h2 className="mm-card__title">Global jobs</h2>
             <p className="mt-1 text-sm text-[var(--mm-text2)]">
-              Recent background work across Refiner, Pruner, and Subber.
+              Recent background work across Refiner and Pruner.
             </p>
           </div>
         </div>

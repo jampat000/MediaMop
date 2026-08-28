@@ -50,19 +50,6 @@ from mediamop.modules.refiner.worker_loop import (
     start_refiner_worker_background_tasks,
     stop_refiner_worker_background_tasks,
 )
-from mediamop.modules.subber.subber_job_handlers import build_subber_job_handlers
-from mediamop.modules.subber.subber_schedule_enqueue import (
-    start_subber_movies_scan_schedule_enqueue_tasks,
-    start_subber_tv_scan_schedule_enqueue_tasks,
-    start_subber_upgrade_schedule_enqueue_tasks,
-    stop_subber_movies_scan_schedule_enqueue_tasks,
-    stop_subber_tv_scan_schedule_enqueue_tasks,
-    stop_subber_upgrade_schedule_enqueue_tasks,
-)
-from mediamop.modules.subber.worker_loop import (
-    start_subber_worker_background_tasks,
-    stop_subber_worker_background_tasks,
-)
 from mediamop.platform.auth.rate_limit import SlidingWindowLimiter
 from mediamop.platform.auth.service import cleanup_inactive_sessions
 from mediamop.platform.auth.session_cleanup import start_session_cleanup_task, stop_session_cleanup_task
@@ -126,13 +113,6 @@ def _warn_startup_misconfigurations(settings: MediaMopSettings) -> None:
             "disabled. Set MEDIAMOP_CORS_ORIGINS to the MediaMop URL to enable this defence."
         )
 
-    if not settings.subber_webhook_secret:
-        _lifespan_log.warning(
-            "MEDIAMOP_SUBBER_WEBHOOK_SECRET is not set — Sonarr/Radarr webhook endpoints accept "
-            "unauthenticated requests. Set this to a shared secret and configure it in Sonarr/Radarr "
-            "webhook headers (X-Webhook-Secret) to protect the webhook queue."
-        )
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -191,12 +171,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     pruner_preview_schedule_tasks: list[asyncio.Task[None]] = []
     pruner_stop = None
     pruner_worker_tasks: list[asyncio.Task[None]] = []
-    subber_handlers = build_subber_job_handlers(settings, session_factory)
-    subber_tv_scan_tasks: list[asyncio.Task[None]] = []
-    subber_movies_scan_tasks: list[asyncio.Task[None]] = []
-    subber_upgrade_tasks: list[asyncio.Task[None]] = []
-    subber_stop = None
-    subber_worker_tasks: list[asyncio.Task[None]] = []
     suite_configuration_backup_tasks: list[asyncio.Task[None]] = []
 
     def _start_session_cleanup_task() -> None:
@@ -270,39 +244,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             job_handlers=pruner_handlers,
         )
 
-    def _start_subber_tv_scan_tasks() -> None:
-        nonlocal subber_tv_scan_tasks
-        subber_tv_scan_tasks = start_subber_tv_scan_schedule_enqueue_tasks(
-            session_factory,
-            stop_event=stop,
-            settings=settings,
-        )
-
-    def _start_subber_movies_scan_tasks() -> None:
-        nonlocal subber_movies_scan_tasks
-        subber_movies_scan_tasks = start_subber_movies_scan_schedule_enqueue_tasks(
-            session_factory,
-            stop_event=stop,
-            settings=settings,
-        )
-
-    def _start_subber_upgrade_tasks() -> None:
-        nonlocal subber_upgrade_tasks
-        subber_upgrade_tasks = start_subber_upgrade_schedule_enqueue_tasks(
-            session_factory,
-            stop_event=stop,
-            settings=settings,
-        )
-
-    def _start_subber_workers() -> None:
-        nonlocal subber_stop, subber_worker_tasks
-        subber_stop, subber_worker_tasks = start_subber_worker_background_tasks(
-            session_factory,
-            settings,
-            stop_event=stop,
-            job_handlers=subber_handlers,
-        )
-
     def _start_suite_configuration_backup_tasks() -> None:
         nonlocal suite_configuration_backup_tasks
         suite_configuration_backup_tasks = start_suite_configuration_backup_tasks(
@@ -324,10 +265,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     _run_non_essential_startup_step("refiner_worker_start", _start_refiner_workers)
     _run_non_essential_startup_step("pruner_preview_schedule_start", _start_pruner_preview_schedule_tasks)
     _run_non_essential_startup_step("pruner_worker_start", _start_pruner_workers)
-    _run_non_essential_startup_step("subber_tv_scan_schedule_start", _start_subber_tv_scan_tasks)
-    _run_non_essential_startup_step("subber_movies_scan_schedule_start", _start_subber_movies_scan_tasks)
-    _run_non_essential_startup_step("subber_upgrade_schedule_start", _start_subber_upgrade_tasks)
-    _run_non_essential_startup_step("subber_worker_start", _start_subber_workers)
     _run_non_essential_startup_step("suite_configuration_backup_start", _start_suite_configuration_backup_tasks)
     app.state.startup_ready = True
     try:
@@ -354,17 +291,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             lambda: stop_refiner_failure_cleanup_enqueue_tasks(refiner_failure_cleanup_tasks),
         )
         await _stop_task_group(
-            "subber_tv_scan_schedule_stop", lambda: stop_subber_tv_scan_schedule_enqueue_tasks(subber_tv_scan_tasks)
-        )
-        await _stop_task_group(
-            "subber_movies_scan_schedule_stop",
-            lambda: stop_subber_movies_scan_schedule_enqueue_tasks(subber_movies_scan_tasks),
-        )
-        await _stop_task_group(
-            "subber_upgrade_schedule_stop",
-            lambda: stop_subber_upgrade_schedule_enqueue_tasks(subber_upgrade_tasks),
-        )
-        await _stop_task_group(
             "suite_configuration_backup_stop",
             lambda: stop_suite_configuration_backup_tasks(suite_configuration_backup_tasks),
         )
@@ -375,11 +301,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             "job_rows_retention_tasks_stop",
             lambda: stop_job_rows_retention_tasks(job_rows_retention_tasks),
         )
-        if subber_stop is not None:
-            await _stop_task_group(
-                "subber_worker_stop",
-                lambda: stop_subber_worker_background_tasks(subber_stop, subber_worker_tasks),
-            )
         await _stop_task_group(
             "pruner_preview_schedule_stop",
             lambda: stop_pruner_preview_schedule_enqueue_tasks(pruner_preview_schedule_tasks),

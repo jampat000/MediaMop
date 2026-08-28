@@ -11,7 +11,6 @@ from sqlalchemy.orm import Session
 
 from mediamop.modules.pruner.pruner_jobs_model import PrunerJob, PrunerJobStatus
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.subber.subber_jobs_model import SubberJob, SubberJobStatus
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,19 +19,10 @@ class StartupJobRecoveryResult:
     refiner_failed: int = 0
     pruner_requeued: int = 0
     pruner_failed: int = 0
-    subber_requeued: int = 0
-    subber_failed: int = 0
 
     @property
     def total_recovered(self) -> int:
-        return (
-            self.refiner_requeued
-            + self.refiner_failed
-            + self.pruner_requeued
-            + self.pruner_failed
-            + self.subber_requeued
-            + self.subber_failed
-        )
+        return self.refiner_requeued + self.refiner_failed + self.pruner_requeued + self.pruner_failed
 
     def as_log_dict(self) -> dict[str, int]:
         return {
@@ -40,8 +30,6 @@ class StartupJobRecoveryResult:
             "refiner_failed": self.refiner_failed,
             "pruner_requeued": self.pruner_requeued,
             "pruner_failed": self.pruner_failed,
-            "subber_requeued": self.subber_requeued,
-            "subber_failed": self.subber_failed,
         }
 
 
@@ -75,22 +63,11 @@ def recover_incomplete_jobs_after_startup(session: Session, *, now: datetime | N
         module_name="Pruner",
         now=when,
     )
-    sr, sf = _recover_table(
-        session,
-        model=SubberJob,
-        leased_status=SubberJobStatus.LEASED.value,
-        pending_status=SubberJobStatus.PENDING.value,
-        failed_status=SubberJobStatus.FAILED.value,
-        module_name="Subber",
-        now=when,
-    )
     return StartupJobRecoveryResult(
         refiner_requeued=rr,
         refiner_failed=rf,
         pruner_requeued=pr,
         pruner_failed=pf,
-        subber_requeued=sr,
-        subber_failed=sf,
     )
 
 

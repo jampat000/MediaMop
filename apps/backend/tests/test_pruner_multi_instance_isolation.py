@@ -36,7 +36,6 @@ def session_factory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> sessionm
     monkeypatch.setenv("MEDIAMOP_HOME", str(home))
     monkeypatch.setenv("MEDIAMOP_REFINER_WORKER_COUNT", "0")
     monkeypatch.setenv("MEDIAMOP_PRUNER_WORKER_COUNT", "0")
-    monkeypatch.setenv("MEDIAMOP_SUBBER_WORKER_COUNT", "0")
     backend = Path(__file__).resolve().parents[1]
     cfg = Config(str(backend / "alembic.ini"))
     command.upgrade(cfg, "head")

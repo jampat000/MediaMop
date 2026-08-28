@@ -288,7 +288,6 @@ def post_suite_operational_history_reset(
         activity_events_deleted=result.activity_events_deleted,
         refiner_jobs_deleted=result.refiner_jobs_deleted,
         pruner_jobs_deleted=result.pruner_jobs_deleted,
-        subber_jobs_deleted=result.subber_jobs_deleted,
         total_deleted=result.total_deleted,
     )
 

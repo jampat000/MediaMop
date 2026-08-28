@@ -18,19 +18,16 @@ from typing import Any, Literal
 MediaScope = Literal["movie", "tv"]
 EventKind = Literal["imported", "handoff"]
 
-# Subber's stored payloads have always spelled the movie scope "movies"; the queue
-# dialects use "movie". Convert at the boundary rather than teaching one of them both.
-_SUBBER_SCOPE = {"movie": "movies", "tv": "tv"}
-
 
 @dataclass(frozen=True, slots=True)
 class MediaManagerImportEvent:
     """A file a media manager wants MediaMop to act on.
 
     ``event_kind`` separates the two reasons a manager gets in touch. ``imported`` is
-    "I have finished with this file and it is in the library now" — Subber's cue to look
-    for subtitles. ``handoff`` is "I have not finished; clean this up and tell me when
-    you are done" — Refiner's cue, and the only kind that carries a callback.
+    "I have finished with this file and it is in the library now", which was Subber's cue
+    to look for subtitles and is now accepted and ignored — Subber lives in Deluno, which
+    sees its own library. ``handoff`` is "I have not finished; clean this up and tell me
+    when you are done" — Refiner's cue, and the only kind that carries a callback.
     """
 
     source_key: str
@@ -47,24 +44,6 @@ class MediaManagerImportEvent:
     handoff_id: str | None = None
     callback_path: str | None = None
     release_name: str | None = None
-
-    def to_subber_job_payload(self) -> dict[str, Any]:
-        """Render the payload Subber's webhook-import job handler already expects."""
-
-        return {
-            "file_path": self.file_path,
-            "media_scope": _SUBBER_SCOPE[self.media_scope],
-            "title": self.title,
-            "year": self.year,
-            "show_title": self.show_title,
-            "season_number": self.season_number,
-            "episode_number": self.episode_number,
-            "episode_title": self.episode_title,
-            # Kept under the historical key names so stored rows stay readable across
-            # the upgrade; both are simply "the id the source used for this entity".
-            "sonarr_episode_id": self.source_entity_id if self.media_scope == "tv" else None,
-            "radarr_movie_id": self.source_entity_id if self.media_scope == "movie" else None,
-        }
 
 
 def _text(value: Any) -> str | None:

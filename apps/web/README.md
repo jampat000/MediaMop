@@ -84,7 +84,7 @@ GitHub Actions **Test** workflow runs **`npm ci`**, **`npm run build`**, and **`
 
 ## Intentionally not built
 
-- Module pages (Refiner, Pruner, Subber, settings product, …)
+- Module pages (Refiner, Pruner, settings product, …)
 - Role-based navigation / permissions UI
 - Non-session auth (JWT-in-browser, token storage)
 

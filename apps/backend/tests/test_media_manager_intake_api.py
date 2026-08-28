@@ -1,7 +1,11 @@
 """HTTP: the one media-manager intake webhook (no operator auth, optional shared secret).
 
-Covers the dialects that replaced the per-vendor Subber routes, plus the hand-off path
-that Refiner serves for a manager which wants a file cleaned before it imports it.
+Covers the dialects that replaced the per-vendor subtitle routes, plus the hand-off
+path that Refiner serves for a manager which wants a file cleaned before it imports it.
+
+An ``imported`` event no longer enqueues anything: it was Subber's cue, and Subber
+moved to Deluno. It is still accepted, because a manager configured to send one should
+not start logging failed deliveries over a module that moved.
 """
 
 from __future__ import annotations
@@ -16,7 +20,6 @@ from starlette.testclient import TestClient
 from alembic import command
 from mediamop.api.factory import create_app
 from mediamop.modules.refiner.jobs_model import RefinerJob
-from mediamop.modules.subber.subber_jobs_model import SubberJob
 from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_in_process_workers,
     integration_test_quiesce_periodic_enqueue,
@@ -60,17 +63,12 @@ def _set_watched_folders(client: TestClient) -> None:
         db.commit()
 
 
-def _subber_jobs(client: TestClient) -> list[SubberJob]:
-    with _session_factory(client)() as db:
-        return list(db.scalars(select(SubberJob)))
-
-
 def _refiner_jobs(client: TestClient) -> list[RefinerJob]:
     with _session_factory(client)() as db:
         return list(db.scalars(select(RefinerJob).where(RefinerJob.job_kind == "refiner.file.remux_pass.v1")))
 
 
-# --- the dialects that replaced /subber/webhook/{radarr,sonarr} ---------------
+# --- the dialects that replaced the per-vendor webhook routes -----------------
 
 
 def test_sonarr_non_download_is_ignored(client: TestClient) -> None:
@@ -79,7 +77,7 @@ def test_sonarr_non_download_is_ignored(client: TestClient) -> None:
     assert r.json() == {"status": "ignored", "source": "sonarr"}
 
 
-def test_sonarr_download_enqueues_a_tv_subtitle_import(client: TestClient) -> None:
+def test_sonarr_download_is_accepted_and_ignored(client: TestClient) -> None:
     r = client.post(
         "/api/v1/intake/webhook/sonarr",
         json={
@@ -91,13 +89,9 @@ def test_sonarr_download_enqueues_a_tv_subtitle_import(client: TestClient) -> No
     )
     assert r.status_code == 200
     body = r.json()
-    assert body["status"] == "ok"
+    assert body["status"] == "ignored"
     assert body["event"] == "imported"
-    assert body["media_scope"] == "tv"
-
-    jobs = _subber_jobs(client)
-    assert len(jobs) == 1
-    assert "webhook_import.tv" in jobs[0].job_kind
+    assert _refiner_jobs(client) == []
 
 
 def test_radarr_non_download_is_ignored(client: TestClient) -> None:
@@ -106,7 +100,7 @@ def test_radarr_non_download_is_ignored(client: TestClient) -> None:
     assert r.json()["status"] == "ignored"
 
 
-def test_radarr_download_enqueues_a_movie_subtitle_import(client: TestClient) -> None:
+def test_radarr_download_is_accepted_and_ignored(client: TestClient) -> None:
     r = client.post(
         "/api/v1/intake/webhook/radarr",
         json={
@@ -116,11 +110,8 @@ def test_radarr_download_enqueues_a_movie_subtitle_import(client: TestClient) ->
         },
     )
     assert r.status_code == 200
-    assert r.json()["media_scope"] == "movie"
-
-    jobs = _subber_jobs(client)
-    assert len(jobs) == 1
-    assert "webhook_import.movies" in jobs[0].job_kind
+    assert r.json()["status"] == "ignored"
+    assert _refiner_jobs(client) == []
 
 
 # --- the hand-off path, which is what a manager like Deluno needs -------------
@@ -221,14 +212,15 @@ def test_deluno_tv_handoff_uses_the_tv_watched_folder(client: TestClient) -> Non
 # --- the native shape, for a manager with no dialect of its own ---------------
 
 
-def test_native_imported_event_enqueues_a_subtitle_import(client: TestClient) -> None:
+def test_native_imported_event_is_accepted_and_ignored(client: TestClient) -> None:
     r = client.post(
         "/api/v1/intake/webhook/native",
         json={"event": "imported", "mediaScope": "movie", "filePath": "/media/m/x.mkv", "title": "X", "year": 1999},
     )
     assert r.status_code == 200
     assert r.json()["event"] == "imported"
-    assert len(_subber_jobs(client)) == 1
+    assert r.json()["status"] == "ignored"
+    assert _refiner_jobs(client) == []
 
 
 def test_native_handoff_event_enqueues_a_refiner_pass(client: TestClient) -> None:
@@ -271,7 +263,7 @@ def test_source_key_is_case_insensitive(client: TestClient) -> None:
 
 
 def test_configured_secret_is_required(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setenv("MEDIAMOP_SUBBER_WEBHOOK_SECRET", "s3cret")
+    monkeypatch.setenv("MEDIAMOP_MEDIA_MANAGER_WEBHOOK_SECRET", "s3cret")
     app = create_app()
     with TestClient(app) as c:
         body = {"eventType": "Grab"}
@@ -279,5 +271,24 @@ def test_configured_secret_is_required(monkeypatch: pytest.MonkeyPatch, tmp_path
         assert (
             c.post("/api/v1/intake/webhook/radarr", json=body, headers={"X-Webhook-Secret": "wrong"}).status_code == 401
         )
+        ok = c.post("/api/v1/intake/webhook/radarr", json=body, headers={"X-Webhook-Secret": "s3cret"})
+        assert ok.status_code == 200
+
+
+def test_the_old_subber_env_name_still_configures_the_secret(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The setting was named for Subber; the endpoint it guards outlived the name.
+
+    An install that set MEDIAMOP_SUBBER_WEBHOOK_SECRET and never renamed it must keep
+    authenticating, because the alternative is a webhook that quietly stops checking.
+    """
+
+    monkeypatch.setenv("MEDIAMOP_SUBBER_WEBHOOK_SECRET", "s3cret")
+    app = create_app()
+    with TestClient(app) as c:
+        body = {"eventType": "Grab"}
+        assert c.post("/api/v1/intake/webhook/radarr", json=body).status_code == 401
         ok = c.post("/api/v1/intake/webhook/radarr", json=body, headers={"X-Webhook-Secret": "s3cret"})
         assert ok.status_code == 200
