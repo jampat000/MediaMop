@@ -28,6 +28,7 @@ from mediamop.modules.refiner.refiner_tv_output_cleanup import (
     _cascade_delete_empty_parents_under_tv_output_root,
     maybe_run_tv_output_season_folder_cleanup_after_remux,
 )
+from tests.manager_signal_helpers import truth_no_signal, truth_unreachable
 
 
 def _session(tmp_path: Path) -> Session:
@@ -153,18 +154,18 @@ def test_season_folder_with_no_episode_media_refuses(tmp_path: Path) -> None:
     assert final.parent.is_dir()
 
 
-def test_missing_manager_credentials_leave_the_season_in_place(
+def test_no_connected_manager_leaves_the_season_in_place(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No credentials means no library truth, and no library truth means no deletion."""
+    """No manager means no library truth, and no library truth means no deletion."""
 
     watched, output, src, final = _tree(tmp_path)
-    monkeypatch.setattr(mod, "resolve_tv_manager_credentials", lambda _s, _c: (None, None))
+    monkeypatch.setattr(mod, "collect_library_truth", lambda _s, _c, *, media_scope: ())
 
     out = _run(_session(tmp_path), _runtime(watched, output, tmp_path), watched, src, final)
 
-    assert "not configured" in _reason(out)
+    assert "No media manager is connected" in _reason(out)
     assert "left in place" in _reason(out)
     assert out["tv_output_truth_check"] == "skipped"
     assert final.parent.is_dir()
@@ -178,19 +179,37 @@ def test_manager_unreachable_refuses_rather_than_assuming_empty(
     """A failed episode-file fetch is not the same answer as an empty library."""
 
     watched, output, src, final = _tree(tmp_path)
-    monkeypatch.setattr(mod, "resolve_tv_manager_credentials", lambda _s, _c: ("http://127.0.0.1:9", "k"))
-
-    def _boom(*, base_url: str, api_key: str) -> list[dict]:
-        msg = "Sonarr library fetch failed: could not reach Sonarr (connection refused)."
-        raise RuntimeError(msg)
-
-    monkeypatch.setattr(mod, "fetch_sonarr_library_episodefiles", _boom)
+    monkeypatch.setattr(
+        mod,
+        "collect_library_truth",
+        lambda _s, _c, *, media_scope: (
+            truth_unreachable(kind="sonarr", detail="MediaMop could not reach Sonarr (Main)."),
+        ),
+    )
 
     out = _run(_session(tmp_path), _runtime(watched, output, tmp_path), watched, src, final)
 
-    assert "could not be reached" in _reason(out)
+    assert "could not confirm with Sonarr (Main)" in _reason(out)
+    assert "left in place" in _reason(out)
     assert out["tv_output_truth_check"] == "skipped"
     assert final.parent.is_dir()
+
+
+def test_a_manager_that_cannot_report_library_truth_also_refuses(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Deluno answers the queue question but not this one. Silence is not a clearance."""
+
+    watched, output, src, final = _tree(tmp_path)
+    monkeypatch.setattr(mod, "collect_library_truth", lambda _s, _c, *, media_scope: (truth_no_signal(),))
+
+    out = _run(_session(tmp_path), _runtime(watched, output, tmp_path), watched, src, final)
+
+    assert "could not confirm with Deluno (Main)" in _reason(out)
+    assert out["tv_output_truth_check"] == "skipped"
+    assert final.parent.is_dir()
+    assert final.exists()
 
 
 class TestTvCascadeStopsAtTheOutputRoot:

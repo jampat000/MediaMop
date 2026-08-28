@@ -2,7 +2,7 @@
 
 ``maybe_run_movie_output_folder_cleanup_after_remux`` ends in ``shutil.rmtree`` of a
 folder in the operator's library. Everything before that is the set of reasons not to.
-The happy path and the Radarr-truth refusal are covered in
+The happy path and the library-truth refusal are covered in
 ``test_refiner_movie_output_cleanup.py``; this file covers the gates that were reachable
 but untested, plus the cascade walk that stops parent deletion escaping the output root.
 
@@ -29,6 +29,7 @@ from mediamop.modules.refiner.refiner_movie_output_cleanup import (
     newest_mtime_seconds_under_tree,
 )
 from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
+from tests.manager_signal_helpers import truth_no_signal, truth_unreachable
 
 
 def _session(tmp_path: Path) -> Session:
@@ -159,21 +160,21 @@ def test_unreadable_timestamps_refuse_for_safety(tmp_path: Path) -> None:
     assert final.parent.is_dir()
 
 
-def test_missing_manager_credentials_leave_the_folder_in_place(
+def test_no_connected_manager_leaves_the_folder_in_place(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No credentials means no library truth, and no library truth means no deletion.
+    """No manager means no library truth, and no library truth means no deletion.
 
     This is the gate that matters most: unverifiable must never read as safe.
     """
 
     watched, output, src, final = _tree(tmp_path)
-    monkeypatch.setattr(mod, "resolve_movie_manager_credentials", lambda _s, _c: (None, None))
+    monkeypatch.setattr(mod, "collect_library_truth", lambda _s, _c, *, media_scope: ())
 
     out = _run(_session(tmp_path), _runtime(watched, output, tmp_path), watched, src, final)
 
-    assert "not configured" in (out["movie_output_folder_skip_reason"] or "")
+    assert "No media manager is connected" in (out["movie_output_folder_skip_reason"] or "")
     assert "left in place" in (out["movie_output_folder_skip_reason"] or "")
     assert out["movie_output_truth_check"] == "skipped"
     assert final.parent.is_dir()
@@ -187,19 +188,36 @@ def test_manager_unreachable_refuses_rather_than_assuming_empty(
     """A failed library fetch is not the same answer as an empty library."""
 
     watched, output, src, final = _tree(tmp_path)
-    monkeypatch.setattr(mod, "resolve_movie_manager_credentials", lambda _s, _c: ("http://127.0.0.1:9", "k"))
-
-    def _boom(*, base_url: str, api_key: str) -> list[dict]:
-        msg = "Radarr library fetch failed: could not reach Radarr (connection refused)."
-        raise RuntimeError(msg)
-
-    monkeypatch.setattr(mod, "fetch_radarr_library_movies", _boom)
+    monkeypatch.setattr(
+        mod,
+        "collect_library_truth",
+        lambda _s, _c, *, media_scope: (truth_unreachable(detail="MediaMop could not reach Radarr (Main)."),),
+    )
 
     out = _run(_session(tmp_path), _runtime(watched, output, tmp_path), watched, src, final)
 
-    assert "could not be reached" in (out["movie_output_folder_skip_reason"] or "")
+    reason = out["movie_output_folder_skip_reason"] or ""
+    assert "could not confirm with Radarr (Main)" in reason
+    assert "left in place" in reason
     assert out["movie_output_truth_check"] == "skipped"
     assert final.parent.is_dir()
+
+
+def test_a_manager_that_cannot_report_library_truth_also_refuses(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Deluno answers the queue question but not this one. Silence is not a clearance."""
+
+    watched, output, src, final = _tree(tmp_path)
+    monkeypatch.setattr(mod, "collect_library_truth", lambda _s, _c, *, media_scope: (truth_no_signal(),))
+
+    out = _run(_session(tmp_path), _runtime(watched, output, tmp_path), watched, src, final)
+
+    assert "could not confirm with Deluno (Main)" in (out["movie_output_folder_skip_reason"] or "")
+    assert out["movie_output_truth_check"] == "skipped"
+    assert final.parent.is_dir()
+    assert final.exists()
 
 
 def test_newest_mtime_returns_none_for_a_tree_with_no_files(tmp_path: Path) -> None:
