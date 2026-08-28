@@ -45,6 +45,7 @@ export type RefinerRuntimeSettingsOut = {
   sqlite_throughput_note: string;
   configuration_note: string;
   visibility_note: string;
+  refiner_media_extensions: string[];
   refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs: boolean;
   refiner_watched_folder_min_file_age_seconds: number;
   refiner_movie_output_cleanup_min_age_seconds: number;

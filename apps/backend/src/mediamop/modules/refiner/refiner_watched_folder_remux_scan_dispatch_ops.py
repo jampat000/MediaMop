@@ -6,6 +6,7 @@ import json
 import re
 import shutil
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 from sqlalchemy import func, select
@@ -15,6 +16,61 @@ from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMU
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.refiner_remux_rules import is_refiner_media_candidate
 from mediamop.platform.activity.models import ActivityEvent
+
+# Files that legitimately sit beside media and are not a failed attempt at it. Counting
+# these as "unsupported type" would bury the signal in subtitles and artwork.
+_NON_MEDIA_COMPANION_SUFFIXES: frozenset[str] = frozenset(
+    {
+        ".srt",
+        ".sub",
+        ".idx",
+        ".ass",
+        ".ssa",
+        ".vtt",
+        ".sup",
+        ".nfo",
+        ".txt",
+        ".md",
+        ".log",
+        ".xml",
+        ".json",
+        ".yml",
+        ".yaml",
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".webp",
+        ".tbn",
+        ".bmp",
+        ".par2",
+        ".sfv",
+        ".nzb",
+        ".torrent",
+        ".url",
+        ".db",
+        ".ini",
+        ".bak",
+        ".mp3",
+        ".flac",
+        ".m4a",
+        ".aac",
+        ".ac3",
+        ".dts",
+        ".ogg",
+        ".wav",
+        # In-progress downloads. The same file is admitted under its real name once the
+        # client renames it, so reporting it as an unsupported type would put a message
+        # on screen for every active download.
+        ".part",
+        ".partial",
+        ".crdownload",
+        ".downloading",
+        ".tmp",
+        ".!ut",
+        ".!qb",
+    }
+)
 
 _HASH_ARTIFACT_STEM_RE = re.compile(r"^[a-fA-F0-9]{32,64}$")
 _TRANSIENT_DOWNLOAD_DIR_MARKERS = {
@@ -58,19 +114,47 @@ def _existing_completed_output_path_is_safe(path: Path) -> bool:
         return False
 
 
-def iter_watched_folder_media_candidate_files(watched_root: Path, *, min_file_age_seconds: int = 0) -> list[Path]:
-    """Sorted candidate files under ``watched_root`` honoring optional minimum file-age guardrail."""
+@dataclass(frozen=True, slots=True)
+class WatchedFolderScanCandidates:
+    """What a watched-folder walk found, and what it decided not to look at.
+
+    ``ignored_unsupported_type`` is the point of this type. Extension mismatch used to be
+    the one admission decision that produced no counter, no reason and no activity row —
+    a ``.mov`` in a watched folder simply never appeared, and nothing said why (#348).
+    Every other guardrail alongside it reports itself.
+    """
+
+    files: list[Path]
+    ignored_unsupported_type: int = 0
+    ignored_unsupported_extensions: tuple[str, ...] = ()
+
+
+def iter_watched_folder_media_candidates(
+    watched_root: Path,
+    *,
+    min_file_age_seconds: int = 0,
+) -> WatchedFolderScanCandidates:
+    """Candidate files under ``watched_root``, plus a count of what the allowlist rejected."""
 
     root = watched_root.resolve()
     now = time.time()
     min_age = max(0, int(min_file_age_seconds))
     found: list[Path] = []
+    rejected = 0
+    rejected_suffixes: set[str] = set()
     for p in sorted(root.rglob("*")):
         if not p.is_file():
             continue
-        if not is_refiner_media_candidate(p):
-            continue
         if is_transient_download_artifact_media_path(p):
+            # A part-file is not an unsupported type; it is the same file mid-copy.
+            continue
+        if not is_refiner_media_candidate(p):
+            suffix = p.suffix.lower()
+            # Only count things that look like an attempt at media. Counting every
+            # .nfo and .srt beside a film would bury the signal this exists to give.
+            if suffix and suffix not in _NON_MEDIA_COMPANION_SUFFIXES:
+                rejected += 1
+                rejected_suffixes.add(suffix)
             continue
         try:
             p.resolve().relative_to(root)
@@ -84,7 +168,17 @@ def iter_watched_folder_media_candidate_files(watched_root: Path, *, min_file_ag
             if age_s < min_age:
                 continue
         found.append(p)
-    return found
+    return WatchedFolderScanCandidates(
+        files=found,
+        ignored_unsupported_type=rejected,
+        ignored_unsupported_extensions=tuple(sorted(rejected_suffixes)),
+    )
+
+
+def iter_watched_folder_media_candidate_files(watched_root: Path, *, min_file_age_seconds: int = 0) -> list[Path]:
+    """Files only. Kept for callers that do not report on what was skipped."""
+
+    return iter_watched_folder_media_candidates(watched_root, min_file_age_seconds=min_file_age_seconds).files
 
 
 def relative_posix_path_under_watched(*, watched_root: Path, file_path: Path) -> str:
