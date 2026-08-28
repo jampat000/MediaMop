@@ -113,12 +113,16 @@ def try_enqueue_periodic_watched_folder_remux_scan_dispatch(
 ) -> tuple[bool, str | None]:
     """Periodic tick enqueue helper.
 
-    When ``media_scope`` is provided, evaluates one scope only (Movies or TV). When omitted, preserves the original
-    behavior and evaluates both scopes.
+    When ``media_scope`` is provided, evaluates one scope only (Movies or TV) — this is the
+    production call shape. When omitted, evaluates both scopes.
+
+    Whether a scope is scheduled at all is decided by the caller from the per-scope
+    ``movie_schedule_enabled`` / ``tv_schedule_enabled`` rows. There is deliberately no
+    process-wide kill switch here: one existed, was only ever consulted on the
+    ``media_scope is None`` path the scheduler never takes, and reported itself as live
+    configuration while scheduled scans ran regardless (#329).
     """
     if media_scope is None:
-        if not settings.refiner_watched_folder_remux_scan_dispatch_schedule_enabled:
-            return False, "schedule_disabled"
         inserted_any = False
         last_skip: str | None = None
         for scope_name in ("movie", "tv"):

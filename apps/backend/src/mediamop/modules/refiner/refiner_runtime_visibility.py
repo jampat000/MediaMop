@@ -61,15 +61,15 @@ _FAILURE_CLEANUP_NOTE = (
 )
 
 _WATCHED_FOLDER_SCAN_PERIODIC_NOTE = (
-    "Optional periodic enqueue for refiner.watched_folder.remux_scan_dispatch.v1 uses "
-    "MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED and "
-    "MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_INTERVAL_SECONDS in apps/backend/.env "
-    "(Refiner-only schedule). Each tick evaluates Movies and TV "
-    "independently: when a scope has no pending/leased scan for that scope and its watched folder is saved, "
-    "one periodic scan job is enqueued for that scope (still not a filesystem watcher). "
-    "File-pass options for periodic ticks: "
-    "MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS. "
-    "Restart the API after changing any of these — values are read at process start only."
+    "Periodic scanning for refiner.watched_folder.remux_scan_dispatch.v1 is controlled **per scope on the "
+    "Refiner Libraries tab**, not by an environment variable: each of Movies and TV has its own on/off switch "
+    "and its own check interval, saved in the database and applied without a restart. Each tick evaluates the "
+    "two scopes independently: when a scope is switched on, is inside its schedule window, has no pending or "
+    "leased scan already, and has a saved watched folder, one periodic scan job is enqueued for that scope "
+    "(still not a filesystem watcher). "
+    "Whether those periodic ticks may also queue file work is the one part still set in apps/backend/.env: "
+    "MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS (default on). "
+    "Restart the API after changing that one — it is read at process start only."
 )
 _REFINER_PROBE_NOTE = (
     "Refiner ffprobe preflight depth: MEDIAMOP_REFINER_PROBE_SIZE_MB and "
@@ -106,12 +106,6 @@ def refiner_runtime_settings_from_settings(settings: MediaMopSettings) -> Refine
         sqlite_throughput_note=_SQLITE_THROUGHPUT_NOTE,
         configuration_note=_CONFIGURATION_NOTE,
         visibility_note=_VISIBILITY_NOTE,
-        refiner_watched_folder_remux_scan_dispatch_schedule_enabled=(
-            settings.refiner_watched_folder_remux_scan_dispatch_schedule_enabled
-        ),
-        refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds=(
-            settings.refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds
-        ),
         refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs=(
             settings.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs
         ),

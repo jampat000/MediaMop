@@ -30,6 +30,7 @@ from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_periodi
     _missed_due_run_count,
     _next_scheduler_sleep_seconds,
     _watched_folder_scan_interval_seconds,
+    refiner_scope_periodic_scan_enabled,
 )
 
 
@@ -43,8 +44,6 @@ def _settings_on() -> MediaMopSettings:
     base = MediaMopSettings.load()
     return replace(
         base,
-        refiner_watched_folder_remux_scan_dispatch_schedule_enabled=True,
-        refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds=3600,
         refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs=True,
     )
 
@@ -297,15 +296,53 @@ def test_queue_has_active_scan_detects_pending_and_leased_per_scope() -> None:
         assert refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan(db, media_scope="tv") is False
 
 
-def test_try_enqueue_periodic_skips_when_schedule_disabled() -> None:
+def test_scheduler_enable_gate_reads_the_per_scope_database_toggle() -> None:
+    """The gate the scheduler actually consults, asserted directly.
+
+    The removed env flag was only ever read on the ``media_scope is None`` path, which the
+    production scheduler never takes — so the coverage that set it proved nothing about
+    shipped behaviour (#329).
+    """
+
+    row = SimpleNamespace(movie_schedule_enabled=True, tv_schedule_enabled=False)
+    assert refiner_scope_periodic_scan_enabled(row, media_scope="movie") is True
+    assert refiner_scope_periodic_scan_enabled(row, media_scope="tv") is False
+
+    both_off = SimpleNamespace(movie_schedule_enabled=False, tv_schedule_enabled=False)
+    assert refiner_scope_periodic_scan_enabled(both_off, media_scope="movie") is False
+    assert refiner_scope_periodic_scan_enabled(both_off, media_scope="tv") is False
+
+
+def test_production_call_shape_enqueues_one_scope_at_a_time(tmp_path) -> None:
+    """``media_scope`` is always explicit in production; no process-wide switch gates it."""
+
     fac = _fac()
-    base = MediaMopSettings.load()
-    off = replace(base, refiner_watched_folder_remux_scan_dispatch_schedule_enabled=False)
+    settings = _settings_on()
+    watched = tmp_path / "watch"
+    out = tmp_path / "out"
+    watched.mkdir()
+    out.mkdir()
     with fac() as db:
-        ins, skip = try_enqueue_periodic_watched_folder_remux_scan_dispatch(db, off)
-        db.rollback()
-    assert ins is False
-    assert skip == "schedule_disabled"
+        db.execute(delete(RefinerJob))
+        db.execute(
+            update(RefinerPathSettingsRow)
+            .where(RefinerPathSettingsRow.id == 1)
+            .values(refiner_watched_folder=str(watched), refiner_output_folder=str(out)),
+        )
+        db.commit()
+    try:
+        with fac() as db:
+            inserted, skip = try_enqueue_periodic_watched_folder_remux_scan_dispatch(db, settings, media_scope="movie")
+            db.commit()
+        assert inserted is True, skip
+        with fac() as db:
+            assert refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan(db, media_scope="movie") is True
+            # Asking about Movies must not queue TV work.
+            assert refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan(db, media_scope="tv") is False
+    finally:
+        with fac() as db:
+            db.execute(delete(RefinerJob))
+            db.commit()
 
 
 def test_try_enqueue_periodic_skips_when_active_scan_exists() -> None:
