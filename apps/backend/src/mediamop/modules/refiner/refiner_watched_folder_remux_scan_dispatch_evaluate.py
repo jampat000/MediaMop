@@ -1,116 +1,98 @@
-"""Combine Radarr + Sonarr queue rows and apply Refiner domain ownership / blocking (no duplicate rules)."""
+"""Ask every media manager covering a scope, then apply Refiner domain rules (no duplicate rules).
+
+The managers are a safety signal, not a permission slip. Refiner still processes files
+when no manager is connected, and when the file is not in any manager's active queue.
+What changed is that "no answer" is no longer spelled the same way as "nothing is
+importing": a manager that could not be reached is reported to the operator, and the
+file falls back to the file-settling gates rather than being waved through as clear.
+"""
 
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
 from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.domain import (
-    FileAnchorCandidate,
-    RefinerQueueRowView,
-    should_block_for_upstream,
+from mediamop.modules.refiner.domain import FileAnchorCandidate
+from mediamop.modules.refiner.manager_queue_signals import (
+    AttributedQueueRow,
+    QueueSignalReport,
+    attributed_rows_for_file,
+    report_for_signals,
+    upstream_block_reason,
 )
-from mediamop.modules.refiner.queue_adapter import (
-    MOVIE_QUEUE_DIALECT,
-    TV_QUEUE_DIALECT,
-    map_queue_row_to_refiner_view,
-)
-from mediamop.modules.refiner.refiner_candidate_gate_queue_fetch import fetch_arr_v3_queue_rows
-from mediamop.platform.media_managers.credentials import (
-    resolve_movie_manager_credentials,
-    resolve_tv_manager_credentials,
-)
+from mediamop.platform.media_managers.manager_binding import collect_queue_signals
+from mediamop.platform.media_managers.manager_port import ManagerQueueSignal, MediaScope
 
 Verdict = Literal["proceed", "wait_upstream", "not_held"]
 
 
+@dataclass(frozen=True, slots=True)
+class WatchedFileDispatchOutcome:
+    """Whether one watched file can be processed, and which connection said otherwise."""
+
+    verdict: Verdict
+    blocked_reason: str | None = None
+
+
 def merge_queue_views_for_watched_file(
     *,
-    radarr_rows: Sequence[Mapping[str, Any]],
-    sonarr_rows: Sequence[Mapping[str, Any]],
+    signals: Sequence[ManagerQueueSignal],
     file_path: Path,
-) -> list[RefinerQueueRowView]:
-    abs_path = str(file_path.resolve())
-    views: list[RefinerQueueRowView] = []
-    for row in radarr_rows:
-        views.append(
-            map_queue_row_to_refiner_view(row, MOVIE_QUEUE_DIALECT, candidate_path=abs_path, candidate_entity_id=None),
-        )
-    for row in sonarr_rows:
-        views.append(
-            map_queue_row_to_refiner_view(row, TV_QUEUE_DIALECT, candidate_path=abs_path, candidate_entity_id=None),
-        )
-    return views
+) -> list[AttributedQueueRow]:
+    """Every manager's rows for one file, each still carrying the connection that sent it."""
+
+    return attributed_rows_for_file(signals, file_path=file_path)
 
 
-def verdict_for_watched_scan_file(views: Sequence[RefinerQueueRowView], *, candidate: FileAnchorCandidate) -> Verdict:
+def verdict_for_watched_scan_file(
+    rows: Sequence[AttributedQueueRow],
+    *,
+    candidate: FileAnchorCandidate,
+) -> WatchedFileDispatchOutcome:
     """Decide whether a watched-folder file can be processed.
 
-    Radarr/Sonarr are safety signals only. Refiner must still process files when
-    those apps are not configured, or when the file is not currently in their
-    active queue.
+    A block from **any** manager blocks the file — two connections covering one library
+    is an ordinary 4K-plus-1080p setup, and either of them may be mid-import.
     """
 
-    if should_block_for_upstream(views, file_candidate=candidate):
-        return "wait_upstream"
-    return "proceed"
+    reason = upstream_block_reason(rows, candidate=candidate)
+    if reason is not None:
+        return WatchedFileDispatchOutcome(verdict="wait_upstream", blocked_reason=reason)
+    return WatchedFileDispatchOutcome(verdict="proceed")
 
 
-def fetch_radarr_and_sonarr_queue_rows_for_scan(
+def fetch_manager_queue_signals_for_scan(
     session: Session,
     settings: MediaMopSettings,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str | None, str | None]:
-    """Return ``(radarr_rows, sonarr_rows, radarr_error, sonarr_error)``.
+    *,
+    media_scope: MediaScope,
+) -> tuple[tuple[ManagerQueueSignal, ...], QueueSignalReport]:
+    """Ask every manager covering ``media_scope``, and say who did not answer.
 
-    Missing credentials or HTTP failures yield empty rows plus optional operator-facing error text.
+    Never raises: a manager being down degrades the scan to the file-settling gates, and
+    the report is what stops that degradation from being silent.
     """
 
-    rad_err: str | None = None
-    son_err: str | None = None
-    rad_rows: list[dict[str, Any]] = []
-    son_rows: list[dict[str, Any]] = []
-
-    r_base, r_key = resolve_movie_manager_credentials(session, settings)
-    if r_base and r_key:
-        try:
-            rad_rows = fetch_arr_v3_queue_rows(base_url=r_base, api_key=r_key, app="radarr")
-        except RuntimeError as exc:
-            rad_err = str(exc)
-    else:
-        rad_err = "Radarr URL/API key not configured (no queue rows loaded)."
-
-    s_base, s_key = resolve_tv_manager_credentials(session, settings)
-    if s_base and s_key:
-        try:
-            son_rows = fetch_arr_v3_queue_rows(base_url=s_base, api_key=s_key, app="sonarr")
-        except RuntimeError as exc:
-            son_err = str(exc)
-    else:
-        son_err = "Sonarr URL/API key not configured (no queue rows loaded)."
-
-    return rad_rows, son_rows, rad_err, son_err
+    signals = collect_queue_signals(session, settings, media_scope=media_scope)
+    return signals, report_for_signals(signals)
 
 
 def evaluate_watched_media_file_for_dispatch(
     *,
-    radarr_rows: Sequence[Mapping[str, Any]],
-    sonarr_rows: Sequence[Mapping[str, Any]],
+    signals: Sequence[ManagerQueueSignal],
     file_path: Path,
-) -> Verdict:
+) -> WatchedFileDispatchOutcome:
     """Ownership + upstream blocking using the same :class:`RefinerQueueRowView` rules as the candidate gate."""
 
-    views = merge_queue_views_for_watched_file(
-        radarr_rows=radarr_rows,
-        sonarr_rows=sonarr_rows,
-        file_path=file_path,
-    )
+    rows = merge_queue_views_for_watched_file(signals=signals, file_path=file_path)
     candidate = FileAnchorCandidate(title=file_path.stem, year=None)
-    return verdict_for_watched_scan_file(views, candidate=candidate)
+    return verdict_for_watched_scan_file(rows, candidate=candidate)
 
 
 def format_scan_summary_for_activity(summary: dict[str, Any]) -> str:

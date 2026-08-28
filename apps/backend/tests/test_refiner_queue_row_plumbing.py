@@ -1,4 +1,4 @@
-"""Shared *arr queue plumbing only (paths, no app-specific mapping)."""
+"""Shared queue-row plumbing only (paths, no per-scope or per-product mapping)."""
 
 from __future__ import annotations
 

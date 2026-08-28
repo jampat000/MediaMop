@@ -236,6 +236,30 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/media-managers/capabilities": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Media Manager Capabilities
+     * @description What each connected manager manages, and which questions it can answer.
+     *
+     *     Asks the managers themselves, so a connection that has gone away is reported as
+     *     unreachable rather than silently described from its saved kind. Only enabled
+     *     connections with an address and a saved key are listed — nothing else can be asked.
+     */
+    get: operations["get_media_manager_capabilities_api_v1_media_managers_capabilities_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/media-managers/connections": {
     parameters: {
       query?: never;
@@ -603,7 +627,7 @@ export interface paths {
     put?: never;
     /**
      * Post Refiner Candidate Gate Enqueue
-     * @description Refiner: enqueue one ownership / upstream-blocking evaluation against the live *arr queue.
+     * @description Refiner: enqueue one ownership / upstream-blocking evaluation against every connected media manager.
      */
     post: operations["post_refiner_candidate_gate_enqueue_api_v1_refiner_jobs_candidate_gate_enqueue_post"];
     delete?: never;
@@ -1524,6 +1548,66 @@ export interface components {
     MeOut: {
       user: components["schemas"]["UserPublic"];
     };
+    /**
+     * MediaManagerCapabilityOut
+     * @description What one connected manager can be asked, and what it says it manages.
+     *
+     *     This is the outbound half of ADR-0013 made visible: an operator can see, before
+     *     anything runs, whether a manager will give Refiner an upstream safety check and
+     *     whether it can clear a folder for deletion. A manager that cannot do one of those
+     *     says so here rather than looking like a clean pass later.
+     */
+    MediaManagerCapabilityOut: {
+      /** Connection Id */
+      connection_id: number;
+      /**
+       * Detail
+       * @description Why MediaMop could not ask, when it could not.
+       */
+      detail?: string | null;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: "radarr" | "sonarr" | "deluno" | "native";
+      /**
+       * Label
+       * @description How this connection is named in operator messages, e.g. 'Deluno (Main)'.
+       */
+      label: string;
+      /**
+       * Library Roots
+       * @description Folders this manager reported that it manages.
+       */
+      library_roots?: string[];
+      /**
+       * Media Scopes
+       * @description Which libraries this manager looks after. A manager may serve both.
+       */
+      media_scopes: ("movie" | "tv")[];
+      /** Name */
+      name: string;
+      /**
+       * Reachable
+       * @description Whether the manager answered when MediaMop asked what it manages.
+       */
+      reachable: boolean;
+      /**
+       * Reports Import Queue
+       * @description Whether MediaMop can ask this manager what it is currently importing.
+       */
+      reports_import_queue: boolean;
+      /**
+       * Reports Library Truth
+       * @description Whether MediaMop can ask this manager which files it still keeps, which folder cleanup needs.
+       */
+      reports_library_truth: boolean;
+      /**
+       * Summary
+       * @description One plain-language sentence about what MediaMop can do with this manager.
+       */
+      summary: string;
+    };
     /** MediaManagerConnectionCreateIn */
     MediaManagerConnectionCreateIn: {
       /**
@@ -2366,32 +2450,31 @@ export interface components {
     };
     /**
      * RefinerCandidateGateManualEnqueueIn
-     * @description Operator supplies a real release candidate; workers compare it to the live download queue.
+     * @description Operator supplies a real release candidate; workers compare it to every connected manager.
+     *
+     *     The candidate is described by the **library it belongs to**, not by the product that
+     *     manages it: one Movies library may be served by several connections at once, and the
+     *     gate asks all of them.
      */
     RefinerCandidateGateManualEnqueueIn: {
       /** Csrf Token */
       csrf_token: string;
       /**
-       * Movie Id
-       * @description Radarr movie id when matching without path
+       * Entity Id
+       * @description The manager's own id for this movie or series, when matching without a path
        */
-      movie_id?: number | null;
+      entity_id?: number | null;
+      /**
+       * Media Scope
+       * @enum {string}
+       */
+      media_scope: "movie" | "tv";
       /** Output Path */
       output_path?: string | null;
       /** Release Title */
       release_title: string;
       /** Release Year */
       release_year?: number | null;
-      /**
-       * Series Id
-       * @description Sonarr series id when matching without path
-       */
-      series_id?: number | null;
-      /**
-       * Target
-       * @enum {string}
-       */
-      target: "radarr" | "sonarr";
     };
     /** RefinerCandidateGateManualEnqueueOut */
     RefinerCandidateGateManualEnqueueOut: {
@@ -3805,6 +3888,26 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_media_manager_capabilities_api_v1_media_managers_capabilities_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MediaManagerCapabilityOut"][];
         };
       };
     };

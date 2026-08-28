@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import shutil
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal
@@ -15,7 +16,7 @@ from sqlalchemy.orm import Session
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.refiner.refiner_candidate_gate_queue_fetch import fetch_arr_v3_queue_rows
+from mediamop.modules.refiner.manager_queue_signals import attributed_rows_for_file, report_for_signals
 from mediamop.modules.refiner.refiner_path_settings_service import (
     effective_tv_work_folder,
     effective_work_folder,
@@ -26,10 +27,8 @@ from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_ops imp
     refiner_active_remux_pass_exists_for_relative_path,
     relative_posix_path_under_watched,
 )
-from mediamop.platform.media_managers.credentials import (
-    resolve_movie_manager_credentials,
-    resolve_tv_manager_credentials,
-)
+from mediamop.platform.media_managers.manager_binding import collect_queue_signals
+from mediamop.platform.media_managers.manager_port import ManagerQueueSignal
 
 logger = logging.getLogger(__name__)
 
@@ -118,30 +117,17 @@ def _job_temp_candidates(*, work_root: Path, rel_norm: str) -> list[Path]:
     return out
 
 
-def _movie_queue_contains(*, radarr_rows: list[dict[str, Any]], src_file: Path) -> bool:
-    sp = str(src_file.resolve())
-    for row in radarr_rows:
-        path = row.get("outputPath")
-        if isinstance(path, str) and path.strip():
-            try:
-                if Path(path.strip()).expanduser().resolve() == Path(sp):
-                    return True
-            except OSError:
-                continue
-    return False
+def _held_by_manager(*, signals: Sequence[ManagerQueueSignal], media_file: Path) -> str | None:
+    """The connection whose queue still names this exact file, or ``None``.
 
+    Path equality only — failure cleanup deletes folders, so it does not lean on the
+    looser title/year anchor that the scan gate uses to decide a wait.
+    """
 
-def _tv_queue_contains(*, sonarr_rows: list[dict[str, Any]], episode: Path) -> bool:
-    ep = episode.resolve()
-    for row in sonarr_rows:
-        path = row.get("outputPath")
-        if isinstance(path, str) and path.strip():
-            try:
-                if Path(path.strip()).expanduser().resolve() == ep:
-                    return True
-            except OSError:
-                continue
-    return False
+    for row in attributed_rows_for_file(signals, file_path=media_file):
+        if row.view.applies_to_file:
+            return row.connection_label
+    return None
 
 
 def _failed_jobs_for_scope(
@@ -244,27 +230,16 @@ def run_refiner_failure_cleanup_sweep_for_scope(
         out["skip_reason"] = "No eligible failed Refiner jobs were old enough for cleanup."
         return out
 
-    radarr_rows: list[dict[str, Any]] = []
-    sonarr_rows: list[dict[str, Any]] = []
+    # This sweep deletes folders, so an import check it could not make is a stop, not a
+    # shrug: every manager covering the scope has to answer before anything is removed.
+    signals = collect_queue_signals(session, settings, media_scope=ms)
+    signal_report = report_for_signals(signals)
     queue_unreachable: str | None = None
-    if ms == "movie":
-        base, key = resolve_movie_manager_credentials(session, settings)
-        if not base or not key:
-            queue_unreachable = "Radarr URL/API key is not configured."
-        else:
-            try:
-                radarr_rows = fetch_arr_v3_queue_rows(base_url=base, api_key=key, app="radarr")
-            except RuntimeError as exc:
-                queue_unreachable = str(exc)
-    else:
-        base, key = resolve_tv_manager_credentials(session, settings)
-        if not base or not key:
-            queue_unreachable = "Sonarr URL/API key is not configured."
-        else:
-            try:
-                sonarr_rows = fetch_arr_v3_queue_rows(base_url=base, api_key=key, app="sonarr")
-            except RuntimeError as exc:
-                queue_unreachable = str(exc)
+    if signal_report.consulted == 0:
+        scope_word = "TV episodes" if ms == "tv" else "Movies"
+        queue_unreachable = f"No media manager is connected for {scope_word}."
+    elif not signal_report.all_reported:
+        queue_unreachable = signal_report.silent_details[0]
 
     for job, rel_norm, legacy_dry_run in failed_rows:
         detail: dict[str, Any] = {
@@ -292,7 +267,8 @@ def run_refiner_failure_cleanup_sweep_for_scope(
             continue
         if queue_unreachable:
             detail[f"{'tv' if ms == 'tv' else 'movie'}_failure_cleanup_skip_reason"] = (
-                f"ARR queue check was unavailable ({queue_unreachable}), so nothing was removed."
+                f"MediaMop could not check whether anything is still importing, so nothing was removed. "
+                f"{queue_unreachable}"
             )
             continue
         src_file = (watched_root / Path(rel_norm)).resolve()
@@ -303,10 +279,11 @@ def run_refiner_failure_cleanup_sweep_for_scope(
             detail["movie_failure_cleanup_output_folder_deleted"] = False
             out_folder = (output_root / Path(rel_norm)).resolve().parent
             detail["movie_failure_cleanup_output_folder_path"] = str(out_folder)
-            if _movie_queue_contains(radarr_rows=radarr_rows, src_file=src_file):
+            holder = _held_by_manager(signals=signals, media_file=src_file)
+            if holder is not None:
                 detail["movie_failure_cleanup_queue_check"] = "blocked_in_queue"
                 detail["movie_failure_cleanup_skip_reason"] = (
-                    "File is still in Radarr queue, so failure cleanup skipped."
+                    f"{holder} is still importing this file, so failure cleanup skipped."
                 )
                 continue
             detail["movie_failure_cleanup_queue_check"] = "passed_not_in_queue"
@@ -370,7 +347,7 @@ def run_refiner_failure_cleanup_sweep_for_scope(
                 continue
             blocked = False
             for ep in episodes:
-                if _tv_queue_contains(sonarr_rows=sonarr_rows, episode=ep):
+                if _held_by_manager(signals=signals, media_file=ep) is not None:
                     blocked = True
                     break
                 try:

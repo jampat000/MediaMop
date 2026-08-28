@@ -1,27 +1,26 @@
-"""In-process Refiner worker handler for ``refiner.candidate_gate.v1`` (live queue + domain)."""
+"""In-process Refiner worker handler for ``refiner.candidate_gate.v1`` (live managers + domain)."""
 
 from __future__ import annotations
 
 import json
 from collections.abc import Callable
-from typing import Any, Literal
+from typing import Any
 
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.refiner_candidate_gate_activity import record_refiner_candidate_gate_completed
-from mediamop.modules.refiner.refiner_candidate_gate_evaluate import evaluate_refiner_candidate_gate_from_queue_rows
-from mediamop.modules.refiner.refiner_candidate_gate_queue_fetch import fetch_arr_v3_queue_rows
-from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
-from mediamop.platform.media_managers.credentials import (
-    resolve_movie_manager_credentials,
-    resolve_tv_manager_credentials,
+from mediamop.modules.refiner.refiner_candidate_gate_evaluate import (
+    evaluate_refiner_candidate_gate_from_manager_signals,
 )
+from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
+from mediamop.platform.media_managers.manager_binding import collect_queue_signals
+from mediamop.platform.media_managers.manager_port import MediaScope
 
 
 def _parse_job_payload(payload_json: str | None) -> dict[str, Any]:
     if not payload_json or not payload_json.strip():
-        msg = "candidate gate job requires payload_json with target and release_title"
+        msg = "candidate gate job requires payload_json with media_scope and release_title"
         raise ValueError(msg)
     data = json.loads(payload_json)
     if not isinstance(data, dict):
@@ -30,61 +29,56 @@ def _parse_job_payload(payload_json: str | None) -> dict[str, Any]:
     return data
 
 
+def _optional_int(value: Any, *, field: str) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        msg = f"candidate gate payload.{field} must be an integer or null"
+        raise ValueError(msg)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    msg = f"candidate gate payload.{field} must be an integer or null"
+    raise ValueError(msg)
+
+
 def make_refiner_candidate_gate_handler(
     settings: MediaMopSettings,
     session_factory: sessionmaker[Session],
 ) -> Callable[[RefinerJobWorkContext], None]:
-    """Fetch live Radarr or Sonarr queue, map rows, evaluate ownership / upstream blocking."""
+    """Ask every manager covering the scope what it is importing, then evaluate ownership / blocking.
+
+    A manager being unreachable does not fail the job. The gate reports what it could not
+    ask, which is the whole reason it no longer reduces to one ``(url, key)`` pair.
+    """
 
     def _run(ctx: RefinerJobWorkContext) -> None:
         body = _parse_job_payload(ctx.payload_json)
-        target = body.get("target")
-        if target not in ("radarr", "sonarr"):
-            msg = "candidate gate payload.target must be 'radarr' or 'sonarr'"
+        raw_scope = body.get("media_scope")
+        if raw_scope not in ("movie", "tv"):
+            msg = "candidate gate payload.media_scope must be 'movie' or 'tv'"
             raise ValueError(msg)
-        app: Literal["radarr", "sonarr"] = target
+        media_scope: MediaScope = raw_scope
         title = body.get("release_title")
         if not isinstance(title, str) or not title.strip():
             msg = "candidate gate payload.release_title is required"
             raise ValueError(msg)
-        year_raw = body.get("release_year")
-        year: int | None
-        if year_raw is None:
-            year = None
-        elif isinstance(year_raw, int):
-            year = year_raw
-        elif isinstance(year_raw, float) and year_raw.is_integer():
-            year = int(year_raw)
-        else:
-            msg = "candidate gate payload.release_year must be an integer or null"
-            raise ValueError(msg)
-
-        output_path = body.get("output_path") if isinstance(body.get("output_path"), str) else None
-        movie_id = body.get("movie_id")
-        mid = int(movie_id) if isinstance(movie_id, int) else None
-        series_id = body.get("series_id")
-        sid = int(series_id) if isinstance(series_id, int) else None
+        year = _optional_int(body.get("release_year"), field="release_year")
+        entity_id = _optional_int(body.get("entity_id"), field="entity_id")
+        raw_output_path = body.get("output_path")
+        output_path = raw_output_path.strip() if isinstance(raw_output_path, str) and raw_output_path.strip() else None
 
         with session_factory() as session:
-            if app == "radarr":
-                base, key = resolve_movie_manager_credentials(session, settings)
-            else:
-                base, key = resolve_tv_manager_credentials(session, settings)
-        if not base or not key:
-            raise RuntimeError(
-                "Refiner candidate gate needs Radarr/Sonarr URL and API key: set "
-                "MEDIAMOP_ARR_RADARR_BASE_URL / MEDIAMOP_ARR_RADARR_API_KEY or the Sonarr pair.",
-            )
+            signals = collect_queue_signals(session, settings, media_scope=media_scope)
 
-        rows = fetch_arr_v3_queue_rows(base_url=base, api_key=key, app=app)
-        outcome = evaluate_refiner_candidate_gate_from_queue_rows(
-            target=app,
-            queue_rows=rows,
+        outcome = evaluate_refiner_candidate_gate_from_manager_signals(
+            media_scope=media_scope,
+            signals=signals,
             release_title=title.strip(),
             release_year=year,
-            output_path=output_path.strip() if output_path and output_path.strip() else None,
-            movie_id=mid,
-            series_id=sid,
+            output_path=output_path,
+            entity_id=entity_id,
         )
         detail_obj: dict[str, object] = {
             "job_id": ctx.id,
@@ -92,7 +86,11 @@ def make_refiner_candidate_gate_handler(
             "owned": outcome.owned,
             "blocked_upstream": outcome.blocked_upstream,
             "queue_row_count": outcome.queue_row_count,
-            "target": outcome.target,
+            "media_scope": outcome.media_scope,
+            "managers_consulted": outcome.managers_consulted,
+            "managers_reporting": outcome.managers_reporting,
+            "managers_without_queue_signal": list(outcome.managers_without_queue_signal),
+            "blocked_by_connection": outcome.blocked_by_connection,
             "reasons": list(outcome.reasons),
         }
         detail = json.dumps(detail_obj, separators=(",", ":"))[:10_000]

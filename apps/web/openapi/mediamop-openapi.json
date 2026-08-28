@@ -510,6 +510,99 @@
         "title": "MeOut",
         "type": "object"
       },
+      "MediaManagerCapabilityOut": {
+        "description": "What one connected manager can be asked, and what it says it manages.\n\nThis is the outbound half of ADR-0013 made visible: an operator can see, before\nanything runs, whether a manager will give Refiner an upstream safety check and\nwhether it can clear a folder for deletion. A manager that cannot do one of those\nsays so here rather than looking like a clean pass later.",
+        "properties": {
+          "connection_id": {
+            "title": "Connection Id",
+            "type": "integer"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why MediaMop could not ask, when it could not.",
+            "title": "Detail"
+          },
+          "kind": {
+            "enum": [
+              "radarr",
+              "sonarr",
+              "deluno",
+              "native"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "description": "How this connection is named in operator messages, e.g. 'Deluno (Main)'.",
+            "title": "Label",
+            "type": "string"
+          },
+          "library_roots": {
+            "description": "Folders this manager reported that it manages.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Library Roots",
+            "type": "array"
+          },
+          "media_scopes": {
+            "description": "Which libraries this manager looks after. A manager may serve both.",
+            "items": {
+              "enum": [
+                "movie",
+                "tv"
+              ],
+              "type": "string"
+            },
+            "title": "Media Scopes",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reachable": {
+            "description": "Whether the manager answered when MediaMop asked what it manages.",
+            "title": "Reachable",
+            "type": "boolean"
+          },
+          "reports_import_queue": {
+            "description": "Whether MediaMop can ask this manager what it is currently importing.",
+            "title": "Reports Import Queue",
+            "type": "boolean"
+          },
+          "reports_library_truth": {
+            "description": "Whether MediaMop can ask this manager which files it still keeps, which folder cleanup needs.",
+            "title": "Reports Library Truth",
+            "type": "boolean"
+          },
+          "summary": {
+            "description": "One plain-language sentence about what MediaMop can do with this manager.",
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "connection_id",
+          "kind",
+          "name",
+          "label",
+          "media_scopes",
+          "reports_import_queue",
+          "reports_library_truth",
+          "reachable",
+          "summary"
+        ],
+        "title": "MediaManagerCapabilityOut",
+        "type": "object"
+      },
       "MediaManagerConnectionCreateIn": {
         "additionalProperties": false,
         "properties": {
@@ -2584,14 +2677,14 @@
         "type": "object"
       },
       "RefinerCandidateGateManualEnqueueIn": {
-        "description": "Operator supplies a real release candidate; workers compare it to the live download queue.",
+        "description": "Operator supplies a real release candidate; workers compare it to every connected manager.\n\nThe candidate is described by the **library it belongs to**, not by the product that\nmanages it: one Movies library may be served by several connections at once, and the\ngate asks all of them.",
         "properties": {
           "csrf_token": {
             "minLength": 1,
             "title": "Csrf Token",
             "type": "string"
           },
-          "movie_id": {
+          "entity_id": {
             "anyOf": [
               {
                 "type": "integer"
@@ -2600,8 +2693,16 @@
                 "type": "null"
               }
             ],
-            "description": "Radarr movie id when matching without path",
-            "title": "Movie Id"
+            "description": "The manager's own id for this movie or series, when matching without a path",
+            "title": "Entity Id"
+          },
+          "media_scope": {
+            "enum": [
+              "movie",
+              "tv"
+            ],
+            "title": "Media Scope",
+            "type": "string"
           },
           "output_path": {
             "anyOf": [
@@ -2631,30 +2732,10 @@
               }
             ],
             "title": "Release Year"
-          },
-          "series_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Sonarr series id when matching without path",
-            "title": "Series Id"
-          },
-          "target": {
-            "enum": [
-              "radarr",
-              "sonarr"
-            ],
-            "title": "Target",
-            "type": "string"
           }
         },
         "required": [
-          "target",
+          "media_scope",
           "release_title",
           "csrf_token"
         ],
@@ -5524,6 +5605,32 @@
         ]
       }
     },
+    "/api/v1/media-managers/capabilities": {
+      "get": {
+        "description": "What each connected manager manages, and which questions it can answer.\n\nAsks the managers themselves, so a connection that has gone away is reported as\nunreachable rather than silently described from its saved kind. Only enabled\nconnections with an address and a saved key are listed \u2014 nothing else can be asked.",
+        "operationId": "get_media_manager_capabilities_api_v1_media_managers_capabilities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MediaManagerCapabilityOut"
+                  },
+                  "title": "Response Get Media Manager Capabilities Api V1 Media Managers Capabilities Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Media Manager Capabilities",
+        "tags": [
+          "media-managers"
+        ]
+      }
+    },
     "/api/v1/media-managers/connections": {
       "get": {
         "description": "Every configured media manager.",
@@ -6830,7 +6937,7 @@
     },
     "/api/v1/refiner/jobs/candidate-gate/enqueue": {
       "post": {
-        "description": "Refiner: enqueue one ownership / upstream-blocking evaluation against the live *arr queue.",
+        "description": "Refiner: enqueue one ownership / upstream-blocking evaluation against every connected media manager.",
         "operationId": "post_refiner_candidate_gate_enqueue_api_v1_refiner_jobs_candidate_gate_enqueue_post",
         "requestBody": {
           "content": {

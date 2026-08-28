@@ -19,6 +19,7 @@ from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
+from mediamop.modules.refiner.manager_queue_signals import report_for_signals
 from mediamop.modules.refiner.refiner_job_handlers import build_refiner_job_handlers
 from mediamop.modules.refiner.refiner_operator_settings_model import RefinerOperatorSettingsRow
 from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
@@ -27,6 +28,7 @@ from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_job_kin
 )
 from mediamop.modules.refiner.worker_loop import process_one_refiner_job
 from mediamop.platform.activity.models import ActivityEvent
+from tests.manager_signal_helpers import reported
 
 
 @pytest.fixture
@@ -78,8 +80,9 @@ def test_scan_handler_enqueues_remux_when_requested(
         },
     ]
 
-    def _fake_fetch(_session: Session, _settings: MediaMopSettings):
-        return fake_rad, [], None, None
+    def _fake_fetch(_session: Session, _settings: MediaMopSettings, *, media_scope: str):
+        signals = (reported(fake_rad, name="Main"),)
+        return signals, report_for_signals(signals)
 
     t0 = datetime(2026, 4, 12, 12, 0, 0, tzinfo=UTC)
 
@@ -114,7 +117,7 @@ def test_scan_handler_enqueues_remux_when_requested(
 
     handlers = build_refiner_job_handlers(settings, session_factory)
     with patch(
-        "mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_radarr_and_sonarr_queue_rows_for_scan",
+        "mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
         side_effect=_fake_fetch,
     ):
         assert (
@@ -158,8 +161,9 @@ def test_scan_handler_enqueues_remux_without_arr_connections(
     mkv = watch / "Standalone Movie 2026.mkv"
     mkv.write_bytes(b"x")
 
-    def _fake_fetch(_session: Session, _settings: MediaMopSettings):
-        return [], [], "Radarr not configured", "Sonarr not configured"
+    def _fake_fetch(_session: Session, _settings: MediaMopSettings, *, media_scope: str):
+        # Nothing connected at all: the scan still runs, on the file-settling gates alone.
+        return (), report_for_signals(())
 
     with session_factory() as s:
         s.merge(
@@ -191,7 +195,7 @@ def test_scan_handler_enqueues_remux_without_arr_connections(
 
     handlers = build_refiner_job_handlers(settings, session_factory)
     with patch(
-        "mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_radarr_and_sonarr_queue_rows_for_scan",
+        "mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
         side_effect=_fake_fetch,
     ):
         assert (
@@ -280,8 +284,8 @@ def test_scan_handler_skips_file_when_previous_success_output_still_exists(
 
     handlers = build_refiner_job_handlers(settings, session_factory)
     with patch(
-        "mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_radarr_and_sonarr_queue_rows_for_scan",
-        return_value=([], [], "Radarr not configured", "Sonarr not configured"),
+        "mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
+        return_value=((), report_for_signals(())),
     ):
         assert (
             process_one_refiner_job(
@@ -338,8 +342,8 @@ def test_scan_handler_does_not_record_activity_when_no_files_are_queued(
 
     handlers = build_refiner_job_handlers(settings, session_factory)
     with patch(
-        "mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_radarr_and_sonarr_queue_rows_for_scan",
-        return_value=([], [], None, None),
+        "mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
+        return_value=((reported([]),), report_for_signals((reported([]),))),
     ):
         assert (
             process_one_refiner_job(

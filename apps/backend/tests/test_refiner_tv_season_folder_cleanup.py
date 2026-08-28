@@ -22,6 +22,7 @@ from mediamop.modules.refiner.file_remux_pass.visibility import (
     REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED,
 )
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.modules.refiner.manager_queue_signals import report_for_signals
 from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
 from mediamop.modules.refiner.refiner_tv_season_folder_cleanup import (
     get_tv_episode_set_media_files,
@@ -29,6 +30,14 @@ from mediamop.modules.refiner.refiner_tv_season_folder_cleanup import (
 )
 from mediamop.platform.activity import constants as activity_c
 from mediamop.platform.activity.models import ActivityEvent
+from tests.manager_signal_helpers import reported, unreachable
+
+
+def _quiet_manager(_session, _settings, *, media_scope):
+    """One connected TV manager that answered and has nothing in flight."""
+
+    signals = (reported([], scope="tv", kind="sonarr"),)
+    return signals, report_for_signals(signals)
 
 
 def _sqlite_session(tmp_path: Path) -> tuple[sessionmaker[Session], Session]:
@@ -63,7 +72,7 @@ def test_episode_set_direct_children_only(tmp_path: Path) -> None:
     assert {p.name for p in got} == {"a.mkv", "b.mkv"}
 
 
-def test_tv_cleanup_skips_when_sonarr_unreachable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_tv_cleanup_skips_when_a_manager_is_unreachable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _sqlite_session(tmp_path)
     home = tmp_path / "h"
     home.mkdir()
@@ -78,11 +87,12 @@ def test_tv_cleanup_skips_when_sonarr_unreachable(tmp_path: Path, monkeypatch: p
     (out / "Serie" / "S01").mkdir(parents=True)
     (out / "Serie" / "S01" / "e.mkv").write_bytes(b"y" * 100)
 
-    def _boom(_s, _settings):
-        return [], [], None, "connection refused"
+    def _boom(_s, _settings, *, media_scope):
+        signals = (unreachable(kind="sonarr", detail="MediaMop could not reach Sonarr (Main) (connection refused)."),)
+        return signals, report_for_signals(signals)
 
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_radarr_and_sonarr_queue_rows_for_scan",
+        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
         _boom,
     )
 
@@ -107,16 +117,17 @@ def test_tv_cleanup_skips_when_sonarr_unreachable(tmp_path: Path, monkeypatch: p
         },
         final_output_file=out / "Serie" / "S01" / "e.mkv",
     )
-    assert outd["tv_sonarr_unreachable"] is True
+    assert outd["tv_manager_queue_unavailable"] is True
     assert outd["tv_season_folder_deleted"] is False
+    assert "Sonarr (Main)" in outd["tv_season_folder_skip_reason"]
     assert sdir.exists()
 
 
 def test_tv_cleanup_blocked_by_active_other_tv_job(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _sqlite_session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_radarr_and_sonarr_queue_rows_for_scan",
-        lambda _s, _settings: ([], [], None, None),
+        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        _quiet_manager,
     )
     home = tmp_path / "h"
     home.mkdir()
@@ -199,12 +210,9 @@ def test_tv_cleanup_not_blocked_by_movie_scope_job_same_path(tmp_path: Path, mon
     rt = _tv_runtime(watched=watched, out=out, home=home)
     outd: dict = {}
 
-    def _ok_fetch(_s, _settings):
-        return [], [], None, None
-
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_radarr_and_sonarr_queue_rows_for_scan",
-        _ok_fetch,
+        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        _quiet_manager,
     )
     handle_tv_cleanup_after_success(
         session=session,
@@ -244,8 +252,8 @@ def test_tv_cleanup_legacy_dry_run_flag_does_not_block_cleanup(tmp_path: Path, m
     (out / "Serie" / "S01" / "e.mkv").write_bytes(b"y" * 100)
 
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_radarr_and_sonarr_queue_rows_for_scan",
-        lambda _s, _settings: ([], [], None, None),
+        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        _quiet_manager,
     )
 
     settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
@@ -286,8 +294,8 @@ def test_tv_cleanup_season_equals_watched_root_skipped(tmp_path: Path, monkeypat
     (out / "e.mkv").write_bytes(b"y" * 80)
 
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_radarr_and_sonarr_queue_rows_for_scan",
-        lambda _s, _settings: ([], [], None, None),
+        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        _quiet_manager,
     )
 
     settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
@@ -352,8 +360,8 @@ def test_tv_cleanup_blocked_output_too_small_for_prior_pass(tmp_path: Path, monk
     session.commit()
 
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_radarr_and_sonarr_queue_rows_for_scan",
-        lambda _s, _settings: ([], [], None, None),
+        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        _quiet_manager,
     )
 
     settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
@@ -381,7 +389,7 @@ def test_tv_cleanup_blocked_output_too_small_for_prior_pass(tmp_path: Path, monk
     assert sdir.exists()
 
 
-def test_tv_cleanup_blocked_when_sonarr_queue_holds_sibling_episode(
+def test_tv_cleanup_blocked_when_a_manager_still_holds_a_sibling_episode(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _, session = _sqlite_session(tmp_path)
@@ -401,12 +409,13 @@ def test_tv_cleanup_blocked_when_sonarr_queue_holds_sibling_episode(
     (out / "Serie" / "S01" / "e.mkv").write_bytes(b"y" * 100)
     (out / "Serie" / "S01" / "queued.mkv").write_bytes(b"z" * 100)
 
-    def _fetch(_s, _settings):
-        son = [{"outputPath": str(queued.resolve()), "status": "importpending"}]
-        return [], son, None, None
+    def _fetch(_s, _settings, *, media_scope):
+        rows = [{"outputPath": str(queued.resolve()), "status": "importpending"}]
+        signals = (reported(rows, scope="tv", kind="sonarr"),)
+        return signals, report_for_signals(signals)
 
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_radarr_and_sonarr_queue_rows_for_scan",
+        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
         _fetch,
     )
 
@@ -456,8 +465,8 @@ def test_tv_cleanup_check4_never_processed_old_sibling_passes(tmp_path: Path, mo
     (out / "Serie" / "S01" / "e.mkv").write_bytes(b"y" * 100)
 
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_radarr_and_sonarr_queue_rows_for_scan",
-        lambda _s, _settings: ([], [], None, None),
+        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        _quiet_manager,
     )
 
     settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
@@ -503,8 +512,8 @@ def test_tv_cleanup_check4_blocked_when_min_age_not_met(tmp_path: Path, monkeypa
     (out / "Serie" / "S01" / "e.mkv").write_bytes(b"y" * 100)
 
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_radarr_and_sonarr_queue_rows_for_scan",
-        lambda _s, _settings: ([], [], None, None),
+        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        _quiet_manager,
     )
 
     settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
@@ -572,8 +581,8 @@ def test_tv_cleanup_activity_movie_scope_ignored_for_prior_success(
     session.commit()
 
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_radarr_and_sonarr_queue_rows_for_scan",
-        lambda _s, _settings: ([], [], None, None),
+        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        _quiet_manager,
     )
 
     settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
@@ -637,8 +646,8 @@ def test_tv_cleanup_failed_tv_activity_does_not_clear_episode(tmp_path: Path, mo
     session.commit()
 
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_radarr_and_sonarr_queue_rows_for_scan",
-        lambda _s, _settings: ([], [], None, None),
+        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        _quiet_manager,
     )
 
     settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
@@ -705,8 +714,8 @@ def test_tv_cleanup_dry_run_activity_row_does_not_count_as_tv_success(
     session.commit()
 
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_radarr_and_sonarr_queue_rows_for_scan",
-        lambda _s, _settings: ([], [], None, None),
+        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        _quiet_manager,
     )
 
     settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
@@ -772,8 +781,8 @@ def test_tv_cleanup_blocked_when_prior_tv_success_but_output_missing(
     session.commit()
 
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_radarr_and_sonarr_queue_rows_for_scan",
-        lambda _s, _settings: ([], [], None, None),
+        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        _quiet_manager,
     )
 
     settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
@@ -818,8 +827,8 @@ def test_tv_cleanup_rmtree_oserror_skips_season(tmp_path: Path, monkeypatch: pyt
     (out / "Serie" / "S01" / "e.mkv").write_bytes(b"y" * 100)
 
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_radarr_and_sonarr_queue_rows_for_scan",
-        lambda _s, _settings: ([], [], None, None),
+        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        _quiet_manager,
     )
 
     def _boom(_path, ignore_errors=False, onerror=None):
@@ -871,8 +880,8 @@ def test_tv_cleanup_cascade_removes_empty_show_folder(tmp_path: Path, monkeypatc
     (out / "Serie" / "S01" / "e.mkv").write_bytes(b"y" * 100)
 
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_radarr_and_sonarr_queue_rows_for_scan",
-        lambda _s, _settings: ([], [], None, None),
+        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        _quiet_manager,
     )
 
     settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)

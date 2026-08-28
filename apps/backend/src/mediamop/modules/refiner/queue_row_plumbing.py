@@ -1,7 +1,7 @@
-"""Generic JSON/path helpers for *arr queue rows — no Radarr- or Sonarr-specific semantics.
+"""Generic JSON/path helpers for a media manager's queue rows — no per-product semantics.
 
-Anything that interprets movie vs series, or which id fields apply, lives in the app
-adapters instead.
+Anything that interprets movie vs series, or which id fields apply, lives in the scope
+dialects in :mod:`mediamop.modules.refiner.queue_adapter` instead.
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ def nested_dict(row: Mapping[str, Any], key: str) -> Mapping[str, Any] | None:
 
 
 def primary_queue_status(row: Mapping[str, Any]) -> str:
-    """First non-empty status-like string (Radarr/Sonarr v3 queue resources often align)."""
+    """First non-empty status-like string (queue resources across managers largely align)."""
     for k in ("status", "trackedDownloadStatus", "trackedDownloadState"):
         v = row.get(k)
         if isinstance(v, str) and v.strip():

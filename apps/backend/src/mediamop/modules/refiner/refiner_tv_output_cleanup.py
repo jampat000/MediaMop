@@ -1,8 +1,12 @@
 """TV-only Refiner output-folder cleanup after a successful remux pass (Pass 3b).
 
 Deletes the **season output folder** (immediate parent of the episode file under the TV output root) when
-Sonarr episode-file library truth, minimum age (direct-child episode media only), and active TV remux gates pass.
+media manager library truth, minimum age (direct-child episode media only), and active TV remux gates pass.
 Movies scope is never handled here — do not import Movies output cleanup helpers.
+
+Library truth comes from the media manager port, so every manager looking after TV is asked
+and any one of them keeping a file inside the season folder stops the delete. A manager that
+cannot answer stops it too — see :mod:`mediamop.modules.refiner.manager_library_truth`.
 """
 
 from __future__ import annotations
@@ -11,8 +15,6 @@ import json
 import logging
 import shutil
 import time
-import urllib.error
-import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -22,13 +24,12 @@ from sqlalchemy.orm import Session
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.modules.refiner.manager_library_truth import evaluate_library_truth_for_folder
 from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
 from mediamop.modules.refiner.refiner_remux_rules import is_refiner_media_candidate
-from mediamop.platform.media_managers.credentials import resolve_tv_manager_credentials
-from mediamop.platform.outbound_http import normalize_local_service_base_url
+from mediamop.platform.media_managers.manager_binding import collect_library_truth
 
 logger = logging.getLogger(__name__)
-_SONARR_PAGE_SIZE = 200_000
 
 
 def _normalize_media_scope(raw: str | None) -> str:
@@ -83,62 +84,6 @@ def newest_mtime_direct_child_media_candidates(season_folder: Path) -> float | N
             continue
         newest = mt if newest is None else max(newest, mt)
     return newest
-
-
-def fetch_sonarr_library_episodefiles(
-    *,
-    base_url: str,
-    api_key: str,
-    timeout_seconds: float = 120.0,
-) -> list[dict[str, Any]]:
-    """GET ``/api/v3/episodefile`` — full library episode file list (Refiner-owned stdlib HTTP)."""
-
-    base = normalize_local_service_base_url(base_url)
-    # Sonarr's episodefile endpoint is treated as a full library listing here; use a very high cap.
-    url = f"{base}/api/v3/episodefile?pageSize={_SONARR_PAGE_SIZE}"
-    req = urllib.request.Request(
-        url,
-        method="GET",
-        headers={"X-Api-Key": api_key, "Accept": "application/json"},
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=timeout_seconds) as resp:
-            raw = resp.read().decode("utf-8")
-    except urllib.error.HTTPError as e:
-        msg = f"Sonarr episode file library fetch failed: HTTP {e.code} for {url!r}"
-        raise RuntimeError(msg) from e
-    except OSError as e:
-        msg = f"Sonarr episode file library fetch failed: could not reach Sonarr ({e})."
-        raise RuntimeError(msg) from e
-    data = json.loads(raw)
-    if isinstance(data, list):
-        return [x for x in data if isinstance(x, dict)]
-    return []
-
-
-def sonarr_episodefile_paths_under_folder(
-    *,
-    episodefiles: list[dict[str, Any]],
-    folder: Path,
-) -> list[Path]:
-    """Return Sonarr episode file ``path`` values that resolve **inside** ``folder`` (inclusive)."""
-
-    folder_r = folder.resolve()
-    hits: list[Path] = []
-    for ef in episodefiles:
-        raw_path = ef.get("path")
-        if not isinstance(raw_path, str) or not raw_path.strip():
-            continue
-        try:
-            pr = Path(raw_path.strip()).expanduser().resolve()
-        except OSError:
-            continue
-        try:
-            pr.relative_to(folder_r)
-        except ValueError:
-            continue
-        hits.append(pr)
-    return hits
 
 
 def _expected_tv_output_file_path(*, output_root: Path, relative_media_path: str) -> Path | None:
@@ -400,44 +345,18 @@ def maybe_run_tv_output_season_folder_cleanup_after_remux(
         out["tv_output_truth_note"] = out["tv_output_season_folder_skip_reason"]
         return
 
-    base, key = resolve_tv_manager_credentials(session, settings)
-    if not base or not key:
-        out["tv_output_season_folder_skip_reason"] = (
-            "Sonarr URL or API key is not configured in MediaMop, so Refiner could not verify Sonarr episode file paths. "
-            "The TV season output folder was left in place."
-        )
-        out["tv_output_truth_check"] = "skipped"
-        out["tv_output_truth_note"] = out["tv_output_season_folder_skip_reason"]
-        return
-
-    try:
-        episodefiles = fetch_sonarr_library_episodefiles(base_url=base, api_key=key)
-    except RuntimeError as exc:
-        out["tv_output_season_folder_skip_reason"] = (
-            f"Sonarr could not be reached or returned an error while reading episode files, so the season output folder was not removed ({exc})."
-        )
-        out["tv_output_truth_check"] = "skipped"
-        out["tv_output_truth_note"] = str(exc)
-        logger.warning("Refiner TV output cleanup: %s", exc)
-        return
-
-    hits = sonarr_episodefile_paths_under_folder(episodefiles=episodefiles, folder=output_season_folder)
-    if hits:
-        sample = "; ".join(str(p) for p in hits[:3])
-        if len(hits) > 3:
-            sample += f" (+{len(hits) - 3} more)"
-        out["tv_output_truth_check"] = "failed"
-        out["tv_output_truth_note"] = (
-            "Sonarr still reports at least one library episode file inside this TV season output folder, so Refiner treats it as "
-            f"the kept library location and will not delete it. Example path(s): {sample}"
-        )
-        out["tv_output_season_folder_skip_reason"] = out["tv_output_truth_note"]
-        return
-
-    out["tv_output_truth_check"] = "passed"
-    out["tv_output_truth_note"] = (
-        "Sonarr reports no library episode file paths inside this season folder, so Refiner treated it as safe to remove under the other gates."
+    truth = evaluate_library_truth_for_folder(
+        collect_library_truth(session, settings, media_scope="tv"),
+        folder=output_season_folder,
+        media_scope="tv",
     )
+    out["tv_output_truth_check"] = truth.check
+    out["tv_output_truth_note"] = truth.note
+    if not truth.clears_delete:
+        out["tv_output_season_folder_skip_reason"] = truth.note
+        if truth.check == "skipped":
+            logger.warning("Refiner TV output cleanup: %s", truth.note)
+        return
 
     cascade: list[str] = out["tv_output_cascade_folders_deleted"]
 

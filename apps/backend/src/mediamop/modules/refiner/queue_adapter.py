@@ -2,10 +2,11 @@
 
 A queue row differs by *what kind of library it describes*, not by which product sent
 it. A movie row nests its entity under ``movie`` and identifies it with ``movieId``; an
-episode row nests under ``series`` and uses ``seriesId``. Radarr and Sonarr are simply
-the managers that happen to speak those two shapes, so the dialect is keyed by media
-scope and carries the neutral key names alongside the vendor ones. A manager that
-serves both scopes (Deluno, or anything posting the native payload) needs no new code.
+episode row nests under ``series`` and uses ``seriesId``. Those are two shapes, not two
+products, so the dialect is keyed by media scope and carries the neutral key names
+alongside the older ones. A manager that serves both scopes needs no new code here —
+its outbound dialect in :mod:`mediamop.platform.media_managers.manager_dialects` tags
+each row with the scope it describes, and the right dialect reads it.
 """
 
 from __future__ import annotations
@@ -14,7 +15,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from mediamop.modules.refiner.arr_queue_plumbing import (
+from mediamop.modules.refiner.domain import RefinerQueueRowView
+from mediamop.modules.refiner.queue_row_plumbing import (
     blocking_suppressed_for_import_wait,
     first_int,
     first_str,
@@ -22,7 +24,6 @@ from mediamop.modules.refiner.arr_queue_plumbing import (
     path_matches_candidate,
     primary_queue_status,
 )
-from mediamop.modules.refiner.domain import RefinerQueueRowView
 
 MediaScope = Literal["movie", "tv"]
 

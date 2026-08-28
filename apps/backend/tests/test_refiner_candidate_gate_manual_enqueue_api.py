@@ -47,7 +47,7 @@ def test_refiner_candidate_gate_enqueue_admin_ok(client_with_admin: TestClient) 
         client_with_admin,
         "/api/v1/refiner/jobs/candidate-gate/enqueue",
         json={
-            "target": "radarr",
+            "media_scope": "movie",
             "release_title": "Example Movie 2020",
             "release_year": 2020,
             "csrf_token": tok,
@@ -65,7 +65,27 @@ def test_refiner_candidate_gate_enqueue_admin_ok(client_with_admin: TestClient) 
         assert row.job_kind == REFINER_CANDIDATE_GATE_JOB_KIND
 
 
-def test_refiner_candidate_gate_enqueue_rejects_series_id_for_radarr(
+def test_refiner_candidate_gate_enqueue_rejects_a_vendor_name_as_scope(
+    client_with_admin: TestClient,
+) -> None:
+    """The gate is asked about a library, not about a product."""
+
+    _clear_refiner_jobs()
+    _login_admin(client_with_admin)
+    tok = fetch_csrf(client_with_admin)
+    r = auth_post(
+        client_with_admin,
+        "/api/v1/refiner/jobs/candidate-gate/enqueue",
+        json={
+            "media_scope": "radarr",
+            "release_title": "X",
+            "csrf_token": tok,
+        },
+    )
+    assert r.status_code == 422, r.text
+
+
+def test_refiner_candidate_gate_enqueue_accepts_tv_scope_with_entity_id(
     client_with_admin: TestClient,
 ) -> None:
     _clear_refiner_jobs()
@@ -75,10 +95,10 @@ def test_refiner_candidate_gate_enqueue_rejects_series_id_for_radarr(
         client_with_admin,
         "/api/v1/refiner/jobs/candidate-gate/enqueue",
         json={
-            "target": "radarr",
-            "release_title": "X",
-            "series_id": 1,
+            "media_scope": "tv",
+            "release_title": "Example Show 2020",
+            "entity_id": 12,
             "csrf_token": tok,
         },
     )
-    assert r.status_code == 422, r.text
+    assert r.status_code == 200, r.text

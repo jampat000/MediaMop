@@ -9,6 +9,7 @@ import json
 import logging
 import shutil
 import time
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -16,15 +17,16 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.domain import FileAnchorCandidate, file_is_owned_by_queue
+from mediamop.modules.refiner.domain import FileAnchorCandidate
 from mediamop.modules.refiner.file_remux_pass.visibility import (
     REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN,
     REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED,
 )
+from mediamop.modules.refiner.manager_queue_signals import file_is_owned_by_any_manager
 from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
 from mediamop.modules.refiner.refiner_remux_rules import is_refiner_media_candidate
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_evaluate import (
-    fetch_radarr_and_sonarr_queue_rows_for_scan,
+    fetch_manager_queue_signals_for_scan,
     merge_queue_views_for_watched_file,
 )
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_ops import (
@@ -33,6 +35,7 @@ from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_ops imp
 )
 from mediamop.platform.activity import constants as activity_c
 from mediamop.platform.activity.models import ActivityEvent
+from mediamop.platform.media_managers.manager_port import ManagerQueueSignal
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +49,7 @@ def init_tv_season_cleanup_activity_fields(out: dict[str, Any]) -> None:
     out.setdefault("tv_episode_check_summary", [])
     out.setdefault("tv_output_completeness_check", {})
     out.setdefault("tv_cascade_folders_deleted", [])
-    out.setdefault("tv_sonarr_unreachable", False)
+    out.setdefault("tv_manager_queue_unavailable", False)
     out.setdefault("source_deleted_after_success", False)
 
 
@@ -155,10 +158,19 @@ def _activity_documents_tv_live_success(session: Session, *, relative_posix: str
     return False
 
 
-def _episode_in_sonarr_queue(*, sonarr_rows: list[dict[str, Any]], episode_path: Path) -> bool:
-    views = merge_queue_views_for_watched_file(radarr_rows=[], sonarr_rows=sonarr_rows, file_path=episode_path)
+def _episode_held_by_any_manager(
+    *,
+    signals: Sequence[ManagerQueueSignal],
+    episode_path: Path,
+) -> str | None:
+    """The connection still holding this episode, or ``None``. Any manager is enough."""
+
+    rows = merge_queue_views_for_watched_file(signals=signals, file_path=episode_path)
     candidate = FileAnchorCandidate(title=episode_path.stem, year=None)
-    return file_is_owned_by_queue(views, file_candidate=candidate)
+    for row in rows:
+        if file_is_owned_by_any_manager([row], candidate=candidate):
+            return row.connection_label
+    return None
 
 
 def _tv_cascade_delete_empty_parents(
@@ -247,14 +259,22 @@ def handle_tv_cleanup_after_success(
 
     out["tv_season_folder_path"] = str(season_folder)
 
-    rad_rows, son_rows, _rad_err, son_err = fetch_radarr_and_sonarr_queue_rows_for_scan(session, settings)
-    if son_err:
-        out["tv_sonarr_unreachable"] = True
+    # Deleting a whole season folder is not something to do on a guess, so unlike the
+    # watched-folder scan this gate refuses to run when any manager could not answer.
+    signals, signal_report = fetch_manager_queue_signals_for_scan(session, settings, media_scope="tv")
+    if signal_report.consulted == 0:
+        out["tv_manager_queue_unavailable"] = True
         out["tv_season_folder_skip_reason"] = (
-            f"Sonarr could not be reached or had no usable queue data ({son_err}). "
-            "TV season cleanup was skipped so nothing was removed by mistake."
+            "No media manager is connected for TV episodes, so MediaMop could not check whether anything is "
+            "still importing. TV season cleanup was skipped so nothing was removed by mistake."
         )
-        summary.append(f"Stopped: Sonarr check failed — {son_err}")
+        summary.append("Stopped: no media manager is connected for TV episodes.")
+        return
+    if not signal_report.all_reported:
+        note = signal_report.silent_details[0]
+        out["tv_manager_queue_unavailable"] = True
+        out["tv_season_folder_skip_reason"] = f"{note} TV season cleanup was skipped so nothing was removed by mistake."
+        summary.append(f"Stopped: import check failed — {note}")
         return
 
     episodes = get_tv_episode_set_media_files(season_folder=season_folder)
@@ -276,17 +296,18 @@ def handle_tv_cleanup_after_success(
         rel = relative_posix_path_under_watched(watched_root=watched_resolved, file_path=ep)
         line_parts: list[str] = [f"{name}:"]
 
-        if _episode_in_sonarr_queue(sonarr_rows=son_rows, episode_path=ep):
+        holder = _episode_held_by_any_manager(signals=signals, episode_path=ep)
+        if holder is not None:
             msg = (
-                f"At least one episode is still in the Sonarr download queue ({name}), "
+                f"{holder} is still working on at least one episode in this season ({name}), "
                 "so the whole season folder was left in place."
             )
             out["tv_season_folder_skip_reason"] = msg
-            line_parts.append("Sonarr queue check failed — episode still appears in the Sonarr queue.")
+            line_parts.append(f"Import check failed — {holder} still lists this episode.")
             summary.append(" ".join(line_parts))
             return
 
-        line_parts.append("Sonarr queue check passed — episode is not held in the Sonarr queue.")
+        line_parts.append("Import check passed — no connected media manager still lists this episode.")
 
         if refiner_active_remux_pass_exists_for_relative_path(
             session,
@@ -380,7 +401,7 @@ def handle_tv_cleanup_after_success(
             completeness[name] = "skipped"
             line_parts.append(
                 "Never-processed check passed — Refiner has no successful live TV pass on record for this file, "
-                "it is not in Sonarr's queue, and the file is old enough under your minimum-age setting.",
+                "no connected media manager still lists it, and the file is old enough under your minimum-age setting.",
             )
 
         summary.append(" ".join(line_parts))
