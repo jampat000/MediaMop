@@ -17,9 +17,11 @@ from mediamop.modules.refiner.file_remux_pass.visibility import (
     REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED,
     REMUX_PASS_OUTCOME_SKIPPED_GUARDRAIL,
 )
+from mediamop.modules.refiner.manager_queue_signals import report_for_signals
 from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
 from mediamop.modules.refiner.refiner_remux_rules import PlannedTrack, RemuxPlan
 from mediamop.platform.file_lifecycle.guardrails import DiskSpaceCheck
+from tests.manager_signal_helpers import reported, truth_reported
 
 from .test_refiner_tv_season_folder_cleanup import _sqlite_session
 
@@ -364,17 +366,14 @@ def test_tv_live_skips_movie_folder_cleanup_deletes_season_folder_when_gates_pas
     monkeypatch.setattr(runmod, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
     monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
+    quiet = (reported([], scope="tv", kind="sonarr"),)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_radarr_and_sonarr_queue_rows_for_scan",
-        lambda _s, _settings: ([], [], None, None),
+        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        lambda _s, _settings, *, media_scope: (quiet, report_for_signals(quiet)),
     )
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.resolve_tv_manager_credentials",
-        lambda _s, _st: ("http://127.0.0.1:9", "k"),
-    )
-    monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.fetch_sonarr_library_episodefiles",
-        lambda **kwargs: [],
+        "mediamop.modules.refiner.refiner_tv_output_cleanup.collect_library_truth",
+        lambda _s, _settings, *, media_scope: (truth_reported([], kind="sonarr"),),
     )
     old = time.time() - 200_000
     os.utime(mkv, (old, old))

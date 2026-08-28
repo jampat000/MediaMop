@@ -22,6 +22,7 @@ from mediamop.modules.refiner.refiner_failure_cleanup_handlers import make_refin
 from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
 from mediamop.platform.activity.models import ActivityEvent
+from tests.manager_signal_helpers import reported
 
 
 def _session(tmp_path: Path) -> Session:
@@ -100,10 +101,9 @@ def test_failed_movie_older_than_grace_cleans_source_output_and_temp(tmp_path: P
     settings = replace(_settings(), refiner_movie_failure_cleanup_grace_period_seconds=300)
     with (
         patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_movie_manager_credentials",
-            return_value=("http://radarr.local", "abc"),
+            "mediamop.modules.refiner.refiner_failure_cleanup.collect_queue_signals",
+            return_value=(reported([]),),
         ),
-        patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
     ):
         result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=settings, media_scope="movie")
     job = result["jobs"][0]
@@ -114,7 +114,7 @@ def test_failed_movie_older_than_grace_cleans_source_output_and_temp(tmp_path: P
     assert str(temp.resolve()) in job["movie_failure_cleanup_temp_files_deleted"]
 
 
-def test_failed_movie_in_radarr_queue_skips(tmp_path: Path) -> None:
+def test_failed_movie_still_held_by_a_manager_skips(tmp_path: Path) -> None:
     session = _session(tmp_path)
     mw = tmp_path / "mw"
     mo = tmp_path / "mo"
@@ -131,12 +131,8 @@ def test_failed_movie_in_radarr_queue_skips(tmp_path: Path) -> None:
     settings = replace(_settings(), refiner_movie_failure_cleanup_grace_period_seconds=300)
     with (
         patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_movie_manager_credentials",
-            return_value=("http://radarr.local", "abc"),
-        ),
-        patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows",
-            return_value=[{"outputPath": str(src.resolve())}],
+            "mediamop.modules.refiner.refiner_failure_cleanup.collect_queue_signals",
+            return_value=(reported([{"outputPath": str(src.resolve())}], name="4K"),),
         ),
     ):
         result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=settings, media_scope="movie")
@@ -176,12 +172,8 @@ def test_tv_cleanup_skips_when_any_direct_child_episode_still_in_queue(tmp_path:
     _add_failed(session, rel=rel, scope="tv")
     with (
         patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_tv_manager_credentials",
-            return_value=("http://sonarr.local", "abc"),
-        ),
-        patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows",
-            return_value=[{"outputPath": str(ep2.resolve())}],
+            "mediamop.modules.refiner.refiner_failure_cleanup.collect_queue_signals",
+            return_value=(reported([{"outputPath": str(ep2.resolve())}], scope="tv", kind="sonarr"),),
         ),
     ):
         result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="tv")
@@ -219,13 +211,14 @@ def test_failed_movie_radarr_unreachable_skips(tmp_path: Path) -> None:
     _seed_paths(session, mw=root / "mw", mo=root / "mo", tw=root / "tw", to=root / "to")
     _add_failed(session, rel="Title/Film.mkv", scope="movie")
     with patch(
-        "mediamop.modules.refiner.refiner_failure_cleanup.resolve_movie_manager_credentials",
-        return_value=(None, None),
+        "mediamop.modules.refiner.refiner_failure_cleanup.collect_queue_signals",
+        return_value=(),
     ):
         result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="movie")
     job = result["jobs"][0]
     assert job["movie_failure_cleanup_ran"] is False
-    assert "ARR queue check was unavailable" in job["movie_failure_cleanup_skip_reason"]
+    assert "could not check whether anything is still importing" in job["movie_failure_cleanup_skip_reason"]
+    assert "No media manager is connected for Movies." in job["movie_failure_cleanup_skip_reason"]
 
 
 def test_failed_movie_root_bounds_prevent_root_delete(tmp_path: Path) -> None:
@@ -240,10 +233,9 @@ def test_failed_movie_root_bounds_prevent_root_delete(tmp_path: Path) -> None:
     _add_failed(session, rel="Film.mkv", scope="movie")
     with (
         patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_movie_manager_credentials",
-            return_value=("http://radarr.local", "abc"),
+            "mediamop.modules.refiner.refiner_failure_cleanup.collect_queue_signals",
+            return_value=(reported([]),),
         ),
-        patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
     ):
         result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="movie")
     job = result["jobs"][0]
@@ -267,10 +259,9 @@ def test_tv_pending_or_leased_job_blocks_season_delete(tmp_path: Path) -> None:
     _add_pending(session, rel="Show/Season 1/S01E02.mkv", scope="tv")
     with (
         patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_tv_manager_credentials",
-            return_value=("http://sonarr.local", "abc"),
+            "mediamop.modules.refiner.refiner_failure_cleanup.collect_queue_signals",
+            return_value=(reported([], scope="tv", kind="sonarr"),),
         ),
-        patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
     ):
         result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="tv")
     job = result["jobs"][0]
@@ -293,10 +284,9 @@ def test_tv_season_delete_requires_terminal_failed_for_every_direct_child_episod
     _add_failed(session, rel="Show/Season 1/S01E01.mkv", scope="tv")
     with (
         patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_tv_manager_credentials",
-            return_value=("http://sonarr.local", "abc"),
+            "mediamop.modules.refiner.refiner_failure_cleanup.collect_queue_signals",
+            return_value=(reported([], scope="tv", kind="sonarr"),),
         ),
-        patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
     ):
         result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="tv")
     job = result["jobs"][0]
@@ -326,10 +316,9 @@ def test_movies_scope_does_not_process_tv_failed_rows(tmp_path: Path) -> None:
     _add_failed(session, rel="Show/Season 1/S01E01.mkv", scope="tv")
     with (
         patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_movie_manager_credentials",
-            return_value=("http://radarr.local", "abc"),
+            "mediamop.modules.refiner.refiner_failure_cleanup.collect_queue_signals",
+            return_value=(reported([]),),
         ),
-        patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
     ):
         result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="movie")
     assert result["eligible_failed_jobs"] == 0
@@ -344,10 +333,9 @@ def test_tv_scope_does_not_process_movie_failed_rows(tmp_path: Path) -> None:
     _add_failed(session, rel="Title/Film.mkv", scope="movie")
     with (
         patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_tv_manager_credentials",
-            return_value=("http://sonarr.local", "abc"),
+            "mediamop.modules.refiner.refiner_failure_cleanup.collect_queue_signals",
+            return_value=(reported([], scope="tv", kind="sonarr"),),
         ),
-        patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
     ):
         result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="tv")
     assert result["eligible_failed_jobs"] == 0
@@ -369,10 +357,9 @@ def test_lock_failures_non_fatal(tmp_path: Path) -> None:
     _add_failed(session, rel=rel, scope="movie")
     with (
         patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_movie_manager_credentials",
-            return_value=("http://radarr.local", "abc"),
+            "mediamop.modules.refiner.refiner_failure_cleanup.collect_queue_signals",
+            return_value=(reported([]),),
         ),
-        patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
         patch("mediamop.modules.refiner.refiner_failure_cleanup.shutil.rmtree", side_effect=PermissionError("locked")),
     ):
         result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="movie")
@@ -398,16 +385,9 @@ def test_per_scope_grace_settings_are_independent(tmp_path: Path) -> None:
         refiner_movie_failure_cleanup_grace_period_seconds=600,
         refiner_tv_failure_cleanup_grace_period_seconds=1200,
     )
-    with (
-        patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_movie_manager_credentials",
-            return_value=("http://radarr.local", "abc"),
-        ),
-        patch(
-            "mediamop.modules.refiner.refiner_failure_cleanup.resolve_tv_manager_credentials",
-            return_value=("http://sonarr.local", "abc"),
-        ),
-        patch("mediamop.modules.refiner.refiner_failure_cleanup.fetch_arr_v3_queue_rows", return_value=[]),
+    with patch(
+        "mediamop.modules.refiner.refiner_failure_cleanup.collect_queue_signals",
+        return_value=(reported([]),),
     ):
         movie_res = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=settings, media_scope="movie")
         tv_res = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=settings, media_scope="tv")

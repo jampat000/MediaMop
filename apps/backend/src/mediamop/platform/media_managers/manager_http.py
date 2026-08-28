@@ -22,6 +22,37 @@ class MediaManagerHttpError(RuntimeError):
     """Raised when a call to a media manager fails."""
 
 
+class MediaManagerRateLimitedError(MediaManagerHttpError):
+    """The manager returned 429. Back off; never retry inside the same call.
+
+    Deluno publishes a limit of 3000 requests per 60s per key and answers a breach with
+    ``Retry-After``. Retrying immediately would spend the rest of the window on the
+    retry rather than on the work, so this is surfaced to the caller as a degraded
+    answer instead of being swallowed by a loop.
+    """
+
+    def __init__(self, message: str, *, retry_after_seconds: float | None = None) -> None:
+        super().__init__(message)
+        self.retry_after_seconds = retry_after_seconds
+
+
+def _retry_after_seconds(raw: str | None) -> float | None:
+    """Seconds from a ``Retry-After`` header, when it is expressed as a delay."""
+
+    if raw is None:
+        return None
+    text = raw.strip()
+    if not text:
+        return None
+    try:
+        seconds = float(text)
+    except ValueError:
+        # The HTTP-date form is legal but nothing MediaMop needs to act on: the caller
+        # degrades either way, and the next scheduled pass is minutes out.
+        return None
+    return seconds if seconds >= 0 else None
+
+
 def _validated_base_url(raw: str) -> str:
     try:
         return normalize_local_service_base_url(raw)
@@ -49,7 +80,10 @@ class MediaManagerHttpClient:
     def get_json(self, path: str, *, params: dict[str, Any] | None = None) -> Any:
         flat = {k: str(int(v)) if isinstance(v, bool) else str(v) for k, v in (params or {}).items()}
         url = self._url(path, flat if flat else None)
-        req = urllib.request.Request(url, headers={"X-Api-Key": self._api_key})
+        req = urllib.request.Request(
+            url,
+            headers={"X-Api-Key": self._api_key, "Accept": "application/json"},
+        )
         return self._read_json(req)
 
     def post_json(self, path: str, body: dict[str, Any]) -> Any:
@@ -89,6 +123,11 @@ class MediaManagerHttpClient:
             body = ""
             with contextlib.suppress(Exception):
                 body = e.read().decode("utf-8", errors="replace")[:500]
+            if e.code == 429:
+                raise MediaManagerRateLimitedError(
+                    f"HTTP 429: {body}",
+                    retry_after_seconds=_retry_after_seconds(e.headers.get("Retry-After")),
+                ) from e
             raise MediaManagerHttpError(f"HTTP {e.code}: {body}") from e
 
     def health_ok(self, path: str) -> None:

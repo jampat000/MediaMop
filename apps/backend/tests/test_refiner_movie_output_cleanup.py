@@ -1,4 +1,4 @@
-"""Tests for Refiner Pass 3a — Movies output-folder cleanup (Radarr truth + gates)."""
+"""Tests for Refiner Pass 3a — Movies output-folder cleanup (manager library truth + gates)."""
 
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ from mediamop.modules.refiner.refiner_movie_output_cleanup import (
     normalize_relative_media_path_for_match,
 )
 from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
+from tests.manager_signal_helpers import truth_reported, truth_unreachable
 
 
 def _session(tmp_path: Path) -> tuple[sessionmaker[Session], Session]:
@@ -37,8 +38,10 @@ def _settings(*, min_out_age: int = 0) -> MediaMopSettings:
     return replace(MediaMopSettings.load(), refiner_movie_output_cleanup_min_age_seconds=min_out_age)
 
 
-def _fake_radarr_creds(session: Session, settings: MediaMopSettings) -> tuple[str, str]:
-    return "http://127.0.0.1:9", "fake-key"
+def _library_truth(*answers):
+    """Patch the fan-out so a test states the managers' answers, not their HTTP."""
+
+    return lambda _session, _settings, *, media_scope: tuple(answers)
 
 
 def test_normalize_relative_media_path() -> None:
@@ -76,16 +79,13 @@ def test_tv_scope_skips_with_plain_reason(tmp_path: Path) -> None:
     assert "TV output cleanup is separate" in (out.get("movie_output_folder_skip_reason") or "")
 
 
-def test_truth_failed_when_radarr_moviefile_inside_folder(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_truth_failed_when_a_manager_keeps_a_file_inside_the_folder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     fac, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_movie_manager_credentials",
-        _fake_radarr_creds,
-    )
-    movies = [{"id": 1, "movieFile": {"path": str((tmp_path / "o" / "Title" / "f.mkv").resolve())}}]
-    monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.fetch_radarr_library_movies",
-        lambda **kwargs: movies,
+        "mediamop.modules.refiner.refiner_movie_output_cleanup.collect_library_truth",
+        _library_truth(truth_reported([str((tmp_path / "o" / "Title" / "f.mkv").resolve())])),
     )
     watched = tmp_path / "w"
     out_root = tmp_path / "o"
@@ -122,15 +122,11 @@ def test_truth_failed_when_radarr_moviefile_inside_folder(tmp_path: Path, monkey
     assert title.exists()
 
 
-def test_deleted_when_radarr_empty_and_age_ok(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_deleted_when_every_manager_reports_clear_and_age_ok(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_movie_manager_credentials",
-        _fake_radarr_creds,
-    )
-    monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.fetch_radarr_library_movies",
-        lambda **kwargs: [],
+        "mediamop.modules.refiner.refiner_movie_output_cleanup.collect_library_truth",
+        _library_truth(truth_reported([])),
     )
     watched = tmp_path / "w"
     out_root = tmp_path / "o"
@@ -168,19 +164,11 @@ def test_deleted_when_radarr_empty_and_age_ok(tmp_path: Path, monkeypatch: pytes
     assert not title.exists()
 
 
-def test_radarr_unreachable_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_unreachable_manager_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_movie_manager_credentials",
-        _fake_radarr_creds,
-    )
-
-    def _boom(**kwargs):
-        raise RuntimeError("connection refused")
-
-    monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.fetch_radarr_library_movies",
-        _boom,
+        "mediamop.modules.refiner.refiner_movie_output_cleanup.collect_library_truth",
+        _library_truth(truth_unreachable(name="Main", detail="Connection refused.")),
     )
     watched = tmp_path / "w"
     out_root = tmp_path / "o"
@@ -220,12 +208,8 @@ def test_radarr_unreachable_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
 def test_age_gate_blocks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_movie_manager_credentials",
-        _fake_radarr_creds,
-    )
-    monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.fetch_radarr_library_movies",
-        lambda **kwargs: [],
+        "mediamop.modules.refiner.refiner_movie_output_cleanup.collect_library_truth",
+        _library_truth(truth_reported([])),
     )
     watched = tmp_path / "w"
     out_root = tmp_path / "o"
@@ -263,12 +247,8 @@ def test_age_gate_blocks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
 def test_active_movies_remux_blocks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     fac, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_movie_manager_credentials",
-        _fake_radarr_creds,
-    )
-    monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.fetch_radarr_library_movies",
-        lambda **kwargs: [],
+        "mediamop.modules.refiner.refiner_movie_output_cleanup.collect_library_truth",
+        _library_truth(truth_reported([])),
     )
     session.add(
         RefinerJob(
@@ -321,12 +301,8 @@ def test_active_movies_remux_blocks(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 def test_tv_remux_job_does_not_block_movies_output_cleanup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     fac, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_movie_manager_credentials",
-        _fake_radarr_creds,
-    )
-    monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.fetch_radarr_library_movies",
-        lambda **kwargs: [],
+        "mediamop.modules.refiner.refiner_movie_output_cleanup.collect_library_truth",
+        _library_truth(truth_reported([])),
     )
     session.add(
         RefinerJob(
@@ -378,12 +354,8 @@ def test_tv_remux_job_does_not_block_movies_output_cleanup(tmp_path: Path, monke
 def test_cascade_removes_empty_parent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_movie_manager_credentials",
-        _fake_radarr_creds,
-    )
-    monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.fetch_radarr_library_movies",
-        lambda **kwargs: [],
+        "mediamop.modules.refiner.refiner_movie_output_cleanup.collect_library_truth",
+        _library_truth(truth_reported([])),
     )
     watched = tmp_path / "w"
     out_root = tmp_path / "o"
@@ -426,12 +398,8 @@ def test_cascade_removes_empty_parent(tmp_path: Path, monkeypatch: pytest.Monkey
 def test_output_folder_is_root_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_movie_manager_credentials",
-        _fake_radarr_creds,
-    )
-    monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.fetch_radarr_library_movies",
-        lambda **kwargs: [],
+        "mediamop.modules.refiner.refiner_movie_output_cleanup.collect_library_truth",
+        _library_truth(truth_reported([])),
     )
     watched = tmp_path / "w"
     out_root = tmp_path / "o"
@@ -469,12 +437,8 @@ def test_output_folder_is_root_skips(tmp_path: Path, monkeypatch: pytest.MonkeyP
 def test_rmtree_lock_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_movie_manager_credentials",
-        _fake_radarr_creds,
-    )
-    monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.fetch_radarr_library_movies",
-        lambda **kwargs: [],
+        "mediamop.modules.refiner.refiner_movie_output_cleanup.collect_library_truth",
+        _library_truth(truth_reported([])),
     )
     watched = tmp_path / "w"
     out_root = tmp_path / "o"
@@ -519,19 +483,15 @@ def test_live_cleanup_runs_even_when_legacy_dry_run_flag_passed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _, session = _session(tmp_path)
-    radarr_calls: list[int] = []
+    manager_calls: list[int] = []
 
-    def _radarr_must_not_run(**_kwargs: object) -> list[dict[str, object]]:
-        radarr_calls.append(1)
-        return []
+    def _record_and_answer(_session, _settings, *, media_scope):
+        manager_calls.append(1)
+        return (truth_reported([]),)
 
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.resolve_movie_manager_credentials",
-        _fake_radarr_creds,
-    )
-    monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.fetch_radarr_library_movies",
-        _radarr_must_not_run,
+        "mediamop.modules.refiner.refiner_movie_output_cleanup.collect_library_truth",
+        _record_and_answer,
     )
     watched = tmp_path / "w"
     out_root = tmp_path / "o"
@@ -566,7 +526,7 @@ def test_live_cleanup_runs_even_when_legacy_dry_run_flag_passed(
     )
     assert out["movie_output_dry_run"] is False
     assert out["movie_output_truth_check"] == "passed"
-    assert radarr_calls == [1]
+    assert manager_calls == [1]
 
 
 def test_expected_output_outside_output_root_skips(tmp_path: Path) -> None:

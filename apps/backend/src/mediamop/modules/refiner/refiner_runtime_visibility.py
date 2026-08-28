@@ -38,15 +38,18 @@ _WORK_TEMP_STALE_SWEEP_PERIODIC_NOTE = (
 _MOVIE_OUTPUT_CLEANUP_NOTE = (
     "Movies output-folder cleanup (Pass 3a) after a successful Movies remux uses "
     "MEDIAMOP_REFINER_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS in apps/backend/.env (default 48 hours, clamped 1h..30d). "
-    "Radarr library paths are read live from Radarr before any delete. Restart the API after changing this value."
+    "Before any delete, MediaMop asks every media manager connected for Movies which library files it still "
+    "keeps, and leaves the folder alone if any of them keeps one inside it or cannot answer. "
+    "Restart the API after changing this value."
 )
 
 _TV_OUTPUT_CLEANUP_NOTE = (
     "TV output-folder cleanup (Pass 3b) after a successful TV remux uses "
     "MEDIAMOP_REFINER_TV_OUTPUT_CLEANUP_MIN_AGE_SECONDS in apps/backend/.env (default 48 hours, clamped 1h..30d). "
     "The age gate looks at direct-child episode media files in the season output folder only. "
-    "Before any delete, Refiner reads Sonarr's saved episode file locations and skips removal if any kept library file "
-    "still maps under that season output folder. Restart the API after changing this value."
+    "Before any delete, MediaMop asks every media manager connected for TV episodes which library files it still "
+    "keeps, and leaves the season folder alone if any of them keeps one inside it or cannot answer. "
+    "Restart the API after changing this value."
 )
 
 _FAILURE_CLEANUP_NOTE = (

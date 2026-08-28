@@ -1,4 +1,8 @@
-"""Encrypt/decrypt Sonarr/Radarr API keys at rest."""
+"""Encrypt/decrypt a media manager's API key at rest.
+
+The KDF domain bytes below are frozen for compatibility with existing installs, which is
+the reason this module still lives under the old package name.
+"""
 
 from __future__ import annotations
 

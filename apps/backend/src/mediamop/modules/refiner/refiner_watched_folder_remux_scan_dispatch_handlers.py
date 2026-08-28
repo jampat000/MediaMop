@@ -18,7 +18,7 @@ from mediamop.modules.refiner.refiner_operator_settings_service import ensure_re
 from mediamop.modules.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_evaluate import (
     evaluate_watched_media_file_for_dispatch,
-    fetch_radarr_and_sonarr_queue_rows_for_scan,
+    fetch_manager_queue_signals_for_scan,
 )
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_ops import (
     iter_watched_folder_media_candidate_files,
@@ -28,6 +28,7 @@ from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_ops imp
     retry_completed_movie_source_cleanup,
 )
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
+from mediamop.platform.media_managers.manager_port import MediaScope
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
     settings: MediaMopSettings,
     session_factory: sessionmaker[Session],
 ) -> Callable[[RefinerJobWorkContext], None]:
-    """Scan saved watched folder, classify each media file with merged *arr queue domain rules, optionally enqueue remux."""
+    """Scan saved watched folder, classify each media file against every media manager covering the scope, optionally enqueue remux."""
 
     def _run(ctx: RefinerJobWorkContext) -> None:
         body = _parse_job_payload(ctx.payload_json)
@@ -55,7 +56,7 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
         if scan_trigger not in ("manual", "periodic"):
             scan_trigger = "manual"
         media_scope_raw = body.get("media_scope", "movie")
-        media_scope = media_scope_raw if media_scope_raw in ("movie", "tv") else "movie"
+        media_scope: MediaScope = "tv" if media_scope_raw == "tv" else "movie"
 
         with session_factory() as session:
             op_settings = ensure_refiner_operator_settings_row(session)
@@ -68,8 +69,12 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
             raise ValueError(path_err or "Refiner path settings are incomplete for this scan.")
 
         watched_root = rt.watched_folder
-        with session_factory() as arr_session:
-            rad_rows, son_rows, rad_err, son_err = fetch_radarr_and_sonarr_queue_rows_for_scan(arr_session, settings)
+        with session_factory() as manager_session:
+            signals, signal_report = fetch_manager_queue_signals_for_scan(
+                manager_session,
+                settings,
+                media_scope=media_scope,
+            )
 
         watched_path = Path(watched_root)
         files = iter_watched_folder_media_candidate_files(
@@ -78,6 +83,7 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
         )
 
         sample_paths: list[str] = []
+        upstream_block_reasons: list[str] = []
         summary: dict[str, Any] = {
             "job_id": ctx.id,
             "scan_trigger": scan_trigger,
@@ -87,10 +93,12 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
             "enqueue_remux_jobs": enqueue_remux_jobs,
             "min_file_age_seconds": op_settings.min_file_age_seconds,
             "minimum_input_file_size_mb": op_settings.refiner_min_input_file_size_mb,
-            "radarr_queue_row_count": len(rad_rows),
-            "sonarr_queue_row_count": len(son_rows),
-            "radarr_queue_fetch_error": rad_err,
-            "sonarr_queue_fetch_error": son_err,
+            "managers_consulted": signal_report.consulted,
+            "managers_reporting": signal_report.reported,
+            "manager_queue_row_count": sum(len(s.rows) for s in signals if s.is_reported),
+            "managers_without_queue_signal": list(signal_report.silent_labels),
+            "manager_queue_signal_notes": list(signal_report.silent_details),
+            "upstream_block_reasons": upstream_block_reasons,
             "media_candidates_seen": len(files),
             "verdict_proceed": 0,
             "verdict_wait_upstream": 0,
@@ -131,19 +139,21 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                         )
                         continue
 
-                verdict = evaluate_watched_media_file_for_dispatch(
-                    radarr_rows=rad_rows,
-                    sonarr_rows=son_rows,
+                outcome = evaluate_watched_media_file_for_dispatch(
+                    signals=signals,
+                    media_scope=media_scope,
                     file_path=file_path,
                 )
-                if verdict == "proceed":
+                if outcome.verdict == "proceed":
                     summary["verdict_proceed"] += 1
-                elif verdict == "wait_upstream":
+                elif outcome.verdict == "wait_upstream":
                     summary["verdict_wait_upstream"] += 1
+                    if outcome.blocked_reason and outcome.blocked_reason not in upstream_block_reasons:
+                        upstream_block_reasons.append(outcome.blocked_reason)
                 else:
                     summary["verdict_not_held"] += 1
 
-                if verdict != "proceed" or not enqueue_remux_jobs:
+                if outcome.verdict != "proceed" or not enqueue_remux_jobs:
                     continue
 
                 rel = relative_posix_path_under_watched(watched_root=watched_path, file_path=file_path)
@@ -215,10 +225,17 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                 )
             elif waiting:
                 summary["scan_result_label"] = "waiting_for_files"
-                summary["user_message"] = (
-                    f"{waiting} file{' looks' if waiting == 1 else 's look'} like it is still being copied or imported, "
-                    "so MediaMop left it alone for now."
+                # One reason names the connection holding the file; several are summarised,
+                # because a per-file list does not fit one operator sentence.
+                held_by = (
+                    upstream_block_reasons[0]
+                    if len(upstream_block_reasons) == 1
+                    else (
+                        f"{waiting} file{' looks' if waiting == 1 else 's look'} like they are still being copied "
+                        "or imported, so MediaMop left them alone for now."
+                    )
                 )
+                summary["user_message"] = held_by
                 summary["waiting_message"] = "MediaMop will check again on the next scheduled scan."
             elif seen and not enqueue_remux_jobs:
                 summary["scan_result_label"] = "check_only"
@@ -236,6 +253,13 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
             else:
                 summary["scan_result_label"] = "no_media_found"
                 summary["user_message"] = "MediaMop did not find any media files in this watched folder."
+
+            # A manager that could not be reached must never read as "nothing is importing".
+            # The scan still runs — the file-settling gates are the fallback — but the
+            # operator is told which check was missing rather than being shown a clean pass.
+            degraded_note = signal_report.note()
+            if degraded_note:
+                summary["user_message"] = f"{summary['user_message']} {degraded_note}".strip()
 
             # File-level processing events now tell the user what happened. Recording a scan
             # event here makes Activity look backwards when completed file events arrive first.

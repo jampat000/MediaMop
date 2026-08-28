@@ -37,7 +37,7 @@ def post_refiner_candidate_gate_enqueue(
     db: DbSessionDep,
     settings: SettingsDep,
 ) -> RefinerCandidateGateManualEnqueueOut:
-    """Refiner: enqueue one ownership / upstream-blocking evaluation against the live *arr queue."""
+    """Refiner: enqueue one ownership / upstream-blocking evaluation against every connected media manager."""
 
     validate_browser_post_origin(request, settings)
     secret = require_session_secret(settings)
@@ -48,12 +48,11 @@ def post_refiner_candidate_gate_enqueue(
         )
 
     payload = {
-        "target": body.target,
+        "media_scope": body.media_scope,
         "release_title": body.release_title,
         "release_year": body.release_year,
         "output_path": body.output_path,
-        "movie_id": body.movie_id,
-        "series_id": body.series_id,
+        "entity_id": body.entity_id,
     }
     dedupe_key = f"{REFINER_CANDIDATE_GATE_JOB_KIND}:{uuid4().hex}"
     job = refiner_enqueue_or_get_job(

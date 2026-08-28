@@ -1,7 +1,12 @@
 """Movies-only Refiner output-folder cleanup after a successful remux pass (Pass 3a).
 
 Deletes the **immediate parent directory** of the movie file under the Movies output root when
-Radarr library truth, minimum age, and active-job gates all pass. TV scope is never handled here.
+media manager library truth, minimum age, and active-job gates all pass. TV scope is never
+handled here.
+
+Library truth comes from the media manager port, so every manager looking after Movies is
+asked and any one of them keeping a file inside the folder stops the delete. A manager that
+cannot answer stops it too — see :mod:`mediamop.modules.refiner.manager_library_truth`.
 """
 
 from __future__ import annotations
@@ -10,8 +15,6 @@ import json
 import logging
 import shutil
 import time
-import urllib.error
-import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -21,12 +24,11 @@ from sqlalchemy.orm import Session
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.modules.refiner.manager_library_truth import evaluate_library_truth_for_folder
 from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
-from mediamop.platform.media_managers.credentials import resolve_movie_manager_credentials
-from mediamop.platform.outbound_http import normalize_local_service_base_url
+from mediamop.platform.media_managers.manager_binding import collect_library_truth
 
 logger = logging.getLogger(__name__)
-_RADARR_PAGE_SIZE = 200_000
 
 
 def _normalize_media_scope(raw: str | None) -> str:
@@ -51,65 +53,6 @@ def init_movie_output_cleanup_activity_fields(out: dict[str, Any]) -> None:
     out.setdefault("movie_output_age_seconds", None)
     out.setdefault("movie_output_cascade_folders_deleted", [])
     out.setdefault("movie_output_dry_run", None)
-
-
-def fetch_radarr_library_movies(
-    *,
-    base_url: str,
-    api_key: str,
-    timeout_seconds: float = 60.0,
-) -> list[dict[str, Any]]:
-    """GET ``/api/v3/movie`` (Refiner-owned stdlib HTTP; same style as queue fetch)."""
-
-    base = normalize_local_service_base_url(base_url)
-    # Radarr's movie endpoint effectively behaves as an unpaginated library listing; use a very high cap.
-    url = f"{base}/api/v3/movie?pageSize={_RADARR_PAGE_SIZE}"
-    req = urllib.request.Request(
-        url,
-        method="GET",
-        headers={"X-Api-Key": api_key, "Accept": "application/json"},
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=timeout_seconds) as resp:
-            raw = resp.read().decode("utf-8")
-    except urllib.error.HTTPError as e:
-        msg = f"Radarr library fetch failed: HTTP {e.code} for {url!r}"
-        raise RuntimeError(msg) from e
-    except OSError as e:
-        msg = f"Radarr library fetch failed: could not reach Radarr ({e})."
-        raise RuntimeError(msg) from e
-    data = json.loads(raw)
-    if isinstance(data, list):
-        return [x for x in data if isinstance(x, dict)]
-    return []
-
-
-def radarr_library_moviefile_paths_under_folder(
-    *,
-    movies: list[dict[str, Any]],
-    folder: Path,
-) -> list[Path]:
-    """Return Radarr ``movieFile.path`` values that resolve **inside** ``folder`` (inclusive)."""
-
-    folder_r = folder.resolve()
-    hits: list[Path] = []
-    for m in movies:
-        mf = m.get("movieFile")
-        if not isinstance(mf, dict):
-            continue
-        raw_path = mf.get("path")
-        if not isinstance(raw_path, str) or not raw_path.strip():
-            continue
-        try:
-            pr = Path(raw_path.strip()).expanduser().resolve()
-        except OSError:
-            continue
-        try:
-            pr.relative_to(folder_r)
-        except ValueError:
-            continue
-        hits.append(pr)
-    return hits
 
 
 def newest_mtime_seconds_under_tree(root: Path) -> float | None:
@@ -355,44 +298,18 @@ def maybe_run_movie_output_folder_cleanup_after_remux(
         out["movie_output_truth_note"] = out["movie_output_folder_skip_reason"]
         return
 
-    base, key = resolve_movie_manager_credentials(session, settings)
-    if not base or not key:
-        out["movie_output_folder_skip_reason"] = (
-            "Radarr URL or API key is not configured in MediaMop, so Refiner could not verify Radarr library paths. "
-            "The movie output folder was left in place."
-        )
-        out["movie_output_truth_check"] = "skipped"
-        out["movie_output_truth_note"] = out["movie_output_folder_skip_reason"]
-        return
-
-    try:
-        movies = fetch_radarr_library_movies(base_url=base, api_key=key)
-    except RuntimeError as exc:
-        out["movie_output_folder_skip_reason"] = (
-            f"Radarr could not be reached or returned an error while reading the movie library, so the output folder was not removed ({exc})."
-        )
-        out["movie_output_truth_check"] = "skipped"
-        out["movie_output_truth_note"] = str(exc)
-        logger.warning("Refiner Movies output cleanup: %s", exc)
-        return
-
-    hits = radarr_library_moviefile_paths_under_folder(movies=movies, folder=output_movie_folder)
-    if hits:
-        sample = "; ".join(str(p) for p in hits[:3])
-        if len(hits) > 3:
-            sample += f" (+{len(hits) - 3} more)"
-        out["movie_output_truth_check"] = "failed"
-        out["movie_output_truth_note"] = (
-            "Radarr still reports at least one library movie file inside this output folder, so Refiner treats it as "
-            f"the kept library location and will not delete it. Example path(s): {sample}"
-        )
-        out["movie_output_folder_skip_reason"] = out["movie_output_truth_note"]
-        return
-
-    out["movie_output_truth_check"] = "passed"
-    out["movie_output_truth_note"] = (
-        "Radarr reports no library movie file paths inside this folder, so Refiner treated it as safe to remove under the other gates."
+    truth = evaluate_library_truth_for_folder(
+        collect_library_truth(session, settings, media_scope="movie"),
+        folder=output_movie_folder,
+        media_scope="movie",
     )
+    out["movie_output_truth_check"] = truth.check
+    out["movie_output_truth_note"] = truth.note
+    if not truth.clears_delete:
+        out["movie_output_folder_skip_reason"] = truth.note
+        if truth.check == "skipped":
+            logger.warning("Refiner Movies output cleanup: %s", truth.note)
+        return
 
     cascade: list[str] = out["movie_output_cascade_folders_deleted"]
 

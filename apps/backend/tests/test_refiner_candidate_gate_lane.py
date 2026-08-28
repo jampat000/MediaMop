@@ -1,4 +1,4 @@
-"""Refiner candidate gate: refiner_jobs, handler wiring, mocked live Radarr queue rows."""
+"""Refiner candidate gate: refiner_jobs, handler wiring, mocked media manager answers."""
 
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ from mediamop.modules.refiner.refiner_job_handlers import build_refiner_job_hand
 from mediamop.modules.refiner.worker_loop import process_one_refiner_job
 from mediamop.platform.activity import constants as C
 from mediamop.platform.activity.models import ActivityEvent
+from tests.manager_signal_helpers import reported, unreachable
 
 
 @pytest.fixture
@@ -65,17 +66,13 @@ def test_candidate_gate_handler_uses_live_queue_shape(
         },
     ]
 
-    def _fake_fetch(**_kwargs):
-        return fake_rows
-
     t0 = datetime(2026, 4, 12, 12, 0, 0, tzinfo=UTC)
     payload = {
-        "target": "radarr",
+        "media_scope": "movie",
         "release_title": "Gate Test",
         "release_year": 2001,
         "output_path": "/q/m.mkv",
-        "movie_id": None,
-        "series_id": None,
+        "entity_id": None,
     }
     with session_factory() as s:
         refiner_enqueue_or_get_job(
@@ -88,8 +85,8 @@ def test_candidate_gate_handler_uses_live_queue_shape(
 
     handlers = build_refiner_job_handlers(settings, session_factory)
     with patch(
-        "mediamop.modules.refiner.refiner_candidate_gate_handlers.fetch_arr_v3_queue_rows",
-        side_effect=_fake_fetch,
+        "mediamop.modules.refiner.refiner_candidate_gate_handlers.collect_queue_signals",
+        return_value=(reported(fake_rows, name="Main"),),
     ):
         assert (
             process_one_refiner_job(
@@ -115,9 +112,53 @@ def test_candidate_gate_handler_uses_live_queue_shape(
         assert body.get("verdict") == "proceed"
 
 
-def test_refiner_candidate_gate_queue_fetch_module_has_no_in_repo_package_imports() -> None:
-    import mediamop.modules.refiner.refiner_candidate_gate_queue_fetch as mod
+def test_candidate_gate_handler_reports_a_manager_it_could_not_reach(
+    session_factory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An unreachable manager must not land in Activity as a clean, empty queue."""
 
-    src = Path(mod.__file__).read_text(encoding="utf-8")
-    assert "from mediamop" not in src
-    assert "import mediamop" not in src
+    monkeypatch.delenv("MEDIAMOP_ARR_RADARR_BASE_URL", raising=False)
+    monkeypatch.delenv("MEDIAMOP_ARR_RADARR_API_KEY", raising=False)
+    settings = MediaMopSettings.load()
+
+    payload = {
+        "media_scope": "movie",
+        "release_title": "Gate Test",
+        "release_year": 2001,
+        "output_path": "/q/m.mkv",
+        "entity_id": None,
+    }
+    with session_factory() as s:
+        refiner_enqueue_or_get_job(
+            s,
+            dedupe_key="refiner.candidate_gate.v1:unreachable",
+            job_kind=REFINER_CANDIDATE_GATE_JOB_KIND,
+            payload_json=json.dumps(payload),
+        )
+        s.commit()
+
+    handlers = build_refiner_job_handlers(settings, session_factory)
+    with patch(
+        "mediamop.modules.refiner.refiner_candidate_gate_handlers.collect_queue_signals",
+        return_value=(unreachable(name="4K", detail="Connection refused."),),
+    ):
+        assert (
+            process_one_refiner_job(
+                session_factory,
+                lease_owner="cg-test",
+                job_handlers=handlers,
+                now=datetime(2026, 4, 12, 12, 0, 0, tzinfo=UTC),
+                lease_seconds=3600,
+            )
+            == "processed"
+        )
+
+    with session_factory() as s:
+        ev = s.scalars(
+            select(ActivityEvent).where(ActivityEvent.event_type == C.REFINER_CANDIDATE_GATE_COMPLETED),
+        ).first()
+        assert ev is not None
+        body = json.loads(ev.detail or "{}")
+        assert body.get("verdict") == "no_upstream_signal"
+        assert body.get("managers_without_queue_signal") == ["Radarr (4K)"]

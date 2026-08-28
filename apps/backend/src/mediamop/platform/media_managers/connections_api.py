@@ -29,6 +29,7 @@ from mediamop.platform.media_managers.connection_model import (
     MediaManagerSearchLaneRow,
 )
 from mediamop.platform.media_managers.connection_schemas import (
+    MediaManagerCapabilityOut,
     MediaManagerConnectionCreateIn,
     MediaManagerConnectionDeleteIn,
     MediaManagerConnectionOut,
@@ -49,6 +50,7 @@ from mediamop.platform.media_managers.connection_service import (
     rotate_webhook_secret,
     update_connection,
 )
+from mediamop.platform.media_managers.manager_binding import describe_connections
 from mediamop.platform.media_managers.manager_http import (
     MediaManagerHttpClient,
     MediaManagerHttpError,
@@ -141,6 +143,40 @@ def post_media_manager_connection(
     db.commit()
     db.refresh(row)
     return _to_out(row)
+
+
+@router.get("/media-managers/capabilities", response_model=list[MediaManagerCapabilityOut])
+def get_media_manager_capabilities(
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+) -> list[MediaManagerCapabilityOut]:
+    """What each connected manager manages, and which questions it can answer.
+
+    Asks the managers themselves, so a connection that has gone away is reported as
+    unreachable rather than silently described from its saved kind. Only enabled
+    connections with an address and a saved key are listed — nothing else can be asked.
+    """
+
+    out: list[MediaManagerCapabilityOut] = []
+    for described in describe_connections(db, settings):
+        caps = described.capabilities
+        out.append(
+            MediaManagerCapabilityOut(
+                connection_id=described.connection.connection_id or 0,
+                kind=cast(MediaManagerKind, described.connection.kind),
+                name=described.connection.name,
+                label=described.connection.label,
+                media_scopes=sorted(caps.scopes),
+                reports_import_queue=caps.reports_queue,
+                reports_library_truth=caps.reports_library_truth,
+                reachable=described.status == "reported",
+                library_roots=list(described.library_roots),
+                summary=caps.summary,
+                detail=described.detail,
+            )
+        )
+    return out
 
 
 @router.get("/media-managers/connections/{connection_id}", response_model=MediaManagerConnectionOut)
