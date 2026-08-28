@@ -7,7 +7,7 @@ import {
   RefinerOverviewTab,
   type RefinerOverviewOpenTab,
 } from "./refiner-overview-tab";
-import { RefinerPathSettingsSection } from "./refiner-path-settings-section";
+import { RefinerLibrariesSection } from "./refiner-libraries-section";
 import { RefinerSchedulesSection } from "./refiner-schedules-section";
 import { RefinerRemuxSection } from "./refiner-remux-section";
 import {
@@ -114,7 +114,7 @@ export function RefinerPage() {
 
           {tab === "libraries" ? (
             <div className="mm-bubble-stack flex w-full min-w-0 flex-col">
-              <RefinerPathSettingsSection />
+              <RefinerLibrariesSection />
               <RefinerProcessSettingsSection />
             </div>
           ) : null}
