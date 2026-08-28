@@ -616,6 +616,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/refiner/files": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Refiner Files
+     * @description Files Refiner has seen, with the reason it is or is not working on each.
+     */
+    get: operations["get_refiner_files_api_v1_refiner_files_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/files/{file_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Delete Refiner File
+     * @description Forget a file. Removes MediaMop's record of it, never the file on disk.
+     */
+    delete: operations["delete_refiner_file_api_v1_refiner_files__file_id__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/refiner/jobs/candidate-gate/enqueue": {
     parameters: {
       query?: never;
@@ -2730,6 +2770,51 @@ export interface components {
        */
       ok: boolean;
     };
+    /** RefinerFileForgetIn */
+    RefinerFileForgetIn: {
+      /** Csrf Token */
+      csrf_token: string;
+    };
+    /** RefinerFileOut */
+    RefinerFileOut: {
+      /**
+       * Blocked By Connection
+       * @description The media manager connection holding this file, when the status is blocked_upstream.
+       */
+      blocked_by_connection?: string | null;
+      /** Id */
+      id: number;
+      /** Last Attempt At */
+      last_attempt_at?: string | null;
+      /** Last Seen At */
+      last_seen_at?: string | null;
+      /** Library Id */
+      library_id: number;
+      /** Library Name */
+      library_name: string;
+      /** Relative Path */
+      relative_path: string;
+      /** Size Bytes */
+      size_bytes: number;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status:
+        | "unprocessed"
+        | "processing"
+        | "processed"
+        | "processing_failed"
+        | "disabled"
+        | "on_hold"
+        | "out_of_schedule"
+        | "blocked_upstream";
+      /**
+       * Status Reason
+       * @description Why the file is in this state, written for the person reading it.
+       */
+      status_reason: string;
+    };
     /**
      * RefinerFileRemuxPassManualEnqueueIn
      * @description Manual ``refiner.file.remux_pass.v1`` enqueue — requires a saved Refiner watched folder before this POST succeeds.
@@ -2763,6 +2848,22 @@ export interface components {
        * @default true
        */
       ok: boolean;
+    };
+    /**
+     * RefinerFilesPageOut
+     * @description A page of files plus the bucket counts shown above them.
+     */
+    RefinerFilesPageOut: {
+      /** Files */
+      files: components["schemas"]["RefinerFileOut"][];
+      /** Limit */
+      limit: number;
+      /** Returned */
+      returned: number;
+      /** Status Counts */
+      status_counts: {
+        [key: string]: number;
+      };
     };
     /** RefinerJobCancelPendingIn */
     RefinerJobCancelPendingIn: {
@@ -5415,6 +5516,85 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["PrunerOverviewStatsOut"];
+        };
+      };
+    };
+  };
+  get_refiner_files_api_v1_refiner_files_get: {
+    parameters: {
+      query?: {
+        library_id?: number | null;
+        file_status?:
+          | (
+              | "unprocessed"
+              | "processing"
+              | "processed"
+              | "processing_failed"
+              | "disabled"
+              | "on_hold"
+              | "out_of_schedule"
+              | "blocked_upstream"
+            )
+          | null;
+        path_contains?: string | null;
+        within_days?: number | null;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerFilesPageOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_refiner_file_api_v1_refiner_files__file_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        file_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RefinerFileForgetIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { mmSectionTabClass } from "../../lib/ui/mm-control-roles";
 import { RefinerProcessSettingsSection } from "./refiner-process-settings-section";
+import { RefinerFilesSection } from "./refiner-files-section";
 import { RefinerJobsInspectionSection } from "./refiner-jobs-inspection-section";
 import {
   RefinerOverviewTab,
@@ -19,6 +20,7 @@ type RefinerPageTabId =
   | "overview"
   | "libraries"
   | "audio-subtitles"
+  | "files"
   | "jobs"
   | "schedules";
 
@@ -26,11 +28,13 @@ const REFINER_TAB_BLURBS: Record<RefinerPageTabId, string> = {
   overview:
     "Review remux throughput, recent outcomes, and overall Refiner status.",
   libraries:
-    "Set TV and Movies watched, work, and output folders, plus per-library scan controls.",
+    "Add and configure Refiner libraries — folders, file types, schedule and guardrails, one set per library.",
   "audio-subtitles":
     "Choose default audio and subtitle remux rules separately for TV and Movies.",
   schedules:
     "Set optional schedule windows and run manual watched-folder scans when needed.",
+  files:
+    "Every file Refiner has looked at, and why it is or is not being processed.",
   jobs: "View queued, running, and recent Refiner jobs for troubleshooting and progress.",
 };
 
@@ -42,6 +46,7 @@ export function RefinerPage() {
     { id: "libraries", label: "Libraries" },
     { id: "audio-subtitles", label: "Audio & subtitles" },
     { id: "schedules", label: "Schedules" },
+    { id: "files", label: "Files" },
     { id: "jobs", label: "Jobs" },
   ];
 
@@ -122,6 +127,7 @@ export function RefinerPage() {
           {tab === "audio-subtitles" ? <RefinerRemuxSection /> : null}
 
           {tab === "schedules" ? <RefinerSchedulesSection /> : null}
+          {tab === "files" ? <RefinerFilesSection /> : null}
           {tab === "jobs" ? <RefinerJobsInspectionSection /> : null}
         </div>
       </div>

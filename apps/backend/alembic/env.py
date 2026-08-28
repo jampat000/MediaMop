@@ -31,6 +31,7 @@ from mediamop.modules.pruner import pruner_preview_run_model as _pruner_preview_
 from mediamop.modules.pruner import pruner_scope_settings_model as _pruner_scope_settings_orm  # noqa: F401
 from mediamop.modules.pruner import pruner_server_instance_model as _pruner_server_instance_orm  # noqa: F401
 from mediamop.modules.refiner import jobs_model as _refiner_jobs_orm  # noqa: F401
+from mediamop.modules.refiner import refiner_file_state_model as _refiner_file_state_orm  # noqa: F401
 from mediamop.modules.refiner import refiner_library_model as _refiner_library_orm  # noqa: F401
 from mediamop.modules.refiner import refiner_operator_settings_model as _refiner_operator_settings_orm  # noqa: F401
 from mediamop.modules.refiner import refiner_path_settings_model as _refiner_path_settings_orm  # noqa: F401
