@@ -22,6 +22,8 @@ function file(over: Partial<RefinerFile> = {}): RefinerFile {
     status_reason: "Ready for Refiner to process as part of Movies.",
     blocked_by_connection: null,
     size_bytes: 2048,
+    hold_until: null,
+    size_changed_at: null,
     last_seen_at: null,
     last_attempt_at: null,
     ...over,
@@ -147,4 +149,50 @@ it("explains an empty list rather than showing nothing", async () => {
   render(<RefinerFilesSection />, { wrapper });
 
   expect(await screen.findByText(/No files match/)).toBeInTheDocument();
+});
+
+it("shows a held file's release time so the wait is not open-ended", async () => {
+  asOperator();
+  vi.spyOn(api, "fetchRefinerFiles").mockResolvedValue(
+    page({
+      files: [
+        file({
+          status: "on_hold",
+          status_reason:
+            "This file is still growing, so something is writing to it.",
+          hold_until: new Date(Date.now() + 30_000).toISOString(),
+        }),
+      ],
+    }),
+  );
+
+  render(<RefinerFilesSection />, { wrapper });
+
+  expect(
+    await screen.findByTestId("refiner-file-hold-until-1"),
+  ).toHaveTextContent(/Ready in about 30s/);
+});
+
+it("invents no release time when the wait is on a writer rather than the clock", async () => {
+  asOperator();
+  vi.spyOn(api, "fetchRefinerFiles").mockResolvedValue(
+    page({
+      files: [
+        file({
+          status: "on_hold",
+          status_reason: "MediaMop could not open this file for reading.",
+          hold_until: null,
+        }),
+      ],
+    }),
+  );
+
+  render(<RefinerFilesSection />, { wrapper });
+
+  expect(
+    await screen.findByText(/could not open this file for reading/),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByTestId("refiner-file-hold-until-1"),
+  ).not.toBeInTheDocument();
 });

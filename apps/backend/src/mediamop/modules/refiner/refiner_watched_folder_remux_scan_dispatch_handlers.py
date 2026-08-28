@@ -15,8 +15,14 @@ from sqlalchemy.orm import Session, sessionmaker
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
+from mediamop.modules.refiner.refiner_file_settling import (
+    AccessCheck,
+    check_file_access,
+    observe_size_settling,
+)
 from mediamop.modules.refiner.refiner_file_state_service import (
     decide_file_state,
+    existing_file_row,
     library_in_schedule_window,
     record_file_state,
 )
@@ -117,6 +123,8 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
             "ignored_unsupported_extensions": list(candidates.ignored_unsupported_extensions),
             "media_extensions_applied": list(refiner_media_extensions_sorted()),
             "files_withheld": 0,
+            "files_still_settling": 0,
+            "files_failing_access_test": 0,
             "verdict_proceed": 0,
             "verdict_wait_upstream": 0,
             "verdict_not_held": 0,
@@ -165,10 +173,35 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                 # existed only as a local variable and the operator saw nothing (#334).
                 if library is not None:
                     rel_for_state = relative_posix_path_under_watched(watched_root=watched_path, file_path=file_path)
+                    observed_size = _file_size_bytes(file_path)
+                    # Read the previous observation before recording this one — the whole
+                    # settling decision is the comparison between the two (#335).
+                    previous = existing_file_row(session, library_id=library.id, relative_path=rel_for_state)
+                    settling = observe_size_settling(
+                        library=library,
+                        previous=previous,
+                        current_size_bytes=observed_size,
+                    )
+                    # Only probe access once the file has stopped moving. A file mid-write
+                    # is normally locked as well, and "still being written to" is the
+                    # cause an operator can act on.
+                    access = (
+                        AccessCheck(ok=True)
+                        if settling.is_settling
+                        else check_file_access(
+                            library=library,
+                            file_path=file_path,
+                            output_folder=Path(rt.output_folder) if rt.output_folder else None,
+                        )
+                    )
                     verdict = decide_file_state(
                         library=library,
                         in_schedule_window=in_window,
                         file_age_seconds=_file_age_seconds(file_path),
+                        size_is_settling=settling.is_settling,
+                        settling_reason=settling.reason,
+                        settling_stable_at=settling.stable_at,
+                        access_problem=access.problem,
                         blocked_by_connection=outcome.blocked_connection,
                     )
                     record_file_state(
@@ -176,10 +209,15 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                         library=library,
                         relative_path=rel_for_state,
                         verdict=verdict,
-                        size_bytes=_file_size_bytes(file_path),
+                        size_bytes=observed_size,
+                        size_changed_at=settling.size_changed_at,
                     )
                     if not verdict.eligible:
                         summary["files_withheld"] += 1
+                        if settling.is_settling:
+                            summary["files_still_settling"] += 1
+                        elif access.problem:
+                            summary["files_failing_access_test"] += 1
                         continue
                 if outcome.verdict == "proceed":
                     summary["verdict_proceed"] += 1

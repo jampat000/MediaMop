@@ -99,6 +99,14 @@ class RefinerLibraryRow(Base):
     # Timing.
     scan_interval_seconds: Mapped[int] = mapped_column(Integer, nullable=False, server_default="300")
     hold_minutes: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    # How long a file's size must hold still before it counts as finished being written.
+    # This is what replaces guessing at a write duration with an mtime threshold: it
+    # observes writing having stopped rather than predicting when it will.
+    file_detection_interval_seconds: Mapped[int] = mapped_column(Integer, nullable=False, server_default="30")
+    ignore_size_changes: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    # The read/write probe before queueing. On by default: discovering a file is locked
+    # after a job has been enqueued is a failure, discovering it before is a wait.
+    skip_access_tests: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     schedule_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
     schedule_hours_limited: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     schedule_days: Mapped[str] = mapped_column(Text, nullable=False, server_default="")

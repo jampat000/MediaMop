@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -358,3 +358,172 @@ def test_scan_handler_does_not_record_activity_when_no_files_are_queued(
 
     with session_factory() as s:
         assert s.scalar(select(ActivityEvent)) is None
+
+
+def _seed_library(session_factory, *, watch: Path, out: Path, **overrides) -> None:
+    """A library row, so the file-state gates in the handler actually run.
+
+    The lane tests above predate libraries and resolve to none, which makes the whole
+    state block a no-op for them. These two need it.
+    """
+
+    from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
+
+    with session_factory() as s:
+        s.add(
+            RefinerLibraryRow(
+                name="Movies",
+                media_scope="movie",
+                enabled=True,
+                display_order=0,
+                watched_folder=str(watch.resolve()),
+                output_folder=str(out.resolve()),
+                min_file_age_seconds=0,
+                hold_minutes=0,
+                schedule_enabled=False,
+                file_detection_interval_seconds=overrides.pop("file_detection_interval_seconds", 30),
+                **overrides,
+            )
+        )
+        s.commit()
+
+
+def _run_scan(session_factory, settings, *, dedupe: str, now: datetime) -> str:
+    def _fake_fetch(_session: Session, _settings: MediaMopSettings, *, media_scope: str):
+        signals = (reported([], name="Main"),)
+        return signals, report_for_signals(signals)
+
+    with session_factory() as s:
+        refiner_enqueue_or_get_job(
+            s,
+            dedupe_key=f"refiner.watched_folder.remux_scan_dispatch.v1:{dedupe}",
+            job_kind=REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
+            payload_json=json.dumps({"enqueue_remux_jobs": True}),
+        )
+        s.commit()
+
+    handlers = build_refiner_job_handlers(settings, session_factory)
+    with patch(
+        "mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_handlers."
+        "fetch_manager_queue_signals_for_scan",
+        side_effect=_fake_fetch,
+    ):
+        return process_one_refiner_job(
+            session_factory,
+            lease_owner="settling-test",
+            job_handlers=handlers,
+            now=now,
+            lease_seconds=3600,
+        )
+
+
+def _remux_jobs(session_factory) -> list[RefinerJob]:
+    with session_factory() as s:
+        return [j for j in s.scalars(select(RefinerJob)).all() if j.job_kind == "refiner.file.remux_pass.v1"]
+
+
+def test_a_file_still_settling_is_never_enqueued(
+    session_factory,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The first sighting of a file is one observation, and one observation proves nothing.
+
+    An mtime threshold would have queued this immediately with the age gate at zero. Size
+    settling holds it, and the operator can see why (#335).
+    """
+
+    monkeypatch.setenv("MEDIAMOP_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
+    settings = MediaMopSettings.load()
+
+    watch = tmp_path / "watch"
+    watch.mkdir()
+    out = tmp_path / "out"
+    out.mkdir()
+    (watch / "Gate Test 2001.mkv").write_bytes(b"x" * 1024)
+
+    with session_factory() as s:
+        s.merge(
+            RefinerPathSettingsRow(
+                id=1,
+                refiner_watched_folder=str(watch.resolve()),
+                refiner_work_folder=None,
+                refiner_output_folder=str(out.resolve()),
+            ),
+        )
+        s.merge(
+            RefinerOperatorSettingsRow(
+                id=1, min_file_age_seconds=0, refiner_min_input_file_size_mb=0, minimum_free_disk_space_mb=0
+            )
+        )
+        s.commit()
+    _seed_library(session_factory, watch=watch, out=out)
+
+    assert _run_scan(session_factory, settings, dedupe="first", now=datetime(2026, 4, 12, 12, 0, tzinfo=UTC)) == (
+        "processed"
+    )
+
+    assert _remux_jobs(session_factory) == []
+
+    from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
+
+    with session_factory() as s:
+        row = s.scalars(select(RefinerFileRow)).one()
+        assert row.status == RefinerFileStatus.ON_HOLD.value
+        assert row.relative_path == "Gate Test 2001.mkv"
+        assert row.size_bytes == 1024
+        # The reason is the point: the operator can see this is a wait, not a failure.
+        assert "writing" in row.status_reason or "only just found" in row.status_reason
+        assert row.hold_until is not None
+
+
+def test_a_file_whose_size_has_held_still_is_enqueued_on_the_next_scan(
+    session_factory,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MEDIAMOP_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
+    settings = MediaMopSettings.load()
+
+    watch = tmp_path / "watch"
+    watch.mkdir()
+    out = tmp_path / "out"
+    out.mkdir()
+    (watch / "Gate Test 2001.mkv").write_bytes(b"x" * 1024)
+
+    with session_factory() as s:
+        s.merge(
+            RefinerPathSettingsRow(
+                id=1,
+                refiner_watched_folder=str(watch.resolve()),
+                refiner_work_folder=None,
+                refiner_output_folder=str(out.resolve()),
+            ),
+        )
+        s.merge(
+            RefinerOperatorSettingsRow(
+                id=1, min_file_age_seconds=0, refiner_min_input_file_size_mb=0, minimum_free_disk_space_mb=0
+            )
+        )
+        s.commit()
+    _seed_library(session_factory, watch=watch, out=out)
+
+    _run_scan(session_factory, settings, dedupe="first", now=datetime(2026, 4, 12, 12, 0, tzinfo=UTC))
+    assert _remux_jobs(session_factory) == []
+
+    from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow
+
+    # Backdate the observation, which is exactly what the next scan sees once the
+    # detection interval has passed with the size unchanged.
+    with session_factory() as s:
+        row = s.scalars(select(RefinerFileRow)).one()
+        row.size_changed_at = datetime.now(UTC) - timedelta(seconds=120)
+        s.commit()
+
+    assert _run_scan(session_factory, settings, dedupe="second", now=datetime(2026, 4, 12, 12, 5, tzinfo=UTC)) == (
+        "processed"
+    )
+
+    remux = _remux_jobs(session_factory)
+    assert len(remux) == 1
+    assert json.loads(remux[0].payload_json or "{}").get("relative_media_path") == "Gate Test 2001.mkv"

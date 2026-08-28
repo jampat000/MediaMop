@@ -33,6 +33,17 @@ class RefinerFileOut(BaseModel):
         description="The media manager connection holding this file, when the status is blocked_upstream.",
     )
     size_bytes: int
+    hold_until: datetime | None = Field(
+        default=None,
+        description=(
+            "When an on-hold file becomes eligible. Null when the hold is waiting on a writer to stop "
+            "rather than on the clock."
+        ),
+    )
+    size_changed_at: datetime | None = Field(
+        default=None,
+        description="When this file's size last changed, as observed across scans.",
+    )
     last_seen_at: datetime | None = None
     last_attempt_at: datetime | None = None
 

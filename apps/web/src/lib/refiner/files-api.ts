@@ -32,6 +32,9 @@ export interface RefinerFile {
   status_reason: string;
   blocked_by_connection: string | null;
   size_bytes: number;
+  /** When an on-hold file becomes eligible. Null when the wait is on a writer, not the clock. */
+  hold_until: string | null;
+  size_changed_at: string | null;
   last_seen_at: string | null;
   last_attempt_at: string | null;
 }
