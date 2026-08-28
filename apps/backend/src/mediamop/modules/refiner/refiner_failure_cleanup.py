@@ -17,7 +17,9 @@ from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.manager_queue_signals import attributed_rows_for_file, report_for_signals
+from mediamop.modules.refiner.refiner_library_service import resolve_library
 from mediamop.modules.refiner.refiner_path_settings_service import (
+    effective_library_work_folder,
     effective_tv_work_folder,
     effective_work_folder,
     ensure_refiner_path_settings_row,
@@ -190,6 +192,7 @@ def run_refiner_failure_cleanup_sweep_for_scope(
     session: Session,
     settings: MediaMopSettings,
     media_scope: str,
+    library_id: int | None = None,
 ) -> dict[str, Any]:
     ms = _scope(media_scope)
     now = datetime.now(UTC)
@@ -199,18 +202,22 @@ def run_refiner_failure_cleanup_sweep_for_scope(
         else int(settings.refiner_movie_failure_cleanup_grace_period_seconds)
     )
     older_than = now - timedelta(seconds=max(0, grace))
-    row = ensure_refiner_path_settings_row(session)
-    work_root = (
-        Path(
+    library = resolve_library(session, library_id=library_id, media_scope=ms)
+    if library is not None:
+        work_raw, _ = effective_library_work_folder(library=library, mediamop_home=settings.mediamop_home)
+        watched_raw = library.watched_folder or ""
+        output_raw = library.output_folder or ""
+    else:
+        # Unmigrated database: read the singleton exactly as before.
+        row = ensure_refiner_path_settings_row(session)
+        work_raw = (
             effective_tv_work_folder(row=row, mediamop_home=settings.mediamop_home)[0]
             if ms == "tv"
             else effective_work_folder(row=row, mediamop_home=settings.mediamop_home)[0]
         )
-        .expanduser()
-        .resolve()
-    )
-    watched_raw = (row.refiner_tv_watched_folder if ms == "tv" else row.refiner_watched_folder) or ""
-    output_raw = (row.refiner_tv_output_folder if ms == "tv" else row.refiner_output_folder) or ""
+        watched_raw = (row.refiner_tv_watched_folder if ms == "tv" else row.refiner_watched_folder) or ""
+        output_raw = (row.refiner_tv_output_folder if ms == "tv" else row.refiner_output_folder) or ""
+    work_root = Path(work_raw).expanduser().resolve()
     out: dict[str, Any] = {
         "media_scope": ms,
         "cleanup_run_status": "started",
