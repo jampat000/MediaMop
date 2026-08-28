@@ -145,3 +145,37 @@ class RefinerLibraryReorderIn(BaseModel):
 
     csrf_token: str = Field(..., min_length=1)
     library_ids_in_order: list[int] = Field(..., min_length=1)
+
+
+class DiscoverableLibraryOut(BaseModel):
+    """One library a connected manager reports."""
+
+    key: str = Field(description="The manager's own id, kept only as an integration reference.")
+    name: str
+    media_scope: MediaScope | None = None
+    root_path: str | None = Field(
+        default=None, description="Where the manager sees this library, on the manager's host."
+    )
+    already_imported: bool
+    local_path_problem: str | None = Field(
+        default=None,
+        description="Why that path cannot be used on this machine, shown beside the manager's value.",
+    )
+
+
+class RefinerLibraryImportIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    csrf_token: str = Field(..., min_length=1)
+    keys: list[str] = Field(..., min_length=1, description="Manager library ids to import.")
+
+
+class LibraryDriftOut(BaseModel):
+    """A difference between the manager and MediaMop. Reported, never applied."""
+
+    kind: Literal["root_moved", "library_removed", "library_added", "path_not_local"]
+    library_id: int | None = None
+    library_name: str
+    manager_value: str | None = None
+    mediamop_value: str | None = None
+    detail: str

@@ -760,6 +760,66 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/refiner/libraries/discover/{connection_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Refiner Discoverable Libraries
+     * @description What this manager says it looks after, and whether MediaMop already has it.
+     */
+    get: operations["get_refiner_discoverable_libraries_api_v1_refiner_libraries_discover__connection_id__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/libraries/discover/{connection_id}/drift": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Refiner Library Drift
+     * @description Differences between the manager and MediaMop. Reported only — nothing is applied.
+     */
+    get: operations["get_refiner_library_drift_api_v1_refiner_libraries_discover__connection_id__drift_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/libraries/discover/{connection_id}/import": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Refiner Import Libraries
+     * @description Create a Refiner library per selected manager library.
+     */
+    post: operations["post_refiner_import_libraries_api_v1_refiner_libraries_discover__connection_id__import_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/refiner/libraries/reorder": {
     parameters: {
       query?: never;
@@ -800,6 +860,26 @@ export interface paths {
      * @description Remove a library. Refused while it still has queued or running work.
      */
     delete: operations["delete_refiner_library_api_v1_refiner_libraries__library_id__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/libraries/{library_id}/unlink": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Refiner Library Unlink
+     * @description Forget where a library came from. The library itself is untouched.
+     */
+    post: operations["post_refiner_library_unlink_api_v1_refiner_libraries__library_id__unlink_post"];
+    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -1603,6 +1683,33 @@ export interface components {
       /** Parent Path */
       parent_path: string | null;
     };
+    /**
+     * DiscoverableLibraryOut
+     * @description One library a connected manager reports.
+     */
+    DiscoverableLibraryOut: {
+      /** Already Imported */
+      already_imported: boolean;
+      /**
+       * Key
+       * @description The manager's own id, kept only as an integration reference.
+       */
+      key: string;
+      /**
+       * Local Path Problem
+       * @description Why that path cannot be used on this machine, shown beside the manager's value.
+       */
+      local_path_problem?: string | null;
+      /** Media Scope */
+      media_scope?: ("movie" | "tv") | null;
+      /** Name */
+      name: string;
+      /**
+       * Root Path
+       * @description Where the manager sees this library, on the manager's host.
+       */
+      root_path?: string | null;
+    };
     /** HTTPValidationError */
     HTTPValidationError: {
       /** Detail */
@@ -1625,6 +1732,31 @@ export interface components {
        * @description Application liveness indicator.
        */
       status: string;
+    };
+    /**
+     * LibraryDriftOut
+     * @description A difference between the manager and MediaMop. Reported, never applied.
+     */
+    LibraryDriftOut: {
+      /** Detail */
+      detail: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind:
+        | "root_moved"
+        | "library_removed"
+        | "library_added"
+        | "path_not_local";
+      /** Library Id */
+      library_id?: number | null;
+      /** Library Name */
+      library_name: string;
+      /** Manager Value */
+      manager_value?: string | null;
+      /** Mediamop Value */
+      mediamop_value?: string | null;
     };
     /** LoginIn */
     LoginIn: {
@@ -2834,6 +2966,16 @@ export interface components {
     RefinerLibraryDeleteIn: {
       /** Csrf Token */
       csrf_token: string;
+    };
+    /** RefinerLibraryImportIn */
+    RefinerLibraryImportIn: {
+      /** Csrf Token */
+      csrf_token: string;
+      /**
+       * Keys
+       * @description Manager library ids to import.
+       */
+      keys: string[];
     };
     /** RefinerLibraryOut */
     RefinerLibraryOut: {
@@ -5531,6 +5673,103 @@ export interface operations {
       };
     };
   };
+  get_refiner_discoverable_libraries_api_v1_refiner_libraries_discover__connection_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        connection_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DiscoverableLibraryOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_refiner_library_drift_api_v1_refiner_libraries_discover__connection_id__drift_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        connection_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibraryDriftOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  post_refiner_import_libraries_api_v1_refiner_libraries_discover__connection_id__import_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        connection_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RefinerLibraryImportIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerLibraryOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   post_refiner_libraries_reorder_api_v1_refiner_libraries_reorder_post: {
     parameters: {
       query?: never;
@@ -5651,6 +5890,41 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  post_refiner_library_unlink_api_v1_refiner_libraries__library_id__unlink_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RefinerLibraryDeleteIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerLibraryOut"];
+        };
       };
       /** @description Validation Error */
       422: {

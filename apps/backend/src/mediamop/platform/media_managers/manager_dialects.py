@@ -26,6 +26,7 @@ from mediamop.platform.media_managers.manager_port import (
     ManagerCapabilities,
     ManagerConnection,
     ManagerDescription,
+    ManagerLibraryDescriptor,
     ManagerLibraryTruth,
     ManagerQueueRow,
     ManagerQueueSignal,
@@ -160,8 +161,27 @@ class ArrV3ManagerPort:
                 capabilities=caps,
                 detail=_unreachable(connection, exc, what="which folders it manages"),
             )
-        roots = _paths_under(str(row.get("path", "")) for row in _dicts(payload))
-        return ManagerDescription(connection=connection, status="reported", capabilities=caps, library_roots=roots)
+        rows = _dicts(payload)
+        roots = _paths_under(str(row.get("path", "")) for row in rows)
+        libraries = tuple(
+            ManagerLibraryDescriptor(
+                key=str(_first_number(row, "id") or path),
+                # An arr root folder has no name of its own; the path is what an
+                # operator recognises it by.
+                name=path,
+                media_scope=self._scope,
+                root_path=path,
+            )
+            for row, path in ((row, _text(row.get("path"))) for row in rows)
+            if path
+        )
+        return ManagerDescription(
+            connection=connection,
+            status="reported",
+            capabilities=caps,
+            library_roots=roots,
+            libraries=libraries,
+        )
 
     def queue_rows(self, connection: ManagerConnection) -> ManagerQueueSignal:
         try:
@@ -304,6 +324,7 @@ class ExternalIntegrationManagerPort:
             status="reported",
             capabilities=caps,
             library_roots=roots,
+            libraries=tuple(_manifest_library_descriptor(lib) for lib in libraries if _manifest_library_key(lib)),
         )
 
     def queue_rows(self, connection: ManagerConnection) -> ManagerQueueSignal:
@@ -331,6 +352,34 @@ class ExternalIntegrationManagerPort:
                 "individual files it still keeps, so it cannot clear a folder for deletion."
             ),
         )
+
+
+def _manifest_library_key(library: Mapping[str, Any]) -> str | None:
+    """The manager's own id for a library, kept only as an integration reference."""
+
+    number = _first_number(library, "id", "libraryId", "library_id")
+    if number is not None:
+        return str(number)
+    return _first_text(library, "id", "libraryId", "library_id", "key", "uuid", "guid")
+
+
+def _manifest_library_descriptor(library: Mapping[str, Any]) -> ManagerLibraryDescriptor:
+    """One manifest entry, read tolerantly.
+
+    The documented manifest sample shows ``"libraries": []`` from an unconfigured
+    instance, so the populated entry shape is unconfirmed (Deluno#331). Every plausible
+    spelling of name, media type and root is accepted rather than guessing one and
+    failing on the others; a missing root surfaces as a mismatch the operator can fix,
+    which is the same outcome as a root MediaMop cannot see.
+    """
+
+    key = _manifest_library_key(library) or ""
+    name = _first_text(library, "name", "title", "label", "displayName", "display_name") or key
+    scope = _scope_from_media_type(
+        library.get("mediaType") or library.get("media_type") or library.get("scope") or library.get("type")
+    )
+    root = _first_text(library, "path", "rootFolder", "root_folder", "root", "rootPath", "root_path")
+    return ManagerLibraryDescriptor(key=key, name=name, media_scope=scope, root_path=root)
 
 
 def _manifest_libraries(payload: Any) -> list[dict[str, Any]]:

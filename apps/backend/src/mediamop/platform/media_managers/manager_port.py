@@ -141,6 +141,22 @@ class ManagerCapabilities:
 
 
 @dataclass(frozen=True, slots=True)
+class ManagerLibraryDescriptor:
+    """One library a manager says it looks after.
+
+    ``key`` is the manager's own identifier, kept as a durable integration reference —
+    Deluno's documentation asks external tools to store its ids for exactly this and
+    nothing else. ``root_path`` is a path **on the manager's host**, which is not
+    necessarily a path MediaMop can see.
+    """
+
+    key: str
+    name: str
+    media_scope: MediaScope | None
+    root_path: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class ManagerDescription:
     """A live answer to "what do you manage", degrading to the static capabilities."""
 
@@ -148,6 +164,7 @@ class ManagerDescription:
     status: SignalStatus
     capabilities: ManagerCapabilities
     library_roots: tuple[str, ...] = field(default=())
+    libraries: tuple[ManagerLibraryDescriptor, ...] = field(default=())
     detail: str | None = None
 
 

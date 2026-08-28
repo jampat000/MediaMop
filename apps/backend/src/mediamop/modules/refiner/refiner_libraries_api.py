@@ -25,11 +25,21 @@ from mediamop.modules.refiner.refiner_library_crud import (
     update_library,
     update_rule_set,
 )
+from mediamop.modules.refiner.refiner_library_discovery import (
+    RefinerDiscoveryError,
+    discoverable_libraries,
+    import_libraries,
+    resync_drift,
+    unlink_library,
+)
 from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow, RefinerRuleSetRow
 from mediamop.modules.refiner.refiner_library_service import list_libraries, manager_connection_ids_for
 from mediamop.modules.refiner.schemas_refiner_libraries import (
+    DiscoverableLibraryOut,
+    LibraryDriftOut,
     RefinerLibraryCreateIn,
     RefinerLibraryDeleteIn,
+    RefinerLibraryImportIn,
     RefinerLibraryOut,
     RefinerLibraryReorderIn,
     RefinerLibraryUpdateIn,
@@ -44,6 +54,7 @@ from mediamop.platform.auth.csrf import (
     verify_csrf_token,
 )
 from mediamop.platform.auth.deps_auth import UserPublicDep
+from mediamop.platform.media_managers.connection_model import MediaManagerConnectionRow
 
 router = APIRouter(tags=["refiner"])
 
@@ -284,3 +295,96 @@ def delete_refiner_rule_set(
     except RefinerLibraryError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     db.commit()
+
+
+def _require_connection(db: DbSessionDep, connection_id: int) -> MediaManagerConnectionRow:
+    row = db.get(MediaManagerConnectionRow, connection_id)
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="That media manager connection does not exist."
+        )
+    return row
+
+
+@router.get(
+    "/refiner/libraries/discover/{connection_id}",
+    response_model=list[DiscoverableLibraryOut],
+)
+def get_refiner_discoverable_libraries(
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    connection_id: int = Path(ge=1),
+) -> list[DiscoverableLibraryOut]:
+    """What this manager says it looks after, and whether MediaMop already has it."""
+
+    connection = _require_connection(db, connection_id)
+    try:
+        found = discoverable_libraries(db, settings, connection)
+    except RefinerDiscoveryError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+    return [DiscoverableLibraryOut(**vars(item)) for item in found]
+
+
+@router.post(
+    "/refiner/libraries/discover/{connection_id}/import",
+    response_model=list[RefinerLibraryOut],
+    status_code=status.HTTP_201_CREATED,
+)
+def post_refiner_import_libraries(
+    body: RefinerLibraryImportIn,
+    request: Request,
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    connection_id: int = Path(ge=1),
+) -> list[RefinerLibraryOut]:
+    """Create a Refiner library per selected manager library."""
+
+    _verify_csrf(request, settings, body.csrf_token)
+    connection = _require_connection(db, connection_id)
+    try:
+        created = import_libraries(db, settings, connection, keys=list(body.keys))
+    except RefinerDiscoveryError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    db.commit()
+    return [_library_out(db, row) for row in created]
+
+
+@router.get(
+    "/refiner/libraries/discover/{connection_id}/drift",
+    response_model=list[LibraryDriftOut],
+)
+def get_refiner_library_drift(
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    connection_id: int = Path(ge=1),
+) -> list[LibraryDriftOut]:
+    """Differences between the manager and MediaMop. Reported only — nothing is applied."""
+
+    connection = _require_connection(db, connection_id)
+    try:
+        drift = resync_drift(db, settings, connection)
+    except RefinerDiscoveryError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+    return [LibraryDriftOut(**vars(item)) for item in drift]
+
+
+@router.post("/refiner/libraries/{library_id}/unlink", response_model=RefinerLibraryOut)
+def post_refiner_library_unlink(
+    body: RefinerLibraryDeleteIn,
+    request: Request,
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    library_id: int = Path(ge=1),
+) -> RefinerLibraryOut:
+    """Forget where a library came from. The library itself is untouched."""
+
+    _verify_csrf(request, settings, body.csrf_token)
+    row = _require_library(db, library_id)
+    unlink_library(db, row)
+    db.commit()
+    db.refresh(row)
+    return _library_out(db, row)
