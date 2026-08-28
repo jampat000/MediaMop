@@ -2913,16 +2913,6 @@ export interface components {
        */
       refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs: boolean;
       /**
-       * Refiner Watched Folder Remux Scan Dispatch Schedule Enabled
-       * @description ``MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED`` at process start.
-       */
-      refiner_watched_folder_remux_scan_dispatch_schedule_enabled: boolean;
-      /**
-       * Refiner Watched Folder Remux Scan Dispatch Schedule Interval Seconds
-       * @description Seconds between periodic enqueue attempts (clamped 60..7d); restart required to change.
-       */
-      refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds: number;
-      /**
        * Refiner Work Temp Stale Sweep Min Stale Age Seconds
        * @description Minimum file age before Refiner removes its own stale temp work files (60s..30d). Shared for both scopes (narrow exception: same temp filename semantics).
        */

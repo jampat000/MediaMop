@@ -3802,17 +3802,6 @@
             "title": "Refiner Watched Folder Remux Scan Dispatch Periodic Enqueue Remux Jobs",
             "type": "boolean"
           },
-          "refiner_watched_folder_remux_scan_dispatch_schedule_enabled": {
-            "description": "``MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED`` at process start.",
-            "title": "Refiner Watched Folder Remux Scan Dispatch Schedule Enabled",
-            "type": "boolean"
-          },
-          "refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds": {
-            "description": "Seconds between periodic enqueue attempts (clamped 60..7d); restart required to change.",
-            "minimum": 60.0,
-            "title": "Refiner Watched Folder Remux Scan Dispatch Schedule Interval Seconds",
-            "type": "integer"
-          },
           "refiner_work_temp_stale_sweep_min_stale_age_seconds": {
             "description": "Minimum file age before Refiner removes its own stale temp work files (60s..30d). Shared for both scopes (narrow exception: same temp filename semantics).",
             "minimum": 60.0,
@@ -3880,8 +3869,6 @@
           "sqlite_throughput_note",
           "configuration_note",
           "visibility_note",
-          "refiner_watched_folder_remux_scan_dispatch_schedule_enabled",
-          "refiner_watched_folder_remux_scan_dispatch_schedule_interval_seconds",
           "refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs",
           "refiner_probe_size_mb",
           "refiner_analyze_duration_seconds",
