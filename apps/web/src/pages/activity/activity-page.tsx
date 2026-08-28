@@ -66,8 +66,6 @@ const EVENT_LABELS: Record<string, string> = {
   "refiner.supplied_payload_evaluation_completed":
     "Manual queue check finished",
   "refiner.candidate_gate_completed": "Queue check finished",
-  "refiner.watched_folder_remux_scan_dispatch_completed":
-    "Watched-folder scan finished",
   "refiner.file_processing_progress": "File processing",
   "refiner.file_remux_pass_completed": "File processing finished",
   "refiner.work_temp_stale_sweep_completed": "Temporary files cleanup finished",
@@ -351,39 +349,6 @@ function normalizeRefinerSummary(
       chip: "Queue check finished",
       tone: "success",
       compact: true,
-    };
-  }
-  if (
-    ev.event_type === "refiner.watched_folder_remux_scan_dispatch_completed"
-  ) {
-    const parsed = parseDetail(ev.detail);
-    const queued = asNumber(parsed?.remux_jobs_enqueued) ?? 0;
-    const seen = asNumber(parsed?.media_candidates_seen) ?? 0;
-    const waiting = asNumber(parsed?.verdict_wait_upstream) ?? 0;
-    const userMessage = asString(parsed?.user_message);
-    const waitingMessage = asString(parsed?.waiting_message);
-    const label = asString(parsed?.scan_result_label);
-    const paths = asStringArray(parsed?.enqueued_relative_paths_sample);
-    const details = [
-      userMessage,
-      waitingMessage,
-      paths.length ? `Added: ${paths.join(", ")}` : null,
-    ]
-      .filter(Boolean)
-      .join(" ");
-    return {
-      title: label ?? "Watched folder checked",
-      summary: seen
-        ? `${seen} media file${seen === 1 ? "" : "s"} checked`
-        : "No media files found",
-      detail: details || ev.detail || null,
-      chip: queued
-        ? `${queued} added to Refiner`
-        : waiting
-          ? "Waiting for files"
-          : "Folder checked",
-      tone: waiting ? "warning" : queued ? "success" : "info",
-      compact: false,
     };
   }
   if (ev.event_type === "refiner.work_temp_stale_sweep_completed") {

@@ -256,7 +256,6 @@ def maybe_run_tv_output_season_folder_cleanup_after_remux(
     watched_root: Path,
     src: Path,
     final_output_file: Path | None,
-    dry_run: bool | None = None,
     relative_media_path: str,
     current_job_id: int | None,
     media_scope: str | None,

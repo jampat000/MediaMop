@@ -61,6 +61,16 @@ if (-not (Test-Path $prettierBin)) {
     Pass "prettier"
 }
 
+# ---- dead code ---------------------------------------------------------------
+if (-not (Test-Path $prettierBin)) {
+    Skip "dead-code guard (run: npm ci in apps/web)"
+} else {
+    Step "dead-code guard"
+    node "$REPO\scripts\check-dead-code.mjs"
+    if ($LASTEXITCODE -ne 0) { Fail "dead-code guard failed" }
+    Pass "dead-code guard"
+}
+
 # ---- OpenAPI spec + types drift ---------------------------------------------
 $venvPython = "$REPO\apps\backend\.venv\Scripts\python.exe"
 if (-not (Test-Path $prettierBin) -or -not (Test-Path $venvPython)) {

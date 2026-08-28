@@ -29,8 +29,6 @@ const PLEX_UNAVAILABLE: ReadonlySet<PrunerPeopleRoleId> = new Set([
   "guest_star",
 ]);
 
-export const DEFAULT_PRUNER_PEOPLE_ROLES: PrunerPeopleRoleId[] = [];
-
 export function normalizePeopleRolesFromApi(
   raw: string[] | undefined | null,
 ): PrunerPeopleRoleId[] {

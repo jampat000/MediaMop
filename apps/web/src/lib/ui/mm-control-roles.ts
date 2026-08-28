@@ -35,7 +35,7 @@ export const mmSelectFieldClass = `${mmNativeFieldShell} mt-1 cursor-pointer`;
 /** Anchored picker button (custom listbox) — visually aligned with {@link mmSelectFieldClass}. */
 export const mmPickerTriggerClass = `${mmNativeFieldShell} mt-1 cursor-pointer text-left`;
 
-/** Checkbox control — matches ``MmMultiOptionRows`` multi-option styling. */
+/** Checkbox control — used for multi-option rows and standalone toggles. */
 export const mmCheckboxControlClass =
   "mt-0.5 h-4 w-4 shrink-0 rounded border-[var(--mm-border)] text-[var(--mm-gold)] accent-[var(--mm-gold)] " +
   "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mm-accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mm-card-bg)] " +
