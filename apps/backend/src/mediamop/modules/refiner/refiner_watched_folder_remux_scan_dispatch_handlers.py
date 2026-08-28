@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 import uuid
 from collections.abc import Callable
 from pathlib import Path
@@ -14,6 +15,12 @@ from sqlalchemy.orm import Session, sessionmaker
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
+from mediamop.modules.refiner.refiner_file_state_service import (
+    decide_file_state,
+    library_in_schedule_window,
+    record_file_state,
+)
+from mediamop.modules.refiner.refiner_library_service import resolve_library
 from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
 from mediamop.modules.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
 from mediamop.modules.refiner.refiner_remux_rules import refiner_media_extensions_sorted
@@ -77,6 +84,10 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                 media_scope=media_scope,
             )
 
+        with session_factory() as library_session:
+            library = resolve_library(library_session, media_scope=media_scope)
+            in_window = library_in_schedule_window(library_session, library) if library is not None else True
+
         watched_path = Path(watched_root)
         candidates = iter_watched_folder_media_candidates(
             watched_path,
@@ -105,6 +116,7 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
             "ignored_unsupported_type": candidates.ignored_unsupported_type,
             "ignored_unsupported_extensions": list(candidates.ignored_unsupported_extensions),
             "media_extensions_applied": list(refiner_media_extensions_sorted()),
+            "files_withheld": 0,
             "verdict_proceed": 0,
             "verdict_wait_upstream": 0,
             "verdict_not_held": 0,
@@ -149,6 +161,26 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                     media_scope=media_scope,
                     file_path=file_path,
                 )
+                # Record why this file is or is not being worked on. Until now the reason
+                # existed only as a local variable and the operator saw nothing (#334).
+                if library is not None:
+                    rel_for_state = relative_posix_path_under_watched(watched_root=watched_path, file_path=file_path)
+                    verdict = decide_file_state(
+                        library=library,
+                        in_schedule_window=in_window,
+                        file_age_seconds=_file_age_seconds(file_path),
+                        blocked_by_connection=outcome.blocked_connection,
+                    )
+                    record_file_state(
+                        session,
+                        library=library,
+                        relative_path=rel_for_state,
+                        verdict=verdict,
+                        size_bytes=_file_size_bytes(file_path),
+                    )
+                    if not verdict.eligible:
+                        summary["files_withheld"] += 1
+                        continue
                 if outcome.verdict == "proceed":
                     summary["verdict_proceed"] += 1
                 elif outcome.verdict == "wait_upstream":
@@ -280,3 +312,17 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
             # event here makes Activity look backwards when completed file events arrive first.
 
     return _run
+
+
+def _file_age_seconds(path: Path) -> float | None:
+    try:
+        return max(0.0, time.time() - float(path.stat().st_mtime))
+    except OSError:
+        return None
+
+
+def _file_size_bytes(path: Path) -> int:
+    try:
+        return int(path.stat().st_size)
+    except OSError:
+        return 0

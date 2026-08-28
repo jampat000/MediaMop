@@ -2770,6 +2770,111 @@
         "title": "RefinerCandidateGateManualEnqueueOut",
         "type": "object"
       },
+      "RefinerFileForgetIn": {
+        "additionalProperties": false,
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrf_token"
+        ],
+        "title": "RefinerFileForgetIn",
+        "type": "object"
+      },
+      "RefinerFileOut": {
+        "properties": {
+          "blocked_by_connection": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The media manager connection holding this file, when the status is blocked_upstream.",
+            "title": "Blocked By Connection"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "last_attempt_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Attempt At"
+          },
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
+          },
+          "library_id": {
+            "title": "Library Id",
+            "type": "integer"
+          },
+          "library_name": {
+            "title": "Library Name",
+            "type": "string"
+          },
+          "relative_path": {
+            "title": "Relative Path",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "unprocessed",
+              "processing",
+              "processed",
+              "processing_failed",
+              "disabled",
+              "on_hold",
+              "out_of_schedule",
+              "blocked_upstream"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "status_reason": {
+            "description": "Why the file is in this state, written for the person reading it.",
+            "title": "Status Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "library_id",
+          "library_name",
+          "relative_path",
+          "status",
+          "status_reason",
+          "size_bytes"
+        ],
+        "title": "RefinerFileOut",
+        "type": "object"
+      },
       "RefinerFileRemuxPassManualEnqueueIn": {
         "additionalProperties": false,
         "description": "Manual ``refiner.file.remux_pass.v1`` enqueue \u2014 requires a saved Refiner watched folder before this POST succeeds.",
@@ -2830,6 +2935,41 @@
           "job_kind"
         ],
         "title": "RefinerFileRemuxPassManualEnqueueOut",
+        "type": "object"
+      },
+      "RefinerFilesPageOut": {
+        "description": "A page of files plus the bucket counts shown above them.",
+        "properties": {
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/RefinerFileOut"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "returned": {
+            "title": "Returned",
+            "type": "integer"
+          },
+          "status_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Status Counts",
+            "type": "object"
+          }
+        },
+        "required": [
+          "files",
+          "status_counts",
+          "returned",
+          "limit"
+        ],
+        "title": "RefinerFilesPageOut",
         "type": "object"
       },
       "RefinerJobCancelPendingIn": {
@@ -7725,6 +7865,179 @@
         "tags": [
           "pruner",
           "pruner"
+        ]
+      }
+    },
+    "/api/v1/refiner/files": {
+      "get": {
+        "description": "Files Refiner has seen, with the reason it is or is not working on each.",
+        "operationId": "get_refiner_files_api_v1_refiner_files_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "library_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Library Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "file_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "unprocessed",
+                    "processing",
+                    "processed",
+                    "processing_failed",
+                    "disabled",
+                    "on_hold",
+                    "out_of_schedule",
+                    "blocked_upstream"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "File Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "path_contains",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 400,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Path Contains"
+            }
+          },
+          {
+            "in": "query",
+            "name": "within_days",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 3650,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Within Days"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefinerFilesPageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Refiner Files",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/files/{file_id}": {
+      "delete": {
+        "description": "Forget a file. Removes MediaMop's record of it, never the file on disk.",
+        "operationId": "delete_refiner_file_api_v1_refiner_files__file_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "File Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefinerFileForgetIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Refiner File",
+        "tags": [
+          "refiner",
+          "refiner"
         ]
       }
     },

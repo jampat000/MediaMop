@@ -23,8 +23,8 @@ from mediamop.modules.refiner.manager_queue_signals import (
     AttributedQueueRow,
     QueueSignalReport,
     attributed_rows_for_file,
+    blocking_connection_label,
     report_for_signals,
-    upstream_block_reason,
 )
 from mediamop.platform.media_managers.manager_binding import collect_queue_signals
 from mediamop.platform.media_managers.manager_port import ManagerQueueSignal, MediaScope
@@ -38,6 +38,9 @@ class WatchedFileDispatchOutcome:
 
     verdict: Verdict
     blocked_reason: str | None = None
+    # The connection holding the file, so the Files screen can name it without
+    # re-parsing the prose reason (#334).
+    blocked_connection: str | None = None
 
 
 def merge_queue_views_for_watched_file(
@@ -66,9 +69,13 @@ def verdict_for_watched_scan_file(
     is an ordinary 4K-plus-1080p setup, and either of them may be mid-import.
     """
 
-    reason = upstream_block_reason(rows, candidate=candidate)
-    if reason is not None:
-        return WatchedFileDispatchOutcome(verdict="wait_upstream", blocked_reason=reason)
+    label = blocking_connection_label(rows, candidate=candidate)
+    if label is not None:
+        return WatchedFileDispatchOutcome(
+            verdict="wait_upstream",
+            blocked_reason=f"{label} is still importing this file, so MediaMop left it alone for now.",
+            blocked_connection=label,
+        )
     return WatchedFileDispatchOutcome(verdict="proceed")
 
 
