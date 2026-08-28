@@ -20,7 +20,7 @@ MediaMop is a self-hosted media operations app:
   Outbound, a media scope resolves to **every** connection that looks after it and each
   one is asked what it is importing and which files it still keeps. "Could not ask" is a
   distinct answer from "nothing is importing", and only the latter clears a delete. See
-  [ADR-0014](docs/adr/ADR-0014-media-manager-port-outbound.md).
+  [ADR-0015](docs/adr/ADR-0015-media-manager-port-outbound.md).
 - **Dashboard, Activity, and Settings** expose runtime health, history, logs, backups, upgrades, and security posture.
 
 ## Runtime Shape
