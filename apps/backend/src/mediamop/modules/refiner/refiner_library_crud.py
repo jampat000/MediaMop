@@ -139,6 +139,7 @@ def _apply_fields(session: Session, row: RefinerLibraryRow, body: object) -> Non
         "file_detection_interval_seconds",
         "ignore_size_changes",
         "skip_access_tests",
+        "file_system_events_enabled",
         "schedule_enabled",
         "schedule_hours_limited",
         "schedule_days",

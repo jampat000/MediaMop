@@ -53,6 +53,8 @@ def _csrf_settings(**overrides: object) -> MediaMopSettings:
         temp_dir=str(home / "temp"),
         sqlalchemy_database_url="sqlite:///" + db.as_posix(),
         refiner_worker_count=0,
+        refiner_watcher_enabled=False,
+        refiner_watcher_debounce_seconds=3.0,
         pruner_worker_count=0,
         pruner_preview_schedule_enqueue_enabled=False,
         pruner_preview_schedule_scan_interval_seconds=45,

@@ -142,6 +142,11 @@ class MediaMopSettings:
     sqlalchemy_database_url: str
     # 0 = no in-process Refiner workers (Refiner-owned refiner_jobs only); >0 when Refiner queues durable work.
     refiner_worker_count: int
+    # Filesystem watcher: whether to run it at all, and how long a watched tree must be
+    # quiet before a burst of events becomes one scan. Off makes the periodic scan the
+    # only trigger, which is the pre-watcher behaviour and still finds every file.
+    refiner_watcher_enabled: bool
+    refiner_watcher_debounce_seconds: float
     # 0 = no in-process Pruner workers (Pruner-owned pruner_jobs only); >0 when Pruner queues durable work.
     pruner_worker_count: int
     # Pruner per-scope scheduled preview enqueue loop (reads ``pruner_scope_settings``; independent of worker count).
@@ -353,6 +358,10 @@ class MediaMopSettings:
         assert_sqlite_db_location_usable(db_p)
         db_url = sqlalchemy_sqlite_url(db_p)
         refiner_workers = clamp_refiner_worker_count(_env_int("MEDIAMOP_REFINER_WORKER_COUNT", 8))
+        refiner_watcher_on = _env_bool("MEDIAMOP_REFINER_WATCHER_ENABLED", True)
+        refiner_watcher_debounce = max(
+            0.25, min(300.0, float(_env_int("MEDIAMOP_REFINER_WATCHER_DEBOUNCE_SECONDS", 3)))
+        )
         pruner_workers = clamp_pruner_worker_count(_env_int("MEDIAMOP_PRUNER_WORKER_COUNT", 1))
         pruner_preview_sched_enq = _env_bool("MEDIAMOP_PRUNER_PREVIEW_SCHEDULE_ENQUEUE_ENABLED", True)
         pruner_preview_sched_scan_iv = max(
@@ -513,6 +522,8 @@ class MediaMopSettings:
             temp_dir=str(temp_p),
             sqlalchemy_database_url=db_url,
             refiner_worker_count=refiner_workers,
+            refiner_watcher_enabled=refiner_watcher_on,
+            refiner_watcher_debounce_seconds=refiner_watcher_debounce,
             pruner_worker_count=pruner_workers,
             pruner_preview_schedule_enqueue_enabled=pruner_preview_sched_enq,
             pruner_preview_schedule_scan_interval_seconds=pruner_preview_sched_scan_iv,

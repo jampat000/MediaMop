@@ -67,7 +67,7 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
         body = _parse_job_payload(ctx.payload_json)
         enqueue_remux_jobs = bool(body.get("enqueue_remux_jobs", False))
         scan_trigger = body.get("scan_trigger", "manual")
-        if scan_trigger not in ("manual", "periodic"):
+        if scan_trigger not in ("manual", "periodic", "filesystem_event"):
             scan_trigger = "manual"
         media_scope_raw = body.get("media_scope", "movie")
         media_scope: MediaScope = "tv" if media_scope_raw == "tv" else "movie"

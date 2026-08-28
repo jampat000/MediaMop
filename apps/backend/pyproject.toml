@@ -20,6 +20,10 @@ dependencies = [
   "cryptography>=44.0.0",
   "httpx>=0.27",
   "tzdata>=2025.1",
+  # Filesystem events are the trigger for Refiner work; the periodic scan is the
+  # backstop. Import failure is handled as a fallback to polling, not as a hard
+  # requirement, because container mounts and network shares often deliver no events.
+  "watchdog>=4.0",
 ]
 
 [project.optional-dependencies]

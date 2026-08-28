@@ -78,6 +78,7 @@ class RefinerLibraryOut(BaseModel):
     file_detection_interval_seconds: int
     ignore_size_changes: bool
     skip_access_tests: bool
+    file_system_events_enabled: bool
     schedule_enabled: bool
     schedule_hours_limited: bool
     schedule_days: str
@@ -135,6 +136,13 @@ class RefinerLibraryCreateIn(BaseModel):
     skip_access_tests: bool = Field(
         False,
         description="Skip the read/write probe that runs before a file is queued.",
+    )
+    file_system_events_enabled: bool = Field(
+        True,
+        description=(
+            "Watch this folder for changes so new files are picked up within seconds. The periodic scan "
+            "runs regardless, so switching this off makes MediaMop slower to notice a file, never blind to it."
+        ),
     )
     schedule_enabled: bool = True
     schedule_hours_limited: bool = False

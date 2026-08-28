@@ -2978,6 +2978,12 @@ export interface components {
        */
       file_detection_interval_seconds: number;
       /**
+       * File System Events Enabled
+       * @description Watch this folder for changes so new files are picked up within seconds. The periodic scan runs regardless, so switching this off makes MediaMop slower to notice a file, never blind to it.
+       * @default true
+       */
+      file_system_events_enabled: boolean;
+      /**
        * Hold Minutes
        * @default 0
        */
@@ -3130,6 +3136,8 @@ export interface components {
       exclude_patterns_csv: string;
       /** File Detection Interval Seconds */
       file_detection_interval_seconds: number;
+      /** File System Events Enabled */
+      file_system_events_enabled: boolean;
       /** Hold Minutes */
       hold_minutes: number;
       /** Id */
@@ -3229,6 +3237,12 @@ export interface components {
        * @default 30
        */
       file_detection_interval_seconds: number;
+      /**
+       * File System Events Enabled
+       * @description Watch this folder for changes so new files are picked up within seconds. The periodic scan runs regardless, so switching this off makes MediaMop slower to notice a file, never blind to it.
+       * @default true
+       */
+      file_system_events_enabled: boolean;
       /**
        * Hold Minutes
        * @default 0
