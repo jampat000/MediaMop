@@ -35,7 +35,10 @@ def _record_refiner_queue_depth(session: Session) -> None:
     set_module_queue_depth(module="refiner", depth=int(depth or 0))
 
 
-_CLAIM_NEXT_SQL = """
+# ``{admission}`` is a predicate built by :func:`_admission_predicate` from ids and job
+# kinds this pass may not take. It narrows *which row is chosen*, so a job the schedule
+# excludes is never leased — the window gates work, not only enqueue (#337).
+_CLAIM_NEXT_SQL_TEMPLATE = """
 UPDATE refiner_jobs
 SET
   status = :leased,
@@ -45,16 +48,64 @@ SET
   attempt_count = attempt_count + 1
 WHERE id = (
   SELECT id FROM refiner_jobs
-  WHERE (status = :pending AND (not_before IS NULL OR not_before <= :now))
-     OR (
-       status = :leased
-       AND (lease_expires_at IS NULL OR lease_expires_at < :now)
-     )
+  WHERE (
+      (status = :pending AND (not_before IS NULL OR not_before <= :now))
+      OR (
+        status = :leased
+        AND (lease_expires_at IS NULL OR lease_expires_at < :now)
+      )
+    )
+    {admission}
   ORDER BY id ASC
   LIMIT 1
 )
 RETURNING id
 """
+
+
+def _admission_predicate(admission: object | None) -> tuple[str, dict[str, object]]:
+    """SQL narrowing the claim to work this pass is allowed to start.
+
+    Library ids are formatted into the statement rather than bound, because a variable
+    length ``IN`` list cannot be one bound parameter. They are integers read from the
+    primary key of a row this process just selected, and each is re-coerced with ``int()``
+    here so nothing but a number can reach the string.
+    """
+
+    if admission is None:
+        return "", {}
+
+    clauses: list[str] = []
+    params: dict[str, object] = {}
+
+    blocked: frozenset[int] = getattr(admission, "blocked_library_ids", frozenset())
+    ids = sorted({int(x) for x in blocked})
+    if ids:
+        # A job with no library_id in its payload predates libraries or is suite-wide, so
+        # COALESCE keeps it claimable rather than sweeping it up in the exclusion.
+        rendered = ",".join(str(i) for i in ids)
+        clauses.append(f"AND COALESCE(json_extract(payload_json, '$.library_id'), -1) NOT IN ({rendered})")
+
+    pause = getattr(admission, "pause", None)
+    if pause is not None and getattr(pause, "paused", False):
+        from mediamop.modules.refiner.refiner_work_admission import DETECTION_JOB_KIND_PREFIXES
+
+        if getattr(pause, "scan_while_paused", False):
+            # Detection continues; processing does not. Prefix matching keeps this in step
+            # with the job-kind naming rather than an enumerated list that drifts.
+            likes = []
+            for index, prefix in enumerate(DETECTION_JOB_KIND_PREFIXES):
+                key = f"detect_{index}"
+                likes.append(f"job_kind LIKE :{key}")
+                params[key] = f"{prefix}%"
+            clauses.append(f"AND ({' OR '.join(likes)})")
+        else:
+            # Nothing at all.
+            clauses.append("AND 1 = 0")
+
+    if not clauses:
+        return "", params
+    return "\n    " + "\n    ".join(clauses), params
 
 
 def _tombstone_cancelled_dedupe_key(*, original: str, job_id: int) -> str:
@@ -134,22 +185,29 @@ def claim_next_eligible_refiner_job(
     lease_owner: str,
     lease_expires_at: datetime,
     now: datetime | None = None,
+    admission: object | None = None,
 ) -> RefinerJob | None:
     """Atomically lease the next ``pending`` or **expired** ``leased`` row.
 
     Increments ``attempt_count`` on every successful claim (including reclaim).
     Returns ``None`` if no eligible row exists.
+
+    ``admission`` narrows what may be claimed to what the schedule and the suite pause
+    currently allow. Passing ``None`` claims exactly as before, which is what every
+    caller that has nothing to do with scheduling wants.
     """
 
     when = now if now is not None else _utc_now()
+    predicate, extra = _admission_predicate(admission)
     result = session.execute(
-        text(_CLAIM_NEXT_SQL),
+        text(_CLAIM_NEXT_SQL_TEMPLATE.format(admission=predicate)),
         {
             "leased": RefinerJobStatus.LEASED.value,
             "pending": RefinerJobStatus.PENDING.value,
             "owner": lease_owner,
             "lease_exp": lease_expires_at,
             "now": when,
+            **extra,
         },
     )
     row = result.fetchone()

@@ -3455,6 +3455,12 @@
             "title": "Schedule End",
             "type": "string"
           },
+          "schedule_grid": {
+            "default": "",
+            "description": "7 days x 96 quarter-hours as 672 characters of 0/1, Monday first. Empty means no restriction. Work already running finishes when a window closes; the window stops MediaMop starting anything new.",
+            "title": "Schedule Grid",
+            "type": "string"
+          },
           "schedule_hours_limited": {
             "default": false,
             "title": "Schedule Hours Limited",
@@ -3687,6 +3693,10 @@
             "title": "Schedule End",
             "type": "string"
           },
+          "schedule_grid": {
+            "title": "Schedule Grid",
+            "type": "string"
+          },
           "schedule_hours_limited": {
             "title": "Schedule Hours Limited",
             "type": "boolean"
@@ -3748,6 +3758,7 @@
           "ignore_size_changes",
           "skip_access_tests",
           "file_system_events_enabled",
+          "schedule_grid",
           "schedule_enabled",
           "schedule_hours_limited",
           "schedule_days",
@@ -3948,6 +3959,12 @@
             "default": "23:59",
             "maxLength": 5,
             "title": "Schedule End",
+            "type": "string"
+          },
+          "schedule_grid": {
+            "default": "",
+            "description": "7 days x 96 quarter-hours as 672 characters of 0/1, Monday first. Empty means no restriction. Work already running finishes when a window closes; the window stops MediaMop starting anything new.",
+            "title": "Schedule Grid",
             "type": "string"
           },
           "schedule_hours_limited": {
@@ -5585,6 +5602,89 @@
           "total_deleted"
         ],
         "title": "SuiteOperationalHistoryResetOut",
+        "type": "object"
+      },
+      "SuitePauseIn": {
+        "additionalProperties": false,
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "pause_for_minutes": {
+            "anyOf": [
+              {
+                "maximum": 10080.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Lift the pause automatically after this many minutes. Omit for a pause with no expiry.",
+            "title": "Pause For Minutes"
+          },
+          "paused": {
+            "title": "Paused",
+            "type": "boolean"
+          },
+          "scan_while_paused": {
+            "default": true,
+            "title": "Scan While Paused",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "csrf_token",
+          "paused"
+        ],
+        "title": "SuitePauseIn",
+        "type": "object"
+      },
+      "SuitePauseOut": {
+        "properties": {
+          "in_flight_policy": {
+            "description": "What happens to work that is already running when a pause or a schedule window starts.",
+            "title": "In Flight Policy",
+            "type": "string"
+          },
+          "paused": {
+            "title": "Paused",
+            "type": "boolean"
+          },
+          "paused_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the pause lifts on its own. Null for a pause that lasts until it is lifted by hand.",
+            "title": "Paused Until"
+          },
+          "reason": {
+            "description": "What to show an operator, written for them rather than for the code.",
+            "title": "Reason",
+            "type": "string"
+          },
+          "scan_while_paused": {
+            "description": "Whether MediaMop keeps noticing new files while it is not working on them.",
+            "title": "Scan While Paused",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "paused",
+          "scan_while_paused",
+          "reason",
+          "in_flight_policy"
+        ],
+        "title": "SuitePauseOut",
         "type": "object"
       },
       "SuiteSecurityOverviewOut": {
@@ -9971,6 +10071,66 @@
           }
         },
         "summary": "Post Suite Operational History Reset",
+        "tags": [
+          "suite"
+        ]
+      }
+    },
+    "/api/v1/suite/pause": {
+      "get": {
+        "operationId": "get_suite_pause_api_v1_suite_pause_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuitePauseOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Suite Pause",
+        "tags": [
+          "suite"
+        ]
+      },
+      "put": {
+        "operationId": "put_suite_pause_api_v1_suite_pause_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuitePauseIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuitePauseOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Suite Pause",
         "tags": [
           "suite"
         ]

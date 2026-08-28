@@ -29,6 +29,7 @@ from mediamop.modules.refiner.refiner_library_service import (
     list_libraries,
     manager_connection_ids_for,
 )
+from mediamop.modules.refiner.refiner_schedule_grid import ScheduleGridError, normalize_grid
 from mediamop.platform.media_managers.connection_model import MediaManagerConnectionRow
 
 _ACTIVE_JOB_STATUSES = (RefinerJobStatus.PENDING.value, RefinerJobStatus.LEASED.value)
@@ -149,6 +150,13 @@ def _apply_fields(session: Session, row: RefinerLibraryRow, body: object) -> Non
         "priority",
     ):
         setattr(row, field, getattr(body, field))
+    # Validated rather than stored as given: a grid of the wrong length would switch work
+    # on or off at times nobody chose, and failing the save is the honest outcome.
+    grid = getattr(body, "schedule_grid", "")
+    try:
+        row.schedule_grid = normalize_grid(grid)
+    except ScheduleGridError as exc:
+        raise RefinerLibraryError(str(exc)) from exc
     row.rule_set_id = _validate_rule_set(session, getattr(body, "rule_set_id", None))
 
 

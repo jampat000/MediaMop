@@ -114,6 +114,11 @@ class RefinerLibraryRow(Base):
     schedule_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
     schedule_hours_limited: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     schedule_days: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    # 7x24 at 15-minute resolution, as 672 characters of 0/1. Empty means no restriction,
+    # which is what every library has until someone draws a grid. This supersedes the
+    # day/start/end trio below, which cannot express "overnight on weeknights, all day at
+    # the weekend" — the shape most operators actually want.
+    schedule_grid: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     schedule_start: Mapped[str] = mapped_column(Text, nullable=False, server_default="00:00")
     schedule_end: Mapped[str] = mapped_column(Text, nullable=False, server_default="23:59")
 

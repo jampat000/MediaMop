@@ -10,6 +10,22 @@ vi.mock("../lib/auth/queries", () => ({
     mutate: logoutMutate,
     isPending: false,
   }),
+  // The shell now carries the pause control, which needs to know whether the signed-in
+  // person may change it.
+  useMeQuery: () => ({ data: { role: "operator" } }),
+}));
+
+vi.mock("../lib/suite/pause-queries", () => ({
+  useSuitePauseQuery: () => ({
+    data: {
+      paused: false,
+      paused_until: null,
+      scan_while_paused: true,
+      reason: "",
+      in_flight_policy: "Work already running finishes.",
+    },
+  }),
+  useSaveSuitePause: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock("../lib/dashboard/queries", () => ({

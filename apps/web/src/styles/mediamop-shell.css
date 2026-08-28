@@ -80,9 +80,68 @@ body.mm-body {
 
 .mm-shell-toolbar {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: calc(8px * var(--mm-density-ui-scale));
   min-height: var(--mm-control-height);
   margin: 0 0 calc(12px * var(--mm-density-ui-scale));
+}
+
+/* Pause lives in the toolbar so it is reachable from any screen: the reason to want it
+   is that the machine is busy, which has nothing to do with the page you are on. */
+.mm-pause-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: calc(8px * var(--mm-density-ui-scale));
+  margin-right: auto;
+}
+
+.mm-pause-badge {
+  border-radius: 999px;
+  border: 1px solid var(--mm-warning-border, var(--mm-border));
+  background: var(--mm-warning-bg, transparent);
+  color: var(--mm-warning-text, var(--mm-text1));
+  padding: 2px calc(10px * var(--mm-density-ui-scale));
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mm-pause-reason {
+  font-size: 0.8125rem;
+  color: var(--mm-text2);
+}
+
+.mm-pause-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: calc(6px * var(--mm-density-ui-scale));
+  min-width: 260px;
+  padding: calc(12px * var(--mm-density-ui-scale));
+  border: 1px solid var(--mm-border);
+  border-radius: 8px;
+  background: var(--mm-surface1, var(--mm-bg, #fff));
+  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+}
+
+.mm-pause-scan-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+  color: var(--mm-text2);
+}
+
+.mm-pause-policy {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--mm-text3);
 }
 
 .mm-theme-toggle {
@@ -1873,4 +1932,66 @@ select.mm-input::-ms-expand {
     margin: 0;
     border-radius: var(--mm-radius-sm);
   }
+}
+
+/* 7x24 schedule editor. The stored grid is quarter-hour resolution; the editor works in
+   whole hours because 168 targets are usable with a mouse and 672 are not. */
+.mm-schedule-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mm-schedule-grid-body {
+  overflow-x: auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.mm-schedule-grid-hours,
+.mm-schedule-grid-row {
+  display: grid;
+  grid-template-columns: 42px repeat(24, minmax(14px, 1fr));
+  gap: 2px;
+  align-items: center;
+  min-width: 420px;
+}
+
+.mm-schedule-grid-hours span {
+  font-size: 0.625rem;
+  color: var(--mm-text3);
+  text-align: left;
+}
+
+.mm-schedule-grid-row + .mm-schedule-grid-row {
+  margin-top: 2px;
+}
+
+.mm-schedule-grid-day {
+  font-size: 0.6875rem;
+  color: var(--mm-text2);
+}
+
+.mm-schedule-cell {
+  height: 18px;
+  border: 1px solid var(--mm-border);
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.mm-schedule-cell:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.mm-schedule-cell-on {
+  background: var(--mm-accent, #2563eb);
+  border-color: var(--mm-accent, #2563eb);
+}
+
+.mm-schedule-grid-actions {
+  display: flex;
+  gap: 8px;
 }
