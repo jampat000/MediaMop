@@ -137,6 +137,22 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Removal rate")).toBeInTheDocument();
   });
 
+  it("gives the module cards a column each, so they fill the row", () => {
+    // The grid said three columns while only Refiner and Pruner were left, so the cards
+    // sat in two thirds of the row with an empty column beside them. Nothing tied the
+    // column count to the number of modules, so removing Subber could not have caught it.
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    const grid = screen.getByTestId("dashboard-module-cards");
+    const columns = /xl:grid-cols-(\d+)/.exec(grid.className)?.[1];
+
+    expect(Number(columns)).toBe(grid.children.length);
+  });
+
   it("keeps Refiner scan maintenance noise out of the dashboard", () => {
     useRefinerOverviewStatsQuery.mockReturnValue({
       data: {

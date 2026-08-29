@@ -594,7 +594,11 @@ export function DashboardPage() {
       </section>
 
       <section
-        className="mt-5 grid gap-4 xl:grid-cols-3"
+        // Two modules, so two columns. This was three when Subber was one of them (#331)
+        // and was left behind when it went, so Refiner and Pruner sat in two thirds of the
+        // row with an empty column beside them. Two also lines the cards up with the
+        // Needs attention / Recent activity pair below, which is already xl:grid-cols-2.
+        className="mt-5 grid gap-4 xl:grid-cols-2"
         data-testid="dashboard-module-cards"
       >
         {moduleCards.map((card) => (
