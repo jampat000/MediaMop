@@ -1,0 +1,5 @@
+# Build output. The sibling MediaMop.Tray project has its bin/ and obj/ committed, which
+# is a pre-existing wart rather than a pattern to copy: it makes every local build show up
+# as a diff and puts binaries in review.
+bin/
+obj/

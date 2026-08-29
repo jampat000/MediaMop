@@ -23,4 +23,10 @@
     <PackageReference Include="Velopack" Version="0.0.1298" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- UpdateSettings is internal and stays that way: it is not API, it is this app's
+         own on-disk state. The tests reach it through here rather than by widening it. -->
+    <InternalsVisibleTo Include="MediaMop.Tray.Tests" />
+  </ItemGroup>
+
 </Project>
