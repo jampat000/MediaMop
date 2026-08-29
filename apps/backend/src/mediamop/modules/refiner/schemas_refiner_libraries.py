@@ -314,6 +314,20 @@ class DiscoverableLibraryOut(BaseModel):
         default=None,
         description="Why that path cannot be used on this machine, shown beside the manager's value.",
     )
+    processes_before_import: bool = Field(
+        default=False,
+        description=(
+            "Whether the manager processes this library before importing it. When it does, it also "
+            "publishes where it expects the finished file."
+        ),
+    )
+    output_path: str | None = Field(
+        default=None,
+        description="Where the manager expects processed output. Only set when it processes before importing.",
+    )
+    output_path_problem: str | None = Field(
+        default=None, description="Why that output path cannot be used on this machine."
+    )
 
 
 class RefinerLibraryImportIn(BaseModel):

@@ -355,31 +355,48 @@ class ExternalIntegrationManagerPort:
 
 
 def _manifest_library_key(library: Mapping[str, Any]) -> str | None:
-    """The manager's own id for a library, kept only as an integration reference."""
+    """The manager's own id for a library, kept only as an integration reference.
 
-    number = _first_number(library, "id", "libraryId", "library_id")
+    Confirmed against a populated manifest (Deluno#331): ``id`` is the library's own
+    identifier, a hex string, stable across restarts. The numeric branch stays because
+    the arr products' root-folder ids are integers and share this helper.
+    """
+
+    number = _first_number(library, "id")
     if number is not None:
         return str(number)
-    return _first_text(library, "id", "libraryId", "library_id", "key", "uuid", "guid")
+    return _first_text(library, "id")
 
 
 def _manifest_library_descriptor(library: Mapping[str, Any]) -> ManagerLibraryDescriptor:
-    """One manifest entry, read tolerantly.
+    """One manifest entry, read against the confirmed contract.
 
-    The documented manifest sample shows ``"libraries": []`` from an unconfigured
-    instance, so the populated entry shape is unconfirmed (Deluno#331). Every plausible
-    spelling of name, media type and root is accepted rather than guessing one and
-    failing on the others; a missing root surfaces as a mismatch the operator can fix,
-    which is the same outcome as a root MediaMop cannot see.
+    The shape was unconfirmed when #351 shipped, because the documented sample was
+    captured on an unconfigured instance and showed ``"libraries": []``. It is confirmed
+    now (Deluno#331), so this reads the documented keys rather than guessing among
+    plausible spellings — a parser that accepts shapes the manager never sends is a
+    parser nobody can reason about, and it hides the day the contract really changes.
+
+    ``processorOutputPath`` is populated **only** for a library whose ``importWorkflow``
+    is ``refine-before-import``; a ``standard`` library sends an empty string. So the
+    workflow is what MediaMop branches on, not whether the path happens to be there.
     """
 
     key = _manifest_library_key(library) or ""
-    name = _first_text(library, "name", "title", "label", "displayName", "display_name") or key
-    scope = _scope_from_media_type(
-        library.get("mediaType") or library.get("media_type") or library.get("scope") or library.get("type")
+    name = _first_text(library, "name") or key
+    scope = _scope_from_media_type(library.get("mediaType"))
+    root = _first_text(library, "rootPath")
+    workflow = (_text(library.get("importWorkflow")) or "").strip().lower()
+    processes_before_import = workflow == "refine-before-import"
+    output = _first_text(library, "processorOutputPath") if processes_before_import else None
+    return ManagerLibraryDescriptor(
+        key=key,
+        name=name,
+        media_scope=scope,
+        root_path=root,
+        output_path=output,
+        processes_before_import=processes_before_import,
     )
-    root = _first_text(library, "path", "rootFolder", "root_folder", "root", "rootPath", "root_path")
-    return ManagerLibraryDescriptor(key=key, name=name, media_scope=scope, root_path=root)
 
 
 def _manifest_libraries(payload: Any) -> list[dict[str, Any]]:

@@ -53,6 +53,12 @@ class DiscoverableLibrary:
     root_path: str | None
     already_imported: bool
     local_path_problem: str | None
+    #: Where the manager expects processed output, when it processes before importing.
+    #: Shown before the import so the operator sees what will be filled in, rather than
+    #: discovering it afterwards.
+    output_path: str | None = None
+    processes_before_import: bool = False
+    output_path_problem: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -157,6 +163,11 @@ def discoverable_libraries(
                 root_path=descriptor.root_path,
                 already_imported=(connection_row.id, descriptor.key) in imported,
                 local_path_problem=local_path_problem(descriptor.root_path),
+                output_path=descriptor.output_path,
+                processes_before_import=descriptor.processes_before_import,
+                output_path_problem=(
+                    local_path_problem(descriptor.output_path) if descriptor.processes_before_import else None
+                ),
             )
         )
     return out
@@ -211,11 +222,22 @@ def import_libraries(
         # MediaMop cannot see: a library pointed at a folder that is not there would
         # fail every scan, and the operator is told why on the way in.
         usable_root = descriptor.root_path if local_path_problem(descriptor.root_path) is None else ""
+        # A manager that processes before importing tells MediaMop where it expects the
+        # finished file. Without this a discovered library arrived with no output folder
+        # and could not run a pass at all, which made discovery a half-import (#364).
+        # Held to the same textual local-path check as the watched folder, for the same
+        # reason: the manager's path is not necessarily one MediaMop can see.
+        usable_output = (
+            descriptor.output_path
+            if descriptor.processes_before_import and local_path_problem(descriptor.output_path) is None
+            else ""
+        )
         row = RefinerLibraryRow(
             name=_unique_name(session, descriptor.name or f"{connection_row.name} library {key}"),
             media_scope=descriptor.media_scope or "movie",
             display_order=order,
             watched_folder=usable_root or "",
+            output_folder=usable_output or "",
             discovered_from_connection_id=connection_row.id,
             discovered_library_key=key,
         )

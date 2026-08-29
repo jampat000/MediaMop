@@ -1961,6 +1961,22 @@ export interface components {
       /** Name */
       name: string;
       /**
+       * Output Path
+       * @description Where the manager expects processed output. Only set when it processes before importing.
+       */
+      output_path?: string | null;
+      /**
+       * Output Path Problem
+       * @description Why that output path cannot be used on this machine.
+       */
+      output_path_problem?: string | null;
+      /**
+       * Processes Before Import
+       * @description Whether the manager processes this library before importing it. When it does, it also publishes where it expects the finished file.
+       * @default false
+       */
+      processes_before_import: boolean;
+      /**
        * Root Path
        * @description Where the manager sees this library, on the manager's host.
        */
