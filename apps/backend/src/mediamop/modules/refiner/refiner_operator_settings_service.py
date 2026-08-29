@@ -36,6 +36,12 @@ def ensure_refiner_operator_settings_row(db: Session) -> RefinerOperatorSettings
         row = RefinerOperatorSettingsRow(
             id=1,
             max_concurrent_files=1,
+            runner_capacity=4,
+            runner_cost_sd=0,
+            runner_cost_720p=0,
+            runner_cost_1080p=1,
+            runner_cost_4k=1,
+            runner_cost_undetermined=0,
             min_file_age_seconds=60,
             refiner_min_input_file_size_mb=50,
             minimum_free_disk_space_mb=5120,
@@ -99,6 +105,12 @@ def build_refiner_operator_settings_out(db: Session, row: RefinerOperatorSetting
     tz = (suite.app_timezone or "UTC").strip() or "UTC"
     return RefinerOperatorSettingsOut(
         max_concurrent_files=_clamp_max_concurrent_files(row.max_concurrent_files),
+        runner_capacity=max(1, min(64, int(row.runner_capacity or 4))),
+        runner_cost_sd=max(0, min(64, int(row.runner_cost_sd or 0))),
+        runner_cost_720p=max(0, min(64, int(row.runner_cost_720p or 0))),
+        runner_cost_1080p=max(0, min(64, int(row.runner_cost_1080p or 0))),
+        runner_cost_4k=max(0, min(64, int(row.runner_cost_4k or 0))),
+        runner_cost_undetermined=max(0, min(64, int(row.runner_cost_undetermined or 0))),
         min_file_age_seconds=_clamp_min_file_age_seconds(row.min_file_age_seconds),
         refiner_min_input_file_size_mb=_clamp_size_mb(row.refiner_min_input_file_size_mb),
         minimum_free_disk_space_mb=_clamp_size_mb(row.minimum_free_disk_space_mb),
@@ -121,6 +133,17 @@ def apply_refiner_operator_settings_put(db: Session, body: RefinerOperatorSettin
     row = ensure_refiner_operator_settings_row(db)
     if body.max_concurrent_files is not None:
         row.max_concurrent_files = _clamp_max_concurrent_files(body.max_concurrent_files)
+    for field in (
+        "runner_capacity",
+        "runner_cost_sd",
+        "runner_cost_720p",
+        "runner_cost_1080p",
+        "runner_cost_4k",
+        "runner_cost_undetermined",
+    ):
+        value = getattr(body, field, None)
+        if value is not None:
+            setattr(row, field, max(0, min(64, int(value))))
     if body.min_file_age_seconds is not None:
         row.min_file_age_seconds = _clamp_min_file_age_seconds(body.min_file_age_seconds)
     if body.refiner_min_input_file_size_mb is not None:

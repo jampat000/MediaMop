@@ -64,6 +64,13 @@ class RefinerJob(Base):
     )
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     not_before: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # What this job costs against the runner budget, fixed at enqueue. On the row rather
+    # than looked up at lease time so the claim can compare instead of joining against a
+    # probe result that may not exist yet.
+    runner_cost: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    # Higher goes first. Seeded from the library's priority; "move to top" raises it
+    # above everything currently queued.
+    priority: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

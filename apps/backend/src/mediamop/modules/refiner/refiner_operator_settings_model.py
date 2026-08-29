@@ -16,6 +16,16 @@ class RefinerOperatorSettingsRow(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     max_concurrent_files: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+    # A weighted budget replaces the flat count above: a 700 MB SD rip and a 60 GB 4K
+    # remux are not the same unit of work, and a machine sized for two of the latter is
+    # idle under six of the former. The count stays as the source the capacity was
+    # migrated from, and as the per-library cap's units.
+    runner_capacity: Mapped[int] = mapped_column(Integer, nullable=False, server_default="4")
+    runner_cost_sd: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    runner_cost_720p: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    runner_cost_1080p: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+    runner_cost_4k: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+    runner_cost_undetermined: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     min_file_age_seconds: Mapped[int] = mapped_column(Integer, nullable=False, server_default="60")
     refiner_min_input_file_size_mb: Mapped[int] = mapped_column(Integer, nullable=False, server_default="50")
     minimum_free_disk_space_mb: Mapped[int] = mapped_column(Integer, nullable=False, server_default="5120")

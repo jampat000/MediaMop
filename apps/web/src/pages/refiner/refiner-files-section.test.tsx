@@ -22,6 +22,8 @@ function file(over: Partial<RefinerFile> = {}): RefinerFile {
     status_reason: "Ready for Refiner to process as part of Movies.",
     blocked_by_connection: null,
     size_bytes: 2048,
+    video_width: null,
+    video_height: null,
     hold_until: null,
     size_changed_at: null,
     last_seen_at: null,
@@ -195,4 +197,44 @@ it("invents no release time when the wait is on a writer rather than the clock",
   expect(
     screen.queryByTestId("refiner-file-hold-until-1"),
   ).not.toBeInTheDocument();
+});
+
+it("offers move to top only for work that has not started", async () => {
+  asOperator();
+  vi.spyOn(api, "fetchRefinerFiles").mockResolvedValue(
+    page({
+      files: [
+        file({ id: 1, status: "unprocessed" }),
+        file({ id: 2, status: "processing", relative_path: "Other/other.mkv" }),
+      ],
+    }),
+  );
+
+  render(<RefinerFilesSection />, { wrapper });
+
+  expect(
+    await screen.findByTestId("refiner-file-move-to-top-1"),
+  ).toBeInTheDocument();
+  // A running file cannot be started earlier; a button here would be a lie.
+  expect(
+    screen.queryByTestId("refiner-file-move-to-top-2"),
+  ).not.toBeInTheDocument();
+});
+
+it("shows the server's own words about whether the move happened", async () => {
+  asOperator();
+  vi.spyOn(api, "fetchRefinerFiles").mockResolvedValue(
+    page({ files: [file({ id: 1, status: "unprocessed" })] }),
+  );
+  vi.spyOn(api, "moveRefinerFileToTop").mockResolvedValue({
+    moved: false,
+    detail: "There is no queued work for this file to move.",
+  });
+
+  render(<RefinerFilesSection />, { wrapper });
+  fireEvent.click(await screen.findByTestId("refiner-file-move-to-top-1"));
+
+  expect(await screen.findByTestId("refiner-files-notice")).toHaveTextContent(
+    "There is no queued work for this file to move.",
+  );
 });

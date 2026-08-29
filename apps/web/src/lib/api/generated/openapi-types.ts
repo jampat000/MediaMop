@@ -656,6 +656,29 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/refiner/files/{file_id}/move-to-top": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Move Refiner File To Top
+     * @description Put this file's queued work ahead of everything else waiting.
+     *
+     *     Only affects work that has not started. A file already being processed cannot be
+     *     started earlier, and saying so is more use than a button that appears to work.
+     */
+    post: operations["move_refiner_file_to_top_api_v1_refiner_files__file_id__move_to_top_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/refiner/jobs/candidate-gate/enqueue": {
     parameters: {
       query?: never;
@@ -2793,6 +2816,21 @@ export interface components {
       /** Csrf Token */
       csrf_token: string;
     };
+    /** RefinerFileMoveToTopIn */
+    RefinerFileMoveToTopIn: {
+      /** Csrf Token */
+      csrf_token: string;
+    };
+    /**
+     * RefinerFileMoveToTopOut
+     * @description What happened, said in words the screen can show unchanged.
+     */
+    RefinerFileMoveToTopOut: {
+      /** Detail */
+      detail: string;
+      /** Moved */
+      moved: boolean;
+    };
     /** RefinerFileOut */
     RefinerFileOut: {
       /**
@@ -3419,6 +3457,24 @@ export interface components {
        */
       refiner_min_input_file_size_mb: number;
       /**
+       * Runner Capacity
+       * @description Total processing capacity. Active files consume it according to their cost, and new work waits once it is fully occupied.
+       */
+      runner_capacity: number;
+      /** Runner Cost 1080P */
+      runner_cost_1080p: number;
+      /** Runner Cost 4K */
+      runner_cost_4k: number;
+      /** Runner Cost 720P */
+      runner_cost_720p: number;
+      /** Runner Cost Sd */
+      runner_cost_sd: number;
+      /**
+       * Runner Cost Undetermined
+       * @description What a file MediaMop has not measured yet costs. Zero admits it rather than stalling on the unknown.
+       */
+      runner_cost_undetermined: number;
+      /**
        * Schedule Timezone
        * @description IANA zone for schedule windows (suite settings).
        */
@@ -3461,6 +3517,18 @@ export interface components {
       movie_schedule_start?: string | null;
       /** Refiner Min Input File Size Mb */
       refiner_min_input_file_size_mb?: number | null;
+      /** Runner Capacity */
+      runner_capacity?: number | null;
+      /** Runner Cost 1080P */
+      runner_cost_1080p?: number | null;
+      /** Runner Cost 4K */
+      runner_cost_4k?: number | null;
+      /** Runner Cost 720P */
+      runner_cost_720p?: number | null;
+      /** Runner Cost Sd */
+      runner_cost_sd?: number | null;
+      /** Runner Cost Undetermined */
+      runner_cost_undetermined?: number | null;
       /** Tv Schedule Days */
       tv_schedule_days?: string | null;
       /** Tv Schedule Enabled */
@@ -5727,6 +5795,41 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  move_refiner_file_to_top_api_v1_refiner_files__file_id__move_to_top_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        file_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RefinerFileMoveToTopIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerFileMoveToTopOut"];
+        };
       };
       /** @description Validation Error */
       422: {

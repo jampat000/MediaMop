@@ -29,6 +29,10 @@ from mediamop.modules.refiner.refiner_library_service import resolve_library
 from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
 from mediamop.modules.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
 from mediamop.modules.refiner.refiner_remux_rules import refiner_media_extensions_sorted
+from mediamop.modules.refiner.refiner_runner_units import (
+    budget_from_settings,
+    resolution_class_for_dimensions,
+)
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_evaluate import (
     evaluate_watched_media_file_for_dispatch,
     fetch_manager_queue_signals_for_scan,
@@ -95,6 +99,7 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
             )
 
         with session_factory() as library_session:
+            runner_budget = budget_from_settings(ensure_refiner_operator_settings_row(library_session))
             library = resolve_library(library_session, media_scope=media_scope)
             admission = evaluate_work_admission(library_session)
             pause_reason = admission.pause.reason if admission.pause.paused else None
@@ -284,19 +289,36 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                             )
                     continue
 
-                payload = json.dumps(
-                    {
-                        "relative_media_path": rel,
-                        "media_scope": media_scope,
-                    },
-                    separators=(",", ":"),
-                )
+                payload_body: dict[str, Any] = {
+                    "relative_media_path": rel,
+                    "media_scope": media_scope,
+                }
+                # The library id travels with the job so the per-library cap and the
+                # schedule window can be applied at lease time without re-deriving it.
+                if library is not None:
+                    payload_body["library_id"] = library.id
+                payload = json.dumps(payload_body, separators=(",", ":"))
                 dedupe = f"{REFINER_FILE_REMUX_PASS_JOB_KIND}:scan:{uuid.uuid4().hex}"
+                # Weighted from the height this file was measured at on a previous pass.
+                # A file MediaMop has not processed before costs the "undetermined"
+                # weight rather than a guess, and is measured for next time.
+                previous_row = (
+                    existing_file_row(session, library_id=library.id, relative_path=rel)
+                    if library is not None
+                    else None
+                )
                 refiner_enqueue_or_get_job(
                     session,
                     dedupe_key=dedupe,
                     job_kind=REFINER_FILE_REMUX_PASS_JOB_KIND,
                     payload_json=payload,
+                    runner_cost=runner_budget.cost_for(
+                        resolution_class_for_dimensions(
+                            width=previous_row.video_width if previous_row else None,
+                            height=previous_row.video_height if previous_row else None,
+                        )
+                    ),
+                    priority=int(library.priority) if library is not None else 0,
                 )
                 summary["remux_jobs_enqueued"] += 1
                 if len(sample_paths) < sample_cap:

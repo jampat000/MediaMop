@@ -56,7 +56,7 @@ WHERE id = (
       )
     )
     {admission}
-  ORDER BY id ASC
+  ORDER BY priority DESC, id ASC
   LIMIT 1
 )
 RETURNING id
@@ -85,6 +85,14 @@ def _admission_predicate(admission: object | None) -> tuple[str, dict[str, objec
         # COALESCE keeps it claimable rather than sweeping it up in the exclusion.
         rendered = ",".join(str(i) for i in ids)
         clauses.append(f"AND COALESCE(json_extract(payload_json, '$.library_id'), -1) NOT IN ({rendered})")
+
+    # The weighted budget. A job costing more than what is left waits; a job costing
+    # nothing runs even when the budget is full, which is the whole point of weighting
+    # rather than counting.
+    available = getattr(admission, "available_units", None)
+    if available is not None:
+        clauses.append("AND runner_cost <= :available_units")
+        params["available_units"] = max(0, int(available))
 
     pause = getattr(admission, "pause", None)
     if pause is not None and getattr(pause, "paused", False):
@@ -146,8 +154,15 @@ def refiner_enqueue_or_get_job(
     job_kind: str,
     payload_json: str | None = None,
     max_attempts: int = 3,
+    runner_cost: int = 0,
+    priority: int = 0,
 ) -> RefinerJob:
-    """Insert a ``pending`` job or return the existing row for ``dedupe_key``."""
+    """Insert a ``pending`` job or return the existing row for ``dedupe_key``.
+
+    ``runner_cost`` is fixed here rather than at lease time: the claim has to answer
+    "does this fit in what is left?" in one statement, and a row carrying its own cost
+    makes that a comparison instead of a join against a probe result that may not exist.
+    """
 
     validate_refiner_enqueue_job_kind(job_kind)
 
@@ -161,6 +176,8 @@ def refiner_enqueue_or_get_job(
         payload_json=payload_json,
         status=RefinerJobStatus.PENDING.value,
         max_attempts=max(1, max_attempts),
+        runner_cost=max(0, int(runner_cost)),
+        priority=int(priority),
     )
     with session.begin_nested():
         session.add(row)
@@ -357,4 +374,26 @@ def recover_handler_ok_finalize_failed_to_completed(
     session.flush()
     record_module_job_event(module="refiner", event="completed")
     _record_refiner_queue_depth(session)
+    return "ok"
+
+
+def move_refiner_job_to_top(session: Session, *, job_id: int) -> Literal["ok", "not_found", "wrong_status"]:
+    """Put one queued job ahead of everything else waiting.
+
+    Only ``pending`` rows: a leased job is already running, and "move to top" cannot
+    make something that has started start earlier. Raising it above the current maximum
+    rather than to a fixed number means two files moved to the top keep the order they
+    were moved in.
+    """
+
+    job = session.scalars(select(RefinerJob).where(RefinerJob.id == job_id)).one_or_none()
+    if job is None:
+        return "not_found"
+    if job.status != RefinerJobStatus.PENDING.value:
+        return "wrong_status"
+    highest = session.scalar(
+        select(func.max(RefinerJob.priority)).where(RefinerJob.status == RefinerJobStatus.PENDING.value)
+    )
+    job.priority = int(highest or 0) + 1
+    session.flush()
     return "ok"

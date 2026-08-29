@@ -242,3 +242,28 @@ def forget_file(session: Session, row: RefinerFileRow) -> None:
 
     session.delete(row)
     session.flush()
+
+
+def record_measured_video_dimensions(
+    session: Session,
+    *,
+    relative_path: str,
+    video_width: int | None,
+    video_height: int | None,
+) -> None:
+    """Remember the size a pass measured, for weighting the next enqueue.
+
+    Matched on path alone rather than on ``(library_id, path)``: the pass knows the file
+    it processed but not which library row the scan attributed it to, and a resolution is
+    a property of the file rather than of the library looking at it. Writing to every
+    matching row is correct for the same reason.
+    """
+
+    rows = session.scalars(select(RefinerFileRow).where(RefinerFileRow.relative_path == relative_path)).all()
+    for row in rows:
+        if video_width is not None:
+            row.video_width = int(video_width)
+        if video_height is not None:
+            row.video_height = int(video_height)
+    if rows:
+        session.flush()

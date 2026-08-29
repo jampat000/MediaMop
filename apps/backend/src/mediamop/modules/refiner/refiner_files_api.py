@@ -14,11 +14,15 @@ from starlette import status as http_status
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
 from mediamop.core.config import MediaMopSettings
+from mediamop.modules.refiner.jobs_ops import move_refiner_job_to_top
 from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow
 from mediamop.modules.refiner.refiner_file_state_service import forget_file, list_files, status_counts
+from mediamop.modules.refiner.refiner_job_queue_lookup import pending_remux_job_for_relative_path
 from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
 from mediamop.modules.refiner.schemas_refiner_files import (
     RefinerFileForgetIn,
+    RefinerFileMoveToTopIn,
+    RefinerFileMoveToTopOut,
     RefinerFileOut,
     RefinerFilesPageOut,
     RefinerFileStatusName,
@@ -104,3 +108,47 @@ def delete_refiner_file(
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="MediaMop has no record of that file.")
     forget_file(db, row)
     db.commit()
+
+
+@router.post("/refiner/files/{file_id}/move-to-top", response_model=RefinerFileMoveToTopOut)
+def move_refiner_file_to_top(
+    body: RefinerFileMoveToTopIn,
+    request: Request,
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    file_id: int = Path(ge=1),
+) -> RefinerFileMoveToTopOut:
+    """Put this file's queued work ahead of everything else waiting.
+
+    Only affects work that has not started. A file already being processed cannot be
+    started earlier, and saying so is more use than a button that appears to work.
+    """
+
+    _verify_csrf(request, settings, body.csrf_token)
+    row = db.get(RefinerFileRow, file_id)
+    if row is None:
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="MediaMop has no record of that file.")
+
+    job = pending_remux_job_for_relative_path(db, relative_path=row.relative_path)
+    if job is None:
+        db.commit()
+        return RefinerFileMoveToTopOut(
+            moved=False,
+            detail=(
+                "There is no queued work for this file to move. It may already be running, or it may not "
+                "have been picked up by a scan yet."
+            ),
+        )
+
+    outcome = move_refiner_job_to_top(db, job_id=int(job.id))
+    db.commit()
+    if outcome != "ok":
+        return RefinerFileMoveToTopOut(
+            moved=False,
+            detail="This file's work has already started, so it cannot be moved ahead of anything.",
+        )
+    return RefinerFileMoveToTopOut(
+        moved=True,
+        detail="Moved to the front of the queue. It starts as soon as there is capacity for it.",
+    )
