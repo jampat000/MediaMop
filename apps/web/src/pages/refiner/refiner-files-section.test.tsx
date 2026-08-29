@@ -314,3 +314,88 @@ it("asks the managers why a file is held and shows their own words", async () =>
     "Deluno (Main) is still importing this file.",
   );
 });
+
+it("opens a processing record and offers it as a download", async () => {
+  asOperator();
+  vi.spyOn(api, "fetchRefinerFiles").mockResolvedValue(
+    page({ files: [file({ id: 1, status: "processed" })] }),
+  );
+  vi.spyOn(api, "fetchRefinerFileLog").mockResolvedValue({
+    file_id: 1,
+    relative_path: "Some Film/film.mkv",
+    retention_days: 90,
+    entries: [
+      {
+        id: 5,
+        recorded_at: "2026-08-26T14:00:00Z",
+        outcome: "live_output_written",
+        title: "Remuxed Some Film",
+        library_name: "Movies",
+        detail: { ffmpeg_argv: ["ffmpeg", "-i", "in.mkv"] },
+      },
+    ],
+  });
+
+  render(<RefinerFilesSection />, { wrapper });
+  fireEvent.click(await screen.findByTestId("refiner-file-log-1"));
+
+  const panel = await screen.findByTestId("refiner-file-log-panel");
+  expect(panel).toHaveTextContent("live_output_written");
+  expect(panel).toHaveTextContent("kept for 90 days");
+  expect(screen.getByTestId("refiner-file-log-download")).toHaveAttribute(
+    "href",
+    "/api/v1/refiner/files/1/log/download",
+  );
+});
+
+it("says zero retention keeps records forever rather than showing a bare 0", async () => {
+  asOperator();
+  vi.spyOn(api, "fetchRefinerFiles").mockResolvedValue(
+    page({ files: [file({ id: 1, status: "processed" })] }),
+  );
+  vi.spyOn(api, "fetchRefinerFileLog").mockResolvedValue({
+    file_id: 1,
+    relative_path: "Some Film/film.mkv",
+    retention_days: 0,
+    entries: [
+      {
+        id: 5,
+        recorded_at: "2026-08-26T14:00:00Z",
+        outcome: "live_output_written",
+        title: "",
+        library_name: "Movies",
+        detail: {},
+      },
+    ],
+  });
+
+  render(<RefinerFilesSection />, { wrapper });
+  fireEvent.click(await screen.findByTestId("refiner-file-log-1"));
+
+  expect(await screen.findByTestId("refiner-file-log-panel")).toHaveTextContent(
+    "kept forever",
+  );
+});
+
+it("explains an empty record instead of opening a blank panel", async () => {
+  asOperator();
+  vi.spyOn(api, "fetchRefinerFiles").mockResolvedValue(
+    page({ files: [file({ id: 1, status: "unprocessed" })] }),
+  );
+  vi.spyOn(api, "fetchRefinerFileLog").mockResolvedValue({
+    file_id: 1,
+    relative_path: "Some Film/film.mkv",
+    retention_days: 90,
+    entries: [],
+  });
+
+  render(<RefinerFilesSection />, { wrapper });
+  fireEvent.click(await screen.findByTestId("refiner-file-log-1"));
+
+  expect(await screen.findByTestId("refiner-files-notice")).toHaveTextContent(
+    /has not processed this file yet/,
+  );
+  expect(
+    screen.queryByTestId("refiner-file-log-panel"),
+  ).not.toBeInTheDocument();
+});

@@ -45,6 +45,8 @@ def ensure_refiner_operator_settings_row(db: Session) -> RefinerOperatorSettings
             work_temp_stale_sweep_enabled=True,
             failure_cleanup_enabled=False,
             keep_failed_work_files=False,
+            file_log_retention_days=90,
+            verbose_detection_logging=False,
             min_file_age_seconds=60,
             refiner_min_input_file_size_mb=50,
             minimum_free_disk_space_mb=5120,
@@ -117,6 +119,8 @@ def build_refiner_operator_settings_out(db: Session, row: RefinerOperatorSetting
         work_temp_stale_sweep_enabled=bool(row.work_temp_stale_sweep_enabled),
         failure_cleanup_enabled=bool(row.failure_cleanup_enabled),
         keep_failed_work_files=bool(row.keep_failed_work_files),
+        file_log_retention_days=max(0, min(3650, int(row.file_log_retention_days))),
+        verbose_detection_logging=bool(row.verbose_detection_logging),
         min_file_age_seconds=_clamp_min_file_age_seconds(row.min_file_age_seconds),
         refiner_min_input_file_size_mb=_clamp_size_mb(row.refiner_min_input_file_size_mb),
         minimum_free_disk_space_mb=_clamp_size_mb(row.minimum_free_disk_space_mb),
@@ -150,7 +154,14 @@ def apply_refiner_operator_settings_put(db: Session, body: RefinerOperatorSettin
         value = getattr(body, field, None)
         if value is not None:
             setattr(row, field, max(0, min(64, int(value))))
-    for flag in ("work_temp_stale_sweep_enabled", "failure_cleanup_enabled", "keep_failed_work_files"):
+    if body.file_log_retention_days is not None:
+        row.file_log_retention_days = max(0, min(3650, int(body.file_log_retention_days)))
+    for flag in (
+        "work_temp_stale_sweep_enabled",
+        "failure_cleanup_enabled",
+        "keep_failed_work_files",
+        "verbose_detection_logging",
+    ):
         toggled = getattr(body, flag, None)
         if toggled is not None:
             setattr(row, flag, bool(toggled))

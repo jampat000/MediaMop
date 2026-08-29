@@ -679,6 +679,49 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/refiner/files/{file_id}/log": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Refiner File Log
+     * @description Everything MediaMop retained about what it did to this file, newest first.
+     */
+    get: operations["get_refiner_file_log_api_v1_refiner_files__file_id__log_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/files/{file_id}/log/download": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Download Refiner File Log
+     * @description The same record as plain text, for attaching to a bug report.
+     *
+     *     Text rather than raw JSON: the reason anyone downloads this is to send it to somebody
+     *     else, and minified JSON is not something a person reads in a forum post.
+     */
+    get: operations["download_refiner_file_log_api_v1_refiner_files__file_id__log_download_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/refiner/files/{file_id}/move-to-top": {
     parameters: {
       query?: never;
@@ -2805,6 +2848,46 @@ export interface components {
       /** Csrf Token */
       csrf_token: string;
     };
+    /**
+     * RefinerFileLogEntryOut
+     * @description One completed pass over this file.
+     */
+    RefinerFileLogEntryOut: {
+      /**
+       * Detail
+       * @description The whole pass payload: admission decisions, probe, plan, ffmpeg argv, cleanup gates, timings.
+       */
+      detail?: {
+        [key: string]: unknown;
+      };
+      /** Id */
+      id: number;
+      /** Library Name */
+      library_name: string;
+      /** Outcome */
+      outcome: string;
+      /**
+       * Recorded At
+       * Format: date-time
+       */
+      recorded_at: string;
+      /** Title */
+      title: string;
+    };
+    /** RefinerFileLogOut */
+    RefinerFileLogOut: {
+      /** Entries */
+      entries: components["schemas"]["RefinerFileLogEntryOut"][];
+      /** File Id */
+      file_id: number;
+      /** Relative Path */
+      relative_path: string;
+      /**
+       * Retention Days
+       * @description How long these records are kept. 0 means they are kept forever.
+       */
+      retention_days: number;
+    };
     /** RefinerFileMoveToTopIn */
     RefinerFileMoveToTopIn: {
       /** Csrf Token */
@@ -3531,6 +3614,11 @@ export interface components {
        */
       failure_cleanup_enabled: boolean;
       /**
+       * File Log Retention Days
+       * @description How long to keep the per-file processing record. 0 keeps it forever.
+       */
+      file_log_retention_days: number;
+      /**
        * Keep Failed Work Files
        * @description Keep a failed run's working files so they can be inspected instead of swept.
        */
@@ -3598,6 +3686,11 @@ export interface components {
       /** Updated At */
       updated_at: string;
       /**
+       * Verbose Detection Logging
+       * @description Record extra detail from the file-detection stage. Turn this on while working out why a file is or is not being picked up, and turn it off again afterwards — it is loud.
+       */
+      verbose_detection_logging: boolean;
+      /**
        * Work Temp Stale Sweep Enabled
        * @description Reclaim MediaMop's own stale working files. Safe, and on by default.
        */
@@ -3612,6 +3705,8 @@ export interface components {
       csrf_token: string;
       /** Failure Cleanup Enabled */
       failure_cleanup_enabled?: boolean | null;
+      /** File Log Retention Days */
+      file_log_retention_days?: number | null;
       /** Keep Failed Work Files */
       keep_failed_work_files?: boolean | null;
       /** Max Concurrent Files */
@@ -3654,6 +3749,8 @@ export interface components {
       tv_schedule_hours_limited?: boolean | null;
       /** Tv Schedule Start */
       tv_schedule_start?: string | null;
+      /** Verbose Detection Logging */
+      verbose_detection_logging?: boolean | null;
       /** Work Temp Stale Sweep Enabled */
       work_temp_stale_sweep_enabled?: boolean | null;
     };
@@ -5985,6 +6082,70 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_refiner_file_log_api_v1_refiner_files__file_id__log_get: {
+    parameters: {
+      query?: {
+        limit?: number;
+      };
+      header?: never;
+      path: {
+        file_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerFileLogOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  download_refiner_file_log_api_v1_refiner_files__file_id__log_download_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        file_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
       };
       /** @description Validation Error */
       422: {

@@ -16,6 +16,7 @@ from mediamop.modules.refiner.file_remux_pass.visibility import (
     remux_pass_activity_title,
     remux_pass_result_to_activity_detail,
 )
+from mediamop.modules.refiner.refiner_file_log_service import record_file_log
 from mediamop.modules.refiner.refiner_file_remux_pass_activity import (
     complete_refiner_file_processing_activity,
     record_refiner_file_processing_started,
@@ -64,6 +65,18 @@ def _record(session_factory: sessionmaker[Session], *, payload: dict[str, Any], 
     detail = remux_pass_result_to_activity_detail(payload)
     title = remux_pass_activity_title(payload)
     with session_factory() as session, session.begin():
+        # The durable per-file record is written here, beside the activity row, so the
+        # two cannot disagree about what happened. It outlives the activity feed under
+        # its own retention (#340).
+        relative_path = payload.get("relative_media_path")
+        if isinstance(relative_path, str) and relative_path.strip():
+            try:
+                record_file_log(session, relative_path=relative_path, title=title, detail=payload)
+            except Exception:
+                # A record that cannot be written must not fail the pass that produced
+                # it: the work is done either way, and losing the job is worse than
+                # losing the note about it.
+                logger.exception("Refiner could not write the processing record for %s.", relative_path)
         if activity_id is not None:
             updated = complete_refiner_file_processing_activity(
                 session,
