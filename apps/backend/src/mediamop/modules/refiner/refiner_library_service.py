@@ -124,6 +124,7 @@ def rules_config_for(session: Session, library: RefinerLibraryRow) -> RefinerRul
         preserve_forced_subs=bool(rule_set.preserve_forced_subs),
         preserve_default_subs=bool(rule_set.preserve_default_subs),
         audio_preference_mode=normalize_audio_preference_mode(rule_set.audio_preference_mode),
+        audio_sorters_json=rule_set.audio_sorters_json or "",
     )
 
 

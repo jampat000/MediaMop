@@ -3995,6 +3995,12 @@ export interface components {
         | "preferred_langs_quality"
         | "preferred_langs_strict"
         | "quality_all_languages";
+      /**
+       * Audio Sorters Json
+       * @description Ordered track sorters as JSON: [{"field": "language", "value": "eng"}, {"field": "channels", "value": ">=5.1"}]. Fields: bitrate, channels, codec, language, title, default, forced, commentary. Omit "value" to sort by the field itself; "reversed" flips it. Empty uses the default order, which is what Refiner has always applied.
+       * @default
+       */
+      audio_sorters_json: string;
       /** Csrf Token */
       csrf_token: string;
       /**
@@ -4042,6 +4048,12 @@ export interface components {
        */
       subtitle_mode: "keep_all" | "keep_listed" | "remove_all";
       /**
+       * Subtitle Sorters Json
+       * @description The same, for subtitle tracks.
+       * @default
+       */
+      subtitle_sorters_json: string;
+      /**
        * Tertiary Audio Lang
        * @default
        */
@@ -4051,6 +4063,8 @@ export interface components {
     RefinerRuleSetOut: {
       /** Audio Preference Mode */
       audio_preference_mode: string;
+      /** Audio Sorters Json */
+      audio_sorters_json: string;
       /** Default Audio Slot */
       default_audio_slot: string;
       /** Id */
@@ -4071,6 +4085,8 @@ export interface components {
       subtitle_langs_csv: string;
       /** Subtitle Mode */
       subtitle_mode: string;
+      /** Subtitle Sorters Json */
+      subtitle_sorters_json: string;
       /** Tertiary Audio Lang */
       tertiary_audio_lang: string;
       /** Updated At */

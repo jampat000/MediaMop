@@ -102,6 +102,9 @@ export interface RefinerRuleSet {
   preserve_forced_subs: boolean;
   preserve_default_subs: boolean;
   audio_preference_mode: string;
+  /** Ordered track sorters as JSON. Empty means the default order Refiner has always applied. */
+  audio_sorters_json: string;
+  subtitle_sorters_json: string;
   /** Libraries pointing at this rule set. Deleting one still in use is refused. */
   used_by_library_count: number;
   updated_at: string | null;
