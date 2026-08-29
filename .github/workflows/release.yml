@@ -113,7 +113,7 @@ jobs:
       # still checks the vendored copy against the current upstream checksum, so
       # a stale restore is refreshed rather than shipped.
       - name: Cache vendored FFmpeg
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: packaging/windows/vendor/ffmpeg
           key: ffmpeg-vendor-${{ runner.os }}-${{ github.run_id }}
