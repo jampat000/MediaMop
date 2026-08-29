@@ -13,8 +13,10 @@ MediaMop is a self-hosted media operations app:
   selects the cleanup behaviour, but it is no longer what the module partitions on.
   Adding a library is a POST. See
   [ADR-0014](docs/adr/ADR-0014-refiner-libraries-replace-fixed-scopes.md). The singleton
-  settings rows still exist and are read only when no library covers a scope, which is a
-  database that has not been migrated; they are dropped once nothing reads them.
+  settings rows that libraries replaced were dropped in `0025`; the libraries are the only
+  store. The two `/api/v1` surfaces they backed are kept and resolve `movie` and `tv` to
+  the library covering that scope, because the setup wizard and the Refiner overview read
+  them.
 - **Pruner** previews and removes media from connected media servers.
 - **Media managers** are the products MediaMop accepts work from and reports back to.
   A connection carries a *kind* (Radarr, Sonarr, Deluno, or anything posting MediaMop's

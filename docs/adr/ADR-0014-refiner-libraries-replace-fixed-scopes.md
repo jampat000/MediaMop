@@ -171,7 +171,7 @@ prefix, or a queue. Everything stays on `refiner_jobs` under `refiner.*`.
 - [ADR-0009](ADR-0009-suite-wide-timing-isolation.md) — suite-wide timing isolation
 - [ADR-0012](ADR-0012-refiner-preflight-parity-boundary.md) — preflight parity boundary
 - [ADR-0013](ADR-0013-media-managers-are-kinds-not-products.md) — a media manager is a kind
-- Execution plan: [`docs/exec-plans/active/refiner-library-model.md`](../exec-plans/active/refiner-library-model.md)
+- Execution plan: [`docs/exec-plans/completed/refiner-library-model.md`](../exec-plans/completed/refiner-library-model.md)
 
 [#350]: https://github.com/jampat000/MediaMop/issues/350
 [#351]: https://github.com/jampat000/MediaMop/issues/351
