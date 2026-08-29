@@ -3548,6 +3548,12 @@
             "title": "Output Folder",
             "type": "string"
           },
+          "preserve_original_timestamps": {
+            "default": false,
+            "description": "Give the output the original file's modification time.",
+            "title": "Preserve Original Timestamps",
+            "type": "boolean"
+          },
           "priority": {
             "default": 0,
             "maximum": 100.0,
@@ -3625,6 +3631,12 @@
             "default": "00:00",
             "maxLength": 5,
             "title": "Schedule Start",
+            "type": "string"
+          },
+          "sidecar_patterns_csv": {
+            "default": ".srt,.ass,.ssa,.sub,.idx,.vtt,.nfo,.jpg,.png",
+            "description": "Which files beside the video travel with it to the output, renamed to the output's stem. Empty migrates nothing \u2014 and the source folder deletion would then remove them.",
+            "title": "Sidecar Patterns Csv",
             "type": "string"
           },
           "skip_access_tests": {
@@ -3821,6 +3833,10 @@
             "title": "Output Folder",
             "type": "string"
           },
+          "preserve_original_timestamps": {
+            "title": "Preserve Original Timestamps",
+            "type": "boolean"
+          },
           "priority": {
             "title": "Priority",
             "type": "integer"
@@ -3876,6 +3892,10 @@
             "title": "Schedule Start",
             "type": "string"
           },
+          "sidecar_patterns_csv": {
+            "title": "Sidecar Patterns Csv",
+            "type": "string"
+          },
           "skip_access_tests": {
             "title": "Skip Access Tests",
             "type": "boolean"
@@ -3925,6 +3945,8 @@
           "top_level_only",
           "scan_interval_seconds",
           "hold_minutes",
+          "sidecar_patterns_csv",
+          "preserve_original_timestamps",
           "file_detection_interval_seconds",
           "ignore_size_changes",
           "skip_access_tests",
@@ -4102,6 +4124,12 @@
             "title": "Output Folder",
             "type": "string"
           },
+          "preserve_original_timestamps": {
+            "default": false,
+            "description": "Give the output the original file's modification time.",
+            "title": "Preserve Original Timestamps",
+            "type": "boolean"
+          },
           "priority": {
             "default": 0,
             "maximum": 100.0,
@@ -4179,6 +4207,12 @@
             "default": "00:00",
             "maxLength": 5,
             "title": "Schedule Start",
+            "type": "string"
+          },
+          "sidecar_patterns_csv": {
+            "default": ".srt,.ass,.ssa,.sub,.idx,.vtt,.nfo,.jpg,.png",
+            "description": "Which files beside the video travel with it to the output, renamed to the output's stem. Empty migrates nothing \u2014 and the source folder deletion would then remove them.",
+            "title": "Sidecar Patterns Csv",
             "type": "string"
           },
           "skip_access_tests": {

@@ -110,6 +110,14 @@ class RefinerLibraryRow(Base):
     exclude_hidden: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
     top_level_only: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
 
+    # Output. Which files beside the video travel with it. Empty migrates nothing, which
+    # is what every install did before — and what it did *instead* was delete them with
+    # the release folder, so the seeded list is the safer direction (#344).
+    sidecar_patterns_csv: Mapped[str] = mapped_column(
+        Text, nullable=False, server_default=".srt,.ass,.ssa,.sub,.idx,.vtt,.nfo,.jpg,.png"
+    )
+    preserve_original_timestamps: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+
     # Timing.
     scan_interval_seconds: Mapped[int] = mapped_column(Integer, nullable=False, server_default="300")
     hold_minutes: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")

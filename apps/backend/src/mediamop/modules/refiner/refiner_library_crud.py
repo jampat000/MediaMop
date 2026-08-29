@@ -143,6 +143,8 @@ def _apply_fields(session: Session, row: RefinerLibraryRow, body: object) -> Non
         "top_level_only",
         "scan_interval_seconds",
         "hold_minutes",
+        "sidecar_patterns_csv",
+        "preserve_original_timestamps",
         "file_detection_interval_seconds",
         "ignore_size_changes",
         "skip_access_tests",
