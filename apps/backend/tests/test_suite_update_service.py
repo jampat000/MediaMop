@@ -90,8 +90,8 @@ def test_build_suite_update_status_docker_includes_update_command(monkeypatch: p
 
     assert status.status == "update_available"
     assert status.install_type == "docker"
-    # Not `docker pull <image>:<tag>`: that tag does not exist (images publish as `v2.0.8`)
-    # and the documented compose file pins `:latest`, so `compose up -d` would ignore it.
+    # Not `docker pull <image>:<tag>`: the compose file documented in docs/docker.md follows
+    # `:latest`, so `compose up -d` starts the old image no matter which tag was pulled.
     assert status.docker_update_command == "docker compose pull && docker compose up -d"
     assert status.in_app_upgrade_supported is False
     assert status.in_app_upgrade_summary is None
