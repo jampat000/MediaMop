@@ -61,6 +61,15 @@ class RefinerRuleSetRow(Base):
     audio_sorters_json: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     subtitle_sorters_json: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
 
+    # Metadata and attachment stripping, all off by default. An embedded poster is an
+    # mjpeg video stream, so removing images is a stream decision as well as a metadata
+    # one (#342).
+    remove_images: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    remove_attachments: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    remove_title: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    remove_language_tags: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    remove_other_metadata: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False

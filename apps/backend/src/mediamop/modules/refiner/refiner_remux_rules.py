@@ -7,6 +7,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
+from mediamop.modules.refiner.refiner_metadata_rules import (
+    MetadataRules,
+    describe_attachment_stream,
+    describe_image_stream,
+    is_attachment_stream,
+    metadata_removal_notes,
+    split_video_and_images,
+)
 from mediamop.modules.refiner.refiner_track_sorters import (
     DEFAULT_AUDIO_SORTERS,
     TrackSorter,
@@ -192,6 +200,8 @@ class RefinerRulesConfig:
     #: The ordered sorter list, as stored JSON. Empty means the seeded default, which
     #: reproduces the ranking this used to hardcode (#341).
     audio_sorters_json: str = ""
+    #: Metadata and attachment stripping. All off by default (#342).
+    metadata: MetadataRules = field(default_factory=MetadataRules)
 
 
 def _ordered_preference_langs(config: RefinerRulesConfig) -> list[str]:
@@ -227,9 +237,23 @@ class RemuxPlan:
     removed_subtitles: list[str] = field(default_factory=list)
     default_audio_output_index: int = 0
     audio_selection_notes: list[str] = field(default_factory=list)
+    #: Embedded posters and attachments this plan drops, and the sentences describing
+    #: them. Separated from video because an embedded poster *is* a video stream and
+    #: anything reasoning about "the video stream" must not find two.
+    removed_images: list[str] = field(default_factory=list)
+    removed_attachments: list[str] = field(default_factory=list)
+    metadata_notes: list[str] = field(default_factory=list)
+    metadata: MetadataRules = field(default_factory=MetadataRules)
 
 
 def is_remux_required(plan: RemuxPlan, audio_probe: list[dict[str, Any]], sub_probe: list[dict[str, Any]]) -> bool:
+    # A file whose only change is metadata stripping still needs a pass. Without this it
+    # would be reported as "nothing to do" and copied through with its poster and title
+    # intact, which is the setting appearing not to work (#342).
+    if plan.removed_images or plan.removed_attachments:
+        return True
+    if plan.metadata.remove_title or plan.metadata.remove_language_tags or plan.metadata.remove_other_metadata:
+        return True
     if [t.input_index for t in plan.audio] != [int(s["index"]) for s in audio_probe]:
         return True
     if [t.input_index for t in plan.subtitles] != [int(s["index"]) for s in sub_probe]:
@@ -244,6 +268,15 @@ def is_remux_required(plan: RemuxPlan, audio_probe: list[dict[str, Any]], sub_pr
     ]
     new_sub = [(t.input_index, int(t.forced), int(t.default)) for t in plan.subtitles]
     return old_sub != new_sub
+
+
+def attachment_streams(probe: dict[str, Any]) -> list[dict]:
+    """Attached fonts and similar. Not returned by ``split_streams``, which predates them."""
+
+    streams = probe.get("streams")
+    if not isinstance(streams, list):
+        return []
+    return [s for s in streams if isinstance(s, dict) and is_attachment_stream(s)]
 
 
 def split_streams(probe: dict[str, Any]) -> tuple[list[dict], list[dict], list[dict]]:
@@ -443,12 +476,20 @@ def plan_remux(
     audio: list[dict[str, Any]],
     subtitles: list[dict[str, Any]],
     config: RefinerRulesConfig,
+    attachments: list[dict[str, Any]] | None = None,
 ) -> RemuxPlan | None:
     """
     Single winning audio track + retention policy: all other audio streams removed from output.
     Returns None if no audio would remain.
     """
-    video_indices = [int(s["index"]) for s in video]
+    rules = config.metadata
+    # Always split, whether or not removal is on, so the plan knows which stream is the
+    # picture even when the poster is being kept.
+    real_video, image_streams = split_video_and_images(video)
+    dropped_images = image_streams if rules.remove_images else []
+    kept_video = real_video if rules.remove_images else video
+    video_indices = [int(s["index"]) for s in kept_video]
+    dropped_attachments = [s for s in attachments or [] if is_attachment_stream(s)] if rules.remove_attachments else []
 
     removed_audio: list[str] = []
     notes: list[str] = []
@@ -575,6 +616,12 @@ def plan_remux(
         removed_subtitles=removed_sub_labels,
         default_audio_output_index=0,
         audio_selection_notes=notes,
+        removed_images=[describe_image_stream(s) for s in dropped_images],
+        removed_attachments=[describe_attachment_stream(s) for s in dropped_attachments],
+        metadata_notes=metadata_removal_notes(
+            rules, removed_images=dropped_images, removed_attachments=dropped_attachments
+        ),
+        metadata=rules,
     )
 
 

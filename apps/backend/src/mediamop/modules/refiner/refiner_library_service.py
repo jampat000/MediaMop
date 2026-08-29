@@ -24,6 +24,7 @@ from mediamop.modules.refiner.refiner_library_model import (
     RefinerLibraryRow,
     RefinerRuleSetRow,
 )
+from mediamop.modules.refiner.refiner_metadata_rules import MetadataRules
 from mediamop.modules.refiner.refiner_remux_rules import RefinerRulesConfig, normalize_audio_preference_mode
 
 
@@ -125,6 +126,13 @@ def rules_config_for(session: Session, library: RefinerLibraryRow) -> RefinerRul
         preserve_default_subs=bool(rule_set.preserve_default_subs),
         audio_preference_mode=normalize_audio_preference_mode(rule_set.audio_preference_mode),
         audio_sorters_json=rule_set.audio_sorters_json or "",
+        metadata=MetadataRules(
+            remove_images=bool(rule_set.remove_images),
+            remove_attachments=bool(rule_set.remove_attachments),
+            remove_title=bool(rule_set.remove_title),
+            remove_language_tags=bool(rule_set.remove_language_tags),
+            remove_other_metadata=bool(rule_set.remove_other_metadata),
+        ),
     )
 
 

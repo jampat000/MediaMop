@@ -98,3 +98,14 @@ def subtitle_after_line_from_plan(plan: RemuxPlan, *, remove_all: bool) -> str:
     if not langs:
         return "None"
     return " · ".join(langs)
+
+
+def metadata_removed_line_from_plan(plan: RemuxPlan) -> str:
+    """What the pass stripped beyond audio and subtitles.
+
+    The before/after display already showed audio and subtitle changes; an embedded
+    poster disappearing with no line about it would look like the file lost something
+    unexplained (#342).
+    """
+
+    return join_track_lines(list(plan.metadata_notes))

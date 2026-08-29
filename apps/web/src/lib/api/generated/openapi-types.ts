@@ -4027,10 +4027,40 @@ export interface components {
        */
       primary_audio_lang: string;
       /**
+       * Remove Attachments
+       * @description Strip attached fonts and similar.
+       * @default false
+       */
+      remove_attachments: boolean;
+      /**
        * Remove Commentary
        * @default false
        */
       remove_commentary: boolean;
+      /**
+       * Remove Images
+       * @description Strip embedded cover art. An embedded poster is carried as a video stream, so this removes a stream as well as an image.
+       * @default false
+       */
+      remove_images: boolean;
+      /**
+       * Remove Language Tags
+       * @description Strip per-stream language tags.
+       * @default false
+       */
+      remove_language_tags: boolean;
+      /**
+       * Remove Other Metadata
+       * @description Strip the remaining container metadata.
+       * @default false
+       */
+      remove_other_metadata: boolean;
+      /**
+       * Remove Title
+       * @description Strip the container title, leaving other metadata alone.
+       * @default false
+       */
+      remove_title: boolean;
       /**
        * Secondary Audio Lang
        * @default
@@ -4077,8 +4107,18 @@ export interface components {
       preserve_forced_subs: boolean;
       /** Primary Audio Lang */
       primary_audio_lang: string;
+      /** Remove Attachments */
+      remove_attachments: boolean;
       /** Remove Commentary */
       remove_commentary: boolean;
+      /** Remove Images */
+      remove_images: boolean;
+      /** Remove Language Tags */
+      remove_language_tags: boolean;
+      /** Remove Other Metadata */
+      remove_other_metadata: boolean;
+      /** Remove Title */
+      remove_title: boolean;
       /** Secondary Audio Lang */
       secondary_audio_lang: string;
       /** Subtitle Langs Csv */

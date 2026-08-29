@@ -276,6 +276,11 @@ def _apply_rule_set_fields(row: RefinerRuleSetRow, body: object) -> None:
         "preserve_forced_subs",
         "preserve_default_subs",
         "audio_preference_mode",
+        "remove_images",
+        "remove_attachments",
+        "remove_title",
+        "remove_language_tags",
+        "remove_other_metadata",
     ):
         setattr(row, field, getattr(body, field))
     _apply_sorter_fields(row, body)

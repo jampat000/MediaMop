@@ -17,6 +17,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from mediamop.modules.refiner.refiner_metadata_rules import metadata_argv_flags
 from mediamop.modules.refiner.refiner_remux_rules import RemuxPlan
 
 logger = logging.getLogger(__name__)
@@ -221,6 +222,9 @@ def build_ffmpeg_argv(*, ffmpeg_bin: str, src: Path, dst: Path, plan: RemuxPlan)
     for t in plan.subtitles:
         args.extend(["-map", f"0:{t.input_index}"])
     args.extend(["-c", "copy"])
+    # Container-level stripping. After the maps, because the maps decide which streams
+    # exist and these decide what those streams carry.
+    args.extend(metadata_argv_flags(plan.metadata))
     for i, t in enumerate(plan.audio):
         args.extend([f"-disposition:a:{i:d}", "default" if t.default else "0"])
     for i, t in enumerate(plan.subtitles):

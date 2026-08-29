@@ -128,6 +128,11 @@ def _rule_set_out(db, row: RefinerRuleSetRow) -> RefinerRuleSetOut:
         audio_preference_mode=row.audio_preference_mode,
         audio_sorters_json=row.audio_sorters_json or "",
         subtitle_sorters_json=row.subtitle_sorters_json or "",
+        remove_images=bool(row.remove_images),
+        remove_attachments=bool(row.remove_attachments),
+        remove_title=bool(row.remove_title),
+        remove_language_tags=bool(row.remove_language_tags),
+        remove_other_metadata=bool(row.remove_other_metadata),
         used_by_library_count=rule_set_usage_count(db, row),
         updated_at=row.updated_at,
     )
