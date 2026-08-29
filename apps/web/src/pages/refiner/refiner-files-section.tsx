@@ -9,6 +9,7 @@ import {
 } from "../../lib/refiner/files-api";
 import {
   useForgetRefinerFile,
+  useMoveRefinerFileToTop,
   useRefinerFilesQuery,
 } from "../../lib/refiner/files-queries";
 import { useRefinerLibrariesQuery } from "../../lib/refiner/libraries-queries";
@@ -82,6 +83,7 @@ export function RefinerFilesSection() {
     limit,
   });
   const forget = useForgetRefinerFile();
+  const moveToTopMutation = useMoveRefinerFileToTop();
   const editable = canEdit(me.data?.role);
 
   if (files.isLoading) return <PageLoading label="Loading files" />;
@@ -89,6 +91,18 @@ export function RefinerFilesSection() {
   const page = files.data;
   const counts = page?.status_counts ?? {};
   const rows = page?.files ?? [];
+
+  const moveToTop = async (file: RefinerFile) => {
+    setNotice(null);
+    try {
+      // The server decides whether the move was possible and says so in words the
+      // screen shows unchanged — it knows whether the work had already started.
+      const result = await moveToTopMutation.mutateAsync(file.id);
+      setNotice(result.detail);
+    } catch {
+      setNotice("That file could not be moved to the front of the queue.");
+    }
+  };
 
   const removeFile = async (file: RefinerFile) => {
     setNotice(null);
@@ -229,15 +243,34 @@ export function RefinerFilesSection() {
                   ) : null}
                 </div>
                 {editable ? (
-                  <button
-                    type="button"
-                    className={mmActionButtonClass({ variant: "tertiary" })}
-                    onClick={() => void removeFile(file)}
-                    data-testid={`refiner-file-forget-${file.id}`}
-                    title="Removes MediaMop's record of this file. The file on disk is untouched."
-                  >
-                    Remove from list
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    {/* Only offered where it can do something: a file that is running
+                      cannot be started earlier, and a button that looked like it worked
+                      would be worse than no button. */}
+                    {file.status === "unprocessed" ||
+                    file.status === "on_hold" ||
+                    file.status === "blocked_upstream" ||
+                    file.status === "out_of_schedule" ? (
+                      <button
+                        type="button"
+                        className={mmActionButtonClass({ variant: "tertiary" })}
+                        onClick={() => void moveToTop(file)}
+                        data-testid={`refiner-file-move-to-top-${file.id}`}
+                        title="Puts this file's queued work ahead of everything else waiting."
+                      >
+                        Move to top
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className={mmActionButtonClass({ variant: "tertiary" })}
+                      onClick={() => void removeFile(file)}
+                      data-testid={`refiner-file-forget-${file.id}`}
+                      title="Removes MediaMop's record of this file. The file on disk is untouched."
+                    >
+                      Remove from list
+                    </button>
+                  </div>
                 ) : null}
               </div>
             </li>

@@ -23,6 +23,7 @@ from mediamop.modules.refiner.file_remux_pass.visibility import (
     remux_pass_result_to_activity_detail,
     summarize_remux_plan,
 )
+from mediamop.modules.refiner.refiner_file_state_service import record_measured_video_dimensions
 from mediamop.modules.refiner.refiner_movie_output_cleanup import (
     maybe_run_movie_output_folder_cleanup_after_remux,
 )
@@ -47,6 +48,7 @@ from mediamop.modules.refiner.refiner_remux_track_display import (
     subtitle_after_line_from_plan,
     subtitle_before_line_from_probe,
 )
+from mediamop.modules.refiner.refiner_runner_units import video_dimensions_from_streams
 from mediamop.modules.refiner.refiner_tv_output_cleanup import (
     maybe_run_tv_output_season_folder_cleanup_after_remux,
 )
@@ -480,6 +482,16 @@ def run_refiner_file_remux_pass(
         )
 
     video, audio, subs = split_streams(probe)
+    # Measured once here and recorded, so the *next* enqueue of this file can weight it
+    # against the runner budget instead of paying the "undetermined" cost forever (#338).
+    measured_width, measured_height = video_dimensions_from_streams(video)
+    if cleanup_session is not None and (measured_width is not None or measured_height is not None):
+        record_measured_video_dimensions(
+            cleanup_session,
+            relative_path=relative_media_path,
+            video_width=measured_width,
+            video_height=measured_height,
+        )
     duration_seconds = _probe_duration_seconds(probe)
     config = rules_config if rules_config is not None else default_refiner_remux_rules_config()
     plan = plan_remux(video=video, audio=audio, subtitles=subs, config=config)

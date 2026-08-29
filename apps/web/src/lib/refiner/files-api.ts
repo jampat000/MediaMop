@@ -32,6 +32,8 @@ export interface RefinerFile {
   status_reason: string;
   blocked_by_connection: string | null;
   size_bytes: number;
+  video_width: number | null;
+  video_height: number | null;
   /** When an on-hold file becomes eligible. Null when the wait is on a writer, not the clock. */
   hold_until: string | null;
   size_changed_at: string | null;
@@ -81,4 +83,27 @@ export async function forgetRefinerFile(id: number): Promise<void> {
     body: JSON.stringify({ csrf_token }),
   });
   await requireOk(path, r, "Could not remove that file from the list");
+}
+
+export interface RefinerFileMoveToTopResult {
+  moved: boolean;
+  detail: string;
+}
+
+export async function moveRefinerFileToTop(
+  id: number,
+): Promise<RefinerFileMoveToTopResult> {
+  const csrf_token = await fetchCsrfToken();
+  const path = `${refinerFilesPath()}/${id}/move-to-top`;
+  const response = await apiFetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ csrf_token }),
+  });
+  await requireOk(
+    path,
+    response,
+    "Could not move that file to the front of the queue",
+  );
+  return readJson<RefinerFileMoveToTopResult>(response);
 }

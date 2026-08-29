@@ -2912,6 +2912,40 @@
         "title": "RefinerFileForgetIn",
         "type": "object"
       },
+      "RefinerFileMoveToTopIn": {
+        "additionalProperties": false,
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrf_token"
+        ],
+        "title": "RefinerFileMoveToTopIn",
+        "type": "object"
+      },
+      "RefinerFileMoveToTopOut": {
+        "description": "What happened, said in words the screen can show unchanged.",
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "moved": {
+            "title": "Moved",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "moved",
+          "detail"
+        ],
+        "title": "RefinerFileMoveToTopOut",
+        "type": "object"
+      },
       "RefinerFileOut": {
         "properties": {
           "blocked_by_connection": {
@@ -4063,6 +4097,44 @@
             "title": "Refiner Min Input File Size Mb",
             "type": "integer"
           },
+          "runner_capacity": {
+            "description": "Total processing capacity. Active files consume it according to their cost, and new work waits once it is fully occupied.",
+            "maximum": 64.0,
+            "minimum": 1.0,
+            "title": "Runner Capacity",
+            "type": "integer"
+          },
+          "runner_cost_1080p": {
+            "maximum": 64.0,
+            "minimum": 0.0,
+            "title": "Runner Cost 1080P",
+            "type": "integer"
+          },
+          "runner_cost_4k": {
+            "maximum": 64.0,
+            "minimum": 0.0,
+            "title": "Runner Cost 4K",
+            "type": "integer"
+          },
+          "runner_cost_720p": {
+            "maximum": 64.0,
+            "minimum": 0.0,
+            "title": "Runner Cost 720P",
+            "type": "integer"
+          },
+          "runner_cost_sd": {
+            "maximum": 64.0,
+            "minimum": 0.0,
+            "title": "Runner Cost Sd",
+            "type": "integer"
+          },
+          "runner_cost_undetermined": {
+            "description": "What a file MediaMop has not measured yet costs. Zero admits it rather than stalling on the unknown.",
+            "maximum": 64.0,
+            "minimum": 0.0,
+            "title": "Runner Cost Undetermined",
+            "type": "integer"
+          },
           "schedule_timezone": {
             "description": "IANA zone for schedule windows (suite settings).",
             "title": "Schedule Timezone",
@@ -4098,6 +4170,12 @@
         },
         "required": [
           "max_concurrent_files",
+          "runner_capacity",
+          "runner_cost_sd",
+          "runner_cost_720p",
+          "runner_cost_1080p",
+          "runner_cost_4k",
+          "runner_cost_undetermined",
           "min_file_age_seconds",
           "refiner_min_input_file_size_mb",
           "minimum_free_disk_space_mb",
@@ -4235,6 +4313,84 @@
               }
             ],
             "title": "Refiner Min Input File Size Mb"
+          },
+          "runner_capacity": {
+            "anyOf": [
+              {
+                "maximum": 64.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runner Capacity"
+          },
+          "runner_cost_1080p": {
+            "anyOf": [
+              {
+                "maximum": 64.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runner Cost 1080P"
+          },
+          "runner_cost_4k": {
+            "anyOf": [
+              {
+                "maximum": 64.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runner Cost 4K"
+          },
+          "runner_cost_720p": {
+            "anyOf": [
+              {
+                "maximum": 64.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runner Cost 720P"
+          },
+          "runner_cost_sd": {
+            "anyOf": [
+              {
+                "maximum": 64.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runner Cost Sd"
+          },
+          "runner_cost_undetermined": {
+            "anyOf": [
+              {
+                "maximum": 64.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runner Cost Undetermined"
           },
           "tv_schedule_days": {
             "anyOf": [
@@ -8385,6 +8541,61 @@
           }
         },
         "summary": "Delete Refiner File",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/files/{file_id}/move-to-top": {
+      "post": {
+        "description": "Put this file's queued work ahead of everything else waiting.\n\nOnly affects work that has not started. A file already being processed cannot be\nstarted earlier, and saying so is more use than a button that appears to work.",
+        "operationId": "move_refiner_file_to_top_api_v1_refiner_files__file_id__move_to_top_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "File Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefinerFileMoveToTopIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefinerFileMoveToTopOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Move Refiner File To Top",
         "tags": [
           "refiner",
           "refiner"

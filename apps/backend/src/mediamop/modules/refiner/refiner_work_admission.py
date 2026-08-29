@@ -17,13 +17,17 @@ implying work stops dead at the boundary.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
+from mediamop.modules.refiner.refiner_operator_settings_model import RefinerOperatorSettingsRow
+from mediamop.modules.refiner.refiner_runner_units import RunnerBudget, budget_from_settings
 from mediamop.modules.refiner.refiner_schedule_grid import grid_allows, next_open_slot
 from mediamop.platform.media_managers.schedule_wall_clock import schedule_time_window_active
 from mediamop.platform.suite_settings.model import SuiteSettingsRow
@@ -137,9 +141,15 @@ class WorkAdmission:
     """What a worker is allowed to pick up on this pass."""
 
     pause: PauseState
-    #: Libraries whose window is shut. A job naming one of these is not leased.
+    #: Libraries whose window is shut, or which are already at their own concurrency cap.
+    #: A job naming one of these is not leased.
     blocked_library_ids: frozenset[int] = field(default_factory=frozenset)
     timezone_name: str = "UTC"
+    #: Runner units left in the budget. A job costing more than this waits; a job costing
+    #: nothing runs even when the budget is full, which is the point of weighting.
+    available_units: int = 0
+    #: Total capacity, for reporting rather than for the decision.
+    capacity: int = 0
 
     @property
     def blocks_processing(self) -> bool:
@@ -155,8 +165,24 @@ class WorkAdmission:
         return is_detection_job_kind(job_kind) and self.pause.scan_while_paused
 
 
+def _leased_jobs(session: Session) -> list[RefinerJob]:
+    return list(session.scalars(select(RefinerJob).where(RefinerJob.status == RefinerJobStatus.LEASED.value)))
+
+
+def _library_id_of(job: RefinerJob) -> int | None:
+    raw = (job.payload_json or "").strip()
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    value = data.get("library_id") if isinstance(data, dict) else None
+    return int(value) if isinstance(value, int) else None
+
+
 def evaluate_work_admission(session: Session, *, now: datetime | None = None) -> WorkAdmission:
-    """Read the pause and every library window once, for one pass of the worker loop."""
+    """Read the pause, every library window, and the runner budget once per worker pass."""
 
     moment = now or datetime.now(UTC)
     suite = session.scalars(select(SuiteSettingsRow).where(SuiteSettingsRow.id == 1)).one_or_none()
@@ -165,8 +191,35 @@ def evaluate_work_admission(session: Session, *, now: datetime | None = None) ->
     tz_name = (suite.app_timezone or "UTC").strip() or "UTC"
     pause = resolve_pause_state(suite, now=moment)
 
+    operator = session.scalars(
+        select(RefinerOperatorSettingsRow).where(RefinerOperatorSettingsRow.id == 1)
+    ).one_or_none()
+    budget = budget_from_settings(operator) if operator is not None else RunnerBudget(capacity=4, costs={})
+
+    leased = _leased_jobs(session)
+    units_in_use = sum(max(0, int(job.runner_cost or 0)) for job in leased)
+    running_per_library: dict[int, int] = {}
+    for job in leased:
+        library_id = _library_id_of(job)
+        if library_id is not None:
+            running_per_library[library_id] = running_per_library.get(library_id, 0) + 1
+
     blocked: set[int] = set()
     for library in session.scalars(select(RefinerLibraryRow).order_by(RefinerLibraryRow.id)):
+        library_id = int(library.id)
         if not library.enabled or not library_window_open(library, timezone_name=tz_name, now=moment):
-            blocked.add(int(library.id))
-    return WorkAdmission(pause=pause, blocked_library_ids=frozenset(blocked), timezone_name=tz_name)
+            blocked.add(library_id)
+            continue
+        # A per-library cap so one library cannot occupy the whole budget and starve the
+        # others, however cheap its files happen to be.
+        cap = max(1, int(library.max_concurrent_files or 1))
+        if running_per_library.get(library_id, 0) >= cap:
+            blocked.add(library_id)
+
+    return WorkAdmission(
+        pause=pause,
+        blocked_library_ids=frozenset(blocked),
+        timezone_name=tz_name,
+        available_units=budget.available(in_use=units_in_use),
+        capacity=budget.capacity,
+    )

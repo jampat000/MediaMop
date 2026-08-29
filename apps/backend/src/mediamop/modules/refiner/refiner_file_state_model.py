@@ -84,6 +84,12 @@ class RefinerFileRow(Base):
     blocked_by_connection: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False, server_default="0")
+    # Recorded after a pass has probed the file, and read at the *next* enqueue to weight
+    # it. Null until then, which costs the "undetermined" weight rather than a guess.
+    # Width is the one that decides the class: 1920x800 is a scope crop of a 1080p master,
+    # and height alone cannot tell it from 1280x720.
+    video_width: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    video_height: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # When ``size_bytes`` last differed from the previous observation. Null until a
     # second scan has something to compare against.
     size_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

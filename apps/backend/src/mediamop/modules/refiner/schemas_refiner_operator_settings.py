@@ -9,6 +9,23 @@ class RefinerOperatorSettingsOut(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     max_concurrent_files: int = Field(ge=1, le=8)
+    runner_capacity: int = Field(
+        ge=1,
+        le=64,
+        description=(
+            "Total processing capacity. Active files consume it according to their cost, and new work "
+            "waits once it is fully occupied."
+        ),
+    )
+    runner_cost_sd: int = Field(ge=0, le=64)
+    runner_cost_720p: int = Field(ge=0, le=64)
+    runner_cost_1080p: int = Field(ge=0, le=64)
+    runner_cost_4k: int = Field(ge=0, le=64)
+    runner_cost_undetermined: int = Field(
+        ge=0,
+        le=64,
+        description="What a file MediaMop has not measured yet costs. Zero admits it rather than stalling on the unknown.",
+    )
     min_file_age_seconds: int = Field(ge=0, le=7 * 24 * 3600)
     refiner_min_input_file_size_mb: int = Field(
         ge=0,
@@ -43,6 +60,12 @@ class RefinerOperatorSettingsPutIn(BaseModel):
 
     csrf_token: str = Field(..., min_length=1)
     max_concurrent_files: int | None = Field(default=None, ge=1, le=8)
+    runner_capacity: int | None = Field(default=None, ge=1, le=64)
+    runner_cost_sd: int | None = Field(default=None, ge=0, le=64)
+    runner_cost_720p: int | None = Field(default=None, ge=0, le=64)
+    runner_cost_1080p: int | None = Field(default=None, ge=0, le=64)
+    runner_cost_4k: int | None = Field(default=None, ge=0, le=64)
+    runner_cost_undetermined: int | None = Field(default=None, ge=0, le=64)
     min_file_age_seconds: int | None = Field(default=None, ge=0, le=7 * 24 * 3600)
     refiner_min_input_file_size_mb: int | None = Field(default=None, ge=0, le=1024 * 1024)
     minimum_free_disk_space_mb: int | None = Field(default=None, ge=0, le=1024 * 1024)
@@ -93,6 +116,12 @@ class RefinerOperatorSettingsPutIn(BaseModel):
     def _at_least_one_update_field(self) -> RefinerOperatorSettingsPutIn:
         has_process = (
             self.max_concurrent_files is not None
+            or self.runner_capacity is not None
+            or self.runner_cost_sd is not None
+            or self.runner_cost_720p is not None
+            or self.runner_cost_1080p is not None
+            or self.runner_cost_4k is not None
+            or self.runner_cost_undetermined is not None
             or self.min_file_age_seconds is not None
             or self.refiner_min_input_file_size_mb is not None
             or self.minimum_free_disk_space_mb is not None

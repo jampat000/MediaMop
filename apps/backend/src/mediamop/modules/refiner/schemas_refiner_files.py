@@ -57,7 +57,20 @@ class RefinerFilesPageOut(BaseModel):
     limit: int
 
 
+class RefinerFileMoveToTopOut(BaseModel):
+    """What happened, said in words the screen can show unchanged."""
+
+    moved: bool
+    detail: str
+
+
 class RefinerFileForgetIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    csrf_token: str = Field(..., min_length=1)
+
+
+class RefinerFileMoveToTopIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     csrf_token: str = Field(..., min_length=1)
