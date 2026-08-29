@@ -7,6 +7,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
+from mediamop.modules.refiner.refiner_track_sorters import (
+    DEFAULT_AUDIO_SORTERS,
+    TrackSorter,
+    describe_sorters,
+    parse_sorters,
+    sort_key_for_track,
+)
+
 SubtitleMode = Literal["remove_all", "keep_selected"]
 DefaultAudioSlot = Literal["primary", "secondary"]
 
@@ -181,6 +189,9 @@ class RefinerRulesConfig:
     preserve_forced_subs: bool
     preserve_default_subs: bool
     audio_preference_mode: AudioSelectionPolicy
+    #: The ordered sorter list, as stored JSON. Empty means the seeded default, which
+    #: reproduces the ranking this used to hardcode (#341).
+    audio_sorters_json: str = ""
 
 
 def _ordered_preference_langs(config: RefinerRulesConfig) -> list[str]:
@@ -296,28 +307,42 @@ def _candidate_from_stream(s: dict[str, Any]) -> _AudioCandidate | None:
     )
 
 
+def _candidate_as_track(c: _AudioCandidate) -> dict[str, Any]:
+    """The facts a sorter can look at, from one candidate."""
+
+    return {
+        "index": int(c.input_index),
+        "language": c.lang_label,
+        "title": c.codec_name,
+        "commentary": bool(c.commentary),
+        "default": bool(c.default),
+        "forced": False,
+        "channels": int(c.channels or 0),
+        "bitrate": int(c.bitrate or 0),
+        "codec": c.codec_name,
+        "codec_rank": int(c.codec_rank),
+    }
+
+
 def _quality_sort_key(
     c: _AudioCandidate,
     *,
     fallback_preferred_penalty: int | None,
+    sorters: list[TrackSorter] | None = None,
 ) -> tuple[int, ...]:
+    """Ascending tuple order = better candidate first.
+
+    The ranking is the operator's ordered sorter list, seeded to reproduce what this
+    used to hardcode. ``fallback_preferred_penalty`` stays outside that list and stays
+    first: it is a property of the *pool* being ranked — whether this candidate's
+    language was one the operator asked for — not a property of the track, and letting
+    a sorter reorder it would let a configuration change quietly override the language
+    preference.
     """
-    Ascending tuple order = better candidate first.
-    commentary → channels → codec → bitrate → default (weak) → index.
-    fallback_preferred_penalty: 0 if lang matches configured preference set, 1 otherwise (fallback pool only).
-    """
-    com = 1 if c.commentary else 0
-    ch = int(c.channels) if c.channels and c.channels > 0 else 0
-    ch_unknown = 1 if ch <= 0 else 0
-    ch_score = -min(ch, 64) if ch > 0 else 0
-    cr = int(c.codec_rank)
-    br = int(c.bitrate) if c.bitrate and c.bitrate > 0 else 0
-    br_unknown = 1 if br <= 0 else 0
-    br_score = -min(br, 2_000_000_000) if br > 0 else 0
-    default_weak = 0 if c.default else 1
-    idx = int(c.input_index)
+
     fp = 0 if fallback_preferred_penalty is None else int(fallback_preferred_penalty)
-    return (fp, com, ch_unknown, ch_score, cr, br_unknown, br_score, default_weak, idx)
+    ordered = sorters if sorters is not None else list(DEFAULT_AUDIO_SORTERS)
+    return (fp, *sort_key_for_track(ordered, _candidate_as_track(c)))
 
 
 def _pick_best(
@@ -325,13 +350,14 @@ def _pick_best(
     *,
     preferred_set: frozenset[str],
     use_fallback_penalty: bool,
+    sorters: list[TrackSorter] | None = None,
 ) -> _AudioCandidate:
     def fp(c: _AudioCandidate) -> int | None:
         if not use_fallback_penalty:
             return None
         return 0 if (c.lang_label and c.lang_label in preferred_set) else 1
 
-    return min(pool, key=lambda c: _quality_sort_key(c, fallback_preferred_penalty=fp(c)))
+    return min(pool, key=lambda c: _quality_sort_key(c, fallback_preferred_penalty=fp(c), sorters=sorters))
 
 
 def _describe_candidate(c: _AudioCandidate) -> str:
@@ -353,13 +379,18 @@ def _select_audio_winner(
     policy = normalize_audio_preference_mode(config.audio_preference_mode)
     preferred_list = _ordered_preference_langs(config)
     preferred_set = frozenset(preferred_list)
+    # The ranking is now the operator's list rather than a tuple in source. Refiner
+    # already explained *why* it picked a track — which FileFlows does not — so that
+    # explanation names the configured order rather than a fixed sentence (#341).
+    sorters = parse_sorters(config.audio_sorters_json)
+    notes.append(f"Track ranking: {describe_sorters(sorters)}.")
 
     if not candidates:
         notes.append("No eligible audio tracks after commentary and probe rules.")
         return None, removed_audio, notes
 
     if policy == "quality_all_languages":
-        w = _pick_best(candidates, preferred_set=preferred_set, use_fallback_penalty=False)
+        w = _pick_best(candidates, preferred_set=preferred_set, use_fallback_penalty=False, sorters=sorters)
         notes.append(
             f"Selected {_describe_candidate(w)} using quality across all languages "
             f"(policy: quality across all languages)."
@@ -377,7 +408,7 @@ def _select_audio_winner(
                 f"No audio tracks matched primary language '{pl}' (strict policy — no fallback to secondary or other languages)."
             )
             return None, removed_audio, notes
-        w = _pick_best(pool, preferred_set=preferred_set, use_fallback_penalty=False)
+        w = _pick_best(pool, preferred_set=preferred_set, use_fallback_penalty=False, sorters=sorters)
         notes.append(f"Selected {_describe_candidate(w)} using primary language only (strict policy).")
         return w, removed_audio, notes
 
@@ -386,7 +417,7 @@ def _select_audio_winner(
         pool = [c for c in candidates if c.lang_label == tier_lang]
         if not pool:
             continue
-        w = _pick_best(pool, preferred_set=preferred_set, use_fallback_penalty=False)
+        w = _pick_best(pool, preferred_set=preferred_set, use_fallback_penalty=False, sorters=sorters)
         others = [c for c in pool if c.input_index != w.input_index]
         if others:
             otxt = "; ".join(_describe_candidate(x) for x in sorted(others, key=lambda x: x.input_index))
@@ -398,7 +429,7 @@ def _select_audio_winner(
         return w, removed_audio, notes
 
     # Fallback: no configured language matched any track
-    w = _pick_best(candidates, preferred_set=preferred_set, use_fallback_penalty=True)
+    w = _pick_best(candidates, preferred_set=preferred_set, use_fallback_penalty=True, sorters=sorters)
     notes.append(
         f"Fell back to {_describe_candidate(w)} because no track matched configured language tiers "
         f"({', '.join(preferred_list) or 'none'}); ranked by quality with preferred-language matches first."

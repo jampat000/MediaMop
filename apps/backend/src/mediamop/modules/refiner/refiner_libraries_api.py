@@ -126,6 +126,8 @@ def _rule_set_out(db, row: RefinerRuleSetRow) -> RefinerRuleSetOut:
         preserve_forced_subs=row.preserve_forced_subs,
         preserve_default_subs=row.preserve_default_subs,
         audio_preference_mode=row.audio_preference_mode,
+        audio_sorters_json=row.audio_sorters_json or "",
+        subtitle_sorters_json=row.subtitle_sorters_json or "",
         used_by_library_count=rule_set_usage_count(db, row),
         updated_at=row.updated_at,
     )

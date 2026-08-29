@@ -30,6 +30,12 @@ from mediamop.modules.refiner.refiner_library_service import (
     manager_connection_ids_for,
 )
 from mediamop.modules.refiner.refiner_schedule_grid import ScheduleGridError, normalize_grid
+from mediamop.modules.refiner.refiner_track_sorters import (
+    TrackSorterError,
+    dump_sorters,
+    preset_sorters,
+    validate_sorters,
+)
 from mediamop.platform.media_managers.connection_model import MediaManagerConnectionRow
 
 _ACTIVE_JOB_STATUSES = (RefinerJobStatus.PENDING.value, RefinerJobStatus.LEASED.value)
@@ -272,6 +278,31 @@ def _apply_rule_set_fields(row: RefinerRuleSetRow, body: object) -> None:
         "audio_preference_mode",
     ):
         setattr(row, field, getattr(body, field))
+    _apply_sorter_fields(row, body)
+
+
+def _apply_sorter_fields(row: RefinerRuleSetRow, body: object) -> None:
+    """Validate and store the two sorter lists.
+
+    Validated rather than stored as given: a list quietly missing the field an operator
+    typed would change how their files are ranked without telling them.
+    """
+
+    for field in ("audio_sorters_json", "subtitle_sorters_json"):
+        raw = getattr(body, field, None)
+        if raw is None:
+            continue
+        try:
+            setattr(row, field, validate_sorters(raw))
+        except TrackSorterError as exc:
+            raise RefinerLibraryError(str(exc)) from exc
+
+    # An empty audio list is filled from the chosen policy's preset. That is what makes
+    # the three policies *presets* rather than a separate mechanism: an operator picks
+    # one, sees the sorters it stands for, and can then edit them — which was the whole
+    # point, because previously the policy was all they could change.
+    if not (row.audio_sorters_json or "").strip():
+        row.audio_sorters_json = dump_sorters(preset_sorters(getattr(body, "audio_preference_mode", None)))
 
 
 def delete_rule_set(session: Session, row: RefinerRuleSetRow) -> None:

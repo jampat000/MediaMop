@@ -5239,6 +5239,12 @@
             "title": "Audio Preference Mode",
             "type": "string"
           },
+          "audio_sorters_json": {
+            "default": "",
+            "description": "Ordered track sorters as JSON: [{\"field\": \"language\", \"value\": \"eng\"}, {\"field\": \"channels\", \"value\": \">=5.1\"}]. Fields: bitrate, channels, codec, language, title, default, forced, commentary. Omit \"value\" to sort by the field itself; \"reversed\" flips it. Empty uses the default order, which is what Refiner has always applied.",
+            "title": "Audio Sorters Json",
+            "type": "string"
+          },
           "csrf_token": {
             "minLength": 1,
             "title": "Csrf Token",
@@ -5303,6 +5309,12 @@
             "title": "Subtitle Mode",
             "type": "string"
           },
+          "subtitle_sorters_json": {
+            "default": "",
+            "description": "The same, for subtitle tracks.",
+            "title": "Subtitle Sorters Json",
+            "type": "string"
+          },
           "tertiary_audio_lang": {
             "default": "",
             "maxLength": 24,
@@ -5321,6 +5333,10 @@
         "properties": {
           "audio_preference_mode": {
             "title": "Audio Preference Mode",
+            "type": "string"
+          },
+          "audio_sorters_json": {
+            "title": "Audio Sorters Json",
             "type": "string"
           },
           "default_audio_slot": {
@@ -5363,6 +5379,10 @@
             "title": "Subtitle Mode",
             "type": "string"
           },
+          "subtitle_sorters_json": {
+            "title": "Subtitle Sorters Json",
+            "type": "string"
+          },
           "tertiary_audio_lang": {
             "title": "Tertiary Audio Lang",
             "type": "string"
@@ -5398,7 +5418,9 @@
           "subtitle_langs_csv",
           "preserve_forced_subs",
           "preserve_default_subs",
-          "audio_preference_mode"
+          "audio_preference_mode",
+          "audio_sorters_json",
+          "subtitle_sorters_json"
         ],
         "title": "RefinerRuleSetOut",
         "type": "object"

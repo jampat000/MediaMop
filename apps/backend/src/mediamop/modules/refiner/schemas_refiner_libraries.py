@@ -25,6 +25,8 @@ class RefinerRuleSetOut(BaseModel):
     preserve_forced_subs: bool
     preserve_default_subs: bool
     audio_preference_mode: str
+    audio_sorters_json: str
+    subtitle_sorters_json: str
     used_by_library_count: int = Field(
         default=0, description="How many libraries reference this rule set. Deleting one still in use is refused."
     )
@@ -45,6 +47,16 @@ class RefinerRuleSetIn(BaseModel):
     subtitle_langs_csv: str = Field("", max_length=500)
     preserve_forced_subs: bool = True
     preserve_default_subs: bool = True
+    audio_sorters_json: str = Field(
+        "",
+        description=(
+            'Ordered track sorters as JSON: [{"field": "language", "value": "eng"}, '
+            '{"field": "channels", "value": ">=5.1"}]. Fields: bitrate, channels, codec, language, '
+            'title, default, forced, commentary. Omit "value" to sort by the field itself; "reversed" '
+            "flips it. Empty uses the default order, which is what Refiner has always applied."
+        ),
+    )
+    subtitle_sorters_json: str = Field("", description="The same, for subtitle tracks.")
     audio_preference_mode: Literal["preferred_langs_quality", "preferred_langs_strict", "quality_all_languages"] = (
         "preferred_langs_quality"
     )

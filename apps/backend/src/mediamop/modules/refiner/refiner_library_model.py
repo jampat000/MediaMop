@@ -55,6 +55,11 @@ class RefinerRuleSetRow(Base):
     preserve_forced_subs: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
     preserve_default_subs: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
     audio_preference_mode: Mapped[str] = mapped_column(Text, nullable=False, server_default="preferred_langs_quality")
+    # The ordered sorter list, replacing a ranking tuple that lived in source. Empty
+    # means the seeded default, which reproduces that tuple exactly — so nothing changes
+    # on upgrade until an operator edits the list (#341).
+    audio_sorters_json: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    subtitle_sorters_json: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
