@@ -1164,6 +1164,108 @@
         "title": "MediaManagerWebhookSecretOut",
         "type": "object"
       },
+      "MetadataProviderIn": {
+        "additionalProperties": false,
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Omit to leave the stored key untouched. An empty string clears it.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Base Url",
+            "type": "string"
+          },
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "provider": {
+            "default": "",
+            "description": "Empty clears the connection.",
+            "enum": [
+              "",
+              "tmdb"
+            ],
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrf_token"
+        ],
+        "title": "MetadataProviderIn",
+        "type": "object"
+      },
+      "MetadataProviderOut": {
+        "properties": {
+          "base_url": {
+            "description": "Where MediaMop asks. Configurable so a cache or gateway in front of the provider works.",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "key_configured": {
+            "description": "Whether a key is stored. The key itself is never returned.",
+            "title": "Key Configured",
+            "type": "boolean"
+          },
+          "known_providers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Known Providers",
+            "type": "array"
+          },
+          "provider": {
+            "description": "The configured provider, or empty when there is none.",
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "base_url",
+          "key_configured"
+        ],
+        "title": "MetadataProviderOut",
+        "type": "object"
+      },
+      "MetadataProviderTestOut": {
+        "properties": {
+          "detail": {
+            "description": "What happened, written for the person reading it.",
+            "title": "Detail",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "matched",
+              "no_match",
+              "not_configured",
+              "unreachable"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "detail"
+        ],
+        "title": "MetadataProviderTestOut",
+        "type": "object"
+      },
       "NotificationChannelIn": {
         "properties": {
           "csrf_token": {
@@ -5508,11 +5610,42 @@
             "title": "Default Audio Slot",
             "type": "string"
           },
+          "keep_original_language": {
+            "default": false,
+            "description": "Keep the audio in the film's original language instead of following the language preferences. Needs a metadata provider; without one the preferences decide exactly as before.",
+            "title": "Keep Original Language",
+            "type": "boolean"
+          },
           "name": {
             "maxLength": 120,
             "minLength": 1,
             "title": "Name",
             "type": "string"
+          },
+          "original_language_additional_csv": {
+            "default": "",
+            "description": "Extra languages kept alongside the original, comma separated.",
+            "maxLength": 200,
+            "title": "Original Language Additional Csv",
+            "type": "string"
+          },
+          "original_language_first_if_none": {
+            "default": true,
+            "description": "If nothing matches the original language, fall back to the language preferences so the output still has audio. A safety net rather than a preference.",
+            "title": "Original Language First If None",
+            "type": "boolean"
+          },
+          "original_language_keep_only_first": {
+            "default": true,
+            "description": "Keep only the first track of each kept language.",
+            "title": "Original Language Keep Only First",
+            "type": "boolean"
+          },
+          "original_language_treat_empty_as_original": {
+            "default": false,
+            "description": "Treat a track with no language tag as the original language.",
+            "title": "Original Language Treat Empty As Original",
+            "type": "boolean"
           },
           "preserve_default_subs": {
             "default": true,
@@ -5625,9 +5758,29 @@
             "title": "Id",
             "type": "integer"
           },
+          "keep_original_language": {
+            "title": "Keep Original Language",
+            "type": "boolean"
+          },
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "original_language_additional_csv": {
+            "title": "Original Language Additional Csv",
+            "type": "string"
+          },
+          "original_language_first_if_none": {
+            "title": "Original Language First If None",
+            "type": "boolean"
+          },
+          "original_language_keep_only_first": {
+            "title": "Original Language Keep Only First",
+            "type": "boolean"
+          },
+          "original_language_treat_empty_as_original": {
+            "title": "Original Language Treat Empty As Original",
+            "type": "boolean"
           },
           "preserve_default_subs": {
             "title": "Preserve Default Subs",
@@ -5719,6 +5872,11 @@
           "audio_preference_mode",
           "audio_sorters_json",
           "subtitle_sorters_json",
+          "keep_original_language",
+          "original_language_additional_csv",
+          "original_language_keep_only_first",
+          "original_language_first_if_none",
+          "original_language_treat_empty_as_original",
           "remove_images",
           "remove_attachments",
           "remove_title",
@@ -10206,6 +10364,111 @@
           }
         },
         "summary": "Post Refiner Library Unlink",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/metadata-provider": {
+      "get": {
+        "operationId": "get_metadata_provider_api_v1_refiner_metadata_provider_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataProviderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Metadata Provider",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      },
+      "put": {
+        "operationId": "put_metadata_provider_api_v1_refiner_metadata_provider_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetadataProviderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataProviderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Metadata Provider",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/metadata-provider/test": {
+      "post": {
+        "description": "Ask the provider a real question, so a saved connection is proven rather than assumed.",
+        "operationId": "post_metadata_provider_test_api_v1_refiner_metadata_provider_test_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetadataProviderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataProviderTestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Metadata Provider Test",
         "tags": [
           "refiner",
           "refiner"

@@ -122,6 +122,12 @@ export interface RefinerRuleSet {
   /** Ordered track sorters as JSON. Empty means the default order Refiner has always applied. */
   audio_sorters_json: string;
   subtitle_sorters_json: string;
+  /** Keep the audio in the film's original language. Needs a metadata provider; without one the preferences decide. */
+  keep_original_language: boolean;
+  original_language_additional_csv: string;
+  original_language_keep_only_first: boolean;
+  original_language_first_if_none: boolean;
+  original_language_treat_empty_as_original: boolean;
   /** An embedded poster is carried as a video stream, so this removes a stream as well as an image. */
   remove_images: boolean;
   remove_attachments: boolean;
