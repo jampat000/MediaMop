@@ -7347,7 +7347,11 @@
             "type": "boolean"
           },
           "mode": {
-            "description": "Auto, DownloadOnly, or NotifyOnly",
+            "enum": [
+              "Auto",
+              "DownloadOnly",
+              "NotifyOnly"
+            ],
             "title": "Mode",
             "type": "string"
           }
@@ -7381,7 +7385,11 @@
             "type": "string"
           },
           "mode": {
-            "pattern": "^(Auto|DownloadOnly|NotifyOnly)$",
+            "enum": [
+              "Auto",
+              "DownloadOnly",
+              "NotifyOnly"
+            ],
             "title": "Mode",
             "type": "string"
           }
