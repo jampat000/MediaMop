@@ -1042,6 +1042,49 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/refiner/maintenance": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Refiner Maintenance
+     * @description What each maintenance family is doing, and whether its schedule is on.
+     */
+    get: operations["get_refiner_maintenance_api_v1_refiner_maintenance_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/maintenance/run": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Refiner Maintenance Run
+     * @description Run one maintenance family now.
+     *
+     *     Ignores the schedule toggle on purpose: the toggle decides whether MediaMop runs this
+     *     on its own, and somebody asking for it now has already decided.
+     */
+    post: operations["post_refiner_maintenance_run_api_v1_refiner_maintenance_run_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/refiner/metadata-provider": {
     parameters: {
       query?: never;
@@ -1996,6 +2039,82 @@ export interface components {
     LogoutIn: {
       /** Csrf Token */
       csrf_token?: string | null;
+    };
+    /**
+     * MaintenanceFamilyStateOut
+     * @description What one family is doing, and whether it is switched on.
+     */
+    MaintenanceFamilyStateOut: {
+      /**
+       * Description
+       * @description What this family does, in a sentence.
+       */
+      description: string;
+      /**
+       * Enabled
+       * @description Whether the schedule runs this family. Triggering by hand ignores this.
+       */
+      enabled: boolean;
+      /**
+       * Family
+       * @enum {string}
+       */
+      family: "work_temp_stale_sweep" | "failure_cleanup";
+      /** Last Completed At */
+      last_completed_at?: string | null;
+      /**
+       * Last Error
+       * @description The most recent failure reason, when the last run failed.
+       */
+      last_error?: string | null;
+      /** Last Failed At */
+      last_failed_at?: string | null;
+      /**
+       * Pending
+       * @description Queued and not yet started.
+       */
+      pending: number;
+      /**
+       * Running
+       * @description Leased by a worker right now.
+       */
+      running: number;
+    };
+    /** MaintenanceStateOut */
+    MaintenanceStateOut: {
+      /** Families */
+      families: components["schemas"]["MaintenanceFamilyStateOut"][];
+    };
+    /** MaintenanceTriggerIn */
+    MaintenanceTriggerIn: {
+      /** Csrf Token */
+      csrf_token: string;
+      /**
+       * Family
+       * @enum {string}
+       */
+      family: "work_temp_stale_sweep" | "failure_cleanup";
+      /**
+       * Media Scope
+       * @default movie
+       * @enum {string}
+       */
+      media_scope: "movie" | "tv";
+    };
+    /** MaintenanceTriggerOut */
+    MaintenanceTriggerOut: {
+      /**
+       * Detail
+       * @description What happened, written for the person reading it.
+       */
+      detail: string;
+      /** Job Id */
+      job_id?: number | null;
+      /**
+       * Queued
+       * @description False when a run of this family was already waiting or in progress.
+       */
+      queued: boolean;
     };
     /** MeOut */
     MeOut: {
@@ -7096,6 +7215,59 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["RefinerLibraryOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_refiner_maintenance_api_v1_refiner_maintenance_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MaintenanceStateOut"];
+        };
+      };
+    };
+  };
+  post_refiner_maintenance_run_api_v1_refiner_maintenance_run_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MaintenanceTriggerIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MaintenanceTriggerOut"];
         };
       };
       /** @description Validation Error */

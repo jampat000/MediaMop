@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { postRefinerFileRemuxPassEnqueue } from "./file-remux-pass-api";
 import {
   fetchRefinerFiles,
   forgetRefinerFile,
@@ -72,4 +73,19 @@ export function useRefinerFileLog() {
   // A mutation rather than a query: a processing record is read when someone opens it,
   // not for every row on every render.
   return useMutation({ mutationFn: (id: number) => fetchRefinerFileLog(id) });
+}
+
+export function useProcessRefinerFileNow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      relative_media_path,
+      media_scope,
+    }: {
+      relative_media_path: string;
+      media_scope: "movie" | "tv";
+    }) => postRefinerFileRemuxPassEnqueue({ relative_media_path, media_scope }),
+    onSuccess: () =>
+      void qc.invalidateQueries({ queryKey: ["refiner", "files"] }),
+  });
 }

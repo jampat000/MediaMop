@@ -12,6 +12,7 @@ import {
 import {
   useForgetRefinerFile,
   useMoveRefinerFileToTop,
+  useProcessRefinerFileNow,
   useRefinerFileLog,
   useRefinerWhyHeld,
   useRequeueRefinerFile,
@@ -94,6 +95,7 @@ export function RefinerFilesSection() {
   const requeueMany = useRequeueRefinerFiles();
   const whyHeld = useRefinerWhyHeld();
   const fileLog = useRefinerFileLog();
+  const processNow = useProcessRefinerFileNow();
   const [openLog, setOpenLog] = useState<RefinerFileLog | null>(null);
   const editable = canEdit(me.data?.role);
 
@@ -142,6 +144,22 @@ export function RefinerFilesSection() {
       );
     } catch {
       setNotice("MediaMop could not ask why that file is held.");
+    }
+  };
+
+  const processFileNow = async (file: RefinerFile) => {
+    setNotice(null);
+    const library = libraries.data?.find((l) => l.id === file.library_id);
+    try {
+      await processNow.mutateAsync({
+        relative_media_path: file.relative_path,
+        media_scope: library?.media_scope === "tv" ? "tv" : "movie",
+      });
+      setNotice(
+        "Queued this file for processing. It starts as soon as there is capacity.",
+      );
+    } catch {
+      setNotice("That file could not be queued for processing.");
     }
   };
 
@@ -436,6 +454,18 @@ export function RefinerFilesSection() {
                         title="Asks every media manager covering this library what it is doing with this file, right now."
                       >
                         Why is this held?
+                      </button>
+                    ) : null}
+                    {file.status === "unprocessed" ||
+                    file.status === "processing_failed" ? (
+                      <button
+                        type="button"
+                        className={mmActionButtonClass({ variant: "tertiary" })}
+                        onClick={() => void processFileNow(file)}
+                        data-testid={`refiner-file-process-now-${file.id}`}
+                        title="Queues a remux pass for this file straight away."
+                      >
+                        Process now
                       </button>
                     ) : null}
                     <button
