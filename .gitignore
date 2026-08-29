@@ -50,6 +50,13 @@ packaging/windows/vendor/
 # Claude Code local settings (machine-specific, never commit)
 .claude/settings.local.json
 
+# .NET build output. apps/tray/MediaMop.Tray had bin/ and obj/ committed — 29 files,
+# Debug binaries and caches — so any `dotnet build` dirtied the tree and put compiled
+# artifacts in review diffs. Nothing reads them: build-velopack.ps1 runs `dotnet publish`
+# from source, in Release, into its own output directory.
+apps/tray/*/bin/
+apps/tray/*/obj/
+
 # Docusaurus
 docs-site/build/
 docs-site/.docusaurus/
