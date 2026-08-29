@@ -145,6 +145,9 @@ class RefinerPathRuntime:
     #: receives this and they are decisions about the same output folder (#344).
     sidecar_patterns_csv: str = ""
     preserve_original_timestamps: bool = False
+    #: What to do when an output already exists at this path. "replace" is what every
+    #: install does today (#349).
+    output_collision_policy: str = "replace"
 
 
 def _normalize_media_scope(raw: str | None) -> RefinerMediaScope:
@@ -293,6 +296,7 @@ def resolve_refiner_path_runtime_for_library(
             work_folder_is_default=work_is_default,
             sidecar_patterns_csv=library.sidecar_patterns_csv or "",
             preserve_original_timestamps=bool(library.preserve_original_timestamps),
+            output_collision_policy=library.output_collision_policy or "replace",
         ),
         None,
     )

@@ -2940,6 +2940,21 @@ export interface components {
        * @description When MediaMop will try this file again on its own. Null when no automatic retry is coming.
        */
       next_retry_at?: string | null;
+      /**
+       * Output Collision Action
+       * @description What that policy decided: write, or skip.
+       */
+      output_collision_action?: string | null;
+      /**
+       * Output Collision Policy
+       * @description The collision policy in force when this file's output was written.
+       */
+      output_collision_policy?: string | null;
+      /**
+       * Output Collision Reason
+       * @description Why, written for the person asking why there is no new output for this file.
+       */
+      output_collision_reason?: string | null;
       /** Relative Path */
       relative_path: string;
       /** Size Bytes */
@@ -3219,6 +3234,18 @@ export interface components {
       /** Name */
       name: string;
       /**
+       * Output Collision Policy
+       * @description What to do when an output already exists at the same path. 'replace' is what MediaMop has always done. The policy and the decision taken are both recorded on the file, so 'why is there no new output for this file' is answerable.
+       * @default replace
+       * @enum {string}
+       */
+      output_collision_policy:
+        | "replace"
+        | "skip"
+        | "keep_both"
+        | "replace_if_larger"
+        | "replace_if_newer";
+      /**
        * Output Folder
        * @default
        */
@@ -3391,6 +3418,8 @@ export interface components {
       min_file_size_mb: number;
       /** Name */
       name: string;
+      /** Output Collision Policy */
+      output_collision_policy: string;
       /** Output Folder */
       output_folder: string;
       /** Preserve Original Timestamps */
@@ -3534,6 +3563,18 @@ export interface components {
       min_file_size_mb: number;
       /** Name */
       name: string;
+      /**
+       * Output Collision Policy
+       * @description What to do when an output already exists at the same path. 'replace' is what MediaMop has always done. The policy and the decision taken are both recorded on the file, so 'why is there no new output for this file' is answerable.
+       * @default replace
+       * @enum {string}
+       */
+      output_collision_policy:
+        | "replace"
+        | "skip"
+        | "keep_both"
+        | "replace_if_larger"
+        | "replace_if_newer";
       /**
        * Output Folder
        * @default

@@ -102,6 +102,13 @@ class RefinerFileRow(Base):
     failure_attempts: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     next_retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # The collision policy in force and what it actually decided. On the file rather than
+    # only in an activity note, because the note ages out and the question — "why is there
+    # no new output for this file" — is asked long afterwards (#349).
+    output_collision_policy: Mapped[str | None] = mapped_column(Text, nullable=True)
+    output_collision_action: Mapped[str | None] = mapped_column(Text, nullable=True)
+    output_collision_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

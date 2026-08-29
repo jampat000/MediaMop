@@ -35,6 +35,8 @@ export interface RefinerLibrary {
   /** Files beside the video that travel with it, renamed to the output's stem. Empty migrates nothing. */
   sidecar_patterns_csv: string;
   preserve_original_timestamps: boolean;
+  /** What to do when an output already exists at the same path. "replace" is the long-standing behaviour. */
+  output_collision_policy: string;
   file_detection_interval_seconds: number;
   ignore_size_changes: boolean;
   skip_access_tests: boolean;
@@ -78,6 +80,7 @@ export interface RefinerLibraryWrite {
   hold_minutes?: number;
   sidecar_patterns_csv?: string;
   preserve_original_timestamps?: boolean;
+  output_collision_policy?: string;
   file_detection_interval_seconds?: number;
   ignore_size_changes?: boolean;
   skip_access_tests?: boolean;

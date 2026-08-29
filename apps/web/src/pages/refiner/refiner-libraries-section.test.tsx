@@ -31,6 +31,7 @@ function library(over: Partial<RefinerLibrary> = {}): RefinerLibrary {
     hold_minutes: 0,
     sidecar_patterns_csv: ".srt,.nfo",
     preserve_original_timestamps: false,
+    output_collision_policy: "replace",
     file_detection_interval_seconds: 30,
     ignore_size_changes: false,
     skip_access_tests: false,

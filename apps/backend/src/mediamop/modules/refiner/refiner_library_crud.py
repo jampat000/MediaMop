@@ -145,6 +145,7 @@ def _apply_fields(session: Session, row: RefinerLibraryRow, body: object) -> Non
         "hold_minutes",
         "sidecar_patterns_csv",
         "preserve_original_timestamps",
+        "output_collision_policy",
         "file_detection_interval_seconds",
         "ignore_size_changes",
         "skip_access_tests",
