@@ -12,7 +12,6 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
 import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.modules.refiner.refiner_path_settings_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
 from mediamop.core.config import MediaMopSettings
@@ -22,13 +21,13 @@ from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.manager_queue_signals import report_for_signals
 from mediamop.modules.refiner.refiner_job_handlers import build_refiner_job_handlers
 from mediamop.modules.refiner.refiner_operator_settings_model import RefinerOperatorSettingsRow
-from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_job_kinds import (
     REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
 )
 from mediamop.modules.refiner.worker_loop import process_one_refiner_job
 from mediamop.platform.activity.models import ActivityEvent
 from tests.manager_signal_helpers import reported
+from tests.refiner_library_fixtures import seed_refiner_libraries, seed_refiner_library
 
 
 @pytest.fixture
@@ -87,13 +86,17 @@ def test_scan_handler_enqueues_remux_when_requested(
     t0 = datetime(2026, 4, 12, 12, 0, 0, tzinfo=UTC)
 
     with session_factory() as s:
-        s.merge(
-            RefinerPathSettingsRow(
-                id=1,
-                refiner_watched_folder=str(watch.resolve()),
-                refiner_work_folder=None,
-                refiner_output_folder=str(out.resolve()),
-            ),
+        seed_refiner_libraries(
+            s,
+            watched_folder=str(watch.resolve()),
+            work_folder="",
+            output_folder=str(out.resolve()),
+            # Settling and the hold timer both off: these tests are about scan
+            # dispatch, and a freshly written file is held by both by design (#335).
+            # Leaving them on would make these assert the holding behaviour instead of
+            # the one they exist for.
+            file_detection_interval_seconds=0,
+            min_file_age_seconds=0,
         )
         s.merge(
             RefinerOperatorSettingsRow(
@@ -166,13 +169,17 @@ def test_scan_handler_enqueues_remux_without_arr_connections(
         return (), report_for_signals(())
 
     with session_factory() as s:
-        s.merge(
-            RefinerPathSettingsRow(
-                id=1,
-                refiner_watched_folder=str(watch.resolve()),
-                refiner_work_folder=None,
-                refiner_output_folder=str(out.resolve()),
-            ),
+        seed_refiner_libraries(
+            s,
+            watched_folder=str(watch.resolve()),
+            work_folder="",
+            output_folder=str(out.resolve()),
+            # Settling and the hold timer both off: these tests are about scan
+            # dispatch, and a freshly written file is held by both by design (#335).
+            # Leaving them on would make these assert the holding behaviour instead of
+            # the one they exist for.
+            file_detection_interval_seconds=0,
+            min_file_age_seconds=0,
         )
         s.merge(
             RefinerOperatorSettingsRow(
@@ -238,13 +245,17 @@ def test_scan_handler_skips_file_when_previous_success_output_still_exists(
     output.write_bytes(b"already-written")
 
     with session_factory() as s:
-        s.merge(
-            RefinerPathSettingsRow(
-                id=1,
-                refiner_watched_folder=str(watch.resolve()),
-                refiner_work_folder=None,
-                refiner_output_folder=str(out.resolve()),
-            ),
+        seed_refiner_libraries(
+            s,
+            watched_folder=str(watch.resolve()),
+            work_folder="",
+            output_folder=str(out.resolve()),
+            # Settling and the hold timer both off: these tests are about scan
+            # dispatch, and a freshly written file is held by both by design (#335).
+            # Leaving them on would make these assert the holding behaviour instead of
+            # the one they exist for.
+            file_detection_interval_seconds=0,
+            min_file_age_seconds=0,
         )
         s.merge(
             RefinerOperatorSettingsRow(
@@ -320,13 +331,17 @@ def test_scan_handler_does_not_record_activity_when_no_files_are_queued(
     (watch / "Already Checked 2026.mkv").write_bytes(b"x")
 
     with session_factory() as s:
-        s.merge(
-            RefinerPathSettingsRow(
-                id=1,
-                refiner_watched_folder=str(watch.resolve()),
-                refiner_work_folder=None,
-                refiner_output_folder=str(out.resolve()),
-            ),
+        seed_refiner_libraries(
+            s,
+            watched_folder=str(watch.resolve()),
+            work_folder="",
+            output_folder=str(out.resolve()),
+            # Settling and the hold timer both off: these tests are about scan
+            # dispatch, and a freshly written file is held by both by design (#335).
+            # Leaving them on would make these assert the holding behaviour instead of
+            # the one they exist for.
+            file_detection_interval_seconds=0,
+            min_file_age_seconds=0,
         )
         s.merge(RefinerOperatorSettingsRow(id=1, min_file_age_seconds=0))
         s.commit()
@@ -361,29 +376,25 @@ def test_scan_handler_does_not_record_activity_when_no_files_are_queued(
 
 
 def _seed_library(session_factory, *, watch: Path, out: Path, **overrides) -> None:
-    """A library row, so the file-state gates in the handler actually run.
+    """A library with size settling **on**, which is what these two tests are about.
 
-    The lane tests above predate libraries and resolve to none, which makes the whole
-    state block a no-op for them. These two need it.
+    The tests above seed the same Movies library with settling switched off, because they
+    are about scan dispatch rather than settling. This replaces that row rather than
+    adding a second one — two libraries named Movies is a unique-constraint failure, and
+    a second library shadowing the first would be a worse test either way.
     """
 
-    from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
-
     with session_factory() as s:
-        s.add(
-            RefinerLibraryRow(
-                name="Movies",
-                media_scope="movie",
-                enabled=True,
-                display_order=0,
-                watched_folder=str(watch.resolve()),
-                output_folder=str(out.resolve()),
-                min_file_age_seconds=0,
-                hold_minutes=0,
-                schedule_enabled=False,
-                file_detection_interval_seconds=overrides.pop("file_detection_interval_seconds", 30),
-                **overrides,
-            )
+        seed_refiner_library(
+            s,
+            media_scope="movie",
+            watched_folder=str(watch.resolve()),
+            output_folder=str(out.resolve()),
+            min_file_age_seconds=0,
+            hold_minutes=0,
+            schedule_enabled=False,
+            file_detection_interval_seconds=overrides.pop("file_detection_interval_seconds", 30),
+            **overrides,
         )
         s.commit()
 
@@ -443,13 +454,17 @@ def test_a_file_still_settling_is_never_enqueued(
     (watch / "Gate Test 2001.mkv").write_bytes(b"x" * 1024)
 
     with session_factory() as s:
-        s.merge(
-            RefinerPathSettingsRow(
-                id=1,
-                refiner_watched_folder=str(watch.resolve()),
-                refiner_work_folder=None,
-                refiner_output_folder=str(out.resolve()),
-            ),
+        seed_refiner_libraries(
+            s,
+            watched_folder=str(watch.resolve()),
+            work_folder="",
+            output_folder=str(out.resolve()),
+            # Settling and the hold timer both off: these tests are about scan
+            # dispatch, and a freshly written file is held by both by design (#335).
+            # Leaving them on would make these assert the holding behaviour instead of
+            # the one they exist for.
+            file_detection_interval_seconds=0,
+            min_file_age_seconds=0,
         )
         s.merge(
             RefinerOperatorSettingsRow(
@@ -492,13 +507,17 @@ def test_a_file_whose_size_has_held_still_is_enqueued_on_the_next_scan(
     (watch / "Gate Test 2001.mkv").write_bytes(b"x" * 1024)
 
     with session_factory() as s:
-        s.merge(
-            RefinerPathSettingsRow(
-                id=1,
-                refiner_watched_folder=str(watch.resolve()),
-                refiner_work_folder=None,
-                refiner_output_folder=str(out.resolve()),
-            ),
+        seed_refiner_libraries(
+            s,
+            watched_folder=str(watch.resolve()),
+            work_folder="",
+            output_folder=str(out.resolve()),
+            # Settling and the hold timer both off: these tests are about scan
+            # dispatch, and a freshly written file is held by both by design (#335).
+            # Leaving them on would make these assert the holding behaviour instead of
+            # the one they exist for.
+            file_detection_interval_seconds=0,
+            min_file_age_seconds=0,
         )
         s.merge(
             RefinerOperatorSettingsRow(

@@ -9,7 +9,6 @@ from mediamop.api.deps import DbSessionDep, SettingsDep
 from mediamop.modules.refiner.refiner_remux_rules_settings_service import (
     apply_refiner_remux_rules_settings_put,
     build_refiner_remux_rules_settings_out,
-    ensure_refiner_remux_rules_settings_row,
 )
 from mediamop.modules.refiner.schemas_refiner_remux_rules_settings import (
     RefinerRemuxRulesSettingsOut,
@@ -35,8 +34,7 @@ def get_refiner_remux_rules_settings(
     _user: UserPublicDep,
     db: DbSessionDep,
 ) -> RefinerRemuxRulesSettingsOut:
-    row = ensure_refiner_remux_rules_settings_row(db)
-    return build_refiner_remux_rules_settings_out(row)
+    return build_refiner_remux_rules_settings_out(db)
 
 
 @router.put(
@@ -62,4 +60,4 @@ def put_refiner_remux_rules_settings(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     db.commit()
-    return build_refiner_remux_rules_settings_out(row)
+    return build_refiner_remux_rules_settings_out(db)

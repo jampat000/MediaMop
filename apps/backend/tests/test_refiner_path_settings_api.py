@@ -9,9 +9,9 @@ from starlette.testclient import TestClient
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
+from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
+from mediamop.modules.refiner.refiner_library_service import resolve_library
 from mediamop.modules.refiner.refiner_path_settings_service import (
-    ensure_refiner_path_settings_row,
     resolve_refiner_path_runtime_for_remux,
     resolved_default_refiner_tv_work_folder,
     resolved_default_refiner_work_folder,
@@ -100,8 +100,12 @@ def test_refiner_path_settings_put_blank_work_persists_default(client_with_admin
     assert out["refiner_work_folder"] == expected_work
     fac = create_session_factory(create_db_engine(settings))
     with fac() as db:
-        row = db.scalars(select(RefinerPathSettingsRow).where(RefinerPathSettingsRow.id == 1)).one()
-        assert row.refiner_work_folder == expected_work
+        # The scope-shaped surface writes the library now (#363).
+        library = db.scalars(
+            select(RefinerLibraryRow).where(RefinerLibraryRow.media_scope == "movie").order_by(RefinerLibraryRow.id)
+        ).first()
+        assert library is not None
+        assert library.work_folder == expected_work
 
 
 def test_refiner_path_settings_put_save_without_watched_folder_succeeds(
@@ -193,11 +197,10 @@ def test_resolve_refiner_path_runtime_fails_without_watched_folder(client_with_a
     fac = create_session_factory(create_db_engine(settings))
     prev: str | None = None
     with fac() as db:
-        row = ensure_refiner_path_settings_row(db)
-        prev = row.refiner_watched_folder
-        db.execute(
-            update(RefinerPathSettingsRow).where(RefinerPathSettingsRow.id == 1).values(refiner_watched_folder=None),
-        )
+        library = resolve_library(db, media_scope="movie")
+        assert library is not None
+        prev = library.watched_folder
+        library.watched_folder = ""
         db.commit()
     try:
         with fac() as db:
@@ -209,11 +212,9 @@ def test_resolve_refiner_path_runtime_fails_without_watched_folder(client_with_a
         assert "settings" in err.lower()
     finally:
         with fac() as db:
-            db.execute(
-                update(RefinerPathSettingsRow)
-                .where(RefinerPathSettingsRow.id == 1)
-                .values(refiner_watched_folder=prev),
-            )
+            restored = resolve_library(db, media_scope="movie")
+            if restored is not None:
+                restored.watched_folder = prev or ""
             db.commit()
 
 

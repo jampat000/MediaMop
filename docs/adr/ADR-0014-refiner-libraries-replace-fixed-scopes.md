@@ -123,6 +123,9 @@ answerable to, not a nice-to-have.
   keeps only what is genuinely suite-wide.
 - The singleton path and rules tables are dropped once nothing reads them, in a later
   migration than the one that seeds from them, so a rollback has somewhere to land.
+  Done in `0025`. Its downgrade recreates them empty and says so: the values live on the
+  libraries by then, and re-seeding stale paths into a table nothing reads would be worse
+  than an empty one, because a later re-upgrade would carry them back across.
 - Deleting a library must be guarded: it may not orphan queued or leased jobs.
 - Discovery ([#351]) and the media manager port ([#350]) both depend on this shape, and
   neither is in scope here.

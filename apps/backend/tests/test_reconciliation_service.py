@@ -10,10 +10,10 @@ from starlette.testclient import TestClient
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
 from mediamop.platform.reconciliation.service import build_reconciliation_report, repair_reconciliation_issue
 from tests.integration_helpers import auth_post
 from tests.integration_helpers import csrf as fetch_csrf
+from tests.refiner_library_fixtures import seed_refiner_libraries
 
 
 def _fac():
@@ -39,11 +39,7 @@ def test_reconciliation_temp_artifact_repair_requires_confirmation(tmp_path: Pat
     artifact.write_bytes(b"partial")
     fac = _fac()
     with fac() as db:
-        db.execute(
-            update(RefinerPathSettingsRow)
-            .where(RefinerPathSettingsRow.id == 1)
-            .values(refiner_work_folder=str(work), refiner_tv_work_folder=None)
-        )
+        seed_refiner_libraries(db, work_folder=str(work))
         db.commit()
 
     try:
@@ -68,11 +64,7 @@ def test_reconciliation_temp_artifact_repair_requires_confirmation(tmp_path: Pat
         assert not artifact.exists()
     finally:
         with fac() as db:
-            db.execute(
-                update(RefinerPathSettingsRow)
-                .where(RefinerPathSettingsRow.id == 1)
-                .values(refiner_work_folder=None, refiner_tv_work_folder=None)
-            )
+            seed_refiner_libraries(db)
             db.commit()
 
 

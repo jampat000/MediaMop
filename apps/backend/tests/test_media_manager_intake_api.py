@@ -53,13 +53,10 @@ def _session_factory(client: TestClient):
 
 
 def _set_watched_folders(client: TestClient) -> None:
-    from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
+    from tests.refiner_library_fixtures import seed_refiner_libraries
 
     with _session_factory(client)() as db:
-        row = db.get(RefinerPathSettingsRow, 1)
-        assert row is not None
-        row.refiner_watched_folder = WATCHED_MOVIES
-        row.refiner_tv_watched_folder = WATCHED_TV
+        seed_refiner_libraries(db, watched_folder=WATCHED_MOVIES, tv_watched_folder=WATCHED_TV)
         db.commit()
 
 

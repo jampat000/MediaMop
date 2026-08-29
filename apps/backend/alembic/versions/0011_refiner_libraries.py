@@ -188,12 +188,17 @@ def _seed_from_singletons(bind: sa.engine.Connection) -> None:
             ),
             {
                 "name": f"{label} rules",
-                "p": value(rules, f"{prefix}primary_audio_lang", ""),
-                "s": value(rules, f"{prefix}secondary_audio_lang", ""),
+                # The fallbacks are the shipped defaults, not empties. They were written
+                # when the singleton always existed, so "nothing to read" could only mean
+                # a half-built row. Since #363 removed those tables from 0001, a
+                # greenfield install reaches here with nothing to read at all — and a new
+                # install must get "eng", not a blank language preference.
+                "p": value(rules, f"{prefix}primary_audio_lang", "eng"),
+                "s": value(rules, f"{prefix}secondary_audio_lang", "jpn"),
                 "t": value(rules, f"{prefix}tertiary_audio_lang", ""),
                 "slot": value(rules, f"{prefix}default_audio_slot", "primary"),
-                "com": int(bool(value(rules, f"{prefix}remove_commentary", 0))),
-                "submode": value(rules, f"{prefix}subtitle_mode", "keep_all"),
+                "com": int(bool(value(rules, f"{prefix}remove_commentary", 1))),
+                "submode": value(rules, f"{prefix}subtitle_mode", "remove_all"),
                 "sublangs": value(rules, f"{prefix}subtitle_langs_csv", ""),
                 "forced": int(bool(value(rules, f"{prefix}preserve_forced_subs", 1))),
                 "dflt": int(bool(value(rules, f"{prefix}preserve_default_subs", 1))),

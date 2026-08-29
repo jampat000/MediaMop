@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.refiner_library_service import list_libraries
-from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
 
 
 def cleanup_refiner_partial_output_files(session: Session, settings: MediaMopSettings) -> int:
@@ -24,14 +23,9 @@ def cleanup_refiner_partial_output_files(session: Session, settings: MediaMopSet
         text = (library.output_folder or "").strip()
         if text:
             roots.add(Path(text).expanduser())
-    if not roots:
-        # No libraries: an unmigrated database, so read the singleton exactly as before.
-        row = session.get(RefinerPathSettingsRow, 1)
-        if row is not None:
-            for raw in (row.refiner_output_folder, row.refiner_tv_output_folder):
-                text = (raw or "").strip()
-                if text:
-                    roots.add(Path(text).expanduser())
+    # No fallback: the libraries are the only store now (#363). The default output root
+    # below is still added unconditionally, so a database with no libraries at all still
+    # gets its own partials swept.
     roots.add(Path(settings.mediamop_home).expanduser() / "refiner-output")
 
     removed = 0

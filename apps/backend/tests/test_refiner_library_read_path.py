@@ -16,7 +16,6 @@ from sqlalchemy.orm import Session, sessionmaker
 
 import mediamop.modules.refiner.jobs_model  # noqa: F401
 import mediamop.modules.refiner.refiner_library_model  # noqa: F401
-import mediamop.modules.refiner.refiner_path_settings_model  # noqa: F401
 import mediamop.platform.media_managers.connection_model  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
@@ -185,19 +184,13 @@ def test_the_seeded_library_wins_over_a_later_one_for_a_scopeless_payload(sessio
 def test_settings_unchanged_when_no_library_covers_the_scope(session: Session, tmp_path: Path) -> None:
     """An unmigrated database falls back to the singleton rather than refusing all work."""
 
-    from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
+    from tests.refiner_library_fixtures import seed_refiner_libraries
 
     watched = tmp_path / "legacy" / "watched"
     output = tmp_path / "legacy" / "output"
     watched.mkdir(parents=True)
     output.mkdir(parents=True)
-    session.add(
-        RefinerPathSettingsRow(
-            id=1,
-            refiner_watched_folder=str(watched),
-            refiner_output_folder=str(output),
-        )
-    )
+    seed_refiner_libraries(session, watched_folder=str(watched), output_folder=str(output))
     session.commit()
     settings = replace(MediaMopSettings.load(), mediamop_home=str(tmp_path / "home"))
 

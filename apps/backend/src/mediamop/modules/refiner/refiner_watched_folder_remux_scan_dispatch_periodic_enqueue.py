@@ -8,11 +8,11 @@ import logging
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
+from mediamop.modules.refiner.refiner_library_service import resolve_library
 from mediamop.modules.refiner.refiner_operator_settings_service import (
     ensure_refiner_operator_settings_row,
     refiner_periodic_scope_in_schedule_window,
 )
-from mediamop.modules.refiner.refiner_path_settings_service import ensure_refiner_path_settings_row
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_enqueue import (
     try_enqueue_periodic_watched_folder_remux_scan_dispatch,
 )
@@ -67,13 +67,15 @@ def refiner_scope_periodic_scan_enabled(operator_row: object, *, media_scope: st
     return bool(getattr(operator_row, attr))
 
 
-def _watched_folder_scan_interval_seconds(path_row: object, *, media_scope: str) -> float:
-    """Actual watched-folder scan cadence configured on the Refiner Libraries tab."""
+def _watched_folder_scan_interval_seconds(library: object, *, media_scope: str) -> float:
+    """The scan cadence configured on the library covering this scope.
 
-    if media_scope == "tv":
-        raw = getattr(path_row, "tv_watched_folder_check_interval_seconds", 300)
-    else:
-        raw = getattr(path_row, "movie_watched_folder_check_interval_seconds", 300)
+    Read from the library rather than the singleton's per-scope column (#363). The scope
+    argument stays because the scheduler ticks per scope and the caller resolves the
+    library from it.
+    """
+
+    raw = getattr(library, "scan_interval_seconds", 300) if library is not None else 300
     return max(10.0, min(float(raw), float(7 * 24 * 3600)))
 
 
@@ -109,8 +111,8 @@ async def _run_periodic_watched_folder_scan_dispatch_enqueue(
         def _scope_once(media_scope: str, *, now_loop: float, next_run_loop: float) -> tuple[float, float]:
             with session_factory() as session:
                 row = ensure_refiner_operator_settings_row(session)
-                path_row = ensure_refiner_path_settings_row(session)
-                interval = _watched_folder_scan_interval_seconds(path_row, media_scope=media_scope)
+                library = resolve_library(session, media_scope=media_scope)
+                interval = _watched_folder_scan_interval_seconds(library, media_scope=media_scope)
                 if not refiner_scope_periodic_scan_enabled(row, media_scope=media_scope):
                     return next_run_loop, interval
                 if now_loop < next_run_loop:

@@ -13,8 +13,8 @@ from mediamop.core.db import Base
 from mediamop.modules.pruner.pruner_jobs_model import PrunerJob, PrunerJobStatus
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.refiner_crash_recovery import cleanup_refiner_partial_output_files
-from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
 from mediamop.platform.jobs.startup_recovery import recover_incomplete_jobs_after_startup
+from tests.refiner_library_fixtures import seed_refiner_libraries
 
 
 def _session_factory(tmp_path: Path) -> sessionmaker[Session]:
@@ -114,11 +114,7 @@ def test_startup_refiner_recovery_removes_hidden_partial_outputs(tmp_path: Path)
 
     settings = MediaMopSettings.load()
     with factory() as session, session.begin():
-        session.add(
-            RefinerPathSettingsRow(
-                id=1, refiner_output_folder=str(output), refiner_work_folder="", refiner_watched_folder=""
-            )
-        )
+        seed_refiner_libraries(session, output_folder=str(output))
 
     with factory() as session:
         removed = cleanup_refiner_partial_output_files(session, settings)

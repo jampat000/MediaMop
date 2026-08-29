@@ -22,7 +22,6 @@ from sqlalchemy.orm import Session, sessionmaker
 import mediamop.modules.refiner.jobs_model  # noqa: F401
 import mediamop.modules.refiner.refiner_file_state_model  # noqa: F401
 import mediamop.modules.refiner.refiner_library_model  # noqa: F401
-import mediamop.modules.refiner.refiner_path_settings_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.media_managers.connection_model  # noqa: F401
 from mediamop.core.config import MediaMopSettings
