@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 
 import pytest
@@ -89,7 +90,9 @@ def test_build_suite_update_status_docker_includes_update_command(monkeypatch: p
 
     assert status.status == "update_available"
     assert status.install_type == "docker"
-    assert status.docker_update_command == "docker pull ghcr.io/jampat000/mediamop:2.0.8 && docker compose up -d"
+    # Not `docker pull <image>:<tag>`: that tag does not exist (images publish as `v2.0.8`)
+    # and the documented compose file pins `:latest`, so `compose up -d` would ignore it.
+    assert status.docker_update_command == "docker compose pull && docker compose up -d"
     assert status.in_app_upgrade_supported is False
     assert status.in_app_upgrade_summary is None
 
@@ -106,3 +109,70 @@ def test_build_suite_update_status_source_has_no_upgrade_support(monkeypatch: py
 
     assert status.install_type == "source"
     assert status.in_app_upgrade_supported is False
+
+
+def _settings_for(tmp_path: object) -> object:
+    """A settings object carrying only what the update-settings helpers read."""
+
+    class _Stub:
+        mediamop_home = str(tmp_path)
+
+    return _Stub()
+
+
+def test_no_settings_file_is_the_shipped_default(tmp_path: object) -> None:
+    got = update_service.get_update_settings(_settings_for(tmp_path))
+
+    assert got.mode == "Auto"
+    assert got.check_on_startup is True
+    assert got.check_interval_minutes == 60
+
+
+def test_a_saved_choice_round_trips(tmp_path: object) -> None:
+    settings = _settings_for(tmp_path)
+
+    update_service.put_update_settings(settings, "DownloadOnly", False, 240)
+
+    got = update_service.get_update_settings(settings)
+    assert got.mode == "DownloadOnly"
+    assert got.check_on_startup is False
+    assert got.check_interval_minutes == 240
+
+
+def test_a_truncated_file_falls_back_to_notify_only_not_to_auto(tmp_path: object) -> None:
+    """The operator chose something. Auto is the one guess that can act against it."""
+
+    settings = _settings_for(tmp_path)
+    update_service.put_update_settings(settings, "NotifyOnly", True, 60)
+    path = tmp_path / "update-settings.json"  # type: ignore[operator]
+    path.write_text('{"mode": "Notify', encoding="utf-8")
+
+    got = update_service.get_update_settings(settings)
+
+    assert got.mode == "NotifyOnly"
+
+
+def test_an_unknown_mode_is_rejected_rather_than_passed_through(tmp_path: object) -> None:
+    """`mode` is a plain string on the wire, so a junk value must not reach the tray."""
+
+    settings = _settings_for(tmp_path)
+    path = tmp_path / "update-settings.json"  # type: ignore[operator]
+    path.write_text('{"mode": "InstallEverythingNow"}', encoding="utf-8")
+
+    assert update_service.get_update_settings(settings).mode == "NotifyOnly"
+
+
+def test_the_settings_file_is_replaced_whole(tmp_path: object) -> None:
+    """The write is a rename, so it leaves the payload exact and no scratch file behind."""
+
+    settings = _settings_for(tmp_path)
+    update_service.put_update_settings(settings, "DownloadOnly", True, 10080)
+    update_service.put_update_settings(settings, "Auto", True, 1)
+
+    path = tmp_path / "update-settings.json"  # type: ignore[operator]
+    assert json.loads(path.read_text(encoding="utf-8")) == {
+        "mode": "Auto",
+        "checkOnStartup": True,
+        "checkIntervalMinutes": 1,
+    }
+    assert not list(path.parent.glob("*.tmp"))

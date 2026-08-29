@@ -12,6 +12,7 @@ import logging
 import os
 import sys
 from pathlib import Path
+from typing import Literal
 
 import httpx
 
@@ -98,7 +99,13 @@ def _build_release_status(
     docker_tag = release.version if release.version else None
     docker_update_command = None
     if install_type == "docker" and docker_tag:
-        docker_update_command = f"docker pull {DOCKER_IMAGE}:{docker_tag} && docker compose up -d"
+        # `docker compose pull` and not `docker pull <image>:<tag>`. Two reasons, either of
+        # which is fatal on its own: images publish as `v2.5.0` while `release.version` has
+        # had its `v` stripped, so the explicit tag does not exist; and the compose file
+        # documented in docs/docker.md pins `:latest`, so `compose up -d` would keep running
+        # the old image even after a successful pull. `compose pull` resolves whatever the
+        # operator's own compose file names, which is the only thing `compose up` will use.
+        docker_update_command = "docker compose pull && docker compose up -d"
 
     return SuiteUpdateStatusOut(
         current_version=current_version,
@@ -132,11 +139,28 @@ def build_suite_update_status(
 
 
 _UPDATE_SETTINGS_FILE = "update-settings.json"
+UpdateMode = Literal["Auto", "DownloadOnly", "NotifyOnly"]
+_UPDATE_MODES: tuple[UpdateMode, ...] = ("Auto", "DownloadOnly", "NotifyOnly")
 _DEFAULT_UPDATE_SETTINGS = UpdateSettingsOut(
     mode="Auto",
     check_on_startup=True,
     check_interval_minutes=60,
 )
+"""What a fresh install gets: nobody has chosen yet, and Auto is the shipped default."""
+
+_UNREADABLE_UPDATE_SETTINGS = UpdateSettingsOut(
+    mode="NotifyOnly",
+    check_on_startup=True,
+    check_interval_minutes=60,
+)
+"""What an unreadable file gets, which is a different situation from no file at all.
+
+A file that exists but cannot be read means the operator chose something and we cannot
+tell what. Auto is the only mode that installs an update with nobody watching, so guessing
+it is the one guess that can act against an explicit choice — an operator who picked
+NotifyOnly would be auto-updated by a truncated file. NotifyOnly still surfaces the update,
+so the cost of guessing wrong in this direction is a prompt rather than an install.
+"""
 
 
 def get_update_settings(settings: MediaMopSettings) -> UpdateSettingsOut:
@@ -145,18 +169,27 @@ def get_update_settings(settings: MediaMopSettings) -> UpdateSettingsOut:
         return _DEFAULT_UPDATE_SETTINGS
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
+        mode = str(raw.get("mode", "")).strip()
+        if mode not in _UPDATE_MODES:
+            raise ValueError(f"unknown update mode {mode!r}")
         return UpdateSettingsOut(
-            mode=raw.get("mode", "Auto"),
+            mode=mode,
             check_on_startup=bool(raw.get("checkOnStartup", True)),
             check_interval_minutes=int(raw.get("checkIntervalMinutes", 60)),
         )
-    except Exception:
-        return _DEFAULT_UPDATE_SETTINGS
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        logger.warning(
+            "Update settings at %s could not be read. Falling back to notify-only so a "
+            "damaged file cannot install an update the operator did not choose.",
+            path,
+            exc_info=True,
+        )
+        return _UNREADABLE_UPDATE_SETTINGS
 
 
 def put_update_settings(
     settings: MediaMopSettings,
-    mode: str,
+    mode: UpdateMode,
     check_on_startup: bool,
     check_interval_minutes: int,
 ) -> UpdateSettingsOut:
@@ -166,7 +199,12 @@ def put_update_settings(
         "checkOnStartup": check_on_startup,
         "checkIntervalMinutes": check_interval_minutes,
     }
-    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    # Written whole and then renamed. `write_text` truncates first, so a crash mid-write
+    # leaves the half-file that the read path above has to guess its way around; the point
+    # of that fallback is to be unreachable in practice.
+    tmp = path.with_suffix(f"{path.suffix}.tmp")
+    tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    os.replace(tmp, path)
     return UpdateSettingsOut(
         mode=mode,
         check_on_startup=check_on_startup,

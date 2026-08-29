@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -188,7 +188,7 @@ class UpdateSettingsOut(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    mode: str = Field(description="Auto, DownloadOnly, or NotifyOnly")
+    mode: Literal["Auto", "DownloadOnly", "NotifyOnly"]
     check_on_startup: bool = True
     check_interval_minutes: int = Field(ge=1, le=10080)
 
@@ -199,7 +199,7 @@ class UpdateSettingsPutIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     csrf_token: str = Field(..., min_length=1)
-    mode: str = Field(..., pattern="^(Auto|DownloadOnly|NotifyOnly)$")
+    mode: Literal["Auto", "DownloadOnly", "NotifyOnly"]
     check_on_startup: bool = True
     check_interval_minutes: int = Field(default=60, ge=1, le=10080)
 
