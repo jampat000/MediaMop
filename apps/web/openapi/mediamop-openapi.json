@@ -625,6 +625,164 @@
         "title": "LogoutIn",
         "type": "object"
       },
+      "MaintenanceFamilyStateOut": {
+        "description": "What one family is doing, and whether it is switched on.",
+        "properties": {
+          "description": {
+            "description": "What this family does, in a sentence.",
+            "title": "Description",
+            "type": "string"
+          },
+          "enabled": {
+            "description": "Whether the schedule runs this family. Triggering by hand ignores this.",
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "family": {
+            "enum": [
+              "work_temp_stale_sweep",
+              "failure_cleanup"
+            ],
+            "title": "Family",
+            "type": "string"
+          },
+          "last_completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Completed At"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The most recent failure reason, when the last run failed.",
+            "title": "Last Error"
+          },
+          "last_failed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Failed At"
+          },
+          "pending": {
+            "description": "Queued and not yet started.",
+            "title": "Pending",
+            "type": "integer"
+          },
+          "running": {
+            "description": "Leased by a worker right now.",
+            "title": "Running",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "family",
+          "enabled",
+          "description",
+          "pending",
+          "running"
+        ],
+        "title": "MaintenanceFamilyStateOut",
+        "type": "object"
+      },
+      "MaintenanceStateOut": {
+        "properties": {
+          "families": {
+            "items": {
+              "$ref": "#/components/schemas/MaintenanceFamilyStateOut"
+            },
+            "title": "Families",
+            "type": "array"
+          }
+        },
+        "required": [
+          "families"
+        ],
+        "title": "MaintenanceStateOut",
+        "type": "object"
+      },
+      "MaintenanceTriggerIn": {
+        "additionalProperties": false,
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "family": {
+            "enum": [
+              "work_temp_stale_sweep",
+              "failure_cleanup"
+            ],
+            "title": "Family",
+            "type": "string"
+          },
+          "media_scope": {
+            "default": "movie",
+            "enum": [
+              "movie",
+              "tv"
+            ],
+            "title": "Media Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrf_token",
+          "family"
+        ],
+        "title": "MaintenanceTriggerIn",
+        "type": "object"
+      },
+      "MaintenanceTriggerOut": {
+        "properties": {
+          "detail": {
+            "description": "What happened, written for the person reading it.",
+            "title": "Detail",
+            "type": "string"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "queued": {
+            "description": "False when a run of this family was already waiting or in progress.",
+            "title": "Queued",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "queued",
+          "detail"
+        ],
+        "title": "MaintenanceTriggerOut",
+        "type": "object"
+      },
       "MeOut": {
         "properties": {
           "user": {
@@ -10364,6 +10522,72 @@
           }
         },
         "summary": "Post Refiner Library Unlink",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/maintenance": {
+      "get": {
+        "description": "What each maintenance family is doing, and whether its schedule is on.",
+        "operationId": "get_refiner_maintenance_api_v1_refiner_maintenance_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceStateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Refiner Maintenance",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/maintenance/run": {
+      "post": {
+        "description": "Run one maintenance family now.\n\nIgnores the schedule toggle on purpose: the toggle decides whether MediaMop runs this\non its own, and somebody asking for it now has already decided.",
+        "operationId": "post_refiner_maintenance_run_api_v1_refiner_maintenance_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaintenanceTriggerIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceTriggerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Refiner Maintenance Run",
         "tags": [
           "refiner",
           "refiner"

@@ -9,6 +9,7 @@ import {
   type RefinerOverviewOpenTab,
 } from "./refiner-overview-tab";
 import { RefinerLibrariesSection } from "./refiner-libraries-section";
+import { RefinerMaintenanceSection } from "./refiner-maintenance-section";
 import { RefinerSchedulesSection } from "./refiner-schedules-section";
 import { RefinerRemuxSection } from "./refiner-remux-section";
 import {
@@ -22,6 +23,7 @@ type RefinerPageTabId =
   | "audio-subtitles"
   | "files"
   | "jobs"
+  | "maintenance"
   | "schedules";
 
 const REFINER_TAB_BLURBS: Record<RefinerPageTabId, string> = {
@@ -36,6 +38,8 @@ const REFINER_TAB_BLURBS: Record<RefinerPageTabId, string> = {
   files:
     "Every file Refiner has looked at, and why it is or is not being processed.",
   jobs: "View queued, running, and recent Refiner jobs for troubleshooting and progress.",
+  maintenance:
+    "Housekeeping MediaMop runs on a schedule, and what this instance is configured with. Start one now if you need to.",
 };
 
 export function RefinerPage() {
@@ -48,6 +52,7 @@ export function RefinerPage() {
     { id: "schedules", label: "Schedules" },
     { id: "files", label: "Files" },
     { id: "jobs", label: "Jobs" },
+    { id: "maintenance", label: "Maintenance" },
   ];
 
   const openFromOverview = (target: RefinerOverviewOpenTab) => {
@@ -129,6 +134,7 @@ export function RefinerPage() {
           {tab === "schedules" ? <RefinerSchedulesSection /> : null}
           {tab === "files" ? <RefinerFilesSection /> : null}
           {tab === "jobs" ? <RefinerJobsInspectionSection /> : null}
+          {tab === "maintenance" ? <RefinerMaintenanceSection /> : null}
         </div>
       </div>
     </div>
