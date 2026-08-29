@@ -267,3 +267,27 @@ def record_measured_video_dimensions(
             row.video_height = int(video_height)
     if rows:
         session.flush()
+
+
+def record_output_collision(
+    session: Session,
+    *,
+    relative_path: str,
+    policy: str,
+    action: str,
+    reason: str,
+) -> None:
+    """Keep the collision decision on the file itself.
+
+    Matched on path alone for the same reason the measured resolution is: the pass knows
+    the file it wrote, not which library row a scan attributed it to, and the decision is
+    a fact about the file.
+    """
+
+    rows = session.scalars(select(RefinerFileRow).where(RefinerFileRow.relative_path == relative_path)).all()
+    for row in rows:
+        row.output_collision_policy = policy
+        row.output_collision_action = action
+        row.output_collision_reason = reason
+    if rows:
+        session.flush()

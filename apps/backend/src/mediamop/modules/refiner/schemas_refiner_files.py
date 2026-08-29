@@ -42,6 +42,15 @@ class RefinerFileOut(BaseModel):
         default=None,
         description="When MediaMop will try this file again on its own. Null when no automatic retry is coming.",
     )
+    output_collision_policy: str | None = Field(
+        default=None,
+        description="The collision policy in force when this file's output was written.",
+    )
+    output_collision_action: str | None = Field(default=None, description="What that policy decided: write, or skip.")
+    output_collision_reason: str | None = Field(
+        default=None,
+        description="Why, written for the person asking why there is no new output for this file.",
+    )
     hold_until: datetime | None = Field(
         default=None,
         description=(

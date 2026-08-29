@@ -23,9 +23,16 @@ from mediamop.modules.refiner.file_remux_pass.visibility import (
     remux_pass_result_to_activity_detail,
     summarize_remux_plan,
 )
-from mediamop.modules.refiner.refiner_file_state_service import record_measured_video_dimensions
+from mediamop.modules.refiner.refiner_file_state_service import (
+    record_measured_video_dimensions,
+    record_output_collision,
+)
 from mediamop.modules.refiner.refiner_movie_output_cleanup import (
     maybe_run_movie_output_folder_cleanup_after_remux,
+)
+from mediamop.modules.refiner.refiner_output_collision import (
+    decide_output_collision,
+    normalize_collision_policy,
 )
 from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
 from mediamop.modules.refiner.refiner_remux_mux import (
@@ -640,6 +647,7 @@ def run_refiner_file_remux_pass(
             out=out,
         )
 
+    collision_policy = normalize_collision_policy(path_runtime.output_collision_policy)
     sidecar_patterns = parse_sidecar_patterns(path_runtime.sidecar_patterns_csv)
     preserve_timestamps = bool(path_runtime.preserve_original_timestamps)
 
@@ -689,10 +697,21 @@ def run_refiner_file_remux_pass(
                 subs_after=after_s,
                 remux_required=remux_needed,
             )
+        # The unchanged-copy path collides exactly like the remux path does, and used to
+        # overwrite just as silently.
+        skip_collision = decide_output_collision(final=final_skip, source=src, staged=src, policy=collision_policy)
         try:
-            _copied, output_replaced_existing, unchanged_output_method = _copy_unchanged_source_to_output(
-                src=src, final=final_skip
-            )
+            if skip_collision.wrote:
+                final_skip = skip_collision.destination
+                _copied, output_replaced_existing, unchanged_output_method = _copy_unchanged_source_to_output(
+                    src=src, final=final_skip
+                )
+            else:
+                _copied, output_replaced_existing, unchanged_output_method = (
+                    False,
+                    False,
+                    "skipped_by_collision_policy",
+                )
         except Exception as exc:
             if progress_reporter is not None:
                 progress_reporter(
@@ -729,6 +748,17 @@ def run_refiner_file_remux_pass(
             }
         out["output_file"] = str(final_skip.resolve())
         out["output_replaced_existing"] = output_replaced_existing
+        out["output_collision_policy"] = skip_collision.policy
+        out["output_collision_action"] = skip_collision.action
+        out["output_collision_reason"] = skip_collision.reason
+        if cleanup_session is not None:
+            record_output_collision(
+                cleanup_session,
+                relative_path=relative_media_path,
+                policy=skip_collision.policy,
+                action=skip_collision.action,
+                reason=skip_collision.reason,
+            )
         out["output_copied_without_remux"] = True
         out["unchanged_output_method"] = unchanged_output_method
         out["live_mutations_skipped"] = False
@@ -843,8 +873,15 @@ def run_refiner_file_remux_pass(
                 remux_required=remux_needed,
             )
         final.parent.mkdir(parents=True, exist_ok=True)
-        output_replaced_existing = final.exists()
-        safe_finalize_file(staged=tmp, final=final)
+        # A collision used to be silent: the existing output was overwritten and the only
+        # trace was a note in an activity row that could age out. The policy and the
+        # decision are both recorded now (#349).
+        collision = decide_output_collision(final=final, source=src, staged=tmp, policy=collision_policy)
+        output_replaced_existing = collision.replaced_existing
+        if collision.wrote:
+            final = collision.destination
+            final.parent.mkdir(parents=True, exist_ok=True)
+            safe_finalize_file(staged=tmp, final=final)
     except Exception as exc:
         if progress_reporter is not None:
             progress_reporter(
@@ -885,10 +922,21 @@ def run_refiner_file_remux_pass(
     out["output_file"] = str(final.resolve())
     out["output_replaced_existing"] = output_replaced_existing
     out["refiner_output_folder_resolved"] = str(out_dir)
-    if output_replaced_existing:
-        out["output_replacement_note"] = (
-            "An existing output file at the same relative path was replaced (default Refiner output collision policy)."
+    out["output_collision_policy"] = collision.policy
+    out["output_collision_action"] = collision.action
+    # The reason is written for the person asking "why is there no new output for this
+    # file", which is the question a silent collision made unanswerable.
+    out["output_collision_reason"] = collision.reason
+    if cleanup_session is not None:
+        record_output_collision(
+            cleanup_session,
+            relative_path=relative_media_path,
+            policy=collision.policy,
+            action=collision.action,
+            reason=collision.reason,
         )
+    if not collision.wrote or output_replaced_existing:
+        out["output_replacement_note"] = collision.reason
     out["after_track_lines_meaning"] = (
         "Live remux finished; before = source probe; after = planned disposition (copy remux — "
         "ffprobe of the written file was used for validation only)."

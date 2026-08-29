@@ -3018,6 +3018,42 @@
             "description": "When MediaMop will try this file again on its own. Null when no automatic retry is coming.",
             "title": "Next Retry At"
           },
+          "output_collision_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What that policy decided: write, or skip.",
+            "title": "Output Collision Action"
+          },
+          "output_collision_policy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The collision policy in force when this file's output was written.",
+            "title": "Output Collision Policy"
+          },
+          "output_collision_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why, written for the person asking why there is no new output for this file.",
+            "title": "Output Collision Reason"
+          },
           "relative_path": {
             "title": "Relative Path",
             "type": "string"
@@ -3542,6 +3578,19 @@
             "title": "Name",
             "type": "string"
           },
+          "output_collision_policy": {
+            "default": "replace",
+            "description": "What to do when an output already exists at the same path. 'replace' is what MediaMop has always done. The policy and the decision taken are both recorded on the file, so 'why is there no new output for this file' is answerable.",
+            "enum": [
+              "replace",
+              "skip",
+              "keep_both",
+              "replace_if_larger",
+              "replace_if_newer"
+            ],
+            "title": "Output Collision Policy",
+            "type": "string"
+          },
           "output_folder": {
             "default": "",
             "maxLength": 4000,
@@ -3829,6 +3878,10 @@
             "title": "Name",
             "type": "string"
           },
+          "output_collision_policy": {
+            "title": "Output Collision Policy",
+            "type": "string"
+          },
           "output_folder": {
             "title": "Output Folder",
             "type": "string"
@@ -3947,6 +4000,7 @@
           "hold_minutes",
           "sidecar_patterns_csv",
           "preserve_original_timestamps",
+          "output_collision_policy",
           "file_detection_interval_seconds",
           "ignore_size_changes",
           "skip_access_tests",
@@ -4116,6 +4170,19 @@
             "maxLength": 120,
             "minLength": 1,
             "title": "Name",
+            "type": "string"
+          },
+          "output_collision_policy": {
+            "default": "replace",
+            "description": "What to do when an output already exists at the same path. 'replace' is what MediaMop has always done. The policy and the decision taken are both recorded on the file, so 'why is there no new output for this file' is answerable.",
+            "enum": [
+              "replace",
+              "skip",
+              "keep_both",
+              "replace_if_larger",
+              "replace_if_newer"
+            ],
+            "title": "Output Collision Policy",
             "type": "string"
           },
           "output_folder": {

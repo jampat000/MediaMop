@@ -117,6 +117,9 @@ class RefinerLibraryRow(Base):
         Text, nullable=False, server_default=".srt,.ass,.ssa,.sub,.idx,.vtt,.nfo,.jpg,.png"
     )
     preserve_original_timestamps: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    # What to do when an output already exists at the path about to be written. "replace"
+    # is what every install does today, and a collision used to be silent (#349).
+    output_collision_policy: Mapped[str] = mapped_column(Text, nullable=False, server_default="replace")
 
     # Timing.
     scan_interval_seconds: Mapped[int] = mapped_column(Integer, nullable=False, server_default="300")

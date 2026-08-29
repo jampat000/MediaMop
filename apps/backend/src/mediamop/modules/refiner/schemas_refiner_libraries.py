@@ -105,6 +105,7 @@ class RefinerLibraryOut(BaseModel):
     hold_minutes: int
     sidecar_patterns_csv: str
     preserve_original_timestamps: bool
+    output_collision_policy: str
     file_detection_interval_seconds: int
     ignore_size_changes: bool
     skip_access_tests: bool
@@ -165,6 +166,14 @@ class RefinerLibraryCreateIn(BaseModel):
     )
     preserve_original_timestamps: bool = Field(
         False, description="Give the output the original file's modification time."
+    )
+    output_collision_policy: Literal["replace", "skip", "keep_both", "replace_if_larger", "replace_if_newer"] = Field(
+        "replace",
+        description=(
+            "What to do when an output already exists at the same path. 'replace' is what MediaMop has "
+            "always done. The policy and the decision taken are both recorded on the file, so 'why is there "
+            "no new output for this file' is answerable."
+        ),
     )
     scan_interval_seconds: int = Field(300, ge=10, le=604800)
     hold_minutes: int = Field(0, ge=0, le=10080)

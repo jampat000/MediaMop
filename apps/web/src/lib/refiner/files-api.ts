@@ -35,6 +35,10 @@ export interface RefinerFile {
   failure_class: string | null;
   failure_attempts: number;
   next_retry_at: string | null;
+  /** The collision policy in force and what it decided, kept on the file rather than only in an activity note. */
+  output_collision_policy: string | null;
+  output_collision_action: string | null;
+  output_collision_reason: string | null;
   video_width: number | null;
   video_height: number | null;
   /** When an on-hold file becomes eligible. Null when the wait is on a writer, not the clock. */
