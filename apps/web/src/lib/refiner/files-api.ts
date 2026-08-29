@@ -175,3 +175,36 @@ export async function fetchRefinerWhyHeld(id: number): Promise<RefinerWhyHeld> {
   await requireOk(path, response, "Could not ask why that file is held");
   return readJson<RefinerWhyHeld>(response);
 }
+
+export interface RefinerFileLogEntry {
+  id: number;
+  recorded_at: string;
+  outcome: string;
+  title: string;
+  library_name: string;
+  detail: Record<string, unknown>;
+}
+
+export interface RefinerFileLog {
+  file_id: number;
+  relative_path: string;
+  /** 0 means these records are kept forever. */
+  retention_days: number;
+  entries: RefinerFileLogEntry[];
+}
+
+export async function fetchRefinerFileLog(id: number): Promise<RefinerFileLog> {
+  const path = `${refinerFilesPath()}/${id}/log`;
+  const response = await apiFetch(path);
+  await requireOk(
+    path,
+    response,
+    "Could not read that file's processing record",
+  );
+  return readJson<RefinerFileLog>(response);
+}
+
+/** The plain-text record, for attaching to a bug report. */
+export function refinerFileLogDownloadPath(id: number): string {
+  return `${refinerFilesPath()}/${id}/log/download`;
+}

@@ -112,3 +112,26 @@ class RefinerRequeueOut(BaseModel):
     requeued: int
     skipped: int
     detail: str
+
+
+class RefinerFileLogEntryOut(BaseModel):
+    """One completed pass over this file."""
+
+    id: int
+    recorded_at: datetime
+    outcome: str
+    title: str
+    library_name: str
+    detail: dict[str, object] = Field(
+        default_factory=dict,
+        description="The whole pass payload: admission decisions, probe, plan, ffmpeg argv, cleanup gates, timings.",
+    )
+
+
+class RefinerFileLogOut(BaseModel):
+    file_id: int
+    relative_path: str
+    retention_days: int = Field(
+        description="How long these records are kept. 0 means they are kept forever.",
+    )
+    entries: list[RefinerFileLogEntryOut]

@@ -32,6 +32,10 @@ from mediamop.modules.refiner.refiner_failure_cleanup_periodic_enqueue import (
     start_refiner_failure_cleanup_enqueue_tasks,
     stop_refiner_failure_cleanup_enqueue_tasks,
 )
+from mediamop.modules.refiner.refiner_file_log_retention_periodic import (
+    start_refiner_file_log_retention_tasks,
+    stop_refiner_file_log_retention_tasks,
+)
 from mediamop.modules.refiner.refiner_job_handlers import build_refiner_job_handlers
 from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue import (
@@ -156,6 +160,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     job_rows_retention_tasks: list[asyncio.Task[None]] = []
     refiner_watched_folder_scan_dispatch_tasks: list[asyncio.Task[None]] = []
     refiner_watched_folder_watcher_tasks: list[asyncio.Task[None]] = []
+    refiner_file_log_retention_tasks: list[asyncio.Task[None]] = []
     refiner_work_temp_stale_sweep_tasks: list[asyncio.Task[None]] = []
     refiner_failure_cleanup_tasks: list[asyncio.Task[None]] = []
     refiner_handlers = build_refiner_job_handlers(settings, session_factory)
@@ -188,6 +193,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     def _start_refiner_watched_folder_scan_dispatch_tasks() -> None:
         nonlocal refiner_watched_folder_scan_dispatch_tasks
         refiner_watched_folder_scan_dispatch_tasks = start_refiner_watched_folder_remux_scan_dispatch_enqueue_tasks(
+            session_factory,
+            stop_event=stop,
+            settings=settings,
+        )
+
+    def _start_refiner_file_log_retention_tasks() -> None:
+        nonlocal refiner_file_log_retention_tasks
+        refiner_file_log_retention_tasks = start_refiner_file_log_retention_tasks(
             session_factory,
             stop_event=stop,
             settings=settings,
@@ -262,6 +275,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         _start_refiner_watched_folder_scan_dispatch_tasks,
     )
     _run_non_essential_startup_step(
+        "refiner_file_log_retention_start",
+        _start_refiner_file_log_retention_tasks,
+    )
+    _run_non_essential_startup_step(
         "refiner_watched_folder_watcher_start",
         _start_refiner_watched_folder_watcher_tasks,
     )
@@ -282,6 +299,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             lambda: stop_refiner_watched_folder_remux_scan_dispatch_enqueue_tasks(
                 refiner_watched_folder_scan_dispatch_tasks
             ),
+        )
+        await _stop_task_group(
+            "refiner_file_log_retention_stop",
+            lambda: stop_refiner_file_log_retention_tasks(refiner_file_log_retention_tasks),
         )
         await _stop_task_group(
             "refiner_watched_folder_watcher_stop",

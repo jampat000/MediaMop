@@ -33,6 +33,17 @@ class RefinerOperatorSettingsOut(BaseModel):
     keep_failed_work_files: bool = Field(
         description="Keep a failed run's working files so they can be inspected instead of swept.",
     )
+    file_log_retention_days: int = Field(
+        ge=0,
+        le=3650,
+        description="How long to keep the per-file processing record. 0 keeps it forever.",
+    )
+    verbose_detection_logging: bool = Field(
+        description=(
+            "Record extra detail from the file-detection stage. Turn this on while working out why a file "
+            "is or is not being picked up, and turn it off again afterwards — it is loud."
+        ),
+    )
     runner_cost_undetermined: int = Field(
         ge=0,
         le=64,
@@ -81,6 +92,8 @@ class RefinerOperatorSettingsPutIn(BaseModel):
     work_temp_stale_sweep_enabled: bool | None = None
     failure_cleanup_enabled: bool | None = None
     keep_failed_work_files: bool | None = None
+    file_log_retention_days: int | None = Field(default=None, ge=0, le=3650)
+    verbose_detection_logging: bool | None = None
     min_file_age_seconds: int | None = Field(default=None, ge=0, le=7 * 24 * 3600)
     refiner_min_input_file_size_mb: int | None = Field(default=None, ge=0, le=1024 * 1024)
     minimum_free_disk_space_mb: int | None = Field(default=None, ge=0, le=1024 * 1024)
@@ -140,6 +153,8 @@ class RefinerOperatorSettingsPutIn(BaseModel):
             or self.work_temp_stale_sweep_enabled is not None
             or self.failure_cleanup_enabled is not None
             or self.keep_failed_work_files is not None
+            or self.file_log_retention_days is not None
+            or self.verbose_detection_logging is not None
             or self.min_file_age_seconds is not None
             or self.refiner_min_input_file_size_mb is not None
             or self.minimum_free_disk_space_mb is not None

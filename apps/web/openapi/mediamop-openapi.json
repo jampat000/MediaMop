@@ -2818,6 +2818,79 @@
         "title": "RefinerFileForgetIn",
         "type": "object"
       },
+      "RefinerFileLogEntryOut": {
+        "description": "One completed pass over this file.",
+        "properties": {
+          "detail": {
+            "additionalProperties": true,
+            "description": "The whole pass payload: admission decisions, probe, plan, ffmpeg argv, cleanup gates, timings.",
+            "title": "Detail",
+            "type": "object"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "library_name": {
+            "title": "Library Name",
+            "type": "string"
+          },
+          "outcome": {
+            "title": "Outcome",
+            "type": "string"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "recorded_at",
+          "outcome",
+          "title",
+          "library_name"
+        ],
+        "title": "RefinerFileLogEntryOut",
+        "type": "object"
+      },
+      "RefinerFileLogOut": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/RefinerFileLogEntryOut"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "file_id": {
+            "title": "File Id",
+            "type": "integer"
+          },
+          "relative_path": {
+            "title": "Relative Path",
+            "type": "string"
+          },
+          "retention_days": {
+            "description": "How long these records are kept. 0 means they are kept forever.",
+            "title": "Retention Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "file_id",
+          "relative_path",
+          "retention_days",
+          "entries"
+        ],
+        "title": "RefinerFileLogOut",
+        "type": "object"
+      },
       "RefinerFileMoveToTopIn": {
         "additionalProperties": false,
         "properties": {
@@ -4148,6 +4221,13 @@
             "title": "Failure Cleanup Enabled",
             "type": "boolean"
           },
+          "file_log_retention_days": {
+            "description": "How long to keep the per-file processing record. 0 keeps it forever.",
+            "maximum": 3650.0,
+            "minimum": 0.0,
+            "title": "File Log Retention Days",
+            "type": "integer"
+          },
           "keep_failed_work_files": {
             "description": "Keep a failed run's working files so they can be inspected instead of swept.",
             "title": "Keep Failed Work Files",
@@ -4273,6 +4353,11 @@
             "title": "Updated At",
             "type": "string"
           },
+          "verbose_detection_logging": {
+            "description": "Record extra detail from the file-detection stage. Turn this on while working out why a file is or is not being picked up, and turn it off again afterwards \u2014 it is loud.",
+            "title": "Verbose Detection Logging",
+            "type": "boolean"
+          },
           "work_temp_stale_sweep_enabled": {
             "description": "Reclaim MediaMop's own stale working files. Safe, and on by default.",
             "title": "Work Temp Stale Sweep Enabled",
@@ -4289,6 +4374,8 @@
           "work_temp_stale_sweep_enabled",
           "failure_cleanup_enabled",
           "keep_failed_work_files",
+          "file_log_retention_days",
+          "verbose_detection_logging",
           "runner_cost_undetermined",
           "min_file_age_seconds",
           "refiner_min_input_file_size_mb",
@@ -4328,6 +4415,19 @@
               }
             ],
             "title": "Failure Cleanup Enabled"
+          },
+          "file_log_retention_days": {
+            "anyOf": [
+              {
+                "maximum": 3650.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Log Retention Days"
           },
           "keep_failed_work_files": {
             "anyOf": [
@@ -4585,6 +4685,17 @@
               }
             ],
             "title": "Tv Schedule Start"
+          },
+          "verbose_detection_logging": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verbose Detection Logging"
           },
           "work_temp_stale_sweep_enabled": {
             "anyOf": [
@@ -8812,6 +8923,106 @@
           }
         },
         "summary": "Delete Refiner File",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/files/{file_id}/log": {
+      "get": {
+        "description": "Everything MediaMop retained about what it did to this file, newest first.",
+        "operationId": "get_refiner_file_log_api_v1_refiner_files__file_id__log_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "File Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefinerFileLogOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Refiner File Log",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/files/{file_id}/log/download": {
+      "get": {
+        "description": "The same record as plain text, for attaching to a bug report.\n\nText rather than raw JSON: the reason anyone downloads this is to send it to somebody\nelse, and minified JSON is not something a person reads in a forum post.",
+        "operationId": "download_refiner_file_log_api_v1_refiner_files__file_id__log_download_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "File Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download Refiner File Log",
         "tags": [
           "refiner",
           "refiner"

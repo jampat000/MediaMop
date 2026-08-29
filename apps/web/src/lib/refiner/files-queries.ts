@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchRefinerFiles,
   forgetRefinerFile,
+  fetchRefinerFileLog,
   fetchRefinerWhyHeld,
   moveRefinerFileToTop,
   requeueRefinerFile,
@@ -65,4 +66,10 @@ export function useRefinerWhyHeld() {
   // A mutation rather than a query: this asks the managers *right now*, and only when
   // someone asks. Running it on render would poll every connection for every file.
   return useMutation({ mutationFn: (id: number) => fetchRefinerWhyHeld(id) });
+}
+
+export function useRefinerFileLog() {
+  // A mutation rather than a query: a processing record is read when someone opens it,
+  // not for every row on every render.
+  return useMutation({ mutationFn: (id: number) => fetchRefinerFileLog(id) });
 }

@@ -11,17 +11,22 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, Path, Query, Request
 from starlette import status as http_status
+from starlette.responses import PlainTextResponse
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.jobs_ops import move_refiner_job_to_top
+from mediamop.modules.refiner.refiner_file_log_service import logs_for_file, render_log_text
 from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow
 from mediamop.modules.refiner.refiner_file_state_service import forget_file, list_files, status_counts
 from mediamop.modules.refiner.refiner_job_queue_lookup import pending_remux_job_for_relative_path
 from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
+from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
 from mediamop.modules.refiner.refiner_requeue_service import requeue_file, requeue_files
 from mediamop.modules.refiner.schemas_refiner_files import (
     RefinerFileForgetIn,
+    RefinerFileLogEntryOut,
+    RefinerFileLogOut,
     RefinerFileMoveToTopIn,
     RefinerFileMoveToTopOut,
     RefinerFileOut,
@@ -41,6 +46,19 @@ from mediamop.platform.auth.csrf import (
 from mediamop.platform.auth.deps_auth import UserPublicDep
 
 router = APIRouter(tags=["refiner"])
+
+
+def _log_detail(raw: str) -> dict[str, object]:
+    """Parse a stored payload, never raising: a record that cannot be parsed is still
+    worth showing, and an exception here would hide the whole file's history."""
+
+    import json as _json
+
+    try:
+        parsed = _json.loads(raw or "{}")
+    except _json.JSONDecodeError:
+        return {"unparsed_detail": raw}
+    return parsed if isinstance(parsed, dict) else {"detail": parsed}
 
 
 def _verify_csrf(request: Request, settings: MediaMopSettings, token: str) -> None:
@@ -208,3 +226,60 @@ def requeue_refiner_files(
     result = requeue_files(db, rows=rows)
     db.commit()
     return RefinerRequeueOut(requeued=result.requeued, skipped=result.skipped, detail=result.detail)
+
+
+@router.get("/refiner/files/{file_id}/log", response_model=RefinerFileLogOut)
+def get_refiner_file_log(
+    _user: UserPublicDep,
+    db: DbSessionDep,
+    file_id: int = Path(ge=1),
+    limit: int = Query(default=50, ge=1, le=500),
+) -> RefinerFileLogOut:
+    """Everything MediaMop retained about what it did to this file, newest first."""
+
+    row = db.get(RefinerFileRow, file_id)
+    if row is None:
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="MediaMop has no record of that file.")
+    operator = ensure_refiner_operator_settings_row(db)
+    rows = logs_for_file(db, file_id=file_id, limit=limit)
+    db.commit()
+    return RefinerFileLogOut(
+        file_id=file_id,
+        relative_path=row.relative_path,
+        retention_days=int(operator.file_log_retention_days),
+        entries=[
+            RefinerFileLogEntryOut(
+                id=entry.id,
+                recorded_at=entry.recorded_at,
+                outcome=entry.outcome,
+                title=entry.title,
+                library_name=entry.library_name,
+                detail=_log_detail(entry.detail_json),
+            )
+            for entry in rows
+        ],
+    )
+
+
+@router.get("/refiner/files/{file_id}/log/download")
+def download_refiner_file_log(
+    _user: UserPublicDep,
+    db: DbSessionDep,
+    file_id: int = Path(ge=1),
+) -> PlainTextResponse:
+    """The same record as plain text, for attaching to a bug report.
+
+    Text rather than raw JSON: the reason anyone downloads this is to send it to somebody
+    else, and minified JSON is not something a person reads in a forum post.
+    """
+
+    row = db.get(RefinerFileRow, file_id)
+    if row is None:
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="MediaMop has no record of that file.")
+    rows = logs_for_file(db, file_id=file_id, limit=500)
+    db.commit()
+    safe = "".join(ch if ch.isalnum() or ch in "-_." else "-" for ch in row.relative_path)[-80:].strip("-") or "file"
+    return PlainTextResponse(
+        render_log_text(rows),
+        headers={"Content-Disposition": f'attachment; filename="mediamop-{safe}.log.txt"'},
+    )

@@ -36,6 +36,14 @@ class RefinerOperatorSettingsRow(Base):
     # Keep a failed run's working files so they can be inspected instead of swept.
     keep_failed_work_files: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
 
+    # The per-file processing record's own retention, independent of the suite log's:
+    # diagnosing the application and diagnosing a file are different questions with
+    # different lifetimes. 0 means keep forever.
+    file_log_retention_days: Mapped[int] = mapped_column(Integer, nullable=False, server_default="90")
+    # Extra detail from the file-detection stage. Off by default, and meant to be turned
+    # off again — it is loud, and that is the point of it.
+    verbose_detection_logging: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+
     min_file_age_seconds: Mapped[int] = mapped_column(Integer, nullable=False, server_default="60")
     refiner_min_input_file_size_mb: Mapped[int] = mapped_column(Integer, nullable=False, server_default="50")
     minimum_free_disk_space_mb: Mapped[int] = mapped_column(Integer, nullable=False, server_default="5120")

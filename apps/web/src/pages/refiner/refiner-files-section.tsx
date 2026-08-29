@@ -4,12 +4,15 @@ import { PageLoading } from "../../components/shared/page-loading";
 import { useMeQuery } from "../../lib/auth/queries";
 import {
   REFINER_FILE_STATUS_LABELS,
+  refinerFileLogDownloadPath,
   type RefinerFile,
+  type RefinerFileLog,
   type RefinerFileStatus,
 } from "../../lib/refiner/files-api";
 import {
   useForgetRefinerFile,
   useMoveRefinerFileToTop,
+  useRefinerFileLog,
   useRefinerWhyHeld,
   useRequeueRefinerFile,
   useRequeueRefinerFiles,
@@ -90,6 +93,8 @@ export function RefinerFilesSection() {
   const requeueOne = useRequeueRefinerFile();
   const requeueMany = useRequeueRefinerFiles();
   const whyHeld = useRefinerWhyHeld();
+  const fileLog = useRefinerFileLog();
+  const [openLog, setOpenLog] = useState<RefinerFileLog | null>(null);
   const editable = canEdit(me.data?.role);
 
   if (files.isLoading) return <PageLoading label="Loading files" />;
@@ -137,6 +142,22 @@ export function RefinerFilesSection() {
       );
     } catch {
       setNotice("MediaMop could not ask why that file is held.");
+    }
+  };
+
+  const showLog = async (file: RefinerFile) => {
+    setNotice(null);
+    try {
+      const log = await fileLog.mutateAsync(file.id);
+      if (log.entries.length === 0) {
+        setNotice(
+          "MediaMop has not processed this file yet, so there is no record to show.",
+        );
+        return;
+      }
+      setOpenLog(log);
+    } catch {
+      setNotice("MediaMop could not read that file's processing record.");
     }
   };
 
@@ -262,6 +283,67 @@ export function RefinerFilesSection() {
         </div>
       ) : null}
 
+      {openLog ? (
+        <div
+          className="rounded border border-[var(--mm-border)] p-3"
+          data-testid="refiner-file-log-panel"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate font-medium text-[var(--mm-text1)]">
+                {openLog.relative_path}
+              </p>
+              <p className="text-xs text-[var(--mm-text3)]">
+                {openLog.entries.length} record(s) ·{" "}
+                {openLog.retention_days === 0
+                  ? "kept forever"
+                  : `kept for ${openLog.retention_days} days`}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              {/* A real link, not a scripted save: the browser handles the download and
+                  the filename comes from the server. */}
+              <a
+                className={mmActionButtonClass({ variant: "tertiary" })}
+                href={refinerFileLogDownloadPath(openLog.file_id)}
+                data-testid="refiner-file-log-download"
+              >
+                Download
+              </a>
+              <button
+                type="button"
+                className={mmActionButtonClass({ variant: "tertiary" })}
+                onClick={() => setOpenLog(null)}
+                data-testid="refiner-file-log-close"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+          <ul className="mt-2 space-y-2">
+            {openLog.entries.map((entry) => (
+              <li
+                key={entry.id}
+                className="rounded border border-[var(--mm-border)] p-2"
+              >
+                <p className="text-xs text-[var(--mm-text3)]">
+                  {new Date(entry.recorded_at).toLocaleString()} ·{" "}
+                  {entry.outcome || "no outcome recorded"}
+                </p>
+                {entry.title ? (
+                  <p className="text-sm text-[var(--mm-text2)]">
+                    {entry.title}
+                  </p>
+                ) : null}
+                <pre className="mt-1 max-h-64 overflow-auto text-xs text-[var(--mm-text3)]">
+                  {JSON.stringify(entry.detail, null, 2)}
+                </pre>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       {notice ? (
         <p
           className="rounded border border-[var(--mm-border)] px-3 py-2 text-sm"
@@ -356,6 +438,15 @@ export function RefinerFilesSection() {
                         Why is this held?
                       </button>
                     ) : null}
+                    <button
+                      type="button"
+                      className={mmActionButtonClass({ variant: "tertiary" })}
+                      onClick={() => void showLog(file)}
+                      data-testid={`refiner-file-log-${file.id}`}
+                      title="What MediaMop did to this file, and why. Kept beyond the activity feed."
+                    >
+                      Processing record
+                    </button>
                     <button
                       type="button"
                       className={mmActionButtonClass({ variant: "tertiary" })}
