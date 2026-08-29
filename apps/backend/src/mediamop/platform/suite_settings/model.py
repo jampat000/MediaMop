@@ -26,6 +26,16 @@ class SuiteSettingsRow(Base):
     configuration_backup_interval_hours: Mapped[int] = mapped_column(Integer, nullable=False, server_default="24")
     configuration_backup_preferred_time: Mapped[str] = mapped_column(Text, nullable=False, server_default="02:00")
     configuration_backup_last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Pause lives on the suite, not on Refiner, so Pruner can honour the same switch
+    # without a second one appearing next to it.
+    processing_paused: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    # A pause with an expiry is one an operator cannot forget to lift. Null means
+    # "until I say otherwise", which is a deliberate choice rather than the only option.
+    processing_paused_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Usually you want to keep noticing files while declining to work on them, so this
+    # defaults on: pausing stops processing, not detection.
+    scan_while_paused: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

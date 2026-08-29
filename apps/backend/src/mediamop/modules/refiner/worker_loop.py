@@ -29,6 +29,7 @@ from mediamop.modules.refiner.jobs_ops import (
     fail_claimed_refiner_job,
     fail_leased_refiner_job_after_complete_failure,
 )
+from mediamop.modules.refiner.refiner_work_admission import evaluate_work_admission
 from mediamop.platform.http.request_context import job_logging_context
 from mediamop.platform.jobs.worker_health import worker_heartbeat, worker_started, worker_stopped
 from mediamop.platform.notifications.dispatch import dispatch_job_notification
@@ -84,11 +85,17 @@ def process_one_refiner_job(
     lease_until = when + timedelta(seconds=lease_seconds)
 
     with session_factory() as session, session.begin():
+        # The schedule and the suite pause are evaluated here, at lease time, rather than
+        # only at enqueue. A window that gated enqueue alone let a job queued two minutes
+        # before closing run all night, which is the outcome the window exists to prevent
+        # (#337). A job already leased is left to finish — see refiner_work_admission.
+        admission = evaluate_work_admission(session, now=when)
         job = claim_next_eligible_refiner_job(
             session,
             lease_owner=lease_owner,
             lease_expires_at=lease_until,
             now=when,
+            admission=admission,
         )
         if job is None:
             return "idle"

@@ -36,6 +36,7 @@ export interface RefinerLibrary {
   ignore_size_changes: boolean;
   skip_access_tests: boolean;
   file_system_events_enabled: boolean;
+  schedule_grid: string;
   schedule_enabled: boolean;
   schedule_hours_limited: boolean;
   schedule_days: string;
@@ -76,6 +77,7 @@ export interface RefinerLibraryWrite {
   ignore_size_changes?: boolean;
   skip_access_tests?: boolean;
   file_system_events_enabled?: boolean;
+  schedule_grid?: string;
   schedule_enabled?: boolean;
   schedule_hours_limited?: boolean;
   schedule_days?: string;

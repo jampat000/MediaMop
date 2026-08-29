@@ -8,6 +8,7 @@ import {
   NavIconSettings,
   NavIconPruner,
 } from "../components/shell/nav-icons";
+import { PauseControl } from "../components/shell/pause-control";
 import { useLogoutMutation } from "../lib/auth/queries";
 import { useDashboardStatusQuery } from "../lib/dashboard/queries";
 import { useSuiteSettingsQuery } from "../lib/suite/queries";
@@ -105,6 +106,7 @@ export function AppShell() {
       <main className="mm-main" id="mm-main-content" tabIndex={-1}>
         <div className="mm-main-inner">
           <div className="mm-shell-toolbar" aria-label="Display controls">
+            <PauseControl />
             <button
               type="button"
               className="mm-theme-toggle"

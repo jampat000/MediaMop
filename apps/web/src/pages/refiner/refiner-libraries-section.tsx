@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
 import { PageLoading } from "../../components/shared/page-loading";
+import { ScheduleGridEditor } from "./schedule-grid-editor";
 import { useMeQuery } from "../../lib/auth/queries";
 import {
   REFINER_MEDIA_SCOPE_LABELS,
@@ -47,6 +48,7 @@ type FormState = {
   ignore_size_changes: boolean;
   skip_access_tests: boolean;
   file_system_events_enabled: boolean;
+  schedule_grid: string;
 };
 
 const EMPTY_FORM: FormState = {
@@ -68,6 +70,7 @@ const EMPTY_FORM: FormState = {
   ignore_size_changes: false,
   skip_access_tests: false,
   file_system_events_enabled: true,
+  schedule_grid: "",
 };
 
 function formFrom(library: RefinerLibrary): FormState {
@@ -92,6 +95,7 @@ function formFrom(library: RefinerLibrary): FormState {
     ignore_size_changes: library.ignore_size_changes,
     skip_access_tests: library.skip_access_tests,
     file_system_events_enabled: library.file_system_events_enabled,
+    schedule_grid: library.schedule_grid,
   };
 }
 
@@ -126,6 +130,7 @@ function writeFrom(
     ignore_size_changes: form.ignore_size_changes,
     skip_access_tests: form.skip_access_tests,
     file_system_events_enabled: form.file_system_events_enabled,
+    schedule_grid: form.schedule_grid,
     rule_set_id: library?.rule_set_id ?? null,
     manager_connection_ids: library?.manager_connection_ids ?? [],
   };
@@ -522,6 +527,16 @@ export function RefinerLibrariesSection() {
               />
               Watch this folder for changes
             </label>
+          </div>
+          <div className="space-y-2">
+            <span className="text-sm font-medium text-[var(--mm-text1)]">
+              When this library may run
+            </span>
+            <ScheduleGridEditor
+              value={form.schedule_grid}
+              onChange={(schedule_grid) => setForm({ ...form, schedule_grid })}
+              disabled={!editable}
+            />
           </div>
           <div className="flex gap-2">
             <button

@@ -5,7 +5,7 @@ first, so the reason an operator is shown is the *first* thing standing in the w
 than whichever check happened to run last:
 
 1. **Disabled** — the library is switched off. Nothing else about the file is relevant.
-2. **Out of schedule** — the library is on, but not right now.
+2. **Out of schedule** — MediaMop is paused, or the library is on but not right now.
 3. **On hold** — the file is still being written to, is too new, or cannot be opened.
 4. **Blocked upstream** — a manager is still importing it.
 
@@ -27,9 +27,6 @@ from sqlalchemy.orm import Session
 
 from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
 from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
-from mediamop.modules.refiner.refiner_operator_settings_service import (
-    refiner_periodic_scope_in_schedule_window,
-)
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,6 +54,9 @@ def decide_file_state(
     library: RefinerLibraryRow,
     in_schedule_window: bool,
     file_age_seconds: float | None,
+    paused_reason: str | None = None,
+    paused_until: datetime | None = None,
+    window_reopens_at: datetime | None = None,
     size_is_settling: bool = False,
     settling_reason: str | None = None,
     settling_stable_at: datetime | None = None,
@@ -71,6 +71,12 @@ def decide_file_state(
             f"The {library.name} library is switched off, so MediaMop is leaving its files alone.",
         )
 
+    if paused_reason:
+        # A paused instance is out of schedule in the only sense that matters to someone
+        # looking at the screen: MediaMop is deliberately not working on this right now,
+        # and this says why and until when.
+        return FileStateVerdict(RefinerFileStatus.OUT_OF_SCHEDULE, paused_reason, hold_until=paused_until)
+
     if library.schedule_enabled and not in_schedule_window:
         return FileStateVerdict(
             RefinerFileStatus.OUT_OF_SCHEDULE,
@@ -78,6 +84,7 @@ def decide_file_state(
                 f"The {library.name} library only runs inside its scheduled hours, and now is outside them. "
                 "MediaMop will pick this up when the window opens."
             ),
+            hold_until=window_reopens_at,
         )
 
     hold_seconds = max(0, int(library.min_file_age_seconds)) + max(0, int(library.hold_minutes)) * 60
@@ -114,25 +121,6 @@ def decide_file_state(
         RefinerFileStatus.UNPROCESSED,
         f"Ready for Refiner to process as part of {_scope_word(library)}.",
     )
-
-
-def library_in_schedule_window(session: Session, library: RefinerLibraryRow) -> bool:
-    """Whether this library's schedule window is open right now.
-
-    Falls back to the per-scope operator window while a library's own days and times are
-    still seeded from it, so an upgrade does not silently change when work runs.
-    """
-
-    if not library.schedule_enabled:
-        return True
-    if not library.schedule_hours_limited:
-        return True
-    from mediamop.modules.refiner.refiner_operator_settings_service import (
-        ensure_refiner_operator_settings_row,
-    )
-
-    row = ensure_refiner_operator_settings_row(session)
-    return refiner_periodic_scope_in_schedule_window(session, row, media_scope=library.media_scope)
 
 
 def existing_file_row(session: Session, *, library_id: int, relative_path: str) -> RefinerFileRow | None:

@@ -23,7 +23,6 @@ from mediamop.modules.refiner.refiner_file_settling import (
 from mediamop.modules.refiner.refiner_file_state_service import (
     decide_file_state,
     existing_file_row,
-    library_in_schedule_window,
     record_file_state,
 )
 from mediamop.modules.refiner.refiner_library_service import resolve_library
@@ -40,6 +39,11 @@ from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_ops imp
     refiner_completed_remux_output_exists_for_relative_path,
     relative_posix_path_under_watched,
     retry_completed_movie_source_cleanup,
+)
+from mediamop.modules.refiner.refiner_work_admission import (
+    evaluate_work_admission,
+    library_window_open,
+    library_window_reopens_at,
 )
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
 from mediamop.platform.media_managers.manager_port import MediaScope
@@ -92,7 +96,17 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
 
         with session_factory() as library_session:
             library = resolve_library(library_session, media_scope=media_scope)
-            in_window = library_in_schedule_window(library_session, library) if library is not None else True
+            admission = evaluate_work_admission(library_session)
+            pause_reason = admission.pause.reason if admission.pause.paused else None
+            pause_until = admission.pause.paused_until if admission.pause.paused else None
+            if library is not None:
+                in_window = library_window_open(library, timezone_name=admission.timezone_name)
+                reopens_at = (
+                    None if in_window else library_window_reopens_at(library, timezone_name=admission.timezone_name)
+                )
+            else:
+                in_window = True
+                reopens_at = None
 
         watched_path = Path(watched_root)
         candidates = iter_watched_folder_media_candidates(
@@ -198,6 +212,9 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                         library=library,
                         in_schedule_window=in_window,
                         file_age_seconds=_file_age_seconds(file_path),
+                        paused_reason=pause_reason,
+                        paused_until=pause_until,
+                        window_reopens_at=reopens_at,
                         size_is_settling=settling.is_settling,
                         settling_reason=settling.reason,
                         settling_stable_at=settling.stable_at,

@@ -91,6 +91,7 @@ def _library_out(db, row: RefinerLibraryRow) -> RefinerLibraryOut:
         ignore_size_changes=row.ignore_size_changes,
         skip_access_tests=row.skip_access_tests,
         file_system_events_enabled=row.file_system_events_enabled,
+        schedule_grid=row.schedule_grid or "",
         schedule_enabled=row.schedule_enabled,
         schedule_hours_limited=row.schedule_hours_limited,
         schedule_days=row.schedule_days,

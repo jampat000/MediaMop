@@ -79,6 +79,7 @@ class RefinerLibraryOut(BaseModel):
     ignore_size_changes: bool
     skip_access_tests: bool
     file_system_events_enabled: bool
+    schedule_grid: str
     schedule_enabled: bool
     schedule_hours_limited: bool
     schedule_days: str
@@ -136,6 +137,13 @@ class RefinerLibraryCreateIn(BaseModel):
     skip_access_tests: bool = Field(
         False,
         description="Skip the read/write probe that runs before a file is queued.",
+    )
+    schedule_grid: str = Field(
+        "",
+        description=(
+            "7 days x 96 quarter-hours as 672 characters of 0/1, Monday first. Empty means no restriction. "
+            "Work already running finishes when a window closes; the window stops MediaMop starting anything new."
+        ),
     )
     file_system_events_enabled: bool = Field(
         True,

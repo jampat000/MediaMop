@@ -23,6 +23,7 @@ from mediamop.platform.media_managers.connections_api import router as media_man
 from mediamop.platform.media_managers.intake_api import router as media_manager_intake_router
 from mediamop.platform.notifications.router import router as notifications_router
 from mediamop.platform.reconciliation.router import router as reconciliation_router
+from mediamop.platform.suite_settings.pause_api import router as suite_pause_router
 from mediamop.platform.suite_settings.router import router as suite_settings_router
 from mediamop.platform.system_configuration.router import router as system_configuration_router
 
@@ -37,6 +38,7 @@ def build_v1_router() -> APIRouter:
     router.include_router(local_browse_router)
     router.include_router(reconciliation_router)
     router.include_router(suite_settings_router)
+    router.include_router(suite_pause_router)
     router.include_router(dashboard_router)
     router.include_router(activity_router)
     router.include_router(refiner_router)

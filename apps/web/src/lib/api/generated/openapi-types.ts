@@ -1246,6 +1246,24 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/suite/pause": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Suite Pause */
+    get: operations["get_suite_pause_api_v1_suite_pause_get"];
+    /** Put Suite Pause */
+    put: operations["put_suite_pause_api_v1_suite_pause_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/suite/security-overview": {
     parameters: {
       query?: never;
@@ -3066,6 +3084,12 @@ export interface components {
        */
       schedule_end: string;
       /**
+       * Schedule Grid
+       * @description 7 days x 96 quarter-hours as 672 characters of 0/1, Monday first. Empty means no restriction. Work already running finishes when a window closes; the window stops MediaMop starting anything new.
+       * @default
+       */
+      schedule_grid: string;
+      /**
        * Schedule Hours Limited
        * @default false
        */
@@ -3182,6 +3206,8 @@ export interface components {
       schedule_enabled: boolean;
       /** Schedule End */
       schedule_end: string;
+      /** Schedule Grid */
+      schedule_grid: string;
       /** Schedule Hours Limited */
       schedule_hours_limited: boolean;
       /** Schedule Start */
@@ -3325,6 +3351,12 @@ export interface components {
        * @default 23:59
        */
       schedule_end: string;
+      /**
+       * Schedule Grid
+       * @description 7 days x 96 quarter-hours as 672 characters of 0/1, Monday first. Empty means no restriction. Work already running finishes when a window closes; the window stops MediaMop starting anything new.
+       * @default
+       */
+      schedule_grid: string;
       /**
        * Schedule Hours Limited
        * @default false
@@ -4087,6 +4119,48 @@ export interface components {
       status: string;
       /** Total Deleted */
       total_deleted: number;
+    };
+    /** SuitePauseIn */
+    SuitePauseIn: {
+      /** Csrf Token */
+      csrf_token: string;
+      /**
+       * Pause For Minutes
+       * @description Lift the pause automatically after this many minutes. Omit for a pause with no expiry.
+       */
+      pause_for_minutes?: number | null;
+      /** Paused */
+      paused: boolean;
+      /**
+       * Scan While Paused
+       * @default true
+       */
+      scan_while_paused: boolean;
+    };
+    /** SuitePauseOut */
+    SuitePauseOut: {
+      /**
+       * In Flight Policy
+       * @description What happens to work that is already running when a pause or a schedule window starts.
+       */
+      in_flight_policy: string;
+      /** Paused */
+      paused: boolean;
+      /**
+       * Paused Until
+       * @description When the pause lifts on its own. Null for a pause that lasts until it is lifted by hand.
+       */
+      paused_until?: string | null;
+      /**
+       * Reason
+       * @description What to show an operator, written for them rather than for the code.
+       */
+      reason: string;
+      /**
+       * Scan While Paused
+       * @description Whether MediaMop keeps noticing new files while it is not working on them.
+       */
+      scan_while_paused: boolean;
     };
     /**
      * SuiteSecurityOverviewOut
@@ -6870,6 +6944,59 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["SuiteOperationalHistoryResetOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_suite_pause_api_v1_suite_pause_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SuitePauseOut"];
+        };
+      };
+    };
+  };
+  put_suite_pause_api_v1_suite_pause_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SuitePauseIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SuitePauseOut"];
         };
       };
       /** @description Validation Error */
