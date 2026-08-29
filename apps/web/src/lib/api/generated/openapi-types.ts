@@ -1042,6 +1042,44 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/refiner/metadata-provider": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Metadata Provider */
+    get: operations["get_metadata_provider_api_v1_refiner_metadata_provider_get"];
+    /** Put Metadata Provider */
+    put: operations["put_metadata_provider_api_v1_refiner_metadata_provider_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/metadata-provider/test": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Metadata Provider Test
+     * @description Ask the provider a real question, so a saved connection is proven rather than assumed.
+     */
+    post: operations["post_metadata_provider_test_api_v1_refiner_metadata_provider_test_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/refiner/operator-settings": {
     parameters: {
       query?: never;
@@ -2203,6 +2241,61 @@ export interface components {
       webhook_secret: string;
       /** Webhook Url Path */
       webhook_url_path: string;
+    };
+    /** MetadataProviderIn */
+    MetadataProviderIn: {
+      /**
+       * Api Key
+       * @description Omit to leave the stored key untouched. An empty string clears it.
+       */
+      api_key?: string | null;
+      /**
+       * Base Url
+       * @default
+       */
+      base_url: string;
+      /** Csrf Token */
+      csrf_token: string;
+      /**
+       * Provider
+       * @description Empty clears the connection.
+       * @default
+       * @enum {string}
+       */
+      provider: "" | "tmdb";
+    };
+    /** MetadataProviderOut */
+    MetadataProviderOut: {
+      /**
+       * Base Url
+       * @description Where MediaMop asks. Configurable so a cache or gateway in front of the provider works.
+       */
+      base_url: string;
+      /**
+       * Key Configured
+       * @description Whether a key is stored. The key itself is never returned.
+       */
+      key_configured: boolean;
+      /** Known Providers */
+      known_providers?: string[];
+      /**
+       * Provider
+       * @description The configured provider, or empty when there is none.
+       */
+      provider: string;
+    };
+    /** MetadataProviderTestOut */
+    MetadataProviderTestOut: {
+      /**
+       * Detail
+       * @description What happened, written for the person reading it.
+       */
+      detail: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "matched" | "no_match" | "not_configured" | "unreachable";
     };
     /** NotificationChannelIn */
     NotificationChannelIn: {
@@ -4198,8 +4291,38 @@ export interface components {
        * @enum {string}
        */
       default_audio_slot: "primary" | "secondary" | "tertiary";
+      /**
+       * Keep Original Language
+       * @description Keep the audio in the film's original language instead of following the language preferences. Needs a metadata provider; without one the preferences decide exactly as before.
+       * @default false
+       */
+      keep_original_language: boolean;
       /** Name */
       name: string;
+      /**
+       * Original Language Additional Csv
+       * @description Extra languages kept alongside the original, comma separated.
+       * @default
+       */
+      original_language_additional_csv: string;
+      /**
+       * Original Language First If None
+       * @description If nothing matches the original language, fall back to the language preferences so the output still has audio. A safety net rather than a preference.
+       * @default true
+       */
+      original_language_first_if_none: boolean;
+      /**
+       * Original Language Keep Only First
+       * @description Keep only the first track of each kept language.
+       * @default true
+       */
+      original_language_keep_only_first: boolean;
+      /**
+       * Original Language Treat Empty As Original
+       * @description Treat a track with no language tag as the original language.
+       * @default false
+       */
+      original_language_treat_empty_as_original: boolean;
       /**
        * Preserve Default Subs
        * @default true
@@ -4288,8 +4411,18 @@ export interface components {
       default_audio_slot: string;
       /** Id */
       id: number;
+      /** Keep Original Language */
+      keep_original_language: boolean;
       /** Name */
       name: string;
+      /** Original Language Additional Csv */
+      original_language_additional_csv: string;
+      /** Original Language First If None */
+      original_language_first_if_none: boolean;
+      /** Original Language Keep Only First */
+      original_language_keep_only_first: boolean;
+      /** Original Language Treat Empty As Original */
+      original_language_treat_empty_as_original: boolean;
       /** Preserve Default Subs */
       preserve_default_subs: boolean;
       /** Preserve Forced Subs */
@@ -6963,6 +7096,92 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["RefinerLibraryOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_metadata_provider_api_v1_refiner_metadata_provider_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MetadataProviderOut"];
+        };
+      };
+    };
+  };
+  put_metadata_provider_api_v1_refiner_metadata_provider_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MetadataProviderIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MetadataProviderOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  post_metadata_provider_test_api_v1_refiner_metadata_provider_test_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MetadataProviderIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MetadataProviderTestOut"];
         };
       };
       /** @description Validation Error */

@@ -36,6 +36,14 @@ class SuiteSettingsRow(Base):
     # Usually you want to keep noticing files while declining to work on them, so this
     # defaults on: pausing stops processing, not detection.
     scan_while_paused: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
+
+    # The metadata provider. On the suite rather than on Refiner because "what is this
+    # film's original language" is not a Refiner question — Pruner will want the same
+    # answer. The base URL is configurable so a cache or gateway in front of TMDb works
+    # (#343). The key is encrypted with the same helper the manager credentials use.
+    metadata_provider: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    metadata_provider_base_url: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    metadata_provider_key_ciphertext: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

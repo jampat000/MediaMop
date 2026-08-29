@@ -27,6 +27,11 @@ class RefinerRuleSetOut(BaseModel):
     audio_preference_mode: str
     audio_sorters_json: str
     subtitle_sorters_json: str
+    keep_original_language: bool
+    original_language_additional_csv: str
+    original_language_keep_only_first: bool
+    original_language_first_if_none: bool
+    original_language_treat_empty_as_original: bool
     remove_images: bool
     remove_attachments: bool
     remove_title: bool
@@ -62,6 +67,29 @@ class RefinerRuleSetIn(BaseModel):
         ),
     )
     subtitle_sorters_json: str = Field("", description="The same, for subtitle tracks.")
+    keep_original_language: bool = Field(
+        False,
+        description=(
+            "Keep the audio in the film's original language instead of following the language preferences. "
+            "Needs a metadata provider; without one the preferences decide exactly as before."
+        ),
+    )
+    original_language_additional_csv: str = Field(
+        "", max_length=200, description="Extra languages kept alongside the original, comma separated."
+    )
+    original_language_keep_only_first: bool = Field(
+        True, description="Keep only the first track of each kept language."
+    )
+    original_language_first_if_none: bool = Field(
+        True,
+        description=(
+            "If nothing matches the original language, fall back to the language preferences so the output "
+            "still has audio. A safety net rather than a preference."
+        ),
+    )
+    original_language_treat_empty_as_original: bool = Field(
+        False, description="Treat a track with no language tag as the original language."
+    )
     remove_images: bool = Field(
         False,
         description=(

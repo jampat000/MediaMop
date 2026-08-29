@@ -202,6 +202,14 @@ class RefinerRulesConfig:
     audio_sorters_json: str = ""
     #: Metadata and attachment stripping. All off by default (#342).
     metadata: MetadataRules = field(default_factory=MetadataRules)
+    #: Original-language audio selection. Typed loosely here so the rules module stays
+    #: free of the metadata integration — the pass owns the lookup and hands the result
+    #: in as ``preferred_audio_indices`` (#343).
+    original_language: Any = None
+    #: Input indices the pass wants preferred, in order, from the metadata lookup.
+    preferred_audio_indices: tuple[int, ...] = ()
+    #: The sentence explaining which mechanism chose, appended to the selection notes.
+    original_language_note: str = ""
 
 
 def _ordered_preference_langs(config: RefinerRulesConfig) -> list[str]:
@@ -378,6 +386,24 @@ def _quality_sort_key(
     return (fp, *sort_key_for_track(ordered, _candidate_as_track(c)))
 
 
+def _pick_from_hint(pool: list[_AudioCandidate], hint: tuple[int, ...] | None) -> _AudioCandidate | None:
+    """The first hinted track that is still a candidate, or None.
+
+    "Still a candidate" is the load-bearing part: the hint comes from a metadata lookup
+    that knows nothing about commentary removal or the probe rules, so a hinted track
+    that those rules already excluded must not be resurrected by it.
+    """
+
+    if not hint:
+        return None
+    by_index = {c.input_index: c for c in pool}
+    for index in hint:
+        found = by_index.get(int(index))
+        if found is not None:
+            return found
+    return None
+
+
 def _pick_best(
     pool: list[_AudioCandidate],
     *,
@@ -417,6 +443,20 @@ def _select_audio_winner(
     # explanation names the configured order rather than a fixed sentence (#341).
     sorters = parse_sorters(config.audio_sorters_json)
     notes.append(f"Track ranking: {describe_sorters(sorters)}.")
+
+    # Original-language selection, when the pass resolved one. It only ever *chooses from*
+    # the surviving candidates — it never adds one back, and when it names nothing the
+    # existing preference-list behaviour runs untouched, which is what keeps the
+    # never-no-audio guarantee intact (#343).
+    hint = getattr(config, "preferred_audio_indices", None)
+    hint_note = getattr(config, "original_language_note", "")
+    if hint_note:
+        notes.append(hint_note)
+    if hint and candidates:
+        chosen = _pick_from_hint(candidates, tuple(hint))
+        if chosen is not None:
+            notes.append(f"Selected {_describe_candidate(chosen)} by original language.")
+            return chosen, removed_audio, notes
 
     if not candidates:
         notes.append("No eligible audio tracks after commentary and probe rules.")

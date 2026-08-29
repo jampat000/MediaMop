@@ -61,6 +61,15 @@ class RefinerRuleSetRow(Base):
     audio_sorters_json: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     subtitle_sorters_json: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
 
+    # Original-language audio selection. All off by default; first_if_none is a safety
+    # net rather than a preference, because plan_remux already refuses to write a file
+    # with no audio and none of this may weaken that (#343).
+    keep_original_language: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    original_language_additional_csv: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    original_language_keep_only_first: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
+    original_language_first_if_none: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
+    original_language_treat_empty_as_original: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+
     # Metadata and attachment stripping, all off by default. An embedded poster is an
     # mjpeg video stream, so removing images is a stream decision as well as a metadata
     # one (#342).
