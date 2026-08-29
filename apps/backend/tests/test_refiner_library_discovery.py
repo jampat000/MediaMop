@@ -304,3 +304,175 @@ def test_a_connection_with_no_saved_key_cannot_be_asked(session: Session, tmp_pa
     with pytest.raises(RefinerDiscoveryError) as exc:
         discoverable_libraries(session, MediaMopSettings.load(), row)
     assert "address and API key" in str(exc.value)
+
+
+# --- the confirmed Deluno contract ----------------------------------------------------
+#
+# #351 shipped against an *unconfirmed* manifest: the documented sample was captured on an
+# unconfigured instance and showed `"libraries": []`, so the populated entry shape was
+# invisible. Deluno#331 answered it from a live rig. These are the two entries exactly as
+# that answer reported them, so the parser is tested against a real body rather than a
+# hand-written guess (#364).
+
+DELUNO_MANIFEST_LIBRARIES: list[dict] = [
+    {
+        "id": "01a03d99f2f47c6587a496701b52f58f",
+        "name": "Movies",
+        "mediaType": "movies",
+        "rootPath": r"C:\Deluno\Library\Movies",
+        "importWorkflow": "refine-before-import",
+        "processorOutputPath": r"C:\Deluno\Refined\Movies",
+    },
+    {
+        "id": "01a03d9c14537c67b22f8215ea5fc45f",
+        "name": "TV",
+        "mediaType": "tv",
+        "rootPath": r"C:\Deluno\Library\TV",
+        "importWorkflow": "standard",
+        "processorOutputPath": "",
+    },
+]
+
+
+def test_the_real_deluno_manifest_entries_parse() -> None:
+    from mediamop.platform.media_managers.manager_dialects import _manifest_library_descriptor
+
+    movies, tv = (_manifest_library_descriptor(entry) for entry in DELUNO_MANIFEST_LIBRARIES)
+
+    assert movies.key == "01a03d99f2f47c6587a496701b52f58f"
+    assert movies.name == "Movies"
+    # "movies" plural is what Deluno actually sends; Refiner's scope is singular.
+    assert movies.media_scope == "movie"
+    assert movies.root_path == r"C:\Deluno\Library\Movies"
+    assert tv.media_scope == "tv"
+    assert tv.root_path == r"C:\Deluno\Library\TV"
+
+
+def test_a_refine_before_import_library_carries_its_processed_output_root() -> None:
+    from mediamop.platform.media_managers.manager_dialects import _manifest_library_descriptor
+
+    movies = _manifest_library_descriptor(DELUNO_MANIFEST_LIBRARIES[0])
+
+    assert movies.processes_before_import is True
+    assert movies.output_path == r"C:\Deluno\Refined\Movies"
+
+
+def test_a_standard_library_reports_no_processed_output_root() -> None:
+    """The workflow is what to branch on, not whether the path happens to be there.
+
+    Deluno sends an empty string for a `standard` library, so treating a present-but-empty
+    value as a configured path would seed an output folder of "".
+    """
+
+    from mediamop.platform.media_managers.manager_dialects import _manifest_library_descriptor
+
+    tv = _manifest_library_descriptor(DELUNO_MANIFEST_LIBRARIES[1])
+
+    assert tv.processes_before_import is False
+    assert tv.output_path is None
+
+
+def test_an_entry_with_no_id_is_skipped_rather_than_imported_anonymously() -> None:
+    from mediamop.platform.media_managers.manager_dialects import _manifest_library_key
+
+    assert _manifest_library_key({"name": "Nameless", "rootPath": "/srv"}) is None
+    assert _manifest_library_key(DELUNO_MANIFEST_LIBRARIES[0]) == "01a03d99f2f47c6587a496701b52f58f"
+
+
+def test_importing_a_refine_before_import_library_seeds_its_output_folder(
+    session: Session, connection: MediaManagerConnectionRow, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Without this a discovered library arrived with no output folder and could not run.
+
+    Discovery was a half-import: it filled in the watched folder and left the operator to
+    type the one the manager had already told MediaMop about.
+    """
+
+    watched = tmp_path / "library"
+    watched.mkdir()
+    output = tmp_path / "refined"
+    output.mkdir()
+    _reports(
+        monkeypatch,
+        ManagerLibraryDescriptor(
+            key="01a03d99f2f47c6587a496701b52f58f",
+            name="Movies",
+            media_scope="movie",
+            root_path=str(watched),
+            output_path=str(output),
+            processes_before_import=True,
+        ),
+    )
+
+    created = import_libraries(session, _settings(), connection, keys=["01a03d99f2f47c6587a496701b52f58f"])[0]
+
+    assert created.watched_folder == str(watched)
+    assert created.output_folder == str(output)
+
+
+def test_a_standard_library_is_imported_with_no_output_folder(
+    session: Session, connection: MediaManagerConnectionRow, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """It is not a refine-before-import library, so the manager has nowhere to expect
+    output and MediaMop must not invent one."""
+
+    watched = tmp_path / "library"
+    watched.mkdir()
+    _reports(
+        monkeypatch,
+        ManagerLibraryDescriptor(key="8", name="TV", media_scope="tv", root_path=str(watched)),
+    )
+
+    created = import_libraries(session, _settings(), connection, keys=["8"])[0]
+
+    assert created.output_folder == ""
+
+
+def test_an_output_root_this_machine_cannot_see_is_left_empty_rather_than_saved(
+    session: Session, connection: MediaManagerConnectionRow, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Same rule as the watched folder: the manager's path is not necessarily one
+    MediaMop can see, and a library pointed at a folder that is not there would fail."""
+
+    watched = tmp_path / "library"
+    watched.mkdir()
+    _reports(
+        monkeypatch,
+        ManagerLibraryDescriptor(
+            key="7",
+            name="Movies",
+            media_scope="movie",
+            root_path=str(watched),
+            output_path="relative/not/absolute",
+            processes_before_import=True,
+        ),
+    )
+
+    created = import_libraries(session, _settings(), connection, keys=["7"])[0]
+
+    assert created.watched_folder == str(watched)
+    assert created.output_folder == ""
+
+
+def test_the_listing_shows_the_output_root_before_the_import(
+    session: Session, connection: MediaManagerConnectionRow, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """So the operator sees what will be filled in, rather than discovering it after."""
+
+    _reports(
+        monkeypatch,
+        ManagerLibraryDescriptor(
+            key="7",
+            name="Movies",
+            media_scope="movie",
+            root_path=str(tmp_path),
+            output_path=str(tmp_path),
+            processes_before_import=True,
+        ),
+    )
+
+    found = discoverable_libraries(session, _settings(), connection)[0]
+
+    assert found.processes_before_import is True
+    assert found.output_path == str(tmp_path)
+    assert found.output_path_problem is None

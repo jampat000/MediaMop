@@ -441,6 +441,36 @@
             "title": "Name",
             "type": "string"
           },
+          "output_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the manager expects processed output. Only set when it processes before importing.",
+            "title": "Output Path"
+          },
+          "output_path_problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why that output path cannot be used on this machine.",
+            "title": "Output Path Problem"
+          },
+          "processes_before_import": {
+            "default": false,
+            "description": "Whether the manager processes this library before importing it. When it does, it also publishes where it expects the finished file.",
+            "title": "Processes Before Import",
+            "type": "boolean"
+          },
           "root_path": {
             "anyOf": [
               {

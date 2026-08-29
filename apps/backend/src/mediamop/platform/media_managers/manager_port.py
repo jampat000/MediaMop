@@ -154,6 +154,12 @@ class ManagerLibraryDescriptor:
     name: str
     media_scope: MediaScope | None
     root_path: str | None = None
+    #: Where the manager expects processed output, when it has somewhere to put it.
+    #: Deluno populates this only for a library configured ``refine-before-import``;
+    #: a ``standard`` library sends an empty value, so ``processes_before_import`` is
+    #: the field to branch on rather than the presence of a path (Deluno#331).
+    output_path: str | None = None
+    processes_before_import: bool = False
 
 
 @dataclass(frozen=True, slots=True)
