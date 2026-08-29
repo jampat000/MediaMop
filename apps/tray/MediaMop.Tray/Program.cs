@@ -224,20 +224,40 @@ sealed class UpdateSettings
     internal static UpdateSettings Load(string runtimeHome)
     {
         var path = Path.Combine(runtimeHome, "update-settings.json");
+        // No file is a fresh install: nobody has chosen yet, so the shipped default applies.
         if (!File.Exists(path)) return new UpdateSettings();
         try
         {
             var json = File.ReadAllText(path);
-            return JsonSerializer.Deserialize<UpdateSettings>(json, JsonOptions) ?? new UpdateSettings();
+            return JsonSerializer.Deserialize<UpdateSettings>(json, JsonOptions)
+                ?? throw new InvalidDataException("update-settings.json parsed as null.");
         }
-        catch { return new UpdateSettings(); }
+        catch (Exception ex)
+        {
+            // A file that exists but cannot be read is a different situation from no file:
+            // it means a choice was made and we cannot tell what it was. Auto is the only
+            // mode that installs an update with nobody watching, so guessing it is the one
+            // guess that can act against an explicit choice — an operator who picked
+            // NotifyOnly would be auto-updated by a truncated file. This is the read that
+            // decides whether to install, so it matters more here than in the backend copy
+            // it deliberately mirrors (get_update_settings in update_service.py).
+            Program.AppendFallbackLog(
+                $"update-settings.json could not be read ({ex.Message}). Using NotifyOnly so a damaged "
+                + "file cannot install an update the operator did not choose.");
+            return new UpdateSettings { Mode = UpdateMode.NotifyOnly };
+        }
     }
 
     internal void Save(string runtimeHome)
     {
         var path = Path.Combine(runtimeHome, "update-settings.json");
         Directory.CreateDirectory(runtimeHome);
-        File.WriteAllText(path, JsonSerializer.Serialize(this, JsonOptions));
+        // Written whole and then renamed. WriteAllText truncates first, so a crash mid-write
+        // leaves exactly the half-file Load has to guess its way around; the point of that
+        // fallback is to stay unreachable in practice.
+        var tmp = path + ".tmp";
+        File.WriteAllText(tmp, JsonSerializer.Serialize(this, JsonOptions));
+        File.Move(tmp, path, overwrite: true);
     }
 }
 
