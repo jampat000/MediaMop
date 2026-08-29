@@ -2803,100 +2803,6 @@
         "title": "ReconciliationRepairIn",
         "type": "object"
       },
-      "RefinerCandidateGateManualEnqueueIn": {
-        "description": "Operator supplies a real release candidate; workers compare it to every connected manager.\n\nThe candidate is described by the **library it belongs to**, not by the product that\nmanages it: one Movies library may be served by several connections at once, and the\ngate asks all of them.",
-        "properties": {
-          "csrf_token": {
-            "minLength": 1,
-            "title": "Csrf Token",
-            "type": "string"
-          },
-          "entity_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The manager's own id for this movie or series, when matching without a path",
-            "title": "Entity Id"
-          },
-          "media_scope": {
-            "enum": [
-              "movie",
-              "tv"
-            ],
-            "title": "Media Scope",
-            "type": "string"
-          },
-          "output_path": {
-            "anyOf": [
-              {
-                "maxLength": 4000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Output Path"
-          },
-          "release_title": {
-            "maxLength": 500,
-            "minLength": 1,
-            "title": "Release Title",
-            "type": "string"
-          },
-          "release_year": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Release Year"
-          }
-        },
-        "required": [
-          "media_scope",
-          "release_title",
-          "csrf_token"
-        ],
-        "title": "RefinerCandidateGateManualEnqueueIn",
-        "type": "object"
-      },
-      "RefinerCandidateGateManualEnqueueOut": {
-        "properties": {
-          "dedupe_key": {
-            "title": "Dedupe Key",
-            "type": "string"
-          },
-          "job_id": {
-            "title": "Job Id",
-            "type": "integer"
-          },
-          "job_kind": {
-            "title": "Job Kind",
-            "type": "string"
-          },
-          "ok": {
-            "default": true,
-            "title": "Ok",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "job_id",
-          "dedupe_key",
-          "job_kind"
-        ],
-        "title": "RefinerCandidateGateManualEnqueueOut",
-        "type": "object"
-      },
       "RefinerFileForgetIn": {
         "additionalProperties": false,
         "properties": {
@@ -2960,6 +2866,23 @@
             "description": "The media manager connection holding this file, when the status is blocked_upstream.",
             "title": "Blocked By Connection"
           },
+          "failure_attempts": {
+            "default": 0,
+            "title": "Failure Attempts",
+            "type": "integer"
+          },
+          "failure_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why this file failed, in terms a retry policy acts on: preflight, execution, guardrail, unknown.",
+            "title": "Failure Class"
+          },
           "hold_until": {
             "anyOf": [
               {
@@ -3008,6 +2931,19 @@
           "library_name": {
             "title": "Library Name",
             "type": "string"
+          },
+          "next_retry_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When MediaMop will try this file again on its own. Null when no automatic retry is coming.",
+            "title": "Next Retry At"
           },
           "relative_path": {
             "title": "Relative Path",
@@ -3122,6 +3058,90 @@
           "job_kind"
         ],
         "title": "RefinerFileRemuxPassManualEnqueueOut",
+        "type": "object"
+      },
+      "RefinerFileRequeueIn": {
+        "additionalProperties": false,
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrf_token"
+        ],
+        "title": "RefinerFileRequeueIn",
+        "type": "object"
+      },
+      "RefinerFilesBulkRequeueIn": {
+        "additionalProperties": false,
+        "description": "Requeue everything matching a filter, described the same way the list is filtered.",
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "file_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "unprocessed",
+                  "processing",
+                  "processed",
+                  "processing_failed",
+                  "disabled",
+                  "on_hold",
+                  "out_of_schedule",
+                  "blocked_upstream"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Status"
+          },
+          "library_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Library Id"
+          },
+          "limit": {
+            "default": 200,
+            "description": "A ceiling on how many are queued in one go, so a mis-typed filter cannot queue a whole library.",
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "path_contains": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path Contains"
+          }
+        },
+        "required": [
+          "csrf_token"
+        ],
+        "title": "RefinerFilesBulkRequeueIn",
         "type": "object"
       },
       "RefinerFilesPageOut": {
@@ -3393,6 +3413,14 @@
             "title": "Manager Connection Ids",
             "type": "array"
           },
+          "max_attempts": {
+            "default": 3,
+            "description": "How many times MediaMop tries a file on its own before stopping.",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Max Attempts",
+            "type": "integer"
+          },
           "max_concurrent_files": {
             "default": 1,
             "maximum": 8.0,
@@ -3453,6 +3481,26 @@
             "minimum": -100.0,
             "title": "Priority",
             "type": "integer"
+          },
+          "retry_backoff_seconds": {
+            "default": 300,
+            "description": "The first wait before a retry. It doubles each attempt, capped at an hour.",
+            "maximum": 3600.0,
+            "minimum": 1.0,
+            "title": "Retry Backoff Seconds",
+            "type": "integer"
+          },
+          "retry_execution_failures": {
+            "default": true,
+            "description": "Retry files that failed while being processed \u2014 a dead ffmpeg, a full disk, a dropped share.",
+            "title": "Retry Execution Failures",
+            "type": "boolean"
+          },
+          "retry_preflight_failures": {
+            "default": false,
+            "description": "Retry files rejected before work started. Off by default: a file with no usable audio will not have grown one in five minutes.",
+            "title": "Retry Preflight Failures",
+            "type": "boolean"
           },
           "rule_set_id": {
             "anyOf": [
@@ -3660,6 +3708,10 @@
             "title": "Manager Connection Ids",
             "type": "array"
           },
+          "max_attempts": {
+            "title": "Max Attempts",
+            "type": "integer"
+          },
           "max_concurrent_files": {
             "title": "Max Concurrent Files",
             "type": "integer"
@@ -3699,6 +3751,18 @@
           "priority": {
             "title": "Priority",
             "type": "integer"
+          },
+          "retry_backoff_seconds": {
+            "title": "Retry Backoff Seconds",
+            "type": "integer"
+          },
+          "retry_execution_failures": {
+            "title": "Retry Execution Failures",
+            "type": "boolean"
+          },
+          "retry_preflight_failures": {
+            "title": "Retry Preflight Failures",
+            "type": "boolean"
           },
           "rule_set_id": {
             "anyOf": [
@@ -3793,6 +3857,10 @@
           "skip_access_tests",
           "file_system_events_enabled",
           "schedule_grid",
+          "max_attempts",
+          "retry_backoff_seconds",
+          "retry_execution_failures",
+          "retry_preflight_failures",
           "schedule_enabled",
           "schedule_hours_limited",
           "schedule_days",
@@ -3899,6 +3967,14 @@
             "title": "Manager Connection Ids",
             "type": "array"
           },
+          "max_attempts": {
+            "default": 3,
+            "description": "How many times MediaMop tries a file on its own before stopping.",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Max Attempts",
+            "type": "integer"
+          },
           "max_concurrent_files": {
             "default": 1,
             "maximum": 8.0,
@@ -3959,6 +4035,26 @@
             "minimum": -100.0,
             "title": "Priority",
             "type": "integer"
+          },
+          "retry_backoff_seconds": {
+            "default": 300,
+            "description": "The first wait before a retry. It doubles each attempt, capped at an hour.",
+            "maximum": 3600.0,
+            "minimum": 1.0,
+            "title": "Retry Backoff Seconds",
+            "type": "integer"
+          },
+          "retry_execution_failures": {
+            "default": true,
+            "description": "Retry files that failed while being processed \u2014 a dead ffmpeg, a full disk, a dropped share.",
+            "title": "Retry Execution Failures",
+            "type": "boolean"
+          },
+          "retry_preflight_failures": {
+            "default": false,
+            "description": "Retry files rejected before work started. Off by default: a file with no usable audio will not have grown one in five minutes.",
+            "title": "Retry Preflight Failures",
+            "type": "boolean"
           },
           "rule_set_id": {
             "anyOf": [
@@ -4047,6 +4143,16 @@
       "RefinerOperatorSettingsOut": {
         "additionalProperties": false,
         "properties": {
+          "failure_cleanup_enabled": {
+            "description": "Delete the source release folder after a file fails terminally. Off by default: this removes the original, so it stays off until you choose it.",
+            "title": "Failure Cleanup Enabled",
+            "type": "boolean"
+          },
+          "keep_failed_work_files": {
+            "description": "Keep a failed run's working files so they can be inspected instead of swept.",
+            "title": "Keep Failed Work Files",
+            "type": "boolean"
+          },
           "max_concurrent_files": {
             "maximum": 8.0,
             "minimum": 1.0,
@@ -4166,6 +4272,11 @@
           "updated_at": {
             "title": "Updated At",
             "type": "string"
+          },
+          "work_temp_stale_sweep_enabled": {
+            "description": "Reclaim MediaMop's own stale working files. Safe, and on by default.",
+            "title": "Work Temp Stale Sweep Enabled",
+            "type": "boolean"
           }
         },
         "required": [
@@ -4175,6 +4286,9 @@
           "runner_cost_720p",
           "runner_cost_1080p",
           "runner_cost_4k",
+          "work_temp_stale_sweep_enabled",
+          "failure_cleanup_enabled",
+          "keep_failed_work_files",
           "runner_cost_undetermined",
           "min_file_age_seconds",
           "refiner_min_input_file_size_mb",
@@ -4203,6 +4317,28 @@
             "minLength": 1,
             "title": "Csrf Token",
             "type": "string"
+          },
+          "failure_cleanup_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Cleanup Enabled"
+          },
+          "keep_failed_work_files": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Keep Failed Work Files"
           },
           "max_concurrent_files": {
             "anyOf": [
@@ -4449,6 +4585,17 @@
               }
             ],
             "title": "Tv Schedule Start"
+          },
+          "work_temp_stale_sweep_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Temp Stale Sweep Enabled"
           }
         },
         "required": [
@@ -4945,6 +5092,29 @@
         "title": "RefinerRemuxRulesSettingsPutIn",
         "type": "object"
       },
+      "RefinerRequeueOut": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "requeued": {
+            "title": "Requeued",
+            "type": "integer"
+          },
+          "skipped": {
+            "title": "Skipped",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "requeued",
+          "skipped",
+          "detail"
+        ],
+        "title": "RefinerRequeueOut",
+        "type": "object"
+      },
       "RefinerRuleSetIn": {
         "additionalProperties": false,
         "properties": {
@@ -5332,49 +5502,6 @@
         "title": "RefinerRuntimeSettingsOut",
         "type": "object"
       },
-      "RefinerSuppliedPayloadEvaluationManualEnqueueIn": {
-        "description": "Operator-triggered enqueue (singleton dedupe; returns existing row when present).",
-        "properties": {
-          "csrf_token": {
-            "minLength": 1,
-            "title": "Csrf Token",
-            "type": "string"
-          }
-        },
-        "required": [
-          "csrf_token"
-        ],
-        "title": "RefinerSuppliedPayloadEvaluationManualEnqueueIn",
-        "type": "object"
-      },
-      "RefinerSuppliedPayloadEvaluationManualEnqueueOut": {
-        "properties": {
-          "dedupe_key": {
-            "title": "Dedupe Key",
-            "type": "string"
-          },
-          "job_id": {
-            "title": "Job Id",
-            "type": "integer"
-          },
-          "job_kind": {
-            "title": "Job Kind",
-            "type": "string"
-          },
-          "ok": {
-            "default": true,
-            "title": "Ok",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "job_id",
-          "dedupe_key",
-          "job_kind"
-        ],
-        "title": "RefinerSuppliedPayloadEvaluationManualEnqueueOut",
-        "type": "object"
-      },
       "RefinerWatchedFolderRemuxScanDispatchManualEnqueueIn": {
         "additionalProperties": false,
         "description": "Queue one watched-folder scan.",
@@ -5434,6 +5561,107 @@
           "job_kind"
         ],
         "title": "RefinerWatchedFolderRemuxScanDispatchManualEnqueueOut",
+        "type": "object"
+      },
+      "RefinerWhyHeldOut": {
+        "description": "A live answer, alongside the recorded one, so a stale record is visible as stale.",
+        "properties": {
+          "blocked_by_connection": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The connection holding this file, named the way MediaMop names connections.",
+            "title": "Blocked By Connection"
+          },
+          "blocked_upstream": {
+            "title": "Blocked Upstream",
+            "type": "boolean"
+          },
+          "file_id": {
+            "title": "File Id",
+            "type": "integer"
+          },
+          "library_name": {
+            "title": "Library Name",
+            "type": "string"
+          },
+          "managers_consulted": {
+            "title": "Managers Consulted",
+            "type": "integer"
+          },
+          "managers_reporting": {
+            "title": "Managers Reporting",
+            "type": "integer"
+          },
+          "managers_without_queue_signal": {
+            "description": "Connections that could not answer. A manager that is unreachable is reported, never assumed idle.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Managers Without Queue Signal",
+            "type": "array"
+          },
+          "owned": {
+            "title": "Owned",
+            "type": "boolean"
+          },
+          "queue_row_count": {
+            "title": "Queue Row Count",
+            "type": "integer"
+          },
+          "reasons": {
+            "description": "Plain-language reasons, already written for the person reading them.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "recorded_reason": {
+            "description": "The sentence the last scan recorded.",
+            "title": "Recorded Reason",
+            "type": "string"
+          },
+          "recorded_status": {
+            "description": "What the last scan concluded about this file.",
+            "title": "Recorded Status",
+            "type": "string"
+          },
+          "relative_path": {
+            "title": "Relative Path",
+            "type": "string"
+          },
+          "verdict": {
+            "description": "What the managers say right now. 'no_upstream_signal' is distinct from 'not_held': unknown never means safe.",
+            "enum": [
+              "proceed",
+              "wait_upstream",
+              "not_held",
+              "no_upstream_signal"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file_id",
+          "relative_path",
+          "library_name",
+          "recorded_status",
+          "recorded_reason",
+          "verdict",
+          "owned",
+          "blocked_upstream",
+          "queue_row_count",
+          "managers_consulted",
+          "managers_reporting"
+        ],
+        "title": "RefinerWhyHeldOut",
         "type": "object"
       },
       "SuiteConfigurationBackupItemOut": {
@@ -8499,6 +8727,49 @@
         ]
       }
     },
+    "/api/v1/refiner/files/requeue": {
+      "post": {
+        "description": "Try every file matching this filter again.\n\nThe filter is the same one the list uses, and ``limit`` is a ceiling rather than a\npage size: a mis-typed filter should not be able to queue a whole library.",
+        "operationId": "requeue_refiner_files_api_v1_refiner_files_requeue_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefinerFilesBulkRequeueIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefinerRequeueOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Requeue Refiner Files",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
     "/api/v1/refiner/files/{file_id}": {
       "delete": {
         "description": "Forget a file. Removes MediaMop's record of it, never the file on disk.",
@@ -8602,15 +8873,27 @@
         ]
       }
     },
-    "/api/v1/refiner/jobs/candidate-gate/enqueue": {
+    "/api/v1/refiner/files/{file_id}/requeue": {
       "post": {
-        "description": "Refiner: enqueue one ownership / upstream-blocking evaluation against every connected media manager.",
-        "operationId": "post_refiner_candidate_gate_enqueue_api_v1_refiner_jobs_candidate_gate_enqueue_post",
+        "description": "Try this file again now.\n\nA manual requeue resets the attempt count and ignores the backoff: whoever asked has\nusually just fixed the thing that broke, so making them wait it out \u2014 or refusing\nbecause the automatic attempts are spent \u2014 would answer a question they did not ask.",
+        "operationId": "requeue_refiner_file_api_v1_refiner_files__file_id__requeue_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "File Id",
+              "type": "integer"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RefinerCandidateGateManualEnqueueIn"
+                "$ref": "#/components/schemas/RefinerFileRequeueIn"
               }
             }
           },
@@ -8621,7 +8904,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RefinerCandidateGateManualEnqueueOut"
+                  "$ref": "#/components/schemas/RefinerRequeueOut"
                 }
               }
             },
@@ -8638,7 +8921,52 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Post Refiner Candidate Gate Enqueue",
+        "summary": "Requeue Refiner File",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/files/{file_id}/why-held": {
+      "get": {
+        "description": "Ask every manager covering this file's library what it is doing with it, right now.\n\nDeliberately live rather than cached: the question is only ever asked because the\nrecorded state looks wrong or stale, and answering it from the same record would be\nno answer at all.",
+        "operationId": "get_refiner_file_why_held_api_v1_refiner_files__file_id__why_held_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "File Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefinerWhyHeldOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Refiner File Why Held",
         "tags": [
           "refiner",
           "refiner"
@@ -8752,49 +9080,6 @@
           }
         },
         "summary": "Get Refiner Jobs Inspection",
-        "tags": [
-          "refiner",
-          "refiner"
-        ]
-      }
-    },
-    "/api/v1/refiner/jobs/supplied-payload-evaluation/enqueue": {
-      "post": {
-        "description": "Enqueue the supplied-payload evaluation durable job (``refiner_jobs`` only).",
-        "operationId": "post_refiner_supplied_payload_evaluation_enqueue_api_v1_refiner_jobs_supplied_payload_evaluation_enqueue_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefinerSuppliedPayloadEvaluationManualEnqueueIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RefinerSuppliedPayloadEvaluationManualEnqueueOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Post Refiner Supplied Payload Evaluation Enqueue",
         "tags": [
           "refiner",
           "refiner"

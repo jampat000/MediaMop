@@ -10,6 +10,9 @@ import {
 import {
   useForgetRefinerFile,
   useMoveRefinerFileToTop,
+  useRefinerWhyHeld,
+  useRequeueRefinerFile,
+  useRequeueRefinerFiles,
   useRefinerFilesQuery,
 } from "../../lib/refiner/files-queries";
 import { useRefinerLibrariesQuery } from "../../lib/refiner/libraries-queries";
@@ -84,6 +87,9 @@ export function RefinerFilesSection() {
   });
   const forget = useForgetRefinerFile();
   const moveToTopMutation = useMoveRefinerFileToTop();
+  const requeueOne = useRequeueRefinerFile();
+  const requeueMany = useRequeueRefinerFiles();
+  const whyHeld = useRefinerWhyHeld();
   const editable = canEdit(me.data?.role);
 
   if (files.isLoading) return <PageLoading label="Loading files" />;
@@ -91,6 +97,48 @@ export function RefinerFilesSection() {
   const page = files.data;
   const counts = page?.status_counts ?? {};
   const rows = page?.files ?? [];
+
+  const requeue = async (file: RefinerFile) => {
+    setNotice(null);
+    try {
+      const result = await requeueOne.mutateAsync(file.id);
+      setNotice(result.detail);
+    } catch {
+      setNotice("That file could not be queued again.");
+    }
+  };
+
+  const requeueFiltered = async () => {
+    setNotice(null);
+    try {
+      // The same filter the list is showing, so what gets queued is what is on screen.
+      const result = await requeueMany.mutateAsync({
+        library_id: libraryId,
+        file_status: fileStatus,
+        path_contains: pathContains || undefined,
+        limit,
+      });
+      setNotice(result.detail);
+    } catch {
+      setNotice("Those files could not be queued again.");
+    }
+  };
+
+  const askWhyHeld = async (file: RefinerFile) => {
+    setNotice(null);
+    try {
+      const answer = await whyHeld.mutateAsync(file.id);
+      // The evaluator's reasons are already written for operators, so they are shown
+      // unchanged rather than re-worded here.
+      setNotice(
+        answer.reasons.length
+          ? answer.reasons.join(" ")
+          : "The media managers had nothing to say about this file.",
+      );
+    } catch {
+      setNotice("MediaMop could not ask why that file is held.");
+    }
+  };
 
   const moveToTop = async (file: RefinerFile) => {
     setNotice(null);
@@ -192,6 +240,28 @@ export function RefinerFilesSection() {
         </label>
       </div>
 
+      {/* Bulk requeue acts on the filter currently on screen, so what gets queued is
+          what is being looked at. Only offered when the filter is narrow enough to mean
+          something — "requeue everything" is not a button anyone should have. */}
+      {editable && fileStatus === "processing_failed" ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className={mmActionButtonClass({ variant: "secondary" })}
+            onClick={() => void requeueFiltered()}
+            data-testid="refiner-files-requeue-filtered"
+            disabled={requeueMany.isPending || rows.length === 0}
+          >
+            {requeueMany.isPending
+              ? "Queueing…"
+              : `Try all ${rows.length} again`}
+          </button>
+          <span className="text-xs text-[var(--mm-text3)]">
+            Queues everything matching the filters above, up to {limit} files.
+          </span>
+        </div>
+      ) : null}
+
       {notice ? (
         <p
           className="rounded border border-[var(--mm-border)] px-3 py-2 text-sm"
@@ -259,6 +329,31 @@ export function RefinerFilesSection() {
                         title="Puts this file's queued work ahead of everything else waiting."
                       >
                         Move to top
+                      </button>
+                    ) : null}
+                    {file.status === "processing_failed" ? (
+                      <button
+                        type="button"
+                        className={mmActionButtonClass({
+                          variant: "secondary",
+                        })}
+                        onClick={() => void requeue(file)}
+                        data-testid={`refiner-file-requeue-${file.id}`}
+                        title="Tries this file again now, ignoring the automatic backoff and attempt limit."
+                      >
+                        Try again
+                      </button>
+                    ) : null}
+                    {file.status === "blocked_upstream" ||
+                    file.status === "on_hold" ? (
+                      <button
+                        type="button"
+                        className={mmActionButtonClass({ variant: "tertiary" })}
+                        onClick={() => void askWhyHeld(file)}
+                        data-testid={`refiner-file-why-held-${file.id}`}
+                        title="Asks every media manager covering this library what it is doing with this file, right now."
+                      >
+                        Why is this held?
                       </button>
                     ) : null}
                     <button

@@ -161,9 +161,6 @@ class MediaMopSettings:
     # clamp). Env name keeps ``PLEX_LIVE`` for older installs; it does not re-enable live scan. Loaded from
     # MEDIAMOP_PRUNER_PLEX_LIVE_ABS_MAX_ITEMS.
     pruner_plex_live_abs_max_items: int
-    # Refiner supplied payload evaluation (``refiner.supplied_payload_evaluation.v1``) — Refiner-only schedule.
-    refiner_supplied_payload_evaluation_schedule_enabled: bool
-    refiner_supplied_payload_evaluation_schedule_interval_seconds: int
     # Refiner watched-folder remux scan dispatch (``refiner.watched_folder.remux_scan_dispatch.v1``).
     # Whether each scope is scheduled, and how often, is stored per scope in the database
     # (Refiner Libraries tab), not here — see ADR-0009 and docs/settings-truthfulness-audit.md.
@@ -244,8 +241,6 @@ class MediaMopSettings:
     def refiner(self) -> RefinerSettings:
         return RefinerSettings(
             worker_count=self.refiner_worker_count,
-            supplied_payload_evaluation_schedule_enabled=self.refiner_supplied_payload_evaluation_schedule_enabled,
-            supplied_payload_evaluation_schedule_interval_seconds=self.refiner_supplied_payload_evaluation_schedule_interval_seconds,
             watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs=self.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs,
             probe_size_mb=self.refiner_probe_size_mb,
             analyze_duration_seconds=self.refiner_analyze_duration_seconds,
@@ -372,26 +367,6 @@ class MediaMopSettings:
         pruner_plex_live_on = _env_bool("MEDIAMOP_PRUNER_PLEX_LIVE_REMOVAL_ENABLED", False)
         pruner_plex_live_abs_max = max(1, min(5000, _env_int("MEDIAMOP_PRUNER_PLEX_LIVE_ABS_MAX_ITEMS", 150)))
 
-        def _refiner_supplied_payload_eval_schedule_enabled() -> bool:
-            new_k = "MEDIAMOP_REFINER_SUPPLIED_PAYLOAD_EVALUATION_SCHEDULE_ENABLED"
-            old_k = "MEDIAMOP_REFINER_LIBRARY_AUDIT_PASS_SCHEDULE_ENABLED"
-            if new_k in os.environ:
-                return _env_bool(new_k, False)
-            if old_k in os.environ:
-                return _env_bool(old_k, False)
-            return False
-
-        def _refiner_supplied_payload_eval_schedule_interval_seconds() -> int:
-            new_k = "MEDIAMOP_REFINER_SUPPLIED_PAYLOAD_EVALUATION_SCHEDULE_INTERVAL_SECONDS"
-            old_k = "MEDIAMOP_REFINER_LIBRARY_AUDIT_PASS_SCHEDULE_INTERVAL_SECONDS"
-            if new_k in os.environ:
-                return clamp_refiner_schedule_interval_seconds(_env_int(new_k, 3600))
-            if old_k in os.environ:
-                return clamp_refiner_schedule_interval_seconds(_env_int(old_k, 3600))
-            return clamp_refiner_schedule_interval_seconds(3600)
-
-        refiner_payload_eval_on = _refiner_supplied_payload_eval_schedule_enabled()
-        refiner_payload_eval_iv = _refiner_supplied_payload_eval_schedule_interval_seconds()
         refiner_wf_scan_periodic_remux_enq = _env_bool(
             "MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS",
             True,
@@ -530,8 +505,6 @@ class MediaMopSettings:
             pruner_apply_enabled=pruner_apply_on,
             pruner_plex_live_removal_enabled=pruner_plex_live_on,
             pruner_plex_live_abs_max_items=pruner_plex_live_abs_max,
-            refiner_supplied_payload_evaluation_schedule_enabled=refiner_payload_eval_on,
-            refiner_supplied_payload_evaluation_schedule_interval_seconds=refiner_payload_eval_iv,
             refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs=refiner_wf_scan_periodic_remux_enq,
             refiner_probe_size_mb=refiner_probe_size_mb,
             refiner_analyze_duration_seconds=refiner_analyze_duration_seconds,

@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from typing import Literal
 
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
+from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
 from mediamop.modules.refiner.refiner_work_temp_stale_sweep_enqueue import (
     enqueue_refiner_work_temp_stale_sweep_job,
 )
@@ -16,6 +18,35 @@ from mediamop.modules.refiner.refiner_work_temp_stale_sweep_enqueue import (
 logger = logging.getLogger(__name__)
 
 REFINER_WORK_TEMP_STALE_SWEEP_ENQUEUE_FAILURE_COOLDOWN_SECONDS = 2.0
+
+
+_ENV_KILL_SWITCH = {"work_temp_stale_sweep_enabled": "refiner_work_temp_stale_sweep_movie_schedule_enabled"}
+_ENV_KILL_SWITCH_VARIABLE = {
+    "work_temp_stale_sweep_enabled": "MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED"
+}
+
+
+def _sweep_enabled(session_factory: sessionmaker[Session], settings: MediaMopSettings, *, attribute: str) -> bool:
+    """Whether this sweep runs, read from the database rather than the environment.
+
+    The environment variable is kept as a **kill switch only**: an explicit 0 still turns
+    the sweep off, so an operator who deliberately disabled it does not find it running
+    again after an upgrade. It can no longer be the thing that *enables* a family nobody
+    can see, which was the bug (#339).
+    """
+
+    variable = _ENV_KILL_SWITCH_VARIABLE.get(attribute)
+    if variable and variable in os.environ and not getattr(settings, _ENV_KILL_SWITCH[attribute], True):
+        return False
+    try:
+        with session_factory() as session:
+            row = ensure_refiner_operator_settings_row(session)
+            enabled = bool(getattr(row, attribute))
+            session.commit()
+            return enabled
+    except Exception:
+        logger.exception("Refiner could not read whether the %s sweep is enabled; leaving it off.", attribute)
+        return False
 
 
 def start_refiner_work_temp_stale_sweep_enqueue_tasks(
@@ -27,7 +58,8 @@ def start_refiner_work_temp_stale_sweep_enqueue_tasks(
     """Background enqueue ticks: **independent** Movies and TV timers when each scope is enabled."""
 
     tasks: list[asyncio.Task[None]] = []
-    if settings.refiner_work_temp_stale_sweep_movie_schedule_enabled:
+    enabled = _sweep_enabled(session_factory, settings, attribute="work_temp_stale_sweep_enabled")
+    if enabled:
         iv = float(settings.refiner_work_temp_stale_sweep_movie_schedule_interval_seconds)
         if iv > 0:
             tasks.append(
@@ -41,7 +73,7 @@ def start_refiner_work_temp_stale_sweep_enqueue_tasks(
                     name="refiner-work-temp-stale-sweep-enqueue-movie",
                 ),
             )
-    if settings.refiner_work_temp_stale_sweep_tv_schedule_enabled:
+    if enabled:
         iv = float(settings.refiner_work_temp_stale_sweep_tv_schedule_interval_seconds)
         if iv > 0:
             tasks.append(

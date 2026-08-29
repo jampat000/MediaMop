@@ -98,7 +98,7 @@ def _seed_mixed_status_rows() -> None:
         db.add(
             RefinerJob(
                 dedupe_key="rinsp-pending",
-                job_kind="refiner.candidate_gate.v1",
+                job_kind="refiner.work_temp_stale_sweep.v1",
                 status=RefinerJobStatus.PENDING.value,
                 updated_at=t0,
             ),
@@ -117,7 +117,7 @@ def _seed_mixed_status_rows() -> None:
         db.add(
             RefinerJob(
                 dedupe_key="rinsp-done",
-                job_kind="refiner.supplied_payload_evaluation.v1",
+                job_kind="refiner.file.remux_pass.v1",
                 status=RefinerJobStatus.COMPLETED.value,
                 attempt_count=1,
                 updated_at=t2,
@@ -147,7 +147,7 @@ def _seed_mixed_status_rows() -> None:
         db.add(
             RefinerJob(
                 dedupe_key="rinsp-cancelled",
-                job_kind="refiner.candidate_gate.v1",
+                job_kind="refiner.work_temp_stale_sweep.v1",
                 status=RefinerJobStatus.CANCELLED.value,
                 updated_at=t1,
             ),
@@ -170,7 +170,7 @@ def test_refiner_jobs_inspection_default_includes_pending_and_leased(
     body = r.json()
     assert body["default_recent_slice"] is True
     kinds = {j["job_kind"] for j in body["jobs"]}
-    assert "refiner.candidate_gate.v1" in kinds
+    assert "refiner.work_temp_stale_sweep.v1" in kinds
     statuses = {j["status"] for j in body["jobs"]}
     assert RefinerJobStatus.PENDING.value in statuses
     assert RefinerJobStatus.LEASED.value in statuses
@@ -202,7 +202,7 @@ def test_refiner_job_cancel_pending_ok(client_with_admin: TestClient) -> None:
     with fac() as db:
         row = RefinerJob(
             dedupe_key=dedupe,
-            job_kind="refiner.candidate_gate.v1",
+            job_kind="refiner.work_temp_stale_sweep.v1",
             status=RefinerJobStatus.PENDING.value,
         )
         db.add(row)
@@ -235,7 +235,7 @@ def test_refiner_job_cancel_pending_refuses_leased(client_with_admin: TestClient
         db.execute(delete(RefinerJob))
         row = RefinerJob(
             dedupe_key="leased-block",
-            job_kind="refiner.candidate_gate.v1",
+            job_kind="refiner.work_temp_stale_sweep.v1",
             status=RefinerJobStatus.LEASED.value,
             lease_owner="w",
             lease_expires_at=datetime(2099, 1, 1, tzinfo=UTC),
@@ -270,7 +270,7 @@ def test_refiner_job_cancel_pending_viewer_forbidden(client_with_viewer: TestCli
         db.execute(delete(RefinerJob))
         row = RefinerJob(
             dedupe_key="viewer-deny",
-            job_kind="refiner.candidate_gate.v1",
+            job_kind="refiner.work_temp_stale_sweep.v1",
             status=RefinerJobStatus.PENDING.value,
         )
         db.add(row)

@@ -3,7 +3,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchRefinerFiles,
   forgetRefinerFile,
+  fetchRefinerWhyHeld,
   moveRefinerFileToTop,
+  requeueRefinerFile,
+  requeueRefinerFiles,
+  type RefinerBulkRequeueQuery,
   type RefinerFilesPage,
   type RefinerFilesQuery,
 } from "./files-api";
@@ -37,4 +41,28 @@ export function useMoveRefinerFileToTop() {
     onSuccess: () =>
       void qc.invalidateQueries({ queryKey: ["refiner", "files"] }),
   });
+}
+
+export function useRequeueRefinerFile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => requeueRefinerFile(id),
+    onSuccess: () =>
+      void qc.invalidateQueries({ queryKey: ["refiner", "files"] }),
+  });
+}
+
+export function useRequeueRefinerFiles() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (query: RefinerBulkRequeueQuery) => requeueRefinerFiles(query),
+    onSuccess: () =>
+      void qc.invalidateQueries({ queryKey: ["refiner", "files"] }),
+  });
+}
+
+export function useRefinerWhyHeld() {
+  // A mutation rather than a query: this asks the managers *right now*, and only when
+  // someone asks. Running it on render would poll every connection for every file.
+  return useMutation({ mutationFn: (id: number) => fetchRefinerWhyHeld(id) });
 }

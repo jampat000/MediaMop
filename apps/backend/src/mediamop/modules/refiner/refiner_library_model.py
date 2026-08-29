@@ -122,6 +122,14 @@ class RefinerLibraryRow(Base):
     schedule_start: Mapped[str] = mapped_column(Text, nullable=False, server_default="00:00")
     schedule_end: Mapped[str] = mapped_column(Text, nullable=False, server_default="23:59")
 
+    # Retry. A file with no retainable audio will still have none in five minutes; an
+    # ffmpeg process that died is the same file meeting a different world. The defaults
+    # say so, and an operator watching a flaky NAS can say otherwise.
+    max_attempts: Mapped[int] = mapped_column(Integer, nullable=False, server_default="3")
+    retry_backoff_seconds: Mapped[int] = mapped_column(Integer, nullable=False, server_default="300")
+    retry_execution_failures: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
+    retry_preflight_failures: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+
     # Capacity.
     max_concurrent_files: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
     priority: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")

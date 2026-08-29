@@ -636,6 +636,29 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/refiner/files/requeue": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Requeue Refiner Files
+     * @description Try every file matching this filter again.
+     *
+     *     The filter is the same one the list uses, and ``limit`` is a ceiling rather than a
+     *     page size: a mis-typed filter should not be able to queue a whole library.
+     */
+    post: operations["requeue_refiner_files_api_v1_refiner_files_requeue_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/refiner/files/{file_id}": {
     parameters: {
       query?: never;
@@ -679,7 +702,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/jobs/candidate-gate/enqueue": {
+  "/api/v1/refiner/files/{file_id}/requeue": {
     parameters: {
       query?: never;
       header?: never;
@@ -689,10 +712,38 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Post Refiner Candidate Gate Enqueue
-     * @description Refiner: enqueue one ownership / upstream-blocking evaluation against every connected media manager.
+     * Requeue Refiner File
+     * @description Try this file again now.
+     *
+     *     A manual requeue resets the attempt count and ignores the backoff: whoever asked has
+     *     usually just fixed the thing that broke, so making them wait it out — or refusing
+     *     because the automatic attempts are spent — would answer a question they did not ask.
      */
-    post: operations["post_refiner_candidate_gate_enqueue_api_v1_refiner_jobs_candidate_gate_enqueue_post"];
+    post: operations["requeue_refiner_file_api_v1_refiner_files__file_id__requeue_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/files/{file_id}/why-held": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Refiner File Why Held
+     * @description Ask every manager covering this file's library what it is doing with it, right now.
+     *
+     *     Deliberately live rather than cached: the question is only ever asked because the
+     *     recorded state looks wrong or stale, and answering it from the same record would be
+     *     no answer at all.
+     */
+    get: operations["get_refiner_file_why_held_api_v1_refiner_files__file_id__why_held_get"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -733,26 +784,6 @@ export interface paths {
     get: operations["get_refiner_jobs_inspection_api_v1_refiner_jobs_inspection_get"];
     put?: never;
     post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/refiner/jobs/supplied-payload-evaluation/enqueue": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Post Refiner Supplied Payload Evaluation Enqueue
-     * @description Enqueue the supplied-payload evaluation durable job (``refiner_jobs`` only).
-     */
-    post: operations["post_refiner_supplied_payload_evaluation_enqueue_api_v1_refiner_jobs_supplied_payload_evaluation_enqueue_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -2769,48 +2800,6 @@ export interface components {
       /** Path */
       path?: string | null;
     };
-    /**
-     * RefinerCandidateGateManualEnqueueIn
-     * @description Operator supplies a real release candidate; workers compare it to every connected manager.
-     *
-     *     The candidate is described by the **library it belongs to**, not by the product that
-     *     manages it: one Movies library may be served by several connections at once, and the
-     *     gate asks all of them.
-     */
-    RefinerCandidateGateManualEnqueueIn: {
-      /** Csrf Token */
-      csrf_token: string;
-      /**
-       * Entity Id
-       * @description The manager's own id for this movie or series, when matching without a path
-       */
-      entity_id?: number | null;
-      /**
-       * Media Scope
-       * @enum {string}
-       */
-      media_scope: "movie" | "tv";
-      /** Output Path */
-      output_path?: string | null;
-      /** Release Title */
-      release_title: string;
-      /** Release Year */
-      release_year?: number | null;
-    };
-    /** RefinerCandidateGateManualEnqueueOut */
-    RefinerCandidateGateManualEnqueueOut: {
-      /** Dedupe Key */
-      dedupe_key: string;
-      /** Job Id */
-      job_id: number;
-      /** Job Kind */
-      job_kind: string;
-      /**
-       * Ok
-       * @default true
-       */
-      ok: boolean;
-    };
     /** RefinerFileForgetIn */
     RefinerFileForgetIn: {
       /** Csrf Token */
@@ -2839,6 +2828,16 @@ export interface components {
        */
       blocked_by_connection?: string | null;
       /**
+       * Failure Attempts
+       * @default 0
+       */
+      failure_attempts: number;
+      /**
+       * Failure Class
+       * @description Why this file failed, in terms a retry policy acts on: preflight, execution, guardrail, unknown.
+       */
+      failure_class?: string | null;
+      /**
        * Hold Until
        * @description When an on-hold file becomes eligible. Null when the hold is waiting on a writer to stop rather than on the clock.
        */
@@ -2853,6 +2852,11 @@ export interface components {
       library_id: number;
       /** Library Name */
       library_name: string;
+      /**
+       * Next Retry At
+       * @description When MediaMop will try this file again on its own. Null when no automatic retry is coming.
+       */
+      next_retry_at?: string | null;
       /** Relative Path */
       relative_path: string;
       /** Size Bytes */
@@ -2914,6 +2918,42 @@ export interface components {
        * @default true
        */
       ok: boolean;
+    };
+    /** RefinerFileRequeueIn */
+    RefinerFileRequeueIn: {
+      /** Csrf Token */
+      csrf_token: string;
+    };
+    /**
+     * RefinerFilesBulkRequeueIn
+     * @description Requeue everything matching a filter, described the same way the list is filtered.
+     */
+    RefinerFilesBulkRequeueIn: {
+      /** Csrf Token */
+      csrf_token: string;
+      /** File Status */
+      file_status?:
+        | (
+            | "unprocessed"
+            | "processing"
+            | "processed"
+            | "processing_failed"
+            | "disabled"
+            | "on_hold"
+            | "out_of_schedule"
+            | "blocked_upstream"
+          )
+        | null;
+      /** Library Id */
+      library_id?: number | null;
+      /**
+       * Limit
+       * @description A ceiling on how many are queued in one go, so a mis-typed filter cannot queue a whole library.
+       * @default 200
+       */
+      limit: number;
+      /** Path Contains */
+      path_contains?: string | null;
     };
     /**
      * RefinerFilesPageOut
@@ -3058,6 +3098,12 @@ export interface components {
       /** Manager Connection Ids */
       manager_connection_ids?: number[];
       /**
+       * Max Attempts
+       * @description How many times MediaMop tries a file on its own before stopping.
+       * @default 3
+       */
+      max_attempts: number;
+      /**
        * Max Concurrent Files
        * @default 1
        */
@@ -3099,6 +3145,24 @@ export interface components {
        * @default 0
        */
       priority: number;
+      /**
+       * Retry Backoff Seconds
+       * @description The first wait before a retry. It doubles each attempt, capped at an hour.
+       * @default 300
+       */
+      retry_backoff_seconds: number;
+      /**
+       * Retry Execution Failures
+       * @description Retry files that failed while being processed — a dead ffmpeg, a full disk, a dropped share.
+       * @default true
+       */
+      retry_execution_failures: boolean;
+      /**
+       * Retry Preflight Failures
+       * @description Retry files rejected before work started. Off by default: a file with no usable audio will not have grown one in five minutes.
+       * @default false
+       */
+      retry_preflight_failures: boolean;
       /** Rule Set Id */
       rule_set_id?: number | null;
       /**
@@ -3213,6 +3277,8 @@ export interface components {
        * @description Media manager connections covering this library. More than one is allowed and is the edge case.
        */
       manager_connection_ids?: number[];
+      /** Max Attempts */
+      max_attempts: number;
       /** Max Concurrent Files */
       max_concurrent_files: number;
       /** Max File Size Mb */
@@ -3234,6 +3300,12 @@ export interface components {
       output_folder: string;
       /** Priority */
       priority: number;
+      /** Retry Backoff Seconds */
+      retry_backoff_seconds: number;
+      /** Retry Execution Failures */
+      retry_execution_failures: boolean;
+      /** Retry Preflight Failures */
+      retry_preflight_failures: boolean;
       /** Rule Set Id */
       rule_set_id?: number | null;
       /** Scan Interval Seconds */
@@ -3326,6 +3398,12 @@ export interface components {
       /** Manager Connection Ids */
       manager_connection_ids?: number[];
       /**
+       * Max Attempts
+       * @description How many times MediaMop tries a file on its own before stopping.
+       * @default 3
+       */
+      max_attempts: number;
+      /**
        * Max Concurrent Files
        * @default 1
        */
@@ -3367,6 +3445,24 @@ export interface components {
        * @default 0
        */
       priority: number;
+      /**
+       * Retry Backoff Seconds
+       * @description The first wait before a retry. It doubles each attempt, capped at an hour.
+       * @default 300
+       */
+      retry_backoff_seconds: number;
+      /**
+       * Retry Execution Failures
+       * @description Retry files that failed while being processed — a dead ffmpeg, a full disk, a dropped share.
+       * @default true
+       */
+      retry_execution_failures: boolean;
+      /**
+       * Retry Preflight Failures
+       * @description Retry files rejected before work started. Off by default: a file with no usable audio will not have grown one in five minutes.
+       * @default false
+       */
+      retry_preflight_failures: boolean;
       /** Rule Set Id */
       rule_set_id?: number | null;
       /**
@@ -3429,6 +3525,16 @@ export interface components {
     };
     /** RefinerOperatorSettingsOut */
     RefinerOperatorSettingsOut: {
+      /**
+       * Failure Cleanup Enabled
+       * @description Delete the source release folder after a file fails terminally. Off by default: this removes the original, so it stays off until you choose it.
+       */
+      failure_cleanup_enabled: boolean;
+      /**
+       * Keep Failed Work Files
+       * @description Keep a failed run's working files so they can be inspected instead of swept.
+       */
+      keep_failed_work_files: boolean;
       /** Max Concurrent Files */
       max_concurrent_files: number;
       /** Min File Age Seconds */
@@ -3491,6 +3597,11 @@ export interface components {
       tv_schedule_start: string;
       /** Updated At */
       updated_at: string;
+      /**
+       * Work Temp Stale Sweep Enabled
+       * @description Reclaim MediaMop's own stale working files. Safe, and on by default.
+       */
+      work_temp_stale_sweep_enabled: boolean;
     };
     /**
      * RefinerOperatorSettingsPutIn
@@ -3499,6 +3610,10 @@ export interface components {
     RefinerOperatorSettingsPutIn: {
       /** Csrf Token */
       csrf_token: string;
+      /** Failure Cleanup Enabled */
+      failure_cleanup_enabled?: boolean | null;
+      /** Keep Failed Work Files */
+      keep_failed_work_files?: boolean | null;
       /** Max Concurrent Files */
       max_concurrent_files?: number | null;
       /** Min File Age Seconds */
@@ -3539,6 +3654,8 @@ export interface components {
       tv_schedule_hours_limited?: boolean | null;
       /** Tv Schedule Start */
       tv_schedule_start?: string | null;
+      /** Work Temp Stale Sweep Enabled */
+      work_temp_stale_sweep_enabled?: boolean | null;
     };
     /** RefinerOverviewStatsOut */
     RefinerOverviewStatsOut: {
@@ -3760,6 +3877,15 @@ export interface components {
        * @default
        */
       tertiary_audio_lang: string;
+    };
+    /** RefinerRequeueOut */
+    RefinerRequeueOut: {
+      /** Detail */
+      detail: string;
+      /** Requeued */
+      requeued: number;
+      /** Skipped */
+      skipped: number;
     };
     /** RefinerRuleSetIn */
     RefinerRuleSetIn: {
@@ -4016,28 +4142,6 @@ export interface components {
       worker_mode_summary: string;
     };
     /**
-     * RefinerSuppliedPayloadEvaluationManualEnqueueIn
-     * @description Operator-triggered enqueue (singleton dedupe; returns existing row when present).
-     */
-    RefinerSuppliedPayloadEvaluationManualEnqueueIn: {
-      /** Csrf Token */
-      csrf_token: string;
-    };
-    /** RefinerSuppliedPayloadEvaluationManualEnqueueOut */
-    RefinerSuppliedPayloadEvaluationManualEnqueueOut: {
-      /** Dedupe Key */
-      dedupe_key: string;
-      /** Job Id */
-      job_id: number;
-      /** Job Kind */
-      job_kind: string;
-      /**
-       * Ok
-       * @default true
-       */
-      ok: boolean;
-    };
-    /**
      * RefinerWatchedFolderRemuxScanDispatchManualEnqueueIn
      * @description Queue one watched-folder scan.
      */
@@ -4071,6 +4175,59 @@ export interface components {
        * @default true
        */
       ok: boolean;
+    };
+    /**
+     * RefinerWhyHeldOut
+     * @description A live answer, alongside the recorded one, so a stale record is visible as stale.
+     */
+    RefinerWhyHeldOut: {
+      /**
+       * Blocked By Connection
+       * @description The connection holding this file, named the way MediaMop names connections.
+       */
+      blocked_by_connection?: string | null;
+      /** Blocked Upstream */
+      blocked_upstream: boolean;
+      /** File Id */
+      file_id: number;
+      /** Library Name */
+      library_name: string;
+      /** Managers Consulted */
+      managers_consulted: number;
+      /** Managers Reporting */
+      managers_reporting: number;
+      /**
+       * Managers Without Queue Signal
+       * @description Connections that could not answer. A manager that is unreachable is reported, never assumed idle.
+       */
+      managers_without_queue_signal?: string[];
+      /** Owned */
+      owned: boolean;
+      /** Queue Row Count */
+      queue_row_count: number;
+      /**
+       * Reasons
+       * @description Plain-language reasons, already written for the person reading them.
+       */
+      reasons?: string[];
+      /**
+       * Recorded Reason
+       * @description The sentence the last scan recorded.
+       */
+      recorded_reason: string;
+      /**
+       * Recorded Status
+       * @description What the last scan concluded about this file.
+       */
+      recorded_status: string;
+      /** Relative Path */
+      relative_path: string;
+      /**
+       * Verdict
+       * @description What the managers say right now. 'no_upstream_signal' is distinct from 'not_held': unknown never means safe.
+       * @enum {string}
+       */
+      verdict: "proceed" | "wait_upstream" | "not_held" | "no_upstream_signal";
     };
     /** SuiteConfigurationBackupItemOut */
     SuiteConfigurationBackupItemOut: {
@@ -5774,6 +5931,39 @@ export interface operations {
       };
     };
   };
+  requeue_refiner_files_api_v1_refiner_files_requeue_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RefinerFilesBulkRequeueIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerRequeueOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   delete_refiner_file_api_v1_refiner_files__file_id__delete: {
     parameters: {
       query?: never;
@@ -5842,16 +6032,18 @@ export interface operations {
       };
     };
   };
-  post_refiner_candidate_gate_enqueue_api_v1_refiner_jobs_candidate_gate_enqueue_post: {
+  requeue_refiner_file_api_v1_refiner_files__file_id__requeue_post: {
     parameters: {
       query?: never;
       header?: never;
-      path?: never;
+      path: {
+        file_id: number;
+      };
       cookie?: never;
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefinerCandidateGateManualEnqueueIn"];
+        "application/json": components["schemas"]["RefinerFileRequeueIn"];
       };
     };
     responses: {
@@ -5861,7 +6053,38 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["RefinerCandidateGateManualEnqueueOut"];
+          "application/json": components["schemas"]["RefinerRequeueOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_refiner_file_why_held_api_v1_refiner_files__file_id__why_held_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        file_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerWhyHeldOut"];
         };
       };
       /** @description Validation Error */
@@ -5929,39 +6152,6 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["RefinerJobsInspectionOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  post_refiner_supplied_payload_evaluation_enqueue_api_v1_refiner_jobs_supplied_payload_evaluation_enqueue_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["RefinerSuppliedPayloadEvaluationManualEnqueueIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RefinerSuppliedPayloadEvaluationManualEnqueueOut"];
         };
       };
       /** @description Validation Error */
