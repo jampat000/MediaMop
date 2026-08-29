@@ -87,6 +87,8 @@ def _library_out(db, row: RefinerLibraryRow) -> RefinerLibraryOut:
         top_level_only=row.top_level_only,
         scan_interval_seconds=row.scan_interval_seconds,
         hold_minutes=row.hold_minutes,
+        sidecar_patterns_csv=row.sidecar_patterns_csv or "",
+        preserve_original_timestamps=bool(row.preserve_original_timestamps),
         file_detection_interval_seconds=row.file_detection_interval_seconds,
         ignore_size_changes=row.ignore_size_changes,
         skip_access_tests=row.skip_access_tests,

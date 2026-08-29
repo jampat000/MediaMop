@@ -103,6 +103,8 @@ class RefinerLibraryOut(BaseModel):
 
     scan_interval_seconds: int
     hold_minutes: int
+    sidecar_patterns_csv: str
+    preserve_original_timestamps: bool
     file_detection_interval_seconds: int
     ignore_size_changes: bool
     skip_access_tests: bool
@@ -154,6 +156,16 @@ class RefinerLibraryCreateIn(BaseModel):
     min_file_age_seconds: int = Field(60, ge=0, le=604800)
     exclude_hidden: bool = True
     top_level_only: bool = False
+    sidecar_patterns_csv: str = Field(
+        ".srt,.ass,.ssa,.sub,.idx,.vtt,.nfo,.jpg,.png",
+        description=(
+            "Which files beside the video travel with it to the output, renamed to the output's stem. "
+            "Empty migrates nothing — and the source folder deletion would then remove them."
+        ),
+    )
+    preserve_original_timestamps: bool = Field(
+        False, description="Give the output the original file's modification time."
+    )
     scan_interval_seconds: int = Field(300, ge=10, le=604800)
     hold_minutes: int = Field(0, ge=0, le=10080)
     file_detection_interval_seconds: int = Field(

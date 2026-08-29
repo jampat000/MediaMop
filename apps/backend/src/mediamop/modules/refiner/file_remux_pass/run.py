@@ -51,6 +51,11 @@ from mediamop.modules.refiner.refiner_remux_track_display import (
     subtitle_before_line_from_probe,
 )
 from mediamop.modules.refiner.refiner_runner_units import video_dimensions_from_streams
+from mediamop.modules.refiner.refiner_sidecar_migration import (
+    apply_original_timestamps,
+    migrate_sidecars,
+    parse_sidecar_patterns,
+)
 from mediamop.modules.refiner.refiner_tv_output_cleanup import (
     maybe_run_tv_output_season_folder_cleanup_after_remux,
 )
@@ -265,6 +270,53 @@ def _init_folder_cleanup_activity_fields(out: dict[str, Any]) -> None:
     out.setdefault("output_completeness_note", None)
 
 
+def _migrate_sidecars_before_cleanup(
+    *,
+    src: Path,
+    final_output_file: Path | None,
+    sidecar_patterns: tuple[str, ...],
+    preserve_timestamps: bool,
+    out: dict[str, Any],
+) -> None:
+    """Carry configured sidecars to the output, and record whether deletion may proceed.
+
+    Run before any cleanup gate. A sidecar that is not there is not a failure — the
+    common case is a release with none — but one that exists and could not be copied
+    stops the source folder being deleted, because proceeding would destroy the only
+    copy of a file MediaMop was asked to keep (#344).
+    """
+
+    out.setdefault("sidecars_migrated", [])
+    out.setdefault("sidecars_skipped", [])
+    out.setdefault("sidecar_migration_blocked", False)
+    out.setdefault("sidecar_migration_blocked_reason", None)
+    out.setdefault("original_timestamps_note", None)
+
+    if final_output_file is None or not sidecar_patterns:
+        return
+
+    result = migrate_sidecars(
+        source_media=src,
+        output_media=final_output_file,
+        patterns=sidecar_patterns,
+        preserve_timestamps=preserve_timestamps,
+    )
+    out["sidecars_migrated"] = [m.destination.name for m in result.migrated]
+    out["sidecars_skipped"] = list(result.skipped)
+    if result.blocks_source_deletion:
+        out["sidecar_migration_blocked"] = True
+        out["sidecar_migration_blocked_reason"] = result.blocking_reason
+        logger.warning("Refiner sidecar migration: %s", result.blocking_reason)
+
+    if preserve_timestamps:
+        problem = apply_original_timestamps(source_media=src, output_media=final_output_file)
+        if problem:
+            # Never fatal: the output is correct either way, and refusing a finished
+            # remux over a timestamp would be the wrong trade.
+            out["original_timestamps_note"] = problem
+            logger.info("Refiner timestamps: %s", problem)
+
+
 def _handle_refiner_cleanup_after_success(
     *,
     src: Path,
@@ -281,6 +333,18 @@ def _handle_refiner_cleanup_after_success(
     """Movies: optional full release-folder removal + cascade. TV: season-folder cleanup (Pass 1b) or skip."""
 
     scope = _normalize_media_scope_for_cleanup(media_scope)
+
+    # Sidecars travel *before* any deletion gate runs, and a sidecar that exists and
+    # could not be copied stops the deletion. Proceeding would destroy the only copy of
+    # a file MediaMop was asked to keep (#344).
+    if out.get("sidecar_migration_blocked"):
+        _init_folder_cleanup_activity_fields(out)
+        out["source_deleted_after_success"] = False
+        out["source_folder_skip_reason"] = out.get("sidecar_migration_blocked_reason") or (
+            "MediaMop did not remove the source folder because a file set to travel with the video could not be copied."
+        )
+        logger.warning("Refiner cleanup blocked by sidecar migration: %s", out["source_folder_skip_reason"])
+        return
 
     if scope != "movie":
         if scope != "tv":
@@ -576,6 +640,9 @@ def run_refiner_file_remux_pass(
             out=out,
         )
 
+    sidecar_patterns = parse_sidecar_patterns(path_runtime.sidecar_patterns_csv)
+    preserve_timestamps = bool(path_runtime.preserve_original_timestamps)
+
     out.pop("after_track_lines_meaning", None)
     out_dir = Path(path_runtime.output_folder).resolve()
 
@@ -665,6 +732,13 @@ def run_refiner_file_remux_pass(
         out["output_copied_without_remux"] = True
         out["unchanged_output_method"] = unchanged_output_method
         out["live_mutations_skipped"] = False
+        _migrate_sidecars_before_cleanup(
+            src=src,
+            final_output_file=final_skip,
+            sidecar_patterns=sidecar_patterns,
+            preserve_timestamps=preserve_timestamps,
+            out=out,
+        )
         _handle_refiner_cleanup_after_success(
             src=src,
             watched_root=watched_root,
@@ -840,6 +914,13 @@ def run_refiner_file_remux_pass(
                 "message": "The cleaned-up file was written. Refiner is doing final safety checks.",
             }
         )
+    _migrate_sidecars_before_cleanup(
+        src=src,
+        final_output_file=final,
+        sidecar_patterns=sidecar_patterns,
+        preserve_timestamps=preserve_timestamps,
+        out=out,
+    )
     _handle_refiner_cleanup_after_success(
         src=src,
         watched_root=watched_root,

@@ -32,6 +32,9 @@ export interface RefinerLibrary {
 
   scan_interval_seconds: number;
   hold_minutes: number;
+  /** Files beside the video that travel with it, renamed to the output's stem. Empty migrates nothing. */
+  sidecar_patterns_csv: string;
+  preserve_original_timestamps: boolean;
   file_detection_interval_seconds: number;
   ignore_size_changes: boolean;
   skip_access_tests: boolean;
@@ -73,6 +76,8 @@ export interface RefinerLibraryWrite {
   top_level_only?: boolean;
   scan_interval_seconds?: number;
   hold_minutes?: number;
+  sidecar_patterns_csv?: string;
+  preserve_original_timestamps?: boolean;
   file_detection_interval_seconds?: number;
   ignore_size_changes?: boolean;
   skip_access_tests?: boolean;

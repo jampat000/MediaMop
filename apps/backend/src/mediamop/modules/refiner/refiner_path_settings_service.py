@@ -141,6 +141,10 @@ class RefinerPathRuntime:
     work_folder_effective: str
     work_folder_is_default: bool
     preview_output_folder: str | None = None
+    #: Output-side library settings. They travel with the paths because the pass already
+    #: receives this and they are decisions about the same output folder (#344).
+    sidecar_patterns_csv: str = ""
+    preserve_original_timestamps: bool = False
 
 
 def _normalize_media_scope(raw: str | None) -> RefinerMediaScope:
@@ -287,6 +291,8 @@ def resolve_refiner_path_runtime_for_library(
             output_folder=str(output_path),
             work_folder_effective=str(work_path),
             work_folder_is_default=work_is_default,
+            sidecar_patterns_csv=library.sidecar_patterns_csv or "",
+            preserve_original_timestamps=bool(library.preserve_original_timestamps),
         ),
         None,
     )

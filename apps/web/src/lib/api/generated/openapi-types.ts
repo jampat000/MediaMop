@@ -3224,6 +3224,12 @@ export interface components {
        */
       output_folder: string;
       /**
+       * Preserve Original Timestamps
+       * @description Give the output the original file's modification time.
+       * @default false
+       */
+      preserve_original_timestamps: boolean;
+      /**
        * Priority
        * @default 0
        */
@@ -3284,6 +3290,12 @@ export interface components {
        * @default 00:00
        */
       schedule_start: string;
+      /**
+       * Sidecar Patterns Csv
+       * @description Which files beside the video travel with it to the output, renamed to the output's stem. Empty migrates nothing — and the source folder deletion would then remove them.
+       * @default .srt,.ass,.ssa,.sub,.idx,.vtt,.nfo,.jpg,.png
+       */
+      sidecar_patterns_csv: string;
       /**
        * Skip Access Tests
        * @description Skip the read/write probe that runs before a file is queued.
@@ -3381,6 +3393,8 @@ export interface components {
       name: string;
       /** Output Folder */
       output_folder: string;
+      /** Preserve Original Timestamps */
+      preserve_original_timestamps: boolean;
       /** Priority */
       priority: number;
       /** Retry Backoff Seconds */
@@ -3405,6 +3419,8 @@ export interface components {
       schedule_hours_limited: boolean;
       /** Schedule Start */
       schedule_start: string;
+      /** Sidecar Patterns Csv */
+      sidecar_patterns_csv: string;
       /** Skip Access Tests */
       skip_access_tests: boolean;
       /** Top Level Only */
@@ -3524,6 +3540,12 @@ export interface components {
        */
       output_folder: string;
       /**
+       * Preserve Original Timestamps
+       * @description Give the output the original file's modification time.
+       * @default false
+       */
+      preserve_original_timestamps: boolean;
+      /**
        * Priority
        * @default 0
        */
@@ -3584,6 +3606,12 @@ export interface components {
        * @default 00:00
        */
       schedule_start: string;
+      /**
+       * Sidecar Patterns Csv
+       * @description Which files beside the video travel with it to the output, renamed to the output's stem. Empty migrates nothing — and the source folder deletion would then remove them.
+       * @default .srt,.ass,.ssa,.sub,.idx,.vtt,.nfo,.jpg,.png
+       */
+      sidecar_patterns_csv: string;
       /**
        * Skip Access Tests
        * @description Skip the read/write probe that runs before a file is queued.
