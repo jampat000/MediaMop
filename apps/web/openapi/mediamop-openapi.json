@@ -5282,9 +5282,39 @@
             "title": "Primary Audio Lang",
             "type": "string"
           },
+          "remove_attachments": {
+            "default": false,
+            "description": "Strip attached fonts and similar.",
+            "title": "Remove Attachments",
+            "type": "boolean"
+          },
           "remove_commentary": {
             "default": false,
             "title": "Remove Commentary",
+            "type": "boolean"
+          },
+          "remove_images": {
+            "default": false,
+            "description": "Strip embedded cover art. An embedded poster is carried as a video stream, so this removes a stream as well as an image.",
+            "title": "Remove Images",
+            "type": "boolean"
+          },
+          "remove_language_tags": {
+            "default": false,
+            "description": "Strip per-stream language tags.",
+            "title": "Remove Language Tags",
+            "type": "boolean"
+          },
+          "remove_other_metadata": {
+            "default": false,
+            "description": "Strip the remaining container metadata.",
+            "title": "Remove Other Metadata",
+            "type": "boolean"
+          },
+          "remove_title": {
+            "default": false,
+            "description": "Strip the container title, leaving other metadata alone.",
+            "title": "Remove Title",
             "type": "boolean"
           },
           "secondary_audio_lang": {
@@ -5363,8 +5393,28 @@
             "title": "Primary Audio Lang",
             "type": "string"
           },
+          "remove_attachments": {
+            "title": "Remove Attachments",
+            "type": "boolean"
+          },
           "remove_commentary": {
             "title": "Remove Commentary",
+            "type": "boolean"
+          },
+          "remove_images": {
+            "title": "Remove Images",
+            "type": "boolean"
+          },
+          "remove_language_tags": {
+            "title": "Remove Language Tags",
+            "type": "boolean"
+          },
+          "remove_other_metadata": {
+            "title": "Remove Other Metadata",
+            "type": "boolean"
+          },
+          "remove_title": {
+            "title": "Remove Title",
             "type": "boolean"
           },
           "secondary_audio_lang": {
@@ -5420,7 +5470,12 @@
           "preserve_default_subs",
           "audio_preference_mode",
           "audio_sorters_json",
-          "subtitle_sorters_json"
+          "subtitle_sorters_json",
+          "remove_images",
+          "remove_attachments",
+          "remove_title",
+          "remove_language_tags",
+          "remove_other_metadata"
         ],
         "title": "RefinerRuleSetOut",
         "type": "object"

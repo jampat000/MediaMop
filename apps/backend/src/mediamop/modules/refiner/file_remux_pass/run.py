@@ -36,6 +36,7 @@ from mediamop.modules.refiner.refiner_remux_mux import (
 )
 from mediamop.modules.refiner.refiner_remux_rules import (
     RefinerRulesConfig,
+    attachment_streams,
     default_refiner_remux_rules_config,
     is_refiner_media_candidate,
     is_remux_required,
@@ -45,6 +46,7 @@ from mediamop.modules.refiner.refiner_remux_rules import (
 from mediamop.modules.refiner.refiner_remux_track_display import (
     audio_after_line_from_plan,
     audio_before_line_from_probe,
+    metadata_removed_line_from_plan,
     subtitle_after_line_from_plan,
     subtitle_before_line_from_probe,
 )
@@ -494,7 +496,7 @@ def run_refiner_file_remux_pass(
         )
     duration_seconds = _probe_duration_seconds(probe)
     config = rules_config if rules_config is not None else default_refiner_remux_rules_config()
-    plan = plan_remux(video=video, audio=audio, subtitles=subs, config=config)
+    plan = plan_remux(video=video, audio=audio, subtitles=subs, config=config, attachments=attachment_streams(probe))
     if plan is None:
         return _fail_before(
             relative_media_path=relative_media_path,
@@ -505,6 +507,7 @@ def run_refiner_file_remux_pass(
     remux_needed = is_remux_required(plan, audio, subs)
     before_a = audio_before_line_from_probe(audio)
     after_a = audio_after_line_from_plan(plan)
+    metadata_removed = metadata_removed_line_from_plan(plan)
     before_s = subtitle_before_line_from_probe(subs)
     after_s = subtitle_after_line_from_plan(plan, remove_all=config.subtitle_mode == "remove_all")
 
@@ -535,6 +538,9 @@ def run_refiner_file_remux_pass(
         "subs_after": after_s,
         "removed_audio": list(plan.removed_audio),
         "removed_subtitles": list(plan.removed_subtitles),
+        "removed_images": list(plan.removed_images),
+        "removed_attachments": list(plan.removed_attachments),
+        "metadata_removed": metadata_removed,
         "after_track_lines_meaning": "Planned output layout for this live pass.",
         "remux_required": remux_needed,
         "ffmpeg_argv": [str(x) for x in argv],

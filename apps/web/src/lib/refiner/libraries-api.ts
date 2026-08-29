@@ -105,6 +105,12 @@ export interface RefinerRuleSet {
   /** Ordered track sorters as JSON. Empty means the default order Refiner has always applied. */
   audio_sorters_json: string;
   subtitle_sorters_json: string;
+  /** An embedded poster is carried as a video stream, so this removes a stream as well as an image. */
+  remove_images: boolean;
+  remove_attachments: boolean;
+  remove_title: boolean;
+  remove_language_tags: boolean;
+  remove_other_metadata: boolean;
   /** Libraries pointing at this rule set. Deleting one still in use is refused. */
   used_by_library_count: number;
   updated_at: string | null;

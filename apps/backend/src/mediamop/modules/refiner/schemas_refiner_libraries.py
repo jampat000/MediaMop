@@ -27,6 +27,11 @@ class RefinerRuleSetOut(BaseModel):
     audio_preference_mode: str
     audio_sorters_json: str
     subtitle_sorters_json: str
+    remove_images: bool
+    remove_attachments: bool
+    remove_title: bool
+    remove_language_tags: bool
+    remove_other_metadata: bool
     used_by_library_count: int = Field(
         default=0, description="How many libraries reference this rule set. Deleting one still in use is refused."
     )
@@ -57,6 +62,17 @@ class RefinerRuleSetIn(BaseModel):
         ),
     )
     subtitle_sorters_json: str = Field("", description="The same, for subtitle tracks.")
+    remove_images: bool = Field(
+        False,
+        description=(
+            "Strip embedded cover art. An embedded poster is carried as a video stream, so this removes a "
+            "stream as well as an image."
+        ),
+    )
+    remove_attachments: bool = Field(False, description="Strip attached fonts and similar.")
+    remove_title: bool = Field(False, description="Strip the container title, leaving other metadata alone.")
+    remove_language_tags: bool = Field(False, description="Strip per-stream language tags.")
+    remove_other_metadata: bool = Field(False, description="Strip the remaining container metadata.")
     audio_preference_mode: Literal["preferred_langs_quality", "preferred_langs_strict", "quality_all_languages"] = (
         "preferred_langs_quality"
     )
