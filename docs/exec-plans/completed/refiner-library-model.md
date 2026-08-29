@@ -96,7 +96,7 @@ Each step is a PR that leaves `main` releasable.
    overview reads both.
 
 9. **Docs.** `ARCHITECTURE.md`, `docs/settings-truthfulness-audit.md`, and move this plan
-   to `completed/`.
+   to `completed/`. *Done.*
 
 ## Risks
 
@@ -114,6 +114,8 @@ Each step is a PR that leaves `main` releasable.
   `alembic check` reports no new upgrade operations, working tree clean at `07c5fab`.
 - 2026-08-29 — step 8: 1194 backend tests, 209 web tests, 7 E2E, `alembic check` reports
   no new upgrade operations against a database built from `0001` through `0025`.
+- 2026-08-29 — plan complete. All nine steps landed; `main` carries libraries as the only
+  Refiner configuration store.
 
 ## Decisions
 
