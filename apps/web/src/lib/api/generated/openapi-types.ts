@@ -5247,9 +5247,9 @@ export interface components {
       check_on_startup: boolean;
       /**
        * Mode
-       * @description Auto, DownloadOnly, or NotifyOnly
+       * @enum {string}
        */
-      mode: string;
+      mode: "Auto" | "DownloadOnly" | "NotifyOnly";
     };
     /**
      * UpdateSettingsPutIn
@@ -5268,8 +5268,11 @@ export interface components {
       check_on_startup: boolean;
       /** Csrf Token */
       csrf_token: string;
-      /** Mode */
-      mode: string;
+      /**
+       * Mode
+       * @enum {string}
+       */
+      mode: "Auto" | "DownloadOnly" | "NotifyOnly";
     };
     /**
      * UpdateStateOut
