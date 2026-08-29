@@ -21,6 +21,18 @@ class RefinerOperatorSettingsOut(BaseModel):
     runner_cost_720p: int = Field(ge=0, le=64)
     runner_cost_1080p: int = Field(ge=0, le=64)
     runner_cost_4k: int = Field(ge=0, le=64)
+    work_temp_stale_sweep_enabled: bool = Field(
+        description="Reclaim MediaMop's own stale working files. Safe, and on by default.",
+    )
+    failure_cleanup_enabled: bool = Field(
+        description=(
+            "Delete the source release folder after a file fails terminally. Off by default: this removes "
+            "the original, so it stays off until you choose it."
+        ),
+    )
+    keep_failed_work_files: bool = Field(
+        description="Keep a failed run's working files so they can be inspected instead of swept.",
+    )
     runner_cost_undetermined: int = Field(
         ge=0,
         le=64,
@@ -66,6 +78,9 @@ class RefinerOperatorSettingsPutIn(BaseModel):
     runner_cost_1080p: int | None = Field(default=None, ge=0, le=64)
     runner_cost_4k: int | None = Field(default=None, ge=0, le=64)
     runner_cost_undetermined: int | None = Field(default=None, ge=0, le=64)
+    work_temp_stale_sweep_enabled: bool | None = None
+    failure_cleanup_enabled: bool | None = None
+    keep_failed_work_files: bool | None = None
     min_file_age_seconds: int | None = Field(default=None, ge=0, le=7 * 24 * 3600)
     refiner_min_input_file_size_mb: int | None = Field(default=None, ge=0, le=1024 * 1024)
     minimum_free_disk_space_mb: int | None = Field(default=None, ge=0, le=1024 * 1024)
@@ -122,6 +137,9 @@ class RefinerOperatorSettingsPutIn(BaseModel):
             or self.runner_cost_1080p is not None
             or self.runner_cost_4k is not None
             or self.runner_cost_undetermined is not None
+            or self.work_temp_stale_sweep_enabled is not None
+            or self.failure_cleanup_enabled is not None
+            or self.keep_failed_work_files is not None
             or self.min_file_age_seconds is not None
             or self.refiner_min_input_file_size_mb is not None
             or self.minimum_free_disk_space_mb is not None

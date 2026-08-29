@@ -22,6 +22,9 @@ function file(over: Partial<RefinerFile> = {}): RefinerFile {
     status_reason: "Ready for Refiner to process as part of Movies.",
     blocked_by_connection: null,
     size_bytes: 2048,
+    failure_class: null,
+    failure_attempts: 0,
+    next_retry_at: null,
     video_width: null,
     video_height: null,
     hold_until: null,
@@ -236,5 +239,78 @@ it("shows the server's own words about whether the move happened", async () => {
 
   expect(await screen.findByTestId("refiner-files-notice")).toHaveTextContent(
     "There is no queued work for this file to move.",
+  );
+});
+
+it("offers a retry on a failed file and shows what the server said", async () => {
+  asOperator();
+  vi.spyOn(api, "fetchRefinerFiles").mockResolvedValue(
+    page({
+      files: [
+        file({
+          id: 1,
+          status: "processing_failed",
+          failure_class: "execution",
+          failure_attempts: 3,
+        }),
+      ],
+    }),
+  );
+  vi.spyOn(api, "requeueRefinerFile").mockResolvedValue({
+    requeued: 1,
+    skipped: 0,
+    detail:
+      "Queued again by hand. It starts as soon as there is capacity for it.",
+  });
+
+  render(<RefinerFilesSection />, { wrapper });
+  fireEvent.click(await screen.findByTestId("refiner-file-requeue-1"));
+
+  expect(await screen.findByTestId("refiner-files-notice")).toHaveTextContent(
+    /Queued again by hand/,
+  );
+});
+
+it("does not offer a retry on a file that has not failed", async () => {
+  asOperator();
+  vi.spyOn(api, "fetchRefinerFiles").mockResolvedValue(
+    page({ files: [file({ id: 1, status: "unprocessed" })] }),
+  );
+
+  render(<RefinerFilesSection />, { wrapper });
+
+  await screen.findByText("Some Film/film.mkv");
+  expect(
+    screen.queryByTestId("refiner-file-requeue-1"),
+  ).not.toBeInTheDocument();
+});
+
+it("asks the managers why a file is held and shows their own words", async () => {
+  asOperator();
+  vi.spyOn(api, "fetchRefinerFiles").mockResolvedValue(
+    page({ files: [file({ id: 1, status: "blocked_upstream" })] }),
+  );
+  vi.spyOn(api, "fetchRefinerWhyHeld").mockResolvedValue({
+    file_id: 1,
+    relative_path: "Some Film/film.mkv",
+    library_name: "Movies",
+    recorded_status: "blocked_upstream",
+    recorded_reason: "Deluno (Main) is still importing this file.",
+    verdict: "wait_upstream",
+    owned: true,
+    blocked_upstream: true,
+    blocked_by_connection: "Deluno (Main)",
+    queue_row_count: 1,
+    managers_consulted: 1,
+    managers_reporting: 1,
+    managers_without_queue_signal: [],
+    reasons: ["Deluno (Main) is still importing this file."],
+  });
+
+  render(<RefinerFilesSection />, { wrapper });
+  fireEvent.click(await screen.findByTestId("refiner-file-why-held-1"));
+
+  expect(await screen.findByTestId("refiner-files-notice")).toHaveTextContent(
+    "Deluno (Main) is still importing this file.",
   );
 });

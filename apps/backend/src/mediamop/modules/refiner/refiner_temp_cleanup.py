@@ -19,6 +19,9 @@ from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.refiner_library_service import list_libraries, seeded_library_for_scope
+from mediamop.modules.refiner.refiner_operator_settings_service import (
+    ensure_refiner_operator_settings_row,
+)
 from mediamop.modules.refiner.refiner_path_settings_service import (
     effective_library_work_folder,
     effective_tv_work_folder,
@@ -175,6 +178,17 @@ def run_refiner_work_temp_stale_sweep_for_scope(
     now = time.time()
     out["temp_cleanup_shared_work_root_conflict"] = False
     out["temp_cleanup_ran"] = True
+    # "Keep failed work files" exists so a failed remux can be inspected. A sweep that
+    # deleted them anyway would make the setting a lie, so it stops here and says why
+    # rather than quietly skipping (#339).
+    operator = ensure_refiner_operator_settings_row(session)
+    if operator.keep_failed_work_files:
+        out["temp_cleanup_ran"] = False
+        out["temp_cleanup_skipped_reason"] = (
+            f"{label} temp files were left alone because 'keep failed work files' is switched on, so a "
+            "failed run can be inspected. Turn it off to let MediaMop reclaim them again."
+        )
+        return out
 
     if not root.is_dir():
         msg = f"{root} — this {label} work folder is missing or not a directory."

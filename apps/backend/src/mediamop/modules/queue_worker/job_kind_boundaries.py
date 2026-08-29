@@ -26,9 +26,33 @@ LEGACY_TRIMMER_QUEUE_JOB_KIND_PREFIX = "trimmer."
 # must still be refused by every lane, not quietly accepted by whichever one it lands on.
 LEGACY_SUBBER_QUEUE_JOB_KIND_PREFIX = "subber."
 
+# Refiner's supplied-payload evaluation lane, removed in #339. On a schedule it was
+# enqueued with no payload at all, so it evaluated zero rows and wrote the same constant
+# — ``row_count: 0, owned: false, blocked_upstream: false`` — once per interval forever.
+# Its scheduled mode was not a feature that happened to be off; it was provably
+# meaningless. The domain functions it exercised are covered directly by tests and stay
+# where they are.
+#
+# The prefix is retired rather than simply disappearing, for the same reason Trimmer's
+# and Subber's are: a row left by an older install must still be refused, not quietly
+# accepted by a worker that no longer knows what it is.
+LEGACY_REFINER_SUPPLIED_PAYLOAD_EVALUATION_JOB_KIND_PREFIX = "refiner.supplied_payload_evaluation."
+
+# Refiner's candidate gate, reshaped in #339. It was a queued family with no scheduler and
+# no UI calling it: an operator asked "is this file held?" and got a job id back, then had
+# to find the answer in the activity feed. It is a read-only question whose answer the
+# caller wants immediately, so it became a synchronous endpoint and the queue round-trip
+# went away. The evaluator itself is unchanged and still in use.
+LEGACY_REFINER_CANDIDATE_GATE_JOB_KIND_PREFIX = "refiner.candidate_gate."
+
 
 def _legacy_or_foreign_prefixes() -> tuple[str, ...]:
-    return (LEGACY_TRIMMER_QUEUE_JOB_KIND_PREFIX, LEGACY_SUBBER_QUEUE_JOB_KIND_PREFIX)
+    return (
+        LEGACY_TRIMMER_QUEUE_JOB_KIND_PREFIX,
+        LEGACY_SUBBER_QUEUE_JOB_KIND_PREFIX,
+        LEGACY_REFINER_SUPPLIED_PAYLOAD_EVALUATION_JOB_KIND_PREFIX,
+        LEGACY_REFINER_CANDIDATE_GATE_JOB_KIND_PREFIX,
+    )
 
 
 # Prefixes that must never be enqueued or executed on ``refiner_jobs`` / Refiner workers.

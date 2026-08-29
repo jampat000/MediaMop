@@ -36,8 +36,6 @@ class SecuritySettings:
 @dataclass(frozen=True, slots=True)
 class RefinerSettings:
     worker_count: int
-    supplied_payload_evaluation_schedule_enabled: bool
-    supplied_payload_evaluation_schedule_interval_seconds: int
     watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs: bool
     probe_size_mb: int
     analyze_duration_seconds: int

@@ -31,7 +31,6 @@ def integration_test_quiesce_in_process_workers(monkeypatch: pytest.MonkeyPatch)
 def integration_test_quiesce_periodic_enqueue(monkeypatch: pytest.MonkeyPatch) -> None:
     """Turn off :class:`mediamop.core.config.MediaMopSettings` periodic enqueue toggles for the suite DB."""
 
-    monkeypatch.setenv("MEDIAMOP_REFINER_SUPPLIED_PAYLOAD_EVALUATION_SCHEDULE_ENABLED", "0")
     monkeypatch.setenv("MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED", "0")
     monkeypatch.setenv("MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_MOVIE_SCHEDULE_ENABLED", "0")
     monkeypatch.setenv("MEDIAMOP_REFINER_WORK_TEMP_STALE_SWEEP_TV_SCHEDULE_ENABLED", "0")

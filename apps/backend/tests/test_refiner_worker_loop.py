@@ -88,7 +88,7 @@ def test_start_refiner_worker_background_tasks_zero_spawns_no_tasks_even_with_ha
     )
     base = MediaMopSettings.load()
     settings = replace(base, refiner_worker_count=0)
-    dummy_handlers = {"refiner.candidate_gate.v1": lambda ctx: None}
+    dummy_handlers = {"refiner.file.remux_pass.v1": lambda ctx: None}
 
     async def _run() -> None:
         stop, tasks = start_refiner_worker_background_tasks(
@@ -131,7 +131,7 @@ def test_refiner_worker_slots_are_gated_by_max_concurrent_files(
             stop, tasks = start_refiner_worker_background_tasks(
                 session_factory,
                 settings,
-                job_handlers={"refiner.candidate_gate.v1": lambda ctx: None},
+                job_handlers={"refiner.file.remux_pass.v1": lambda ctx: None},
                 max_concurrent_files_getter=lambda: 3,
             )
             await asyncio.gather(*tasks)

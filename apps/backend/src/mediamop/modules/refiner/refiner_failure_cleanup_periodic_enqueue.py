@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from typing import Literal
 
 from sqlalchemy.orm import Session, sessionmaker
@@ -11,10 +12,38 @@ from sqlalchemy.orm import Session, sessionmaker
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.refiner_failure_cleanup_activity import record_refiner_failure_cleanup_sweep_skipped
 from mediamop.modules.refiner.refiner_failure_cleanup_enqueue import enqueue_refiner_failure_cleanup_sweep_job
+from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
 
 logger = logging.getLogger(__name__)
 
 REFINER_FAILURE_CLEANUP_ENQUEUE_FAILURE_COOLDOWN_SECONDS = 2.0
+
+
+_FAILURE_CLEANUP_KILL_SWITCH_VARIABLE = "MEDIAMOP_REFINER_MOVIE_FAILURE_CLEANUP_SCHEDULE_ENABLED"
+
+
+def _failure_cleanup_enabled(session_factory: sessionmaker[Session], settings: MediaMopSettings) -> bool:
+    """Whether failure cleanup runs, read from the database rather than the environment.
+
+    This sweep deletes source release folders after a terminal failure, so it stays off
+    until an operator turns it on — but it is now a setting they can find, which it was
+    not. The environment variable survives as a kill switch: an explicit 0 still wins.
+    """
+
+    if (
+        _FAILURE_CLEANUP_KILL_SWITCH_VARIABLE in os.environ
+        and not settings.refiner_movie_failure_cleanup_schedule_enabled
+    ):
+        return False
+    try:
+        with session_factory() as session:
+            row = ensure_refiner_operator_settings_row(session)
+            enabled = bool(row.failure_cleanup_enabled)
+            session.commit()
+            return enabled
+    except Exception:
+        logger.exception("Refiner could not read whether failure cleanup is enabled; leaving it off.")
+        return False
 
 
 def start_refiner_failure_cleanup_enqueue_tasks(
@@ -24,7 +53,8 @@ def start_refiner_failure_cleanup_enqueue_tasks(
     settings: MediaMopSettings,
 ) -> list[asyncio.Task[None]]:
     tasks: list[asyncio.Task[None]] = []
-    if settings.refiner_movie_failure_cleanup_schedule_enabled:
+    enabled = _failure_cleanup_enabled(session_factory, settings)
+    if enabled:
         iv = float(settings.refiner_movie_failure_cleanup_schedule_interval_seconds)
         if iv > 0:
             tasks.append(
@@ -38,7 +68,7 @@ def start_refiner_failure_cleanup_enqueue_tasks(
                     name="refiner-failure-cleanup-enqueue-movie",
                 ),
             )
-    if settings.refiner_tv_failure_cleanup_schedule_enabled:
+    if enabled:
         iv = float(settings.refiner_tv_failure_cleanup_schedule_interval_seconds)
         if iv > 0:
             tasks.append(

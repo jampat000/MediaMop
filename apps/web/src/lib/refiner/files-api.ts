@@ -32,6 +32,9 @@ export interface RefinerFile {
   status_reason: string;
   blocked_by_connection: string | null;
   size_bytes: number;
+  failure_class: string | null;
+  failure_attempts: number;
+  next_retry_at: string | null;
   video_width: number | null;
   video_height: number | null;
   /** When an on-hold file becomes eligible. Null when the wait is on a writer, not the clock. */
@@ -106,4 +109,69 @@ export async function moveRefinerFileToTop(
     "Could not move that file to the front of the queue",
   );
   return readJson<RefinerFileMoveToTopResult>(response);
+}
+
+export interface RefinerRequeueResult {
+  requeued: number;
+  skipped: number;
+  detail: string;
+}
+
+export async function requeueRefinerFile(
+  id: number,
+): Promise<RefinerRequeueResult> {
+  const csrf_token = await fetchCsrfToken();
+  const path = `${refinerFilesPath()}/${id}/requeue`;
+  const response = await apiFetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ csrf_token }),
+  });
+  await requireOk(path, response, "Could not queue that file again");
+  return readJson<RefinerRequeueResult>(response);
+}
+
+export interface RefinerBulkRequeueQuery {
+  library_id?: number;
+  file_status?: RefinerFileStatus;
+  path_contains?: string;
+  limit?: number;
+}
+
+export async function requeueRefinerFiles(
+  query: RefinerBulkRequeueQuery,
+): Promise<RefinerRequeueResult> {
+  const csrf_token = await fetchCsrfToken();
+  const path = `${refinerFilesPath()}/requeue`;
+  const response = await apiFetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...query, csrf_token }),
+  });
+  await requireOk(path, response, "Could not queue those files again");
+  return readJson<RefinerRequeueResult>(response);
+}
+
+export interface RefinerWhyHeld {
+  file_id: number;
+  relative_path: string;
+  library_name: string;
+  recorded_status: string;
+  recorded_reason: string;
+  verdict: "proceed" | "wait_upstream" | "not_held" | "no_upstream_signal";
+  owned: boolean;
+  blocked_upstream: boolean;
+  blocked_by_connection: string | null;
+  queue_row_count: number;
+  managers_consulted: number;
+  managers_reporting: number;
+  managers_without_queue_signal: string[];
+  reasons: string[];
+}
+
+export async function fetchRefinerWhyHeld(id: number): Promise<RefinerWhyHeld> {
+  const path = `${refinerFilesPath()}/${id}/why-held`;
+  const response = await apiFetch(path);
+  await requireOk(path, response, "Could not ask why that file is held");
+  return readJson<RefinerWhyHeld>(response);
 }

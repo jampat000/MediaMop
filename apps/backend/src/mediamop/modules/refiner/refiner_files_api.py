@@ -19,13 +19,17 @@ from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow
 from mediamop.modules.refiner.refiner_file_state_service import forget_file, list_files, status_counts
 from mediamop.modules.refiner.refiner_job_queue_lookup import pending_remux_job_for_relative_path
 from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
+from mediamop.modules.refiner.refiner_requeue_service import requeue_file, requeue_files
 from mediamop.modules.refiner.schemas_refiner_files import (
     RefinerFileForgetIn,
     RefinerFileMoveToTopIn,
     RefinerFileMoveToTopOut,
     RefinerFileOut,
+    RefinerFileRequeueIn,
+    RefinerFilesBulkRequeueIn,
     RefinerFilesPageOut,
     RefinerFileStatusName,
+    RefinerRequeueOut,
 )
 from mediamop.platform.auth.authorization import RequireOperatorDep
 from mediamop.platform.auth.csrf import (
@@ -152,3 +156,55 @@ def move_refiner_file_to_top(
         moved=True,
         detail="Moved to the front of the queue. It starts as soon as there is capacity for it.",
     )
+
+
+@router.post("/refiner/files/{file_id}/requeue", response_model=RefinerRequeueOut)
+def requeue_refiner_file(
+    body: RefinerFileRequeueIn,
+    request: Request,
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    file_id: int = Path(ge=1),
+) -> RefinerRequeueOut:
+    """Try this file again now.
+
+    A manual requeue resets the attempt count and ignores the backoff: whoever asked has
+    usually just fixed the thing that broke, so making them wait it out — or refusing
+    because the automatic attempts are spent — would answer a question they did not ask.
+    """
+
+    _verify_csrf(request, settings, body.csrf_token)
+    row = db.get(RefinerFileRow, file_id)
+    if row is None:
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="MediaMop has no record of that file.")
+    result = requeue_file(db, row=row, manual=True)
+    db.commit()
+    return RefinerRequeueOut(requeued=result.requeued, skipped=result.skipped, detail=result.detail)
+
+
+@router.post("/refiner/files/requeue", response_model=RefinerRequeueOut)
+def requeue_refiner_files(
+    body: RefinerFilesBulkRequeueIn,
+    request: Request,
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+) -> RefinerRequeueOut:
+    """Try every file matching this filter again.
+
+    The filter is the same one the list uses, and ``limit`` is a ceiling rather than a
+    page size: a mis-typed filter should not be able to queue a whole library.
+    """
+
+    _verify_csrf(request, settings, body.csrf_token)
+    rows = list_files(
+        db,
+        library_id=body.library_id,
+        status=body.file_status,
+        path_contains=body.path_contains,
+        limit=body.limit,
+    )
+    result = requeue_files(db, rows=rows)
+    db.commit()
+    return RefinerRequeueOut(requeued=result.requeued, skipped=result.skipped, detail=result.detail)

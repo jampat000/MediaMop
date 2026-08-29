@@ -35,10 +35,7 @@ from mediamop.platform.suite_settings.model import SuiteSettingsRow
 #: Job kinds that are detection rather than processing. These keep running through a
 #: pause when "scan while paused" is on, because noticing a file costs nothing and
 #: refusing to notice it only hides work that is arriving anyway.
-DETECTION_JOB_KIND_PREFIXES: tuple[str, ...] = (
-    "refiner.watched_folder.remux_scan_dispatch",
-    "refiner.supplied_payload_evaluation",
-)
+DETECTION_JOB_KIND_PREFIXES: tuple[str, ...] = ("refiner.watched_folder.remux_scan_dispatch",)
 
 
 def is_detection_job_kind(job_kind: str) -> bool:

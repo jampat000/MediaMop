@@ -42,6 +42,9 @@ def ensure_refiner_operator_settings_row(db: Session) -> RefinerOperatorSettings
             runner_cost_1080p=1,
             runner_cost_4k=1,
             runner_cost_undetermined=0,
+            work_temp_stale_sweep_enabled=True,
+            failure_cleanup_enabled=False,
+            keep_failed_work_files=False,
             min_file_age_seconds=60,
             refiner_min_input_file_size_mb=50,
             minimum_free_disk_space_mb=5120,
@@ -111,6 +114,9 @@ def build_refiner_operator_settings_out(db: Session, row: RefinerOperatorSetting
         runner_cost_1080p=max(0, min(64, int(row.runner_cost_1080p or 0))),
         runner_cost_4k=max(0, min(64, int(row.runner_cost_4k or 0))),
         runner_cost_undetermined=max(0, min(64, int(row.runner_cost_undetermined or 0))),
+        work_temp_stale_sweep_enabled=bool(row.work_temp_stale_sweep_enabled),
+        failure_cleanup_enabled=bool(row.failure_cleanup_enabled),
+        keep_failed_work_files=bool(row.keep_failed_work_files),
         min_file_age_seconds=_clamp_min_file_age_seconds(row.min_file_age_seconds),
         refiner_min_input_file_size_mb=_clamp_size_mb(row.refiner_min_input_file_size_mb),
         minimum_free_disk_space_mb=_clamp_size_mb(row.minimum_free_disk_space_mb),
@@ -144,6 +150,10 @@ def apply_refiner_operator_settings_put(db: Session, body: RefinerOperatorSettin
         value = getattr(body, field, None)
         if value is not None:
             setattr(row, field, max(0, min(64, int(value))))
+    for flag in ("work_temp_stale_sweep_enabled", "failure_cleanup_enabled", "keep_failed_work_files"):
+        toggled = getattr(body, flag, None)
+        if toggled is not None:
+            setattr(row, flag, bool(toggled))
     if body.min_file_age_seconds is not None:
         row.min_file_age_seconds = _clamp_min_file_age_seconds(body.min_file_age_seconds)
     if body.refiner_min_input_file_size_mb is not None:

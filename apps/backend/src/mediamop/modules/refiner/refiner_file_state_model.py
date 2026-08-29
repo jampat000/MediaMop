@@ -96,6 +96,12 @@ class RefinerFileRow(Base):
     # When an ON_HOLD file becomes eligible. Held without a release time reads as held
     # forever, which is the complaint the Files screen exists to answer.
     hold_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Why it failed, in terms a retry policy can act on rather than a sentence to
+    # substring-match. Null until something fails.
+    failure_class: Mapped[str | None] = mapped_column(Text, nullable=True)
+    failure_attempts: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    next_retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

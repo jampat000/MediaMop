@@ -33,6 +33,15 @@ class RefinerFileOut(BaseModel):
         description="The media manager connection holding this file, when the status is blocked_upstream.",
     )
     size_bytes: int
+    failure_class: str | None = Field(
+        default=None,
+        description="Why this file failed, in terms a retry policy acts on: preflight, execution, guardrail, unknown.",
+    )
+    failure_attempts: int = 0
+    next_retry_at: datetime | None = Field(
+        default=None,
+        description="When MediaMop will try this file again on its own. Null when no automatic retry is coming.",
+    )
     hold_until: datetime | None = Field(
         default=None,
         description=(
@@ -74,3 +83,32 @@ class RefinerFileMoveToTopIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     csrf_token: str = Field(..., min_length=1)
+
+
+class RefinerFileRequeueIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    csrf_token: str = Field(..., min_length=1)
+
+
+class RefinerFilesBulkRequeueIn(BaseModel):
+    """Requeue everything matching a filter, described the same way the list is filtered."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    csrf_token: str = Field(..., min_length=1)
+    library_id: int | None = Field(default=None, ge=1)
+    file_status: RefinerFileStatusName | None = None
+    path_contains: str | None = Field(default=None, max_length=500)
+    limit: int = Field(
+        default=200,
+        ge=1,
+        le=1000,
+        description="A ceiling on how many are queued in one go, so a mis-typed filter cannot queue a whole library.",
+    )
+
+
+class RefinerRequeueOut(BaseModel):
+    requeued: int
+    skipped: int
+    detail: str

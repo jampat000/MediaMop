@@ -80,6 +80,10 @@ class RefinerLibraryOut(BaseModel):
     skip_access_tests: bool
     file_system_events_enabled: bool
     schedule_grid: str
+    max_attempts: int
+    retry_backoff_seconds: int
+    retry_execution_failures: bool
+    retry_preflight_failures: bool
     schedule_enabled: bool
     schedule_hours_limited: bool
     schedule_days: str
@@ -137,6 +141,23 @@ class RefinerLibraryCreateIn(BaseModel):
     skip_access_tests: bool = Field(
         False,
         description="Skip the read/write probe that runs before a file is queued.",
+    )
+    max_attempts: int = Field(
+        3, ge=1, le=20, description="How many times MediaMop tries a file on its own before stopping."
+    )
+    retry_backoff_seconds: int = Field(
+        300, ge=1, le=3600, description="The first wait before a retry. It doubles each attempt, capped at an hour."
+    )
+    retry_execution_failures: bool = Field(
+        True,
+        description="Retry files that failed while being processed — a dead ffmpeg, a full disk, a dropped share.",
+    )
+    retry_preflight_failures: bool = Field(
+        False,
+        description=(
+            "Retry files rejected before work started. Off by default: a file with no usable audio will not "
+            "have grown one in five minutes."
+        ),
     )
     schedule_grid: str = Field(
         "",
