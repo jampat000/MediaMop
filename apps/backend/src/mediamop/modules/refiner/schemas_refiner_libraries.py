@@ -106,6 +106,10 @@ class RefinerLibraryOut(BaseModel):
     sidecar_patterns_csv: str
     preserve_original_timestamps: bool
     output_collision_policy: str
+    hardware_decode_mode: str
+    hardware_device: str
+    hardware_disabled_vendors_csv: str
+    ffmpeg_strictness: str
     file_detection_interval_seconds: int
     ignore_size_changes: bool
     skip_access_tests: bool
@@ -174,6 +178,24 @@ class RefinerLibraryCreateIn(BaseModel):
             "always done. The policy and the decision taken are both recorded on the file, so 'why is there "
             "no new output for this file' is answerable."
         ),
+    )
+    hardware_decode_mode: Literal["off", "auto", "device"] = Field(
+        "off",
+        description=(
+            "Hardware decoding. 'off' is what MediaMop has always done. A choice that cannot work falls back "
+            "to software and records why — it never fails a file."
+        ),
+    )
+    hardware_device: str = Field(
+        "", max_length=32, description="The ffmpeg method to use when the mode is 'device' — cuda, qsv, vaapi."
+    )
+    hardware_disabled_vendors_csv: str = Field(
+        "",
+        max_length=200,
+        description="Vendors to never use, comma separated: nvidia, intel, amd, vaapi, apple.",
+    )
+    ffmpeg_strictness: Literal["very", "strict", "normal", "unofficial", "experimental"] = Field(
+        "normal", description="ffmpeg's -strict level. 'normal' is its own default and passes no flag."
     )
     scan_interval_seconds: int = Field(300, ge=10, le=604800)
     hold_minutes: int = Field(0, ge=0, le=10080)

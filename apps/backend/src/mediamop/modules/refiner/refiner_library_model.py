@@ -121,6 +121,14 @@ class RefinerLibraryRow(Base):
     # is what every install does today, and a collision used to be silent (#349).
     output_collision_policy: Mapped[str] = mapped_column(Text, nullable=False, server_default="replace")
 
+    # Hardware decoding. Off by default, which is exactly what MediaMop does today by not
+    # passing the flags. The per-vendor disable list exists because auto-detection picks
+    # the wrong device often enough to need an escape hatch (#345).
+    hardware_decode_mode: Mapped[str] = mapped_column(Text, nullable=False, server_default="off")
+    hardware_device: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    hardware_disabled_vendors_csv: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    ffmpeg_strictness: Mapped[str] = mapped_column(Text, nullable=False, server_default="normal")
+
     # Timing.
     scan_interval_seconds: Mapped[int] = mapped_column(Integer, nullable=False, server_default="300")
     hold_minutes: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
