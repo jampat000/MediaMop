@@ -100,12 +100,13 @@ def _build_release_status(
     docker_tag = release.version if release.version else None
     docker_update_command = None
     if install_type == "docker" and docker_tag:
-        # `docker compose pull` and not `docker pull <image>:<tag>`. Two reasons, either of
-        # which is fatal on its own: images publish as `v2.5.0` while `release.version` has
-        # had its `v` stripped, so the explicit tag does not exist; and the compose file
-        # documented in docs/docker.md pins `:latest`, so `compose up -d` would keep running
-        # the old image even after a successful pull. `compose pull` resolves whatever the
-        # operator's own compose file names, which is the only thing `compose up` will use.
+        # `docker compose pull`, not `docker pull <image>:<tag>`. The versioned tag does
+        # exist — release.yml pushes `${plain}` and `latest`, where plain is the tag with
+        # its `v` stripped — but naming it achieves nothing: `compose up -d` starts whatever
+        # the operator's compose file references, and the one documented in docs/docker.md
+        # follows `:latest`. The pull succeeded and the upgrade silently did not happen.
+        # `compose pull` resolves the same reference `compose up` will use, which is the
+        # only way to be sure the two agree.
         docker_update_command = "docker compose pull && docker compose up -d"
 
     return SuiteUpdateStatusOut(

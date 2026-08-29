@@ -48,7 +48,7 @@ The `Release` workflow:
 - builds the Velopack Windows package on `windows-latest`
 - publishes `mediamop-web-dist.zip`
 - builds and pushes Docker tags:
-  - `ghcr.io/<owner>/<repo>:vX.Y.Z`
+  - `ghcr.io/<owner>/<repo>:X.Y.Z` (the git tag is `vX.Y.Z`; the image tag drops the `v`)
   - `ghcr.io/<owner>/<repo>:latest`
 - verifies the published Docker manifest resolves
 - runs the published Docker image and waits for `/health`
