@@ -21,6 +21,20 @@ updates:
         patterns:
           - "*"
 
+  # apps/web is the shipped frontend. It was missing while docs-site was covered, so the
+  # marketing site got dependency PRs and the product did not. CI's `npm audit
+  # --audit-level=high` runs here too, but that only fails a build after the fact and
+  # ignores moderate severities — it does not open a PR to fix anything.
+  - package-ecosystem: npm
+    directory: /apps/web
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      web:
+        patterns:
+          - "*"
+
   - package-ecosystem: npm
     directory: /docs-site
     schedule:
@@ -28,5 +42,28 @@ updates:
     open-pull-requests-limit: 5
     groups:
       docs-site:
+        patterns:
+          - "*"
+
+  # The tray ships in the Windows installer and had no ecosystem entry at all, so Velopack
+  # and the test project's xunit packages were unmonitored. One directory each: Dependabot
+  # resolves NuGet per project file, and there is no .sln to cover both.
+  - package-ecosystem: nuget
+    directory: /apps/tray/MediaMop.Tray
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      tray:
+        patterns:
+          - "*"
+
+  - package-ecosystem: nuget
+    directory: /apps/tray/MediaMop.Tray.Tests
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      tray-tests:
         patterns:
           - "*"
