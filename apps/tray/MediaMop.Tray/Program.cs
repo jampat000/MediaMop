@@ -255,9 +255,23 @@ sealed class UpdateSettings
         // Written whole and then renamed. WriteAllText truncates first, so a crash mid-write
         // leaves exactly the half-file Load has to guess its way around; the point of that
         // fallback is to stay unreachable in practice.
-        var tmp = path + ".tmp";
-        File.WriteAllText(tmp, JsonSerializer.Serialize(this, JsonOptions));
-        File.Move(tmp, path, overwrite: true);
+        //
+        // The scratch name is unique per write, not "update-settings.json.tmp". The backend
+        // writes this same file when the Settings page saves, and a shared scratch name lets
+        // one writer rename the other's file into place — an operator told their choice was
+        // saved while the file holds a different one. Same directory, so the rename stays
+        // atomic; leading dot so a half-written file is not mistaken for real settings.
+        var tmp = Path.Combine(runtimeHome, $".update-settings.{Guid.NewGuid():n}.tmp");
+        try
+        {
+            File.WriteAllText(tmp, JsonSerializer.Serialize(this, JsonOptions));
+            File.Move(tmp, path, overwrite: true);
+        }
+        catch
+        {
+            if (File.Exists(tmp)) File.Delete(tmp);
+            throw;
+        }
     }
 }
 

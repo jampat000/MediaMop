@@ -176,3 +176,22 @@ def test_the_settings_file_is_replaced_whole(tmp_path: object) -> None:
         "checkIntervalMinutes": 1,
     }
     assert not list(path.parent.glob("*.tmp"))
+
+
+def test_a_scratch_file_from_the_tray_is_not_renamed_into_place(tmp_path: object) -> None:
+    """The tray writes this same file. A shared scratch name lets one writer claim the other's.
+
+    Both implementations used ``update-settings.json.tmp``, so an interleaved save could
+    rename the tray's half-written file into place and tell the web UI it had saved — the
+    operator's choice silently replaced by someone else's, which is the exact failure the
+    atomic write was added to prevent.
+    """
+
+    settings = _settings_for(tmp_path)
+    foreign = tmp_path / "update-settings.json.tmp"  # type: ignore[operator]
+    foreign.write_text('{"mode": "Auto"}', encoding="utf-8")
+
+    update_service.put_update_settings(settings, "NotifyOnly", True, 60)
+
+    assert update_service.get_update_settings(settings).mode == "NotifyOnly"
+    assert foreign.exists(), "the other writer's scratch file was consumed"

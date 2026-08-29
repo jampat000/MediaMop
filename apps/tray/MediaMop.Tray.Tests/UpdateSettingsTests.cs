@@ -102,6 +102,22 @@ public sealed class UpdateSettingsTests : IDisposable
     }
 
     [Fact]
+    public void A_stale_scratch_file_from_another_writer_is_not_touched()
+    {
+        // The backend writes this same file. Both used to pick the same scratch name, so one
+        // could rename the other's half-written file into place and report success. The name
+        // is unique per write now, which is why this pre-existing file survives untouched.
+        // Planted at exactly the name the old code used, so this fails against it.
+        var foreign = SettingsPath + ".tmp";
+        File.WriteAllText(foreign, "{\"mode\": \"Auto\"}");
+
+        new UpdateSettings { Mode = UpdateMode.NotifyOnly }.Save(_home);
+
+        Assert.Equal(UpdateMode.NotifyOnly, UpdateSettings.Load(_home).Mode);
+        Assert.True(File.Exists(foreign));
+    }
+
+    [Fact]
     public void The_file_is_replaced_whole_and_leaves_no_scratch_file()
     {
         new UpdateSettings { Mode = UpdateMode.DownloadOnly, CheckIntervalMinutes = 10080 }.Save(_home);

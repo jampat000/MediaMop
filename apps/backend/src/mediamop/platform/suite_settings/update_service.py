@@ -11,6 +11,7 @@ import json
 import logging
 import os
 import sys
+import tempfile
 from pathlib import Path
 from typing import Literal
 
@@ -202,9 +203,23 @@ def put_update_settings(
     # Written whole and then renamed. `write_text` truncates first, so a crash mid-write
     # leaves the half-file that the read path above has to guess its way around; the point
     # of that fallback is to be unreachable in practice.
-    tmp = path.with_suffix(f"{path.suffix}.tmp")
-    tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    os.replace(tmp, path)
+    #
+    # The scratch name is unique per write, not `update-settings.json.tmp`. The tray writes
+    # this same file when its menu changes the mode, and a shared scratch name lets one
+    # writer rename the other's file into place: the web UI saves NotifyOnly, is told it
+    # saved, and the file holds Auto. That is the silent change of an operator's choice
+    # this whole path exists to prevent. mkstemp keeps it in the same directory so the
+    # rename stays atomic.
+    tmp_name: str | None = None
+    try:
+        fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent))
+        with os.fdopen(fd, "w", encoding="utf-8") as target:
+            target.write(json.dumps(payload, indent=2))
+        os.replace(tmp_name, path)
+        tmp_name = None
+    finally:
+        if tmp_name is not None and os.path.exists(tmp_name):
+            os.unlink(tmp_name)
     return UpdateSettingsOut(
         mode=mode,
         check_on_startup=check_on_startup,
