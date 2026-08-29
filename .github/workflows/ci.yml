@@ -155,6 +155,9 @@ jobs:
         with:
           dotnet-version: "9.0.x"
 
+      - name: MediaMop tray unit tests
+        run: dotnet test apps/tray/MediaMop.Tray.Tests --nologo --verbosity quiet
+
       - name: Install Velopack CLI
         run: dotnet tool install -g vpk
 
