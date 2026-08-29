@@ -213,8 +213,20 @@ def validate_remux_output(path: Path, *, mediamop_home: str, expected_audio: int
         )
 
 
-def build_ffmpeg_argv(*, ffmpeg_bin: str, src: Path, dst: Path, plan: RemuxPlan) -> list[str]:
-    args = [ffmpeg_bin, "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", str(src)]
+def build_ffmpeg_argv(
+    *,
+    ffmpeg_bin: str,
+    src: Path,
+    dst: Path,
+    plan: RemuxPlan,
+    input_flags: list[str] | None = None,
+) -> list[str]:
+    # ``input_flags`` carries hardware acceleration and strictness. They go *before* -i,
+    # because -hwaccel applies to the input that follows it; after -i they are silently
+    # ignored, which is the failure mode where nothing looks wrong and nothing is faster.
+    args = [ffmpeg_bin, "-hide_banner", "-loglevel", "error", "-nostdin", "-y"]
+    args.extend(input_flags or [])
+    args.extend(["-i", str(src)])
     for vi in plan.video_indices:
         args.extend(["-map", f"0:{vi}"])
     for t in plan.audio:

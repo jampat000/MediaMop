@@ -793,6 +793,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/refiner/hardware": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Refiner Hardware
+     * @description What ffmpeg on this machine reports it can do.
+     */
+    get: operations["get_refiner_hardware_api_v1_refiner_hardware_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/refiner/jobs/file-remux-pass/enqueue": {
     parameters: {
       query?: never;
@@ -3069,6 +3089,36 @@ export interface components {
         [key: string]: number;
       };
     };
+    /** RefinerHardwareOut */
+    RefinerHardwareOut: {
+      /**
+       * Available Methods
+       * @description Acceleration methods this ffmpeg build was compiled with. Being listed does not prove a device is present or working — those are different facts.
+       */
+      available_methods?: string[];
+      /**
+       * Detail
+       * @description What happened, written for the person reading it.
+       */
+      detail: string;
+      /**
+       * Detected
+       * @description Whether MediaMop was able to ask ffmpeg at all.
+       */
+      detected: boolean;
+      /**
+       * Selectable Vendors
+       * @description Vendors that can be switched off on a library.
+       */
+      selectable_vendors?: string[];
+      /** Strictness Levels */
+      strictness_levels?: string[];
+      /**
+       * Vendors
+       * @description Vendors covered by the available methods.
+       */
+      vendors?: string[];
+    };
     /** RefinerJobCancelPendingIn */
     RefinerJobCancelPendingIn: {
       /** Csrf Token */
@@ -3166,6 +3216,18 @@ export interface components {
        */
       exclude_patterns_csv: string;
       /**
+       * Ffmpeg Strictness
+       * @description ffmpeg's -strict level. 'normal' is its own default and passes no flag.
+       * @default normal
+       * @enum {string}
+       */
+      ffmpeg_strictness:
+        | "very"
+        | "strict"
+        | "normal"
+        | "unofficial"
+        | "experimental";
+      /**
        * File Detection Interval Seconds
        * @description How long this file's size must stay unchanged before MediaMop treats it as finished being written. 0 turns size settling off.
        * @default 30
@@ -3177,6 +3239,25 @@ export interface components {
        * @default true
        */
       file_system_events_enabled: boolean;
+      /**
+       * Hardware Decode Mode
+       * @description Hardware decoding. 'off' is what MediaMop has always done. A choice that cannot work falls back to software and records why — it never fails a file.
+       * @default off
+       * @enum {string}
+       */
+      hardware_decode_mode: "off" | "auto" | "device";
+      /**
+       * Hardware Device
+       * @description The ffmpeg method to use when the mode is 'device' — cuda, qsv, vaapi.
+       * @default
+       */
+      hardware_device: string;
+      /**
+       * Hardware Disabled Vendors Csv
+       * @description Vendors to never use, comma separated: nvidia, intel, amd, vaapi, apple.
+       * @default
+       */
+      hardware_disabled_vendors_csv: string;
       /**
        * Hold Minutes
        * @default 0
@@ -3382,10 +3463,18 @@ export interface components {
       exclude_markers_csv: string;
       /** Exclude Patterns Csv */
       exclude_patterns_csv: string;
+      /** Ffmpeg Strictness */
+      ffmpeg_strictness: string;
       /** File Detection Interval Seconds */
       file_detection_interval_seconds: number;
       /** File System Events Enabled */
       file_system_events_enabled: boolean;
+      /** Hardware Decode Mode */
+      hardware_decode_mode: string;
+      /** Hardware Device */
+      hardware_device: string;
+      /** Hardware Disabled Vendors Csv */
+      hardware_disabled_vendors_csv: string;
       /** Hold Minutes */
       hold_minutes: number;
       /** Id */
@@ -3496,6 +3585,18 @@ export interface components {
        */
       exclude_patterns_csv: string;
       /**
+       * Ffmpeg Strictness
+       * @description ffmpeg's -strict level. 'normal' is its own default and passes no flag.
+       * @default normal
+       * @enum {string}
+       */
+      ffmpeg_strictness:
+        | "very"
+        | "strict"
+        | "normal"
+        | "unofficial"
+        | "experimental";
+      /**
        * File Detection Interval Seconds
        * @description How long this file's size must stay unchanged before MediaMop treats it as finished being written. 0 turns size settling off.
        * @default 30
@@ -3507,6 +3608,25 @@ export interface components {
        * @default true
        */
       file_system_events_enabled: boolean;
+      /**
+       * Hardware Decode Mode
+       * @description Hardware decoding. 'off' is what MediaMop has always done. A choice that cannot work falls back to software and records why — it never fails a file.
+       * @default off
+       * @enum {string}
+       */
+      hardware_decode_mode: "off" | "auto" | "device";
+      /**
+       * Hardware Device
+       * @description The ffmpeg method to use when the mode is 'device' — cuda, qsv, vaapi.
+       * @default
+       */
+      hardware_device: string;
+      /**
+       * Hardware Disabled Vendors Csv
+       * @description Vendors to never use, comma separated: nvidia, intel, amd, vaapi, apple.
+       * @default
+       */
+      hardware_disabled_vendors_csv: string;
       /**
        * Hold Minutes
        * @default 0
@@ -6380,6 +6500,26 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_refiner_hardware_api_v1_refiner_hardware_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerHardwareOut"];
         };
       };
     };

@@ -37,6 +37,11 @@ export interface RefinerLibrary {
   preserve_original_timestamps: boolean;
   /** What to do when an output already exists at the same path. "replace" is the long-standing behaviour. */
   output_collision_policy: string;
+  /** Hardware decoding. A choice that cannot work falls back to software and records why. */
+  hardware_decode_mode: string;
+  hardware_device: string;
+  hardware_disabled_vendors_csv: string;
+  ffmpeg_strictness: string;
   file_detection_interval_seconds: number;
   ignore_size_changes: boolean;
   skip_access_tests: boolean;
@@ -81,6 +86,10 @@ export interface RefinerLibraryWrite {
   sidecar_patterns_csv?: string;
   preserve_original_timestamps?: boolean;
   output_collision_policy?: string;
+  hardware_decode_mode?: string;
+  hardware_device?: string;
+  hardware_disabled_vendors_csv?: string;
+  ffmpeg_strictness?: string;
   file_detection_interval_seconds?: number;
   ignore_size_changes?: boolean;
   skip_access_tests?: boolean;

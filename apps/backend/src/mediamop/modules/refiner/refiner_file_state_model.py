@@ -17,6 +17,7 @@ from enum import StrEnum
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     DateTime,
     ForeignKey,
     Index,
@@ -108,6 +109,12 @@ class RefinerFileRow(Base):
     output_collision_policy: Mapped[str | None] = mapped_column(Text, nullable=True)
     output_collision_action: Mapped[str | None] = mapped_column(Text, nullable=True)
     output_collision_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Which decode method was actually used, and whether it fell back. Recorded so a slow
+    # pass is explained rather than mysterious (#345).
+    hardware_method: Mapped[str | None] = mapped_column(Text, nullable=True)
+    hardware_fell_back_to_software: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    hardware_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

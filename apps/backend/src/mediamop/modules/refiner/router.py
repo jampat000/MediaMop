@@ -9,6 +9,7 @@ from fastapi import APIRouter
 
 from mediamop.modules.refiner.file_remux_pass.api import router as refiner_file_remux_pass_router
 from mediamop.modules.refiner.refiner_files_api import router as refiner_files_router
+from mediamop.modules.refiner.refiner_hardware_api import router as refiner_hardware_router
 from mediamop.modules.refiner.refiner_hold_diagnostic_api import router as refiner_hold_diagnostic_router
 from mediamop.modules.refiner.refiner_jobs_inspection_api import router as refiner_jobs_inspection_router
 from mediamop.modules.refiner.refiner_libraries_api import router as refiner_libraries_router
@@ -31,5 +32,6 @@ router.include_router(refiner_remux_rules_settings_router)
 router.include_router(refiner_runtime_settings_router)
 router.include_router(refiner_overview_stats_router)
 router.include_router(refiner_hold_diagnostic_router)
+router.include_router(refiner_hardware_router)
 router.include_router(refiner_file_remux_pass_router)
 router.include_router(refiner_watched_folder_remux_scan_dispatch_router)

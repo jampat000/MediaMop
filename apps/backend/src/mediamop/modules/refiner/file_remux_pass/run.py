@@ -27,6 +27,14 @@ from mediamop.modules.refiner.refiner_file_state_service import (
     record_measured_video_dimensions,
     record_output_collision,
 )
+from mediamop.modules.refiner.refiner_hardware_acceleration import (
+    HardwareSettings,
+    decide_acceleration,
+    detect_acceleration,
+    normalize_decode_mode,
+    normalize_strictness,
+    parse_disabled_vendors,
+)
 from mediamop.modules.refiner.refiner_movie_output_cleanup import (
     maybe_run_movie_output_folder_cleanup_after_remux,
 )
@@ -583,9 +591,23 @@ def run_refiner_file_remux_pass(
     after_s = subtitle_after_line_from_plan(plan, remove_all=config.subtitle_mode == "remove_all")
 
     _, ffmpeg_bin = resolve_ffprobe_ffmpeg(mediamop_home=settings.mediamop_home)
+    # Decided before the argv is built, because the flags go into it. A device that is
+    # busy, absent or not compiled in falls back to software with a reason rather than
+    # failing the file (#345).
+    hardware = decide_acceleration(
+        settings=HardwareSettings(
+            mode=normalize_decode_mode(path_runtime.hardware_decode_mode),
+            device=path_runtime.hardware_device or "",
+            disabled_vendors=parse_disabled_vendors(path_runtime.hardware_disabled_vendors_csv),
+            strictness=normalize_strictness(path_runtime.ffmpeg_strictness),
+        ),
+        report=detect_acceleration(ffmpeg_bin),
+    )
     work_dir = Path(path_runtime.work_folder_effective)
     dst_placeholder = work_dir / "planned-ffmpeg-destination-placeholder.mkv"
-    argv = build_ffmpeg_argv(ffmpeg_bin=ffmpeg_bin, src=src, dst=dst_placeholder, plan=plan)
+    argv = build_ffmpeg_argv(
+        ffmpeg_bin=ffmpeg_bin, src=src, dst=dst_placeholder, plan=plan, input_flags=hardware.argv_flags
+    )
 
     watched_root = Path(path_runtime.watched_folder).resolve()
 
@@ -922,6 +944,9 @@ def run_refiner_file_remux_pass(
     out["output_file"] = str(final.resolve())
     out["output_replaced_existing"] = output_replaced_existing
     out["refiner_output_folder_resolved"] = str(out_dir)
+    out["hardware_method"] = hardware.method or None
+    out["hardware_fell_back_to_software"] = hardware.fell_back_to_software
+    out["hardware_reason"] = hardware.reason
     out["output_collision_policy"] = collision.policy
     out["output_collision_action"] = collision.action
     # The reason is written for the person asking "why is there no new output for this

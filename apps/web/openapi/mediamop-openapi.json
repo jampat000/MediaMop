@@ -3288,6 +3288,57 @@
         "title": "RefinerFilesPageOut",
         "type": "object"
       },
+      "RefinerHardwareOut": {
+        "properties": {
+          "available_methods": {
+            "description": "Acceleration methods this ffmpeg build was compiled with. Being listed does not prove a device is present or working \u2014 those are different facts.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Available Methods",
+            "type": "array"
+          },
+          "detail": {
+            "description": "What happened, written for the person reading it.",
+            "title": "Detail",
+            "type": "string"
+          },
+          "detected": {
+            "description": "Whether MediaMop was able to ask ffmpeg at all.",
+            "title": "Detected",
+            "type": "boolean"
+          },
+          "selectable_vendors": {
+            "description": "Vendors that can be switched off on a library.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Selectable Vendors",
+            "type": "array"
+          },
+          "strictness_levels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Strictness Levels",
+            "type": "array"
+          },
+          "vendors": {
+            "description": "Vendors covered by the available methods.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Vendors",
+            "type": "array"
+          }
+        },
+        "required": [
+          "detected",
+          "detail"
+        ],
+        "title": "RefinerHardwareOut",
+        "type": "object"
+      },
       "RefinerJobCancelPendingIn": {
         "additionalProperties": false,
         "properties": {
@@ -3482,6 +3533,19 @@
             "title": "Exclude Patterns Csv",
             "type": "string"
           },
+          "ffmpeg_strictness": {
+            "default": "normal",
+            "description": "ffmpeg's -strict level. 'normal' is its own default and passes no flag.",
+            "enum": [
+              "very",
+              "strict",
+              "normal",
+              "unofficial",
+              "experimental"
+            ],
+            "title": "Ffmpeg Strictness",
+            "type": "string"
+          },
           "file_detection_interval_seconds": {
             "default": 30,
             "description": "How long this file's size must stay unchanged before MediaMop treats it as finished being written. 0 turns size settling off.",
@@ -3495,6 +3559,31 @@
             "description": "Watch this folder for changes so new files are picked up within seconds. The periodic scan runs regardless, so switching this off makes MediaMop slower to notice a file, never blind to it.",
             "title": "File System Events Enabled",
             "type": "boolean"
+          },
+          "hardware_decode_mode": {
+            "default": "off",
+            "description": "Hardware decoding. 'off' is what MediaMop has always done. A choice that cannot work falls back to software and records why \u2014 it never fails a file.",
+            "enum": [
+              "off",
+              "auto",
+              "device"
+            ],
+            "title": "Hardware Decode Mode",
+            "type": "string"
+          },
+          "hardware_device": {
+            "default": "",
+            "description": "The ffmpeg method to use when the mode is 'device' \u2014 cuda, qsv, vaapi.",
+            "maxLength": 32,
+            "title": "Hardware Device",
+            "type": "string"
+          },
+          "hardware_disabled_vendors_csv": {
+            "default": "",
+            "description": "Vendors to never use, comma separated: nvidia, intel, amd, vaapi, apple.",
+            "maxLength": 200,
+            "title": "Hardware Disabled Vendors Csv",
+            "type": "string"
           },
           "hold_minutes": {
             "default": 0,
@@ -3810,6 +3899,10 @@
             "title": "Exclude Patterns Csv",
             "type": "string"
           },
+          "ffmpeg_strictness": {
+            "title": "Ffmpeg Strictness",
+            "type": "string"
+          },
           "file_detection_interval_seconds": {
             "title": "File Detection Interval Seconds",
             "type": "integer"
@@ -3817,6 +3910,18 @@
           "file_system_events_enabled": {
             "title": "File System Events Enabled",
             "type": "boolean"
+          },
+          "hardware_decode_mode": {
+            "title": "Hardware Decode Mode",
+            "type": "string"
+          },
+          "hardware_device": {
+            "title": "Hardware Device",
+            "type": "string"
+          },
+          "hardware_disabled_vendors_csv": {
+            "title": "Hardware Disabled Vendors Csv",
+            "type": "string"
           },
           "hold_minutes": {
             "title": "Hold Minutes",
@@ -4001,6 +4106,10 @@
           "sidecar_patterns_csv",
           "preserve_original_timestamps",
           "output_collision_policy",
+          "hardware_decode_mode",
+          "hardware_device",
+          "hardware_disabled_vendors_csv",
+          "ffmpeg_strictness",
           "file_detection_interval_seconds",
           "ignore_size_changes",
           "skip_access_tests",
@@ -4076,6 +4185,19 @@
             "title": "Exclude Patterns Csv",
             "type": "string"
           },
+          "ffmpeg_strictness": {
+            "default": "normal",
+            "description": "ffmpeg's -strict level. 'normal' is its own default and passes no flag.",
+            "enum": [
+              "very",
+              "strict",
+              "normal",
+              "unofficial",
+              "experimental"
+            ],
+            "title": "Ffmpeg Strictness",
+            "type": "string"
+          },
           "file_detection_interval_seconds": {
             "default": 30,
             "description": "How long this file's size must stay unchanged before MediaMop treats it as finished being written. 0 turns size settling off.",
@@ -4089,6 +4211,31 @@
             "description": "Watch this folder for changes so new files are picked up within seconds. The periodic scan runs regardless, so switching this off makes MediaMop slower to notice a file, never blind to it.",
             "title": "File System Events Enabled",
             "type": "boolean"
+          },
+          "hardware_decode_mode": {
+            "default": "off",
+            "description": "Hardware decoding. 'off' is what MediaMop has always done. A choice that cannot work falls back to software and records why \u2014 it never fails a file.",
+            "enum": [
+              "off",
+              "auto",
+              "device"
+            ],
+            "title": "Hardware Decode Mode",
+            "type": "string"
+          },
+          "hardware_device": {
+            "default": "",
+            "description": "The ffmpeg method to use when the mode is 'device' \u2014 cuda, qsv, vaapi.",
+            "maxLength": 32,
+            "title": "Hardware Device",
+            "type": "string"
+          },
+          "hardware_disabled_vendors_csv": {
+            "default": "",
+            "description": "Vendors to never use, comma separated: nvidia, intel, amd, vaapi, apple.",
+            "maxLength": 200,
+            "title": "Hardware Disabled Vendors Csv",
+            "type": "string"
           },
           "hold_minutes": {
             "default": 0,
@@ -9356,6 +9503,29 @@
           }
         },
         "summary": "Get Refiner File Why Held",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/hardware": {
+      "get": {
+        "description": "What ffmpeg on this machine reports it can do.",
+        "operationId": "get_refiner_hardware_api_v1_refiner_hardware_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefinerHardwareOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Refiner Hardware",
         "tags": [
           "refiner",
           "refiner"

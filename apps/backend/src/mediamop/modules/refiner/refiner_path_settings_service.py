@@ -148,6 +148,10 @@ class RefinerPathRuntime:
     #: What to do when an output already exists at this path. "replace" is what every
     #: install does today (#349).
     output_collision_policy: str = "replace"
+    hardware_decode_mode: str = "off"
+    hardware_device: str = ""
+    hardware_disabled_vendors_csv: str = ""
+    ffmpeg_strictness: str = "normal"
 
 
 def _normalize_media_scope(raw: str | None) -> RefinerMediaScope:
@@ -297,6 +301,10 @@ def resolve_refiner_path_runtime_for_library(
             sidecar_patterns_csv=library.sidecar_patterns_csv or "",
             preserve_original_timestamps=bool(library.preserve_original_timestamps),
             output_collision_policy=library.output_collision_policy or "replace",
+            hardware_decode_mode=library.hardware_decode_mode or "off",
+            hardware_device=library.hardware_device or "",
+            hardware_disabled_vendors_csv=library.hardware_disabled_vendors_csv or "",
+            ffmpeg_strictness=library.ffmpeg_strictness or "normal",
         ),
         None,
     )

@@ -110,6 +110,47 @@ Migration note:
 
 The image exposes `GET /health` and includes a Docker `HEALTHCHECK`.
 
+## Hardware acceleration and device passthrough
+
+MediaMop stream-copies, so hardware decoding is rarely on the critical path today. It is
+switched **off** by default and nothing here is needed to run Refiner.
+
+`GET /api/v1/refiner/hardware` reports what the ffmpeg inside the container was compiled
+with. That is not the same as what your host offers — a method being listed does not prove
+a device is present — and neither is visible to the container without passthrough.
+
+**Intel QSV / AMD / VAAPI** need the render node:
+
+```yaml
+services:
+  mediamop:
+    devices:
+      - /dev/dri:/dev/dri
+```
+
+The container user must be able to read it. On most hosts that means adding the container
+user to the `render` group (`group_add: ["render"]`), or matching its gid.
+
+**NVIDIA** needs the NVIDIA Container Toolkit on the host, then:
+
+```yaml
+services:
+  mediamop:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: ["gpu"]
+```
+
+Without passthrough, a library configured to use a device **falls back to software and
+records why on the file** — it does not fail. That is the intended behaviour, so a
+misconfigured device costs you speed rather than a failed pass. The reason is on the
+file's record and in its processing log.
+
+Per-vendor disables exist on each library for the case where auto-detection picks a device
+that is present but wrong.
+
 ## Filesystem events on bind mounts
 
 Refiner watches its watched folders so a new file becomes a candidate within seconds, and
