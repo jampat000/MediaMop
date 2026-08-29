@@ -11,7 +11,7 @@ from starlette import status
 from mediamop.api.deps import DbSessionDep, SettingsDep
 from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
-from mediamop.modules.refiner.refiner_path_settings_service import ensure_refiner_path_settings_row
+from mediamop.modules.refiner.refiner_library_service import resolve_library
 from mediamop.modules.refiner.schemas_file_remux_pass_manual import (
     RefinerFileRemuxPassManualEnqueueIn,
     RefinerFileRemuxPassManualEnqueueOut,
@@ -48,11 +48,9 @@ def post_refiner_file_remux_pass_enqueue(
             detail="Invalid or expired CSRF token.",
         )
 
-    row = ensure_refiner_path_settings_row(db)
     scope = body.media_scope
-    watched_ok = (
-        (row.refiner_tv_watched_folder or "").strip() if scope == "tv" else (row.refiner_watched_folder or "").strip()
-    )
+    library = resolve_library(db, media_scope=scope)
+    watched_ok = (library.watched_folder or "").strip() if library is not None else ""
     if not watched_ok:
         label = "TV Refiner" if scope == "tv" else "Movies Refiner"
         raise HTTPException(

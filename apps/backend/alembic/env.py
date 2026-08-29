@@ -35,10 +35,6 @@ from mediamop.modules.refiner import refiner_file_log_model as _refiner_file_log
 from mediamop.modules.refiner import refiner_file_state_model as _refiner_file_state_orm  # noqa: F401
 from mediamop.modules.refiner import refiner_library_model as _refiner_library_orm  # noqa: F401
 from mediamop.modules.refiner import refiner_operator_settings_model as _refiner_operator_settings_orm  # noqa: F401
-from mediamop.modules.refiner import refiner_path_settings_model as _refiner_path_settings_orm  # noqa: F401
-from mediamop.modules.refiner import (
-    refiner_remux_rules_settings_model as _refiner_remux_rules_settings_orm,  # noqa: F401
-)
 
 # Register models on Base.metadata (Alembic autogenerate / revision drift checks).
 from mediamop.platform.activity import models as _activity_orm  # noqa: F401

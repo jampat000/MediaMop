@@ -18,8 +18,6 @@ import mediamop.modules.pruner.pruner_scope_settings_model  # noqa: F401
 import mediamop.modules.pruner.pruner_server_instance_model  # noqa: F401
 import mediamop.modules.refiner.jobs_model  # noqa: F401
 import mediamop.modules.refiner.refiner_operator_settings_model  # noqa: F401
-import mediamop.modules.refiner.refiner_path_settings_model  # noqa: F401
-import mediamop.modules.refiner.refiner_remux_rules_settings_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.arr_library.arr_operator_settings_model  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
@@ -28,6 +26,11 @@ import mediamop.platform.suite_settings.suite_configuration_backup_model  # noqa
 from alembic import op
 
 # Register all ORM tables on Base.metadata (must mirror ``alembic/env.py``).
+#
+# The two Refiner singleton settings models were removed in #363, so this no longer
+# creates their tables and 0025 has nothing to drop on a greenfield install. Building
+# from live metadata is what makes that work: a deleted model is simply a table that is
+# never created, rather than one created here and dropped four migrations later.
 from mediamop.core.db import Base
 from mediamop.core.greenfield_db_seed import seed_greenfield_singleton_rows
 

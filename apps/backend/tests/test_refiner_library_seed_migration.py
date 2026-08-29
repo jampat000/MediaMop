@@ -42,6 +42,47 @@ def _rows(engine: sa.Engine, sql: str) -> list[dict]:
         return [dict(r) for r in conn.execute(sa.text(sql)).mappings()]
 
 
+def _create_pre_library_singletons(engine: sa.Engine) -> None:
+    """Recreate the two settings tables as a pre-library database actually had them.
+
+    They are no longer built by 0001 (#363 removed the models, and 0001 creates from live
+    metadata), so replaying the chain from scratch never produces them. A **real** upgrade
+    from v2.4.x still does: that database has these tables, 0011 reads them, and 0025
+    drops them afterwards. That is the path these tests exist to protect, so the fixture
+    now builds the starting state rather than relying on a migration to build it.
+    """
+
+    with engine.begin() as conn:
+        conn.execute(
+            sa.text(
+                "create table if not exists refiner_path_settings ("
+                " id integer primary key,"
+                " refiner_watched_folder text, refiner_work_folder text, refiner_output_folder text,"
+                " refiner_tv_watched_folder text, refiner_tv_work_folder text, refiner_tv_output_folder text,"
+                " movie_watched_folder_check_interval_seconds integer not null default 300,"
+                " tv_watched_folder_check_interval_seconds integer not null default 300,"
+                " updated_at timestamp)"
+            )
+        )
+        columns = ["id integer primary key", "updated_at timestamp"]
+        for prefix in ("", "tv_"):
+            columns += [
+                f"{prefix}primary_audio_lang text not null default 'eng'",
+                f"{prefix}secondary_audio_lang text not null default ''",
+                f"{prefix}tertiary_audio_lang text not null default ''",
+                f"{prefix}default_audio_slot text not null default 'primary'",
+                f"{prefix}remove_commentary integer not null default 1",
+                f"{prefix}subtitle_mode text not null default 'remove_all'",
+                f"{prefix}subtitle_langs_csv text not null default ''",
+                f"{prefix}preserve_forced_subs integer not null default 1",
+                f"{prefix}preserve_default_subs integer not null default 1",
+                f"{prefix}audio_preference_mode text not null default 'preferred_langs_quality'",
+            ]
+        conn.execute(sa.text(f"create table if not exists refiner_remux_rules_settings ({', '.join(columns)})"))
+        conn.execute(sa.text("insert or ignore into refiner_path_settings (id) values (1)"))
+        conn.execute(sa.text("insert or ignore into refiner_remux_rules_settings (id) values (1)"))
+
+
 def test_seed_carries_configured_paths_and_rules_verbatim(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -50,6 +91,7 @@ def test_seed_carries_configured_paths_and_rules_verbatim(
     command.upgrade(cfg, _BEFORE)
 
     engine = _engine()
+    _create_pre_library_singletons(engine)
     with engine.begin() as conn:
         conn.execute(
             sa.text(
@@ -158,6 +200,7 @@ def test_seed_links_the_manager_the_retired_inference_would_have_chosen(
     command.upgrade(cfg, _BEFORE)
 
     engine = _engine()
+    _create_pre_library_singletons(engine)
     with engine.begin() as conn:
         for kind, name in (("radarr", "Radarr 4K"), ("sonarr", "Sonarr Main"), ("deluno", "Deluno")):
             conn.execute(
@@ -242,18 +285,37 @@ def test_seeding_is_idempotent(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) 
     assert sorted(names) == ["Movies", "TV"]
 
 
-def test_the_singleton_rows_are_untouched_by_the_seed(
+def test_a_configured_upgrade_carries_the_value_across_and_then_drops_the_table(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """Step 8 drops them; until then they stay readable so every step has a rollback."""
+    """The whole upgrade, end to end: 0011 carries the value, 0025 removes the table.
+
+    This test used to assert the singleton *survived* to head, because it was the
+    rollback path for the release that introduced libraries. Step 8 has happened (#363),
+    so the guarantee it protects is now the other one — the value must reach the library
+    before the table it came from disappears, and a watched folder that failed to carry
+    across is the destructive case ADR-0014 §6 exists to prevent.
+    """
 
     cfg = _config(monkeypatch, tmp_path, "untouched")
     command.upgrade(cfg, _BEFORE)
-    with _engine().begin() as conn:
+    engine = _engine()
+    _create_pre_library_singletons(engine)
+    with engine.begin() as conn:
         conn.execute(sa.text("update refiner_path_settings set refiner_watched_folder = '/keep/me' where id = 1"))
 
     command.upgrade(cfg, "head")
 
-    rows = _rows(_engine(), "select refiner_watched_folder from refiner_path_settings where id = 1")
-    assert rows[0]["refiner_watched_folder"] == "/keep/me"
+    carried = _rows(
+        _engine(),
+        "select watched_folder from refiner_libraries where media_scope = 'movie' order by id limit 1",
+    )
+    assert carried[0]["watched_folder"] == "/keep/me"
+
+    remaining = _rows(
+        _engine(),
+        "select name from sqlite_master where type = 'table' and name in"
+        " ('refiner_path_settings', 'refiner_remux_rules_settings')",
+    )
+    assert remaining == []

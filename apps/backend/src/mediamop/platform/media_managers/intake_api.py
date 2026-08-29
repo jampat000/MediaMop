@@ -24,7 +24,7 @@ from mediamop.api.deps import DbSessionDep, SettingsDep
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
-from mediamop.modules.refiner.refiner_path_settings_service import ensure_refiner_path_settings_row
+from mediamop.modules.refiner.refiner_library_service import resolve_library
 from mediamop.platform.media_managers.connection_service import (
     connection_for_kind,
     webhook_secret_matches,
@@ -79,8 +79,8 @@ def _compact_json(payload: dict[str, Any]) -> str:
 
 
 def _enqueue_refine(session: Session, event: MediaManagerImportEvent) -> str:
-    row = ensure_refiner_path_settings_row(session)
-    watched = row.refiner_tv_watched_folder if event.media_scope == "tv" else row.refiner_watched_folder
+    library = resolve_library(session, media_scope=event.media_scope)
+    watched = (library.watched_folder or "") if library is not None else ""
     resolved = relative_media_path_for_handoff(watched_folder=watched, file_path=event.file_path)
     if not resolved.ok:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=resolved.problem)

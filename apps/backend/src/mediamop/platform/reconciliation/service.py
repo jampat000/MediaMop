@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
+from mediamop.modules.refiner.refiner_library_service import list_libraries
 from mediamop.platform.file_lifecycle.mutations import safe_unlink_under_roots
 
 TEMP_ARTIFACT_SUFFIXES = (".partial", ".part", ".tmp", ".link")
@@ -51,11 +51,12 @@ def _path_exists(raw: str | None) -> bool:
         return False
 
 
-def _configured_refiner_work_roots(row: RefinerPathSettingsRow | None) -> list[Path]:
-    if row is None:
-        return []
+def _configured_refiner_work_roots(session: Session) -> list[Path]:
+    """Every library's work root. Reads the libraries now the singletons are gone (#363),
+    which also means a third library's work folder is no longer skipped."""
+
     roots: list[Path] = []
-    for raw in (row.refiner_work_folder, row.refiner_tv_work_folder):
+    for raw in (library.work_folder for library in list_libraries(session)):
         if not raw or not str(raw).strip():
             continue
         try:
@@ -73,20 +74,23 @@ def _is_temp_artifact(path: Path) -> bool:
 
 
 def _scan_refiner_paths(session: Session) -> list[ReconciliationIssue]:
-    row = session.get(RefinerPathSettingsRow, 1)
-    if row is None:
+    libraries = list_libraries(session)
+    if not libraries:
         return []
 
     issues: list[ReconciliationIssue] = []
-    configured_folders = (
-        ("refiner", "Movies watched folder", row.refiner_watched_folder),
-        ("refiner", "Movies output folder", row.refiner_output_folder),
-        ("refiner", "Movies work folder", row.refiner_work_folder),
-        ("refiner", "TV watched folder", row.refiner_tv_watched_folder),
-        ("refiner", "TV output folder", row.refiner_tv_output_folder),
-        ("refiner", "TV work folder", row.refiner_tv_work_folder),
-    )
-    for module, label, raw in configured_folders:
+    # Every library, not two fixed scopes: a third library's unreachable folder used to
+    # go unreported entirely because the singleton had nowhere to put it.
+    configured_folders = [
+        ("refiner", f"{library.name} {role} folder", raw, library.id)
+        for library in libraries
+        for role, raw in (
+            ("watched", library.watched_folder),
+            ("output", library.output_folder),
+            ("work", library.work_folder),
+        )
+    ]
+    for module, label, raw, library_id in configured_folders:
         if raw and str(raw).strip() and not _path_exists(str(raw)):
             issues.append(
                 ReconciliationIssue(
@@ -95,12 +99,12 @@ def _scan_refiner_paths(session: Session) -> list[ReconciliationIssue]:
                     severity="warning",
                     message=f"{label} is configured but is not currently reachable on disk.",
                     path=str(raw),
-                    db_table="refiner_path_settings",
-                    db_id=1,
+                    db_table="refiner_libraries",
+                    db_id=library_id,
                 )
             )
 
-    for root in _configured_refiner_work_roots(row):
+    for root in _configured_refiner_work_roots(session):
         for path in root.rglob("*"):
             if len(issues) >= MAX_ISSUES_PER_CATEGORY:
                 return issues
@@ -142,8 +146,7 @@ def repair_reconciliation_issue(
             raise ValueError("confirm=true is required before removing a Refiner temp artifact.")
         if not path or not path.strip():
             raise ValueError("path is required for this repair action.")
-        path_row = session.get(RefinerPathSettingsRow, 1)
-        roots = _configured_refiner_work_roots(path_row)
+        roots = _configured_refiner_work_roots(session)
         target = Path(path)
         if not _is_temp_artifact(target):
             raise ValueError("Refusing to remove a file that does not look like a temp artifact.")

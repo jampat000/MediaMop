@@ -11,17 +11,13 @@ import pytest
 from sqlalchemy import delete, select, update
 
 import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.modules.refiner.refiner_path_settings_model  # noqa: F401
 import mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue as periodic_enqueue
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
-from mediamop.modules.refiner.refiner_path_settings_service import (
-    mirror_singleton_paths_onto_seeded_libraries,
-)
+from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_enqueue import (
     refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan,
     try_enqueue_periodic_watched_folder_remux_scan_dispatch,
@@ -35,6 +31,7 @@ from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_periodi
     _watched_folder_scan_interval_seconds,
     refiner_scope_periodic_scan_enabled,
 )
+from tests.refiner_library_fixtures import seed_refiner_libraries
 
 
 def _fac():
@@ -52,12 +49,23 @@ def _settings_on() -> MediaMopSettings:
 
 
 def test_periodic_scheduler_uses_library_watched_folder_interval() -> None:
-    row = SimpleNamespace(
-        movie_watched_folder_check_interval_seconds=20,
-        tv_watched_folder_check_interval_seconds=40,
-    )
-    assert _watched_folder_scan_interval_seconds(row, media_scope="movie") == 20
-    assert _watched_folder_scan_interval_seconds(row, media_scope="tv") == 40
+    """The cadence comes off the library itself now (#363), not a per-scope column.
+
+    The caller resolves the library from the scope, so each scope gets its own library
+    and its own interval rather than two columns on one row.
+    """
+
+    movies = SimpleNamespace(scan_interval_seconds=20)
+    tv = SimpleNamespace(scan_interval_seconds=40)
+
+    assert _watched_folder_scan_interval_seconds(movies, media_scope="movie") == 20
+    assert _watched_folder_scan_interval_seconds(tv, media_scope="tv") == 40
+
+
+def test_a_missing_library_falls_back_to_the_shipped_cadence() -> None:
+    """A scope with no library must not schedule a scan every zero seconds."""
+
+    assert _watched_folder_scan_interval_seconds(None, media_scope="movie") == 300
 
 
 def test_periodic_scheduler_reports_missed_due_intervals() -> None:
@@ -108,17 +116,13 @@ def test_periodic_scheduler_scope_failure_does_not_block_other_scope(
 
     with fac() as db:
         db.execute(delete(RefinerJob))
-        db.execute(
-            update(RefinerPathSettingsRow)
-            .where(RefinerPathSettingsRow.id == 1)
-            .values(
-                refiner_watched_folder=str(tmp_path / "mwatch"),
-                refiner_output_folder=str(tmp_path / "mout"),
-                refiner_tv_watched_folder=str(tmp_path / "twatch"),
-                refiner_tv_output_folder=str(tmp_path / "tout"),
-            ),
+        seed_refiner_libraries(
+            db,
+            watched_folder=str(tmp_path / "mwatch"),
+            output_folder=str(tmp_path / "mout"),
+            tv_watched_folder=str(tmp_path / "twatch"),
+            tv_output_folder=str(tmp_path / "tout"),
         )
-        mirror_singleton_paths_onto_seeded_libraries(db)
         db.commit()
 
     calls: list[str] = []
@@ -154,17 +158,7 @@ def test_periodic_scheduler_scope_failure_does_not_block_other_scope(
     finally:
         with fac() as db:
             db.execute(delete(RefinerJob))
-            db.execute(
-                update(RefinerPathSettingsRow)
-                .where(RefinerPathSettingsRow.id == 1)
-                .values(
-                    refiner_watched_folder=None,
-                    refiner_output_folder="",
-                    refiner_tv_watched_folder=None,
-                    refiner_tv_output_folder=None,
-                ),
-            )
-            mirror_singleton_paths_onto_seeded_libraries(db)
+            seed_refiner_libraries(db)
             db.commit()
 
 
@@ -196,8 +190,10 @@ def test_periodic_scheduler_keeps_scope_next_run_values_independent(
     )
     monkeypatch.setattr(
         periodic_enqueue,
-        "ensure_refiner_path_settings_row",
-        lambda _session: SimpleNamespace(),
+        "resolve_library",
+        # The cadence comes from the library now (#363); an object with no
+        # scan_interval_seconds exercises the helper's own default.
+        lambda _session, **_kwargs: SimpleNamespace(),
     )
     monkeypatch.setattr(
         periodic_enqueue,
@@ -248,7 +244,6 @@ def test_queue_has_active_scan_detects_pending_and_leased_per_scope() -> None:
                 status=RefinerJobStatus.PENDING.value,
             ),
         )
-        mirror_singleton_paths_onto_seeded_libraries(db)
         db.commit()
     with fac() as db:
         assert refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan(db, media_scope="movie") is True
@@ -265,7 +260,6 @@ def test_queue_has_active_scan_detects_pending_and_leased_per_scope() -> None:
                 payload_json=tv_payload,
             ),
         )
-        mirror_singleton_paths_onto_seeded_libraries(db)
         db.commit()
     with fac() as db:
         assert refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan(db, media_scope="movie") is False
@@ -282,7 +276,6 @@ def test_queue_has_active_scan_detects_pending_and_leased_per_scope() -> None:
                 attempt_count=1,
             ),
         )
-        mirror_singleton_paths_onto_seeded_libraries(db)
         db.commit()
     with fac() as db:
         assert refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan(db, media_scope="movie") is True
@@ -298,7 +291,6 @@ def test_queue_has_active_scan_detects_pending_and_leased_per_scope() -> None:
                 attempt_count=1,
             ),
         )
-        mirror_singleton_paths_onto_seeded_libraries(db)
         db.commit()
     with fac() as db:
         assert refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan(db, media_scope="movie") is False
@@ -333,17 +325,11 @@ def test_production_call_shape_enqueues_one_scope_at_a_time(tmp_path) -> None:
     out.mkdir()
     with fac() as db:
         db.execute(delete(RefinerJob))
-        db.execute(
-            update(RefinerPathSettingsRow)
-            .where(RefinerPathSettingsRow.id == 1)
-            .values(refiner_watched_folder=str(watched), refiner_output_folder=str(out)),
-        )
-        mirror_singleton_paths_onto_seeded_libraries(db)
+        seed_refiner_libraries(db, watched_folder=str(watched), output_folder=str(out))
         db.commit()
     try:
         with fac() as db:
             inserted, skip = try_enqueue_periodic_watched_folder_remux_scan_dispatch(db, settings, media_scope="movie")
-            mirror_singleton_paths_onto_seeded_libraries(db)
             db.commit()
         assert inserted is True, skip
         with fac() as db:
@@ -353,7 +339,6 @@ def test_production_call_shape_enqueues_one_scope_at_a_time(tmp_path) -> None:
     finally:
         with fac() as db:
             db.execute(delete(RefinerJob))
-            mirror_singleton_paths_onto_seeded_libraries(db)
             db.commit()
 
 
@@ -362,16 +347,8 @@ def test_try_enqueue_periodic_skips_when_active_scan_exists() -> None:
     settings = _settings_on()
     with fac() as db:
         db.execute(delete(RefinerJob))
-        db.execute(
-            update(RefinerPathSettingsRow)
-            .where(RefinerPathSettingsRow.id == 1)
-            .values(
-                refiner_watched_folder=None,
-                refiner_output_folder="",
-                refiner_tv_watched_folder=None,
-                refiner_tv_output_folder=None,
-            ),
-        )
+        # No folders configured on either library.
+        seed_refiner_libraries(db)
         db.add(
             RefinerJob(
                 dedupe_key="wf-scan-block",
@@ -379,7 +356,6 @@ def test_try_enqueue_periodic_skips_when_active_scan_exists() -> None:
                 status=RefinerJobStatus.PENDING.value,
             ),
         )
-        mirror_singleton_paths_onto_seeded_libraries(db)
         db.commit()
     with fac() as db:
         ins, skip = try_enqueue_periodic_watched_folder_remux_scan_dispatch(db, settings)
@@ -409,22 +385,11 @@ def test_try_enqueue_periodic_enqueues_tv_when_movie_scope_blocked(tmp_path) -> 
                 payload_json=block_payload,
             ),
         )
-        db.execute(
-            update(RefinerPathSettingsRow)
-            .where(RefinerPathSettingsRow.id == 1)
-            .values(
-                refiner_watched_folder=mw,
-                refiner_output_folder=mo,
-                refiner_tv_watched_folder=tw,
-                refiner_tv_output_folder=to,
-            ),
-        )
-        mirror_singleton_paths_onto_seeded_libraries(db)
+        seed_refiner_libraries(db, watched_folder=mw, output_folder=mo, tv_watched_folder=tw, tv_output_folder=to)
         db.commit()
     try:
         with fac() as db:
             ins, skip = try_enqueue_periodic_watched_folder_remux_scan_dispatch(db, settings)
-            mirror_singleton_paths_onto_seeded_libraries(db)
             db.commit()
         assert ins is True
         assert skip is None
@@ -439,17 +404,7 @@ def test_try_enqueue_periodic_enqueues_tv_when_movie_scope_blocked(tmp_path) -> 
     finally:
         with fac() as db:
             db.execute(delete(RefinerJob))
-            db.execute(
-                update(RefinerPathSettingsRow)
-                .where(RefinerPathSettingsRow.id == 1)
-                .values(
-                    refiner_watched_folder=None,
-                    refiner_output_folder="",
-                    refiner_tv_watched_folder=None,
-                    refiner_tv_output_folder=None,
-                ),
-            )
-            mirror_singleton_paths_onto_seeded_libraries(db)
+            seed_refiner_libraries(db)
             db.commit()
 
 
@@ -464,22 +419,11 @@ def test_try_enqueue_periodic_inserts_movie_and_tv_when_both_scopes_ready(tmp_pa
     to = str(tmp_path / "tout")
     with fac() as db:
         db.execute(delete(RefinerJob))
-        db.execute(
-            update(RefinerPathSettingsRow)
-            .where(RefinerPathSettingsRow.id == 1)
-            .values(
-                refiner_watched_folder=mw,
-                refiner_output_folder=mo,
-                refiner_tv_watched_folder=tw,
-                refiner_tv_output_folder=to,
-            ),
-        )
-        mirror_singleton_paths_onto_seeded_libraries(db)
+        seed_refiner_libraries(db, watched_folder=mw, output_folder=mo, tv_watched_folder=tw, tv_output_folder=to)
         db.commit()
     try:
         with fac() as db:
             ins, skip = try_enqueue_periodic_watched_folder_remux_scan_dispatch(db, settings)
-            mirror_singleton_paths_onto_seeded_libraries(db)
             db.commit()
         assert ins is True
         assert skip is None
@@ -497,17 +441,7 @@ def test_try_enqueue_periodic_inserts_movie_and_tv_when_both_scopes_ready(tmp_pa
     finally:
         with fac() as db:
             db.execute(delete(RefinerJob))
-            db.execute(
-                update(RefinerPathSettingsRow)
-                .where(RefinerPathSettingsRow.id == 1)
-                .values(
-                    refiner_watched_folder=None,
-                    refiner_output_folder="",
-                    refiner_tv_watched_folder=None,
-                    refiner_tv_output_folder=None,
-                ),
-            )
-            mirror_singleton_paths_onto_seeded_libraries(db)
+            seed_refiner_libraries(db)
             db.commit()
 
 
@@ -520,20 +454,11 @@ def test_try_enqueue_periodic_inserts_when_prerequisites_met(tmp_path) -> None:
     tmp_path.joinpath("out").mkdir()
     with fac() as db:
         db.execute(delete(RefinerJob))
-        db.execute(
-            update(RefinerPathSettingsRow)
-            .where(RefinerPathSettingsRow.id == 1)
-            .values(
-                refiner_watched_folder=watched,
-                refiner_output_folder=out,
-            ),
-        )
-        mirror_singleton_paths_onto_seeded_libraries(db)
+        seed_refiner_libraries(db, watched_folder=watched, output_folder=out)
         db.commit()
     try:
         with fac() as db:
             ins, skip = try_enqueue_periodic_watched_folder_remux_scan_dispatch(db, settings)
-            mirror_singleton_paths_onto_seeded_libraries(db)
             db.commit()
         assert ins is True
         assert skip is None
@@ -549,13 +474,5 @@ def test_try_enqueue_periodic_inserts_when_prerequisites_met(tmp_path) -> None:
     finally:
         with fac() as db:
             db.execute(delete(RefinerJob))
-            db.execute(
-                update(RefinerPathSettingsRow)
-                .where(RefinerPathSettingsRow.id == 1)
-                .values(
-                    refiner_watched_folder=None,
-                    refiner_output_folder="",
-                ),
-            )
-            mirror_singleton_paths_onto_seeded_libraries(db)
+            seed_refiner_libraries(db)
             db.commit()

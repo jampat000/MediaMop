@@ -19,10 +19,10 @@ from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.refiner_failure_cleanup import run_refiner_failure_cleanup_sweep_for_scope
 from mediamop.modules.refiner.refiner_failure_cleanup_enqueue import enqueue_refiner_failure_cleanup_sweep_job
 from mediamop.modules.refiner.refiner_failure_cleanup_handlers import make_refiner_failure_cleanup_handler
-from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
 from mediamop.platform.activity.models import ActivityEvent
 from tests.manager_signal_helpers import reported
+from tests.refiner_library_fixtures import seed_refiner_libraries
 
 
 def _session(tmp_path: Path) -> Session:
@@ -37,16 +37,14 @@ def _settings() -> MediaMopSettings:
 
 
 def _seed_paths(session: Session, *, mw: Path, mo: Path, tw: Path, to: Path) -> None:
-    session.add(
-        RefinerPathSettingsRow(
-            id=1,
-            refiner_watched_folder=str(mw.resolve()),
-            refiner_output_folder=str(mo.resolve()),
-            refiner_tv_watched_folder=str(tw.resolve()),
-            refiner_tv_output_folder=str(to.resolve()),
-            refiner_work_folder=str((mw.parent / "mwork").resolve()),
-            refiner_tv_work_folder=str((tw.parent / "twork").resolve()),
-        ),
+    seed_refiner_libraries(
+        session,
+        watched_folder=str(mw.resolve()),
+        output_folder=str(mo.resolve()),
+        work_folder=str((mw.parent / "mwork").resolve()),
+        tv_watched_folder=str(tw.resolve()),
+        tv_output_folder=str(to.resolve()),
+        tv_work_folder=str((tw.parent / "twork").resolve()),
     )
     session.commit()
 
@@ -184,7 +182,9 @@ def test_tv_cleanup_skips_when_any_direct_child_episode_still_in_queue(tmp_path:
 
 def test_missing_path_settings_skip_cleanly(tmp_path: Path) -> None:
     session = _session(tmp_path)
-    session.add(RefinerPathSettingsRow(id=1, refiner_watched_folder=None, refiner_output_folder=""))
+    # A library exists but has no folders set — the "nothing configured" state now that
+    # the singleton is gone.
+    seed_refiner_libraries(session)
     session.commit()
     result = run_refiner_failure_cleanup_sweep_for_scope(session=session, settings=_settings(), media_scope="movie")
     assert "not configured" in result["skip_reason"]

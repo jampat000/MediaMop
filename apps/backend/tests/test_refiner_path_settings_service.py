@@ -7,10 +7,10 @@ from pathlib import Path
 import pytest
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
+from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
 from mediamop.modules.refiner.refiner_path_settings_service import (
     _validate_path_separation,
-    effective_work_folder,
+    effective_library_work_folder,
     resolved_default_refiner_tv_work_folder,
     resolved_default_refiner_work_folder,
 )
@@ -39,9 +39,13 @@ def test_resolved_default_tv_work_under_home(tmp_path: Path, monkeypatch: pytest
 
 
 def test_legacy_movie_default_is_treated_as_default(tmp_path: Path) -> None:
-    row = RefinerPathSettingsRow(id=1, refiner_work_folder=r"C:\ProgramData\Media\refiner-movie-work")
+    # Reads the library now the singleton is gone (#363). The recognition itself — a work
+    # folder saved before the default moved is still the default — is unchanged.
+    library = RefinerLibraryRow(
+        name="Movies", media_scope="movie", work_folder=r"C:\ProgramData\Media\refiner-movie-work"
+    )
 
-    got, is_default = effective_work_folder(row=row, mediamop_home=str(tmp_path))
+    got, is_default = effective_library_work_folder(library=library, mediamop_home=str(tmp_path))
 
     assert is_default is True
     assert got == str(tmp_path.resolve() / "refiner" / "refiner-movie-work")

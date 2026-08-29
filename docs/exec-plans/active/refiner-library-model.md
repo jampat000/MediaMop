@@ -90,7 +90,10 @@ Each step is a PR that leaves `main` releasable.
    disable, delete.
 
 8. **Drop the singletons.** A separate migration, only once nothing reads them, so steps
-   2 through 7 each have somewhere to roll back to.
+   2 through 7 each have somewhere to roll back to. *Done — `0025`, [#363].* The two
+   `/api/v1` surfaces they backed are kept and repointed at the libraries rather than
+   removed: the setup wizard writes through path-settings on first run, and the Refiner
+   overview reads both.
 
 9. **Docs.** `ARCHITECTURE.md`, `docs/settings-truthfulness-audit.md`, and move this plan
    to `completed/`.
@@ -109,6 +112,8 @@ Each step is a PR that leaves `main` releasable.
 
 - 2026-08-28 — baseline recorded: 763 backend tests, 166 web tests, coverage 77.62%,
   `alembic check` reports no new upgrade operations, working tree clean at `07c5fab`.
+- 2026-08-29 — step 8: 1194 backend tests, 209 web tests, 7 E2E, `alembic check` reports
+  no new upgrade operations against a database built from `0001` through `0025`.
 
 ## Decisions
 
@@ -124,5 +129,14 @@ Each step is a PR that leaves `main` releasable.
   against a real port is more reliable than against a planned one, and #350 changes no
   schema so it is a clean first PR.
 
+- 2026-08-29 — **A v3 configuration bundle is translated onto the seeded libraries, not
+  rejected.** The alternative strands a backup taken the day before an upgrade, which is
+  exactly when one is taken. `BUNDLE_FORMAT_VERSION` is 4 and 3 stays restorable.
+- 2026-08-29 — **A stored `subtitle_mode` of `keep_all` is read as keep-selected, not
+  migrated to `remove_all`.** It is the rule-set table's server default and never a mode
+  anything implements; the planner already read it as keep-selected. Rewriting the stored
+  value would start deleting subtitles nobody asked to delete.
+
 [#350]: https://github.com/jampat000/MediaMop/issues/350
 [#351]: https://github.com/jampat000/MediaMop/issues/351
+[#363]: https://github.com/jampat000/MediaMop/issues/363

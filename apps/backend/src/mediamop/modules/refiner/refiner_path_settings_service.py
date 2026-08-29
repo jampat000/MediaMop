@@ -11,7 +11,6 @@ from sqlalchemy.orm import Session
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
 from mediamop.modules.refiner.refiner_library_service import resolve_library, seeded_library_for_scope
-from mediamop.modules.refiner.refiner_path_settings_model import RefinerPathSettingsRow
 
 RefinerMediaScope = Literal["movie", "tv"]
 
@@ -100,38 +99,6 @@ def _validate_cross_family_paths(paths: list[Path]) -> None:
                 raise ValueError(msg)
 
 
-def effective_work_folder(*, row: RefinerPathSettingsRow, mediamop_home: str) -> tuple[str, bool]:
-    """Return ``(absolute_work_path, is_default)`` for movie scope."""
-
-    stored = (row.refiner_work_folder or "").strip()
-    if stored:
-        if _is_legacy_refiner_default_work_folder(stored, media_scope="movie"):
-            return resolved_default_refiner_work_folder(mediamop_home=mediamop_home), True
-        return stored, False
-    return resolved_default_refiner_work_folder(mediamop_home=mediamop_home), True
-
-
-def effective_tv_work_folder(*, row: RefinerPathSettingsRow, mediamop_home: str) -> tuple[str, bool]:
-    """Return ``(absolute_tv_work_path, is_default)``."""
-
-    stored = (row.refiner_tv_work_folder or "").strip()
-    if stored:
-        if _is_legacy_refiner_default_work_folder(stored, media_scope="tv"):
-            return resolved_default_refiner_tv_work_folder(mediamop_home=mediamop_home), True
-        return stored, False
-    return resolved_default_refiner_tv_work_folder(mediamop_home=mediamop_home), True
-
-
-def ensure_refiner_path_settings_row(session: Session) -> RefinerPathSettingsRow:
-    """Return singleton row ``id = 1`` (seeded by initial Alembic revision on greenfield DBs)."""
-
-    row = session.get(RefinerPathSettingsRow, 1)
-    if row is None:
-        msg = "refiner_path_settings row missing — run database migrations (alembic upgrade head)."
-        raise RuntimeError(msg)
-    return row
-
-
 @dataclass(frozen=True, slots=True)
 class RefinerPathRuntime:
     """Resolved folders for ``refiner.file.remux_pass.v1`` (no environment path fallback)."""
@@ -178,78 +145,17 @@ def resolve_refiner_path_runtime_for_remux(
 
     library = resolve_library(session, library_id=library_id, media_scope=media_scope)
     if library is None:
-        # No library covers this scope. Every migrated database has one, so this is the
-        # database that has not been migrated yet — fall back to the singleton rather
-        # than refusing work. The fallback goes away with the singletons themselves
-        # (exec plan step 8), which is why it reads them rather than duplicating them.
-        return _resolve_from_legacy_singleton(session, settings, media_scope=media_scope)
+        # There is one store now (#363). A database with no library covering this scope
+        # is one an operator has emptied, not an unmigrated one — 0011 seeds Movies and
+        # TV — so this refuses with a sentence rather than falling back to a table that
+        # no longer exists.
+        scope = _normalize_media_scope(media_scope)
+        label = "TV" if scope == "tv" else "Movies"
+        return None, (
+            f"No Refiner library covers {label}. Add one on the Refiner Libraries settings page, "
+            "then queue this work again."
+        )
     return resolve_refiner_path_runtime_for_library(settings, library)
-
-
-def _resolve_from_legacy_singleton(
-    session: Session,
-    settings: MediaMopSettings,
-    *,
-    media_scope: str | None,
-) -> tuple[RefinerPathRuntime | None, str | None]:
-    """Pre-library resolution, kept verbatim so an unmigrated database behaves as before."""
-
-    scope = _normalize_media_scope(media_scope)
-    label = "TV Refiner" if scope == "tv" else "Movies Refiner"
-    row = ensure_refiner_path_settings_row(session)
-
-    if scope == "tv":
-        watched_raw = (row.refiner_tv_watched_folder or "").strip()
-        watched_col = "refiner_tv_watched_folder"
-    else:
-        watched_raw = (row.refiner_watched_folder or "").strip()
-        watched_col = "refiner_watched_folder"
-
-    if not watched_raw:
-        return None, (
-            f"{label} watched folder is not set in saved path settings. "
-            "Manual remux and folder-scan jobs for this scope need a watched folder to resolve relative paths. "
-            f"Configure {label.lower()} paths (column {watched_col}) before enqueueing or running those jobs."
-        )
-    watched_path = _norm_dir_path(watched_raw)
-    if not watched_path.is_dir():
-        return None, f"{label} watched folder must be an existing directory (update saved path settings)."
-
-    if scope == "tv":
-        work_str, work_is_default = effective_tv_work_folder(row=row, mediamop_home=settings.mediamop_home)
-    else:
-        work_str, work_is_default = effective_work_folder(row=row, mediamop_home=settings.mediamop_home)
-    work_path = _norm_dir_path(work_str)
-
-    out_raw = (
-        (row.refiner_tv_output_folder or "").strip() if scope == "tv" else (row.refiner_output_folder or "").strip()
-    )
-    if not out_raw:
-        return None, (
-            f"Configure the {label.lower()} output folder in saved Refiner path settings "
-            "before running a live remux pass for this scope."
-        )
-    output_path = _norm_dir_path(out_raw)
-    if not output_path.is_dir():
-        return None, f"{label} output folder must be an existing directory (update saved path settings)."
-
-    try:
-        _validate_path_separation(watched=watched_path, work=work_path, output=output_path)
-    except ValueError as exc:
-        return None, str(exc)
-
-    if not work_is_default and not work_path.is_dir():
-        return None, f"{label} work/temp folder must be an existing directory when set to a custom path."
-
-    return (
-        RefinerPathRuntime(
-            watched_folder=str(watched_path),
-            output_folder=str(output_path),
-            work_folder_effective=str(work_path),
-            work_folder_is_default=work_is_default,
-        ),
-        None,
-    )
 
 
 def resolve_refiner_path_runtime_for_library(
@@ -325,58 +231,86 @@ def effective_library_work_folder(*, library: RefinerLibraryRow, mediamop_home: 
     return raw, False
 
 
-def build_refiner_path_settings_get_out(
-    *, row: RefinerPathSettingsRow, settings: MediaMopSettings
-) -> dict[str, object]:
-    work_eff, _is_def = effective_work_folder(row=row, mediamop_home=settings.mediamop_home)
+def _scoped_library(session: Session, scope: RefinerMediaScope) -> RefinerLibraryRow | None:
+    """The library this legacy scope-shaped surface speaks for.
+
+    The same resolution every other pre-library caller uses, so the compatibility view
+    and the work itself never disagree about which library a scope means.
+    """
+
+    return resolve_library(session, media_scope=scope)
+
+
+def build_refiner_path_settings_get_out(*, session: Session, settings: MediaMopSettings) -> dict[str, object]:
+    """The singleton-shaped view, now read from the libraries.
+
+    The table is gone (#363). The shape stays because the dashboard, the Refiner overview
+    and the setup wizard all read it, and rewriting three screens to prove a storage
+    change is not a trade worth making — the drift hazard was two *stores*, and there is
+    one now.
+    """
+
+    movies = _scoped_library(session, "movie")
+    tv = _scoped_library(session, "tv")
+
     default_work = resolved_default_refiner_work_folder(mediamop_home=settings.mediamop_home)
-    tv_work_eff, _tv_def = effective_tv_work_folder(row=row, mediamop_home=settings.mediamop_home)
     default_tv_work = resolved_default_refiner_tv_work_folder(mediamop_home=settings.mediamop_home)
+    work_eff = (
+        effective_library_work_folder(library=movies, mediamop_home=settings.mediamop_home)[0]
+        if movies is not None
+        else default_work
+    )
+    tv_work_eff = (
+        effective_library_work_folder(library=tv, mediamop_home=settings.mediamop_home)[0]
+        if tv is not None
+        else default_tv_work
+    )
+
+    movie_watched = (movies.watched_folder or "") if movies is not None else ""
+    tv_watched = (tv.watched_folder or "") if tv is not None else ""
     return {
-        "refiner_watched_folder": row.refiner_watched_folder,
-        "refiner_watched_folder_exists": bool(
-            (row.refiner_watched_folder or "").strip() and Path(row.refiner_watched_folder or "").is_dir()
-        ),
-        "refiner_work_folder": row.refiner_work_folder,
-        "refiner_output_folder": (row.refiner_output_folder or "").strip() or None,
+        "refiner_watched_folder": movie_watched or None,
+        "refiner_watched_folder_exists": bool(movie_watched.strip() and Path(movie_watched).is_dir()),
+        "refiner_work_folder": (movies.work_folder or None) if movies is not None else None,
+        "refiner_output_folder": ((movies.output_folder or "").strip() or None) if movies is not None else None,
         "resolved_default_work_folder": default_work,
         "effective_work_folder": work_eff,
-        "refiner_tv_watched_folder": row.refiner_tv_watched_folder,
-        "refiner_tv_watched_folder_exists": bool(
-            (row.refiner_tv_watched_folder or "").strip() and Path(row.refiner_tv_watched_folder or "").is_dir()
-        ),
-        "refiner_tv_work_folder": row.refiner_tv_work_folder,
-        "refiner_tv_output_folder": (row.refiner_tv_output_folder or "").strip() or None,
+        "refiner_tv_watched_folder": tv_watched or None,
+        "refiner_tv_watched_folder_exists": bool(tv_watched.strip() and Path(tv_watched).is_dir()),
+        "refiner_tv_work_folder": (tv.work_folder or None) if tv is not None else None,
+        "refiner_tv_output_folder": ((tv.output_folder or "").strip() or None) if tv is not None else None,
         "resolved_default_tv_work_folder": default_tv_work,
         "effective_tv_work_folder": tv_work_eff,
         "movie_watched_folder_check_interval_seconds": _clamp_watched_folder_poll_interval_seconds(
-            int(row.movie_watched_folder_check_interval_seconds)
+            int(movies.scan_interval_seconds) if movies is not None else 300
         ),
         "tv_watched_folder_check_interval_seconds": _clamp_watched_folder_poll_interval_seconds(
-            int(row.tv_watched_folder_check_interval_seconds)
+            int(tv.scan_interval_seconds) if tv is not None else 300
         ),
-        "updated_at": row.updated_at,
+        "updated_at": movies.updated_at if movies is not None else None,
     }
 
 
-def _tv_paths_for_overlap_check(
-    *,
-    row: RefinerPathSettingsRow,
-    settings: MediaMopSettings,
-) -> list[Path]:
-    """Material TV paths from the persisted row (for cross-family validation)."""
+def _tv_paths_for_overlap_check(*, library: RefinerLibraryRow | None, settings: MediaMopSettings) -> list[Path]:
+    """Material TV paths already saved, for cross-family validation.
 
-    if not (row.refiner_tv_watched_folder or "").strip() and not (row.refiner_tv_output_folder or "").strip():
+    Read from the TV library rather than the singleton row, so a save that touches only
+    the Movies paths still cannot be made to overlap the TV ones.
+    """
+
+    if library is None:
+        return []
+    watched = (library.watched_folder or "").strip()
+    output = (library.output_folder or "").strip()
+    if not watched and not output:
         return []
     out: list[Path] = []
-    tw = (row.refiner_tv_watched_folder or "").strip()
-    if tw:
-        out.append(_norm_dir_path(tw))
-    tout = (row.refiner_tv_output_folder or "").strip()
-    if tout:
-        out.append(_norm_dir_path(tout))
-    tw_eff, _ = effective_tv_work_folder(row=row, mediamop_home=settings.mediamop_home)
-    out.append(_norm_dir_path(tw_eff))
+    if watched:
+        out.append(_norm_dir_path(watched))
+    if output:
+        out.append(_norm_dir_path(output))
+    work_eff, _ = effective_library_work_folder(library=library, mediamop_home=settings.mediamop_home)
+    out.append(_norm_dir_path(work_eff))
     return out
 
 
@@ -393,14 +327,27 @@ def apply_refiner_path_settings_put(
     tv_output_folder: str | None = None,
     movie_watched_folder_check_interval_seconds: int | None = None,
     tv_watched_folder_check_interval_seconds: int | None = None,
-) -> RefinerPathSettingsRow:
-    """Validate and persist path settings (hard-block invalid overlap on save)."""
+) -> RefinerLibraryRow | None:
+    """Validate and persist the scope-shaped paths onto the libraries they now live on.
 
-    row = ensure_refiner_path_settings_row(session)
+    Every validation rule is unchanged — separation, existence, the required-output pairing
+    and the cross-family overlap block. Only the destination moved (#363). The setup
+    wizard writes through this on first run, which is why the surface is kept rather than
+    removed.
+    """
+
+    movies = _scoped_library(session, "movie")
+    tv = _scoped_library(session, "tv")
+    if movies is None:
+        msg = (
+            "No Refiner library covers Movies, so there is nowhere to save these paths. "
+            "Add one on the Refiner Libraries settings page."
+        )
+        raise ValueError(msg)
 
     watched_clean = (watched_folder or "").strip() or None
     watched_path: Path | None = None
-    watched_store: str | None = None
+    watched_store = ""
     if watched_clean is not None:
         watched_path = _norm_dir_path(watched_clean)
         watched_store = str(watched_path)
@@ -437,15 +384,15 @@ def apply_refiner_path_settings_put(
     if watched_path is not None:
         cross_paths.append(watched_path)
 
+    pending_tv: tuple[str, str, str] | None = None
+    clear_tv = False
     if tv_paths_included:
         tw_clean = (tv_watched_folder or "").strip() or None
         tout_in = (tv_output_folder if tv_output_folder is not None else "").strip()
         twork_in = (tv_work_folder if tv_work_folder is not None else "").strip()
 
         if tw_clean is None and not tout_in and not twork_in:
-            row.refiner_tv_watched_folder = None
-            row.refiner_tv_work_folder = None
-            row.refiner_tv_output_folder = None
+            clear_tv = True
         else:
             if tw_clean is None and tout_in:
                 msg = "Set a TV watched folder before saving a TV output folder."
@@ -454,7 +401,6 @@ def apply_refiner_path_settings_put(
                 msg = "TV Refiner paths: set a watched folder (or clear all TV fields)."
                 raise ValueError(msg)
             tv_watched_path = _norm_dir_path(tw_clean)
-            tw_store = str(tv_watched_path)
 
             if not tout_in:
                 msg = "TV Refiner output folder is required when a TV watched folder is set."
@@ -468,78 +414,41 @@ def apply_refiner_path_settings_put(
                 tv_work_resolved = resolved_default_refiner_tv_work_folder(mediamop_home=settings.mediamop_home)
                 tv_work_path = _norm_dir_path(tv_work_resolved)
                 tv_work_path.mkdir(parents=True, exist_ok=True)
-                stored_tv_work = str(tv_work_path)
             else:
                 tv_work_path = _norm_dir_path(twork_in)
                 if not tv_work_path.is_dir():
                     msg = "TV Refiner work/temp folder must already exist on disk when set to a custom path."
                     raise ValueError(msg)
-                stored_tv_work = str(tv_work_path)
 
             _validate_path_separation(watched=tv_watched_path, work=tv_work_path, output=tv_output_path)
-
-            row.refiner_tv_watched_folder = tw_store
-            row.refiner_tv_work_folder = stored_tv_work
-            row.refiner_tv_output_folder = str(tv_output_path)
-
+            pending_tv = (str(tv_watched_path), str(tv_work_path), str(tv_output_path))
             cross_paths.extend([tv_watched_path, tv_work_path, tv_output_path])
     else:
-        cross_paths.extend(_tv_paths_for_overlap_check(row=row, settings=settings))
+        cross_paths.extend(_tv_paths_for_overlap_check(library=tv, settings=settings))
 
+    # Validated before anything is written, so a rejected save leaves both libraries
+    # exactly as they were rather than half-applied.
     _validate_cross_family_paths(cross_paths)
 
-    row.refiner_watched_folder = watched_store
-    row.refiner_work_folder = stored_work
-    row.refiner_output_folder = str(output_path) if output_path is not None else ""
+    movies.watched_folder = watched_store
+    movies.work_folder = stored_work
+    movies.output_folder = str(output_path) if output_path is not None else ""
     if movie_watched_folder_check_interval_seconds is not None:
-        row.movie_watched_folder_check_interval_seconds = _clamp_watched_folder_poll_interval_seconds(
+        movies.scan_interval_seconds = _clamp_watched_folder_poll_interval_seconds(
             movie_watched_folder_check_interval_seconds
         )
-    if tv_watched_folder_check_interval_seconds is not None:
-        row.tv_watched_folder_check_interval_seconds = _clamp_watched_folder_poll_interval_seconds(
-            tv_watched_folder_check_interval_seconds
-        )
-    session.add(row)
+
+    if tv is not None:
+        if clear_tv:
+            tv.watched_folder = ""
+            tv.work_folder = ""
+            tv.output_folder = ""
+        elif pending_tv is not None:
+            tv.watched_folder, tv.work_folder, tv.output_folder = pending_tv
+        if tv_watched_folder_check_interval_seconds is not None:
+            tv.scan_interval_seconds = _clamp_watched_folder_poll_interval_seconds(
+                tv_watched_folder_check_interval_seconds
+            )
+
     session.flush()
-    mirror_singleton_paths_onto_seeded_libraries(session)
-    return row
-
-
-def mirror_singleton_paths_onto_seeded_libraries(session: Session) -> None:
-    """Keep the seeded libraries current while the old settings page is still the editor.
-
-    Processing resolves paths from ``refiner_libraries`` (ADR-0014), but until the
-    Libraries screen lands the only way to edit them is the path-settings page, which
-    writes the singleton. Without this the two stores drift, and a library's watched
-    folder is the input to source-folder deletion — a stale one is the "silent path
-    repointing" risk the exec plan calls out.
-
-    Goes away with the singleton itself (exec plan step 8).
-    """
-
-    row = ensure_refiner_path_settings_row(session)
-    for scope, watched, work, output, interval in (
-        (
-            "movie",
-            row.refiner_watched_folder,
-            row.refiner_work_folder,
-            row.refiner_output_folder,
-            row.movie_watched_folder_check_interval_seconds,
-        ),
-        (
-            "tv",
-            row.refiner_tv_watched_folder,
-            row.refiner_tv_work_folder,
-            row.refiner_tv_output_folder,
-            row.tv_watched_folder_check_interval_seconds,
-        ),
-    ):
-        library = seeded_library_for_scope(session, scope)
-        if library is None:
-            continue
-        library.watched_folder = (watched or "").strip()
-        library.work_folder = (work or "").strip()
-        library.output_folder = (output or "").strip()
-        library.scan_interval_seconds = int(interval)
-        session.add(library)
-    session.flush()
+    return movies

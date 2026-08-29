@@ -24,9 +24,8 @@ from mediamop.modules.refiner.refiner_operator_settings_service import (
 )
 from mediamop.modules.refiner.refiner_path_settings_service import (
     effective_library_work_folder,
-    effective_tv_work_folder,
-    effective_work_folder,
-    ensure_refiner_path_settings_row,
+    resolved_default_refiner_tv_work_folder,
+    resolved_default_refiner_work_folder,
 )
 
 logger = logging.getLogger(__name__)
@@ -64,15 +63,19 @@ def _resolved_movie_and_tv_work_roots(*, session: Session, settings: MediaMopSet
 
     movie = seeded_library_for_scope(session, "movie")
     tv = seeded_library_for_scope(session, "tv")
-    if movie is not None and tv is not None:
-        movie_work, _ = effective_library_work_folder(library=movie, mediamop_home=settings.mediamop_home)
-        tv_work, _ = effective_library_work_folder(library=tv, mediamop_home=settings.mediamop_home)
-        return Path(movie_work).expanduser().resolve(), Path(tv_work).expanduser().resolve()
-
-    # Unmigrated database: read the singleton exactly as before.
-    row = ensure_refiner_path_settings_row(session)
-    movie_work, _ = effective_work_folder(row=row, mediamop_home=settings.mediamop_home)
-    tv_work, _ = effective_tv_work_folder(row=row, mediamop_home=settings.mediamop_home)
+    # A scope with no seeded library falls back to that scope's default work root rather
+    # than to a table that no longer exists (#363). The default is where an unconfigured
+    # install already puts its temp files, so the sweep still finds them.
+    movie_work = (
+        effective_library_work_folder(library=movie, mediamop_home=settings.mediamop_home)[0]
+        if movie is not None
+        else resolved_default_refiner_work_folder(mediamop_home=settings.mediamop_home)
+    )
+    tv_work = (
+        effective_library_work_folder(library=tv, mediamop_home=settings.mediamop_home)[0]
+        if tv is not None
+        else resolved_default_refiner_tv_work_folder(mediamop_home=settings.mediamop_home)
+    )
     return Path(movie_work).expanduser().resolve(), Path(tv_work).expanduser().resolve()
 
 

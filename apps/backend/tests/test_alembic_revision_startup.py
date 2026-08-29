@@ -28,28 +28,36 @@ def test_ensure_database_at_application_head_ok_on_migrated_db() -> None:
     ensure_database_at_application_head(engine)
 
 
-def test_head_schema_includes_refiner_remux_rules_settings_table() -> None:
+def test_head_schema_no_longer_carries_the_refiner_singleton_settings_tables() -> None:
+    """The libraries are the only store now (#363).
+
+    Asserted rather than assumed, because the whole point of dropping them was to end the
+    two-stores drift hazard, and a table quietly recreated by a later migration would put
+    it straight back.
+    """
+
     settings = MediaMopSettings.load()
     engine = create_db_engine(settings)
     insp = sa.inspect(engine)
-    assert insp.has_table("refiner_remux_rules_settings")
-    names = {c["name"] for c in insp.get_columns("refiner_remux_rules_settings")}
-    assert "primary_audio_lang" in names
-    assert "subtitle_mode" in names
+
+    assert not insp.has_table("refiner_path_settings")
+    assert not insp.has_table("refiner_remux_rules_settings")
 
 
-def test_head_schema_includes_refiner_path_settings_table() -> None:
+def test_head_schema_carries_the_libraries_that_replaced_them() -> None:
     settings = MediaMopSettings.load()
     engine = create_db_engine(settings)
     insp = sa.inspect(engine)
-    assert insp.has_table("refiner_path_settings")
-    names = {c["name"] for c in insp.get_columns("refiner_path_settings")}
-    assert "refiner_watched_folder" in names
-    assert "refiner_work_folder" in names
-    assert "refiner_output_folder" in names
-    assert "refiner_tv_watched_folder" in names
-    assert "refiner_tv_work_folder" in names
-    assert "refiner_tv_output_folder" in names
+
+    assert insp.has_table("refiner_libraries")
+    library_columns = {c["name"] for c in insp.get_columns("refiner_libraries")}
+    for name in ("watched_folder", "work_folder", "output_folder", "scan_interval_seconds"):
+        assert name in library_columns
+
+    assert insp.has_table("refiner_rule_sets")
+    rule_set_columns = {c["name"] for c in insp.get_columns("refiner_rule_sets")}
+    assert "primary_audio_lang" in rule_set_columns
+    assert "subtitle_mode" in rule_set_columns
 
 
 def test_head_schema_includes_suite_settings_table() -> None:

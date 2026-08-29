@@ -11,7 +11,6 @@ from mediamop.modules.refiner.refiner_path_settings_schemas import RefinerPathSe
 from mediamop.modules.refiner.refiner_path_settings_service import (
     apply_refiner_path_settings_put,
     build_refiner_path_settings_get_out,
-    ensure_refiner_path_settings_row,
 )
 from mediamop.platform.auth.authorization import RequireOperatorDep
 from mediamop.platform.auth.csrf import (
@@ -26,8 +25,9 @@ router = APIRouter(tags=["refiner"])
 
 
 def _out_from_session(db, settings: MediaMopSettings) -> RefinerPathSettingsOut:
-    row = ensure_refiner_path_settings_row(db)
-    payload = build_refiner_path_settings_get_out(row=row, settings=settings)
+    """The scope-shaped view, now assembled from the libraries (#363)."""
+
+    payload = build_refiner_path_settings_get_out(session=db, settings=settings)
     return RefinerPathSettingsOut.model_validate(payload)
 
 

@@ -20,9 +20,6 @@ from mediamop.modules.refiner.manager_queue_signals import attributed_rows_for_f
 from mediamop.modules.refiner.refiner_library_service import resolve_library
 from mediamop.modules.refiner.refiner_path_settings_service import (
     effective_library_work_folder,
-    effective_tv_work_folder,
-    effective_work_folder,
-    ensure_refiner_path_settings_row,
 )
 from mediamop.modules.refiner.refiner_remux_rules import is_refiner_media_candidate
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_ops import (
@@ -208,15 +205,12 @@ def run_refiner_failure_cleanup_sweep_for_scope(
         watched_raw = library.watched_folder or ""
         output_raw = library.output_folder or ""
     else:
-        # Unmigrated database: read the singleton exactly as before.
-        row = ensure_refiner_path_settings_row(session)
-        work_raw = (
-            effective_tv_work_folder(row=row, mediamop_home=settings.mediamop_home)[0]
-            if ms == "tv"
-            else effective_work_folder(row=row, mediamop_home=settings.mediamop_home)[0]
-        )
-        watched_raw = (row.refiner_tv_watched_folder if ms == "tv" else row.refiner_watched_folder) or ""
-        output_raw = (row.refiner_tv_output_folder if ms == "tv" else row.refiner_output_folder) or ""
+        # One store now (#363). No library covering the scope means an operator removed
+        # it, not an unmigrated database, and a cleanup sweep with no paths to work
+        # against must not guess at them.
+        work_raw = ""
+        watched_raw = ""
+        output_raw = ""
     work_root = Path(work_raw).expanduser().resolve()
     out: dict[str, Any] = {
         "media_scope": ms,
