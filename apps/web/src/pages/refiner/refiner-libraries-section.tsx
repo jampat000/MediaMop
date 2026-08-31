@@ -146,6 +146,22 @@ function errorText(error: unknown, fallback: string): string {
   return fallback;
 }
 
+function managerCoverageLabel(value: string): string {
+  if (value === "connected") return "Connected";
+  if (value === "unreachable") return "Unreachable";
+  return "No upstream signal";
+}
+
+function managerCoverageClass(value: string): string {
+  if (value === "connected") {
+    return "border-emerald-700/50 bg-emerald-500/10 text-emerald-300";
+  }
+  if (value === "unreachable") {
+    return "border-rose-700/50 bg-rose-500/10 text-rose-300";
+  }
+  return "border-amber-700/50 bg-amber-500/10 text-amber-300";
+}
+
 /**
  * Refiner libraries: add, edit, reorder, enable, remove.
  *
@@ -326,6 +342,14 @@ export function RefinerLibrariesSection() {
                     {library.active_job_count > 0
                       ? ` · ${library.active_job_count} in progress`
                       : ""}
+                  </p>
+                  <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--mm-text2)]">
+                    <span
+                      className={`rounded-full border px-2 py-0.5 font-medium ${managerCoverageClass(library.manager_coverage)}`}
+                    >
+                      Manager: {managerCoverageLabel(library.manager_coverage)}
+                    </span>
+                    <span>{library.manager_coverage_detail}</span>
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

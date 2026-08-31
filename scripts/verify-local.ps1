@@ -90,7 +90,7 @@ if (Test-Path $venvPython) {
     $py = Get-Command python -ErrorAction SilentlyContinue
     if (-not $py) { $py = Get-Command py -ErrorAction SilentlyContinue }
     if (-not $py) {
-        Write-Error 'Python not on PATH. From apps/backend: py -3 -m venv .venv; pip install -e .'
+        Write-Error 'Python not on PATH. From apps/backend: py -3 -m venv .venv; python -m pip install --require-hashes -r requirements-runtime.lock; python -m pip install --no-deps --no-build-isolation -e .'
     }
     $pyExe = $py.Source
 }

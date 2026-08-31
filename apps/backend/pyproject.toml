@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mediamop-backend"
-version = "2.5.1"
+version = "2.6.0"
 description = "MediaMop backend spine (FastAPI, SQLite, Alembic)"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -35,8 +35,15 @@ dev = [
   "pytest-cov>=5.0",
   "pytest-asyncio>=0.23",
   "httpx>=0.27",
+  # Starlette 1.x uses this compatibility package for its TestClient; keeping it
+  # in the dev set removes the deprecated httpx 0.x adapter and its warning.
+  "httpx2>=2.12.0",
   "bandit>=1.7",
   "pip-audit>=2.7",
+]
+build = [
+  "pillow>=11.0.0",
+  "pyinstaller>=6.12.0",
 ]
 
 [tool.setuptools.packages.find]

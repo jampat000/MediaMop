@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
-import tempfile
 from collections import deque
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -14,6 +12,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
+from mediamop.core.logging import log_file_lock, prune_active_log_file
 from mediamop.platform.suite_settings.service import ensure_suite_settings_row
 
 logger = logging.getLogger(__name__)
@@ -51,45 +50,46 @@ def read_suite_logs(
     counts = {"ERROR": 0, "WARNING": 0, "INFO": 0}
     total = 0
 
-    try:
-        handle = path.open("r", encoding="utf-8")
-    except OSError:
-        logger.warning("Suite log read skipped because %s could not be opened.", path, exc_info=True)
-        return ([], 0, counts)
+    with log_file_lock():
+        try:
+            handle = path.open("r", encoding="utf-8")
+        except OSError:
+            logger.warning("Suite log read skipped because the active log could not be opened.")
+            return ([], 0, counts)
 
-    with handle:
-        for raw in handle:
-            entry = _parse_log_line(raw)
-            if entry is None:
-                continue
-            if _skip_low_value_noise(entry):
-                continue
-            total += 1
-            counts[_count_bucket(entry.level)] += 1
-            if requested_level and entry.level != requested_level:
-                continue
-            if has_exception is True and not entry.traceback:
-                continue
-            if has_exception is False and entry.traceback:
-                continue
-            if search_term:
-                haystack = " ".join(
-                    part
-                    for part in (
-                        entry.message,
-                        entry.detail or "",
-                        entry.traceback or "",
-                        entry.logger,
-                        entry.source or "",
-                        entry.component,
-                        entry.correlation_id or "",
-                        entry.job_id or "",
-                    )
-                    if part
-                ).lower()
-                if search_term not in haystack:
+        with handle:
+            for raw in handle:
+                entry = _parse_log_line(raw)
+                if entry is None:
                     continue
-            rows.append(entry)
+                if _skip_low_value_noise(entry):
+                    continue
+                total += 1
+                counts[_count_bucket(entry.level)] += 1
+                if requested_level and entry.level != requested_level:
+                    continue
+                if has_exception is True and not entry.traceback:
+                    continue
+                if has_exception is False and entry.traceback:
+                    continue
+                if search_term:
+                    haystack = " ".join(
+                        part
+                        for part in (
+                            entry.message,
+                            entry.detail or "",
+                            entry.traceback or "",
+                            entry.logger,
+                            entry.source or "",
+                            entry.component,
+                            entry.correlation_id or "",
+                            entry.job_id or "",
+                        )
+                        if part
+                    ).lower()
+                    if search_term not in haystack:
+                        continue
+                rows.append(entry)
 
     return list(reversed(rows)), total, counts
 
@@ -101,33 +101,8 @@ def prune_logs_for_retention(session: Session, settings: MediaMopSettings) -> No
 
 def prune_log_file(settings: MediaMopSettings, *, keep_days: int) -> None:
     path = _log_file_path(settings)
-    if not path.is_file():
-        return
-    cutoff = datetime.now(UTC) - timedelta(days=max(1, keep_days))
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp_name: str | None = None
-    try:
-        fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".prune", dir=str(path.parent))
-        with path.open("r", encoding="utf-8") as source, os.fdopen(fd, "w", encoding="utf-8") as target:
-            for raw in source:
-                parsed = _parse_log_line(raw)
-                if parsed is None:
-                    continue
-                try:
-                    at = datetime.fromisoformat(parsed.timestamp.replace("Z", "+00:00"))
-                except ValueError:
-                    continue
-                if at >= cutoff:
-                    target.write(raw.rstrip("\n") + "\n")
-        os.replace(tmp_name, path)
-    except OSError:
-        logger.warning("Suite log prune skipped because %s could not be rewritten.", path, exc_info=True)
-        if tmp_name:
-            try:
-                Path(tmp_name).unlink()
-            except OSError:
-                logger.debug("Suite log prune could not remove temp file %s", tmp_name, exc_info=True)
-        return
+    prune_active_log_file(path, keep_days=keep_days)
 
 
 def _log_file_path(settings: MediaMopSettings) -> Path:

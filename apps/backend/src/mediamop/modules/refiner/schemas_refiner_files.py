@@ -38,6 +38,10 @@ class RefinerFileOut(BaseModel):
         description="Why this file failed, in terms a retry policy acts on: preflight, execution, guardrail, unknown.",
     )
     failure_attempts: int = 0
+    quarantined: bool = Field(
+        default=False,
+        description="True when repeated failures placed this file on hold until an operator requeues it.",
+    )
     next_retry_at: datetime | None = Field(
         default=None,
         description="When MediaMop will try this file again on its own. Null when no automatic retry is coming.",

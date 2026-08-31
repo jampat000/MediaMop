@@ -228,6 +228,7 @@ def list_recent_activity_events(
     search: str | None = None,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    before_id: int | None = None,
 ) -> list[ActivityEvent]:
     lim = max(1, min(limit, 100))
     stmt = (
@@ -241,4 +242,6 @@ def list_recent_activity_events(
         .order_by(desc(ActivityEvent.created_at))
         .limit(lim)
     )
+    if before_id is not None:
+        stmt = stmt.where(ActivityEvent.id < int(before_id))
     return list(db.scalars(stmt).all())

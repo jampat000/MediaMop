@@ -293,8 +293,12 @@ export async function updateNotificationChannel(
 }
 
 export async function deleteNotificationChannel(id: number): Promise<void> {
+  const csrf_token = await fetchCsrfToken();
   const path = `${notificationChannelsPath()}/${id}`;
-  const r = await apiFetch(path, { method: "DELETE" });
+  const r = await apiFetch(path, {
+    method: "DELETE",
+    headers: { "X-CSRF-Token": csrf_token },
+  });
   if (!r.ok && r.status !== 204) {
     await requireOk(path, r, "Could not delete notification channel");
   }

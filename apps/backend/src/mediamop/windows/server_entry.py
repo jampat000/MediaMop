@@ -56,11 +56,16 @@ def _prepare_environment(resource_root: Path, runtime_home: Path) -> None:
     if not (web_dist / "index.html").is_file():
         raise RuntimeError("Bundled web assets are missing from the MediaMop desktop package.")
     runtime_home.mkdir(parents=True, exist_ok=True)
-    os.environ["MEDIAMOP_ENV"] = "production"
+    os.environ.setdefault("MEDIAMOP_ENV", "production")
     os.environ["MEDIAMOP_HOME"] = str(runtime_home)
     os.environ["MEDIAMOP_WEB_DIST"] = str(web_dist)
     os.environ["MEDIAMOP_ALEMBIC_ROOT"] = str(resource_root)
-    os.environ["MEDIAMOP_SESSION_COOKIE_SECURE"] = "false"
+    # Respect an explicit operator choice.  Production defaults to secure cookies;
+    # plain-HTTP local development can opt in to ``false`` in its environment.
+    os.environ.setdefault(
+        "MEDIAMOP_SESSION_COOKIE_SECURE",
+        "true" if os.environ.get("MEDIAMOP_ENV", "production").strip().lower() == "production" else "false",
+    )
     os.environ["MEDIAMOP_SESSION_SECRET"] = _ensure_session_secret(runtime_home)
 
 
@@ -102,6 +107,7 @@ def main() -> None:
             port=port,
             log_level="info",
             log_config=None,
+            server_header=False,
         )
     )
     asyncio.run(server.serve())

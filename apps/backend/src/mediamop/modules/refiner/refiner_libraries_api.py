@@ -67,6 +67,32 @@ def _verify_csrf(request: Request, settings: MediaMopSettings, token: str) -> No
 
 
 def _library_out(db, row: RefinerLibraryRow) -> RefinerLibraryOut:
+    manager_ids = list(manager_connection_ids_for(db, row))
+    manager_rows = [db.get(MediaManagerConnectionRow, connection_id) for connection_id in manager_ids]
+    if not manager_rows:
+        manager_coverage = "no_upstream_signal"
+        manager_coverage_detail = (
+            "No media manager is linked. Watched-folder remux can still run after local safety gates, "
+            "but upstream import protection is reduced."
+        )
+    elif any(item is None or not item.enabled or item.last_connection_test_ok is False for item in manager_rows):
+        manager_coverage = "unreachable"
+        manager_coverage_detail = (
+            "A linked media manager did not answer its last connection test. Remux remains local, "
+            "but manager-truth-dependent cleanup is held until the connection is available."
+        )
+    elif any(item.last_connection_test_ok is not True for item in manager_rows):
+        manager_coverage = "no_upstream_signal"
+        manager_coverage_detail = (
+            "A manager is linked but has not returned a successful connection signal yet. "
+            "This is not the same as an empty queue."
+        )
+    else:
+        manager_coverage = "connected"
+        manager_coverage_detail = (
+            "The linked manager connection is healthy. Upstream checks and manager-truth-dependent "
+            "cleanup can use its latest answer."
+        )
     return RefinerLibraryOut(
         id=row.id,
         name=row.name,
@@ -111,7 +137,9 @@ def _library_out(db, row: RefinerLibraryRow) -> RefinerLibraryOut:
         max_concurrent_files=row.max_concurrent_files,
         priority=row.priority,
         rule_set_id=row.rule_set_id,
-        manager_connection_ids=list(manager_connection_ids_for(db, row)),
+        manager_connection_ids=manager_ids,
+        manager_coverage=manager_coverage,
+        manager_coverage_detail=manager_coverage_detail,
         discovered_from_connection_id=row.discovered_from_connection_id,
         discovered_library_key=row.discovered_library_key,
         active_job_count=active_job_count_for_library(db, row),

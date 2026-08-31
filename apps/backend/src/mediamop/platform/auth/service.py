@@ -6,6 +6,8 @@ No JWT for browser, no localStorage. Cookie holds opaque token; ``UserSession`` 
 from __future__ import annotations
 
 import logging
+import re
+import uuid
 from datetime import timedelta
 
 from sqlalchemy import and_, delete, func, select, update
@@ -33,6 +35,35 @@ from mediamop.platform.auth.sessions import (
 
 logger = logging.getLogger(__name__)
 MAX_ACTIVE_SESSIONS_PER_USER = 5
+
+
+def client_label_from_user_agent(user_agent: str | None) -> str:
+    """Map a browser user-agent to a short non-identifying session label."""
+
+    value = (user_agent or "").lower()
+    browser = "Browser"
+    if "edg/" in value or "edge/" in value:
+        browser = "Edge"
+    elif "chrome/" in value or "crios/" in value:
+        browser = "Chrome"
+    elif "firefox/" in value or "fxios/" in value:
+        browser = "Firefox"
+    elif "safari/" in value and "chrome/" not in value:
+        browser = "Safari"
+    elif "electron/" in value:
+        browser = "MediaMop app"
+    platform = "device"
+    if "windows" in value:
+        platform = "Windows"
+    elif "mac os" in value or "macintosh" in value:
+        platform = "macOS"
+    elif "android" in value:
+        platform = "Android"
+    elif "iphone" in value or "ipad" in value or "ios" in value:
+        platform = "iOS"
+    elif "linux" in value:
+        platform = "Linux"
+    return f"{browser} on {platform}"[:80]
 
 
 def authenticate_user(db: Session, username: str, password: str) -> User | None:
@@ -131,6 +162,7 @@ def create_user_session(
     *,
     settings: MediaMopSettings,
     trusted_device: bool = False,
+    client_label: str = "Browser session",
 ) -> tuple[UserSession, str]:
     """Persist session row and return (row, raw_cookie_token)— hash only in DB."""
 
@@ -147,6 +179,7 @@ def create_user_session(
         absolute_expires_at=compute_absolute_expiry(now=now, ttl=abs_ttl),
         is_trusted_device=trusted_device,
         last_seen_at=now,
+        client_label=(client_label.strip() or "Browser session")[:80],
     )
     db.add(row)
     db.flush()
@@ -164,6 +197,7 @@ def login_user(
     password: str,
     settings: MediaMopSettings,
     trusted_device: bool = False,
+    client_label: str = "Browser session",
 ) -> tuple[User, UserSession, str] | None:
     """Verify credentials and create a new server-side session. Returns user + raw token."""
 
@@ -175,6 +209,7 @@ def login_user(
         user,
         settings=settings,
         trusted_device=trusted_device,
+        client_label=client_label,
     )
     return user, row, raw
 
@@ -240,12 +275,15 @@ def user_public(user: User) -> dict:
     return {"id": user.id, "username": user.username, "role": user.role}
 
 
-def session_public(session: UserSession, *, settings: MediaMopSettings) -> dict:
+def session_public(session: UserSession, *, settings: MediaMopSettings, current: bool = True) -> dict:
     idle_minutes = settings.session_trusted_idle_minutes if session.is_trusted_device else settings.session_idle_minutes
     absolute_days = (
         settings.session_trusted_absolute_days if session.is_trusted_device else settings.session_absolute_days
     )
     return {
+        "session_id": str(session.id),
+        "client_label": (session.client_label or "Browser session")[:80],
+        "current": current,
         "trusted_device": session.is_trusted_device,
         "created_at": session.created_at,
         "last_seen_at": session.last_seen_at,
@@ -253,6 +291,79 @@ def session_public(session: UserSession, *, settings: MediaMopSettings) -> dict:
         "idle_timeout_minutes": idle_minutes,
         "absolute_timeout_days": absolute_days,
     }
+
+
+def list_active_sessions(
+    db: Session,
+    *,
+    user_id: int,
+    settings: MediaMopSettings,
+    current_session_id: uuid.UUID | None = None,
+    now=None,
+) -> list[dict]:
+    """Return non-revoked, non-expired sessions without exposing secret material."""
+
+    moment = now or utcnow()
+    rows = db.scalars(
+        select(UserSession)
+        .where(
+            UserSession.user_id == user_id,
+            UserSession.revoked_at.is_(None),
+            UserSession.absolute_expires_at > moment,
+        )
+        .order_by(UserSession.last_seen_at.desc(), UserSession.created_at.desc())
+    ).all()
+    out: list[dict] = []
+    for row in rows:
+        idle = effective_idle_timeout(row, settings=settings)
+        if session_invalid_reason(row, idle=idle, now=moment) is not None:
+            continue
+        out.append(session_public(row, settings=settings, current=row.id == current_session_id))
+    return out
+
+
+def session_id_for_cookie(db: Session, raw_cookie_token: str | None) -> uuid.UUID | None:
+    """Resolve a cookie to its row id without returning or storing the raw cookie."""
+
+    if not raw_cookie_token:
+        return None
+    row = db.scalars(select(UserSession).where(UserSession.token_hash == hash_session_token(raw_cookie_token))).first()
+    return row.id if row is not None else None
+
+
+def revoke_user_session(db: Session, *, user_id: int, session_id: uuid.UUID, now=None) -> bool:
+    row = db.scalars(
+        select(UserSession).where(UserSession.user_id == user_id, UserSession.id == session_id)
+    ).one_or_none()
+    if row is None or row.revoked_at is not None:
+        return False
+    revoke_session(row, at=now or utcnow())
+    db.flush()
+    return True
+
+
+def revoke_other_user_sessions(
+    db: Session,
+    *,
+    user_id: int,
+    current_session_id: uuid.UUID | None,
+    now=None,
+) -> int:
+    moment = now or utcnow()
+    stmt = select(UserSession).where(
+        UserSession.user_id == user_id,
+        UserSession.revoked_at.is_(None),
+        UserSession.absolute_expires_at > moment,
+    )
+    count = 0
+    for row in db.scalars(stmt).all():
+        if current_session_id is not None and row.id == current_session_id:
+            continue
+        revoke_session(row, at=moment)
+        count += 1
+    if count:
+        db.flush()
+    return count
 
 
 def change_password_for_user(

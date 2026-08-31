@@ -7,6 +7,7 @@ import logging
 import time
 import uuid
 from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,7 @@ from mediamop.modules.refiner.refiner_file_settling import (
     check_file_access,
     observe_size_settling,
 )
+from mediamop.modules.refiner.refiner_file_state_model import RefinerFileStatus
 from mediamop.modules.refiner.refiner_file_state_service import (
     decide_file_state,
     existing_file_row,
@@ -29,6 +31,7 @@ from mediamop.modules.refiner.refiner_library_service import resolve_library
 from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
 from mediamop.modules.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
 from mediamop.modules.refiner.refiner_remux_rules import refiner_media_extensions_sorted
+from mediamop.modules.refiner.refiner_requeue_service import requeue_file
 from mediamop.modules.refiner.refiner_runner_units import (
     budget_from_settings,
     resolution_class_for_dimensions,
@@ -142,6 +145,9 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
             "ignored_unsupported_extensions": list(candidates.ignored_unsupported_extensions),
             "media_extensions_applied": list(refiner_media_extensions_sorted()),
             "files_withheld": 0,
+            "files_quarantined": 0,
+            "files_waiting_for_retry": 0,
+            "automatic_retries_requeued": 0,
             "files_still_settling": 0,
             "files_failing_access_test": 0,
             "verdict_proceed": 0,
@@ -196,6 +202,43 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                     # Read the previous observation before recording this one — the whole
                     # settling decision is the comparison between the two (#335).
                     previous = existing_file_row(session, library_id=library.id, relative_path=rel_for_state)
+                    if previous is not None and previous.size_bytes != observed_size:
+                        # A changed source is a new processing opportunity. Do not carry a
+                        # failure/quarantine counter from the old bytes into the new file.
+                        previous.failure_class = None
+                        previous.failure_attempts = 0
+                        previous.next_retry_at = None
+                        if previous.status in {
+                            RefinerFileStatus.PROCESSING_FAILED.value,
+                            RefinerFileStatus.ON_HOLD.value,
+                        }:
+                            previous.status = RefinerFileStatus.UNPROCESSED.value
+                            previous.status_reason = "The source changed; Refiner will evaluate it again."
+                    # A failed file must not be turned back into fresh work by every
+                    # periodic scan. Preserve the failure while the source is unchanged;
+                    # a manual requeue or changed file is the explicit retry signal (#402).
+                    if previous is not None and previous.size_bytes == observed_size:
+                        if previous.status == RefinerFileStatus.PROCESSING_FAILED.value:
+                            retry_at = previous.next_retry_at
+                            if retry_at is not None:
+                                retry_at = retry_at.replace(tzinfo=retry_at.tzinfo or UTC)
+                            if retry_at is not None and retry_at <= datetime.now(UTC):
+                                retry = requeue_file(session, row=previous, manual=False)
+                                if retry.requeued:
+                                    summary["automatic_retries_requeued"] += 1
+                                    continue
+                            summary["files_waiting_for_retry"] += 1
+                            summary["files_withheld"] += 1
+                            previous.last_seen_at = datetime.now(UTC)
+                            continue
+                        if (
+                            previous.status == RefinerFileStatus.ON_HOLD.value
+                            and int(previous.failure_attempts or 0) >= 3
+                        ):
+                            summary["files_quarantined"] += 1
+                            summary["files_withheld"] += 1
+                            previous.last_seen_at = datetime.now(UTC)
+                            continue
                     settling = observe_size_settling(
                         library=library,
                         previous=previous,

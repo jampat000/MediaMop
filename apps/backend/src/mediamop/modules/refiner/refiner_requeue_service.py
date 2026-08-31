@@ -47,6 +47,13 @@ class RetryDecision:
     will_retry: bool
     next_retry_at: datetime | None
     reason: str
+    quarantined: bool = False
+
+
+# Repeated failures are an incident, not a scheduling strategy.  After this many
+# consecutive failures in the same class, the file stays held until an operator
+# explicitly starts it again.
+REFINER_QUARANTINE_AFTER_FAILURES = 3
 
 
 def decide_retry(
@@ -157,9 +164,20 @@ def record_failure(
         failure_class.value if isinstance(failure_class, RefinerFailureClass) else str(failure_class).strip().lower()
     )
     decision = decide_retry(library=library, failure_class=value, attempts_so_far=attempts, now=moment)
+    consecutive_failures = attempts if row.failure_class == value else 1
+    if consecutive_failures >= REFINER_QUARANTINE_AFTER_FAILURES:
+        decision = RetryDecision(
+            will_retry=False,
+            next_retry_at=None,
+            quarantined=True,
+            reason=(
+                f"MediaMop held this file after {consecutive_failures} repeated {value} failures. "
+                "Review the failure detail and use Start again after fixing the cause."
+            ),
+        )
 
-    row.status = RefinerFileStatus.PROCESSING_FAILED.value
-    row.status_reason = f"{reason} {decision.reason}".strip()
+    row.status = RefinerFileStatus.ON_HOLD.value if decision.quarantined else RefinerFileStatus.PROCESSING_FAILED.value
+    row.status_reason = f"{reason} {decision.reason}".strip()[:10000]
     row.failure_class = value
     row.failure_attempts = attempts
     row.next_retry_at = decision.next_retry_at

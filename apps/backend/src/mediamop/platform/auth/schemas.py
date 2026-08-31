@@ -45,12 +45,30 @@ class MeOut(BaseModel):
 
 
 class CurrentSessionOut(BaseModel):
+    session_id: str = ""
+    client_label: str = "Browser session"
+    current: bool = True
     trusted_device: bool
     created_at: datetime
     last_seen_at: datetime
     absolute_expires_at: datetime
     idle_timeout_minutes: int = Field(ge=1)
     absolute_timeout_days: int = Field(ge=1)
+
+
+class SessionOut(CurrentSessionOut):
+    """Safe session inventory entry; never includes the cookie or token hash."""
+
+    current: bool = False
+
+
+class SessionsOut(BaseModel):
+    items: list[SessionOut]
+
+
+class SessionActionOut(BaseModel):
+    message: str
+    revoked_count: int = Field(default=0, ge=0)
 
 
 class BootstrapStatusOut(BaseModel):

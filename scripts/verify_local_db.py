@@ -22,7 +22,7 @@ def main() -> int:
         from mediamop.core.alembic_revision_check import ensure_database_at_application_head
         from mediamop.core.config import MediaMopSettings
     except ImportError as exc:
-        print(f"FAIL: missing dependency ({exc}). Install apps/backend with pip install -e .", file=sys.stderr)
+        print(f"FAIL: missing dependency ({exc}). Install apps/backend from requirements-runtime.lock, then run pip install --no-deps --no-build-isolation -e .", file=sys.stderr)
         return 2
 
     ini_path = _BACKEND / "alembic.ini"

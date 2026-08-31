@@ -58,6 +58,8 @@ export interface RefinerLibrary {
 
   rule_set_id: number | null;
   manager_connection_ids: number[];
+  manager_coverage: "connected" | "no_upstream_signal" | "unreachable" | string;
+  manager_coverage_detail: string;
   discovered_from_connection_id: number | null;
   discovered_library_key: string | null;
   /** Queued or running jobs. Deletion is refused while this is non-zero. */

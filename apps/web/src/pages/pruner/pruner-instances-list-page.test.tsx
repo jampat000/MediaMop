@@ -1040,7 +1040,7 @@ describe("PrunerInstancesListPage", () => {
     patchSpy.mockRestore();
   });
 
-  it("Overview shows At a glance cards without connection forms", async () => {
+  it("Overview shows guided setup without misleading empty-state KPIs", async () => {
     const client = new QueryClient();
     vi.spyOn(prunerApi, "fetchPrunerInstances").mockResolvedValue([]);
     vi.spyOn(prunerApi, "fetchPrunerJobsInspection").mockResolvedValue({
@@ -1051,11 +1051,11 @@ describe("PrunerInstancesListPage", () => {
     render(wrap(<PrunerInstancesListPage />, client));
 
     await waitFor(() =>
-      expect(
-        screen.getByTestId("pruner-overview-at-a-glance"),
-      ).toBeInTheDocument(),
+      expect(screen.getByTestId("pruner-guided-setup")).toBeInTheDocument(),
     );
-    expect(screen.getByText(/At a glance/i)).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("pruner-overview-at-a-glance"),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByTestId("pruner-connection-panel-emby"),
     ).not.toBeInTheDocument();

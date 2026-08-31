@@ -19,7 +19,8 @@ git clone https://github.com/jampat000/MediaMop.git
 cd MediaMop/apps/backend
 py -3 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -e .
+python -m pip install --require-hashes -r requirements-runtime.lock
+python -m pip install --no-deps --no-build-isolation -e .
 ```
 
 ## 2. Configure environment

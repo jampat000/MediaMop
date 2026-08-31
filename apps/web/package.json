@@ -1,7 +1,7 @@
 {
   "name": "mediamop-web",
   "private": true,
-  "version": "2.5.1",
+  "version": "2.6.0",
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "engines": {
@@ -17,14 +17,16 @@
     "lint:fix": "eslint src --fix",
     "format": "prettier --check --end-of-line auto \"src/**/*.{ts,tsx,css}\" \"index.html\" \"vite.config.ts\"",
     "format:fix": "prettier --write --end-of-line auto \"src/**/*.{ts,tsx,css}\" \"index.html\" \"vite.config.ts\"",
-    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "build": "npm run check:tokens && tsc -p tsconfig.json --noEmit && vite build && npm run check:bundle-budget",
+    "check:tokens": "node ./scripts/check-design-tokens.mjs",
+    "check:bundle-budget": "node ./scripts/check-bundle-budget.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "api:openapi:export": "node ./scripts/export-openapi.mjs",
     "api:types:generate": "openapi-typescript ./openapi/mediamop-openapi.json -o ./src/lib/api/generated/openapi-types.ts && prettier --write --end-of-line auto ./src/lib/api/generated/openapi-types.ts",
     "api:types:sync": "npm run api:openapi:export && npm run api:types:generate",
     "api:types:check": "npm run api:types:sync && git diff --exit-code -- openapi/mediamop-openapi.json src/lib/api/generated/openapi-types.ts",
-    "ci": "npm run lint && npm run format && npm run build && npm run test"
+    "ci": "npm run lint && npm run format && npm run check:tokens && npm run build && npm run test"
   },
   "dependencies": {
     "@fontsource/outfit": "^5.2.8",

@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import {
   useChangePasswordMutation,
   useCurrentSessionQuery,
+  useActiveSessionsQuery,
+  useRevokeOtherSessionsMutation,
+  useRevokeSessionMutation,
 } from "../../lib/auth/queries";
 import { useSuiteSecurityOverviewQuery } from "../../lib/suite/queries";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
@@ -17,11 +20,29 @@ import {
   SUITE_PASSWORD_FIELD_CLASS,
 } from "./settings-shared";
 
+function formatSessionDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown time";
+  }
+  return date.toLocaleString([], {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+function securityFlag(value: boolean, good: boolean): string {
+  return value === good ? "On" : "Needs attention";
+}
+
 export function SettingsSecurityTab() {
   const navigate = useNavigate();
   const changePassword = useChangePasswordMutation();
   const currentSessionQ = useCurrentSessionQuery();
   const securityOverviewQ = useSuiteSecurityOverviewQuery();
+  const sessionsQ = useActiveSessionsQuery(currentSessionQ.data !== null);
+  const revokeOthers = useRevokeOtherSessionsMutation();
+  const revokeSession = useRevokeSessionMutation();
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -32,6 +53,7 @@ export function SettingsSecurityTab() {
   const [changePasswordStatus, setChangePasswordStatus] = useState<
     string | null
   >(null);
+  const [sessionStatus, setSessionStatus] = useState<string | null>(null);
 
   const currentSession = currentSessionQ.data;
   const securityOverview = securityOverviewQ.data;
@@ -117,6 +139,250 @@ export function SettingsSecurityTab() {
               : "Loading trusted-device policy."
           }
         />
+      </section>
+      <section
+        className="mm-card w-full"
+        aria-labelledby="suite-security-posture-heading"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 id="suite-security-posture-heading" className="mm-card__title">
+              Security posture
+            </h2>
+            <p className="mm-card__body text-sm text-[var(--mm-text2)]">
+              These values describe the protections currently active in the
+              running server. They are read-only here and take effect after a
+              restart.
+            </p>
+          </div>
+          {securityOverview?.restart_required_note ? (
+            <span className="mm-status-badge mm-status-badge--info">
+              Startup configuration
+            </span>
+          ) : null}
+        </div>
+        {securityOverview ? (
+          <dl className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="mm-security-fact">
+              <dt>Session signing</dt>
+              <dd
+                className={
+                  securityOverview.session_signing_configured
+                    ? "mm-status-text--healthy"
+                    : "mm-status-text--failed"
+                }
+              >
+                {securityFlag(
+                  securityOverview.session_signing_configured,
+                  true,
+                )}
+              </dd>
+            </div>
+            <div className="mm-security-fact">
+              <dt>HTTPS-only sign-in cookie</dt>
+              <dd
+                className={
+                  securityOverview.sign_in_cookie_https_only
+                    ? "mm-status-text--healthy"
+                    : "mm-status-text--warning"
+                }
+              >
+                {securityOverview.sign_in_cookie_https_only
+                  ? "On"
+                  : "Off — use HTTPS in production"}
+              </dd>
+            </div>
+            <div className="mm-security-fact">
+              <dt>Same-site cookie policy</dt>
+              <dd>{securityOverview.sign_in_cookie_same_site}</dd>
+            </div>
+            <div className="mm-security-fact">
+              <dt>Standard session</dt>
+              <dd>
+                Idle {securityOverview.standard_session_idle_timeout_plain}; max{" "}
+                {securityOverview.standard_session_absolute_timeout_plain}
+              </dd>
+            </div>
+            <div className="mm-security-fact">
+              <dt>Trusted-device session</dt>
+              <dd>
+                Idle {securityOverview.trusted_session_idle_timeout_plain}; max{" "}
+                {securityOverview.trusted_session_absolute_timeout_plain}
+              </dd>
+            </div>
+            <div className="mm-security-fact">
+              <dt>Strict transport hardening</dt>
+              <dd
+                className={
+                  securityOverview.extra_https_hardening_enabled
+                    ? "mm-status-text--healthy"
+                    : "mm-status-text--warning"
+                }
+              >
+                {securityOverview.extra_https_hardening_enabled
+                  ? "On"
+                  : "Off — review HTTPS deployment"}
+              </dd>
+            </div>
+            <div className="mm-security-fact">
+              <dt>Sign-in rate limit</dt>
+              <dd>
+                {securityOverview.sign_in_attempt_limit} attempts /{" "}
+                {securityOverview.sign_in_attempt_window_plain}
+              </dd>
+            </div>
+            <div className="mm-security-fact">
+              <dt>First-time setup rate limit</dt>
+              <dd>
+                {securityOverview.first_time_setup_attempt_limit} attempts /{" "}
+                {securityOverview.first_time_setup_attempt_window_plain}
+              </dd>
+            </div>
+            <div className="mm-security-fact">
+              <dt>Allowed browser origins</dt>
+              <dd>
+                {securityOverview.allowed_browser_origins_count} configured
+                origin
+                {securityOverview.allowed_browser_origins_count === 1
+                  ? ""
+                  : "s"}
+              </dd>
+            </div>
+          </dl>
+        ) : securityOverviewQ.isError ? (
+          <p
+            className="mt-4 text-sm text-[var(--mm-status-failed-text)]"
+            role="alert"
+          >
+            Could not load the server security overview. Check the server logs
+            and try again.
+          </p>
+        ) : (
+          <p className="mt-4 text-sm text-[var(--mm-text2)]">
+            Loading server security overview…
+          </p>
+        )}
+        {securityOverview?.restart_required_note ? (
+          <p className="mt-4 rounded-md border border-[var(--mm-border)] bg-[var(--mm-surface-2)]/50 p-3 text-sm text-[var(--mm-text2)]">
+            {securityOverview.restart_required_note}
+          </p>
+        ) : null}
+      </section>
+      <section
+        className="mm-card w-full"
+        aria-labelledby="suite-security-sessions-heading"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 id="suite-security-sessions-heading" className="mm-card__title">
+              Active sessions
+            </h2>
+            <p className="mm-card__body text-sm text-[var(--mm-text2)]">
+              Review signed-in browsers and sign out anything you no longer
+              recognize. Session tokens are never shown.
+            </p>
+          </div>
+          <button
+            type="button"
+            className={mmActionButtonClass({
+              variant: "tertiary",
+              disabled: revokeOthers.isPending || sessionsQ.isPending,
+            })}
+            disabled={
+              revokeOthers.isPending ||
+              sessionsQ.isPending ||
+              (sessionsQ.data ?? []).filter((item) => !item.current).length ===
+                0
+            }
+            onClick={async () => {
+              setSessionStatus(null);
+              try {
+                const result = await revokeOthers.mutateAsync();
+                setSessionStatus(result.message);
+              } catch {
+                setSessionStatus(
+                  "Could not sign out the other sessions. Refresh and try again.",
+                );
+              }
+            }}
+          >
+            {revokeOthers.isPending
+              ? "Signing out…"
+              : "Sign out other sessions"}
+          </button>
+        </div>
+        {sessionStatus ? (
+          <p className="mt-3 text-sm text-[var(--mm-text2)]" role="status">
+            {sessionStatus}
+          </p>
+        ) : null}
+        {sessionsQ.isError ? (
+          <p
+            className="mt-4 text-sm text-[var(--mm-status-failed-text)]"
+            role="alert"
+          >
+            Could not load active sessions. Refresh the page to try again.
+          </p>
+        ) : sessionsQ.isPending ? (
+          <p className="mt-4 text-sm text-[var(--mm-text2)]">
+            Loading active sessions…
+          </p>
+        ) : (sessionsQ.data ?? []).length === 0 ? (
+          <p className="mt-4 text-sm text-[var(--mm-text2)]">
+            No active sessions were found.
+          </p>
+        ) : (
+          <div className="mt-4 grid gap-2" data-testid="active-sessions">
+            {(sessionsQ.data ?? []).map((session) => (
+              <article key={session.session_id} className="mm-session-row">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-sm font-semibold text-[var(--mm-text1)]">
+                      {session.client_label || "Browser session"}
+                    </h3>
+                    {session.current ? (
+                      <span className="mm-status-badge mm-status-badge--ok">
+                        This browser
+                      </span>
+                    ) : null}
+                    {session.trusted_device ? (
+                      <span className="mm-status-badge mm-status-badge--info">
+                        Trusted
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 text-xs text-[var(--mm-text2)]">
+                    Last seen {formatSessionDate(session.last_seen_at)} ·
+                    Expires {formatSessionDate(session.absolute_expires_at)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={mmActionButtonClass({
+                    variant: "tertiary",
+                    disabled: session.current || revokeSession.isPending,
+                  })}
+                  disabled={session.current || revokeSession.isPending}
+                  onClick={async () => {
+                    setSessionStatus(null);
+                    try {
+                      const result = await revokeSession.mutateAsync(
+                        session.session_id,
+                      );
+                      setSessionStatus(result.message);
+                    } catch {
+                      setSessionStatus(
+                        "Could not sign out that session. It may already be inactive.",
+                      );
+                    }
+                  }}
+                >
+                  {revokeSession.isPending ? "Signing out…" : "Sign out"}
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
       <section
         className="mm-card w-full"

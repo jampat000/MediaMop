@@ -305,9 +305,10 @@ Start-BuildPhase "Backend pip install"
 Push-Location $backendDir
 try {
   Invoke-Native -FilePath $py -ArgumentList @("-m", "ensurepip", "--upgrade")
-  $pip = Resolve-VenvExecutable -ScriptsDir $venvScriptsDir -NamePattern "pip*.exe" -MissingMessage "pip launcher was not created in the backend virtual environment."
-  Invoke-Native -FilePath $py -ArgumentList @("-m", "pip", "install", "--upgrade", "pip")
-  Invoke-Native -FilePath $pip -ArgumentList @("install", "--upgrade", "--force-reinstall", "-e", ".")
+  # Invoke pip through Python because the lock deliberately includes pip itself.  A
+  # direct pip.exe invocation refuses to upgrade the interpreter that launched it.
+  Invoke-Native -FilePath $py -ArgumentList @("-m", "pip", "install", "--require-hashes", "--upgrade", "-r", "requirements.lock")
+  Invoke-Native -FilePath $py -ArgumentList @("-m", "pip", "install", "--no-deps", "--no-build-isolation", "--upgrade", "--force-reinstall", "-e", ".")
   $installedBackendVersion = (& $py -c "import importlib.metadata as m; print(m.version('mediamop-backend'))").Trim()
   if (-not $installedBackendVersion) {
     throw "Could not resolve installed mediamop-backend version after editable install."
@@ -315,7 +316,6 @@ try {
   if ($installedBackendVersion -ne $backendProjectVersion) {
     throw "Installed mediamop-backend version '$installedBackendVersion' does not match backend project version '$backendProjectVersion'."
   }
-  Invoke-Native -FilePath $pip -ArgumentList @("install", "pillow>=11.0.0", "pyinstaller>=6.12.0")
   $pyinstaller = Resolve-VenvExecutable -ScriptsDir $venvScriptsDir -NamePattern "pyinstaller*.exe" -MissingMessage "pyinstaller launcher was not installed in the backend virtual environment."
 } finally {
   Pop-Location

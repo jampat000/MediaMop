@@ -36,11 +36,7 @@ def test_ready_ok_after_lifespan_startup() -> None:
     body = response.json()
     assert body["ready"] is True
     assert body["status"] == "ready"
-    assert {step["name"] for step in body["steps"]} == {
-        "database",
-        "workers",
-        "filesystem_watcher",
-    }
+    assert set(body) == {"ready", "status"}
     assert response.headers.get("Cache-Control", "").startswith("no-store")
 
 

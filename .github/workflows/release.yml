@@ -30,18 +30,18 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Normalize tag version
         id: version
         shell: bash
         run: echo "plain=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: apps/backend/pyproject.toml
+          cache-dependency-path: apps/backend/requirements.lock
 
       - name: Validate release version alignment
         shell: bash
@@ -80,23 +80,23 @@ jobs:
         env:
           TAG_VERSION: ${{ github.ref_name }}
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "20"
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
 
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: "9.0.x"
 
       - name: Install Velopack CLI
         run: dotnet tool install -g vpk
 
-      - name: Install MediaMop backend (editable)
+      - name: Install locked MediaMop backend (editable)
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e "./apps/backend[dev]"
+          python -m pip install --require-hashes -r apps/backend/requirements.lock
+          python -m pip install --no-deps --no-build-isolation -e "./apps/backend"
 
       - name: MediaMop web - install and build
         working-directory: apps/web
@@ -113,7 +113,7 @@ jobs:
       # still checks the vendored copy against the current upstream checksum, so
       # a stale restore is refreshed rather than shipped.
       - name: Cache vendored FFmpeg
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: packaging/windows/vendor/ffmpeg
           key: ffmpeg-vendor-${{ runner.os }}-${{ github.run_id }}
@@ -182,7 +182,7 @@ jobs:
           }
 
       - name: Upload Velopack release artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: mediamop-windows-velopack
           if-no-files-found: error
@@ -199,18 +199,18 @@ jobs:
     env:
       MEDIAMOP_SESSION_SECRET: ${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-release-session-secret-32chars-min
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: apps/backend/pyproject.toml
+          cache-dependency-path: apps/backend/requirements.lock
 
-      - name: Install MediaMop backend (editable) and Playwright browser
+      - name: Install locked MediaMop backend and Playwright browser
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e "./apps/backend[dev]"
+          python -m pip install --require-hashes -r apps/backend/requirements.lock
+          python -m pip install --no-deps --no-build-isolation -e "./apps/backend"
           python -m playwright install --with-deps chromium
 
       - name: Backend dependency vulnerability scan (pip-audit)
@@ -229,7 +229,7 @@ jobs:
           alembic check
           pytest -q --cov=mediamop --cov-fail-under=75
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "20"
           cache: npm
@@ -261,7 +261,7 @@ jobs:
         run: python -m pytest tests/e2e/mediamop -q --tb=short
 
       - name: Upload web dist
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: mediamop-web-dist
           if-no-files-found: error
@@ -280,10 +280,10 @@ jobs:
     env:
       MEDIAMOP_SESSION_SECRET: ${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-release-session-secret-32chars-min
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Download web dist
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: mediamop-web-dist
           path: ${{ github.workspace }}
@@ -297,21 +297,21 @@ jobs:
         run: echo "plain=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Download Velopack release artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: mediamop-windows-velopack
           path: ${{ github.workspace }}/windows-artifact
 
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
 
-      - uses: docker/login-action@v4
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish release Docker image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: ./Dockerfile
@@ -361,7 +361,7 @@ jobs:
           cp "$notes_file" "$GITHUB_WORKSPACE/release-notes.md"
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           files: |
             mediamop-web-dist.zip

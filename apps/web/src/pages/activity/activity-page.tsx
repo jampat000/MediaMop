@@ -12,6 +12,7 @@ import {
 } from "../../lib/activity/queries";
 import { useActivityStreamInvalidation } from "../../lib/activity/use-activity-stream-invalidation";
 import type { ActivityEventItem } from "../../lib/api/types";
+import { fetchActivityRecent } from "../../lib/api/activity-api";
 import {
   isHttpErrorFromApi,
   isLikelyNetworkFailure,
@@ -157,11 +158,11 @@ function scopeLabel(raw: string | null): string {
 function toneClasses(tone: ActivityTone): string {
   switch (tone) {
     case "success":
-      return "border-emerald-500/25 bg-emerald-500/[0.08]";
+      return "mm-activity-tone--success";
     case "warning":
-      return "border-amber-400/25 bg-amber-400/[0.08]";
+      return "mm-activity-tone--warning";
     case "error":
-      return "border-red-400/30 bg-red-500/[0.10]";
+      return "mm-activity-tone--error";
     default:
       return "border-[var(--mm-border)] bg-[var(--mm-card-bg)]";
   }
@@ -170,11 +171,11 @@ function toneClasses(tone: ActivityTone): string {
 function chipToneClasses(tone: ActivityTone): string {
   switch (tone) {
     case "success":
-      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
+      return "mm-activity-chip--success";
     case "warning":
-      return "border-amber-400/30 bg-amber-400/10 text-amber-100";
+      return "mm-activity-chip--warning";
     case "error":
-      return "border-red-400/35 bg-red-500/10 text-red-100";
+      return "mm-activity-chip--error";
     default:
       return "border-[var(--mm-border)] bg-black/10 text-[var(--mm-text2)]";
   }
@@ -637,6 +638,94 @@ function collectEventOptions(
     .sort((a, b) => a.label.localeCompare(b.label));
 }
 
+type ActivityGroup = {
+  key: string;
+  events: ActivityEventItem[];
+};
+
+function groupRepeatedFailures(items: ActivityEventItem[]): ActivityGroup[] {
+  const groups: ActivityGroup[] = [];
+  for (const event of items) {
+    const display = eventDisplay(event);
+    const isFailure =
+      display.tone === "error" || /failed|denied/i.test(event.event_type);
+    const previous = groups.at(-1);
+    const key = `${event.module}|${event.event_type}|${display.title}`;
+    if (isFailure && previous?.key === key) {
+      previous.events.push(event);
+    } else {
+      groups.push({ key, events: [event] });
+    }
+  }
+  return groups;
+}
+
+function ActivityEventRow({
+  ev,
+  fmt,
+  compact = false,
+}: {
+  ev: ActivityEventItem;
+  fmt: (iso: string) => string;
+  compact?: boolean;
+}) {
+  const display = eventDisplay(ev);
+  const renderedTitle = compactActivityTitle(display.title);
+  return (
+    <article
+      className={`rounded-xl border px-4 ${compact ? "mm-activity-row--compact py-2.5" : "py-4"} ${toneClasses(display.tone)}`}
+      data-testid="activity-row"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="mm-activity-event-icon" aria-hidden="true">
+              {display.tone === "success"
+                ? "✓"
+                : display.tone === "error"
+                  ? "!"
+                  : display.tone === "warning"
+                    ? "!"
+                    : "·"}
+            </span>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-gold)]">
+              {ev.module === "system" ||
+              ev.module === "auth" ||
+              ev.module === "arr_library"
+                ? "System"
+                : titleCase(ev.module)}
+            </span>
+            <span
+              className={`rounded-full border px-2.5 py-1 text-xs font-medium ${chipToneClasses(display.tone)}`}
+            >
+              {display.chip}
+            </span>
+          </div>
+          <h2
+            className="min-w-0 break-words text-lg font-semibold text-[var(--mm-text1)] [overflow-wrap:anywhere]"
+            title={display.title}
+          >
+            {renderedTitle}
+          </h2>
+          {!compact ? (
+            <p className="break-words text-sm text-[var(--mm-text3)]">
+              {display.summary}
+            </p>
+          ) : null}
+        </div>
+        <time className="text-sm text-[var(--mm-text3)]">
+          {fmt(ev.created_at)}
+        </time>
+      </div>
+      {!compact ? (
+        <div className="mt-3">
+          <ActivityEventDetails ev={ev} display={display} />
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
 export function ActivityPage() {
   const [filters, setFilters] = useState<ActivityFiltersState>({
     module: "all",
@@ -652,6 +741,9 @@ export function ActivityPage() {
     from: "",
     to: "",
   });
+  const [olderItems, setOlderItems] = useState<ActivityEventItem[]>([]);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [olderError, setOlderError] = useState<string | null>(null);
 
   const queryFilters = useMemo(
     () => ({
@@ -697,8 +789,14 @@ export function ActivityPage() {
     );
   }
 
-  const items = recent.data.items ?? [];
-  const eventOptions = collectEventOptions(items);
+  const latestItems = recent.data.items ?? [];
+  const itemById = new Map<number, ActivityEventItem>();
+  for (const event of [...latestItems, ...olderItems])
+    itemById.set(event.id, event);
+  const items = Array.from(itemById.values()).sort((a, b) => b.id - a.id);
+  const matchingTotal = Math.max(Number(recent.data.total) || 0, items.length);
+  const visibleItems = items.slice(0, matchingTotal || items.length);
+  const eventOptions = collectEventOptions(visibleItems);
   const filtersActive = Boolean(
     applied.eventType ||
     applied.search.trim() ||
@@ -706,6 +804,30 @@ export function ActivityPage() {
     applied.to ||
     applied.module !== "all",
   );
+  const hasMore =
+    Boolean(recent.data.has_more) || visibleItems.length < matchingTotal;
+
+  async function loadOlderActivity() {
+    const oldest = visibleItems.at(-1);
+    if (!oldest || loadingOlder) return;
+    setLoadingOlder(true);
+    setOlderError(null);
+    try {
+      const page = await fetchActivityRecent({
+        ...queryFilters,
+        before_id: oldest.id,
+      });
+      setOlderItems((previous) => {
+        const merged = new Map(previous.map((item) => [item.id, item]));
+        for (const item of page.items ?? []) merged.set(item.id, item);
+        return Array.from(merged.values()).sort((a, b) => b.id - a.id);
+      });
+    } catch {
+      setOlderError("Could not load older activity. Try again.");
+    } finally {
+      setLoadingOlder(false);
+    }
+  }
 
   return (
     <div className="mm-page">
@@ -725,11 +847,11 @@ export function ActivityPage() {
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <ActivitySummaryCard
           label="Showing now"
-          value={`${items.length} events`}
+          value={`${visibleItems.length} ${visibleItems.length === 1 ? "event" : "events"}`}
         />
         <ActivitySummaryCard
           label="Matches in store"
-          value={`${recent.data.total ?? 0} events`}
+          value={`${matchingTotal} ${matchingTotal === 1 ? "event" : "events"}`}
         />
         <ActivitySummaryCard
           label="System events"
@@ -738,7 +860,7 @@ export function ActivityPage() {
         <ActivitySummaryCard label="Refresh" value="Live" />
       </section>
 
-      <section className="mt-4 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-4">
+      <section className="mm-activity-filters mt-4 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-4">
         <div className="grid gap-3 lg:grid-cols-[220px_1fr_1fr_1fr_auto_auto]">
           <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
             Module
@@ -813,7 +935,11 @@ export function ActivityPage() {
             <button
               type="button"
               className={mmActionButtonClass({ variant: "primary" })}
-              onClick={() => setApplied(filters)}
+              onClick={() => {
+                setApplied(filters);
+                setOlderItems([]);
+                setOlderError(null);
+              }}
             >
               Apply filters
             </button>
@@ -834,6 +960,8 @@ export function ActivityPage() {
                 } as ActivityFiltersState;
                 setFilters(reset);
                 setApplied(reset);
+                setOlderItems([]);
+                setOlderError(null);
               }}
             >
               Clear
@@ -842,67 +970,83 @@ export function ActivityPage() {
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[var(--mm-text2)]">
           <span>
-            Showing {items.length} of {recent.data.total} matching events.
+            Showing {visibleItems.length} of {matchingTotal} matching{" "}
+            {matchingTotal === 1 ? "event" : "events"}.
           </span>
           {filtersActive ? (
             <span className="rounded-full border border-[var(--mm-border)] bg-black/10 px-2 py-0.5 text-xs text-[var(--mm-text2)]">
               Filters active
             </span>
           ) : null}
+          {hasMore ? (
+            <button
+              type="button"
+              className={mmActionButtonClass({
+                variant: "tertiary",
+                disabled: loadingOlder,
+              })}
+              disabled={loadingOlder}
+              onClick={() => void loadOlderActivity()}
+            >
+              {loadingOlder ? "Loading older…" : "Load older activity"}
+            </button>
+          ) : null}
+          {olderError ? (
+            <span className="text-[var(--mm-status-failed-text)]" role="alert">
+              {olderError}
+            </span>
+          ) : null}
         </div>
       </section>
 
       <section className="mt-4 space-y-3" data-testid="activity-feed">
-        {items.length === 0 ? (
+        {visibleItems.length === 0 ? (
           <div className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-4 text-sm text-[var(--mm-text2)]">
             No activity matched the current filters.
           </div>
         ) : (
-          items.map((ev) => {
-            const display = eventDisplay(ev);
-            const renderedTitle = compactActivityTitle(display.title);
-            return (
-              <article
-                key={ev.id}
-                className={`rounded-xl border px-4 py-4 ${toneClasses(display.tone)}`}
-                data-testid="activity-row"
+          groupRepeatedFailures(visibleItems).map((group) =>
+            group.events.length > 1 ? (
+              <details
+                key={group.key}
+                className="mm-activity-cluster"
+                data-testid="activity-cluster"
               >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-gold)]">
-                        {ev.module === "system" ||
-                        ev.module === "auth" ||
-                        ev.module === "arr_library"
-                          ? "System"
-                          : titleCase(ev.module)}
-                      </span>
-                      <span
-                        className={`rounded-full border px-2.5 py-1 text-xs font-medium ${chipToneClasses(display.tone)}`}
-                      >
-                        {display.chip}
-                      </span>
-                    </div>
-                    <h2
-                      className="min-w-0 break-words text-lg font-semibold text-[var(--mm-text1)] [overflow-wrap:anywhere]"
-                      title={display.title}
-                    >
-                      {renderedTitle}
-                    </h2>
-                    <p className="break-words text-sm text-[var(--mm-text3)]">
-                      {display.summary}
-                    </p>
-                  </div>
-                  <time className="text-sm text-[var(--mm-text3)]">
-                    {fmt(ev.created_at)}
-                  </time>
+                <summary className="mm-activity-cluster__summary">
+                  <span
+                    className="mm-activity-event-icon mm-activity-event-icon--error"
+                    aria-hidden="true"
+                  >
+                    !
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <strong>{group.events.length} repeated failures</strong>
+                    <small>
+                      {compactActivityTitle(
+                        eventDisplay(group.events[0]).title,
+                      )}{" "}
+                      · first {fmt(group.events.at(-1)?.created_at ?? "")} ·
+                      latest {fmt(group.events[0].created_at)}
+                    </small>
+                  </span>
+                  <span className="mm-status-badge mm-status-badge--failed">
+                    Review
+                  </span>
+                </summary>
+                <div className="mm-activity-cluster__events">
+                  {group.events.map((ev) => (
+                    <ActivityEventRow key={ev.id} ev={ev} fmt={fmt} compact />
+                  ))}
                 </div>
-                <div className="mt-3">
-                  <ActivityEventDetails ev={ev} display={display} />
-                </div>
-              </article>
-            );
-          })
+              </details>
+            ) : (
+              <ActivityEventRow
+                key={group.events[0].id}
+                ev={group.events[0]}
+                fmt={fmt}
+              />
+            ),
+          )
         )}
       </section>
     </div>

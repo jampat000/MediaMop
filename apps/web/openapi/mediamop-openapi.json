@@ -50,6 +50,12 @@
       },
       "ActivityRecentOut": {
         "properties": {
+          "has_more": {
+            "default": false,
+            "description": "More matching persisted events exist beyond this bounded page.",
+            "title": "Has More",
+            "type": "boolean"
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/ActivityEventItemOut"
@@ -271,10 +277,20 @@
             "title": "Absolute Timeout Days",
             "type": "integer"
           },
+          "client_label": {
+            "default": "Browser session",
+            "title": "Client Label",
+            "type": "string"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "current": {
+            "default": true,
+            "title": "Current",
+            "type": "boolean"
           },
           "idle_timeout_minutes": {
             "minimum": 1.0,
@@ -284,6 +300,11 @@
           "last_seen_at": {
             "format": "date-time",
             "title": "Last Seen At",
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "title": "Session Id",
             "type": "string"
           },
           "trusted_device": {
@@ -306,6 +327,19 @@
         "properties": {
           "activity_summary": {
             "$ref": "#/components/schemas/ActivitySummaryOut"
+          },
+          "incident_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Incident Count",
+            "type": "integer"
+          },
+          "modules": {
+            "items": {
+              "$ref": "#/components/schemas/ModuleOperationalStatusOut"
+            },
+            "title": "Modules",
+            "type": "array"
           },
           "scope_note": {
             "default": "Read-only overview. No jobs or settings are changed from this view.",
@@ -1452,6 +1486,65 @@
           "detail"
         ],
         "title": "MetadataProviderTestOut",
+        "type": "object"
+      },
+      "ModuleOperationalStatusOut": {
+        "description": "Current module state, deliberately separate from historical counters.",
+        "properties": {
+          "action_path": {
+            "title": "Action Path",
+            "type": "string"
+          },
+          "active_job_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Active Job Count",
+            "type": "integer"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "failed_job_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Failed Job Count",
+            "type": "integer"
+          },
+          "module": {
+            "title": "Module",
+            "type": "string"
+          },
+          "quarantined_file_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Quarantined File Count",
+            "type": "integer"
+          },
+          "queued_job_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Queued Job Count",
+            "type": "integer"
+          },
+          "state": {
+            "description": "setup_required, processing, degraded, paused, or healthy.",
+            "title": "State",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "module",
+          "state",
+          "configured",
+          "summary",
+          "action_path"
+        ],
+        "title": "ModuleOperationalStatusOut",
         "type": "object"
       },
       "NotificationChannelIn": {
@@ -2938,6 +3031,25 @@
         "title": "PrunerStudiosOut",
         "type": "object"
       },
+      "PublicReadinessResponse": {
+        "description": "Minimal load-balancer response; detailed startup state is authenticated.",
+        "properties": {
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ready",
+          "status"
+        ],
+        "title": "PublicReadinessResponse",
+        "type": "object"
+      },
       "ReadinessResponse": {
         "properties": {
           "ready": {
@@ -3343,6 +3455,12 @@
             ],
             "description": "Why, written for the person asking why there is no new output for this file.",
             "title": "Output Collision Reason"
+          },
+          "quarantined": {
+            "default": false,
+            "description": "True when repeated failures placed this file on hold until an operator requeues it.",
+            "title": "Quarantined",
+            "type": "boolean"
           },
           "relative_path": {
             "title": "Relative Path",
@@ -4236,6 +4354,17 @@
             },
             "title": "Manager Connection Ids",
             "type": "array"
+          },
+          "manager_coverage": {
+            "default": "no_upstream_signal",
+            "description": "connected, no_upstream_signal, or unreachable; absence of a manager is not an empty queue.",
+            "title": "Manager Coverage",
+            "type": "string"
+          },
+          "manager_coverage_detail": {
+            "default": "",
+            "title": "Manager Coverage Detail",
+            "type": "string"
           },
           "max_attempts": {
             "title": "Max Attempts",
@@ -6446,6 +6575,100 @@
         "title": "RefinerWhyHeldOut",
         "type": "object"
       },
+      "SessionActionOut": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "revoked_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Revoked Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "SessionActionOut",
+        "type": "object"
+      },
+      "SessionOut": {
+        "description": "Safe session inventory entry; never includes the cookie or token hash.",
+        "properties": {
+          "absolute_expires_at": {
+            "format": "date-time",
+            "title": "Absolute Expires At",
+            "type": "string"
+          },
+          "absolute_timeout_days": {
+            "minimum": 1.0,
+            "title": "Absolute Timeout Days",
+            "type": "integer"
+          },
+          "client_label": {
+            "default": "Browser session",
+            "title": "Client Label",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "current": {
+            "default": false,
+            "title": "Current",
+            "type": "boolean"
+          },
+          "idle_timeout_minutes": {
+            "minimum": 1.0,
+            "title": "Idle Timeout Minutes",
+            "type": "integer"
+          },
+          "last_seen_at": {
+            "format": "date-time",
+            "title": "Last Seen At",
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "trusted_device": {
+            "title": "Trusted Device",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "trusted_device",
+          "created_at",
+          "last_seen_at",
+          "absolute_expires_at",
+          "idle_timeout_minutes",
+          "absolute_timeout_days"
+        ],
+        "title": "SessionOut",
+        "type": "object"
+      },
+      "SessionsOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SessionOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "SessionsOut",
+        "type": "object"
+      },
       "SuiteConfigurationBackupItemOut": {
         "additionalProperties": false,
         "properties": {
@@ -7540,7 +7763,7 @@
   },
   "info": {
     "title": "MediaMop API",
-    "version": "2.5.1"
+    "version": "2.6.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -7645,6 +7868,23 @@
                 }
               ],
               "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before Id"
             }
           }
         ],
@@ -7960,6 +8200,135 @@
           }
         },
         "summary": "Get Current Session",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/sessions": {
+      "get": {
+        "operationId": "get_sessions_api_v1_auth_sessions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Sessions",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/sessions/revoke-others": {
+      "post": {
+        "operationId": "post_revoke_other_sessions_api_v1_auth_sessions_revoke_others_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionActionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Revoke Other Sessions",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/sessions/{session_id}/revoke": {
+      "post": {
+        "operationId": "post_revoke_session_api_v1_auth_sessions__session_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionActionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Revoke Session",
         "tags": [
           "auth"
         ]
@@ -11489,6 +11858,22 @@
               "title": "Channel Id",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
           }
         ],
         "responses": {
@@ -12044,6 +12429,28 @@
         ]
       }
     },
+    "/api/v1/system/readiness": {
+      "get": {
+        "description": "Detailed startup and worker diagnostics for signed-in operators.",
+        "operationId": "authenticated_readiness_api_v1_system_readiness_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Authenticated Readiness",
+        "tags": [
+          "readiness"
+        ]
+      }
+    },
     "/api/v1/system/reconciliation": {
       "get": {
         "description": "Return non-mutating filesystem/database reconciliation findings.",
@@ -12258,7 +12665,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReadinessResponse"
+                  "$ref": "#/components/schemas/PublicReadinessResponse"
                 }
               }
             },

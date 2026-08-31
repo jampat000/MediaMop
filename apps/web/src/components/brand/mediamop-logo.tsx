@@ -1,5 +1,6 @@
-import logoSrc from "./mediamop-logo-premium.png";
-import logoCroppedSrc from "./mediamop-logo-premium-cropped.png";
+import logoSrc from "./mediamop-logo-premium.webp";
+import logoCroppedSrc from "./mediamop-logo-premium-cropped.webp";
+import logoSidebarSrc from "./mediamop-logo-sidebar.webp";
 
 export type MediaMopLogoVariant = "sidebar" | "auth" | "hero";
 
@@ -16,7 +17,12 @@ const variantClass: Record<MediaMopLogoVariant, string> = {
 
 /** Premium raster logo — single source of truth; preserves aspect ratio (object-fit: contain). */
 export function MediaMopLogo({ variant = "auth", className }: Props) {
-  const src = variant === "hero" ? logoSrc : logoCroppedSrc;
+  const src =
+    variant === "hero"
+      ? logoSrc
+      : variant === "sidebar"
+        ? logoSidebarSrc
+        : logoCroppedSrc;
   return (
     <img
       src={src}

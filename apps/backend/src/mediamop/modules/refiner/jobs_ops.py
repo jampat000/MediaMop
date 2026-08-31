@@ -260,6 +260,7 @@ def complete_claimed_refiner_job(
     job.status = RefinerJobStatus.COMPLETED.value
     job.lease_owner = None
     job.lease_expires_at = None
+    job.last_error = None
     session.flush()
     record_module_job_event(module="refiner", event="completed")
     _record_refiner_queue_depth(session)

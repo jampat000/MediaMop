@@ -161,6 +161,54 @@ function RefinerOverviewNeedsAttention({
   );
 }
 
+function RefinerGuidedSetup({
+  onOpenTab,
+}: {
+  onOpenTab?: (tab: RefinerOverviewOpenTab) => void;
+}) {
+  return (
+    <MmOverviewSection
+      headingId="refiner-guided-setup-heading"
+      heading="Set up Refiner"
+      data-testid="refiner-guided-setup"
+    >
+      <p className="max-w-2xl leading-relaxed">
+        Refiner has no watched folder yet. Complete this checklist before
+        expecting processing activity; the history figures above remain
+        historical only.
+      </p>
+      <ol className="mt-4 grid gap-2 text-sm text-[var(--mm-text2)] sm:grid-cols-3">
+        <li className="mm-setup-step">
+          <span>1</span>
+          <strong>Choose a library</strong>
+          <small>Pick TV, Movies, or both.</small>
+        </li>
+        <li className="mm-setup-step">
+          <span>2</span>
+          <strong>Set a watched folder</strong>
+          <small>Use a local, Docker, or UNC path.</small>
+        </li>
+        <li className="mm-setup-step">
+          <span>3</span>
+          <strong>Review the first scan</strong>
+          <small>Start with the safety defaults.</small>
+        </li>
+      </ol>
+      {onOpenTab ? (
+        <div className="mt-4 border-t border-[var(--mm-border)] pt-4">
+          <button
+            type="button"
+            className={mmActionButtonClass({ variant: "secondary" })}
+            onClick={() => onOpenTab("libraries")}
+          >
+            Configure libraries
+          </button>
+        </div>
+      ) : null}
+    </MmOverviewSection>
+  );
+}
+
 function RefinerOverviewLoadError({ err }: { err: unknown }) {
   return (
     <div className="mm-page__intro" data-testid="refiner-overview-load-error">
@@ -442,6 +490,8 @@ export function RefinerOverviewTab({
           />
         </MmAtGlanceGrid>
       </MmOverviewSection>
+
+      {!watchedSet ? <RefinerGuidedSetup onOpenTab={onOpenTab} /> : null}
 
       <RefinerOverviewNeedsAttention
         items={attentionItems}

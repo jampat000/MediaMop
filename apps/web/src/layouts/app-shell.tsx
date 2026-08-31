@@ -27,6 +27,8 @@ export function AppShell() {
   const logout = useLogoutMutation();
   const suite = useSuiteSettingsQuery();
   const dashboard = useDashboardStatusQuery();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [theme, setTheme] = useState<AppTheme>(() => readStoredAppTheme());
   const productTitle =
     (suite.data?.product_display_name ?? "MediaMop").trim() || "MediaMop";
@@ -43,17 +45,45 @@ export function AppShell() {
 
   return (
     <div className="mm-app-layout" data-testid="shell-ready">
-      <aside className="mm-sidebar" aria-label="Product">
+      <aside
+        id="mm-primary-sidebar"
+        className={`mm-sidebar${sidebarOpen ? " mm-sidebar--open" : ""}${sidebarCollapsed ? " mm-sidebar--collapsed" : ""}`}
+        aria-label="Product"
+      >
         <BrandHeaderLink to="/" productTitle={productTitle} />
+        <button
+          type="button"
+          className="mm-sidebar-collapse"
+          data-testid="sidebar-collapse"
+          aria-label={
+            sidebarCollapsed ? "Expand navigation" : "Collapse navigation"
+          }
+          aria-expanded={!sidebarCollapsed}
+          onClick={() => setSidebarCollapsed((value) => !value)}
+        >
+          <span aria-hidden="true">{sidebarCollapsed ? "→" : "←"}</span>
+          <span className="mm-sidebar-collapse__label">
+            {sidebarCollapsed ? "Expand" : "Collapse"}
+          </span>
+        </button>
         <nav className="mm-sidebar-nav" aria-label="Primary">
           <p className="mm-sidebar-section-label">Overview</p>
-          <NavLink to="/" end className={sidebarNavClass}>
+          <NavLink
+            to="/"
+            end
+            className={sidebarNavClass}
+            onClick={() => setSidebarOpen(false)}
+          >
             <span className="mm-sidebar-link-icon" aria-hidden="true">
               <NavIconDashboard />
             </span>
             <span className="mm-sidebar-link-label">Dashboard</span>
           </NavLink>
-          <NavLink to="/activity" className={sidebarNavClass}>
+          <NavLink
+            to="/activity"
+            className={sidebarNavClass}
+            onClick={() => setSidebarOpen(false)}
+          >
             <span className="mm-sidebar-link-icon" aria-hidden="true">
               <NavIconActivity />
             </span>
@@ -61,13 +91,21 @@ export function AppShell() {
           </NavLink>
 
           <p className="mm-sidebar-section-label">Modules</p>
-          <NavLink to="/refiner" className={sidebarNavClass}>
+          <NavLink
+            to="/refiner"
+            className={sidebarNavClass}
+            onClick={() => setSidebarOpen(false)}
+          >
             <span className="mm-sidebar-link-icon" aria-hidden="true">
               <NavIconRefiner />
             </span>
             <span className="mm-sidebar-link-label">Refiner</span>
           </NavLink>
-          <NavLink to="/pruner" className={sidebarNavClass}>
+          <NavLink
+            to="/pruner"
+            className={sidebarNavClass}
+            onClick={() => setSidebarOpen(false)}
+          >
             <span className="mm-sidebar-link-icon" aria-hidden="true">
               <NavIconPruner />
             </span>
@@ -75,7 +113,11 @@ export function AppShell() {
           </NavLink>
 
           <p className="mm-sidebar-section-label">System</p>
-          <NavLink to="/settings" className={sidebarNavClass}>
+          <NavLink
+            to="/settings"
+            className={sidebarNavClass}
+            onClick={() => setSidebarOpen(false)}
+          >
             <span className="mm-sidebar-link-icon" aria-hidden="true">
               <NavIconSettings />
             </span>
@@ -103,9 +145,28 @@ export function AppShell() {
           </div>
         </div>
       </aside>
+      {sidebarOpen ? (
+        <button
+          type="button"
+          className="mm-sidebar-backdrop"
+          aria-label="Close navigation"
+          onClick={() => setSidebarOpen(false)}
+        />
+      ) : null}
       <main className="mm-main" id="mm-main-content" tabIndex={-1}>
         <div className="mm-main-inner">
           <div className="mm-shell-toolbar" aria-label="Display controls">
+            <button
+              type="button"
+              className="mm-shell-menu-toggle"
+              data-testid="shell-nav-toggle"
+              aria-controls="mm-primary-sidebar"
+              aria-expanded={sidebarOpen}
+              onClick={() => setSidebarOpen((value) => !value)}
+            >
+              <span aria-hidden="true">☰</span>
+              <span>Menu</span>
+            </button>
             <PauseControl />
             <button
               type="button"

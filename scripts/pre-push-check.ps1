@@ -28,7 +28,7 @@ function Fail($msg)   { Write-Host "[pre-push] FAIL: $msg" -ForegroundColor Red;
 # ---- ruff -------------------------------------------------------------------
 $ruff = "$REPO\apps\backend\.venv\Scripts\ruff.exe"
 if (-not (Test-Path $ruff)) {
-    Skip "ruff (run: pip install -e '.[dev]' in apps/backend)"
+    Skip "ruff (run: python -m pip install --require-hashes -r requirements.lock in apps/backend)"
 } else {
     Step "ruff"
     Push-Location "$REPO\apps\backend"

@@ -50,6 +50,9 @@ function library(over: Partial<RefinerLibrary> = {}): RefinerLibrary {
     priority: 0,
     rule_set_id: null,
     manager_connection_ids: [],
+    manager_coverage: "no_upstream_signal",
+    manager_coverage_detail:
+      "No media manager has been tested for this library.",
     discovered_from_connection_id: null,
     discovered_library_key: null,
     active_job_count: 0,

@@ -9,7 +9,7 @@ MediaMop publishes an all-in-one container image with:
 The stable image tags are published by the release workflow:
 
 - `ghcr.io/jampat000/mediamop:latest`
-- `ghcr.io/jampat000/mediamop:vX.Y.Z`
+- `ghcr.io/jampat000/mediamop:X.Y.Z` (the Git tag is `vX.Y.Z`; the image tag has no `v`)
 
 ## Quick start
 

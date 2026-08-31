@@ -196,6 +196,57 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/auth/sessions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Sessions */
+    get: operations["get_sessions_api_v1_auth_sessions_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/auth/sessions/revoke-others": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Post Revoke Other Sessions */
+    post: operations["post_revoke_other_sessions_api_v1_auth_sessions_revoke_others_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/auth/sessions/{session_id}/revoke": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Post Revoke Session */
+    post: operations["post_revoke_session_api_v1_auth_sessions__session_id__revoke_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/dashboard/status": {
     parameters: {
       query?: never;
@@ -1634,6 +1685,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/system/readiness": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Authenticated Readiness
+     * @description Detailed startup and worker diagnostics for signed-in operators.
+     */
+    get: operations["authenticated_readiness_api_v1_system_readiness_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/system/reconciliation": {
     parameters: {
       query?: never;
@@ -1790,6 +1861,12 @@ export interface components {
     };
     /** ActivityRecentOut */
     ActivityRecentOut: {
+      /**
+       * Has More
+       * @description More matching persisted events exist beyond this bounded page.
+       * @default false
+       */
+      has_more: boolean;
       /** Items */
       items?: components["schemas"]["ActivityEventItemOut"][];
       /**
@@ -1894,10 +1971,20 @@ export interface components {
       /** Absolute Timeout Days */
       absolute_timeout_days: number;
       /**
+       * Client Label
+       * @default Browser session
+       */
+      client_label: string;
+      /**
        * Created At
        * Format: date-time
        */
       created_at: string;
+      /**
+       * Current
+       * @default true
+       */
+      current: boolean;
       /** Idle Timeout Minutes */
       idle_timeout_minutes: number;
       /**
@@ -1905,12 +1992,24 @@ export interface components {
        * Format: date-time
        */
       last_seen_at: string;
+      /**
+       * Session Id
+       * @default
+       */
+      session_id: string;
       /** Trusted Device */
       trusted_device: boolean;
     };
     /** DashboardStatusOut */
     DashboardStatusOut: {
       activity_summary: components["schemas"]["ActivitySummaryOut"];
+      /**
+       * Incident Count
+       * @default 0
+       */
+      incident_count: number;
+      /** Modules */
+      modules?: components["schemas"]["ModuleOperationalStatusOut"][];
       /**
        * Scope Note
        * @description Fixed honesty line for the dashboard slice.
@@ -2431,6 +2530,45 @@ export interface components {
        * @enum {string}
        */
       status: "matched" | "no_match" | "not_configured" | "unreachable";
+    };
+    /**
+     * ModuleOperationalStatusOut
+     * @description Current module state, deliberately separate from historical counters.
+     */
+    ModuleOperationalStatusOut: {
+      /** Action Path */
+      action_path: string;
+      /**
+       * Active Job Count
+       * @default 0
+       */
+      active_job_count: number;
+      /** Configured */
+      configured: boolean;
+      /**
+       * Failed Job Count
+       * @default 0
+       */
+      failed_job_count: number;
+      /** Module */
+      module: string;
+      /**
+       * Quarantined File Count
+       * @default 0
+       */
+      quarantined_file_count: number;
+      /**
+       * Queued Job Count
+       * @default 0
+       */
+      queued_job_count: number;
+      /**
+       * State
+       * @description setup_required, processing, degraded, paused, or healthy.
+       */
+      state: string;
+      /** Summary */
+      summary: string;
     };
     /** NotificationChannelIn */
     NotificationChannelIn: {
@@ -3029,6 +3167,16 @@ export interface components {
       /** Studios */
       studios?: string[];
     };
+    /**
+     * PublicReadinessResponse
+     * @description Minimal load-balancer response; detailed startup state is authenticated.
+     */
+    PublicReadinessResponse: {
+      /** Ready */
+      ready: boolean;
+      /** Status */
+      status: string;
+    };
     /** ReadinessResponse */
     ReadinessResponse: {
       /** Ready */
@@ -3203,6 +3351,12 @@ export interface components {
        * @description Why, written for the person asking why there is no new output for this file.
        */
       output_collision_reason?: string | null;
+      /**
+       * Quarantined
+       * @description True when repeated failures placed this file on hold until an operator requeues it.
+       * @default false
+       */
+      quarantined: boolean;
       /** Relative Path */
       relative_path: string;
       /** Size Bytes */
@@ -3716,6 +3870,17 @@ export interface components {
        * @description Media manager connections covering this library. More than one is allowed and is the edge case.
        */
       manager_connection_ids?: number[];
+      /**
+       * Manager Coverage
+       * @description connected, no_upstream_signal, or unreachable; absence of a manager is not an empty queue.
+       * @default no_upstream_signal
+       */
+      manager_coverage: string;
+      /**
+       * Manager Coverage Detail
+       * @default
+       */
+      manager_coverage_detail: string;
       /** Max Attempts */
       max_attempts: number;
       /** Max Concurrent Files */
@@ -4839,6 +5004,63 @@ export interface components {
        */
       verdict: "proceed" | "wait_upstream" | "not_held" | "no_upstream_signal";
     };
+    /** SessionActionOut */
+    SessionActionOut: {
+      /** Message */
+      message: string;
+      /**
+       * Revoked Count
+       * @default 0
+       */
+      revoked_count: number;
+    };
+    /**
+     * SessionOut
+     * @description Safe session inventory entry; never includes the cookie or token hash.
+     */
+    SessionOut: {
+      /**
+       * Absolute Expires At
+       * Format: date-time
+       */
+      absolute_expires_at: string;
+      /** Absolute Timeout Days */
+      absolute_timeout_days: number;
+      /**
+       * Client Label
+       * @default Browser session
+       */
+      client_label: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Current
+       * @default false
+       */
+      current: boolean;
+      /** Idle Timeout Minutes */
+      idle_timeout_minutes: number;
+      /**
+       * Last Seen At
+       * Format: date-time
+       */
+      last_seen_at: string;
+      /**
+       * Session Id
+       * @default
+       */
+      session_id: string;
+      /** Trusted Device */
+      trusted_device: boolean;
+    };
+    /** SessionsOut */
+    SessionsOut: {
+      /** Items */
+      items: components["schemas"]["SessionOut"][];
+    };
     /** SuiteConfigurationBackupItemOut */
     SuiteConfigurationBackupItemOut: {
       /**
@@ -5347,6 +5569,7 @@ export interface operations {
         search?: string | null;
         date_from?: string | null;
         date_to?: string | null;
+        before_id?: number | null;
       };
       header?: never;
       path?: never;
@@ -5602,6 +5825,90 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["CurrentSessionOut"];
+        };
+      };
+    };
+  };
+  get_sessions_api_v1_auth_sessions_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SessionsOut"];
+        };
+      };
+    };
+  };
+  post_revoke_other_sessions_api_v1_auth_sessions_revoke_others_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        "X-CSRF-Token"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SessionActionOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  post_revoke_session_api_v1_auth_sessions__session_id__revoke_post: {
+    parameters: {
+      query?: never;
+      header?: {
+        "X-CSRF-Token"?: string | null;
+      };
+      path: {
+        session_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SessionActionOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -7992,7 +8299,9 @@ export interface operations {
   delete_notification_channel_route_api_v1_suite_notification_channels__channel_id__delete: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        "X-CSRF-Token"?: string | null;
+      };
       path: {
         channel_id: number;
       };
@@ -8413,6 +8722,26 @@ export interface operations {
       };
     };
   };
+  authenticated_readiness_api_v1_system_readiness_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ReadinessResponse"];
+        };
+      };
+    };
+  };
   get_reconciliation_report_api_v1_system_reconciliation_get: {
     parameters: {
       query?: never;
@@ -8609,7 +8938,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["ReadinessResponse"];
+          "application/json": components["schemas"]["PublicReadinessResponse"];
         };
       };
     };

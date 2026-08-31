@@ -7,6 +7,7 @@ Claims rows from ``refiner_jobs`` only, dispatches by ``job_kind``, then complet
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import socket
@@ -29,7 +30,12 @@ from mediamop.modules.refiner.jobs_ops import (
     fail_claimed_refiner_job,
     fail_leased_refiner_job_after_complete_failure,
 )
+from mediamop.modules.refiner.refiner_failure_classes import RefinerFailureClass
+from mediamop.modules.refiner.refiner_library_service import resolve_library
+from mediamop.modules.refiner.refiner_requeue_service import record_failure
 from mediamop.modules.refiner.refiner_work_admission import evaluate_work_admission
+from mediamop.platform.activity import constants as activity_constants
+from mediamop.platform.activity import service as activity_service
 from mediamop.platform.http.request_context import job_logging_context
 from mediamop.platform.jobs.worker_health import worker_heartbeat, worker_started, worker_stopped
 from mediamop.platform.notifications.dispatch import dispatch_job_notification
@@ -41,6 +47,58 @@ DEFAULT_REFINER_JOB_LEASE_SECONDS = 300
 REFINER_WORKER_IDLE_SLEEP_SECONDS = 5.0
 REFINER_WORKER_TICK_ERROR_BACKOFF_SECONDS = 1.0
 REFINER_TERMINALIZATION_FAILURE_PREFIX = "refiner_terminalization_failure: "
+
+
+def _record_unhandled_refiner_failure(
+    session_factory: sessionmaker[Session],
+    *,
+    ctx: RefinerJobWorkContext,
+    message: str,
+) -> None:
+    """Persist bounded diagnostics when a handler exits before writing Activity."""
+
+    try:
+        payload = json.loads(ctx.payload_json or "{}")
+    except (TypeError, ValueError):
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+    relative_path = payload.get("relative_media_path")
+    media_scope = payload.get("media_scope") if payload.get("media_scope") in {"movie", "tv"} else "movie"
+    library_id = payload.get("library_id") if isinstance(payload.get("library_id"), int) else None
+    safe_message = " ".join(str(message).split())[:1200]
+    try:
+        with session_factory() as session, session.begin():
+            library = resolve_library(session, library_id=library_id, media_scope=media_scope)
+            decision = None
+            if library is not None and isinstance(relative_path, str) and relative_path.strip():
+                decision = record_failure(
+                    session,
+                    library=library,
+                    relative_path=relative_path.strip(),
+                    failure_class=RefinerFailureClass.UNKNOWN,
+                    reason=safe_message,
+                )
+            detail = json.dumps(
+                {
+                    "job_id": ctx.id,
+                    "job_kind": ctx.job_kind,
+                    "failure_class": RefinerFailureClass.UNKNOWN.value,
+                    "message": safe_message,
+                    "next_action": "Review this job and use Start again after fixing the cause.",
+                    "retry_scheduled": bool(decision and decision.will_retry),
+                },
+                separators=(",", ":"),
+            )
+            activity_service.record_activity_event(
+                session,
+                event_type=activity_constants.REFINER_WORKER_FAILURE,
+                module="refiner",
+                title="Refiner job could not start",
+                detail=detail,
+            )
+    except Exception:
+        logger.exception("Refiner failure diagnostics could not be persisted job_id=%s", ctx.id)
 
 
 @dataclass(frozen=True, slots=True)
@@ -172,20 +230,33 @@ def process_one_refiner_job(
         with job_logging_context(ctx.id):
             handler(ctx)
     except Exception as exc:
-        logger.exception("Refiner job handler failed for job_id=%s kind=%s", ctx.id, ctx.job_kind)
-        err_text = operator_failure_from_exception(
+        failure = operator_failure_from_exception(
             module="Refiner",
             action="job",
             exc=exc,
             recoverable=False,
-        ).message[:10_000]
+        )
+        logger.error(
+            "Refiner job handler failed for job_id=%s kind=%s: %s",
+            ctx.id,
+            ctx.job_kind,
+            failure.message,
+            extra={"detail": failure.technical_detail},
+        )
+        _record_unhandled_refiner_failure(session_factory, ctx=ctx, message=failure.message)
+        stored_error = failure.message
+        if failure.next_action:
+            stored_error += f" Next action: {failure.next_action}"
+        if failure.technical_detail:
+            stored_error += f" Technical detail: {failure.technical_detail}"
+        stored_error = stored_error[:10_000]
         try:
             with session_factory() as session, session.begin():
                 fail_claimed_refiner_job(
                     session,
                     job_id=ctx.id,
                     lease_owner=ctx.lease_owner,
-                    error_message=err_text,
+                    error_message=stored_error,
                     now=when,
                 )
         except Exception:

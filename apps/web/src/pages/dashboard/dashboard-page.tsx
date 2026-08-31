@@ -5,7 +5,7 @@ import {
   useActivityRecentQuery,
 } from "../../lib/activity/queries";
 import { useActivityStreamInvalidations } from "../../lib/activity/use-activity-stream-invalidation";
-import type { ActivityEventItem } from "../../lib/api/types";
+import type { ActivityEventItem, DashboardStatus } from "../../lib/api/types";
 import {
   isHttpErrorFromApi,
   isLikelyNetworkFailure,
@@ -28,7 +28,13 @@ import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
 
 type ModuleKey = "refiner" | "pruner";
-type ModuleStatus = "Healthy" | "Review needed" | "Active";
+type ModuleStatus =
+  | "Healthy"
+  | "Review needed"
+  | "Active"
+  | "Setup required"
+  | "Paused";
+type OperationalModule = NonNullable<DashboardStatus["modules"]>[number];
 
 type ModuleMetric = {
   label: string;
@@ -115,17 +121,42 @@ function shortLastActivity(
 }
 
 function healthTone(status: ModuleStatus): string {
-  if (status === "Review needed")
-    return "border-amber-400/30 bg-amber-400/10 text-amber-100";
+  if (status === "Review needed" || status === "Setup required")
+    return "border-[var(--mm-status-warning-text)]/40 bg-[var(--mm-status-warning-bg)] text-[var(--mm-status-warning-text)]";
+  if (status === "Paused")
+    return "border-[var(--mm-status-info-text)]/40 bg-[var(--mm-status-info-bg)] text-[var(--mm-status-info-text)]";
   if (status === "Active")
-    return "border-sky-400/30 bg-sky-400/10 text-sky-100";
-  return "border-emerald-500/30 bg-emerald-500/10 text-emerald-100";
+    return "border-[var(--mm-status-info-text)]/40 bg-[var(--mm-status-info-bg)] text-[var(--mm-status-info-text)]";
+  return "border-[var(--mm-status-healthy-text)]/40 bg-[var(--mm-status-healthy-bg)] text-[var(--mm-status-healthy-text)]";
 }
 
 function statusFromSignals(attention: boolean, active: boolean): ModuleStatus {
   if (attention) return "Review needed";
   if (active) return "Active";
   return "Healthy";
+}
+
+function statusFromOperationalState(state: string): ModuleStatus {
+  switch (state) {
+    case "setup_required":
+      return "Setup required";
+    case "processing":
+      return "Active";
+    case "paused":
+      return "Paused";
+    case "degraded":
+      return "Review needed";
+    default:
+      return "Healthy";
+  }
+}
+
+function moduleNeedsAttention(status: ModuleStatus): boolean {
+  return (
+    status === "Review needed" ||
+    status === "Setup required" ||
+    status === "Paused"
+  );
 }
 
 function formatCount(value: number): string {
@@ -294,6 +325,7 @@ function buildRefinerCard(args: {
   successRatePercent: number;
   movieFolder: string | null | undefined;
   tvFolder: string | null | undefined;
+  operational?: OperationalModule;
 }): ModuleCardData {
   const attention = !args.movieFolder && !args.tvFolder;
   const active =
@@ -302,7 +334,7 @@ function buildRefinerCard(args: {
     args.outputWritten > 0 ||
     args.alreadyOptimized > 0;
 
-  return {
+  const card: ModuleCardData = {
     key: "refiner",
     name: "Refiner",
     status: statusFromSignals(attention || args.failed > 0, active),
@@ -341,6 +373,18 @@ function buildRefinerCard(args: {
     actionLabel: "Open Refiner",
     actionTo: "/refiner",
   };
+  if (args.operational) {
+    card.status = statusFromOperationalState(args.operational.state);
+    card.summary = args.operational.summary;
+    card.actionTo = args.operational.action_path;
+    card.actionLabel =
+      card.status === "Setup required" ? "Configure Refiner" : "Review Refiner";
+    card.facts = [
+      `Current queue: ${formatCount(args.operational.queued_job_count)} queued, ${formatCount(args.operational.active_job_count)} active`,
+      `Current failures: ${formatCount(args.operational.failed_job_count)} jobs · ${formatCount(args.operational.quarantined_file_count)} quarantined files`,
+    ];
+  }
+  return card;
 }
 
 function buildPrunerCard(args: {
@@ -351,6 +395,7 @@ function buildPrunerCard(args: {
   itemsRemoved: number;
   itemsSkipped: number;
   failedApplies: number;
+  operational?: OperationalModule;
 }): ModuleCardData {
   const attention = args.enabledServers === 0 || args.failedApplies > 0;
   const active =
@@ -359,7 +404,7 @@ function buildPrunerCard(args: {
   const removalRate =
     reviewedItems > 0 ? (args.itemsRemoved / reviewedItems) * 100.0 : 0;
 
-  return {
+  const card: ModuleCardData = {
     key: "pruner",
     name: "Pruner",
     status: statusFromSignals(attention, active),
@@ -396,6 +441,18 @@ function buildPrunerCard(args: {
     actionLabel: "Open Pruner",
     actionTo: "/pruner",
   };
+  if (args.operational) {
+    card.status = statusFromOperationalState(args.operational.state);
+    card.summary = args.operational.summary;
+    card.actionTo = args.operational.action_path;
+    card.actionLabel =
+      card.status === "Setup required" ? "Configure Pruner" : "Review Pruner";
+    card.facts = [
+      `Current queue: ${formatCount(args.operational.queued_job_count)} queued, ${formatCount(args.operational.active_job_count)} active`,
+      `Current failures: ${formatCount(args.operational.failed_job_count)}`,
+    ];
+  }
+  return card;
 }
 
 export function DashboardPage() {
@@ -434,6 +491,10 @@ export function DashboardPage() {
   }
 
   const recentItems = recent.data?.items ?? [];
+  const operationalModules = dash.data.modules ?? [];
+  const operationalByModule = new Map(
+    operationalModules.map((module) => [module.module, module]),
+  );
   const lastActivityMetric = shortLastActivity(recentItems, fmt);
   const refinerCard = buildRefinerCard({
     processed: refinerStats.data?.files_processed ?? 0,
@@ -445,6 +506,7 @@ export function DashboardPage() {
     successRatePercent: refinerStats.data?.success_rate_percent ?? 0,
     movieFolder: refinerPaths.data?.refiner_watched_folder,
     tvFolder: refinerPaths.data?.refiner_tv_watched_folder,
+    operational: operationalByModule.get("refiner"),
   });
   const prunerCard = buildPrunerCard({
     enabledServers:
@@ -455,6 +517,7 @@ export function DashboardPage() {
     itemsRemoved: prunerStats.data?.items_removed ?? 0,
     itemsSkipped: prunerStats.data?.items_skipped ?? 0,
     failedApplies: prunerStats.data?.failed_applies ?? 0,
+    operational: operationalByModule.get("pruner"),
   });
 
   const refinerFileOutcomes =
@@ -477,8 +540,8 @@ export function DashboardPage() {
   };
 
   const moduleCards = [refinerCardForDashboard, prunerCard];
-  const modulesNeedingAttentionTotal = moduleCards.filter(
-    (m) => m.status === "Review needed",
+  const modulesNeedingAttentionTotal = moduleCards.filter((m) =>
+    moduleNeedsAttention(m.status),
   ).length;
   const activeModuleCount = moduleCards.filter(
     (m) => m.status === "Active",
@@ -488,7 +551,7 @@ export function DashboardPage() {
   );
   const attentionItems = [
     ...moduleCards
-      .filter((m) => m.status === "Review needed")
+      .filter((m) => moduleNeedsAttention(m.status))
       .map((m) => `${m.name}: ${m.summary}`),
     ...workerIssues.map(
       (row) =>
@@ -507,24 +570,37 @@ export function DashboardPage() {
         ? "Active"
         : "Healthy";
   const moduleAttentionNames = moduleCards
-    .filter((m) => m.status === "Review needed")
+    .filter((m) => moduleNeedsAttention(m.status))
     .map((m) => m.name);
   const workerIssueNames = workerIssues.map(
     (row) => `${row.module[0].toUpperCase()}${row.module.slice(1)} workers`,
   );
   const overallStatusDetail =
-    moduleAttentionNames.length > 0 && workerIssueNames.length > 0
-      ? `Needs setup: ${moduleAttentionNames.join(", ")}. Worker issues: ${workerIssueNames.join(", ")}.`
-      : moduleAttentionNames.length > 0
-        ? `Needs setup: ${moduleAttentionNames.join(", ")}.`
-        : workerIssueNames.length > 0
-          ? `Worker issues: ${workerIssueNames.join(", ")}.`
-          : activeItems.length > 0
-            ? `Active: ${moduleCards
-                .filter((m) => m.status === "Active")
-                .map((m) => m.name)
-                .join(", ")}.`
-            : "No module or worker issues detected.";
+    operationalModules.length > 0
+      ? moduleAttentionNames.length > 0 && workerIssueNames.length > 0
+        ? `Needs attention: ${moduleAttentionNames.join(", ")}. Worker issues: ${workerIssueNames.join(", ")}.`
+        : moduleAttentionNames.length > 0
+          ? `Needs attention: ${moduleAttentionNames.join(", ")}.`
+          : workerIssueNames.length > 0
+            ? `Worker issues: ${workerIssueNames.join(", ")}.`
+            : activeItems.length > 0
+              ? `Active: ${moduleCards
+                  .filter((m) => m.status === "Active")
+                  .map((m) => m.name)
+                  .join(", ")}.`
+              : "No module or worker issues detected."
+      : moduleAttentionNames.length > 0 && workerIssueNames.length > 0
+        ? `Needs setup: ${moduleAttentionNames.join(", ")}. Worker issues: ${workerIssueNames.join(", ")}.`
+        : moduleAttentionNames.length > 0
+          ? `Needs setup: ${moduleAttentionNames.join(", ")}.`
+          : workerIssueNames.length > 0
+            ? `Worker issues: ${workerIssueNames.join(", ")}.`
+            : activeItems.length > 0
+              ? `Active: ${moduleCards
+                  .filter((m) => m.status === "Active")
+                  .map((m) => m.name)
+                  .join(", ")}.`
+              : "No module or worker issues detected.";
 
   const refinerDashboardJobs: DashboardJobRow[] = (
     refinerJobs.data?.jobs ?? []
@@ -563,6 +639,32 @@ export function DashboardPage() {
           doing right now.
         </p>
       </header>
+
+      {dash.data.incident_count > 0 ? (
+        <section
+          className="mm-dashboard-incident"
+          data-testid="dashboard-incident-banner"
+          role="status"
+        >
+          <div>
+            <p className="mm-dashboard-incident__eyebrow">Operator attention</p>
+            <p className="mm-dashboard-incident__message">
+              {formatCount(dash.data.incident_count)} current incident
+              {dash.data.incident_count === 1 ? "" : "s"} need review.
+              Historical success does not hide an active failure.
+            </p>
+          </div>
+          <Link
+            to={
+              moduleCards.find((card) => moduleNeedsAttention(card.status))
+                ?.actionTo ?? "/activity"
+            }
+            className={mmActionButtonClass({ variant: "secondary" })}
+          >
+            Review now
+          </Link>
+        </section>
+      ) : null}
 
       <section
         className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
