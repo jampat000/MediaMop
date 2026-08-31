@@ -33,8 +33,8 @@ RUN groupadd --system --gid 1000 mediamop \
   && chown -R mediamop:mediamop /data/mediamop /opt/mediamop /home/mediamop
 COPY --chown=mediamop:mediamop apps/backend /opt/mediamop/apps/backend
 RUN python -m venv /opt/mediamop/.venv \
-  && /opt/mediamop/.venv/bin/pip install --no-cache-dir --upgrade pip \
-  && /opt/mediamop/.venv/bin/pip install --no-cache-dir --prefer-binary -e "/opt/mediamop/apps/backend"
+  && /opt/mediamop/.venv/bin/pip install --no-cache-dir --prefer-binary --require-hashes -r /opt/mediamop/apps/backend/requirements-runtime.lock \
+  && /opt/mediamop/.venv/bin/pip install --no-cache-dir --no-deps --no-build-isolation -e "/opt/mediamop/apps/backend"
 
 COPY --from=web --chown=mediamop:mediamop /src/apps/web/dist /opt/mediamop/web-dist
 COPY docker/entrypoint.sh /entrypoint.sh
@@ -44,10 +44,9 @@ ENV PYTHONPATH=/opt/mediamop/apps/backend/src
 ENV PATH=/opt/mediamop/.venv/bin:$PATH
 ENV MEDIAMOP_WEB_DIST=/opt/mediamop/web-dist
 ENV MEDIAMOP_ENV=production
-# All-in-one is usually reached over plain HTTP first (localhost / LAN). Secure cookies would
-# never be sent on http://, which breaks sign-in. Set MEDIAMOP_SESSION_COOKIE_SECURE=true when
-# browsers always use HTTPS (e.g. TLS terminated at a reverse proxy in front of this container).
-ENV MEDIAMOP_SESSION_COOKIE_SECURE=false
+# Secure cookies are the production default. Plain-HTTP local development can explicitly set
+# MEDIAMOP_SESSION_COOKIE_SECURE=false; HTTPS reverse proxies should leave this enabled.
+ENV MEDIAMOP_SESSION_COOKIE_SECURE=true
 
 EXPOSE 8788
 

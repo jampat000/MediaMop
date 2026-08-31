@@ -92,7 +92,10 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [react()],
     build: {
-      sourcemap: "hidden",
+      // Source maps are opt-in for local diagnostics. Production artifacts do not expose
+      // source paths or ship multi-megabyte maps by default.
+      sourcemap:
+        process.env.MEDIAMOP_BUILD_SOURCEMAPS === "true" ? "hidden" : false,
     },
     server: {
       // ``true`` = listen on all interfaces (0.0.0.0). Required so **http://localhost:<port>**

@@ -7,6 +7,7 @@ import { RouteErrorScreen } from "../components/error-boundary";
 import { AppShell } from "../layouts/app-shell";
 import { RequireAuth } from "./require-auth";
 import { RequireSetupWizard } from "./require-setup-wizard";
+import { AppHydrateFallback } from "./hydrate-fallback";
 
 const routeErrorElement = <RouteErrorScreen />;
 const router = createBrowserRouter([
@@ -16,6 +17,7 @@ const router = createBrowserRouter([
       Component: (await import("../pages/auth/login-page")).LoginPage,
     }),
     errorElement: routeErrorElement,
+    HydrateFallback: AppHydrateFallback,
   },
   {
     path: "/setup",
@@ -23,11 +25,13 @@ const router = createBrowserRouter([
       Component: (await import("../pages/setup/setup-page")).SetupPage,
     }),
     errorElement: routeErrorElement,
+    HydrateFallback: AppHydrateFallback,
   },
   {
     path: "/",
     element: <RequireAuth />,
     errorElement: routeErrorElement,
+    HydrateFallback: AppHydrateFallback,
     children: [
       {
         path: "setup-wizard",

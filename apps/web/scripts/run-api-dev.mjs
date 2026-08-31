@@ -56,6 +56,33 @@ const apiPort = process.env.MEDIAMOP_DEV_API_PORT?.trim()
   : Number(portFromFile);
 
 const pythonCmd = resolvePythonCmd();
+const childEnv = {
+  ...process.env,
+  PYTHONPATH: "src",
+  MEDIAMOP_HOME: (process.env.MEDIAMOP_HOME || "").trim() || defaultDevHome,
+  MEDIAMOP_SESSION_SECRET:
+    (process.env.MEDIAMOP_SESSION_SECRET || "").trim() || defaultDevSessionSecret,
+};
+
+/** Keep ``npm run dev:quick`` self-contained for a fresh MEDIAMOP_HOME. */
+const migration = spawnSync(
+  pythonCmd.command,
+  [...pythonCmd.prefixArgs, "-m", "alembic", "upgrade", "head"],
+  {
+    cwd: backendDir,
+    stdio: "inherit",
+    env: childEnv,
+    shell: false,
+  },
+);
+if (migration.error || migration.status !== 0) {
+  console.error(
+    "[dev-api] Database migration preflight failed; the API was not started. " +
+      "Run .\\scripts\\dev-migrate.ps1 from the repository root, then retry npm run dev:quick.",
+  );
+  process.exit(migration.status ?? 1);
+}
+
 const uvicornArgs = [
   ...pythonCmd.prefixArgs,
   "-m",
@@ -71,13 +98,7 @@ const uvicornArgs = [
 const child = spawn(pythonCmd.command, uvicornArgs, {
   cwd: backendDir,
   stdio: "inherit",
-  env: {
-    ...process.env,
-    PYTHONPATH: "src",
-    MEDIAMOP_HOME: (process.env.MEDIAMOP_HOME || "").trim() || defaultDevHome,
-    MEDIAMOP_SESSION_SECRET:
-      (process.env.MEDIAMOP_SESSION_SECRET || "").trim() || defaultDevSessionSecret,
-  },
+  env: childEnv,
   shell: false,
 });
 

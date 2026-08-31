@@ -161,6 +161,11 @@ class RefinerLibraryOut(BaseModel):
         default_factory=list,
         description="Media manager connections covering this library. More than one is allowed and is the edge case.",
     )
+    manager_coverage: str = Field(
+        default="no_upstream_signal",
+        description="connected, no_upstream_signal, or unreachable; absence of a manager is not an empty queue.",
+    )
+    manager_coverage_detail: str = Field(default="")
     discovered_from_connection_id: int | None = None
     discovered_library_key: str | None = None
     active_job_count: int = Field(

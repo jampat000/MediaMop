@@ -2,11 +2,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchBootstrapStatus,
   fetchCurrentSession,
+  fetchActiveSessions,
   postChangePassword,
   fetchMe,
   postBootstrap,
   postLogin,
   postLogout,
+  postRevokeOtherSessions,
+  postRevokeSession,
 } from "../api/auth-api";
 import { activityRecentKey } from "../activity/queries";
 import { dashboardStatusKey } from "../dashboard/queries";
@@ -14,6 +17,7 @@ import { dashboardStatusKey } from "../dashboard/queries";
 export const qk = {
   me: ["auth", "me"] as const,
   session: ["auth", "session"] as const,
+  sessions: ["auth", "sessions"] as const,
   bootstrap: ["auth", "bootstrap-status"] as const,
 };
 
@@ -38,6 +42,41 @@ export function useCurrentSessionQuery() {
     queryKey: qk.session,
     queryFn: fetchCurrentSession,
     retry: false,
+  });
+}
+
+export function useActiveSessionsQuery(enabled = true) {
+  return useQuery({
+    queryKey: qk.sessions,
+    queryFn: fetchActiveSessions,
+    retry: false,
+    enabled,
+  });
+}
+
+export function useRevokeOtherSessionsMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: postRevokeOtherSessions,
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: qk.sessions }),
+        qc.invalidateQueries({ queryKey: activityRecentKey }),
+      ]);
+    },
+  });
+}
+
+export function useRevokeSessionMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (sessionId: string) => postRevokeSession(sessionId),
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: qk.sessions }),
+        qc.invalidateQueries({ queryKey: activityRecentKey }),
+      ]);
+    },
   });
 }
 

@@ -29,6 +29,26 @@ MEDIAMOP_TRUSTED_PROXY_IPS=172.18.0.1,10.0.0.0/24
 
 When the immediate peer is trusted, MediaMop uses the right-most untrusted address in `X-Forwarded-For` as the client key. Forwarded headers from untrusted peers are ignored.
 
+For an HTTPS reverse proxy, terminate TLS at the proxy, keep the MediaMop hop on
+the private network, and set the proxy's address in `MEDIAMOP_TRUSTED_PROXY_IPS`.
+The proxy should send exactly one `X-Forwarded-Proto: https` value. MediaMop
+only accepts that protocol value from the configured immediate peer; a browser
+cannot spoof it directly. For example, an nginx deployment can use:
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:8788;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+```
+
+Set `MEDIAMOP_SESSION_COOKIE_SECURE=true` and, only when every browser reaches
+the proxy over HTTPS, `MEDIAMOP_SECURITY_ENABLE_HSTS=1`. Plain HTTP localhost
+development may explicitly set `MEDIAMOP_SESSION_COOKIE_SECURE=false`; the
+Security settings screen reports this trade-off.
+
 ## CORS
 
 Credentialed browser requests require explicit origins. `MEDIAMOP_CORS_ORIGINS=*` is rejected at startup.

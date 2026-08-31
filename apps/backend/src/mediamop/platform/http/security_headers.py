@@ -48,6 +48,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         else:
             response.headers.setdefault("Content-Security-Policy", _API_CSP)
         response.headers.setdefault("X-Frame-Options", "DENY")
+        # Uvicorn is configured not to add this header in packaged/server entrypoints;
+        # remove it here as well for alternate ASGI runners and TestClient responses.
+        if "server" in response.headers:
+            del response.headers["server"]
         # API responses can include filesystem paths, credentials metadata, and operator settings.
         path = request.url.path
         if path.startswith("/api/v1") or path in {"/health", "/ready", "/readiness", "/metrics"}:

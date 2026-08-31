@@ -14,10 +14,14 @@ Backend unit tests. `tests/conftest.py` sets an isolated temporary `MEDIAMOP_HOM
 cd apps/backend
 $env:PYTHONPATH = "src"
 $env:MEDIAMOP_SESSION_SECRET = "local-dev-secret-at-least-32-characters-long"
-python -m pip install -e ".[dev]"
+python -m pip install --require-hashes -r requirements.lock
+python -m pip install --no-deps --no-build-isolation -e .
 alembic upgrade head
 pytest -q
 ```
+
+`requirements.lock` is the reproducible development and packaging set. Regenerate it only when
+dependencies change, then review the resulting hashes and run the full validation suite.
 
 CI runs `alembic upgrade head` before `pytest` in `apps/backend`; include it locally if migrations are ahead of your SQLite file.
 

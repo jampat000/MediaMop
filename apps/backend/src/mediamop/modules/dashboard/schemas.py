@@ -24,6 +24,20 @@ class SystemStatusOut(BaseModel):
     worker_health: list[WorkerLaneHealthOut] = Field(default_factory=list)
 
 
+class ModuleOperationalStatusOut(BaseModel):
+    """Current module state, deliberately separate from historical counters."""
+
+    module: str
+    state: str = Field(description="setup_required, processing, degraded, paused, or healthy.")
+    configured: bool
+    active_job_count: int = Field(default=0, ge=0)
+    queued_job_count: int = Field(default=0, ge=0)
+    failed_job_count: int = Field(default=0, ge=0)
+    quarantined_file_count: int = Field(default=0, ge=0)
+    summary: str
+    action_path: str
+
+
 class ActivitySummaryOut(BaseModel):
     """Derived from persisted ``activity_events`` only — snapshot at request time."""
 
@@ -38,3 +52,5 @@ class DashboardStatusOut(BaseModel):
     )
     system: SystemStatusOut
     activity_summary: ActivitySummaryOut
+    modules: list[ModuleOperationalStatusOut] = Field(default_factory=list)
+    incident_count: int = Field(default=0, ge=0)

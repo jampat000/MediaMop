@@ -27,3 +27,10 @@ class ReadinessResponse(BaseModel):
     startup_seconds: float
     steps: list[ReadinessStep]
     worker_health: list[ReadinessWorkerOut] = Field(default_factory=list)
+
+
+class PublicReadinessResponse(BaseModel):
+    """Minimal load-balancer response; detailed startup state is authenticated."""
+
+    ready: bool
+    status: str

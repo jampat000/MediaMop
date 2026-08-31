@@ -44,7 +44,12 @@ Copy **`.env.example`** to **`.env`** in this directory (gitignored). The API lo
 
 ## Run API (development)
 
-From this directory, with dependencies installed (`pip install -e ".[dev]"`):
+From this directory, with dependencies installed from the committed lock:
+
+```powershell
+python -m pip install --require-hashes -r requirements.lock
+python -m pip install --no-deps --no-build-isolation -e .
+```
 
 ```powershell
 $env:PYTHONPATH = "src"

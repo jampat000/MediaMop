@@ -10,8 +10,6 @@ import contextlib
 import json
 import logging
 import threading
-import urllib.error
-import urllib.request
 from datetime import UTC, datetime, timezone
 from typing import TYPE_CHECKING
 
@@ -20,6 +18,7 @@ if TYPE_CHECKING:
 
 from mediamop.platform.notifications.model import NotificationChannel
 from mediamop.platform.notifications.ops import get_channels_for_event
+from mediamop.platform.outbound_http import post_json_to_external_url, safe_external_error_message
 
 logger = logging.getLogger(__name__)
 
@@ -72,38 +71,19 @@ def _build_discord_payload(*, title: str, detail: str, event: str, module: str, 
 
 def _post_one(
     channel: NotificationChannel, *, title: str, detail: str, event: str, module: str, job_id: int, job_kind: str
-) -> None:
-    try:
-        if channel.provider == "discord":
-            body = _build_discord_payload(title=title, detail=detail, event=event, module=module, job_id=job_id)
-        else:
-            body = _build_webhook_payload(
-                event=event, module=module, job_id=job_id, job_kind=job_kind, title=title, detail=detail
-            )
-        req = urllib.request.Request(
-            channel.url,
-            data=body,
-            headers={"Content-Type": "application/json", "User-Agent": "MediaMop/1.0"},
-            method="POST",
+) -> int:
+    if channel.provider == "discord":
+        body = _build_discord_payload(title=title, detail=detail, event=event, module=module, job_id=job_id)
+    else:
+        body = _build_webhook_payload(
+            event=event, module=module, job_id=job_id, job_kind=job_kind, title=title, detail=detail
         )
-        with urllib.request.urlopen(req, timeout=_DISPATCH_TIMEOUT_SECONDS) as resp:
-            status = resp.status
-        if status >= 400:
-            logger.warning(
-                "Notification channel %s (%s) returned HTTP %s for event=%s",
-                channel.id,
-                channel.label,
-                status,
-                event,
-            )
-    except Exception:
-        logger.warning(
-            "Notification dispatch failed for channel %s (%s) event=%s",
-            channel.id,
-            channel.label,
-            event,
-            exc_info=True,
-        )
+    return post_json_to_external_url(
+        channel.url,
+        body=body,
+        headers={"User-Agent": "MediaMop/1.0"},
+        timeout=_DISPATCH_TIMEOUT_SECONDS,
+    )
 
 
 def _is_permanently_failed(session: Session, module: str, job_id: int) -> bool:
@@ -154,7 +134,26 @@ def _dispatch_thread(
         return
 
     for channel in channels:
-        _post_one(channel, title=title, detail=detail, event=event, module=module, job_id=job_id, job_kind=job_kind)
+        try:
+            response_status = _post_one(
+                channel, title=title, detail=detail, event=event, module=module, job_id=job_id, job_kind=job_kind
+            )
+            if response_status >= 400:
+                logger.warning(
+                    "Notification channel %s (%s) returned HTTP %s for event=%s",
+                    channel.id,
+                    channel.label,
+                    response_status,
+                    event,
+                )
+        except Exception as exc:  # noqa: BLE001 - one bad channel must not stop the others
+            logger.warning(
+                "Notification dispatch failed for channel %s (%s) event=%s: %s",
+                channel.id,
+                channel.label,
+                event,
+                safe_external_error_message(exc),
+            )
 
 
 def dispatch_job_notification(
@@ -224,4 +223,4 @@ def test_dispatch_notification_channel(
         )
         return None
     except Exception as exc:
-        return str(exc)
+        return safe_external_error_message(exc)

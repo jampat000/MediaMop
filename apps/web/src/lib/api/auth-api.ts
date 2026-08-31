@@ -1,5 +1,11 @@
 import { apiFetch, readJson, requireOk } from "./client";
-import type { BootstrapStatus, CurrentSession, UserPublic } from "./types";
+import type {
+  ActiveSession,
+  BootstrapStatus,
+  CurrentSession,
+  SessionAction,
+  UserPublic,
+} from "./types";
 
 export async function fetchCsrfToken(): Promise<string> {
   const path = "/api/v1/auth/csrf";
@@ -28,6 +34,34 @@ export async function fetchCurrentSession(): Promise<CurrentSession | null> {
   }
   await requireOk(path, r, "Could not load the current session");
   return readJson<CurrentSession>(r);
+}
+
+export async function fetchActiveSessions(): Promise<ActiveSession[]> {
+  const path = "/api/v1/auth/sessions";
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load active sessions");
+  const data = await readJson<{ items: ActiveSession[] }>(r);
+  return data.items;
+}
+
+async function postSessionAction(path: string): Promise<SessionAction> {
+  const csrf = await fetchCsrfToken();
+  const r = await apiFetch(path, {
+    method: "POST",
+    headers: { "X-CSRF-Token": csrf },
+  });
+  await requireOk(path, r, "Could not update sessions");
+  return readJson<SessionAction>(r);
+}
+
+export function postRevokeOtherSessions(): Promise<SessionAction> {
+  return postSessionAction("/api/v1/auth/sessions/revoke-others");
+}
+
+export function postRevokeSession(sessionId: string): Promise<SessionAction> {
+  return postSessionAction(
+    `/api/v1/auth/sessions/${encodeURIComponent(sessionId)}/revoke`,
+  );
 }
 
 export async function fetchBootstrapStatus(): Promise<BootstrapStatus> {

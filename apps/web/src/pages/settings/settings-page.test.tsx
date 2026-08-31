@@ -91,6 +91,9 @@ const minimalSecurity: SuiteSecurityOverviewOut = {
 };
 
 const minimalCurrentSession: CurrentSession = {
+  session_id: "00000000-0000-0000-0000-000000000001",
+  client_label: "Chrome on Windows",
+  current: true,
   trusted_device: true,
   created_at: "2026-04-11T00:00:00Z",
   last_seen_at: "2026-04-11T00:05:00Z",
@@ -555,7 +558,7 @@ describe("SettingsPage (suite settings)", () => {
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("heading", { name: "Security posture" }),
-    ).not.toBeInTheDocument();
+    ).toBeInTheDocument();
   });
 
   it("change password fields use Show/Hide and reset visibility when cleared", () => {

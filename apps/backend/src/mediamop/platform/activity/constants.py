@@ -7,6 +7,7 @@ AUTH_LOGOUT = "auth.logout"
 AUTH_BOOTSTRAP_SUCCEEDED = "auth.bootstrap_succeeded"
 AUTH_BOOTSTRAP_DENIED = "auth.bootstrap_denied"
 AUTH_PASSWORD_CHANGED = "auth.password_changed"
+AUTH_SESSIONS_REVOKED = "auth.sessions_revoked"
 SYSTEM_RECONCILIATION_REPAIR = "system.reconciliation.repair"
 
 # Shared *arr library (Sonarr/Radarr) — operator-triggered connection checks
@@ -19,6 +20,7 @@ REFINER_FILE_PROCESSING_PROGRESS = "refiner.file_processing_progress"
 REFINER_FILE_REMUX_PASS_COMPLETED = "refiner.file_remux_pass_completed"
 REFINER_WORK_TEMP_STALE_SWEEP_COMPLETED = "refiner.work_temp_stale_sweep_completed"
 REFINER_FAILURE_CLEANUP_SWEEP_COMPLETED = "refiner.failure_cleanup_sweep_completed"
+REFINER_WORKER_FAILURE = "refiner.worker_failure"
 
 # Pruner (pruner_jobs + server instances)
 PRUNER_CONNECTION_TEST_SUCCEEDED = "pruner.connection_test_succeeded"

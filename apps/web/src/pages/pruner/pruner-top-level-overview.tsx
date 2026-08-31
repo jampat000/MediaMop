@@ -126,6 +126,61 @@ function PrunerOverviewNextSteps({
   );
 }
 
+function PrunerGuidedSetup({
+  onNavigate,
+}: {
+  onNavigate: (tab: TopTab) => void;
+}) {
+  return (
+    <section
+      className="mm-card"
+      data-testid="pruner-guided-setup"
+      aria-labelledby="pruner-guided-setup-heading"
+    >
+      <p className="mm-page__eyebrow">First run</p>
+      <h2 id="pruner-guided-setup-heading" className="mm-card__title">
+        Set up Pruner
+      </h2>
+      <p className="mm-card__body max-w-2xl">
+        Pruner is ready for configuration. Complete this short checklist before
+        the first cleanup run; no cleanup KPI is shown until a server is
+        connected.
+      </p>
+      <ol className="mt-4 grid gap-2 text-sm text-[var(--mm-text2)] sm:grid-cols-3">
+        <li className="mm-setup-step">
+          <span>1</span>
+          <strong>Connect a server</strong>
+          <small>Choose Emby, Jellyfin, or Plex.</small>
+        </li>
+        <li className="mm-setup-step">
+          <span>2</span>
+          <strong>Test the connection</strong>
+          <small>Confirm MediaMop can read the library.</small>
+        </li>
+        <li className="mm-setup-step">
+          <span>3</span>
+          <strong>Choose cleanup rules</strong>
+          <small>Preview first; apply only when ready.</small>
+        </li>
+      </ol>
+      <div className="mt-4 flex flex-wrap gap-2.5 border-t border-[var(--mm-border)] pt-4">
+        <MmNextStepsButton
+          label="Connect Emby"
+          onClick={() => onNavigate("emby")}
+        />
+        <MmNextStepsButton
+          label="Connect Jellyfin"
+          onClick={() => onNavigate("jellyfin")}
+        />
+        <MmNextStepsButton
+          label="Connect Plex"
+          onClick={() => onNavigate("plex")}
+        />
+      </div>
+    </section>
+  );
+}
+
 function PrunerOverviewNeedsAttention({
   items,
   onOpenProviderTab,
@@ -207,6 +262,17 @@ export function TopLevelOverview({
   });
 
   const attentionItems = buildPrunerNeedsAttention(instances);
+
+  if (instances.length === 0) {
+    return (
+      <section
+        className="mm-bubble-stack"
+        data-testid="pruner-top-overview-tab"
+      >
+        <PrunerGuidedSetup onNavigate={onNavigateTopTab} />
+      </section>
+    );
+  }
 
   const last30Body = statsQ.isPending ? (
     <p className="text-[var(--mm-text3)]">Loading...</p>

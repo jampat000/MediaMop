@@ -1,0 +1,16 @@
+{
+  "exceptions": [
+    {
+      "advisory": "GHSA-w3rx-r6r6-pgpr",
+      "package": "image-size",
+      "expires": "2026-12-31",
+      "mitigation": "Docusaurus only parses repository-controlled documentation assets. The docs image preflight rejects ICNS, JXL, HEIC, and HEIF before the build. Remove this exception when image-size publishes a fixed release and update the image-size override in package.json."
+    },
+    {
+      "advisory": "GHSA-5p2g-fcmc-qvqq",
+      "package": "image-size",
+      "expires": "2026-12-31",
+      "mitigation": "Docusaurus only parses repository-controlled documentation assets. The docs image preflight rejects ICNS, JXL, HEIC, and HEIF before the build. Remove this exception when image-size publishes a fixed release and update the image-size override in package.json."
+    }
+  ]
+}

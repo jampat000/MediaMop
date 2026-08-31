@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 
 from fastapi import APIRouter, Body, Header, HTTPException, Request, Response, status
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -88,6 +89,7 @@ def post_login(
         password=body.password,
         settings=settings,
         trusted_device=body.trusted_device,
+        client_label=auth_service.client_label_from_user_agent(request.headers.get("user-agent")),
     )
     if result is None:
         logger.warning("auth event: login failed")
@@ -327,7 +329,97 @@ def get_current_session(
             detail="Not authenticated.",
         )
     session_row, _user = pair
-    return schemas.CurrentSessionOut(**auth_service.session_public(session_row, settings=settings))
+    return schemas.CurrentSessionOut(**auth_service.session_public(session_row, settings=settings, current=True))
+
+
+@router.get("/sessions", response_model=schemas.SessionsOut)
+def get_sessions(
+    request: Request,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    user: UserPublicDep,
+) -> schemas.SessionsOut:
+    raw = current_raw_session_token(request, settings)
+    pair = auth_service.load_valid_session_for_request(db, raw, settings)
+    if pair is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated.")
+    current_id = pair[0].id
+    return schemas.SessionsOut(
+        items=[
+            schemas.SessionOut(**item)
+            for item in auth_service.list_active_sessions(
+                db, user_id=user.id, settings=settings, current_session_id=current_id
+            )
+        ]
+    )
+
+
+@router.post("/sessions/revoke-others", response_model=schemas.SessionActionOut)
+def post_revoke_other_sessions(
+    request: Request,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    user: UserPublicDep,
+    x_csrf_token: str | None = Header(default=None, alias="X-CSRF-Token"),
+) -> schemas.SessionActionOut:
+    validate_browser_post_origin(request, settings)
+    secret = require_session_secret(settings)
+    raw = current_raw_session_token(request, settings)
+    if x_csrf_token is None or not verify_csrf_token(secret, x_csrf_token, raw_session_token=raw):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Your confirmation token expired. Refresh the page and try again.",
+        )
+    pair = auth_service.load_valid_session_for_request(db, raw, settings)
+    if pair is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated.")
+    count = auth_service.revoke_other_user_sessions(db, user_id=user.id, current_session_id=pair[0].id)
+    activity_service.record_activity_event(
+        db,
+        event_type=activity_constants.AUTH_SESSIONS_REVOKED,
+        module="auth",
+        title="Other sessions signed out",
+        detail=str(count),
+    )
+    db.commit()
+    return schemas.SessionActionOut(message=f"Signed out {count} other session(s).", revoked_count=count)
+
+
+@router.post("/sessions/{session_id}/revoke", response_model=schemas.SessionActionOut)
+def post_revoke_session(
+    session_id: uuid.UUID,
+    request: Request,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    user: UserPublicDep,
+    x_csrf_token: str | None = Header(default=None, alias="X-CSRF-Token"),
+) -> schemas.SessionActionOut:
+    validate_browser_post_origin(request, settings)
+    secret = require_session_secret(settings)
+    raw = current_raw_session_token(request, settings)
+    if x_csrf_token is None or not verify_csrf_token(secret, x_csrf_token, raw_session_token=raw):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Your confirmation token expired. Refresh the page and try again.",
+        )
+    pair = auth_service.load_valid_session_for_request(db, raw, settings)
+    if pair is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated.")
+    if session_id == pair[0].id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="The current session cannot be revoked here."
+        )
+    if not auth_service.revoke_user_session(db, user_id=user.id, session_id=session_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session is no longer active.")
+    activity_service.record_activity_event(
+        db,
+        event_type=activity_constants.AUTH_SESSIONS_REVOKED,
+        module="auth",
+        title="Session signed out",
+        detail="One other session was revoked.",
+    )
+    db.commit()
+    return schemas.SessionActionOut(message="Session signed out.", revoked_count=1)
 
 
 @router.get("/admin/ping", include_in_schema=False)

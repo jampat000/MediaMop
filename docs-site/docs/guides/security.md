@@ -43,6 +43,8 @@ MediaMop's security posture and hardening baseline.
 | Bandit | Python security linting |
 | pip-audit | Python dependency vulnerabilities |
 | npm audit | JavaScript dependency vulnerabilities |
+
+The docs build runs an image-format preflight and rejects ICNS, JXL, HEIC, and HEIF before Docusaurus parses repository assets. The current `image-size` advisories are tracked in `dependency-audit-exceptions.json` because the registry does not yet publish a fixed version; the exception has an expiry date and a documented mitigation. When a fixed release is available, update the `image-size` override, remove the exception entries, and keep the preflight as defense in depth.
 | Dependabot | Automated dependency update PRs |
 
 ## Repository controls

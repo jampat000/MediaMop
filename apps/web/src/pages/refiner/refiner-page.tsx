@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { mmSectionTabClass } from "../../lib/ui/mm-control-roles";
 import { RefinerProcessSettingsSection } from "./refiner-process-settings-section";
 import { RefinerFilesSection } from "./refiner-files-section";
@@ -42,8 +42,41 @@ const REFINER_TAB_BLURBS: Record<RefinerPageTabId, string> = {
     "Housekeeping MediaMop runs on a schedule, and what this instance is configured with. Start one now if you need to.",
 };
 
+const REFINER_CAPABILITY_NOTE =
+  "Standalone watched-folder remux works after local safety gates. A media manager adds upstream import protection, library discovery, and safe manager-truth-dependent cleanup; no signal is never treated as an empty queue.";
+
+function refinerTabFromQuery(value: string | null): RefinerPageTabId {
+  const allowed: RefinerPageTabId[] = [
+    "overview",
+    "libraries",
+    "audio-subtitles",
+    "schedules",
+    "files",
+    "jobs",
+    "maintenance",
+  ];
+  return allowed.includes(value as RefinerPageTabId)
+    ? (value as RefinerPageTabId)
+    : "overview";
+}
+
 export function RefinerPage() {
-  const [tab, setTab] = useState<RefinerPageTabId>("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [tab, setTab] = useState<RefinerPageTabId>(() =>
+    refinerTabFromQuery(searchParams.get("tab")),
+  );
+
+  useEffect(() => {
+    setTab(refinerTabFromQuery(searchParams.get("tab")));
+  }, [searchParams]);
+
+  const selectTab = (next: RefinerPageTabId) => {
+    setTab(next);
+    const params = new URLSearchParams(searchParams);
+    if (next === "overview") params.delete("tab");
+    else params.set("tab", next);
+    setSearchParams(params, { replace: true });
+  };
 
   const tabs: { id: RefinerPageTabId; label: string }[] = [
     { id: "overview", label: "Overview" },
@@ -62,7 +95,7 @@ export function RefinerPage() {
       jobs: "jobs",
       schedules: "schedules",
     };
-    setTab(map[target]);
+    selectTab(map[target]);
   };
 
   return (
@@ -97,7 +130,7 @@ export function RefinerPage() {
             role="tab"
             aria-selected={tab === id}
             className={mmSectionTabClass(tab === id)}
-            onClick={() => setTab(id)}
+            onClick={() => selectTab(id)}
           >
             {label}
           </button>
@@ -124,6 +157,9 @@ export function RefinerPage() {
 
           {tab === "libraries" ? (
             <div className="mm-bubble-stack flex w-full min-w-0 flex-col">
+              <p className="max-w-prose text-sm leading-6 text-[var(--mm-text2)]">
+                {REFINER_CAPABILITY_NOTE}
+              </p>
               <RefinerLibrariesSection />
               <RefinerProcessSettingsSection />
             </div>

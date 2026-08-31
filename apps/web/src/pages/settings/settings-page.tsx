@@ -107,7 +107,7 @@ export function SettingsPage() {
     } else {
       nextParams.set("tab", nextTab);
     }
-    setSearchParams(nextParams, { replace: true });
+    setSearchParams(nextParams);
   }
   const [appTimezone, setAppTimezone] = useState<string | null>(null);
   const [logRetentionDaysDraft, setLogRetentionDaysDraft] = useState<
@@ -211,6 +211,9 @@ export function SettingsPage() {
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty]);
 
+  useEffect(() => {
+    setTab(normalizeSettingsTab(searchParams.get("tab"), showSupportTab));
+  }, [searchParams, showSupportTab]);
   useEffect(() => {
     if (tab === "support" && !showSupportTab) {
       setTab("general");
@@ -460,86 +463,94 @@ export function SettingsPage() {
       </header>
 
       <div className="mm-page__body max-w-none">
-        <div
-          className="mb-5 flex gap-2 overflow-x-auto sm:flex-wrap sm:overflow-visible"
-          role="tablist"
-          aria-label="Settings sections"
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "general"}
-            className={tabButtonClass(tab === "general")}
-            onClick={() => setSettingsTab("general")}
-          >
-            General
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "security"}
-            className={tabButtonClass(tab === "security")}
-            onClick={() => setSettingsTab("security")}
-          >
-            Security
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "backup"}
-            className={tabButtonClass(tab === "backup")}
-            onClick={() => setSettingsTab("backup")}
-          >
-            Backup and restore
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "upgrade"}
-            className={tabButtonClass(tab === "upgrade")}
-            onClick={() => setSettingsTab("upgrade")}
-          >
-            Upgrade
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "logs"}
-            className={tabButtonClass(tab === "logs")}
-            onClick={() => setSettingsTab("logs")}
-          >
-            Logs
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "notifications"}
-            className={tabButtonClass(tab === "notifications")}
-            onClick={() => setSettingsTab("notifications")}
-          >
-            Notifications
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "media-managers"}
-            className={tabButtonClass(tab === "media-managers")}
-            onClick={() => setSettingsTab("media-managers")}
-          >
-            Media managers
-          </button>
-          {showSupportTab ? (
+        <nav className="mm-settings-nav mb-5" aria-label="Settings sections">
+          <div className="mm-settings-nav__group">
+            <p className="mm-settings-nav__label">Workspace</p>
             <button
               type="button"
               role="tab"
-              aria-selected={tab === "support"}
-              className={tabButtonClass(tab === "support")}
-              onClick={() => setSettingsTab("support")}
+              aria-selected={tab === "general"}
+              className={tabButtonClass(tab === "general")}
+              onClick={() => setSettingsTab("general")}
             >
-              Support
+              General
             </button>
-          ) : null}
-        </div>
+          </div>
+          <div className="mm-settings-nav__group">
+            <p className="mm-settings-nav__label">Security</p>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "security"}
+              className={tabButtonClass(tab === "security")}
+              onClick={() => setSettingsTab("security")}
+            >
+              Security
+            </button>
+          </div>
+          <div className="mm-settings-nav__group">
+            <p className="mm-settings-nav__label">Operations</p>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "backup"}
+              className={tabButtonClass(tab === "backup")}
+              onClick={() => setSettingsTab("backup")}
+            >
+              Backup and restore
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "upgrade"}
+              className={tabButtonClass(tab === "upgrade")}
+              onClick={() => setSettingsTab("upgrade")}
+            >
+              Upgrade
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "logs"}
+              className={tabButtonClass(tab === "logs")}
+              onClick={() => setSettingsTab("logs")}
+            >
+              Logs
+            </button>
+          </div>
+          <div className="mm-settings-nav__group">
+            <p className="mm-settings-nav__label">Integrations</p>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "notifications"}
+              className={tabButtonClass(tab === "notifications")}
+              onClick={() => setSettingsTab("notifications")}
+            >
+              Notifications
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "media-managers"}
+              className={tabButtonClass(tab === "media-managers")}
+              onClick={() => setSettingsTab("media-managers")}
+            >
+              Media managers
+            </button>
+            {showSupportTab ? (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab === "support"}
+                className={tabButtonClass(tab === "support")}
+                onClick={() => setSettingsTab("support")}
+              >
+                Support
+              </button>
+            ) : null}
+          </div>
+        </nav>
 
         {tab === "general" ? (
           <SettingsGeneralTab

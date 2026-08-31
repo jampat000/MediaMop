@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Header, HTTPException, Request
 from starlette import status
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
@@ -134,8 +134,19 @@ def delete_notification_channel_route(
     _user: RequireOperatorDep,
     db: DbSessionDep,
     settings: SettingsDep,
+    x_csrf_token: str | None = Header(default=None, alias="X-CSRF-Token"),
 ) -> None:
     validate_browser_post_origin(request, settings)
+    secret = require_session_secret(settings)
+    if x_csrf_token is None or not verify_csrf_token(
+        secret,
+        x_csrf_token,
+        raw_session_token=current_raw_session_token(request, settings),
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Your confirmation token expired. Refresh the page and try again.",
+        )
     result = delete_notification_channel(db, channel_id)
     if result == "not_found":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification channel not found.")

@@ -18,9 +18,11 @@ from mediamop.api.router import build_v1_router
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.lifespan import lifespan
 from mediamop.platform.health import health_router
+from mediamop.platform.http.compressed_assets import CompressedStaticAssetsMiddleware
 from mediamop.platform.http.head_mirrors_get import HeadMirrorsGetMiddleware
 from mediamop.platform.http.request_context import RequestContextMiddleware
 from mediamop.platform.http.security_headers import SecurityHeadersMiddleware
+from mediamop.platform.http.trusted_proxy import TrustedProxySchemeMiddleware
 from mediamop.platform.http.xrw_csrf_middleware import XRequestedWithCsrfMiddleware
 from mediamop.platform.metrics.router import router as metrics_router
 from mediamop.platform.readiness import readiness_router
@@ -127,6 +129,7 @@ def create_app() -> FastAPI:
     application.add_middleware(RequestContextMiddleware)
     application.add_middleware(XRequestedWithCsrfMiddleware)
     application.add_middleware(HeadMirrorsGetMiddleware)
+    application.add_middleware(TrustedProxySchemeMiddleware, settings=settings)
 
     @application.exception_handler(StarletteHTTPException)
     async def _friendly_upgrade_landing_handler(request: Request, exc: StarletteHTTPException):
@@ -157,5 +160,8 @@ def create_app() -> FastAPI:
     application.include_router(build_v1_router())
     _serve_index_with_no_cache(application)
     _mount_web_spa_if_configured(application)
+    web_root = _web_dist_root()
+    if web_root is not None:
+        application.add_middleware(CompressedStaticAssetsMiddleware, root=web_root)
 
     return application

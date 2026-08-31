@@ -408,7 +408,7 @@ export function SetupWizardPage() {
                         className={[
                           "relative isolate flex min-h-[2.6rem] min-w-0 cursor-pointer items-center gap-2.5 overflow-hidden rounded-md border px-3 py-2 text-sm transition-colors",
                           landingPath === option.value
-                            ? "border-[var(--mm-accent)] bg-[rgba(212,175,55,0.14)] text-[var(--mm-text)]"
+                            ? "border-[var(--mm-accent)] bg-[var(--mm-accent-soft)] text-[var(--mm-text)]"
                             : "border-[var(--mm-border)] bg-transparent text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)]",
                         ].join(" ")}
                       >
@@ -465,7 +465,7 @@ export function SetupWizardPage() {
                       className={[
                         "flex min-w-0 cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2 text-sm transition-colors",
                         displayDensity === id
-                          ? "border-[var(--mm-accent)] bg-[rgba(212,175,55,0.14)] text-[var(--mm-text)]"
+                          ? "border-[var(--mm-accent)] bg-[var(--mm-accent-soft)] text-[var(--mm-text)]"
                           : "border-[var(--mm-border)] bg-transparent text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)]",
                       ].join(" ")}
                     >

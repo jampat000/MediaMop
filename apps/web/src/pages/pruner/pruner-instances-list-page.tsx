@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   mmModuleTabBlurbBandClass,
   mmModuleTabBlurbTextClass,
@@ -13,7 +14,36 @@ import { TopLevelOverview } from "./pruner-top-level-overview";
 
 export function PrunerInstancesListPage() {
   const q = usePrunerInstancesQuery();
-  const [topTab, setTopTab] = useState<TopTab>("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [topTab, setTopTab] = useState<TopTab>(() => {
+    const candidate = searchParams.get("tab") as TopTab | null;
+    return candidate &&
+      ["overview", "emby", "jellyfin", "plex", "jobs", "schedule"].includes(
+        candidate,
+      )
+      ? candidate
+      : "overview";
+  });
+  useEffect(() => {
+    const candidate = searchParams.get("tab") as TopTab | null;
+    if (
+      candidate &&
+      ["overview", "emby", "jellyfin", "plex", "jobs", "schedule"].includes(
+        candidate,
+      )
+    ) {
+      setTopTab(candidate);
+    } else {
+      setTopTab("overview");
+    }
+  }, [searchParams]);
+  const selectTopTab = (next: TopTab) => {
+    setTopTab(next);
+    const params = new URLSearchParams(searchParams);
+    if (next === "overview") params.delete("tab");
+    else params.set("tab", next);
+    setSearchParams(params, { replace: true });
+  };
   const instances = q.data ?? [];
 
   return (
@@ -54,7 +84,7 @@ export function PrunerInstancesListPage() {
             className={mmSectionTabClass(
               topTab === id || (topTab === "schedule" && id === "emby"),
             )}
-            onClick={() => setTopTab(id)}
+            onClick={() => selectTopTab(id)}
           >
             {label}
           </button>
@@ -98,8 +128,8 @@ export function PrunerInstancesListPage() {
             topTab === "overview" ? (
               <TopLevelOverview
                 instances={instances}
-                onOpenProviderTab={(t) => setTopTab(t)}
-                onNavigateTopTab={(t) => setTopTab(t)}
+                onOpenProviderTab={(t) => selectTopTab(t)}
+                onNavigateTopTab={(t) => selectTopTab(t)}
               />
             ) : topTab === "jobs" ? (
               <TopLevelJobs instances={instances} />

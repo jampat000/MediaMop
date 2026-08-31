@@ -22,3 +22,4 @@ class ActivityRecentOut(BaseModel):
     items: list[ActivityEventItemOut] = Field(default_factory=list)
     total: int = Field(default=0, ge=0)
     system_events: int = Field(default=0, ge=0)
+    has_more: bool = Field(default=False, description="More matching persisted events exist beyond this bounded page.")

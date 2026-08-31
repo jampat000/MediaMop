@@ -89,5 +89,8 @@ class UserSession(Base):
         nullable=False,
     )
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # A deliberately coarse label for the session list.  Store no user-agent string,
+    # IP address, token, or other identifying browser data.
+    client_label: Mapped[str] = mapped_column(String(80), nullable=False, server_default="Browser session")
 
     user: Mapped[User] = relationship("User", back_populates="sessions")

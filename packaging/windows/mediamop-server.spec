@@ -6,7 +6,7 @@ from PyInstaller.utils.hooks import collect_submodules, copy_metadata
 ROOT = Path.cwd()
 BACKEND = ROOT / "apps" / "backend"
 WEB_DIST = ROOT / "apps" / "web" / "dist"
-LOGO = ROOT / "apps" / "web" / "src" / "components" / "brand" / "mediamop-logo-premium.png"
+LOGO = ROOT / "apps" / "web" / "src" / "components" / "brand" / "mediamop-logo-premium.webp"
 TRAY_ICON_PNG = ROOT / "packaging" / "windows" / "assets" / "mediamop-tray-icon.png"
 TRAY_ICON_ICO = ROOT / "packaging" / "windows" / "assets" / "mediamop-tray-icon.ico"
 FFMPEG_VENDOR = ROOT / "packaging" / "windows" / "vendor" / "ffmpeg"

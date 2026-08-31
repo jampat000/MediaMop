@@ -46,7 +46,7 @@ def main() -> int:
     try:
         from dotenv import load_dotenv
     except ImportError as exc:
-        print(f"FAIL: {exc}. Install backend deps: pip install -e ./apps/backend", file=sys.stderr)
+        print(f"FAIL: {exc}. Install backend deps from apps/backend/requirements.lock, then run pip install --no-deps --no-build-isolation -e ./apps/backend", file=sys.stderr)
         return 2
 
     load_dotenv(_BACKEND_ROOT / ".env")

@@ -48,6 +48,7 @@ def get_activity_recent(
     search: str | None = Query(default=None, min_length=1, max_length=200),
     date_from: str | None = Query(default=None),
     date_to: str | None = Query(default=None),
+    before_id: int | None = Query(default=None, ge=1),
 ) -> ActivityRecentOut:
     """Recent persisted events, newest first — snapshot only (pagination-style read; not a control plane)."""
 
@@ -72,17 +73,21 @@ def get_activity_recent(
         search=search,
         date_from=parsed_from,
         date_to=parsed_to,
+        before_id=before_id,
+    )
+    total = count_activity_events(
+        db,
+        module=module,
+        event_type=event_type,
+        search=search,
+        date_from=parsed_from,
+        date_to=parsed_to,
     )
     return ActivityRecentOut(
         items=[ActivityEventItemOut.model_validate(r) for r in rows],
-        total=count_activity_events(
-            db,
-            module=module,
-            event_type=event_type,
-            search=search,
-            date_from=parsed_from,
-            date_to=parsed_to,
-        ),
+        # A concurrent insert/delete can make the two reads observe different
+        # moments. Never return a total smaller than the rows in this page.
+        total=max(total, len(rows)),
         system_events=count_system_activity_events(
             db,
             event_type=event_type,
@@ -90,6 +95,7 @@ def get_activity_recent(
             date_from=parsed_from,
             date_to=parsed_to,
         ),
+        has_more=total > len(rows),
     )
 
 
