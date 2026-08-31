@@ -139,7 +139,7 @@ def post_json_to_external_url(
             raise ExternalEndpointError("MediaMop could not connect to the notification destination.") from exc
 
         if endpoint.scheme == "https":
-            context = ssl.create_default_context()
+            context = _secure_external_tls_context()
             try:
                 sock = context.wrap_socket(sock, server_hostname=endpoint.hostname)
             except (OSError, ssl.SSLError) as exc:
@@ -175,3 +175,11 @@ def safe_external_error_message(exc: BaseException) -> str:
     if isinstance(exc, ExternalEndpointError):
         return str(exc)
     return "MediaMop could not deliver the notification. Check the destination and server logs."
+
+
+def _secure_external_tls_context() -> ssl.SSLContext:
+    """Build the minimum TLS policy used for outbound provider connections."""
+
+    context = ssl.create_default_context()
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    return context
