@@ -56,6 +56,8 @@ def remux_pass_activity_title(payload: dict[str, Any]) -> str:
     rel = payload.get("relative_media_path")
     name = Path(str(rel)).name if isinstance(rel, str) and rel.strip() else "unknown file"
     outcome = payload.get("outcome")
+    if payload.get("pass_through_unchanged") is True and outcome == REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED:
+        return f"{name} was passed through unchanged"
     if outcome == REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN:
         return f"{name} was processed successfully"
     if outcome == REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED:

@@ -296,6 +296,7 @@ function normalizeRefinerSummary(
     const parsed = parseDetail(ev.detail);
     const outcome = asString(parsed?.outcome);
     const remuxNeeded = asBoolean(parsed?.remux_required);
+    const passedThrough = asBoolean(parsed?.pass_through_unchanged) === true;
     const fileName =
       asString(parsed?.relative_media_path)
         ?.split(/[\\/]/)
@@ -307,14 +308,16 @@ function normalizeRefinerSummary(
         .at(-1) ??
       "File";
     return {
-      title:
-        outcome === "live_skipped_not_required"
+      title: passedThrough
+        ? `${fileName} was passed through unchanged`
+        : outcome === "live_skipped_not_required"
           ? `No changes needed for ${fileName}`
           : outcome?.startsWith("failed")
             ? `${fileName} could not be processed`
             : `${fileName} was processed successfully`,
-      summary:
-        outcome === "live_skipped_not_required"
+      summary: passedThrough
+        ? "Refiner rules were bypassed for this file"
+        : outcome === "live_skipped_not_required"
           ? "No changes were needed"
           : outcome?.startsWith("failed")
             ? "Refiner could not finish this file"
@@ -322,8 +325,9 @@ function normalizeRefinerSummary(
               ? "The file already fits your Refiner rules"
               : "Refiner finished writing the cleaned-up file",
       detail: ev.detail ?? null,
-      chip:
-        outcome === "live_skipped_not_required"
+      chip: passedThrough
+        ? "Passed through"
+        : outcome === "live_skipped_not_required"
           ? "No changes needed"
           : outcome?.startsWith("failed")
             ? "Processing failed"

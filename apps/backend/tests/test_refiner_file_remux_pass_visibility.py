@@ -55,6 +55,16 @@ def test_activity_title_per_outcome() -> None:
             {**base, "outcome": REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED},
         ).lower()
     )
+    assert (
+        "passed through unchanged"
+        in remux_pass_activity_title(
+            {
+                **base,
+                "outcome": REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED,
+                "pass_through_unchanged": True,
+            }
+        ).lower()
+    )
 
 
 def test_source_not_ready_is_an_expected_wait_not_a_failure() -> None:

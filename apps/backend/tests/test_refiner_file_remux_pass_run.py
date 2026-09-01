@@ -264,6 +264,74 @@ def test_live_skips_when_no_remux_required_copies_to_output_and_deletes_release_
     assert not release.exists()
 
 
+def test_operator_pass_through_preserves_foreign_audio_and_moves_validated_file_to_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    media = tmp_path / "media"
+    media.mkdir()
+    release = media / "ForeignLanguageFilm"
+    release.mkdir()
+    source = release / "film.mkv"
+    source.write_bytes(b"foreign-language-media" * 200)
+    out = tmp_path / "out"
+    out.mkdir()
+    settings = replace(
+        MediaMopSettings.load(),
+        mediamop_home=str(home),
+        refiner_watched_folder_min_file_age_seconds=0,
+    )
+    runtime = _runtime(media=media, home=home, out=out)
+    monkeypatch.setattr(
+        runmod,
+        "ffprobe_json",
+        lambda *_args, **_kwargs: {
+            "format": {"duration": "7200"},
+            "streams": [
+                {"index": 0, "codec_type": "video", "codec_name": "h264"},
+                {
+                    "index": 1,
+                    "codec_type": "audio",
+                    "codec_name": "aac",
+                    "channels": 2,
+                    "tags": {"language": "fra"},
+                    "disposition": {"default": 1},
+                },
+            ],
+        },
+    )
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(
+        runmod,
+        "plan_remux",
+        lambda **_kwargs: (_ for _ in ()).throw(AssertionError("pass-through must not apply Refiner rules")),
+    )
+    progress: list[dict[str, object]] = []
+
+    result = runmod.run_refiner_file_remux_pass(
+        settings=settings,
+        path_runtime=runtime,
+        relative_media_path="ForeignLanguageFilm/film.mkv",
+        refiner_min_input_file_size_mb=999,
+        pass_through_unchanged=True,
+        progress_reporter=progress.append,
+    )
+
+    output = out / "ForeignLanguageFilm" / "film.mkv"
+    assert result["ok"] is True
+    assert result["outcome"] == REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED
+    assert result["pass_through_unchanged"] is True
+    assert result["output_copied_without_remux"] is True
+    assert result["unchanged_output_method"] == "validated_copy"
+    assert output.read_bytes() == b"foreign-language-media" * 200
+    assert result["source_deleted_after_success"] is True
+    assert any(update.get("percent") == 100.0 for update in progress)
+    assert any("passing this file through unchanged" in str(update.get("message", "")) for update in progress)
+    assert not release.exists()
+
+
 def test_live_result_keeps_removed_track_lists_for_activity_detail(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

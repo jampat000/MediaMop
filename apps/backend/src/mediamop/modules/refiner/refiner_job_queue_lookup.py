@@ -15,7 +15,12 @@ from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMU
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 
 
-def pending_remux_job_for_relative_path(session: Session, *, relative_path: str) -> RefinerJob | None:
+def pending_remux_job_for_relative_path(
+    session: Session,
+    *,
+    relative_path: str,
+    library_id: int | None = None,
+) -> RefinerJob | None:
     """The oldest pending remux job for this path, or None.
 
     Pending only. A leased job is already running and cannot be started earlier, so
@@ -39,6 +44,10 @@ def pending_remux_job_for_relative_path(session: Session, *, relative_path: str)
             data = json.loads(raw)
         except json.JSONDecodeError:
             continue
-        if isinstance(data, dict) and data.get("relative_media_path") == wanted:
-            return job
+        if not isinstance(data, dict) or data.get("relative_media_path") != wanted:
+            continue
+        payload_library_id = data.get("library_id")
+        if library_id is not None and payload_library_id is not None and payload_library_id != library_id:
+            continue
+        return job
     return None

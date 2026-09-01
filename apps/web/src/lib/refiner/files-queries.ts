@@ -83,15 +83,18 @@ export function useProcessRefinerFileNow() {
       relative_media_path,
       media_scope,
       library_id,
+      pass_through_unchanged,
     }: {
       relative_media_path: string;
       media_scope: "movie" | "tv";
       library_id?: number;
+      pass_through_unchanged?: boolean;
     }) =>
       postRefinerFileRemuxPassEnqueue({
         relative_media_path,
         media_scope,
         library_id,
+        pass_through_unchanged,
       }),
     onSuccess: () =>
       void qc.invalidateQueries({ queryKey: ["refiner", "files"] }),

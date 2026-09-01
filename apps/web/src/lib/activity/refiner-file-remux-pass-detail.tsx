@@ -20,6 +20,7 @@ type RemuxDetail = {
   removed_subtitles?: string[];
   after_track_lines_meaning?: string;
   remux_required?: boolean;
+  pass_through_unchanged?: boolean;
   live_mutations_skipped?: boolean;
   output_file?: string;
   reason?: string;
@@ -56,7 +57,13 @@ type RefinerProgressDetail = {
   reason?: string | null;
 };
 
-function outcomeLabel(outcome: string | undefined): string {
+function outcomeLabel(
+  outcome: string | undefined,
+  passThroughUnchanged = false,
+): string {
+  if (passThroughUnchanged && outcome === "live_skipped_not_required") {
+    return "Passed through unchanged";
+  }
   switch (outcome) {
     case "live_output_written":
       return "File processed";
@@ -282,7 +289,10 @@ export function RefinerFileRemuxPassActivityDetail({
   const removedSubtitleTracks = parsed.removed_subtitles ?? [];
 
   const summaryTiles = [
-    { label: "Outcome", value: outcomeLabel(parsed.outcome) },
+    {
+      label: "Outcome",
+      value: outcomeLabel(parsed.outcome, parsed.pass_through_unchanged),
+    },
     { label: "Original size", value: sourceSize },
     { label: "Final size", value: outputSize },
     { label: "Change", value: savings },

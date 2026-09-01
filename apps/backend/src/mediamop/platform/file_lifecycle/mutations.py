@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import shutil
 import tempfile
@@ -13,7 +14,13 @@ class FileLifecycleError(RuntimeError):
     """Raised when a guarded filesystem mutation cannot complete safely."""
 
 
-def safe_copy_to_final(*, source: Path, final: Path, validate_staged: Callable[[Path], None] | None = None) -> None:
+def safe_copy_to_final(
+    *,
+    source: Path,
+    final: Path,
+    validate_staged: Callable[[Path], None] | None = None,
+    progress_callback: Callable[[int, int], None] | None = None,
+) -> None:
     """Copy ``source`` to ``final`` without exposing a partial destination file."""
 
     src = source.resolve()
@@ -23,7 +30,20 @@ def safe_copy_to_final(*, source: Path, final: Path, validate_staged: Callable[[
     os.close(fd)
     tmp = Path(tmp_name)
     try:
-        shutil.copy2(src, tmp)
+        if progress_callback is None:
+            shutil.copy2(src, tmp)
+        else:
+            total_bytes = int(src.stat().st_size)
+            copied_bytes = 0
+            with src.open("rb") as source_handle, tmp.open("wb") as target_handle:
+                while chunk := source_handle.read(8 * 1024 * 1024):
+                    target_handle.write(chunk)
+                    copied_bytes += len(chunk)
+                    # Progress is optional observability. A dashboard update must
+                    # never invalidate a safe copy that is otherwise succeeding.
+                    with contextlib.suppress(Exception):
+                        progress_callback(copied_bytes, total_bytes)
+            shutil.copystat(src, tmp)
     except Exception as exc:
         _best_effort_unlink(tmp)
         raise FileLifecycleError(f"Could not safely copy {src} to {dst}: {exc}") from exc

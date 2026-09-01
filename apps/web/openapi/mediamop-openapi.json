@@ -3592,6 +3592,12 @@
             "title": "Media Scope",
             "type": "string"
           },
+          "pass_through_unchanged": {
+            "default": false,
+            "description": "Operator override: do not apply audio, subtitle, or metadata rules. Validate and place the unchanged source in the library output folder, then use the normal post-success source cleanup.",
+            "title": "Pass Through Unchanged",
+            "type": "boolean"
+          },
           "relative_media_path": {
             "description": "Path relative to the saved Refiner watched folder (no .. segments). The watched folder is not required when saving path settings alone, but it must be configured before enqueue.",
             "minLength": 1,

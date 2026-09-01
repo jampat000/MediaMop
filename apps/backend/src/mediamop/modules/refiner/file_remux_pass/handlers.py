@@ -310,7 +310,9 @@ def _apply_file_outcome_state(
                 relative_path=relative_path.strip(),
                 status=RefinerFileStatus.PROCESSED,
                 reason=(
-                    "Refiner checked this file and found that no changes were needed."
+                    "MediaMop passed this file through unchanged at the operator's request and placed it in the output folder."
+                    if result.get("pass_through_unchanged") is True
+                    else "Refiner checked this file and found that no changes were needed."
                     if result.get("outcome") == "live_skipped_not_required"
                     else "Refiner finished processing this file."
                 ),
@@ -483,6 +485,7 @@ def make_refiner_file_remux_pass_handler(
         library_id = (
             raw_library_id if isinstance(raw_library_id, int) and not isinstance(raw_library_id, bool) else None
         )
+        pass_through_unchanged = data.get("pass_through_unchanged") is True
 
         failure_payload: dict[str, Any] | None = None
         result: dict[str, Any] | None = None
@@ -556,6 +559,7 @@ def make_refiner_file_remux_pass_handler(
                     cleanup_session=session,
                     current_job_id=ctx.id,
                     progress_reporter=progress_reporter,
+                    pass_through_unchanged=pass_through_unchanged,
                 )
                 result["job_id"] = ctx.id
                 result["library_id"] = int(library.id) if library is not None else library_id

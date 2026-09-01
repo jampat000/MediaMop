@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import * as api from "../../lib/refiner/files-api";
+import * as remuxApi from "../../lib/refiner/file-remux-pass-api";
 import type {
   RefinerFile,
   RefinerFilesPage,
@@ -386,6 +387,45 @@ it("offers a retry on a failed file and shows what the server said", async () =>
 
   expect(await screen.findByTestId("refiner-files-notice")).toHaveTextContent(
     /Queued again by hand/,
+  );
+});
+
+it("passes an edge-case file through unchanged only after explaining source cleanup", async () => {
+  asOperator();
+  vi.spyOn(api, "fetchRefinerFiles").mockResolvedValue(
+    page({
+      files: [file({ id: 1, status: "processing_failed" })],
+      status_counts: { processing_failed: 1 },
+    }),
+  );
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+  const enqueue = vi
+    .spyOn(remuxApi, "postRefinerFileRemuxPassEnqueue")
+    .mockResolvedValue({
+      ok: true,
+      job_id: 44,
+      dedupe_key: "pass-through-44",
+      job_kind: "refiner.file.remux_pass.v1",
+    });
+
+  render(<RefinerFilesSection />, { wrapper });
+  fireEvent.click(await screen.findByTestId("refiner-file-pass-through-1"));
+
+  expect(confirm).toHaveBeenCalledWith(
+    expect.stringMatching(
+      /copy and validate.*output folder.*remove the watched source/s,
+    ),
+  );
+  await waitFor(() => {
+    expect(enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        relative_media_path: "Some Film/film.mkv",
+        pass_through_unchanged: true,
+      }),
+    );
+  });
+  expect(await screen.findByTestId("refiner-files-notice")).toHaveTextContent(
+    /Queued to pass through unchanged/,
   );
 });
 

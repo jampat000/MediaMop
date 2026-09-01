@@ -25,6 +25,24 @@ def test_safe_copy_to_final_replaces_only_after_complete(tmp_path: Path) -> None
     assert not list(final.parent.glob("*.partial"))
 
 
+def test_safe_copy_reports_progress_without_changing_atomic_placement(tmp_path: Path) -> None:
+    source = tmp_path / "large-source.mkv"
+    final = tmp_path / "out" / "large-source.mkv"
+    source.write_bytes(b"x" * (9 * 1024 * 1024))
+    updates: list[tuple[int, int]] = []
+
+    safe_copy_to_final(
+        source=source,
+        final=final,
+        progress_callback=lambda copied, total: updates.append((copied, total)),
+    )
+
+    assert updates
+    assert updates[-1] == (source.stat().st_size, source.stat().st_size)
+    assert final.read_bytes() == source.read_bytes()
+    assert not list(final.parent.glob("*.partial"))
+
+
 def test_safe_finalize_file_moves_completed_stage_to_final(tmp_path: Path) -> None:
     staged = tmp_path / "work" / "file.partial.mkv"
     final = tmp_path / "out" / "file.mkv"

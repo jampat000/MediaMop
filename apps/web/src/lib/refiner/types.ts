@@ -184,6 +184,7 @@ export type RefinerFileRemuxPassManualEnqueueBody = {
   relative_media_path: string;
   media_scope: "movie" | "tv";
   library_id?: number;
+  pass_through_unchanged?: boolean;
 };
 
 export type RefinerFileRemuxPassManualEnqueueOut = {

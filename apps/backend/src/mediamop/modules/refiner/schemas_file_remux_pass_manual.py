@@ -30,6 +30,14 @@ class RefinerFileRemuxPassManualEnqueueIn(BaseModel):
         ge=1,
         description="The Refiner library owning the file. Omit only for legacy scope-based jobs.",
     )
+    pass_through_unchanged: bool = Field(
+        default=False,
+        description=(
+            "Operator override: do not apply audio, subtitle, or metadata rules. "
+            "Validate and place the unchanged source in the library output folder, "
+            "then use the normal post-success source cleanup."
+        ),
+    )
 
 
 class RefinerFileRemuxPassManualEnqueueOut(BaseModel):

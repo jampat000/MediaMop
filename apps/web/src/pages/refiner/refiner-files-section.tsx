@@ -131,12 +131,12 @@ function guidanceForFile(
     case "processing_failed":
       return {
         title: "This attempt failed.",
-        next: "Fix the reason above, then use Try again. Automatic retry status is shown here.",
+        next: "Fix the reason and use Try again, or use Pass through unchanged when this is an intentional edge case you want delivered without Refiner rules.",
       };
     case "skipped":
       return {
         title: "This file does not match the library rules.",
-        next: "The reason above names the rule. Change that library rule and use Check again if you want MediaMop to reconsider it.",
+        next: "Change the named library rule and use Check again, or pass this one file through unchanged when it is a legitimate exception.",
       };
     case "on_hold":
       return {
@@ -467,6 +467,31 @@ export function RefinerFilesSection() {
     }
   };
 
+  const passThroughFile = async (file: RefinerFile) => {
+    const confirmed = window.confirm(
+      "Pass this file through unchanged?\n\nMediaMop will bypass audio, subtitle, and metadata rules, copy and validate the original in this library's output folder, then remove the watched source using the normal successful-cleanup rules. Readiness checks still apply, so an active download will remain untouched.",
+    );
+    if (!confirmed) return;
+
+    setNotice(null);
+    const library = libraries.data?.find((item) => item.id === file.library_id);
+    try {
+      await processNow.mutateAsync({
+        relative_media_path: file.relative_path,
+        media_scope: library?.media_scope === "tv" ? "tv" : "movie",
+        library_id: file.library_id,
+        pass_through_unchanged: true,
+      });
+      setNotice(
+        "Queued to pass through unchanged. MediaMop will validate the output before removing the watched source.",
+      );
+    } catch {
+      setNotice(
+        "That file could not be queued for pass-through. Refresh the row and review its library paths.",
+      );
+    }
+  };
+
   const checkFileAgain = async (file: RefinerFile) => {
     setNotice(null);
     const library = libraries.data?.find((item) => item.id === file.library_id);
@@ -588,8 +613,9 @@ export function RefinerFilesSection() {
           </h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--mm-text2)]">
             This is the control room for files Refiner has seen. Select rows to
-            start, retry, or re-check them together; the original media file is
-            never removed by these actions.
+            start, retry, or re-check them together. Pass through unchanged is
+            the explicit exception: it validates an unchanged output first, then
+            performs the library&apos;s normal successful source cleanup.
           </p>
         </div>
         <div
@@ -1030,6 +1056,21 @@ export function RefinerFilesSection() {
                             title="Queues a remux pass for this file straight away."
                           >
                             Process now
+                          </button>
+                        ) : null}
+                        {file.status !== "processing" &&
+                        file.status !== "processed" &&
+                        file.status !== "disabled" ? (
+                          <button
+                            type="button"
+                            className={mmActionButtonClass({
+                              variant: "secondary",
+                            })}
+                            onClick={() => void passThroughFile(file)}
+                            data-testid={`refiner-file-pass-through-${file.id}`}
+                            title="Bypasses Refiner track and metadata rules, safely places an unchanged validated copy in the output folder, then performs normal successful source cleanup."
+                          >
+                            Pass through unchanged
                           </button>
                         ) : null}
                         <button

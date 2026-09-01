@@ -56,7 +56,9 @@ from mediamop.modules.refiner.refiner_remux_mux import (
     validate_remux_output,
 )
 from mediamop.modules.refiner.refiner_remux_rules import (
+    PlannedTrack,
     RefinerRulesConfig,
+    RemuxPlan,
     attachment_streams,
     default_refiner_remux_rules_config,
     is_refiner_media_candidate,
@@ -175,6 +177,64 @@ def _normalize_media_scope_for_cleanup(raw: str | None) -> str:
     return "tv" if s == "tv" else "movie"
 
 
+def _pass_through_plan(
+    *,
+    video: list[dict[str, Any]],
+    audio: list[dict[str, Any]],
+    subtitles: list[dict[str, Any]],
+) -> RemuxPlan:
+    """Describe an unchanged file without applying any Refiner selection rules.
+
+    The plan is observability only: pass-through never invokes ffmpeg. Keeping every
+    stream in the description makes the processing record truthful about what reached
+    the output folder.
+    """
+
+    def tags(stream: dict[str, Any]) -> dict[str, Any]:
+        value = stream.get("tags")
+        return value if isinstance(value, dict) else {}
+
+    def disposition(stream: dict[str, Any]) -> dict[str, Any]:
+        value = stream.get("disposition")
+        return value if isinstance(value, dict) else {}
+
+    def integer(value: Any) -> int:
+        try:
+            return int(value or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    audio_tracks = [
+        PlannedTrack(
+            input_index=integer(stream.get("index")),
+            lang_label=str(tags(stream).get("language") or "und"),
+            forced=bool(disposition(stream).get("forced")),
+            default=bool(disposition(stream).get("default")),
+            channels=integer(stream.get("channels")),
+            bitrate=integer(stream.get("bit_rate")),
+            codec_name=str(stream.get("codec_name") or ""),
+            kind="audio",
+        )
+        for stream in audio
+    ]
+    subtitle_tracks = [
+        PlannedTrack(
+            input_index=integer(stream.get("index")),
+            lang_label=str(tags(stream).get("language") or "und"),
+            forced=bool(disposition(stream).get("forced")),
+            default=bool(disposition(stream).get("default")),
+            kind="subtitle",
+        )
+        for stream in subtitles
+    ]
+    return RemuxPlan(
+        video_indices=[integer(stream.get("index")) for stream in video],
+        audio=audio_tracks,
+        subtitles=subtitle_tracks,
+        audio_selection_notes=["The operator chose Pass through unchanged, so every stream was preserved."],
+    )
+
+
 def _commit_cleanup_session(cleanup_session: Session | None) -> None:
     """Release a short Refiner metadata transaction before more media work begins.
 
@@ -262,6 +322,7 @@ def _copy_unchanged_source_to_output(
     expected_audio: int,
     expected_duration_seconds: float | None,
     expected_source_fingerprint: tuple[int, int, int, int],
+    progress_callback: Callable[[int, int], None] | None = None,
 ) -> tuple[bool, bool, str]:
     """For already-correct files, still place a copy in the output tree before cleanup."""
 
@@ -287,7 +348,12 @@ def _copy_unchanged_source_to_output(
     # Never hard-link watched input into the output tree. On Linux a downloader can
     # continue writing through its original descriptor after the watched name is
     # removed, which would mutate the output through the shared inode.
-    safe_copy_to_final(source=src_resolved, final=final, validate_staged=validate_staged)
+    safe_copy_to_final(
+        source=src_resolved,
+        final=final,
+        validate_staged=validate_staged,
+        progress_callback=progress_callback,
+    )
     return True, replaced_existing, "validated_copy"
 
 
@@ -561,6 +627,7 @@ def _run_refiner_file_remux_pass(
     refiner_min_input_file_size_mb: int = 0,
     minimum_free_disk_space_mb: int = 0,
     expected_source_fingerprint: tuple[int, int, int, int],
+    pass_through_unchanged: bool = False,
 ) -> dict[str, Any]:
     """Run one pass: probe, plan, optional ffmpeg remux, and post-success cleanup.
 
@@ -613,7 +680,7 @@ def _run_refiner_file_remux_pass(
             inspected_source_path=inspected,
         )
     min_size_mb = max(0, int(refiner_min_input_file_size_mb))
-    if min_size_mb > 0:
+    if min_size_mb > 0 and not pass_through_unchanged:
         try:
             source_size_bytes = int(src.stat().st_size)
         except OSError as exc:
@@ -710,7 +777,17 @@ def _run_refiner_file_remux_pass(
                 inspected_source_path=inspected,
             )
     config = rules_config if rules_config is not None else default_refiner_remux_rules_config()
-    plan = plan_remux(video=video, audio=audio, subtitles=subs, config=config, attachments=attachment_streams(probe))
+    plan = (
+        _pass_through_plan(video=video, audio=audio, subtitles=subs)
+        if pass_through_unchanged
+        else plan_remux(
+            video=video,
+            audio=audio,
+            subtitles=subs,
+            config=config,
+            attachments=attachment_streams(probe),
+        )
+    )
     if plan is None:
         return _fail_before(
             relative_media_path=relative_media_path,
@@ -721,31 +798,37 @@ def _run_refiner_file_remux_pass(
             refiner_watched_folder_resolved=str(Path(root).resolve()),
         )
 
-    remux_needed = is_remux_required(plan, audio, subs)
+    remux_needed = False if pass_through_unchanged else is_remux_required(plan, audio, subs)
     before_a = audio_before_line_from_probe(audio)
     after_a = audio_after_line_from_plan(plan)
     metadata_removed = metadata_removed_line_from_plan(plan)
     before_s = subtitle_before_line_from_probe(subs)
-    after_s = subtitle_after_line_from_plan(plan, remove_all=config.subtitle_mode == "remove_all")
+    after_s = subtitle_after_line_from_plan(
+        plan,
+        remove_all=False if pass_through_unchanged else config.subtitle_mode == "remove_all",
+    )
 
-    _, ffmpeg_bin = resolve_ffprobe_ffmpeg(mediamop_home=settings.mediamop_home)
-    # Decided before the argv is built, because the flags go into it. A device that is
-    # busy, absent or not compiled in falls back to software with a reason rather than
-    # failing the file (#345).
-    hardware = decide_acceleration(
-        settings=HardwareSettings(
-            mode=normalize_decode_mode(path_runtime.hardware_decode_mode),
-            device=path_runtime.hardware_device or "",
-            disabled_vendors=parse_disabled_vendors(path_runtime.hardware_disabled_vendors_csv),
-            strictness=normalize_strictness(path_runtime.ffmpeg_strictness),
-        ),
-        report=detect_acceleration(ffmpeg_bin),
-    )
     work_dir = Path(path_runtime.work_folder_effective)
-    dst_placeholder = work_dir / "planned-ffmpeg-destination-placeholder.mkv"
-    argv = build_ffmpeg_argv(
-        ffmpeg_bin=ffmpeg_bin, src=src, dst=dst_placeholder, plan=plan, input_flags=hardware.argv_flags
-    )
+    hardware = None
+    argv: list[str] = []
+    if not pass_through_unchanged:
+        _, ffmpeg_bin = resolve_ffprobe_ffmpeg(mediamop_home=settings.mediamop_home)
+        # Decided before the argv is built, because the flags go into it. A device that is
+        # busy, absent or not compiled in falls back to software with a reason rather than
+        # failing the file (#345).
+        hardware = decide_acceleration(
+            settings=HardwareSettings(
+                mode=normalize_decode_mode(path_runtime.hardware_decode_mode),
+                device=path_runtime.hardware_device or "",
+                disabled_vendors=parse_disabled_vendors(path_runtime.hardware_disabled_vendors_csv),
+                strictness=normalize_strictness(path_runtime.ffmpeg_strictness),
+            ),
+            report=detect_acceleration(ffmpeg_bin),
+        )
+        dst_placeholder = work_dir / "planned-ffmpeg-destination-placeholder.mkv"
+        argv = build_ffmpeg_argv(
+            ffmpeg_bin=ffmpeg_bin, src=src, dst=dst_placeholder, plan=plan, input_flags=hardware.argv_flags
+        )
 
     watched_root = Path(path_runtime.watched_folder).resolve()
 
@@ -757,7 +840,11 @@ def _run_refiner_file_remux_pass(
         "refiner_watched_folder_resolved": str(watched_root),
         "stream_counts": {"video": len(video), "audio": len(audio), "subtitle": len(subs)},
         "preflight_status": "ok",
-        "preflight_reason": "ffprobe completed and remux plan was evaluated",
+        "preflight_reason": (
+            "ffprobe completed and the operator's pass-through request was validated"
+            if pass_through_unchanged
+            else "ffprobe completed and remux plan was evaluated"
+        ),
         "preflight_probe_settings": {
             "probe_size_mb": settings.refiner_probe_size_mb,
             "analyze_duration_seconds": settings.refiner_analyze_duration_seconds,
@@ -774,6 +861,7 @@ def _run_refiner_file_remux_pass(
         "metadata_removed": metadata_removed,
         "after_track_lines_meaning": "Planned output layout for this live pass.",
         "remux_required": remux_needed,
+        "pass_through_unchanged": pass_through_unchanged,
         "ffmpeg_argv": [str(x) for x in argv],
         "audio_selection_notes": list(plan.audio_selection_notes),
         "media_scope": scope,
@@ -832,12 +920,21 @@ def _run_refiner_file_remux_pass(
     if not remux_needed:
         out["outcome"] = REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED
         out["refiner_output_folder_resolved"] = str(out_dir)
-        out["after_track_lines_meaning"] = (
-            "No ffmpeg run was needed because the file already matched the saved Refiner rules."
-        )
-        out["reason"] = (
-            "The file already matched the saved Refiner rules, so Refiner copied it to the output folder without rewriting it."
-        )
+        if pass_through_unchanged:
+            out["after_track_lines_meaning"] = (
+                "No audio, subtitle, or metadata rules were applied because the operator chose Pass through unchanged."
+            )
+            out["reason"] = (
+                "The operator bypassed Refiner rules for this edge case. MediaMop validated and copied the unchanged file "
+                "to the output folder before running normal post-success source cleanup."
+            )
+        else:
+            out["after_track_lines_meaning"] = (
+                "No ffmpeg run was needed because the file already matched the saved Refiner rules."
+            )
+            out["reason"] = (
+                "The file already matched the saved Refiner rules, so Refiner copied it to the output folder without rewriting it."
+            )
         rel_skip = src.resolve().relative_to(watched_root)
         final_skip = out_dir / rel_skip
         disk = check_minimum_free_disk_space(
@@ -866,6 +963,46 @@ def _run_refiner_file_remux_pass(
         # The unchanged-copy path collides exactly like the remux path does, and used to
         # overwrite just as silently.
         skip_collision = decide_output_collision(final=final_skip, source=src, staged=src, policy=collision_policy)
+        copy_started_at = time.monotonic()
+        last_copy_report = {"percent": -1.0, "at": copy_started_at}
+
+        def report_copy_progress(copied_bytes: int, total_bytes: int) -> None:
+            if progress_reporter is None:
+                return
+            now_monotonic = time.monotonic()
+            elapsed = max(0.001, now_monotonic - copy_started_at)
+            percent = 100.0 if total_bytes <= 0 else min(100.0, copied_bytes * 100.0 / total_bytes)
+            if (
+                percent < 100.0
+                and percent - last_copy_report["percent"] < 1.0
+                and now_monotonic - last_copy_report["at"] < 2.0
+            ):
+                return
+            last_copy_report["percent"] = percent
+            last_copy_report["at"] = now_monotonic
+            bytes_per_second = copied_bytes / elapsed
+            remaining_bytes = max(0, total_bytes - copied_bytes)
+            eta_seconds = remaining_bytes / bytes_per_second if bytes_per_second > 0 else None
+            progress_reporter(
+                {
+                    "status": "processing",
+                    "percent": percent,
+                    "eta_seconds": eta_seconds,
+                    "elapsed_seconds": elapsed,
+                    "relative_media_path": relative_media_path,
+                    "inspected_source_path": inspected,
+                    "media_scope": scope,
+                    "processed_bytes": copied_bytes,
+                    "total_bytes": total_bytes,
+                    "speed": f"{bytes_per_second / (1024 * 1024):.1f} MB/s",
+                    "message": (
+                        "MediaMop is passing this file through unchanged."
+                        if pass_through_unchanged
+                        else "MediaMop is copying the unchanged file to the output folder."
+                    ),
+                }
+            )
+
         try:
             if skip_collision.wrote:
                 final_skip = skip_collision.destination
@@ -876,6 +1013,7 @@ def _run_refiner_file_remux_pass(
                     expected_audio=len(audio),
                     expected_duration_seconds=duration_seconds,
                     expected_source_fingerprint=expected_source_fingerprint,
+                    progress_callback=report_copy_progress,
                 )
             else:
                 _copied, output_replaced_existing, unchanged_output_method = (
@@ -962,6 +1100,7 @@ def _run_refiner_file_remux_pass(
         _run_scope_output_cleanup(final_output_file=final_skip)
         return out
 
+    assert hardware is not None
     try:
         work_disk = check_minimum_free_disk_space(
             target_path=work_dir / f".{src.name}.work-preflight",
@@ -1218,6 +1357,7 @@ def run_refiner_file_remux_pass(
     progress_reporter: Callable[[dict[str, Any]], None] | None = None,
     refiner_min_input_file_size_mb: int = 0,
     minimum_free_disk_space_mb: int = 0,
+    pass_through_unchanged: bool = False,
 ) -> dict[str, Any]:
     """Reserve the source against writers for the complete Refiner pass."""
 
@@ -1243,6 +1383,7 @@ def run_refiner_file_remux_pass(
             progress_reporter=progress_reporter,
             refiner_min_input_file_size_mb=refiner_min_input_file_size_mb,
             minimum_free_disk_space_mb=minimum_free_disk_space_mb,
+            pass_through_unchanged=pass_through_unchanged,
             expected_source_fingerprint=(0, 0, 0, 0),
         )
 
@@ -1274,6 +1415,7 @@ def run_refiner_file_remux_pass(
             progress_reporter=progress_reporter,
             refiner_min_input_file_size_mb=refiner_min_input_file_size_mb,
             minimum_free_disk_space_mb=minimum_free_disk_space_mb,
+            pass_through_unchanged=pass_through_unchanged,
             expected_source_fingerprint=fingerprint,
         )
 

@@ -3460,6 +3460,12 @@ export interface components {
        */
       media_scope: "movie" | "tv";
       /**
+       * Pass Through Unchanged
+       * @description Operator override: do not apply audio, subtitle, or metadata rules. Validate and place the unchanged source in the library output folder, then use the normal post-success source cleanup.
+       * @default false
+       */
+      pass_through_unchanged: boolean;
+      /**
        * Relative Media Path
        * @description Path relative to the saved Refiner watched folder (no .. segments). The watched folder is not required when saving path settings alone, but it must be configured before enqueue.
        */

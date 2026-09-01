@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from sqlalchemy import delete, select
@@ -122,3 +123,56 @@ def test_refiner_file_remux_pass_enqueue_rejects_missing_watched_folder(
     assert isinstance(detail, str)
     assert "watched folder" in detail.lower()
     assert "path settings" in detail.lower()
+
+
+def test_pass_through_converts_an_existing_pending_job_instead_of_duplicating_it(
+    client_with_admin: TestClient,
+    tmp_path: Path,
+) -> None:
+    _clear_refiner_jobs()
+    _login_admin(client_with_admin)
+    watch = tmp_path / "pass_watch"
+    watch.mkdir()
+    out = tmp_path / "pass_out"
+    out.mkdir()
+    _put_refiner_path_settings(
+        client_with_admin,
+        watched=str(watch.resolve()),
+        output=str(out.resolve()),
+    )
+
+    first = auth_post(
+        client_with_admin,
+        "/api/v1/refiner/jobs/file-remux-pass/enqueue",
+        json={
+            "csrf_token": fetch_csrf(client_with_admin),
+            "relative_media_path": "Foreign/film.mkv",
+        },
+    )
+    assert first.status_code == 200, first.text
+    factory = _fac()
+    with factory() as db:
+        queued = db.get(RefinerJob, first.json()["job_id"])
+        assert queued is not None
+        queued_payload = json.loads(queued.payload_json or "{}")
+        queued_payload["origin"] = {"source_key": "radarr", "handoff_id": "handoff-1"}
+        queued.payload_json = json.dumps(queued_payload, separators=(",", ":"))
+        db.commit()
+    second = auth_post(
+        client_with_admin,
+        "/api/v1/refiner/jobs/file-remux-pass/enqueue",
+        json={
+            "csrf_token": fetch_csrf(client_with_admin),
+            "relative_media_path": "Foreign/film.mkv",
+            "pass_through_unchanged": True,
+        },
+    )
+    assert second.status_code == 200, second.text
+    assert second.json()["job_id"] == first.json()["job_id"]
+
+    with factory() as db:
+        rows = list(db.scalars(select(RefinerJob)).all())
+        assert len(rows) == 1
+        payload = json.loads(rows[0].payload_json or "{}")
+        assert payload["pass_through_unchanged"] is True
+        assert payload["origin"] == {"source_key": "radarr", "handoff_id": "handoff-1"}
