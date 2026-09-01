@@ -64,6 +64,21 @@ def test_a_file_that_needed_no_remux_is_still_a_completion() -> None:
     assert "No remux was needed" in body["message"]
 
 
+def test_an_operator_pass_through_is_reported_as_a_ready_unchanged_file() -> None:
+    body = build_completion_body(
+        origin=ORIGIN,
+        result={
+            "ok": True,
+            "outcome": "live_skipped_not_required",
+            "output_file": "/out/foreign-film.mkv",
+            "pass_through_unchanged": True,
+        },
+    )
+    assert body["status"] == "completed"
+    assert body["outputPath"] == "/out/foreign-film.mkv"
+    assert "passed this file through unchanged" in body["message"]
+
+
 def test_a_failure_carries_the_reason_the_operator_would_see() -> None:
     body = build_completion_body(
         origin=ORIGIN,

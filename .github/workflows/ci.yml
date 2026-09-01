@@ -80,6 +80,9 @@ jobs:
       - name: GitHub Actions pin check
         run: node scripts/check-github-action-pins.mjs
 
+      - name: Release publication gate ordering
+        run: node scripts/check-release-workflow-gates.mjs
+
       - name: MediaMop web - install, lint, format, build, unit tests
         working-directory: apps/web
         run: |
@@ -107,20 +110,39 @@ jobs:
 
   docker-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       MEDIAMOP_SESSION_SECRET: ${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-ci-session-secret-32chars-min
+      MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT: ${{ github.workspace }}/artifacts/docker-ci-fixture
+      MEDIAMOP_LIVE_E2E_FIXTURE_SERVER_ROOT: /e2e-fixture
+      MEDIAMOP_LIVE_E2E_FFMPEG: ffmpeg
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: apps/backend/requirements.lock
+
+      - name: Install locked live-audit dependencies and browser
+        run: |
+          python -m pip install --require-hashes -r apps/backend/requirements.lock
+          python -m playwright install --with-deps chromium
+          command -v ffmpeg >/dev/null || (sudo apt-get update && sudo apt-get install -y ffmpeg)
 
       - name: Build MediaMop Docker image
         run: docker build -t mediamop-ci-smoke .
 
-      - name: Run MediaMop Docker smoke
+      - name: Start MediaMop Docker candidate
         run: |
           docker rm -f mediamop-ci-smoke >/dev/null 2>&1 || true
+          mkdir -p "$MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT"
+          chmod 0777 "$MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT"
           docker run -d --name mediamop-ci-smoke -p 8788:8788 \
+            -v "$MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT:$MEDIAMOP_LIVE_E2E_FIXTURE_SERVER_ROOT" \
             -e MEDIAMOP_SESSION_SECRET="$MEDIAMOP_SESSION_SECRET" \
+            -e MEDIAMOP_SESSION_COOKIE_SECURE=false \
             mediamop-ci-smoke
           for i in {1..30}; do
             if curl -fsS http://127.0.0.1:8788/health >/tmp/mediamop-health.json; then
@@ -131,6 +153,20 @@ jobs:
           done
           docker logs mediamop-ci-smoke
           exit 1
+
+      - name: Full live E2E against Docker candidate
+        env:
+          MEDIAMOP_LIVE_BASE_URL: http://127.0.0.1:8788
+          MEDIAMOP_LIVE_E2E_ARTIFACTS: artifacts/docker-ci-e2e
+        run: python scripts/live-packaged-e2e.py
+
+      - name: Upload Docker live-audit evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: mediamop-docker-live-audit
+          if-no-files-found: warn
+          path: artifacts/docker-ci-e2e/*
 
       - name: Cleanup MediaMop Docker smoke
         if: always()

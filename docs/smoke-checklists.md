@@ -29,6 +29,8 @@ Use the Velopack setup exe from the release being validated.
 21. Relaunch MediaMop and confirm the existing user, settings, and wizard completion state persist.
 22. Install the next version over the current version and confirm Velopack applies a delta update cleanly.
 23. Uninstall and reinstall only when intentionally testing clean-install behavior.
+24. Confirm the automated packaged smoke reports that Refiner placed a byte-identical
+    pass-through file in the processed tree before removing its watched source.
 
 ## Docker smoke
 
@@ -48,6 +50,9 @@ Use the published release image, not a locally built image.
 
 3. Open `http://localhost:8788/`.
 4. Confirm first-run user creation appears.
+5. Confirm the release-candidate audit artifact includes `pass-through-proof.json`
+   showing completed, byte-identical delivery and watched-source cleanup through a
+   mounted Docker path.
 5. Attempt a password shorter than 8 characters and confirm it is blocked.
 6. Create the first user with a valid password.
 7. Confirm the setup wizard opens.

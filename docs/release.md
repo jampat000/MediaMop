@@ -47,12 +47,24 @@ The `Release` workflow:
 - reruns the E2E auth smoke on Linux
 - builds the Velopack Windows package on `windows-latest`
 - publishes `mediamop-web-dist.zip`
+- builds a local, unpushed Docker release candidate
+- runs the complete packaged browser/API audit against that candidate, including
+  a mounted disposable Refiner file that must pass through byte-identically into
+  the processed tree before its watched source is removed, and uploads screenshots
+  plus JSON evidence
 - builds and pushes Docker tags:
   - `ghcr.io/<owner>/<repo>:X.Y.Z` (the git tag is `vX.Y.Z`; the image tag drops the `v`)
   - `ghcr.io/<owner>/<repo>:latest`
 - verifies the published Docker manifest resolves
 - runs the published Docker image and waits for `/health`
 - creates the GitHub Release
+
+The registry login and Docker push occur only after the unpushed candidate passes
+the complete live audit. A failed screen, API check, browser console error, page
+error, failed request, bad response, changed pass-through output, or incomplete
+source cleanup therefore stops the release before either the versioned image or
+`latest` is published. The Windows package smoke runs the same real pass-through
+lifecycle against the packaged executable and bundled FFmpeg.
 
 `VITE_SUPPORT_URL` is a Vite build-time variable. Official releases should set the GitHub Actions repository variable `VITE_SUPPORT_URL` to `https://github.com/sponsors/jampat000` so the production frontend and packaged Windows installer include **Settings -> Support**. If that variable is missing, release builds still succeed, but production safely hides the Support tab.
 
@@ -67,7 +79,7 @@ The release workflow publishes GHCR images with the repository `GITHUB_TOKEN` an
 |-------------|---------|
 | `Tag + source tree` | Canonical source snapshot for the release. |
 | `mediamop-web-dist.zip` | Static production build of `apps/web/dist`. Backend still required. |
-| `MediaMop-*-win-Setup.exe` | Windows desktop installer (Velopack) with .NET tray host, bundled backend runtime, bundled web UI, and delta update support. |
+| `MediaMop-win-Setup.exe` | Windows desktop installer (Velopack) with .NET tray host, bundled backend runtime, bundled web UI, and delta update support. |
 | `ghcr.io/<owner>/<repo>:vX.Y.Z` | Versioned all-in-one container image. |
 | `ghcr.io/<owner>/<repo>:latest` | Latest stable container image. |
 

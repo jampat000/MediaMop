@@ -11,6 +11,7 @@ from starlette import status
 from mediamop.api.deps import DbSessionDep, SettingsDep
 from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
+from mediamop.modules.refiner.refiner_job_queue_lookup import pending_remux_job_for_relative_path
 from mediamop.modules.refiner.refiner_library_service import resolve_library
 from mediamop.modules.refiner.schemas_file_remux_pass_manual import (
     RefinerFileRemuxPassManualEnqueueIn,
@@ -49,7 +50,12 @@ def post_refiner_file_remux_pass_enqueue(
         )
 
     scope = body.media_scope
-    library = resolve_library(db, media_scope=scope)
+    library = resolve_library(db, library_id=body.library_id, media_scope=scope)
+    if body.library_id is not None and (library is None or library.id != body.library_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="The selected Refiner library no longer exists. Refresh Libraries and try again.",
+        )
     watched_ok = (library.watched_folder or "").strip() if library is not None else ""
     if not watched_ok:
         label = "TV Refiner" if scope == "tv" else "Movies Refiner"
@@ -62,17 +68,44 @@ def post_refiner_file_remux_pass_enqueue(
             ),
         )
 
+    relative_media_path = body.relative_media_path.strip()
+    library_id = library.id if library is not None else body.library_id
     payload = {
-        "relative_media_path": body.relative_media_path.strip(),
+        "relative_media_path": relative_media_path,
         "media_scope": scope,
+        "library_id": library_id,
+        "pass_through_unchanged": body.pass_through_unchanged,
     }
-    dedupe_key = f"{REFINER_FILE_REMUX_PASS_JOB_KIND}:{uuid4().hex}"
-    job = refiner_enqueue_or_get_job(
-        db,
-        dedupe_key=dedupe_key,
-        job_kind=REFINER_FILE_REMUX_PASS_JOB_KIND,
-        payload_json=json.dumps(payload, separators=(",", ":")),
-    )
+    job = None
+    if body.pass_through_unchanged:
+        # A scan may already have queued the ordinary rules-based pass. Convert that
+        # still-pending row in place so the operator's explicit choice cannot race a
+        # duplicate job for the same file.
+        job = pending_remux_job_for_relative_path(
+            db,
+            relative_path=relative_media_path,
+            library_id=library_id,
+        )
+        if job is not None:
+            try:
+                pending_payload = json.loads(job.payload_json or "{}")
+            except json.JSONDecodeError:
+                pending_payload = {}
+            if not isinstance(pending_payload, dict):
+                pending_payload = {}
+            # Keep manager hand-off/callback metadata and any other additive fields
+            # already carried by the queued job while replacing its processing choice.
+            pending_payload.update(payload)
+            job.payload_json = json.dumps(pending_payload, separators=(",", ":"))
+            job.not_before = None
+    if job is None:
+        dedupe_key = f"{REFINER_FILE_REMUX_PASS_JOB_KIND}:{uuid4().hex}"
+        job = refiner_enqueue_or_get_job(
+            db,
+            dedupe_key=dedupe_key,
+            job_kind=REFINER_FILE_REMUX_PASS_JOB_KIND,
+            payload_json=json.dumps(payload, separators=(",", ":")),
+        )
     db.commit()
     return RefinerFileRemuxPassManualEnqueueOut(
         job_id=job.id,

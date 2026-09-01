@@ -296,6 +296,7 @@ function normalizeRefinerSummary(
     const parsed = parseDetail(ev.detail);
     const outcome = asString(parsed?.outcome);
     const remuxNeeded = asBoolean(parsed?.remux_required);
+    const passedThrough = asBoolean(parsed?.pass_through_unchanged) === true;
     const fileName =
       asString(parsed?.relative_media_path)
         ?.split(/[\\/]/)
@@ -307,14 +308,16 @@ function normalizeRefinerSummary(
         .at(-1) ??
       "File";
     return {
-      title:
-        outcome === "live_skipped_not_required"
+      title: passedThrough
+        ? `${fileName} was passed through unchanged`
+        : outcome === "live_skipped_not_required"
           ? `No changes needed for ${fileName}`
           : outcome?.startsWith("failed")
             ? `${fileName} could not be processed`
             : `${fileName} was processed successfully`,
-      summary:
-        outcome === "live_skipped_not_required"
+      summary: passedThrough
+        ? "Refiner rules were bypassed for this file"
+        : outcome === "live_skipped_not_required"
           ? "No changes were needed"
           : outcome?.startsWith("failed")
             ? "Refiner could not finish this file"
@@ -322,8 +325,9 @@ function normalizeRefinerSummary(
               ? "The file already fits your Refiner rules"
               : "Refiner finished writing the cleaned-up file",
       detail: ev.detail ?? null,
-      chip:
-        outcome === "live_skipped_not_required"
+      chip: passedThrough
+        ? "Passed through"
+        : outcome === "live_skipped_not_required"
           ? "No changes needed"
           : outcome?.startsWith("failed")
             ? "Processing failed"
@@ -861,8 +865,8 @@ export function ActivityPage() {
       </section>
 
       <section className="mm-activity-filters mt-4 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-4">
-        <div className="grid gap-3 lg:grid-cols-[220px_1fr_1fr_1fr_auto_auto]">
-          <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-[minmax(160px,0.9fr)_minmax(160px,0.9fr)_minmax(180px,1.2fr)_minmax(190px,1fr)_minmax(190px,1fr)_auto]">
+          <label className="flex min-w-0 flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
             Module
             <select
               className="mm-input"
@@ -881,7 +885,7 @@ export function ActivityPage() {
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+          <label className="flex min-w-0 flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
             Event
             <select
               className="mm-input"
@@ -898,7 +902,7 @@ export function ActivityPage() {
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+          <label className="flex min-w-0 flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
             Search
             <input
               className="mm-input"
@@ -909,7 +913,7 @@ export function ActivityPage() {
               placeholder="Search titles and details"
             />
           </label>
-          <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+          <label className="flex min-w-0 flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
             From
             <input
               type="datetime-local"
@@ -920,7 +924,7 @@ export function ActivityPage() {
               }
             />
           </label>
-          <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+          <label className="flex min-w-0 flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
             To
             <input
               type="datetime-local"

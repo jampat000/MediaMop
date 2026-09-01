@@ -8,15 +8,11 @@ import {
   fetchRefinerPathSettings,
   putRefinerPathSettings,
 } from "./path-settings-api";
-import {
-  fetchRefinerRemuxRulesSettings,
-  putRefinerRemuxRulesSettings,
-} from "./remux-rules-settings-api";
+import { fetchRefinerRemuxRulesSettings } from "./remux-rules-settings-api";
 import { postRefinerWatchedFolderRemuxScanDispatchEnqueue } from "./watched-folder-scan-api";
 import type {
   RefinerOperatorSettingsPutBody,
   RefinerPathSettingsPutBody,
-  RefinerRemuxRulesSettingsPutBody,
   RefinerWatchedFolderRemuxScanDispatchEnqueueBody,
 } from "./types";
 
@@ -86,9 +82,15 @@ export const refinerRuntimeSettingsQueryKey = [
 ] as const;
 
 export function useRefinerWatchedFolderRemuxScanDispatchEnqueueMutation() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: RefinerWatchedFolderRemuxScanDispatchEnqueueBody) =>
       postRefinerWatchedFolderRemuxScanDispatchEnqueue(body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["refiner", "files"] });
+      void qc.invalidateQueries({ queryKey: ["refiner", "jobs"] });
+      void qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
   });
 }
 
@@ -102,16 +104,5 @@ export function useRefinerRemuxRulesSettingsQuery() {
     queryKey: refinerRemuxRulesSettingsQueryKey,
     queryFn: () => fetchRefinerRemuxRulesSettings(),
     staleTime: 30_000,
-  });
-}
-
-export function useRefinerRemuxRulesSettingsSaveMutation() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (body: RefinerRemuxRulesSettingsPutBody) =>
-      putRefinerRemuxRulesSettings(body),
-    onSuccess: (data) => {
-      qc.setQueryData(refinerRemuxRulesSettingsQueryKey, data);
-    },
   });
 }

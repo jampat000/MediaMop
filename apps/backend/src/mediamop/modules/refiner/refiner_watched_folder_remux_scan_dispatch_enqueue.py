@@ -35,12 +35,33 @@ def _scan_job_media_scope(payload_json: str | None) -> str:
     return "movie"
 
 
+def _scan_job_library_id(payload_json: str | None) -> int | None:
+    """Payload library id, or ``None`` for a pre-library/legacy scan job."""
+
+    raw = (payload_json or "").strip()
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    value = data.get("library_id")
+    return int(value) if isinstance(value, int) and value > 0 else None
+
+
 def refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan(
     session: Session,
     *,
     media_scope: str,
+    library_id: int | None = None,
 ) -> bool:
-    """True when a pending/leased scan job exists for this Movies vs TV scope."""
+    """True when a pending/leased scan already covers this exact library.
+
+    Legacy jobs have no library id and still occupy their whole Movies/TV scope. New
+    jobs are library-specific, so two Movies libraries can be scanned independently.
+    """
 
     want = (media_scope or "movie").strip().lower()
     if want not in ("movie", "tv"):
@@ -56,7 +77,17 @@ def refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan(
             ),
         ),
     ).all()
-    return any(_scan_job_media_scope(job.payload_json) == want for job in rows)
+    for job in rows:
+        job_library_id = _scan_job_library_id(job.payload_json)
+        if library_id is not None:
+            if job_library_id == int(library_id):
+                return True
+            if job_library_id is None and _scan_job_media_scope(job.payload_json) == want:
+                return True
+            continue
+        if _scan_job_media_scope(job.payload_json) == want:
+            return True
+    return False
 
 
 def validate_watched_folder_scan_dispatch_prerequisites(
@@ -112,6 +143,7 @@ def try_enqueue_periodic_watched_folder_remux_scan_dispatch(
     settings: MediaMopSettings,
     *,
     media_scope: str | None = None,
+    library_id: int | None = None,
 ) -> tuple[bool, str | None]:
     """Periodic tick enqueue helper.
 
@@ -124,7 +156,7 @@ def try_enqueue_periodic_watched_folder_remux_scan_dispatch(
     ``media_scope is None`` path the scheduler never takes, and reported itself as live
     configuration while scheduled scans ran regardless (#329).
     """
-    if media_scope is None:
+    if media_scope is None and library_id is None:
         inserted_any = False
         last_skip: str | None = None
         for scope_name in ("movie", "tv"):
@@ -141,15 +173,23 @@ def try_enqueue_periodic_watched_folder_remux_scan_dispatch(
             return True, None
         return False, last_skip
 
-    scope = (media_scope or "movie").strip().lower()
+    library = resolve_library(session, library_id=library_id, media_scope=media_scope)
+    scope = ((library.media_scope if library is not None else media_scope) or "movie").strip().lower()
     if scope not in ("movie", "tv"):
         scope = "movie"
-    if refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan(session, media_scope=scope):
-        return False, f"active_scan_already_queued_{scope}"
+    resolved_library_id = int(library.id) if library is not None else library_id
+    if refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan(
+        session,
+        media_scope=scope,
+        library_id=resolved_library_id,
+    ):
+        suffix = f"library_{resolved_library_id}" if resolved_library_id is not None else scope
+        return False, f"active_scan_already_queued_{suffix}"
     ok, err = validate_watched_folder_scan_dispatch_prerequisites(
         session,
         enqueue_remux_jobs=settings.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs,
         media_scope=scope,
+        library_id=resolved_library_id,
     )
     if not ok:
         return False, err
@@ -158,5 +198,6 @@ def try_enqueue_periodic_watched_folder_remux_scan_dispatch(
         enqueue_remux_jobs=settings.refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs,
         scan_trigger="periodic",
         media_scope=scope,
+        library_id=resolved_library_id,
     )
     return True, None

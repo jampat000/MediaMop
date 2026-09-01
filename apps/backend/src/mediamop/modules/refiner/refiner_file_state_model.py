@@ -43,6 +43,7 @@ class RefinerFileStatus(StrEnum):
     PROCESSING = "processing"
     PROCESSED = "processed"
     PROCESSING_FAILED = "processing_failed"
+    SKIPPED = "skipped"
     DISABLED = "disabled"
     ON_HOLD = "on_hold"
     OUT_OF_SCHEDULE = "out_of_schedule"
@@ -56,6 +57,7 @@ REFINER_WITHHELD_STATUSES: frozenset[str] = frozenset(
         RefinerFileStatus.ON_HOLD.value,
         RefinerFileStatus.OUT_OF_SCHEDULE.value,
         RefinerFileStatus.BLOCKED_UPSTREAM.value,
+        RefinerFileStatus.SKIPPED.value,
     }
 )
 

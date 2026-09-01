@@ -33,6 +33,7 @@ class ModuleOperationalStatusOut(BaseModel):
     active_job_count: int = Field(default=0, ge=0)
     queued_job_count: int = Field(default=0, ge=0)
     failed_job_count: int = Field(default=0, ge=0)
+    failed_file_count: int = Field(default=0, ge=0)
     quarantined_file_count: int = Field(default=0, ge=0)
     summary: str
     action_path: str

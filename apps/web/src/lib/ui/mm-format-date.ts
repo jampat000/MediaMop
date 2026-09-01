@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useSuiteSettingsQuery } from "../suite/queries";
 
-function parseIso(iso: string): Date {
+export function parseAppDate(iso: string): Date {
   // Backend timestamps have no Z suffix — append it to force UTC parsing.
   const s = iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z";
   return new Date(s);
@@ -21,7 +21,7 @@ export function useAppDateFormatter(): (
           dateStyle: "medium",
           timeStyle: "short",
           timeZone: tz,
-        }).format(parseIso(iso));
+        }).format(parseAppDate(iso));
       } catch {
         return iso;
       }
@@ -40,7 +40,7 @@ export function formatAppDate(
       dateStyle: "medium",
       timeStyle: "short",
       timeZone: tz || undefined,
-    }).format(parseIso(iso));
+    }).format(parseAppDate(iso));
   } catch {
     return iso ?? "—";
   }

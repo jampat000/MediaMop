@@ -155,7 +155,7 @@ apply_refiner_permissions() {
 run_app() {
   cd /opt/mediamop/apps/backend
   alembic upgrade head
-  exec uvicorn mediamop.api.main:app --host 0.0.0.0 --port "${PORT:-8788}"
+  exec uvicorn mediamop.api.main:app --host 0.0.0.0 --port "${PORT:-8788}" --no-server-header
 }
 
 validate_uint "$MEDIAMOP_PUID" "MEDIAMOP_PUID"
@@ -202,7 +202,7 @@ if [ "$(id -u)" -eq 0 ]; then
   gosu mediamop sh -c 'cd /opt/mediamop/apps/backend && alembic upgrade head'
   apply_refiner_permissions
   cd /opt/mediamop/apps/backend
-  exec gosu mediamop uvicorn mediamop.api.main:app --host 0.0.0.0 --port "${PORT:-8788}"
+  exec gosu mediamop uvicorn mediamop.api.main:app --host 0.0.0.0 --port "${PORT:-8788}" --no-server-header
 fi
 
 run_app

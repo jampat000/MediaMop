@@ -9,6 +9,7 @@ import {
 } from "../../lib/auth/queries";
 import { useSuiteSecurityOverviewQuery } from "../../lib/suite/queries";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
+import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
 import {
   mmModuleTabBlurbBandClass,
   mmModuleTabBlurbTextClass,
@@ -20,22 +21,12 @@ import {
   SUITE_PASSWORD_FIELD_CLASS,
 } from "./settings-shared";
 
-function formatSessionDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "Unknown time";
-  }
-  return date.toLocaleString([], {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-}
-
 function securityFlag(value: boolean, good: boolean): string {
   return value === good ? "On" : "Needs attention";
 }
 
 export function SettingsSecurityTab() {
+  const formatDate = useAppDateFormatter();
   const navigate = useNavigate();
   const changePassword = useChangePasswordMutation();
   const currentSessionQ = useCurrentSessionQuery();
@@ -352,8 +343,8 @@ export function SettingsSecurityTab() {
                     ) : null}
                   </div>
                   <p className="mt-1 text-xs text-[var(--mm-text2)]">
-                    Last seen {formatSessionDate(session.last_seen_at)} ·
-                    Expires {formatSessionDate(session.absolute_expires_at)}
+                    Last seen {formatDate(session.last_seen_at)} · Expires{" "}
+                    {formatDate(session.absolute_expires_at)}
                   </p>
                 </div>
                 <button

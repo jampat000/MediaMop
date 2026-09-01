@@ -21,6 +21,12 @@ class RefinerJobInspectionRow(BaseModel):
     lease_owner: str | None
     lease_expires_at: datetime | None
     last_error: str | None
+    operator_message: str = Field(default="", description="Short plain-language explanation for the operator.")
+    next_action: str = Field(default="", description="The next action an operator can take, or why none is needed.")
+    technical_detail: str | None = Field(
+        default=None,
+        description="Technical diagnostic detail, kept secondary to the operator message.",
+    )
     payload_json: str | None = None
     created_at: datetime
     updated_at: datetime
@@ -52,3 +58,17 @@ class RefinerJobCancelPendingOut(BaseModel):
     ok: bool = True
     job_id: int
     status: str = Field(description="Always ``cancelled`` on success.")
+
+
+class RefinerJobRecoverFinalizeFailedIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    csrf_token: str = Field(..., min_length=1)
+
+
+class RefinerJobRecoverFinalizeFailedOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ok: bool = True
+    job_id: int
+    status: str = Field(description="Always ``completed`` on success.")

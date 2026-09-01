@@ -15,6 +15,7 @@ than failing.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -36,6 +37,16 @@ def _csv_values(raw: str | None) -> tuple[str, ...]:
     return tuple(part.strip() for part in (raw or "").split(",") if part.strip())
 
 
+def _as_utc(value: datetime | None) -> datetime | None:
+    """SQLite can return timezone columns without tzinfo; comparisons must stay safe."""
+
+    if value is None:
+        return None
+    if value.tzinfo is None or value.utcoffset() is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
 @dataclass(frozen=True, slots=True)
 class LibraryAdmissionRules:
     """What this library will pick up, as data rather than module constants."""
@@ -46,7 +57,12 @@ class LibraryAdmissionRules:
     exclude_patterns: tuple[str, ...]
     min_file_size_mb: int
     max_file_size_mb: int
+    rejected_file_action: str
     min_file_age_seconds: int
+    created_after: datetime | None
+    created_before: datetime | None
+    modified_after: datetime | None
+    modified_before: datetime | None
     exclude_hidden: bool
     top_level_only: bool
 
@@ -104,7 +120,14 @@ def admission_rules_for(library: RefinerLibraryRow) -> LibraryAdmissionRules:
         exclude_patterns=_csv_values(library.exclude_patterns_csv),
         min_file_size_mb=max(0, int(library.min_file_size_mb)),
         max_file_size_mb=max(0, int(library.max_file_size_mb)),
+        rejected_file_action=(
+            "delete_file" if (library.rejected_file_action or "").strip().lower() == "delete_file" else "leave"
+        ),
         min_file_age_seconds=max(0, int(library.min_file_age_seconds)),
+        created_after=_as_utc(library.created_after),
+        created_before=_as_utc(library.created_before),
+        modified_after=_as_utc(library.modified_after),
+        modified_before=_as_utc(library.modified_before),
         exclude_hidden=bool(library.exclude_hidden),
         top_level_only=bool(library.top_level_only),
     )

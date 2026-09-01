@@ -29,9 +29,13 @@ This is the canonical governance checklist for keeping MediaMop releases control
 ## After every release
 
 1. Confirm the GitHub Release exists for the pushed tag.
-2. Confirm `MediaMopSetup.exe` is attached to the release.
+2. Confirm `MediaMop-win-Setup.exe` is attached to the release.
 3. Confirm the published release body is plain-language and matches the approved `docs/release-notes/vX.Y.Z.md` content.
-4. Confirm the release notes/install guidance explicitly tell Windows users to run `MediaMopSetup.exe` as administrator, and note the one-time updater-service bootstrap requirement for older installs.
+4. Confirm the release notes/install guidance names the attached `MediaMop-win-Setup.exe` installer and explains any one-time upgrade requirement for older installs.
 5. Confirm the GHCR image exists for both `vX.Y.Z` and `latest`.
 6. Confirm the release workflow completed `mediamop`, Docker publish, Docker smoke, and Windows package jobs.
-7. Open a follow-up issue for any manual smoke-test failure.
+7. Download `mediamop-docker-release-candidate-audit` and confirm its summary has
+   no console warnings, console errors, page errors, failed requests, or bad responses;
+   confirm `pass-through-proof.json` reports a completed job, byte-identical output,
+   and successful watched-source cleanup.
+8. Open a follow-up issue for any manual smoke-test failure.

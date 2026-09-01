@@ -51,9 +51,9 @@ def _release_record(version: str = "1.2.3") -> GitHubReleaseRecord:
         prerelease=False,
         assets=(
             GitHubReleaseAsset(
-                name="MediaMopSetup.exe",
+                name="MediaMop-win-Setup.exe",
                 api_url=f"https://api.github.com/repos/jampat000/MediaMop/releases/assets/{version.replace('.', '')}",
-                browser_download_url=f"https://github.com/jampat000/MediaMop/releases/download/v{version}/MediaMopSetup.exe",
+                browser_download_url=f"https://github.com/jampat000/MediaMop/releases/download/v{version}/MediaMop-win-Setup.exe",
                 size_bytes=123456789,
                 content_type="application/octet-stream",
             ),

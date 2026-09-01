@@ -23,6 +23,7 @@ from mediamop.core.db import Base
 from mediamop.modules.refiner.refiner_file_settling import (
     check_file_access,
     observe_size_settling,
+    source_writer_problem,
 )
 from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
 from mediamop.modules.refiner.refiner_file_state_service import (
@@ -336,3 +337,44 @@ def test_a_file_held_open_exclusively_is_reported_as_locked(tmp_path: Path) -> N
 
     assert check.ok is False
     assert "locked" in (check.problem or "")
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows share-mode semantics only")
+def test_a_preallocated_file_with_an_active_writer_is_reported_even_when_it_is_readable(tmp_path: Path) -> None:
+    import ctypes
+    from ctypes import wintypes
+
+    source = tmp_path / "preallocated.mkv"
+    source.write_bytes(b"\0" * 4096)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    create_file = kernel32.CreateFileW
+    create_file.argtypes = (
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.HANDLE,
+    )
+    create_file.restype = wintypes.HANDLE
+    handle = create_file(
+        str(source),
+        0x40000000,  # GENERIC_WRITE
+        0x00000001 | 0x00000002 | 0x00000004,  # share read/write/delete, like a downloader
+        None,
+        3,
+        0x00000080,
+        None,
+    )
+    assert handle != ctypes.c_void_p(-1).value
+    try:
+        # A normal reader can open this, which is exactly why the old check passed.
+        with source.open("rb") as reader:
+            assert reader.read(1) == b"\0"
+        problem = source_writer_problem(source)
+    finally:
+        kernel32.CloseHandle(handle)
+
+    assert problem is not None
+    assert "still open for writing" in problem

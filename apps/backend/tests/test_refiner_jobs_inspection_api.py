@@ -177,6 +177,33 @@ def test_refiner_jobs_inspection_default_includes_pending_and_leased(
     assert RefinerJobStatus.CANCELLED.value in statuses
 
 
+def test_refiner_jobs_inspection_returns_operator_guidance_and_keeps_lock_detail_secondary(
+    client_with_admin: TestClient,
+) -> None:
+    _login(client_with_admin)
+    fac = _fac()
+    with fac() as db:
+        db.execute(delete(RefinerJob))
+        db.add(
+            RefinerJob(
+                dedupe_key="operator-guidance-lock",
+                job_kind="refiner.file.remux_pass.v1",
+                status=RefinerJobStatus.FAILED.value,
+                last_error="sqlite3.OperationalError: database is locked",
+                payload_json='{"relative_media_path":"Movie/Film.mkv"}',
+            )
+        )
+        db.commit()
+
+    response = client_with_admin.get("/api/v1/refiner/jobs/inspection?limit=10")
+
+    assert response.status_code == 200, response.text
+    job = next(item for item in response.json()["jobs"] if item["dedupe_key"] == "operator-guidance-lock")
+    assert "could not save the Refiner result" in job["operator_message"]
+    assert "Files at once" in job["next_action"]
+    assert job["technical_detail"] == "sqlite3.OperationalError: database is locked"
+
+
 def test_refiner_jobs_inspection_status_filter(client_with_admin: TestClient) -> None:
     _seed_mixed_status_rows()
     _login(client_with_admin)
@@ -185,6 +212,41 @@ def test_refiner_jobs_inspection_status_filter(client_with_admin: TestClient) ->
     body = r.json()
     assert body["default_recent_slice"] is False
     assert all(j["status"] == RefinerJobStatus.PENDING.value for j in body["jobs"])
+
+
+def test_refiner_jobs_default_hides_successful_periodic_scan_noise(
+    client_with_admin: TestClient,
+) -> None:
+    fac = _fac()
+    with fac() as db:
+        db.execute(delete(RefinerJob))
+        db.add_all(
+            [
+                RefinerJob(
+                    dedupe_key="routine-scan",
+                    job_kind="refiner.watched_folder.remux_scan_dispatch.v1",
+                    status=RefinerJobStatus.COMPLETED.value,
+                ),
+                RefinerJob(
+                    dedupe_key="material-file-work",
+                    job_kind="refiner.file.remux_pass.v1",
+                    status=RefinerJobStatus.COMPLETED.value,
+                ),
+            ]
+        )
+        db.commit()
+
+    _login(client_with_admin)
+    recent = client_with_admin.get("/api/v1/refiner/jobs/inspection?limit=20")
+    completed = client_with_admin.get("/api/v1/refiner/jobs/inspection?status=completed&limit=20")
+
+    assert recent.status_code == 200, recent.text
+    assert [row["dedupe_key"] for row in recent.json()["jobs"]] == ["material-file-work"]
+    assert completed.status_code == 200, completed.text
+    assert {row["dedupe_key"] for row in completed.json()["jobs"]} == {
+        "routine-scan",
+        "material-file-work",
+    }
 
 
 def test_refiner_jobs_inspection_invalid_status_422(client_with_admin: TestClient) -> None:

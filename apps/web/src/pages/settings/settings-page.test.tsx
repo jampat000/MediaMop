@@ -66,7 +66,7 @@ const windowsUpdateAvailableStatus: SuiteUpdateStatusOut = {
   latest_version: "2.0.8",
   latest_name: "MediaMop 2.0.8",
   windows_installer_url:
-    "https://github.com/jampat000/MediaMop/releases/download/v2.0.8/MediaMopSetup.exe",
+    "https://github.com/jampat000/MediaMop/releases/download/v2.0.8/MediaMop-win-Setup.exe",
   in_app_upgrade_supported: true,
   in_app_upgrade_summary:
     "Updates are managed by the MediaMop desktop app via Velopack.",

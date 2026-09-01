@@ -83,6 +83,8 @@ def build_completion_body(*, origin: HandoffOrigin, result: dict[str, Any]) -> d
 
 
 def _success_message(outcome: str, result: dict[str, Any]) -> str:
+    if result.get("pass_through_unchanged") is True:
+        return "The operator passed this file through unchanged; it is ready in the output folder."
     if outcome == "live_skipped_not_required":
         return "No remux was needed; the file was already in the wanted shape."
     removed_audio = result.get("removed_audio")

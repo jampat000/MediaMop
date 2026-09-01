@@ -18,10 +18,14 @@ ignored ``artifacts/live-packaged-e2e`` directory.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
+import time
+import uuid
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
@@ -47,6 +51,13 @@ AUDIT_PASSWORD = os.environ.get(
 ARTIFACT_DIR = Path(
     os.environ.get("MEDIAMOP_LIVE_E2E_ARTIFACTS", "artifacts/live-packaged-e2e")
 )
+FIXTURE_HOST_ROOT_RAW = os.environ.get(
+    "MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT", ""
+).strip()
+FIXTURE_SERVER_ROOT = os.environ.get(
+    "MEDIAMOP_LIVE_E2E_FIXTURE_SERVER_ROOT", ""
+).strip()
+FIXTURE_FFMPEG = os.environ.get("MEDIAMOP_LIVE_E2E_FFMPEG", "ffmpeg").strip()
 TIMEOUT_MS = 30_000
 
 
@@ -79,6 +90,8 @@ class LiveAudit:
         self.bad_responses: list[str] = []
         self.http_checks: list[str] = []
         self.completed_requests: set[tuple[str, str]] = set()
+        self.expected_not_found_urls: set[str] = set()
+        self.expected_not_found_in_flight = False
         self._attach_diagnostics()
 
     def _attach_diagnostics(self) -> None:
@@ -93,6 +106,12 @@ class LiveAudit:
             if (
                 text
                 == "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+            ):
+                return
+            if (
+                self.expected_not_found_in_flight
+                and text
+                == "Failed to load resource: the server responded with a status of 404 (Not Found)"
             ):
                 return
             if message.type == "error":
@@ -127,6 +146,11 @@ class LiveAudit:
             if response.status >= 400:
                 if response.status == 401 and response.url.rstrip("/").endswith(
                     "/api/v1/auth/me"
+                ):
+                    return
+                if (
+                    response.status == 404
+                    and response.url in self.expected_not_found_urls
                 ):
                     return
                 self.bad_responses.append(f"{response.status} {response.url}")
@@ -187,6 +211,48 @@ class LiveAudit:
         self.require(response.ok, f"GET {path} returned HTTP {response.status}")
         self.http_checks.append(f"GET {path} -> {response.status}")
         return response
+
+    def browser_api(
+        self,
+        method: str,
+        path: str,
+        body: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Call a same-origin API through the signed-in browser session."""
+
+        result = self.page.evaluate(
+            """
+            async ({ method, path, body }) => {
+              const response = await fetch(path, {
+                method,
+                credentials: "same-origin",
+                headers: {
+                  "Accept": "application/json",
+                  "Content-Type": "application/json",
+                  "X-Requested-With": "XMLHttpRequest",
+                },
+                body: body === null ? undefined : JSON.stringify(body),
+              });
+              const text = await response.text();
+              let payload = null;
+              if (text) {
+                try { payload = JSON.parse(text); }
+                catch { payload = { raw: text }; }
+              }
+              return { status: response.status, payload };
+            }
+            """,
+            {"method": method, "path": path, "body": body},
+        )
+        self.http_checks.append(f"{method} {path} -> {result['status']}")
+        return result
+
+    def csrf_token(self) -> str:
+        result = self.browser_api("GET", "/api/v1/auth/csrf")
+        self.require(result["status"] == 200, "could not obtain a CSRF token")
+        token = str((result.get("payload") or {}).get("csrf_token") or "")
+        self.require(bool(token), "CSRF response did not include a token")
+        return token
 
     def assert_common_headers(self, response: Any, path: str) -> None:
         headers = {key.lower(): value for key, value in response.headers.items()}
@@ -365,16 +431,41 @@ class LiveAudit:
             "X-Requested-With": "XMLHttpRequest",
         }
         for path in paths:
-            response = self.context.request.get(
-                urljoin(BASE_URL + "/", path.lstrip("/")),
-                headers=headers,
-                timeout=TIMEOUT_MS,
+            # Run protected reads in the signed-in page itself.  Playwright's
+            # separate APIRequestContext does not reliably inherit the browser
+            # session after the first-user bootstrap redirect on packaged
+            # Windows builds, which made this audit report a false 401 even
+            # while the authenticated shell was visibly loaded.
+            expected_not_found = (
+                "999999" in path or "00000000-0000-4000-8000-000000000000" in path
             )
+            if expected_not_found:
+                self.expected_not_found_urls.add(
+                    urljoin(BASE_URL + "/", path.lstrip("/"))
+                )
+            self.expected_not_found_in_flight = expected_not_found
+            try:
+                status = self.page.evaluate(
+                    """
+                    async ({ path, headers }) => {
+                      const response = await fetch(path, {
+                        method: "GET",
+                        credentials: "same-origin",
+                        headers,
+                      });
+                      await response.arrayBuffer();
+                      return response.status;
+                    }
+                    """,
+                    {"path": path, "headers": headers},
+                )
+            finally:
+                self.expected_not_found_in_flight = False
             self.require(
-                response.status in {200, 204, 404},
-                f"GET {path} returned unexpected HTTP {response.status}",
+                status in {200, 204, 404},
+                f"GET {path} returned unexpected HTTP {status}",
             )
-            self.http_checks.append(f"GET {path} -> {response.status}")
+            self.http_checks.append(f"GET {path} -> {status}")
         # The SSE route is intentionally excluded from the finite request
         # loop; the Activity browser step opens and closes it as a real client.
         self.record(
@@ -502,7 +593,7 @@ class LiveAudit:
         expected = {
             "Overview": "refiner-overview-panel",
             "Libraries": "refiner-libraries-section",
-            "Audio & subtitles": "refiner-remux-section",
+            "Audio & subtitles": "refiner-rule-set-workspace",
             "Schedules": "refiner-schedules-section",
             "Files": "refiner-files-section",
             "Jobs": "refiner-jobs-inspection-section",
@@ -917,8 +1008,21 @@ class LiveAudit:
             card.get_by_role("button", name="Enable", exact=True),
             "enable media manager",
         )
-        self.click(
-            card.get_by_test_id("media-manager-test"), "test media manager connection"
+        with self.page.expect_response(
+            lambda response: (
+                response.request.method == "POST"
+                and "/api/v1/media-managers/connections/" in response.url
+                and response.url.endswith("/test")
+            ),
+            timeout=TIMEOUT_MS,
+        ) as test_response:
+            self.click(
+                card.get_by_test_id("media-manager-test"),
+                "test media manager connection",
+            )
+        self.require(
+            test_response.value.status == 200,
+            "media manager connection failure was not returned as a normal test result",
         )
         self.visible(
             card.get_by_test_id("media-manager-status"), "media manager test result"
@@ -945,6 +1049,171 @@ class LiveAudit:
         self.screenshot("settings-integrations")
         self.record(
             "media-manager create, secret generation, enable/disable, connection test, and remove"
+        )
+
+    def refiner_pass_through_lifecycle(self) -> None:
+        """Prove an unchanged file reaches output before its watched source is removed."""
+
+        configured = bool(FIXTURE_HOST_ROOT_RAW or FIXTURE_SERVER_ROOT)
+        if not configured:
+            self.record(
+                "Refiner pass-through lifecycle skipped (no controlled fixture mount)"
+            )
+            return
+        self.require(
+            bool(FIXTURE_HOST_ROOT_RAW and FIXTURE_SERVER_ROOT),
+            "both Refiner fixture host and server roots are required",
+        )
+        self.require(bool(FIXTURE_FFMPEG), "Refiner fixture FFmpeg command is required")
+
+        host_root = Path(FIXTURE_HOST_ROOT_RAW).expanduser().resolve()
+        host_root.mkdir(parents=True, exist_ok=True)
+        fixture_name = f"pass-through-{uuid.uuid4().hex}"
+        fixture_root = host_root / fixture_name
+        watch = fixture_root / "watch"
+        work = fixture_root / "work"
+        output = fixture_root / "processed"
+        release = watch / "ForeignFilm"
+        for directory in (fixture_root, watch, work, output, release):
+            directory.mkdir(parents=True, exist_ok=False)
+            if os.name != "nt":
+                directory.chmod(0o777)
+
+        source = release / "foreign-only.mkv"
+        subprocess.run(
+            [
+                FIXTURE_FFMPEG,
+                "-nostdin",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=black:s=320x180:d=2",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=440:duration=2",
+                "-map",
+                "0:v",
+                "-map",
+                "1:a",
+                "-c:v",
+                "mpeg4",
+                "-c:a",
+                "aac",
+                "-metadata:s:a:0",
+                "language=jpn",
+                "-y",
+                str(source),
+            ],
+            check=True,
+            timeout=60,
+        )
+        self.require(source.is_file(), "FFmpeg did not create the pass-through fixture")
+        old_time = time.time() - 600
+        os.utime(source, (old_time, old_time))
+        source_size = source.stat().st_size
+        source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+
+        server_separator = (
+            "\\" if re.match(r"^[A-Za-z]:[\\/]", FIXTURE_SERVER_ROOT) else "/"
+        )
+
+        def server_path(*parts: str) -> str:
+            root = FIXTURE_SERVER_ROOT.rstrip("/\\")
+            return root + server_separator + server_separator.join(parts)
+
+        path_result = self.browser_api(
+            "PUT",
+            "/api/v1/refiner/path-settings",
+            {
+                "csrf_token": self.csrf_token(),
+                "refiner_watched_folder": server_path(fixture_name, "watch"),
+                "refiner_work_folder": server_path(fixture_name, "work"),
+                "refiner_output_folder": server_path(fixture_name, "processed"),
+            },
+        )
+        self.require(
+            path_result["status"] == 200,
+            f"could not configure pass-through fixture paths: {path_result['payload']}",
+        )
+        enqueue = self.browser_api(
+            "POST",
+            "/api/v1/refiner/jobs/file-remux-pass/enqueue",
+            {
+                "csrf_token": self.csrf_token(),
+                "relative_media_path": "ForeignFilm/foreign-only.mkv",
+                "media_scope": "movie",
+                "pass_through_unchanged": True,
+            },
+        )
+        self.require(
+            enqueue["status"] == 200,
+            f"could not enqueue pass-through fixture: {enqueue['payload']}",
+        )
+        job_id = int((enqueue.get("payload") or {}).get("job_id") or 0)
+        self.require(job_id > 0, "pass-through enqueue did not return a job id")
+
+        delivered = output / "ForeignFilm" / "foreign-only.mkv"
+        terminal_status = ""
+        last_error = ""
+        deadline = time.monotonic() + 90
+        while time.monotonic() < deadline:
+            inspection = self.browser_api(
+                "GET", "/api/v1/refiner/jobs/inspection?limit=100"
+            )
+            self.require(
+                inspection["status"] == 200,
+                "could not inspect the pass-through job",
+            )
+            rows = (inspection.get("payload") or {}).get("jobs") or []
+            row = next((item for item in rows if item.get("id") == job_id), None)
+            if row:
+                terminal_status = str(row.get("status") or "")
+                last_error = str(row.get("last_error") or "")
+                if terminal_status in {"failed", "cancelled"}:
+                    break
+            if (
+                terminal_status == "completed"
+                and delivered.is_file()
+                and not source.exists()
+            ):
+                break
+            time.sleep(0.25)
+
+        self.require(
+            delivered.is_file(),
+            f"pass-through output was not created (status={terminal_status}, error={last_error})",
+        )
+        self.require(not source.exists(), "pass-through source was not cleaned up")
+        self.require(
+            terminal_status == "completed",
+            f"pass-through job did not complete (status={terminal_status}, error={last_error})",
+        )
+        output_size = delivered.stat().st_size
+        output_hash = hashlib.sha256(delivered.read_bytes()).hexdigest()
+        self.require(output_size == source_size, "pass-through output size changed")
+        self.require(output_hash == source_hash, "pass-through output bytes changed")
+
+        proof = {
+            "job_id": job_id,
+            "job_status": terminal_status,
+            "source_removed": True,
+            "output_created": True,
+            "source_bytes": source_size,
+            "output_bytes": output_size,
+            "source_sha256": source_hash,
+            "output_sha256": output_hash,
+            "result": "passed",
+        }
+        ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+        (ARTIFACT_DIR / "pass-through-proof.json").write_text(
+            json.dumps(proof, indent=2), encoding="utf-8"
+        )
+        self.record(
+            "Refiner pass-through placed byte-identical output before cleaning the watched source"
         )
 
     def settings_history_and_navigation(self) -> None:
@@ -1037,6 +1306,7 @@ def run(playwright: Playwright) -> dict[str, Any]:
         audit.settings_backup_upgrade_logs_security()
         audit.settings_notifications()
         audit.settings_media_managers()
+        audit.refiner_pass_through_lifecycle()
         audit.settings_history_and_navigation()
         return audit.finish()
     except Exception:

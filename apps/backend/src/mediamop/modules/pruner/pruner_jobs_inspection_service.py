@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from mediamop.modules.pruner.pruner_jobs_model import PrunerJob, PrunerJobStatus
 from mediamop.modules.pruner.pruner_schemas import PrunerJobsInspectionOut, PrunerJobsInspectionRow
+from mediamop.platform.jobs.operator_job_status import build_job_operator_status
 
 _ALLOWED_STATUS: frozenset[str] = frozenset(s.value for s in PrunerJobStatus)
 
@@ -34,7 +35,26 @@ def list_pruner_jobs_for_inspection(
         stmt = select(PrunerJob).order_by(PrunerJob.updated_at.desc()).limit(limit)
         default_recent_slice = True
     rows = session.scalars(stmt).all()
+    inspection_rows = []
+    for row in rows:
+        item = PrunerJobsInspectionRow.model_validate(row)
+        operator_status = build_job_operator_status(
+            module="pruner",
+            job_kind=row.job_kind,
+            status=row.status,
+            last_error=row.last_error,
+            payload_json=row.payload_json,
+        )
+        inspection_rows.append(
+            item.model_copy(
+                update={
+                    "operator_message": operator_status.operator_message,
+                    "next_action": operator_status.next_action,
+                    "technical_detail": operator_status.technical_detail,
+                }
+            )
+        )
     return PrunerJobsInspectionOut(
-        jobs=[PrunerJobsInspectionRow.model_validate(r) for r in rows],
+        jobs=inspection_rows,
         default_recent_slice=default_recent_slice,
     )

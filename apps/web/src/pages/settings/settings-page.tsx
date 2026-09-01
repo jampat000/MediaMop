@@ -54,7 +54,7 @@ type TabId =
 
 function tabButtonClass(active: boolean): string {
   return [
-    "shrink-0 whitespace-nowrap rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
+    "mm-settings-nav__button shrink-0 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-colors",
     active
       ? "border-[var(--mm-accent)] bg-[var(--mm-accent)]/15 text-[var(--mm-text)]"
       : "border-[var(--mm-border)] bg-transparent text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)]",
@@ -463,161 +463,226 @@ export function SettingsPage() {
       </header>
 
       <div className="mm-page__body max-w-none">
-        <nav className="mm-settings-nav mb-5" aria-label="Settings sections">
-          <div className="mm-settings-nav__group">
-            <p className="mm-settings-nav__label">Workspace</p>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === "general"}
-              className={tabButtonClass(tab === "general")}
-              onClick={() => setSettingsTab("general")}
-            >
-              General
-            </button>
-          </div>
-          <div className="mm-settings-nav__group">
-            <p className="mm-settings-nav__label">Security</p>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === "security"}
-              className={tabButtonClass(tab === "security")}
-              onClick={() => setSettingsTab("security")}
-            >
-              Security
-            </button>
-          </div>
-          <div className="mm-settings-nav__group">
-            <p className="mm-settings-nav__label">Operations</p>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === "backup"}
-              className={tabButtonClass(tab === "backup")}
-              onClick={() => setSettingsTab("backup")}
-            >
-              Backup and restore
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === "upgrade"}
-              className={tabButtonClass(tab === "upgrade")}
-              onClick={() => setSettingsTab("upgrade")}
-            >
-              Upgrade
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === "logs"}
-              className={tabButtonClass(tab === "logs")}
-              onClick={() => setSettingsTab("logs")}
-            >
-              Logs
-            </button>
-          </div>
-          <div className="mm-settings-nav__group">
-            <p className="mm-settings-nav__label">Integrations</p>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === "notifications"}
-              className={tabButtonClass(tab === "notifications")}
-              onClick={() => setSettingsTab("notifications")}
-            >
-              Notifications
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === "media-managers"}
-              className={tabButtonClass(tab === "media-managers")}
-              onClick={() => setSettingsTab("media-managers")}
-            >
-              Media managers
-            </button>
-            {showSupportTab ? (
-              <button
-                type="button"
-                role="tab"
-                aria-selected={tab === "support"}
-                className={tabButtonClass(tab === "support")}
-                onClick={() => setSettingsTab("support")}
-              >
-                Support
-              </button>
-            ) : null}
-          </div>
-        </nav>
+        <div className="mm-settings-workspace">
+          <nav className="mm-settings-nav" aria-label="Settings sections">
+            <div className="mm-settings-nav__tabs" role="tablist">
+              <div className="mm-settings-nav__group">
+                <p className="mm-settings-nav__label">Workspace</p>
+                <button
+                  type="button"
+                  role="tab"
+                  id="settings-tab-general"
+                  aria-controls="settings-panel"
+                  aria-label="General"
+                  aria-selected={tab === "general"}
+                  className={tabButtonClass(tab === "general")}
+                  onClick={() => setSettingsTab("general")}
+                >
+                  <span>
+                    <strong>General</strong>
+                    <small>Locale, display and history</small>
+                  </span>
+                </button>
+              </div>
+              <div className="mm-settings-nav__group">
+                <p className="mm-settings-nav__label">Security</p>
+                <button
+                  type="button"
+                  role="tab"
+                  id="settings-tab-security"
+                  aria-controls="settings-panel"
+                  aria-label="Security"
+                  aria-selected={tab === "security"}
+                  className={tabButtonClass(tab === "security")}
+                  onClick={() => setSettingsTab("security")}
+                >
+                  <span>
+                    <strong>Security</strong>
+                    <small>Accounts and active sessions</small>
+                  </span>
+                </button>
+              </div>
+              <div className="mm-settings-nav__group">
+                <p className="mm-settings-nav__label">Operations</p>
+                <button
+                  type="button"
+                  role="tab"
+                  id="settings-tab-backup"
+                  aria-controls="settings-panel"
+                  aria-label="Backup and restore"
+                  aria-selected={tab === "backup"}
+                  className={tabButtonClass(tab === "backup")}
+                  onClick={() => setSettingsTab("backup")}
+                >
+                  <span>
+                    <strong>Backup and restore</strong>
+                    <small>Protect and recover configuration</small>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="settings-tab-upgrade"
+                  aria-controls="settings-panel"
+                  aria-label="Upgrade"
+                  aria-selected={tab === "upgrade"}
+                  className={tabButtonClass(tab === "upgrade")}
+                  onClick={() => setSettingsTab("upgrade")}
+                >
+                  <span>
+                    <strong>Upgrade</strong>
+                    <small>Version and update status</small>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="settings-tab-logs"
+                  aria-controls="settings-panel"
+                  aria-label="Logs"
+                  aria-selected={tab === "logs"}
+                  className={tabButtonClass(tab === "logs")}
+                  onClick={() => setSettingsTab("logs")}
+                >
+                  <span>
+                    <strong>Logs</strong>
+                    <small>Diagnostics and runtime events</small>
+                  </span>
+                </button>
+              </div>
+              <div className="mm-settings-nav__group">
+                <p className="mm-settings-nav__label">Integrations</p>
+                <button
+                  type="button"
+                  role="tab"
+                  id="settings-tab-notifications"
+                  aria-controls="settings-panel"
+                  aria-label="Notifications"
+                  aria-selected={tab === "notifications"}
+                  className={tabButtonClass(tab === "notifications")}
+                  onClick={() => setSettingsTab("notifications")}
+                >
+                  <span>
+                    <strong>Notifications</strong>
+                    <small>Delivery channels and alerts</small>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="settings-tab-media-managers"
+                  aria-controls="settings-panel"
+                  aria-label="Media managers"
+                  aria-selected={tab === "media-managers"}
+                  className={tabButtonClass(tab === "media-managers")}
+                  onClick={() => setSettingsTab("media-managers")}
+                >
+                  <span>
+                    <strong>Media managers</strong>
+                    <small>Library automation connections</small>
+                  </span>
+                </button>
+                {showSupportTab ? (
+                  <button
+                    type="button"
+                    role="tab"
+                    id="settings-tab-support"
+                    aria-controls="settings-panel"
+                    aria-label="Support"
+                    aria-selected={tab === "support"}
+                    className={tabButtonClass(tab === "support")}
+                    onClick={() => setSettingsTab("support")}
+                  >
+                    <span>
+                      <strong>Support</strong>
+                      <small>Help fund and maintain MediaMop</small>
+                    </span>
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </nav>
 
-        {tab === "general" ? (
-          <SettingsGeneralTab
-            editable={editable}
-            settingsData={settingsQ.data}
-            save={save}
-            appTimezone={appTimezone}
-            setAppTimezone={setAppTimezone}
-            timezoneDirty={timezoneDirty}
-            setLogRetentionDaysDraft={setLogRetentionDaysDraft}
-            normalizedLogRetentionDraft={normalizedLogRetentionDraft}
-            finalizeLogRetentionDays={finalizeLogRetentionDays}
-            logsDirty={logsDirty}
-            lastSuiteSaveTarget={lastSuiteSaveTarget}
-            displayDensity={displayDensity}
-            setDisplayDensity={setDisplayDensity}
-            resetHistoryConfirm={resetHistoryConfirm}
-            setResetHistoryConfirm={setResetHistoryConfirm}
-            resetHistory={resetHistory}
-            resetHistoryMsg={resetHistoryMsg}
-            onSaveTimezone={() => void handleSaveTimezone()}
-            onSaveLogs={() => void handleSaveLogs()}
-            onResetOperationalHistory={() =>
-              void handleResetOperationalHistory()
-            }
-          />
-        ) : tab === "backup" ? (
-          <SettingsBackupTab
-            editable={editable}
-            settingsData={settingsQ.data}
-            save={save}
-            backupScheduleDirty={backupScheduleDirty}
-            lastSuiteSaveTarget={lastSuiteSaveTarget}
-            configurationBackupEnabled={configurationBackupEnabled}
-            setConfigurationBackupEnabled={setConfigurationBackupEnabled}
-            configurationBackupIntervalHours={configurationBackupIntervalHours}
-            setConfigurationBackupIntervalHours={
-              setConfigurationBackupIntervalHours
-            }
-            configurationBackupPreferredTime={configurationBackupPreferredTime}
-            setConfigurationBackupPreferredTime={
-              setConfigurationBackupPreferredTime
-            }
-            backupsQ={backupsQ}
-            backupBusy={backupBusy}
-            backupMsg={backupMsg}
-            backupErr={backupErr}
-            onSaveBackupSchedule={() => void handleSaveBackupSchedule()}
-            onDownloadConfiguration={() => void handleDownloadConfiguration()}
-            onRestoreFileChange={(e) => void handleRestoreFileChange(e)}
-            onDownloadStoredBackup={(id, fileLabel) =>
-              void handleDownloadStoredBackup(id, fileLabel)
-            }
-          />
-        ) : tab === "upgrade" ? (
-          <SettingsUpgradeTab updateStatusQ={updateStatusQ} />
-        ) : tab === "security" ? (
-          <SettingsSecurityTab />
-        ) : tab === "media-managers" ? (
-          <SettingsMediaManagersTab />
-        ) : tab === "notifications" ? (
-          <SettingsNotificationsTab />
-        ) : tab === "support" ? (
-          <SettingsSupportTab />
-        ) : (
-          <SettingsLogsTab />
-        )}
+          <main
+            id="settings-panel"
+            className="mm-settings-workspace__content"
+            role="tabpanel"
+            aria-labelledby={`settings-tab-${tab}`}
+          >
+            {tab === "general" ? (
+              <SettingsGeneralTab
+                editable={editable}
+                settingsData={settingsQ.data}
+                save={save}
+                appTimezone={appTimezone}
+                setAppTimezone={setAppTimezone}
+                timezoneDirty={timezoneDirty}
+                setLogRetentionDaysDraft={setLogRetentionDaysDraft}
+                normalizedLogRetentionDraft={normalizedLogRetentionDraft}
+                finalizeLogRetentionDays={finalizeLogRetentionDays}
+                logsDirty={logsDirty}
+                lastSuiteSaveTarget={lastSuiteSaveTarget}
+                displayDensity={displayDensity}
+                setDisplayDensity={setDisplayDensity}
+                resetHistoryConfirm={resetHistoryConfirm}
+                setResetHistoryConfirm={setResetHistoryConfirm}
+                resetHistory={resetHistory}
+                resetHistoryMsg={resetHistoryMsg}
+                onSaveTimezone={() => void handleSaveTimezone()}
+                onSaveLogs={() => void handleSaveLogs()}
+                onResetOperationalHistory={() =>
+                  void handleResetOperationalHistory()
+                }
+              />
+            ) : tab === "backup" ? (
+              <SettingsBackupTab
+                editable={editable}
+                settingsData={settingsQ.data}
+                save={save}
+                backupScheduleDirty={backupScheduleDirty}
+                lastSuiteSaveTarget={lastSuiteSaveTarget}
+                configurationBackupEnabled={configurationBackupEnabled}
+                setConfigurationBackupEnabled={setConfigurationBackupEnabled}
+                configurationBackupIntervalHours={
+                  configurationBackupIntervalHours
+                }
+                setConfigurationBackupIntervalHours={
+                  setConfigurationBackupIntervalHours
+                }
+                configurationBackupPreferredTime={
+                  configurationBackupPreferredTime
+                }
+                setConfigurationBackupPreferredTime={
+                  setConfigurationBackupPreferredTime
+                }
+                backupsQ={backupsQ}
+                backupBusy={backupBusy}
+                backupMsg={backupMsg}
+                backupErr={backupErr}
+                onSaveBackupSchedule={() => void handleSaveBackupSchedule()}
+                onDownloadConfiguration={() =>
+                  void handleDownloadConfiguration()
+                }
+                onRestoreFileChange={(e) => void handleRestoreFileChange(e)}
+                onDownloadStoredBackup={(id, fileLabel) =>
+                  void handleDownloadStoredBackup(id, fileLabel)
+                }
+              />
+            ) : tab === "upgrade" ? (
+              <SettingsUpgradeTab updateStatusQ={updateStatusQ} />
+            ) : tab === "security" ? (
+              <SettingsSecurityTab />
+            ) : tab === "media-managers" ? (
+              <SettingsMediaManagersTab />
+            ) : tab === "notifications" ? (
+              <SettingsNotificationsTab />
+            ) : tab === "support" ? (
+              <SettingsSupportTab />
+            ) : (
+              <SettingsLogsTab />
+            )}
+          </main>
+        </div>
       </div>
     </div>
   );

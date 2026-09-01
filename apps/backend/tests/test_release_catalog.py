@@ -5,10 +5,46 @@ import pytest
 from mediamop.platform.suite_settings import release_catalog
 
 
+def _asset(name: str) -> release_catalog.GitHubReleaseAsset:
+    return release_catalog.GitHubReleaseAsset(
+        name=name,
+        api_url=f"https://api.github.test/assets/{name}",
+        browser_download_url=f"https://downloads.github.test/{name}",
+        size_bytes=123,
+        content_type="application/octet-stream",
+    )
+
+
+def _record(*assets: release_catalog.GitHubReleaseAsset) -> release_catalog.GitHubReleaseRecord:
+    return release_catalog.GitHubReleaseRecord(
+        tag_name="v2.6.1",
+        version="2.6.1",
+        release_name="MediaMop 2.6.1",
+        html_url="https://github.test/releases/v2.6.1",
+        published_at=None,
+        draft=False,
+        prerelease=False,
+        assets=assets,
+    )
+
+
 def test_normalize_release_version_strips_v_prefix() -> None:
     assert release_catalog.normalize_release_version("v2.0.8") == "2.0.8"
     assert release_catalog.normalize_release_version("2.0.8") == "2.0.8"
     assert release_catalog.tag_for_version("2.0.8") == "v2.0.8"
+
+
+def test_windows_installer_asset_prefers_current_velopack_name() -> None:
+    current = _asset("MediaMop-win-Setup.exe")
+    legacy = _asset("MediaMopSetup.exe")
+
+    assert _record(legacy, current).windows_installer_asset() is current
+
+
+def test_windows_installer_asset_accepts_legacy_release_name() -> None:
+    legacy = _asset("MediaMopSetup.exe")
+
+    assert _record(legacy).windows_installer_asset() is legacy
 
 
 def test_fetch_release_record_by_version_rejects_wrong_returned_tag(monkeypatch: pytest.MonkeyPatch) -> None:

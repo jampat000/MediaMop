@@ -81,6 +81,17 @@ export type RefinerOverviewStatsOut = {
 
 export type RefinerOperatorSettingsOut = {
   max_concurrent_files: number;
+  runner_capacity: number;
+  runner_cost_sd: number;
+  runner_cost_720p: number;
+  runner_cost_1080p: number;
+  runner_cost_4k: number;
+  runner_cost_undetermined: number;
+  work_temp_stale_sweep_enabled: boolean;
+  failure_cleanup_enabled: boolean;
+  keep_failed_work_files: boolean;
+  file_log_retention_days: number;
+  verbose_detection_logging: boolean;
   min_file_age_seconds: number;
   refiner_min_input_file_size_mb: number;
   minimum_free_disk_space_mb: number;
@@ -102,6 +113,17 @@ export type RefinerOperatorSettingsOut = {
 /** Partial PUT: include only fields to change (per-scope schedule saves omit the other scope). */
 export type RefinerOperatorSettingsPutBody = {
   max_concurrent_files?: number;
+  runner_capacity?: number;
+  runner_cost_sd?: number;
+  runner_cost_720p?: number;
+  runner_cost_1080p?: number;
+  runner_cost_4k?: number;
+  runner_cost_undetermined?: number;
+  work_temp_stale_sweep_enabled?: boolean;
+  failure_cleanup_enabled?: boolean;
+  keep_failed_work_files?: boolean;
+  file_log_retention_days?: number;
+  verbose_detection_logging?: boolean;
   min_file_age_seconds?: number;
   refiner_min_input_file_size_mb?: number;
   minimum_free_disk_space_mb?: number;
@@ -122,6 +144,7 @@ export type RefinerOperatorSettingsPutBody = {
 export type RefinerWatchedFolderRemuxScanDispatchEnqueueBody = {
   enqueue_remux_jobs: boolean;
   media_scope: "movie" | "tv";
+  library_id?: number;
 };
 
 export type RefinerWatchedFolderRemuxScanDispatchEnqueueOut = {
@@ -155,16 +178,13 @@ export type RefinerRemuxRulesScopeSettings = {
     | "quality_all_languages";
 };
 
-export type RefinerRemuxRulesSettingsPutBody =
-  RefinerRemuxRulesScopeSettings & {
-    media_scope: "movie" | "tv";
-  };
-
 /** POST /api/v1/refiner/jobs/file-remux-pass/enqueue */
 
 export type RefinerFileRemuxPassManualEnqueueBody = {
   relative_media_path: string;
   media_scope: "movie" | "tv";
+  library_id?: number;
+  pass_through_unchanged?: boolean;
 };
 
 export type RefinerFileRemuxPassManualEnqueueOut = {

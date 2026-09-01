@@ -62,6 +62,7 @@ def decide_file_state(
     settling_stable_at: datetime | None = None,
     access_problem: str | None = None,
     blocked_by_connection: str | None = None,
+    minimum_age_seconds: int | None = None,
 ) -> FileStateVerdict:
     """Why this file is or is not being worked on, in the order the reasons apply."""
 
@@ -87,7 +88,8 @@ def decide_file_state(
             hold_until=window_reopens_at,
         )
 
-    hold_seconds = max(0, int(library.min_file_age_seconds)) + max(0, int(library.hold_minutes)) * 60
+    configured_age = library.min_file_age_seconds if minimum_age_seconds is None else minimum_age_seconds
+    hold_seconds = max(0, int(configured_age)) + max(0, int(library.hold_minutes)) * 60
     if size_is_settling:
         return FileStateVerdict(
             RefinerFileStatus.ON_HOLD,

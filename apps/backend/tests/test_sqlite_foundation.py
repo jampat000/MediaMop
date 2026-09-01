@@ -37,7 +37,7 @@ def test_engine_applies_sqlite_hardening_pragmas(monkeypatch: pytest.MonkeyPatch
         p = verify_sqlite_pragmas(engine)
         assert p["journal_mode"].lower() == "wal"
         assert p["foreign_keys"] == "1"
-        assert int(p["busy_timeout"]) == 5000
+        assert int(p["busy_timeout"]) == 30000
         assert p["synchronous"] == "1"
     finally:
         engine.dispose()

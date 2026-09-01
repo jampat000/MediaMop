@@ -19,8 +19,13 @@ from mediamop.core.db import Base
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.manager_queue_signals import report_for_signals
+from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
 from mediamop.modules.refiner.refiner_job_handlers import build_refiner_job_handlers
+from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
 from mediamop.modules.refiner.refiner_operator_settings_model import RefinerOperatorSettingsRow
+from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_handlers import (
+    _library_admission_rejection,
+)
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_job_kinds import (
     REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
 )
@@ -79,7 +84,13 @@ def test_scan_handler_enqueues_remux_when_requested(
         },
     ]
 
-    def _fake_fetch(_session: Session, _settings: MediaMopSettings, *, media_scope: str):
+    def _fake_fetch(
+        _session: Session,
+        _settings: MediaMopSettings,
+        *,
+        media_scope: str,
+        connection_ids: tuple[int, ...] | None = None,
+    ):
         signals = (reported(fake_rad, name="Main"),)
         return signals, report_for_signals(signals)
 
@@ -164,7 +175,13 @@ def test_scan_handler_enqueues_remux_without_arr_connections(
     mkv = watch / "Standalone Movie 2026.mkv"
     mkv.write_bytes(b"x")
 
-    def _fake_fetch(_session: Session, _settings: MediaMopSettings, *, media_scope: str):
+    def _fake_fetch(
+        _session: Session,
+        _settings: MediaMopSettings,
+        *,
+        media_scope: str,
+        connection_ids: tuple[int, ...] | None = None,
+    ):
         # Nothing connected at all: the scan still runs, on the file-settling gates alone.
         return (), report_for_signals(())
 
@@ -224,6 +241,279 @@ def test_scan_handler_enqueues_remux_without_arr_connections(
         assert s.scalar(select(ActivityEvent)) is None
 
 
+def test_scan_job_targets_the_named_library_when_two_movie_libraries_exist(
+    session_factory,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MEDIAMOP_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
+    settings = MediaMopSettings.load()
+    first_watch = tmp_path / "movies"
+    second_watch = tmp_path / "movies_4k"
+    first_out = tmp_path / "movies_out"
+    second_out = tmp_path / "movies_4k_out"
+    for folder in (first_watch, second_watch, first_out, second_out):
+        folder.mkdir()
+    (first_watch / "Wrong Library.mkv").write_bytes(b"one")
+    (second_watch / "Right Library.mkv").write_bytes(b"two")
+
+    with session_factory() as session:
+        seed_refiner_library(
+            session,
+            name="Movies",
+            watched_folder=str(first_watch),
+            output_folder=str(first_out),
+            file_detection_interval_seconds=0,
+            min_file_age_seconds=0,
+        )
+        target = RefinerLibraryRow(
+            name="Movies 4K",
+            media_scope="movie",
+            watched_folder=str(second_watch),
+            output_folder=str(second_out),
+            file_detection_interval_seconds=0,
+            min_file_age_seconds=0,
+            display_order=2,
+        )
+        session.add(target)
+        session.flush()
+        target_id = int(target.id)
+        session.merge(
+            RefinerOperatorSettingsRow(
+                id=1,
+                min_file_age_seconds=0,
+                refiner_min_input_file_size_mb=0,
+            )
+        )
+        refiner_enqueue_or_get_job(
+            session,
+            dedupe_key="refiner.watched_folder.remux_scan_dispatch.v1:second-movie-library",
+            job_kind=REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
+            payload_json=json.dumps({"enqueue_remux_jobs": True, "media_scope": "movie", "library_id": target_id}),
+        )
+        session.commit()
+
+    handlers = build_refiner_job_handlers(settings, session_factory)
+    with patch(
+        "mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_handlers."
+        "fetch_manager_queue_signals_for_scan",
+        return_value=((), report_for_signals(())),
+    ):
+        assert (
+            process_one_refiner_job(
+                session_factory,
+                lease_owner="specific-library-test",
+                job_handlers=handlers,
+                now=datetime(2026, 4, 12, 12, 0, tzinfo=UTC),
+                lease_seconds=3600,
+            )
+            == "processed"
+        )
+
+    with session_factory() as session:
+        remux = [
+            job for job in session.scalars(select(RefinerJob)).all() if job.job_kind == "refiner.file.remux_pass.v1"
+        ]
+        assert len(remux) == 1
+        payload = json.loads(remux[0].payload_json or "{}")
+        assert payload["relative_media_path"] == "Right Library.mkv"
+        assert payload["library_id"] == target_id
+
+
+def test_per_library_size_and_path_rules_skip_settled_files_before_queueing(
+    session_factory,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
+
+    monkeypatch.setenv("MEDIAMOP_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
+    settings = MediaMopSettings.load()
+    watch = tmp_path / "admission_watch"
+    out = tmp_path / "admission_out"
+    watch.mkdir()
+    out.mkdir()
+    sizes_mb = {
+        "feature.mkv": 3,
+        "tiny-feature.mkv": 1,
+        "huge-feature.mkv": 5,
+        "not-included.mkv": 3,
+        "feature-sample.mkv": 3,
+    }
+    for name, size_mb in sizes_mb.items():
+        (watch / name).write_bytes(b"x" * size_mb * 1024 * 1024)
+
+    with session_factory() as session:
+        library = seed_refiner_library(
+            session,
+            watched_folder=str(watch),
+            output_folder=str(out),
+            file_detection_interval_seconds=0,
+            min_file_age_seconds=0,
+            min_file_size_mb=2,
+            max_file_size_mb=4,
+            include_patterns_csv="*feature*",
+            exclude_patterns_csv="*sample*",
+        )
+        library_id = int(library.id)
+        session.merge(
+            RefinerOperatorSettingsRow(
+                id=1,
+                min_file_age_seconds=0,
+                refiner_min_input_file_size_mb=0,
+            )
+        )
+        refiner_enqueue_or_get_job(
+            session,
+            dedupe_key="refiner.watched_folder.remux_scan_dispatch.v1:admission-rules",
+            job_kind=REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
+            payload_json=json.dumps({"enqueue_remux_jobs": True, "media_scope": "movie", "library_id": library_id}),
+        )
+        session.commit()
+
+    handlers = build_refiner_job_handlers(settings, session_factory)
+    with patch(
+        "mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_handlers."
+        "fetch_manager_queue_signals_for_scan",
+        return_value=((), report_for_signals(())),
+    ):
+        assert (
+            process_one_refiner_job(
+                session_factory,
+                lease_owner="admission-test",
+                job_handlers=handlers,
+                now=datetime(2026, 4, 12, 12, 0, tzinfo=UTC),
+                lease_seconds=3600,
+            )
+            == "processed"
+        )
+
+    with session_factory() as session:
+        remux = [
+            json.loads(job.payload_json or "{}")
+            for job in session.scalars(select(RefinerJob)).all()
+            if job.job_kind == "refiner.file.remux_pass.v1"
+        ]
+        assert [payload["relative_media_path"] for payload in remux] == ["feature.mkv"]
+        rows = {row.relative_path: row for row in session.scalars(select(RefinerFileRow)).all()}
+        assert rows["tiny-feature.mkv"].status == RefinerFileStatus.SKIPPED.value
+        assert "minimum" in rows["tiny-feature.mkv"].status_reason
+        assert rows["huge-feature.mkv"].status == RefinerFileStatus.SKIPPED.value
+        assert "maximum" in rows["huge-feature.mkv"].status_reason
+        assert rows["not-included.mkv"].status == RefinerFileStatus.SKIPPED.value
+        assert "include patterns" in rows["not-included.mkv"].status_reason
+        assert rows["feature-sample.mkv"].status == RefinerFileStatus.SKIPPED.value
+        assert "exclude patterns" in rows["feature-sample.mkv"].status_reason
+
+
+def test_per_library_rejection_policy_deletes_only_rejected_file(
+    session_factory,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MEDIAMOP_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
+    settings = MediaMopSettings.load()
+    watch = tmp_path / "rejection_cleanup_watch"
+    out = tmp_path / "rejection_cleanup_out"
+    release = watch / "Movie Release"
+    release.mkdir(parents=True)
+    out.mkdir()
+    accepted = release / "feature.mkv"
+    rejected = release / "feature-sample.mkv"
+    accepted.write_bytes(b"x" * 2 * 1024 * 1024)
+    rejected.write_bytes(b"x" * 1024 * 1024)
+    with session_factory() as session:
+        library = seed_refiner_library(
+            session,
+            watched_folder=str(watch),
+            output_folder=str(out),
+            file_detection_interval_seconds=0,
+            min_file_age_seconds=0,
+            min_file_size_mb=2,
+            rejected_file_action="delete_file",
+        )
+        session.merge(
+            RefinerOperatorSettingsRow(
+                id=1,
+                min_file_age_seconds=0,
+                refiner_min_input_file_size_mb=0,
+            )
+        )
+        refiner_enqueue_or_get_job(
+            session,
+            dedupe_key="refiner.watched_folder.remux_scan_dispatch.v1:rejection-cleanup",
+            job_kind=REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
+            payload_json=json.dumps(
+                {"enqueue_remux_jobs": True, "media_scope": "movie", "library_id": int(library.id)}
+            ),
+        )
+        session.commit()
+    handlers = build_refiner_job_handlers(settings, session_factory)
+    with patch(
+        "mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_handlers."
+        "fetch_manager_queue_signals_for_scan",
+        return_value=((), report_for_signals(())),
+    ):
+        assert (
+            process_one_refiner_job(
+                session_factory,
+                lease_owner="rejection-cleanup-test",
+                job_handlers=handlers,
+                now=datetime(2026, 4, 12, 12, 0, tzinfo=UTC),
+                lease_seconds=3600,
+            )
+            == "processed"
+        )
+    assert accepted.exists()
+    assert not rejected.exists()
+    assert release.exists()
+    with session_factory() as session:
+        row = session.scalars(
+            select(RefinerFileRow).where(RefinerFileRow.relative_path == "Movie Release/feature-sample.mkv")
+        ).one()
+        assert row.status == RefinerFileStatus.SKIPPED.value
+    assert "deleted the rejected file" in row.status_reason
+
+
+def test_per_library_created_and_modified_windows_reject_outside_files(tmp_path: Path) -> None:
+    candidate = tmp_path / "feature.mkv"
+    candidate.write_bytes(b"video")
+
+    created_rejection = _library_admission_rejection(
+        file_path=candidate,
+        relative_path="feature.mkv",
+        size_bytes=candidate.stat().st_size,
+        minimum_size_mb=0,
+        maximum_size_mb=0,
+        include_patterns=(),
+        exclude_patterns=(),
+        created_after=datetime.now(UTC) + timedelta(days=1),
+        created_before=None,
+        modified_after=None,
+        modified_before=None,
+    )
+    assert created_rejection is not None
+    assert created_rejection[1] == "skipped_before_created_window"
+    assert "creation time" in created_rejection[0]
+
+    modified_rejection = _library_admission_rejection(
+        file_path=candidate,
+        relative_path="feature.mkv",
+        size_bytes=candidate.stat().st_size,
+        minimum_size_mb=0,
+        maximum_size_mb=0,
+        include_patterns=(),
+        exclude_patterns=(),
+        created_after=None,
+        created_before=None,
+        modified_after=datetime.now(UTC) + timedelta(days=1),
+        modified_before=None,
+    )
+    assert modified_rejection is not None
+    assert modified_rejection[1] == "skipped_before_modified_window"
+    assert "last-modified time" in modified_rejection[0]
+
+
 def test_scan_handler_skips_file_when_previous_success_output_still_exists(
     session_factory,
     tmp_path: Path,
@@ -278,6 +568,8 @@ def test_scan_handler_skips_file_when_previous_success_output_still_exists(
                         "output_file": str(output.resolve()),
                         "source_deleted_after_success": False,
                         "source_folder_skip_reason": "file is locked",
+                        "inspected_source_path": str(mkv.resolve()),
+                        "source_size_bytes": mkv.stat().st_size,
                     },
                 ),
             ),
@@ -314,6 +606,114 @@ def test_scan_handler_skips_file_when_previous_success_output_still_exists(
         assert remux == []
     assert watch.exists()
     assert not release.exists()
+
+
+def test_cleanup_retry_ignores_closed_processing_schedule(
+    session_factory,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MEDIAMOP_REFINER_WATCHED_FOLDER_MIN_FILE_AGE_SECONDS", "0")
+    settings = MediaMopSettings.load()
+    watch = tmp_path / "watch_cleanup_outside_schedule"
+    out = tmp_path / "out_cleanup_outside_schedule"
+    release = watch / "Testament 1983"
+    release.mkdir(parents=True)
+    out.mkdir()
+    source = release / "Testament 1983.mkv"
+    source.write_bytes(b"completed-source")
+    rejected_extra = release / "Testament at 20.mpg"
+    rejected_extra.write_bytes(b"audio-only-extra")
+    output = out / "Testament 1983" / "Testament 1983.mkv"
+    output.parent.mkdir(parents=True)
+    output.write_bytes(b"completed-output")
+    with session_factory() as s:
+        movies, _tv = seed_refiner_libraries(
+            s,
+            watched_folder=str(watch.resolve()),
+            work_folder="",
+            output_folder=str(out.resolve()),
+            file_detection_interval_seconds=0,
+            min_file_age_seconds=0,
+        )
+        # This mirrors the live Testament incident: the extra had already been
+        # observed before the completed-output cleanup retry removed the release.
+        s.add(
+            RefinerFileRow(
+                library_id=movies.id,
+                relative_path="Testament 1983/Testament at 20.mpg",
+                status=RefinerFileStatus.ON_HOLD.value,
+                status_reason="The file is in use.",
+                size_bytes=rejected_extra.stat().st_size,
+            )
+        )
+        s.merge(
+            RefinerOperatorSettingsRow(
+                id=1,
+                min_file_age_seconds=0,
+                refiner_min_input_file_size_mb=0,
+                minimum_free_disk_space_mb=0,
+            )
+        )
+        s.add(
+            ActivityEvent(
+                module="refiner",
+                event_type="refiner.file_remux_pass_completed",
+                title="Testament 1983.mkv was processed successfully",
+                detail=json.dumps(
+                    {
+                        "ok": True,
+                        "relative_media_path": "Testament 1983/Testament 1983.mkv",
+                        "media_scope": "movie",
+                        "output_file": str(output.resolve()),
+                        "source_deleted_after_success": False,
+                        "inspected_source_path": str(source.resolve()),
+                        "source_size_bytes": source.stat().st_size,
+                    }
+                ),
+            )
+        )
+        s.commit()
+    with session_factory() as s:
+        refiner_enqueue_or_get_job(
+            s,
+            dedupe_key="refiner.watched_folder.remux_scan_dispatch.v1:closed-window-cleanup",
+            job_kind=REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
+            payload_json=json.dumps({"enqueue_remux_jobs": True}),
+        )
+        s.commit()
+    handlers = build_refiner_job_handlers(settings, session_factory)
+    with (
+        patch(
+            "mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.fetch_manager_queue_signals_for_scan",
+            return_value=((), report_for_signals(())),
+        ),
+        patch(
+            "mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.library_window_open",
+            return_value=False,
+        ),
+        patch(
+            "mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_handlers.library_window_reopens_at",
+            return_value=datetime(2026, 4, 13, 0, 0, tzinfo=UTC),
+        ),
+    ):
+        assert (
+            process_one_refiner_job(
+                session_factory,
+                lease_owner="cleanup-test",
+                job_handlers=handlers,
+                now=datetime(2026, 4, 12, 12, 0, tzinfo=UTC),
+                lease_seconds=3600,
+            )
+            == "processed"
+        )
+    assert not release.exists()
+    with session_factory() as s:
+        rows = {row.relative_path: row for row in s.scalars(select(RefinerFileRow)).all()}
+        assert rows["Testament 1983/Testament 1983.mkv"].status == RefinerFileStatus.PROCESSED.value
+        assert "temporary lock cleared" in rows["Testament 1983/Testament 1983.mkv"].status_reason
+        assert rows["Testament 1983/Testament at 20.mpg"].status == RefinerFileStatus.PROCESSED.value
+        assert "No separate output" in rows["Testament 1983/Testament at 20.mpg"].status_reason
 
 
 def test_scan_handler_does_not_record_activity_when_no_files_are_queued(
@@ -400,7 +800,13 @@ def _seed_library(session_factory, *, watch: Path, out: Path, **overrides) -> No
 
 
 def _run_scan(session_factory, settings, *, dedupe: str, now: datetime) -> str:
-    def _fake_fetch(_session: Session, _settings: MediaMopSettings, *, media_scope: str):
+    def _fake_fetch(
+        _session: Session,
+        _settings: MediaMopSettings,
+        *,
+        media_scope: str,
+        connection_ids: tuple[int, ...] | None = None,
+    ):
         signals = (reported([], name="Main"),)
         return signals, report_for_signals(signals)
 

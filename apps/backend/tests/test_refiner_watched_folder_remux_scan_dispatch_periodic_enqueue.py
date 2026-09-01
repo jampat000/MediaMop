@@ -116,6 +116,9 @@ def test_periodic_scheduler_scope_failure_does_not_block_other_scope(
 
     with fac() as db:
         db.execute(delete(RefinerJob))
+        # This scheduler supports multiple libraries per scope. Keep this test's
+        # expected call list independent from libraries left by earlier tests.
+        db.execute(delete(RefinerLibraryRow))
         seed_refiner_libraries(
             db,
             watched_folder=str(tmp_path / "mwatch"),
@@ -131,7 +134,14 @@ def test_periodic_scheduler_scope_failure_does_not_block_other_scope(
         stop_event = asyncio.Event()
         loop = asyncio.get_running_loop()
 
-        def _fake_enqueue(_session, _settings, *, media_scope: str = "movie"):
+        def _fake_enqueue(
+            _session,
+            _settings,
+            *,
+            media_scope: str = "movie",
+            library_id: int | None = None,
+        ):
+            assert library_id is not None
             calls.append(media_scope)
             if media_scope == "movie":
                 raise RuntimeError("movie scope failed")
@@ -158,6 +168,7 @@ def test_periodic_scheduler_scope_failure_does_not_block_other_scope(
     finally:
         with fac() as db:
             db.execute(delete(RefinerJob))
+            db.execute(delete(RefinerLibraryRow))
             seed_refiner_libraries(db)
             db.commit()
 
@@ -185,20 +196,11 @@ def test_periodic_scheduler_keeps_scope_next_run_values_independent(
 
     monkeypatch.setattr(
         periodic_enqueue,
-        "ensure_refiner_operator_settings_row",
-        lambda _session: SimpleNamespace(movie_schedule_enabled=True, tv_schedule_enabled=True),
-    )
-    monkeypatch.setattr(
-        periodic_enqueue,
-        "resolve_library",
-        # The cadence comes from the library now (#363); an object with no
-        # scan_interval_seconds exercises the helper's own default.
-        lambda _session, **_kwargs: SimpleNamespace(),
-    )
-    monkeypatch.setattr(
-        periodic_enqueue,
-        "refiner_periodic_scope_in_schedule_window",
-        lambda _session, _row, *, media_scope: media_scope in {"movie", "tv"},
+        "list_libraries",
+        lambda _session: [
+            SimpleNamespace(id=1, name="Movies", media_scope="movie", enabled=True),
+            SimpleNamespace(id=2, name="TV", media_scope="tv", enabled=True),
+        ],
     )
     monkeypatch.setattr(
         periodic_enqueue,
@@ -209,7 +211,14 @@ def test_periodic_scheduler_keeps_scope_next_run_values_independent(
     async def _run() -> None:
         stop_event = asyncio.Event()
 
-        def _fake_enqueue(_session, _settings, *, media_scope: str = "movie"):
+        def _fake_enqueue(
+            _session,
+            _settings,
+            *,
+            media_scope: str = "movie",
+            library_id: int | None = None,
+        ):
+            assert library_id is not None
             calls.append(media_scope)
             if len(calls) >= 3:
                 stop_event.set()

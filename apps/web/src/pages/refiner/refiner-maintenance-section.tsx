@@ -11,6 +11,7 @@ import {
   useRunRefinerMaintenance,
 } from "../../lib/refiner/maintenance-queries";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
+import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
 
 function canEdit(role: string | undefined): boolean {
   return role === "admin" || role === "operator";
@@ -21,14 +22,17 @@ const FAMILY_LABELS: Record<MaintenanceFamily, string> = {
   failure_cleanup: "Failure cleanup",
 };
 
-function stateLine(family: MaintenanceFamilyState): string {
+function stateLine(
+  family: MaintenanceFamilyState,
+  formatDate: (iso: string) => string,
+): string {
   if (family.running > 0) return `Running now (${family.running}).`;
   if (family.pending > 0)
     return `Queued (${family.pending}), waiting for a worker.`;
   if (family.last_failed_at)
     return `Last run failed: ${family.last_error ?? "no reason recorded"}.`;
   if (family.last_completed_at)
-    return `Last finished ${new Date(family.last_completed_at).toLocaleString()}.`;
+    return `Last finished ${formatDate(family.last_completed_at)}.`;
   return "Has not run yet.";
 }
 
@@ -40,6 +44,7 @@ function stateLine(family: MaintenanceFamilyState): string {
  * who wanted to reclaim stale work files had to wait for a timer they could not see.
  */
 export function RefinerMaintenanceSection() {
+  const formatDate = useAppDateFormatter();
   const me = useMeQuery();
   const maintenance = useRefinerMaintenanceQuery();
   const runtime = useRefinerRuntimeSettingsQuery();
@@ -101,7 +106,7 @@ export function RefinerMaintenanceSection() {
                   {family.description}
                 </p>
                 <p className="mt-1 text-xs text-[var(--mm-text3)]">
-                  {stateLine(family)}
+                  {stateLine(family, formatDate)}
                 </p>
               </div>
               {editable ? (

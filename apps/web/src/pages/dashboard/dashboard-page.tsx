@@ -4,6 +4,10 @@ import {
   activityRecentKey,
   useActivityRecentQuery,
 } from "../../lib/activity/queries";
+import {
+  REFINER_FILE_PROCESSING_PROGRESS_EVENT,
+  RefinerFileProcessingProgressDetail,
+} from "../../lib/activity/refiner-file-remux-pass-detail";
 import { useActivityStreamInvalidations } from "../../lib/activity/use-activity-stream-invalidation";
 import type { ActivityEventItem, DashboardStatus } from "../../lib/api/types";
 import {
@@ -24,6 +28,7 @@ import {
   useRefinerOverviewStatsQuery,
   useRefinerPathSettingsQuery,
 } from "../../lib/refiner/queries";
+import { useSuitePauseQuery } from "../../lib/suite/pause-queries";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
 
@@ -59,6 +64,10 @@ type GlobalJobRow = {
   status: string;
   title: string;
   detail: string;
+  nextAction: string;
+  technicalDetail?: string;
+  actionTo: string;
+  actionLabel: string;
   updatedAt: string;
 };
 
@@ -75,13 +84,18 @@ type DashboardJobRow = {
   job_kind: string;
   status: string;
   last_error: string | null;
+  operator_message?: string;
+  next_action?: string;
+  technical_detail?: string | null;
   updated_at: string;
 };
 
-type DashboardMetricValue = {
-  value: string;
-  detail?: string;
-  valueTitle?: string;
+type AttentionItem = {
+  key: string;
+  title: string;
+  detail: string;
+  actionTo: string;
+  actionLabel: string;
 };
 
 const REFINER_FILE_REMUX_PASS_JOB_KIND = "refiner.file.remux_pass.v1";
@@ -103,21 +117,6 @@ function compactMetricText(
   const tail = Math.max(12, Math.min(tailLength, maxLength - 16));
   const head = Math.max(16, maxLength - tail - 1);
   return `${normalized.slice(0, head).trimEnd()}...${normalized.slice(-tail).trimStart()}`;
-}
-
-function shortLastActivity(
-  items: ActivityEventItem[],
-  fmt: (iso: string) => string,
-): DashboardMetricValue {
-  if (items.length === 0) {
-    return { value: "No recent activity" };
-  }
-  const ev = items[0];
-  return {
-    value: compactMetricText(ev.title),
-    detail: fmt(ev.created_at),
-    valueTitle: ev.title,
-  };
 }
 
 function healthTone(status: ModuleStatus): string {
@@ -229,18 +228,58 @@ function MetricCard({
   );
 }
 
+function activityModuleLabel(module: string): string {
+  const value = module.trim();
+  if (!value) return "System";
+  return `${value[0].toUpperCase()}${value.slice(1)}`;
+}
+
+function LiveSignal({
+  item,
+  fmt,
+}: {
+  item: ActivityEventItem;
+  fmt: (iso: string) => string;
+}) {
+  return (
+    <li className="mm-dashboard-signal">
+      <span className="mm-dashboard-signal__marker" aria-hidden="true" />
+      <div className="min-w-0">
+        <div className="mm-dashboard-signal__meta">
+          <span>{activityModuleLabel(item.module)}</span>
+          <time>{fmt(item.created_at)}</time>
+        </div>
+        <p title={item.title}>{item.title}</p>
+      </div>
+    </li>
+  );
+}
+
 function ModuleCard({ card }: { card: ModuleCardData }) {
+  const needsAction = card.status !== "Healthy";
   return (
     <article className="mm-card mm-dash-card flex h-full flex-col gap-4">
       <div className="flex items-start justify-between gap-2">
         <h2 className="text-lg font-semibold text-[var(--mm-text1)]">
           {card.name}
         </h2>
-        <span
-          className={`rounded-full border px-2.5 py-1 text-xs font-medium ${healthTone(card.status)}`}
-        >
-          {card.status}
-        </span>
+        {needsAction ? (
+          <Link
+            to={card.actionTo}
+            data-testid={`dashboard-${card.key}-status-link`}
+            aria-label={`${card.name}: ${card.status}. Open the next action.`}
+            title={`Open ${card.name} action: ${card.actionLabel}`}
+            className={`rounded-full border px-2.5 py-1 text-xs font-medium transition hover:brightness-125 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--mm-accent-ring)] ${healthTone(card.status)}`}
+          >
+            {card.status}
+          </Link>
+        ) : (
+          <span
+            className={`rounded-full border px-2.5 py-1 text-xs font-medium ${healthTone(card.status)}`}
+          >
+            {card.status}
+          </span>
+        )}
       </div>
       <p className="text-sm leading-6 text-[var(--mm-text2)]">{card.summary}</p>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -288,12 +327,45 @@ function jobStatusLabel(status: string): string {
       return "Running";
     case "completed":
       return "Completed";
+    case "cancelled":
+      return "Cancelled";
     case "failed":
-    case "handler_ok_finalize_failed":
       return "Failed";
+    case "handler_ok_finalize_failed":
+      return "Needs recovery";
     default:
       return "Needs review";
   }
+}
+
+function readableLegacyJobMessage(
+  module: string,
+  title: string,
+  status: string,
+  raw: string | null,
+): string {
+  const value = raw?.trim() ?? "";
+  const lower = value.toLowerCase();
+  if (
+    lower.includes("database is locked") ||
+    lower.includes("database table is locked")
+  ) {
+    return `${module} could not save this result while another local operation was using the database.`;
+  }
+  if (lower.includes("not a supported refiner media")) {
+    return "This file is not a supported Refiner media file for this pass.";
+  }
+  if (
+    lower.includes("could not find this file") ||
+    lower.includes("no such file")
+  ) {
+    return "MediaMop could not find this file under the saved watched folder.";
+  }
+  const withoutTechnical = value.split(/\bTechnical detail:\s*/i)[0].trim();
+  if (withoutTechnical.length > 0) {
+    return compactMetricText(withoutTechnical, 260, 80);
+  }
+  return `${title} is ${jobStatusLabel(status).toLowerCase()}.`;
 }
 
 function isDashboardVisibleRefinerJob(jobKind: string): boolean {
@@ -374,15 +446,40 @@ function buildRefinerCard(args: {
     actionTo: "/refiner",
   };
   if (args.operational) {
-    card.status = statusFromOperationalState(args.operational.state);
-    card.summary = args.operational.summary;
-    card.actionTo = args.operational.action_path;
-    card.actionLabel =
-      card.status === "Setup required" ? "Configure Refiner" : "Review Refiner";
+    const operational = args.operational;
+    const failedFileCount = operational.failed_file_count ?? 0;
+    card.status = statusFromOperationalState(operational.state);
+    card.summary = operational.summary;
+    if (card.status === "Setup required") {
+      card.actionTo = operational.action_path;
+      card.actionLabel = "Configure Refiner";
+    } else if (card.status === "Review needed") {
+      card.actionTo = operational.action_path;
+      card.actionLabel = "Review Refiner";
+    } else if (card.status === "Active") {
+      card.actionTo = "/refiner?tab=files&status=processing";
+      card.actionLabel = "View live work";
+    } else {
+      card.actionTo = "/refiner";
+      card.actionLabel = "Open Refiner";
+    }
     card.facts = [
-      `Current queue: ${formatCount(args.operational.queued_job_count)} queued, ${formatCount(args.operational.active_job_count)} active`,
-      `Current failures: ${formatCount(args.operational.failed_job_count)} jobs · ${formatCount(args.operational.quarantined_file_count)} quarantined files`,
+      `Current queue: ${formatCount(operational.queued_job_count)} queued, ${formatCount(operational.active_job_count)} active`,
+      `Current failures: ${formatCount(operational.failed_job_count)} jobs · ${formatCount(failedFileCount)} ${failedFileCount === 1 ? "file" : "files"} needing action · ${formatCount(operational.quarantined_file_count)} held files`,
     ];
+    card.metrics = card.metrics.map((metric) =>
+      metric.label === "Failures"
+        ? {
+            label: "Needs action",
+            value: formatCount(
+              operational.failed_job_count +
+                failedFileCount +
+                operational.quarantined_file_count,
+            ),
+            detail: "Current unresolved work",
+          }
+        : metric,
+    );
   }
   return card;
 }
@@ -444,9 +541,19 @@ function buildPrunerCard(args: {
   if (args.operational) {
     card.status = statusFromOperationalState(args.operational.state);
     card.summary = args.operational.summary;
-    card.actionTo = args.operational.action_path;
-    card.actionLabel =
-      card.status === "Setup required" ? "Configure Pruner" : "Review Pruner";
+    if (card.status === "Setup required") {
+      card.actionTo = args.operational.action_path;
+      card.actionLabel = "Configure Pruner";
+    } else if (card.status === "Review needed") {
+      card.actionTo = args.operational.action_path;
+      card.actionLabel = "Review Pruner";
+    } else if (card.status === "Active") {
+      card.actionTo = "/pruner?tab=jobs";
+      card.actionLabel = "View live work";
+    } else {
+      card.actionTo = "/pruner";
+      card.actionLabel = "Open Pruner";
+    }
     card.facts = [
       `Current queue: ${formatCount(args.operational.queued_job_count)} queued, ${formatCount(args.operational.active_job_count)} active`,
       `Current failures: ${formatCount(args.operational.failed_job_count)}`,
@@ -467,6 +574,7 @@ export function DashboardPage() {
   const prunerStats = usePrunerOverviewStatsQuery();
   const prunerInstances = usePrunerInstancesQuery();
   const prunerJobs = usePrunerJobsInspectionQuery(12);
+  const suitePause = useSuitePauseQuery();
 
   if (dash.isPending) {
     return <PageLoading label="Loading dashboard" />;
@@ -495,7 +603,6 @@ export function DashboardPage() {
   const operationalByModule = new Map(
     operationalModules.map((module) => [module.module, module]),
   );
-  const lastActivityMetric = shortLastActivity(recentItems, fmt);
   const refinerCard = buildRefinerCard({
     processed: refinerStats.data?.files_processed ?? 0,
     failed: refinerStats.data?.files_failed ?? 0,
@@ -549,18 +656,31 @@ export function DashboardPage() {
   const workerIssues = (dash.data.system.worker_health ?? []).filter(
     (row) => row.status === "degraded",
   );
-  const attentionItems = [
+  const attentionItems: AttentionItem[] = [
     ...moduleCards
       .filter((m) => moduleNeedsAttention(m.status))
-      .map((m) => `${m.name}: ${m.summary}`),
-    ...workerIssues.map(
-      (row) =>
-        `${row.module[0].toUpperCase()}${row.module.slice(1)} workers: ${row.detail}`,
-    ),
+      .map((m) => ({
+        key: `module-${m.key}`,
+        title: m.name,
+        detail: m.summary,
+        actionTo: m.actionTo,
+        actionLabel: m.actionLabel,
+      })),
+    ...workerIssues.map((row) => ({
+      key: `worker-${row.module}`,
+      title: `${row.module[0].toUpperCase()}${row.module.slice(1)} workers`,
+      detail: row.detail,
+      actionTo:
+        row.module === "pruner" ? "/pruner?tab=jobs" : "/refiner?tab=jobs",
+      actionLabel: "Open jobs",
+    })),
   ];
   const activeItems = moduleCards
     .filter((m) => m.status === "Active")
     .map((m) => `${m.name}: ${m.summary}`);
+  const hasFailedJobHistory = operationalModules.some(
+    (module) => module.failed_job_count > 0,
+  );
   const overallStatus =
     !dash.data.system.healthy ||
     modulesNeedingAttentionTotal > 0 ||
@@ -611,9 +731,20 @@ export function DashboardPage() {
       module: "Refiner",
       status: jobStatusLabel(job.status),
       title: refinerJobTitle(job.job_kind),
-      detail: job.last_error
-        ? job.last_error
-        : `${refinerJobTitle(job.job_kind)} is ${jobStatusLabel(job.status).toLowerCase()}.`,
+      detail:
+        job.operator_message?.trim() ||
+        readableLegacyJobMessage(
+          "Refiner",
+          refinerJobTitle(job.job_kind),
+          job.status,
+          job.last_error,
+        ),
+      nextAction:
+        job.next_action?.trim() ||
+        "Open Refiner Jobs for the explanation and the next action.",
+      technicalDetail: job.technical_detail ?? undefined,
+      actionTo: "/refiner?tab=jobs",
+      actionLabel: "Open Refiner jobs",
       updatedAt: job.updated_at,
     })) ?? []),
     ...(prunerJobs.data?.jobs.slice(0, 4).map((job) => ({
@@ -621,23 +752,83 @@ export function DashboardPage() {
       module: "Pruner",
       status: jobStatusLabel(job.status),
       title: prunerJobTitle(job.job_kind),
-      detail: job.last_error
-        ? job.last_error
-        : `${prunerJobTitle(job.job_kind)} is ${jobStatusLabel(job.status).toLowerCase()}.`,
+      detail:
+        job.operator_message?.trim() ||
+        readableLegacyJobMessage(
+          "Pruner",
+          prunerJobTitle(job.job_kind),
+          job.status,
+          job.last_error,
+        ),
+      nextAction:
+        job.next_action?.trim() ||
+        "Open Pruner Jobs for the explanation and the next action.",
+      technicalDetail: job.technical_detail ?? undefined,
+      actionTo: "/pruner?tab=jobs",
+      actionLabel: "Open Pruner jobs",
       updatedAt: job.updated_at,
     })) ?? []),
   ]
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .slice(0, 10);
+  const liveProgressItems = recentItems
+    .filter(
+      (item) =>
+        item.event_type === REFINER_FILE_PROCESSING_PROGRESS_EVENT &&
+        Boolean(item.detail),
+    )
+    .slice(0, 4);
+  const activeGlobalJobs = globalJobs
+    .filter((job) => job.status === "Running" || job.status === "Queued")
+    .slice(0, 4);
+  const recentSignals = recentItems
+    .filter(
+      (item) => item.event_type !== REFINER_FILE_PROCESSING_PROGRESS_EVENT,
+    )
+    .slice(0, 5);
+  const activeJobCount = operationalModules.reduce(
+    (total, module) => total + module.active_job_count,
+    0,
+  );
+  const queuedJobCount = operationalModules.reduce(
+    (total, module) => total + module.queued_job_count,
+    0,
+  );
+  const processingPaused = suitePause.data?.paused === true;
+  const queuedMetricLabel = processingPaused
+    ? "Jobs held by pause"
+    : "Background jobs queued";
+  const queuedMetricDetail =
+    queuedJobCount === 0
+      ? "No background work is waiting"
+      : processingPaused
+        ? "Includes maintenance and media work; Resume releases them"
+        : "Includes maintenance and media work";
+  const liveNow = activeJobCount > 0 || liveProgressItems.length > 0;
+  const eventsLast24h = dash.data.activity_summary.events_last_24h ?? 0;
 
   return (
     <div className="mm-page" data-testid="dashboard-page">
-      <header className="mm-page__intro">
-        <h1 className="mm-page__title">Dashboard</h1>
-        <p className="mm-page__lead">
-          See what needs attention across MediaMop and what the modules are
-          doing right now.
-        </p>
+      <header className="mm-page__intro mm-dashboard-heading">
+        <div>
+          <p className="mm-page__eyebrow">Operations</p>
+          <h1 className="mm-page__title">Dashboard</h1>
+          <p className="mm-page__lead">
+            Watch files move through MediaMop now. Activity keeps the durable
+            history after the work is finished.
+          </p>
+        </div>
+        <div
+          className={`mm-dashboard-live-chip ${liveNow ? "mm-dashboard-live-chip--active" : ""}`}
+          role="status"
+          aria-live="polite"
+        >
+          <span className="mm-dashboard-live-chip__pulse" aria-hidden="true" />
+          <span>
+            <strong>{liveNow ? "Processing live" : "Live connection"}</strong>
+            <small>Updates automatically</small>
+          </span>
+        </div>
       </header>
 
       {dash.data.incident_count > 0 ? (
@@ -646,53 +837,193 @@ export function DashboardPage() {
           data-testid="dashboard-incident-banner"
           role="status"
         >
-          <div>
+          <div className="min-w-0">
             <p className="mm-dashboard-incident__eyebrow">Operator attention</p>
             <p className="mm-dashboard-incident__message">
-              {formatCount(dash.data.incident_count)} current incident
-              {dash.data.incident_count === 1 ? "" : "s"} need review.
-              Historical success does not hide an active failure.
+              {formatCount(dash.data.incident_count)} issue
+              {dash.data.incident_count === 1 ? " needs" : "s need"} action.
+              Open the linked module to see the exact reason and next step.
+            </p>
+            <p className="mm-dashboard-incident__hint">
+              {hasFailedJobHistory
+                ? "Resolve the linked action first. Finished job history can be cleared from Settings → General after review."
+                : "Open the linked module to resolve the current item; clearing finished history will not hide unresolved work."}
             </p>
           </div>
-          <Link
-            to={
-              moduleCards.find((card) => moduleNeedsAttention(card.status))
-                ?.actionTo ?? "/activity"
-            }
-            className={mmActionButtonClass({ variant: "secondary" })}
-          >
-            Review now
-          </Link>
+          <div className="flex shrink-0 flex-wrap justify-end gap-2">
+            <Link
+              to={attentionItems[0]?.actionTo ?? "/activity"}
+              className={mmActionButtonClass({ variant: "secondary" })}
+            >
+              {attentionItems[0]?.actionLabel ?? "Open review"}
+            </Link>
+            {hasFailedJobHistory ? (
+              <Link
+                to="/settings?tab=general#history-reset"
+                className={mmActionButtonClass({ variant: "tertiary" })}
+                title="Clear completed and failed job history after reviewing it"
+              >
+                Clear finished history
+              </Link>
+            ) : null}
+          </div>
         </section>
       ) : null}
 
       <section
-        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+        className="mm-dashboard-status-strip"
         data-testid="dashboard-status-strip"
       >
         <MetricCard
-          label="Overall status"
+          label="Processing now"
+          value={formatCount(activeJobCount)}
+          detail={liveNow ? "Work is moving" : "Waiting for eligible files"}
+        />
+        <MetricCard
+          label={queuedMetricLabel}
+          value={formatCount(queuedJobCount)}
+          detail={queuedMetricDetail}
+        />
+        <MetricCard
+          label="Activity · 24h"
+          value={formatCount(eventsLast24h)}
+          detail="Live operational events"
+        />
+        <MetricCard
+          label="System state"
           value={overallStatus}
           detail={overallStatusDetail}
         />
-        <MetricCard
-          label="Modules needing attention"
-          value={
-            modulesNeedingAttentionTotal === 0
-              ? "None detected"
-              : String(modulesNeedingAttentionTotal)
-          }
-        />
-        <MetricCard
-          label="Active modules"
-          value={activeModuleCount === 0 ? "None" : String(activeModuleCount)}
-        />
-        <MetricCard
-          label="Last activity"
-          value={lastActivityMetric.value}
-          detail={lastActivityMetric.detail}
-          valueTitle={lastActivityMetric.valueTitle}
-        />
+      </section>
+
+      <section className="mm-dashboard-live-grid">
+        <article
+          className={`mm-dashboard-live-stage ${liveNow ? "mm-dashboard-live-stage--active" : ""}`}
+          data-testid="dashboard-active-work"
+          aria-live="polite"
+        >
+          <div className="mm-dashboard-panel-heading">
+            <div>
+              <p className="mm-dashboard-panel-heading__eyebrow">
+                Live operations
+              </p>
+              <h2>{liveNow ? "Work in motion" : "Ready for the next file"}</h2>
+              <p>
+                {liveNow
+                  ? `${formatCount(activeJobCount)} active and ${formatCount(queuedJobCount)} waiting across MediaMop.`
+                  : processingPaused && queuedJobCount > 0
+                    ? `${formatCount(queuedJobCount)} background job${queuedJobCount === 1 ? " is" : "s are"} safely held by the pause. This can include cleanup and other maintenance, not just media files.`
+                    : "The workers are connected and will appear here as soon as processing starts."}
+              </p>
+            </div>
+            <Link to="/refiner?tab=files&status=processing">
+              Open workbench
+            </Link>
+          </div>
+
+          <div className="mm-dashboard-live-stage__body">
+            {liveProgressItems.length > 0 ? (
+              liveProgressItems.map((item) => (
+                <div key={item.id} className="mm-dashboard-progress-card">
+                  <RefinerFileProcessingProgressDetail
+                    detail={item.detail ?? ""}
+                  />
+                </div>
+              ))
+            ) : activeGlobalJobs.length > 0 ? (
+              activeGlobalJobs.map((job) => (
+                <div key={job.key} className="mm-dashboard-generic-job">
+                  <span
+                    className="mm-dashboard-generic-job__pulse"
+                    aria-hidden="true"
+                  />
+                  <div>
+                    <p>{job.detail}</p>
+                    <small>{job.nextAction}</small>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="mm-dashboard-idle-state">
+                <span
+                  className="mm-dashboard-idle-state__radar"
+                  aria-hidden="true"
+                />
+                <div>
+                  <strong>No active media work</strong>
+                  <p>
+                    New Refiner and Pruner work will surface here automatically.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="mm-dashboard-flow" aria-label="Current work flow">
+            <div className={activeJobCount > 0 ? "is-active" : ""}>
+              <span>Processing</span>
+              <strong>{formatCount(activeJobCount)}</strong>
+            </div>
+            <i aria-hidden="true" />
+            <div className={queuedJobCount > 0 ? "is-active" : ""}>
+              <span>{processingPaused ? "Held by pause" : "Queued jobs"}</span>
+              <strong>{formatCount(queuedJobCount)}</strong>
+            </div>
+            <i aria-hidden="true" />
+            <div>
+              <span>Updates today</span>
+              <strong>{formatCount(eventsLast24h)}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article
+          className="mm-dashboard-action-queue"
+          data-testid="dashboard-needs-attention"
+        >
+          <div className="mm-dashboard-panel-heading">
+            <div>
+              <p className="mm-dashboard-panel-heading__eyebrow">
+                Action queue
+              </p>
+              <h2>
+                {attentionItems.length > 0
+                  ? "Your next decisions"
+                  : "All clear"}
+              </h2>
+              <p>
+                {attentionItems.length > 0
+                  ? "Only items that need a person appear here."
+                  : "MediaMop does not need anything from you right now."}
+              </p>
+            </div>
+            <span className="mm-dashboard-action-count">
+              {formatCount(attentionItems.length)}
+            </span>
+          </div>
+          <div className="mm-dashboard-action-queue__body">
+            {attentionItems.length > 0 ? (
+              attentionItems.map((item) => (
+                <Link
+                  key={item.key}
+                  to={item.actionTo}
+                  className="mm-dashboard-action-item"
+                >
+                  <span>
+                    <strong>{item.title}</strong>
+                    <small>{item.detail}</small>
+                  </span>
+                  <b>{item.actionLabel} →</b>
+                </Link>
+              ))
+            ) : (
+              <div className="mm-dashboard-all-clear">
+                <span aria-hidden="true">✓</span>
+                <p>Nothing needs review or configuration.</p>
+              </div>
+            )}
+          </div>
+        </article>
       </section>
 
       <section
@@ -708,33 +1039,30 @@ export function DashboardPage() {
         ))}
       </section>
 
-      <section className="mt-6 grid gap-4 xl:grid-cols-2">
-        <article
-          className="mm-card mm-dash-card"
-          data-testid="dashboard-needs-attention"
-        >
-          <h2 className="mm-card__title">Needs attention</h2>
-          <div className="mm-card__body space-y-2 text-sm text-[var(--mm-text2)]">
-            {attentionItems.length > 0 ? (
-              attentionItems.map((line) => <p key={line}>{line}</p>)
-            ) : (
-              <p>Nothing needs attention right now.</p>
-            )}
+      <section className="mm-dashboard-signal-stream">
+        <div className="mm-dashboard-panel-heading">
+          <div>
+            <p className="mm-dashboard-panel-heading__eyebrow">
+              Recent activity
+            </p>
+            <h2>What just changed</h2>
+            <p>
+              A concise live pulse. Use Activity for the searchable audit trail.
+            </p>
           </div>
-        </article>
-        <article
-          className="mm-card mm-dash-card"
-          data-testid="dashboard-active-work"
-        >
-          <h2 className="mm-card__title">Active work</h2>
-          <div className="mm-card__body space-y-2 text-sm text-[var(--mm-text2)]">
-            {activeItems.length > 0 ? (
-              activeItems.map((line) => <p key={line}>{line}</p>)
-            ) : (
-              <p>No modules are actively processing right now.</p>
-            )}
-          </div>
-        </article>
+          <Link to="/activity">Open activity history</Link>
+        </div>
+        {recentSignals.length > 0 ? (
+          <ol>
+            {recentSignals.map((item) => (
+              <LiveSignal key={item.id} item={item} fmt={fmt} />
+            ))}
+          </ol>
+        ) : (
+          <p className="mm-dashboard-signal-stream__empty">
+            The next completed action or system event will appear here.
+          </p>
+        )}
       </section>
 
       <section
@@ -743,10 +1071,25 @@ export function DashboardPage() {
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="mm-card__title">Global jobs</h2>
+            <h2 className="mm-card__title">Background work</h2>
             <p className="mt-1 text-sm text-[var(--mm-text2)]">
-              Recent background work across Refiner and Pruner.
+              The latest queued and completed work across Refiner and Pruner.
+              Anything requiring you includes a plain-language next step.
             </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              to="/refiner?tab=jobs"
+              className={mmActionButtonClass({ variant: "tertiary" })}
+            >
+              Refiner jobs
+            </Link>
+            <Link
+              to="/pruner?tab=jobs"
+              className={mmActionButtonClass({ variant: "tertiary" })}
+            >
+              Pruner jobs
+            </Link>
           </div>
         </div>
         <div className="mm-card__body space-y-3">
@@ -776,6 +1119,28 @@ export function DashboardPage() {
                     <p className="break-words text-sm text-[var(--mm-text2)] [overflow-wrap:anywhere]">
                       {job.detail}
                     </p>
+                    <p className="mt-2 text-xs text-[var(--mm-text3)]">
+                      <span className="font-semibold text-[var(--mm-text2)]">
+                        Next step:
+                      </span>{" "}
+                      {job.nextAction}
+                    </p>
+                    {job.technicalDetail ? (
+                      <details className="mt-2 text-xs text-[var(--mm-text3)]">
+                        <summary className="cursor-pointer select-none">
+                          Technical detail
+                        </summary>
+                        <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap break-words rounded border border-[var(--mm-border)] bg-black/10 p-2 [overflow-wrap:anywhere]">
+                          {job.technicalDetail}
+                        </pre>
+                      </details>
+                    ) : null}
+                    <Link
+                      to={job.actionTo}
+                      className="mt-2 inline-flex text-xs font-semibold text-[var(--mm-accent-bright)] underline underline-offset-2"
+                    >
+                      {job.actionLabel}
+                    </Link>
                   </div>
                   <time className="text-sm text-[var(--mm-text3)]">
                     {fmt(job.updatedAt)}

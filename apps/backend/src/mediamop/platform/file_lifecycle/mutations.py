@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import shutil
 import tempfile
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 
@@ -13,7 +14,13 @@ class FileLifecycleError(RuntimeError):
     """Raised when a guarded filesystem mutation cannot complete safely."""
 
 
-def safe_copy_to_final(*, source: Path, final: Path) -> None:
+def safe_copy_to_final(
+    *,
+    source: Path,
+    final: Path,
+    validate_staged: Callable[[Path], None] | None = None,
+    progress_callback: Callable[[int, int], None] | None = None,
+) -> None:
     """Copy ``source`` to ``final`` without exposing a partial destination file."""
 
     src = source.resolve()
@@ -23,15 +30,48 @@ def safe_copy_to_final(*, source: Path, final: Path) -> None:
     os.close(fd)
     tmp = Path(tmp_name)
     try:
-        shutil.copy2(src, tmp)
-        os.replace(tmp, dst)
+        if progress_callback is None:
+            shutil.copy2(src, tmp)
+        else:
+            total_bytes = int(src.stat().st_size)
+            copied_bytes = 0
+            with src.open("rb") as source_handle, tmp.open("wb") as target_handle:
+                while chunk := source_handle.read(8 * 1024 * 1024):
+                    target_handle.write(chunk)
+                    copied_bytes += len(chunk)
+                    # Progress is optional observability. A dashboard update must
+                    # never invalidate a safe copy that is otherwise succeeding.
+                    with contextlib.suppress(Exception):
+                        progress_callback(copied_bytes, total_bytes)
+            shutil.copystat(src, tmp)
     except Exception as exc:
         _best_effort_unlink(tmp)
         raise FileLifecycleError(f"Could not safely copy {src} to {dst}: {exc}") from exc
+    if validate_staged is not None:
+        try:
+            validate_staged(tmp)
+        except Exception:
+            _best_effort_unlink(tmp)
+            raise
+    try:
+        os.replace(tmp, dst)
+    except Exception as exc:
+        _best_effort_unlink(tmp)
+        raise FileLifecycleError(f"Could not safely publish the validated copy at {dst}: {exc}") from exc
 
 
-def try_hardlink_to_final(*, source: Path, final: Path) -> bool:
-    """Atomically expose ``final`` as a hardlink to ``source`` when the filesystem supports it."""
+def try_hardlink_to_final(
+    *,
+    source: Path,
+    final: Path,
+    validate_staged: Callable[[Path], None] | None = None,
+) -> bool:
+    """Validate and atomically expose a same-filesystem hardlink when supported.
+
+    ``False`` means hardlink creation was rejected and the caller should use its
+    copy fallback. Validation and publication errors remain failures: silently
+    falling back after either one could hide an invalid output or overwrite decision.
+    """
 
     src = source.resolve()
     dst = final
@@ -42,11 +82,17 @@ def try_hardlink_to_final(*, source: Path, final: Path) -> bool:
     _best_effort_unlink(tmp)
     try:
         os.link(src, tmp)
-        os.replace(tmp, dst)
-        return True
     except OSError:
         _best_effort_unlink(tmp)
         return False
+    try:
+        if validate_staged is not None:
+            validate_staged(tmp)
+        os.replace(tmp, dst)
+    except Exception:
+        _best_effort_unlink(tmp)
+        raise
+    return True
 
 
 def safe_finalize_file(*, staged: Path, final: Path) -> None:

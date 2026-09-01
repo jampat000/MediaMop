@@ -1505,6 +1505,12 @@
             "title": "Configured",
             "type": "boolean"
           },
+          "failed_file_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Failed File Count",
+            "type": "integer"
+          },
           "failed_job_count": {
             "default": 0,
             "minimum": 0.0,
@@ -1892,6 +1898,18 @@
             ],
             "title": "Last Error"
           },
+          "next_action": {
+            "default": "",
+            "description": "The next action an operator can take, or why none is needed.",
+            "title": "Next Action",
+            "type": "string"
+          },
+          "operator_message": {
+            "default": "",
+            "description": "Short plain-language explanation for the operator.",
+            "title": "Operator Message",
+            "type": "string"
+          },
           "payload_json": {
             "anyOf": [
               {
@@ -1906,6 +1924,18 @@
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "technical_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Technical diagnostic detail, kept secondary to the operator message.",
+            "title": "Technical Detail"
           },
           "updated_at": {
             "format": "date-time",
@@ -3341,6 +3371,12 @@
             "description": "The media manager connection holding this file, when the status is blocked_upstream.",
             "title": "Blocked By Connection"
           },
+          "created_at": {
+            "description": "When MediaMop first recorded this file.",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
           "failure_attempts": {
             "default": 0,
             "title": "Failure Attempts",
@@ -3489,6 +3525,7 @@
               "processing",
               "processed",
               "processing_failed",
+              "skipped",
               "disabled",
               "on_hold",
               "out_of_schedule",
@@ -3501,6 +3538,12 @@
             "description": "Why the file is in this state, written for the person reading it.",
             "title": "Status Reason",
             "type": "string"
+          },
+          "updated_at": {
+            "description": "When this file row was last changed.",
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
           }
         },
         "required": [
@@ -3510,7 +3553,9 @@
           "relative_path",
           "status",
           "status_reason",
-          "size_bytes"
+          "size_bytes",
+          "created_at",
+          "updated_at"
         ],
         "title": "RefinerFileOut",
         "type": "object"
@@ -3524,6 +3569,19 @@
             "title": "Csrf Token",
             "type": "string"
           },
+          "library_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The Refiner library owning the file. Omit only for legacy scope-based jobs.",
+            "title": "Library Id"
+          },
           "media_scope": {
             "default": "movie",
             "description": "Which saved watched/output tree resolves ``relative_media_path``.",
@@ -3533,6 +3591,12 @@
             ],
             "title": "Media Scope",
             "type": "string"
+          },
+          "pass_through_unchanged": {
+            "default": false,
+            "description": "Operator override: do not apply audio, subtitle, or metadata rules. Validate and place the unchanged source in the library output folder, then use the normal post-success source cleanup.",
+            "title": "Pass Through Unchanged",
+            "type": "boolean"
           },
           "relative_media_path": {
             "description": "Path relative to the saved Refiner watched folder (no .. segments). The watched folder is not required when saving path settings alone, but it must be configured before enqueue.",
@@ -3609,6 +3673,7 @@
                   "processing",
                   "processed",
                   "processing_failed",
+                  "skipped",
                   "disabled",
                   "on_hold",
                   "out_of_schedule",
@@ -3849,6 +3914,18 @@
             "title": "Max Attempts",
             "type": "integer"
           },
+          "next_action": {
+            "default": "",
+            "description": "The next action an operator can take, or why none is needed.",
+            "title": "Next Action",
+            "type": "string"
+          },
+          "operator_message": {
+            "default": "",
+            "description": "Short plain-language explanation for the operator.",
+            "title": "Operator Message",
+            "type": "string"
+          },
           "payload_json": {
             "anyOf": [
               {
@@ -3864,6 +3941,18 @@
             "description": "Persisted status value for this row.",
             "title": "Status",
             "type": "string"
+          },
+          "technical_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Technical diagnostic detail, kept secondary to the operator message.",
+            "title": "Technical Detail"
           },
           "updated_at": {
             "format": "date-time",
@@ -3885,6 +3974,46 @@
           "updated_at"
         ],
         "title": "RefinerJobInspectionRow",
+        "type": "object"
+      },
+      "RefinerJobRecoverFinalizeFailedIn": {
+        "additionalProperties": false,
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csrf_token"
+        ],
+        "title": "RefinerJobRecoverFinalizeFailedIn",
+        "type": "object"
+      },
+      "RefinerJobRecoverFinalizeFailedOut": {
+        "additionalProperties": false,
+        "properties": {
+          "job_id": {
+            "title": "Job Id",
+            "type": "integer"
+          },
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "status": {
+            "description": "Always ``completed`` on success.",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "title": "RefinerJobRecoverFinalizeFailedOut",
         "type": "object"
       },
       "RefinerJobsInspectionOut": {
@@ -3914,6 +4043,32 @@
       "RefinerLibraryCreateIn": {
         "additionalProperties": false,
         "properties": {
+          "created_after": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Only admit files whose filesystem creation time is on or after this instant.",
+            "title": "Created After"
+          },
+          "created_before": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Only admit files whose filesystem creation time is before this instant.",
+            "title": "Created Before"
+          },
           "csrf_token": {
             "minLength": 1,
             "title": "Csrf Token",
@@ -4069,6 +4224,32 @@
             "title": "Min File Size Mb",
             "type": "integer"
           },
+          "modified_after": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Only admit files whose last-modified time is on or after this instant.",
+            "title": "Modified After"
+          },
+          "modified_before": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Only admit files whose last-modified time is before this instant.",
+            "title": "Modified Before"
+          },
           "name": {
             "maxLength": 120,
             "minLength": 1,
@@ -4106,6 +4287,16 @@
             "minimum": -100.0,
             "title": "Priority",
             "type": "integer"
+          },
+          "rejected_file_action": {
+            "default": "leave",
+            "description": "What to do with a settled file rejected by size/path rules or because it contains no video. delete_file removes only that file and then empty parent folders; it never removes a folder containing other files.",
+            "enum": [
+              "leave",
+              "delete_file"
+            ],
+            "title": "Rejected File Action",
+            "type": "string"
           },
           "retry_backoff_seconds": {
             "default": 300,
@@ -4265,6 +4456,30 @@
             "title": "Active Job Count",
             "type": "integer"
           },
+          "created_after": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created After"
+          },
+          "created_before": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created Before"
+          },
           "discovered_from_connection_id": {
             "anyOf": [
               {
@@ -4398,6 +4613,30 @@
             "title": "Min File Size Mb",
             "type": "integer"
           },
+          "modified_after": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modified After"
+          },
+          "modified_before": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modified Before"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -4417,6 +4656,10 @@
           "priority": {
             "title": "Priority",
             "type": "integer"
+          },
+          "rejected_file_action": {
+            "title": "Rejected File Action",
+            "type": "string"
           },
           "retry_backoff_seconds": {
             "title": "Retry Backoff Seconds",
@@ -4517,7 +4760,12 @@
           "exclude_patterns_csv",
           "min_file_size_mb",
           "max_file_size_mb",
+          "rejected_file_action",
           "min_file_age_seconds",
+          "created_after",
+          "created_before",
+          "modified_after",
+          "modified_before",
           "exclude_hidden",
           "top_level_only",
           "scan_interval_seconds",
@@ -4577,6 +4825,32 @@
         "additionalProperties": false,
         "description": "Same shape as create. A library is edited whole, so a partial save cannot half-apply.",
         "properties": {
+          "created_after": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Only admit files whose filesystem creation time is on or after this instant.",
+            "title": "Created After"
+          },
+          "created_before": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Only admit files whose filesystem creation time is before this instant.",
+            "title": "Created Before"
+          },
           "csrf_token": {
             "minLength": 1,
             "title": "Csrf Token",
@@ -4732,6 +5006,32 @@
             "title": "Min File Size Mb",
             "type": "integer"
           },
+          "modified_after": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Only admit files whose last-modified time is on or after this instant.",
+            "title": "Modified After"
+          },
+          "modified_before": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Only admit files whose last-modified time is before this instant.",
+            "title": "Modified Before"
+          },
           "name": {
             "maxLength": 120,
             "minLength": 1,
@@ -4769,6 +5069,16 @@
             "minimum": -100.0,
             "title": "Priority",
             "type": "integer"
+          },
+          "rejected_file_action": {
+            "default": "leave",
+            "description": "What to do with a settled file rejected by size/path rules or because it contains no video. delete_file removes only that file and then empty parent folders; it never removes a folder containing other files.",
+            "enum": [
+              "leave",
+              "delete_file"
+            ],
+            "title": "Rejected File Action",
+            "type": "string"
           },
           "retry_backoff_seconds": {
             "default": 300,
@@ -6428,6 +6738,19 @@
             "title": "Enqueue Remux Jobs",
             "type": "boolean"
           },
+          "library_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Limit the recheck to this saved Refiner library; omit for the scope default.",
+            "title": "Library Id"
+          },
           "media_scope": {
             "default": "movie",
             "description": "Which saved watched/output tree this scan uses (Movies vs TV path settings).",
@@ -7763,7 +8086,7 @@
   },
   "info": {
     "title": "MediaMop API",
-    "version": "2.6.0"
+    "version": "2.6.1"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -9795,6 +10118,7 @@
                     "processing",
                     "processed",
                     "processing_failed",
+                    "skipped",
                     "disabled",
                     "on_hold",
                     "out_of_schedule",
@@ -10459,6 +10783,60 @@
           }
         },
         "summary": "Post Refiner Job Cancel Pending",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/jobs/{job_id}/recover-finalize-failed": {
+      "post": {
+        "description": "Recover a completed media pass whose durable job finalization was interrupted.",
+        "operationId": "post_refiner_job_recover_finalize_failed_api_v1_refiner_jobs__job_id__recover_finalize_failed_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefinerJobRecoverFinalizeFailedIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefinerJobRecoverFinalizeFailedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Refiner Job Recover Finalize Failed",
         "tags": [
           "refiner",
           "refiner"

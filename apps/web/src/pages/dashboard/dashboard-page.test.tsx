@@ -11,6 +11,7 @@ const useRefinerJobsInspectionQuery = vi.fn();
 const usePrunerOverviewStatsQuery = vi.fn();
 const usePrunerInstancesQuery = vi.fn();
 const usePrunerJobsInspectionQuery = vi.fn();
+const useSuitePauseQuery = vi.fn();
 
 vi.mock("../../lib/activity/queries", () => ({
   activityRecentKey: ["activity", "recent"],
@@ -48,6 +49,10 @@ vi.mock("../../lib/pruner/queries", () => ({
     usePrunerInstancesQuery(...args),
   usePrunerJobsInspectionQuery: (...args: unknown[]) =>
     usePrunerJobsInspectionQuery(...args),
+}));
+
+vi.mock("../../lib/suite/pause-queries", () => ({
+  useSuitePauseQuery: (...args: unknown[]) => useSuitePauseQuery(...args),
 }));
 
 vi.mock("../../lib/ui/mm-format-date", () => ({
@@ -112,6 +117,47 @@ describe("DashboardPage", () => {
     });
     usePrunerInstancesQuery.mockReturnValue({ data: [] });
     usePrunerJobsInspectionQuery.mockReturnValue({ data: { jobs: [] } });
+    useSuitePauseQuery.mockReturnValue({ data: { paused: false } });
+  });
+
+  it("explains that paused queue counts include background maintenance", () => {
+    useDashboardStatusQuery.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: {
+        scope_note: "Read-only overview.",
+        system: { api_version: "1.0.0", environment: "test", healthy: true },
+        modules: [
+          {
+            module: "refiner",
+            status: "healthy",
+            summary: "Ready.",
+            queued_job_count: 2,
+            active_job_count: 0,
+            failed_job_count: 0,
+            action_path: "/refiner?tab=jobs",
+          },
+        ],
+        activity_summary: { events_last_24h: 0, latest: null },
+      },
+    });
+    useSuitePauseQuery.mockReturnValue({ data: { paused: true } });
+
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Jobs held by pause")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Includes maintenance and media work; Resume releases them",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/2 background jobs are safely held by the pause/),
+    ).toBeInTheDocument();
   });
 
   it("renders restored dashboard sections", () => {
@@ -128,8 +174,8 @@ describe("DashboardPage", () => {
     expect(
       screen.queryByTestId("dashboard-runtime-health"),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("Refiner")).toBeInTheDocument();
-    expect(screen.getByText("Pruner")).toBeInTheDocument();
+    expect(screen.getAllByText("Refiner").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Pruner").length).toBeGreaterThan(0);
     expect(
       screen.getByText("Needs setup: Refiner, Pruner."),
     ).toBeInTheDocument();
@@ -222,6 +268,50 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Process file")).toBeInTheDocument();
   });
 
+  it("shows cancelled jobs as terminal history rather than review work", () => {
+    useRefinerJobsInspectionQuery.mockReturnValue({
+      data: {
+        jobs: [
+          {
+            id: 24,
+            dedupe_key: "cancelled-file",
+            job_kind: "refiner.file.remux_pass.v1",
+            status: "cancelled",
+            attempt_count: 0,
+            max_attempts: 3,
+            lease_owner: null,
+            lease_expires_at: null,
+            last_error:
+              "Cancelled by operator before a worker claimed this job.",
+            payload_json: '{"relative_media_path":"Movie/Old.mkv"}',
+            operator_message:
+              "This Refiner job was cancelled before a worker started it for Old.mkv.",
+            next_action:
+              "No action is needed. If the file still exists and should be processed, start it again from Files.",
+            technical_detail:
+              "Cancelled by operator before a worker claimed this job.",
+            created_at: "2026-04-25T10:01:00Z",
+            updated_at: "2026-04-25T10:01:00Z",
+          },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Cancelled")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /This Refiner job was cancelled before a worker started it/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Needs review")).not.toBeInTheDocument();
+  });
+
   it("shows worker health problems as attention items", () => {
     useDashboardStatusQuery.mockReturnValue({
       isPending: false,
@@ -256,9 +346,106 @@ describe("DashboardPage", () => {
     );
 
     expect(screen.getAllByText("Review needed").length).toBeGreaterThan(0);
+    expect(screen.getByText("Refiner workers")).toBeInTheDocument();
+    expect(screen.getByText(/Refiner expected 1 worker/)).toBeInTheDocument();
+  });
+
+  it("makes attention states navigable and exposes the history clear path", () => {
+    useDashboardStatusQuery.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: {
+        scope_note: "Read-only overview.",
+        system: { api_version: "1.0.0", environment: "test", healthy: true },
+        activity_summary: { events_last_24h: 0, latest: null },
+        incident_count: 1,
+        modules: [
+          {
+            module: "refiner",
+            state: "degraded",
+            configured: true,
+            active_job_count: 0,
+            queued_job_count: 0,
+            failed_job_count: 1,
+            failed_file_count: 0,
+            quarantined_file_count: 0,
+            summary: "1 Refiner job needs review.",
+            action_path: "/refiner?tab=jobs&status=failed",
+          },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("dashboard-refiner-status-link")).toHaveAttribute(
+      "href",
+      "/refiner?tab=jobs&status=failed",
+    );
     expect(
-      screen.getByText(/Refiner workers: Refiner expected 1 worker/),
+      screen.getByRole("link", { name: "Clear finished history" }),
+    ).toHaveAttribute("href", "/settings?tab=general#history-reset");
+  });
+
+  it("surfaces unresolved Refiner files without offering an irrelevant history clear", () => {
+    useDashboardStatusQuery.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: {
+        scope_note: "Read-only overview.",
+        system: { api_version: "1.0.0", environment: "test", healthy: true },
+        activity_summary: { events_last_24h: 0, latest: null },
+        incident_count: 1,
+        modules: [
+          {
+            module: "refiner",
+            state: "degraded",
+            configured: true,
+            active_job_count: 0,
+            queued_job_count: 0,
+            failed_job_count: 0,
+            failed_file_count: 1,
+            quarantined_file_count: 0,
+            summary:
+              "1 file needs action. Open Refiner Files for the exact reason and recovery action.",
+            action_path: "/refiner?tab=files&status=processing_failed",
+          },
+        ],
+      },
+    });
+    useRefinerPathSettingsQuery.mockReturnValue({
+      data: {
+        refiner_watched_folder: "C:/media",
+        refiner_watched_folder_exists: true,
+        refiner_tv_watched_folder: null,
+        refiner_tv_watched_folder_exists: false,
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("dashboard-refiner-status-link")).toHaveAttribute(
+      "href",
+      "/refiner?tab=files&status=processing_failed",
+    );
+    expect(screen.getAllByText("Review needed").length).toBeGreaterThan(0);
+    expect(screen.getByText("Current unresolved work")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /clearing finished history will not hide unresolved work/i,
+      ),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Clear finished history" }),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps long last-activity file names compact without losing the full title", () => {
@@ -287,9 +474,10 @@ describe("DashboardPage", () => {
       </MemoryRouter>,
     );
 
-    const compactValue = screen.getByTitle(longTitle);
-    expect(compactValue).toHaveTextContent("...");
-    expect(compactValue.textContent).not.toBe(longTitle);
-    expect(screen.getByText("2026-05-07T15:45:00Z")).toBeInTheDocument();
+    const signalValue = screen.getAllByTitle(longTitle)[0];
+    expect(signalValue).toHaveTextContent(longTitle);
+    expect(screen.getAllByText("2026-05-07T15:45:00Z").length).toBeGreaterThan(
+      0,
+    );
   });
 });

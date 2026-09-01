@@ -88,4 +88,5 @@ def test_release_workflow_uses_velopack_and_normalized_semver() -> None:
     assert "build-velopack.ps1" in text
     assert "mediamop-windows-velopack" in text
     assert "dotnet tool install -g vpk" in text
-    assert "MediaMop-*-win-Setup.exe" in text
+    assert text.count('Get-Item -LiteralPath "dist/windows/releases/MediaMop-win-Setup.exe" -ErrorAction Stop') == 2
+    assert "MediaMop-*-win-Setup.exe" not in text

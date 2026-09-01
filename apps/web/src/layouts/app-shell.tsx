@@ -3,10 +3,13 @@ import { useState } from "react";
 import { BrandHeaderLink } from "../components/brand/brand-header-link";
 import {
   NavIconActivity,
+  NavIconChevronLeft,
+  NavIconChevronRight,
   NavIconDashboard,
   NavIconRefiner,
   NavIconSettings,
   NavIconPruner,
+  NavIconSignOut,
 } from "../components/shell/nav-icons";
 import { PauseControl } from "../components/shell/pause-control";
 import { useLogoutMutation } from "../lib/auth/queries";
@@ -61,7 +64,13 @@ export function AppShell() {
           aria-expanded={!sidebarCollapsed}
           onClick={() => setSidebarCollapsed((value) => !value)}
         >
-          <span aria-hidden="true">{sidebarCollapsed ? "→" : "←"}</span>
+          <span className="mm-sidebar-collapse__icon" aria-hidden="true">
+            {sidebarCollapsed ? (
+              <NavIconChevronRight />
+            ) : (
+              <NavIconChevronLeft />
+            )}
+          </span>
           <span className="mm-sidebar-collapse__label">
             {sidebarCollapsed ? "Expand" : "Collapse"}
           </span>
@@ -72,6 +81,7 @@ export function AppShell() {
             to="/"
             end
             className={sidebarNavClass}
+            title="Dashboard"
             onClick={() => setSidebarOpen(false)}
           >
             <span className="mm-sidebar-link-icon" aria-hidden="true">
@@ -82,6 +92,7 @@ export function AppShell() {
           <NavLink
             to="/activity"
             className={sidebarNavClass}
+            title="Activity"
             onClick={() => setSidebarOpen(false)}
           >
             <span className="mm-sidebar-link-icon" aria-hidden="true">
@@ -94,6 +105,7 @@ export function AppShell() {
           <NavLink
             to="/refiner"
             className={sidebarNavClass}
+            title="Refiner"
             onClick={() => setSidebarOpen(false)}
           >
             <span className="mm-sidebar-link-icon" aria-hidden="true">
@@ -104,6 +116,7 @@ export function AppShell() {
           <NavLink
             to="/pruner"
             className={sidebarNavClass}
+            title="Pruner"
             onClick={() => setSidebarOpen(false)}
           >
             <span className="mm-sidebar-link-icon" aria-hidden="true">
@@ -116,6 +129,7 @@ export function AppShell() {
           <NavLink
             to="/settings"
             className={sidebarNavClass}
+            title="Settings"
             onClick={() => setSidebarOpen(false)}
           >
             <span className="mm-sidebar-link-icon" aria-hidden="true">
@@ -139,8 +153,14 @@ export function AppShell() {
               className="mm-sidebar-signout"
               disabled={logout.isPending}
               onClick={handleSignOut}
+              title={sidebarCollapsed ? "Sign out" : undefined}
             >
-              {logout.isPending ? "Signing out…" : "Sign out"}
+              <span className="mm-sidebar-signout__icon" aria-hidden="true">
+                <NavIconSignOut />
+              </span>
+              <span className="mm-sidebar-signout__label">
+                {logout.isPending ? "Signing out…" : "Sign out"}
+              </span>
             </button>
           </div>
         </div>

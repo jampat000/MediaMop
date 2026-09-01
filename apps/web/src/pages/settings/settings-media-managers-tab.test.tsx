@@ -152,6 +152,38 @@ describe("SettingsMediaManagersTab", () => {
     expect(status).toHaveTextContent("never");
   });
 
+  it("prevents remove or update while a connection test is running", async () => {
+    vi.spyOn(api, "fetchMediaManagerConnections").mockResolvedValue([
+      connection(),
+    ]);
+    let finishTest!: (value: api.MediaManagerConnectionTest) => void;
+    const pendingTest = new Promise<api.MediaManagerConnectionTest>(
+      (resolve) => {
+        finishTest = resolve;
+      },
+    );
+    vi.spyOn(api, "testMediaManagerConnection").mockReturnValue(pendingTest);
+
+    render(<SettingsMediaManagersTab />, { wrapper });
+    fireEvent.click(await screen.findByTestId("media-manager-test"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("media-manager-test")).toBeDisabled(),
+    );
+    expect(screen.getByTestId("media-manager-remove")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Disable" })).toBeDisabled();
+
+    finishTest({
+      connection_id: 1,
+      ok: false,
+      detail: "Could not reach Deluno.",
+      checked_at: "2026-09-01T07:00:00Z",
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId("media-manager-remove")).toBeEnabled(),
+    );
+  });
+
   it("keeps the address and secret folded away behind a disclosure", async () => {
     vi.spyOn(api, "fetchMediaManagerConnections").mockResolvedValue([
       connection(),

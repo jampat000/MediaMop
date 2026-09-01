@@ -26,6 +26,14 @@ from tests.manager_signal_helpers import reported, truth_reported
 from .test_refiner_tv_season_folder_cleanup import _sqlite_session
 
 
+@pytest.fixture(autouse=True)
+def _stub_media_validation(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These orchestration tests use byte fixtures; media validation has focused tests."""
+
+    monkeypatch.setattr(runmod, "validate_media_integrity", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(runmod, "validate_remux_output", lambda *_args, **_kwargs: None)
+
+
 def _fake_probe() -> dict:
     return {
         "streams": [
@@ -78,6 +86,144 @@ def test_run_fails_when_watched_root_missing(tmp_path: Path) -> None:
     assert "watched folder" in r["reason"].lower()
 
 
+def test_run_explains_when_the_selected_file_is_missing(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    media = tmp_path / "media"
+    media.mkdir()
+    out = tmp_path / "out"
+    out.mkdir()
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    rt = _runtime(media=media, home=home, out=out)
+
+    result = runmod.run_refiner_file_remux_pass(
+        settings=settings,
+        path_runtime=rt,
+        relative_media_path="Missing/film.mkv",
+    )
+
+    assert result["ok"] is False
+    assert "could not find this file" in result["reason"].lower()
+    assert "restore the file" in result["reason"].lower()
+
+
+def test_run_explains_when_the_selected_file_type_is_not_supported(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    media = tmp_path / "media"
+    media.mkdir()
+    unsupported = media / "notes.txt"
+    unsupported.write_text("not media", encoding="utf-8")
+    out = tmp_path / "out"
+    out.mkdir()
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    rt = _runtime(media=media, home=home, out=out)
+
+    result = runmod.run_refiner_file_remux_pass(
+        settings=settings,
+        path_runtime=rt,
+        relative_media_path="notes.txt",
+    )
+
+    assert result["ok"] is False
+    assert "does not process .txt files" in result["reason"]
+    assert "supported media file" in result["reason"]
+
+
+def test_run_rejects_audio_only_file_with_video_extension_before_writing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    media = tmp_path / "media"
+    media.mkdir()
+    source = media / "audio-disguised-as-video.mpg"
+    source.write_bytes(b"x" * 2000)
+    out = tmp_path / "out"
+    out.mkdir()
+    settings = replace(
+        MediaMopSettings.load(),
+        mediamop_home=str(home),
+        refiner_watched_folder_min_file_age_seconds=0,
+    )
+    runtime = _runtime(media=media, home=home, out=out)
+    monkeypatch.setattr(
+        runmod,
+        "ffprobe_json",
+        lambda *_args, **_kwargs: {
+            "streams": [
+                {
+                    "index": 0,
+                    "codec_type": "audio",
+                    "codec_name": "ac3",
+                    "channels": 2,
+                }
+            ]
+        },
+    )
+    monkeypatch.setattr(
+        runmod,
+        "remux_to_temp_file",
+        lambda **_kwargs: (_ for _ in ()).throw(AssertionError("ffmpeg must not start")),
+    )
+
+    result = runmod.run_refiner_file_remux_pass(
+        settings=settings,
+        path_runtime=runtime,
+        relative_media_path=source.name,
+    )
+
+    assert result["ok"] is False
+    assert result["outcome"] == REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION
+    assert "contain a video stream" in result["reason"]
+    assert result["rejection_kind"] == "no_video_stream"
+    assert result["refiner_watched_folder_resolved"] == str(media.resolve())
+    assert not (out / source.name).exists()
+
+
+def test_run_waits_without_probing_when_another_program_has_the_source_open_for_writing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    media = tmp_path / "media"
+    media.mkdir()
+    source = media / "downloading.mkv"
+    source.write_bytes(b"preallocated")
+    out = tmp_path / "out"
+    out.mkdir()
+    settings = replace(MediaMopSettings.load(), mediamop_home=str(home), refiner_watched_folder_min_file_age_seconds=0)
+    runtime = _runtime(media=media, home=home, out=out)
+
+    monkeypatch.setattr(
+        runmod,
+        "acquire_source_read_guard",
+        lambda _path: (
+            None,
+            "This file is still open for writing by another program. MediaMop will wait until the downloader closes it.",
+        ),
+    )
+    monkeypatch.setattr(
+        runmod,
+        "ffprobe_json",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("ffprobe must not start")),
+    )
+
+    result = runmod.run_refiner_file_remux_pass(
+        settings=settings,
+        path_runtime=runtime,
+        relative_media_path=source.name,
+    )
+
+    assert result["ok"] is False
+    assert result["outcome"] == "source_not_ready"
+    assert result["retryable_wait"] is True
+    assert "still open for writing" in result["reason"]
+    assert not (out / source.name).exists()
+
+
 def test_live_skips_when_no_remux_required_copies_to_output_and_deletes_release_folder(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -110,13 +256,170 @@ def test_live_skips_when_no_remux_required_copies_to_output_and_deletes_release_
     assert r["preflight_status"] == "ok"
     assert r.get("live_mutations_skipped") is False
     assert r.get("output_copied_without_remux") is True
-    assert r.get("unchanged_output_method") in {"hardlink", "copy"}
+    assert r.get("unchanged_output_method") == ("validated_hardlink" if os.name == "nt" else "validated_copy")
     assert Path(r["output_file"]).resolve() == (out / "ReleaseTitle" / "one.mkv").resolve()
     assert (out / "ReleaseTitle" / "one.mkv").read_bytes() == b"x" * 2000
     assert r.get("source_deleted_after_success") is True
     assert r.get("source_folder_deleted") is True
     assert not mkv.exists()
     assert not release.exists()
+
+
+def test_operator_pass_through_preserves_foreign_audio_and_moves_validated_file_to_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    media = tmp_path / "media"
+    media.mkdir()
+    release = media / "ForeignLanguageFilm"
+    release.mkdir()
+    source = release / "film.mkv"
+    source.write_bytes(b"foreign-language-media" * 200)
+    out = tmp_path / "out"
+    out.mkdir()
+    settings = replace(
+        MediaMopSettings.load(),
+        mediamop_home=str(home),
+        refiner_watched_folder_min_file_age_seconds=0,
+    )
+    runtime = _runtime(media=media, home=home, out=out)
+    monkeypatch.setattr(
+        runmod,
+        "ffprobe_json",
+        lambda *_args, **_kwargs: {
+            "format": {"duration": "7200"},
+            "streams": [
+                {"index": 0, "codec_type": "video", "codec_name": "h264"},
+                {
+                    "index": 1,
+                    "codec_type": "audio",
+                    "codec_name": "aac",
+                    "channels": 2,
+                    "tags": {"language": "fra"},
+                    "disposition": {"default": 1},
+                },
+            ],
+        },
+    )
+    monkeypatch.setattr(runmod, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe-x", "ffmpeg-x"))
+    monkeypatch.setattr(
+        runmod,
+        "plan_remux",
+        lambda **_kwargs: (_ for _ in ()).throw(AssertionError("pass-through must not apply Refiner rules")),
+    )
+    progress: list[dict[str, object]] = []
+
+    result = runmod.run_refiner_file_remux_pass(
+        settings=settings,
+        path_runtime=runtime,
+        relative_media_path="ForeignLanguageFilm/film.mkv",
+        refiner_min_input_file_size_mb=999,
+        pass_through_unchanged=True,
+        progress_reporter=progress.append,
+    )
+
+    output = out / "ForeignLanguageFilm" / "film.mkv"
+    assert result["ok"] is True
+    assert result["outcome"] == REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED
+    assert result["pass_through_unchanged"] is True
+    assert result["output_copied_without_remux"] is True
+    assert result["unchanged_output_method"] == ("validated_hardlink" if os.name == "nt" else "validated_copy")
+    assert output.read_bytes() == b"foreign-language-media" * 200
+    assert result["source_deleted_after_success"] is True
+    assert any(update.get("percent") == 100.0 for update in progress)
+    assert any("passing this file through unchanged" in str(update.get("message", "")) for update in progress)
+    assert not release.exists()
+
+
+def test_pass_through_uses_validated_hardlink_when_windows_guard_makes_it_safe(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    media = tmp_path / "media"
+    media.mkdir()
+    release = media / "ForeignLanguageFilm"
+    release.mkdir()
+    source = release / "film.mkv"
+    source.write_bytes(b"foreign-language-media" * 200)
+    out = tmp_path / "out"
+    out.mkdir()
+    settings = replace(
+        MediaMopSettings.load(),
+        mediamop_home=str(home),
+        refiner_watched_folder_min_file_age_seconds=0,
+    )
+    runtime = _runtime(media=media, home=home, out=out)
+    monkeypatch.setattr(
+        runmod,
+        "ffprobe_json",
+        lambda *_args, **_kwargs: {
+            "format": {"duration": "7200"},
+            "streams": [
+                {"index": 0, "codec_type": "video", "codec_name": "h264"},
+                {
+                    "index": 1,
+                    "codec_type": "audio",
+                    "codec_name": "aac",
+                    "channels": 2,
+                    "tags": {"language": "fra"},
+                    "disposition": {"default": 1},
+                },
+            ],
+        },
+    )
+    monkeypatch.setattr(runmod, "_hardlink_fast_path_supported", lambda: True)
+    progress: list[dict[str, object]] = []
+
+    result = runmod.run_refiner_file_remux_pass(
+        settings=settings,
+        path_runtime=runtime,
+        relative_media_path="ForeignLanguageFilm/film.mkv",
+        pass_through_unchanged=True,
+        progress_reporter=progress.append,
+    )
+
+    output = out / "ForeignLanguageFilm" / "film.mkv"
+    assert result["ok"] is True
+    assert result["unchanged_output_method"] == "validated_hardlink"
+    assert result["source_deleted_after_success"] is True
+    assert output.read_bytes() == b"foreign-language-media" * 200
+    assert any(update.get("percent") == 100.0 for update in progress)
+    assert not release.exists()
+
+
+def test_surviving_watched_source_detaches_hardlinked_output(
+    tmp_path: Path,
+) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    source = tmp_path / "watched" / "film.mkv"
+    source.parent.mkdir()
+    source.write_bytes(b"media" * 200)
+    output = tmp_path / "output" / "film.mkv"
+    output.parent.mkdir()
+    os.link(source, output)
+    fingerprint = runmod._source_fingerprint(source)
+    updates: list[tuple[int, int]] = []
+
+    method = runmod._detach_hardlinked_output_if_source_remains(
+        src=source,
+        final=output,
+        method="validated_hardlink",
+        mediamop_home=str(home),
+        expected_audio=1,
+        expected_duration_seconds=None,
+        expected_source_fingerprint=fingerprint,
+        progress_callback=lambda copied, total: updates.append((copied, total)),
+    )
+
+    assert method == "validated_hardlink_detached_copy"
+    assert source.read_bytes() == output.read_bytes()
+    assert os.path.samefile(source, output) is False
+    assert updates[-1] == (source.stat().st_size, source.stat().st_size)
 
 
 def test_live_result_keeps_removed_track_lists_for_activity_detail(
