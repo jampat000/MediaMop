@@ -208,13 +208,7 @@ def _build_module_statuses(
             ),
         )
     )
-    incidents = (
-        refiner_failed
-        + refiner_failed_files
-        + pruner_failed
-        + refiner_quarantined
-        + int(failed_connection)
-    )
+    incidents = refiner_failed + refiner_failed_files + pruner_failed + refiner_quarantined + int(failed_connection)
     return statuses, incidents
 
 

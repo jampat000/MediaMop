@@ -60,8 +60,18 @@ def safe_copy_to_final(
         raise FileLifecycleError(f"Could not safely publish the validated copy at {dst}: {exc}") from exc
 
 
-def try_hardlink_to_final(*, source: Path, final: Path) -> bool:
-    """Atomically expose ``final`` as a hardlink to ``source`` when the filesystem supports it."""
+def try_hardlink_to_final(
+    *,
+    source: Path,
+    final: Path,
+    validate_staged: Callable[[Path], None] | None = None,
+) -> bool:
+    """Validate and atomically expose a same-filesystem hardlink when supported.
+
+    ``False`` means hardlink creation was rejected and the caller should use its
+    copy fallback. Validation and publication errors remain failures: silently
+    falling back after either one could hide an invalid output or overwrite decision.
+    """
 
     src = source.resolve()
     dst = final
@@ -72,11 +82,17 @@ def try_hardlink_to_final(*, source: Path, final: Path) -> bool:
     _best_effort_unlink(tmp)
     try:
         os.link(src, tmp)
-        os.replace(tmp, dst)
-        return True
     except OSError:
         _best_effort_unlink(tmp)
         return False
+    try:
+        if validate_staged is not None:
+            validate_staged(tmp)
+        os.replace(tmp, dst)
+    except Exception:
+        _best_effort_unlink(tmp)
+        raise
+    return True
 
 
 def safe_finalize_file(*, staged: Path, final: Path) -> None:

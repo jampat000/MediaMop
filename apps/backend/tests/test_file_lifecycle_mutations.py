@@ -67,6 +67,23 @@ def test_try_hardlink_to_final_keeps_source_and_replaces_final(tmp_path: Path) -
     assert final.read_text(encoding="utf-8") == "source"
 
 
+def test_try_hardlink_validates_before_replacing_existing_final(tmp_path: Path) -> None:
+    source = tmp_path / "source.mkv"
+    final = tmp_path / "final.mkv"
+    source.write_text("invalid", encoding="utf-8")
+    final.write_text("keep", encoding="utf-8")
+
+    def reject(_staged: Path) -> None:
+        raise ValueError("invalid media")
+
+    with pytest.raises(ValueError, match="invalid media"):
+        try_hardlink_to_final(source=source, final=final, validate_staged=reject)
+
+    assert source.read_text(encoding="utf-8") == "invalid"
+    assert final.read_text(encoding="utf-8") == "keep"
+    assert not list(tmp_path.glob("*.link"))
+
+
 def test_safe_unlink_reports_missing_as_absent(tmp_path: Path) -> None:
     missing = tmp_path / "missing.tmp"
     assert safe_unlink(missing) is False

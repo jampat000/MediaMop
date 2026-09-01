@@ -255,7 +255,7 @@ def test_live_skips_when_no_remux_required_copies_to_output_and_deletes_release_
     assert r["preflight_status"] == "ok"
     assert r.get("live_mutations_skipped") is False
     assert r.get("output_copied_without_remux") is True
-    assert r.get("unchanged_output_method") == "validated_copy"
+    assert r.get("unchanged_output_method") == ("validated_hardlink" if os.name == "nt" else "validated_copy")
     assert Path(r["output_file"]).resolve() == (out / "ReleaseTitle" / "one.mkv").resolve()
     assert (out / "ReleaseTitle" / "one.mkv").read_bytes() == b"x" * 2000
     assert r.get("source_deleted_after_success") is True
@@ -324,12 +324,101 @@ def test_operator_pass_through_preserves_foreign_audio_and_moves_validated_file_
     assert result["outcome"] == REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED
     assert result["pass_through_unchanged"] is True
     assert result["output_copied_without_remux"] is True
-    assert result["unchanged_output_method"] == "validated_copy"
+    assert result["unchanged_output_method"] == ("validated_hardlink" if os.name == "nt" else "validated_copy")
     assert output.read_bytes() == b"foreign-language-media" * 200
     assert result["source_deleted_after_success"] is True
     assert any(update.get("percent") == 100.0 for update in progress)
     assert any("passing this file through unchanged" in str(update.get("message", "")) for update in progress)
     assert not release.exists()
+
+
+def test_pass_through_uses_validated_hardlink_when_windows_guard_makes_it_safe(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    media = tmp_path / "media"
+    media.mkdir()
+    release = media / "ForeignLanguageFilm"
+    release.mkdir()
+    source = release / "film.mkv"
+    source.write_bytes(b"foreign-language-media" * 200)
+    out = tmp_path / "out"
+    out.mkdir()
+    settings = replace(
+        MediaMopSettings.load(),
+        mediamop_home=str(home),
+        refiner_watched_folder_min_file_age_seconds=0,
+    )
+    runtime = _runtime(media=media, home=home, out=out)
+    monkeypatch.setattr(
+        runmod,
+        "ffprobe_json",
+        lambda *_args, **_kwargs: {
+            "format": {"duration": "7200"},
+            "streams": [
+                {"index": 0, "codec_type": "video", "codec_name": "h264"},
+                {
+                    "index": 1,
+                    "codec_type": "audio",
+                    "codec_name": "aac",
+                    "channels": 2,
+                    "tags": {"language": "fra"},
+                    "disposition": {"default": 1},
+                },
+            ],
+        },
+    )
+    monkeypatch.setattr(runmod, "_hardlink_fast_path_supported", lambda: True)
+    progress: list[dict[str, object]] = []
+
+    result = runmod.run_refiner_file_remux_pass(
+        settings=settings,
+        path_runtime=runtime,
+        relative_media_path="ForeignLanguageFilm/film.mkv",
+        pass_through_unchanged=True,
+        progress_reporter=progress.append,
+    )
+
+    output = out / "ForeignLanguageFilm" / "film.mkv"
+    assert result["ok"] is True
+    assert result["unchanged_output_method"] == "validated_hardlink"
+    assert result["source_deleted_after_success"] is True
+    assert output.read_bytes() == b"foreign-language-media" * 200
+    assert any(update.get("percent") == 100.0 for update in progress)
+    assert not release.exists()
+
+
+def test_surviving_watched_source_detaches_hardlinked_output(
+    tmp_path: Path,
+) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    source = tmp_path / "watched" / "film.mkv"
+    source.parent.mkdir()
+    source.write_bytes(b"media" * 200)
+    output = tmp_path / "output" / "film.mkv"
+    output.parent.mkdir()
+    os.link(source, output)
+    fingerprint = runmod._source_fingerprint(source)
+    updates: list[tuple[int, int]] = []
+
+    method = runmod._detach_hardlinked_output_if_source_remains(
+        src=source,
+        final=output,
+        method="validated_hardlink",
+        mediamop_home=str(home),
+        expected_audio=1,
+        expected_duration_seconds=None,
+        expected_source_fingerprint=fingerprint,
+        progress_callback=lambda copied, total: updates.append((copied, total)),
+    )
+
+    assert method == "validated_hardlink_detached_copy"
+    assert source.read_bytes() == output.read_bytes()
+    assert os.path.samefile(source, output) is False
+    assert updates[-1] == (source.stat().st_size, source.stat().st_size)
 
 
 def test_live_result_keeps_removed_track_lists_for_activity_detail(

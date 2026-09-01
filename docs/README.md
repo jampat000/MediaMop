@@ -33,6 +33,7 @@ This directory is the repository-local system of record. Keep durable decisions 
 - [`diagnostics-contract.md`](diagnostics-contract.md) - diagnostics behavior.
 - [`security-hardening.md`](security-hardening.md) - security posture and credential handling.
 - [`settings-truthfulness-audit.md`](settings-truthfulness-audit.md) - settings truthfulness audit history.
+- [`fileflows-parity-audit.md`](fileflows-parity-audit.md) - current Refiner/FileFlows capability and regression audit.
 
 ## Execution Plans
 

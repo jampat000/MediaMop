@@ -87,7 +87,11 @@ from mediamop.modules.refiner.refiner_tv_season_folder_cleanup import (
     init_tv_season_cleanup_activity_fields,
 )
 from mediamop.platform.file_lifecycle.guardrails import bytes_to_mb, check_minimum_free_disk_space
-from mediamop.platform.file_lifecycle.mutations import safe_copy_to_final, safe_finalize_file
+from mediamop.platform.file_lifecycle.mutations import (
+    safe_copy_to_final,
+    safe_finalize_file,
+    try_hardlink_to_final,
+)
 from mediamop.platform.metrics.service import record_module_savings
 
 logger = logging.getLogger(__name__)
@@ -314,6 +318,12 @@ def _check_output_file_completeness(*, output_file: Path, source_file: Path) -> 
     }
 
 
+def _hardlink_fast_path_supported() -> bool:
+    """Only Windows supplies the mandatory no-writer guard required by this path."""
+
+    return os.name == "nt"
+
+
 def _copy_unchanged_source_to_output(
     *,
     src: Path,
@@ -324,7 +334,7 @@ def _copy_unchanged_source_to_output(
     expected_source_fingerprint: tuple[int, int, int, int],
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> tuple[bool, bool, str]:
-    """For already-correct files, still place a copy in the output tree before cleanup."""
+    """Place an already-correct file in the output tree before source cleanup."""
 
     src_resolved = src.resolve()
     final.parent.mkdir(parents=True, exist_ok=True)
@@ -345,9 +355,21 @@ def _copy_unchanged_source_to_output(
         )
         _assert_source_unchanged(src_resolved, expected_source_fingerprint)
 
-    # Never hard-link watched input into the output tree. On Linux a downloader can
-    # continue writing through its original descriptor after the watched name is
-    # removed, which would mutate the output through the shared inode.
+    # Windows' held source handle denies writers for the complete pass. That makes a
+    # staged hardlink safe and turns a same-volume 50 GB no-change file into metadata
+    # work rather than a 50 GB copy. Linux/Docker locks are advisory, so a downloader
+    # could continue writing through an existing descriptor after source cleanup; keep
+    # the independent-copy path there. Cross-volume Windows links fail and fall back.
+    if _hardlink_fast_path_supported() and try_hardlink_to_final(
+        source=src_resolved,
+        final=final,
+        validate_staged=validate_staged,
+    ):
+        if progress_callback is not None:
+            source_size = int(src_resolved.stat().st_size)
+            progress_callback(source_size, source_size)
+        return True, replaced_existing, "validated_hardlink"
+
     safe_copy_to_final(
         source=src_resolved,
         final=final,
@@ -355,6 +377,46 @@ def _copy_unchanged_source_to_output(
         progress_callback=progress_callback,
     )
     return True, replaced_existing, "validated_copy"
+
+
+def _detach_hardlinked_output_if_source_remains(
+    *,
+    src: Path,
+    final: Path,
+    method: str,
+    mediamop_home: str,
+    expected_audio: int,
+    expected_duration_seconds: float | None,
+    expected_source_fingerprint: tuple[int, int, int, int],
+    progress_callback: Callable[[int, int], None] | None = None,
+) -> str:
+    """Break the shared inode if a safety gate intentionally preserves the source.
+
+    A successful normal cleanup removes the watched hardlink and leaves the output as
+    the sole name for that inode. If cleanup is blocked, keeping two names would let a
+    later writer mutate the published output through the watched path. In that uncommon
+    path, pay the copy cost and atomically replace only the output name.
+    """
+
+    if method != "validated_hardlink" or not src.exists():
+        return method
+
+    def validate_staged(staged: Path) -> None:
+        validate_remux_output(
+            staged,
+            mediamop_home=mediamop_home,
+            expected_audio=expected_audio,
+            expected_duration_seconds=expected_duration_seconds,
+        )
+        _assert_source_unchanged(src, expected_source_fingerprint)
+
+    safe_copy_to_final(
+        source=final,
+        final=final,
+        validate_staged=validate_staged,
+        progress_callback=progress_callback,
+    )
+    return "validated_hardlink_detached_copy"
 
 
 def _cascade_delete_empty_parents(
@@ -925,15 +987,15 @@ def _run_refiner_file_remux_pass(
                 "No audio, subtitle, or metadata rules were applied because the operator chose Pass through unchanged."
             )
             out["reason"] = (
-                "The operator bypassed Refiner rules for this edge case. MediaMop validated and copied the unchanged file "
-                "to the output folder before running normal post-success source cleanup."
+                "The operator bypassed Refiner rules for this edge case. MediaMop validated and placed the unchanged file "
+                "in the output folder before running normal post-success source cleanup."
             )
         else:
             out["after_track_lines_meaning"] = (
                 "No ffmpeg run was needed because the file already matched the saved Refiner rules."
             )
             out["reason"] = (
-                "The file already matched the saved Refiner rules, so Refiner copied it to the output folder without rewriting it."
+                "The file already matched the saved Refiner rules, so Refiner placed it in the output folder without rewriting it."
             )
         rel_skip = src.resolve().relative_to(watched_root)
         final_skip = out_dir / rel_skip
@@ -1097,6 +1159,28 @@ def _run_refiner_file_remux_pass(
             min_file_age_seconds=min_age,
             current_job_id=current_job_id,
         )
+        try:
+            out["unchanged_output_method"] = _detach_hardlinked_output_if_source_remains(
+                src=src,
+                final=final_skip,
+                method=unchanged_output_method,
+                mediamop_home=settings.mediamop_home,
+                expected_audio=len(audio),
+                expected_duration_seconds=duration_seconds,
+                expected_source_fingerprint=expected_source_fingerprint,
+                progress_callback=report_copy_progress,
+            )
+        except Exception as exc:
+            with contextlib.suppress(OSError):
+                final_skip.unlink()
+            out["ok"] = False
+            out["outcome"] = REMUX_PASS_OUTCOME_FAILED_DURING_EXECUTION
+            out["reason"] = (
+                "MediaMop preserved the watched source because cleanup could not finish, but could not detach the "
+                f"validated output from that source safely. The unsafe output link was removed. The system reported: {exc}"
+            )
+            out.pop("output_file", None)
+            return out
         _run_scope_output_cleanup(final_output_file=final_skip)
         return out
 
