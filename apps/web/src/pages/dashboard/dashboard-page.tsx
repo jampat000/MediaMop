@@ -446,13 +446,15 @@ function buildRefinerCard(args: {
     actionTo: "/refiner",
   };
   if (args.operational) {
-    card.status = statusFromOperationalState(args.operational.state);
-    card.summary = args.operational.summary;
+    const operational = args.operational;
+    const failedFileCount = operational.failed_file_count ?? 0;
+    card.status = statusFromOperationalState(operational.state);
+    card.summary = operational.summary;
     if (card.status === "Setup required") {
-      card.actionTo = args.operational.action_path;
+      card.actionTo = operational.action_path;
       card.actionLabel = "Configure Refiner";
     } else if (card.status === "Review needed") {
-      card.actionTo = args.operational.action_path;
+      card.actionTo = operational.action_path;
       card.actionLabel = "Review Refiner";
     } else if (card.status === "Active") {
       card.actionTo = "/refiner?tab=files&status=processing";
@@ -462,9 +464,22 @@ function buildRefinerCard(args: {
       card.actionLabel = "Open Refiner";
     }
     card.facts = [
-      `Current queue: ${formatCount(args.operational.queued_job_count)} queued, ${formatCount(args.operational.active_job_count)} active`,
-      `Current failures: ${formatCount(args.operational.failed_job_count)} jobs · ${formatCount(args.operational.quarantined_file_count)} quarantined files`,
+      `Current queue: ${formatCount(operational.queued_job_count)} queued, ${formatCount(operational.active_job_count)} active`,
+      `Current failures: ${formatCount(operational.failed_job_count)} jobs · ${formatCount(failedFileCount)} ${failedFileCount === 1 ? "file" : "files"} needing action · ${formatCount(operational.quarantined_file_count)} held files`,
     ];
+    card.metrics = card.metrics.map((metric) =>
+      metric.label === "Failures"
+        ? {
+            label: "Needs action",
+            value: formatCount(
+              operational.failed_job_count +
+                failedFileCount +
+                operational.quarantined_file_count,
+            ),
+            detail: "Current unresolved work",
+          }
+        : metric,
+    );
   }
   return card;
 }
@@ -663,6 +678,9 @@ export function DashboardPage() {
   const activeItems = moduleCards
     .filter((m) => m.status === "Active")
     .map((m) => `${m.name}: ${m.summary}`);
+  const hasFailedJobHistory = operationalModules.some(
+    (module) => module.failed_job_count > 0,
+  );
   const overallStatus =
     !dash.data.system.healthy ||
     modulesNeedingAttentionTotal > 0 ||
@@ -827,8 +845,9 @@ export function DashboardPage() {
               Open the linked module to see the exact reason and next step.
             </p>
             <p className="mm-dashboard-incident__hint">
-              Once finished jobs have been reviewed, clear this history from
-              Settings → General.
+              {hasFailedJobHistory
+                ? "Resolve the linked action first. Finished job history can be cleared from Settings → General after review."
+                : "Open the linked module to resolve the current item; clearing finished history will not hide unresolved work."}
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap justify-end gap-2">
@@ -838,13 +857,15 @@ export function DashboardPage() {
             >
               {attentionItems[0]?.actionLabel ?? "Open review"}
             </Link>
-            <Link
-              to="/settings?tab=general#history-reset"
-              className={mmActionButtonClass({ variant: "tertiary" })}
-              title="Clear completed and failed job history after reviewing it"
-            >
-              Clear finished history
-            </Link>
+            {hasFailedJobHistory ? (
+              <Link
+                to="/settings?tab=general#history-reset"
+                className={mmActionButtonClass({ variant: "tertiary" })}
+                title="Clear completed and failed job history after reviewing it"
+              >
+                Clear finished history
+              </Link>
+            ) : null}
           </div>
         </section>
       ) : null}

@@ -1505,6 +1505,12 @@
             "title": "Configured",
             "type": "boolean"
           },
+          "failed_file_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Failed File Count",
+            "type": "integer"
+          },
           "failed_job_count": {
             "default": 0,
             "minimum": 0.0,

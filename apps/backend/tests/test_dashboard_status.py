@@ -7,6 +7,8 @@ from starlette.testclient import TestClient
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
 from mediamop.modules.dashboard.service import build_dashboard_status
+from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
+from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
 from tests.integration_helpers import auth_post
 from tests.integration_helpers import csrf as fetch_csrf
 
@@ -49,3 +51,35 @@ def test_get_dashboard_status_authenticated(client_with_admin: TestClient) -> No
     summ = body["activity_summary"]
     assert "events_last_24h" in summ
     assert "latest" in summ
+
+
+def test_dashboard_reports_unresolved_refiner_file_as_actionable() -> None:
+    settings, fac = _session_factory()
+    with fac() as db:
+        library = RefinerLibraryRow(
+            name="Dashboard failed-file fixture",
+            watched_folder="C:/media/dashboard-fixture",
+            enabled=True,
+        )
+        db.add(library)
+        db.flush()
+        db.add(
+            RefinerFileRow(
+                library_id=library.id,
+                relative_path="Needs.Review.mkv",
+                status=RefinerFileStatus.PROCESSING_FAILED.value,
+                status_reason="The last processing attempt failed.",
+                failure_attempts=1,
+            )
+        )
+        db.commit()
+
+        out = build_dashboard_status(db, settings)
+
+    refiner = next(module for module in out.modules if module.module == "refiner")
+    assert refiner.state == "degraded"
+    assert refiner.failed_job_count == 0
+    assert refiner.failed_file_count == 1
+    assert refiner.action_path == "/refiner?tab=files&status=processing_failed"
+    assert "1 file needs action" in refiner.summary
+    assert out.incident_count == 1

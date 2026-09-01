@@ -356,6 +356,20 @@ describe("DashboardPage", () => {
         system: { api_version: "1.0.0", environment: "test", healthy: true },
         activity_summary: { events_last_24h: 0, latest: null },
         incident_count: 1,
+        modules: [
+          {
+            module: "refiner",
+            state: "degraded",
+            configured: true,
+            active_job_count: 0,
+            queued_job_count: 0,
+            failed_job_count: 1,
+            failed_file_count: 0,
+            quarantined_file_count: 0,
+            summary: "1 Refiner job needs review.",
+            action_path: "/refiner?tab=jobs&status=failed",
+          },
+        ],
       },
     });
 
@@ -367,11 +381,66 @@ describe("DashboardPage", () => {
 
     expect(screen.getByTestId("dashboard-refiner-status-link")).toHaveAttribute(
       "href",
-      "/refiner",
+      "/refiner?tab=jobs&status=failed",
     );
     expect(
       screen.getByRole("link", { name: "Clear finished history" }),
     ).toHaveAttribute("href", "/settings?tab=general#history-reset");
+  });
+
+  it("surfaces unresolved Refiner files without offering an irrelevant history clear", () => {
+    useDashboardStatusQuery.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: {
+        scope_note: "Read-only overview.",
+        system: { api_version: "1.0.0", environment: "test", healthy: true },
+        activity_summary: { events_last_24h: 0, latest: null },
+        incident_count: 1,
+        modules: [
+          {
+            module: "refiner",
+            state: "degraded",
+            configured: true,
+            active_job_count: 0,
+            queued_job_count: 0,
+            failed_job_count: 0,
+            failed_file_count: 1,
+            quarantined_file_count: 0,
+            summary:
+              "1 file needs action. Open Refiner Files for the exact reason and recovery action.",
+            action_path: "/refiner?tab=files&status=processing_failed",
+          },
+        ],
+      },
+    });
+    useRefinerPathSettingsQuery.mockReturnValue({
+      data: {
+        refiner_watched_folder: "C:/media",
+        refiner_watched_folder_exists: true,
+        refiner_tv_watched_folder: null,
+        refiner_tv_watched_folder_exists: false,
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("dashboard-refiner-status-link")).toHaveAttribute(
+      "href",
+      "/refiner?tab=files&status=processing_failed",
+    );
+    expect(screen.getAllByText("Review needed").length).toBeGreaterThan(0);
+    expect(screen.getByText("Current unresolved work")).toBeInTheDocument();
+    expect(
+      screen.getByText(/clearing finished history will not hide unresolved work/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Clear finished history" }),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps long last-activity file names compact without losing the full title", () => {

@@ -2566,6 +2566,11 @@ export interface components {
       /** Configured */
       configured: boolean;
       /**
+       * Failed File Count
+       * @default 0
+       */
+      failed_file_count: number;
+      /**
        * Failed Job Count
        * @default 0
        */

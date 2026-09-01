@@ -66,6 +66,14 @@ def _build_module_statuses(
     refiner_failed = _count_jobs(
         db, RefinerJob, (RefinerJobStatus.FAILED.value, RefinerJobStatus.HANDLER_OK_FINALIZE_FAILED.value)
     )
+    refiner_failed_files = int(
+        db.scalar(
+            select(func.count())
+            .select_from(RefinerFileRow)
+            .where(RefinerFileRow.status == RefinerFileStatus.PROCESSING_FAILED.value),
+        )
+        or 0
+    )
     refiner_quarantined = int(
         db.scalar(
             select(func.count())
@@ -83,12 +91,19 @@ def _build_module_statuses(
             "setup_required",
             "Add an enabled watched-folder library before Refiner can process files.",
         )
-    elif refiner_failed or refiner_quarantined:
+    elif refiner_failed or refiner_failed_files or refiner_quarantined:
         refiner_state = "degraded"
         parts: list[str] = []
         if refiner_failed:
             parts.append(
                 f"{refiner_failed} Refiner job(s) need review. Open Refiner Jobs for the explanation and recovery action."
+            )
+        if refiner_failed_files:
+            file_label = "file" if refiner_failed_files == 1 else "files"
+            verb = "needs" if refiner_failed_files == 1 else "need"
+            parts.append(
+                f"{refiner_failed_files} {file_label} {verb} action. "
+                "Open Refiner Files for the exact reason and recovery action."
             )
         if refiner_quarantined:
             parts.append(
@@ -114,13 +129,16 @@ def _build_module_statuses(
             active_job_count=refiner_active,
             queued_job_count=refiner_queued,
             failed_job_count=refiner_failed,
+            failed_file_count=refiner_failed_files,
             quarantined_file_count=refiner_quarantined,
             summary=refiner_summary,
             action_path=(
-                "/refiner?tab=files&status=on_hold"
-                if refiner_quarantined and not refiner_failed
-                else "/refiner?tab=jobs&status=failed"
+                "/refiner?tab=jobs&status=failed"
                 if refiner_failed
+                else "/refiner?tab=files&status=processing_failed"
+                if refiner_failed_files
+                else "/refiner?tab=files&status=on_hold"
+                if refiner_quarantined
                 else "/refiner?tab=jobs"
                 if (refiner_worker and refiner_worker.status == "degraded")
                 else "/refiner?tab=libraries"
@@ -190,7 +208,13 @@ def _build_module_statuses(
             ),
         )
     )
-    incidents = refiner_failed + pruner_failed + refiner_quarantined + int(failed_connection)
+    incidents = (
+        refiner_failed
+        + refiner_failed_files
+        + pruner_failed
+        + refiner_quarantined
+        + int(failed_connection)
+    )
     return statuses, incidents
 
 
