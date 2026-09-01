@@ -34,4 +34,6 @@ This is the canonical governance checklist for keeping MediaMop releases control
 4. Confirm the release notes/install guidance names the attached `MediaMop-win-Setup.exe` installer and explains any one-time upgrade requirement for older installs.
 5. Confirm the GHCR image exists for both `vX.Y.Z` and `latest`.
 6. Confirm the release workflow completed `mediamop`, Docker publish, Docker smoke, and Windows package jobs.
-7. Open a follow-up issue for any manual smoke-test failure.
+7. Download `mediamop-docker-release-candidate-audit` and confirm its summary has
+   no console warnings, console errors, page errors, failed requests, or bad responses.
+8. Open a follow-up issue for any manual smoke-test failure.
