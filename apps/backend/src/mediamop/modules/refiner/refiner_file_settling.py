@@ -26,7 +26,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import BinaryIO, Self
+from typing import Any, BinaryIO, Self
 
 from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow
 from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
@@ -152,7 +152,12 @@ def acquire_source_read_guard(file_path: Path) -> tuple[SourceReadGuard | None, 
         import ctypes
         from ctypes import wintypes
 
-        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        # Typeshed intentionally omits these Windows-only ctypes members on
+        # non-Windows type-checking hosts. Runtime dispatch is already guarded
+        # by os.name, so keep the platform binding dynamic and check the shared
+        # file-settling contract on every CI operating system.
+        windows_ctypes: Any = ctypes
+        kernel32 = windows_ctypes.WinDLL("kernel32", use_last_error=True)
         create_file = kernel32.CreateFileW
         create_file.argtypes = (
             wintypes.LPCWSTR,
@@ -173,7 +178,7 @@ def acquire_source_read_guard(file_path: Path) -> tuple[SourceReadGuard | None, 
         file_share_delete = 0x00000004
         open_existing = 3
         file_attribute_normal = 0x00000080
-        invalid_handle_value = ctypes.c_void_p(-1).value
+        invalid_handle_value = windows_ctypes.c_void_p(-1).value
         windows_handle = create_file(
             str(file_path),
             generic_read,
@@ -184,7 +189,7 @@ def acquire_source_read_guard(file_path: Path) -> tuple[SourceReadGuard | None, 
             None,
         )
         if windows_handle == invalid_handle_value:
-            error = ctypes.get_last_error()
+            error = windows_ctypes.get_last_error()
             if error in {32, 33}:
                 return None, (
                     "This file is still open for writing by another program. MediaMop will wait until "
@@ -192,7 +197,7 @@ def acquire_source_read_guard(file_path: Path) -> tuple[SourceReadGuard | None, 
                 )
             return None, (
                 "MediaMop could not reserve this file for safe read-only processing, so it will wait. "
-                f"The system reported: {ctypes.WinError(error)}."
+                f"The system reported: {windows_ctypes.WinError(error)}."
             )
 
         return SourceReadGuard(lambda: close_handle(windows_handle)), None
