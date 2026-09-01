@@ -18,7 +18,7 @@ This release focuses on <plain-language summary in one sentence>.
 
 ## Upgrade Notes
 
-- If you are upgrading from an older Windows install that predates the updater service, run `MediaMopSetup.exe` once as administrator.
+- Windows users can install the release with `MediaMop-win-Setup.exe`; existing application data is preserved.
 - After that one-time bootstrap, future upgrades can be started from **Settings -> Upgrade**.
 - <Any additional one-time action or compatibility warning>
 

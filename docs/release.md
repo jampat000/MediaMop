@@ -67,7 +67,7 @@ The release workflow publishes GHCR images with the repository `GITHUB_TOKEN` an
 |-------------|---------|
 | `Tag + source tree` | Canonical source snapshot for the release. |
 | `mediamop-web-dist.zip` | Static production build of `apps/web/dist`. Backend still required. |
-| `MediaMop-*-win-Setup.exe` | Windows desktop installer (Velopack) with .NET tray host, bundled backend runtime, bundled web UI, and delta update support. |
+| `MediaMop-win-Setup.exe` | Windows desktop installer (Velopack) with .NET tray host, bundled backend runtime, bundled web UI, and delta update support. |
 | `ghcr.io/<owner>/<repo>:vX.Y.Z` | Versioned all-in-one container image. |
 | `ghcr.io/<owner>/<repo>:latest` | Latest stable container image. |
 

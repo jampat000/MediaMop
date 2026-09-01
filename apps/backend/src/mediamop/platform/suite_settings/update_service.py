@@ -19,7 +19,6 @@ import httpx
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.platform.suite_settings.release_catalog import (
-    WINDOWS_INSTALLER_ASSET_NAME,
     fetch_latest_release_record,
     normalize_release_version,
     parse_version_key,
@@ -96,7 +95,7 @@ def _build_release_status(
         status = "up_to_date"
         summary = f"This install is already on MediaMop {current_version}."
 
-    installer_asset = release.asset_named(WINDOWS_INSTALLER_ASSET_NAME)
+    installer_asset = release.windows_installer_asset()
     docker_tag = release.version if release.version else None
     docker_update_command = None
     if install_type == "docker" and docker_tag:

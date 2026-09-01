@@ -161,24 +161,20 @@ jobs:
           $pfxPath = Join-Path $env:RUNNER_TEMP "mediamop-codesign.pfx"
           [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_CODESIGN_PFX_BASE64))
           $signtool = (Get-Command signtool.exe -ErrorAction Stop).Source
-          $setupExe = Get-ChildItem -Path "dist/windows/releases" -Filter "MediaMop-*-win-Setup.exe" | Select-Object -First 1
-          if ($setupExe) {
-            & $signtool sign /f $pfxPath /p $env:WINDOWS_CODESIGN_PASSWORD /fd sha256 /tr http://timestamp.digicert.com /td sha256 $setupExe.FullName
-            if ($LASTEXITCODE -ne 0) {
-              throw "signtool failed with exit code $LASTEXITCODE"
-            }
+          $setupExe = Get-Item -LiteralPath "dist/windows/releases/MediaMop-win-Setup.exe" -ErrorAction Stop
+          & $signtool sign /f $pfxPath /p $env:WINDOWS_CODESIGN_PASSWORD /fd sha256 /tr http://timestamp.digicert.com /td sha256 $setupExe.FullName
+          if ($LASTEXITCODE -ne 0) {
+            throw "signtool failed with exit code $LASTEXITCODE"
           }
 
       - name: Verify Velopack setup signature
         if: ${{ steps.codesign.outputs.enabled == 'true' }}
         shell: powershell
         run: |
-          $setupExe = Get-ChildItem -Path "dist/windows/releases" -Filter "MediaMop-*-win-Setup.exe" | Select-Object -First 1
-          if ($setupExe) {
-            $signature = Get-AuthenticodeSignature -FilePath $setupExe.FullName
-            if ($signature.Status -ne "Valid") {
-              throw "Setup signature verification failed: $($signature.Status) $($signature.StatusMessage)"
-            }
+          $setupExe = Get-Item -LiteralPath "dist/windows/releases/MediaMop-win-Setup.exe" -ErrorAction Stop
+          $signature = Get-AuthenticodeSignature -FilePath $setupExe.FullName
+          if ($signature.Status -ne "Valid") {
+            throw "Setup signature verification failed: $($signature.Status) $($signature.StatusMessage)"
           }
 
       - name: Upload Velopack release artifacts

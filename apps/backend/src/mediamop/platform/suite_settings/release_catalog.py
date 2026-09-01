@@ -13,8 +13,8 @@ GH_REPO = "MediaMop"
 GH_REPO_SLUG = f"{GH_OWNER}/{GH_REPO}"
 GH_RELEASES_LATEST_URL = f"https://api.github.com/repos/{GH_REPO_SLUG}/releases/latest"
 GH_RELEASE_BY_TAG_URL_TEMPLATE = f"https://api.github.com/repos/{GH_REPO_SLUG}/releases/tags/{{tag}}"
-WINDOWS_INSTALLER_ASSET_NAME = "MediaMopSetup.exe"
-WINDOWS_INSTALLER_SHA256_ASSET_NAME = "MediaMopSetup.exe.sha256"
+WINDOWS_INSTALLER_ASSET_NAME = "MediaMop-win-Setup.exe"
+LEGACY_WINDOWS_INSTALLER_ASSET_NAME = "MediaMopSetup.exe"
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,6 +43,11 @@ class GitHubReleaseRecord:
             if asset.name.strip().lower() == wanted:
                 return asset
         return None
+
+    def windows_installer_asset(self) -> GitHubReleaseAsset | None:
+        """Return the current Velopack installer, with legacy-release compatibility."""
+
+        return self.asset_named(WINDOWS_INSTALLER_ASSET_NAME) or self.asset_named(LEGACY_WINDOWS_INSTALLER_ASSET_NAME)
 
 
 def normalize_release_version(raw: str | None) -> str | None:
