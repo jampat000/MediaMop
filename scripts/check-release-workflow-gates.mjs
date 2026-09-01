@@ -32,6 +32,40 @@ function requireOrder(source, markers, file) {
   }
 }
 
+function requireJob(source, jobName, file) {
+  const marker = `\n  ${jobName}:\n`;
+  const start = source.indexOf(marker);
+  if (start < 0) {
+    throw new Error(`${file} is missing required job: ${jobName}`);
+  }
+  const bodyStart = start + marker.length;
+  const remaining = source.slice(bodyStart);
+  const nextJob = remaining.search(/\n  [a-zA-Z0-9_-]+:\n/);
+  return nextJob < 0 ? remaining : remaining.slice(0, nextJob);
+}
+
+function rejectText(source, marker, file) {
+  if (source.includes(marker)) {
+    throw new Error(`${file} contains forbidden workflow text: ${marker}`);
+  }
+}
+
+const invalidRunnerTempFixture =
+  "MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT: ${{ runner.temp }}";
+rejectText(release, invalidRunnerTempFixture, ".github/workflows/release.yml");
+rejectText(ci, invalidRunnerTempFixture, ".github/workflows/ci.yml");
+
+const releasePublish = requireJob(
+  release,
+  "publish",
+  ".github/workflows/release.yml",
+);
+const ciDockerSmoke = requireJob(
+  ci,
+  "docker-smoke",
+  ".github/workflows/ci.yml",
+);
+
 requireOrder(
   release,
   [
@@ -54,7 +88,7 @@ for (const marker of [
   "MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT:$MEDIAMOP_LIVE_E2E_FIXTURE_SERVER_ROOT",
   "name: mediamop-docker-release-candidate-audit",
 ]) {
-  requireText(release, marker, ".github/workflows/release.yml");
+  requireText(releasePublish, marker, ".github/workflows/release.yml publish job");
 }
 
 requireOrder(
@@ -75,7 +109,7 @@ for (const marker of [
   "MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT:$MEDIAMOP_LIVE_E2E_FIXTURE_SERVER_ROOT",
   "name: mediamop-docker-live-audit",
 ]) {
-  requireText(ci, marker, ".github/workflows/ci.yml");
+  requireText(ciDockerSmoke, marker, ".github/workflows/ci.yml docker-smoke job");
 }
 
 console.log(

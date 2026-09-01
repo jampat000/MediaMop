@@ -194,9 +194,6 @@ jobs:
       contents: read
     env:
       MEDIAMOP_SESSION_SECRET: ${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-release-session-secret-32chars-min
-      MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT: ${{ runner.temp }}/mediamop-docker-release-fixture
-      MEDIAMOP_LIVE_E2E_FIXTURE_SERVER_ROOT: /e2e-fixture
-      MEDIAMOP_LIVE_E2E_FFMPEG: ffmpeg
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -281,6 +278,9 @@ jobs:
       packages: write
     env:
       MEDIAMOP_SESSION_SECRET: ${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-release-session-secret-32chars-min
+      MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT: ${{ github.workspace }}/artifacts/docker-release-fixture
+      MEDIAMOP_LIVE_E2E_FIXTURE_SERVER_ROOT: /e2e-fixture
+      MEDIAMOP_LIVE_E2E_FFMPEG: ffmpeg
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
