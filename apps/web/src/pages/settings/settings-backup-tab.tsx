@@ -6,6 +6,7 @@ import type {
   useSuiteSettingsSaveMutation,
 } from "../../lib/suite/queries";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
+import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
 import {
   mmModuleTabBlurbBandClass,
   mmModuleTabBlurbTextClass,
@@ -60,6 +61,7 @@ export function SettingsBackupTab({
   onDownloadStoredBackup,
 }: SettingsBackupTabProps) {
   const restoreInputRef = useRef<HTMLInputElement>(null);
+  const formatDate = useAppDateFormatter();
 
   return (
     <div data-testid="suite-settings-backup-tab" className="mm-bubble-stack">
@@ -158,11 +160,7 @@ export function SettingsBackupTab({
                   <span className="font-medium text-[var(--mm-text2)]">
                     Last automatic run:
                   </span>{" "}
-                  {settingsData.configuration_backup_last_run_at
-                    ? new Date(
-                        settingsData.configuration_backup_last_run_at,
-                      ).toLocaleString()
-                    : "—"}
+                  {formatDate(settingsData.configuration_backup_last_run_at)}
                 </p>
                 <p className="text-xs text-[var(--mm-text3)]">
                   <span className="font-medium text-[var(--mm-text2)]">
@@ -296,7 +294,7 @@ export function SettingsBackupTab({
                       >
                         <div className="min-w-0 text-[var(--mm-text2)]">
                           <div className="font-medium text-[var(--mm-text)]">
-                            {new Date(row.created_at).toLocaleString()}
+                            {formatDate(row.created_at)}
                           </div>
                           <div className="text-xs text-[var(--mm-text3)]">
                             {formatBackupBytes(row.size_bytes)}

@@ -99,13 +99,35 @@ def test_a_third_library_can_be_added_and_edited(operator: TestClient) -> None:
             "watched_folder": "/srv/4k/in2",
             "output_folder": "/srv/4k/out",
             "min_file_size_mb": 900,
+            "created_after": "2026-01-01T00:00:00Z",
+            "created_before": "2027-01-01T00:00:00Z",
+            "modified_after": "2026-02-01T00:00:00Z",
+            "modified_before": "2026-12-01T00:00:00Z",
             "top_level_only": True,
         },
     )
     assert updated.status_code == 200, updated.text
     assert updated.json()["watched_folder"] == "/srv/4k/in2"
     assert updated.json()["min_file_size_mb"] == 900
+    assert updated.json()["created_after"].startswith("2026-01-01T00:00:00")
+    assert updated.json()["created_before"].startswith("2027-01-01T00:00:00")
+    assert updated.json()["modified_after"].startswith("2026-02-01T00:00:00")
+    assert updated.json()["modified_before"].startswith("2026-12-01T00:00:00")
     assert updated.json()["top_level_only"] is True
+
+
+def test_detection_windows_must_be_ordered_and_timezone_aware(operator: TestClient) -> None:
+    reversed_window = _create(
+        operator,
+        created_after="2027-01-01T00:00:00Z",
+        created_before="2026-01-01T00:00:00Z",
+    )
+    assert reversed_window.status_code == 422
+    assert "Created after must be earlier" in reversed_window.text
+
+    timezone_missing = _create(operator, modified_after="2026-01-01T00:00:00")
+    assert timezone_missing.status_code == 422
+    assert "must include a timezone" in timezone_missing.text
 
 
 def test_a_duplicate_name_is_refused(operator: TestClient) -> None:

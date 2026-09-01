@@ -100,7 +100,7 @@ def build_worker_health_snapshot(
                     stale_workers=0,
                     stopped_workers=0,
                     status="disabled",
-                    detail=f"{module.title()} workers are disabled by configuration.",
+                    detail=f"{module.title()} is turned off in Settings, so no new background work will run.",
                 ),
             )
             continue
@@ -114,7 +114,10 @@ def build_worker_health_snapshot(
         missing = max(0, expected - len(module_rows))
         degraded = stale + stopped + missing
         if degraded:
-            detail = f"{module.title()} expected {expected} worker(s), but {degraded} are stale, stopped, or missing."
+            detail = (
+                f"{module.title()} is not processing new work because {degraded} worker slot(s) stopped responding. "
+                "Restart MediaMop; queued work remains safe."
+            )
             status = "degraded"
         else:
             detail = f"{module.title()} worker heartbeats are current."

@@ -49,7 +49,12 @@ def post_refiner_file_remux_pass_enqueue(
         )
 
     scope = body.media_scope
-    library = resolve_library(db, media_scope=scope)
+    library = resolve_library(db, library_id=body.library_id, media_scope=scope)
+    if body.library_id is not None and (library is None or library.id != body.library_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="The selected Refiner library no longer exists. Refresh Libraries and try again.",
+        )
     watched_ok = (library.watched_folder or "").strip() if library is not None else ""
     if not watched_ok:
         label = "TV Refiner" if scope == "tv" else "Movies Refiner"
@@ -65,6 +70,7 @@ def post_refiner_file_remux_pass_enqueue(
     payload = {
         "relative_media_path": body.relative_media_path.strip(),
         "media_scope": scope,
+        "library_id": library.id if library is not None else body.library_id,
     }
     dedupe_key = f"{REFINER_FILE_REMUX_PASS_JOB_KIND}:{uuid4().hex}"
     job = refiner_enqueue_or_get_job(

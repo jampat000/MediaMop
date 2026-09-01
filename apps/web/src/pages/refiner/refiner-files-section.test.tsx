@@ -10,6 +10,7 @@ import type {
 } from "../../lib/refiner/files-api";
 import * as librariesApi from "../../lib/refiner/libraries-api";
 import * as authQueries from "../../lib/auth/queries";
+import * as pauseApi from "../../lib/suite/pause-api";
 import { RefinerFilesSection } from "./refiner-files-section";
 
 function file(over: Partial<RefinerFile> = {}): RefinerFile {
@@ -32,6 +33,8 @@ function file(over: Partial<RefinerFile> = {}): RefinerFile {
     video_height: null,
     hold_until: null,
     size_changed_at: null,
+    created_at: "2026-09-01T08:00:00Z",
+    updated_at: "2026-09-01T08:05:00Z",
     last_seen_at: null,
     last_attempt_at: null,
     ...over,
@@ -60,9 +63,17 @@ function asOperator() {
     data: { role: "operator" },
   } as ReturnType<typeof authQueries.useMeQuery>);
   vi.spyOn(librariesApi, "fetchRefinerLibraries").mockResolvedValue([]);
+  vi.spyOn(pauseApi, "fetchSuitePause").mockResolvedValue({
+    paused: false,
+    paused_until: null,
+    scan_while_paused: true,
+    reason: "Processing is running.",
+    in_flight_policy: "Work already running finishes.",
+  });
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -89,6 +100,54 @@ it("shows the reason a file is not being processed", async () => {
   ).toBeInTheDocument();
 });
 
+it("shows first-seen, last-check, and processing-attempt timestamps on every file", async () => {
+  asOperator();
+  vi.spyOn(api, "fetchRefinerFiles").mockResolvedValue(
+    page({
+      files: [
+        file({
+          created_at: "2026-09-01T08:00:00Z",
+          last_seen_at: "2026-09-01T08:05:00Z",
+          last_attempt_at: "2026-09-01T08:04:00Z",
+        }),
+      ],
+    }),
+  );
+
+  render(<RefinerFilesSection />, { wrapper });
+
+  const timeline = await screen.findByTestId("refiner-file-timestamps-1");
+  expect(timeline).toHaveTextContent("First seen");
+  expect(timeline).toHaveTextContent("Last checked");
+  expect(timeline).toHaveTextContent("Last processing attempt");
+  expect(timeline).not.toHaveTextContent("Not recorded");
+});
+
+it("treats timezone-less backend timestamps as UTC in relative ages", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-09-01T02:04:00Z"));
+  asOperator();
+  vi.spyOn(api, "fetchRefinerFiles").mockResolvedValue(
+    page({
+      files: [
+        file({
+          created_at: "2026-09-01T01:19:00",
+          last_seen_at: "2026-09-01T02:04:00",
+          last_attempt_at: "2026-09-01T01:20:00",
+        }),
+      ],
+    }),
+  );
+
+  render(<RefinerFilesSection />, { wrapper });
+
+  const timeline = await screen.findByTestId("refiner-file-timestamps-1");
+  expect(timeline).toHaveTextContent("45 min ago");
+  expect(timeline).toHaveTextContent("just now");
+  expect(timeline).toHaveTextContent("44 min ago");
+  expect(timeline).not.toHaveTextContent("10 hr ago");
+});
+
 it("shows a bucket for every state, including empty ones", async () => {
   asOperator();
   vi.spyOn(api, "fetchRefinerFiles").mockResolvedValue(page());
@@ -104,6 +163,62 @@ it("shows a bucket for every state, including empty ones", async () => {
   expect(
     screen.getByTestId("refiner-files-bucket-disabled"),
   ).toBeInTheDocument();
+});
+
+it("labels paused work as paused instead of claiming its schedule is closed", async () => {
+  asOperator();
+  vi.mocked(pauseApi.fetchSuitePause).mockResolvedValue({
+    paused: true,
+    paused_until: null,
+    scan_while_paused: true,
+    reason: "Processing is paused until it is resumed.",
+    in_flight_policy: "Work already running finishes.",
+  });
+  vi.spyOn(api, "fetchRefinerFiles").mockResolvedValue(
+    page({
+      files: [
+        file({
+          status: "out_of_schedule",
+          status_reason:
+            "Processing is paused. MediaMop will start work again when you resume it.",
+        }),
+      ],
+      status_counts: { out_of_schedule: 1 },
+    }),
+  );
+
+  render(<RefinerFilesSection />, { wrapper });
+
+  expect(await screen.findByText("Paused")).toBeInTheDocument();
+  expect(screen.getByText("Processing is paused.")).toBeInTheDocument();
+  expect(screen.getByText(/Use Resume at the top/)).toBeInTheDocument();
+  expect(
+    screen.queryByText("This library is outside its schedule."),
+  ).not.toBeInTheDocument();
+});
+
+it("asks for a re-check when a saved pause reason is stale", async () => {
+  asOperator();
+  vi.spyOn(api, "fetchRefinerFiles").mockResolvedValue(
+    page({
+      files: [
+        file({
+          status: "out_of_schedule",
+          status_reason:
+            "Processing is paused. MediaMop will start work again when you resume it.",
+        }),
+      ],
+      status_counts: { out_of_schedule: 1 },
+    }),
+  );
+
+  render(<RefinerFilesSection />, { wrapper });
+
+  expect(await screen.findAllByText(/Needs re-check/)).toHaveLength(2);
+  expect(screen.getByText("Refresh this file's status.")).toBeInTheDocument();
+  expect(screen.getByText(/Use Check again/)).toBeInTheDocument();
+  expect(screen.queryByText("Processing is paused.")).not.toBeInTheDocument();
+  expect(screen.getByText("Needs action").parentElement).toHaveTextContent("1");
 });
 
 it("filters by bucket", async () => {
@@ -334,7 +449,13 @@ it("opens a processing record and offers it as a download", async () => {
         outcome: "live_output_written",
         title: "Remuxed Some Film",
         library_name: "Movies",
-        detail: { ffmpeg_argv: ["ffmpeg", "-i", "in.mkv"] },
+        detail: {
+          source_path: "E:/Completed/Some Film/film.mkv",
+          output_path: "F:/Some Film/film.mkv",
+          output_validation: "Passed: playable video and audio were found.",
+          cleanup_result: "Source removed after the output was verified.",
+          ffmpeg_argv: ["ffmpeg", "-i", "in.mkv"],
+        },
       },
     ],
   });
@@ -343,8 +464,12 @@ it("opens a processing record and offers it as a download", async () => {
   fireEvent.click(await screen.findByTestId("refiner-file-log-1"));
 
   const panel = await screen.findByTestId("refiner-file-log-panel");
-  expect(panel).toHaveTextContent("live_output_written");
+  expect(panel).toHaveTextContent("live output written");
   expect(panel).toHaveTextContent("kept for 90 days");
+  expect(panel).toHaveTextContent("Output validation");
+  expect(panel).toHaveTextContent("Source cleanup");
+  expect(panel).toHaveTextContent("Technical record");
+  expect(panel).not.toHaveTextContent("Ffmpeg Argv");
   expect(screen.getByTestId("refiner-file-log-download")).toHaveAttribute(
     "href",
     "/api/v1/refiner/files/1/log/download",

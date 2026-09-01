@@ -21,9 +21,11 @@ from __future__ import annotations
 
 import contextlib
 import os
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import BinaryIO, Self
 
 from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow
 from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
@@ -114,6 +116,120 @@ class AccessCheck:
     problem: str | None = None
 
 
+class SourceReadGuard:
+    """A held source handle that permits readers but prevents writers.
+
+    Size and mtime checks cannot detect a preallocated download. On Windows, share-mode
+    compatibility is the only reliable way to ask whether another process still owns
+    write access. Keeping this handle open also prevents a writer from starting between
+    preflight and ffmpeg.
+    """
+
+    __slots__ = ("_close", "_closed")
+
+    def __init__(self, close: Callable[[], None]) -> None:
+        self._close = close
+        self._closed = False
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        self._close()
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        self.close()
+
+
+def acquire_source_read_guard(file_path: Path) -> tuple[SourceReadGuard | None, str | None]:
+    """Reserve a source for read-only processing, or explain why Refiner must wait."""
+
+    if os.name == "nt":
+        import ctypes
+        from ctypes import wintypes
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        create_file = kernel32.CreateFileW
+        create_file.argtypes = (
+            wintypes.LPCWSTR,
+            wintypes.DWORD,
+            wintypes.DWORD,
+            wintypes.LPVOID,
+            wintypes.DWORD,
+            wintypes.DWORD,
+            wintypes.HANDLE,
+        )
+        create_file.restype = wintypes.HANDLE
+        close_handle = kernel32.CloseHandle
+        close_handle.argtypes = (wintypes.HANDLE,)
+        close_handle.restype = wintypes.BOOL
+
+        generic_read = 0x80000000
+        file_share_read = 0x00000001
+        file_share_delete = 0x00000004
+        open_existing = 3
+        file_attribute_normal = 0x00000080
+        invalid_handle_value = ctypes.c_void_p(-1).value
+        handle = create_file(
+            str(file_path),
+            generic_read,
+            file_share_read | file_share_delete,
+            None,
+            open_existing,
+            file_attribute_normal,
+            None,
+        )
+        if handle == invalid_handle_value:
+            error = ctypes.get_last_error()
+            if error in {32, 33}:
+                return None, (
+                    "This file is still open for writing by another program. MediaMop will wait until "
+                    "the downloader or importer closes it."
+                )
+            return None, (
+                "MediaMop could not reserve this file for safe read-only processing, so it will wait. "
+                f"The system reported: {ctypes.WinError(error)}."
+            )
+
+        return SourceReadGuard(lambda: close_handle(handle)), None
+
+    handle: BinaryIO | None = None
+    try:
+        handle = file_path.open("rb")
+        try:
+            import fcntl
+
+            fcntl.flock(handle.fileno(), fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except ImportError:
+            pass
+        except BlockingIOError:
+            handle.close()
+            return None, (
+                "This file is still open for writing by another program. MediaMop will wait until "
+                "the downloader or importer closes it."
+            )
+    except OSError as exc:
+        if handle is not None:
+            handle.close()
+        return None, (
+            "MediaMop could not reserve this file for safe read-only processing, so it will wait. "
+            f"The system reported: {exc}."
+        )
+    return SourceReadGuard(handle.close), None
+
+
+def source_writer_problem(file_path: Path) -> str | None:
+    """Return an operator-readable wait reason when a source still has a writer."""
+
+    guard, problem = acquire_source_read_guard(file_path)
+    if guard is not None:
+        guard.close()
+    return problem
+
+
 def _output_root_problem(output_folder: Path) -> str | None:
     probe = output_folder / f".mediamop-write-test-{os.getpid()}"
     try:
@@ -161,6 +277,10 @@ def check_file_access(
                 f"writing it. The system reported: {exc}."
             ),
         )
+
+    writer_problem = source_writer_problem(file_path)
+    if writer_problem:
+        return AccessCheck(ok=False, problem=writer_problem)
 
     if output_folder is not None:
         problem = _output_root_problem(output_folder)

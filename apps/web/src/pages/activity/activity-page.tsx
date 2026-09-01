@@ -861,8 +861,8 @@ export function ActivityPage() {
       </section>
 
       <section className="mm-activity-filters mt-4 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-4">
-        <div className="grid gap-3 lg:grid-cols-[220px_1fr_1fr_1fr_auto_auto]">
-          <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-[minmax(160px,0.9fr)_minmax(160px,0.9fr)_minmax(180px,1.2fr)_minmax(190px,1fr)_minmax(190px,1fr)_auto]">
+          <label className="flex min-w-0 flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
             Module
             <select
               className="mm-input"
@@ -881,7 +881,7 @@ export function ActivityPage() {
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+          <label className="flex min-w-0 flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
             Event
             <select
               className="mm-input"
@@ -898,7 +898,7 @@ export function ActivityPage() {
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+          <label className="flex min-w-0 flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
             Search
             <input
               className="mm-input"
@@ -909,7 +909,7 @@ export function ActivityPage() {
               placeholder="Search titles and details"
             />
           </label>
-          <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+          <label className="flex min-w-0 flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
             From
             <input
               type="datetime-local"
@@ -920,7 +920,7 @@ export function ActivityPage() {
               }
             />
           </label>
-          <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+          <label className="flex min-w-0 flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
             To
             <input
               type="datetime-local"

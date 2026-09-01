@@ -13,9 +13,9 @@ export const PRUNER_TAB_BLURBS: Record<TopTab, string> = {
 };
 
 export const PRUNER_JOB_FILTER_OPTIONS = [
-  { value: "recent", label: "Recent (all statuses, newest first)" },
-  { value: "pending", label: "Pending" },
+  { value: "recent", label: "Recent work (newest first)" },
+  { value: "pending", label: "Queued" },
   { value: "running", label: "Running" },
   { value: "failed", label: "Failed" },
-  { value: "completed", label: "Completed" },
+  { value: "completed", label: "Finished" },
 ] as const;

@@ -25,6 +25,11 @@ class RefinerFileRemuxPassManualEnqueueIn(BaseModel):
         default="movie",
         description="Which saved watched/output tree resolves ``relative_media_path``.",
     )
+    library_id: int | None = Field(
+        default=None,
+        ge=1,
+        description="The Refiner library owning the file. Omit only for legacy scope-based jobs.",
+    )
 
 
 class RefinerFileRemuxPassManualEnqueueOut(BaseModel):

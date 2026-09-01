@@ -95,6 +95,9 @@ def test_completed_remux_output_blocks_repeat_scan_when_source_cleanup_failed(tm
     output = tmp_path / "out" / "movies" / "a.mkv"
     output.parent.mkdir(parents=True)
     output.write_bytes(b"done")
+    source = tmp_path / "source" / "movies" / "a.mkv"
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b"source")
     detail = {
         "ok": True,
         "outcome": "live_output_written",
@@ -103,6 +106,8 @@ def test_completed_remux_output_blocks_repeat_scan_when_source_cleanup_failed(tm
         "output_file": str(output),
         "source_deleted_after_success": False,
         "source_folder_skip_reason": "file is locked",
+        "inspected_source_path": str(source.resolve()),
+        "source_size_bytes": source.stat().st_size,
     }
     with fac() as s:
         s.add(
@@ -121,6 +126,7 @@ def test_completed_remux_output_blocks_repeat_scan_when_source_cleanup_failed(tm
                 s,
                 relative_posix="movies/a.mkv",
                 media_scope="movie",
+                source_path=source,
             )
             is True
         )
@@ -129,6 +135,7 @@ def test_completed_remux_output_blocks_repeat_scan_when_source_cleanup_failed(tm
                 s,
                 relative_posix="movies/a.mkv",
                 media_scope="tv",
+                source_path=source,
             )
             is False
         )
@@ -163,6 +170,49 @@ def test_completed_remux_output_guard_allows_reprocess_when_output_missing(tmp_p
                 s,
                 relative_posix="movies/a.mkv",
                 media_scope="movie",
+            )
+            is False
+        )
+
+
+def test_completed_remux_output_never_authorizes_cleanup_for_changed_source(tmp_path) -> None:
+    url = f"sqlite:///{tmp_path / 'changed.sqlite'}"
+    engine = create_engine(url, connect_args={"check_same_thread": False}, future=True)
+    Base.metadata.create_all(engine)
+    fac = sessionmaker(bind=engine, class_=Session, autoflush=False, autocommit=False, future=True)
+    source = tmp_path / "watch" / "Movie" / "Movie.mkv"
+    output = tmp_path / "out" / "Movie" / "Movie.mkv"
+    source.parent.mkdir(parents=True)
+    output.parent.mkdir(parents=True)
+    source.write_bytes(b"replacement-source")
+    output.write_bytes(b"old-output")
+    detail = {
+        "ok": True,
+        "relative_media_path": "Movie/Movie.mkv",
+        "media_scope": "movie",
+        "output_file": str(output.resolve()),
+        "source_deleted_after_success": False,
+        "inspected_source_path": str(source.resolve()),
+        "source_size_bytes": len(b"original"),
+    }
+    with fac() as s:
+        s.add(
+            ActivityEvent(
+                module="refiner",
+                event_type="refiner.file_remux_pass_completed",
+                title="Movie.mkv was processed successfully",
+                detail=json.dumps(detail),
+            )
+        )
+        s.commit()
+    with fac() as s:
+        assert (
+            refiner_completed_remux_output_exists_for_relative_path(
+                s,
+                relative_posix="Movie/Movie.mkv",
+                media_scope="movie",
+                output_root=tmp_path / "out",
+                source_path=source,
             )
             is False
         )

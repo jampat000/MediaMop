@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 MediaScope = Literal["movie", "tv"]
 
@@ -125,7 +125,12 @@ class RefinerLibraryOut(BaseModel):
     exclude_patterns_csv: str
     min_file_size_mb: int
     max_file_size_mb: int
+    rejected_file_action: str
     min_file_age_seconds: int
+    created_after: datetime | None
+    created_before: datetime | None
+    modified_after: datetime | None
+    modified_before: datetime | None
     exclude_hidden: bool
     top_level_only: bool
 
@@ -191,7 +196,26 @@ class RefinerLibraryCreateIn(BaseModel):
     exclude_patterns_csv: str = Field("", max_length=1000)
     min_file_size_mb: int = Field(0, ge=0, le=1_000_000)
     max_file_size_mb: int = Field(0, ge=0, le=1_000_000)
+    rejected_file_action: Literal["leave", "delete_file"] = Field(
+        "leave",
+        description=(
+            "What to do with a settled file rejected by size/path rules or because it contains no video. "
+            "delete_file removes only that file and then empty parent folders; it never removes a folder containing other files."
+        ),
+    )
     min_file_age_seconds: int = Field(60, ge=0, le=604800)
+    created_after: datetime | None = Field(
+        None, description="Only admit files whose filesystem creation time is on or after this instant."
+    )
+    created_before: datetime | None = Field(
+        None, description="Only admit files whose filesystem creation time is before this instant."
+    )
+    modified_after: datetime | None = Field(
+        None, description="Only admit files whose last-modified time is on or after this instant."
+    )
+    modified_before: datetime | None = Field(
+        None, description="Only admit files whose last-modified time is before this instant."
+    )
     exclude_hidden: bool = True
     top_level_only: bool = False
     sidecar_patterns_csv: str = Field(
@@ -286,6 +310,29 @@ class RefinerLibraryCreateIn(BaseModel):
     priority: int = Field(0, ge=-100, le=100)
     rule_set_id: int | None = None
     manager_connection_ids: list[int] = Field(default_factory=list)
+
+    @field_validator("created_after", "created_before", "modified_after", "modified_before")
+    @classmethod
+    def detection_window_requires_timezone(cls, value: datetime | None) -> datetime | None:
+        if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+            raise ValueError("Detection-window times must include a timezone.")
+        return value
+
+    @model_validator(mode="after")
+    def detection_windows_are_ordered(self):
+        if (
+            self.created_after is not None
+            and self.created_before is not None
+            and self.created_after >= self.created_before
+        ):
+            raise ValueError("Created after must be earlier than created before.")
+        if (
+            self.modified_after is not None
+            and self.modified_before is not None
+            and self.modified_after >= self.modified_before
+        ):
+            raise ValueError("Modified after must be earlier than modified before.")
+        return self
 
 
 class RefinerLibraryUpdateIn(RefinerLibraryCreateIn):

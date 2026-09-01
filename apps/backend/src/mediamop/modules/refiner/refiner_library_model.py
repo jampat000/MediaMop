@@ -115,7 +115,17 @@ class RefinerLibraryRow(Base):
     # 0 means no maximum. A nullable column would make "unset" and "zero" the same
     # question at every read site.
     max_file_size_mb: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    # Optional cleanup for files rejected by the admission rules. It is deliberately
+    # file-only: deleting a whole release folder because one sample failed a size rule
+    # would turn a convenience into a data-loss trap.
+    rejected_file_action: Mapped[str] = mapped_column(Text, nullable=False, server_default="leave")
     min_file_age_seconds: Mapped[int] = mapped_column(Integer, nullable=False, server_default="60")
+    # Optional fixed time windows match FileFlows' Created/Modified before/after
+    # admission rules. Null means that side of the window is open.
+    created_after: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_before: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    modified_after: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    modified_before: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     exclude_hidden: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
     top_level_only: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
 

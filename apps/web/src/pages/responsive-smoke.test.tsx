@@ -29,6 +29,11 @@ vi.mock("../lib/refiner/jobs-inspection/queries", () => ({
     isError: false,
     mutate: vi.fn(),
   })),
+  useRefinerJobRecoverFinalizeFailedMutation: vi.fn(() => ({
+    isPending: false,
+    isError: false,
+    mutate: vi.fn(),
+  })),
 }));
 
 vi.mock("../lib/pruner/queries", () => ({

@@ -24,6 +24,11 @@ class RefinerWatchedFolderRemuxScanDispatchManualEnqueueIn(BaseModel):
         default="movie",
         description="Which saved watched/output tree this scan uses (Movies vs TV path settings).",
     )
+    library_id: int | None = Field(
+        default=None,
+        ge=1,
+        description="Limit the recheck to this saved Refiner library; omit for the scope default.",
+    )
 
 
 class RefinerWatchedFolderRemuxScanDispatchManualEnqueueOut(BaseModel):

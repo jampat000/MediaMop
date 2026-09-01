@@ -58,12 +58,34 @@ export function PrunerStudioMultiSelect({
   const summary = studioTriggerSummary(value);
   const options = mergeOptionsFromLibrary(studios, value);
   const baseTestId = testId ?? "pruner-studio-multiselect";
+  const hasConfiguredInstance = Number.isFinite(instanceId) && instanceId > 0;
 
   const helperBelow = (
     <p className="text-xs text-[var(--mm-text3)]">
       Select studios to activate this rule.
     </p>
   );
+
+  if (!hasConfiguredInstance) {
+    return (
+      <div className="space-y-2" data-testid={baseTestId}>
+        <span className="sr-only" data-testid={`${baseTestId}-summary`}>
+          {summary}
+        </span>
+        <select
+          className="mm-input w-full cursor-not-allowed opacity-70"
+          disabled
+          value="__connect__"
+          data-testid={`${baseTestId}-not-configured`}
+        >
+          <option value="__connect__">Connect a server to load studios</option>
+        </select>
+        <p className="text-xs text-[var(--mm-text3)]">
+          Save and test this provider&apos;s connection before choosing studios.
+        </p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

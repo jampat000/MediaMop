@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 
 from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.refiner_library_service import resolve_library
+from mediamop.modules.refiner.refiner_library_service import list_libraries, resolve_library
 from mediamop.modules.refiner.refiner_operator_settings_service import (
     ensure_refiner_operator_settings_row,
     refiner_periodic_scope_in_schedule_window,
@@ -52,7 +53,10 @@ def refiner_library_periodic_scan_enabled(library: object) -> bool:
     fourth library is scheduled independently of the seeded two (ADR-0014).
     """
 
-    return bool(getattr(library, "enabled", False)) and bool(getattr(library, "schedule_enabled", False))
+    # ``schedule_enabled`` means "apply this processing window", not "stop
+    # discovering files". Detection keeps the Files workbench truthful outside a run
+    # window; leasing is where the schedule blocks expensive work (#337).
+    return bool(getattr(library, "enabled", False))
 
 
 def refiner_scope_periodic_scan_enabled(operator_row: object, *, media_scope: str) -> bool:
@@ -104,62 +108,73 @@ async def _run_periodic_watched_folder_scan_dispatch_enqueue(
     settings: MediaMopSettings,
 ) -> None:
     loop = asyncio.get_running_loop()
-    next_run_movie = loop.time()
-    next_run_tv = loop.time()
+    next_run_by_library: dict[int, float] = {}
     while not stop_event.is_set():
 
-        def _scope_once(media_scope: str, *, now_loop: float, next_run_loop: float) -> tuple[float, float]:
+        def _once(now_loop: float) -> float:
             with session_factory() as session:
-                row = ensure_refiner_operator_settings_row(session)
-                library = resolve_library(session, media_scope=media_scope)
-                interval = _watched_folder_scan_interval_seconds(library, media_scope=media_scope)
-                if not refiner_scope_periodic_scan_enabled(row, media_scope=media_scope):
-                    return next_run_loop, interval
-                if now_loop < next_run_loop:
-                    return next_run_loop, interval
-                if not refiner_periodic_scope_in_schedule_window(session, row, media_scope=media_scope):
-                    return now_loop + min(interval, 60.0), interval
+                libraries = [
+                    library for library in list_libraries(session) if refiner_library_periodic_scan_enabled(library)
+                ]
+                active_ids = {int(library.id) for library in libraries}
+                for stale_id in set(next_run_by_library).difference(active_ids):
+                    next_run_by_library.pop(stale_id, None)
 
-                missed = _missed_due_run_count(
-                    now_loop=now_loop,
-                    next_run_loop=next_run_loop,
-                    interval_seconds=interval,
-                )
-                if missed > 0:
-                    logger.warning(
-                        "Refiner watched-folder scheduler missed %s %s run(s); enqueueing one catch-up scan",
-                        missed,
-                        media_scope,
+                nearest = now_loop + 60.0
+                for library in libraries:
+                    library_id = int(library.id)
+                    scope = "tv" if library.media_scope == "tv" else "movie"
+                    interval = _watched_folder_scan_interval_seconds(library, media_scope=scope)
+                    due = next_run_by_library.get(library_id, now_loop)
+                    if now_loop < due:
+                        nearest = min(nearest, due)
+                        continue
+
+                    missed = _missed_due_run_count(
+                        now_loop=now_loop,
+                        next_run_loop=due,
+                        interval_seconds=interval,
                     )
+                    if missed > 0:
+                        logger.warning(
+                            "Refiner watched-folder scheduler missed %s run(s) for library %s; enqueueing one catch-up scan",
+                            missed,
+                            library.name,
+                        )
 
-                try:
-                    try_enqueue_periodic_watched_folder_remux_scan_dispatch(session, settings, media_scope=media_scope)
-                except Exception:
-                    session.rollback()
-                    logger.exception("Refiner watched-folder scheduler failed for %s scope", media_scope)
-                    return (
-                        now_loop + REFINER_WATCHED_FOLDER_SCAN_DISPATCH_ENQUEUE_FAILURE_COOLDOWN_SECONDS,
-                        interval,
-                    )
-                session.commit()
-                return now_loop + interval, interval
+                    try:
+                        inserted, skip = try_enqueue_periodic_watched_folder_remux_scan_dispatch(
+                            session,
+                            settings,
+                            media_scope=scope,
+                            library_id=library_id,
+                        )
+                        session.commit()
+                    except Exception:
+                        session.rollback()
+                        logger.exception("Refiner watched-folder scheduler failed for library %s", library.name)
+                        next_due = now_loop + REFINER_WATCHED_FOLDER_SCAN_DISPATCH_ENQUEUE_FAILURE_COOLDOWN_SECONDS
+                    else:
+                        # If an earlier scan is still queued, check again soon rather than
+                        # losing a whole library interval. Every other outcome completed
+                        # this tick and waits for the configured cadence.
+                        active_skip = bool(skip and skip.startswith("active_scan_already_queued_"))
+                        next_due = now_loop + (min(interval, 5.0) if not inserted and active_skip else interval)
+                    next_run_by_library[library_id] = next_due
+                    nearest = min(nearest, next_due)
 
-        def _once(
-            now_loop: float,
-            *,
-            next_movie_loop: float = next_run_movie,
-            next_tv_loop: float = next_run_tv,
-        ) -> tuple[float, float, float]:
-            next_movie, poll_movie = _scope_once("movie", now_loop=now_loop, next_run_loop=next_movie_loop)
-            next_tv, poll_tv = _scope_once("tv", now_loop=now_loop, next_run_loop=next_tv_loop)
-            return next_movie, next_tv, min(poll_movie, poll_tv)
+                return max(0.25, min(60.0, nearest - now_loop))
 
         try:
             now_loop = loop.time()
-            next_vals = await asyncio.to_thread(_once, now_loop)
-            poll_seconds = 1.0
-            if next_vals is not None:
-                next_run_movie, next_run_tv, poll_seconds = next_vals
+            poll_seconds = await asyncio.to_thread(_once, now_loop)
+            # ``stop_event.set`` may have been scheduled thread-safely by work that ran
+            # inside ``_once``. A zero-delay yield can resume this task before that
+            # callback under a busy suite, so allow one bounded handoff window before
+            # deciding whether to start another library cycle.
+            if not stop_event.is_set():
+                with contextlib.suppress(TimeoutError):
+                    await asyncio.wait_for(stop_event.wait(), timeout=0.01)
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -176,12 +191,7 @@ async def _run_periodic_watched_folder_scan_dispatch_enqueue(
 
         if stop_event.is_set():
             break
-        deadline = loop.time() + _next_scheduler_sleep_seconds(
-            now_loop=loop.time(),
-            next_run_movie=next_run_movie,
-            next_run_tv=next_run_tv,
-            poll_seconds=poll_seconds,
-        )
+        deadline = loop.time() + max(0.25, float(poll_seconds))
         while loop.time() < deadline and not stop_event.is_set():
             remaining = deadline - loop.time()
             if remaining <= 0:

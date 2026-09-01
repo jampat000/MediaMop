@@ -32,7 +32,7 @@ const REFINER_TAB_BLURBS: Record<RefinerPageTabId, string> = {
   libraries:
     "Add and configure Refiner libraries — folders, file types, schedule and guardrails, one set per library.",
   "audio-subtitles":
-    "Choose default audio and subtitle remux rules separately for TV and Movies.",
+    "Build reusable audio, subtitle and metadata profiles, then attach the right profile to each library.",
   schedules:
     "Set optional schedule windows and run manual watched-folder scans when needed.",
   files:

@@ -383,6 +383,12 @@ class PrunerJobsInspectionRow(BaseModel):
     status: str
     payload_json: str | None
     last_error: str | None
+    operator_message: str = Field(default="", description="Short plain-language explanation for the operator.")
+    next_action: str = Field(default="", description="The next action an operator can take, or why none is needed.")
+    technical_detail: str | None = Field(
+        default=None,
+        description="Technical diagnostic detail, kept secondary to the operator message.",
+    )
     updated_at: datetime
 
 

@@ -89,6 +89,17 @@ function seedRefinerQueries(qc: QueryClient) {
   qc.setQueryData(refinerPathSettingsQueryKey, minimalRefinerPathSettings);
   qc.setQueryData(refinerOperatorSettingsQueryKey, {
     max_concurrent_files: 1,
+    runner_capacity: 4,
+    runner_cost_sd: 1,
+    runner_cost_720p: 1,
+    runner_cost_1080p: 2,
+    runner_cost_4k: 4,
+    runner_cost_undetermined: 0,
+    work_temp_stale_sweep_enabled: true,
+    failure_cleanup_enabled: false,
+    keep_failed_work_files: false,
+    file_log_retention_days: 90,
+    verbose_detection_logging: false,
     min_file_age_seconds: 60,
     refiner_min_input_file_size_mb: 50,
     minimum_free_disk_space_mb: 5120,
@@ -173,26 +184,28 @@ describe("RefinerPage", () => {
     openTab("Jobs");
     const block = screen.getByTestId("refiner-jobs-inspection-section");
     expect(block.textContent).toMatch(/Activity/i);
-    expect(block.textContent).toMatch(
-      /Pending, running, and recent Refiner work/i,
-    );
+    expect(block.textContent).toMatch(/Current and recent Refiner work/i);
+    expect(block.textContent).toMatch(/clear next step/i);
   });
 
   it("Libraries tab shows processing settings controls", () => {
     renderRefinerPage();
     openTab("Libraries");
-    const section = screen.getByText("Processing settings");
+    const section = screen.getByText("Processing, safety and records");
     expect(section).toBeInTheDocument();
   });
 
   it("Libraries tab exposes process controls for concurrency and file-age guardrail", () => {
     renderRefinerPage();
     openTab("Libraries");
-    const block = screen.getByText("Processing settings").closest("section");
+    const block = screen
+      .getByText("Processing, safety and records")
+      .closest("section");
     expect(block).not.toBeNull();
     const text = block?.textContent ?? "";
-    expect(text).toMatch(/Files at once/i);
-    expect(text).toMatch(/Minimum file age/i);
+    expect(text).toMatch(/Absolute file limit/i);
+    expect(text).toMatch(/Minimum unchanged age/i);
+    expect(text).toMatch(/Verbose file-detection records/i);
   });
 
   it("top-level tabs no longer include Workers", () => {

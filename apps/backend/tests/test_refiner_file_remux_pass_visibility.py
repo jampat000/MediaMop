@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import json
+
 from mediamop.modules.refiner.file_remux_pass.visibility import (
     REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN,
     REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED,
+    REMUX_PASS_OUTCOME_SOURCE_NOT_READY,
     clip_remux_pass_payload_for_activity,
     remux_pass_activity_title,
     remux_pass_result_to_activity_detail,
@@ -43,11 +46,33 @@ def test_activity_title_per_outcome() -> None:
         ).lower()
     )
     assert (
+        "waiting for foo.mkv"
+        in remux_pass_activity_title({**base, "ok": False, "outcome": REMUX_PASS_OUTCOME_SOURCE_NOT_READY}).lower()
+    )
+    assert (
         "no changes needed"
         in remux_pass_activity_title(
             {**base, "outcome": REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED},
         ).lower()
     )
+
+
+def test_source_not_ready_is_an_expected_wait_not_a_failure() -> None:
+    detail = json.loads(
+        remux_pass_result_to_activity_detail(
+            {
+                "ok": False,
+                "outcome": REMUX_PASS_OUTCOME_SOURCE_NOT_READY,
+                "retryable_wait": True,
+                "relative_media_path": "movies/downloading.mkv",
+                "reason": "This file is still open for writing.",
+            }
+        )
+    )
+
+    assert detail["result"] == "skipped"
+    assert detail["severity"] == "info"
+    assert "next_action" not in detail
 
 
 def test_clip_argv_for_activity_truncates_long_lists() -> None:

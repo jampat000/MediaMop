@@ -172,6 +172,9 @@ export type PrunerJobsInspectionRow = {
   status: string;
   payload_json: string | null;
   last_error: string | null;
+  operator_message?: string;
+  next_action?: string;
+  technical_detail?: string | null;
   updated_at: string;
 };
 

@@ -5,6 +5,7 @@ Binary resolution: ``<MEDIAMOP_HOME>/bin/ffmpeg/{ffprobe,ffmpeg}[.exe]`` first, 
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
@@ -23,8 +24,14 @@ from mediamop.modules.refiner.refiner_remux_rules import RemuxPlan
 logger = logging.getLogger(__name__)
 
 REFINER_FFMPEG_TIMEOUT_S: int = 3600
+REFINER_FFMPEG_SLOW_GRACE_S: int = 60
+REFINER_FFMPEG_MAX_PROJECTED_REMAINING_S: int = 12 * 60 * 60
 _REFINER_FFPROBE_LOG_MAX_CHARS = 2000
 _REFINER_FFMPEG_STDERR_TAIL_BYTES = 32 * 1024
+
+
+class MediaCompletenessError(RuntimeError):
+    """A staged or source media file cannot be trusted as complete."""
 
 
 def _clip_probe_text(raw: object, *, max_chars: int = _REFINER_FFPROBE_LOG_MAX_CHARS) -> str:
@@ -196,7 +203,30 @@ def ffprobe_json(
     return parsed
 
 
-def validate_remux_output(path: Path, *, mediamop_home: str, expected_audio: int = 0) -> None:
+def _probe_duration_seconds(data: dict[str, Any]) -> float | None:
+    candidates: list[float] = []
+    fmt = data.get("format")
+    if isinstance(fmt, dict):
+        with contextlib.suppress(TypeError, ValueError):
+            candidates.append(float(fmt.get("duration") or 0))
+    streams = data.get("streams")
+    if isinstance(streams, list):
+        for stream in streams:
+            if not isinstance(stream, dict):
+                continue
+            with contextlib.suppress(TypeError, ValueError):
+                candidates.append(float(stream.get("duration") or 0))
+    valid = [duration for duration in candidates if duration > 0]
+    return max(valid) if valid else None
+
+
+def validate_remux_output(
+    path: Path,
+    *,
+    mediamop_home: str,
+    expected_audio: int = 0,
+    expected_duration_seconds: float | None = None,
+) -> None:
     data = ffprobe_json(path, mediamop_home=mediamop_home)
     streams = data.get("streams") or []
     if not isinstance(streams, list):
@@ -211,6 +241,66 @@ def validate_remux_output(path: Path, *, mediamop_home: str, expected_audio: int
         raise RuntimeError(
             f"validation failed: expected {expected_audio} audio stream(s), got {n_audio}",
         )
+    if expected_duration_seconds is not None and expected_duration_seconds > 0:
+        output_duration = _probe_duration_seconds(data)
+        if output_duration is None:
+            raise MediaCompletenessError(
+                "Validation failed: Refiner could not confirm the staged output duration, so it was not published."
+            )
+        tolerance = max(5.0, expected_duration_seconds * 0.01)
+        if output_duration < expected_duration_seconds - tolerance:
+            raise MediaCompletenessError(
+                "Validation failed: the staged output is incomplete "
+                f"({output_duration:.1f}s of {expected_duration_seconds:.1f}s expected), so it was not published."
+            )
+
+
+def validate_media_integrity(path: Path, *, mediamop_home: str) -> None:
+    """Read the primary video from start to finish and fail on damaged/truncated input.
+
+    Docker bind mounts cannot always expose another process's write handle. A complete
+    demux pass is therefore the authoritative preflight there: it catches sparse or
+    preallocated downloads whose logical size and metadata already look final.
+    """
+
+    _, ffmpeg_bin = resolve_ffprobe_ffmpeg(mediamop_home=mediamop_home)
+    argv = [
+        ffmpeg_bin,
+        "-hide_banner",
+        "-v",
+        "error",
+        "-xerror",
+        "-err_detect",
+        "explode",
+        "-i",
+        str(path),
+        "-map",
+        "0:v:0",
+        "-c",
+        "copy",
+        "-f",
+        "null",
+        "-",
+    ]
+    result = subprocess.run(
+        argv,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        stdin=subprocess.DEVNULL,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=REFINER_FFMPEG_TIMEOUT_S,
+        check=False,
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or "").strip()
+        if len(detail) > _REFINER_FFPROBE_LOG_MAX_CHARS:
+            detail = detail[:_REFINER_FFPROBE_LOG_MAX_CHARS] + "…(truncated)"
+        raise MediaCompletenessError(
+            "MediaMop could not read this media file from start to finish. It may still be downloading or may be "
+            f"incomplete, so Refiner will wait. The media check reported: {detail or 'incomplete media data'}."
+        )
 
 
 def build_ffmpeg_argv(
@@ -224,7 +314,17 @@ def build_ffmpeg_argv(
     # ``input_flags`` carries hardware acceleration and strictness. They go *before* -i,
     # because -hwaccel applies to the input that follows it; after -i they are silently
     # ignored, which is the failure mode where nothing looks wrong and nothing is faster.
-    args = [ffmpeg_bin, "-hide_banner", "-loglevel", "error", "-nostdin", "-y"]
+    args = [
+        ffmpeg_bin,
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-xerror",
+        "-err_detect",
+        "explode",
+        "-nostdin",
+        "-y",
+    ]
     args.extend(input_flags or [])
     args.extend(["-i", str(src)])
     for vi in plan.video_indices:
@@ -293,66 +393,89 @@ def run_ffmpeg(
     progress_argv = _argv_with_progress(argv)
     started = time.monotonic()
     fields: dict[str, str] = {}
-    proc = subprocess.Popen(
-        progress_argv,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        stdin=subprocess.DEVNULL,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
-    if proc.stdout is None:
-        proc.kill()
-        raise RuntimeError("ffmpeg progress stream is unavailable")
+    with tempfile.NamedTemporaryFile(delete=False) as stderr_file:
+        stderr_path = Path(stderr_file.name)
     try:
-        for raw in proc.stdout:
-            if timeout_s is not None and time.monotonic() - started > timeout_s:
-                proc.kill()
-                raise RuntimeError("ffmpeg timed out")
-            line = raw.strip()
-            if not line or "=" not in line:
-                continue
-            key, value = line.split("=", 1)
-            fields[key] = value
-            if key != "progress":
-                continue
-            elapsed = max(0.0, time.monotonic() - started)
-            out_time_s: float | None = None
-            try:
-                out_time_s = max(0.0, float(fields.get("out_time_ms", "0")) / 1_000_000.0)
-            except ValueError:
-                out_time_s = None
-            percent: float | None = None
-            eta_s: int | None = None
-            if duration_seconds and duration_seconds > 0 and out_time_s is not None:
-                percent = max(0.0, min(99.0 if value != "end" else 100.0, (out_time_s / duration_seconds) * 100.0))
-                if percent > 0 and value != "end":
-                    total_est = elapsed / (percent / 100.0)
-                    eta_s = max(0, int(total_est - elapsed))
-            if value == "end":
-                percent = 100.0
-                eta_s = 0
-            progress_callback(
-                {
-                    "percent": percent,
-                    "eta_seconds": eta_s,
-                    "elapsed_seconds": int(elapsed),
-                    "processed_seconds": out_time_s,
-                    "speed": fields.get("speed"),
-                    "progress": value,
-                }
+        with stderr_path.open("wb") as stderr_handle:
+            proc = subprocess.Popen(
+                progress_argv,
+                stdout=subprocess.PIPE,
+                stderr=stderr_handle,
+                stdin=subprocess.DEVNULL,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
             )
-        rc = proc.wait(timeout=5)
-    except Exception:
-        if proc.poll() is None:
-            proc.kill()
-        raise
-    stderr = ""
-    if proc.stderr is not None:
-        stderr = proc.stderr.read()
-    if rc != 0:
-        raise RuntimeError((stderr or "").strip() or "ffmpeg failed")
+            if proc.stdout is None:
+                proc.kill()
+                raise RuntimeError("ffmpeg progress stream is unavailable")
+            try:
+                for raw in proc.stdout:
+                    elapsed = max(0.0, time.monotonic() - started)
+                    if timeout_s is not None and elapsed > timeout_s:
+                        proc.kill()
+                        raise RuntimeError("ffmpeg timed out")
+                    line = raw.strip()
+                    if not line or "=" not in line:
+                        continue
+                    key, value = line.split("=", 1)
+                    fields[key] = value
+                    if key != "progress":
+                        continue
+                    out_time_s: float | None = None
+                    try:
+                        out_time_s = max(0.0, float(fields.get("out_time_ms", "0")) / 1_000_000.0)
+                    except ValueError:
+                        out_time_s = None
+                    percent: float | None = None
+                    eta_s: int | None = None
+                    if duration_seconds and duration_seconds > 0 and out_time_s is not None:
+                        percent = max(
+                            0.0,
+                            min(99.0 if value != "end" else 100.0, (out_time_s / duration_seconds) * 100.0),
+                        )
+                        if percent > 0 and value != "end":
+                            total_est = elapsed / (percent / 100.0)
+                            eta_s = max(0, int(total_est - elapsed))
+                    if value == "end":
+                        percent = 100.0
+                        eta_s = 0
+                    if (
+                        elapsed >= REFINER_FFMPEG_SLOW_GRACE_S
+                        and eta_s is not None
+                        and eta_s > REFINER_FFMPEG_MAX_PROJECTED_REMAINING_S
+                    ):
+                        proc.kill()
+                        raise RuntimeError(
+                            "ffmpeg was stopped because progress projected more than 12 hours remaining. "
+                            "The input may be malformed, mislabeled, or unreadable at a usable speed."
+                        )
+                    progress_callback(
+                        {
+                            "percent": percent,
+                            "eta_seconds": eta_s,
+                            "elapsed_seconds": int(elapsed),
+                            "processed_seconds": out_time_s,
+                            "speed": fields.get("speed"),
+                            "progress": value,
+                        }
+                    )
+                rc = proc.wait(timeout=5)
+            except Exception:
+                if proc.poll() is None:
+                    proc.kill()
+                raise
+        if rc != 0:
+            raise RuntimeError(_read_tail_text(stderr_path) or "ffmpeg failed")
+    finally:
+        try:
+            stderr_path.unlink(missing_ok=True)
+        except OSError:
+            logger.debug(
+                "Refiner: could not remove temporary ffmpeg stderr log %s",
+                stderr_path,
+                exc_info=True,
+            )
 
 
 def remux_to_temp_file(
@@ -379,7 +502,12 @@ def remux_to_temp_file(
         argv = build_ffmpeg_argv(ffmpeg_bin=ffmpeg_bin, src=src, dst=tmp_path, plan=plan)
         logger.debug("Refiner: ffmpeg %s", " ".join(argv[:8]) + " ...")
         run_ffmpeg(argv, progress_callback=progress_callback, duration_seconds=duration_seconds)
-        validate_remux_output(tmp_path, mediamop_home=mediamop_home, expected_audio=len(plan.audio))
+        validate_remux_output(
+            tmp_path,
+            mediamop_home=mediamop_home,
+            expected_audio=len(plan.audio),
+            expected_duration_seconds=duration_seconds,
+        )
     except Exception:
         try:
             if tmp_path.is_file():

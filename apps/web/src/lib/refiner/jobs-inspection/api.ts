@@ -2,6 +2,7 @@ import { fetchCsrfToken } from "../../api/auth-api";
 import { apiFetch, readJson, requireOk } from "../../api/client";
 import type {
   RefinerJobCancelPendingOut,
+  RefinerJobRecoverFinalizeFailedOut,
   RefinerJobsInspectionOut,
 } from "./types";
 
@@ -45,4 +46,18 @@ export async function postRefinerJobCancelPending(
   });
   await requireOk(path, r, "Could not cancel Refiner job");
   return readJson<RefinerJobCancelPendingOut>(r);
+}
+
+export async function postRefinerJobRecoverFinalizeFailed(
+  jobId: number,
+): Promise<RefinerJobRecoverFinalizeFailedOut> {
+  const csrf_token = await fetchCsrfToken();
+  const path = `/api/v1/refiner/jobs/${jobId}/recover-finalize-failed`;
+  const r = await apiFetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ csrf_token }),
+  });
+  await requireOk(path, r, "Could not recover that Refiner result");
+  return readJson<RefinerJobRecoverFinalizeFailedOut>(r);
 }

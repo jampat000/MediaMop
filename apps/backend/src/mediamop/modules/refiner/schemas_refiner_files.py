@@ -12,6 +12,7 @@ RefinerFileStatusName = Literal[
     "processing",
     "processed",
     "processing_failed",
+    "skipped",
     "disabled",
     "on_hold",
     "out_of_schedule",
@@ -66,6 +67,8 @@ class RefinerFileOut(BaseModel):
         default=None,
         description="When this file's size last changed, as observed across scans.",
     )
+    created_at: datetime = Field(description="When MediaMop first recorded this file.")
+    updated_at: datetime = Field(description="When this file row was last changed.")
     last_seen_at: datetime | None = None
     last_attempt_at: datetime | None = None
 

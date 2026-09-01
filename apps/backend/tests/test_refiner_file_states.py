@@ -137,6 +137,7 @@ def test_every_withheld_status_is_a_deliberate_decision_not_to_act() -> None:
         "on_hold",
         "out_of_schedule",
         "blocked_upstream",
+        "skipped",
     } == REFINER_WITHHELD_STATUSES
 
 

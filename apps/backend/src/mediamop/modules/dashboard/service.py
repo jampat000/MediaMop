@@ -83,10 +83,22 @@ def _build_module_statuses(
             "setup_required",
             "Add an enabled watched-folder library before Refiner can process files.",
         )
+    elif refiner_failed or refiner_quarantined:
+        refiner_state = "degraded"
+        parts: list[str] = []
+        if refiner_failed:
+            parts.append(
+                f"{refiner_failed} Refiner job(s) need review. Open Refiner Jobs for the explanation and recovery action."
+            )
+        if refiner_quarantined:
+            parts.append(
+                f"{refiner_quarantined} file(s) are held after repeated failures. Open Refiner Files to fix or start them again."
+            )
+        if refiner_worker and refiner_worker.status == "degraded":
+            parts.append(refiner_worker.detail)
+        refiner_summary = " ".join(parts)
     elif refiner_worker and refiner_worker.status == "degraded":
         refiner_state, refiner_summary = "degraded", refiner_worker.detail
-    elif refiner_failed or refiner_quarantined:
-        refiner_state, refiner_summary = "degraded", "Refiner has current failures that need operator review."
     elif refiner_active or refiner_queued:
         refiner_state, refiner_summary = (
             "processing",
@@ -104,7 +116,15 @@ def _build_module_statuses(
             failed_job_count=refiner_failed,
             quarantined_file_count=refiner_quarantined,
             summary=refiner_summary,
-            action_path=("/refiner?tab=jobs" if (refiner_failed or refiner_quarantined) else "/refiner?tab=libraries"),
+            action_path=(
+                "/refiner?tab=files&status=on_hold"
+                if refiner_quarantined and not refiner_failed
+                else "/refiner?tab=jobs&status=failed"
+                if refiner_failed
+                else "/refiner?tab=jobs"
+                if (refiner_worker and refiner_worker.status == "degraded")
+                else "/refiner?tab=libraries"
+            ),
         )
     )
 
@@ -138,7 +158,15 @@ def _build_module_statuses(
             "Connect an enabled Emby, Jellyfin, or Plex server before Pruner can run.",
         )
     elif (pruner_worker and pruner_worker.status == "degraded") or failed_connection or pruner_failed:
-        pruner_state, pruner_summary = "degraded", "Pruner needs a connection or job failure reviewed."
+        pruner_state = "degraded"
+        parts = []
+        if failed_connection:
+            parts.append("The connected media server needs a connection test.")
+        if pruner_failed:
+            parts.append(f"{pruner_failed} Pruner job(s) need review in Pruner Jobs.")
+        if pruner_worker and pruner_worker.status == "degraded":
+            parts.append(pruner_worker.detail)
+        pruner_summary = " ".join(parts)
     elif pruner_active or pruner_queued:
         pruner_state, pruner_summary = (
             "processing",
@@ -155,7 +183,11 @@ def _build_module_statuses(
             queued_job_count=pruner_queued,
             failed_job_count=pruner_failed,
             summary=pruner_summary,
-            action_path="/pruner?tab=jobs" if pruner_failed else "/pruner?tab=emby",
+            action_path=(
+                "/pruner?tab=jobs"
+                if pruner_failed or (pruner_worker and pruner_worker.status == "degraded")
+                else "/pruner?tab=emby"
+            ),
         )
     )
     incidents = refiner_failed + pruner_failed + refiner_quarantined + int(failed_connection)

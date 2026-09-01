@@ -144,7 +144,11 @@ def enqueue_scan_for_library(
     """
 
     scope = "tv" if library.media_scope == "tv" else "movie"
-    if refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan(session, media_scope=scope):
+    if refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan(
+        session,
+        media_scope=scope,
+        library_id=library.id,
+    ):
         # A queued scan will already look at this file. Adding another would mean two
         # walks of the same tree for one arrival.
         return False, "active_scan_already_queued"

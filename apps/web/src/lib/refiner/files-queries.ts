@@ -13,6 +13,7 @@ import {
   type RefinerFilesPage,
   type RefinerFilesQuery,
 } from "./files-api";
+import { postRefinerWatchedFolderRemuxScanDispatchEnqueue } from "./watched-folder-scan-api";
 
 export const refinerFilesKey = (query: RefinerFilesQuery) => [
   "refiner",
@@ -81,11 +82,41 @@ export function useProcessRefinerFileNow() {
     mutationFn: ({
       relative_media_path,
       media_scope,
+      library_id,
     }: {
       relative_media_path: string;
       media_scope: "movie" | "tv";
-    }) => postRefinerFileRemuxPassEnqueue({ relative_media_path, media_scope }),
+      library_id?: number;
+    }) =>
+      postRefinerFileRemuxPassEnqueue({
+        relative_media_path,
+        media_scope,
+        library_id,
+      }),
     onSuccess: () =>
       void qc.invalidateQueries({ queryKey: ["refiner", "files"] }),
+  });
+}
+
+export function useRefinerCheckLibraryAgain() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      media_scope,
+      library_id,
+    }: {
+      media_scope: "movie" | "tv";
+      library_id: number;
+    }) =>
+      postRefinerWatchedFolderRemuxScanDispatchEnqueue({
+        enqueue_remux_jobs: true,
+        media_scope,
+        library_id,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["refiner", "files"] });
+      void qc.invalidateQueries({ queryKey: ["refiner", "jobs"] });
+      void qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
   });
 }

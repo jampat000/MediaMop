@@ -274,6 +274,7 @@ export function SettingsGeneralTab({
             <section
               className={SUITE_SETTINGS_DASH_CARD_CLASS}
               data-testid="suite-settings-history-reset"
+              id="history-reset"
               aria-labelledby="suite-settings-history-reset-heading"
             >
               <div className="mm-card-action-body">

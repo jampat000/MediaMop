@@ -50,6 +50,7 @@ def post_refiner_watched_folder_remux_scan_dispatch_enqueue(
         db,
         enqueue_remux_jobs=body.enqueue_remux_jobs,
         media_scope=body.media_scope,
+        library_id=body.library_id,
     )
     if not ok:
         if err == "no_saved_watched_folder":
@@ -74,6 +75,7 @@ def post_refiner_watched_folder_remux_scan_dispatch_enqueue(
         enqueue_remux_jobs=body.enqueue_remux_jobs,
         scan_trigger="manual",
         media_scope=body.media_scope,
+        library_id=body.library_id,
     )
     db.commit()
     return RefinerWatchedFolderRemuxScanDispatchManualEnqueueOut(

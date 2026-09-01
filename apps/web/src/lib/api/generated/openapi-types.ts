@@ -944,6 +944,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/refiner/jobs/{job_id}/recover-finalize-failed": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Refiner Job Recover Finalize Failed
+     * @description Recover a completed media pass whose durable job finalization was interrupted.
+     */
+    post: operations["post_refiner_job_recover_finalize_failed_api_v1_refiner_jobs__job_id__recover_finalize_failed_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/refiner/libraries": {
     parameters: {
       query?: never;
@@ -2726,10 +2746,27 @@ export interface components {
       job_kind: string;
       /** Last Error */
       last_error: string | null;
+      /**
+       * Next Action
+       * @description The next action an operator can take, or why none is needed.
+       * @default
+       */
+      next_action: string;
+      /**
+       * Operator Message
+       * @description Short plain-language explanation for the operator.
+       * @default
+       */
+      operator_message: string;
       /** Payload Json */
       payload_json: string | null;
       /** Status */
       status: string;
+      /**
+       * Technical Detail
+       * @description Technical diagnostic detail, kept secondary to the operator message.
+       */
+      technical_detail?: string | null;
       /**
        * Updated At
        * Format: date-time
@@ -3307,6 +3344,12 @@ export interface components {
        */
       blocked_by_connection?: string | null;
       /**
+       * Created At
+       * Format: date-time
+       * @description When MediaMop first recorded this file.
+       */
+      created_at: string;
+      /**
        * Failure Attempts
        * @default 0
        */
@@ -3375,6 +3418,7 @@ export interface components {
         | "processing"
         | "processed"
         | "processing_failed"
+        | "skipped"
         | "disabled"
         | "on_hold"
         | "out_of_schedule"
@@ -3384,6 +3428,12 @@ export interface components {
        * @description Why the file is in this state, written for the person reading it.
        */
       status_reason: string;
+      /**
+       * Updated At
+       * Format: date-time
+       * @description When this file row was last changed.
+       */
+      updated_at: string;
     };
     /**
      * RefinerFileRemuxPassManualEnqueueIn
@@ -3392,6 +3442,11 @@ export interface components {
     RefinerFileRemuxPassManualEnqueueIn: {
       /** Csrf Token */
       csrf_token: string;
+      /**
+       * Library Id
+       * @description The Refiner library owning the file. Omit only for legacy scope-based jobs.
+       */
+      library_id?: number | null;
       /**
        * Media Scope
        * @description Which saved watched/output tree resolves ``relative_media_path``.
@@ -3438,6 +3493,7 @@ export interface components {
             | "processing"
             | "processed"
             | "processing_failed"
+            | "skipped"
             | "disabled"
             | "on_hold"
             | "out_of_schedule"
@@ -3547,6 +3603,18 @@ export interface components {
       lease_owner: string | null;
       /** Max Attempts */
       max_attempts: number;
+      /**
+       * Next Action
+       * @description The next action an operator can take, or why none is needed.
+       * @default
+       */
+      next_action: string;
+      /**
+       * Operator Message
+       * @description Short plain-language explanation for the operator.
+       * @default
+       */
+      operator_message: string;
       /** Payload Json */
       payload_json?: string | null;
       /**
@@ -3555,10 +3623,35 @@ export interface components {
        */
       status: string;
       /**
+       * Technical Detail
+       * @description Technical diagnostic detail, kept secondary to the operator message.
+       */
+      technical_detail?: string | null;
+      /**
        * Updated At
        * Format: date-time
        */
       updated_at: string;
+    };
+    /** RefinerJobRecoverFinalizeFailedIn */
+    RefinerJobRecoverFinalizeFailedIn: {
+      /** Csrf Token */
+      csrf_token: string;
+    };
+    /** RefinerJobRecoverFinalizeFailedOut */
+    RefinerJobRecoverFinalizeFailedOut: {
+      /** Job Id */
+      job_id: number;
+      /**
+       * Ok
+       * @default true
+       */
+      ok: boolean;
+      /**
+       * Status
+       * @description Always ``completed`` on success.
+       */
+      status: string;
     };
     /**
      * RefinerJobsInspectionOut
@@ -3575,6 +3668,16 @@ export interface components {
     };
     /** RefinerLibraryCreateIn */
     RefinerLibraryCreateIn: {
+      /**
+       * Created After
+       * @description Only admit files whose filesystem creation time is on or after this instant.
+       */
+      created_after?: string | null;
+      /**
+       * Created Before
+       * @description Only admit files whose filesystem creation time is before this instant.
+       */
+      created_before?: string | null;
       /** Csrf Token */
       csrf_token: string;
       /**
@@ -3694,6 +3797,16 @@ export interface components {
        * @default 0
        */
       min_file_size_mb: number;
+      /**
+       * Modified After
+       * @description Only admit files whose last-modified time is on or after this instant.
+       */
+      modified_after?: string | null;
+      /**
+       * Modified Before
+       * @description Only admit files whose last-modified time is before this instant.
+       */
+      modified_before?: string | null;
       /** Name */
       name: string;
       /**
@@ -3724,6 +3837,13 @@ export interface components {
        * @default 0
        */
       priority: number;
+      /**
+       * Rejected File Action
+       * @description What to do with a settled file rejected by size/path rules or because it contains no video. delete_file removes only that file and then empty parent folders; it never removes a folder containing other files.
+       * @default leave
+       * @enum {string}
+       */
+      rejected_file_action: "leave" | "delete_file";
       /**
        * Retry Backoff Seconds
        * @description The first wait before a retry. It doubles each attempt, capped at an hour.
@@ -3831,6 +3951,10 @@ export interface components {
        * @default 0
        */
       active_job_count: number;
+      /** Created After */
+      created_after: string | null;
+      /** Created Before */
+      created_before: string | null;
       /** Discovered From Connection Id */
       discovered_from_connection_id?: number | null;
       /** Discovered Library Key */
@@ -3898,6 +4022,10 @@ export interface components {
       min_file_age_seconds: number;
       /** Min File Size Mb */
       min_file_size_mb: number;
+      /** Modified After */
+      modified_after: string | null;
+      /** Modified Before */
+      modified_before: string | null;
       /** Name */
       name: string;
       /** Output Collision Policy */
@@ -3908,6 +4036,8 @@ export interface components {
       preserve_original_timestamps: boolean;
       /** Priority */
       priority: number;
+      /** Rejected File Action */
+      rejected_file_action: string;
       /** Retry Backoff Seconds */
       retry_backoff_seconds: number;
       /** Retry Execution Failures */
@@ -3955,6 +4085,16 @@ export interface components {
      * @description Same shape as create. A library is edited whole, so a partial save cannot half-apply.
      */
     RefinerLibraryUpdateIn: {
+      /**
+       * Created After
+       * @description Only admit files whose filesystem creation time is on or after this instant.
+       */
+      created_after?: string | null;
+      /**
+       * Created Before
+       * @description Only admit files whose filesystem creation time is before this instant.
+       */
+      created_before?: string | null;
       /** Csrf Token */
       csrf_token: string;
       /**
@@ -4074,6 +4214,16 @@ export interface components {
        * @default 0
        */
       min_file_size_mb: number;
+      /**
+       * Modified After
+       * @description Only admit files whose last-modified time is on or after this instant.
+       */
+      modified_after?: string | null;
+      /**
+       * Modified Before
+       * @description Only admit files whose last-modified time is before this instant.
+       */
+      modified_before?: string | null;
       /** Name */
       name: string;
       /**
@@ -4104,6 +4254,13 @@ export interface components {
        * @default 0
        */
       priority: number;
+      /**
+       * Rejected File Action
+       * @description What to do with a settled file rejected by size/path rules or because it contains no video. delete_file removes only that file and then empty parent folders; it never removes a folder containing other files.
+       * @default leave
+       * @enum {string}
+       */
+      rejected_file_action: "leave" | "delete_file";
       /**
        * Retry Backoff Seconds
        * @description The first wait before a retry. It doubles each attempt, capped at an hour.
@@ -4929,6 +5086,11 @@ export interface components {
        * @default true
        */
       enqueue_remux_jobs: boolean;
+      /**
+       * Library Id
+       * @description Limit the recheck to this saved Refiner library; omit for the scope default.
+       */
+      library_id?: number | null;
       /**
        * Media Scope
        * @description Which saved watched/output tree this scan uses (Movies vs TV path settings).
@@ -6815,6 +6977,7 @@ export interface operations {
               | "processing"
               | "processed"
               | "processing_failed"
+              | "skipped"
               | "disabled"
               | "on_hold"
               | "out_of_schedule"
@@ -7224,6 +7387,41 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["RefinerJobCancelPendingOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  post_refiner_job_recover_finalize_failed_api_v1_refiner_jobs__job_id__recover_finalize_failed_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        job_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RefinerJobRecoverFinalizeFailedIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerJobRecoverFinalizeFailedOut"];
         };
       };
       /** @description Validation Error */

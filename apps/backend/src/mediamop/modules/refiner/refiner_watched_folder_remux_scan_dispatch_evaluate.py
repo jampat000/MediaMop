@@ -84,6 +84,7 @@ def fetch_manager_queue_signals_for_scan(
     settings: MediaMopSettings,
     *,
     media_scope: MediaScope,
+    connection_ids: tuple[int, ...] | None = None,
 ) -> tuple[tuple[ManagerQueueSignal, ...], QueueSignalReport]:
     """Ask every manager covering ``media_scope``, and say who did not answer.
 
@@ -91,7 +92,12 @@ def fetch_manager_queue_signals_for_scan(
     the report is what stops that degradation from being silent.
     """
 
-    signals = collect_queue_signals(session, settings, media_scope=media_scope)
+    signals = collect_queue_signals(
+        session,
+        settings,
+        media_scope=media_scope,
+        connection_ids=connection_ids,
+    )
     return signals, report_for_signals(signals)
 
 

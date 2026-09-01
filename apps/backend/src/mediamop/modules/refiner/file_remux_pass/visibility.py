@@ -19,6 +19,7 @@ from mediamop.platform.observability.operator_messages import activity_detail_en
 REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN = "live_output_written"
 REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED = "live_skipped_not_required"
 REMUX_PASS_OUTCOME_SKIPPED_GUARDRAIL = "skipped_guardrail"
+REMUX_PASS_OUTCOME_SOURCE_NOT_READY = "source_not_ready"
 REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION = "failed_before_execution"
 REMUX_PASS_OUTCOME_FAILED_DURING_EXECUTION = "failed_during_execution"
 
@@ -61,6 +62,8 @@ def remux_pass_activity_title(payload: dict[str, Any]) -> str:
         return f"No changes needed for {name}"
     if outcome == REMUX_PASS_OUTCOME_SKIPPED_GUARDRAIL:
         return f"Skipped {name}"
+    if outcome == REMUX_PASS_OUTCOME_SOURCE_NOT_READY:
+        return f"Waiting for {name}"
     if outcome == REMUX_PASS_OUTCOME_FAILED_DURING_EXECUTION:
         return f"{name} could not be processed"
     if outcome == REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION or payload.get("ok") is False:
@@ -75,7 +78,7 @@ def clip_remux_pass_payload_for_activity(payload: dict[str, Any]) -> dict[str, A
     outcome = str(out.get("outcome") or "")
     if outcome in {REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN, REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED}:
         result = DiagnosticResult.SUCCESS
-    elif outcome == REMUX_PASS_OUTCOME_SKIPPED_GUARDRAIL:
+    elif outcome in {REMUX_PASS_OUTCOME_SKIPPED_GUARDRAIL, REMUX_PASS_OUTCOME_SOURCE_NOT_READY}:
         result = DiagnosticResult.SKIPPED
     else:
         result = DiagnosticResult.FAILED if out.get("ok") is False else DiagnosticResult.SUCCESS

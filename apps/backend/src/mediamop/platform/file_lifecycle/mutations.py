@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import shutil
 import tempfile
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 
@@ -13,7 +13,7 @@ class FileLifecycleError(RuntimeError):
     """Raised when a guarded filesystem mutation cannot complete safely."""
 
 
-def safe_copy_to_final(*, source: Path, final: Path) -> None:
+def safe_copy_to_final(*, source: Path, final: Path, validate_staged: Callable[[Path], None] | None = None) -> None:
     """Copy ``source`` to ``final`` without exposing a partial destination file."""
 
     src = source.resolve()
@@ -24,10 +24,20 @@ def safe_copy_to_final(*, source: Path, final: Path) -> None:
     tmp = Path(tmp_name)
     try:
         shutil.copy2(src, tmp)
-        os.replace(tmp, dst)
     except Exception as exc:
         _best_effort_unlink(tmp)
         raise FileLifecycleError(f"Could not safely copy {src} to {dst}: {exc}") from exc
+    if validate_staged is not None:
+        try:
+            validate_staged(tmp)
+        except Exception:
+            _best_effort_unlink(tmp)
+            raise
+    try:
+        os.replace(tmp, dst)
+    except Exception as exc:
+        _best_effort_unlink(tmp)
+        raise FileLifecycleError(f"Could not safely publish the validated copy at {dst}: {exc}") from exc
 
 
 def try_hardlink_to_final(*, source: Path, final: Path) -> bool:

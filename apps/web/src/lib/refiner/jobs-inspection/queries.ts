@@ -1,5 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchRefinerJobsInspection, postRefinerJobCancelPending } from "./api";
+import {
+  fetchRefinerJobsInspection,
+  postRefinerJobCancelPending,
+  postRefinerJobRecoverFinalizeFailed,
+} from "./api";
 
 /** ``recent`` = no status filter — server returns newest rows across all statuses. */
 export type RefinerJobsInspectionFilter =
@@ -50,6 +54,19 @@ export function useRefinerJobCancelPendingMutation() {
       void qc.invalidateQueries({
         queryKey: ["refiner", "jobs", "inspection"],
       });
+    },
+  });
+}
+
+export function useRefinerJobRecoverFinalizeFailedMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (jobId: number) => postRefinerJobRecoverFinalizeFailed(jobId),
+    onSuccess: () => {
+      void qc.invalidateQueries({
+        queryKey: ["refiner", "jobs", "inspection"],
+      });
+      void qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }

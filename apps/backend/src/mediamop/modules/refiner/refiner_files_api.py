@@ -109,6 +109,8 @@ def get_refiner_files(
             output_collision_reason=row.output_collision_reason,
             hold_until=row.hold_until,
             size_changed_at=row.size_changed_at,
+            created_at=row.created_at,
+            updated_at=row.updated_at,
             last_seen_at=row.last_seen_at,
             last_attempt_at=row.last_attempt_at,
         )

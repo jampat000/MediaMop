@@ -26,6 +26,7 @@ _NAMING_CONVENTION: dict[str, str] = {
     "pk": "pk_%(table_name)s",
 }
 _SQLITE_ADAPTERS_REGISTERED = False
+_SQLITE_BUSY_TIMEOUT_MS = 30_000
 
 
 class Base(DeclarativeBase):
@@ -45,7 +46,11 @@ def _register_sqlite_pragmas(engine: Engine) -> None:
         try:
             cursor.execute("PRAGMA journal_mode=WAL")
             cursor.execute("PRAGMA foreign_keys=ON")
-            cursor.execute("PRAGMA busy_timeout=5000")
+            # Keep the connection-level wait aligned with SQLAlchemy's 30 second
+            # timeout. Refiner deliberately writes progress in short transactions;
+            # a transient writer collision should wait for that transaction rather
+            # than turn a completed media mutation into a failed job.
+            cursor.execute(f"PRAGMA busy_timeout={_SQLITE_BUSY_TIMEOUT_MS}")
             cursor.execute("PRAGMA synchronous=NORMAL")
         finally:
             cursor.close()
@@ -75,7 +80,7 @@ def create_db_engine(settings: MediaMopSettings) -> Engine:
         connect_args={
             "check_same_thread": False,
             # Seconds sqlite3 waits on locked DB (complements PRAGMA busy_timeout).
-            "timeout": 30.0,
+            "timeout": _SQLITE_BUSY_TIMEOUT_MS / 1000,
         },
         pool_pre_ping=True,
         future=True,

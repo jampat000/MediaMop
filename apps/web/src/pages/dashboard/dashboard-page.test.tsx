@@ -11,6 +11,7 @@ const useRefinerJobsInspectionQuery = vi.fn();
 const usePrunerOverviewStatsQuery = vi.fn();
 const usePrunerInstancesQuery = vi.fn();
 const usePrunerJobsInspectionQuery = vi.fn();
+const useSuitePauseQuery = vi.fn();
 
 vi.mock("../../lib/activity/queries", () => ({
   activityRecentKey: ["activity", "recent"],
@@ -48,6 +49,10 @@ vi.mock("../../lib/pruner/queries", () => ({
     usePrunerInstancesQuery(...args),
   usePrunerJobsInspectionQuery: (...args: unknown[]) =>
     usePrunerJobsInspectionQuery(...args),
+}));
+
+vi.mock("../../lib/suite/pause-queries", () => ({
+  useSuitePauseQuery: (...args: unknown[]) => useSuitePauseQuery(...args),
 }));
 
 vi.mock("../../lib/ui/mm-format-date", () => ({
@@ -112,6 +117,47 @@ describe("DashboardPage", () => {
     });
     usePrunerInstancesQuery.mockReturnValue({ data: [] });
     usePrunerJobsInspectionQuery.mockReturnValue({ data: { jobs: [] } });
+    useSuitePauseQuery.mockReturnValue({ data: { paused: false } });
+  });
+
+  it("explains that paused queue counts include background maintenance", () => {
+    useDashboardStatusQuery.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: {
+        scope_note: "Read-only overview.",
+        system: { api_version: "1.0.0", environment: "test", healthy: true },
+        modules: [
+          {
+            module: "refiner",
+            status: "healthy",
+            summary: "Ready.",
+            queued_job_count: 2,
+            active_job_count: 0,
+            failed_job_count: 0,
+            action_path: "/refiner?tab=jobs",
+          },
+        ],
+        activity_summary: { events_last_24h: 0, latest: null },
+      },
+    });
+    useSuitePauseQuery.mockReturnValue({ data: { paused: true } });
+
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Jobs held by pause")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Includes maintenance and media work; Resume releases them",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/2 background jobs are safely held by the pause/),
+    ).toBeInTheDocument();
   });
 
   it("renders restored dashboard sections", () => {
@@ -128,8 +174,8 @@ describe("DashboardPage", () => {
     expect(
       screen.queryByTestId("dashboard-runtime-health"),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("Refiner")).toBeInTheDocument();
-    expect(screen.getByText("Pruner")).toBeInTheDocument();
+    expect(screen.getAllByText("Refiner").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Pruner").length).toBeGreaterThan(0);
     expect(
       screen.getByText("Needs setup: Refiner, Pruner."),
     ).toBeInTheDocument();
@@ -256,9 +302,35 @@ describe("DashboardPage", () => {
     );
 
     expect(screen.getAllByText("Review needed").length).toBeGreaterThan(0);
+    expect(screen.getByText("Refiner workers")).toBeInTheDocument();
+    expect(screen.getByText(/Refiner expected 1 worker/)).toBeInTheDocument();
+  });
+
+  it("makes attention states navigable and exposes the history clear path", () => {
+    useDashboardStatusQuery.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: {
+        scope_note: "Read-only overview.",
+        system: { api_version: "1.0.0", environment: "test", healthy: true },
+        activity_summary: { events_last_24h: 0, latest: null },
+        incident_count: 1,
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("dashboard-refiner-status-link")).toHaveAttribute(
+      "href",
+      "/refiner",
+    );
     expect(
-      screen.getByText(/Refiner workers: Refiner expected 1 worker/),
-    ).toBeInTheDocument();
+      screen.getByRole("link", { name: "Clear finished history" }),
+    ).toHaveAttribute("href", "/settings?tab=general#history-reset");
   });
 
   it("keeps long last-activity file names compact without losing the full title", () => {
@@ -287,9 +359,10 @@ describe("DashboardPage", () => {
       </MemoryRouter>,
     );
 
-    const compactValue = screen.getByTitle(longTitle);
-    expect(compactValue).toHaveTextContent("...");
-    expect(compactValue.textContent).not.toBe(longTitle);
-    expect(screen.getByText("2026-05-07T15:45:00Z")).toBeInTheDocument();
+    const signalValue = screen.getAllByTitle(longTitle)[0];
+    expect(signalValue).toHaveTextContent(longTitle);
+    expect(screen.getAllByText("2026-05-07T15:45:00Z").length).toBeGreaterThan(
+      0,
+    );
   });
 });

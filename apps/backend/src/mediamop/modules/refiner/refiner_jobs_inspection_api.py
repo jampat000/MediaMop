@@ -9,7 +9,10 @@ from starlette import status
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
 from mediamop.modules.refiner.jobs_model import RefinerJobStatus
-from mediamop.modules.refiner.jobs_ops import cancel_pending_refiner_job
+from mediamop.modules.refiner.jobs_ops import (
+    cancel_pending_refiner_job,
+    recover_handler_ok_finalize_failed_to_completed,
+)
 from mediamop.modules.refiner.refiner_jobs_inspection_service import (
     list_refiner_jobs_for_inspection,
     validate_refiner_inspection_statuses,
@@ -17,6 +20,8 @@ from mediamop.modules.refiner.refiner_jobs_inspection_service import (
 from mediamop.modules.refiner.schemas_refiner_jobs_inspection import (
     RefinerJobCancelPendingIn,
     RefinerJobCancelPendingOut,
+    RefinerJobRecoverFinalizeFailedIn,
+    RefinerJobRecoverFinalizeFailedOut,
     RefinerJobsInspectionOut,
 )
 from mediamop.platform.auth.authorization import RequireOperatorDep
@@ -93,3 +98,40 @@ def post_refiner_job_cancel_pending(
         )
     db.commit()
     return RefinerJobCancelPendingOut(job_id=job_id, status=RefinerJobStatus.CANCELLED.value)
+
+
+@router.post(
+    "/refiner/jobs/{job_id}/recover-finalize-failed",
+    response_model=RefinerJobRecoverFinalizeFailedOut,
+)
+def post_refiner_job_recover_finalize_failed(
+    job_id: int,
+    body: RefinerJobRecoverFinalizeFailedIn,
+    request: Request,
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+) -> RefinerJobRecoverFinalizeFailedOut:
+    """Recover a completed media pass whose durable job finalization was interrupted."""
+
+    validate_browser_post_origin(request, settings)
+    secret = require_session_secret(settings)
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired CSRF token.",
+        )
+    outcome = recover_handler_ok_finalize_failed_to_completed(
+        db,
+        job_id=job_id,
+        recovered_by_label=_user.username,
+    )
+    if outcome == "not_found":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Refiner job not found.")
+    if outcome == "wrong_status":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only a job whose media work completed but finalization failed can be recovered.",
+        )
+    db.commit()
+    return RefinerJobRecoverFinalizeFailedOut(job_id=job_id, status=RefinerJobStatus.COMPLETED.value)

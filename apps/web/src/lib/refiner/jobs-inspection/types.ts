@@ -10,6 +10,9 @@ export type RefinerJobInspectionRow = {
   lease_owner: string | null;
   lease_expires_at: string | null;
   last_error: string | null;
+  operator_message?: string;
+  next_action?: string;
+  technical_detail?: string | null;
   payload_json: string | null;
   created_at: string;
   updated_at: string;
@@ -21,6 +24,12 @@ export type RefinerJobsInspectionOut = {
 };
 
 export type RefinerJobCancelPendingOut = {
+  ok: boolean;
+  job_id: number;
+  status: string;
+};
+
+export type RefinerJobRecoverFinalizeFailedOut = {
   ok: boolean;
   job_id: number;
   status: string;

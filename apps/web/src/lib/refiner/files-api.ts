@@ -6,6 +6,7 @@ export type RefinerFileStatus =
   | "processing"
   | "processed"
   | "processing_failed"
+  | "skipped"
   | "disabled"
   | "on_hold"
   | "out_of_schedule"
@@ -17,6 +18,7 @@ export const REFINER_FILE_STATUS_LABELS: Record<RefinerFileStatus, string> = {
   processing: "Processing",
   processed: "Done",
   processing_failed: "Failed",
+  skipped: "Skipped",
   disabled: "Library off",
   on_hold: "On hold",
   out_of_schedule: "Out of schedule",
@@ -44,6 +46,10 @@ export interface RefinerFile {
   /** When an on-hold file becomes eligible. Null when the wait is on a writer, not the clock. */
   hold_until: string | null;
   size_changed_at: string | null;
+  /** When MediaMop first added this file to the workbench. */
+  created_at: string;
+  /** When this workbench row last changed state or detail. */
+  updated_at: string;
   last_seen_at: string | null;
   last_attempt_at: string | null;
 }
