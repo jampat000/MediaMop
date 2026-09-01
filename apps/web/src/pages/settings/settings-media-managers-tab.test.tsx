@@ -157,9 +157,11 @@ describe("SettingsMediaManagersTab", () => {
       connection(),
     ]);
     let finishTest!: (value: api.MediaManagerConnectionTest) => void;
-    const pendingTest = new Promise<api.MediaManagerConnectionTest>((resolve) => {
-      finishTest = resolve;
-    });
+    const pendingTest = new Promise<api.MediaManagerConnectionTest>(
+      (resolve) => {
+        finishTest = resolve;
+      },
+    );
     vi.spyOn(api, "testMediaManagerConnection").mockReturnValue(pendingTest);
 
     render(<SettingsMediaManagersTab />, { wrapper });

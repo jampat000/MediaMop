@@ -281,7 +281,8 @@ describe("DashboardPage", () => {
             max_attempts: 3,
             lease_owner: null,
             lease_expires_at: null,
-            last_error: "Cancelled by operator before a worker claimed this job.",
+            last_error:
+              "Cancelled by operator before a worker claimed this job.",
             payload_json: '{"relative_media_path":"Movie/Old.mkv"}',
             operator_message:
               "This Refiner job was cancelled before a worker started it for Old.mkv.",
@@ -304,7 +305,9 @@ describe("DashboardPage", () => {
 
     expect(screen.getByText("Cancelled")).toBeInTheDocument();
     expect(
-      screen.getByText(/This Refiner job was cancelled before a worker started it/),
+      screen.getByText(
+        /This Refiner job was cancelled before a worker started it/,
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText("Needs review")).not.toBeInTheDocument();
   });
@@ -436,7 +439,9 @@ describe("DashboardPage", () => {
     expect(screen.getAllByText("Review needed").length).toBeGreaterThan(0);
     expect(screen.getByText("Current unresolved work")).toBeInTheDocument();
     expect(
-      screen.getByText(/clearing finished history will not hide unresolved work/i),
+      screen.getByText(
+        /clearing finished history will not hide unresolved work/i,
+      ),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: "Clear finished history" }),
