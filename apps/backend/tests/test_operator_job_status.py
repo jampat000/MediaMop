@@ -38,6 +38,19 @@ def test_finalize_failure_tells_operator_not_to_run_media_work_twice() -> None:
     assert "not run the media work again" in result.next_action
 
 
+def test_cancelled_job_is_terminal_history_not_an_active_review() -> None:
+    result = build_job_operator_status(
+        module="refiner",
+        job_kind="refiner.file.remux_pass.v1",
+        status="cancelled",
+        last_error="Cancelled by operator before a worker claimed this job.",
+        payload_json='{"relative_media_path":"Movie/Old.mkv"}',
+    )
+
+    assert result.operator_message == "This Refiner job was cancelled before a worker started it for Old.mkv."
+    assert result.next_action.startswith("No action is needed.")
+
+
 def test_file_preflight_failures_explain_the_user_fix() -> None:
     missing = build_job_operator_status(
         module="refiner",

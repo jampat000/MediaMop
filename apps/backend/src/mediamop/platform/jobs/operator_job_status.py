@@ -81,8 +81,10 @@ def build_job_operator_status(
         )
     if status == "cancelled":
         return JobOperatorStatus(
-            operator_message=f"{label} cancelled this job before it started{subject}.",
-            next_action="Start the file or workflow again when you are ready.",
+            operator_message=f"This {label} job was cancelled before a worker started it{subject}.",
+            next_action=(
+                "No action is needed. If the file still exists and should be processed, start it again from Files."
+            ),
             technical_detail=technical,
         )
     if status == "handler_ok_finalize_failed":

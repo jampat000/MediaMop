@@ -268,6 +268,47 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Process file")).toBeInTheDocument();
   });
 
+  it("shows cancelled jobs as terminal history rather than review work", () => {
+    useRefinerJobsInspectionQuery.mockReturnValue({
+      data: {
+        jobs: [
+          {
+            id: 24,
+            dedupe_key: "cancelled-file",
+            job_kind: "refiner.file.remux_pass.v1",
+            status: "cancelled",
+            attempt_count: 0,
+            max_attempts: 3,
+            lease_owner: null,
+            lease_expires_at: null,
+            last_error: "Cancelled by operator before a worker claimed this job.",
+            payload_json: '{"relative_media_path":"Movie/Old.mkv"}',
+            operator_message:
+              "This Refiner job was cancelled before a worker started it for Old.mkv.",
+            next_action:
+              "No action is needed. If the file still exists and should be processed, start it again from Files.",
+            technical_detail:
+              "Cancelled by operator before a worker claimed this job.",
+            created_at: "2026-04-25T10:01:00Z",
+            updated_at: "2026-04-25T10:01:00Z",
+          },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Cancelled")).toBeInTheDocument();
+    expect(
+      screen.getByText(/This Refiner job was cancelled before a worker started it/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Needs review")).not.toBeInTheDocument();
+  });
+
   it("shows worker health problems as attention items", () => {
     useDashboardStatusQuery.mockReturnValue({
       isPending: false,

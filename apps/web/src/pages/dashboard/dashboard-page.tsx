@@ -327,6 +327,8 @@ function jobStatusLabel(status: string): string {
       return "Running";
     case "completed":
       return "Completed";
+    case "cancelled":
+      return "Cancelled";
     case "failed":
       return "Failed";
     case "handler_ok_finalize_failed":
