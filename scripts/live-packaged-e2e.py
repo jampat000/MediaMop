@@ -79,6 +79,8 @@ class LiveAudit:
         self.bad_responses: list[str] = []
         self.http_checks: list[str] = []
         self.completed_requests: set[tuple[str, str]] = set()
+        self.expected_not_found_urls: set[str] = set()
+        self.expected_not_found_in_flight = False
         self._attach_diagnostics()
 
     def _attach_diagnostics(self) -> None:
@@ -93,6 +95,12 @@ class LiveAudit:
             if (
                 text
                 == "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+            ):
+                return
+            if (
+                self.expected_not_found_in_flight
+                and text
+                == "Failed to load resource: the server responded with a status of 404 (Not Found)"
             ):
                 return
             if message.type == "error":
@@ -127,6 +135,11 @@ class LiveAudit:
             if response.status >= 400:
                 if response.status == 401 and response.url.rstrip("/").endswith(
                     "/api/v1/auth/me"
+                ):
+                    return
+                if (
+                    response.status == 404
+                    and response.url in self.expected_not_found_urls
                 ):
                     return
                 self.bad_responses.append(f"{response.status} {response.url}")
@@ -365,16 +378,41 @@ class LiveAudit:
             "X-Requested-With": "XMLHttpRequest",
         }
         for path in paths:
-            response = self.context.request.get(
-                urljoin(BASE_URL + "/", path.lstrip("/")),
-                headers=headers,
-                timeout=TIMEOUT_MS,
+            # Run protected reads in the signed-in page itself.  Playwright's
+            # separate APIRequestContext does not reliably inherit the browser
+            # session after the first-user bootstrap redirect on packaged
+            # Windows builds, which made this audit report a false 401 even
+            # while the authenticated shell was visibly loaded.
+            expected_not_found = (
+                "999999" in path or "00000000-0000-4000-8000-000000000000" in path
             )
+            if expected_not_found:
+                self.expected_not_found_urls.add(
+                    urljoin(BASE_URL + "/", path.lstrip("/"))
+                )
+            self.expected_not_found_in_flight = expected_not_found
+            try:
+                status = self.page.evaluate(
+                    """
+                    async ({ path, headers }) => {
+                      const response = await fetch(path, {
+                        method: "GET",
+                        credentials: "same-origin",
+                        headers,
+                      });
+                      await response.arrayBuffer();
+                      return response.status;
+                    }
+                    """,
+                    {"path": path, "headers": headers},
+                )
+            finally:
+                self.expected_not_found_in_flight = False
             self.require(
-                response.status in {200, 204, 404},
-                f"GET {path} returned unexpected HTTP {response.status}",
+                status in {200, 204, 404},
+                f"GET {path} returned unexpected HTTP {status}",
             )
-            self.http_checks.append(f"GET {path} -> {response.status}")
+            self.http_checks.append(f"GET {path} -> {status}")
         # The SSE route is intentionally excluded from the finite request
         # loop; the Activity browser step opens and closes it as a real client.
         self.record(
@@ -502,7 +540,7 @@ class LiveAudit:
         expected = {
             "Overview": "refiner-overview-panel",
             "Libraries": "refiner-libraries-section",
-            "Audio & subtitles": "refiner-remux-section",
+            "Audio & subtitles": "refiner-rule-set-workspace",
             "Schedules": "refiner-schedules-section",
             "Files": "refiner-files-section",
             "Jobs": "refiner-jobs-inspection-section",
