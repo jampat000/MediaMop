@@ -175,13 +175,29 @@ static class Program
         return Path.Combine(programData, "MediaMop");
     }
 
-    internal static void OpenBrowser(int port)
+    internal static bool OpenBrowser(
+        int port,
+        Action<ProcessStartInfo>? startProcess = null)
     {
-        Process.Start(new ProcessStartInfo
+        var startInfo = new ProcessStartInfo
         {
             FileName = $"http://127.0.0.1:{port}/",
             UseShellExecute = true,
-        });
+        };
+
+        try
+        {
+            (startProcess ?? (info => Process.Start(info)))(startInfo);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            // Opening a browser is a convenience action. Session 0, disconnected RDP
+            // sessions, and hardened shell policies can reject shell execution; none of
+            // those conditions should stop the tray watchdog or its server process.
+            AppendFallbackLog($"Could not open MediaMop in the browser: {ex.Message}");
+            return false;
+        }
     }
 
     internal static void AppendFallbackLog(string message)
