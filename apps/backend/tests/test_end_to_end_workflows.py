@@ -119,7 +119,8 @@ def test_refiner_file_reaches_output_cleanup_and_stats(
     monkeypatch.setattr(refiner_run, "ffprobe_json", lambda path, mediamop_home, **kwargs: _fake_probe())
     monkeypatch.setattr(refiner_run, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe", "ffmpeg"))
     monkeypatch.setattr(refiner_run, "is_remux_required", lambda *_args, **_kwargs: False)
-    # This workflow uses byte fixtures; staged-media validation has focused real-contract tests.
+    # This workflow uses byte fixtures; media validation has focused real-contract tests.
+    monkeypatch.setattr(refiner_run, "validate_media_integrity", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(refiner_run, "validate_remux_output", lambda *_args, **_kwargs: None)
 
     handlers = build_refiner_job_handlers(settings, isolated_session_factory)

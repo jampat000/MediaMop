@@ -1,6 +1,7 @@
 """Safety validation for staged Refiner output."""
 
 from pathlib import Path
+from subprocess import CompletedProcess
 from typing import Any
 
 import pytest
@@ -49,6 +50,62 @@ def test_staged_output_accepts_normal_duration_rounding(
         expected_audio=1,
         expected_duration_seconds=5384.046,
     )
+
+
+def test_source_integrity_validation_reads_primary_video_to_completion(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "complete.mkv"
+    source.write_bytes(b"complete")
+    calls: list[list[str]] = []
+    monkeypatch.setattr(mux, "resolve_ffprobe_ffmpeg", lambda **_kwargs: ("ffprobe", "ffmpeg"))
+
+    def _run(argv: list[str], **_kwargs: Any) -> CompletedProcess[str]:
+        calls.append(argv)
+        return CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(mux.subprocess, "run", _run)
+
+    mux.validate_media_integrity(source, mediamop_home=str(tmp_path))
+
+    assert calls == [
+        [
+            "ffmpeg",
+            "-hide_banner",
+            "-v",
+            "error",
+            "-xerror",
+            "-err_detect",
+            "explode",
+            "-i",
+            str(source),
+            "-map",
+            "0:v:0",
+            "-c",
+            "copy",
+            "-f",
+            "null",
+            "-",
+        ]
+    ]
+
+
+def test_source_integrity_validation_rejects_incomplete_media(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "testament.mkv"
+    source.write_bytes(b"partial")
+    monkeypatch.setattr(mux, "resolve_ffprobe_ffmpeg", lambda **_kwargs: ("ffprobe", "ffmpeg"))
+    monkeypatch.setattr(
+        mux.subprocess,
+        "run",
+        lambda argv, **_kwargs: CompletedProcess(argv, 1, "", "Invalid data found when processing input"),
+    )
+
+    with pytest.raises(mux.MediaCompletenessError, match="Invalid data found when processing input"):
+        mux.validate_media_integrity(source, mediamop_home=str(tmp_path))
 
 
 def test_temp_output_is_deleted_when_duration_validation_fails(

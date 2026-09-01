@@ -27,9 +27,10 @@ from .test_refiner_tv_season_folder_cleanup import _sqlite_session
 
 
 @pytest.fixture(autouse=True)
-def _stub_staged_media_validation(monkeypatch: pytest.MonkeyPatch) -> None:
+def _stub_media_validation(monkeypatch: pytest.MonkeyPatch) -> None:
     """These orchestration tests use byte fixtures; media validation has focused tests."""
 
+    monkeypatch.setattr(runmod, "validate_media_integrity", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(runmod, "validate_remux_output", lambda *_args, **_kwargs: None)
 
 
