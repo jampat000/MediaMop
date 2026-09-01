@@ -194,6 +194,9 @@ jobs:
       contents: read
     env:
       MEDIAMOP_SESSION_SECRET: ${{ github.run_id }}-${{ github.job }}-${{ github.run_attempt }}-release-session-secret-32chars-min
+      MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT: ${{ runner.temp }}/mediamop-docker-release-fixture
+      MEDIAMOP_LIVE_E2E_FIXTURE_SERVER_ROOT: /e2e-fixture
+      MEDIAMOP_LIVE_E2E_FFMPEG: ffmpeg
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -291,6 +294,7 @@ jobs:
         run: |
           python -m pip install --require-hashes -r apps/backend/requirements.lock
           python -m playwright install --with-deps chromium
+          command -v ffmpeg >/dev/null || (sudo apt-get update && sudo apt-get install -y ffmpeg)
 
       - name: Download web dist
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
@@ -327,7 +331,10 @@ jobs:
       - name: Start unpushed Docker release candidate
         run: |
           docker rm -f mediamop-release-candidate >/dev/null 2>&1 || true
+          mkdir -p "$MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT"
+          chmod 0777 "$MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT"
           docker run -d --name mediamop-release-candidate -p 8788:8788 \
+            -v "$MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT:$MEDIAMOP_LIVE_E2E_FIXTURE_SERVER_ROOT" \
             -e MEDIAMOP_SESSION_SECRET="$MEDIAMOP_SESSION_SECRET" \
             -e MEDIAMOP_SESSION_COOKIE_SECURE=false \
             "mediamop-release-candidate:${{ steps.version.outputs.plain }}"

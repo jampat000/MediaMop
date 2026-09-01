@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from typing import cast
 
 from fastapi import APIRouter, HTTPException, Path, Request
-from sqlalchemy import select
+from sqlalchemy import select, update
 from starlette import status
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
@@ -365,8 +365,24 @@ def post_media_manager_connection_test(
         api_key = decrypt_arr_api_key(settings, row.api_key_ciphertext) if row.api_key_ciphertext else None
         ok, detail = _probe(row.name, row.kind, row.base_url, api_key)
 
-    row.last_connection_test_ok = ok
-    row.last_connection_test_at = checked_at
-    row.last_connection_test_detail = detail
+    # The probe can take a few seconds. Another browser or API client may remove
+    # this connection while the network call is in flight, so persist with a
+    # conditional statement instead of flushing a now-stale ORM row as HTTP 500.
+    persisted = db.execute(
+        update(MediaManagerConnectionRow)
+        .where(MediaManagerConnectionRow.id == connection_id)
+        .values(
+            last_connection_test_ok=ok,
+            last_connection_test_at=checked_at,
+            last_connection_test_detail=detail,
+        )
+        .execution_options(synchronize_session=False)
+    )
+    if persisted.rowcount == 0:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="That media manager connection was removed while its connection test was running.",
+        )
     db.commit()
     return MediaManagerConnectionTestOut(connection_id=row.id, ok=ok, detail=detail, checked_at=checked_at)

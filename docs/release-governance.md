@@ -35,5 +35,7 @@ This is the canonical governance checklist for keeping MediaMop releases control
 5. Confirm the GHCR image exists for both `vX.Y.Z` and `latest`.
 6. Confirm the release workflow completed `mediamop`, Docker publish, Docker smoke, and Windows package jobs.
 7. Download `mediamop-docker-release-candidate-audit` and confirm its summary has
-   no console warnings, console errors, page errors, failed requests, or bad responses.
+   no console warnings, console errors, page errors, failed requests, or bad responses;
+   confirm `pass-through-proof.json` reports a completed job, byte-identical output,
+   and successful watched-source cleanup.
 8. Open a follow-up issue for any manual smoke-test failure.

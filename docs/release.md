@@ -48,8 +48,10 @@ The `Release` workflow:
 - builds the Velopack Windows package on `windows-latest`
 - publishes `mediamop-web-dist.zip`
 - builds a local, unpushed Docker release candidate
-- runs the complete packaged browser/API audit against that candidate and uploads
-  its screenshots and JSON evidence
+- runs the complete packaged browser/API audit against that candidate, including
+  a mounted disposable Refiner file that must pass through byte-identically into
+  the processed tree before its watched source is removed, and uploads screenshots
+  plus JSON evidence
 - builds and pushes Docker tags:
   - `ghcr.io/<owner>/<repo>:X.Y.Z` (the git tag is `vX.Y.Z`; the image tag drops the `v`)
   - `ghcr.io/<owner>/<repo>:latest`
@@ -59,8 +61,10 @@ The `Release` workflow:
 
 The registry login and Docker push occur only after the unpushed candidate passes
 the complete live audit. A failed screen, API check, browser console error, page
-error, failed request, or bad response therefore stops the release before either
-the versioned image or `latest` is published.
+error, failed request, bad response, changed pass-through output, or incomplete
+source cleanup therefore stops the release before either the versioned image or
+`latest` is published. The Windows package smoke runs the same real pass-through
+lifecycle against the packaged executable and bundled FFmpeg.
 
 `VITE_SUPPORT_URL` is a Vite build-time variable. Official releases should set the GitHub Actions repository variable `VITE_SUPPORT_URL` to `https://github.com/sponsors/jampat000` so the production frontend and packaged Windows installer include **Settings -> Support**. If that variable is missing, release builds still succeed, but production safely hides the Support tab.
 

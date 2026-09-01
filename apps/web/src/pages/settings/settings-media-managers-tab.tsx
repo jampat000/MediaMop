@@ -221,6 +221,8 @@ function ConnectionCard({
   const test = useTestMediaManagerConnection();
   const secret = useGenerateMediaManagerWebhookSecret();
   const [revealed, setRevealed] = useState<string | null>(null);
+  const busy =
+    update.isPending || remove.isPending || test.isPending || secret.isPending;
 
   return (
     <div
@@ -243,7 +245,7 @@ function ConnectionCard({
           type="button"
           data-testid="media-manager-test"
           className={mmActionButtonClass({ variant: "primary" })}
-          disabled={test.isPending}
+          disabled={busy}
           onClick={() => test.mutate(connection.id)}
         >
           {test.isPending ? "Testing…" : "Test connection"}
@@ -251,7 +253,7 @@ function ConnectionCard({
         <button
           type="button"
           className={mmActionButtonClass({ variant: "secondary" })}
-          disabled={update.isPending}
+          disabled={busy}
           onClick={() =>
             update.mutate({
               id: connection.id,
@@ -265,7 +267,7 @@ function ConnectionCard({
           type="button"
           data-testid="media-manager-remove"
           className={mmActionButtonClass({ variant: "tertiary" })}
-          disabled={remove.isPending}
+          disabled={busy}
           onClick={() => remove.mutate(connection.id)}
         >
           Remove
@@ -318,7 +320,7 @@ function ConnectionCard({
             type="button"
             data-testid="media-manager-generate-secret"
             className={`mt-3 ${mmActionButtonClass({ variant: "secondary" })}`}
-            disabled={secret.isPending}
+            disabled={busy}
             onClick={() =>
               secret.mutate(connection.id, {
                 onSuccess: (data) => setRevealed(data.webhook_secret),

@@ -50,6 +50,8 @@ requireOrder(
 for (const marker of [
   "MEDIAMOP_LIVE_EXPECTED_VERSION: ${{ steps.version.outputs.plain }}",
   "MEDIAMOP_SESSION_COOKIE_SECURE=false",
+  "MEDIAMOP_LIVE_E2E_FIXTURE_SERVER_ROOT: /e2e-fixture",
+  "MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT:$MEDIAMOP_LIVE_E2E_FIXTURE_SERVER_ROOT",
   "name: mediamop-docker-release-candidate-audit",
 ]) {
   requireText(release, marker, ".github/workflows/release.yml");
@@ -69,11 +71,13 @@ requireOrder(
 
 for (const marker of [
   "MEDIAMOP_SESSION_COOKIE_SECURE=false",
+  "MEDIAMOP_LIVE_E2E_FIXTURE_SERVER_ROOT: /e2e-fixture",
+  "MEDIAMOP_LIVE_E2E_FIXTURE_HOST_ROOT:$MEDIAMOP_LIVE_E2E_FIXTURE_SERVER_ROOT",
   "name: mediamop-docker-live-audit",
 ]) {
   requireText(ci, marker, ".github/workflows/ci.yml");
 }
 
 console.log(
-  "Docker candidate E2E gates run before registry login and release publication.",
+  "Docker candidate E2E and mounted pass-through lifecycle gates run before registry login and release publication.",
 );

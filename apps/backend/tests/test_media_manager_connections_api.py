@@ -10,8 +10,11 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from sqlalchemy import delete
 from starlette.testclient import TestClient
 
+import mediamop.platform.media_managers.connections_api as connections_api
+from mediamop.platform.media_managers.connection_model import MediaManagerConnectionRow
 from tests.integration_helpers import auth_post, auth_put, trusted_browser_origin_headers
 from tests.integration_helpers import csrf as fetch_csrf
 
@@ -131,6 +134,49 @@ def test_a_connection_can_be_deleted(operator: TestClient) -> None:
     _, row = _create(operator)
     assert _delete(operator, row["id"]) == 204
     assert operator.get("/api/v1/media-managers/connections").json() == []
+
+
+def test_an_unreachable_connection_is_a_normal_test_result(
+    operator: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, row = _create(operator)
+    monkeypatch.setattr(
+        connections_api,
+        "_probe",
+        lambda *_args: (False, "MediaMop could not reach Deluno. Check the address."),
+    )
+
+    response = auth_post(
+        operator,
+        f"/api/v1/media-managers/connections/{row['id']}/test",
+        json={"csrf_token": fetch_csrf(operator)},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["ok"] is False
+    assert "could not reach" in response.json()["detail"]
+
+
+def test_removing_a_connection_during_its_test_returns_a_clean_not_found(
+    operator: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, row = _create(operator)
+
+    def remove_during_probe(*_args: Any) -> tuple[bool, str]:
+        with operator.app.state.session_factory() as concurrent_db:
+            concurrent_db.execute(delete(MediaManagerConnectionRow).where(MediaManagerConnectionRow.id == row["id"]))
+            concurrent_db.commit()
+        return False, "The connection disappeared while the test was running."
+
+    monkeypatch.setattr(connections_api, "_probe", remove_during_probe)
+    response = auth_post(
+        operator,
+        f"/api/v1/media-managers/connections/{row['id']}/test",
+        json={"csrf_token": fetch_csrf(operator)},
+    )
+
+    assert response.status_code == 404, response.text
+    assert "removed while its connection test was running" in response.json()["detail"]
 
 
 def test_a_lane_can_be_saved_per_manager(operator: TestClient) -> None:
