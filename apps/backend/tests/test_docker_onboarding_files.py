@@ -36,6 +36,7 @@ def test_docker_entrypoint_generates_persistent_session_secret() -> None:
     assert "MEDIAMOP_PUID" in entrypoint
     assert "MEDIAMOP_CHOWN_OUTPUT" in entrypoint
     assert "gosu mediamop" in entrypoint
+    assert entrypoint.count("--no-server-header") == 2
 
 
 def test_dockerfile_provisions_gosu_and_unprivileged_runtime_user() -> None:

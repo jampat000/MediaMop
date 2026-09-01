@@ -20,6 +20,7 @@ blocked in ``sleep`` is a worker not doing anything else.
 from __future__ import annotations
 
 import contextlib
+import importlib
 import os
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -173,7 +174,7 @@ def acquire_source_read_guard(file_path: Path) -> tuple[SourceReadGuard | None, 
         open_existing = 3
         file_attribute_normal = 0x00000080
         invalid_handle_value = ctypes.c_void_p(-1).value
-        handle = create_file(
+        windows_handle = create_file(
             str(file_path),
             generic_read,
             file_share_read | file_share_delete,
@@ -182,7 +183,7 @@ def acquire_source_read_guard(file_path: Path) -> tuple[SourceReadGuard | None, 
             file_attribute_normal,
             None,
         )
-        if handle == invalid_handle_value:
+        if windows_handle == invalid_handle_value:
             error = ctypes.get_last_error()
             if error in {32, 33}:
                 return None, (
@@ -194,31 +195,30 @@ def acquire_source_read_guard(file_path: Path) -> tuple[SourceReadGuard | None, 
                 f"The system reported: {ctypes.WinError(error)}."
             )
 
-        return SourceReadGuard(lambda: close_handle(handle)), None
+        return SourceReadGuard(lambda: close_handle(windows_handle)), None
 
-    handle: BinaryIO | None = None
+    source_handle: BinaryIO | None = None
     try:
-        handle = file_path.open("rb")
+        source_handle = file_path.open("rb")
         try:
-            import fcntl
-
-            fcntl.flock(handle.fileno(), fcntl.LOCK_SH | fcntl.LOCK_NB)
+            fcntl = importlib.import_module("fcntl")
+            fcntl.flock(source_handle.fileno(), fcntl.LOCK_SH | fcntl.LOCK_NB)
         except ImportError:
             pass
         except BlockingIOError:
-            handle.close()
+            source_handle.close()
             return None, (
                 "This file is still open for writing by another program. MediaMop will wait until "
                 "the downloader or importer closes it."
             )
     except OSError as exc:
-        if handle is not None:
-            handle.close()
+        if source_handle is not None:
+            source_handle.close()
         return None, (
             "MediaMop could not reserve this file for safe read-only processing, so it will wait. "
             f"The system reported: {exc}."
         )
-    return SourceReadGuard(handle.close), None
+    return SourceReadGuard(source_handle.close), None
 
 
 def source_writer_problem(file_path: Path) -> str | None:

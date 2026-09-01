@@ -8,10 +8,11 @@ not a schema change.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import cast
+from typing import Any, cast
 
 from fastapi import APIRouter, HTTPException, Path, Request
 from sqlalchemy import select, update
+from sqlalchemy.engine import CursorResult
 from starlette import status
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
@@ -368,15 +369,18 @@ def post_media_manager_connection_test(
     # The probe can take a few seconds. Another browser or API client may remove
     # this connection while the network call is in flight, so persist with a
     # conditional statement instead of flushing a now-stale ORM row as HTTP 500.
-    persisted = db.execute(
-        update(MediaManagerConnectionRow)
-        .where(MediaManagerConnectionRow.id == connection_id)
-        .values(
-            last_connection_test_ok=ok,
-            last_connection_test_at=checked_at,
-            last_connection_test_detail=detail,
-        )
-        .execution_options(synchronize_session=False)
+    persisted = cast(
+        CursorResult[Any],
+        db.execute(
+            update(MediaManagerConnectionRow)
+            .where(MediaManagerConnectionRow.id == connection_id)
+            .values(
+                last_connection_test_ok=ok,
+                last_connection_test_at=checked_at,
+                last_connection_test_detail=detail,
+            )
+            .execution_options(synchronize_session=False)
+        ),
     )
     if persisted.rowcount == 0:
         db.rollback()

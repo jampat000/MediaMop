@@ -68,10 +68,12 @@ def post_refiner_file_remux_pass_enqueue(
             ),
         )
 
+    relative_media_path = body.relative_media_path.strip()
+    library_id = library.id if library is not None else body.library_id
     payload = {
-        "relative_media_path": body.relative_media_path.strip(),
+        "relative_media_path": relative_media_path,
         "media_scope": scope,
-        "library_id": library.id if library is not None else body.library_id,
+        "library_id": library_id,
         "pass_through_unchanged": body.pass_through_unchanged,
     }
     job = None
@@ -81,8 +83,8 @@ def post_refiner_file_remux_pass_enqueue(
         # duplicate job for the same file.
         job = pending_remux_job_for_relative_path(
             db,
-            relative_path=payload["relative_media_path"],
-            library_id=payload["library_id"],
+            relative_path=relative_media_path,
+            library_id=library_id,
         )
         if job is not None:
             try:

@@ -74,7 +74,7 @@ def _commit_session_with_retry(
     *,
     label: str,
     required: bool,
-    retry_operation: Callable[[], None] | None = None,
+    retry_operation: Callable[[], object] | None = None,
 ) -> None:
     """Commit a worker-owned transaction without letting optional metadata poison a pass."""
 
