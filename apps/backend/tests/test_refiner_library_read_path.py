@@ -53,7 +53,7 @@ def _library(session: Session, tmp_path: Path, **overrides) -> RefinerLibraryRow
         (folder / sub).mkdir(parents=True, exist_ok=True)
     row = RefinerLibraryRow(
         name=name,
-        media_scope=overrides.pop("media_scope", "movie"),
+        media_type=overrides.pop("media_scope", "movie"),
         watched_folder=str(folder / "watched"),
         work_folder=str(folder / "work"),
         output_folder=str(folder / "output"),

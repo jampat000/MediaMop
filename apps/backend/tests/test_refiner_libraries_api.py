@@ -59,7 +59,7 @@ def _create(client: TestClient, **overrides: Any):
     body = {
         "csrf_token": fetch_csrf(client),
         "name": "Movies 4K",
-        "media_scope": "movie",
+        "media_type": "movie",
         "watched_folder": "/srv/4k/in",
         "output_folder": "/srv/4k/out",
         "media_extensions_csv": ".mkv,.mp4",
@@ -76,8 +76,8 @@ def test_the_seeded_libraries_are_listed(operator: TestClient) -> None:
     rows = operator.get("/api/v1/refiner/libraries").json()
     by_name = {r["name"]: r for r in rows}
     assert {"Movies", "TV"} <= set(by_name)
-    assert by_name["Movies"]["media_scope"] == "movie"
-    assert by_name["TV"]["media_scope"] == "tv"
+    assert by_name["Movies"]["media_type"] == "movie"
+    assert by_name["TV"]["media_type"] == "tv"
     # The former module constants arrive as this library's saved data.
     assert ".mkv" in by_name["Movies"]["media_extensions_csv"]
 
@@ -87,7 +87,7 @@ def test_a_third_library_can_be_added_and_edited(operator: TestClient) -> None:
     assert created.status_code == 201, created.text
     row = created.json()
     assert row["name"] == "Movies 4K"
-    assert row["media_scope"] == "movie"
+    assert row["media_type"] == "movie"
 
     updated = auth_put(
         operator,
@@ -95,7 +95,7 @@ def test_a_third_library_can_be_added_and_edited(operator: TestClient) -> None:
         json={
             "csrf_token": fetch_csrf(operator),
             "name": "Movies 4K",
-            "media_scope": "movie",
+            "media_type": "movie",
             "watched_folder": "/srv/4k/in2",
             "output_folder": "/srv/4k/out",
             "min_file_size_mb": 900,
@@ -137,8 +137,8 @@ def test_a_duplicate_name_is_refused(operator: TestClient) -> None:
     assert "already exists" in again.json()["detail"]
 
 
-def test_an_unknown_media_scope_is_refused(operator: TestClient) -> None:
-    r = _create(operator, media_scope="anime")
+def test_an_unknown_media_type_is_refused(operator: TestClient) -> None:
+    r = _create(operator, media_type="anime")
     assert r.status_code == 422
 
 

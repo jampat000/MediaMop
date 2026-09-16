@@ -101,7 +101,7 @@ def _library_out(db, row: RefinerLibraryRow) -> RefinerLibraryOut:
         id=row.id,
         name=row.name,
         enabled=row.enabled,
-        media_scope=row.media_scope,  # type: ignore[arg-type]
+        media_type=row.media_type,  # type: ignore[arg-type]
         display_order=row.display_order,
         watched_folder=row.watched_folder,
         work_folder=row.work_folder,

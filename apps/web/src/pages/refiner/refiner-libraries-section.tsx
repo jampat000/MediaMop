@@ -6,11 +6,11 @@ import { ScheduleGridEditor } from "./schedule-grid-editor";
 import { useMeQuery } from "../../lib/auth/queries";
 import { useMediaManagerConnectionsQuery } from "../../lib/media-managers/queries";
 import {
-  REFINER_MEDIA_SCOPE_LABELS,
+  REFINER_MEDIA_TYPE_LABELS,
   type RefinerFailurePolicy,
   type RefinerLibrary,
   type RefinerLibraryWrite,
-  type RefinerMediaScope,
+  type RefinerMediaType,
 } from "../../lib/refiner/libraries-api";
 import {
   useCreateRefinerLibrary,
@@ -35,11 +35,11 @@ function canEdit(role: string | undefined): boolean {
   return role === "operator" || role === "admin";
 }
 
-const SCOPES: RefinerMediaScope[] = ["movie", "tv"];
+const MEDIA_TYPES: RefinerMediaType[] = ["movie", "tv"];
 
 type FormState = {
   name: string;
-  media_scope: RefinerMediaScope;
+  media_type: RefinerMediaType;
   watched_folder: string;
   work_folder: string;
   output_folder: string;
@@ -87,7 +87,7 @@ type BooleanFormKey = {
 
 const EMPTY_FORM: FormState = {
   name: "",
-  media_scope: "movie",
+  media_type: "movie",
   watched_folder: "",
   work_folder: "",
   output_folder: "",
@@ -149,7 +149,7 @@ function utcDateTimeValue(value: string): string | null {
 function formFrom(library: RefinerLibrary): FormState {
   return {
     name: library.name,
-    media_scope: library.media_scope,
+    media_type: library.media_type,
     watched_folder: library.watched_folder,
     work_folder: library.work_folder,
     output_folder: library.output_folder,
@@ -205,7 +205,7 @@ function writeFrom(
   };
   return {
     name: form.name.trim(),
-    media_scope: form.media_scope,
+    media_type: form.media_type,
     enabled: library?.enabled ?? true,
     watched_folder: form.watched_folder.trim(),
     work_folder: form.work_folder.trim(),
@@ -624,7 +624,7 @@ export function RefinerLibrariesSection() {
                   const unavailable =
                     item.already_imported ||
                     Boolean(item.local_path_problem) ||
-                    !item.media_scope;
+                    !item.media_type;
                   return (
                     <label
                       key={item.key}
@@ -741,7 +741,7 @@ export function RefinerLibrariesSection() {
                     {library.name}
                   </p>
                   <p className="text-xs text-[var(--mm-text3)]">
-                    {REFINER_MEDIA_SCOPE_LABELS[library.media_scope]} ·{" "}
+                    {REFINER_MEDIA_TYPE_LABELS[library.media_type]} ·{" "}
                     {library.watched_folder || "no watched folder yet"}
                     {library.active_job_count > 0
                       ? ` · ${library.active_job_count} in progress`
@@ -857,21 +857,21 @@ export function RefinerLibrariesSection() {
             <div className="grid gap-3 lg:grid-cols-2">
               {field("Name", "name", "Movies 4K")}
               <label className="block text-sm">
-                <span className="text-[var(--mm-text2)]">Kind of media</span>
+                <span className="text-[var(--mm-text2)]">Media type</span>
                 <select
                   className={mmSelectFieldClass}
-                  value={form.media_scope}
+                  value={form.media_type}
                   onChange={(event) =>
                     setForm({
                       ...form,
-                      media_scope: event.target.value as RefinerMediaScope,
+                      media_type: event.target.value as RefinerMediaType,
                     })
                   }
                   disabled={!editable}
                 >
-                  {SCOPES.map((scope) => (
+                  {MEDIA_TYPES.map((scope) => (
                     <option key={scope} value={scope}>
-                      {REFINER_MEDIA_SCOPE_LABELS[scope]}
+                      {REFINER_MEDIA_TYPE_LABELS[scope]}
                     </option>
                   ))}
                 </select>

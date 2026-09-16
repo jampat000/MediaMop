@@ -456,7 +456,7 @@ export function RefinerFilesSection() {
     try {
       await processNow.mutateAsync({
         relative_media_path: file.relative_path,
-        media_scope: library?.media_scope === "tv" ? "tv" : "movie",
+        media_scope: library?.media_type === "tv" ? "tv" : "movie",
         library_id: file.library_id,
       });
       setNotice(
@@ -478,7 +478,7 @@ export function RefinerFilesSection() {
     try {
       await processNow.mutateAsync({
         relative_media_path: file.relative_path,
-        media_scope: library?.media_scope === "tv" ? "tv" : "movie",
+        media_scope: library?.media_type === "tv" ? "tv" : "movie",
         library_id: file.library_id,
         pass_through_unchanged: true,
       });
@@ -497,7 +497,7 @@ export function RefinerFilesSection() {
     const library = libraries.data?.find((item) => item.id === file.library_id);
     try {
       await checkAgain.mutateAsync({
-        media_scope: library?.media_scope === "tv" ? "tv" : "movie",
+        media_scope: library?.media_type === "tv" ? "tv" : "movie",
         library_id: file.library_id,
       });
       setNotice(
@@ -531,7 +531,7 @@ export function RefinerFilesSection() {
           );
           await processNow.mutateAsync({
             relative_media_path: file.relative_path,
-            media_scope: library?.media_scope === "tv" ? "tv" : "movie",
+            media_scope: library?.media_type === "tv" ? "tv" : "movie",
             library_id: file.library_id,
           });
           started += 1;
@@ -540,7 +540,7 @@ export function RefinerFilesSection() {
             (item) => item.id === file.library_id,
           );
           await checkAgain.mutateAsync({
-            media_scope: library?.media_scope === "tv" ? "tv" : "movie",
+            media_scope: library?.media_type === "tv" ? "tv" : "movie",
             library_id: file.library_id,
           });
           checkedLibraries.add(file.library_id);

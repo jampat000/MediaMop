@@ -14,6 +14,7 @@ damage rather than an error message:
 from __future__ import annotations
 
 import json
+from pathlib import PurePath
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -54,7 +55,7 @@ def active_job_count_for_library(session: Session, library: RefinerLibraryRow) -
     """
 
     seeded_for_scope = next(
-        (row for row in list_libraries(session) if row.media_scope == library.media_scope),
+        (row for row in list_libraries(session) if row.media_type == library.media_type),
         None,
     )
     is_seeded = seeded_for_scope is not None and seeded_for_scope.id == library.id
@@ -78,7 +79,7 @@ def active_job_count_for_library(session: Session, library: RefinerLibraryRow) -
         if is_seeded:
             scope = (data.get("media_scope") or "movie").strip().lower()
             scope = "tv" if scope == "tv" else "movie"
-            if scope == library.media_scope:
+            if scope == library.media_type:
                 count += 1
     return count
 
@@ -86,9 +87,7 @@ def active_job_count_for_library(session: Session, library: RefinerLibraryRow) -
 def _validate_scope(media_scope: str) -> str:
     scope = (media_scope or "").strip().lower()
     if scope not in REFINER_MEDIA_SCOPES:
-        raise RefinerLibraryError(
-            f"Unknown media scope {media_scope!r}. Use one of: {', '.join(REFINER_MEDIA_SCOPES)}."
-        )
+        raise RefinerLibraryError(f"Unknown media type {media_scope!r}. Use one of: {', '.join(REFINER_MEDIA_SCOPES)}.")
     return scope
 
 
@@ -199,14 +198,66 @@ def _set_manager_links(session: Session, row: RefinerLibraryRow, connection_ids:
     session.flush()
 
 
+def _folder(raw: str | None) -> PurePath | None:
+    text = (raw or "").strip()
+    if not text:
+        return None
+    # Textual, so a folder that is not mounted yet can still be saved; the pass checks existence.
+    return PurePath(text.replace("\\", "/").rstrip("/").lower() or "/")
+
+
+def _overlaps(a: PurePath, b: PurePath) -> bool:
+    return a == b or a in b.parents or b in a.parents
+
+
+def _validate_folders(session: Session, row: RefinerLibraryRow) -> None:
+    """The folder rules the retired path-settings screen enforced, applied to every library (#460).
+
+    Refiner deletes source folders on the strength of these paths, so two folders that overlap
+    are refused at save time rather than discovered as damage later:
+
+    - a library's watched, work and output folders must be separate from one another;
+    - no library's watched or output folder may overlap another library's watched or output
+      folder, because one would process or clean up the other's files.
+    """
+
+    watched, work, output = _folder(row.watched_folder), _folder(row.work_folder), _folder(row.output_folder)
+    if watched is not None and not output:
+        raise RefinerLibraryError(
+            "Set an output folder as well as a watched folder, so processed files have somewhere to go."
+        )
+    for (label_a, a), (label_b, b) in (
+        (("watched", watched), ("output", output)),
+        (("watched", watched), ("work", work)),
+        (("work", work), ("output", output)),
+    ):
+        if a is not None and b is not None and _overlaps(a, b):
+            raise RefinerLibraryError(
+                f"This library's {label_a} folder and {label_b} folder overlap. Use separate folders, "
+                "neither inside the other."
+            )
+    for other in list_libraries(session):
+        if other.id == row.id:
+            continue
+        for label_a, a in (("watched", watched), ("output", output)):
+            for label_b, raw in (("watched", other.watched_folder), ("output", other.output_folder)):
+                b = _folder(raw)
+                if a is not None and b is not None and _overlaps(a, b):
+                    raise RefinerLibraryError(
+                        f"This library's {label_a} folder overlaps the {label_b} folder of {other.name!r}. "
+                        "Each library needs its own folders, neither inside another's."
+                    )
+
+
 def create_library(session: Session, body: object) -> RefinerLibraryRow:
     name = _validate_name(session, body.name)  # type: ignore[attr-defined]
-    scope = _validate_scope(body.media_scope)  # type: ignore[attr-defined]
+    scope = _validate_scope(body.media_type)  # type: ignore[attr-defined]
     highest = session.scalars(
         select(RefinerLibraryRow.display_order).order_by(RefinerLibraryRow.display_order.desc())
     ).first()
-    row = RefinerLibraryRow(name=name, media_scope=scope, display_order=(highest or 0) + 1)
+    row = RefinerLibraryRow(name=name, media_type=scope, display_order=(highest or 0) + 1)
     _apply_fields(session, row, body)
+    _validate_folders(session, row)
     session.add(row)
     session.flush()
     _set_manager_links(session, row, list(body.manager_connection_ids))  # type: ignore[attr-defined]
@@ -215,8 +266,9 @@ def create_library(session: Session, body: object) -> RefinerLibraryRow:
 
 def update_library(session: Session, row: RefinerLibraryRow, body: object) -> RefinerLibraryRow:
     row.name = _validate_name(session, body.name, exclude_id=row.id)  # type: ignore[attr-defined]
-    row.media_scope = _validate_scope(body.media_scope)  # type: ignore[attr-defined]
+    row.media_type = _validate_scope(body.media_type)  # type: ignore[attr-defined]
     _apply_fields(session, row, body)
+    _validate_folders(session, row)
     session.add(row)
     session.flush()
     _set_manager_links(session, row, list(body.manager_connection_ids))  # type: ignore[attr-defined]

@@ -5,35 +5,46 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { qk } from "../../lib/auth/queries";
+import type { RefinerLibrary } from "../../lib/refiner/libraries-api";
 import { suiteSettingsQueryKey } from "../../lib/suite/queries";
 import { SetupWizardPage } from "./setup-wizard-page";
 
 const {
   navigateMock,
   suiteMutateAsyncMock,
-  refinerMutateAsyncMock,
+  createLibraryMock,
+  updateLibraryMock,
   patchPrunerInstanceMock,
   postPrunerInstanceMock,
-  refinerQueryData,
+  librariesState,
   prunerQueryData,
 } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
   suiteMutateAsyncMock: vi.fn(),
-  refinerMutateAsyncMock: vi.fn(),
+  createLibraryMock: vi.fn(),
+  updateLibraryMock: vi.fn(),
   patchPrunerInstanceMock: vi.fn(),
   postPrunerInstanceMock: vi.fn(),
-  refinerQueryData: {
-    refiner_watched_folder: "",
-    refiner_work_folder: null,
-    refiner_output_folder: "",
-    refiner_tv_watched_folder: "",
-    refiner_tv_work_folder: null,
-    refiner_tv_output_folder: "",
-    movie_watched_folder_check_interval_seconds: 300,
-    tv_watched_folder_check_interval_seconds: 300,
-  },
+  librariesState: { data: [] as RefinerLibrary[] },
   prunerQueryData: [],
 }));
+
+function existingLibrary(over: Partial<RefinerLibrary>): RefinerLibrary {
+  return {
+    id: 7,
+    name: "Films",
+    enabled: true,
+    media_type: "movie",
+    display_order: 0,
+    watched_folder: "C:\\Old\\Movies",
+    work_folder: "C:\\Work",
+    output_folder: "C:\\Old\\MoviesOut",
+    scan_interval_seconds: 900,
+    rule_set_id: 3,
+    manager_connection_ids: [2],
+    ...over,
+  } as RefinerLibrary;
+}
 
 vi.mock("react-router-dom", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-router-dom")>();
@@ -55,14 +66,18 @@ vi.mock("../../lib/suite/queries", async (importOriginal) => {
   };
 });
 
-vi.mock("../../lib/refiner/queries", () => ({
-  useRefinerPathSettingsQuery: () => ({
+vi.mock("../../lib/refiner/libraries-queries", () => ({
+  useRefinerLibrariesQuery: () => ({
     isPending: false,
-    data: refinerQueryData,
+    data: librariesState.data,
   }),
-  useRefinerPathSettingsSaveMutation: () => ({
+  useCreateRefinerLibrary: () => ({
     isPending: false,
-    mutateAsync: refinerMutateAsyncMock,
+    mutateAsync: createLibraryMock,
+  }),
+  useUpdateRefinerLibrary: () => ({
+    isPending: false,
+    mutateAsync: updateLibraryMock,
   }),
 }));
 
@@ -119,11 +134,14 @@ describe("SetupWizardPage", () => {
   beforeEach(() => {
     navigateMock.mockReset();
     suiteMutateAsyncMock.mockReset();
-    refinerMutateAsyncMock.mockReset();
+    createLibraryMock.mockReset();
+    updateLibraryMock.mockReset();
+    librariesState.data = [];
     postPrunerInstanceMock.mockReset();
     patchPrunerInstanceMock.mockReset();
     suiteMutateAsyncMock.mockResolvedValue({});
-    refinerMutateAsyncMock.mockResolvedValue({});
+    createLibraryMock.mockResolvedValue({});
+    updateLibraryMock.mockResolvedValue({});
     postPrunerInstanceMock.mockResolvedValue({});
     patchPrunerInstanceMock.mockResolvedValue({});
   });
@@ -173,12 +191,14 @@ describe("SetupWizardPage", () => {
         }),
       );
     });
-    expect(refinerMutateAsyncMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        refiner_watched_folder: "D:\\Movies",
-        refiner_output_folder: "E:\\MoviesOut",
-      }),
-    );
+    expect(createLibraryMock).toHaveBeenCalledTimes(1);
+    expect(createLibraryMock).toHaveBeenCalledWith({
+      name: "Movies",
+      media_type: "movie",
+      watched_folder: "D:\\Movies",
+      output_folder: "E:\\MoviesOut",
+    });
+    expect(updateLibraryMock).not.toHaveBeenCalled();
     expect(postPrunerInstanceMock).toHaveBeenCalledWith(
       expect.objectContaining({
         provider: "jellyfin",
@@ -191,5 +211,65 @@ describe("SetupWizardPage", () => {
         replace: true,
       });
     });
+  });
+
+  it("creates a library for each media type that has folders and none yet", async () => {
+    renderWizard();
+
+    fireEvent.change(screen.getByPlaceholderText("TV watched folder"), {
+      target: { value: "D:\\TV" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("TV output folder"), {
+      target: { value: "E:\\TVOut" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Movies watched folder"), {
+      target: { value: "D:\\Movies" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Movies output folder"), {
+      target: { value: "E:\\MoviesOut" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Finish setup" }));
+
+    await waitFor(() => {
+      expect(createLibraryMock).toHaveBeenCalledTimes(2);
+    });
+    expect(createLibraryMock).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "TV", media_type: "tv" }),
+    );
+    expect(createLibraryMock).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Movies", media_type: "movie" }),
+    );
+    expect(updateLibraryMock).not.toHaveBeenCalled();
+  });
+
+  it("updates the first existing library of a media type instead of adding another", async () => {
+    librariesState.data = [
+      existingLibrary({ id: 9, name: "4K films", display_order: 1 }),
+      existingLibrary({ id: 7, name: "Films", display_order: 0 }),
+    ];
+    renderWizard();
+
+    const watched = screen.getByPlaceholderText("Movies watched folder");
+    expect(watched).toHaveValue("C:\\Old\\Movies");
+    fireEvent.change(watched, { target: { value: "D:\\Movies" } });
+    fireEvent.click(screen.getByRole("button", { name: "Finish setup" }));
+
+    await waitFor(() => {
+      expect(updateLibraryMock).toHaveBeenCalledTimes(1);
+    });
+    expect(updateLibraryMock).toHaveBeenCalledWith({
+      id: 7,
+      data: expect.objectContaining({
+        name: "Films",
+        media_type: "movie",
+        watched_folder: "D:\\Movies",
+        output_folder: "C:\\Old\\MoviesOut",
+        work_folder: "C:\\Work",
+        scan_interval_seconds: 900,
+        rule_set_id: 3,
+        manager_connection_ids: [2],
+      }),
+    });
+    expect(createLibraryMock).not.toHaveBeenCalled();
   });
 });

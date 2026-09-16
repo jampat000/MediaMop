@@ -1,11 +1,11 @@
 import { fetchCsrfToken } from "../api/auth-api";
 import { apiFetch, readJson, requireOk } from "../api/client";
 
-export type RefinerMediaScope = "movie" | "tv";
+export type RefinerMediaType = "movie" | "tv";
 
 export type RefinerFailurePolicy = "pass_through" | "hold" | "reject";
 
-export const REFINER_MEDIA_SCOPE_LABELS: Record<RefinerMediaScope, string> = {
+export const REFINER_MEDIA_TYPE_LABELS: Record<RefinerMediaType, string> = {
   movie: "Movies",
   tv: "TV episodes",
 };
@@ -15,7 +15,7 @@ export interface RefinerLibrary {
   id: number;
   name: string;
   enabled: boolean;
-  media_scope: RefinerMediaScope;
+  media_type: RefinerMediaType;
   display_order: number;
 
   watched_folder: string;
@@ -82,7 +82,7 @@ export interface RefinerLibrary {
 
 export interface RefinerLibraryWrite {
   name: string;
-  media_scope: RefinerMediaScope;
+  media_type: RefinerMediaType;
   enabled: boolean;
   watched_folder: string;
   work_folder: string;
@@ -132,10 +132,17 @@ export interface RefinerLibraryWrite {
   manager_connection_ids: number[];
 }
 
+/** A new library needs only a name and media type; the server fills in every other field's default. */
+export type RefinerLibraryCreate = Pick<
+  RefinerLibraryWrite,
+  "name" | "media_type"
+> &
+  Partial<RefinerLibraryWrite>;
+
 export interface DiscoverableRefinerLibrary {
   key: string;
   name: string;
-  media_scope: RefinerMediaScope | null;
+  media_type: RefinerMediaType | null;
   root_path: string | null;
   already_imported: boolean;
   local_path_problem: string | null;
@@ -234,7 +241,7 @@ export async function fetchRefinerLibraries(): Promise<RefinerLibrary[]> {
 }
 
 export async function createRefinerLibrary(
-  data: RefinerLibraryWrite,
+  data: RefinerLibraryCreate,
 ): Promise<RefinerLibrary> {
   const csrf_token = await fetchCsrfToken();
   const path = refinerLibrariesPath();
@@ -348,7 +355,7 @@ export function writeFromRefinerLibrary(
 ): RefinerLibraryWrite {
   return {
     name: library.name,
-    media_scope: library.media_scope,
+    media_type: library.media_type,
     enabled: library.enabled,
     watched_folder: library.watched_folder,
     work_folder: library.work_folder,

@@ -15,21 +15,25 @@ import {
 } from "../../lib/api/error-guards";
 import { useRefinerJobsInspectionQuery } from "../../lib/refiner/jobs-inspection/queries";
 import {
+  REFINER_MEDIA_TYPE_LABELS,
+  type RefinerLibrary,
+  type RefinerRuleSet,
+} from "../../lib/refiner/libraries-api";
+import {
+  useRefinerLibrariesQuery,
+  useRefinerRuleSetsQuery,
+} from "../../lib/refiner/libraries-queries";
+import {
   useRefinerOperatorSettingsQuery,
-  useRefinerPathSettingsQuery,
   useRefinerOverviewStatsQuery,
-  useRefinerRemuxRulesSettingsQuery,
 } from "../../lib/refiner/queries";
 import { refinerStreamLanguageLabel } from "../../lib/refiner/stream-language-options";
-import type { RefinerRemuxRulesScopeSettings } from "../../lib/refiner/types";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 
 export type RefinerOverviewOpenTab =
   "libraries" | "audio-subtitles" | "jobs" | "schedules";
 
-function remuxDefaultsGlanceBody(
-  rem: RefinerRemuxRulesScopeSettings,
-): ReactNode {
+function ruleSetGlanceBody(rem: RefinerRuleSet): ReactNode {
   const pri = refinerStreamLanguageLabel(rem.primary_audio_lang);
   const sec = (rem.secondary_audio_lang ?? "").trim()
     ? refinerStreamLanguageLabel(rem.secondary_audio_lang)
@@ -42,15 +46,17 @@ function remuxDefaultsGlanceBody(
 
   const pol =
     rem.audio_preference_mode === "preferred_langs_strict"
-      ? "Strict preferred languages"
+      ? "Preferred languages only"
       : rem.audio_preference_mode === "quality_all_languages"
-        ? "Best quality (all languages)"
+        ? "Best quality in any language"
         : "Preferred languages, then quality";
 
   const sub =
     rem.subtitle_mode === "remove_all"
       ? "Remove all subtitles"
-      : `Keep selected (${(rem.subtitle_langs_csv ?? "").trim() || "—"})`;
+      : rem.subtitle_mode === "keep_all"
+        ? "Keep all subtitles"
+        : `Keep selected (${(rem.subtitle_langs_csv ?? "").trim() || "—"})`;
 
   return (
     <div className="space-y-1.5 lg:space-y-2">
@@ -70,9 +76,25 @@ function remuxDefaultsGlanceBody(
   );
 }
 
+function hasFolder(value: string | null | undefined): boolean {
+  return Boolean((value ?? "").trim());
+}
+
+function scanIntervalLabel(seconds: number): string {
+  if (seconds % 3600 === 0) {
+    const hours = seconds / 3600;
+    return hours === 1 ? "every hour" : `every ${hours} hours`;
+  }
+  if (seconds % 60 === 0) {
+    const minutes = seconds / 60;
+    return minutes === 1 ? "every minute" : `every ${minutes} minutes`;
+  }
+  return `every ${seconds} seconds`;
+}
+
 function buildNeedsAttention(args: {
   failedCount: number;
-  watchedSet: boolean;
+  libraries: RefinerLibrary[];
 }): { text: string; target?: RefinerOverviewOpenTab }[] {
   const items: { text: string; target?: RefinerOverviewOpenTab }[] = [];
   if (args.failedCount > 0) {
@@ -84,11 +106,28 @@ function buildNeedsAttention(args: {
       target: "jobs",
     });
   }
-  if (!args.watchedSet) {
+  if (args.libraries.length === 0) {
     items.push({
-      text: "No watched folder yet — add a watched folder under Libraries (TV, Movies, or both) before scans or passes can run.",
+      text: "No Refiner libraries yet — add one under Libraries before scans or passes can run.",
       target: "libraries",
     });
+  } else {
+    const missing = args.libraries.filter(
+      (library) => library.enabled && !hasFolder(library.watched_folder),
+    );
+    if (missing.length === 1) {
+      items.push({
+        text: `${missing[0].name} has no watched folder — add one under Libraries before it can be scanned.`,
+        target: "libraries",
+      });
+    } else if (missing.length > 1) {
+      items.push({
+        text: `${missing.length} libraries have no watched folder (${missing
+          .map((library) => library.name)
+          .join(", ")}) — add them under Libraries before they can be scanned.`,
+        target: "libraries",
+      });
+    }
   }
   return items.slice(0, 4);
 }
@@ -226,16 +265,16 @@ export function RefinerOverviewTab({
 }: {
   onOpenTab?: (t: RefinerOverviewOpenTab) => void;
 } = {}) {
-  const pathSettings = useRefinerPathSettingsQuery();
+  const librariesQuery = useRefinerLibrariesQuery();
   const operatorSettings = useRefinerOperatorSettingsQuery();
-  const remuxRules = useRefinerRemuxRulesSettingsQuery();
+  const ruleSets = useRefinerRuleSetsQuery();
   const overviewStats = useRefinerOverviewStatsQuery();
   const pending = useRefinerJobsInspectionQuery("pending");
   const leased = useRefinerJobsInspectionQuery("leased");
   const failed = useRefinerJobsInspectionQuery("failed");
 
-  const blocking = pathSettings.isError
-    ? pathSettings.error
+  const blocking = librariesQuery.isError
+    ? librariesQuery.error
     : operatorSettings.isError
       ? operatorSettings.error
       : null;
@@ -244,25 +283,19 @@ export function RefinerOverviewTab({
     return <RefinerOverviewLoadError err={blocking} />;
   }
 
-  if (pathSettings.isPending || operatorSettings.isPending) {
+  if (librariesQuery.isPending || operatorSettings.isPending) {
     return <PageLoading label="Loading Refiner overview" />;
   }
 
-  if (!pathSettings.data || !operatorSettings.data) {
+  if (!librariesQuery.data || !operatorSettings.data) {
     return <PageLoading label="Loading Refiner overview" />;
   }
 
-  const watchedSet =
-    Boolean((pathSettings.data.refiner_watched_folder ?? "").trim()) ||
-    Boolean((pathSettings.data.refiner_tv_watched_folder ?? "").trim());
-  const outputSet = Boolean(
-    (pathSettings.data.refiner_output_folder ?? "").trim(),
+  const libraries = [...librariesQuery.data].sort(
+    (x, y) => x.display_order - y.display_order,
   );
-  const tvWatchedSet = Boolean(
-    (pathSettings.data.refiner_tv_watched_folder ?? "").trim(),
-  );
-  const tvOutputSet = Boolean(
-    (pathSettings.data.refiner_tv_output_folder ?? "").trim(),
+  const watchedSet = libraries.some((library) =>
+    hasFolder(library.watched_folder),
   );
 
   const pendingN = pending.data?.jobs.length ?? 0;
@@ -278,14 +311,6 @@ export function RefinerOverviewTab({
       </p>
       <dl className="grid gap-2 text-sm text-[var(--mm-text3)] sm:grid-cols-2">
         <div>
-          <dt>Folder checks</dt>
-          <dd className="font-medium text-[var(--mm-text1)]">
-            TV {pathSettings.data.tv_watched_folder_check_interval_seconds}s ·
-            Movies{" "}
-            {pathSettings.data.movie_watched_folder_check_interval_seconds}s
-          </dd>
-        </div>
-        <div>
           <dt>Minimum unchanged age</dt>
           <dd className="font-medium text-[var(--mm-text1)]">
             {operatorSettings.data.min_file_age_seconds} seconds
@@ -295,46 +320,46 @@ export function RefinerOverviewTab({
     </div>
   );
 
-  const foldersBody = (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-6">
-      <div className="min-w-0 space-y-2">
-        <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-          TV
-        </p>
-        <p>
-          <span className="text-[var(--mm-text3)]">Watched · </span>
-          <span className="font-medium text-[var(--mm-text1)]">
-            {tvWatchedSet ? "Set" : "Not set"}
-          </span>
-        </p>
-        <p>
-          <span className="text-[var(--mm-text3)]">Output · </span>
-          <span className="font-medium text-[var(--mm-text1)]">
-            {tvOutputSet ? "Set" : "Not set"}
-          </span>
-        </p>
-      </div>
-      <div className="min-w-0 space-y-2">
-        <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-          Movies
-        </p>
-        <p>
-          <span className="text-[var(--mm-text3)]">Watched · </span>
-          <span className="font-medium text-[var(--mm-text1)]">
-            {(pathSettings.data.refiner_watched_folder ?? "").trim()
-              ? "Set"
-              : "Not set"}
-          </span>
-        </p>
-        <p>
-          <span className="text-[var(--mm-text3)]">Output · </span>
-          <span className="font-medium text-[var(--mm-text1)]">
-            {outputSet ? "Set" : "Not set"}
-          </span>
-        </p>
-      </div>
-    </div>
-  );
+  const foldersBody =
+    libraries.length === 0 ? (
+      <p className="text-[var(--mm-text3)]">No libraries yet.</p>
+    ) : (
+      <ul
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-6"
+        data-testid="refiner-overview-libraries"
+      >
+        {libraries.map((library) => (
+          <li
+            key={library.id}
+            className="min-w-0 space-y-2"
+            data-testid="refiner-overview-library"
+          >
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+              {library.name} · {REFINER_MEDIA_TYPE_LABELS[library.media_type]}
+              {library.enabled ? "" : " · Off"}
+            </p>
+            <p>
+              <span className="text-[var(--mm-text3)]">Watched · </span>
+              <span className="font-medium text-[var(--mm-text1)]">
+                {hasFolder(library.watched_folder) ? "Set" : "Not set"}
+              </span>
+            </p>
+            <p>
+              <span className="text-[var(--mm-text3)]">Output · </span>
+              <span className="font-medium text-[var(--mm-text1)]">
+                {hasFolder(library.output_folder) ? "Set" : "Not set"}
+              </span>
+            </p>
+            <p>
+              <span className="text-[var(--mm-text3)]">Checked · </span>
+              <span className="font-medium text-[var(--mm-text1)]">
+                {scanIntervalLabel(library.scan_interval_seconds)}
+              </span>
+            </p>
+          </li>
+        ))}
+      </ul>
+    );
 
   const queueBody = (
     <div className="space-y-1.5">
@@ -365,28 +390,42 @@ export function RefinerOverviewTab({
     </div>
   );
 
-  const remuxBody = remuxRules.isPending ? (
-    <p className="text-[var(--mm-text3)]">Loading…</p>
-  ) : remuxRules.isError ? (
-    <p className="text-[var(--mm-text3)]">Could not load defaults.</p>
-  ) : remuxRules.data ? (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-5 lg:gap-x-6 lg:gap-y-1">
-      <div className="min-w-0 space-y-2 lg:space-y-2.5">
-        <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)] lg:text-xs">
-          TV
-        </p>
-        {remuxDefaultsGlanceBody(remuxRules.data.tv)}
-      </div>
-      <div className="min-w-0 space-y-2 lg:space-y-2.5">
-        <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)] lg:text-xs">
-          Movies
-        </p>
-        {remuxDefaultsGlanceBody(remuxRules.data.movie)}
-      </div>
-    </div>
-  ) : (
-    <p className="text-[var(--mm-text3)]">—</p>
+  const ruleSetById = new Map(
+    (ruleSets.data ?? []).map((ruleSet) => [ruleSet.id, ruleSet]),
   );
+  const remuxBody =
+    libraries.length === 0 ? (
+      <p className="text-[var(--mm-text3)]">No libraries yet.</p>
+    ) : ruleSets.isPending ? (
+      <p className="text-[var(--mm-text3)]">Loading…</p>
+    ) : ruleSets.isError ? (
+      <p className="text-[var(--mm-text3)]">Could not load rule sets.</p>
+    ) : (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-5 lg:gap-x-6 lg:gap-y-1">
+        {libraries.map((library) => {
+          const ruleSet =
+            library.rule_set_id === null
+              ? undefined
+              : ruleSetById.get(library.rule_set_id);
+          return (
+            <div key={library.id} className="min-w-0 space-y-2 lg:space-y-2.5">
+              <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--mm-text3)] lg:text-xs">
+                {library.name}
+              </p>
+              <p>
+                <span className="text-[var(--mm-text3)]">Rule set:</span>{" "}
+                <span className="font-medium text-[var(--mm-text1)]">
+                  {ruleSet
+                    ? ruleSet.name
+                    : `${REFINER_MEDIA_TYPE_LABELS[library.media_type]} defaults`}
+                </span>
+              </p>
+              {ruleSet ? ruleSetGlanceBody(ruleSet) : null}
+            </div>
+          );
+        })}
+      </div>
+    );
   const statsBody =
     overviewStats.isPending || overviewStats.isError || !overviewStats.data ? (
       <p className="text-[var(--mm-text3)]">Loading…</p>
@@ -414,7 +453,7 @@ export function RefinerOverviewTab({
 
   const attentionItems = buildNeedsAttention({
     failedCount: failedReady ? failedN : 0,
-    watchedSet,
+    libraries,
   });
 
   return (

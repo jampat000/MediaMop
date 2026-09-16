@@ -136,7 +136,7 @@ def test_seed_carries_configured_paths_and_rules_verbatim(
     assert set(libraries) == {"Movies", "TV"}
 
     movies = libraries["Movies"]
-    assert movies["media_scope"] == "movie"
+    assert movies["media_type"] == "movie"
     assert movies["watched_folder"] == "/srv/movies/in"
     assert movies["work_folder"] == "/srv/movies/work"
     assert movies["output_folder"] == "/srv/movies/out"
@@ -151,7 +151,7 @@ def test_seed_carries_configured_paths_and_rules_verbatim(
     assert movies["schedule_end"] == "05:00"
 
     tv = libraries["TV"]
-    assert tv["media_scope"] == "tv"
+    assert tv["media_type"] == "tv"
     assert tv["watched_folder"] == "/srv/tv/in"
     assert tv["output_folder"] == "/srv/tv/out"
     assert tv["scan_interval_seconds"] == 120
@@ -309,7 +309,7 @@ def test_a_configured_upgrade_carries_the_value_across_and_then_drops_the_table(
 
     carried = _rows(
         _engine(),
-        "select watched_folder from refiner_libraries where media_scope = 'movie' order by id limit 1",
+        "select watched_folder from refiner_libraries where media_type = 'movie' order by id limit 1",
     )
     assert carried[0]["watched_folder"] == "/keep/me"
 

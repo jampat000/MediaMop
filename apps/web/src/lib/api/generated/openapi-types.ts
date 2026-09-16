@@ -1293,30 +1293,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/refiner/path-settings": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get Refiner Path Settings
-     * @description Read saved Refiner path roles plus the resolved default work/temp path (shown before first save).
-     */
-    get: operations["get_refiner_path_settings_api_v1_refiner_path_settings_get"];
-    /**
-     * Put Refiner Path Settings
-     * @description Persist Refiner path settings with hard validation (overlap, existence, required output).
-     */
-    put: operations["put_refiner_path_settings_api_v1_refiner_path_settings_put"];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   "/api/v1/refiner/reject-support": {
     parameters: {
       query?: never;
@@ -1333,24 +1309,6 @@ export interface paths {
      */
     get: operations["get_refiner_reject_support_api_v1_refiner_reject_support_get"];
     put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/refiner/remux-rules-settings": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Refiner Remux Rules Settings */
-    get: operations["get_refiner_remux_rules_settings_api_v1_refiner_remux_rules_settings_get"];
-    /** Put Refiner Remux Rules Settings */
-    put: operations["put_refiner_remux_rules_settings_api_v1_refiner_remux_rules_settings_put"];
     post?: never;
     delete?: never;
     options?: never;
@@ -2178,8 +2136,8 @@ export interface components {
        * @description Why that path cannot be used on this machine, shown beside the manager's value.
        */
       local_path_problem?: string | null;
-      /** Media Scope */
-      media_scope?: ("movie" | "tv") | null;
+      /** Media Type */
+      media_type?: ("movie" | "tv") | null;
       /** Name */
       name: string;
       /**
@@ -3961,10 +3919,10 @@ export interface components {
        */
       media_extensions_csv: string;
       /**
-       * Media Scope
+       * Media Type
        * @enum {string}
        */
-      media_scope: "movie" | "tv";
+      media_type: "movie" | "tv";
       /**
        * Min File Age Seconds
        * @default 60
@@ -4194,10 +4152,10 @@ export interface components {
       /** Media Extensions Csv */
       media_extensions_csv: string;
       /**
-       * Media Scope
+       * Media Type
        * @enum {string}
        */
-      media_scope: "movie" | "tv";
+      media_type: "movie" | "tv";
       /** Min File Age Seconds */
       min_file_age_seconds: number;
       /** Min File Size Mb */
@@ -4383,10 +4341,10 @@ export interface components {
        */
       media_extensions_csv: string;
       /**
-       * Media Scope
+       * Media Type
        * @enum {string}
        */
-      media_scope: "movie" | "tv";
+      media_type: "movie" | "tv";
       /**
        * Min File Age Seconds
        * @default 60
@@ -4715,187 +4673,6 @@ export interface components {
        * @default 30
        */
       window_days: number;
-    };
-    /** RefinerPathSettingsOut */
-    RefinerPathSettingsOut: {
-      /** Effective Tv Work Folder */
-      effective_tv_work_folder: string;
-      /** Effective Work Folder */
-      effective_work_folder: string;
-      /** Movie Watched Folder Check Interval Seconds */
-      movie_watched_folder_check_interval_seconds: number;
-      /** Refiner Output Folder */
-      refiner_output_folder: string | null;
-      /** Refiner Tv Output Folder */
-      refiner_tv_output_folder: string | null;
-      /** Refiner Tv Watched Folder */
-      refiner_tv_watched_folder: string | null;
-      /** Refiner Tv Watched Folder Exists */
-      refiner_tv_watched_folder_exists: boolean;
-      /** Refiner Tv Work Folder */
-      refiner_tv_work_folder: string | null;
-      /** Refiner Watched Folder */
-      refiner_watched_folder: string | null;
-      /** Refiner Watched Folder Exists */
-      refiner_watched_folder_exists: boolean;
-      /** Refiner Work Folder */
-      refiner_work_folder: string | null;
-      /** Resolved Default Tv Work Folder */
-      resolved_default_tv_work_folder: string;
-      /** Resolved Default Work Folder */
-      resolved_default_work_folder: string;
-      /** Tv Watched Folder Check Interval Seconds */
-      tv_watched_folder_check_interval_seconds: number;
-      /**
-       * Updated At
-       * Format: date-time
-       */
-      updated_at: string;
-    };
-    /** RefinerPathSettingsPutIn */
-    RefinerPathSettingsPutIn: {
-      /** Csrf Token */
-      csrf_token: string;
-      /**
-       * Movie Watched Folder Check Interval Seconds
-       * @description When set, updates Movies watched-folder poll interval (seconds, 10–604800). Omit to leave unchanged.
-       */
-      movie_watched_folder_check_interval_seconds?: number | null;
-      /** Refiner Output Folder */
-      refiner_output_folder?: string | null;
-      /** Refiner Tv Output Folder */
-      refiner_tv_output_folder?: string | null;
-      /**
-       * Refiner Tv Paths Included
-       * @description When true, TV watched/work/output fields are validated and persisted (clear TV by sending empty values). When false, existing TV path columns are left unchanged (backward-compatible movie-only saves).
-       * @default false
-       */
-      refiner_tv_paths_included: boolean;
-      /** Refiner Tv Watched Folder */
-      refiner_tv_watched_folder?: string | null;
-      /** Refiner Tv Work Folder */
-      refiner_tv_work_folder?: string | null;
-      /** Refiner Watched Folder */
-      refiner_watched_folder?: string | null;
-      /** Refiner Work Folder */
-      refiner_work_folder?: string | null;
-      /**
-       * Tv Watched Folder Check Interval Seconds
-       * @description When set, updates TV watched-folder poll interval (seconds, 10–604800). Omit to leave unchanged.
-       */
-      tv_watched_folder_check_interval_seconds?: number | null;
-    };
-    /** RefinerRemuxRulesScopeOut */
-    RefinerRemuxRulesScopeOut: {
-      /**
-       * Audio Preference Mode
-       * @enum {string}
-       */
-      audio_preference_mode:
-        | "preferred_langs_quality"
-        | "preferred_langs_strict"
-        | "quality_all_languages";
-      /**
-       * Default Audio Slot
-       * @enum {string}
-       */
-      default_audio_slot: "primary" | "secondary";
-      /** Preserve Default Subs */
-      preserve_default_subs: boolean;
-      /** Preserve Forced Subs */
-      preserve_forced_subs: boolean;
-      /** Primary Audio Lang */
-      primary_audio_lang: string;
-      /** Remove Commentary */
-      remove_commentary: boolean;
-      /** Secondary Audio Lang */
-      secondary_audio_lang: string;
-      /**
-       * Subtitle Langs Csv
-       * @description Comma-separated ISO-style language tags used when subtitle_mode is keep_selected.
-       */
-      subtitle_langs_csv: string;
-      /**
-       * Subtitle Mode
-       * @enum {string}
-       */
-      subtitle_mode: "remove_all" | "keep_selected";
-      /** Tertiary Audio Lang */
-      tertiary_audio_lang: string;
-    };
-    /** RefinerRemuxRulesSettingsOut */
-    RefinerRemuxRulesSettingsOut: {
-      movie: components["schemas"]["RefinerRemuxRulesScopeOut"];
-      tv: components["schemas"]["RefinerRemuxRulesScopeOut"];
-      /** Updated At */
-      updated_at: string;
-    };
-    /** RefinerRemuxRulesSettingsPutIn */
-    RefinerRemuxRulesSettingsPutIn: {
-      /**
-       * Audio Preference Mode
-       * @default preferred_langs_quality
-       * @enum {string}
-       */
-      audio_preference_mode:
-        | "preferred_langs_quality"
-        | "preferred_langs_strict"
-        | "quality_all_languages";
-      /** Csrf Token */
-      csrf_token: string;
-      /**
-       * Default Audio Slot
-       * @default primary
-       * @enum {string}
-       */
-      default_audio_slot: "primary" | "secondary";
-      /**
-       * Media Scope
-       * @default movie
-       * @enum {string}
-       */
-      media_scope: "movie" | "tv";
-      /**
-       * Preserve Default Subs
-       * @default true
-       */
-      preserve_default_subs: boolean;
-      /**
-       * Preserve Forced Subs
-       * @default true
-       */
-      preserve_forced_subs: boolean;
-      /**
-       * Primary Audio Lang
-       * @default eng
-       */
-      primary_audio_lang: string;
-      /**
-       * Remove Commentary
-       * @default true
-       */
-      remove_commentary: boolean;
-      /**
-       * Secondary Audio Lang
-       * @default jpn
-       */
-      secondary_audio_lang: string;
-      /**
-       * Subtitle Langs Csv
-       * @default
-       */
-      subtitle_langs_csv: string;
-      /**
-       * Subtitle Mode
-       * @default remove_all
-       * @enum {string}
-       */
-      subtitle_mode: "remove_all" | "keep_selected";
-      /**
-       * Tertiary Audio Lang
-       * @default
-       */
-      tertiary_audio_lang: string;
     };
     /** RefinerRequeueOut */
     RefinerRequeueOut: {
@@ -8318,59 +8095,6 @@ export interface operations {
       };
     };
   };
-  get_refiner_path_settings_api_v1_refiner_path_settings_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RefinerPathSettingsOut"];
-        };
-      };
-    };
-  };
-  put_refiner_path_settings_api_v1_refiner_path_settings_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["RefinerPathSettingsPutIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RefinerPathSettingsOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
   get_refiner_reject_support_api_v1_refiner_reject_support_get: {
     parameters: {
       query?: {
@@ -8389,59 +8113,6 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["RejectSupportOut"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  get_refiner_remux_rules_settings_api_v1_refiner_remux_rules_settings_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RefinerRemuxRulesSettingsOut"];
-        };
-      };
-    };
-  };
-  put_refiner_remux_rules_settings_api_v1_refiner_remux_rules_settings_put: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["RefinerRemuxRulesSettingsPutIn"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["RefinerRemuxRulesSettingsOut"];
         };
       };
       /** @description Validation Error */

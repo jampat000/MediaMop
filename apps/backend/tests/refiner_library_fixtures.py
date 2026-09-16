@@ -34,11 +34,11 @@ def seed_refiner_library(
     """
 
     existing = session.scalars(
-        select(RefinerLibraryRow).where(RefinerLibraryRow.media_scope == media_scope).order_by(RefinerLibraryRow.id)
+        select(RefinerLibraryRow).where(RefinerLibraryRow.media_type == media_scope).order_by(RefinerLibraryRow.id)
     ).first()
     row = existing or RefinerLibraryRow(
         name=name or ("TV" if media_scope == "tv" else "Movies"),
-        media_scope=media_scope,
+        media_type=media_scope,
     )
     row.enabled = True
     row.watched_folder = watched_folder

@@ -26,7 +26,8 @@ from mediamop.api.deps import DbSessionDep, SettingsDep
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
-from mediamop.modules.refiner.refiner_library_service import resolve_library
+from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
+from mediamop.modules.refiner.refiner_library_service import list_libraries, resolve_library
 from mediamop.platform.activity import constants as activity_constants
 from mediamop.platform.activity import service as activity_service
 from mediamop.platform.media_managers.connection_model import MediaManagerConnectionRow
@@ -40,7 +41,7 @@ from mediamop.platform.media_managers.handoff_ledger import (
     find_handoff,
     record_handoff_received,
 )
-from mediamop.platform.media_managers.handoff_paths import relative_media_path_for_handoff
+from mediamop.platform.media_managers.handoff_paths import HandoffPathResult, relative_media_path_for_handoff
 from mediamop.platform.media_managers.import_events import (
     MediaManagerImportEvent,
     dialect_for_source,
@@ -89,17 +90,44 @@ def _compact_json(payload: dict[str, Any]) -> str:
     return json.dumps(payload, separators=(",", ":"))
 
 
+def _library_for_handoff(
+    session: Session, event: MediaManagerImportEvent
+) -> tuple[RefinerLibraryRow | None, HandoffPathResult]:
+    """The library whose watched folder holds the file, and the file's path relative to it.
+
+    Chosen by folder, not by media type (#460): with two film libraries, the first one of that
+    type is not necessarily the one the manager dropped the file into. When several watched
+    folders contain the file (one nested in another), the deepest wins, and a library of the
+    hand-off's media type is preferred over one of the other type.
+    """
+
+    candidates = []
+    for library in list_libraries(session):
+        resolved = relative_media_path_for_handoff(watched_folder=library.watched_folder, file_path=event.file_path)
+        if resolved.ok:
+            depth = len([p for p in (library.watched_folder or "").replace("\\", "/").split("/") if p])
+            candidates.append((library.media_type == event.media_scope, depth, -library.id, library, resolved))
+    if candidates:
+        _, _, _, library, resolved = max(candidates, key=lambda c: (c[0], c[1], c[2]))
+        return library, resolved
+    # Nothing contains it: explain against the library of this media type, as before.
+    fallback = resolve_library(session, media_scope=event.media_scope)
+    watched = (fallback.watched_folder or "") if fallback is not None else ""
+    return fallback, relative_media_path_for_handoff(watched_folder=watched, file_path=event.file_path)
+
+
 def _enqueue_refine(session: Session, event: MediaManagerImportEvent) -> str:
-    library = resolve_library(session, media_scope=event.media_scope)
-    watched = (library.watched_folder or "") if library is not None else ""
-    resolved = relative_media_path_for_handoff(watched_folder=watched, file_path=event.file_path)
+    library, resolved = _library_for_handoff(session, event)
     if not resolved.ok:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=resolved.problem)
 
     payload: dict[str, Any] = {
         "relative_media_path": resolved.relative_media_path,
-        "media_scope": event.media_scope,
+        # The job's cleanup shape follows the library it landed in, not what the manager called it.
+        "media_scope": library.media_type if library is not None else event.media_scope,
     }
+    if library is not None:
+        payload["library_id"] = library.id
     # Carried on the job so the completion report can find its way home without a
     # second table: the job row already persists its payload across restarts.
     if event.handoff_id or event.callback_path:

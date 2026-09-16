@@ -49,18 +49,18 @@ def _put_refiner_path_settings(
     output: str,
     work: str | None = None,
 ) -> None:
-    tok = fetch_csrf(client)
-    r = client.put(
-        "/api/v1/refiner/path-settings",
-        json={
-            "csrf_token": tok,
-            "refiner_watched_folder": watched,
-            "refiner_work_folder": work,
-            "refiner_output_folder": output,
-        },
-        headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
-    )
-    assert r.status_code == 200, r.text
+    del client
+    # The path-settings route was retired with #460; the Movies library is configured directly.
+    from mediamop.modules.refiner.refiner_library_service import resolve_library
+
+    with create_session_factory(create_db_engine(MediaMopSettings.load()))() as db:
+        # The library scope-only work resolves to (first by display order), not the lowest id.
+        library = resolve_library(db, media_scope="movie")
+        assert library is not None
+        library.watched_folder = watched or ""
+        library.work_folder = work or ""
+        library.output_folder = output
+        db.commit()
 
 
 def test_refiner_file_remux_pass_enqueue_writes_live_payload(client_with_admin: TestClient, tmp_path: Path) -> None:

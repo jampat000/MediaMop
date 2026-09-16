@@ -46,7 +46,7 @@ class FileStateVerdict:
 
 
 def _scope_word(library: RefinerLibraryRow) -> str:
-    return "TV episodes" if library.media_scope == "tv" else "Movies"
+    return "TV episodes" if library.media_type == "tv" else "Movies"
 
 
 def decide_file_state(

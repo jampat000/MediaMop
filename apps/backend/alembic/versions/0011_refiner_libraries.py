@@ -211,10 +211,17 @@ def _seed_from_singletons(bind: sa.engine.Connection) -> None:
         output_key = "refiner_tv_output_folder" if tv else "refiner_output_folder"
         interval_key = f"{'tv' if tv else 'movie'}_watched_folder_check_interval_seconds"
 
+        # A greenfield install gets this table from migration 0001, which builds today's models,
+        # so the column may already carry its later name (renamed in 0033, #460).
+        type_column = (
+            "media_type"
+            if "media_type" in {c["name"] for c in inspect(bind).get_columns("refiner_libraries")}
+            else "media_scope"
+        )
         library_id = bind.execute(
             sa.text(
                 "insert into refiner_libraries ("
-                " name, enabled, media_scope, display_order, watched_folder, work_folder, output_folder,"
+                f" name, enabled, {type_column}, display_order, watched_folder, work_folder, output_folder,"
                 " media_extensions_csv, exclude_markers_csv, min_file_size_mb, min_file_age_seconds,"
                 " scan_interval_seconds, schedule_enabled, schedule_hours_limited, schedule_days,"
                 " schedule_start, schedule_end, max_concurrent_files, rule_set_id"

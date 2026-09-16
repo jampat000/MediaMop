@@ -49,7 +49,7 @@ class DiscoverableLibrary:
 
     key: str
     name: str
-    media_scope: str | None
+    media_type: str | None
     root_path: str | None
     already_imported: bool
     local_path_problem: str | None
@@ -159,7 +159,7 @@ def discoverable_libraries(
             DiscoverableLibrary(
                 key=descriptor.key,
                 name=descriptor.name,
-                media_scope=descriptor.media_scope,
+                media_type=descriptor.media_scope,
                 root_path=descriptor.root_path,
                 already_imported=(connection_row.id, descriptor.key) in imported,
                 local_path_problem=local_path_problem(descriptor.root_path),
@@ -234,7 +234,7 @@ def import_libraries(
         )
         row = RefinerLibraryRow(
             name=_unique_name(session, descriptor.name or f"{connection_row.name} library {key}"),
-            media_scope=descriptor.media_scope or "movie",
+            media_type=descriptor.media_scope or "movie",
             display_order=order,
             watched_folder=usable_root or "",
             output_folder=usable_output or "",

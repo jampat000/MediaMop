@@ -236,7 +236,7 @@ def test_the_managers_hand_off_rides_along_with_the_delivery(db_session: Session
 
 
 def test_new_libraries_default_to_the_guarantee(db_session: Session) -> None:
-    library = RefinerLibraryRow(name="Fresh", media_scope="movie")
+    library = RefinerLibraryRow(name="Fresh", media_type="movie")
     db_session.add(library)
     db_session.flush()
     db_session.refresh(library)

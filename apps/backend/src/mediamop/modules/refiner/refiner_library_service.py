@@ -88,7 +88,7 @@ def seeded_library_for_scope(session: Session, media_scope: str) -> RefinerLibra
     scope = normalize_media_scope(media_scope)
     return session.scalars(
         select(RefinerLibraryRow)
-        .where(RefinerLibraryRow.media_scope == scope)
+        .where(RefinerLibraryRow.media_type == scope)
         .order_by(RefinerLibraryRow.display_order, RefinerLibraryRow.id)
     ).first()
 

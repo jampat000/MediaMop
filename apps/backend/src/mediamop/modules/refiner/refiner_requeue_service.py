@@ -203,7 +203,7 @@ def _enqueue_remux_for(
     payload = json.dumps(
         {
             "relative_media_path": row.relative_path,
-            "media_scope": "tv" if library.media_scope == "tv" else "movie",
+            "media_scope": "tv" if library.media_type == "tv" else "movie",
             "library_id": library.id,
         },
         separators=(",", ":"),

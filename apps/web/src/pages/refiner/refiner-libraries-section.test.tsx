@@ -14,7 +14,7 @@ function library(over: Partial<RefinerLibrary> = {}): RefinerLibrary {
     id: 1,
     name: "Movies",
     enabled: true,
-    media_scope: "movie",
+    media_type: "movie",
     display_order: 0,
     watched_folder: "/srv/movies/in",
     work_folder: "",
@@ -95,7 +95,7 @@ it("lists every library, not just Movies and TV", async () => {
   asOperator();
   vi.spyOn(api, "fetchRefinerLibraries").mockResolvedValue([
     library(),
-    library({ id: 2, name: "TV", media_scope: "tv", display_order: 1 }),
+    library({ id: 2, name: "TV", media_type: "tv", display_order: 1 }),
     library({ id: 3, name: "Movies 4K", display_order: 2 }),
   ]);
 
@@ -128,7 +128,7 @@ it("discovers and imports selected manager libraries", async () => {
     {
       key: "movies-4k",
       name: "Movies 4K",
-      media_scope: "movie",
+      media_type: "movie",
       root_path: "/manager/movies-4k",
       already_imported: false,
       local_path_problem: null,
@@ -201,7 +201,7 @@ it("adds a library through the API", async () => {
 
   await waitFor(() => {
     expect(create).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "Kids", media_scope: "movie" }),
+      expect.objectContaining({ name: "Kids", media_type: "movie" }),
     );
   });
 });

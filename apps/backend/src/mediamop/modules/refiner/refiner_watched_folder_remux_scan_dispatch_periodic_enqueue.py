@@ -123,7 +123,7 @@ async def _run_periodic_watched_folder_scan_dispatch_enqueue(
                 nearest = now_loop + 60.0
                 for library in libraries:
                     library_id = int(library.id)
-                    scope = "tv" if library.media_scope == "tv" else "movie"
+                    scope = "tv" if library.media_type == "tv" else "movie"
                     interval = _watched_folder_scan_interval_seconds(library, media_scope=scope)
                     due = next_run_by_library.get(library_id, now_loop)
                     if now_loop < due:

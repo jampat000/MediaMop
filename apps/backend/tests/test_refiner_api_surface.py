@@ -68,6 +68,9 @@ REQUIRED_SURFACES: tuple[tuple[str, str], ...] = (
 RETIRED_SURFACES: tuple[str, ...] = (
     "/api/v1/refiner/jobs/candidate-gate/enqueue",
     "/api/v1/refiner/jobs/supplied-payload-evaluation/enqueue",
+    # Scope-shaped views that resolved "movie" and "tv" to whichever library came first (#460).
+    "/api/v1/refiner/path-settings",
+    "/api/v1/refiner/remux-rules-settings",
 )
 
 
