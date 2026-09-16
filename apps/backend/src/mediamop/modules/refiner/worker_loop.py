@@ -39,6 +39,13 @@ from mediamop.platform.activity import constants as activity_constants
 from mediamop.platform.activity import service as activity_service
 from mediamop.platform.activity.provenance import job_provenance
 from mediamop.platform.http.request_context import job_logging_context
+from mediamop.platform.jobs.worker_failures import (
+    AlreadyRecordedFailure,
+    job_failure,
+    refused_job_error,
+    retry_coming,
+    stored_error,
+)
 from mediamop.platform.jobs.worker_health import worker_heartbeat, worker_started, worker_stopped
 from mediamop.platform.notifications.dispatch import dispatch_job_notification
 from mediamop.platform.observability.failure_messages import operator_failure_from_exception
@@ -127,6 +134,9 @@ class RefinerJobWorkContext:
     job_kind: str
     payload_json: str | None
     lease_owner: str
+    #: This claim's attempt and the job's limit, so failure wording can say whether it will be retried.
+    attempt_count: int = 1
+    max_attempts: int = 1
 
 
 class RefinerNoHandlerForJobKind(LookupError):
@@ -180,13 +190,19 @@ def process_one_refiner_job(
             job_kind=job.job_kind,
             payload_json=job.payload_json,
             lease_owner=lease_owner,
+            attempt_count=int(job.attempt_count or 1),
+            max_attempts=int(job.max_attempts or 1),
         )
 
     if job_kind_forbidden_on_refiner_lane(ctx.job_kind):
-        err_text = (
-            "refiner worker refused job_kind reserved for another module lane: "
-            f"{ctx.job_kind!r} (row id={ctx.id}); use the correct table + workers for that prefix"
-        )[:10_000]
+        err_text = refused_job_error(
+            module="Refiner",
+            technical_reason=(
+                "refiner worker refused job_kind reserved for another module lane: "
+                f"{ctx.job_kind!r} (row id={ctx.id}); use the correct table + workers for that prefix"
+            ),
+            will_retry=retry_coming(attempt_count=ctx.attempt_count, max_attempts=ctx.max_attempts),
+        )
         try:
             with session_factory() as session, session.begin():
                 fail_claimed_refiner_job(
@@ -204,10 +220,14 @@ def process_one_refiner_job(
         return "processed"
 
     if not ctx.job_kind.startswith(REFINER_QUEUE_JOB_KIND_PREFIX):
-        err_text = (
-            "refiner worker refused job_kind missing required refiner.* prefix: "
-            f"{ctx.job_kind!r} (row id={ctx.id}); enqueue only refiner-owned kinds"
-        )[:10_000]
+        err_text = refused_job_error(
+            module="Refiner",
+            technical_reason=(
+                "refiner worker refused job_kind missing required refiner.* prefix: "
+                f"{ctx.job_kind!r} (row id={ctx.id}); enqueue only refiner-owned kinds"
+            ),
+            will_retry=retry_coming(attempt_count=ctx.attempt_count, max_attempts=ctx.max_attempts),
+        )
         try:
             with session_factory() as session, session.begin():
                 fail_claimed_refiner_job(
@@ -227,7 +247,13 @@ def process_one_refiner_job(
     handler = job_handlers.get(ctx.job_kind)
     if handler is None:
         exc: BaseException = RefinerNoHandlerForJobKind(ctx.job_kind)
-        err_text = str(exc)[:10_000]
+        err_text = stored_error(
+            job_failure(
+                module="Refiner",
+                exc=exc,
+                will_retry=retry_coming(attempt_count=ctx.attempt_count, max_attempts=ctx.max_attempts),
+            )
+        )
         try:
             with session_factory() as session, session.begin():
                 fail_claimed_refiner_job(
@@ -248,11 +274,10 @@ def process_one_refiner_job(
         with job_logging_context(ctx.id):
             handler(ctx)
     except Exception as exc:
-        failure = operator_failure_from_exception(
+        failure = job_failure(
             module="Refiner",
-            action="job",
             exc=exc,
-            recoverable=False,
+            will_retry=retry_coming(attempt_count=ctx.attempt_count, max_attempts=ctx.max_attempts),
         )
         logger.error(
             "Refiner job handler failed for job_id=%s kind=%s: %s",
@@ -261,20 +286,17 @@ def process_one_refiner_job(
             failure.message,
             extra={"detail": failure.technical_detail},
         )
-        _record_unhandled_refiner_failure(session_factory, ctx=ctx, message=failure.message)
-        stored_error = failure.message
-        if failure.next_action:
-            stored_error += f" Next action: {failure.next_action}"
-        if failure.technical_detail:
-            stored_error += f" Technical detail: {failure.technical_detail}"
-        stored_error = stored_error[:10_000]
+        if not isinstance(exc, AlreadyRecordedFailure):
+            # A handler that recorded its own failure has said it once already (#488).
+            _record_unhandled_refiner_failure(session_factory, ctx=ctx, message=failure.message)
+        error_text = stored_error(failure)
         try:
             with session_factory() as session, session.begin():
                 fail_claimed_refiner_job(
                     session,
                     job_id=ctx.id,
                     lease_owner=ctx.lease_owner,
-                    error_message=stored_error,
+                    error_message=error_text,
                     now=when,
                 )
         except Exception:
@@ -311,7 +333,18 @@ def process_one_refiner_job(
         )
 
     if not complete_ok and complete_err is not None:
-        bounded = (REFINER_TERMINALIZATION_FAILURE_PREFIX + complete_err)[:10_000]
+        # The handler finished; only recording that failed. Said plainly, with the detail after it.
+        bounded = (
+            REFINER_TERMINALIZATION_FAILURE_PREFIX
+            + stored_error(
+                operator_failure_from_exception(
+                    module="Refiner",
+                    action="job",
+                    exc=RuntimeError(complete_err),
+                    continuation="The work ran, but MediaMop could not record that it finished.",
+                )
+            )
+        )[:10_000]
         try:
             with session_factory() as session, session.begin():
                 recovered = fail_leased_refiner_job_after_complete_failure(
