@@ -81,6 +81,18 @@ requireOrder(
   ".github/workflows/release.yml",
 );
 
+// Checksums describe the files as published. Signing rewrites Setup.exe, so hashing must come after it.
+requireOrder(
+  release,
+  [
+    "- name: Sign Velopack release artifacts",
+    "- name: Verify Velopack setup signature",
+    "- name: Generate release artifact checksums",
+    "- name: Upload Velopack release artifacts",
+  ],
+  ".github/workflows/release.yml",
+);
+
 for (const marker of [
   "MEDIAMOP_LIVE_EXPECTED_VERSION: ${{ steps.version.outputs.plain }}",
   "MEDIAMOP_SESSION_COOKIE_SECURE=false",
