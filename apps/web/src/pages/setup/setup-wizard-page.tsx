@@ -38,7 +38,9 @@ import {
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 
 const LANDING_OPTIONS = [
-  { value: "/", label: "Dashboard" },
+  // "/" is In hand since 3.0 (#463); the dashboard moved to /dashboard.
+  { value: "/", label: "In hand" },
+  { value: "/dashboard", label: "Dashboard" },
   { value: "/refiner", label: "Refiner" },
   { value: "/pruner", label: "Pruner" },
 ] as const;
