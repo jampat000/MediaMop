@@ -7446,10 +7446,15 @@
             "title": "Sign In Attempt Window Plain",
             "type": "string"
           },
-          "sign_in_cookie_https_only": {
-            "description": "Whether the sign-in cookie is marked for HTTPS only.",
-            "title": "Sign In Cookie Https Only",
-            "type": "boolean"
+          "sign_in_cookie_https_mode": {
+            "description": "How the sign-in cookie decides to be HTTPS-only: auto, always, or never.",
+            "title": "Sign In Cookie Https Mode",
+            "type": "string"
+          },
+          "sign_in_cookie_https_plain": {
+            "description": "Plain-language explanation of the sign-in cookie's HTTPS-only behaviour.",
+            "title": "Sign In Cookie Https Plain",
+            "type": "string"
           },
           "sign_in_cookie_same_site": {
             "description": "How strictly the browser limits the sign-in cookie.",
@@ -7479,7 +7484,8 @@
         },
         "required": [
           "session_signing_configured",
-          "sign_in_cookie_https_only",
+          "sign_in_cookie_https_mode",
+          "sign_in_cookie_https_plain",
           "sign_in_cookie_same_site",
           "standard_session_idle_timeout_plain",
           "standard_session_absolute_timeout_plain",

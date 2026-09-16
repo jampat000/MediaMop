@@ -61,3 +61,47 @@ The docs build runs an image-format preflight and rejects ICNS, JXL, HEIC, and H
 4. Confirm auth smoke tests pass
 5. Confirm backup files don't expose secrets
 6. Confirm activity/log views don't expose tokens
+
+## Locked out
+
+MediaMop has one operator account. There is no second admin to let you back in, and no email
+reset — the app stores no email address and has no outbound mail path, only webhooks. Recovery is
+therefore proof that you can reach the server, which is already the trust boundary: the session
+signing key and the database both live under `MEDIAMOP_HOME`.
+
+### If you forgot your password
+
+Run the recovery command where MediaMop is installed. It sets a new password, re-activates the
+account, and signs out every existing session.
+
+```bash
+docker compose exec mediamop mediamop-recover
+```
+
+On a Windows install, run `mediamop-recover` from the installation directory.
+
+You will be prompted for the new password, which keeps it out of your shell history. For
+scripted use, pass `--password`. To see the accounts without changing anything, use `--list`.
+
+### If you signed in but are sent straight back to the login page
+
+Your password is not the problem — the browser is discarding the session cookie. This happens
+when MediaMop is reached over plain HTTP while the cookie is forced to HTTPS-only.
+
+The default is `auto`, which marks the cookie HTTPS-only only when a request actually arrives
+over HTTPS, so this should not occur unless the setting has been forced. Check for
+`MEDIAMOP_SESSION_COOKIE_SECURE=true` in your environment and remove it, or set it to `auto`,
+then restart.
+
+### If the server will not start at all
+
+As a last resort you can clear the accounts directly and use first-run setup again. Everything
+else — libraries, connections and settings — lives in other tables and survives.
+
+```bash
+docker compose exec mediamop /opt/mediamop/.venv/bin/python -c "import sqlite3; c=sqlite3.connect('/data/mediamop/data/mediamop.sqlite3'); c.execute('DELETE FROM user_sessions'); c.execute('DELETE FROM users'); c.commit(); print('cleared')"
+```
+
+The database is at `$MEDIAMOP_HOME/data/mediamop.sqlite3` — `/data/mediamop/data/mediamop.sqlite3`
+in Docker, and `C:\ProgramData\MediaMop\data\mediamop.sqlite3` on a default Windows install. Stop
+the server first. Then open `/setup` to create the account again.

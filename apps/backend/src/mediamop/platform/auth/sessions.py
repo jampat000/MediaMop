@@ -109,3 +109,22 @@ def session_invalid_reason(
     if is_idle_expired(session_row, idle=idle, now=n):
         return "idle_expired"
     return None
+
+
+def resolve_cookie_secure(request_scheme: str, mode: str) -> bool:
+    """Decide the cookie ``Secure`` flag for one request.
+
+    ``Secure`` is a promise the browser enforces: it will refuse to store or send the cookie
+    over plain HTTP. On a LAN install served over HTTP that silently discards the session and
+    locks the operator out, while protecting nothing — there is no TLS for it to protect.
+
+    Under ``auto`` the flag therefore follows the request. The scheme is trustworthy because
+    :class:`~mediamop.platform.http.trusted_proxy.TrustedProxySchemeMiddleware` only honours
+    ``X-Forwarded-Proto`` from an explicitly configured proxy, so a client cannot claim HTTPS.
+    """
+
+    if mode == "always":
+        return True
+    if mode == "never":
+        return False
+    return (request_scheme or "").strip().lower() == "https"

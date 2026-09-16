@@ -117,7 +117,9 @@ html[data-mm-theme="light"] {
   --mm-accent-bright: #8c6413;
   --mm-accent-soft: rgba(184, 135, 25, 0.14);
   --mm-accent-ring: rgba(184, 135, 25, 0.34);
-  --mm-on-accent: #fffaf0;
+  /* Dark ink on gold: #fffaf0 on #b88719 measures 3.1:1 and fails WCAG AA for button
+     text, while the dark theme's pair is 9.2:1. #211f1a reaches ~5.1:1. (#457) */
+  --mm-on-accent: #211f1a;
   --mm-status-healthy-text: #087853;
   --mm-status-warning-text: #805400;
   --mm-status-failed-text: #b42318;

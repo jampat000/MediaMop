@@ -60,12 +60,10 @@ def _prepare_environment(resource_root: Path, runtime_home: Path) -> None:
     os.environ["MEDIAMOP_HOME"] = str(runtime_home)
     os.environ["MEDIAMOP_WEB_DIST"] = str(web_dist)
     os.environ["MEDIAMOP_ALEMBIC_ROOT"] = str(resource_root)
-    # Respect an explicit operator choice.  Production defaults to secure cookies;
-    # plain-HTTP local development can opt in to ``false`` in its environment.
-    os.environ.setdefault(
-        "MEDIAMOP_SESSION_COOKIE_SECURE",
-        "true" if os.environ.get("MEDIAMOP_ENV", "production").strip().lower() == "production" else "false",
-    )
+    # Deliberately not forced.  The packaged server is normally reached over plain HTTP on a
+    # LAN, where a Secure cookie is discarded by the browser rather than protected, locking the
+    # operator out.  The default `auto` marks it HTTPS-only only when the request arrived over
+    # HTTPS; an operator can still force either value in the environment.
     os.environ["MEDIAMOP_SESSION_SECRET"] = _ensure_session_secret(runtime_home)
 
 

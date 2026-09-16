@@ -11,6 +11,7 @@ import {
   postRevokeOtherSessions,
   postRevokeSession,
 } from "../api/auth-api";
+import { markLoginSucceeded } from "./session-kept";
 import { activityRecentKey } from "../activity/queries";
 import { dashboardStatusKey } from "../dashboard/queries";
 
@@ -93,6 +94,9 @@ export function useLoginMutation() {
       trustedDevice: boolean;
     }) => postLogin(username, password, trustedDevice),
     onSuccess: (data) => {
+      // Remember that the server accepted us, so a 401 moments later can be reported as a
+      // rejected cookie rather than a silent bounce back to the form (#453).
+      markLoginSucceeded();
       // Anonymous /me is cached as `null` (401). Hydrate from the login response — do not invalidate
       // /me here: an immediate refetch can run before the session cookie is visible to fetch(), get
       // 401, and overwrite this cache back to null (E2E/CI flake).

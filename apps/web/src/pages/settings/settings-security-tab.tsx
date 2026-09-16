@@ -173,14 +173,12 @@ export function SettingsSecurityTab() {
               <dt>HTTPS-only sign-in cookie</dt>
               <dd
                 className={
-                  securityOverview.sign_in_cookie_https_only
-                    ? "mm-status-text--healthy"
-                    : "mm-status-text--warning"
+                  securityOverview.sign_in_cookie_https_mode === "never"
+                    ? "mm-status-text--warning"
+                    : "mm-status-text--healthy"
                 }
               >
-                {securityOverview.sign_in_cookie_https_only
-                  ? "On"
-                  : "Off — use HTTPS in production"}
+                {securityOverview.sign_in_cookie_https_plain}
               </dd>
             </div>
             <div className="mm-security-fact">

@@ -26,6 +26,11 @@ dependencies = [
   "watchdog>=4.0",
 ]
 
+[project.scripts]
+# Operator account recovery from the server's own shell. MediaMop has one account and no email
+# reset, so reaching the server is the recovery factor. See platform/auth/recover.py and #454.
+mediamop-recover = "mediamop.platform.auth.recover:main"
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0",

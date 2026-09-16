@@ -32,6 +32,7 @@ from mediamop.platform.auth.csrf import (
     verify_csrf_token,
 )
 from mediamop.platform.auth.deps_auth import UserPublicDep
+from mediamop.platform.auth.sessions import resolve_cookie_secure
 from mediamop.platform.suite_settings.service import ensure_suite_settings_row
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -114,7 +115,7 @@ def post_login(
         value=raw,
         max_age=auth_service.session_public(session_row, settings=settings)["absolute_timeout_days"] * 86400,
         httponly=True,
-        secure=settings.session_cookie_secure,
+        secure=resolve_cookie_secure(request.url.scheme, settings.session_cookie_secure_mode),
         samesite=settings.session_cookie_samesite,
         path="/",
     )
@@ -302,7 +303,7 @@ def post_logout(
         key=settings.session_cookie_name,
         path="/",
         httponly=True,
-        secure=settings.session_cookie_secure,
+        secure=resolve_cookie_secure(request.url.scheme, settings.session_cookie_secure_mode),
         samesite=settings.session_cookie_samesite,
     )
     response.headers.setdefault("Cache-Control", "no-store, private")

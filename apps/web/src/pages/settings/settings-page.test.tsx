@@ -80,7 +80,9 @@ const windowsUpdateAvailableStatus: SuiteUpdateStatusOut = {
 
 const minimalSecurity: SuiteSecurityOverviewOut = {
   session_signing_configured: true,
-  sign_in_cookie_https_only: false,
+  sign_in_cookie_https_mode: "auto",
+  sign_in_cookie_https_plain:
+    "Matched to each connection — on over HTTPS, off over plain HTTP on your network.",
   sign_in_cookie_same_site: "Lax (recommended for most setups)",
   standard_session_idle_timeout_plain: "14 days",
   standard_session_absolute_timeout_plain: "90 days",
