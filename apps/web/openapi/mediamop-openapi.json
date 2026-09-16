@@ -8962,6 +8962,200 @@
         ]
       }
     },
+    "/api/v1/intake/capabilities": {
+      "get": {
+        "description": "What a media manager may ask MediaMop about its hand-offs.",
+        "operationId": "get_intake_capabilities_api_v1_intake_capabilities_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Webhook-Secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Webhook-Secret"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "title": "Response Get Intake Capabilities Api V1 Intake Capabilities Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Intake Capabilities",
+        "tags": [
+          "media-manager-intake"
+        ]
+      }
+    },
+    "/api/v1/intake/handoffs/{source_key}/{handoff_id}": {
+      "delete": {
+        "description": "Drop a hand-off MediaMop has not started. Refuses (409) once work has begun; never touches a file.",
+        "operationId": "delete_intake_handoff_api_v1_intake_handoffs__source_key___handoff_id__delete",
+        "parameters": [
+          {
+            "description": "The manager that gave MediaMop the hand-off.",
+            "in": "path",
+            "name": "source_key",
+            "required": true,
+            "schema": {
+              "description": "The manager that gave MediaMop the hand-off.",
+              "title": "Source Key",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The manager's own hand-off id.",
+            "in": "path",
+            "name": "handoff_id",
+            "required": true,
+            "schema": {
+              "description": "The manager's own hand-off id.",
+              "title": "Handoff Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Webhook-Secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Webhook-Secret"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Intake Handoff",
+        "tags": [
+          "media-manager-intake"
+        ]
+      },
+      "get": {
+        "description": "Where a hand-off is: queued, scheduled, working, or how it ended. 404 means never received.",
+        "operationId": "get_intake_handoff_api_v1_intake_handoffs__source_key___handoff_id__get",
+        "parameters": [
+          {
+            "description": "The manager that gave MediaMop the hand-off.",
+            "in": "path",
+            "name": "source_key",
+            "required": true,
+            "schema": {
+              "description": "The manager that gave MediaMop the hand-off.",
+              "title": "Source Key",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The manager's own hand-off id.",
+            "in": "path",
+            "name": "handoff_id",
+            "required": true,
+            "schema": {
+              "description": "The manager's own hand-off id.",
+              "title": "Handoff Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Webhook-Secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Webhook-Secret"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Intake Handoff Api V1 Intake Handoffs  Source Key   Handoff Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Intake Handoff",
+        "tags": [
+          "media-manager-intake"
+        ]
+      }
+    },
     "/api/v1/intake/webhook/{source_key}": {
       "post": {
         "description": "Accept one event from a media manager and hand it to whichever module owns it.",

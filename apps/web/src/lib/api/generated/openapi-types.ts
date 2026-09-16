@@ -287,6 +287,50 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/intake/capabilities": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Intake Capabilities
+     * @description What a media manager may ask MediaMop about its hand-offs.
+     */
+    get: operations["get_intake_capabilities_api_v1_intake_capabilities_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/intake/handoffs/{source_key}/{handoff_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Intake Handoff
+     * @description Where a hand-off is: queued, scheduled, working, or how it ended. 404 means never received.
+     */
+    get: operations["get_intake_handoff_api_v1_intake_handoffs__source_key___handoff_id__get"];
+    put?: never;
+    post?: never;
+    /**
+     * Delete Intake Handoff
+     * @description Drop a hand-off MediaMop has not started. Refuses (409) once work has begun; never touches a file.
+     */
+    delete: operations["delete_intake_handoff_api_v1_intake_handoffs__source_key___handoff_id__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/intake/webhook/{source_key}": {
     parameters: {
       query?: never;
@@ -6284,6 +6328,111 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["DashboardStatusOut"];
+        };
+      };
+    };
+  };
+  get_intake_capabilities_api_v1_intake_capabilities_get: {
+    parameters: {
+      query?: never;
+      header?: {
+        "X-Webhook-Secret"?: string | null;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: string[];
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_intake_handoff_api_v1_intake_handoffs__source_key___handoff_id__get: {
+    parameters: {
+      query?: never;
+      header?: {
+        "X-Webhook-Secret"?: string | null;
+      };
+      path: {
+        /** @description The manager that gave MediaMop the hand-off. */
+        source_key: string;
+        /** @description The manager's own hand-off id. */
+        handoff_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_intake_handoff_api_v1_intake_handoffs__source_key___handoff_id__delete: {
+    parameters: {
+      query?: never;
+      header?: {
+        "X-Webhook-Secret"?: string | null;
+      };
+      path: {
+        /** @description The manager that gave MediaMop the hand-off. */
+        source_key: string;
+        /** @description The manager's own hand-off id. */
+        handoff_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

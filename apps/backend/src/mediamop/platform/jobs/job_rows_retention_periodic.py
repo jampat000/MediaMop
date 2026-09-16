@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.pruner.pruner_jobs_model import PrunerJob, PrunerJobStatus
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.platform.media_managers.handoff_ledger import prune_ledger
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,8 @@ def _run_prune_tick(session_factory: sessionmaker[Session], *, settings: MediaMo
     cutoff = datetime.now(UTC) - timedelta(days=settings.job_rows_retention_days)
     with session_factory() as session, session.begin():
         counts = prune_job_rows(session, cutoff=cutoff)
+        # Hand-off answers outlive job rows on purpose (#480), so they age out on their own clock.
+        prune_ledger(session)
     return counts
 
 

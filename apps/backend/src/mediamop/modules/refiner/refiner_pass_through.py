@@ -43,6 +43,10 @@ from sqlalchemy.orm import Session, sessionmaker
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.refiner.jobs_model import RefinerJob
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
+from mediamop.modules.refiner.refiner_failure_policy_job_kinds import (
+    REFINER_FILE_PASS_THROUGH_JOB_KIND,
+    REFINER_FILE_REJECT_JOB_KIND,
+)
 from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
 from mediamop.modules.refiner.refiner_file_state_service import (
     mark_file_status,
@@ -58,8 +62,6 @@ from mediamop.platform.media_managers.completion_callback import report_handoff_
 
 logger = logging.getLogger(__name__)
 
-REFINER_FILE_PASS_THROUGH_JOB_KIND = "refiner.file.pass_through.v1"
-REFINER_FILE_REJECT_JOB_KIND = "refiner.file.reject.v1"
 
 FAILURE_POLICY_PASS_THROUGH = "pass_through"
 FAILURE_POLICY_HOLD = "hold"

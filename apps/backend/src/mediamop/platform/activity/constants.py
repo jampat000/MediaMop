@@ -31,6 +31,8 @@ REFINER_FILE_REJECTED = "refiner.file_rejected"
 REFINER_FILE_REJECT_FELL_BACK = "refiner.file_reject_fell_back"
 # A report sent to the media manager that handed a file over, so every report is visible.
 REFINER_HANDOFF_REPORTED = "refiner.handoff_reported"
+# The manager cancelled a hand-off MediaMop had not started (#480).
+REFINER_HANDOFF_CANCELLED = "refiner.handoff_cancelled"
 
 # Pruner (pruner_jobs + server instances)
 PRUNER_CONNECTION_TEST_SUCCEEDED = "pruner.connection_test_succeeded"

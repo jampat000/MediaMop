@@ -39,6 +39,12 @@ from mediamop.platform.media_managers.connection_service import (
     connection_for_kind,
     resolve_callback_target,
 )
+from mediamop.platform.media_managers.handoff_ledger import (
+    STATE_COMPLETED,
+    STATE_FAILED,
+    STATE_PASSED_THROUGH,
+    record_handoff_outcome,
+)
 from mediamop.platform.media_managers.manager_dialects import port_for_kind
 from mediamop.platform.media_managers.manager_port import ManagerConnection
 
@@ -362,22 +368,50 @@ def report_handoff_completion(
 
     target = resolve_handoff_target(session, settings, origin)
     if isinstance(target, str):
+        _record_outcome(session, origin=origin, body=build_completion_body(origin=origin, result=result))
         return f"skipped: {target}"
 
     output_path = _manager_output_path(target.connection, origin=origin, result=result) if succeeded else None
     body = build_completion_body(origin=origin, result=result, output_path=output_path)
     delivery = post_handoff_report(target, body)
-    try:
-        relative = result.get("relative_media_path")
-        record_handoff_report(
-            session,
-            target=target,
-            body=body,
-            delivery=delivery,
-            relative_path=relative if isinstance(relative, str) else None,
-        )
-        session.commit()
-    except Exception:  # noqa: BLE001 - the report is sent; a busy database must not raise here
-        session.rollback()
-        logger.warning("Could not record the hand-off report in Activity.", exc_info=True)
+    relative = result.get("relative_media_path")
+    _record_outcome(
+        session,
+        origin=origin,
+        body=body,
+        report=(target, delivery, relative if isinstance(relative, str) else None),
+    )
     return delivery.status
+
+
+def _record_outcome(
+    session: Session,
+    *,
+    origin: HandoffOrigin,
+    body: dict[str, Any],
+    report: tuple[HandoffReportTarget, HandoffReportDelivery, str | None] | None = None,
+) -> None:
+    """Keep the hand-off ledger (#480) and Activity in step with a final outcome. Never raises."""
+
+    try:
+        if body.get("status") == "completed":
+            state = (
+                STATE_PASSED_THROUGH if body.get("message") == _PASS_THROUGH_AFTER_FAILURE_MESSAGE else STATE_COMPLETED
+            )
+        else:
+            state = STATE_FAILED
+        record_handoff_outcome(
+            session,
+            source_key=origin.source_key,
+            handoff_id=origin.handoff_id,
+            state=state,
+            output_path=body.get("outputPath"),
+            message=body.get("message"),
+        )
+        if report is not None:
+            target, delivery, relative = report
+            record_handoff_report(session, target=target, body=body, delivery=delivery, relative_path=relative)
+        session.commit()
+    except Exception:  # noqa: BLE001 - the outcome is on disk; a busy database must not raise here
+        session.rollback()
+        logger.warning("Could not record the hand-off outcome.", exc_info=True)
