@@ -430,6 +430,46 @@ def admin_ping(_admin: RequireAdminDep) -> dict[str, bool]:
     return {"ok": True}
 
 
+@router.post("/change-username", response_model=schemas.ChangeUsernameOut)
+def post_change_username(
+    request: Request,
+    body: schemas.ChangeUsernameIn,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    user: UserPublicDep,
+) -> schemas.ChangeUsernameOut:
+    """Rename the signed-in operator account. The session survives — only the label changed."""
+
+    secret = require_session_secret(settings)
+    validate_browser_post_origin(request, settings)
+    if not verify_csrf_token(secret, body.csrf_token, raw_session_token=current_raw_session_token(request, settings)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired CSRF token.",
+        )
+    try:
+        new_username = auth_service.change_username_for_user(
+            db,
+            user_id=user.id,
+            current_password=body.current_password,
+            new_username=body.new_username,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    logger.info("auth event: username changed (user_id=%s)", user.id)
+    activity_service.record_activity_event(
+        db,
+        event_type=activity_constants.AUTH_PASSWORD_CHANGED,
+        module="auth",
+        title="Username changed",
+        detail=f"Signed in as {new_username}.",
+    )
+    return schemas.ChangeUsernameOut(
+        message="Username changed. Use it the next time you sign in.",
+        username=new_username,
+    )
+
+
 @router.post("/change-password", response_model=schemas.ChangePasswordOut)
 def post_change_password(
     request: Request,

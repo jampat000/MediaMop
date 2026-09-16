@@ -111,6 +111,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/auth/change-username": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Change Username
+     * @description Rename the signed-in operator account. The session survives — only the label changed.
+     */
+    post: operations["post_change_username_api_v1_auth_change_username_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/auth/csrf": {
     parameters: {
       query?: never;
@@ -1960,6 +1980,22 @@ export interface components {
     ChangePasswordOut: {
       /** Message */
       message: string;
+    };
+    /** ChangeUsernameIn */
+    ChangeUsernameIn: {
+      /** Csrf Token */
+      csrf_token: string;
+      /** Current Password */
+      current_password: string;
+      /** New Username */
+      new_username: string;
+    };
+    /** ChangeUsernameOut */
+    ChangeUsernameOut: {
+      /** Message */
+      message: string;
+      /** Username */
+      username: string;
     };
     /**
      * ConfigurationBundleImportIn
@@ -5856,6 +5892,39 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["ChangePasswordOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  post_change_username_api_v1_auth_change_username_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ChangeUsernameIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ChangeUsernameOut"];
         };
       };
       /** @description Validation Error */

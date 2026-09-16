@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   useChangePasswordMutation,
+  useChangeUsernameMutation,
   useCurrentSessionQuery,
   useActiveSessionsQuery,
   useRevokeOtherSessionsMutation,
@@ -29,6 +30,9 @@ export function SettingsSecurityTab() {
   const formatDate = useAppDateFormatter();
   const navigate = useNavigate();
   const changePassword = useChangePasswordMutation();
+  const changeUsername = useChangeUsernameMutation();
+  const [newUsername, setNewUsername] = useState("");
+  const [usernamePassword, setUsernamePassword] = useState("");
   const currentSessionQ = useCurrentSessionQuery();
   const securityOverviewQ = useSuiteSecurityOverviewQuery();
   const sessionsQ = useActiveSessionsQuery(currentSessionQ.data !== null);
@@ -372,6 +376,98 @@ export function SettingsSecurityTab() {
             ))}
           </div>
         )}
+      </section>
+      <section
+        className="mm-card w-full"
+        aria-labelledby="suite-security-change-username-heading"
+      >
+        <h2
+          id="suite-security-change-username-heading"
+          className="mm-card__title"
+        >
+          Change username
+        </h2>
+        <p className="mm-card__body text-sm text-[var(--mm-text2)]">
+          MediaMop has one account. Signing in ignores capitalisation, so{" "}
+          <code>admin</code> and <code>Admin</code> are the same name.
+        </p>
+        <div className="mm-card__body space-y-3">
+          <label className="block">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+              New username
+            </span>
+            <div className="mt-1 flex flex-wrap gap-2">
+              <input
+                type="text"
+                className={SUITE_PASSWORD_FIELD_CLASS}
+                placeholder="Enter a new username"
+                value={newUsername}
+                disabled={changeUsername.isPending}
+                onChange={(e) => setNewUsername(e.target.value)}
+                autoComplete="username"
+              />
+            </div>
+          </label>
+          <label className="block">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+              Current password
+            </span>
+            <div className="mt-1 flex flex-wrap gap-2">
+              <input
+                type="password"
+                className={SUITE_PASSWORD_FIELD_CLASS}
+                placeholder="Confirm it is you"
+                value={usernamePassword}
+                disabled={changeUsername.isPending}
+                onChange={(e) => setUsernamePassword(e.target.value)}
+                autoComplete="current-password"
+              />
+            </div>
+          </label>
+          {changeUsername.isError ? (
+            <p className="text-sm text-red-300" role="alert">
+              {changeUsername.error instanceof Error
+                ? changeUsername.error.message
+                : "Could not change the username."}
+            </p>
+          ) : null}
+          {changeUsername.isSuccess ? (
+            <p className="text-sm text-[var(--mm-text2)]" role="status">
+              {changeUsername.data.message}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            className={mmActionButtonClass({
+              variant: "secondary",
+              disabled:
+                changeUsername.isPending ||
+                newUsername.trim() === "" ||
+                usernamePassword === "",
+            })}
+            disabled={
+              changeUsername.isPending ||
+              newUsername.trim() === "" ||
+              usernamePassword === ""
+            }
+            onClick={() => {
+              changeUsername.mutate(
+                {
+                  currentPassword: usernamePassword,
+                  newUsername: newUsername.trim(),
+                },
+                {
+                  onSuccess: () => {
+                    setNewUsername("");
+                    setUsernamePassword("");
+                  },
+                },
+              );
+            }}
+          >
+            {changeUsername.isPending ? "Saving…" : "Change username"}
+          </button>
+        </div>
       </section>
       <section
         className="mm-card w-full"

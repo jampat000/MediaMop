@@ -66,6 +66,19 @@
   --mm-bubble-grid-gap-desktop: calc(1.75rem * var(--mm-density-ui-scale));
   --mm-main-pad-y: calc(clamp(32px, 2.2vw, 40px) * var(--mm-density-ui-scale));
   --mm-main-pad-x: calc(clamp(16px, 3vw, 40px) * var(--mm-density-ui-scale));
+  /* Type ramp (#464). Before this, almost everything sat at 13-14px, so no screen had a lead
+     and the eye had nowhere to land. Sizes are in rem so they follow the density font scale. */
+  --mm-type-eyebrow: 0.6875rem; /* 11px, uppercase, tracked — labels and eyebrows */
+  --mm-type-caption: 0.78125rem; /* 12.5px — secondary detail under a value */
+  --mm-type-body: 0.84375rem; /* 13.5px — rows and body copy */
+  --mm-type-panel: 1rem; /* 16px — panel and card headings */
+  --mm-type-title: 1.5rem; /* 24px — page title */
+  --mm-type-figure: 1.75rem; /* 28px — hero figures and stat values */
+  --mm-tracking-eyebrow: 0.14em;
+  /* Control sizes (#464). The single 34px height was below a comfortable hit target for form
+     fields; 40px is the field size, with smaller steps for secondary and quiet controls. */
+  --mm-control-height-lg: calc(40px * var(--mm-density-ui-scale));
+  --mm-control-height-sm: calc(32px * var(--mm-density-ui-scale));
   --mm-control-height: calc(34px * var(--mm-density-ui-scale));
   --mm-control-pad-x: calc(11px * var(--mm-density-ui-scale));
   --mm-control-pad-y: calc(7px * var(--mm-density-ui-scale));

@@ -66,8 +66,22 @@ def client_label_from_user_agent(user_agent: str | None) -> str:
     return f"{browser} on {platform}"[:80]
 
 
+def find_user_by_username(db: Session, username: str) -> User | None:
+    """Look a user up without regard to case.
+
+    SQLite compares TEXT case-sensitively, so an exact match locked out anyone who typed their
+    own name with different capitalisation. Migration ``0029`` adds a unique index on
+    ``lower(username)`` so the database enforces the same rule this query assumes.
+    """
+
+    folded = (username or "").strip().lower()
+    if not folded:
+        return None
+    return db.scalars(select(User).where(func.lower(User.username) == folded)).first()
+
+
 def authenticate_user(db: Session, username: str, password: str) -> User | None:
-    stmt = select(User).where(User.username == username)
+    stmt = select(User).where(func.lower(User.username) == (username or "").strip().lower())
     user = db.scalars(stmt).first()
     if user is None or not user.is_active:
         verify_password(password, DUMMY_PASSWORD_HASH)
@@ -364,6 +378,45 @@ def revoke_other_user_sessions(
     if count:
         db.flush()
     return count
+
+
+def change_username_for_user(
+    db: Session,
+    *,
+    user_id: int,
+    current_password: str,
+    new_username: str,
+) -> str:
+    """Rename the operator account after verifying the current password. Returns the new name.
+
+    The current password is required because the username is half of the credentials: without it
+    an unattended browser would be enough to change how the operator signs in.
+
+    Unlike a password change this does **not** revoke sessions. Nothing about the existing
+    session's authority has changed — it is keyed on a token, not on the name.
+    """
+
+    user = db.get(User, user_id)
+    if user is None or not user.is_active:
+        raise ValueError("Account is not available.")
+    if not verify_password(current_password, user.password_hash):
+        raise ValueError("Current password is incorrect.")
+
+    candidate = (new_username or "").strip()
+    if not candidate:
+        raise ValueError("Username is required.")
+    if candidate == user.username:
+        raise ValueError("New username must be different from the current username.")
+
+    clash = find_user_by_username(db, candidate)
+    if clash is not None and clash.id != user.id:
+        # Reported the same way whether the difference is capitalisation or not, because after
+        # migration 0029 the database treats them as the same name either way.
+        raise ValueError("That username is already taken.")
+
+    user.username = candidate
+    db.flush()
+    return candidate
 
 
 def change_password_for_user(

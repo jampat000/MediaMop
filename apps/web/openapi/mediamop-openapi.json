@@ -229,6 +229,52 @@
         "title": "ChangePasswordOut",
         "type": "object"
       },
+      "ChangeUsernameIn": {
+        "additionalProperties": false,
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "current_password": {
+            "minLength": 1,
+            "title": "Current Password",
+            "type": "string"
+          },
+          "new_username": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "New Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password",
+          "new_username",
+          "csrf_token"
+        ],
+        "title": "ChangeUsernameIn",
+        "type": "object"
+      },
+      "ChangeUsernameOut": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "username"
+        ],
+        "title": "ChangeUsernameOut",
+        "type": "object"
+      },
       "ConfigurationBundleImportIn": {
         "additionalProperties": false,
         "description": "Restore suite + module settings from a prior configuration bundle export.",
@@ -8366,6 +8412,48 @@
           }
         },
         "summary": "Post Change Password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/change-username": {
+      "post": {
+        "description": "Rename the signed-in operator account. The session survives \u2014 only the label changed.",
+        "operationId": "post_change_username_api_v1_auth_change_username_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeUsernameIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeUsernameOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Change Username",
         "tags": [
           "auth"
         ]

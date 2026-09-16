@@ -4,6 +4,7 @@ import {
   fetchCurrentSession,
   fetchActiveSessions,
   postChangePassword,
+  postChangeUsername,
   fetchMe,
   postBootstrap,
   postLogin,
@@ -143,6 +144,24 @@ export function useBootstrapMutation() {
       void qc.invalidateQueries({ queryKey: qk.bootstrap });
       void qc.invalidateQueries({ queryKey: activityRecentKey });
       void qc.invalidateQueries({ queryKey: dashboardStatusKey });
+    },
+  });
+}
+
+export function useChangeUsernameMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      currentPassword,
+      newUsername,
+    }: {
+      currentPassword: string;
+      newUsername: string;
+    }) => postChangeUsername(currentPassword, newUsername),
+    onSuccess: () => {
+      // The session is untouched by a rename, so only the displayed identity needs refreshing.
+      void qc.invalidateQueries({ queryKey: qk.me });
+      void qc.invalidateQueries({ queryKey: activityRecentKey });
     },
   });
 }
