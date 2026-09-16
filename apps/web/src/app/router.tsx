@@ -50,7 +50,18 @@ const router = createBrowserRouter([
             errorElement: routeErrorElement,
             children: [
               {
+                // What MediaMop currently has custody of. The landing screen, because it is
+                // the question an operator actually opens the app to answer (#463).
                 index: true,
+                lazy: async () => ({
+                  Component: (await import("../pages/in-hand/in-hand-page"))
+                    .InHandPage,
+                }),
+                errorElement: routeErrorElement,
+              },
+              {
+                // Still the cross-module summary while Pruner exists; retires with it (#459).
+                path: "dashboard",
                 lazy: async () => ({
                   Component: (await import("../pages/dashboard/dashboard-page"))
                     .DashboardPage,
