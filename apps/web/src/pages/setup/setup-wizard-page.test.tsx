@@ -146,6 +146,20 @@ describe("SetupWizardPage", () => {
     patchPrunerInstanceMock.mockResolvedValue({});
   });
 
+  it("offers In hand as the start page at / and the dashboard at /dashboard", async () => {
+    renderWizard();
+
+    fireEvent.click(screen.getByText("Dashboard"));
+    fireEvent.click(screen.getByRole("button", { name: "Finish setup" }));
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith("/dashboard", {
+        replace: true,
+      });
+    });
+    expect(screen.getByText("In hand")).toBeInTheDocument();
+  });
+
   it("skips and persists skipped wizard state", async () => {
     renderWizard();
 

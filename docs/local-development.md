@@ -112,7 +112,7 @@ The **`Test`** workflow (`.github/workflows/ci.yml`):
 
 1. Runs **`apps/backend`** tests with **`MEDIAMOP_HOME`** on the runner temp dir, **`alembic check`**, **`alembic upgrade head`**, then **`pytest`** (no Postgres service).
 2. Runs **`npm ci` → `npm run build` → `npm run test`** in **`apps/web`**.
-3. Runs **E2E** with **`MEDIAMOP_E2E=1`**, **`MEDIAMOP_HOME`** on a temp dir, uvicorn + **`vite preview`** + Playwright (from repo-root **`tests/e2e/mediamop/`**, same as local optional E2E below).
+3. Runs **E2E** with **`MEDIAMOP_E2E=1`**, **`MEDIAMOP_HOME`** on a temp dir, uvicorn serving the built web app (**`MEDIAMOP_WEB_DIST`**, as the packages do) + Playwright (from repo-root **`tests/e2e/mediamop/`**, same as local optional E2E below).
 
 Pushing a semver tag **`v*`** runs the **`Release`** workflow, which repeats the same three stages before publishing a GitHub Release — see **[`docs/release.md`](release.md)**.
 

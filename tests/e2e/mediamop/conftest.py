@@ -1,21 +1,22 @@
-"""MediaMop spine E2E: SQLite, uvicorn API, Vite preview (proxied /api).
+"""MediaMop spine E2E: SQLite and the uvicorn API serving the built web app, as the packages do.
 
-Opt-in only: ``MEDIAMOP_E2E=1``. Uses ``MEDIAMOP_E2E_HOME`` when set, else a fresh temp directory for an isolated database file.
+Opt-in only: ``MEDIAMOP_E2E=1``. Every run gets its own data folder: a fresh temporary directory,
+or a new ``run-…`` folder inside ``MEDIAMOP_E2E_HOME`` when that is set. Server start-up, teardown
+and leftover clean-up live in ``_runtime.py`` (#462). Each server's output is kept in
+``<home>/e2e-logs`` and quoted in the failure when a server does not come up.
 """
 
 from __future__ import annotations
 
+import atexit
 import os
-import socket
 import subprocess
 import sys
-import tempfile
-import time
-import urllib.error
-import urllib.request
 from pathlib import Path
 
 import pytest
+
+from tests.e2e.mediamop import _runtime as runtime
 
 
 def _repo_root() -> Path:
@@ -32,20 +33,6 @@ REPO_ROOT = _repo_root()
 BACKEND_DIR = REPO_ROOT / "apps" / "backend"
 WEB_DIR = REPO_ROOT / "apps" / "web"
 SRC_PATH = (BACKEND_DIR / "src").resolve()
-NODE_CMD = "node.exe" if os.name == "nt" else "node"
-
-
-def _pick_loopback_port() -> int:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("127.0.0.1", 0))
-        return int(s.getsockname()[1])
-
-
-def _e2e_home() -> str:
-    explicit = (os.environ.get("MEDIAMOP_E2E_HOME") or "").strip()
-    if explicit:
-        return str(Path(explicit).expanduser().resolve())
-    return str(Path(tempfile.mkdtemp(prefix="mediamop_e2e_")))
 
 
 def _truncate_auth_tables(home: str) -> None:
@@ -86,32 +73,6 @@ def _run_backend_code(
     )
 
 
-def _wait_http(url: str, *, timeout_s: float = 60.0) -> None:
-    deadline = time.time() + timeout_s
-    last: Exception | None = None
-    while time.time() < deadline:
-        try:
-            with urllib.request.urlopen(url, timeout=2) as r:
-                if r.status == 200:
-                    return
-        except (urllib.error.URLError, TimeoutError, OSError) as e:
-            last = e
-            time.sleep(0.25)
-    raise RuntimeError(f"timeout waiting for {url}: {last!r}")
-
-
-def _stop_process(process: subprocess.Popen[bytes], *, timeout_s: float = 8.0) -> None:
-    """Stop a fixture process without leaving its runtime behind."""
-    if process.poll() is not None:
-        return
-    process.terminate()
-    try:
-        process.wait(timeout=timeout_s)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait(timeout=timeout_s)
-
-
 @pytest.fixture(scope="session")
 def mediamop_runtime() -> dict[str, str]:
     if os.environ.get("MEDIAMOP_E2E") != "1":
@@ -120,11 +81,21 @@ def mediamop_runtime() -> dict[str, str]:
     if not secret:
         pytest.fail("MEDIAMOP_SESSION_SECRET must be set for MediaMop E2E")
 
-    home = _e2e_home()
-    api_port = _pick_loopback_port()
-    web_port = _pick_loopback_port()
-    web_origin = f"http://127.0.0.1:{web_port}"
+    stopped = runtime.reap_leftovers()
+    if stopped:
+        print(f"MediaMop E2E: stopped servers left behind by an earlier run: {', '.join(stopped)}")
+
+    home = runtime.run_home((os.environ.get("MEDIAMOP_E2E_HOME") or "").strip() or None)
+    logs = Path(home) / "e2e-logs"
+    api_port = runtime.pick_free_port()
     api_internal = f"http://127.0.0.1:{api_port}"
+    # The API serves the built web app itself, exactly as the Docker and Windows packages do.
+    # Going through `vite preview` added a proxy hop whose keep-alive race failed POSTs and PUTs
+    # intermittently ("Failed to fetch") and made the suite untrustworthy (#462).
+    web_origin = api_internal
+    web_dist = WEB_DIR / "dist"
+    if not (web_dist / "index.html").is_file():
+        pytest.fail("MediaMop E2E needs the built web app: run `npm ci && npm run build` in apps/web first.")
 
     env_base = {
         **os.environ,
@@ -132,6 +103,13 @@ def mediamop_runtime() -> dict[str, str]:
         "MEDIAMOP_SESSION_SECRET": secret,
         "MEDIAMOP_CORS_ORIGINS": web_origin,
         "PYTHONPATH": str(SRC_PATH),
+        "MEDIAMOP_WEB_DIST": str(web_dist),
+        # Every test signs up a fresh admin and signs in against this one API process. The
+        # production limits (10 bootstraps an hour, 10 sign-ins a minute) are per process, so a
+        # suite of more than ten tests was refused part-way through and failed as a stuck sign-in
+        # (#462). The limits themselves are covered by the backend tests.
+        "MEDIAMOP_BOOTSTRAP_RATE_MAX_ATTEMPTS": "10000",
+        "MEDIAMOP_AUTH_LOGIN_RATE_MAX_ATTEMPTS": "10000",
     }
 
     subprocess.run(
@@ -142,68 +120,50 @@ def mediamop_runtime() -> dict[str, str]:
     )
     _truncate_auth_tables(home)
 
-    api_proc = subprocess.Popen(
-        [
-            sys.executable,
-            "-m",
-            "uvicorn",
-            "mediamop.api.main:app",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            str(api_port),
-            "--log-level",
-            "warning",
-        ],
-        cwd=str(BACKEND_DIR),
-        env=env_base,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    try:
-        _wait_http(f"{api_internal}/health")
-    except RuntimeError:
-        _stop_process(api_proc)
-        pytest.fail("MediaMop API did not start")
+    servers: list[runtime.Server] = []
 
-    web_env = {
-        **os.environ,
-        "VITE_DEV_API_PROXY_TARGET": api_internal,
-    }
-    web_proc = subprocess.Popen(
-        [
-            NODE_CMD,
-            str(WEB_DIR / "node_modules" / "vite" / "bin" / "vite.js"),
-            "preview",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            str(web_port),
-            "--strictPort",
-        ],
-        cwd=str(WEB_DIR),
-        env=web_env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    try:
-        _wait_http(web_origin, timeout_s=90.0)
-    except RuntimeError:
-        _stop_process(web_proc)
-        _stop_process(api_proc)
-        pytest.fail(
-            "Vite preview did not start (run npm install && npm run build in apps/web first)"
-        )
+    def _stop_all() -> None:
+        for server in reversed(servers):
+            runtime.stop_server(server)
+        servers.clear()
 
+    # Finalizers do not run if pytest itself is killed; this still runs on a normal interpreter exit.
+    atexit.register(_stop_all)
     try:
+        try:
+            api = runtime.start_server(
+                "MediaMop API",
+                [
+                    sys.executable,
+                    "-m",
+                    "uvicorn",
+                    "mediamop.api.main:app",
+                    "--host",
+                    "127.0.0.1",
+                    "--port",
+                    str(api_port),
+                    "--log-level",
+                    "warning",
+                ],
+                cwd=BACKEND_DIR,
+                env=env_base,
+                port=api_port,
+                url=f"{api_internal}/health",
+                log_path=logs / "api.log",
+            )
+            servers.append(api)
+            runtime.wait_until_up(api, timeout_s=60.0)
+        except RuntimeError as exc:
+            pytest.fail(f"MediaMop E2E could not start its server.\n{exc}", pytrace=False)
+
         yield {
             "base_url": web_origin,
             "api_url": api_internal,
             "home": home,
         }
     finally:
-        _stop_process(web_proc)
-        _stop_process(api_proc)
+        _stop_all()
+        atexit.unregister(_stop_all)
 
 
 @pytest.fixture(scope="function", autouse=True)

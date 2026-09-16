@@ -2,7 +2,9 @@
 
 Run with MEDIAMOP_E2E=1. Screenshots are saved to artifacts/screenshots/ for
 visual inspection. The artifacts/ directory is .gitignored so no pixel-exact
-baselines are committed; these are informational smoke checks.
+baselines are committed; these are informational smoke checks. What is asserted is
+the structure of each screen, rebaselined for the 3.0 screens in #462: In hand at
+"/", the dashboard at "/dashboard", and the Activity page's history statement.
 
 Usage:
     MEDIAMOP_E2E=1 pytest tests/e2e/mediamop/test_visual_smoke_audit.py -v
@@ -109,7 +111,8 @@ def test_dashboard_renders_without_error(mediamop_shell: str) -> None:
             ensure_signed_in(page, base)
 
             open_sidebar(page, "Dashboard")
-            expect(page).to_have_url(re.compile(r".*/(?:$|[/?#])"))
+            # 3.0 moved the dashboard off "/" (In hand is the landing page); the old pattern matched any URL.
+            expect(page).to_have_url(re.compile(r".*/dashboard(?:$|[/?#])"))
 
             expect(page.get_by_test_id("dashboard-page")).to_be_visible()
             expect(page.get_by_test_id("dashboard-status-strip")).to_be_visible()
@@ -118,6 +121,50 @@ def test_dashboard_renders_without_error(mediamop_shell: str) -> None:
             _assert_document_owns_vertical_scroll(page)
             _assert_no_error_state(page)
             _save_screenshot(page, "dashboard")
+        finally:
+            browser.close()
+
+
+def test_in_hand_is_the_landing_page(mediamop_shell: str) -> None:
+    """3.0 lands on In hand at "/": what MediaMop is holding, not a module dashboard (#463)."""
+    base = mediamop_shell.rstrip("/")
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        try:
+            page = browser.new_page(viewport={"width": 1600, "height": 900})
+            page.set_default_timeout(30_000)
+
+            ensure_signed_in(page, base)
+            page.goto(f"{base}/", wait_until="domcontentloaded")
+
+            expect(page.get_by_role("heading", name="In hand", exact=True)).to_be_visible()
+            # Page content only: the shell brand line is replaced by the Weir rename (#458).
+            expect(page.locator("main").get_by_text("your library", exact=False)).to_have_count(0)
+            _assert_document_owns_vertical_scroll(page)
+            _assert_no_error_state(page)
+            _save_screenshot(page, "in-hand")
+        finally:
+            browser.close()
+
+
+def test_activity_page_says_how_far_back_history_goes(mediamop_shell: str) -> None:
+    """The 3.0 Activity page: filters, and a plain statement of its history horizon (#469)."""
+    base = mediamop_shell.rstrip("/")
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        try:
+            page = browser.new_page(viewport={"width": 1600, "height": 900})
+            page.set_default_timeout(30_000)
+
+            ensure_signed_in(page, base)
+            open_sidebar(page, "Activity")
+
+            expect(page).to_have_url(re.compile(r".*/activity(?:$|[/?#])"))
+            expect(page.get_by_role("heading", name="Activity", exact=True)).to_be_visible()
+            expect(page.get_by_test_id("activity-retention")).to_contain_text("History goes back 90 days")
+            expect(page.get_by_test_id("activity-feed")).to_be_visible()
+            _assert_no_error_state(page)
+            _save_screenshot(page, "activity")
         finally:
             browser.close()
 
