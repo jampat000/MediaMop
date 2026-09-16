@@ -17,8 +17,6 @@ from mediamop.modules.refiner.refiner_maintenance_api import router as refiner_m
 from mediamop.modules.refiner.refiner_metadata_provider_api import router as refiner_metadata_provider_router
 from mediamop.modules.refiner.refiner_operator_settings_api import router as refiner_operator_settings_router
 from mediamop.modules.refiner.refiner_overview_stats_api import router as refiner_overview_stats_router
-from mediamop.modules.refiner.refiner_path_settings_api import router as refiner_path_settings_router
-from mediamop.modules.refiner.refiner_remux_rules_settings_api import router as refiner_remux_rules_settings_router
 from mediamop.modules.refiner.refiner_runtime_settings_api import router as refiner_runtime_settings_router
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_api import (
     router as refiner_watched_folder_remux_scan_dispatch_router,
@@ -29,8 +27,6 @@ router.include_router(refiner_jobs_inspection_router)
 router.include_router(refiner_operator_settings_router)
 router.include_router(refiner_files_router)
 router.include_router(refiner_libraries_router)
-router.include_router(refiner_path_settings_router)
-router.include_router(refiner_remux_rules_settings_router)
 router.include_router(refiner_runtime_settings_router)
 router.include_router(refiner_overview_stats_router)
 router.include_router(refiner_hold_diagnostic_router)

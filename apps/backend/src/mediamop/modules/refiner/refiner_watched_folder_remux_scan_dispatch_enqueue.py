@@ -174,7 +174,7 @@ def try_enqueue_periodic_watched_folder_remux_scan_dispatch(
         return False, last_skip
 
     library = resolve_library(session, library_id=library_id, media_scope=media_scope)
-    scope = ((library.media_scope if library is not None else media_scope) or "movie").strip().lower()
+    scope = ((library.media_type if library is not None else media_scope) or "movie").strip().lower()
     if scope not in ("movie", "tv"):
         scope = "movie"
     resolved_library_id = int(library.id) if library is not None else library_id

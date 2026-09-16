@@ -198,8 +198,8 @@ def test_periodic_scheduler_keeps_scope_next_run_values_independent(
         periodic_enqueue,
         "list_libraries",
         lambda _session: [
-            SimpleNamespace(id=1, name="Movies", media_scope="movie", enabled=True),
-            SimpleNamespace(id=2, name="TV", media_scope="tv", enabled=True),
+            SimpleNamespace(id=1, name="Movies", media_type="movie", enabled=True),
+            SimpleNamespace(id=2, name="TV", media_type="tv", enabled=True),
         ],
     )
     monkeypatch.setattr(

@@ -48,7 +48,7 @@ def session(tmp_path: Path) -> Session:
 def _library(session: Session, **overrides) -> RefinerLibraryRow:
     row = RefinerLibraryRow(
         name=overrides.pop("name", "Movies"),
-        media_scope=overrides.pop("media_scope", "movie"),
+        media_type=overrides.pop("media_scope", "movie"),
         watched_folder="/srv/in",
         output_folder="/srv/out",
         min_file_age_seconds=overrides.pop("min_file_age_seconds", 60),

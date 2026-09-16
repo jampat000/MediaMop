@@ -401,8 +401,6 @@ class LiveAudit:
             "/api/v1/refiner/metadata-provider",
             "/api/v1/refiner/operator-settings",
             "/api/v1/refiner/overview-stats",
-            "/api/v1/refiner/path-settings",
-            "/api/v1/refiner/remux-rules-settings",
             "/api/v1/refiner/rule-sets",
             "/api/v1/refiner/runtime-settings",
             "/api/v1/suite/configuration-backups",
@@ -1128,14 +1126,24 @@ class LiveAudit:
             root = FIXTURE_SERVER_ROOT.rstrip("/\\")
             return root + server_separator + server_separator.join(parts)
 
+        # The seeded Movies library is configured directly; the path-settings route was retired in #460.
+        libraries = self.browser_api("GET", "/api/v1/refiner/libraries")
+        movies = next(
+            (row for row in (libraries.get("payload") or []) if row.get("media_type") == "movie"),
+            None,
+        )
+        self.require(movies is not None, "the install has no Movies library to configure")
         path_result = self.browser_api(
             "PUT",
-            "/api/v1/refiner/path-settings",
+            f"/api/v1/refiner/libraries/{movies['id']}",
             {
                 "csrf_token": self.csrf_token(),
-                "refiner_watched_folder": server_path(fixture_name, "watch"),
-                "refiner_work_folder": server_path(fixture_name, "work"),
-                "refiner_output_folder": server_path(fixture_name, "processed"),
+                "name": movies["name"],
+                "media_type": "movie",
+                "watched_folder": server_path(fixture_name, "watch"),
+                "work_folder": server_path(fixture_name, "work"),
+                "output_folder": server_path(fixture_name, "processed"),
+                "manager_connection_ids": movies.get("manager_connection_ids") or [],
             },
         )
         self.require(

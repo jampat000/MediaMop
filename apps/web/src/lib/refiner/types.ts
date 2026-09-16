@@ -1,40 +1,3 @@
-/** GET/PUT /api/v1/refiner/path-settings — Refiner watched / work / output folders (singleton row). */
-
-export type RefinerPathSettingsOut = {
-  refiner_watched_folder: string | null;
-  refiner_watched_folder_exists: boolean;
-  refiner_work_folder: string | null;
-  refiner_output_folder: string | null;
-  resolved_default_work_folder: string;
-  effective_work_folder: string;
-  refiner_tv_watched_folder: string | null;
-  refiner_tv_watched_folder_exists: boolean;
-  refiner_tv_work_folder: string | null;
-  refiner_tv_output_folder: string | null;
-  resolved_default_tv_work_folder: string;
-  effective_tv_work_folder: string;
-  /** How often the server re-evaluates periodic Movies scans vs this library (10–604800 seconds). */
-  movie_watched_folder_check_interval_seconds: number;
-  /** How often the server re-evaluates periodic TV scans vs this library (10–604800 seconds). */
-  tv_watched_folder_check_interval_seconds: number;
-  updated_at: string;
-};
-
-export type RefinerPathSettingsPutBody = {
-  refiner_watched_folder: string | null;
-  refiner_work_folder: string | null;
-  refiner_output_folder: string | null;
-  /** When true, TV path fields are written (send empty strings to clear TV paths). */
-  refiner_tv_paths_included: boolean;
-  refiner_tv_watched_folder: string | null;
-  refiner_tv_work_folder: string | null;
-  refiner_tv_output_folder: string | null;
-  /** Send current Movies value on every save (Movies or TV card). */
-  movie_watched_folder_check_interval_seconds: number;
-  /** Send current TV value on every save (Movies or TV card). */
-  tv_watched_folder_check_interval_seconds: number;
-};
-
 /** GET /api/v1/refiner/runtime-settings — read-only Refiner in-process worker snapshot. */
 
 export type RefinerRuntimeSettingsOut = {
@@ -152,30 +115,6 @@ export type RefinerWatchedFolderRemuxScanDispatchEnqueueOut = {
   job_id: number;
   dedupe_key: string;
   job_kind: string;
-};
-
-/** GET/PUT /api/v1/refiner/remux-rules-settings */
-
-export type RefinerRemuxRulesSettingsOut = {
-  movie: RefinerRemuxRulesScopeSettings;
-  tv: RefinerRemuxRulesScopeSettings;
-  updated_at: string;
-};
-
-export type RefinerRemuxRulesScopeSettings = {
-  primary_audio_lang: string;
-  secondary_audio_lang: string;
-  tertiary_audio_lang: string;
-  default_audio_slot: "primary" | "secondary";
-  remove_commentary: boolean;
-  subtitle_mode: "remove_all" | "keep_selected";
-  subtitle_langs_csv: string;
-  preserve_forced_subs: boolean;
-  preserve_default_subs: boolean;
-  audio_preference_mode:
-    | "preferred_langs_quality"
-    | "preferred_langs_strict"
-    | "quality_all_languages";
 };
 
 /** POST /api/v1/refiner/jobs/file-remux-pass/enqueue */

@@ -88,7 +88,7 @@ def test_listing_marks_what_is_already_imported(
     )
     session.add(
         RefinerLibraryRow(
-            name="Films", media_scope="movie", discovered_from_connection_id=connection.id, discovered_library_key="7"
+            name="Films", media_type="movie", discovered_from_connection_id=connection.id, discovered_library_key="7"
         )
     )
     session.commit()
@@ -97,7 +97,7 @@ def test_listing_marks_what_is_already_imported(
 
     assert found["7"].already_imported is True
     assert found["8"].already_imported is False
-    assert found["8"].media_scope == "tv"
+    assert found["8"].media_type == "tv"
 
 
 def test_importing_a_subset_creates_only_what_was_chosen(
@@ -158,7 +158,7 @@ def test_a_root_mediamop_cannot_see_imports_without_a_watched_folder(
 def test_a_duplicate_name_is_disambiguated_rather_than_refused(
     session: Session, connection: MediaManagerConnectionRow, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    session.add(RefinerLibraryRow(name="Films", media_scope="movie"))
+    session.add(RefinerLibraryRow(name="Films", media_type="movie"))
     session.commit()
     _reports(monkeypatch, ManagerLibraryDescriptor(key="7", name="Films", media_scope="movie", root_path=str(tmp_path)))
 
@@ -182,7 +182,7 @@ def test_resync_reports_a_moved_root_and_changes_nothing(
 
     row = RefinerLibraryRow(
         name="Films",
-        media_scope="movie",
+        media_type="movie",
         watched_folder=str(tmp_path / "old"),
         discovered_from_connection_id=connection.id,
         discovered_library_key="7",
@@ -210,7 +210,7 @@ def test_resync_reports_a_library_the_manager_no_longer_has(
 ) -> None:
     row = RefinerLibraryRow(
         name="Gone",
-        media_scope="movie",
+        media_type="movie",
         watched_folder=str(tmp_path),
         discovered_from_connection_id=connection.id,
         discovered_library_key="7",
@@ -250,7 +250,7 @@ def test_resync_is_quiet_when_nothing_has_changed(
     session.add(
         RefinerLibraryRow(
             name="Films",
-            media_scope="movie",
+            media_type="movie",
             watched_folder=str(tmp_path),
             discovered_from_connection_id=connection.id,
             discovered_library_key="7",
@@ -267,7 +267,7 @@ def test_a_manual_library_is_never_reported_as_drift(
 ) -> None:
     """Discovery is a convenience. A hand-made library is nobody's business but the operator's."""
 
-    session.add(RefinerLibraryRow(name="Hand made", media_scope="movie", watched_folder=str(tmp_path / "mine")))
+    session.add(RefinerLibraryRow(name="Hand made", media_type="movie", watched_folder=str(tmp_path / "mine")))
     session.commit()
     _reports(monkeypatch)
 
@@ -277,7 +277,7 @@ def test_a_manual_library_is_never_reported_as_drift(
 def test_unlinking_keeps_the_library(session: Session, connection: MediaManagerConnectionRow, tmp_path: Path) -> None:
     row = RefinerLibraryRow(
         name="Films",
-        media_scope="movie",
+        media_type="movie",
         watched_folder=str(tmp_path),
         discovered_from_connection_id=connection.id,
         discovered_library_key="7",

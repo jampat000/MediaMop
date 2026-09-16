@@ -6,7 +6,7 @@ import { DashboardPage } from "./dashboard-page";
 const useDashboardStatusQuery = vi.fn();
 const useActivityRecentQuery = vi.fn();
 const useRefinerOverviewStatsQuery = vi.fn();
-const useRefinerPathSettingsQuery = vi.fn();
+const useRefinerLibrariesQuery = vi.fn();
 const useRefinerJobsInspectionQuery = vi.fn();
 const usePrunerOverviewStatsQuery = vi.fn();
 const usePrunerInstancesQuery = vi.fn();
@@ -34,8 +34,11 @@ vi.mock("../../lib/refiner/queries", () => ({
   refinerOverviewStatsQueryKey: ["refiner", "overview-stats"],
   useRefinerOverviewStatsQuery: (...args: unknown[]) =>
     useRefinerOverviewStatsQuery(...args),
-  useRefinerPathSettingsQuery: (...args: unknown[]) =>
-    useRefinerPathSettingsQuery(...args),
+}));
+
+vi.mock("../../lib/refiner/libraries-queries", () => ({
+  useRefinerLibrariesQuery: (...args: unknown[]) =>
+    useRefinerLibrariesQuery(...args),
 }));
 
 vi.mock("../../lib/refiner/jobs-inspection/queries", () => ({
@@ -111,13 +114,11 @@ describe("DashboardPage", () => {
         net_space_saved_percent: 0,
       },
     });
-    useRefinerPathSettingsQuery.mockReturnValue({
-      data: {
-        refiner_watched_folder: null,
-        refiner_watched_folder_exists: false,
-        refiner_tv_watched_folder: null,
-        refiner_tv_watched_folder_exists: false,
-      },
+    useRefinerLibrariesQuery.mockReturnValue({
+      data: [
+        { name: "Movies", watched_folder: "", display_order: 0 },
+        { name: "TV", watched_folder: "", display_order: 1 },
+      ],
     });
     useRefinerJobsInspectionQuery.mockReturnValue({ data: { jobs: [] } });
     usePrunerOverviewStatsQuery.mockReturnValue({
@@ -199,6 +200,26 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Removal rate")).toBeInTheDocument();
   });
 
+  it("lists each Refiner library's watched folder and needs setup only when none has one", () => {
+    useRefinerLibrariesQuery.mockReturnValue({
+      data: [
+        { name: "4K films", watched_folder: "", display_order: 1 },
+        { name: "Films", watched_folder: "/srv/films", display_order: 0 },
+      ],
+    });
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>,
+    );
+    const facts = screen.getAllByText(/watched folder:/);
+    expect(facts.map((fact) => fact.textContent)).toEqual([
+      "Films watched folder: Configured",
+      "4K films watched folder: Not set",
+    ]);
+    expect(screen.getByText("Needs setup: Pruner.")).toBeInTheDocument();
+  });
+
   it("gives the module cards a column each, so they fill the row", () => {
     // The grid said three columns while only Refiner and Pruner were left, so the cards
     // sat in two thirds of the row with an empty column beside them. Nothing tied the
@@ -227,13 +248,15 @@ describe("DashboardPage", () => {
         net_space_saved_percent: 1.5,
       },
     });
-    useRefinerPathSettingsQuery.mockReturnValue({
-      data: {
-        refiner_watched_folder: "E:\\Completed-Movies",
-        refiner_watched_folder_exists: true,
-        refiner_tv_watched_folder: null,
-        refiner_tv_watched_folder_exists: false,
-      },
+    useRefinerLibrariesQuery.mockReturnValue({
+      data: [
+        {
+          name: "Movies",
+          watched_folder: "E:\\Completed-Movies",
+          display_order: 0,
+        },
+        { name: "TV", watched_folder: "", display_order: 1 },
+      ],
     });
     useRefinerJobsInspectionQuery.mockReturnValue({
       data: {
@@ -433,13 +456,11 @@ describe("DashboardPage", () => {
         ],
       },
     });
-    useRefinerPathSettingsQuery.mockReturnValue({
-      data: {
-        refiner_watched_folder: "C:/media",
-        refiner_watched_folder_exists: true,
-        refiner_tv_watched_folder: null,
-        refiner_tv_watched_folder_exists: false,
-      },
+    useRefinerLibrariesQuery.mockReturnValue({
+      data: [
+        { name: "Movies", watched_folder: "C:/media", display_order: 0 },
+        { name: "TV", watched_folder: "", display_order: 1 },
+      ],
     });
 
     render(

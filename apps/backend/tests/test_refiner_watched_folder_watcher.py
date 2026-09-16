@@ -72,7 +72,7 @@ def _library(session_factory, *, watch: Path, out: Path, **overrides) -> Refiner
     with session_factory() as s:
         row = RefinerLibraryRow(
             name=overrides.pop("name", "Movies"),
-            media_scope=overrides.pop("media_scope", "movie"),
+            media_type=overrides.pop("media_scope", "movie"),
             enabled=overrides.pop("enabled", True),
             watched_folder=str(watch.resolve()),
             output_folder=str(out.resolve()),
@@ -249,7 +249,7 @@ def test_a_library_with_no_watched_folder_is_not_watched(session_factory, tmp_pa
         s.add(
             RefinerLibraryRow(
                 name="Unconfigured",
-                media_scope="movie",
+                media_type="movie",
                 enabled=True,
                 watched_folder="",
                 output_folder=str(out.resolve()),

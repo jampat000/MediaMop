@@ -7,7 +7,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-MediaScope = Literal["movie", "tv"]
+MediaType = Literal["movie", "tv"]
 
 
 class RefinerRuleSetOut(BaseModel):
@@ -112,7 +112,7 @@ class RefinerLibraryOut(BaseModel):
     id: int
     name: str
     enabled: bool
-    media_scope: MediaScope
+    media_type: MediaType
     display_order: int
 
     watched_folder: str
@@ -186,7 +186,7 @@ class RefinerLibraryCreateIn(BaseModel):
 
     csrf_token: str = Field(..., min_length=1)
     name: str = Field(..., min_length=1, max_length=120)
-    media_scope: MediaScope
+    media_type: MediaType
     enabled: bool = True
     watched_folder: str = Field("", max_length=4000)
     work_folder: str = Field("", max_length=4000)
@@ -369,7 +369,7 @@ class DiscoverableLibraryOut(BaseModel):
 
     key: str = Field(description="The manager's own id, kept only as an integration reference.")
     name: str
-    media_scope: MediaScope | None = None
+    media_type: MediaType | None = None
     root_path: str | None = Field(
         default=None, description="Where the manager sees this library, on the manager's host."
     )

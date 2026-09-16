@@ -9,14 +9,14 @@ MediaMop is a self-hosted media operations app:
 - **Refiner** remuxes watched media into cleaner outputs. It is configured as any number
   of **libraries** — each a row carrying its own paths, admission rules, schedule,
   guardrails and media manager connections — rather than one fixed movie scope and one
-  fixed TV scope. `media_scope` survives as a property of a library because it still
-  selects the cleanup behaviour, but it is no longer what the module partitions on.
-  Adding a library is a POST. See
+  fixed TV scope. A library's `media_type` (Movies or TV; named `media_scope` until #460)
+  is a property of the library, not what the module partitions on. It still decides the
+  cleanup shape, which manager queue is asked when a library links none, and which library a
+  job belongs to when its payload names none. A hand-off from a manager lands in the library
+  whose watched folder holds the file. Adding a library is a POST. See
   [ADR-0014](docs/adr/ADR-0014-refiner-libraries-replace-fixed-scopes.md). The singleton
-  settings rows that libraries replaced were dropped in `0025`; the libraries are the only
-  store. The two `/api/v1` surfaces they backed are kept and resolve `movie` and `tv` to
-  the library covering that scope, because the setup wizard and the Refiner overview read
-  them.
+  settings rows that libraries replaced were dropped in `0025`, and the scope-shaped
+  `path-settings` and `remux-rules-settings` routes that outlived them were removed in #460.
 - **Pruner** previews and removes media from connected media servers.
 - **Media managers** are the products MediaMop accepts work from and reports back to.
   A connection carries a *kind* (Radarr, Sonarr, Deluno, or anything posting MediaMop's

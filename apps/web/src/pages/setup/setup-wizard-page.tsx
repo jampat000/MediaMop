@@ -13,9 +13,15 @@ import {
 } from "../../lib/pruner/api";
 import { usePrunerInstancesQuery } from "../../lib/pruner/queries";
 import {
-  useRefinerPathSettingsQuery,
-  useRefinerPathSettingsSaveMutation,
-} from "../../lib/refiner/queries";
+  writeFromRefinerLibrary,
+  type RefinerLibrary,
+  type RefinerMediaType,
+} from "../../lib/refiner/libraries-api";
+import {
+  useCreateRefinerLibrary,
+  useRefinerLibrariesQuery,
+  useUpdateRefinerLibrary,
+} from "../../lib/refiner/libraries-queries";
 import {
   curatedTimezoneOptionsSorted,
   CURATED_TIMEZONE_ID_SET,
@@ -69,6 +75,16 @@ function WizardSection({
   );
 }
 
+/** The library the wizard edits for a media type: the first one, when any exist. */
+function firstLibraryOfType(
+  libraries: RefinerLibrary[] | undefined,
+  mediaType: RefinerMediaType,
+): RefinerLibrary | undefined {
+  return (libraries ?? [])
+    .filter((library) => library.media_type === mediaType)
+    .sort((a, b) => a.display_order - b.display_order)[0];
+}
+
 function labelForPrunerSecret(provider: string): string {
   return provider === "plex" ? "Plex token" : "API key";
 }
@@ -86,10 +102,11 @@ export function SetupWizardPage() {
   const navigate = useNavigate();
   const me = useMeQuery();
   const settingsQ = useSuiteSettingsQuery();
-  const refinerQ = useRefinerPathSettingsQuery();
+  const refinerQ = useRefinerLibrariesQuery();
   const prunerInstancesQ = usePrunerInstancesQuery();
   const saveSuite = useSuiteSettingsSaveMutation();
-  const saveRefiner = useRefinerPathSettingsSaveMutation();
+  const createLibrary = useCreateRefinerLibrary();
+  const updateLibrary = useUpdateRefinerLibrary();
 
   const [appTimezone, setAppTimezone] = useState<string>("UTC");
   const [displayDensity, setDisplayDensity] = useState<DisplayDensity>(() =>
@@ -136,10 +153,12 @@ export function SetupWizardPage() {
       return;
     }
     seededRefiner.current = true;
-    setMovieWatchedFolder(refinerQ.data.refiner_watched_folder ?? "");
-    setMovieOutputFolder(refinerQ.data.refiner_output_folder ?? "");
-    setTvWatchedFolder(refinerQ.data.refiner_tv_watched_folder ?? "");
-    setTvOutputFolder(refinerQ.data.refiner_tv_output_folder ?? "");
+    const movies = firstLibraryOfType(refinerQ.data, "movie");
+    const tv = firstLibraryOfType(refinerQ.data, "tv");
+    setMovieWatchedFolder(movies?.watched_folder ?? "");
+    setMovieOutputFolder(movies?.output_folder ?? "");
+    setTvWatchedFolder(tv?.watched_folder ?? "");
+    setTvOutputFolder(tv?.output_folder ?? "");
   }, [refinerQ.data]);
 
   useEffect(() => {
@@ -221,7 +240,8 @@ export function SetupWizardPage() {
     );
   }
 
-  const savePending = saveSuite.isPending || saveRefiner.isPending;
+  const savePending =
+    saveSuite.isPending || createLibrary.isPending || updateLibrary.isPending;
 
   function renderFolderInput({
     value,
@@ -253,10 +273,52 @@ export function SetupWizardPage() {
     );
   }
 
+  /**
+   * The wizard edits the first Refiner library of each media type. When there is none yet it
+   * adds one, but only if a folder was entered: an empty library would do nothing.
+   */
+  async function saveWizardLibrary(
+    libraries: RefinerLibrary[],
+    step: {
+      mediaType: RefinerMediaType;
+      name: string;
+      watchedFolder: string;
+      outputFolder: string;
+    },
+  ) {
+    const existing = firstLibraryOfType(libraries, step.mediaType);
+    if (existing) {
+      if (
+        existing.watched_folder === step.watchedFolder &&
+        existing.output_folder === step.outputFolder
+      ) {
+        return;
+      }
+      await updateLibrary.mutateAsync({
+        id: existing.id,
+        data: {
+          ...writeFromRefinerLibrary(existing),
+          watched_folder: step.watchedFolder,
+          output_folder: step.outputFolder,
+        },
+      });
+      return;
+    }
+    if (!step.watchedFolder && !step.outputFolder) {
+      return;
+    }
+    await createLibrary.mutateAsync({
+      name: step.name,
+      media_type: step.mediaType,
+      watched_folder: step.watchedFolder,
+      output_folder: step.outputFolder,
+    });
+  }
+
   async function saveWizardState(nextState: "skipped" | "completed") {
     setStatusMessage(null);
     const current = settingsQ.data!;
-    const refinerCurrent = refinerQ.data;
+    const librariesCurrent = refinerQ.data;
 
     if (tvWatchedFolder.trim() && !tvOutputFolder.trim()) {
       setStatusMessage(
@@ -298,29 +360,18 @@ export function SetupWizardPage() {
         configuration_backup_preferred_time: backupPreferredTime,
       });
 
-      if (refinerCurrent) {
-        await saveRefiner.mutateAsync({
-          refiner_watched_folder: movieWatchedFolder.trim()
-            ? movieWatchedFolder.trim()
-            : null,
-          refiner_work_folder: refinerCurrent.refiner_work_folder,
-          refiner_output_folder: movieOutputFolder.trim()
-            ? movieOutputFolder.trim()
-            : null,
-          refiner_tv_paths_included: true,
-          refiner_tv_watched_folder: tvWatchedFolder.trim()
-            ? tvWatchedFolder.trim()
-            : null,
-          refiner_tv_work_folder: tvWatchedFolder.trim()
-            ? refinerCurrent.refiner_tv_work_folder
-            : null,
-          refiner_tv_output_folder: tvOutputFolder.trim()
-            ? tvOutputFolder.trim()
-            : null,
-          movie_watched_folder_check_interval_seconds:
-            refinerCurrent.movie_watched_folder_check_interval_seconds,
-          tv_watched_folder_check_interval_seconds:
-            refinerCurrent.tv_watched_folder_check_interval_seconds,
+      if (librariesCurrent) {
+        await saveWizardLibrary(librariesCurrent, {
+          mediaType: "movie",
+          name: "Movies",
+          watchedFolder: movieWatchedFolder.trim(),
+          outputFolder: movieOutputFolder.trim(),
+        });
+        await saveWizardLibrary(librariesCurrent, {
+          mediaType: "tv",
+          name: "TV",
+          watchedFolder: tvWatchedFolder.trim(),
+          outputFolder: tvOutputFolder.trim(),
         });
       }
 
@@ -540,7 +591,7 @@ export function SetupWizardPage() {
 
             <WizardSection
               title="Refiner basics"
-              description="Choose watched and output folders for TV and Movies. Detailed remux rules stay on the Refiner page."
+              description="Choose watched and output folders for TV and Movies. These fill in the first Refiner library of each type, and MediaMop adds one if there is none yet. Add more libraries or change their rules on the Refiner page."
             >
               <div className="grid gap-4 lg:grid-cols-2">
                 <div className="space-y-3">

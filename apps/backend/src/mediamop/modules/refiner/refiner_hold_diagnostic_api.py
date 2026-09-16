@@ -70,7 +70,7 @@ def get_refiner_file_why_held(
             detail="The library this file belonged to no longer exists.",
         )
 
-    media_scope: MediaScope = "tv" if library.media_scope == "tv" else "movie"
+    media_scope: MediaScope = "tv" if library.media_type == "tv" else "movie"
     connection_ids = list(manager_connection_ids_for(db, library))
     signals = collect_queue_signals(
         db,

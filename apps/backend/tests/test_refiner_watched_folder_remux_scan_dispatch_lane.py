@@ -268,7 +268,7 @@ def test_scan_job_targets_the_named_library_when_two_movie_libraries_exist(
         )
         target = RefinerLibraryRow(
             name="Movies 4K",
-            media_scope="movie",
+            media_type="movie",
             watched_folder=str(second_watch),
             output_folder=str(second_out),
             file_detection_interval_seconds=0,

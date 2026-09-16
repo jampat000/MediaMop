@@ -16,6 +16,7 @@ import {
   updateRefinerLibrary,
   updateRefinerRuleSet,
   type RefinerLibrary,
+  type RefinerLibraryCreate,
   type RefinerLibraryWrite,
   type RefinerRuleSet,
   type RefinerRuleSetWrite,
@@ -48,7 +49,7 @@ export function useRefinerLibrariesQuery(enabled = true) {
 export function useCreateRefinerLibrary() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: RefinerLibraryWrite) => createRefinerLibrary(data),
+    mutationFn: (data: RefinerLibraryCreate) => createRefinerLibrary(data),
     onSuccess: () =>
       void qc.invalidateQueries({ queryKey: refinerLibrariesKey }),
   });

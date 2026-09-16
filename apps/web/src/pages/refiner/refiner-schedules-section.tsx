@@ -12,9 +12,13 @@ import {
 } from "../../components/ui/mm-schedule-window-controls";
 import { MmOnOffSwitch } from "../../components/ui/mm-on-off-switch";
 import {
+  REFINER_MEDIA_TYPE_LABELS,
+  type RefinerLibrary,
+} from "../../lib/refiner/libraries-api";
+import { useRefinerLibrariesQuery } from "../../lib/refiner/libraries-queries";
+import {
   useRefinerOperatorSettingsQuery,
   useRefinerOperatorSettingsSaveMutation,
-  useRefinerPathSettingsQuery,
   useRefinerWatchedFolderRemuxScanDispatchEnqueueMutation,
 } from "../../lib/refiner/queries";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
@@ -23,15 +27,74 @@ function canEdit(role: string | undefined): boolean {
   return role === "operator" || role === "admin";
 }
 
+/** One library's "Scan now". Each library has its own watched folder, so each scans on its own. */
+function LibraryScanNow({
+  library,
+  canQueueManual,
+}: {
+  library: RefinerLibrary;
+  canQueueManual: boolean;
+}) {
+  const queueScan = useRefinerWatchedFolderRemuxScanDispatchEnqueueMutation();
+  const watchedSet = Boolean(library.watched_folder.trim());
+  const disabled = !canQueueManual || !watchedSet || queueScan.isPending;
+  return (
+    <div
+      className="rounded-md border border-[var(--mm-border)] bg-black/10 p-4"
+      data-testid="refiner-schedules-library-scan"
+    >
+      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+        {library.name}
+      </p>
+      <p className="mt-1 text-xs text-[var(--mm-text3)]">
+        {REFINER_MEDIA_TYPE_LABELS[library.media_type]}. Checks this
+        library&apos;s watched folder now and adds any ready files to Refiner.
+      </p>
+      {!watchedSet ? (
+        <p className="mt-2 text-xs text-amber-200/90">
+          Save a watched folder for {library.name} in Libraries before running
+          this scan.
+        </p>
+      ) : null}
+      {queueScan.isError ? (
+        <p className="mt-2 text-xs text-red-300" role="alert">
+          {queueScan.error instanceof Error
+            ? queueScan.error.message
+            : `The scan for ${library.name} could not be queued.`}
+        </p>
+      ) : null}
+      {queueScan.isSuccess ? (
+        <p className="mt-2 text-xs text-[var(--mm-text3)]">
+          Queued scan job #{queueScan.data.job_id} for {library.name}.
+        </p>
+      ) : null}
+      <div className="mt-3">
+        <button
+          type="button"
+          aria-label={`Scan ${library.name} now`}
+          className={mmActionButtonClass({ variant: "secondary", disabled })}
+          disabled={disabled}
+          onClick={() =>
+            queueScan.mutate({
+              enqueue_remux_jobs: true,
+              media_scope: library.media_type,
+              library_id: library.id,
+            })
+          }
+        >
+          {queueScan.isPending ? "Starting scan..." : "Scan now"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function RefinerSchedulesSection() {
   const me = useMeQuery();
   const q = useRefinerOperatorSettingsQuery();
-  const pathSettings = useRefinerPathSettingsQuery();
+  const libraries = useRefinerLibrariesQuery();
   const saveTvSchedule = useRefinerOperatorSettingsSaveMutation();
   const saveMovieSchedule = useRefinerOperatorSettingsSaveMutation();
-  const queueTvScan = useRefinerWatchedFolderRemuxScanDispatchEnqueueMutation();
-  const queueMovieScan =
-    useRefinerWatchedFolderRemuxScanDispatchEnqueueMutation();
   const editable = canEdit(me.data?.role);
   const [tvHoursLimited, setTvHoursLimited] = useState(false);
   const [tvDays, setTvDays] = useState("");
@@ -87,10 +150,10 @@ export function RefinerSchedulesSection() {
     }
   }, [q.data, movieDirty, tvDirty]);
 
-  if (q.isPending || pathSettings.isPending || me.isPending) {
+  if (q.isPending || libraries.isPending || me.isPending) {
     return <PageLoading label="Loading Refiner schedules" />;
   }
-  if (q.isError || pathSettings.isError) {
+  if (q.isError || libraries.isError) {
     return (
       <div
         className="mm-module-surface w-full min-w-0 rounded border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200"
@@ -98,25 +161,22 @@ export function RefinerSchedulesSection() {
       >
         <p className="font-semibold">Could not load Refiner schedules</p>
         <p className="mt-1">
-          {isLikelyNetworkFailure(q.error ?? pathSettings.error)
+          {isLikelyNetworkFailure(q.error ?? libraries.error)
             ? "Check that the MediaMop API is running."
-            : isHttpErrorFromApi(q.error ?? pathSettings.error)
+            : isHttpErrorFromApi(q.error ?? libraries.error)
               ? "Sign in, then try again."
               : "Request failed."}
         </p>
       </div>
     );
   }
-  if (!q.data || !pathSettings.data) {
+  if (!q.data || !libraries.data) {
     return null;
   }
 
   const canQueueManual = editable;
-  const tvWatchedSet = Boolean(
-    (pathSettings.data.refiner_tv_watched_folder ?? "").trim(),
-  );
-  const movieWatchedSet = Boolean(
-    (pathSettings.data.refiner_watched_folder ?? "").trim(),
+  const orderedLibraries = [...libraries.data].sort(
+    (x, y) => x.display_order - y.display_order,
   );
 
   return (
@@ -278,109 +338,21 @@ export function RefinerSchedulesSection() {
           Run a scan immediately without waiting for the next folder poll or
           window.
         </p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-md border border-[var(--mm-border)] bg-black/10 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-              TV
-            </p>
-            <p className="mt-1 text-xs text-[var(--mm-text3)]">
-              Checks the TV watched folder now and adds any ready files to
-              Refiner.
-            </p>
-            {!tvWatchedSet ? (
-              <p className="mt-2 text-xs text-amber-200/90">
-                Save a TV watched folder in Libraries before running this scan.
-              </p>
-            ) : null}
-            {queueTvScan.isError ? (
-              <p className="mt-2 text-xs text-red-300" role="alert">
-                {queueTvScan.error instanceof Error
-                  ? queueTvScan.error.message
-                  : "Queue TV scan failed."}
-              </p>
-            ) : null}
-            {queueTvScan.isSuccess ? (
-              <p className="mt-2 text-xs text-[var(--mm-text3)]">
-                Queued TV scan job #{queueTvScan.data.job_id}.
-              </p>
-            ) : null}
-            <div className="mt-3">
-              <button
-                type="button"
-                className={mmActionButtonClass({
-                  variant: "secondary",
-                  disabled:
-                    !canQueueManual || !tvWatchedSet || queueTvScan.isPending,
-                })}
-                disabled={
-                  !canQueueManual || !tvWatchedSet || queueTvScan.isPending
-                }
-                onClick={() =>
-                  queueTvScan.mutate({
-                    enqueue_remux_jobs: true,
-                    media_scope: "tv",
-                  })
-                }
-              >
-                {queueTvScan.isPending ? "Starting TV scan..." : "Scan TV now"}
-              </button>
-            </div>
+        {orderedLibraries.length === 0 ? (
+          <p className="mt-4 text-sm text-[var(--mm-text3)]">
+            Add a library under Libraries to scan it here.
+          </p>
+        ) : (
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {orderedLibraries.map((library) => (
+              <LibraryScanNow
+                key={library.id}
+                library={library}
+                canQueueManual={canQueueManual}
+              />
+            ))}
           </div>
-          <div className="rounded-md border border-[var(--mm-border)] bg-black/10 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-              Movies
-            </p>
-            <p className="mt-1 text-xs text-[var(--mm-text3)]">
-              Checks the Movies watched folder now and adds any ready files to
-              Refiner.
-            </p>
-            {!movieWatchedSet ? (
-              <p className="mt-2 text-xs text-amber-200/90">
-                Save a Movies watched folder in Libraries before running this
-                scan.
-              </p>
-            ) : null}
-            {queueMovieScan.isError ? (
-              <p className="mt-2 text-xs text-red-300" role="alert">
-                {queueMovieScan.error instanceof Error
-                  ? queueMovieScan.error.message
-                  : "Queue Movies scan failed."}
-              </p>
-            ) : null}
-            {queueMovieScan.isSuccess ? (
-              <p className="mt-2 text-xs text-[var(--mm-text3)]">
-                Queued Movies scan job #{queueMovieScan.data.job_id}.
-              </p>
-            ) : null}
-            <div className="mt-3">
-              <button
-                type="button"
-                className={mmActionButtonClass({
-                  variant: "secondary",
-                  disabled:
-                    !canQueueManual ||
-                    !movieWatchedSet ||
-                    queueMovieScan.isPending,
-                })}
-                disabled={
-                  !canQueueManual ||
-                  !movieWatchedSet ||
-                  queueMovieScan.isPending
-                }
-                onClick={() =>
-                  queueMovieScan.mutate({
-                    enqueue_remux_jobs: true,
-                    media_scope: "movie",
-                  })
-                }
-              >
-                {queueMovieScan.isPending
-                  ? "Starting Movies scan..."
-                  : "Scan Movies now"}
-              </button>
-            </div>
-          </div>
-        </div>
+        )}
         {!canQueueManual ? (
           <p className="mt-3 text-xs text-[var(--mm-text3)]">
             Operators and admins can queue manual scans.

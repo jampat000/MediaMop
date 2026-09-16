@@ -50,7 +50,7 @@ def session(tmp_path: Path) -> Session:
 def _library(**overrides) -> RefinerLibraryRow:
     return RefinerLibraryRow(
         name=overrides.pop("name", "Movies"),
-        media_scope="movie",
+        media_type="movie",
         enabled=overrides.pop("enabled", True),
         watched_folder="/srv/in",
         output_folder="/srv/out",

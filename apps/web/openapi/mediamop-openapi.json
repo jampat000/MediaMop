@@ -502,7 +502,7 @@
             "description": "Why that path cannot be used on this machine, shown beside the manager's value.",
             "title": "Local Path Problem"
           },
-          "media_scope": {
+          "media_type": {
             "anyOf": [
               {
                 "enum": [
@@ -515,7 +515,7 @@
                 "type": "null"
               }
             ],
-            "title": "Media Scope"
+            "title": "Media Type"
           },
           "name": {
             "title": "Name",
@@ -4400,12 +4400,12 @@
             "title": "Media Extensions Csv",
             "type": "string"
           },
-          "media_scope": {
+          "media_type": {
             "enum": [
               "movie",
               "tv"
             ],
-            "title": "Media Scope",
+            "title": "Media Type",
             "type": "string"
           },
           "min_file_age_seconds": {
@@ -4601,7 +4601,7 @@
         "required": [
           "csrf_token",
           "name",
-          "media_scope"
+          "media_type"
         ],
         "title": "RefinerLibraryCreateIn",
         "type": "object"
@@ -4799,12 +4799,12 @@
             "title": "Media Extensions Csv",
             "type": "string"
           },
-          "media_scope": {
+          "media_type": {
             "enum": [
               "movie",
               "tv"
             ],
-            "title": "Media Scope",
+            "title": "Media Type",
             "type": "string"
           },
           "min_file_age_seconds": {
@@ -4951,7 +4951,7 @@
           "id",
           "name",
           "enabled",
-          "media_scope",
+          "media_type",
           "display_order",
           "watched_folder",
           "work_folder",
@@ -5198,12 +5198,12 @@
             "title": "Media Extensions Csv",
             "type": "string"
           },
-          "media_scope": {
+          "media_type": {
             "enum": [
               "movie",
               "tv"
             ],
-            "title": "Media Scope",
+            "title": "Media Type",
             "type": "string"
           },
           "min_file_age_seconds": {
@@ -5399,7 +5399,7 @@
         "required": [
           "csrf_token",
           "name",
-          "media_scope"
+          "media_type"
         ],
         "title": "RefinerLibraryUpdateIn",
         "type": "object"
@@ -5966,432 +5966,6 @@
           "net_space_saved_percent"
         ],
         "title": "RefinerOverviewStatsOut",
-        "type": "object"
-      },
-      "RefinerPathSettingsOut": {
-        "properties": {
-          "effective_tv_work_folder": {
-            "title": "Effective Tv Work Folder",
-            "type": "string"
-          },
-          "effective_work_folder": {
-            "title": "Effective Work Folder",
-            "type": "string"
-          },
-          "movie_watched_folder_check_interval_seconds": {
-            "maximum": 604800.0,
-            "minimum": 10.0,
-            "title": "Movie Watched Folder Check Interval Seconds",
-            "type": "integer"
-          },
-          "refiner_output_folder": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Refiner Output Folder"
-          },
-          "refiner_tv_output_folder": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Refiner Tv Output Folder"
-          },
-          "refiner_tv_watched_folder": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Refiner Tv Watched Folder"
-          },
-          "refiner_tv_watched_folder_exists": {
-            "title": "Refiner Tv Watched Folder Exists",
-            "type": "boolean"
-          },
-          "refiner_tv_work_folder": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Refiner Tv Work Folder"
-          },
-          "refiner_watched_folder": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Refiner Watched Folder"
-          },
-          "refiner_watched_folder_exists": {
-            "title": "Refiner Watched Folder Exists",
-            "type": "boolean"
-          },
-          "refiner_work_folder": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Refiner Work Folder"
-          },
-          "resolved_default_tv_work_folder": {
-            "title": "Resolved Default Tv Work Folder",
-            "type": "string"
-          },
-          "resolved_default_work_folder": {
-            "title": "Resolved Default Work Folder",
-            "type": "string"
-          },
-          "tv_watched_folder_check_interval_seconds": {
-            "maximum": 604800.0,
-            "minimum": 10.0,
-            "title": "Tv Watched Folder Check Interval Seconds",
-            "type": "integer"
-          },
-          "updated_at": {
-            "format": "date-time",
-            "title": "Updated At",
-            "type": "string"
-          }
-        },
-        "required": [
-          "refiner_watched_folder",
-          "refiner_watched_folder_exists",
-          "refiner_work_folder",
-          "refiner_output_folder",
-          "resolved_default_work_folder",
-          "effective_work_folder",
-          "refiner_tv_watched_folder",
-          "refiner_tv_watched_folder_exists",
-          "refiner_tv_work_folder",
-          "refiner_tv_output_folder",
-          "resolved_default_tv_work_folder",
-          "effective_tv_work_folder",
-          "movie_watched_folder_check_interval_seconds",
-          "tv_watched_folder_check_interval_seconds",
-          "updated_at"
-        ],
-        "title": "RefinerPathSettingsOut",
-        "type": "object"
-      },
-      "RefinerPathSettingsPutIn": {
-        "properties": {
-          "csrf_token": {
-            "minLength": 1,
-            "title": "Csrf Token",
-            "type": "string"
-          },
-          "movie_watched_folder_check_interval_seconds": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "When set, updates Movies watched-folder poll interval (seconds, 10\u2013604800). Omit to leave unchanged.",
-            "title": "Movie Watched Folder Check Interval Seconds"
-          },
-          "refiner_output_folder": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Refiner Output Folder"
-          },
-          "refiner_tv_output_folder": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Refiner Tv Output Folder"
-          },
-          "refiner_tv_paths_included": {
-            "default": false,
-            "description": "When true, TV watched/work/output fields are validated and persisted (clear TV by sending empty values). When false, existing TV path columns are left unchanged (backward-compatible movie-only saves).",
-            "title": "Refiner Tv Paths Included",
-            "type": "boolean"
-          },
-          "refiner_tv_watched_folder": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Refiner Tv Watched Folder"
-          },
-          "refiner_tv_work_folder": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Refiner Tv Work Folder"
-          },
-          "refiner_watched_folder": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Refiner Watched Folder"
-          },
-          "refiner_work_folder": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Refiner Work Folder"
-          },
-          "tv_watched_folder_check_interval_seconds": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "When set, updates TV watched-folder poll interval (seconds, 10\u2013604800). Omit to leave unchanged.",
-            "title": "Tv Watched Folder Check Interval Seconds"
-          }
-        },
-        "required": [
-          "csrf_token"
-        ],
-        "title": "RefinerPathSettingsPutIn",
-        "type": "object"
-      },
-      "RefinerRemuxRulesScopeOut": {
-        "additionalProperties": false,
-        "properties": {
-          "audio_preference_mode": {
-            "enum": [
-              "preferred_langs_quality",
-              "preferred_langs_strict",
-              "quality_all_languages"
-            ],
-            "title": "Audio Preference Mode",
-            "type": "string"
-          },
-          "default_audio_slot": {
-            "enum": [
-              "primary",
-              "secondary"
-            ],
-            "title": "Default Audio Slot",
-            "type": "string"
-          },
-          "preserve_default_subs": {
-            "title": "Preserve Default Subs",
-            "type": "boolean"
-          },
-          "preserve_forced_subs": {
-            "title": "Preserve Forced Subs",
-            "type": "boolean"
-          },
-          "primary_audio_lang": {
-            "title": "Primary Audio Lang",
-            "type": "string"
-          },
-          "remove_commentary": {
-            "title": "Remove Commentary",
-            "type": "boolean"
-          },
-          "secondary_audio_lang": {
-            "title": "Secondary Audio Lang",
-            "type": "string"
-          },
-          "subtitle_langs_csv": {
-            "description": "Comma-separated ISO-style language tags used when subtitle_mode is keep_selected.",
-            "title": "Subtitle Langs Csv",
-            "type": "string"
-          },
-          "subtitle_mode": {
-            "enum": [
-              "remove_all",
-              "keep_selected"
-            ],
-            "title": "Subtitle Mode",
-            "type": "string"
-          },
-          "tertiary_audio_lang": {
-            "title": "Tertiary Audio Lang",
-            "type": "string"
-          }
-        },
-        "required": [
-          "primary_audio_lang",
-          "secondary_audio_lang",
-          "tertiary_audio_lang",
-          "default_audio_slot",
-          "remove_commentary",
-          "subtitle_mode",
-          "subtitle_langs_csv",
-          "preserve_forced_subs",
-          "preserve_default_subs",
-          "audio_preference_mode"
-        ],
-        "title": "RefinerRemuxRulesScopeOut",
-        "type": "object"
-      },
-      "RefinerRemuxRulesSettingsOut": {
-        "additionalProperties": false,
-        "properties": {
-          "movie": {
-            "$ref": "#/components/schemas/RefinerRemuxRulesScopeOut"
-          },
-          "tv": {
-            "$ref": "#/components/schemas/RefinerRemuxRulesScopeOut"
-          },
-          "updated_at": {
-            "title": "Updated At",
-            "type": "string"
-          }
-        },
-        "required": [
-          "movie",
-          "tv",
-          "updated_at"
-        ],
-        "title": "RefinerRemuxRulesSettingsOut",
-        "type": "object"
-      },
-      "RefinerRemuxRulesSettingsPutIn": {
-        "additionalProperties": false,
-        "properties": {
-          "audio_preference_mode": {
-            "default": "preferred_langs_quality",
-            "enum": [
-              "preferred_langs_quality",
-              "preferred_langs_strict",
-              "quality_all_languages"
-            ],
-            "title": "Audio Preference Mode",
-            "type": "string"
-          },
-          "csrf_token": {
-            "minLength": 1,
-            "title": "Csrf Token",
-            "type": "string"
-          },
-          "default_audio_slot": {
-            "default": "primary",
-            "enum": [
-              "primary",
-              "secondary"
-            ],
-            "title": "Default Audio Slot",
-            "type": "string"
-          },
-          "media_scope": {
-            "default": "movie",
-            "enum": [
-              "movie",
-              "tv"
-            ],
-            "title": "Media Scope",
-            "type": "string"
-          },
-          "preserve_default_subs": {
-            "default": true,
-            "title": "Preserve Default Subs",
-            "type": "boolean"
-          },
-          "preserve_forced_subs": {
-            "default": true,
-            "title": "Preserve Forced Subs",
-            "type": "boolean"
-          },
-          "primary_audio_lang": {
-            "default": "eng",
-            "maxLength": 24,
-            "title": "Primary Audio Lang",
-            "type": "string"
-          },
-          "remove_commentary": {
-            "default": true,
-            "title": "Remove Commentary",
-            "type": "boolean"
-          },
-          "secondary_audio_lang": {
-            "default": "jpn",
-            "maxLength": 24,
-            "title": "Secondary Audio Lang",
-            "type": "string"
-          },
-          "subtitle_langs_csv": {
-            "default": "",
-            "maxLength": 512,
-            "title": "Subtitle Langs Csv",
-            "type": "string"
-          },
-          "subtitle_mode": {
-            "default": "remove_all",
-            "enum": [
-              "remove_all",
-              "keep_selected"
-            ],
-            "title": "Subtitle Mode",
-            "type": "string"
-          },
-          "tertiary_audio_lang": {
-            "default": "",
-            "maxLength": 24,
-            "title": "Tertiary Audio Lang",
-            "type": "string"
-          }
-        },
-        "required": [
-          "csrf_token"
-        ],
-        "title": "RefinerRemuxRulesSettingsPutIn",
         "type": "object"
       },
       "RefinerRequeueOut": {
@@ -12071,70 +11645,6 @@
         ]
       }
     },
-    "/api/v1/refiner/path-settings": {
-      "get": {
-        "description": "Read saved Refiner path roles plus the resolved default work/temp path (shown before first save).",
-        "operationId": "get_refiner_path_settings_api_v1_refiner_path_settings_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RefinerPathSettingsOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Get Refiner Path Settings",
-        "tags": [
-          "refiner",
-          "refiner"
-        ]
-      },
-      "put": {
-        "description": "Persist Refiner path settings with hard validation (overlap, existence, required output).",
-        "operationId": "put_refiner_path_settings_api_v1_refiner_path_settings_put",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefinerPathSettingsPutIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RefinerPathSettingsOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Put Refiner Path Settings",
-        "tags": [
-          "refiner",
-          "refiner"
-        ]
-      }
-    },
     "/api/v1/refiner/reject-support": {
       "get": {
         "description": "Whether the Reject failure policy can be chosen for a library linked to these managers.\n\nAsks Deluno or a native manager for its manifest, so it is called when the option is shown,\nnot on every list.",
@@ -12176,68 +11686,6 @@
           }
         },
         "summary": "Get Refiner Reject Support",
-        "tags": [
-          "refiner",
-          "refiner"
-        ]
-      }
-    },
-    "/api/v1/refiner/remux-rules-settings": {
-      "get": {
-        "operationId": "get_refiner_remux_rules_settings_api_v1_refiner_remux_rules_settings_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RefinerRemuxRulesSettingsOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Get Refiner Remux Rules Settings",
-        "tags": [
-          "refiner",
-          "refiner"
-        ]
-      },
-      "put": {
-        "operationId": "put_refiner_remux_rules_settings_api_v1_refiner_remux_rules_settings_put",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefinerRemuxRulesSettingsPutIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RefinerRemuxRulesSettingsOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Put Refiner Remux Rules Settings",
         "tags": [
           "refiner",
           "refiner"

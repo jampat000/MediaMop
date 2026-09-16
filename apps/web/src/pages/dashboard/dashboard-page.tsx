@@ -29,10 +29,11 @@ import {
   refinerJobsInspectionQueryKey,
   useRefinerJobsInspectionQuery,
 } from "../../lib/refiner/jobs-inspection/queries";
+import type { RefinerLibrary } from "../../lib/refiner/libraries-api";
+import { useRefinerLibrariesQuery } from "../../lib/refiner/libraries-queries";
 import {
   refinerOverviewStatsQueryKey,
   useRefinerOverviewStatsQuery,
-  useRefinerPathSettingsQuery,
 } from "../../lib/refiner/queries";
 import { useSuitePauseQuery } from "../../lib/suite/pause-queries";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
@@ -399,11 +400,12 @@ function buildRefinerCard(args: {
   netSpaceSavedBytes: number;
   netSpaceSavedPercent: number;
   successRatePercent: number;
-  movieFolder: string | null | undefined;
-  tvFolder: string | null | undefined;
+  libraries: Pick<RefinerLibrary, "name" | "watched_folder">[];
   operational?: OperationalModule;
 }): ModuleCardData {
-  const attention = !args.movieFolder && !args.tvFolder;
+  const attention = !args.libraries.some((library) =>
+    library.watched_folder.trim(),
+  );
   const active =
     args.processed > 0 ||
     args.failed > 0 ||
@@ -442,10 +444,10 @@ function buildRefinerCard(args: {
       },
       { label: "Failures", value: formatCount(args.failed) },
     ],
-    facts: [
-      `TV watched folder: ${args.tvFolder?.trim() ? "Configured" : "Not set"}`,
-      `Movies watched folder: ${args.movieFolder?.trim() ? "Configured" : "Not set"}`,
-    ],
+    facts: args.libraries.map(
+      (library) =>
+        `${library.name} watched folder: ${library.watched_folder.trim() ? "Configured" : "Not set"}`,
+    ),
     actionLabel: "Open Refiner",
     actionTo: "/refiner",
   };
@@ -576,7 +578,7 @@ export function DashboardPage() {
   const dash = useDashboardStatusQuery();
   const recent = useActivityRecentQuery(DASHBOARD_ACTIVITY_FILTERS);
   const refinerStats = useRefinerOverviewStatsQuery();
-  const refinerPaths = useRefinerPathSettingsQuery();
+  const refinerLibraries = useRefinerLibrariesQuery();
   const refinerJobs = useRefinerJobsInspectionQuery("recent", 12);
   const prunerStats = usePrunerOverviewStatsQuery();
   const prunerInstances = usePrunerInstancesQuery();
@@ -618,8 +620,9 @@ export function DashboardPage() {
     netSpaceSavedBytes: refinerStats.data?.net_space_saved_bytes ?? 0,
     netSpaceSavedPercent: refinerStats.data?.net_space_saved_percent ?? 0,
     successRatePercent: refinerStats.data?.success_rate_percent ?? 0,
-    movieFolder: refinerPaths.data?.refiner_watched_folder,
-    tvFolder: refinerPaths.data?.refiner_tv_watched_folder,
+    libraries: [...(refinerLibraries.data ?? [])].sort(
+      (a, b) => a.display_order - b.display_order,
+    ),
     operational: operationalByModule.get("refiner"),
   });
   const prunerCard = buildPrunerCard({

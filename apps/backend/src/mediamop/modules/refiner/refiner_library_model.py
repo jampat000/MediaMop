@@ -6,9 +6,11 @@ schema. ``refiner_path_settings`` held movie paths and then the same three again
 ``tv_``-prefixed. A third library — 4K, kids, a re-encode staging folder — needed a
 migration.
 
-``media_scope`` survives as a *property* of a library, because it still selects which
-cleanup behaviour applies (a movie release folder versus a whole season folder). It stops
-being the key the module partitions on.
+``media_type`` (Movies or TV) survives as a *property* of a library. It is no longer the key
+the module partitions on, but it still decides three things: which cleanup shape applies (a
+movie release folder versus a whole season folder), which media-manager queue is asked when a
+library links none, and which library a job belongs to when its payload names none. It was
+called ``media_scope`` until #460.
 """
 
 from __future__ import annotations
@@ -96,9 +98,8 @@ class RefinerLibraryRow(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
-    # Selects the cleanup behaviour (movie release folder vs whole season folder). No
-    # longer the partition key for the module.
-    media_scope: Mapped[str] = mapped_column(Text, nullable=False, server_default="movie")
+    # Movies or TV. See the module docstring for the three things it still decides (#460).
+    media_type: Mapped[str] = mapped_column(Text, nullable=False, server_default="movie")
     display_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
 
     watched_folder: Mapped[str] = mapped_column(Text, nullable=False, server_default="")

@@ -164,13 +164,22 @@ try {
   Invoke-RestMethod -Method Post -Uri "$baseUrl/api/v1/auth/login" -WebSession $webSession -Headers $browserHeaders -Body $loginBody -TimeoutSec 15 | Out-Null
 
   $csrf = (Invoke-RestMethod -Uri "$baseUrl/api/v1/auth/csrf" -WebSession $webSession -Headers $readHeaders -TimeoutSec 15).csrf_token
+  # Configure the seeded Movies library directly (the path-settings route was retired in #460).
+  $libraries = Invoke-RestMethod -Uri "$baseUrl/api/v1/refiner/libraries" -WebSession $webSession -Headers $readHeaders -TimeoutSec 15
+  $moviesLibrary = $libraries | Where-Object { $_.media_type -eq "movie" } | Select-Object -First 1
+  if (-not $moviesLibrary) {
+    throw "The packaged install has no Movies library to configure."
+  }
   $pathBody = @{
     csrf_token = $csrf
-    refiner_watched_folder = $watchedRoot
-    refiner_work_folder = $workRoot
-    refiner_output_folder = $outputRoot
+    name = $moviesLibrary.name
+    media_type = "movie"
+    watched_folder = $watchedRoot
+    work_folder = $workRoot
+    output_folder = $outputRoot
+    manager_connection_ids = @($moviesLibrary.manager_connection_ids)
   } | ConvertTo-Json -Compress
-  Invoke-RestMethod -Method Put -Uri "$baseUrl/api/v1/refiner/path-settings" -WebSession $webSession -Headers $browserHeaders -Body $pathBody -TimeoutSec 15 | Out-Null
+  Invoke-RestMethod -Method Put -Uri "$baseUrl/api/v1/refiner/libraries/$($moviesLibrary.id)" -WebSession $webSession -Headers $browserHeaders -Body $pathBody -TimeoutSec 15 | Out-Null
 
   $csrf = (Invoke-RestMethod -Uri "$baseUrl/api/v1/auth/csrf" -WebSession $webSession -Headers $readHeaders -TimeoutSec 15).csrf_token
   $enqueueBody = @{

@@ -121,7 +121,7 @@ def test_retryable_source_wait_returns_file_to_on_hold_without_counting_a_failur
     with factory() as session, session.begin():
         library = RefinerLibraryRow(
             name="Movies",
-            media_scope="movie",
+            media_type="movie",
             watched_folder="C:/watched",
             output_folder="C:/output",
         )
@@ -179,7 +179,7 @@ def test_rejected_no_video_file_uses_library_cleanup_policy_after_recording(tmp_
     with factory() as session, session.begin():
         library = RefinerLibraryRow(
             name="Movies",
-            media_scope="movie",
+            media_type="movie",
             watched_folder=str(watched),
             output_folder=str(tmp_path / "output"),
             rejected_file_action="delete_file",

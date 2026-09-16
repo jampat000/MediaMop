@@ -1,75 +1,88 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { UserPublic } from "../../lib/api/types";
 import { qk } from "../../lib/auth/queries";
 import { refinerJobsInspectionQueryKey } from "../../lib/refiner/jobs-inspection/queries";
+import type {
+  RefinerLibrary,
+  RefinerRuleSet,
+} from "../../lib/refiner/libraries-api";
+import {
+  refinerLibrariesKey,
+  refinerRuleSetsKey,
+} from "../../lib/refiner/libraries-queries";
 import {
   refinerOperatorSettingsQueryKey,
   refinerOverviewStatsQueryKey,
-  refinerPathSettingsQueryKey,
-  refinerRemuxRulesSettingsQueryKey,
 } from "../../lib/refiner/queries";
-import type {
-  RefinerPathSettingsOut,
-  RefinerRemuxRulesSettingsOut,
-} from "../../lib/refiner/types";
+import * as scanApi from "../../lib/refiner/watched-folder-scan-api";
 import { RefinerPage } from "./refiner-page";
 
 const operatorMe: UserPublic = { id: 1, username: "alice", role: "operator" };
 
-/** Seeded path API shape: default work folders live under MediaMop runtime data. */
-const minimalRefinerPathSettings: RefinerPathSettingsOut = {
-  refiner_watched_folder: null,
-  refiner_watched_folder_exists: false,
-  refiner_work_folder: null,
-  refiner_output_folder: "",
-  resolved_default_work_folder:
-    "C:\\ProgramData\\MediaMop\\refiner\\refiner-movie-work",
-  effective_work_folder:
-    "C:\\ProgramData\\MediaMop\\refiner\\refiner-movie-work",
-  refiner_tv_watched_folder: null,
-  refiner_tv_watched_folder_exists: false,
-  refiner_tv_work_folder: null,
-  refiner_tv_output_folder: null,
-  resolved_default_tv_work_folder:
-    "C:\\ProgramData\\MediaMop\\refiner\\refiner-tv-work",
-  effective_tv_work_folder:
-    "C:\\ProgramData\\MediaMop\\refiner\\refiner-tv-work",
-  movie_watched_folder_check_interval_seconds: 300,
-  tv_watched_folder_check_interval_seconds: 300,
+const englishJapaneseRules = {
+  id: 1,
+  name: "English first",
+  primary_audio_lang: "eng",
+  secondary_audio_lang: "jpn",
+  tertiary_audio_lang: "",
+  default_audio_slot: "primary",
+  remove_commentary: true,
+  subtitle_mode: "remove_all",
+  subtitle_langs_csv: "",
+  preserve_forced_subs: true,
+  preserve_default_subs: true,
+  audio_preference_mode: "preferred_langs_quality",
+  used_by_library_count: 1,
   updated_at: "2026-04-11T00:00:00Z",
-};
+} as RefinerRuleSet;
 
-const minimalRefinerRemuxRules: RefinerRemuxRulesSettingsOut = {
-  movie: {
-    primary_audio_lang: "eng",
-    secondary_audio_lang: "jpn",
-    tertiary_audio_lang: "",
-    default_audio_slot: "primary",
-    remove_commentary: true,
-    subtitle_mode: "remove_all",
-    subtitle_langs_csv: "",
-    preserve_forced_subs: true,
-    preserve_default_subs: true,
-    audio_preference_mode: "preferred_langs_quality",
-  },
-  tv: {
-    primary_audio_lang: "eng",
-    secondary_audio_lang: "jpn",
-    tertiary_audio_lang: "",
-    default_audio_slot: "primary",
-    remove_commentary: true,
-    subtitle_mode: "remove_all",
-    subtitle_langs_csv: "",
-    preserve_forced_subs: true,
-    preserve_default_subs: true,
-    audio_preference_mode: "preferred_langs_quality",
-  },
-  updated_at: "2026-04-11T00:00:00Z",
-};
+function library(over: Partial<RefinerLibrary>): RefinerLibrary {
+  return {
+    id: 1,
+    name: "Movies",
+    enabled: true,
+    media_type: "movie",
+    display_order: 0,
+    watched_folder: "",
+    work_folder: "",
+    output_folder: "",
+    scan_interval_seconds: 300,
+    rule_set_id: null,
+    manager_connection_ids: [],
+    active_job_count: 0,
+    updated_at: null,
+    ...over,
+  } as RefinerLibrary;
+}
+
+/** Two film libraries and one TV library: adding a second library of a type is normal. */
+const seededLibraries: RefinerLibrary[] = [
+  library({
+    id: 1,
+    name: "Films",
+    watched_folder: "/srv/films/in",
+    output_folder: "/srv/films/out",
+    rule_set_id: 1,
+  }),
+  library({ id: 2, name: "4K films", display_order: 1 }),
+  library({
+    id: 3,
+    name: "Shows",
+    media_type: "tv",
+    display_order: 2,
+    scan_interval_seconds: 3600,
+  }),
+];
 
 function wrap(ui: ReactNode, client: QueryClient) {
   return (
@@ -86,7 +99,8 @@ function seedRefinerQueries(qc: QueryClient) {
     files_failed: 1,
     success_rate_percent: 97.7,
   });
-  qc.setQueryData(refinerPathSettingsQueryKey, minimalRefinerPathSettings);
+  qc.setQueryData(refinerLibrariesKey, seededLibraries);
+  qc.setQueryData(refinerRuleSetsKey, [englishJapaneseRules]);
   qc.setQueryData(refinerOperatorSettingsQueryKey, {
     max_concurrent_files: 1,
     runner_capacity: 4,
@@ -116,7 +130,6 @@ function seedRefinerQueries(qc: QueryClient) {
     schedule_timezone: "UTC",
     updated_at: "2026-04-11T00:00:00Z",
   });
-  qc.setQueryData(refinerRemuxRulesSettingsQueryKey, minimalRefinerRemuxRules);
   qc.setQueryData(refinerJobsInspectionQueryKey("recent"), {
     jobs: [],
     default_recent_slice: true,
@@ -131,7 +144,9 @@ function openTab(label: string) {
 }
 
 function renderRefinerPage() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
   seedRefinerQueries(qc);
   qc.setQueryData(qk.me, operatorMe);
   return render(wrap(<RefinerPage />, qc));
@@ -164,6 +179,25 @@ describe("RefinerPage", () => {
     expect(card.textContent).toMatch(/English/i);
     expect(card.textContent).toMatch(/Japanese/i);
     expect(card.textContent).toMatch(/Remove all subtitles/i);
+    expect(card.textContent).toMatch(/English first/);
+    expect(card.textContent).toMatch(/TV episodes defaults/);
+  });
+
+  it("Overview lists every library, including two of the same media type", () => {
+    renderRefinerPage();
+    const rows = screen.getAllByTestId("refiner-overview-library");
+    expect(rows.map((row) => row.textContent)).toEqual([
+      expect.stringContaining("Films · Movies"),
+      expect.stringContaining("4K films · Movies"),
+      expect.stringContaining("Shows · TV episodes"),
+    ]);
+    expect(rows[0].textContent).toMatch(/Watched · Set/);
+    expect(rows[1].textContent).toMatch(/Watched · Not set/);
+    expect(rows[2].textContent).toMatch(/every hour/);
+    const attention = screen.getByTestId("refiner-overview-needs-attention");
+    expect(attention.textContent).toMatch(
+      /2 libraries have no watched folder \(4K films, Shows\)/,
+    );
   });
 
   it("Overview shows last-30-day stats card", () => {
@@ -234,15 +268,47 @@ describe("RefinerPage", () => {
     expect(idxJobs).toBeGreaterThan(idxSched);
   });
 
-  it("Schedules includes independent TV and Movies scan-now actions", () => {
+  it("Schedules offers a scan-now action for each library", () => {
     renderRefinerPage();
     openTab("Schedules");
+    const cards = screen.getAllByTestId("refiner-schedules-library-scan");
+    expect(cards).toHaveLength(3);
     expect(
-      screen.getByRole("button", { name: "Scan TV now" }),
-    ).toBeInTheDocument();
+      within(cards[0]).getByRole("button", { name: "Scan Films now" }),
+    ).toBeEnabled();
+    // A library with no watched folder has nothing to scan yet.
     expect(
-      screen.getByRole("button", { name: "Scan Movies now" }),
+      within(cards[1]).getByRole("button", { name: "Scan 4K films now" }),
+    ).toBeDisabled();
+    expect(
+      within(cards[2]).getByRole("button", { name: "Scan Shows now" }),
+    ).toBeDisabled();
+  });
+
+  it("Scan now queues a scan of that one library", async () => {
+    const enqueue = vi
+      .spyOn(scanApi, "postRefinerWatchedFolderRemuxScanDispatchEnqueue")
+      .mockResolvedValue({
+        ok: true,
+        job_id: 41,
+        dedupe_key: "scan",
+        job_kind: "refiner.watched_folder.remux_scan_dispatch.v1",
+      });
+    renderRefinerPage();
+    openTab("Schedules");
+    fireEvent.click(screen.getByRole("button", { name: "Scan Films now" }));
+
+    await waitFor(() => {
+      expect(enqueue).toHaveBeenCalledWith({
+        enqueue_remux_jobs: true,
+        media_scope: "movie",
+        library_id: 1,
+      });
+    });
+    expect(
+      await screen.findByText("Queued scan job #41 for Films."),
     ).toBeInTheDocument();
+    enqueue.mockRestore();
   });
 
   it("Schedules tab has no master scheduled-processing toggle (folder poll is under Libraries)", () => {

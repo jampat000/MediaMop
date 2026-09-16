@@ -142,6 +142,9 @@ def _restore_refiner_libraries(session: Session, bundle: dict[str, Any]) -> None
             session.add(RefinerRuleSetRow(**dict_to_model_kwargs(RefinerRuleSetRow, row)))
         session.flush()
         for row in bundle["refiner_libraries"]:
+            # Backups taken before #460 name the column media_scope.
+            if "media_type" not in row and "media_scope" in row:
+                row = {**row, "media_type": row["media_scope"]}
             session.add(RefinerLibraryRow(**dict_to_model_kwargs(RefinerLibraryRow, row)))
         session.flush()
         return

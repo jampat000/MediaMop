@@ -143,7 +143,7 @@ def enqueue_scan_for_library(
     design: there is one admission implementation and this is not a second one.
     """
 
-    scope = "tv" if library.media_scope == "tv" else "movie"
+    scope = "tv" if library.media_type == "tv" else "movie"
     if refiner_watched_folder_remux_scan_dispatch_queue_has_active_scan(
         session,
         media_scope=scope,

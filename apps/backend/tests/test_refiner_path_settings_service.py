@@ -42,7 +42,7 @@ def test_legacy_movie_default_is_treated_as_default(tmp_path: Path) -> None:
     # Reads the library now the singleton is gone (#363). The recognition itself — a work
     # folder saved before the default moved is still the default — is unchanged.
     library = RefinerLibraryRow(
-        name="Movies", media_scope="movie", work_folder=r"C:\ProgramData\Media\refiner-movie-work"
+        name="Movies", media_type="movie", work_folder=r"C:\ProgramData\Media\refiner-movie-work"
     )
 
     got, is_default = effective_library_work_folder(library=library, mediamop_home=str(tmp_path))
