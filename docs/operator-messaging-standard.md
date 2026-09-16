@@ -17,7 +17,7 @@ Every operational Activity detail should include stable fields when applicable:
 
 - `module`: `refiner`, `pruner`, `auth`, or `system`.
 - `action`: plain workflow action such as `scan`, `preview`, `apply`, `remux`, `search`, `sync`, `cleanup`, `connection_test`, or `upgrade`.
-- `trigger`: `manual`, `scheduled`, `startup`, `worker`, `retry`, or `system`.
+- `trigger`: why the work happened now — `manual` (a person asked), `scheduled`, `webhook` (a media manager sent it), `folder_change` (a new file appeared in a watched folder), `retry` (an automatic retry came due), `startup`, `worker` (the worker following up on earlier work, such as handing a file back), or `system`. It is set where the work is queued and carried on the job payload as `trigger`, with `run_id` for work that belongs to a larger run such as a folder scan, so the events it produces can say why and be grouped.
 - `result`: `success`, `skipped`, `warning`, `retrying`, `running`, or `failed`.
 - `severity`: derived from `result`; do not hand-pick a scarier severity.
 - `provider`: provider/server name when relevant, for example `Jellyfin`, `Plex`, `Sonarr`, or `Radarr`.

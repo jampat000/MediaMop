@@ -288,7 +288,7 @@ def post_handoff_report(target: HandoffReportTarget, body: dict[str, Any]) -> Ha
         response = httpx.post(target.url, json=body, headers=target.headers, timeout=_TIMEOUT_SECONDS)
     except httpx.HTTPError as exc:
         logger.warning("Hand-off report to %s failed: %s", target.url, exc)
-        return HandoffReportDelivery(False, f"failed: could not reach {name} ({exc.__class__.__name__})")
+        return HandoffReportDelivery(False, f"failed: could not reach {name}")
     if response.is_success:
         return HandoffReportDelivery(True, f"reported {body['status']} to {name}")
     logger.warning("Hand-off report to %s returned HTTP %s", target.url, response.status_code)
@@ -327,6 +327,18 @@ def record_handoff_report(
                 "accepted": delivery.accepted,
                 "delivery": delivery.status,
                 "report": body,
+                "trigger": "worker",
+                "result": "success" if delivery.accepted else "failed",
+                **(
+                    {}
+                    if delivery.accepted
+                    else {
+                        "next_action": (
+                            f"Check that {name} is running and that its address and API key are right on the "
+                            "Media managers settings page."
+                        )
+                    }
+                ),
             },
             separators=(",", ":"),
             ensure_ascii=True,

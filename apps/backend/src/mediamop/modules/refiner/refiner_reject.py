@@ -300,8 +300,9 @@ def _reject_through_queue(*, connections: Sequence[ManagerConnection], source: P
     except (MediaManagerHttpError, OSError) as exc:
         return RejectAttempt(
             False,
-            f"{label} did not accept the rejection ({exc}), so nothing was removed.",
+            f"{label} did not accept the rejection, so nothing was removed.",
             manager=label,
+            detail={"technical_detail": str(exc)[:500]},
         )
     return RejectAttempt(
         True,
@@ -390,6 +391,9 @@ def make_refiner_file_reject_handler(
                 "library_id": library_id,
                 "manager": attempt.manager,
                 "message": attempt.reason,
+                "trigger": "worker",
+                # Falling back is recoverable and the file still reaches the manager: a warning, not a failure.
+                "result": "success" if attempt.done else "warning",
                 **attempt.detail,
             }
             if attempt.done:

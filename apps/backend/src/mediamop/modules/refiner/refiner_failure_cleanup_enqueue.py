@@ -25,6 +25,7 @@ def enqueue_refiner_failure_cleanup_sweep_job(
     session: Session,
     *,
     media_scope: RefinerFailureCleanupScope,
+    trigger: str = "scheduled",
 ) -> tuple[RefinerJob, bool]:
     ms = "tv" if str(media_scope).strip().lower() == "tv" else "movie"
     job_kind = REFINER_TV_FAILURE_CLEANUP_SWEEP_JOB_KIND if ms == "tv" else REFINER_MOVIE_FAILURE_CLEANUP_SWEEP_JOB_KIND
@@ -42,7 +43,7 @@ def enqueue_refiner_failure_cleanup_sweep_job(
     if active is not None:
         return active, False
     dedupe = f"{dedupe_base}:{uuid.uuid4().hex}"
-    payload_json = json.dumps({"media_scope": ms}, separators=(",", ":"))
+    payload_json = json.dumps({"media_scope": ms, "trigger": trigger}, separators=(",", ":"))
     job = refiner_enqueue_or_get_job(
         session,
         dedupe_key=dedupe,

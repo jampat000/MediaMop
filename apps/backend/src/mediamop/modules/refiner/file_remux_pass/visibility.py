@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from mediamop.modules.refiner.refiner_remux_rules import RemuxPlan
+from mediamop.platform.activity.classify import TRIGGERS
 from mediamop.platform.observability.diagnostics import (
     DiagnosticAction,
     DiagnosticModule,
@@ -84,11 +85,23 @@ def clip_remux_pass_payload_for_activity(payload: dict[str, Any]) -> dict[str, A
         result = DiagnosticResult.SKIPPED
     else:
         result = DiagnosticResult.FAILED if out.get("ok") is False else DiagnosticResult.SUCCESS
+    if result == DiagnosticResult.FAILED and out.get("retry_scheduled") is True:
+        # Not the end of it: the standard calls a failure that will be tried again "retrying".
+        result = DiagnosticResult.RETRYING
+    raw_trigger = out.get("trigger")
+    trigger: str = raw_trigger if isinstance(raw_trigger, str) and raw_trigger in TRIGGERS else DiagnosticTrigger.WORKER
+    next_action: str | None = None
+    if result == DiagnosticResult.FAILED and not (out.get("pass_through_queued") or out.get("reject_queued")):
+        # The reason stays in the detail; an action is something the operator can do.
+        next_action = (
+            "Open this file's processing record for what went wrong, fix the cause, "
+            "then use Try again on the Files screen."
+        )
     out.update(
         activity_detail_envelope(
             module=DiagnosticModule.REFINER,
             action=DiagnosticAction.REMUX,
-            trigger=DiagnosticTrigger.WORKER,
+            trigger=trigger,
             result=result,
             media_scope=out.get("media_scope") if isinstance(out.get("media_scope"), str) else None,
             counts={
@@ -96,7 +109,7 @@ def clip_remux_pass_payload_for_activity(payload: dict[str, Any]) -> dict[str, A
                 "subtitles_removed": len(out.get("removed_subtitles") or []),
             },
             user_message=remux_pass_activity_title(out),
-            next_action=str(out.get("reason") or "") if result == DiagnosticResult.FAILED else None,
+            next_action=next_action,
         )
     )
     argv = out.get("ffmpeg_argv")

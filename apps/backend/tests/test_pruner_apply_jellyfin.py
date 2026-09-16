@@ -386,7 +386,8 @@ def test_apply_activity_title_uses_operator_label(
         assert "Remove broken library entries" in (evt.title or "")
         assert "preview snapshot" in (evt.title or "").lower()
         assert "(jellyfin)" in (evt.title or "").lower()
-        assert json.loads(evt.detail or "{}").get("provider") == "jellyfin"
+        assert json.loads(evt.detail or "{}").get("provider_key") == "jellyfin"
+        assert json.loads(evt.detail or "{}").get("provider") == "Jellyfin"
 
 
 def test_apply_activity_title_emby_names_provider(
@@ -459,7 +460,8 @@ def test_apply_activity_title_emby_names_provider(
         assert evt is not None
         assert "(emby)" in (evt.title or "").lower()
         detail = json.loads(evt.detail or "{}")
-        assert detail.get("provider") == "emby"
+        assert detail.get("provider_key") == "emby"
+        assert detail.get("action") == "apply"
 
 
 def test_apply_handler_emby_calls_emby_delete_not_jellyfin(

@@ -21,11 +21,12 @@ def enqueue_refiner_work_temp_stale_sweep_job(
     session: Session,
     *,
     media_scope: RefinerWorkTempStaleSweepEnqueueScope,
+    trigger: str = "scheduled",
 ) -> None:
     """Insert or return the periodic row for **one** scope (Movies vs TV dedupe keys are distinct)."""
 
     ms = normalize_work_temp_sweep_media_scope(media_scope)
-    body = json.dumps({"media_scope": ms}, separators=(",", ":"))
+    body = json.dumps({"media_scope": ms, "trigger": trigger}, separators=(",", ":"))
     refiner_enqueue_or_get_job(
         session,
         dedupe_key=refiner_work_temp_stale_sweep_dedupe_key_for_scope(ms),

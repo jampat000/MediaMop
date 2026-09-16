@@ -24,6 +24,8 @@ RESULTS: frozenset[str] = frozenset({"success", "skipped", "warning", "retrying"
 
 # Read from the event type only when the producer did not say. Ordered: the first match wins,
 # so "fell_back" is a warning even though the event also completed.
+_PERSON_STARTED_PREFIXES: tuple[str, ...] = ("auth.", "system.reconciliation.")
+
 _RESULT_BY_TYPE_WORD: tuple[tuple[str, str], ...] = (
     ("failed", "failed"),
     ("failure", "failed"),
@@ -66,6 +68,9 @@ def classify_activity(*, event_type: str, detail: str | None) -> ActivityFacts:
 
     trigger = data.get("trigger")
     trigger = trigger.strip().lower() if isinstance(trigger, str) and trigger.strip().lower() in TRIGGERS else None
+    if trigger is None and (event_type or "").startswith(_PERSON_STARTED_PREFIXES):
+        # A sign-in, a password change or a repair someone clicked is, by definition, someone's action.
+        trigger = "manual"
 
     result = data.get("result")
     result = result.strip().lower() if isinstance(result, str) and result.strip().lower() in RESULTS else None

@@ -371,7 +371,7 @@ def test_apply_jellyfin_watched_tv_activity_wording(
         assert "tv" in title.lower() or "episodes" in title.lower()
         d = json.loads(evt.detail or "{}")
         assert d.get("phase") == "apply"
-        assert d.get("provider") == "jellyfin"
+        assert d.get("provider_key") == "jellyfin"
         assert d.get("media_scope") == MEDIA_SCOPE_TV
         assert d.get("rule_family_id") == RULE_FAMILY_WATCHED_TV_REPORTED
 
@@ -443,7 +443,7 @@ def test_apply_emby_watched_tv_activity_names_emby(
         assert evt is not None
         assert "Remove watched TV entries" in (evt.title or "")
         assert "(emby)" in (evt.title or "").lower()
-        assert json.loads(evt.detail or "{}").get("provider") == "emby"
+        assert json.loads(evt.detail or "{}").get("provider_key") == "emby"
 
 
 @pytest.fixture

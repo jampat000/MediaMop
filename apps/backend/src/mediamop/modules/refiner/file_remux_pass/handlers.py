@@ -41,6 +41,7 @@ from mediamop.modules.refiner.refiner_rejected_file_cleanup import cleanup_rejec
 from mediamop.modules.refiner.refiner_remux_rules_settings_service import load_refiner_remux_rules_config
 from mediamop.modules.refiner.refiner_requeue_service import record_failure
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
+from mediamop.platform.activity.provenance import job_provenance
 from mediamop.platform.media_managers.completion_callback import report_handoff_completion
 
 logger = logging.getLogger(__name__)
@@ -186,13 +187,16 @@ def _record(session_factory: sessionmaker[Session], *, payload: dict[str, Any], 
 
 
 class RefinerActivityProgressReporter:
-    def __init__(self, session_factory: sessionmaker[Session], *, job_id: int) -> None:
+    def __init__(
+        self, session_factory: sessionmaker[Session], *, job_id: int, extra: dict[str, Any] | None = None
+    ) -> None:
         self._session_factory = session_factory
         self._job_id = job_id
+        self._extra = dict(extra or {})
         self.activity_id: int | None = None
 
     def __call__(self, payload: dict[str, Any]) -> None:
-        body = {"job_id": self._job_id, **payload}
+        body = {"job_id": self._job_id, **self._extra, **payload}
 
         def write() -> None:
             with self._session_factory() as session, session.begin():
@@ -209,8 +213,10 @@ class RefinerActivityProgressReporter:
             logger.warning("Refiner could not save a progress update; continuing the media pass.", exc_info=True)
 
 
-def _make_progress_reporter(session_factory: sessionmaker[Session], *, job_id: int) -> RefinerActivityProgressReporter:
-    return RefinerActivityProgressReporter(session_factory, job_id=job_id)
+def _make_progress_reporter(
+    session_factory: sessionmaker[Session], *, job_id: int, extra: dict[str, Any] | None = None
+) -> RefinerActivityProgressReporter:
+    return RefinerActivityProgressReporter(session_factory, job_id=job_id, extra=extra)
 
 
 def _handoff_origin(data: Any) -> dict[str, Any] | None:
@@ -468,6 +474,7 @@ def make_refiner_file_remux_pass_handler(
             )
             return
 
+        provenance = job_provenance(data)
         rel = data.get("relative_media_path")
         if not isinstance(rel, str) or not rel.strip():
             _record(
@@ -477,6 +484,7 @@ def make_refiner_file_remux_pass_handler(
                     "ok": False,
                     "outcome": REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
                     "reason": "relative_media_path is required",
+                    **provenance,
                 },
             )
             return
@@ -494,6 +502,7 @@ def make_refiner_file_remux_pass_handler(
                         "Re-enqueue without dry_run."
                     ),
                     "relative_media_path": rel.strip(),
+                    **provenance,
                 },
                 library_id=None,
                 media_scope="movie",
@@ -567,7 +576,7 @@ def make_refiner_file_remux_pass_handler(
                     ),
                 )
 
-                progress_reporter = _make_progress_reporter(session_factory, job_id=ctx.id)
+                progress_reporter = _make_progress_reporter(session_factory, job_id=ctx.id, extra=provenance)
                 result = run_refiner_file_remux_pass(
                     settings=settings,
                     path_runtime=path_runtime,
@@ -606,6 +615,7 @@ def make_refiner_file_remux_pass_handler(
                         )
                 _commit_session_with_retry(session, label="finalize Refiner metadata", required=False)
         if failure_payload is not None:
+            failure_payload.update(provenance)
             _record_failed_result(
                 session_factory,
                 payload=failure_payload,
@@ -621,6 +631,7 @@ def make_refiner_file_remux_pass_handler(
             )
             return
         assert result is not None
+        result.update(provenance)
         _apply_file_outcome_state(
             session_factory,
             result=result,

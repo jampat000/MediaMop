@@ -288,14 +288,21 @@ def make_pruner_candidate_removal_apply_handler(
                 counts={"removed": removed, "skipped": skipped, "failed": failed},
                 user_message=(
                     f"Pruner used the saved preview list for {label} and removed {removed} item"
-                    f"{'' if removed == 1 else 's'}."
+                    f"{'' if removed == 1 else 's'}" + (f"; {failed} could not be removed." if failed else ".")
+                ),
+                next_action=(
+                    "Open this entry for the items that could not be removed, check the media server "
+                    "connection, then run the preview again."
+                    if failed
+                    else None
                 ),
             ),
             "phase": "apply",
-            "action": action_label,
+            # The envelope's action ("apply") and provider label stay standard; the wording lives beside them.
+            "action_label": action_label,
             "preview_run_id": preview_run_uuid,
             "server_instance_id": sid,
-            "provider": provider_for_delete,
+            "provider_key": provider_for_delete,
             "media_scope": scope,
             "rule_family_id": rid,
             "removed": removed,

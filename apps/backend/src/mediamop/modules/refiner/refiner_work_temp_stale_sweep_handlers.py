@@ -17,6 +17,7 @@ from mediamop.modules.refiner.refiner_work_temp_stale_sweep_activity import (
     record_refiner_work_temp_stale_sweep_completed,
 )
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
+from mediamop.platform.activity.provenance import job_provenance
 
 
 def _parse_work_temp_stale_sweep_payload(payload_json: str | None) -> str:
@@ -54,6 +55,7 @@ def make_refiner_work_temp_stale_sweep_handler(
             record_refiner_work_temp_stale_sweep_completed(
                 session,
                 media_scope=media_scope,
+                trigger=job_provenance(json.loads(ctx.payload_json or "{}")).get("trigger"),
                 detail=detail,
             )
 

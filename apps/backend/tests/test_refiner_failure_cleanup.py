@@ -445,4 +445,4 @@ def test_failure_cleanup_handler_records_started_and_no_eligible_activity(tmp_pa
     with fac() as db:
         titles = [row.title for row in db.query(ActivityEvent).order_by(ActivityEvent.id.asc()).all()]
     assert "Refiner cleanup started for Movies" in titles
-    assert "Refiner cleanup checked Movies: no eligible files" in titles
+    assert "Refiner cleanup checked Movies: no changes needed" in titles
