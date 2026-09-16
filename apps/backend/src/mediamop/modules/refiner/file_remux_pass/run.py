@@ -48,6 +48,7 @@ from mediamop.modules.refiner.refiner_output_collision import (
 from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
 from mediamop.modules.refiner.refiner_remux_mux import (
     MediaCompletenessError,
+    MediaUnreadableError,
     build_ffmpeg_argv,
     ffprobe_json,
     remux_to_temp_file,
@@ -807,6 +808,14 @@ def _run_refiner_file_remux_pass(
             mediamop_home=settings.mediamop_home,
             probe_size_mb=settings.refiner_probe_size_mb,
             analyze_duration_seconds=settings.refiner_analyze_duration_seconds,
+        )
+    except MediaUnreadableError as exc:
+        return _fail_before(
+            relative_media_path=relative_media_path,
+            reason=f"MediaMop could not read this file's contents, so the file itself looks damaged: {exc}",
+            inspected_source_path=inspected,
+            # Evidence the release is bad, so a library set to reject can act on it (#471).
+            content_unusable=True,
         )
     except Exception as exc:
         return _fail_before(

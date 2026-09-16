@@ -13,8 +13,10 @@ failed deliveries because a module moved.
 from __future__ import annotations
 
 import json
+import re
 import secrets
 import uuid
+from pathlib import Path as FsPath
 from pathlib import PurePath
 from typing import Annotated, Any
 
@@ -28,6 +30,7 @@ from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMU
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
 from mediamop.modules.refiner.refiner_library_service import list_libraries, resolve_library
+from mediamop.modules.refiner.refiner_remux_rules import is_refiner_media_candidate
 from mediamop.platform.activity import constants as activity_constants
 from mediamop.platform.activity import service as activity_service
 from mediamop.platform.media_managers.connection_model import MediaManagerConnectionRow
@@ -116,6 +119,39 @@ def _library_for_handoff(
     return fallback, relative_media_path_for_handoff(watched_folder=watched, file_path=event.file_path)
 
 
+_SAMPLE_PART = re.compile(r"(^|[^a-z0-9])sample([^a-z0-9]|$)", re.IGNORECASE)
+
+
+def _handoff_media_files(library: RefinerLibraryRow | None, relative_path: str) -> list[str]:
+    """The files a hand-off asks MediaMop to process, relative to the watched folder.
+
+    A manager may name a single file or the completed download's *folder*. A folder means the video
+    files inside it, samples left out: a manager importing exactly one video from the processed
+    output would otherwise find a processed sample beside the film and stop to ask a person.
+    """
+
+    if library is None or not relative_path:
+        return [relative_path]
+    folder = FsPath(library.watched_folder or "") / relative_path
+    try:
+        if not folder.is_dir():
+            return [relative_path]
+        videos = sorted(p for p in folder.rglob("*") if p.is_file() and is_refiner_media_candidate(p))
+    except OSError:
+        return [relative_path]
+    main = [p for p in videos if not any(_SAMPLE_PART.search(part) for part in p.relative_to(folder).parts)]
+    chosen = main or videos
+    if not chosen:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"The hand-off names the folder {relative_path!r}, but it holds no video file MediaMop processes. "
+                "Nothing was queued."
+            ),
+        )
+    return [PurePath(relative_path, p.relative_to(folder)).as_posix() for p in chosen]
+
+
 def _enqueue_refine(session: Session, event: MediaManagerImportEvent) -> str:
     library, resolved = _library_for_handoff(session, event)
     if not resolved.ok:
@@ -140,19 +176,26 @@ def _enqueue_refine(session: Session, event: MediaManagerImportEvent) -> str:
             "library_id": event.library_id,
         }
 
+    targets = _handoff_media_files(library, resolved.relative_media_path or "")
+
     # The manager's own idempotency key when it gave us one, so a repeated hand-off
     # after a restart returns the existing job instead of remuxing the file twice.
-    dedupe_key = (
+    base_key = (
         f"{REFINER_FILE_REMUX_PASS_JOB_KIND}:{event.source_key}:handoff:{event.handoff_id}"
         if event.handoff_id
         else f"{REFINER_FILE_REMUX_PASS_JOB_KIND}:{uuid.uuid4().hex}"
     )
-    refiner_enqueue_or_get_job(
-        session,
-        dedupe_key=dedupe_key,
-        job_kind=REFINER_FILE_REMUX_PASS_JOB_KIND,
-        payload_json=_compact_json(payload),
-    )
+    for target in targets:
+        # One file keeps the plain key; a folder's files are keyed apart so each runs once.
+        dedupe_key = (
+            base_key if len(targets) == 1 and target == resolved.relative_media_path else f"{base_key}:{target}"
+        )
+        refiner_enqueue_or_get_job(
+            session,
+            dedupe_key=dedupe_key,
+            job_kind=REFINER_FILE_REMUX_PASS_JOB_KIND,
+            payload_json=_compact_json({**payload, "relative_media_path": target}),
+        )
     if event.handoff_id:
         # So the manager can ask about this hand-off for as long as it cares, not just while
         # the job row exists (#480).

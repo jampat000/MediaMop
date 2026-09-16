@@ -269,7 +269,24 @@ def _assert_fell_back(world: _World, expected: str) -> None:
     assert _events(world, activity_constants.REFINER_FILE_REJECT_FELL_BACK)
 
 
-def test_a_final_failure_under_reject_queues_a_reject_not_a_pass_through(
+def test_a_final_failure_that_says_nothing_about_the_release_is_handed_back_under_reject(
+    factory: sessionmaker[Session], tmp_path: Path
+) -> None:
+    # A crashed ffmpeg, a full disk or a path MediaMop cannot use is not evidence the release is
+    # bad; rejecting would have the manager blocklist a good release.
+    world = _world(factory, tmp_path, kinds=(), relative="Film/film.mkv")
+    with factory() as session:
+        library = seed_refiner_library(session, watched_folder=str(world.watched), failure_policy="reject")
+        assert (
+            apply_failure_policy(session, library=library, relative_path=world.relative, will_retry=False)
+            == "pass_through"
+        )
+        session.commit()
+    assert _jobs(world, REFINER_FILE_REJECT_JOB_KIND) == []
+    assert len(_jobs(world, REFINER_FILE_PASS_THROUGH_JOB_KIND)) == 1
+
+
+def test_a_final_failure_on_unreadable_media_queues_a_reject_not_a_pass_through(
     factory: sessionmaker[Session], tmp_path: Path
 ) -> None:
     world = _world(factory, tmp_path, kinds=(), relative="Film/film.mkv")
@@ -278,7 +295,12 @@ def test_a_final_failure_under_reject_queues_a_reject_not_a_pass_through(
         library = seed_refiner_library(session, watched_folder=str(world.watched), failure_policy="reject")
         assert (
             apply_failure_policy(
-                session, library=library, relative_path=world.relative, will_retry=False, origin=origin
+                session,
+                library=library,
+                relative_path=world.relative,
+                will_retry=False,
+                origin=origin,
+                bad_release=True,
             )
             == "reject"
         )

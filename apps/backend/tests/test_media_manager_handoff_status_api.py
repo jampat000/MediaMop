@@ -296,3 +296,89 @@ def test_only_old_finished_hand_offs_are_pruned(client: TestClient) -> None:
         db.commit()
         remaining = {row.handoff_id for row in db.scalars(select(MediaManagerHandoffRow))}
     assert remaining == {"old-waiting"}
+
+
+# --- folder hand-offs (Deluno names the completed download's folder) ----------------------------
+
+
+def _watch(client: TestClient, folder: Path) -> None:
+    from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
+
+    with _factory(client)() as db:
+        library = db.scalars(select(RefinerLibraryRow).where(RefinerLibraryRow.media_type == "movie")).one()
+        library.watched_folder = str(folder)
+        db.commit()
+
+
+def _hand_off_folder(client: TestClient, watched: Path, name: str) -> int:
+    return client.post(
+        "/api/v1/intake/webhook/deluno",
+        headers=SECRET,
+        json={
+            "eventType": "deluno.processor-handoff",
+            "handoffId": "h1",
+            "libraryId": "lib-1",
+            "mediaType": "movies",
+            "sourcePath": str(watched / name),
+            "callbackPath": "/api/integrations/processors/events",
+        },
+    ).status_code
+
+
+def test_a_folder_hand_off_queues_the_video_inside_it_not_the_folder_or_the_sample(
+    client: TestClient, tmp_path: Path
+) -> None:
+    watched = tmp_path / "watched"
+    (watched / "Blade.Runner.2049" / "Sample").mkdir(parents=True)
+    (watched / "Blade.Runner.2049" / "Blade.Runner.2049.mkv").write_bytes(b"x")
+    (watched / "Blade.Runner.2049" / "Sample" / "sample.mkv").write_bytes(b"x")
+    (watched / "Blade.Runner.2049" / "movie.nfo").write_text("x")
+    _watch(client, watched)
+
+    assert _hand_off_folder(client, watched, "Blade.Runner.2049") == 200
+    with _factory(client)() as db:
+        (job,) = db.scalars(select(RefinerJob)).all()
+    assert '"relative_media_path":"Blade.Runner.2049/Blade.Runner.2049.mkv"' in (job.payload_json or "")
+    # A repeated hand-off returns the same job rather than queueing the file twice.
+    assert _hand_off_folder(client, watched, "Blade.Runner.2049") == 200
+    with _factory(client)() as db:
+        assert len(db.scalars(select(RefinerJob)).all()) == 1
+
+
+def test_a_folder_with_no_video_is_refused_with_a_reason(client: TestClient, tmp_path: Path) -> None:
+    watched = tmp_path / "watched"
+    (watched / "Empty.Release").mkdir(parents=True)
+    (watched / "Empty.Release" / "readme.txt").write_text("x")
+    _watch(client, watched)
+    response = client.post(
+        "/api/v1/intake/webhook/deluno",
+        headers=SECRET,
+        json={
+            "eventType": "deluno.processor-handoff",
+            "handoffId": "h1",
+            "libraryId": "lib-1",
+            "mediaType": "movies",
+            "sourcePath": str(watched / "Empty.Release"),
+            "callbackPath": "/api/integrations/processors/events",
+        },
+    )
+    assert response.status_code == 400
+    assert "no video file" in response.json()["detail"]
+
+
+def test_a_folder_hand_off_answers_for_the_files_inside_it(client: TestClient, tmp_path: Path) -> None:
+    watched = tmp_path / "watched"
+    (watched / "Film").mkdir(parents=True)
+    (watched / "Film" / "film.mkv").write_bytes(b"x")
+    _watch(client, watched)
+    assert _hand_off_folder(client, watched, "Film") == 200
+    _set_job_status(client, RefinerJobStatus.COMPLETED)
+    _file_row(client, RefinerFileStatus.PROCESSED)
+    assert _status(client)["state"] == "completed"
+
+
+def test_a_file_held_after_repeated_failures_is_failed_not_queued(client: TestClient) -> None:
+    _hand_off(client)
+    _set_job_status(client, RefinerJobStatus.COMPLETED)
+    _file_row(client, RefinerFileStatus.ON_HOLD, failure_attempts=3)
+    assert _status(client)["state"] == "failed"

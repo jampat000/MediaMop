@@ -9,7 +9,19 @@ from typing import Literal
 from mediamop.platform.observability.diagnostics import sanitize_diagnostic_value
 from mediamop.platform.observability.operator_messages import provider_label
 
-FailureKind = Literal["auth", "credential", "network", "rate_limit", "validation", "not_found", "internal"]
+FailureKind = Literal[
+    "auth", "credential", "network", "filesystem", "rate_limit", "validation", "not_found", "internal"
+]
+
+# Local file and folder errors. They are OSErrors too, and used to be reported as "could not reach
+# the service over the network", which sent people looking at the wrong thing.
+_FILESYSTEM_ERRORS: tuple[type[BaseException], ...] = (
+    FileNotFoundError,
+    FileExistsError,
+    IsADirectoryError,
+    NotADirectoryError,
+    PermissionError,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +60,8 @@ def classify_exception(exc: BaseException) -> FailureKind:
         return "credential"
     if "unauthorized" in text or "forbidden" in text or "401" in text or "403" in text:
         return "auth"
+    if isinstance(exc, _FILESYSTEM_ERRORS):
+        return "filesystem"
     if "not found" in text or "404" in text:
         return "not_found"
     if isinstance(exc, (ConnectionError, TimeoutError, socket.timeout, OSError)):
@@ -67,6 +81,8 @@ def _why_for_kind(kind: FailureKind, *, provider: str | None) -> str:
         return f"The service{where} rejected the credentials or permission level."
     if kind == "network":
         return f"MediaMop could not reach the service{where} over the network."
+    if kind == "filesystem":
+        return "MediaMop could not use a file or folder it needed."
     if kind == "validation":
         return "The saved settings or job payload did not pass validation."
     if kind == "not_found":
@@ -82,6 +98,8 @@ def _next_action_for_kind(kind: FailureKind, *, provider: str | None, recoverabl
         return f"Check the {provider_s} address, network access, and that the service is running."
     if kind == "rate_limit":
         return "Wait for the provider limit to reset, or reduce how often this workflow runs."
+    if kind == "filesystem":
+        return "Check that the file or folder still exists and that MediaMop can read and write it."
     if kind == "validation":
         return "Review the saved settings for this workflow and save them again."
     if kind == "not_found" and not recoverable:

@@ -35,6 +35,8 @@ from mediamop.modules.refiner.refiner_pass_through import (
     FAILURE_POLICY_PASS_THROUGH,
     FAILURE_POLICY_REJECT,
     apply_failure_policy,
+    normalize_failure_policy,
+    reject_bad_release,
 )
 from mediamop.modules.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
 from mediamop.modules.refiner.refiner_rejected_file_cleanup import cleanup_rejected_file
@@ -252,6 +254,18 @@ def _apply_file_outcome_state(
                 cleanup_detail = str(
                     result.get("rejected_cleanup_detail") or "The saved rejected-file action has not run yet."
                 )
+                if reject_bad_release(
+                    session,
+                    library=library,
+                    relative_path=relative_path.strip(),
+                    reason=rejection_reason,
+                    origin=origin,
+                ):
+                    result["reject_queued"] = True
+                    cleanup_detail = (
+                        "MediaMop is telling your media manager this release is bad so it can find a different one, "
+                        "and removes the download only once the manager accepts."
+                    )
                 row = mark_file_status(
                     session,
                     library_id=library.id,
@@ -319,6 +333,7 @@ def _apply_file_outcome_state(
                     relative_path=relative_path.strip(),
                     will_retry=decision.will_retry,
                     origin=origin,
+                    bad_release=result.get("content_unusable") is True,
                 )
                 result.update(
                     {
@@ -600,6 +615,8 @@ def make_refiner_file_remux_pass_handler(
                     rejected_action = (
                         "delete_file"
                         if (library.rejected_file_action or "").strip().lower() == "delete_file"
+                        # Under reject, the reject job removes the download, and only after the manager accepts.
+                        and normalize_failure_policy(library.failure_policy) != FAILURE_POLICY_REJECT
                         else "leave"
                     )
                     result["rejected_file_action"] = rejected_action

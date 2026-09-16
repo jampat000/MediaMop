@@ -113,6 +113,24 @@ def build_ffprobe_argv(
     ]
 
 
+class MediaUnreadableError(RuntimeError):
+    """ffprobe ran and could not read the file's contents: the file itself is bad.
+
+    Distinct from ffprobe being missing, timing out or being denied access, which say nothing about
+    the release. Only this one is evidence a manager should look for a different release.
+    """
+
+
+# ffprobe's own words for "this is not readable media" (FFmpeg's AVERROR_INVALIDDATA and friends).
+_UNREADABLE_MEDIA_MARKERS = (
+    "invalid data found when processing input",
+    "ebml header parsing failed",
+    "moov atom not found",
+    "could not find codec parameters",
+    "end of file",
+)
+
+
 def ffprobe_json(
     path: Path,
     *,
@@ -190,7 +208,10 @@ def ffprobe_json(
         ),
     )
     if r.returncode != 0:
-        raise RuntimeError((r.stderr or r.stdout or "").strip() or "ffprobe failed")
+        message = (r.stderr or r.stdout or "").strip() or "ffprobe failed"
+        if any(marker in message.lower() for marker in _UNREADABLE_MEDIA_MARKERS):
+            raise MediaUnreadableError(message)
+        raise RuntimeError(message)
     raw = r.stdout
     if not isinstance(raw, str) or not raw.strip():
         raise RuntimeError("ffprobe returned invalid or empty output")
