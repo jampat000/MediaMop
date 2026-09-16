@@ -11,3 +11,7 @@ export type BootstrapStatus = OpenApiSchema<"BootstrapStatusOut">;
 export type ActivityEventItem = OpenApiSchema<"ActivityEventItemOut">;
 export type DashboardStatus = OpenApiSchema<"DashboardStatusOut">;
 export type ActivityRecentResponse = OpenApiSchema<"ActivityRecentOut">;
+export type ActivityFileHistoryPreview =
+  OpenApiSchema<"ActivityFileHistoryCountOut">;
+export type ActivityFileHistoryRemoved =
+  OpenApiSchema<"ActivityFileHistoryRemoveOut">;

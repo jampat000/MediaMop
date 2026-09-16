@@ -176,6 +176,18 @@ export async function postApplyUpdate(): Promise<UpdateStateOut> {
   return readJson<UpdateStateOut>(r);
 }
 
+/** Exactly what clearing history would remove, so the confirmation can say so. Removes nothing. */
+export async function fetchSuiteOperationalHistoryPreview(): Promise<SuiteOperationalHistoryResetOut> {
+  const path = "/api/v1/suite/operational-history/preview";
+  const r = await apiFetch(path);
+  await requireOk(
+    path,
+    r,
+    "Could not check what clearing history would remove",
+  );
+  return readJson<SuiteOperationalHistoryResetOut>(r);
+}
+
 export async function resetSuiteOperationalHistory(
   confirm: string,
 ): Promise<SuiteOperationalHistoryResetOut> {

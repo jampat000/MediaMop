@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { FileStoryPanel } from "../../components/refiner/file-story-panel";
 import { PageLoading } from "../../components/shared/page-loading";
 import {
   REFINER_FILE_PROCESSING_PROGRESS_EVENT,
@@ -11,14 +13,40 @@ import {
   useActivityRecentQuery,
 } from "../../lib/activity/queries";
 import { useActivityStreamInvalidation } from "../../lib/activity/use-activity-stream-invalidation";
-import type { ActivityEventItem } from "../../lib/api/types";
-import { fetchActivityRecent } from "../../lib/api/activity-api";
+import {
+  ACTIVITY_RESULT_LABELS,
+  ACTIVITY_TRIGGER_LABELS,
+  activityTriggerLabel,
+  summarizeRun,
+} from "../../lib/activity/activity-runs";
+import type {
+  ActivityEventItem,
+  ActivityFileHistoryPreview,
+  ActivityRecentResponse,
+} from "../../lib/api/types";
+import {
+  fetchActivityExport,
+  fetchActivityFileHistoryPreview,
+  fetchActivityRecent,
+  removeActivityFileHistory,
+} from "../../lib/api/activity-api";
+import { useMeQuery } from "../../lib/auth/queries";
+import { fetchRefinerFiles } from "../../lib/refiner/files-api";
+import { useRefinerFileLog } from "../../lib/refiner/files-queries";
+import { useRefinerLibrariesQuery } from "../../lib/refiner/libraries-queries";
+import { useSuiteOperationalHistoryResetMutation } from "../../lib/suite/queries";
+import { fetchSuiteOperationalHistoryPreview } from "../../lib/suite/suite-settings-api";
+import type { SuiteOperationalHistoryResetOut } from "../../lib/suite/types";
 import {
   isHttpErrorFromApi,
   isLikelyNetworkFailure,
 } from "../../lib/api/error-guards";
 import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
+import {
+  ClearAllHistoryDialog,
+  RemoveFileHistoryDialog,
+} from "./activity-history-dialogs";
 
 type ActivityModuleFilter = "all" | "refiner" | "pruner" | "system";
 type ActivityTone = "info" | "success" | "warning" | "error";
@@ -38,6 +66,22 @@ type ActivityFiltersState = {
   search: string;
   from: string;
   to: string;
+  trigger: string;
+  result: string;
+  libraryId: string;
+  file: string;
+};
+
+const EMPTY_FILTERS: ActivityFiltersState = {
+  module: "all",
+  eventType: "",
+  search: "",
+  from: "",
+  to: "",
+  trigger: "",
+  result: "",
+  libraryId: "",
+  file: "",
 };
 
 type ActivityEventOption = {
@@ -61,6 +105,7 @@ const EVENT_LABELS: Record<string, string> = {
   "auth.bootstrap_succeeded": "First admin created",
   "auth.bootstrap_denied": "First-time setup blocked",
   "auth.password_changed": "Password changed",
+  "auth.username_changed": "Username changed",
   "system.reconciliation.repair": "System repair finished",
   "arr_library.connection_test_succeeded": "Connection check finished",
   "arr_library.connection_test_failed": "Connection check failed",
@@ -99,6 +144,37 @@ function eventOptionLabel(eventType: string): string {
 
 function titleCase(value: string): string {
   return value ? value[0].toUpperCase() + value.slice(1) : value;
+}
+
+/** A local date and time in the shape a datetime-local input holds. */
+function toLocalInput(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** Yesterday 18:00 to today 08:00, local time: when overnight scheduled work runs. */
+function lastNightRange(now: Date): { from: string; to: string } {
+  const from = new Date(now);
+  from.setDate(from.getDate() - 1);
+  from.setHours(18, 0, 0, 0);
+  const to = new Date(now);
+  to.setHours(8, 0, 0, 0);
+  return { from: toLocalInput(from), to: toLocalInput(to) };
+}
+
+function last24HoursRange(now: Date): { from: string; to: string } {
+  return {
+    from: toLocalInput(new Date(now.getTime() - 24 * 60 * 60 * 1000)),
+    to: "",
+  };
+}
+
+function plural(count: number, one: string, many: string): string {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
+function fileNameOf(path: string): string {
+  return path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
 }
 
 function localInputToIso(value: string): string | undefined {
@@ -568,7 +644,11 @@ function StructuredActivityDetails({ ev }: { ev: ActivityEventItem }) {
           />
           <StructuredMetric
             label="Action"
-            value={asString(parsed.action) ?? "Delete"}
+            value={
+              asString(parsed.action_label) ??
+              asString(parsed.action) ??
+              "Delete"
+            }
           />
         </div>
         {asString(parsed.note) ? (
@@ -643,6 +723,7 @@ function collectEventOptions(
 }
 
 type ActivityGroup = {
+  kind: "failures" | "run";
   key: string;
   events: ActivityEventItem[];
 };
@@ -658,23 +739,68 @@ function groupRepeatedFailures(items: ActivityEventItem[]): ActivityGroup[] {
     if (isFailure && previous?.key === key) {
       previous.events.push(event);
     } else {
-      groups.push({ key, events: [event] });
+      groups.push({ kind: "failures", key, events: [event] });
     }
   }
   return groups;
 }
 
+/**
+ * Consecutive entries that share a run collapse under one summary row; everything else keeps
+ * the repeated-failure clustering. A run of one entry is shown as that entry.
+ */
+function groupActivityFeed(items: ActivityEventItem[]): ActivityGroup[] {
+  const groups: ActivityGroup[] = [];
+  let loose: ActivityEventItem[] = [];
+  const flushLoose = () => {
+    groups.push(...groupRepeatedFailures(loose));
+    loose = [];
+  };
+  let index = 0;
+  while (index < items.length) {
+    const runKey = items[index].run_key;
+    let end = index + 1;
+    if (runKey) {
+      while (end < items.length && items[end].run_key === runKey) end += 1;
+    }
+    if (runKey && end - index > 1) {
+      flushLoose();
+      groups.push({
+        kind: "run",
+        key: `run|${runKey}|${items[index].id}`,
+        events: items.slice(index, end),
+      });
+      index = end;
+    } else {
+      loose.push(items[index]);
+      index += 1;
+    }
+  }
+  flushLoose();
+  return groups;
+}
+
+type FileTarget = { relative_path: string; library_id: number | null };
+
 function ActivityEventRow({
   ev,
   fmt,
   compact = false,
+  libraryName,
+  onOpenStory,
+  onRemoveHistory,
 }: {
   ev: ActivityEventItem;
   fmt: (iso: string) => string;
   compact?: boolean;
+  libraryName?: string;
+  onOpenStory: (ev: ActivityEventItem) => void;
+  onRemoveHistory?: (target: FileTarget) => void;
 }) {
   const display = eventDisplay(ev);
   const renderedTitle = compactActivityTitle(display.title);
+  const triggerLabel = activityTriggerLabel(ev.trigger);
+  const path = ev.relative_path;
   return (
     <article
       className={`rounded-xl border px-4 ${compact ? "mm-activity-row--compact py-2.5" : "py-4"} ${toneClasses(display.tone)}`}
@@ -704,6 +830,15 @@ function ActivityEventRow({
             >
               {display.chip}
             </span>
+            {triggerLabel ? (
+              <span
+                className="rounded-full border border-[var(--mm-border)] bg-black/10 px-2.5 py-1 text-xs text-[var(--mm-text2)]"
+                data-testid="activity-trigger-chip"
+                title="Why this happened"
+              >
+                {triggerLabel}
+              </span>
+            ) : null}
           </div>
           <h2
             className="min-w-0 break-words text-lg font-semibold text-[var(--mm-text1)] [overflow-wrap:anywhere]"
@@ -715,6 +850,43 @@ function ActivityEventRow({
             <p className="break-words text-sm text-[var(--mm-text3)]">
               {display.summary}
             </p>
+          ) : null}
+          {path ? (
+            <div
+              className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm"
+              data-testid="activity-row-file"
+            >
+              <span
+                className="min-w-0 break-words font-mono text-xs text-[var(--mm-text2)] [overflow-wrap:anywhere]"
+                title={path}
+              >
+                {libraryName ? `${libraryName} · ` : ""}
+                {path}
+              </span>
+              {ev.module === "refiner" ? (
+                <button
+                  type="button"
+                  className="text-xs font-medium text-[var(--mm-gold)] underline-offset-2 hover:underline"
+                  onClick={() => onOpenStory(ev)}
+                >
+                  File story
+                </button>
+              ) : null}
+              {onRemoveHistory ? (
+                <button
+                  type="button"
+                  className="text-xs font-medium text-[var(--mm-text3)] underline-offset-2 hover:text-[var(--mm-text1)] hover:underline"
+                  onClick={() =>
+                    onRemoveHistory({
+                      relative_path: path,
+                      library_id: ev.library_id ?? null,
+                    })
+                  }
+                >
+                  Remove this file&apos;s history
+                </button>
+              ) : null}
+            </div>
           ) : null}
         </div>
         <time className="text-sm text-[var(--mm-text3)]">
@@ -730,40 +902,98 @@ function ActivityEventRow({
   );
 }
 
+const FIELD_LABEL_CLASS =
+  "flex min-w-0 flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]";
+
+type ExportFormat = "csv" | "json";
+
 export function ActivityPage() {
-  const [filters, setFilters] = useState<ActivityFiltersState>({
-    module: "all",
-    eventType: "",
-    search: "",
-    from: "",
-    to: "",
-  });
-  const [applied, setApplied] = useState<ActivityFiltersState>({
-    module: "all",
-    eventType: "",
-    search: "",
-    from: "",
-    to: "",
-  });
+  const [filters, setFilters] = useState<ActivityFiltersState>(EMPTY_FILTERS);
+  const [applied, setApplied] = useState<ActivityFiltersState>(EMPTY_FILTERS);
   const [olderItems, setOlderItems] = useState<ActivityEventItem[]>([]);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [olderError, setOlderError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<ExportFormat | null>(null);
+  const [removal, setRemoval] = useState<{
+    target: FileTarget;
+    preview: ActivityFileHistoryPreview;
+  } | null>(null);
+  const [removalBusy, setRemovalBusy] = useState(false);
+  const [removalError, setRemovalError] = useState<string | null>(null);
+  const [clearPreview, setClearPreview] =
+    useState<SuiteOperationalHistoryResetOut | null>(null);
+  const [clearError, setClearError] = useState<string | null>(null);
+  const [storyName, setStoryName] = useState<string | null>(null);
+  const [storyLookupError, setStoryLookupError] = useState<string | null>(null);
 
-  const queryFilters = useMemo(
-    () => ({
+  const navigate = useNavigate();
+  const me = useMeQuery();
+  const canRemove = me.data?.role === "operator" || me.data?.role === "admin";
+  const libraries = useRefinerLibrariesQuery();
+  const fileLog = useRefinerFileLog();
+  const resetHistory = useSuiteOperationalHistoryResetMutation();
+
+  const queryFilters = useMemo(() => {
+    const libraryId = Number(applied.libraryId);
+    return {
       limit: 100,
       module: applied.module === "all" ? undefined : applied.module,
       event_type: applied.eventType || undefined,
       search: applied.search.trim() || undefined,
       date_from: localInputToIso(applied.from),
       date_to: localInputToIso(applied.to),
-    }),
-    [applied],
-  );
+      trigger: applied.trigger || undefined,
+      result: applied.result || undefined,
+      library_id:
+        applied.libraryId && Number.isFinite(libraryId) ? libraryId : undefined,
+      file: applied.file.trim() || undefined,
+    };
+  }, [applied]);
+  const dataKey = JSON.stringify(queryFilters);
 
   useActivityStreamInvalidation(activityRecentKey);
   const recent = useActivityRecentQuery(queryFilters);
   const fmt = useAppDateFormatter();
+
+  // Live, but calm: fresh entries only land in the list while the reader is at the top with
+  // nothing opened and no older pages loaded. Otherwise the list they are reading stays put and a
+  // "new entries" button offers them.
+  const live = recent.data;
+  const [snapshot, setSnapshot] = useState<{
+    key: string;
+    data: ActivityRecentResponse;
+  } | null>(null);
+  const [calm, setCalm] = useState(true);
+  const feedRef = useRef<HTMLElement | null>(null);
+  const olderLoaded = olderItems.length > 0;
+  const hasData = Boolean(live);
+
+  useEffect(() => {
+    const evaluate = () => {
+      const feed = feedRef.current;
+      const atTop = !feed || feed.getBoundingClientRect().top >= 0;
+      const expanded = Boolean(feed?.querySelector("details[open]"));
+      setCalm(atTop && !expanded && !olderLoaded);
+    };
+    evaluate();
+    window.addEventListener("scroll", evaluate, true);
+    document.addEventListener("toggle", evaluate, true);
+    return () => {
+      window.removeEventListener("scroll", evaluate, true);
+      document.removeEventListener("toggle", evaluate, true);
+    };
+  }, [olderLoaded, hasData]);
+
+  useEffect(() => {
+    if (!live) return;
+    setSnapshot((prev) =>
+      prev && prev.key === dataKey && (prev.data === live || !calm)
+        ? prev
+        : { key: dataKey, data: live },
+    );
+  }, [live, dataKey, calm]);
 
   if (recent.isPending) {
     return <PageLoading label="Loading activity" />;
@@ -793,23 +1023,71 @@ export function ActivityPage() {
     );
   }
 
-  const latestItems = recent.data.items ?? [];
+  const liveData = recent.data;
+  const shown = snapshot && snapshot.key === dataKey ? snapshot.data : liveData;
+  const latestItems = shown.items ?? [];
   const itemById = new Map<number, ActivityEventItem>();
   for (const event of [...latestItems, ...olderItems])
     itemById.set(event.id, event);
   const items = Array.from(itemById.values()).sort((a, b) => b.id - a.id);
-  const matchingTotal = Math.max(Number(recent.data.total) || 0, items.length);
+  const matchingTotal = Math.max(Number(shown.total) || 0, items.length);
   const visibleItems = items.slice(0, matchingTotal || items.length);
+  const shownMaxId = visibleItems.reduce((max, ev) => Math.max(max, ev.id), 0);
+  const pendingCount =
+    shown === liveData
+      ? 0
+      : (liveData.items ?? []).filter((ev) => ev.id > shownMaxId).length;
   const eventOptions = collectEventOptions(visibleItems);
+  const libraryNameById = new Map(
+    (libraries.data ?? []).map((library) => [library.id, library.name]),
+  );
   const filtersActive = Boolean(
     applied.eventType ||
     applied.search.trim() ||
     applied.from ||
     applied.to ||
+    applied.trigger ||
+    applied.result ||
+    applied.libraryId ||
+    applied.file.trim() ||
     applied.module !== "all",
   );
   const hasMore =
-    Boolean(recent.data.has_more) || visibleItems.length < matchingTotal;
+    Boolean(shown.has_more) || visibleItems.length < matchingTotal;
+  const retentionDays = shown.retention_days;
+  const filePaths = Array.from(
+    new Set(
+      visibleItems
+        .map((ev) => ev.relative_path)
+        .filter((path): path is string => Boolean(path)),
+    ),
+  );
+  const singleFileTarget: FileTarget | null =
+    applied.file.trim() && filePaths.length === 1
+      ? {
+          relative_path: filePaths[0],
+          library_id:
+            visibleItems.find((ev) => ev.relative_path === filePaths[0])
+              ?.library_id ?? null,
+        }
+      : null;
+
+  function applyFilters(next: ActivityFiltersState) {
+    setFilters(next);
+    setApplied(next);
+    setOlderItems([]);
+    setOlderError(null);
+  }
+
+  function showNewEntries() {
+    setSnapshot({ key: dataKey, data: liveData });
+  }
+
+  async function refreshAfterRemoval() {
+    setOlderItems([]);
+    const refreshed = await recent.refetch();
+    if (refreshed.data) setSnapshot({ key: dataKey, data: refreshed.data });
+  }
 
   async function loadOlderActivity() {
     const oldest = visibleItems.at(-1);
@@ -833,6 +1111,140 @@ export function ActivityPage() {
     }
   }
 
+  async function exportHistory(format: ExportFormat) {
+    setExporting(format);
+    setActionError(null);
+    try {
+      const { limit: _limit, ...exportFilters } = queryFilters;
+      void _limit;
+      const { blob, filename } = await fetchActivityExport(
+        format,
+        exportFilters,
+      );
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setActionError(
+        e instanceof Error ? e.message : "Could not export activity.",
+      );
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  async function openFileStory(ev: ActivityEventItem) {
+    const path = ev.relative_path;
+    if (!path) return;
+    const normalize = (value: string) => value.replaceAll("\\", "/");
+    fileLog.reset();
+    setStoryLookupError(null);
+    try {
+      const page = await fetchRefinerFiles({
+        library_id: ev.library_id ?? undefined,
+        path_contains: path,
+        limit: 50,
+      });
+      const match = page.files.find(
+        (file) =>
+          normalize(file.relative_path) === normalize(path) &&
+          (ev.library_id == null || file.library_id === ev.library_id),
+      );
+      if (!match) {
+        // No tracked file to tell the story of: show the Files screen for that path instead.
+        void navigate(`/refiner?tab=files&path=${encodeURIComponent(path)}`);
+        return;
+      }
+      setStoryName(fileNameOf(path));
+      fileLog.mutate(match.id);
+    } catch (e) {
+      setStoryName(fileNameOf(path));
+      setStoryLookupError(
+        e instanceof Error ? e.message : "Could not find this file.",
+      );
+    }
+  }
+
+  async function startRemoval(target: FileTarget) {
+    setActionError(null);
+    setRemovalError(null);
+    setNotice(null);
+    try {
+      const preview = await fetchActivityFileHistoryPreview(target);
+      setRemoval({ target, preview });
+    } catch (e) {
+      setActionError(
+        e instanceof Error ? e.message : "Could not check this file's history.",
+      );
+    }
+  }
+
+  async function confirmRemoval() {
+    if (!removal) return;
+    setRemovalBusy(true);
+    setRemovalError(null);
+    try {
+      const out = await removeActivityFileHistory(removal.target);
+      setRemoval(null);
+      setNotice(
+        `Removed ${plural(out.activity_events_deleted, "Activity event", "Activity events")} and ${plural(out.processing_records_deleted, "processing record", "processing records")} about ${out.relative_path}. No media file was touched.`,
+      );
+      await refreshAfterRemoval();
+    } catch (e) {
+      setRemovalError(
+        e instanceof Error
+          ? e.message
+          : "Could not remove this file's history.",
+      );
+    } finally {
+      setRemovalBusy(false);
+    }
+  }
+
+  async function startClearAll() {
+    setActionError(null);
+    setClearError(null);
+    setNotice(null);
+    try {
+      setClearPreview(await fetchSuiteOperationalHistoryPreview());
+    } catch (e) {
+      setActionError(
+        e instanceof Error
+          ? e.message
+          : "Could not check what clearing history would remove.",
+      );
+    }
+  }
+
+  async function confirmClearAll(confirm: string) {
+    setClearError(null);
+    try {
+      const out = await resetHistory.mutateAsync(confirm);
+      setClearPreview(null);
+      setNotice(
+        `History cleared. Removed ${plural(out.activity_events_deleted, "Activity event", "Activity events")}, ${plural(out.refiner_jobs_deleted, "finished Refiner job", "finished Refiner jobs")} and ${plural(out.pruner_jobs_deleted, "finished Pruner job", "finished Pruner jobs")}. No media file was touched.`,
+      );
+      await refreshAfterRemoval();
+    } catch (e) {
+      setClearError(
+        e instanceof Error ? e.message : "Could not clear history.",
+      );
+    }
+  }
+
+  const rowProps = {
+    fmt,
+    onOpenStory: (ev: ActivityEventItem) => void openFileStory(ev),
+    onRemoveHistory: canRemove
+      ? (target: FileTarget) => void startRemoval(target)
+      : undefined,
+  };
+  const libraryNameFor = (ev: ActivityEventItem) =>
+    ev.library_id != null ? libraryNameById.get(ev.library_id) : undefined;
+
   return (
     <div className="mm-page">
       <header className="mm-page__intro">
@@ -846,6 +1258,22 @@ export function ActivityPage() {
           and the platform. It updates live and keeps the language focused on
           what the action means.
         </p>
+        {typeof retentionDays === "number" ? (
+          <p
+            className="mt-2 text-sm text-[var(--mm-text2)]"
+            data-testid="activity-retention"
+          >
+            {retentionDays > 0
+              ? `History goes back ${retentionDays} ${retentionDays === 1 ? "day" : "days"}${shown.oldest_event_at ? ` (oldest entry ${fmt(shown.oldest_event_at)})` : ""}.`
+              : "History is kept until you clear it."}{" "}
+            <Link
+              to="/settings#activity-retention"
+              className="text-[var(--mm-gold)] underline-offset-2 hover:underline"
+            >
+              Change how long history is kept
+            </Link>
+          </p>
+        ) : null}
       </header>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -859,14 +1287,14 @@ export function ActivityPage() {
         />
         <ActivitySummaryCard
           label="System events"
-          value={String(recent.data.system_events ?? 0)}
+          value={String(shown.system_events ?? 0)}
         />
         <ActivitySummaryCard label="Refresh" value="Live" />
       </section>
 
       <section className="mm-activity-filters mt-4 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-4">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-[minmax(160px,0.9fr)_minmax(160px,0.9fr)_minmax(180px,1.2fr)_minmax(190px,1fr)_minmax(190px,1fr)_auto]">
-          <label className="flex min-w-0 flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <label className={FIELD_LABEL_CLASS}>
             Module
             <select
               className="mm-input"
@@ -885,7 +1313,7 @@ export function ActivityPage() {
               ))}
             </select>
           </label>
-          <label className="flex min-w-0 flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+          <label className={FIELD_LABEL_CLASS}>
             Event
             <select
               className="mm-input"
@@ -902,7 +1330,69 @@ export function ActivityPage() {
               ))}
             </select>
           </label>
-          <label className="flex min-w-0 flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+          <label className={FIELD_LABEL_CLASS}>
+            Why it happened
+            <select
+              className="mm-input"
+              value={filters.trigger}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, trigger: e.target.value }))
+              }
+            >
+              <option value="">Any reason</option>
+              {Object.entries(ACTIVITY_TRIGGER_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={FIELD_LABEL_CLASS}>
+            Result
+            <select
+              className="mm-input"
+              value={filters.result}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, result: e.target.value }))
+              }
+            >
+              <option value="">Any result</option>
+              {Object.entries(ACTIVITY_RESULT_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={FIELD_LABEL_CLASS}>
+            Refiner library
+            <select
+              className="mm-input"
+              value={filters.libraryId}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, libraryId: e.target.value }))
+              }
+            >
+              <option value="">All Refiner libraries</option>
+              {(libraries.data ?? []).map((library) => (
+                <option key={library.id} value={String(library.id)}>
+                  {library.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={FIELD_LABEL_CLASS}>
+            File
+            <input
+              className="mm-input"
+              value={filters.file}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, file: e.target.value }))
+              }
+              placeholder="Part of a file path"
+            />
+          </label>
+          <label className={FIELD_LABEL_CLASS}>
             Search
             <input
               className="mm-input"
@@ -913,7 +1403,7 @@ export function ActivityPage() {
               placeholder="Search titles and details"
             />
           </label>
-          <label className="flex min-w-0 flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+          <label className={FIELD_LABEL_CLASS}>
             From
             <input
               type="datetime-local"
@@ -924,7 +1414,7 @@ export function ActivityPage() {
               }
             />
           </label>
-          <label className="flex min-w-0 flex-col gap-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+          <label className={FIELD_LABEL_CLASS}>
             To
             <input
               type="datetime-local"
@@ -935,42 +1425,48 @@ export function ActivityPage() {
               }
             />
           </label>
-          <div className="flex items-end gap-2">
-            <button
-              type="button"
-              className={mmActionButtonClass({ variant: "primary" })}
-              onClick={() => {
-                setApplied(filters);
-                setOlderItems([]);
-                setOlderError(null);
-              }}
-            >
-              Apply filters
-            </button>
-            <button
-              type="button"
-              className={mmActionButtonClass({
-                variant: "tertiary",
-                disabled: !filtersActive,
-              })}
-              disabled={!filtersActive}
-              onClick={() => {
-                const reset = {
-                  module: "all",
-                  eventType: "",
-                  search: "",
-                  from: "",
-                  to: "",
-                } as ActivityFiltersState;
-                setFilters(reset);
-                setApplied(reset);
-                setOlderItems([]);
-                setOlderError(null);
-              }}
-            >
-              Clear
-            </button>
-          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className={mmActionButtonClass({ variant: "primary" })}
+            onClick={() => applyFilters(filters)}
+          >
+            Apply filters
+          </button>
+          <button
+            type="button"
+            className={mmActionButtonClass({
+              variant: "tertiary",
+              disabled: !filtersActive,
+            })}
+            disabled={!filtersActive}
+            onClick={() => applyFilters(EMPTY_FILTERS)}
+          >
+            Clear
+          </button>
+          <span className="mx-1 text-xs uppercase tracking-[0.12em] text-[var(--mm-text3)]">
+            Quick
+          </span>
+          <button
+            type="button"
+            className={mmActionButtonClass({ variant: "secondary" })}
+            title="Yesterday 18:00 to today 08:00"
+            onClick={() =>
+              applyFilters({ ...filters, ...lastNightRange(new Date()) })
+            }
+          >
+            Last night
+          </button>
+          <button
+            type="button"
+            className={mmActionButtonClass({ variant: "secondary" })}
+            onClick={() =>
+              applyFilters({ ...filters, ...last24HoursRange(new Date()) })
+            }
+          >
+            Last 24 hours
+          </button>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[var(--mm-text2)]">
           <span>
@@ -1000,17 +1496,146 @@ export function ActivityPage() {
               {olderError}
             </span>
           ) : null}
+          <span className="ml-auto flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className={mmActionButtonClass({
+                variant: "secondary",
+                disabled: exporting !== null,
+              })}
+              disabled={exporting !== null}
+              onClick={() => void exportHistory("csv")}
+            >
+              {exporting === "csv" ? "Exporting…" : "Export CSV"}
+            </button>
+            <button
+              type="button"
+              className={mmActionButtonClass({
+                variant: "secondary",
+                disabled: exporting !== null,
+              })}
+              disabled={exporting !== null}
+              onClick={() => void exportHistory("json")}
+            >
+              {exporting === "json" ? "Exporting…" : "Export JSON"}
+            </button>
+            {canRemove ? (
+              <button
+                type="button"
+                className={mmActionButtonClass({ variant: "tertiary" })}
+                onClick={() => void startClearAll()}
+              >
+                Clear all history
+              </button>
+            ) : null}
+          </span>
         </div>
+        {actionError ? (
+          <p
+            className="mt-3 text-sm text-[var(--mm-status-failed-text)]"
+            role="alert"
+          >
+            {actionError}
+          </p>
+        ) : null}
+        {notice ? (
+          <p
+            className="mt-3 rounded-md border border-[var(--mm-border)] bg-black/10 px-3 py-2 text-sm text-[var(--mm-text1)]"
+            role="status"
+          >
+            {notice}
+          </p>
+        ) : null}
       </section>
 
-      <section className="mt-4 space-y-3" data-testid="activity-feed">
+      {applied.file.trim() ? (
+        <section
+          className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3 text-sm text-[var(--mm-text2)]"
+          data-testid="activity-file-view"
+        >
+          <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">
+            {singleFileTarget
+              ? `Everything MediaMop recorded about ${singleFileTarget.relative_path}, newest first.`
+              : `Everything MediaMop recorded about files matching “${applied.file.trim()}”, newest first.`}
+          </span>
+          {singleFileTarget && canRemove ? (
+            <button
+              type="button"
+              className={mmActionButtonClass({ variant: "tertiary" })}
+              onClick={() => void startRemoval(singleFileTarget)}
+            >
+              Remove this file&apos;s history
+            </button>
+          ) : null}
+        </section>
+      ) : null}
+
+      <section
+        ref={feedRef}
+        className="mt-4 space-y-3"
+        data-testid="activity-feed"
+      >
+        {pendingCount > 0 ? (
+          <div className="sticky top-2 z-10 flex justify-center">
+            <button
+              type="button"
+              className={mmActionButtonClass({ variant: "primary" })}
+              onClick={showNewEntries}
+            >
+              {`${pendingCount} new ${pendingCount === 1 ? "entry" : "entries"} — show`}
+            </button>
+          </div>
+        ) : null}
         {visibleItems.length === 0 ? (
           <div className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-4 text-sm text-[var(--mm-text2)]">
             No activity matched the current filters.
           </div>
         ) : (
-          groupRepeatedFailures(visibleItems).map((group) =>
-            group.events.length > 1 ? (
+          groupActivityFeed(visibleItems).map((group) => {
+            if (group.kind === "run") {
+              const summary = summarizeRun(group.events);
+              return (
+                <details
+                  key={group.key}
+                  className="mm-activity-cluster"
+                  data-testid="activity-run"
+                >
+                  <summary className="mm-activity-cluster__summary">
+                    <span
+                      className={`mm-activity-event-icon${summary.failed > 0 ? " mm-activity-event-icon--error" : ""}`}
+                      aria-hidden="true"
+                    >
+                      {summary.failed > 0 ? "!" : "✓"}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <strong>{summary.headline}</strong>
+                      <small>
+                        {plural(group.events.length, "entry", "entries")} ·
+                        first {fmt(group.events.at(-1)?.created_at ?? "")} ·
+                        latest {fmt(group.events[0].created_at)}
+                      </small>
+                    </span>
+                    {summary.failed > 0 ? (
+                      <span className="mm-status-badge mm-status-badge--failed">
+                        {summary.failed} failed
+                      </span>
+                    ) : null}
+                  </summary>
+                  <div className="mm-activity-cluster__events">
+                    {group.events.map((ev) => (
+                      <ActivityEventRow
+                        key={ev.id}
+                        ev={ev}
+                        compact
+                        libraryName={libraryNameFor(ev)}
+                        {...rowProps}
+                      />
+                    ))}
+                  </div>
+                </details>
+              );
+            }
+            return group.events.length > 1 ? (
               <details
                 key={group.key}
                 className="mm-activity-cluster"
@@ -1039,7 +1664,13 @@ export function ActivityPage() {
                 </summary>
                 <div className="mm-activity-cluster__events">
                   {group.events.map((ev) => (
-                    <ActivityEventRow key={ev.id} ev={ev} fmt={fmt} compact />
+                    <ActivityEventRow
+                      key={ev.id}
+                      ev={ev}
+                      compact
+                      libraryName={libraryNameFor(ev)}
+                      {...rowProps}
+                    />
                   ))}
                 </div>
               </details>
@@ -1047,12 +1678,42 @@ export function ActivityPage() {
               <ActivityEventRow
                 key={group.events[0].id}
                 ev={group.events[0]}
-                fmt={fmt}
+                libraryName={libraryNameFor(group.events[0])}
+                {...rowProps}
               />
-            ),
-          )
+            );
+          })
         )}
       </section>
+
+      {removal ? (
+        <RemoveFileHistoryDialog
+          preview={removal.preview}
+          busy={removalBusy}
+          error={removalError}
+          onCancel={() => setRemoval(null)}
+          onConfirm={() => void confirmRemoval()}
+        />
+      ) : null}
+      {clearPreview ? (
+        <ClearAllHistoryDialog
+          preview={clearPreview}
+          busy={resetHistory.isPending}
+          error={clearError}
+          onCancel={() => setClearPreview(null)}
+          onConfirm={(confirm) => void confirmClearAll(confirm)}
+        />
+      ) : null}
+      <FileStoryPanel
+        open={storyName !== null}
+        fileName={storyName ?? ""}
+        log={fileLog.data}
+        loading={fileLog.isPending}
+        error={
+          storyLookupError ?? (fileLog.isError ? fileLog.error.message : null)
+        }
+        onClose={() => setStoryName(null)}
+      />
     </div>
   );
 }

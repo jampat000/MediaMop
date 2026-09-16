@@ -39,6 +39,7 @@ const minimalSuiteSettings: SuiteSettingsOut = {
   setup_wizard_state: "pending",
   app_timezone: "UTC",
   log_retention_days: 30,
+  activity_retention_days: 90,
   configuration_backup_enabled: false,
   configuration_backup_interval_hours: 24,
   configuration_backup_preferred_time: "02:00",
@@ -350,6 +351,34 @@ describe("SettingsPage (suite settings)", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("saves how long Activity history is kept, including 0 for until cleared", async () => {
+    vi.spyOn(suiteSettingsApi, "fetchSuiteSettings").mockResolvedValue(
+      minimalSuiteSettings,
+    );
+    const putSuiteSettingsSpy = vi
+      .spyOn(suiteSettingsApi, "putSuiteSettings")
+      .mockImplementation(async (body) => ({
+        ...minimalSuiteSettings,
+        activity_retention_days: body.activity_retention_days,
+      }));
+
+    renderSettings(operatorMe);
+    const input = await screen.findByTestId(
+      "suite-settings-activity-retention",
+    );
+    expect(input).toHaveValue(90);
+    fireEvent.change(input, { target: { value: "0" } });
+    fireEvent.click(screen.getByTestId("suite-settings-save-logs"));
+
+    await waitFor(() => {
+      expect(putSuiteSettingsSpy).toHaveBeenCalledTimes(1);
+    });
+    expect(putSuiteSettingsSpy.mock.calls[0]?.[0]).toMatchObject({
+      activity_retention_days: 0,
+      log_retention_days: 30,
+    });
+  });
+
   it("allows changing and saving backup schedule more than once", async () => {
     let currentSavedSettings: SuiteSettingsOut = {
       ...minimalSuiteSettings,
@@ -443,7 +472,10 @@ describe("SettingsPage (suite settings)", () => {
     );
     expect(screen.getByText("System log retention (days)")).toBeInTheDocument();
     expect(
-      screen.getByText(/activity history is kept until you reset it/i),
+      screen.getByText("Keep Activity history for (days)"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/0 keeps it until you clear it/i),
     ).toBeInTheDocument();
     expect(
       screen.getByTestId("suite-settings-history-reset"),

@@ -125,6 +125,9 @@ export function SettingsPage() {
   const [logRetentionDaysDraft, setLogRetentionDaysDraft] = useState<
     string | null
   >(null);
+  const [activityRetentionDaysDraft, setActivityRetentionDaysDraft] = useState<
+    string | null
+  >(null);
   const [displayDensity, setDisplayDensity] = useState<DisplayDensity>(() =>
     readStoredDisplayDensity(),
   );
@@ -154,6 +157,7 @@ export function SettingsPage() {
     const fromServer = settingsQ.data.app_timezone || "";
     setAppTimezone(CURATED_TIMEZONE_ID_SET.has(fromServer) ? fromServer : null);
     setLogRetentionDaysDraft(null);
+    setActivityRetentionDaysDraft(null);
     setConfigurationBackupEnabled(
       Boolean(settingsQ.data.configuration_backup_enabled),
     );
@@ -191,6 +195,11 @@ export function SettingsPage() {
     settingsQ.data !== undefined &&
     logRetentionDaysDraft !== null &&
     logRetentionDaysDraft !== String(settingsQ.data.log_retention_days);
+  const activityRetentionDirty =
+    settingsQ.data !== undefined &&
+    activityRetentionDaysDraft !== null &&
+    activityRetentionDaysDraft !==
+      String(settingsQ.data.activity_retention_days ?? "");
   const backupScheduleDirty =
     settingsQ.data !== undefined &&
     (configurationBackupEnabled !==
@@ -201,7 +210,8 @@ export function SettingsPage() {
         ((
           settingsQ.data.configuration_backup_preferred_time || "02:00"
         ).trim() || "02:00"));
-  const isDirty = timezoneDirty || logsDirty || backupScheduleDirty;
+  const isDirty =
+    timezoneDirty || logsDirty || activityRetentionDirty || backupScheduleDirty;
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
       isDirty && currentLocation.pathname !== nextLocation.pathname,
@@ -298,6 +308,7 @@ export function SettingsPage() {
         const tz = refreshed.data.app_timezone || "";
         setAppTimezone(CURATED_TIMEZONE_ID_SET.has(tz) ? tz : null);
         setLogRetentionDaysDraft(null);
+        setActivityRetentionDaysDraft(null);
       }
       setBackupMsg("Configuration restored.");
     } catch (e) {
@@ -350,6 +361,21 @@ export function SettingsPage() {
     return Math.min(Math.max(Math.trunc(n), 1), 3650);
   };
 
+  const serverActivityRetention = settingsQ.data.activity_retention_days;
+  const normalizedActivityRetentionDraft =
+    activityRetentionDaysDraft !== null
+      ? activityRetentionDaysDraft
+      : String(serverActivityRetention ?? "");
+  /** 0 keeps Activity history until it is cleared; blank or invalid keeps the saved value. */
+  const finalizeActivityRetentionDays = (): number | undefined => {
+    const raw = normalizedActivityRetentionDraft.trim();
+    const n = Number(raw);
+    if (raw === "" || !Number.isFinite(n)) {
+      return serverActivityRetention;
+    }
+    return Math.min(Math.max(Math.trunc(n), 0), 3650);
+  };
+
   const buildSuitePutBody = (): SuiteSettingsPutBody => {
     const d = settingsQ.data;
     const name = (d.product_display_name || "MediaMop").trim() || "MediaMop";
@@ -367,6 +393,9 @@ export function SettingsPage() {
         ? retention
         : d.log_retention_days,
       application_logs_enabled: true,
+      ...(finalizeActivityRetentionDays() !== undefined
+        ? { activity_retention_days: finalizeActivityRetentionDays() }
+        : {}),
       configuration_backup_enabled: Boolean(configurationBackupEnabled),
       configuration_backup_interval_hours: Math.min(
         720,
@@ -497,7 +526,12 @@ export function SettingsPage() {
               setLogRetentionDaysDraft={setLogRetentionDaysDraft}
               normalizedLogRetentionDraft={normalizedLogRetentionDraft}
               finalizeLogRetentionDays={finalizeLogRetentionDays}
-              logsDirty={logsDirty}
+              logsDirty={logsDirty || activityRetentionDirty}
+              normalizedActivityRetentionDraft={
+                normalizedActivityRetentionDraft
+              }
+              setActivityRetentionDaysDraft={setActivityRetentionDaysDraft}
+              finalizeActivityRetentionDays={finalizeActivityRetentionDays}
               lastSuiteSaveTarget={lastSuiteSaveTarget}
               displayDensity={displayDensity}
               setDisplayDensity={setDisplayDensity}
