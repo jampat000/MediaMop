@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed — supersedes the module premise in
+Accepted — supersedes the module premise in
 [ADR-0007](ADR-0007-module-owned-worker-lanes.md), retires the last of the fixed scopes
 left by [ADR-0014](ADR-0014-refiner-libraries-replace-fixed-scopes.md), and moves the
 retention half of [ADR-0015](ADR-0015-media-manager-port-outbound.md) out of this
@@ -59,18 +59,38 @@ media is not on their NAS, and the tool that took it is the reason.
    completed folder and that manager's import. Never "your library". The main screen
    answers: what arrived, what is in hand, what is stuck, what went back.
 
-3. **Retention leaves.** Pruner is deprecated in `3.0` with a pointer to its replacement
-   and removed in `4.0`, **not before that replacement is live**. It moves to Deluno,
-   where the library truth is local. This is a reimplementation, not a port: Deluno is
-   .NET and carries no media-server client today, so the design transfers and the code
-   does not.
+3. **Retention leaves, and becomes a complete action by doing so.** Pruner is deprecated
+   in `3.0` with a pointer to its replacement and removed in `4.0`, **not before that
+   replacement is live**. It moves to Deluno, where the library truth is local. This is a
+   reimplementation, not a port: Deluno is .NET and carries no media-server client today,
+   so the design transfers and the code does not.
 
-4. **A file is never stranded.** Every library carries a failure policy —
-   `pass_through` (default) or `hold`. Under `pass_through`, a file that cannot be
-   processed is delivered to the output folder unmodified, on time, and recorded as
-   passed through rather than failed. The guarantee the product makes is: *worst case you
-   get your original file, unchanged, on schedule.* `hold` remains available for users
-   who would rather nothing reach their manager than something unprocessed.
+   The move also fixes a defect in the current design rather than merely relocating it.
+   Deleting from MediaMop is a dead end: the item is removed from a media server, and the
+   manager — which still monitors it and still reads RSS — is free to download it again.
+   In Deluno, one deletion can remove the file from disk, remove it from Plex, Jellyfin
+   and Emby, unmonitor it, and blocklist the release so it is not re-acquired. Retention
+   only actually works in the product that owns acquisition.
+
+4. **A file is never stranded, and the manager is always told why.** Every library
+   carries a failure policy with three settings:
+
+   - `pass_through` (**default**) — the file is delivered to the output folder
+     unmodified, on time, and recorded as passed through rather than failed. The
+     guarantee is *worst case you get your original file, unchanged, on schedule.*
+   - `hold` — today's behaviour, for users who would rather nothing reach their manager
+     than something unprocessed.
+   - `reject` — the file is deleted and the manager is told **why**, so it can act on
+     that: blocklist the release, decline to re-grab it from RSS, and fetch a different
+     one. A release carrying audio nothing can process is often best replaced rather than
+     passed through, and only the manager can replace it.
+
+   `reject` requires a reporting channel back to the manager that does not exist today.
+   The outbound port from [ADR-0015](ADR-0015-media-manager-port-outbound.md) carries
+   questions, not verdicts; this adds a reason-carrying failure report. Consistent with
+   that ADR, a manager that cannot be reached is not consent: `reject` must fall back to
+   `pass_through` rather than delete a file nobody can be told about. It is opt-in and
+   never the default, because it destroys a file the user paid bandwidth for.
 
 5. **Processing is what the operator configured, and nothing more.** MediaMop has no
    opinion about what a file ought to be — the manager already decided that at
