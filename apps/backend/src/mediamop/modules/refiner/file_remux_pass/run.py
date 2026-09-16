@@ -27,7 +27,7 @@ from mediamop.modules.refiner.file_remux_pass.visibility import (
 )
 from mediamop.modules.refiner.refiner_file_settling import acquire_source_read_guard
 from mediamop.modules.refiner.refiner_file_state_service import (
-    record_measured_video_dimensions,
+    record_measured_media_facts,
     record_output_collision,
 )
 from mediamop.modules.refiner.refiner_hardware_acceleration import (
@@ -816,15 +816,23 @@ def _run_refiner_file_remux_pass(
     # Measured once here and recorded, so the *next* enqueue of this file can weight it
     # against the runner budget instead of paying the "undetermined" cost forever (#338).
     measured_width, measured_height = video_dimensions_from_streams(video)
-    if cleanup_session is not None and (measured_width is not None or measured_height is not None):
-        record_measured_video_dimensions(
+    duration_seconds = _probe_duration_seconds(probe)
+    # The same write also carries what the file *is*, for the operator rather than the
+    # scheduler: codec, track counts and duration had nowhere to live outside the pass log,
+    # so a screen could say a file was queued without being able to say anything about it.
+    measured_codec = str(video[0].get("codec_name") or "").strip() or None if video else None
+    if cleanup_session is not None:
+        record_measured_media_facts(
             cleanup_session,
             relative_path=relative_media_path,
             video_width=measured_width,
             video_height=measured_height,
+            video_codec=measured_codec,
+            audio_track_count=len(audio),
+            subtitle_track_count=len(subs),
+            duration_seconds=duration_seconds,
         )
         _commit_cleanup_session(cleanup_session)
-    duration_seconds = _probe_duration_seconds(probe)
     if os.name != "nt":
         try:
             # POSIX locks are advisory and many Docker bind-mount writers do not take

@@ -19,6 +19,7 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -93,6 +94,13 @@ class RefinerFileRow(Base):
     # and height alone cannot tell it from 1280x720.
     video_width: Mapped[int | None] = mapped_column(Integer, nullable=True)
     video_height: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Recorded by the same pass, for the operator rather than the scheduler: what this file
+    # actually is. Null means "not probed yet", which must stay distinguishable from a real
+    # zero — a file with no subtitle tracks is not the same as a file nobody has looked at.
+    video_codec: Mapped[str | None] = mapped_column(Text, nullable=True)
+    audio_track_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    subtitle_track_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
     # When ``size_bytes`` last differed from the previous observation. Null until a
     # second scan has something to compare against.
     size_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

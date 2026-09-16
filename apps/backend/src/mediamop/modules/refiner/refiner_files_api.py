@@ -21,6 +21,7 @@ from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow
 from mediamop.modules.refiner.refiner_file_state_service import forget_file, list_files, status_counts
 from mediamop.modules.refiner.refiner_job_queue_lookup import pending_remux_job_for_relative_path
 from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
+from mediamop.modules.refiner.refiner_live_progress import live_progress_by_path
 from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
 from mediamop.modules.refiner.refiner_requeue_service import requeue_file, requeue_files
 from mediamop.modules.refiner.schemas_refiner_files import (
@@ -90,6 +91,7 @@ def get_refiner_files(
         limit=limit,
     )
     names = {row.id: row.name for row in db.query(RefinerLibraryRow).all()}
+    live = live_progress_by_path(db)
     files = [
         RefinerFileOut(
             id=row.id,
@@ -100,6 +102,15 @@ def get_refiner_files(
             status_reason=row.status_reason,
             blocked_by_connection=row.blocked_by_connection,
             size_bytes=row.size_bytes,
+            video_codec=row.video_codec,
+            video_width=row.video_width,
+            video_height=row.video_height,
+            audio_track_count=row.audio_track_count,
+            subtitle_track_count=row.subtitle_track_count,
+            duration_seconds=row.duration_seconds,
+            progress_percent=progress.percent if (progress := live.get(row.relative_path)) else None,
+            progress_message=progress.message if progress else None,
+            progress_eta_seconds=progress.eta_seconds if progress else None,
             failure_class=row.failure_class,
             failure_attempts=int(row.failure_attempts or 0),
             quarantined=(row.status == "on_hold" and int(row.failure_attempts or 0) >= 3),

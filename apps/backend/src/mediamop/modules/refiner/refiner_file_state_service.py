@@ -246,19 +246,26 @@ def forget_file(session: Session, row: RefinerFileRow) -> None:
     session.flush()
 
 
-def record_measured_video_dimensions(
+def record_measured_media_facts(
     session: Session,
     *,
     relative_path: str,
     video_width: int | None,
     video_height: int | None,
+    video_codec: str | None = None,
+    audio_track_count: int | None = None,
+    subtitle_track_count: int | None = None,
+    duration_seconds: float | None = None,
 ) -> None:
-    """Remember the size a pass measured, for weighting the next enqueue.
+    """Remember what a pass measured: size for the scheduler, the rest for the operator.
 
     Matched on path alone rather than on ``(library_id, path)``: the pass knows the file
-    it processed but not which library row the scan attributed it to, and a resolution is
-    a property of the file rather than of the library looking at it. Writing to every
+    it processed but not which library row the scan attributed it to, and these are
+    properties of the file rather than of the library looking at it. Writing to every
     matching row is correct for the same reason.
+
+    Every field is optional and ``None`` means "not measured", never zero — a file with no
+    subtitle tracks must stay distinguishable from one nobody has probed.
     """
 
     rows = session.scalars(select(RefinerFileRow).where(RefinerFileRow.relative_path == relative_path)).all()
@@ -267,8 +274,20 @@ def record_measured_video_dimensions(
             row.video_width = int(video_width)
         if video_height is not None:
             row.video_height = int(video_height)
+        if video_codec is not None:
+            row.video_codec = str(video_codec)[:64]
+        if audio_track_count is not None:
+            row.audio_track_count = int(audio_track_count)
+        if subtitle_track_count is not None:
+            row.subtitle_track_count = int(subtitle_track_count)
+        if duration_seconds is not None:
+            row.duration_seconds = float(duration_seconds)
     if rows:
         session.flush()
+
+
+# Kept so the older name keeps working for callers that only care about dimensions.
+record_measured_video_dimensions = record_measured_media_facts
 
 
 def record_output_collision(
