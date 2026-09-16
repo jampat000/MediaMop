@@ -572,6 +572,115 @@
         "title": "DashboardStatusOut",
         "type": "object"
       },
+      "DirectPlayDeviceOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "selected": {
+            "title": "Selected",
+            "type": "boolean"
+          },
+          "source": {
+            "description": "Where this device's capabilities come from.",
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "source",
+          "note",
+          "selected"
+        ],
+        "title": "DirectPlayDeviceOut",
+        "type": "object"
+      },
+      "DirectPlayDevicesIn": {
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "selected": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Selected",
+            "type": "array"
+          }
+        },
+        "required": [
+          "csrf_token"
+        ],
+        "title": "DirectPlayDevicesIn",
+        "type": "object"
+      },
+      "DirectPlayDevicesOut": {
+        "properties": {
+          "customised": {
+            "description": "True when the list comes from the operator's own direct-play-devices.json.",
+            "title": "Customised",
+            "type": "boolean"
+          },
+          "devices": {
+            "items": {
+              "$ref": "#/components/schemas/DirectPlayDeviceOut"
+            },
+            "title": "Devices",
+            "type": "array"
+          }
+        },
+        "required": [
+          "devices",
+          "customised"
+        ],
+        "title": "DirectPlayDevicesOut",
+        "type": "object"
+      },
+      "DirectPlayOut": {
+        "properties": {
+          "device_id": {
+            "title": "Device Id",
+            "type": "string"
+          },
+          "device_name": {
+            "title": "Device Name",
+            "type": "string"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "verdict": {
+            "description": "yes, no, maybe (partial or model-dependent support), or unknown (not measured).",
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device_id",
+          "device_name",
+          "verdict"
+        ],
+        "title": "DirectPlayOut",
+        "type": "object"
+      },
       "DirectoryBrowseEntry": {
         "properties": {
           "description": {
@@ -3610,6 +3719,14 @@
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "direct_play": {
+            "description": "For each device the operator owns: will it play this file without conversion. Information only; it never changes how MediaMop processes the file. Empty when no devices are chosen.",
+            "items": {
+              "$ref": "#/components/schemas/DirectPlayOut"
+            },
+            "title": "Direct Play",
+            "type": "array"
           },
           "duration_seconds": {
             "anyOf": [
@@ -10696,6 +10813,70 @@
         "tags": [
           "pruner",
           "pruner"
+        ]
+      }
+    },
+    "/api/v1/refiner/direct-play/devices": {
+      "get": {
+        "description": "The devices the badge can answer for, each with its source, and which ones you own.",
+        "operationId": "get_direct_play_devices_api_v1_refiner_direct_play_devices_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectPlayDevicesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Direct Play Devices",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      },
+      "put": {
+        "description": "Save which devices you own. Changes only the badge, never how a file is processed.",
+        "operationId": "put_direct_play_devices_api_v1_refiner_direct_play_devices_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DirectPlayDevicesIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectPlayDevicesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Direct Play Devices",
+        "tags": [
+          "refiner",
+          "refiner"
         ]
       }
     },

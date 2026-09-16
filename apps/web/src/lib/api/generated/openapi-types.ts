@@ -791,6 +791,30 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/refiner/direct-play/devices": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Direct Play Devices
+     * @description The devices the badge can answer for, each with its source, and which ones you own.
+     */
+    get: operations["get_direct_play_devices_api_v1_refiner_direct_play_devices_get"];
+    /**
+     * Put Direct Play Devices
+     * @description Save which devices you own. Changes only the badge, never how a file is processed.
+     */
+    put: operations["put_direct_play_devices_api_v1_refiner_direct_play_devices_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/refiner/files": {
     parameters: {
       query?: never;
@@ -2244,6 +2268,53 @@ export interface components {
       scope_note: string;
       system: components["schemas"]["SystemStatusOut"];
     };
+    /** DirectPlayDeviceOut */
+    DirectPlayDeviceOut: {
+      /** Id */
+      id: string;
+      /** Name */
+      name: string;
+      /** Note */
+      note: string;
+      /** Selected */
+      selected: boolean;
+      /**
+       * Source
+       * @description Where this device's capabilities come from.
+       */
+      source: string;
+    };
+    /** DirectPlayDevicesIn */
+    DirectPlayDevicesIn: {
+      /** Csrf Token */
+      csrf_token: string;
+      /** Selected */
+      selected?: string[];
+    };
+    /** DirectPlayDevicesOut */
+    DirectPlayDevicesOut: {
+      /**
+       * Customised
+       * @description True when the list comes from the operator's own direct-play-devices.json.
+       */
+      customised: boolean;
+      /** Devices */
+      devices: components["schemas"]["DirectPlayDeviceOut"][];
+    };
+    /** DirectPlayOut */
+    DirectPlayOut: {
+      /** Device Id */
+      device_id: string;
+      /** Device Name */
+      device_name: string;
+      /** Reasons */
+      reasons?: string[];
+      /**
+       * Verdict
+       * @description yes, no, maybe (partial or model-dependent support), or unknown (not measured).
+       */
+      verdict: string;
+    };
     /** DirectoryBrowseEntry */
     DirectoryBrowseEntry: {
       /** Description */
@@ -3566,6 +3637,11 @@ export interface components {
        * @description When MediaMop first recorded this file.
        */
       created_at: string;
+      /**
+       * Direct Play
+       * @description For each device the operator owns: will it play this file without conversion. Information only; it never changes how MediaMop processes the file. Empty when no devices are chosen.
+       */
+      direct_play?: components["schemas"]["DirectPlayOut"][];
       /**
        * Duration Seconds
        * @description Runtime in seconds, as probed.
@@ -7343,6 +7419,59 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["PrunerOverviewStatsOut"];
+        };
+      };
+    };
+  };
+  get_direct_play_devices_api_v1_refiner_direct_play_devices_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DirectPlayDevicesOut"];
+        };
+      };
+    };
+  };
+  put_direct_play_devices_api_v1_refiner_direct_play_devices_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DirectPlayDevicesIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DirectPlayDevicesOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

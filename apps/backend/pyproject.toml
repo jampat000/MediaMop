@@ -55,6 +55,10 @@ build = [
 where = ["src"]
 include = ["mediamop*"]
 
+[tool.setuptools.package-data]
+# Data files read at runtime, such as the Direct Play device list (#467).
+"mediamop.modules.refiner.direct_play" = ["devices.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]

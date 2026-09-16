@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from mediamop.modules.refiner.direct_play.api import router as refiner_direct_play_router
 from mediamop.modules.refiner.file_remux_pass.api import router as refiner_file_remux_pass_router
 from mediamop.modules.refiner.refiner_files_api import router as refiner_files_router
 from mediamop.modules.refiner.refiner_hardware_api import router as refiner_hardware_router
@@ -26,6 +27,7 @@ router = APIRouter(tags=["refiner"])
 router.include_router(refiner_jobs_inspection_router)
 router.include_router(refiner_operator_settings_router)
 router.include_router(refiner_files_router)
+router.include_router(refiner_direct_play_router)
 router.include_router(refiner_libraries_router)
 router.include_router(refiner_runtime_settings_router)
 router.include_router(refiner_overview_stats_router)
