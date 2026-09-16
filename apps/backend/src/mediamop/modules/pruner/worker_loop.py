@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import socket
@@ -25,10 +26,20 @@ from mediamop.modules.queue_worker.job_kind_boundaries import (
     job_kind_forbidden_on_pruner_lane,
     validate_pruner_worker_handler_registry,
 )
+from mediamop.platform.activity import constants as activity_constants
+from mediamop.platform.activity import service as activity_service
+from mediamop.platform.activity.provenance import job_provenance
 from mediamop.platform.http.request_context import job_logging_context
+from mediamop.platform.jobs.worker_failures import (
+    AlreadyRecordedFailure,
+    job_failure,
+    refused_job_error,
+    retry_coming,
+    stored_error,
+)
 from mediamop.platform.jobs.worker_health import worker_heartbeat, worker_started, worker_stopped
 from mediamop.platform.notifications.dispatch import dispatch_job_notification
-from mediamop.platform.observability.failure_messages import operator_failure_from_exception
+from mediamop.platform.observability.failure_messages import OperatorFailure, operator_failure_from_exception
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +57,9 @@ class PrunerJobWorkContext:
     job_kind: str
     payload_json: str | None
     lease_owner: str
+    #: This claim's attempt and the job's limit, so failure wording can say whether it will be retried.
+    attempt_count: int = 1
+    max_attempts: int = 1
 
 
 class PrunerNoHandlerForJobKind(LookupError):
@@ -54,6 +68,41 @@ class PrunerNoHandlerForJobKind(LookupError):
     def __init__(self, job_kind: str) -> None:
         self.job_kind = job_kind
         super().__init__(f"no Pruner job handler registered for job_kind={job_kind!r}")
+
+
+def _record_unhandled_pruner_failure(
+    session_factory: sessionmaker[Session],
+    *,
+    ctx: PrunerJobWorkContext,
+    failure: OperatorFailure,
+    will_retry: bool,
+) -> None:
+    """One plain Activity entry for a Pruner job that stopped with an error. Never raises."""
+
+    try:
+        payload = json.loads(ctx.payload_json or "{}")
+    except (TypeError, ValueError):
+        payload = {}
+    detail = {
+        "job_id": ctx.id,
+        "job_kind": ctx.job_kind,
+        "message": failure.message,
+        "next_action": failure.next_action,
+        "result": "retrying" if will_retry else "failed",
+        "retry_scheduled": will_retry,
+        **job_provenance(payload),
+    }
+    try:
+        with session_factory() as session, session.begin():
+            activity_service.record_activity_event(
+                session,
+                event_type=activity_constants.PRUNER_JOB_FAILED,
+                module="pruner",
+                title="A Pruner job stopped with an error",
+                detail=json.dumps({k: v for k, v in detail.items() if v is not None}, separators=(",", ":"))[:10_000],
+            )
+    except Exception:
+        logger.exception("Pruner failure diagnostics could not be persisted job_id=%s", ctx.id)
 
 
 def default_pruner_job_handler_registry() -> dict[str, Callable[[PrunerJobWorkContext], None]]:
@@ -85,12 +134,16 @@ def process_one_pruner_job(
             job_kind=job.job_kind,
             payload_json=job.payload_json,
             lease_owner=lease_owner,
+            attempt_count=int(job.attempt_count or 1),
+            max_attempts=int(job.max_attempts or 1),
         )
 
     if job_kind_forbidden_on_pruner_lane(ctx.job_kind):
-        err_text = (
-            f"pruner worker refused job_kind reserved for another module lane: {ctx.job_kind!r} (row id={ctx.id})"
-        )[:10_000]
+        err_text = refused_job_error(
+            module="Pruner",
+            technical_reason=f"pruner worker refused job_kind reserved for another module lane: {ctx.job_kind!r} (row id={ctx.id})",
+            will_retry=retry_coming(attempt_count=ctx.attempt_count, max_attempts=ctx.max_attempts),
+        )
         try:
             with session_factory() as session, session.begin():
                 fail_claimed_pruner_job(
@@ -105,9 +158,11 @@ def process_one_pruner_job(
         return "processed"
 
     if not ctx.job_kind.startswith(PRUNER_QUEUE_JOB_KIND_PREFIX):
-        err_text = (
-            f"pruner worker refused job_kind missing required pruner.* prefix: {ctx.job_kind!r} (row id={ctx.id})"
-        )[:10_000]
+        err_text = refused_job_error(
+            module="Pruner",
+            technical_reason=f"pruner worker refused job_kind missing required pruner.* prefix: {ctx.job_kind!r} (row id={ctx.id})",
+            will_retry=retry_coming(attempt_count=ctx.attempt_count, max_attempts=ctx.max_attempts),
+        )
         try:
             with session_factory() as session, session.begin():
                 fail_claimed_pruner_job(
@@ -124,7 +179,13 @@ def process_one_pruner_job(
     handler = job_handlers.get(ctx.job_kind)
     if handler is None:
         exc: BaseException = PrunerNoHandlerForJobKind(ctx.job_kind)
-        err_text = str(exc)[:10_000]
+        err_text = stored_error(
+            job_failure(
+                module="Pruner",
+                exc=exc,
+                will_retry=retry_coming(attempt_count=ctx.attempt_count, max_attempts=ctx.max_attempts),
+            )
+        )
         try:
             with session_factory() as session, session.begin():
                 fail_claimed_pruner_job(
@@ -143,12 +204,12 @@ def process_one_pruner_job(
             handler(ctx)
     except Exception as exc:
         logger.exception("Pruner job handler failed for job_id=%s kind=%s", ctx.id, ctx.job_kind)
-        err_text = operator_failure_from_exception(
-            module="Pruner",
-            action="job",
-            exc=exc,
-            recoverable=False,
-        ).message[:10_000]
+        will_retry = retry_coming(attempt_count=ctx.attempt_count, max_attempts=ctx.max_attempts)
+        failure = job_failure(module="Pruner", exc=exc, will_retry=will_retry)
+        err_text = stored_error(failure)
+        if not isinstance(exc, AlreadyRecordedFailure):
+            # Until #488 a Pruner job that raised left nothing in Activity at all.
+            _record_unhandled_pruner_failure(session_factory, ctx=ctx, failure=failure, will_retry=will_retry)
         try:
             with session_factory() as session, session.begin():
                 fail_claimed_pruner_job(
@@ -189,7 +250,18 @@ def process_one_pruner_job(
         )
 
     if not complete_ok and complete_err is not None:
-        bounded = (PRUNER_TERMINALIZATION_FAILURE_PREFIX + complete_err)[:10_000]
+        # The handler finished; only recording that failed. Said plainly, with the detail after it.
+        bounded = (
+            PRUNER_TERMINALIZATION_FAILURE_PREFIX
+            + stored_error(
+                operator_failure_from_exception(
+                    module="Pruner",
+                    action="job",
+                    exc=RuntimeError(complete_err),
+                    continuation="The work ran, but MediaMop could not record that it finished.",
+                )
+            )
+        )[:10_000]
         try:
             with session_factory() as session, session.begin():
                 recovered = fail_leased_pruner_job_after_complete_failure(

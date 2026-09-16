@@ -36,6 +36,8 @@ REFINER_HANDOFF_REPORTED = "refiner.handoff_reported"
 REFINER_HANDOFF_CANCELLED = "refiner.handoff_cancelled"
 
 # Pruner (pruner_jobs + server instances)
+# A Pruner job that stopped with an error before recording its own result (#488).
+PRUNER_JOB_FAILED = "pruner.job_failed"
 PRUNER_CONNECTION_TEST_SUCCEEDED = "pruner.connection_test_succeeded"
 PRUNER_CONNECTION_TEST_FAILED = "pruner.connection_test_failed"
 PRUNER_PREVIEW_SUCCEEDED = "pruner.preview_succeeded"

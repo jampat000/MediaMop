@@ -68,7 +68,9 @@ def update_refiner_file_processing_progress(
     name = _filename(payload.get("relative_media_path"))
     status = str(payload.get("status") or "processing")
     title = f"Refiner is processing {name}"
-    if status == "finishing":
+    if status == "waiting":
+        title = f"Waiting to process {name}"
+    elif status == "finishing":
         title = f"Refiner is finishing {name}"
     elif status == "finished":
         title = f"{name} finished processing"

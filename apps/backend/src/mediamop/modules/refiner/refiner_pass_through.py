@@ -58,6 +58,7 @@ from mediamop.modules.refiner.refiner_output_collision import decide_output_coll
 from mediamop.platform.activity import constants as activity_constants
 from mediamop.platform.activity import service as activity_service
 from mediamop.platform.file_lifecycle.mutations import safe_copy_to_final
+from mediamop.platform.jobs.worker_failures import AlreadyRecordedFailure
 from mediamop.platform.media_managers.completion_callback import report_handoff_completion
 
 logger = logging.getLogger(__name__)
@@ -401,7 +402,8 @@ def make_refiner_file_pass_through_handler(
                         separators=(",", ":"),
                     ),
                 )
-            raise
+            # Recorded above in plain words; the worker still fails the job but does not say it twice (#488).
+            raise AlreadyRecordedFailure(str(exc)) from exc
 
         # 3. Brief bookkeeping.
         with session_factory() as session, session.begin():
