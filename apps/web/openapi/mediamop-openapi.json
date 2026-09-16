@@ -4250,6 +4250,16 @@
             "title": "Exclude Patterns Csv",
             "type": "string"
           },
+          "failure_policy": {
+            "default": "pass_through",
+            "description": "What happens once retries run out. 'pass_through' hands the original back to the output folder unchanged, so a file MediaMop cannot process still reaches your media manager. 'hold' keeps it with MediaMop until someone acts.",
+            "enum": [
+              "pass_through",
+              "hold"
+            ],
+            "title": "Failure Policy",
+            "type": "string"
+          },
           "ffmpeg_strictness": {
             "default": "normal",
             "description": "ffmpeg's -strict level. 'normal' is its own default and passes no flag.",
@@ -4676,6 +4686,10 @@
             "title": "Exclude Patterns Csv",
             "type": "string"
           },
+          "failure_policy": {
+            "title": "Failure Policy",
+            "type": "string"
+          },
           "ffmpeg_strictness": {
             "title": "Ffmpeg Strictness",
             "type": "string"
@@ -4940,6 +4954,7 @@
           "retry_backoff_seconds",
           "retry_execution_failures",
           "retry_preflight_failures",
+          "failure_policy",
           "schedule_enabled",
           "schedule_hours_limited",
           "schedule_days",
@@ -5030,6 +5045,16 @@
             "default": "",
             "maxLength": 1000,
             "title": "Exclude Patterns Csv",
+            "type": "string"
+          },
+          "failure_policy": {
+            "default": "pass_through",
+            "description": "What happens once retries run out. 'pass_through' hands the original back to the output folder unchanged, so a file MediaMop cannot process still reaches your media manager. 'hold' keeps it with MediaMop until someone acts.",
+            "enum": [
+              "pass_through",
+              "hold"
+            ],
+            "title": "Failure Policy",
             "type": "string"
           },
           "ffmpeg_strictness": {

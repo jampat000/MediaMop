@@ -152,6 +152,7 @@ class RefinerLibraryOut(BaseModel):
     retry_backoff_seconds: int
     retry_execution_failures: bool
     retry_preflight_failures: bool
+    failure_policy: str
     schedule_enabled: bool
     schedule_hours_limited: bool
     schedule_days: str
@@ -279,6 +280,14 @@ class RefinerLibraryCreateIn(BaseModel):
     retry_execution_failures: bool = Field(
         True,
         description="Retry files that failed while being processed — a dead ffmpeg, a full disk, a dropped share.",
+    )
+    failure_policy: Literal["pass_through", "hold"] = Field(
+        "pass_through",
+        description=(
+            "What happens once retries run out. 'pass_through' hands the original back to the output "
+            "folder unchanged, so a file MediaMop cannot process still reaches your media manager. "
+            "'hold' keeps it with MediaMop until someone acts."
+        ),
     )
     retry_preflight_failures: bool = Field(
         False,

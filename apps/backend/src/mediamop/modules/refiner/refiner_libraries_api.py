@@ -34,6 +34,7 @@ from mediamop.modules.refiner.refiner_library_discovery import (
 )
 from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow, RefinerRuleSetRow
 from mediamop.modules.refiner.refiner_library_service import list_libraries, manager_connection_ids_for
+from mediamop.modules.refiner.refiner_pass_through import normalize_failure_policy
 from mediamop.modules.refiner.schemas_refiner_libraries import (
     DiscoverableLibraryOut,
     LibraryDriftOut,
@@ -134,6 +135,7 @@ def _library_out(db, row: RefinerLibraryRow) -> RefinerLibraryOut:
         retry_backoff_seconds=int(row.retry_backoff_seconds),
         retry_execution_failures=bool(row.retry_execution_failures),
         retry_preflight_failures=bool(row.retry_preflight_failures),
+        failure_policy=normalize_failure_policy(row.failure_policy),
         schedule_enabled=row.schedule_enabled,
         schedule_hours_limited=row.schedule_hours_limited,
         schedule_days=row.schedule_days,

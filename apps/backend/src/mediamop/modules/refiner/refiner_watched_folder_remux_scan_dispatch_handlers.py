@@ -245,6 +245,7 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                         if previous.status in {
                             RefinerFileStatus.PROCESSING_FAILED.value,
                             RefinerFileStatus.ON_HOLD.value,
+                            RefinerFileStatus.PASSED_THROUGH.value,
                         }:
                             previous.status = RefinerFileStatus.UNPROCESSED.value
                             previous.status_reason = "The source changed; Refiner will evaluate it again."
@@ -252,6 +253,13 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                     # periodic scan. Preserve the failure while the source is unchanged;
                     # a manual requeue or changed file is the explicit retry signal (#402).
                     if previous is not None and previous.size_bytes == observed_size:
+                        # Handed back unchanged after processing gave up (#465). The source is
+                        # deliberately left in place, so without this every scan would pick the
+                        # same file up again and loop. A changed source still counts as new work.
+                        if previous.status == RefinerFileStatus.PASSED_THROUGH.value:
+                            summary["files_withheld"] += 1
+                            previous.last_seen_at = datetime.now(UTC)
+                            continue
                         if previous.status == RefinerFileStatus.PROCESSING_FAILED.value:
                             retry_at = previous.next_retry_at
                             if retry_at is not None:

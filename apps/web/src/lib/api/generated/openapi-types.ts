@@ -3789,6 +3789,13 @@ export interface components {
        */
       exclude_patterns_csv: string;
       /**
+       * Failure Policy
+       * @description What happens once retries run out. 'pass_through' hands the original back to the output folder unchanged, so a file MediaMop cannot process still reaches your media manager. 'hold' keeps it with MediaMop until someone acts.
+       * @default pass_through
+       * @enum {string}
+       */
+      failure_policy: "pass_through" | "hold";
+      /**
        * Ffmpeg Strictness
        * @description ffmpeg's -strict level. 'normal' is its own default and passes no flag.
        * @default normal
@@ -4053,6 +4060,8 @@ export interface components {
       exclude_markers_csv: string;
       /** Exclude Patterns Csv */
       exclude_patterns_csv: string;
+      /** Failure Policy */
+      failure_policy: string;
       /** Ffmpeg Strictness */
       ffmpeg_strictness: string;
       /** File Detection Interval Seconds */
@@ -4201,6 +4210,13 @@ export interface components {
        * @default
        */
       exclude_patterns_csv: string;
+      /**
+       * Failure Policy
+       * @description What happens once retries run out. 'pass_through' hands the original back to the output folder unchanged, so a file MediaMop cannot process still reaches your media manager. 'hold' keeps it with MediaMop until someone acts.
+       * @default pass_through
+       * @enum {string}
+       */
+      failure_policy: "pass_through" | "hold";
       /**
        * Ffmpeg Strictness
        * @description ffmpeg's -strict level. 'normal' is its own default and passes no flag.
