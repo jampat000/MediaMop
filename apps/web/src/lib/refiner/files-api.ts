@@ -197,6 +197,14 @@ export async function fetchRefinerWhyHeld(id: number): Promise<RefinerWhyHeld> {
   return readJson<RefinerWhyHeld>(response);
 }
 
+/** One plain-language step, written by the backend from the stored pass record. */
+export interface RefinerFileStoryStep {
+  heading: string;
+  sentence: string;
+  /** How the step should read — not a severity. */
+  tone: "neutral" | "good" | "warn" | "bad";
+}
+
 export interface RefinerFileLogEntry {
   id: number;
   recorded_at: string;
@@ -204,6 +212,8 @@ export interface RefinerFileLogEntry {
   title: string;
   library_name: string;
   detail: Record<string, unknown>;
+  /** The same pass told in plain language. Empty for a record with nothing to narrate. */
+  story: RefinerFileStoryStep[];
 }
 
 export interface RefinerFileLog {

@@ -496,6 +496,7 @@ it("opens a processing record and offers it as a download", async () => {
         outcome: "live_output_written",
         title: "Remuxed Some Film",
         library_name: "Movies",
+        story: [],
         detail: {
           source_path: "E:/Completed/Some Film/film.mkv",
           output_path: "F:/Some Film/film.mkv",
@@ -539,6 +540,7 @@ it("says zero retention keeps records forever rather than showing a bare 0", asy
         outcome: "live_output_written",
         title: "",
         library_name: "Movies",
+        story: [],
         detail: {},
       },
     ],

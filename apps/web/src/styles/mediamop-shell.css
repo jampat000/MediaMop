@@ -3491,3 +3491,226 @@ select.mm-input::-ms-expand {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* The file name is a button that opens its story (#468). Reset the button chrome so it still
+   reads as a name in a list, with the affordance carried by hover and focus instead. */
+button.mm-inhand-row__name {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: var(--mm-type-body);
+  text-align: left;
+  color: var(--mm-text);
+  cursor: pointer;
+}
+
+button.mm-inhand-row__name:hover {
+  color: var(--mm-accent-bright);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+button.mm-inhand-row__name:focus-visible {
+  outline: 2px solid var(--mm-accent-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* --- File story slide-over (#468) ------------------------------------------------------------ */
+
+.mm-story-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.mm-story-backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.45);
+  cursor: default;
+}
+
+.mm-story-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(34rem, 100%);
+  height: 100%;
+  background: var(--mm-card-bg);
+  border-left: 1px solid var(--mm-border);
+  box-shadow: var(--mm-shadow-shell);
+  outline: none;
+  animation: mm-story-in 0.18s ease-out;
+}
+
+@keyframes mm-story-in {
+  from {
+    transform: translateX(1.5rem);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mm-story-panel {
+    animation: none;
+  }
+}
+
+.mm-story-panel__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid var(--mm-border);
+}
+
+.mm-story-panel__titles {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.mm-story-panel__eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: var(--mm-type-eyebrow);
+  font-weight: 600;
+  letter-spacing: var(--mm-tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--mm-text3);
+}
+
+.mm-story-panel__title {
+  margin: 0;
+  font-size: var(--mm-type-panel);
+  font-weight: 600;
+  color: var(--mm-text);
+  overflow-wrap: anywhere;
+}
+
+.mm-story-panel__close {
+  flex-shrink: 0;
+  width: var(--mm-control-height-sm);
+  height: var(--mm-control-height-sm);
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius-sm);
+  background: none;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--mm-text2);
+  cursor: pointer;
+}
+
+.mm-story-panel__close:focus-visible {
+  outline: 2px solid var(--mm-accent-ring);
+  outline-offset: 2px;
+}
+
+.mm-story-panel__body {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 1rem 1.25rem 1.5rem;
+}
+
+.mm-story-panel__note {
+  margin: 0;
+  font-size: var(--mm-type-body);
+  color: var(--mm-text2);
+}
+
+.mm-story-pass + .mm-story-pass {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--mm-border);
+}
+
+.mm-story-pass__when {
+  margin: 0 0 0.75rem;
+  font-size: var(--mm-type-eyebrow);
+  font-weight: 600;
+  letter-spacing: var(--mm-tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--mm-text3);
+}
+
+.mm-story-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A thin rule down the left joins the steps into one account rather than a pile of cards. */
+.mm-story-step {
+  position: relative;
+  padding: 0 0 0.9rem 1rem;
+  border-left: 2px solid var(--mm-border);
+}
+
+.mm-story-step:last-child {
+  padding-bottom: 0;
+}
+
+.mm-story-step--good {
+  border-left-color: var(--mm-status-healthy-text);
+}
+
+.mm-story-step--warn {
+  border-left-color: var(--mm-status-warning-text);
+}
+
+.mm-story-step--bad {
+  border-left-color: var(--mm-status-failed-text);
+}
+
+.mm-story-step__heading {
+  margin: 0 0 0.15rem;
+  font-size: var(--mm-type-caption);
+  font-weight: 600;
+  color: var(--mm-text);
+}
+
+.mm-story-step__sentence {
+  margin: 0;
+  font-size: var(--mm-type-body);
+  line-height: 1.5;
+  color: var(--mm-text2);
+  overflow-wrap: anywhere;
+}
+
+.mm-story-pass__detail {
+  margin-top: 0.85rem;
+  font-size: var(--mm-type-caption);
+  color: var(--mm-text3);
+}
+
+.mm-story-pass__detail summary {
+  cursor: pointer;
+}
+
+.mm-story-pass__detail pre {
+  margin: 0.5rem 0 0;
+  padding: 0.75rem;
+  max-height: 18rem;
+  overflow: auto;
+  border-radius: var(--mm-radius-sm);
+  background: var(--mm-input-bg);
+  font-size: 0.72rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.mm-story-panel__retention {
+  margin: 1.25rem 0 0;
+  font-size: var(--mm-type-caption);
+  color: var(--mm-text3);
+}

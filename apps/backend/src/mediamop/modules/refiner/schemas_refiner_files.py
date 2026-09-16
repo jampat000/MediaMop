@@ -150,6 +150,14 @@ class RefinerRequeueOut(BaseModel):
     detail: str
 
 
+class RefinerFileStoryStepOut(BaseModel):
+    """One plain-language step in what happened to a file, built from the stored pass record."""
+
+    heading: str
+    sentence: str
+    tone: str = Field(description="neutral, good, warn or bad — how the step should read, not a severity.")
+
+
 class RefinerFileLogEntryOut(BaseModel):
     """One completed pass over this file."""
 
@@ -161,6 +169,13 @@ class RefinerFileLogEntryOut(BaseModel):
     detail: dict[str, object] = Field(
         default_factory=dict,
         description="The whole pass payload: admission decisions, probe, plan, ffmpeg argv, cleanup gates, timings.",
+    )
+    story: list[RefinerFileStoryStepOut] = Field(
+        default_factory=list,
+        description=(
+            "The same pass told in plain language. Rebuilt from the stored record on every request, "
+            "so improving the wording improves past entries too."
+        ),
     )
 
 

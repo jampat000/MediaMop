@@ -3341,6 +3341,11 @@ export interface components {
        * Format: date-time
        */
       recorded_at: string;
+      /**
+       * Story
+       * @description The same pass told in plain language. Rebuilt from the stored record on every request, so improving the wording improves past entries too.
+       */
+      story?: components["schemas"]["RefinerFileStoryStepOut"][];
       /** Title */
       title: string;
     };
@@ -3566,6 +3571,21 @@ export interface components {
     RefinerFileRequeueIn: {
       /** Csrf Token */
       csrf_token: string;
+    };
+    /**
+     * RefinerFileStoryStepOut
+     * @description One plain-language step in what happened to a file, built from the stored pass record.
+     */
+    RefinerFileStoryStepOut: {
+      /** Heading */
+      heading: string;
+      /** Sentence */
+      sentence: string;
+      /**
+       * Tone
+       * @description neutral, good, warn or bad — how the step should read, not a severity.
+       */
+      tone: string;
     };
     /**
      * RefinerFilesBulkRequeueIn

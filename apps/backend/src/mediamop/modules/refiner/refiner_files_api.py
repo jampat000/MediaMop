@@ -19,6 +19,7 @@ from mediamop.modules.refiner.jobs_ops import move_refiner_job_to_top
 from mediamop.modules.refiner.refiner_file_log_service import logs_for_file, render_log_text
 from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow
 from mediamop.modules.refiner.refiner_file_state_service import forget_file, list_files, status_counts
+from mediamop.modules.refiner.refiner_file_story import narrate_pass
 from mediamop.modules.refiner.refiner_job_queue_lookup import pending_remux_job_for_relative_path
 from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
 from mediamop.modules.refiner.refiner_live_progress import live_progress_by_path
@@ -35,6 +36,7 @@ from mediamop.modules.refiner.schemas_refiner_files import (
     RefinerFilesBulkRequeueIn,
     RefinerFilesPageOut,
     RefinerFileStatusName,
+    RefinerFileStoryStepOut,
     RefinerRequeueOut,
 )
 from mediamop.platform.auth.authorization import RequireOperatorDep
@@ -276,7 +278,11 @@ def get_refiner_file_log(
                 outcome=entry.outcome,
                 title=entry.title,
                 library_name=entry.library_name,
-                detail=_log_detail(entry.detail_json),
+                detail=(detail := _log_detail(entry.detail_json)),
+                story=[
+                    RefinerFileStoryStepOut(heading=step.heading, sentence=step.sentence, tone=step.tone)
+                    for step in narrate_pass(detail, library_name=entry.library_name)
+                ],
             )
             for entry in rows
         ],
