@@ -8,6 +8,8 @@ export type SuiteSettingsOut = {
   setup_wizard_state: "pending" | "skipped" | "completed" | string;
   app_timezone: string;
   log_retention_days: number;
+  /** How far back Activity history goes. 0 keeps it until it is cleared. Absent on older servers. */
+  activity_retention_days?: number;
   configuration_backup_enabled?: boolean;
   configuration_backup_interval_hours?: number;
   configuration_backup_preferred_time?: string;
@@ -23,6 +25,7 @@ export type SuiteSettingsPutBody = {
   log_retention_days: number;
   /** Older APIs required this flag; current servers ignore it. Always send `true` when saving suite settings. */
   application_logs_enabled: boolean;
+  activity_retention_days?: number;
   configuration_backup_enabled?: boolean;
   configuration_backup_interval_hours?: number;
   configuration_backup_preferred_time?: string;

@@ -31,6 +31,9 @@ type SettingsGeneralTabProps = {
   normalizedLogRetentionDraft: string;
   finalizeLogRetentionDays: () => number;
   logsDirty: boolean;
+  normalizedActivityRetentionDraft: string;
+  setActivityRetentionDaysDraft: (v: string | null) => void;
+  finalizeActivityRetentionDays: () => number | undefined;
   lastSuiteSaveTarget: "timezone" | "logs" | "backup" | null;
   displayDensity: DisplayDensity;
   setDisplayDensity: (v: DisplayDensity) => void;
@@ -54,6 +57,9 @@ export function SettingsGeneralTab({
   normalizedLogRetentionDraft,
   finalizeLogRetentionDays,
   logsDirty,
+  normalizedActivityRetentionDraft,
+  setActivityRetentionDaysDraft,
+  finalizeActivityRetentionDays,
   lastSuiteSaveTarget,
   displayDensity,
   setDisplayDensity,
@@ -205,11 +211,11 @@ export function SettingsGeneralTab({
                   id="suite-settings-log-retention-heading"
                   className="text-base font-semibold text-[var(--mm-text1)]"
                 >
-                  Log retention
+                  Log and history retention
                 </h3>
                 <p className="mt-1 text-sm text-[var(--mm-text2)]">
-                  Decide how long MediaMop keeps persisted system log entries on
-                  disk.
+                  Decide how long MediaMop keeps system log entries on disk and
+                  how far back Activity history goes.
                 </p>
               </div>
               <label className="block max-w-md">
@@ -239,10 +245,42 @@ export function SettingsGeneralTab({
                   className="mt-1 text-xs text-[var(--mm-text3)]"
                 >
                   Between 1 and 3650 days. Older system log entries are removed
-                  automatically while MediaMop is running; activity history is
-                  kept until you reset it.
+                  automatically while MediaMop is running.
                 </p>
               </label>
+              {settingsData.activity_retention_days !== undefined ? (
+                <label className="block max-w-md" id="activity-retention">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
+                    Keep Activity history for (days)
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={3650}
+                    className={`${mmEditableTextFieldClass} mt-1`}
+                    value={normalizedActivityRetentionDraft}
+                    disabled={!editable || save.isPending}
+                    data-testid="suite-settings-activity-retention"
+                    onChange={(e) =>
+                      setActivityRetentionDaysDraft(e.target.value)
+                    }
+                    onBlur={() =>
+                      setActivityRetentionDaysDraft(
+                        String(finalizeActivityRetentionDays() ?? ""),
+                      )
+                    }
+                    aria-describedby="suite-general-activity-retention-hint"
+                  />
+                  <p
+                    id="suite-general-activity-retention-hint"
+                    className="mt-1 text-xs text-[var(--mm-text3)]"
+                  >
+                    Keep Activity history for N days; 0 keeps it until you clear
+                    it. Older entries are removed once a day. Media files are
+                    never touched.
+                  </p>
+                </label>
+              ) : null}
               {save.isError && lastSuiteSaveTarget === "logs" ? (
                 <p
                   className="text-sm text-red-300"
@@ -266,7 +304,7 @@ export function SettingsGeneralTab({
                 data-testid="suite-settings-save-logs"
                 onClick={() => onSaveLogs()}
               >
-                {save.isPending ? "Saving..." : "Save log retention"}
+                {save.isPending ? "Saving..." : "Save retention"}
               </button>
             </div>
           </section>
@@ -286,8 +324,9 @@ export function SettingsGeneralTab({
                     Dashboard and activity history
                   </h3>
                   <p className="mt-1 text-sm leading-6 text-[var(--mm-text2)]">
-                    History is kept until you reset it. Sign-outs, expired
-                    sessions, and log retention do not clear this data.
+                    History is kept for as long as the Activity history setting
+                    says, or until you reset it. Sign-outs and expired sessions
+                    do not clear it.
                   </p>
                 </div>
                 <label className="block text-sm text-[var(--mm-text2)]">
