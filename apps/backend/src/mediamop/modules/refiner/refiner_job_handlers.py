@@ -17,8 +17,10 @@ from mediamop.modules.refiner.refiner_failure_cleanup_job_kinds import (
 )
 from mediamop.modules.refiner.refiner_pass_through import (
     REFINER_FILE_PASS_THROUGH_JOB_KIND,
+    REFINER_FILE_REJECT_JOB_KIND,
     make_refiner_file_pass_through_handler,
 )
+from mediamop.modules.refiner.refiner_reject import make_refiner_file_reject_handler
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_handlers import (
     make_refiner_watched_folder_remux_scan_dispatch_handler,
 )
@@ -44,6 +46,8 @@ def build_refiner_job_handlers(
         REFINER_FILE_REMUX_PASS_JOB_KIND: make_refiner_file_remux_pass_handler(settings, session_factory),
         # Hands back the original when processing gave up, so a file is never stranded (#465).
         REFINER_FILE_PASS_THROUGH_JOB_KIND: make_refiner_file_pass_through_handler(settings, session_factory),
+        # The opt-in reject policy; falls back to a pass-through whenever it cannot act safely (#471).
+        REFINER_FILE_REJECT_JOB_KIND: make_refiner_file_reject_handler(settings, session_factory),
         REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND: make_refiner_watched_folder_remux_scan_dispatch_handler(
             settings,
             session_factory,

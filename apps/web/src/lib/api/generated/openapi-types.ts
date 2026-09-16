@@ -1273,6 +1273,29 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/refiner/reject-support": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Refiner Reject Support
+     * @description Whether the Reject failure policy can be chosen for a library linked to these managers.
+     *
+     *     Asks Deluno or a native manager for its manifest, so it is called when the option is shown,
+     *     not on every list.
+     */
+    get: operations["get_refiner_reject_support_api_v1_refiner_reject_support_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/refiner/remux-rules-settings": {
     parameters: {
       query?: never;
@@ -3810,11 +3833,11 @@ export interface components {
       exclude_patterns_csv: string;
       /**
        * Failure Policy
-       * @description What happens once retries run out. 'pass_through' hands the original back to the output folder unchanged, so a file MediaMop cannot process still reaches your media manager. 'hold' keeps it with MediaMop until someone acts.
+       * @description What happens once retries run out. 'pass_through' hands the original back to the output folder unchanged, so a file MediaMop cannot process still reaches your media manager. 'hold' keeps it with MediaMop until someone acts. 'reject' tells the media manager the release is bad and removes the download once it accepts, so it can find a different one; it is only allowed when a linked manager can take a rejection, and falls back to 'pass_through' whenever it cannot be done safely.
        * @default pass_through
        * @enum {string}
        */
-      failure_policy: "pass_through" | "hold";
+      failure_policy: "pass_through" | "hold" | "reject";
       /**
        * Ffmpeg Strictness
        * @description ffmpeg's -strict level. 'normal' is its own default and passes no flag.
@@ -4232,11 +4255,11 @@ export interface components {
       exclude_patterns_csv: string;
       /**
        * Failure Policy
-       * @description What happens once retries run out. 'pass_through' hands the original back to the output folder unchanged, so a file MediaMop cannot process still reaches your media manager. 'hold' keeps it with MediaMop until someone acts.
+       * @description What happens once retries run out. 'pass_through' hands the original back to the output folder unchanged, so a file MediaMop cannot process still reaches your media manager. 'hold' keeps it with MediaMop until someone acts. 'reject' tells the media manager the release is bad and removes the download once it accepts, so it can find a different one; it is only allowed when a linked manager can take a rejection, and falls back to 'pass_through' whenever it cannot be done safely.
        * @default pass_through
        * @enum {string}
        */
-      failure_policy: "pass_through" | "hold";
+      failure_policy: "pass_through" | "hold" | "reject";
       /**
        * Ffmpeg Strictness
        * @description ffmpeg's -strict level. 'normal' is its own default and passes no flag.
@@ -5281,6 +5304,22 @@ export interface components {
        * @enum {string}
        */
       verdict: "proceed" | "wait_upstream" | "not_held" | "no_upstream_signal";
+    };
+    /**
+     * RejectSupportOut
+     * @description Whether the ``reject`` failure policy can be chosen for a set of linked managers.
+     */
+    RejectSupportOut: {
+      /**
+       * Available
+       * @description True when a linked manager can take a rejection.
+       */
+      available: boolean;
+      /**
+       * Reason
+       * @description One plain sentence explaining the answer, shown next to the option.
+       */
+      reason: string;
     };
     /** SessionActionOut */
     SessionActionOut: {
@@ -8170,6 +8209,37 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["RefinerPathSettingsOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_refiner_reject_support_api_v1_refiner_reject_support_get: {
+    parameters: {
+      query?: {
+        connection_ids?: number[];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RejectSupportOut"];
         };
       };
       /** @description Validation Error */

@@ -31,7 +31,11 @@ from mediamop.modules.refiner.refiner_file_state_model import RefinerFileStatus
 from mediamop.modules.refiner.refiner_file_state_service import mark_file_status
 from mediamop.modules.refiner.refiner_library_service import resolve_library, rules_config_for
 from mediamop.modules.refiner.refiner_operator_settings_service import ensure_refiner_operator_settings_row
-from mediamop.modules.refiner.refiner_pass_through import apply_failure_policy
+from mediamop.modules.refiner.refiner_pass_through import (
+    FAILURE_POLICY_PASS_THROUGH,
+    FAILURE_POLICY_REJECT,
+    apply_failure_policy,
+)
 from mediamop.modules.refiner.refiner_path_settings_service import resolve_refiner_path_runtime_for_remux
 from mediamop.modules.refiner.refiner_rejected_file_cleanup import cleanup_rejected_file
 from mediamop.modules.refiner.refiner_remux_rules_settings_service import load_refiner_remux_rules_config
@@ -303,7 +307,7 @@ def _apply_file_outcome_state(
                     failure_class=failure_class,
                     reason=reason,
                 )
-                passing_through = apply_failure_policy(
+                follow_up = apply_failure_policy(
                     session,
                     library=library,
                     relative_path=relative_path.strip(),
@@ -312,7 +316,8 @@ def _apply_file_outcome_state(
                 )
                 result.update(
                     {
-                        "pass_through_queued": passing_through,
+                        "pass_through_queued": follow_up == FAILURE_POLICY_PASS_THROUGH,
+                        "reject_queued": follow_up == FAILURE_POLICY_REJECT,
                         "failure_class": failure_class.value,
                         "retry_scheduled": decision.will_retry,
                         "quarantined": decision.quarantined,

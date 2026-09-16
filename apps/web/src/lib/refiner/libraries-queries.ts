@@ -7,6 +7,7 @@ import {
   deleteRefinerRuleSet,
   discoverRefinerLibraries,
   fetchRefinerLibraryDrift,
+  fetchRefinerRejectSupport,
   fetchRefinerLibraries,
   fetchRefinerRuleSets,
   importDiscoveredRefinerLibraries,
@@ -22,6 +23,19 @@ import {
 
 export const refinerLibrariesKey = ["refiner", "libraries"];
 export const refinerRuleSetsKey = ["refiner", "rule-sets"];
+
+/** Asks the linked managers what they can do, so only while the option is on screen. */
+export function useRefinerRejectSupportQuery(
+  connectionIds: number[],
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: ["refiner", "reject-support", ...connectionIds],
+    queryFn: () => fetchRefinerRejectSupport(connectionIds),
+    enabled,
+    staleTime: 60_000,
+  });
+}
 
 export function useRefinerLibrariesQuery(enabled = true) {
   return useQuery<RefinerLibrary[]>({

@@ -7,6 +7,7 @@ import { useMeQuery } from "../../lib/auth/queries";
 import { useMediaManagerConnectionsQuery } from "../../lib/media-managers/queries";
 import {
   REFINER_MEDIA_SCOPE_LABELS,
+  type RefinerFailurePolicy,
   type RefinerLibrary,
   type RefinerLibraryWrite,
   type RefinerMediaScope,
@@ -19,6 +20,7 @@ import {
   useRefinerLibrariesQuery,
   useRefinerRuleSetsQuery,
   useRefinerLibraryDrift,
+  useRefinerRejectSupportQuery,
   useReorderRefinerLibraries,
   useUnlinkDiscoveredRefinerLibrary,
   useUpdateRefinerLibrary,
@@ -74,7 +76,7 @@ type FormState = {
   preserve_original_timestamps: boolean;
   retry_execution_failures: boolean;
   retry_preflight_failures: boolean;
-  failure_policy: "pass_through" | "hold";
+  failure_policy: RefinerFailurePolicy;
   schedule_grid: string;
   rule_set_id: string;
 };
@@ -313,6 +315,13 @@ export function RefinerLibrariesSection() {
 
   const editable = canEdit(me.data?.role);
   const rows = libraries.data ?? [];
+  const editingConnectionIds =
+    rows.find((r) => r.id === editingId)?.manager_connection_ids ?? [];
+  const rejectSupport = useRefinerRejectSupportQuery(
+    editingConnectionIds,
+    adding || editingId !== null,
+  );
+  const rejectAvailable = rejectSupport.data?.available === true;
 
   if (libraries.isLoading) return <PageLoading label="Loading libraries" />;
 
@@ -1122,8 +1131,7 @@ export function RefinerLibrariesSection() {
                 onChange={(event) =>
                   setForm({
                     ...form,
-                    failure_policy: event.target.value as
-                      "pass_through" | "hold",
+                    failure_policy: event.target.value as RefinerFailurePolicy,
                   })
                 }
                 disabled={!editable}
@@ -1132,11 +1140,31 @@ export function RefinerLibrariesSection() {
                   Hand the original back unchanged
                 </option>
                 <option value="hold">Keep it until someone acts</option>
+                <option
+                  value="reject"
+                  disabled={
+                    !rejectAvailable && form.failure_policy !== "reject"
+                  }
+                >
+                  Reject the release so a different one is found
+                </option>
               </select>
               <span className="block text-xs text-[var(--mm-text3)]">
                 {form.failure_policy === "pass_through"
                   ? "Your media manager still gets the file, exactly as it arrived. The original stays in the watched folder."
-                  : "The file stays with MediaMop and will not reach your media manager until you deal with it."}
+                  : form.failure_policy === "hold"
+                    ? "The file stays with MediaMop and will not reach your media manager until you deal with it."
+                    : "MediaMop tells your media manager the release is bad and removes the download once the manager accepts, so it can find a different one. If that cannot be done safely, the original is handed back unchanged instead."}
+              </span>
+              <span
+                className="block text-xs text-[var(--mm-text3)]"
+                data-testid="reject-support"
+              >
+                {rejectSupport.isLoading
+                  ? "Checking whether Reject is available…"
+                  : rejectSupport.data
+                    ? `Reject: ${rejectSupport.data.reason}`
+                    : null}
               </span>
             </label>
           </section>

@@ -97,6 +97,17 @@ class MediaManagerHttpClient:
         )
         return self._read_json(req)
 
+    def delete(self, path: str, *, params: dict[str, Any] | None = None) -> None:
+        """A DELETE whose success is the status code alone; any non-2xx raises."""
+
+        flat = {k: str(v).lower() if isinstance(v, bool) else str(v) for k, v in (params or {}).items()}
+        req = urllib.request.Request(
+            self._url(path, flat if flat else None),
+            method="DELETE",
+            headers={"X-Api-Key": self._api_key, "Accept": "application/json"},
+        )
+        self._read_json(req, allow_empty=True)
+
     def put_json(self, path: str, body: dict[str, Any]) -> None:
         data = json.dumps(body).encode("utf-8")
         url = self._url(path, None)

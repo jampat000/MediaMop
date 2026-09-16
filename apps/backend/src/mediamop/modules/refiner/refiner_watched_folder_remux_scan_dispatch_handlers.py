@@ -246,6 +246,7 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                             RefinerFileStatus.PROCESSING_FAILED.value,
                             RefinerFileStatus.ON_HOLD.value,
                             RefinerFileStatus.PASSED_THROUGH.value,
+                            RefinerFileStatus.REJECTED.value,
                         }:
                             previous.status = RefinerFileStatus.UNPROCESSED.value
                             previous.status_reason = "The source changed; Refiner will evaluate it again."
@@ -256,7 +257,12 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                         # Handed back unchanged after processing gave up (#465). The source is
                         # deliberately left in place, so without this every scan would pick the
                         # same file up again and loop. A changed source still counts as new work.
-                        if previous.status == RefinerFileStatus.PASSED_THROUGH.value:
+                        # A rejected file waits for its manager (or MediaMop) to remove it; picking it
+                        # up again would process a release the manager was just told is bad.
+                        if previous.status in {
+                            RefinerFileStatus.PASSED_THROUGH.value,
+                            RefinerFileStatus.REJECTED.value,
+                        }:
                             summary["files_withheld"] += 1
                             previous.last_seen_at = datetime.now(UTC)
                             continue

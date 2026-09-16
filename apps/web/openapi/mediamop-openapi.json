@@ -4285,10 +4285,11 @@
           },
           "failure_policy": {
             "default": "pass_through",
-            "description": "What happens once retries run out. 'pass_through' hands the original back to the output folder unchanged, so a file MediaMop cannot process still reaches your media manager. 'hold' keeps it with MediaMop until someone acts.",
+            "description": "What happens once retries run out. 'pass_through' hands the original back to the output folder unchanged, so a file MediaMop cannot process still reaches your media manager. 'hold' keeps it with MediaMop until someone acts. 'reject' tells the media manager the release is bad and removes the download once it accepts, so it can find a different one; it is only allowed when a linked manager can take a rejection, and falls back to 'pass_through' whenever it cannot be done safely.",
             "enum": [
               "pass_through",
-              "hold"
+              "hold",
+              "reject"
             ],
             "title": "Failure Policy",
             "type": "string"
@@ -5082,10 +5083,11 @@
           },
           "failure_policy": {
             "default": "pass_through",
-            "description": "What happens once retries run out. 'pass_through' hands the original back to the output folder unchanged, so a file MediaMop cannot process still reaches your media manager. 'hold' keeps it with MediaMop until someone acts.",
+            "description": "What happens once retries run out. 'pass_through' hands the original back to the output folder unchanged, so a file MediaMop cannot process still reaches your media manager. 'hold' keeps it with MediaMop until someone acts. 'reject' tells the media manager the release is bad and removes the download once it accepts, so it can find a different one; it is only allowed when a linked manager can take a rejection, and falls back to 'pass_through' whenever it cannot be done safely.",
             "enum": [
               "pass_through",
-              "hold"
+              "hold",
+              "reject"
             ],
             "title": "Failure Policy",
             "type": "string"
@@ -7108,6 +7110,27 @@
           "managers_reporting"
         ],
         "title": "RefinerWhyHeldOut",
+        "type": "object"
+      },
+      "RejectSupportOut": {
+        "description": "Whether the ``reject`` failure policy can be chosen for a set of linked managers.",
+        "properties": {
+          "available": {
+            "description": "True when a linked manager can take a rejection.",
+            "title": "Available",
+            "type": "boolean"
+          },
+          "reason": {
+            "description": "One plain sentence explaining the answer, shown next to the option.",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "available",
+          "reason"
+        ],
+        "title": "RejectSupportOut",
         "type": "object"
       },
       "SessionActionOut": {
@@ -11912,6 +11935,53 @@
           }
         },
         "summary": "Put Refiner Path Settings",
+        "tags": [
+          "refiner",
+          "refiner"
+        ]
+      }
+    },
+    "/api/v1/refiner/reject-support": {
+      "get": {
+        "description": "Whether the Reject failure policy can be chosen for a library linked to these managers.\n\nAsks Deluno or a native manager for its manifest, so it is called when the option is shown,\nnot on every list.",
+        "operationId": "get_refiner_reject_support_api_v1_refiner_reject_support_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "connection_ids",
+            "required": false,
+            "schema": {
+              "items": {
+                "type": "integer"
+              },
+              "title": "Connection Ids",
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RejectSupportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Refiner Reject Support",
         "tags": [
           "refiner",
           "refiner"
