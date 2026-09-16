@@ -65,6 +65,7 @@ from mediamop.platform.media_managers.completion_callback import (
     record_handoff_report,
     resolve_handoff_target,
 )
+from mediamop.platform.media_managers.handoff_ledger import STATE_REJECTED, record_handoff_outcome
 from mediamop.platform.media_managers.manager_binding import connections_by_id
 from mediamop.platform.media_managers.manager_dialects import port_for_kind
 from mediamop.platform.media_managers.manager_http import MediaManagerHttpError
@@ -399,6 +400,14 @@ def make_refiner_file_reject_handler(
                     status=RefinerFileStatus.REJECTED,
                     reason=attempt.reason,
                 )
+                if origin is not None:
+                    record_handoff_outcome(
+                        session,
+                        source_key=origin.source_key,
+                        handoff_id=origin.handoff_id,
+                        state=STATE_REJECTED,
+                        message=attempt.reason,
+                    )
                 event_type = activity_constants.REFINER_FILE_REJECTED
                 title = f"{Path(relative_path).name} was rejected so a different release can be found"
             else:

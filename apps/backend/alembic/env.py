@@ -21,6 +21,7 @@ from sqlalchemy import engine_from_config, pool
 
 import mediamop.platform.arr_library.arr_operator_settings_model  # noqa: F401
 import mediamop.platform.media_managers.connection_model  # noqa: F401
+import mediamop.platform.media_managers.handoff_ledger_model  # noqa: F401
 import mediamop.platform.suite_settings.suite_configuration_backup_model  # noqa: F401
 
 # Import Base after ensuring src/ is on path (run from apps/backend with PYTHONPATH=src).
