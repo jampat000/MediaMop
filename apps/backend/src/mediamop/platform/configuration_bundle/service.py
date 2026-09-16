@@ -223,6 +223,7 @@ def apply_configuration_bundle(session: Session, bundle: dict[str, Any]) -> None
         signed_in_home_notice=ss.get("signed_in_home_notice"),
         app_timezone=str(ss["app_timezone"]),
         log_retention_days=int(ss["log_retention_days"]),
+        activity_retention_days=ss.get("activity_retention_days"),
         configuration_backup_enabled=ss.get("configuration_backup_enabled"),
         configuration_backup_interval_hours=ss.get("configuration_backup_interval_hours"),
     )

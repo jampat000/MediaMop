@@ -67,3 +67,24 @@ def reset_operational_history(session: Session) -> OperationalHistoryResetResult
         refiner_jobs_deleted=refiner_count,
         pruner_jobs_deleted=pruner_count,
     )
+
+
+def preview_operational_history_reset(session: Session) -> OperationalHistoryResetResult:
+    """What a reset would remove, counted the same way, without removing anything."""
+
+    refiner_terminal = (
+        RefinerJobStatus.COMPLETED.value,
+        RefinerJobStatus.FAILED.value,
+        RefinerJobStatus.HANDLER_OK_FINALIZE_FAILED.value,
+        RefinerJobStatus.CANCELLED.value,
+    )
+    pruner_terminal = (
+        PrunerJobStatus.COMPLETED.value,
+        PrunerJobStatus.FAILED.value,
+        PrunerJobStatus.HANDLER_OK_FINALIZE_FAILED.value,
+    )
+    return OperationalHistoryResetResult(
+        activity_events_deleted=_count(session, ActivityEvent),
+        refiner_jobs_deleted=_count(session, RefinerJob, RefinerJob.status.in_(refiner_terminal)),
+        pruner_jobs_deleted=_count(session, PrunerJob, PrunerJob.status.in_(pruner_terminal)),
+    )

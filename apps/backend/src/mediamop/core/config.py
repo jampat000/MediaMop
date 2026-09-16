@@ -191,7 +191,8 @@ class MediaMopSettings:
     refiner_tv_failure_cleanup_grace_period_seconds: int
     # Legacy env read for compatibility only; remux path resolution uses saved Refiner path settings (SQLite).
     refiner_remux_media_root: str | None
-    # Job-row retention: delete terminal job rows (completed/failed/cancelled) older than N days (default 7, 1..365).
+    # Job-row retention: delete terminal job rows (completed/failed/cancelled) older than N days (default 90, 1..365).
+    # 90 matches Activity and file logs, so "has this failed before?" has the same horizon everywhere (#469).
     job_rows_retention_days: int
     job_rows_retention_schedule_interval_seconds: int
     # Shared *arr HTTP (env: MEDIAMOP_ARR_*). SQLite operator settings may override per-request.
@@ -464,7 +465,7 @@ class MediaMopSettings:
         )
         refiner_remux_root = (os.environ.get("MEDIAMOP_REFINER_REMUX_MEDIA_ROOT") or "").strip()
         refiner_remux_media_root = str(Path(refiner_remux_root).expanduser()) if refiner_remux_root else None
-        job_rows_retention_days = max(1, min(365, _env_int("MEDIAMOP_JOB_ROWS_RETENTION_DAYS", 7)))
+        job_rows_retention_days = max(1, min(365, _env_int("MEDIAMOP_JOB_ROWS_RETENTION_DAYS", 90)))
         job_rows_retention_schedule_iv = max(
             60, min(86400, _env_int("MEDIAMOP_JOB_ROWS_RETENTION_SCHEDULE_INTERVAL_SECONDS", 3600))
         )

@@ -30,6 +30,7 @@ def ensure_suite_settings_row(session: Session) -> SuiteSettingsRow:
             setup_wizard_state=_default_setup_wizard_state(session),
             app_timezone="UTC",
             log_retention_days=30,
+            activity_retention_days=90,
             configuration_backup_enabled=False,
             configuration_backup_interval_hours=24,
             configuration_backup_preferred_time="02:00",
@@ -50,6 +51,7 @@ def build_suite_settings_out(row: SuiteSettingsRow) -> SuiteSettingsOut:
         setup_wizard_state=wizard_state,
         app_timezone=(row.app_timezone or "UTC").strip() or "UTC",
         log_retention_days=max(1, min(int(row.log_retention_days), 3650)),
+        activity_retention_days=max(0, min(int(row.activity_retention_days), 3650)),
         configuration_backup_enabled=bool(row.configuration_backup_enabled),
         configuration_backup_interval_hours=max(1, min(int(row.configuration_backup_interval_hours or 24), 720)),
         configuration_backup_preferred_time=_normalize_backup_preferred_time(
@@ -79,6 +81,7 @@ def apply_suite_settings_put(
     app_timezone: str,
     log_retention_days: int,
     setup_wizard_state: str | None = None,
+    activity_retention_days: int | None = None,
     configuration_backup_enabled: bool | None = None,
     configuration_backup_interval_hours: int | None = None,
     configuration_backup_preferred_time: str | None = None,
@@ -107,6 +110,9 @@ def apply_suite_settings_put(
     if keep_days < 1 or keep_days > 3650:
         msg = "Log retention must be between 1 and 3650 days."
         raise ValueError(msg)
+    if activity_retention_days is not None and not 0 <= int(activity_retention_days) <= 3650:
+        msg = "Activity history must be kept between 0 (forever) and 3650 days."
+        raise ValueError(msg)
     wizard_state: str | None = None
     if setup_wizard_state is not None:
         wizard_state = (setup_wizard_state or "").strip().lower()
@@ -130,6 +136,8 @@ def apply_suite_settings_put(
         row.setup_wizard_state = wizard_state
     row.app_timezone = tz
     row.log_retention_days = keep_days
+    if activity_retention_days is not None:
+        row.activity_retention_days = int(activity_retention_days)
     if configuration_backup_enabled is not None:
         row.configuration_backup_enabled = bool(configuration_backup_enabled)
     if backup_hours is not None:

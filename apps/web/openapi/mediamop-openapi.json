@@ -28,14 +28,73 @@
             "title": "Id",
             "type": "integer"
           },
+          "library_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Library Id"
+          },
           "module": {
             "description": "Source area, e.g. auth.",
             "title": "Module",
             "type": "string"
           },
+          "relative_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The file this concerns, relative to its library.",
+            "title": "Relative Path"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How it went: success, skipped, warning, running, failed.",
+            "title": "Result"
+          },
+          "run_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Events sharing a run key belong to one run.",
+            "title": "Run Key"
+          },
           "title": {
             "title": "Title",
             "type": "string"
+          },
+          "trigger": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why it happened: manual, scheduled, webhook, retry, \u2026",
+            "title": "Trigger"
           }
         },
         "required": [
@@ -46,6 +105,95 @@
           "title"
         ],
         "title": "ActivityEventItemOut",
+        "type": "object"
+      },
+      "ActivityFileHistoryCountOut": {
+        "properties": {
+          "activity_events": {
+            "minimum": 0.0,
+            "title": "Activity Events",
+            "type": "integer"
+          },
+          "message": {
+            "description": "Exactly what removing it would delete, and what it would not.",
+            "title": "Message",
+            "type": "string"
+          },
+          "processing_records": {
+            "minimum": 0.0,
+            "title": "Processing Records",
+            "type": "integer"
+          },
+          "relative_path": {
+            "title": "Relative Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "relative_path",
+          "activity_events",
+          "processing_records",
+          "message"
+        ],
+        "title": "ActivityFileHistoryCountOut",
+        "type": "object"
+      },
+      "ActivityFileHistoryRemoveIn": {
+        "properties": {
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "library_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Library Id"
+          },
+          "relative_path": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Relative Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "relative_path",
+          "csrf_token"
+        ],
+        "title": "ActivityFileHistoryRemoveIn",
+        "type": "object"
+      },
+      "ActivityFileHistoryRemoveOut": {
+        "properties": {
+          "activity_events_deleted": {
+            "minimum": 0.0,
+            "title": "Activity Events Deleted",
+            "type": "integer"
+          },
+          "processing_records_deleted": {
+            "minimum": 0.0,
+            "title": "Processing Records Deleted",
+            "type": "integer"
+          },
+          "relative_path": {
+            "title": "Relative Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "relative_path",
+          "activity_events_deleted",
+          "processing_records_deleted"
+        ],
+        "title": "ActivityFileHistoryRemoveOut",
         "type": "object"
       },
       "ActivityRecentOut": {
@@ -62,6 +210,26 @@
             },
             "title": "Items",
             "type": "array"
+          },
+          "oldest_event_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The oldest event still kept, so the page can say how far back history goes.",
+            "title": "Oldest Event At"
+          },
+          "retention_days": {
+            "default": 90,
+            "description": "How far back history is kept. 0 means it is kept until cleared.",
+            "minimum": 0.0,
+            "title": "Retention Days",
+            "type": "integer"
           },
           "system_events": {
             "default": 0,
@@ -7315,6 +7483,13 @@
         "additionalProperties": false,
         "description": "Values stored in ``suite_settings`` (editable in the app).",
         "properties": {
+          "activity_retention_days": {
+            "description": "How far back Activity history goes. Older events are removed daily; 0 keeps them all.",
+            "maximum": 3650.0,
+            "minimum": 0.0,
+            "title": "Activity Retention Days",
+            "type": "integer"
+          },
           "app_timezone": {
             "description": "Suite-wide timezone label used for date/time displays that follow app timezone.",
             "maxLength": 120,
@@ -7397,6 +7572,7 @@
           "setup_wizard_state",
           "app_timezone",
           "log_retention_days",
+          "activity_retention_days",
           "configuration_backup_enabled",
           "configuration_backup_interval_hours",
           "configuration_backup_preferred_time",
@@ -7408,6 +7584,19 @@
       "SuiteSettingsPutIn": {
         "description": "Body for ``PUT /suite/settings``.\n\n``extra=\"ignore\"`` keeps older browser builds or tools from failing when they send removed keys.\n``application_logs_enabled`` is accepted for compatibility with pre-0047 APIs but is not persisted.",
         "properties": {
+          "activity_retention_days": {
+            "anyOf": [
+              {
+                "maximum": 3650.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activity Retention Days"
+          },
           "app_timezone": {
             "maxLength": 120,
             "minLength": 1,
@@ -7905,6 +8094,310 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/activity/export": {
+      "get": {
+        "description": "The filtered history as a file, oldest first \u2014 for your records or a bug report.",
+        "operationId": "get_activity_export_api_v1_activity_export_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "csv",
+              "pattern": "^(csv|json)$",
+              "title": "Format",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "module",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Module"
+            }
+          },
+          {
+            "in": "query",
+            "name": "event_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "trigger",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Trigger"
+            }
+          },
+          {
+            "in": "query",
+            "name": "result",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 16,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Result"
+            }
+          },
+          {
+            "in": "query",
+            "name": "library_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Library Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "file",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2000,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "File"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Activity Export",
+        "tags": [
+          "activity"
+        ]
+      }
+    },
+    "/api/v1/activity/file-history": {
+      "get": {
+        "description": "What removing one file's history would delete \u2014 shown before anyone confirms.",
+        "operationId": "get_activity_file_history_api_v1_activity_file_history_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "relative_path",
+            "required": true,
+            "schema": {
+              "maxLength": 2000,
+              "minLength": 1,
+              "title": "Relative Path",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "library_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Library Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityFileHistoryCountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Activity File History",
+        "tags": [
+          "activity"
+        ]
+      }
+    },
+    "/api/v1/activity/file-history/remove": {
+      "post": {
+        "description": "Delete one file's history. Irreversible, history only: no media file is ever touched.",
+        "operationId": "post_activity_file_history_remove_api_v1_activity_file_history_remove_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivityFileHistoryRemoveIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityFileHistoryRemoveOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Activity File History Remove",
+        "tags": [
+          "activity"
+        ]
+      }
+    },
     "/api/v1/activity/recent": {
       "get": {
         "description": "Recent persisted events, newest first \u2014 snapshot only (pagination-style read; not a control plane).",
@@ -8023,6 +8516,77 @@
                 }
               ],
               "title": "Before Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "trigger",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Trigger"
+            }
+          },
+          {
+            "in": "query",
+            "name": "result",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 16,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Result"
+            }
+          },
+          {
+            "in": "query",
+            "name": "library_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Library Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "file",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2000,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "File"
             }
           }
         ],
@@ -12372,6 +12936,28 @@
         "summary": "Post Notification Channel Test",
         "tags": [
           "notifications"
+        ]
+      }
+    },
+    "/api/v1/suite/operational-history/preview": {
+      "get": {
+        "description": "Exactly what clearing history would remove, so the confirmation can say so. Removes nothing.",
+        "operationId": "get_suite_operational_history_preview_api_v1_suite_operational_history_preview_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuiteOperationalHistoryResetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Suite Operational History Preview",
+        "tags": [
+          "suite"
         ]
       }
     },
