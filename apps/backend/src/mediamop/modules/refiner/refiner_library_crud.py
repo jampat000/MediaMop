@@ -163,6 +163,7 @@ def _apply_fields(session: Session, row: RefinerLibraryRow, body: object) -> Non
         "retry_backoff_seconds",
         "retry_execution_failures",
         "retry_preflight_failures",
+        "failure_policy",
         "schedule_enabled",
         "schedule_hours_limited",
         "schedule_days",

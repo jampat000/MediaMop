@@ -21,6 +21,10 @@ REFINER_FILE_REMUX_PASS_COMPLETED = "refiner.file_remux_pass_completed"
 REFINER_WORK_TEMP_STALE_SWEEP_COMPLETED = "refiner.work_temp_stale_sweep_completed"
 REFINER_FAILURE_CLEANUP_SWEEP_COMPLETED = "refiner.failure_cleanup_sweep_completed"
 REFINER_WORKER_FAILURE = "refiner.worker_failure"
+# A file MediaMop could not process was handed back unmodified rather than kept (#465). A distinct
+# type, so it can never be counted as a completed pass or as space saved.
+REFINER_FILE_PASSED_THROUGH = "refiner.file_passed_through"
+REFINER_FILE_PASS_THROUGH_FAILED = "refiner.file_pass_through_failed"
 
 # Pruner (pruner_jobs + server instances)
 PRUNER_CONNECTION_TEST_SUCCEEDED = "pruner.connection_test_succeeded"

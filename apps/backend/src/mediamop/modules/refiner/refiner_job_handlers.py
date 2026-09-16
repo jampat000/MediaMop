@@ -15,6 +15,10 @@ from mediamop.modules.refiner.refiner_failure_cleanup_job_kinds import (
     REFINER_MOVIE_FAILURE_CLEANUP_SWEEP_JOB_KIND,
     REFINER_TV_FAILURE_CLEANUP_SWEEP_JOB_KIND,
 )
+from mediamop.modules.refiner.refiner_pass_through import (
+    REFINER_FILE_PASS_THROUGH_JOB_KIND,
+    make_refiner_file_pass_through_handler,
+)
 from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_handlers import (
     make_refiner_watched_folder_remux_scan_dispatch_handler,
 )
@@ -38,6 +42,8 @@ def build_refiner_job_handlers(
 
     reg: dict[str, Callable[[RefinerJobWorkContext], None]] = {
         REFINER_FILE_REMUX_PASS_JOB_KIND: make_refiner_file_remux_pass_handler(settings, session_factory),
+        # Hands back the original when processing gave up, so a file is never stranded (#465).
+        REFINER_FILE_PASS_THROUGH_JOB_KIND: make_refiner_file_pass_through_handler(settings, session_factory),
         REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND: make_refiner_watched_folder_remux_scan_dispatch_handler(
             settings,
             session_factory,

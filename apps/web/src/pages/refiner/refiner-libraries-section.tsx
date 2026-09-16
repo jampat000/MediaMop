@@ -74,6 +74,7 @@ type FormState = {
   preserve_original_timestamps: boolean;
   retry_execution_failures: boolean;
   retry_preflight_failures: boolean;
+  failure_policy: "pass_through" | "hold";
   schedule_grid: string;
   rule_set_id: string;
 };
@@ -122,6 +123,7 @@ const EMPTY_FORM: FormState = {
   preserve_original_timestamps: false,
   retry_execution_failures: true,
   retry_preflight_failures: false,
+  failure_policy: "pass_through",
   schedule_grid: "",
   rule_set_id: "",
 };
@@ -184,6 +186,7 @@ function formFrom(library: RefinerLibrary): FormState {
     preserve_original_timestamps: library.preserve_original_timestamps,
     retry_execution_failures: library.retry_execution_failures,
     retry_preflight_failures: library.retry_preflight_failures,
+    failure_policy: library.failure_policy,
     schedule_grid: library.schedule_grid,
     rule_set_id:
       library.rule_set_id === null ? "" : String(library.rule_set_id),
@@ -236,6 +239,7 @@ function writeFrom(
     retry_backoff_seconds: asNumber(form.retry_backoff_seconds, 300),
     retry_execution_failures: form.retry_execution_failures,
     retry_preflight_failures: form.retry_preflight_failures,
+    failure_policy: form.failure_policy,
     exclude_hidden: form.exclude_hidden,
     top_level_only: form.top_level_only,
     ignore_size_changes: form.ignore_size_changes,
@@ -1108,6 +1112,33 @@ export function RefinerLibrariesSection() {
                 "Usually leave this off: retrying does not repair an unsupported or malformed file.",
               )}
             </div>
+            <label className="block space-y-1">
+              <span className="text-sm text-[var(--mm-text2)]">
+                When retries run out
+              </span>
+              <select
+                className={mmSelectFieldClass}
+                value={form.failure_policy}
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    failure_policy: event.target.value as
+                      "pass_through" | "hold",
+                  })
+                }
+                disabled={!editable}
+              >
+                <option value="pass_through">
+                  Hand the original back unchanged
+                </option>
+                <option value="hold">Keep it until someone acts</option>
+              </select>
+              <span className="block text-xs text-[var(--mm-text3)]">
+                {form.failure_policy === "pass_through"
+                  ? "Your media manager still gets the file, exactly as it arrived. The original stays in the watched folder."
+                  : "The file stays with MediaMop and will not reach your media manager until you deal with it."}
+              </span>
+            </label>
           </section>
 
           <details className="rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-4">

@@ -32,6 +32,7 @@ from mediamop.modules.refiner.jobs_ops import (
 )
 from mediamop.modules.refiner.refiner_failure_classes import RefinerFailureClass
 from mediamop.modules.refiner.refiner_library_service import resolve_library
+from mediamop.modules.refiner.refiner_pass_through import apply_failure_policy
 from mediamop.modules.refiner.refiner_requeue_service import record_failure
 from mediamop.modules.refiner.refiner_work_admission import evaluate_work_admission
 from mediamop.platform.activity import constants as activity_constants
@@ -78,6 +79,13 @@ def _record_unhandled_refiner_failure(
                     relative_path=relative_path.strip(),
                     failure_class=RefinerFailureClass.UNKNOWN,
                     reason=safe_message,
+                )
+                # A crash is still a failure; the file must not be stranded by it either (#465).
+                apply_failure_policy(
+                    session,
+                    library=library,
+                    relative_path=relative_path.strip(),
+                    will_retry=decision.will_retry,
                 )
             detail = json.dumps(
                 {

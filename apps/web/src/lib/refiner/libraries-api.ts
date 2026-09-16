@@ -55,6 +55,8 @@ export interface RefinerLibrary {
   retry_backoff_seconds: number;
   retry_execution_failures: boolean;
   retry_preflight_failures: boolean;
+  /** What happens once retries run out: hand the original back, or keep it (#465). */
+  failure_policy: "pass_through" | "hold";
   schedule_grid: string;
   schedule_enabled: boolean;
   schedule_hours_limited: boolean;
@@ -114,6 +116,8 @@ export interface RefinerLibraryWrite {
   retry_backoff_seconds: number;
   retry_execution_failures: boolean;
   retry_preflight_failures: boolean;
+  /** What happens once retries run out: hand the original back, or keep it (#465). */
+  failure_policy: "pass_through" | "hold";
   schedule_grid: string;
   schedule_enabled: boolean;
   schedule_hours_limited: boolean;
@@ -378,6 +382,7 @@ export function writeFromRefinerLibrary(
     retry_backoff_seconds: library.retry_backoff_seconds,
     retry_execution_failures: library.retry_execution_failures,
     retry_preflight_failures: library.retry_preflight_failures,
+    failure_policy: library.failure_policy,
     schedule_grid: library.schedule_grid,
     schedule_enabled: library.schedule_enabled,
     schedule_hours_limited: library.schedule_hours_limited,

@@ -49,6 +49,10 @@ class RefinerFileStatus(StrEnum):
     ON_HOLD = "on_hold"
     OUT_OF_SCHEDULE = "out_of_schedule"
     BLOCKED_UPSTREAM = "blocked_upstream"
+    # Terminal, and deliberately distinct from PROCESSED: MediaMop could not process this file,
+    # so it handed the original back unmodified rather than keep it (#465). "We did nothing to
+    # this on purpose" must never be confused with "we improved this" — including in savings.
+    PASSED_THROUGH = "passed_through"
 
 
 #: States where MediaMop has decided not to act, as opposed to not having acted yet.

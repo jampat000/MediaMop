@@ -10,7 +10,8 @@ export type RefinerFileStatus =
   | "disabled"
   | "on_hold"
   | "out_of_schedule"
-  | "blocked_upstream";
+  | "blocked_upstream"
+  | "passed_through";
 
 /** Plain words for each state. The reason string carries the detail. */
 export const REFINER_FILE_STATUS_LABELS: Record<RefinerFileStatus, string> = {
@@ -23,6 +24,7 @@ export const REFINER_FILE_STATUS_LABELS: Record<RefinerFileStatus, string> = {
   on_hold: "On hold",
   out_of_schedule: "Out of schedule",
   blocked_upstream: "Blocked upstream",
+  passed_through: "Handed back unchanged",
 };
 
 export interface RefinerFile {

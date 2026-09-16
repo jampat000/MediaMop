@@ -181,6 +181,11 @@ class RefinerLibraryRow(Base):
     retry_backoff_seconds: Mapped[int] = mapped_column(Integer, nullable=False, server_default="300")
     retry_execution_failures: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
     retry_preflight_failures: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    # What happens once retries are exhausted (#465). MediaMop sits in the middle of someone
+    # else's pipeline, so keeping a file it could not process means that file never reaches
+    # the manager. ``pass_through`` hands the original back unmodified; ``hold`` keeps today's
+    # behaviour for an operator who would rather nothing arrive than something unprocessed.
+    failure_policy: Mapped[str] = mapped_column(Text, nullable=False, server_default="pass_through")
 
     # Capacity.
     max_concurrent_files: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
