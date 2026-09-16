@@ -167,7 +167,7 @@ def run_refiner_work_temp_stale_sweep_for_scope(
             f"{label} Refiner uses a work folder that is the same directory on disk as the other scope's "
             "saved work folder. Refiner cannot tell which temp files belong to Movies versus TV here, "
             "so automatic temp deletion for this scope is turned off for safety. "
-            "Save **separate** Movies and TV work folders in Refiner path settings to enable cleanup, "
+            "Give each library its own work folder on the Refiner Libraries settings page to enable cleanup, "
             "or remove temp files yourself if you are sure they are unused."
         )
         logger.warning(

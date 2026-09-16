@@ -125,6 +125,7 @@ def _enqueue_refine(session: Session, event: MediaManagerImportEvent) -> str:
         "relative_media_path": resolved.relative_media_path,
         # The job's cleanup shape follows the library it landed in, not what the manager called it.
         "media_scope": library.media_type if library is not None else event.media_scope,
+        "trigger": "webhook",
     }
     if library is not None:
         payload["library_id"] = library.id
@@ -327,7 +328,15 @@ def delete_intake_handoff(
         module="refiner",
         title=f"{key.capitalize()} cancelled its hand-off of {PurePath(row.relative_path).name}",
         detail=json.dumps(
-            {"source": key, "handoff_id": handoff_id, "relative_media_path": row.relative_path, "message": sentence},
+            {
+                "source": key,
+                "handoff_id": handoff_id,
+                "relative_media_path": row.relative_path,
+                "library_id": row.library_id,
+                "trigger": "webhook",
+                "result": "success",
+                "message": sentence,
+            },
             separators=(",", ":"),
         ),
     )

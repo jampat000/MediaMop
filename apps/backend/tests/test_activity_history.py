@@ -140,7 +140,7 @@ def test_a_filtered_range_exports_as_csv_and_json(client_with_admin: TestClient,
     assert sorted(r["title"] for r in rows) == ["Heat failed", "Heat was handed back"]
     assert {r["trigger"] for r in rows} == {"scheduled", "retry"}
 
-    as_json = client.get("/api/v1/activity/export", params={"format": "json", "trigger": "manual"})
+    as_json = client.get("/api/v1/activity/export", params={"format": "json", "trigger": "manual", "module": "refiner"})
     assert as_json.status_code == 200
     assert [r["title"] for r in as_json.json()] == ["Alien processed"]
 

@@ -127,7 +127,7 @@ def enqueue_pass_through(
     Without it, a manager waiting on a hand-off would only ever have heard nothing.
     """
 
-    body: dict[str, Any] = {"relative_media_path": relative_path, "library_id": library.id}
+    body: dict[str, Any] = {"relative_media_path": relative_path, "library_id": library.id, "trigger": "worker"}
     if origin:
         body["origin"] = origin
     payload = json.dumps(body, separators=(",", ":"))
@@ -153,7 +153,7 @@ def enqueue_reject(
 ) -> RefinerJob:
     """Queue a reject. Its own durable job, so no HTTP call or delete runs inside a transaction."""
 
-    body: dict[str, Any] = {"relative_media_path": relative_path, "library_id": library.id}
+    body: dict[str, Any] = {"relative_media_path": relative_path, "library_id": library.id, "trigger": "worker"}
     if origin:
         body["origin"] = origin
     if reason:
@@ -334,6 +334,8 @@ def record_delivery(
                 "collision_action": result.collision_action,
                 "source_kept": True,
                 "message": result.sentence,
+                "trigger": "worker",
+                "result": "success" if result.delivered else "skipped",
             },
             separators=(",", ":"),
             ensure_ascii=True,
@@ -387,6 +389,9 @@ def make_refiner_file_pass_through_handler(
                             "job_id": ctx.id,
                             "relative_media_path": relative_path,
                             "message": str(exc)[:1200],
+                            "trigger": "worker",
+                            "result": "failed",
+                            "library_id": delivery.library_id,
                             "source_kept": True,
                             "next_action": (
                                 "The original is untouched in the watched folder. "

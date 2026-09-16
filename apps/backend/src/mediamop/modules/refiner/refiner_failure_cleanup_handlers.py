@@ -15,15 +15,18 @@ from mediamop.modules.refiner.refiner_failure_cleanup_activity import (
     record_refiner_failure_cleanup_sweep_started,
 )
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
+from mediamop.platform.activity.provenance import job_provenance
 
 
-def _parse_payload(payload_json: str | None, *, default_scope: str) -> str:
+def _parse_payload(payload_json: str | None, *, default_scope: str) -> tuple[str, str | None]:
     media_scope = default_scope
+    trigger: str | None = None
     if payload_json and payload_json.strip():
         data = json.loads(payload_json)
         if isinstance(data, dict):
             media_scope = "tv" if str(data.get("media_scope") or "").strip().lower() == "tv" else "movie"
-    return media_scope
+            trigger = job_provenance(data).get("trigger")
+    return media_scope, trigger
 
 
 def make_refiner_failure_cleanup_handler(
@@ -33,11 +36,12 @@ def make_refiner_failure_cleanup_handler(
     default_scope: str,
 ) -> Callable[[RefinerJobWorkContext], None]:
     def _run(ctx: RefinerJobWorkContext) -> None:
-        media_scope = _parse_payload(ctx.payload_json, default_scope=default_scope)
+        media_scope, trigger = _parse_payload(ctx.payload_json, default_scope=default_scope)
         with session_factory() as session, session.begin():
             record_refiner_failure_cleanup_sweep_started(
                 session,
                 media_scope=media_scope,
+                trigger=trigger,
                 detail=json.dumps(
                     {"job_id": ctx.id, "media_scope": media_scope, "cleanup_run_status": "started"},
                     separators=(",", ":"),
@@ -54,6 +58,7 @@ def make_refiner_failure_cleanup_handler(
             record_refiner_failure_cleanup_sweep_completed(
                 session,
                 media_scope=media_scope,
+                trigger=trigger,
                 detail=detail,
             )
 

@@ -62,6 +62,7 @@ from mediamop.modules.refiner.refiner_work_admission import (
     library_window_reopens_at,
 )
 from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
+from mediamop.platform.activity.provenance import SCAN_TRIGGER_TO_TRIGGER
 from mediamop.platform.media_managers.manager_port import MediaScope
 
 logger = logging.getLogger(__name__)
@@ -499,6 +500,9 @@ def make_refiner_watched_folder_remux_scan_dispatch_handler(
                 payload_body: dict[str, Any] = {
                     "relative_media_path": rel,
                     "media_scope": media_scope,
+                    # Why the scan ran, and which scan: every file it queues is part of that run (#469).
+                    "trigger": SCAN_TRIGGER_TO_TRIGGER.get(scan_trigger, "manual"),
+                    "run_id": f"scan-{ctx.id}",
                 }
                 # The library id travels with the job so the per-library cap and the
                 # schedule window can be applied at lease time without re-deriving it.

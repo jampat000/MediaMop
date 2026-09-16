@@ -199,12 +199,14 @@ def _enqueue_remux_for(
     library: RefinerLibraryRow,
     row: RefinerFileRow,
     not_before: datetime | None,
+    trigger: str = "manual",
 ) -> RefinerJob:
     payload = json.dumps(
         {
             "relative_media_path": row.relative_path,
             "media_scope": "tv" if library.media_type == "tv" else "movie",
             "library_id": library.id,
+            "trigger": trigger,
         },
         separators=(",", ":"),
     )
@@ -251,7 +253,9 @@ def requeue_file(
     else:
         not_before = row.next_retry_at
 
-    _enqueue_remux_for(session, library=library, row=row, not_before=not_before)
+    _enqueue_remux_for(
+        session, library=library, row=row, not_before=not_before, trigger="manual" if manual else "retry"
+    )
     row.status = RefinerFileStatus.UNPROCESSED.value
     row.status_reason = (
         "Queued again by hand. It starts as soon as there is capacity for it."

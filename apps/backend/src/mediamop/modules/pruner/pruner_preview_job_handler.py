@@ -292,6 +292,13 @@ def make_pruner_candidate_removal_preview_handler(
                     user_message=(
                         f"Pruner checked {label_scope} for {rule_tag} and found {len(cands)} item"
                         f"{'' if len(cands) == 1 else 's'}."
+                        if outcome != "failed"
+                        else f"Pruner could not check {label_scope} for {rule_tag}."
+                    ),
+                    next_action=(
+                        "Test the media server connection on the Pruner page, then run the preview again."
+                        if outcome == "failed"
+                        else None
                     ),
                 ),
                 "phase": "preview",

@@ -122,7 +122,7 @@ def post_refiner_maintenance_run(
     _verify_csrf(request, settings, body.csrf_token)
 
     if body.family == "work_temp_stale_sweep":
-        enqueue_refiner_work_temp_stale_sweep_job(db, media_scope=body.media_scope)
+        enqueue_refiner_work_temp_stale_sweep_job(db, media_scope=body.media_scope, trigger="manual")
         db.commit()
         return MaintenanceTriggerOut(
             queued=True,
@@ -132,7 +132,7 @@ def post_refiner_maintenance_run(
             ),
         )
 
-    job, inserted = enqueue_refiner_failure_cleanup_sweep_job(db, media_scope=body.media_scope)
+    job, inserted = enqueue_refiner_failure_cleanup_sweep_job(db, media_scope=body.media_scope, trigger="manual")
     db.commit()
     if not inserted:
         # Already waiting or running. Saying so beats silently returning success for a

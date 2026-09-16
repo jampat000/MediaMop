@@ -75,6 +75,8 @@ def post_refiner_file_remux_pass_enqueue(
         "media_scope": scope,
         "library_id": library_id,
         "pass_through_unchanged": body.pass_through_unchanged,
+        # An operator asked for this, including when it replaces a queued job's choice below.
+        "trigger": "manual",
     }
     job = None
     if body.pass_through_unchanged:

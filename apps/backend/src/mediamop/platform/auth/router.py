@@ -459,7 +459,7 @@ def post_change_username(
     logger.info("auth event: username changed (user_id=%s)", user.id)
     activity_service.record_activity_event(
         db,
-        event_type=activity_constants.AUTH_PASSWORD_CHANGED,
+        event_type=activity_constants.AUTH_USERNAME_CHANGED,
         module="auth",
         title="Username changed",
         detail=f"Signed in as {new_username}.",

@@ -37,6 +37,7 @@ from mediamop.modules.refiner.refiner_requeue_service import record_failure
 from mediamop.modules.refiner.refiner_work_admission import evaluate_work_admission
 from mediamop.platform.activity import constants as activity_constants
 from mediamop.platform.activity import service as activity_service
+from mediamop.platform.activity.provenance import job_provenance
 from mediamop.platform.http.request_context import job_logging_context
 from mediamop.platform.jobs.worker_health import worker_heartbeat, worker_started, worker_stopped
 from mediamop.platform.notifications.dispatch import dispatch_job_notification
@@ -96,6 +97,14 @@ def _record_unhandled_refiner_failure(
                     "message": safe_message,
                     "next_action": "Review this job and use Start again after fixing the cause.",
                     "retry_scheduled": bool(decision and decision.will_retry),
+                    "result": "retrying" if decision and decision.will_retry else "failed",
+                    **(
+                        {"relative_media_path": relative_path.strip()}
+                        if isinstance(relative_path, str) and relative_path.strip()
+                        else {}
+                    ),
+                    **({"library_id": library_id} if library_id is not None else {}),
+                    **job_provenance(payload),
                 },
                 separators=(",", ":"),
             )
@@ -103,7 +112,7 @@ def _record_unhandled_refiner_failure(
                 session,
                 event_type=activity_constants.REFINER_WORKER_FAILURE,
                 module="refiner",
-                title="Refiner job could not start",
+                title="A Refiner job stopped with an error",
                 detail=detail,
             )
     except Exception:

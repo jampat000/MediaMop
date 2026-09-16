@@ -156,6 +156,10 @@ def test_scan_handler_enqueues_remux_when_requested(
         body = json.loads(remux[0].payload_json or "{}")
         assert body.get("relative_media_path") == "Gate Test 2001.mkv"
         assert "dry_run" not in body
+        # No scan_trigger means a manual scan; every file it queues belongs to that scan's run (#469).
+        assert body.get("trigger") == "manual"
+        scan_job = next(j for j in jobs if j.job_kind == REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND)
+        assert body.get("run_id") == f"scan-{scan_job.id}"
 
         assert s.scalar(select(ActivityEvent)) is None
 

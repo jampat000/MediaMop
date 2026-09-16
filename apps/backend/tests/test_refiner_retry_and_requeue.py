@@ -314,6 +314,9 @@ def test_an_automatic_requeue_keeps_the_count_and_honours_the_backoff(session: S
 
     assert row.failure_attempts == 1
     assert _remux_jobs(session)[0].not_before is not None
+    import json
+
+    assert json.loads(_remux_jobs(session)[0].payload_json or "{}")["trigger"] == "retry"
 
 
 def test_a_requeued_job_carries_its_library_so_the_caps_still_apply(session: Session) -> None:
@@ -335,6 +338,7 @@ def test_a_requeued_job_carries_its_library_so_the_caps_still_apply(session: Ses
     payload = json.loads(_remux_jobs(session)[0].payload_json or "{}")
     assert payload["library_id"] == library.id
     assert payload["relative_media_path"] == "Film/film.mkv"
+    assert payload["trigger"] == "manual"
 
 
 def test_a_bulk_requeue_reports_a_total_rather_than_stopping_at_the_first_problem(session: Session) -> None:
