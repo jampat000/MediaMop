@@ -86,6 +86,7 @@ def _record_unhandled_refiner_failure(
                     library=library,
                     relative_path=relative_path.strip(),
                     will_retry=decision.will_retry,
+                    origin=payload.get("origin") if isinstance(payload.get("origin"), dict) else None,
                 )
             detail = json.dumps(
                 {

@@ -142,6 +142,9 @@ def test_deluno_handoff_enqueues_a_refiner_pass_with_a_relative_path(client: Tes
     assert payload["media_scope"] == "movie"
     assert payload["origin"]["handoff_id"] == "handoff-1"
     assert payload["origin"]["callback_path"] == "/api/integrations/processors/events"
+    # Deluno refuses a processor event that does not name its library, so the id has to
+    # survive from the hand-off to the report.
+    assert payload["origin"]["library_id"] == "lib-1"
 
 
 def test_repeated_handoff_id_does_not_remux_the_file_twice(client: TestClient) -> None:

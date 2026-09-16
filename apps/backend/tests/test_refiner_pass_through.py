@@ -11,6 +11,7 @@ import json
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import pytest
 from sqlalchemy import delete, select
@@ -18,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
+from mediamop.modules.refiner import refiner_pass_through
 from mediamop.modules.refiner.jobs_model import RefinerJob
 from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
 from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
@@ -223,6 +225,16 @@ def test_repeated_failures_do_not_queue_racing_deliveries(db_session: Session) -
     assert len(_pass_through_jobs(db_session)) == 1
 
 
+def test_the_managers_hand_off_rides_along_with_the_delivery(db_session: Session) -> None:
+    """The delivery is what a waiting manager finally hears about, so it has to know who asked."""
+
+    library = seed_refiner_library(db_session, failure_policy="pass_through")
+    origin = {"source_key": "deluno", "handoff_id": "h1", "library_id": "lib-movies", "callback_path": "/cb"}
+    apply_failure_policy(db_session, library=library, relative_path=_REL, will_retry=False, origin=origin)
+    (job,) = _pass_through_jobs(db_session)
+    assert json.loads(job.payload_json or "{}")["origin"] == origin
+
+
 def test_new_libraries_default_to_the_guarantee(db_session: Session) -> None:
     library = RefinerLibraryRow(name="Fresh", media_scope="movie")
     db_session.add(library)
@@ -280,6 +292,66 @@ def test_the_handler_delivers_marks_and_records(
     )
     assert events
     assert json.loads(events[-1].detail or "{}")["source_kept"] is True
+
+
+def test_a_delivered_hand_off_is_reported_to_the_waiting_manager(
+    db_session: Session,
+    folders: tuple[Path, Path],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    watched, output = folders
+    library = seed_refiner_library(
+        db_session,
+        watched_folder=str(watched),
+        output_folder=str(output),
+        failure_policy="pass_through",
+    )
+    db_session.commit()
+    reports: list[dict[str, Any]] = []
+
+    def _capture(session: Session, settings: MediaMopSettings, *, payload_json: str, result: dict[str, Any]) -> str:
+        reports.append({"payload": json.loads(payload_json), "result": result})
+        return "reported completed to Deluno"
+
+    monkeypatch.setattr(refiner_pass_through, "report_handoff_completion", _capture)
+    origin = {"source_key": "deluno", "handoff_id": "h1", "library_id": "lib-movies", "callback_path": "/cb"}
+
+    settings = MediaMopSettings.load()
+    handler = make_refiner_file_pass_through_handler(settings, create_session_factory(create_db_engine(settings)))
+    handler(
+        _Ctx(id=9, payload_json=json.dumps({"relative_media_path": _REL, "library_id": library.id, "origin": origin}))
+    )
+
+    (report,) = reports
+    assert report["payload"]["origin"] == origin
+    assert report["result"]["ok"] is True
+    assert report["result"]["passed_through_after_failure"] is True
+    assert Path(report["result"]["output_file"]) == (output / _REL).resolve()
+    assert Path(report["result"]["refiner_output_folder_resolved"]) == output.resolve()
+
+
+def test_a_delivery_that_did_not_come_from_a_manager_reports_nothing(
+    db_session: Session,
+    folders: tuple[Path, Path],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    watched, output = folders
+    library = seed_refiner_library(
+        db_session,
+        watched_folder=str(watched),
+        output_folder=str(output),
+        failure_policy="pass_through",
+    )
+    db_session.commit()
+    reports: list[Any] = []
+    monkeypatch.setattr(refiner_pass_through, "report_handoff_completion", lambda *a, **k: reports.append(k) or "")
+
+    settings = MediaMopSettings.load()
+    handler = make_refiner_file_pass_through_handler(settings, create_session_factory(create_db_engine(settings)))
+    handler(_Ctx(id=10, payload_json=json.dumps({"relative_media_path": _REL, "library_id": library.id})))
+
+    assert (output / _REL).read_bytes() == _BYTES
+    assert reports == []
 
 
 def test_a_failed_delivery_is_recorded_and_the_original_survives(

@@ -97,6 +97,7 @@ def _enqueue_refine(session: Session, event: MediaManagerImportEvent) -> str:
             "handoff_id": event.handoff_id,
             "callback_path": event.callback_path,
             "release_name": event.release_name,
+            "library_id": event.library_id,
         }
 
     # The manager's own idempotency key when it gave us one, so a repeated hand-off
