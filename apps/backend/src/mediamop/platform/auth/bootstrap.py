@@ -7,7 +7,7 @@ Unavailable once **any** user with role ``admin`` exists (active or not — reco
 
 from __future__ import annotations
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from mediamop.platform.auth.models import User, UserRole
@@ -29,8 +29,16 @@ def acquire_bootstrap_transaction_lock(db: Session) -> None:
 
 
 def any_admin_user_exists(db: Session) -> bool:
+    """Whether a **usable** admin exists.
+
+    Deliberately filtered on ``is_active``. Counting deactivated rows here bricks the install:
+    sign-in rejects an inactive user, so with no active admin left there is no way in, and a
+    role-only count would also keep first-run setup closed. That leaves hand-editing the
+    database as the only route back (#456).
+    """
+
     cnt = db.scalar(
-        select(func.count()).select_from(User).where(User.role == UserRole.admin.value),
+        select(func.count()).select_from(User).where(User.role == UserRole.admin.value, User.is_active.is_(True)),
     )
     return (cnt or 0) > 0
 
@@ -45,6 +53,10 @@ def create_initial_admin(db: Session, *, username: str, password: str) -> User:
     if any_admin_user_exists(db):
         raise RuntimeError("bootstrap not allowed: an admin user already exists")
     validate_password_strength(password, username=username)
+    # Any admin row still here is inactive, or the guard above would have refused. Clearing it
+    # keeps this a single-operator product: leaving the row and inserting alongside it would
+    # produce two admins, which nothing else in the app expects. Sessions cascade with the row.
+    db.execute(delete(User).where(User.role == UserRole.admin.value))
     row = User(
         username=username.strip(),
         password_hash=hash_password(password),

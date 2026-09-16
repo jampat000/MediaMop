@@ -70,6 +70,7 @@ export function LoginPage() {
     Boolean((location.state as { fromSetup?: boolean } | null)?.fromSetup) ||
     searchParams.get("bootstrap") === "created";
   const sessionExpired = searchParams.get("session") === "expired";
+  const sessionNotKept = searchParams.get("problem") === "session-not-kept";
   const me = useMeQuery();
   const boot = useBootstrapStatusQuery();
   const login = useLoginMutation();
@@ -164,6 +165,18 @@ export function LoginPage() {
             <p className="mm-auth-banner" role="status">
               Your session expired. Sign in again to keep using MediaMop.
             </p>
+          ) : null}
+          {sessionNotKept ? (
+            <div className="mm-auth-banner" role="alert">
+              <strong>
+                Your password was correct, but the session did not stick.
+              </strong>{" "}
+              Your browser rejected the sign-in cookie. This usually happens
+              when MediaMop is reached over plain HTTP while HTTPS-only cookies
+              are switched on. Set{" "}
+              <code>MEDIAMOP_SESSION_COOKIE_SECURE=auto</code> and restart, or
+              reach MediaMop over HTTPS.
+            </div>
           ) : null}
 
           {boot.data?.bootstrap_allowed ? (

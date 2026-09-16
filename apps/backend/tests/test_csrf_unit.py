@@ -32,7 +32,7 @@ def _csrf_settings(**overrides: object) -> MediaMopSettings:
         credentials_secret=None,
         previous_credentials_secrets=(),
         session_cookie_name="mediamop_session",
-        session_cookie_secure=False,
+        session_cookie_secure_mode="auto",
         session_cookie_samesite="lax",
         session_idle_minutes=720,
         session_absolute_days=14,

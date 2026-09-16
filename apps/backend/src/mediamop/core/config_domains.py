@@ -9,7 +9,7 @@ from dataclasses import dataclass
 class SessionSettings:
     secret: str | None
     cookie_name: str
-    cookie_secure: bool
+    cookie_secure_mode: str
     cookie_samesite: str
     idle_minutes: int
     absolute_days: int

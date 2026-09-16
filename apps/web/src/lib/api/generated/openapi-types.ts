@@ -5426,10 +5426,15 @@ export interface components {
        */
       sign_in_attempt_window_plain: string;
       /**
-       * Sign In Cookie Https Only
-       * @description Whether the sign-in cookie is marked for HTTPS only.
+       * Sign In Cookie Https Mode
+       * @description How the sign-in cookie decides to be HTTPS-only: auto, always, or never.
        */
-      sign_in_cookie_https_only: boolean;
+      sign_in_cookie_https_mode: string;
+      /**
+       * Sign In Cookie Https Plain
+       * @description Plain-language explanation of the sign-in cookie's HTTPS-only behaviour.
+       */
+      sign_in_cookie_https_plain: string;
       /**
        * Sign In Cookie Same Site
        * @description How strictly the browser limits the sign-in cookie.

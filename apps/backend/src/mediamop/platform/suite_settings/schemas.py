@@ -123,7 +123,12 @@ class SuiteSecurityOverviewOut(BaseModel):
     session_signing_configured: bool = Field(
         description="Whether the app was started with a sign-in signing key configured.",
     )
-    sign_in_cookie_https_only: bool = Field(description="Whether the sign-in cookie is marked for HTTPS only.")
+    sign_in_cookie_https_mode: str = Field(
+        description="How the sign-in cookie decides to be HTTPS-only: auto, always, or never.",
+    )
+    sign_in_cookie_https_plain: str = Field(
+        description="Plain-language explanation of the sign-in cookie's HTTPS-only behaviour.",
+    )
     sign_in_cookie_same_site: str = Field(description="How strictly the browser limits the sign-in cookie.")
     standard_session_idle_timeout_plain: str = Field(
         description="How long a standard device can stay idle before sign-in expires.",

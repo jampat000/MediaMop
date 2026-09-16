@@ -116,7 +116,9 @@ class MediaMopSettings:
     credentials_secret: str | None
     previous_credentials_secrets: tuple[str, ...]
     session_cookie_name: str
-    session_cookie_secure: bool
+    #: ``auto`` marks the cookie HTTPS-only only when the request actually arrived over
+    #: HTTPS; ``always``/``never`` force it. See :func:`resolve_cookie_secure`.
+    session_cookie_secure_mode: Literal["auto", "always", "never"]
     session_cookie_samesite: Literal["strict", "lax", "none"]
     session_idle_minutes: int
     session_absolute_days: int
@@ -211,7 +213,7 @@ class MediaMopSettings:
         return SessionSettings(
             secret=self.session_secret,
             cookie_name=self.session_cookie_name,
-            cookie_secure=self.session_cookie_secure,
+            cookie_secure_mode=self.session_cookie_secure_mode,
             cookie_samesite=self.session_cookie_samesite,
             idle_minutes=self.session_idle_minutes,
             absolute_days=self.session_absolute_days,
@@ -309,10 +311,18 @@ class MediaMopSettings:
         if _samesite_raw not in ("lax", "strict", "none"):
             _samesite_raw = "lax"
         samesite = cast(Literal["strict", "lax", "none"], _samesite_raw)
-        secure = _env_bool(
-            "MEDIAMOP_SESSION_COOKIE_SECURE",
-            default=(env == "production"),
-        )
+        # Tri-state, and deliberately not a bool. Marking the cookie ``Secure`` on a plain-HTTP
+        # LAN install protects nothing — there is no TLS — it only makes the browser discard the
+        # cookie, which locks the operator out with no error. ``auto`` decides per request from
+        # the (proxy-validated) scheme. Legacy boolish values keep their old meaning.
+        _secure_raw = (os.environ.get("MEDIAMOP_SESSION_COOKIE_SECURE") or "").strip().lower()
+        if _secure_raw in ("1", "true", "yes", "on", "always"):
+            _secure_mode = "always"
+        elif _secure_raw in ("0", "false", "no", "off", "never"):
+            _secure_mode = "never"
+        else:
+            _secure_mode = "auto"
+        cookie_secure_mode = cast(Literal["auto", "always", "never"], _secure_mode)
         idle_min = max(1, _env_int("MEDIAMOP_SESSION_IDLE_MINUTES", 20160))
         abs_days = max(1, _env_int("MEDIAMOP_SESSION_ABSOLUTE_DAYS", 90))
         trusted_idle_days = max(1, _env_int("MEDIAMOP_SESSION_TRUSTED_IDLE_DAYS", 60))
@@ -475,7 +485,7 @@ class MediaMopSettings:
             credentials_secret=credentials_secret,
             previous_credentials_secrets=previous_credentials_secrets,
             session_cookie_name=cookie_name,
-            session_cookie_secure=secure,
+            session_cookie_secure_mode=cookie_secure_mode,
             session_cookie_samesite=samesite,
             session_idle_minutes=idle_min,
             session_absolute_days=abs_days,

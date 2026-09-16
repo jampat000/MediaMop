@@ -32,7 +32,8 @@ export type SuiteSettingsPutBody = {
 
 export type SuiteSecurityOverviewOut = {
   session_signing_configured: boolean;
-  sign_in_cookie_https_only: boolean;
+  sign_in_cookie_https_mode: string;
+  sign_in_cookie_https_plain: string;
   sign_in_cookie_same_site: string;
   standard_session_idle_timeout_plain: string;
   standard_session_absolute_timeout_plain: string;

@@ -44,9 +44,10 @@ ENV PYTHONPATH=/opt/mediamop/apps/backend/src
 ENV PATH=/opt/mediamop/.venv/bin:$PATH
 ENV MEDIAMOP_WEB_DIST=/opt/mediamop/web-dist
 ENV MEDIAMOP_ENV=production
-# Secure cookies are the production default. Plain-HTTP local development can explicitly set
-# MEDIAMOP_SESSION_COOKIE_SECURE=false; HTTPS reverse proxies should leave this enabled.
-ENV MEDIAMOP_SESSION_COOKIE_SECURE=true
+# The sign-in cookie is marked HTTPS-only automatically when a request actually arrives over
+# HTTPS (directly, or via a proxy listed in MEDIAMOP_TRUSTED_PROXY_IPS). Forcing it on here
+# would discard the cookie on a plain-HTTP LAN install and lock the operator out for nothing,
+# so the default is left as `auto`. Set MEDIAMOP_SESSION_COOKIE_SECURE=true to force it.
 
 EXPOSE 8788
 

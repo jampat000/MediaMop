@@ -29,11 +29,20 @@ def _same_site_plain(raw: str) -> str:
     return "Lax (recommended for most setups)"
 
 
+def _https_cookie_plain(mode: str) -> str:
+    if mode == "always":
+        return "Always on. Sign-in will not work unless the app is reached over HTTPS."
+    if mode == "never":
+        return "Always off. The sign-in cookie is sent over plain HTTP as well as HTTPS."
+    return "Matched to each connection — on over HTTPS, off over plain HTTP on your network."
+
+
 def build_suite_security_overview(settings: MediaMopSettings) -> SuiteSecurityOverviewOut:
     secret_ok = bool((settings.session_secret or "").strip())
     return SuiteSecurityOverviewOut(
         session_signing_configured=secret_ok,
-        sign_in_cookie_https_only=settings.session_cookie_secure,
+        sign_in_cookie_https_mode=settings.session_cookie_secure_mode,
+        sign_in_cookie_https_plain=_https_cookie_plain(settings.session_cookie_secure_mode),
         sign_in_cookie_same_site=_same_site_plain(settings.session_cookie_samesite),
         standard_session_idle_timeout_plain=_plain_duration(settings.session_idle_minutes * 60),
         standard_session_absolute_timeout_plain=_plain_duration(settings.session_absolute_days * 86400),
