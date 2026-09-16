@@ -3405,6 +3405,18 @@
       },
       "RefinerFileOut": {
         "properties": {
+          "audio_track_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many audio tracks the file carries.",
+            "title": "Audio Track Count"
+          },
           "blocked_by_connection": {
             "anyOf": [
               {
@@ -3422,6 +3434,18 @@
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Runtime in seconds, as probed.",
+            "title": "Duration Seconds"
           },
           "failure_attempts": {
             "default": 0,
@@ -3538,6 +3562,42 @@
             "description": "Why, written for the person asking why there is no new output for this file.",
             "title": "Output Collision Reason"
           },
+          "progress_eta_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The running pass's own estimate of the time left, when it has one.",
+            "title": "Progress Eta Seconds"
+          },
+          "progress_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the running pass is doing, in the words it reported.",
+            "title": "Progress Message"
+          },
+          "progress_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How far the current pass has got, when one is running. Null when nothing is in flight.",
+            "title": "Progress Percent"
+          },
           "quarantined": {
             "default": false,
             "description": "True when repeated failures placed this file on hold until an operator requeues it.",
@@ -3585,11 +3645,59 @@
             "title": "Status Reason",
             "type": "string"
           },
+          "subtitle_track_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many subtitle tracks the file carries.",
+            "title": "Subtitle Track Count"
+          },
           "updated_at": {
             "description": "When this file row was last changed.",
             "format": "date-time",
             "title": "Updated At",
             "type": "string"
+          },
+          "video_codec": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Video codec as ffprobe named it, e.g. hevc.",
+            "title": "Video Codec"
+          },
+          "video_height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Measured height in pixels.",
+            "title": "Video Height"
+          },
+          "video_width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Measured width in pixels.",
+            "title": "Video Width"
           }
         },
         "required": [
@@ -11643,6 +11751,22 @@
     "/api/v1/refiner/overview-stats": {
       "get": {
         "operationId": "get_refiner_overview_stats_api_v1_refiner_overview_stats_get",
+        "parameters": [
+          {
+            "description": "How far back to count. Pass 1 for 'today' on the custody screen.",
+            "in": "query",
+            "name": "window_days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "description": "How far back to count. Pass 1 for 'today' on the custody screen.",
+              "maximum": 3650,
+              "minimum": 1,
+              "title": "Window Days",
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -11653,6 +11777,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Get Refiner Overview Stats",

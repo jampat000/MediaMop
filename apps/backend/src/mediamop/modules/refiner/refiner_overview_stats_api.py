@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 from mediamop.api.deps import DbSessionDep
 from mediamop.modules.refiner.refiner_overview_stats_service import build_refiner_overview_stats
@@ -14,5 +14,12 @@ router = APIRouter(tags=["refiner"])
 def get_refiner_overview_stats(
     db: DbSessionDep,
     _user: RequireOperatorDep,
+    window_days: int = Query(
+        default=30,
+        ge=1,
+        le=3650,
+        description="How far back to count. Pass 1 for 'today' on the custody screen.",
+    ),
 ) -> RefinerOverviewStatsOut:
-    return build_refiner_overview_stats(db)
+    # The builder already took a window; only the route was fixed at 30 days.
+    return build_refiner_overview_stats(db, window_days=window_days)

@@ -34,6 +34,26 @@ class RefinerFileOut(BaseModel):
         description="The media manager connection holding this file, when the status is blocked_upstream.",
     )
     size_bytes: int
+    # What the file actually is, measured at the last probe. Null means not probed yet, which
+    # is deliberately distinct from a real zero.
+    video_codec: str | None = Field(default=None, description="Video codec as ffprobe named it, e.g. hevc.")
+    video_width: int | None = Field(default=None, description="Measured width in pixels.")
+    video_height: int | None = Field(default=None, description="Measured height in pixels.")
+    audio_track_count: int | None = Field(default=None, description="How many audio tracks the file carries.")
+    subtitle_track_count: int | None = Field(default=None, description="How many subtitle tracks the file carries.")
+    duration_seconds: float | None = Field(default=None, description="Runtime in seconds, as probed.")
+    progress_percent: float | None = Field(
+        default=None,
+        description="How far the current pass has got, when one is running. Null when nothing is in flight.",
+    )
+    progress_message: str | None = Field(
+        default=None,
+        description="What the running pass is doing, in the words it reported.",
+    )
+    progress_eta_seconds: float | None = Field(
+        default=None,
+        description="The running pass's own estimate of the time left, when it has one.",
+    )
     failure_class: str | None = Field(
         default=None,
         description="Why this file failed, in terms a retry policy acts on: preflight, execution, guardrail, unknown.",

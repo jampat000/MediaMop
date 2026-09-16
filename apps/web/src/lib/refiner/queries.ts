@@ -29,10 +29,13 @@ export const refinerOperatorSettingsQueryKey = [
   "operator-settings",
 ] as const;
 
-export function useRefinerOverviewStatsQuery() {
+export function useRefinerOverviewStatsQuery(windowDays?: number) {
   return useQuery({
-    queryKey: refinerOverviewStatsQueryKey,
-    queryFn: () => fetchRefinerOverviewStats(),
+    queryKey:
+      windowDays === undefined
+        ? refinerOverviewStatsQueryKey
+        : [...refinerOverviewStatsQueryKey, windowDays],
+    queryFn: () => fetchRefinerOverviewStats(windowDays),
     staleTime: 30_000,
   });
 }

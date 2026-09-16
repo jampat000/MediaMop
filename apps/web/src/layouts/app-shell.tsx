@@ -87,6 +87,17 @@ export function AppShell() {
             to="/"
             end
             className={sidebarNavClass}
+            title="In hand"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <span className="mm-sidebar-link-icon" aria-hidden="true">
+              <NavIconDashboard />
+            </span>
+            <span className="mm-sidebar-link-label">In hand</span>
+          </NavLink>
+          <NavLink
+            to="/dashboard"
+            className={sidebarNavClass}
             title="Dashboard"
             onClick={() => setSidebarOpen(false)}
           >

@@ -3249,3 +3249,245 @@ select.mm-input::-ms-expand {
   display: flex;
   gap: 8px;
 }
+
+/* --- "In hand": files MediaMop currently has custody of (#463) -------------------------------
+   Built on the type ramp and surface tokens rather than fixed values, so both themes work and
+   the four density steps still scale it. */
+
+.mm-inhand-flow {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: stretch;
+  gap: 0;
+  margin-bottom: var(--mm-space);
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius);
+  background: var(--mm-card-bg);
+  box-shadow: var(--mm-shadow-card);
+  overflow: hidden;
+}
+
+.mm-inhand-flow__stage {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 1.15rem;
+  min-width: 0;
+}
+
+/* The middle stage is the one this screen is about. */
+.mm-inhand-flow__stage--active {
+  background: var(--mm-accent-soft);
+}
+
+.mm-inhand-flow__label {
+  margin: 0;
+  font-size: var(--mm-type-eyebrow);
+  font-weight: 600;
+  letter-spacing: var(--mm-tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--mm-text3);
+}
+
+.mm-inhand-flow__figure {
+  margin: 0;
+  font-size: var(--mm-type-figure);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--mm-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.mm-inhand-flow__detail {
+  margin: 0;
+  font-size: var(--mm-type-caption);
+  color: var(--mm-text2);
+  overflow-wrap: anywhere;
+}
+
+.mm-inhand-flow__arrow {
+  display: flex;
+  align-items: center;
+  padding: 0 0.35rem;
+  color: var(--mm-text3);
+}
+
+.mm-inhand-group,
+.mm-inhand-stuck,
+.mm-inhand-empty {
+  margin-bottom: var(--mm-space);
+  border: 1px solid var(--mm-border);
+  border-radius: var(--mm-radius);
+  background: var(--mm-card-bg);
+  box-shadow: var(--mm-shadow-card);
+  overflow: hidden;
+}
+
+.mm-inhand-group__title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.85rem 1.15rem;
+  font-size: var(--mm-type-panel);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--mm-text);
+  border-bottom: 1px solid var(--mm-border);
+}
+
+.mm-inhand-group__count {
+  font-size: var(--mm-type-caption);
+  font-weight: 400;
+  color: var(--mm-text3);
+}
+
+.mm-inhand-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mm-inhand-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 20rem);
+  gap: 1rem;
+  align-items: start;
+  padding: 0.7rem 1.15rem;
+  border-bottom: 1px solid var(--mm-border-sidebar);
+}
+
+.mm-inhand-row:last-child {
+  border-bottom: none;
+}
+
+.mm-inhand-row__main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.mm-inhand-row__name {
+  font-size: var(--mm-type-body);
+  color: var(--mm-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Numbers and codecs line up column-to-column without the whole screen reading as a terminal. */
+.mm-inhand-row__facts {
+  font-size: var(--mm-type-caption);
+  color: var(--mm-text3);
+  font-variant-numeric: tabular-nums;
+}
+
+.mm-inhand-row__state {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: var(--mm-type-caption);
+  color: var(--mm-text2);
+  min-width: 0;
+}
+
+/* Held upstream is not a failure — the guardrail is working. */
+.mm-inhand-row__state--held {
+  color: var(--mm-status-info-text);
+}
+
+.mm-inhand-row__reason {
+  color: var(--mm-text3);
+  overflow-wrap: anywhere;
+}
+
+.mm-inhand-row__progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.15rem;
+}
+
+.mm-inhand-row__progress-track {
+  position: relative;
+  flex-grow: 1;
+  height: 5px;
+  border-radius: var(--mm-radius-pill);
+  background: var(--mm-input-bg);
+  overflow: hidden;
+}
+
+.mm-inhand-row__progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--mm-radius-pill);
+  background: var(--mm-accent);
+  transition: width 0.6s ease;
+}
+
+.mm-inhand-row__progress-text {
+  flex-shrink: 0;
+  color: var(--mm-accent-bright);
+  font-variant-numeric: tabular-nums;
+}
+
+.mm-inhand-stuck {
+  border-color: var(--mm-status-failed-text);
+  background: var(--mm-status-failed-bg);
+}
+
+.mm-inhand-stuck__title {
+  margin: 0;
+  padding: 0.9rem 1.15rem 0.35rem;
+  font-size: var(--mm-type-panel);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--mm-text);
+}
+
+.mm-inhand-stuck__body {
+  margin: 0;
+  padding: 0 1.15rem 0.75rem;
+  font-size: var(--mm-type-caption);
+  color: var(--mm-text2);
+}
+
+.mm-inhand-stuck__link {
+  display: inline-block;
+  padding: 0.75rem 1.15rem;
+  font-size: var(--mm-type-caption);
+  font-weight: 600;
+  color: var(--mm-accent-bright);
+}
+
+.mm-inhand-empty__title {
+  margin: 0;
+  padding: 1.5rem 1.15rem 0.35rem;
+  font-size: var(--mm-type-panel);
+  font-weight: 600;
+  color: var(--mm-text);
+}
+
+.mm-inhand-empty__body {
+  margin: 0;
+  padding: 0 1.15rem 1.5rem;
+  font-size: var(--mm-type-body);
+  color: var(--mm-text2);
+  max-width: 42rem;
+}
+
+@media (max-width: 720px) {
+  .mm-inhand-flow {
+    grid-template-columns: 1fr;
+  }
+
+  /* The arrows only mean anything in a row. */
+  .mm-inhand-flow__arrow {
+    display: none;
+  }
+
+  .mm-inhand-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

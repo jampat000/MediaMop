@@ -43,6 +43,15 @@ export interface RefinerFile {
   output_collision_reason: string | null;
   video_width: number | null;
   video_height: number | null;
+  /** What the file is, measured at the last probe. Null means not probed yet, never zero. */
+  video_codec: string | null;
+  audio_track_count: number | null;
+  subtitle_track_count: number | null;
+  duration_seconds: number | null;
+  /** How far the pass currently working on this file has got. Null when nothing is in flight. */
+  progress_percent: number | null;
+  progress_message: string | null;
+  progress_eta_seconds: number | null;
   /** When an on-hold file becomes eligible. Null when the wait is on a writer, not the clock. */
   hold_until: string | null;
   size_changed_at: string | null;

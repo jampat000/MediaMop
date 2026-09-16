@@ -3376,6 +3376,11 @@ export interface components {
     /** RefinerFileOut */
     RefinerFileOut: {
       /**
+       * Audio Track Count
+       * @description How many audio tracks the file carries.
+       */
+      audio_track_count?: number | null;
+      /**
        * Blocked By Connection
        * @description The media manager connection holding this file, when the status is blocked_upstream.
        */
@@ -3386,6 +3391,11 @@ export interface components {
        * @description When MediaMop first recorded this file.
        */
       created_at: string;
+      /**
+       * Duration Seconds
+       * @description Runtime in seconds, as probed.
+       */
+      duration_seconds?: number | null;
       /**
        * Failure Attempts
        * @default 0
@@ -3432,6 +3442,21 @@ export interface components {
        */
       output_collision_reason?: string | null;
       /**
+       * Progress Eta Seconds
+       * @description The running pass's own estimate of the time left, when it has one.
+       */
+      progress_eta_seconds?: number | null;
+      /**
+       * Progress Message
+       * @description What the running pass is doing, in the words it reported.
+       */
+      progress_message?: string | null;
+      /**
+       * Progress Percent
+       * @description How far the current pass has got, when one is running. Null when nothing is in flight.
+       */
+      progress_percent?: number | null;
+      /**
        * Quarantined
        * @description True when repeated failures placed this file on hold until an operator requeues it.
        * @default false
@@ -3466,11 +3491,31 @@ export interface components {
        */
       status_reason: string;
       /**
+       * Subtitle Track Count
+       * @description How many subtitle tracks the file carries.
+       */
+      subtitle_track_count?: number | null;
+      /**
        * Updated At
        * Format: date-time
        * @description When this file row was last changed.
        */
       updated_at: string;
+      /**
+       * Video Codec
+       * @description Video codec as ffprobe named it, e.g. hevc.
+       */
+      video_codec?: string | null;
+      /**
+       * Video Height
+       * @description Measured height in pixels.
+       */
+      video_height?: number | null;
+      /**
+       * Video Width
+       * @description Measured width in pixels.
+       */
+      video_width?: number | null;
     };
     /**
      * RefinerFileRemuxPassManualEnqueueIn
@@ -8019,7 +8064,10 @@ export interface operations {
   };
   get_refiner_overview_stats_api_v1_refiner_overview_stats_get: {
     parameters: {
-      query?: never;
+      query?: {
+        /** @description How far back to count. Pass 1 for 'today' on the custody screen. */
+        window_days?: number;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -8033,6 +8081,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["RefinerOverviewStatsOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
