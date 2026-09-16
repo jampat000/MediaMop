@@ -8,7 +8,9 @@
  */
 
 import { useEffect, useId, useRef } from "react";
+import { DirectPlayLine } from "./direct-play-line";
 import type {
+  RefinerDirectPlay,
   RefinerFileLog,
   RefinerFileStoryStep,
 } from "../../lib/refiner/files-api";
@@ -37,6 +39,8 @@ function Step({ step }: { step: RefinerFileStoryStep }): React.ReactElement {
 export interface FileStoryPanelProps {
   open: boolean;
   fileName: string;
+  /** Which of the operator's devices will play the file directly. Information only. */
+  directPlay?: RefinerDirectPlay[];
   log: RefinerFileLog | undefined;
   loading: boolean;
   error: string | null;
@@ -46,6 +50,7 @@ export interface FileStoryPanelProps {
 export function FileStoryPanel({
   open,
   fileName,
+  directPlay = [],
   log,
   loading,
   error,
@@ -120,6 +125,11 @@ export function FileStoryPanel({
         </header>
 
         <div className="mm-story-panel__body">
+          <DirectPlayLine
+            directPlay={directPlay}
+            full
+            testId="file-story-direct-play"
+          />
           {loading ? (
             <p className="mm-story-panel__note">Reading the record…</p>
           ) : error ? (

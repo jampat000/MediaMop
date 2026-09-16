@@ -32,6 +32,7 @@ function file(over: Partial<RefinerFile> = {}): RefinerFile {
     audio_track_count: null,
     subtitle_track_count: null,
     duration_seconds: null,
+    direct_play: [],
     progress_percent: null,
     progress_message: null,
     progress_eta_seconds: null,
@@ -209,4 +210,56 @@ it("opens a file's story from its row", async () => {
   expect(await screen.findByRole("dialog")).toBeInTheDocument();
   expect(await screen.findByText("Picked up")).toBeInTheDocument();
   expect(fetchLog).toHaveBeenCalledWith(1);
+});
+
+it("shows the Direct Play badge on a row, and the full reasons in the file's story", async () => {
+  vi.spyOn(filesApi, "fetchRefinerFileLog").mockResolvedValue({
+    file_id: 1,
+    relative_path: "movies/Arrival.2016.2160p.mkv",
+    retention_days: 90,
+    entries: [],
+  });
+  mount([
+    file({
+      id: 1,
+      direct_play: [
+        {
+          device_id: "apple_tv_4k",
+          device_name: "Apple TV 4K",
+          verdict: "yes",
+          reasons: [],
+        },
+        {
+          device_id: "iphone",
+          device_name: "iPhone",
+          verdict: "no",
+          reasons: ["cannot play DTS audio", "cannot play MKV files"],
+        },
+      ],
+    }),
+  ]);
+
+  const badge = await screen.findByTestId("in-hand-direct-play-1");
+  expect(badge).toHaveTextContent(
+    "Direct Play: Apple TV 4K ✓ yes · iPhone ✗ no (DTS audio, +1 more)",
+  );
+
+  fireEvent.click(
+    screen.getByRole("button", { name: "Arrival.2016.2160p.mkv" }),
+  );
+  const story = await screen.findByTestId("file-story-direct-play");
+  expect(story).toHaveTextContent(
+    "iPhone cannot play it directly, so the media server will convert it: cannot play DTS audio; cannot play MKV files.",
+  );
+  expect(story).toHaveTextContent(
+    "Information only. MediaMop never changes a file because of this.",
+  );
+});
+
+it("shows no Direct Play badge when no devices are chosen", async () => {
+  mount([file({ id: 1, direct_play: [] })]);
+
+  await screen.findByTestId("in-hand-row");
+  expect(screen.queryByTestId("in-hand-direct-play-1")).not.toBeInTheDocument();
+  expect(screen.queryByText(/Direct Play/)).not.toBeInTheDocument();
 });

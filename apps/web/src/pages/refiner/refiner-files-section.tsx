@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { DirectPlayLine } from "../../components/refiner/direct-play-line";
 import { PageLoading } from "../../components/shared/page-loading";
 import { useMeQuery } from "../../lib/auth/queries";
 import {
@@ -972,6 +973,10 @@ export function RefinerFilesSection() {
                           {holdReleaseLabel(file.hold_until, formatDate)}
                         </p>
                       ) : null}
+                      <DirectPlayLine
+                        directPlay={file.direct_play}
+                        testId={`refiner-file-direct-play-${file.id}`}
+                      />
                       <div className="mm-refiner-next-step mt-3">
                         <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--mm-accent-bright)]">
                           Next step

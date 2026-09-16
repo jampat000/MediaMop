@@ -3714,3 +3714,60 @@ button.mm-inhand-row__name:focus-visible {
   font-size: var(--mm-type-caption);
   color: var(--mm-text3);
 }
+
+/* Direct Play badge (#467). Secondary information, so it stays quiet: caption size, muted
+   text, and only the verdict mark carries a tint. The verdict is always in words as well. */
+.mm-direct-play {
+  margin-top: 0.25rem;
+  font-size: var(--mm-type-caption);
+  color: var(--mm-text3);
+  overflow-wrap: anywhere;
+}
+
+.mm-direct-play__label {
+  color: var(--mm-text2);
+}
+
+.mm-direct-play__device--yes .mm-direct-play__mark {
+  color: var(--mm-status-healthy-text);
+}
+
+.mm-direct-play__device--no .mm-direct-play__mark {
+  color: var(--mm-status-failed-text);
+}
+
+.mm-direct-play__device--maybe .mm-direct-play__mark {
+  color: var(--mm-status-warning-text);
+}
+
+.mm-direct-play__why {
+  margin-top: 0.15rem;
+}
+
+.mm-direct-play__why summary {
+  width: fit-content;
+  cursor: pointer;
+}
+
+.mm-direct-play__reasons {
+  margin: 0.25rem 0 0;
+  padding-left: 1.1rem;
+  list-style: disc;
+}
+
+.mm-direct-play--full {
+  margin: 0 0 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--mm-border);
+}
+
+.mm-direct-play__heading {
+  margin: 0;
+  font-size: var(--mm-type-caption);
+  font-weight: 600;
+  color: var(--mm-text2);
+}
+
+.mm-direct-play__note {
+  margin: 0.4rem 0 0;
+}
