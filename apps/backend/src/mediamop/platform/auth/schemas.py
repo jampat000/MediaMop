@@ -101,3 +101,16 @@ class ChangePasswordIn(BaseModel):
 
 class ChangePasswordOut(BaseModel):
     message: str
+
+
+class ChangeUsernameIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    current_password: str = Field(..., min_length=1)
+    new_username: str = Field(..., min_length=1, max_length=64)
+    csrf_token: str = Field(..., min_length=1)
+
+
+class ChangeUsernameOut(BaseModel):
+    message: str
+    username: str

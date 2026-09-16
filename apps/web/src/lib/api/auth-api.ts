@@ -143,3 +143,22 @@ export async function postChangePassword(
   await requireOk(path, r, "Could not change the password");
   return readJson(r);
 }
+
+export async function postChangeUsername(
+  currentPassword: string,
+  newUsername: string,
+): Promise<{ message: string; username: string }> {
+  const csrf_token = await fetchCsrfToken();
+  const path = "/api/v1/auth/change-username";
+  const r = await apiFetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      csrf_token,
+      current_password: currentPassword,
+      new_username: newUsername,
+    }),
+  });
+  await requireOk(path, r, "Could not change the username");
+  return readJson(r);
+}

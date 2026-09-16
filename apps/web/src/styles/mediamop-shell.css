@@ -2663,25 +2663,25 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 .mm-auth-card {
   padding: 1.75rem 1.85rem;
   background: var(--mm-card-bg);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--mm-border);
   border-radius: var(--mm-radius);
   box-shadow: var(--mm-shadow-card);
 }
 
 .mm-auth-eyebrow {
   margin: 0 0 0.75rem;
-  font-size: 10px;
+  font-size: var(--mm-type-eyebrow);
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--mm-tracking-eyebrow);
   text-transform: uppercase;
   color: var(--mm-text3);
 }
 
 .mm-auth-title {
   margin: 0 0 0.5rem;
-  font-size: 1.35rem;
+  font-size: var(--mm-type-title);
   font-weight: 600;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.03em;
   color: var(--mm-text);
 }
 
@@ -2705,15 +2705,15 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   padding: 0.65rem 0.75rem;
   font-size: 0.85rem;
   border-radius: var(--mm-radius-sm);
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  color: #fecaca;
+  background: var(--mm-status-failed-bg);
+  border: 1px solid var(--mm-status-failed-text);
+  color: var(--mm-status-failed-text);
 }
 
 .mm-auth-banner--ok {
-  background: rgba(212, 181, 106, 0.1);
-  border-color: rgba(200, 170, 95, 0.35);
-  color: var(--mm-accent-bright);
+  background: var(--mm-status-healthy-bg);
+  border-color: var(--mm-status-healthy-text);
+  color: var(--mm-status-healthy-text);
 }
 
 .mm-auth-form {
@@ -2723,10 +2723,11 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 }
 
 .mm-auth-label {
-  font-size: 0.75rem;
+  font-size: var(--mm-type-eyebrow);
   font-weight: 600;
   color: var(--mm-text2);
-  letter-spacing: 0.03em;
+  letter-spacing: var(--mm-tracking-eyebrow);
+  text-transform: uppercase;
 }
 
 /**
@@ -2823,10 +2824,11 @@ select.mm-input::-ms-expand {
 
 .mm-auth-input {
   font: inherit;
-  padding: 0.55rem 0.65rem;
+  min-height: var(--mm-control-height-lg);
+  padding: 0 0.75rem;
   border-radius: var(--mm-radius-sm);
-  border: 1px solid var(--mm-border);
-  background: rgba(31, 35, 42, 0.65);
+  border: 1px solid var(--mm-input-border);
+  background: var(--mm-input-bg);
   color: var(--mm-text);
   transition:
     border-color 0.14s ease,
@@ -2838,7 +2840,8 @@ select.mm-input::-ms-expand {
 }
 
 .mm-auth-input:hover {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--mm-input-border-hover);
+  background: var(--mm-input-bg-hover);
 }
 
 .mm-auth-input:focus {
@@ -2893,10 +2896,11 @@ select.mm-input::-ms-expand {
   margin-top: 0.35rem;
   font: inherit;
   font-weight: 600;
-  padding: 0.6rem 1rem;
+  min-height: var(--mm-control-height-lg);
+  padding: 0 1rem;
   border: none;
   border-radius: var(--mm-radius-sm);
-  background: linear-gradient(180deg, #e0c15a 0%, #d4af37 100%);
+  background: var(--mm-accent);
   color: var(--mm-on-accent);
   cursor: pointer;
   transition: filter 0.14s ease;
