@@ -4,6 +4,66 @@
  */
 
 export interface paths {
+  "/api/v1/activity/export": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Activity Export
+     * @description The filtered history as a file, oldest first — for your records or a bug report.
+     */
+    get: operations["get_activity_export_api_v1_activity_export_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/activity/file-history": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Activity File History
+     * @description What removing one file's history would delete — shown before anyone confirms.
+     */
+    get: operations["get_activity_file_history_api_v1_activity_file_history_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/activity/file-history/remove": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Activity File History Remove
+     * @description Delete one file's history. Irreversible, history only: no media file is ever touched.
+     */
+    post: operations["post_activity_file_history_remove_api_v1_activity_file_history_remove_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/activity/recent": {
     parameters: {
       query?: never;
@@ -1540,6 +1600,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/suite/operational-history/preview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Suite Operational History Preview
+     * @description Exactly what clearing history would remove, so the confirmation can say so. Removes nothing.
+     */
+    get: operations["get_suite_operational_history_preview_api_v1_suite_operational_history_preview_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/suite/operational-history/reset": {
     parameters: {
       query?: never;
@@ -1916,13 +1996,67 @@ export interface components {
       event_type: string;
       /** Id */
       id: number;
+      /** Library Id */
+      library_id?: number | null;
       /**
        * Module
        * @description Source area, e.g. auth.
        */
       module: string;
+      /**
+       * Relative Path
+       * @description The file this concerns, relative to its library.
+       */
+      relative_path?: string | null;
+      /**
+       * Result
+       * @description How it went: success, skipped, warning, running, failed.
+       */
+      result?: string | null;
+      /**
+       * Run Key
+       * @description Events sharing a run key belong to one run.
+       */
+      run_key?: string | null;
       /** Title */
       title: string;
+      /**
+       * Trigger
+       * @description Why it happened: manual, scheduled, webhook, retry, …
+       */
+      trigger?: string | null;
+    };
+    /** ActivityFileHistoryCountOut */
+    ActivityFileHistoryCountOut: {
+      /** Activity Events */
+      activity_events: number;
+      /**
+       * Message
+       * @description Exactly what removing it would delete, and what it would not.
+       */
+      message: string;
+      /** Processing Records */
+      processing_records: number;
+      /** Relative Path */
+      relative_path: string;
+    };
+    /** ActivityFileHistoryRemoveIn */
+    ActivityFileHistoryRemoveIn: {
+      /** Csrf Token */
+      csrf_token: string;
+      /** Library Id */
+      library_id?: number | null;
+      /** Relative Path */
+      relative_path: string;
+    };
+    /** ActivityFileHistoryRemoveOut */
+    ActivityFileHistoryRemoveOut: {
+      /** Activity Events Deleted */
+      activity_events_deleted: number;
+      /** Processing Records Deleted */
+      processing_records_deleted: number;
+      /** Relative Path */
+      relative_path: string;
     };
     /** ActivityRecentOut */
     ActivityRecentOut: {
@@ -1934,6 +2068,17 @@ export interface components {
       has_more: boolean;
       /** Items */
       items?: components["schemas"]["ActivityEventItemOut"][];
+      /**
+       * Oldest Event At
+       * @description The oldest event still kept, so the page can say how far back history goes.
+       */
+      oldest_event_at?: string | null;
+      /**
+       * Retention Days
+       * @description How far back history is kept. 0 means it is kept until cleared.
+       * @default 90
+       */
+      retention_days: number;
       /**
        * System Events
        * @default 0
@@ -5444,6 +5589,11 @@ export interface components {
      */
     SuiteSettingsOut: {
       /**
+       * Activity Retention Days
+       * @description How far back Activity history goes. Older events are removed daily; 0 keeps them all.
+       */
+      activity_retention_days: number;
+      /**
        * App Timezone
        * @description Suite-wide timezone label used for date/time displays that follow app timezone.
        */
@@ -5502,6 +5652,8 @@ export interface components {
      *     ``application_logs_enabled`` is accepted for compatibility with pre-0047 APIs but is not persisted.
      */
     SuiteSettingsPutIn: {
+      /** Activity Retention Days */
+      activity_retention_days?: number | null;
       /** App Timezone */
       app_timezone: string;
       /**
@@ -5703,6 +5855,111 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  get_activity_export_api_v1_activity_export_get: {
+    parameters: {
+      query?: {
+        format?: string;
+        module?: string | null;
+        event_type?: string | null;
+        search?: string | null;
+        date_from?: string | null;
+        date_to?: string | null;
+        trigger?: string | null;
+        result?: string | null;
+        library_id?: number | null;
+        file?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_activity_file_history_api_v1_activity_file_history_get: {
+    parameters: {
+      query: {
+        relative_path: string;
+        library_id?: number | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActivityFileHistoryCountOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  post_activity_file_history_remove_api_v1_activity_file_history_remove_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ActivityFileHistoryRemoveIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActivityFileHistoryRemoveOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   get_activity_recent_api_v1_activity_recent_get: {
     parameters: {
       query?: {
@@ -5713,6 +5970,10 @@ export interface operations {
         date_from?: string | null;
         date_to?: string | null;
         before_id?: number | null;
+        trigger?: string | null;
+        result?: string | null;
+        library_id?: number | null;
+        file?: string | null;
       };
       header?: never;
       path?: never;
@@ -8612,6 +8873,26 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_suite_operational_history_preview_api_v1_suite_operational_history_preview_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SuiteOperationalHistoryResetOut"];
         };
       };
     };

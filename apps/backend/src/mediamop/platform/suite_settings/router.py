@@ -21,7 +21,10 @@ from mediamop.platform.auth.deps_auth import UserPublicDep
 from mediamop.platform.configuration_bundle.service import apply_configuration_bundle, build_configuration_bundle
 from mediamop.platform.metrics.service import build_runtime_metrics_summary
 from mediamop.platform.suite_settings.logs_service import prune_log_file, read_suite_logs
-from mediamop.platform.suite_settings.operational_history import reset_operational_history
+from mediamop.platform.suite_settings.operational_history import (
+    preview_operational_history_reset,
+    reset_operational_history,
+)
 from mediamop.platform.suite_settings.schemas import (
     ApplyUpdateIn,
     ConfigurationBundleImportIn,
@@ -104,6 +107,7 @@ def put_suite_settings(
             setup_wizard_state=body.setup_wizard_state,
             app_timezone=body.app_timezone,
             log_retention_days=body.log_retention_days,
+            activity_retention_days=body.activity_retention_days,
             configuration_backup_enabled=body.configuration_backup_enabled,
             configuration_backup_interval_hours=body.configuration_backup_interval_hours,
             configuration_backup_preferred_time=body.configuration_backup_preferred_time,
@@ -257,6 +261,23 @@ def post_suite_apply_update(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="No downloaded update is pending.")
     write_apply_update_flag(settings)
     return state
+
+
+@router.get("/suite/operational-history/preview", response_model=SuiteOperationalHistoryResetOut)
+def get_suite_operational_history_preview(
+    _user: RequireOperatorDep,
+    db: DbSessionDep,
+) -> SuiteOperationalHistoryResetOut:
+    """Exactly what clearing history would remove, so the confirmation can say so. Removes nothing."""
+
+    result = preview_operational_history_reset(db)
+    return SuiteOperationalHistoryResetOut(
+        status="preview",
+        activity_events_deleted=result.activity_events_deleted,
+        refiner_jobs_deleted=result.refiner_jobs_deleted,
+        pruner_jobs_deleted=result.pruner_jobs_deleted,
+        total_deleted=result.total_deleted,
+    )
 
 
 @router.post("/suite/operational-history/reset", response_model=SuiteOperationalHistoryResetOut)

@@ -17,7 +17,9 @@ from sqlalchemy.orm import Session, sessionmaker
 from mediamop.core.config import MediaMopSettings
 from mediamop.modules.pruner.pruner_jobs_model import PrunerJob, PrunerJobStatus
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.platform.activity.service import prune_activity_events
 from mediamop.platform.media_managers.handoff_ledger import prune_ledger
+from mediamop.platform.suite_settings.service import ensure_suite_settings_row
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +61,10 @@ def _run_prune_tick(session_factory: sessionmaker[Session], *, settings: MediaMo
         counts = prune_job_rows(session, cutoff=cutoff)
         # Hand-off answers outlive job rows on purpose (#480), so they age out on their own clock.
         prune_ledger(session)
+        # Activity keeps its own, operator-visible horizon (#469).
+        counts["activity"] = prune_activity_events(
+            session, retention_days=int(ensure_suite_settings_row(session).activity_retention_days)
+        )
     return counts
 
 
@@ -76,9 +82,10 @@ async def _run_job_rows_retention_forever(
             total = sum(counts.values())
             if total:
                 logger.info(
-                    "Job-row retention pruned terminal rows refiner=%d pruner=%d",
+                    "History retention pruned refiner jobs=%d pruner jobs=%d activity events=%d",
                     counts["refiner"],
                     counts["pruner"],
+                    counts.get("activity", 0),
                 )
         except asyncio.CancelledError:
             raise

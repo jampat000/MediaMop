@@ -33,6 +33,11 @@ class SuiteSettingsOut(BaseModel):
         le=3650,
         description="How long persisted system logs are kept before automatic cleanup.",
     )
+    activity_retention_days: int = Field(
+        ge=0,
+        le=3650,
+        description="How far back Activity history goes. Older events are removed daily; 0 keeps them all.",
+    )
     configuration_backup_enabled: bool = Field(
         description="Whether server-side automatic configuration snapshots are enabled.",
     )
@@ -68,6 +73,7 @@ class SuiteSettingsPutIn(BaseModel):
     setup_wizard_state: str | None = Field(default=None, min_length=1, max_length=32)
     app_timezone: str = Field(..., min_length=1, max_length=120)
     log_retention_days: int = Field(ge=1, le=3650)
+    activity_retention_days: int | None = Field(default=None, ge=0, le=3650)
     application_logs_enabled: bool | None = Field(
         default=None,
         description="Deprecated; retained so older clients can POST without changes. Ignored when persisting.",
