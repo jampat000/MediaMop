@@ -171,9 +171,9 @@ export function LoginPage() {
               <strong>
                 Your password was correct, but the session did not stick.
               </strong>{" "}
-              Your browser rejected the sign-in cookie. This usually happens when
-              MediaMop is reached over plain HTTP while HTTPS-only cookies are
-              switched on. Set{" "}
+              Your browser rejected the sign-in cookie. This usually happens
+              when MediaMop is reached over plain HTTP while HTTPS-only cookies
+              are switched on. Set{" "}
               <code>MEDIAMOP_SESSION_COOKIE_SECURE=auto</code> and restart, or
               reach MediaMop over HTTPS.
             </div>
