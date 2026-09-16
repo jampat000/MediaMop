@@ -44,6 +44,10 @@ class MediaManagerImportEvent:
     handoff_id: str | None = None
     callback_path: str | None = None
     release_name: str | None = None
+    #: The manager's own library id. Deluno refuses a processor event without it, so it has
+    #: to survive the round trip from hand-off to report (verified: Deluno ExternalIntegration
+    #: endpoint for /processors/events requires libraryId).
+    library_id: str | None = None
 
 
 def _text(value: Any) -> str | None:
@@ -143,6 +147,7 @@ def _normalize_deluno(body: Mapping[str, Any]) -> MediaManagerImportEvent | None
         release_name=release_name,
         handoff_id=_text(body.get("handoffId")),
         callback_path=_text(body.get("callbackPath")),
+        library_id=_text(body.get("libraryId")),
     )
 
 
@@ -175,6 +180,7 @@ def _normalize_native(body: Mapping[str, Any]) -> MediaManagerImportEvent | None
         handoff_id=_text(body.get("handoffId") or body.get("handoff_id")),
         callback_path=_text(body.get("callbackPath") or body.get("callback_path")),
         release_name=_text(body.get("releaseName") or body.get("release_name")),
+        library_id=_text(body.get("libraryId") or body.get("library_id")),
     )
 
 

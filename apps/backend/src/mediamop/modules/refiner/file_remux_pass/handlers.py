@@ -209,12 +209,20 @@ def _make_progress_reporter(session_factory: sessionmaker[Session], *, job_id: i
     return RefinerActivityProgressReporter(session_factory, job_id=job_id)
 
 
+def _handoff_origin(data: Any) -> dict[str, Any] | None:
+    """The manager's hand-off details from a job payload, when this job came from one."""
+
+    origin = data.get("origin") if isinstance(data, dict) else None
+    return origin if isinstance(origin, dict) else None
+
+
 def _apply_file_outcome_state(
     session_factory: sessionmaker[Session],
     *,
     result: dict[str, Any],
     library_id: int | None,
     media_scope: str,
+    origin: dict[str, Any] | None = None,
 ) -> None:
     """Keep the durable Files row in step with the result shown in Activity."""
 
@@ -300,6 +308,7 @@ def _apply_file_outcome_state(
                     library=library,
                     relative_path=relative_path.strip(),
                     will_retry=decision.will_retry,
+                    origin=origin,
                 )
                 result.update(
                     {
@@ -345,6 +354,7 @@ def _record_failed_result(
     payload: dict[str, Any],
     library_id: int | None,
     media_scope: str,
+    origin: dict[str, Any] | None = None,
 ) -> None:
     """Record preflight failures through the same Files/Activity contract as a run result."""
 
@@ -353,6 +363,7 @@ def _record_failed_result(
         result=payload,
         library_id=library_id,
         media_scope=media_scope,
+        origin=origin,
     )
     _record(session_factory, payload=payload)
 
@@ -595,6 +606,7 @@ def make_refiner_file_remux_pass_handler(
                 payload=failure_payload,
                 library_id=library_id,
                 media_scope=media_scope,
+                origin=_handoff_origin(data),
             )
             _report_back(
                 settings,
@@ -609,6 +621,7 @@ def make_refiner_file_remux_pass_handler(
             result=result,
             library_id=library_id,
             media_scope=media_scope,
+            origin=_handoff_origin(data),
         )
         _record(
             session_factory, payload=result, activity_id=progress_reporter.activity_id if progress_reporter else None

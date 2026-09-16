@@ -54,6 +54,7 @@ from mediamop.modules.refiner.refiner_output_collision import decide_output_coll
 from mediamop.platform.activity import constants as activity_constants
 from mediamop.platform.activity import service as activity_service
 from mediamop.platform.file_lifecycle.mutations import safe_copy_to_final
+from mediamop.platform.media_managers.completion_callback import report_handoff_completion
 
 logger = logging.getLogger(__name__)
 
@@ -111,13 +112,18 @@ def enqueue_pass_through(
     *,
     library: RefinerLibraryRow,
     relative_path: str,
+    origin: dict[str, Any] | None = None,
 ) -> RefinerJob:
-    """Queue delivery of the unmodified original. Called once retries are exhausted."""
+    """Queue delivery of the unmodified original. Called once retries are exhausted.
 
-    payload = json.dumps(
-        {"relative_media_path": relative_path, "library_id": library.id},
-        separators=(",", ":"),
-    )
+    ``origin`` is the manager's hand-off, carried so the delivery can be reported as complete.
+    Without it, a manager waiting on a hand-off would only ever have heard nothing.
+    """
+
+    body: dict[str, Any] = {"relative_media_path": relative_path, "library_id": library.id}
+    if origin:
+        body["origin"] = origin
+    payload = json.dumps(body, separators=(",", ":"))
     return refiner_enqueue_or_get_job(
         session,
         # One delivery per file at a time. A second failure recorded while the first delivery is
@@ -135,6 +141,7 @@ def apply_failure_policy(
     library: RefinerLibraryRow,
     relative_path: str,
     will_retry: bool,
+    origin: dict[str, Any] | None = None,
 ) -> bool:
     """Act on a recorded failure. Returns True when a pass-through was queued.
 
@@ -147,7 +154,7 @@ def apply_failure_policy(
     if normalize_failure_policy(library.failure_policy) != FAILURE_POLICY_PASS_THROUGH:
         return False
 
-    enqueue_pass_through(session, library=library, relative_path=relative_path)
+    enqueue_pass_through(session, library=library, relative_path=relative_path, origin=origin)
     row = session.scalars(
         select(RefinerFileRow).where(
             RefinerFileRow.library_id == library.id,
@@ -288,8 +295,6 @@ def make_refiner_file_pass_through_handler(
 ) -> Callable[[Any], None]:
     """Worker handler for ``refiner.file.pass_through.v1``."""
 
-    del settings  # Paths come from the library row, not the process configuration.
-
     def _run(ctx: Any) -> None:
         try:
             payload = json.loads(ctx.payload_json or "{}")
@@ -344,5 +349,26 @@ def make_refiner_file_pass_through_handler(
         # 3. Brief bookkeeping.
         with session_factory() as session, session.begin():
             record_delivery(session, settings=delivery, relative_path=relative_path, result=result, job_id=ctx.id)
+
+        # 4. Tell a waiting manager the file is ready. Only when something was actually delivered:
+        # after a collision skip the file at that path is not this one, and asking the manager to
+        # import it would be wrong. Reporting never raises; the delivery already succeeded.
+        origin = payload.get("origin") if isinstance(payload.get("origin"), dict) else None
+        if origin and result.delivered:
+            with session_factory() as session:
+                status = report_handoff_completion(
+                    session,
+                    settings,
+                    payload_json=json.dumps({"origin": origin}),
+                    result={
+                        "ok": True,
+                        "outcome": "live_output_written",
+                        "relative_media_path": relative_path,
+                        "output_file": str(result.destination),
+                        "refiner_output_folder_resolved": str(Path(delivery.output_folder).resolve()),
+                        "passed_through_after_failure": True,
+                    },
+                )
+            logger.info("Refiner pass-through hand-off report: %s", status)
 
     return _run
