@@ -256,6 +256,8 @@ def record_measured_media_facts(
     audio_track_count: int | None = None,
     subtitle_track_count: int | None = None,
     duration_seconds: float | None = None,
+    audio_codecs: list[str] | None = None,
+    video_bit_depth: int | None = None,
 ) -> None:
     """Remember what a pass measured: size for the scheduler, the rest for the operator.
 
@@ -282,6 +284,10 @@ def record_measured_media_facts(
             row.subtitle_track_count = int(subtitle_track_count)
         if duration_seconds is not None:
             row.duration_seconds = float(duration_seconds)
+        if audio_codecs is not None:
+            row.audio_codecs = ",".join(c.strip().lower() for c in audio_codecs if c.strip())[:1000]
+        if video_bit_depth is not None:
+            row.video_bit_depth = int(video_bit_depth)
     if rows:
         session.flush()
 

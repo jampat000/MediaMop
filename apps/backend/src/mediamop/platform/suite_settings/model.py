@@ -24,6 +24,8 @@ class SuiteSettingsRow(Base):
     log_retention_days: Mapped[int] = mapped_column(Integer, nullable=False, server_default="30")
     # How far back Activity history goes (#469). 0 keeps it until someone clears it.
     activity_retention_days: Mapped[int] = mapped_column(Integer, nullable=False, server_default="90")
+    # Which devices the operator owns, for the read-only Direct Play badge (#467). Device ids, comma-separated.
+    direct_play_devices: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     configuration_backup_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     configuration_backup_interval_hours: Mapped[int] = mapped_column(Integer, nullable=False, server_default="24")
     configuration_backup_preferred_time: Mapped[str] = mapped_column(Text, nullable=False, server_default="02:00")

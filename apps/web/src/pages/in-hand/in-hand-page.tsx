@@ -14,6 +14,7 @@
  */
 
 import { useCallback, useMemo, useState } from "react";
+import { DirectPlayLine } from "../../components/refiner/direct-play-line";
 import { FileStoryPanel } from "../../components/refiner/file-story-panel";
 import { Link } from "react-router-dom";
 import { PageLoading } from "../../components/shared/page-loading";
@@ -127,6 +128,10 @@ function FileRow({
         <span className="mm-inhand-row__facts">
           {[formatBytes(file.size_bytes), facts].filter(Boolean).join(" · ")}
         </span>
+        <DirectPlayLine
+          directPlay={file.direct_play}
+          testId={`in-hand-direct-play-${file.id}`}
+        />
       </div>
 
       <div className="mm-inhand-row__state">
@@ -335,6 +340,7 @@ export function InHandPage(): React.ReactElement {
               storyFile.relative_path
             : ""
         }
+        directPlay={storyFile?.direct_play ?? []}
         log={fileLog.data}
         loading={fileLog.isPending}
         error={fileLog.isError ? fileLog.error.message : null}

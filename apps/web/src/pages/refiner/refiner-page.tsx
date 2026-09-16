@@ -6,6 +6,7 @@ import {
   WorkspaceTabList,
   type WorkspaceTabOption,
 } from "../../components/shared/workspace-shell";
+import { RefinerDirectPlaySection } from "./refiner-direct-play-section";
 import { RefinerProcessSettingsSection } from "./refiner-process-settings-section";
 import { RefinerFilesSection } from "./refiner-files-section";
 import { RefinerJobsInspectionSection } from "./refiner-jobs-inspection-section";
@@ -147,6 +148,7 @@ export function RefinerPage() {
             </p>
             <RefinerLibrariesSection />
             <RefinerProcessSettingsSection />
+            <RefinerDirectPlaySection />
           </div>
         ) : null}
 

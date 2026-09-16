@@ -109,6 +109,10 @@ class RefinerFileRow(Base):
     audio_track_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     subtitle_track_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # For the read-only Direct Play badge (#467): the audio codecs present (ffprobe names,
+    # comma-separated, in track order) and the video's bit depth. Null means not measured.
+    audio_codecs: Mapped[str | None] = mapped_column(Text, nullable=True)
+    video_bit_depth: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # When ``size_bytes`` last differed from the previous observation. Null until a
     # second scan has something to compare against.
     size_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

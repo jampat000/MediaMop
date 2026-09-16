@@ -164,6 +164,12 @@ try {
   Invoke-RestMethod -Method Post -Uri "$baseUrl/api/v1/auth/login" -WebSession $webSession -Headers $browserHeaders -Body $loginBody -TimeoutSec 15 | Out-Null
 
   $csrf = (Invoke-RestMethod -Uri "$baseUrl/api/v1/auth/csrf" -WebSession $webSession -Headers $readHeaders -TimeoutSec 15).csrf_token
+  # The Direct Play device list is a data file; prove the packaged app can read it (#467).
+  $devices = Invoke-RestMethod -Uri "$baseUrl/api/v1/refiner/direct-play/devices" -WebSession $webSession -Headers $readHeaders -TimeoutSec 15
+  if (-not $devices.devices -or $devices.devices.Count -lt 1) {
+    throw "The packaged app could not load its Direct Play device list."
+  }
+
   # Configure the seeded Movies library directly (the path-settings route was retired in #460).
   $libraries = Invoke-RestMethod -Uri "$baseUrl/api/v1/refiner/libraries" -WebSession $webSession -Headers $readHeaders -TimeoutSec 15
   $moviesLibrary = $libraries | Where-Object { $_.media_type -eq "movie" } | Select-Object -First 1

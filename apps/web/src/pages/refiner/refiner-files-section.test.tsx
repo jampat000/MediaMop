@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
@@ -36,6 +42,7 @@ function file(over: Partial<RefinerFile> = {}): RefinerFile {
     audio_track_count: null,
     subtitle_track_count: null,
     duration_seconds: null,
+    direct_play: [],
     progress_percent: null,
     progress_message: null,
     progress_eta_seconds: null,
@@ -575,4 +582,84 @@ it("explains an empty record instead of opening a blank panel", async () => {
   expect(
     screen.queryByTestId("refiner-file-log-panel"),
   ).not.toBeInTheDocument();
+});
+
+it("shows each device's Direct Play verdict in words, with the reasons", async () => {
+  asOperator();
+  vi.spyOn(api, "fetchRefinerFiles").mockResolvedValue(
+    page({
+      files: [
+        file({
+          id: 7,
+          direct_play: [
+            {
+              device_id: "apple_tv_4k",
+              device_name: "Apple TV 4K",
+              verdict: "yes",
+              reasons: [],
+            },
+            {
+              device_id: "iphone",
+              device_name: "iPhone",
+              verdict: "no",
+              reasons: ["cannot play DTS audio"],
+            },
+            {
+              device_id: "lg_webos",
+              device_name: "LG TV",
+              verdict: "maybe",
+              reasons: ["may not play Dolby TrueHD audio on some tracks"],
+            },
+            {
+              device_id: "roku",
+              device_name: "Roku",
+              verdict: "unknown",
+              reasons: [],
+            },
+          ],
+        }),
+      ],
+    }),
+  );
+
+  render(<RefinerFilesSection />, { wrapper });
+
+  const badge = await screen.findByTestId("refiner-file-direct-play-7");
+  expect(badge).toHaveTextContent(
+    "Direct Play: Apple TV 4K ✓ yes · iPhone ✗ no (DTS audio) · LG TV ? maybe (may not play Dolby TrueHD audio on some tracks) · Roku (not measured yet)",
+  );
+  // The verdict is carried in words for screen readers, not only by the mark or its colour.
+  expect(within(badge).getByText(/^\s*yes$/)).toHaveClass("sr-only");
+  expect(within(badge).getByText(/^\s*no$/)).toHaveClass("sr-only");
+  expect(within(badge).getByText(/^\s*maybe$/)).toHaveClass("sr-only");
+  // Full reasons on hover, and in a disclosure for keyboard and touch.
+  expect(within(badge).getByTitle(/^iPhone/)).toHaveAttribute(
+    "title",
+    "iPhone cannot play it directly, so the media server will convert it: cannot play DTS audio.",
+  );
+  fireEvent.click(within(badge).getByText("Why"));
+  expect(
+    within(badge).getByText(
+      "LG TV may not play it directly, so the media server may convert it: may not play Dolby TrueHD audio on some tracks.",
+    ),
+  ).toBeVisible();
+  // Information only: nothing on the row offers to change the file for a device.
+  expect(
+    screen.queryByRole("button", { name: /convert|compatible|direct play/i }),
+  ).not.toBeInTheDocument();
+});
+
+it("shows no Direct Play line when no devices are chosen", async () => {
+  asOperator();
+  vi.spyOn(api, "fetchRefinerFiles").mockResolvedValue(
+    page({ files: [file({ id: 7, direct_play: [] })] }),
+  );
+
+  render(<RefinerFilesSection />, { wrapper });
+
+  await screen.findByTestId("refiner-file-7");
+  expect(
+    screen.queryByTestId("refiner-file-direct-play-7"),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByText(/Direct Play/)).not.toBeInTheDocument();
 });

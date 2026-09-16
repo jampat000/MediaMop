@@ -256,6 +256,21 @@ def _commit_cleanup_session(cleanup_session: Session | None) -> None:
         cleanup_session.rollback()
 
 
+def _video_bit_depth(stream: dict[str, Any]) -> int | None:
+    """Bits per sample of a video stream, from ffprobe's own field or its pixel format."""
+
+    raw = stream.get("bits_per_raw_sample")
+    if isinstance(raw, (str, int)) and str(raw).strip().isdigit() and int(raw) > 0:
+        return int(raw)
+    pix_fmt = str(stream.get("pix_fmt") or "").lower()
+    if not pix_fmt:
+        return None
+    for depth in (12, 10):
+        if f"{depth}le" in pix_fmt or f"{depth}be" in pix_fmt or pix_fmt.endswith(f"p{depth}"):
+            return depth
+    return 8
+
+
 def _probe_duration_seconds(probe: dict[str, Any]) -> float | None:
     candidates: list[float] = []
     fmt = probe.get("format")
@@ -831,6 +846,9 @@ def _run_refiner_file_remux_pass(
             audio_track_count=len(audio),
             subtitle_track_count=len(subs),
             duration_seconds=duration_seconds,
+            # From the same probe, for the read-only Direct Play badge (#467). Never a processing input.
+            audio_codecs=[str(stream.get("codec_name") or "") for stream in audio],
+            video_bit_depth=_video_bit_depth(video[0]) if video else None,
         )
         _commit_cleanup_session(cleanup_session)
     if os.name != "nt":

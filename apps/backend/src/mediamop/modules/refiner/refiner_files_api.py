@@ -15,6 +15,7 @@ from starlette.responses import PlainTextResponse
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
 from mediamop.core.config import MediaMopSettings
+from mediamop.modules.refiner.direct_play.service import direct_play_for_row, selected_device_profiles
 from mediamop.modules.refiner.jobs_ops import move_refiner_job_to_top
 from mediamop.modules.refiner.refiner_file_log_service import logs_for_file, render_log_text
 from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow
@@ -75,6 +76,7 @@ def _verify_csrf(request: Request, settings: MediaMopSettings, token: str) -> No
 def get_refiner_files(
     _user: UserPublicDep,
     db: DbSessionDep,
+    settings: SettingsDep,
     library_id: int | None = Query(default=None, ge=1),
     file_status: RefinerFileStatusName | None = Query(default=None),
     path_contains: str | None = Query(default=None, max_length=400),
@@ -94,6 +96,7 @@ def get_refiner_files(
     )
     names = {row.id: row.name for row in db.query(RefinerLibraryRow).all()}
     live = live_progress_by_path(db)
+    devices = selected_device_profiles(db, settings)
     files = [
         RefinerFileOut(
             id=row.id,
@@ -110,6 +113,7 @@ def get_refiner_files(
             audio_track_count=row.audio_track_count,
             subtitle_track_count=row.subtitle_track_count,
             duration_seconds=row.duration_seconds,
+            direct_play=direct_play_for_row(row, devices),
             progress_percent=progress.percent if (progress := live.get(row.relative_path)) else None,
             progress_message=progress.message if progress else None,
             progress_eta_seconds=progress.eta_seconds if progress else None,

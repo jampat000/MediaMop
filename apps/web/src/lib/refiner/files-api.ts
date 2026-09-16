@@ -29,6 +29,19 @@ export const REFINER_FILE_STATUS_LABELS: Record<RefinerFileStatus, string> = {
   rejected: "Rejected for a replacement",
 };
 
+/** Whether one device the operator owns will play the file without the media server converting it. */
+export type RefinerDirectPlayVerdict = "yes" | "no" | "maybe" | "unknown";
+
+/** Information only: this never changes what MediaMop does to a file. */
+export interface RefinerDirectPlay {
+  device_id: string;
+  device_name: string;
+  /** `maybe` means partial or model-dependent support; `unknown` means not measured yet. */
+  verdict: RefinerDirectPlayVerdict;
+  /** Plain words such as "cannot play DTS audio". Empty for `yes` and `unknown`. */
+  reasons: string[];
+}
+
 export interface RefinerFile {
   id: number;
   library_id: number;
@@ -52,6 +65,8 @@ export interface RefinerFile {
   audio_track_count: number | null;
   subtitle_track_count: number | null;
   duration_seconds: number | null;
+  /** One entry per device the operator chose. Empty when none are chosen. */
+  direct_play: RefinerDirectPlay[];
   /** How far the pass currently working on this file has got. Null when nothing is in flight. */
   progress_percent: number | null;
   progress_message: string | null;

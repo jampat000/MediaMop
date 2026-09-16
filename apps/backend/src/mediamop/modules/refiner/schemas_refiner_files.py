@@ -20,6 +20,31 @@ RefinerFileStatusName = Literal[
 ]
 
 
+class DirectPlayOut(BaseModel):
+    device_id: str
+    device_name: str
+    verdict: str = Field(description="yes, no, maybe (partial or model-dependent support), or unknown (not measured).")
+    reasons: list[str] = Field(default_factory=list)
+
+
+class DirectPlayDeviceOut(BaseModel):
+    id: str
+    name: str
+    source: str = Field(description="Where this device's capabilities come from.")
+    note: str
+    selected: bool
+
+
+class DirectPlayDevicesOut(BaseModel):
+    devices: list[DirectPlayDeviceOut]
+    customised: bool = Field(description="True when the list comes from the operator's own direct-play-devices.json.")
+
+
+class DirectPlayDevicesIn(BaseModel):
+    csrf_token: str = Field(..., min_length=1)
+    selected: list[str] = Field(default_factory=list, max_length=100)
+
+
 class RefinerFileOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -42,6 +67,13 @@ class RefinerFileOut(BaseModel):
     audio_track_count: int | None = Field(default=None, description="How many audio tracks the file carries.")
     subtitle_track_count: int | None = Field(default=None, description="How many subtitle tracks the file carries.")
     duration_seconds: float | None = Field(default=None, description="Runtime in seconds, as probed.")
+    direct_play: list[DirectPlayOut] = Field(
+        default_factory=list,
+        description=(
+            "For each device the operator owns: will it play this file without conversion. Information only; "
+            "it never changes how MediaMop processes the file. Empty when no devices are chosen."
+        ),
+    )
     progress_percent: float | None = Field(
         default=None,
         description="How far the current pass has got, when one is running. Null when nothing is in flight.",
