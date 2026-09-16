@@ -33,6 +33,8 @@ import httpx
 from sqlalchemy.orm import Session
 
 from mediamop.core.config import MediaMopSettings
+from mediamop.platform.activity import constants as activity_constants
+from mediamop.platform.activity import service as activity_service
 from mediamop.platform.media_managers.connection_service import (
     connection_for_kind,
     resolve_callback_target,
@@ -96,11 +98,13 @@ def build_completion_body(
     origin: HandoffOrigin,
     result: dict[str, Any],
     output_path: str | None = None,
+    rejected: bool = False,
 ) -> dict[str, Any]:
     """Shape the report. Deliberately small: an outcome, a path, and a reason.
 
     ``output_path`` overrides the local ``output_file`` with the same file expressed in the
-    manager's own coordinates, when that translation was possible.
+    manager's own coordinates, when that translation was possible. ``rejected`` marks a
+    failure report sent under the opt-in ``reject`` policy.
     """
 
     outcome = str(result.get("outcome") or "").strip()
@@ -121,7 +125,12 @@ def build_completion_body(
         body["message"] = _success_message(outcome, result)
     else:
         body["message"] = _failure_message(result)
-        if result.get("rejected_cleanup_status") == "deleted":
+        if rejected:
+            # The opt-in reject policy: MediaMop removes the download once this is accepted, and
+            # asks the manager to treat the release as bad and find a different one.
+            body["disposition"] = "rejected"
+            body["sourceRemoved"] = True
+        elif result.get("rejected_cleanup_status") == "deleted":
             # The library's own "delete rejected files" setting removed it. No disposition is
             # claimed: "rejected" asks a manager to blocklist and search again, which that
             # setting never promised.
@@ -213,6 +222,112 @@ def _manager_output_path(connection: ManagerConnection, *, origin: HandoffOrigin
     return None
 
 
+@dataclass(frozen=True, slots=True)
+class HandoffReportTarget:
+    """Where, and as whom, to report on one hand-off."""
+
+    connection: ManagerConnection
+    url: str
+    headers: dict[str, str]
+
+
+@dataclass(frozen=True, slots=True)
+class HandoffReportDelivery:
+    """Whether the manager accepted a report. ``accepted`` is only ever True on a 2xx answer.
+
+    "Could not reach it" and "it refused" are both not-accepted: a caller that deletes a file
+    on acceptance must treat them the same.
+    """
+
+    accepted: bool
+    status: str
+
+
+def resolve_handoff_target(
+    session: Session,
+    settings: MediaMopSettings,
+    origin: HandoffOrigin,
+) -> HandoffReportTarget | str:
+    """The manager to report to, or a sentence saying why there is none."""
+
+    if not origin.callback_path:
+        return "the hand-off named no callback path"
+    connection = connection_for_kind(session, origin.source_key)
+    if connection is None:
+        return f"no enabled {origin.source_key} connection is configured to report back to"
+    target = resolve_callback_target(settings, connection)
+    if target is None:
+        return f"the {connection.name} connection has no address saved"
+    headers = {"Content-Type": "application/json"}
+    if target.api_key:
+        headers["X-Api-Key"] = target.api_key
+    return HandoffReportTarget(
+        connection=ManagerConnection(
+            kind=connection.kind,
+            name=connection.name,
+            base_url=target.base_url,
+            api_key=target.api_key or "",
+            connection_id=connection.id,
+        ),
+        url=f"{target.base_url}/{origin.callback_path.lstrip('/')}",
+        headers=headers,
+    )
+
+
+def post_handoff_report(target: HandoffReportTarget, body: dict[str, Any]) -> HandoffReportDelivery:
+    """Send one report. Never raises."""
+
+    name = target.connection.name
+    try:
+        response = httpx.post(target.url, json=body, headers=target.headers, timeout=_TIMEOUT_SECONDS)
+    except httpx.HTTPError as exc:
+        logger.warning("Hand-off report to %s failed: %s", target.url, exc)
+        return HandoffReportDelivery(False, f"failed: could not reach {name} ({exc.__class__.__name__})")
+    if response.is_success:
+        return HandoffReportDelivery(True, f"reported {body['status']} to {name}")
+    logger.warning("Hand-off report to %s returned HTTP %s", target.url, response.status_code)
+    return HandoffReportDelivery(False, f"failed: {name} answered HTTP {response.status_code}")
+
+
+def record_handoff_report(
+    session: Session,
+    *,
+    target: HandoffReportTarget,
+    body: dict[str, Any],
+    delivery: HandoffReportDelivery,
+    relative_path: str | None,
+) -> None:
+    """Put a report in Activity, in plain words, whether or not it was accepted."""
+
+    name = target.connection.name
+    file_name = Path(relative_path).name if relative_path else (body.get("releaseName") or "a handed-over file")
+    if not delivery.accepted:
+        title = f"MediaMop could not tell {name} about {file_name}"
+    elif body.get("disposition") == "rejected":
+        title = f"Told {name} that {file_name} is a bad release and was removed"
+    elif body.get("status") == "completed":
+        title = f"Told {name} that {file_name} is ready to import"
+    else:
+        title = f"Told {name} that MediaMop could not process {file_name}"
+    activity_service.record_activity_event(
+        session,
+        event_type=activity_constants.REFINER_HANDOFF_REPORTED,
+        module="refiner",
+        title=title,
+        detail=json.dumps(
+            {
+                "relative_media_path": relative_path,
+                "manager": name,
+                "accepted": delivery.accepted,
+                "delivery": delivery.status,
+                "report": body,
+            },
+            separators=(",", ":"),
+            ensure_ascii=True,
+        )[:10_000],
+    )
+
+
 def report_handoff_completion(
     session: Session,
     settings: MediaMopSettings,
@@ -220,10 +335,10 @@ def report_handoff_completion(
     payload_json: str | None,
     result: dict[str, Any],
 ) -> str:
-    """Post the outcome back to the originating manager.
+    """Post the outcome back to the originating manager, and record that it did.
 
-    Returns a short status for logging and activity. Never raises: a manager being
-    unreachable must not fail a remux that already succeeded on disk.
+    Returns a short status for logging. Never raises: a manager being unreachable must not
+    fail a remux that already succeeded on disk.
     """
 
     try:
@@ -242,42 +357,27 @@ def report_handoff_completion(
         return "skipped: the failure will be retried, so it is not final yet"
     if not succeeded and result.get("pass_through_queued") is True:
         return "skipped: the original is being handed back, which will be reported when it is delivered"
+    if not succeeded and result.get("reject_queued") is True:
+        return "skipped: the release is being rejected, which reports on its own"
 
-    connection = connection_for_kind(session, origin.source_key)
-    if connection is None:
-        return f"skipped: no enabled {origin.source_key} connection is configured to report back to"
+    target = resolve_handoff_target(session, settings, origin)
+    if isinstance(target, str):
+        return f"skipped: {target}"
 
-    target = resolve_callback_target(settings, connection)
-    if target is None:
-        return f"skipped: the {connection.name} connection has no address saved"
-
-    url = f"{target.base_url}/{origin.callback_path.lstrip('/')}"
-    headers = {"Content-Type": "application/json"}
-    if target.api_key:
-        headers["X-Api-Key"] = target.api_key
-
-    output_path = None
-    if succeeded:
-        output_path = _manager_output_path(
-            ManagerConnection(
-                kind=connection.kind,
-                name=connection.name,
-                base_url=target.base_url,
-                api_key=target.api_key or "",
-                connection_id=connection.id,
-            ),
-            origin=origin,
-            result=result,
-        )
-
+    output_path = _manager_output_path(target.connection, origin=origin, result=result) if succeeded else None
     body = build_completion_body(origin=origin, result=result, output_path=output_path)
+    delivery = post_handoff_report(target, body)
     try:
-        response = httpx.post(url, json=body, headers=headers, timeout=_TIMEOUT_SECONDS)
-    except httpx.HTTPError as exc:
-        logger.warning("Hand-off completion callback to %s failed: %s", url, exc)
-        return f"failed: could not reach {connection.name} ({exc.__class__.__name__})"
-
-    if response.is_success:
-        return f"reported {body['status']} to {connection.name}"
-    logger.warning("Hand-off completion callback to %s returned HTTP %s", url, response.status_code)
-    return f"failed: {connection.name} answered HTTP {response.status_code}"
+        relative = result.get("relative_media_path")
+        record_handoff_report(
+            session,
+            target=target,
+            body=body,
+            delivery=delivery,
+            relative_path=relative if isinstance(relative, str) else None,
+        )
+        session.commit()
+    except Exception:  # noqa: BLE001 - the report is sent; a busy database must not raise here
+        session.rollback()
+        logger.warning("Could not record the hand-off report in Activity.", exc_info=True)
+    return delivery.status

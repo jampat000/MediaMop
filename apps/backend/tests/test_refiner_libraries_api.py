@@ -291,3 +291,29 @@ def test_libraries_and_rule_sets_reach_the_generated_openapi_schema() -> None:
         assert path in schema["paths"], path
     props = schema["components"]["schemas"]["RefinerLibraryOut"]["properties"]
     assert {"media_extensions_csv", "manager_connection_ids", "active_job_count"} <= set(props)
+
+
+# --- the reject failure policy (#471) ------------------------------------------------------------
+
+
+def test_reject_cannot_be_saved_for_a_library_no_manager_can_take_one_for(operator: TestClient) -> None:
+    """Reject deletes downloads, so it is refused rather than saved and silently never used."""
+
+    response = _create(operator, failure_policy="reject")
+    assert response.status_code == 400, response.text
+    assert "cannot use Reject yet" in response.json()["detail"]
+    assert "Link a media manager" in response.json()["detail"]
+    names = {row["name"] for row in operator.get("/api/v1/refiner/libraries").json()}
+    assert "Movies 4K" not in names
+
+
+def test_reject_support_explains_itself(operator: TestClient) -> None:
+    response = operator.get("/api/v1/refiner/reject-support")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["available"] is False
+    assert "Link a media manager" in body["reason"]
+
+
+def test_reject_support_needs_a_session(client_with_admin: TestClient) -> None:
+    assert client_with_admin.get("/api/v1/refiner/reject-support").status_code == 401

@@ -281,12 +281,15 @@ class RefinerLibraryCreateIn(BaseModel):
         True,
         description="Retry files that failed while being processed — a dead ffmpeg, a full disk, a dropped share.",
     )
-    failure_policy: Literal["pass_through", "hold"] = Field(
+    failure_policy: Literal["pass_through", "hold", "reject"] = Field(
         "pass_through",
         description=(
             "What happens once retries run out. 'pass_through' hands the original back to the output "
             "folder unchanged, so a file MediaMop cannot process still reaches your media manager. "
-            "'hold' keeps it with MediaMop until someone acts."
+            "'hold' keeps it with MediaMop until someone acts. 'reject' tells the media manager the release "
+            "is bad and removes the download once it accepts, so it can find a different one; it is only "
+            "allowed when a linked manager can take a rejection, and falls back to 'pass_through' whenever "
+            "it cannot be done safely."
         ),
     )
     retry_preflight_failures: bool = Field(
@@ -407,3 +410,10 @@ class LibraryDriftOut(BaseModel):
     manager_value: str | None = None
     mediamop_value: str | None = None
     detail: str
+
+
+class RejectSupportOut(BaseModel):
+    """Whether the ``reject`` failure policy can be chosen for a set of linked managers."""
+
+    available: bool = Field(description="True when a linked manager can take a rejection.")
+    reason: str = Field(description="One plain sentence explaining the answer, shown next to the option.")

@@ -7,7 +7,7 @@ for the epic.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Path, Request
+from fastapi import APIRouter, HTTPException, Path, Query, Request
 from sqlalchemy import select
 from starlette import status
 
@@ -34,7 +34,8 @@ from mediamop.modules.refiner.refiner_library_discovery import (
 )
 from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow, RefinerRuleSetRow
 from mediamop.modules.refiner.refiner_library_service import list_libraries, manager_connection_ids_for
-from mediamop.modules.refiner.refiner_pass_through import normalize_failure_policy
+from mediamop.modules.refiner.refiner_pass_through import FAILURE_POLICY_REJECT, normalize_failure_policy
+from mediamop.modules.refiner.refiner_reject import reject_support
 from mediamop.modules.refiner.schemas_refiner_libraries import (
     DiscoverableLibraryOut,
     LibraryDriftOut,
@@ -46,6 +47,7 @@ from mediamop.modules.refiner.schemas_refiner_libraries import (
     RefinerLibraryUpdateIn,
     RefinerRuleSetIn,
     RefinerRuleSetOut,
+    RejectSupportOut,
 )
 from mediamop.platform.auth.authorization import RequireOperatorDep
 from mediamop.platform.auth.csrf import (
@@ -56,6 +58,7 @@ from mediamop.platform.auth.csrf import (
 )
 from mediamop.platform.auth.deps_auth import UserPublicDep
 from mediamop.platform.media_managers.connection_model import MediaManagerConnectionRow
+from mediamop.platform.media_managers.manager_binding import connections_by_id
 
 router = APIRouter(tags=["refiner"])
 
@@ -154,6 +157,20 @@ def _library_out(db, row: RefinerLibraryRow) -> RefinerLibraryOut:
     )
 
 
+def _refuse_unsupported_reject(db, settings: MediaMopSettings, row: RefinerLibraryRow) -> None:
+    """``reject`` deletes downloads, so it cannot be saved for a library no manager can take one for."""
+
+    if normalize_failure_policy(row.failure_policy) != FAILURE_POLICY_REJECT:
+        return
+    support = reject_support(connections_by_id(db, settings, manager_connection_ids_for(db, row)))
+    if not support.available:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"This library cannot use Reject yet. {support.reason}",
+        )
+
+
 def _rule_set_out(db, row: RefinerRuleSetRow) -> RefinerRuleSetOut:
     return RefinerRuleSetOut(
         id=row.id,
@@ -221,9 +238,27 @@ def post_refiner_library(
         row = create_library(db, body)
     except RefinerLibraryError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    _refuse_unsupported_reject(db, settings, row)
     db.commit()
     db.refresh(row)
     return _library_out(db, row)
+
+
+@router.get("/refiner/reject-support", response_model=RejectSupportOut)
+def get_refiner_reject_support(
+    _user: UserPublicDep,
+    db: DbSessionDep,
+    settings: SettingsDep,
+    connection_ids: list[int] = Query(default_factory=list),
+) -> RejectSupportOut:
+    """Whether the Reject failure policy can be chosen for a library linked to these managers.
+
+    Asks Deluno or a native manager for its manifest, so it is called when the option is shown,
+    not on every list.
+    """
+
+    support = reject_support(connections_by_id(db, settings, connection_ids))
+    return RejectSupportOut(available=support.available, reason=support.reason)
 
 
 @router.get("/refiner/libraries/{library_id}", response_model=RefinerLibraryOut)
@@ -252,6 +287,7 @@ def put_refiner_library(
         update_library(db, row, body)
     except RefinerLibraryError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    _refuse_unsupported_reject(db, settings, row)
     db.commit()
     db.refresh(row)
     return _library_out(db, row)

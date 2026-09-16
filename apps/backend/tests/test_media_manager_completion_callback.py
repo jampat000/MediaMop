@@ -501,3 +501,56 @@ def test_a_file_the_library_deleted_on_rejection_is_not_called_held() -> None:
     assert body["status"] == "failed"
     assert body["sourceRemoved"] is True
     assert "disposition" not in body
+
+
+def test_a_rejection_says_the_download_is_being_removed() -> None:
+    body = build_completion_body(
+        origin=DELUNO_ORIGIN,
+        result={"ok": False, "outcome": "failed", "reason": "No usable audio.", "failure_class": "preflight"},
+        rejected=True,
+    )
+    assert body["status"] == "failed"
+    assert body["disposition"] == "rejected"
+    assert body["sourceRemoved"] is True
+    assert body["failureClass"] == "preflight"
+
+
+def test_a_failure_about_to_be_rejected_is_not_reported_twice(session_factory, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The reject job sends its own report; the pass's failure report would close the hand-off first."""
+    factory, settings = session_factory
+    posts = _capture_posts(monkeypatch)
+    with factory() as db:
+        _deluno_connection(db, settings)
+        status = report_handoff_completion(
+            db,
+            settings,
+            payload_json=DELUNO_PAYLOAD,
+            result={"ok": False, "outcome": "failed_execution", "reason": "x", "reject_queued": True},
+        )
+    assert status.startswith("skipped:")
+    assert posts == []
+
+
+def test_every_report_sent_is_recorded_in_activity(session_factory, monkeypatch: pytest.MonkeyPatch) -> None:
+    from sqlalchemy import select
+
+    from mediamop.platform.activity import constants as activity_constants
+    from mediamop.platform.activity.models import ActivityEvent
+
+    factory, settings = session_factory
+    _capture_posts(monkeypatch)
+    with factory() as db:
+        _deluno_connection(db, settings)
+        report_handoff_completion(
+            db,
+            settings,
+            payload_json=DELUNO_PAYLOAD,
+            result={"ok": True, "outcome": "live_output_written", "relative_media_path": "Film/film.mkv"},
+        )
+    with factory() as db:
+        events = list(
+            db.scalars(
+                select(ActivityEvent).where(ActivityEvent.event_type == activity_constants.REFINER_HANDOFF_REPORTED)
+            )
+        )
+    assert [e.title for e in events] == ["Told Deluno that film.mkv is ready to import"]

@@ -300,3 +300,60 @@ it("says so plainly when nothing is configured yet", async () => {
 
   expect(await screen.findByText(/No libraries yet/)).toBeInTheDocument();
 });
+
+it("offers Reject only when a linked manager can take one, and says why", async () => {
+  asOperator();
+  vi.spyOn(api, "fetchRefinerLibraries").mockResolvedValue([
+    library({ manager_connection_ids: [4] }),
+  ]);
+  const support = vi.spyOn(api, "fetchRefinerRejectSupport").mockResolvedValue({
+    available: false,
+    reason: "Deluno does not yet say it can replace a rejected release.",
+  });
+
+  render(<RefinerLibrariesSection />, { wrapper });
+  fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+
+  expect(
+    await screen.findByText(
+      "Reject: Deluno does not yet say it can replace a rejected release.",
+    ),
+  ).toBeInTheDocument();
+  expect(support).toHaveBeenCalledWith([4]);
+  const option = screen.getByRole("option", {
+    name: "Reject the release so a different one is found",
+  }) as HTMLOptionElement;
+  expect(option.disabled).toBe(true);
+});
+
+it("lets an operator choose Reject when a linked manager supports it", async () => {
+  asOperator();
+  const existing = library({ manager_connection_ids: [2] });
+  vi.spyOn(api, "fetchRefinerLibraries").mockResolvedValue([existing]);
+  vi.spyOn(api, "fetchRefinerRejectSupport").mockResolvedValue({
+    available: true,
+    reason:
+      "Radarr can remove the download, blocklist the release and search for another.",
+  });
+  const update = vi
+    .spyOn(api, "updateRefinerLibrary")
+    .mockResolvedValue(existing);
+
+  render(<RefinerLibrariesSection />, { wrapper });
+  fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+  const option = (await screen.findByRole("option", {
+    name: "Reject the release so a different one is found",
+  })) as HTMLOptionElement;
+  await waitFor(() => expect(option.disabled).toBe(false));
+  fireEvent.change(option.closest("select") as HTMLSelectElement, {
+    target: { value: "reject" },
+  });
+  fireEvent.click(screen.getByTestId("refiner-library-save"));
+
+  await waitFor(() =>
+    expect(update).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ failure_policy: "reject" }),
+    ),
+  );
+});

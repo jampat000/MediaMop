@@ -3,6 +3,8 @@ import { apiFetch, readJson, requireOk } from "../api/client";
 
 export type RefinerMediaScope = "movie" | "tv";
 
+export type RefinerFailurePolicy = "pass_through" | "hold" | "reject";
+
 export const REFINER_MEDIA_SCOPE_LABELS: Record<RefinerMediaScope, string> = {
   movie: "Movies",
   tv: "TV episodes",
@@ -55,8 +57,8 @@ export interface RefinerLibrary {
   retry_backoff_seconds: number;
   retry_execution_failures: boolean;
   retry_preflight_failures: boolean;
-  /** What happens once retries run out: hand the original back, or keep it (#465). */
-  failure_policy: "pass_through" | "hold";
+  /** What happens once retries run out: hand the original back, keep it, or reject the release (#465, #471). */
+  failure_policy: RefinerFailurePolicy;
   schedule_grid: string;
   schedule_enabled: boolean;
   schedule_hours_limited: boolean;
@@ -116,8 +118,8 @@ export interface RefinerLibraryWrite {
   retry_backoff_seconds: number;
   retry_execution_failures: boolean;
   retry_preflight_failures: boolean;
-  /** What happens once retries run out: hand the original back, or keep it (#465). */
-  failure_policy: "pass_through" | "hold";
+  /** What happens once retries run out: hand the original back, keep it, or reject the release (#465, #471). */
+  failure_policy: RefinerFailurePolicy;
   schedule_grid: string;
   schedule_enabled: boolean;
   schedule_hours_limited: boolean;
@@ -394,6 +396,28 @@ export function writeFromRefinerLibrary(
     rule_set_id: library.rule_set_id,
     manager_connection_ids: library.manager_connection_ids,
   };
+}
+
+/** Whether Reject can be chosen for a library linked to these managers, and why. */
+export interface RefinerRejectSupport {
+  available: boolean;
+  reason: string;
+}
+
+export async function fetchRefinerRejectSupport(
+  connectionIds: number[],
+): Promise<RefinerRejectSupport> {
+  const query = new URLSearchParams();
+  for (const id of connectionIds) query.append("connection_ids", String(id));
+  const suffix = query.toString();
+  const path = `/api/v1/refiner/reject-support${suffix ? `?${suffix}` : ""}`;
+  const response = await apiFetch(path);
+  await requireOk(
+    path,
+    response,
+    "Could not check whether Reject is available",
+  );
+  return readJson<RefinerRejectSupport>(response);
 }
 
 const refinerRuleSetsPath = () => "/api/v1/refiner/rule-sets";

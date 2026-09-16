@@ -29,6 +29,8 @@ REQUIRED_SURFACES: tuple[tuple[str, str], ...] = (
     ("PUT", "/api/v1/refiner/libraries/{library_id}"),
     ("DELETE", "/api/v1/refiner/libraries/{library_id}"),
     ("POST", "/api/v1/refiner/libraries/reorder"),
+    # Whether the reject failure policy can be offered for a library's managers (#471).
+    ("GET", "/api/v1/refiner/reject-support"),
     # Rule sets — CRUD, carrying sorters, metadata options and original-language options.
     ("GET", "/api/v1/refiner/rule-sets"),
     ("POST", "/api/v1/refiner/rule-sets"),

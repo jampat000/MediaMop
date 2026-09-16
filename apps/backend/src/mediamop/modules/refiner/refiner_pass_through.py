@@ -59,10 +59,15 @@ from mediamop.platform.media_managers.completion_callback import report_handoff_
 logger = logging.getLogger(__name__)
 
 REFINER_FILE_PASS_THROUGH_JOB_KIND = "refiner.file.pass_through.v1"
+REFINER_FILE_REJECT_JOB_KIND = "refiner.file.reject.v1"
 
 FAILURE_POLICY_PASS_THROUGH = "pass_through"
 FAILURE_POLICY_HOLD = "hold"
-FAILURE_POLICIES: tuple[str, ...] = (FAILURE_POLICY_PASS_THROUGH, FAILURE_POLICY_HOLD)
+# Opt-in. Tell the manager the release is bad so it can find another, and remove the download once
+# it has accepted that. Anything that stops a reject from being done safely falls back to
+# pass_through, never to deleting a file nobody was told about (see refiner_reject).
+FAILURE_POLICY_REJECT = "reject"
+FAILURE_POLICIES: tuple[str, ...] = (FAILURE_POLICY_PASS_THROUGH, FAILURE_POLICY_HOLD, FAILURE_POLICY_REJECT)
 
 
 def normalize_failure_policy(raw: str | None) -> str:
@@ -135,6 +140,33 @@ def enqueue_pass_through(
     )
 
 
+def enqueue_reject(
+    session: Session,
+    *,
+    library: RefinerLibraryRow,
+    relative_path: str,
+    origin: dict[str, Any] | None = None,
+    reason: str | None = None,
+    failure_class: str | None = None,
+) -> RefinerJob:
+    """Queue a reject. Its own durable job, so no HTTP call or delete runs inside a transaction."""
+
+    body: dict[str, Any] = {"relative_media_path": relative_path, "library_id": library.id}
+    if origin:
+        body["origin"] = origin
+    if reason:
+        body["reason"] = reason[:1200]
+    if failure_class:
+        body["failure_class"] = failure_class
+    return refiner_enqueue_or_get_job(
+        session,
+        dedupe_key=f"{REFINER_FILE_REJECT_JOB_KIND}:{library.id}:{relative_path}",
+        job_kind=REFINER_FILE_REJECT_JOB_KIND,
+        payload_json=json.dumps(body, separators=(",", ":")),
+        priority=int(library.priority or 0),
+    )
+
+
 def apply_failure_policy(
     session: Session,
     *,
@@ -142,25 +174,43 @@ def apply_failure_policy(
     relative_path: str,
     will_retry: bool,
     origin: dict[str, Any] | None = None,
-) -> bool:
-    """Act on a recorded failure. Returns True when a pass-through was queued.
+) -> str | None:
+    """Act on a recorded failure. Returns the follow-up queued — ``pass_through`` or ``reject`` — or None.
 
     Nothing happens while an automatic retry is still coming: the policy only decides what to do
     once MediaMop has genuinely given up on processing the file.
     """
 
     if will_retry:
-        return False
-    if normalize_failure_policy(library.failure_policy) != FAILURE_POLICY_PASS_THROUGH:
-        return False
+        return None
+    policy = normalize_failure_policy(library.failure_policy)
+    if policy == FAILURE_POLICY_HOLD:
+        return None
 
-    enqueue_pass_through(session, library=library, relative_path=relative_path, origin=origin)
     row = session.scalars(
         select(RefinerFileRow).where(
             RefinerFileRow.library_id == library.id,
             RefinerFileRow.relative_path == relative_path,
         ),
     ).first()
+
+    if policy == FAILURE_POLICY_REJECT:
+        enqueue_reject(
+            session,
+            library=library,
+            relative_path=relative_path,
+            origin=origin,
+            reason=row.status_reason if row is not None else None,
+            failure_class=row.failure_class if row is not None else None,
+        )
+        if row is not None:
+            row.status_reason = (
+                f"{row.status_reason} MediaMop could not process this file, so it is telling your media manager "
+                "the release is bad so it can find a different one."
+            ).strip()[:10000]
+        return FAILURE_POLICY_REJECT
+
+    enqueue_pass_through(session, library=library, relative_path=relative_path, origin=origin)
     if row is not None:
         # Say what is about to happen, so the screen never shows a failure that is already being
         # resolved. The final sentence is written once the file is actually delivered.
@@ -168,7 +218,7 @@ def apply_failure_policy(
             f"{row.status_reason} MediaMop could not process this file, so it is handing the original "
             "back to the output folder unchanged."
         ).strip()[:10000]
-    return True
+    return FAILURE_POLICY_PASS_THROUGH
 
 
 @dataclass(frozen=True, slots=True)

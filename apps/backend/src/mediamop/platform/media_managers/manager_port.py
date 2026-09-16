@@ -138,6 +138,9 @@ class ManagerCapabilities:
     reports_queue: bool
     reports_library_truth: bool
     summary: str
+    #: Whether one of its queue items can be removed with the release blocklisted, so the
+    #: manager can look for a different one. The reject failure policy's direct route (#471).
+    removes_queue_items: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -172,6 +175,9 @@ class ManagerDescription:
     library_roots: tuple[str, ...] = field(default=())
     libraries: tuple[ManagerLibraryDescriptor, ...] = field(default=())
     detail: str | None = None
+    #: What the manager itself says it can do, verbatim from its manifest. Only managers that
+    #: publish a manifest fill this; a feature gated on one of these is off until it appears.
+    advertised_capabilities: frozenset[str] = field(default=frozenset())
 
 
 class MediaManagerPort(Protocol):
@@ -187,6 +193,10 @@ class MediaManagerPort(Protocol):
 
     def queue_rows(self, connection: ManagerConnection) -> ManagerQueueSignal:
         """What this manager says is mid-import."""
+
+    def remove_queue_item(self, connection: ManagerConnection, row: Mapping[str, Any]) -> None:
+        """Remove one queue item and blocklist its release. Raises ``MediaManagerHttpError``
+        when the manager refuses or cannot do it; returning means it accepted."""
 
     def library_truth(
         self,

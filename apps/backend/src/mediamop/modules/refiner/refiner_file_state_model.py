@@ -53,6 +53,10 @@ class RefinerFileStatus(StrEnum):
     # so it handed the original back unmodified rather than keep it (#465). "We did nothing to
     # this on purpose" must never be confused with "we improved this" — including in savings.
     PASSED_THROUGH = "passed_through"
+    # Terminal. Under the opt-in ``reject`` policy the manager accepted a report that this release
+    # is bad and took responsibility for replacing it (#465, #471). The download itself is removed
+    # by the manager or, for a hand-off, by MediaMop once the report was accepted.
+    REJECTED = "rejected"
 
 
 #: States where MediaMop has decided not to act, as opposed to not having acted yet.

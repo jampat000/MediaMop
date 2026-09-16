@@ -148,6 +148,7 @@ class ArrV3ManagerPort:
                 f"Looks after {scope_word}. MediaMop can ask it what is downloading or importing, "
                 "and which files it still keeps in its library."
             ),
+            removes_queue_items=True,
         )
 
     def describe(self, connection: ManagerConnection) -> ManagerDescription:
@@ -198,6 +199,23 @@ class ArrV3ManagerPort:
         records = payload if isinstance(payload, list) else (payload or {}).get("records")
         rows = tuple(ManagerQueueRow(scope=self._scope, payload=row) for row in _dicts(records))
         return ManagerQueueSignal(connection=connection, status="reported", rows=rows)
+
+    def remove_queue_item(self, connection: ManagerConnection, row: Mapping[str, Any]) -> None:
+        """``DELETE /api/v3/queue/{id}?removeFromClient=true&blocklist=true``.
+
+        Verified against both products' ``openapi.json`` (Sonarr ``v5-develop``, Radarr
+        ``develop``, 2026-09-16): ``removeFromClient`` defaults true, ``blocklist`` false,
+        ``skipRedownload`` false — left at its default so the manager may search again — and a
+        200 is success. The download client removes the data; MediaMop deletes nothing itself.
+        """
+
+        queue_id = _first_number(row, "id")
+        if queue_id is None:
+            raise MediaManagerHttpError(f"{connection.label}'s queue item has no id.")
+        _client(connection, timeout_seconds=_QUEUE_TIMEOUT_SECONDS).delete(
+            f"/api/v3/queue/{queue_id}",
+            params={"removeFromClient": True, "blocklist": True},
+        )
 
     def library_truth(self, connection: ManagerConnection, *, media_scope: MediaScope) -> ManagerLibraryTruth:
         if media_scope != self._scope:
@@ -325,6 +343,14 @@ class ExternalIntegrationManagerPort:
             capabilities=caps,
             library_roots=roots,
             libraries=tuple(_manifest_library_descriptor(lib) for lib in libraries if _manifest_library_key(lib)),
+            advertised_capabilities=_manifest_capabilities(payload),
+        )
+
+    def remove_queue_item(self, connection: ManagerConnection, row: Mapping[str, Any]) -> None:
+        """Not offered: this kind takes a rejection through the hand-off report instead."""
+
+        raise MediaManagerHttpError(
+            f"{connection.label} takes a rejection through its hand-off report, not by removing a queue item."
         )
 
     def queue_rows(self, connection: ManagerConnection) -> ManagerQueueSignal:
@@ -407,6 +433,16 @@ def _manifest_libraries(payload: Any) -> list[dict[str, Any]]:
                 return found
         return []
     return _dicts(payload)
+
+
+def _manifest_capabilities(payload: Any) -> frozenset[str]:
+    """The manifest's ``capabilities`` list, lower-cased. Deluno publishes it as an array of strings
+    (``ExternalIntegrationManifest.Capabilities``, ExternalIntegrationEndpointRouteBuilderExtensions.cs)."""
+
+    raw = payload.get("capabilities") if isinstance(payload, Mapping) else None
+    if not isinstance(raw, list):
+        return frozenset()
+    return frozenset(item.strip().lower() for item in raw if isinstance(item, str) and item.strip())
 
 
 def _external_queue_entries(payload: Any) -> list[dict[str, Any]]:

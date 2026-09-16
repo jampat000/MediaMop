@@ -25,6 +25,12 @@ REFINER_WORKER_FAILURE = "refiner.worker_failure"
 # type, so it can never be counted as a completed pass or as space saved.
 REFINER_FILE_PASSED_THROUGH = "refiner.file_passed_through"
 REFINER_FILE_PASS_THROUGH_FAILED = "refiner.file_pass_through_failed"
+# The opt-in reject policy: the manager accepted the report, or MediaMop fell back to handing the
+# original back because rejecting could not be done safely.
+REFINER_FILE_REJECTED = "refiner.file_rejected"
+REFINER_FILE_REJECT_FELL_BACK = "refiner.file_reject_fell_back"
+# A report sent to the media manager that handed a file over, so every report is visible.
+REFINER_HANDOFF_REPORTED = "refiner.handoff_reported"
 
 # Pruner (pruner_jobs + server instances)
 PRUNER_CONNECTION_TEST_SUCCEEDED = "pruner.connection_test_succeeded"

@@ -202,19 +202,19 @@ def _pass_through_jobs(session: Session) -> list[RefinerJob]:
 
 def test_nothing_happens_while_a_retry_is_still_coming(db_session: Session) -> None:
     library = seed_refiner_library(db_session, failure_policy="pass_through")
-    assert apply_failure_policy(db_session, library=library, relative_path=_REL, will_retry=True) is False
+    assert apply_failure_policy(db_session, library=library, relative_path=_REL, will_retry=True) is None
     assert _pass_through_jobs(db_session) == []
 
 
 def test_hold_keeps_the_file_as_before(db_session: Session) -> None:
     library = seed_refiner_library(db_session, failure_policy="hold")
-    assert apply_failure_policy(db_session, library=library, relative_path=_REL, will_retry=False) is False
+    assert apply_failure_policy(db_session, library=library, relative_path=_REL, will_retry=False) is None
     assert _pass_through_jobs(db_session) == []
 
 
 def test_pass_through_queues_a_delivery_once_retries_run_out(db_session: Session) -> None:
     library = seed_refiner_library(db_session, failure_policy="pass_through")
-    assert apply_failure_policy(db_session, library=library, relative_path=_REL, will_retry=False) is True
+    assert apply_failure_policy(db_session, library=library, relative_path=_REL, will_retry=False) == "pass_through"
     assert len(_pass_through_jobs(db_session)) == 1
 
 
