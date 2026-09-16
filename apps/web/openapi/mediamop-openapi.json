@@ -3322,6 +3322,14 @@
             "title": "Recorded At",
             "type": "string"
           },
+          "story": {
+            "description": "The same pass told in plain language. Rebuilt from the stored record on every request, so improving the wording improves past entries too.",
+            "items": {
+              "$ref": "#/components/schemas/RefinerFileStoryStepOut"
+            },
+            "title": "Story",
+            "type": "array"
+          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -3808,6 +3816,31 @@
           "csrf_token"
         ],
         "title": "RefinerFileRequeueIn",
+        "type": "object"
+      },
+      "RefinerFileStoryStepOut": {
+        "description": "One plain-language step in what happened to a file, built from the stored pass record.",
+        "properties": {
+          "heading": {
+            "title": "Heading",
+            "type": "string"
+          },
+          "sentence": {
+            "title": "Sentence",
+            "type": "string"
+          },
+          "tone": {
+            "description": "neutral, good, warn or bad \u2014 how the step should read, not a severity.",
+            "title": "Tone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "heading",
+          "sentence",
+          "tone"
+        ],
+        "title": "RefinerFileStoryStepOut",
         "type": "object"
       },
       "RefinerFilesBulkRequeueIn": {

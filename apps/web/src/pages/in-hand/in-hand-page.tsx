@@ -13,7 +13,8 @@
  *   4. what was handed back
  */
 
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { FileStoryPanel } from "../../components/refiner/file-story-panel";
 import { Link } from "react-router-dom";
 import { PageLoading } from "../../components/shared/page-loading";
 import { ApiEntryError } from "../../components/shared/api-entry-error";
@@ -21,7 +22,10 @@ import {
   REFINER_FILE_STATUS_LABELS,
   type RefinerFile,
 } from "../../lib/refiner/files-api";
-import { useRefinerFilesQuery } from "../../lib/refiner/files-queries";
+import {
+  useRefinerFileLog,
+  useRefinerFilesQuery,
+} from "../../lib/refiner/files-queries";
 import { useRefinerLibrariesQuery } from "../../lib/refiner/libraries-queries";
 import { useRefinerOverviewStatsQuery } from "../../lib/refiner/queries";
 
@@ -97,7 +101,13 @@ function statusToneClass(status: string): string {
   return "";
 }
 
-function FileRow({ file }: { file: RefinerFile }): React.ReactElement {
+function FileRow({
+  file,
+  onOpen,
+}: {
+  file: RefinerFile;
+  onOpen: (file: RefinerFile) => void;
+}): React.ReactElement {
   const name = file.relative_path.split(/[\\/]/).pop() || file.relative_path;
   const facts = mediaFacts(file);
   const eta = formatEta(file.progress_eta_seconds);
@@ -106,9 +116,14 @@ function FileRow({ file }: { file: RefinerFile }): React.ReactElement {
   return (
     <li className="mm-inhand-row" data-testid="in-hand-row">
       <div className="mm-inhand-row__main">
-        <span className="mm-inhand-row__name" title={file.relative_path}>
+        <button
+          type="button"
+          className="mm-inhand-row__name"
+          title={`What happened to ${file.relative_path}`}
+          onClick={() => onOpen(file)}
+        >
           {name}
-        </span>
+        </button>
         <span className="mm-inhand-row__facts">
           {[formatBytes(file.size_bytes), facts].filter(Boolean).join(" · ")}
         </span>
@@ -154,6 +169,17 @@ export function InHandPage(): React.ReactElement {
   const files = useRefinerFilesQuery({ limit: 200 });
   const today = useRefinerOverviewStatsQuery(1);
   const libraries = useRefinerLibrariesQuery();
+  const fileLog = useRefinerFileLog();
+  const [storyFile, setStoryFile] = useState<RefinerFile | null>(null);
+
+  const openStory = useCallback(
+    (file: RefinerFile) => {
+      setStoryFile(file);
+      fileLog.mutate(file.id);
+    },
+    [fileLog],
+  );
+  const closeStory = useCallback(() => setStoryFile(null), []);
 
   const grouped = useMemo(() => {
     const rows = (files.data?.files ?? []).filter((f) => IN_HAND.has(f.status));
@@ -262,7 +288,7 @@ export function InHandPage(): React.ReactElement {
           </p>
           <ul className="mm-inhand-list">
             {stuck.map((file) => (
-              <FileRow key={file.id} file={file} />
+              <FileRow key={file.id} file={file} onOpen={openStory} />
             ))}
           </ul>
           <Link className="mm-inhand-stuck__link" to="/refiner">
@@ -294,12 +320,26 @@ export function InHandPage(): React.ReactElement {
             </h2>
             <ul className="mm-inhand-list">
               {rows.map((file) => (
-                <FileRow key={file.id} file={file} />
+                <FileRow key={file.id} file={file} onOpen={openStory} />
               ))}
             </ul>
           </section>
         ))
       )}
+
+      <FileStoryPanel
+        open={storyFile !== null}
+        fileName={
+          storyFile
+            ? storyFile.relative_path.split(/[\\/]/).pop() ||
+              storyFile.relative_path
+            : ""
+        }
+        log={fileLog.data}
+        loading={fileLog.isPending}
+        error={fileLog.isError ? fileLog.error.message : null}
+        onClose={closeStory}
+      />
     </div>
   );
 }

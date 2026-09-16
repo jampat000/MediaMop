@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -174,4 +174,39 @@ it("reads as finished rather than broken when nothing is in hand", async () => {
     expect(screen.getByText("Nothing in hand")).toBeInTheDocument();
   });
   expect(screen.queryByTestId("in-hand-row")).not.toBeInTheDocument();
+});
+
+it("opens a file's story from its row", async () => {
+  const fetchLog = vi.spyOn(filesApi, "fetchRefinerFileLog").mockResolvedValue({
+    file_id: 1,
+    relative_path: "movies/Arrival.2016.2160p.mkv",
+    retention_days: 90,
+    entries: [
+      {
+        id: 1,
+        recorded_at: "2026-09-16T14:02:00Z",
+        outcome: "live_output_written",
+        title: "Remuxed Arrival",
+        library_name: "Films 4K",
+        detail: {},
+        story: [
+          {
+            heading: "Picked up",
+            sentence:
+              "MediaMop took this file as a film in the Films 4K library.",
+            tone: "neutral",
+          },
+        ],
+      },
+    ],
+  });
+  mount([file({ id: 1 })]);
+
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Arrival.2016.2160p.mkv" }),
+  );
+
+  expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  expect(await screen.findByText("Picked up")).toBeInTheDocument();
+  expect(fetchLog).toHaveBeenCalledWith(1);
 });
