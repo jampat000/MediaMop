@@ -129,15 +129,6 @@ jobs:
       - name: Smoke test packaged Windows server
         run: powershell -ExecutionPolicy Bypass -File scripts/smoke-windows-package.ps1 -ExpectedVersion "${{ steps.version.outputs.plain }}"
 
-      - name: Generate release artifact checksums
-        shell: powershell
-        run: |
-          $releasesDir = "dist/windows/releases"
-          Get-ChildItem -Path $releasesDir -File | ForEach-Object {
-            $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-            "$hash  $($_.Name)" | Add-Content -LiteralPath (Join-Path $releasesDir "SHA256SUMS.txt") -Encoding ascii
-          }
-
       - name: Detect Windows code signing configuration
         id: codesign
         shell: bash
@@ -175,6 +166,17 @@ jobs:
           $signature = Get-AuthenticodeSignature -FilePath $setupExe.FullName
           if ($signature.Status -ne "Valid") {
             throw "Setup signature verification failed: $($signature.Status) $($signature.StatusMessage)"
+          }
+
+      # After signing: signtool rewrites Setup.exe, so a hash taken earlier would not match the
+      # file people download (and installers that verify SHA256SUMS.txt would refuse it).
+      - name: Generate release artifact checksums
+        shell: powershell
+        run: |
+          $releasesDir = "dist/windows/releases"
+          Get-ChildItem -Path $releasesDir -File | ForEach-Object {
+            $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)" | Add-Content -LiteralPath (Join-Path $releasesDir "SHA256SUMS.txt") -Encoding ascii
           }
 
       - name: Upload Velopack release artifacts
