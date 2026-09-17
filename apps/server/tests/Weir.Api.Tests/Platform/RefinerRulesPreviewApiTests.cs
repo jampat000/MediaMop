@@ -40,7 +40,15 @@ public sealed class RefinerRulesPreviewApiTests
     {
         var runner = new FakePreviewProbeRunner();
         var server = await WeirTestServer.StartAsync(
-            variables: [("WEIR_SESSION_SECRET", ApiTestClient.Secret), ("WEIR_REFINER_WORKER_COUNT", "0")],
+            // The watched-folder scan's own periodic scheduler (1s poll, RunAtStart) would otherwise
+            // independently discover the same watched folder these tests write into and enqueue a real
+            // scan, racing the "the preview endpoint writes nothing" assertions below.
+            variables:
+            [
+                ("WEIR_SESSION_SECRET", ApiTestClient.Secret),
+                ("WEIR_REFINER_WORKER_COUNT", "0"),
+                ("WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED", "false"),
+            ],
             configureServices: services =>
             {
                 services.Replace(ServiceDescriptor.Singleton<IProcessRunner>(runner));

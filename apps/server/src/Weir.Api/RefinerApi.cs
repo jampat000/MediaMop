@@ -7,6 +7,7 @@ using Weir.Core.Jobs;
 using Weir.Infrastructure.Jobs;
 using Weir.Infrastructure.Media;
 using Weir.Infrastructure.Processes;
+using Weir.Infrastructure.Refiner;
 using Weir.Infrastructure.Refiner.RemuxPass;
 using Weir.Infrastructure.Scheduling;
 
@@ -30,13 +31,12 @@ public static class RefinerApi
         // Caps the #502 "Try on a file" preview at one run at a time (see RulesPreviewGate's own docs).
         services.TryAddSingleton<RulesPreviewGate>();
 
-        // Not registered here: Weir.Infrastructure.Refiner.FileLogRetentionTask duplicates
-        // Weir.Infrastructure.Jobs.RefinerFileLogRetentionTask (registered by AddWeirJobs) — both port the
-        // same refiner_file_log_retention_periodic sweep under the identical periodic-task name
-        // "refiner-file-log-retention", an accidental collision from #519 and #522 having each ported it
-        // independently. Registering both here doubled the periodic task list under one name and made two
-        // separate pruning passes race each other for no benefit; the jobs one already runs unconditionally,
-        // so this one is left unregistered rather than deleting either #519's or #522's file outright.
+        // The activity port (#519) and this Refiner-apis port (#522) each independently ported
+        // refiner_file_log_retention_periodic; #546 kept this one (it uses the same UnitOfWork/
+        // OperatorSettingsStore/FileLogStore plumbing as the rest of Refiner) and deleted the activity
+        // port's duplicate file and registration, so this is the only "refiner-file-log-retention" task.
+        services.AddSingleton<FileLogRetentionTask>();
+        services.AddSingleton<IPeriodicTask>(sp => sp.GetRequiredService<FileLogRetentionTask>());
 
         // Watched-folder scan dispatch (#522 part 5): the job handler that runs a scan, and the periodic
         // scheduler that enqueues one per library. Additive: the job handler registry (AddWeirJobs) simply

@@ -33,12 +33,6 @@ public sealed class OpenApiDocumentParityTests
             "Same discovery feature; importing a discovered library depends on the same unported browsing code."),
         ("POST", "/api/v1/refiner/libraries/{library_id}/unlink",
             "Library unlink (detach without deleting rows) is not ported yet."),
-        ("GET", "/api/v1/refiner/reject-support",
-            "The reject-support bundle download is not ported yet."),
-        ("POST", "/api/v1/refiner/jobs/file-remux-pass/enqueue",
-            "Manual remux-pass enqueue; the remux pass itself is being ported on a parallel branch (port/remux-pass)."),
-        ("POST", "/api/v1/refiner/jobs/watched-folder-remux-scan-dispatch/enqueue",
-            "Manual watched-folder scan dispatch enqueue; same remux-pass dependency as the row above."),
     ];
 
     [Fact]
