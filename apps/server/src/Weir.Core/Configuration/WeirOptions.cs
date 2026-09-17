@@ -125,6 +125,35 @@ public sealed record WeirOptions
     /// <summary><c>WEIR_RUNTIME</c> (<c>windows</c>, <c>docker</c> or <c>source</c>), which the update check reports as the install type.</summary>
     public string? RuntimeKind { get; init; }
 
+    /// <summary>
+    /// #555: whether Weir should <c>chown</c> a file it just published, or a folder it just created for one, to
+    /// <see cref="OutputOwnershipUid"/>/<see cref="OutputOwnershipGid"/> (<c>WEIR_CHOWN_OUTPUT</c>, default off).
+    /// Linux only; ignored on Windows (logged once at startup when set — there is no POSIX owner there).
+    /// </summary>
+    public required bool OutputOwnershipChownEnabled { get; init; }
+
+    /// <summary>
+    /// The target owner for <see cref="OutputOwnershipChownEnabled"/>: the first non-blank of
+    /// <c>WEIR_PUID</c>/<c>PUID</c> (default 1000) — the same variable the Docker entrypoint uses to remap the
+    /// container's own runtime user, so a chowned output file matches the identity Weir itself runs as.
+    /// </summary>
+    public required uint OutputOwnershipUid { get; init; }
+
+    /// <summary>The target group for <see cref="OutputOwnershipChownEnabled"/>: first non-blank of <c>WEIR_PGID</c>/<c>PGID</c> (default 1000).</summary>
+    public required uint OutputOwnershipGid { get; init; }
+
+    /// <summary>
+    /// Optional file mode applied to a file Weir just published (<c>WEIR_FILE_MODE_OUTPUT</c>, an octal string such
+    /// as <c>664</c>). <see langword="null"/> when unset. Linux only.
+    /// </summary>
+    public required UnixFileMode? OutputOwnershipFileMode { get; init; }
+
+    /// <summary>
+    /// Optional directory mode applied to a folder Weir just created to publish into (<c>WEIR_DIR_MODE_OUTPUT</c>,
+    /// an octal string such as <c>775</c> or the setgid form <c>2775</c>). <see langword="null"/> when unset. Linux only.
+    /// </summary>
+    public required UnixFileMode? OutputOwnershipDirectoryMode { get; init; }
+
     /// <summary>Origins allowed for the unsafe-request Origin/Referer check.</summary>
     public IReadOnlyList<string> TrustedBrowserOrigins =>
         TrustedBrowserOriginsOverride.Count > 0 ? TrustedBrowserOriginsOverride : CorsOrigins;

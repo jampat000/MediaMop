@@ -10,7 +10,7 @@ Weir's security posture and hardening baseline.
 ## Authentication
 
 - First-run bootstrap is only available when no admin user exists
-- Passwords must be at least 12 characters (enforced frontend and backend)
+- Passwords must be at least 8 characters (enforced frontend and backend)
 - Login and bootstrap routes are rate-limited
 - Session cookies are HTTP-only
 - CSRF protection on all authenticated state-changing requests

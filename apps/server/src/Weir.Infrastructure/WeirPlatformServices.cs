@@ -1,12 +1,14 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Weir.Core.Activity;
 using Weir.Core.Configuration;
 using Weir.Core.Refiner;
 using Weir.Core.Time;
 using Weir.Core.Workers;
 using Weir.Infrastructure.Activity;
+using Weir.Infrastructure.Refiner;
 using Weir.Infrastructure.Scheduling;
 using Weir.Infrastructure.Sqlite;
 
@@ -27,6 +29,27 @@ public static class WeirPlatformServices
         services.TryAddSingleton<ITimeZoneResolver, IanaTimeZoneResolver>();
         services.TryAddSingleton<IActivityWriter, SqliteActivityWriter>();
         services.TryAddSingleton(sp => ActivityNotifications.For(sp.GetRequiredService<SqliteDatabase>()));
+
+        // #555: WEIR_CHOWN_OUTPUT/WEIR_FILE_MODE_OUTPUT/WEIR_DIR_MODE_OUTPUT. Windows gets a no-op tools
+        // implementation (there is no POSIX owner or mode there) and, when an operator actually set one of these,
+        // a one-time warning at startup rather than a silent no-op.
+        services.TryAddSingleton<IOutputOwnershipTools>(sp =>
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                return new LinuxOutputOwnershipTools();
+            }
+
+            if (options.OutputOwnershipChownEnabled || options.OutputOwnershipFileMode is not null || options.OutputOwnershipDirectoryMode is not null)
+            {
+                sp.GetRequiredService<ILogger<WindowsOutputOwnershipTools>>().LogWarning(
+                    "WEIR_CHOWN_OUTPUT / WEIR_FILE_MODE_OUTPUT / WEIR_DIR_MODE_OUTPUT are set, but Windows has no " +
+                    "POSIX owner or mode bits to apply them to. Weir is ignoring them.");
+            }
+
+            return new WindowsOutputOwnershipTools();
+        });
+        services.TryAddSingleton<IOutputOwnership, OutputOwnership>();
         return services;
     }
 

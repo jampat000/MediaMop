@@ -23,7 +23,7 @@ public sealed record PassThroughDeliveryResult(bool Delivered, string Destinatio
 /// </summary>
 public static class PassThroughDelivery
 {
-    public static async Task<PassThroughDeliveryResult> DeliverUnchangedAsync(PassThroughDeliverySettings settings, string relativePath)
+    public static async Task<PassThroughDeliveryResult> DeliverUnchangedAsync(PassThroughDeliverySettings settings, string relativePath, IOutputOwnership? ownership = null)
     {
         ArgumentNullException.ThrowIfNull(settings);
         var watchedRoot = RemuxPassPaths.Resolve(settings.WatchedFolder);
@@ -67,7 +67,7 @@ public static class PassThroughDelivery
                 return Task.CompletedTask;
             }
 
-            await FileLifecycle.SafeCopyToFinalAsync(source, decision.Destination, ValidateStagedAsync).ConfigureAwait(false);
+            await FileLifecycle.SafeCopyToFinalAsync(source, decision.Destination, ValidateStagedAsync, ownership: ownership).ConfigureAwait(false);
             sentence = "Weir could not process this file, so it handed the original back unchanged to " +
                        $"{decision.Destination}. Your media manager can import it as normal.";
         }

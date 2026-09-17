@@ -68,6 +68,19 @@ public sealed class PlatformRulesTests
         Assert.Null(Core.Security.PasswordPolicy.Validate("longer-password-1", "owner"));
     }
 
+    /// <summary>
+    /// #556: the one minimum length every doc (README, docs/, docs-site/) and web hint (setup/bootstrap,
+    /// settings change-password) must state. Pinned as a boundary, not just via the message text above, so a change
+    /// to the constant is caught even if a future edit also updates the message string to match.
+    /// </summary>
+    [Fact]
+    public void Minimum_password_length_is_pinned_at_8()
+    {
+        Assert.Equal(8, Core.Security.PasswordPolicy.MinPasswordLength);
+        Assert.NotNull(Core.Security.PasswordPolicy.Validate("2345678", "owner"));
+        Assert.Null(Core.Security.PasswordPolicy.Validate("23456789", "owner"));
+    }
+
     [Fact]
     public void Rate_limiter_evicts_expired_buckets_and_caps_keys()
     {

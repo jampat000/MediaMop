@@ -26,13 +26,20 @@ public sealed class RefinerPassThroughHandler : IJobHandler
     private readonly TimeProvider _time;
     private readonly ILogger<RefinerPassThroughHandler> _logger;
     private readonly HandoffCompletionReporter? _reporter;
+    private readonly IOutputOwnership? _ownership;
 
-    public RefinerPassThroughHandler(SqliteDatabase database, TimeProvider time, ILogger<RefinerPassThroughHandler> logger, HandoffCompletionReporter? reporter = null)
+    public RefinerPassThroughHandler(
+        SqliteDatabase database,
+        TimeProvider time,
+        ILogger<RefinerPassThroughHandler> logger,
+        HandoffCompletionReporter? reporter = null,
+        IOutputOwnership? ownership = null)
     {
         _database = database ?? throw new ArgumentNullException(nameof(database));
         _time = time ?? throw new ArgumentNullException(nameof(time));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _reporter = reporter;
+        _ownership = ownership;
     }
 
     public string JobKind => IntakeRules.PassThroughJobKind;
@@ -69,7 +76,7 @@ public sealed class RefinerPassThroughHandler : IJobHandler
         PassThroughDeliveryResult result;
         try
         {
-            result = await PassThroughDelivery.DeliverUnchangedAsync(delivery, relativePath).ConfigureAwait(false);
+            result = await PassThroughDelivery.DeliverUnchangedAsync(delivery, relativePath, _ownership).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or PassThroughIntegrityException or FileNotFoundException or InvalidOperationException)
         {

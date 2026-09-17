@@ -372,4 +372,102 @@ public sealed class WeirOptionsParsingTests
         Assert.Equal("9.9.9", WeirVersion.Resolve(options.VersionOverride));
         Assert.Equal(WeirVersion.BuildVersion, WeirVersion.Resolve(null));
     }
+
+    /// <summary>#555: WEIR_CHOWN_OUTPUT and the WEIR_PUID/WEIR_PGID target it applies to.</summary>
+    [Theory]
+    [InlineData("true", true)]
+    [InlineData("1", true)]
+    [InlineData("yes", true)]
+    [InlineData("on", true)]
+    [InlineData("false", false)]
+    [InlineData("0", false)]
+    [InlineData("", false)]
+    [InlineData("sometimes", false)]
+    public void Chown_output_is_boolish_with_a_false_default(string raw, bool expected) =>
+        Assert.Equal(expected, TestRuntime.Load(("WEIR_CHOWN_OUTPUT", raw)).OutputOwnershipChownEnabled);
+
+    [Fact]
+    public void Output_ownership_uid_and_gid_prefer_the_weir_prefixed_variable()
+    {
+        var options = TestRuntime.Load(("WEIR_PUID", "2000"), ("PUID", "3000"), ("WEIR_PGID", "2001"), ("PGID", "3001"));
+        Assert.Equal(2000u, options.OutputOwnershipUid);
+        Assert.Equal(2001u, options.OutputOwnershipGid);
+    }
+
+    [Fact]
+    public void Output_ownership_uid_and_gid_fall_back_to_the_unprefixed_variable()
+    {
+        var options = TestRuntime.Load(("PUID", "3000"), ("PGID", "3001"));
+        Assert.Equal(3000u, options.OutputOwnershipUid);
+        Assert.Equal(3001u, options.OutputOwnershipGid);
+    }
+
+    [Theory]
+    [InlineData("", 1000u)]
+    [InlineData("   ", 1000u)]
+    [InlineData("not-a-number", 1000u)]
+    public void Output_ownership_uid_defaults_to_1000_when_unset_or_unparseable(string raw, uint expected) =>
+        Assert.Equal(expected, TestRuntime.Load(("WEIR_PUID", raw)).OutputOwnershipUid);
+
+    /// <summary>A parsed-but-negative id floors at 0, the same clamp every other id-shaped setting here uses.</summary>
+    [Fact]
+    public void Output_ownership_uid_floors_negative_values_at_zero() =>
+        Assert.Equal(0u, TestRuntime.Load(("WEIR_PUID", "-5")).OutputOwnershipUid);
+
+    /// <summary>#555: WEIR_FILE_MODE_OUTPUT / WEIR_DIR_MODE_OUTPUT, octal strings such as 664, 775 or the setgid form 2775.</summary>
+    [Theory]
+    [InlineData("664", UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead | UnixFileMode.GroupWrite | UnixFileMode.OtherRead)]
+    [InlineData(
+        "775",
+        UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+        UnixFileMode.GroupRead | UnixFileMode.GroupWrite | UnixFileMode.GroupExecute |
+        UnixFileMode.OtherRead | UnixFileMode.OtherExecute)]
+    [InlineData(
+        "2775",
+        UnixFileMode.SetGroup |
+        UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+        UnixFileMode.GroupRead | UnixFileMode.GroupWrite | UnixFileMode.GroupExecute |
+        UnixFileMode.OtherRead | UnixFileMode.OtherExecute)]
+    public void Output_dir_mode_parses_the_octal_string(string raw, UnixFileMode expected) =>
+        Assert.Equal(expected, TestRuntime.Load(("WEIR_DIR_MODE_OUTPUT", raw)).OutputOwnershipDirectoryMode);
+
+    [Fact]
+    public void Output_file_mode_parses_independently_of_the_directory_mode()
+    {
+        var options = TestRuntime.Load(("WEIR_FILE_MODE_OUTPUT", "660"), ("WEIR_DIR_MODE_OUTPUT", "770"));
+        Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead | UnixFileMode.GroupWrite, options.OutputOwnershipFileMode);
+        Assert.Equal(
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+            UnixFileMode.GroupRead | UnixFileMode.GroupWrite | UnixFileMode.GroupExecute,
+            options.OutputOwnershipDirectoryMode);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Output_modes_are_unset_when_blank(string raw)
+    {
+        var options = TestRuntime.Load(("WEIR_FILE_MODE_OUTPUT", raw), ("WEIR_DIR_MODE_OUTPUT", raw));
+        Assert.Null(options.OutputOwnershipFileMode);
+        Assert.Null(options.OutputOwnershipDirectoryMode);
+    }
+
+    [Theory]
+    [InlineData("77")]
+    [InlineData("77777")]
+    [InlineData("27x5")]
+    [InlineData("999")]
+    [InlineData("-775")]
+    public void A_malformed_output_dir_mode_refuses_to_start(string raw)
+    {
+        var error = Assert.Throws<WeirConfigurationException>(() => TestRuntime.Load(("WEIR_DIR_MODE_OUTPUT", raw)));
+        Assert.Equal("WEIR_DIR_MODE_OUTPUT must be an octal file mode such as 664 or 775.", error.Message);
+    }
+
+    [Fact]
+    public void A_malformed_output_file_mode_refuses_to_start()
+    {
+        var error = Assert.Throws<WeirConfigurationException>(() => TestRuntime.Load(("WEIR_FILE_MODE_OUTPUT", "abc")));
+        Assert.Equal("WEIR_FILE_MODE_OUTPUT must be an octal file mode such as 664 or 775.", error.Message);
+    }
 }

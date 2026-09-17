@@ -97,6 +97,17 @@ public sealed class WeirOptionsDefaultsTests
         Assert.Null(Defaults.ArrSonarrApiKey);
     }
 
+    /// <summary>#555: off, 1000/1000 and no modes until an operator sets WEIR_CHOWN_OUTPUT/WEIR_PUID/WEIR_PGID/WEIR_FILE_MODE_OUTPUT/WEIR_DIR_MODE_OUTPUT.</summary>
+    [Fact]
+    public void Output_ownership_is_off_by_default()
+    {
+        Assert.False(Defaults.OutputOwnershipChownEnabled);
+        Assert.Equal(1000u, Defaults.OutputOwnershipUid);
+        Assert.Equal(1000u, Defaults.OutputOwnershipGid);
+        Assert.Null(Defaults.OutputOwnershipFileMode);
+        Assert.Null(Defaults.OutputOwnershipDirectoryMode);
+    }
+
     [Fact]
     public void Default_home_on_windows_is_programdata_weir()
     {

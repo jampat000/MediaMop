@@ -71,6 +71,7 @@ public sealed class RemuxPassRunner
     private readonly RemuxPassSettings _settings;
     private readonly TimeProvider _time;
     private readonly ILogger _logger;
+    private readonly IOutputOwnership? _ownership;
 
     public RemuxPassRunner(
         MediaTools tools,
@@ -82,7 +83,8 @@ public sealed class RemuxPassRunner
         RemuxPassSettings settings,
         TimeProvider time,
         ILogger<RemuxPassRunner> logger,
-        RuntimeMetricsStore? metrics = null)
+        RuntimeMetricsStore? metrics = null,
+        IOutputOwnership? ownership = null)
     {
         _tools = tools ?? throw new ArgumentNullException(nameof(tools));
         _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
@@ -93,6 +95,7 @@ public sealed class RemuxPassRunner
         _time = time ?? throw new ArgumentNullException(nameof(time));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _metrics = metrics;
+        _ownership = ownership;
         _outputCleanup = new OutputFolderCleanup(cleanupData, time, logger, settings.MovieOutputCleanupMinAgeSeconds, settings.TvOutputCleanupMinAgeSeconds);
     }
 
@@ -770,7 +773,7 @@ public sealed class RemuxPassRunner
             {
                 final = collision.Destination;
                 Directory.CreateDirectory(Path.GetDirectoryName(final)!);
-                FileLifecycle.SafeFinalizeFile(tmp, final);
+                FileLifecycle.SafeFinalizeFile(tmp, final, _ownership);
             }
         }
         catch (MediaCompletenessException exception)
@@ -903,14 +906,14 @@ public sealed class RemuxPassRunner
 
         // Windows' held source handle denies writers for the complete pass, which makes a staged hard link safe and turns a
         // same-volume no-change file into metadata work. Elsewhere locks are advisory, so the independent copy stays.
-        if (HardlinkFastPathSupported && await FileLifecycle.TryHardlinkToFinalAsync(src, final, ValidateStaged).ConfigureAwait(false))
+        if (HardlinkFastPathSupported && await FileLifecycle.TryHardlinkToFinalAsync(src, final, ValidateStaged, _ownership).ConfigureAwait(false))
         {
             var size = new FileInfo(src).Length;
             progress(size, size);
             return (replacedExisting, "validated_hardlink");
         }
 
-        await FileLifecycle.SafeCopyToFinalAsync(src, final, ValidateStaged, progress).ConfigureAwait(false);
+        await FileLifecycle.SafeCopyToFinalAsync(src, final, ValidateStaged, progress, ownership: _ownership).ConfigureAwait(false);
         return (replacedExisting, "validated_copy");
     }
 
@@ -933,7 +936,8 @@ public sealed class RemuxPassRunner
                 await _tools.ValidateStagedOutputAsync(staged, context.Source, context.SourceProbe, context.Plan, context.SourceWarnings).ConfigureAwait(false);
                 AssertSourceUnchanged(context.Source, context.Expected);
             },
-            progress).ConfigureAwait(false);
+            progress,
+            ownership: _ownership).ConfigureAwait(false);
         return "validated_hardlink_detached_copy";
     }
 

@@ -285,6 +285,55 @@ A real table was **not** chosen at the time because the schema was frozen and `S
 
 `Weir.Core.Tests/LibraryMode` (`LibraryFilePlannerTests`, `LibraryModeSettingsTests`) cover classification and folder/JSON rules in isolation. `Weir.Infrastructure.Tests/LibraryMode` (`LibraryScanHandlerTests`, `LibraryCleanHandlerTests`) run both handlers against a real database and real files behind a fake ffmpeg/ffprobe process runner: a scan never writes to a file; clean is refused without confirmation; a library failure never queues a reject or pass-through job; library jobs are claimed behind a pending download job; an unmatched file still processes; and a full clean commits the swap and leaves no temp/backup leftovers. Issue #551's title matching is covered in the same file, behind a scripted Sonarr/Radarr connection (`Weir.Infrastructure.Tests.MediaManagers.MediaManagerFixture`/`FakeManagerHttp`): a shared path matches directly, a differing manager library root matches through the reverse path translation, an unreachable manager is recorded as a scan error with the file left unmatched, and the scan's own match data (connection, file id, quality profile id) is fed straight into `RedownloadRiskChecker`/`LibraryCleanPreflight` to prove the #508 warning is real for a matched file. `ManagerRedownloadRules.CanRedownload` (#551/#509's `can_redownload` gate) is covered in `Weir.Infrastructure.Tests.MediaManagers.ArrManagerRedownloadTests`. `apps/web/src/pages/refiner/refiner-library-section.test.tsx` covers the file list rendering, the manager filter and the confirmation dialog's exact text end to end. No contract-suite scenario was added: the Python-driven contract suite has no library-mode surface to exercise against a running server of either backend.
 
+## Output ownership (#555)
+
+`Weir.Infrastructure.Refiner.OutputOwnership` (registered by `WeirPlatformServices.AddWeirPlatform`,
+so every area that publishes a file already has it) applies the optional `WEIR_CHOWN_OUTPUT` /
+`WEIR_FILE_MODE_OUTPUT` / `WEIR_DIR_MODE_OUTPUT` policy directly to a file Weir just published, or a
+folder it just created to publish into — not as a recursive startup sweep, the way the retired
+Python backend's `weir.platform.docker_runtime` module used to chown/chmod the watched/work/output
+folders named in Refiner settings once, at container start, before it was deleted with the rest of
+the Python backend in #523.
+
+- **Settings** (`WeirOptions`/`WeirOptionsLoader`, `Weir.Core.Configuration`): `OutputOwnershipChownEnabled`
+  (`WEIR_CHOWN_OUTPUT`, default off); `OutputOwnershipUid`/`OutputOwnershipGid` (the first non-blank of
+  `WEIR_PUID`/`PUID` and `WEIR_PGID`/`PGID`, default 1000 each — the same variables the Docker
+  entrypoint uses to remap the container's own runtime user, so a chowned output file matches the
+  identity Weir itself runs as); `OutputOwnershipFileMode`/`OutputOwnershipDirectoryMode`
+  (`WEIR_FILE_MODE_OUTPUT`/`WEIR_DIR_MODE_OUTPUT`, octal strings such as `664`/`775` or the
+  setgid form `2775`, parsed straight into `System.IO.UnixFileMode` — an *n*-digit octal string's
+  own bits already line up with that enum's flags, so `(UnixFileMode)Convert.ToInt32(value, 8)` is
+  exact). A malformed octal mode refuses to start with a clear message, the same way
+  `WEIR_CORS_ORIGINS=*` does; an unset value is `null` and changes nothing.
+- **`IOutputOwnership`** (`ApplyToFile`/`ApplyToDirectory`) is called from the existing
+  publish/finalize points: `Weir.Infrastructure.Refiner.RemuxPass.FileLifecycle`'s
+  `SafeCopyToFinalAsync`/`TryHardlinkToFinalAsync`/`SafeFinalizeFile` (an optional `ownership`
+  parameter, applied to the destination directory right after it is created and to the file right
+  after it is published) cover the remux pass's own publish and `PassThroughDelivery.DeliverUnchangedAsync`
+  in one place, and `Weir.Infrastructure.LibraryMode.SafeSwap.RunAsync` calls it directly after the
+  commit rename that exposes the cleaned copy under the original name. `WEIR_CHOWN_WATCHED`/
+  `WEIR_CHOWN_TEMP`/`WEIR_DIR_MODE_WATCHED`/`WEIR_DIR_MODE_TEMP` (the Python backend's other two
+  folder categories) have no .NET equivalent and are not planned: the watched and work folders are
+  never something Weir itself just wrote, so there is nothing for a "just published this" hook to
+  attach them to.
+- **Linux only, by design, not by omission.** `IOutputOwnershipTools` (`Chown`/`SetMode`) is the
+  seam: `LinuxOutputOwnershipTools` calls a libc `chown` P/Invoke (the same shape as
+  `LibraryMode.PhysicalSwapFileSystem`'s permission copy) and `File.SetUnixFileMode`;
+  `WindowsOutputOwnershipTools` does nothing. `AddWeirPlatform` chooses between them once, by
+  `OperatingSystem.IsWindows()`, and — only when an operator actually set one of the three
+  settings — logs a warning once at startup on Windows rather than silently doing nothing forever.
+  `OutputOwnership` itself never branches on platform; it only calls whichever tools it was given,
+  which is what lets `OutputOwnershipTests` prove its chown/mode decision logic (when to call which,
+  that a tool failure never propagates) on any OS, off a fake `IOutputOwnershipTools`.
+  `LinuxOutputOwnershipToolsRealFilesystemTests` proves the real P/Invoke and `SetUnixFileMode`
+  calls against real files, gated to Linux (skipped elsewhere with a reason) since neither exists
+  off it; its chown case only ever chowns a file to the running process's own uid/gid, since
+  chowning to an arbitrary uid needs root and the point is to exercise the syscall, not to require one.
+- **A failure here never fails the job.** `OutputOwnership.Apply` catches every exception from
+  `IOutputOwnershipTools` and logs a warning — a chown that fails because Weir is not root, or a
+  mode Weir cannot set on a network share, must not undo a remux, pass-through or library swap that
+  already succeeded.
+
 ## Activity
 
 `Weir.Api/Endpoints/ActivityEndpoints` ports `weir.platform.activity.router`: `recent` (filters, `before_id` paging), `export` (CSV and JSON), `file-history` and its removal, and the `stream` of `activity.latest` frames. The SQL in `Weir.Infrastructure/Activity/ActivityHistoryStore` is the text SQLAlchemy compiles, clause for clause, except for four defects found while porting and fixed here (issue #543; Python keeps all four, so the byte-for-byte comparison in `ActivityHistoryStoreTests` skips the cases that touch them):
