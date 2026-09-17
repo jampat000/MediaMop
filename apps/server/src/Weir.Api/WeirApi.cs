@@ -28,6 +28,7 @@ public static class WeirApi
         services.AddSingleton(WebApp.Resolve(options.WebDist));
         services.AddSingleton<IOperatorAuthentication, SessionOperatorAuthentication>();
         services.AddSingleton<RouteTable>();
+        services.AddSingleton<WeirOpenApiDocumentCache>();
         services.TryAddSingleton<RuntimeMetricsStore>();
         services.AddSingleton<AuthService>();
         services.AddSingleton<AuthRateLimiters>();
@@ -88,6 +89,7 @@ public static class WeirApi
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapSystemEndpoints();
+            endpoints.MapOpenApiEndpoint();
             endpoints.MapMetricsEndpoint();
             endpoints.MapAuthEndpoints();
             endpoints.MapSuiteEndpoints();

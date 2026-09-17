@@ -32,7 +32,7 @@ public sealed record RouteLabel(string Label);
 /// <summary>Every API route in registration order, for Starlette's partial matches (405 and its <c>Allow</c> header).</summary>
 public sealed class RouteTable
 {
-    private readonly List<(TemplateMatcher Matcher, string[] Methods, string Label)> _routes = [];
+    private readonly List<(string Template, TemplateMatcher Matcher, string[] Methods, string Label)> _routes = [];
     private readonly Lock _lock = new();
 
     public void Add(string template, IReadOnlyList<string> methods, string label)
@@ -41,7 +41,7 @@ public sealed class RouteTable
         var matcher = new TemplateMatcher(TemplateParser.Parse(template), new RouteValueDictionary());
         lock (_lock)
         {
-            _routes.Add((matcher, [.. methods], label));
+            _routes.Add((template, matcher, [.. methods], label));
         }
     }
 
@@ -50,7 +50,7 @@ public sealed class RouteTable
     {
         lock (_lock)
         {
-            foreach (var (matcher, methods, label) in _routes)
+            foreach (var (_, matcher, methods, label) in _routes)
             {
                 if (matcher.TryMatch(path, new RouteValueDictionary()))
                 {
@@ -60,6 +60,19 @@ public sealed class RouteTable
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Every route's actual mounted path (matching Python's path exactly — see <see cref="ApiRoutes.MapApi"/>)
+    /// and the HTTP methods mapped to it, for the OpenAPI document builder to know which of Python's
+    /// operations the .NET server actually answers.
+    /// </summary>
+    public IReadOnlyList<(string Path, IReadOnlyList<string> Methods)> Snapshot()
+    {
+        lock (_lock)
+        {
+            return [.. _routes.Select(route => (route.Template, (IReadOnlyList<string>)route.Methods))];
+        }
     }
 }
 
