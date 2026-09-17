@@ -27,8 +27,23 @@ internal sealed class FakeMediaRunner : IProcessRunner
     public const string EnglishAndJapanese =
         """{"format":{"duration":"100.0"},"streams":[{"index":0,"codec_type":"video","codec_name":"h264","duration":"100.0"},{"index":1,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"eng"},"disposition":{"default":1},"duration":"100.0"},{"index":2,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"jpn"},"duration":"100.0"}]}""";
 
+    /// <summary>
+    /// What a plan that keeps only the Japanese track (dropping English) produces, for tests that need the fake
+    /// <c>ffprobe</c> on the temp output file (a randomized name <see cref="Probes"/> can never pin) to look like
+    /// that instead of <see cref="DefaultProbe"/>'s English-only shape — see <c>DefaultProbe</c>'s remarks.
+    /// </summary>
+    public const string JapaneseOnly =
+        """{"format":{"duration":"100.0"},"streams":[{"index":0,"codec_type":"video","codec_name":"h264","width":1920,"height":1080,"duration":"100.0"},{"index":1,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"jpn"},"disposition":{"default":1},"duration":"100.0"}]}""";
+
     public Dictionary<string, string> Probes { get; } = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// The fake ffprobe's fallback for any path not in <see cref="Probes"/> by its exact file name — which, after a
+    /// remux, is always the temp output file, since <c>MediaTools.CreateTempFile</c> gives it a randomized name a
+    /// test cannot pin ahead of time. So a test asserting the pass succeeded needs this set to what the *output*
+    /// should probe as (the #500 staged-output validator re-probes it for real), separately from <see cref="Probes"/>
+    /// entries pinning what each *source* file probes as.
+    /// </summary>
     public string DefaultProbe { get; set; } = EnglishOnly;
 
     public string? ProbeError { get; set; }
@@ -729,6 +744,11 @@ public sealed class RemuxPassRunnerTests : IDisposable
     {
         var source = _folders.Source(Path.Join("Show", "ep.mkv"));
         _media.Probes["ep.mkv"] = FakeMediaRunner.EnglishAndJapanese;
+        // The #500 staged-output validator re-probes the temp output for real; since it gets a randomized name,
+        // the fake tool answers from DefaultProbe (see its remarks) rather than a Probes[] entry. The manual choice
+        // below keeps only the Japanese track, so the output it validates against must look like that, not the
+        // English-only default.
+        _media.DefaultProbe = FakeMediaRunner.JapaneseOnly;
         var fingerprint = SourceFiles.Fingerprint(source);
         // Keep the Japanese track (not what the automatic rules would have picked) and mark it default.
         var choice = new ManualPlanChoice(
@@ -740,11 +760,13 @@ public sealed class RemuxPassRunnerTests : IDisposable
         Assert.True(Bool(result, "ok"), PyJsonWriter.Dumps(result, PyJsonFormat.Compact));
         var executed = Assert.Single(_media.Remuxes);
         var maps = executed.Select((token, i) => (token, i)).Where(p => p.token == "-map").Select(p => executed[p.i + 1]).ToList();
-        Assert.Equal(["0:0", "0:2"], maps);
+        // #547: "-map 0:t?" (an attachment, if any) is added for every Matroska output regardless of the plan.
+        Assert.Equal(["0:0", "0:2", "0:t?"], maps);
         Assert.DoesNotContain("0:1", executed);
         var dispositionIndex = executed.ToList().IndexOf("-disposition:a:0");
         Assert.True(dispositionIndex >= 0);
-        Assert.Equal("default", executed[dispositionIndex + 1]);
+        // #547: the additive syntax, not the flat "default" this replaced.
+        Assert.Equal("+default", executed[dispositionIndex + 1]);
         Assert.Contains("chose these tracks by hand", string.Join(" ", ((PyList)result["audio_selection_notes"]).Items.Select(PyConvert.Str)), StringComparison.Ordinal);
     }
 
