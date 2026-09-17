@@ -2557,7 +2557,8 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 
 .mm-module-surface {
   max-width: 100%;
-  margin: 0;
+  /* Inline only: a block reset here would cancel the parent's space-y-* gaps between cards. */
+  margin-inline: 0;
 }
 
 .mm-shell-aside {
@@ -4222,4 +4223,43 @@ html[data-mm-theme="light"] .mm-sidebar-footer-panel {
 
 html[data-mm-theme="light"] .mm-sidebar-link:hover {
   background: rgba(33, 31, 26, 0.05);
+}
+
+/* Status text written with Tailwind's light-on-dark shades (text-red-200, text-amber-300, …)
+   drops well below WCAG AA on the light theme. Map those shades to the theme's status tokens,
+   which are tuned for contrast on both themes, and the near-black status wells to soft tints. */
+html[data-mm-theme="light"] .text-red-100,
+html[data-mm-theme="light"] .text-red-200,
+html[data-mm-theme="light"] .text-red-300,
+html[data-mm-theme="light"] .text-red-400,
+html[data-mm-theme="light"] .text-rose-300 {
+  color: var(--mm-status-failed-text);
+}
+
+html[data-mm-theme="light"] .text-amber-100,
+html[data-mm-theme="light"] .text-amber-200,
+html[data-mm-theme="light"] .text-amber-200\/90,
+html[data-mm-theme="light"] .text-amber-300,
+html[data-mm-theme="light"] .text-yellow-300 {
+  color: var(--mm-status-warning-text);
+}
+
+html[data-mm-theme="light"] .text-emerald-200,
+html[data-mm-theme="light"] .text-emerald-300,
+html[data-mm-theme="light"] .text-emerald-400 {
+  color: var(--mm-status-healthy-text);
+}
+
+html[data-mm-theme="light"] .bg-red-950\/20,
+html[data-mm-theme="light"] .bg-red-950\/25 {
+  background-color: var(--mm-status-failed-bg);
+}
+
+html[data-mm-theme="light"] .bg-amber-950\/20,
+html[data-mm-theme="light"] .bg-yellow-950\/20 {
+  background-color: var(--mm-status-warning-bg);
+}
+
+html[data-mm-theme="light"] .bg-emerald-950\/20 {
+  background-color: var(--mm-status-healthy-bg);
 }
