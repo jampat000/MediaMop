@@ -4,9 +4,9 @@ namespace Weir.Core.MediaManagers;
 
 /// <summary>
 /// One file a library-mode swap changed in place, ready to tell every manager that owns it (#507). This is
-/// the whole surface library mode (#505, a separate branch) needs: a scope, the path Weir itself sees, and
-/// — only when Weir's path differs from a manager's own view of the same folder — the local library root to
-/// translate from. Nothing here depends on the library-mode schema.
+/// the whole surface library mode (#505) needs: a scope, the path Weir itself sees, and — only when Weir's
+/// path differs from a manager's own view of the same folder — the local library root to translate from.
+/// Nothing here depends on the library-mode schema.
 /// </summary>
 /// <param name="MediaScope">"movie" or "tv" (<see cref="MediaManagerKinds.Movie"/>/<see cref="MediaManagerKinds.Tv"/>).</param>
 /// <param name="FilePath">The changed file's absolute path, as Weir sees it after the swap committed.</param>
@@ -23,12 +23,6 @@ public sealed record LibraryFileChange(string MediaScope, string FilePath, strin
 /// (#507). Library mode (#505) calls this once per changed file; batching, retrying and de-duplicating
 /// belong entirely to the implementation.
 /// </summary>
-/// <remarks>
-/// Copied verbatim from branch <c>feat/507-file-changed</c> (<c>Weir.Core/MediaManagers/LibraryFileChangeRules.cs</c>) so
-/// #505 and #507 merge cleanly against the same seam. Until that branch lands here, library mode registers a no-op
-/// implementation (<c>Weir.Infrastructure.LibraryMode.NoOpLibraryFileChangeNotifier</c>) — see
-/// <c>apps/server/README.md</c>, "Library mode".
-/// </remarks>
 public interface ILibraryFileChangeNotifier
 {
     Task NotifyAsync(LibraryFileChange change, CancellationToken cancellationToken = default);

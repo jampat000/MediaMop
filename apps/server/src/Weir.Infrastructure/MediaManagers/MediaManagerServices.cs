@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Weir.Core.Configuration;
+using Weir.Core.MediaManagers;
 using Weir.Core.Security;
 using Weir.Infrastructure.Jobs;
 using Weir.Infrastructure.Sqlite;
@@ -25,6 +26,7 @@ public static class MediaManagerServices
         services.TryAddSingleton<MediaManagerIntake>();
         services.TryAddSingleton<HandoffCompletionReporter>();
         services.TryAddSingleton<MetadataProviderService>();
+        services.TryAddSingleton<ILibraryFileChangeNotifier, LibraryFileChangeNotifier>();
         return services;
     }
 }

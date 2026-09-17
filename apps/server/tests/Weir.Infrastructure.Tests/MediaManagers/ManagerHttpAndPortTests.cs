@@ -142,4 +142,73 @@ public sealed class ManagerHttpAndPortTests
             """{"status":"importpending","outputPath":"/tv/Show/S01E01.mkv","title":"Show S01E01","media":{"title":"Show S01E01","year":null},"entityId":4}""",
             PyJsonWriter.Dumps(row.Payload, PyJsonFormat.Compact));
     }
+
+    // --- list_library_files / file_changed (#507) -----------------------------------------------
+
+    [Fact]
+    public async Task Radarr_lists_movie_library_files_from_the_movie_endpoint_and_rescans_by_id()
+    {
+        var http = new FakeManagerHttp().Json(HttpMethod.Get, "/api/v3/movie", """[{"id":7,"title":"Solaris","movieFile":{"path":"/media/Solaris/f.mkv"}},{"id":8,"title":"No File"}]""");
+        var radarr = new HttpMediaManagerPorts(http).PortForKind("radarr")!;
+        var signal = await radarr.ListLibraryFilesAsync(Connection(), "movie");
+        Assert.Equal(SignalStatus.Reported, signal.Status);
+        Assert.Equal([new ManagerLibraryFile("7", "Solaris", "/media/Solaris/f.mkv")], signal.Files);
+        Assert.Equal("/api/v3/movie?pageSize=200000", Assert.Single(http.Requests).PathAndQuery);
+
+        // Wrong scope: no network, just the "does not look after this" no-signal.
+        var wrongScope = await radarr.ListLibraryFilesAsync(Connection(), "tv");
+        Assert.Equal(SignalStatus.NoSignal, wrongScope.Status);
+        Assert.Empty(wrongScope.Files);
+
+        http.Json(HttpMethod.Post, "/api/v3/command", """{"id":1}""", HttpStatusCode.Created);
+        var outcome = await radarr.FileChangedAsync(Connection(), new SortedSet<string>(), "7", "/media/Solaris/f.mkv", "removed 2 audio tracks", CancellationToken.None);
+        Assert.Equal(ManagerNotifyOutcome.Notified, outcome);
+        var command = http.RequestsTo(HttpMethod.Post, "/api/v3/command").Single();
+        Assert.Equal("""{"name":"RescanMovie","movieId":7}""", PyJsonWriter.Dumps(command.Json!, PyJsonFormat.Compact));
+    }
+
+    [Fact]
+    public async Task Sonarr_lists_episode_files_per_series_and_rescans_by_series_id()
+    {
+        var http = new FakeManagerHttp()
+            .Json(HttpMethod.Get, "/api/v3/series", """[{"id":12,"title":"Show"},{"id":13,"title":"Other"}]""")
+            .Route(HttpMethod.Get, "/api/v3/episodefile", request => request.Uri.Query.Contains("seriesId=12", StringComparison.Ordinal)
+                ? FakeManagerHttp.Response(HttpStatusCode.OK, """[{"path":"/tv/Show/S01/e01.mkv"},{"path":"/tv/Show/S01/e02.mkv"}]""")
+                : FakeManagerHttp.Response(HttpStatusCode.OK, "[]"));
+        var sonarr = new HttpMediaManagerPorts(http).PortForKind("sonarr")!;
+        var signal = await sonarr.ListLibraryFilesAsync(Connection("sonarr"), "tv");
+        Assert.Equal(SignalStatus.Reported, signal.Status);
+        Assert.Equal(
+            [new ManagerLibraryFile("12", "Show", "/tv/Show/S01/e01.mkv"), new ManagerLibraryFile("12", "Show", "/tv/Show/S01/e02.mkv")],
+            signal.Files);
+        Assert.Equal(
+            ["/api/v3/series?pageSize=200000", "/api/v3/episodefile?seriesId=12", "/api/v3/episodefile?seriesId=13"],
+            http.Requests.Select(r => r.PathAndQuery));
+
+        http.Json(HttpMethod.Post, "/api/v3/command", """{"id":2}""", HttpStatusCode.Created);
+        await sonarr.FileChangedAsync(Connection("sonarr"), new SortedSet<string>(), "12", "/tv/Show/S01/e01.mkv", null, CancellationToken.None);
+        var command = http.RequestsTo(HttpMethod.Post, "/api/v3/command").Single();
+        Assert.Equal("""{"name":"RescanSeries","seriesId":12}""", PyJsonWriter.Dumps(command.Json!, PyJsonFormat.Compact));
+    }
+
+    [Fact]
+    public async Task Deluno_has_no_listing_but_accepts_file_changed_when_it_advertises_the_capability()
+    {
+        var http = new FakeManagerHttp();
+        var deluno = new HttpMediaManagerPorts(http).PortForKind("deluno")!;
+        var signal = await deluno.ListLibraryFilesAsync(Connection("deluno"), "movie");
+        Assert.Equal(SignalStatus.NoSignal, signal.Status);
+        Assert.Empty(http.Requests);
+
+        var withoutCapability = await deluno.FileChangedAsync(Connection("deluno"), new SortedSet<string>(), null, "/media/f.mkv", "removed 2 audio tracks", CancellationToken.None);
+        Assert.Equal(ManagerNotifyOutcome.NotSupported, withoutCapability);
+        Assert.Empty(http.Requests);
+
+        http.Json(HttpMethod.Post, "/api/integrations/external/file-changed", """{"path":"/media/f.mkv","coalesced":false,"titles":[]}""", HttpStatusCode.Accepted);
+        var capabilities = new SortedSet<string>(StringComparer.Ordinal) { "external-file-changed" };
+        var notified = await deluno.FileChangedAsync(Connection("deluno"), capabilities, null, "/media/f.mkv", "removed 2 audio tracks", CancellationToken.None);
+        Assert.Equal(ManagerNotifyOutcome.Notified, notified);
+        var request = http.RequestsTo(HttpMethod.Post, "/api/integrations/external/file-changed").Single();
+        Assert.Equal("""{"path":"/media/f.mkv","tool":"Weir","reason":"removed 2 audio tracks"}""", PyJsonWriter.Dumps(request.Json!, PyJsonFormat.Compact));
+    }
 }

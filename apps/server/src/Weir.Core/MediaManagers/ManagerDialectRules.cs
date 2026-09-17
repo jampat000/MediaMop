@@ -11,6 +11,22 @@ public static class ManagerDialectRules
 {
     public const string ExternalManifestPath = "/api/integrations/external/manifest";
     public const string ExternalQueuePath = "/api/integrations/external/queue";
+
+    /// <summary>
+    /// Deluno's "a tool changed this library file" endpoint (jampat000/Deluno#528, confirmed against the
+    /// checkout at commit 177ff18a: <c>src/Deluno.Worker/ExternalFileChangedEndpoints.cs:43</c>). Body is
+    /// <c>{"path": "...", "reason": "...", "tool": "Weir"}</c>; it answers 202 Accepted, not one of the
+    /// three statuses every other manager call accepts (#507).
+    /// </summary>
+    public const string ExternalFileChangedPath = "/api/integrations/external/file-changed";
+
+    /// <summary>
+    /// The manifest capability Deluno advertises for <see cref="ExternalFileChangedPath"/>
+    /// (<c>ExternalIntegrationEndpointRouteBuilderExtensions.cs:108</c>): gate the call on it rather than
+    /// trying and classifying a 404, since an older Deluno without #528 has no route there at all.
+    /// </summary>
+    public const string ExternalFileChangedCapability = "external-file-changed";
+
     public const int ArrLibraryPageSize = 200_000;
     public const int ArrQueuePageSize = 1000;
 
@@ -132,6 +148,63 @@ public static class ManagerDialectRules
 
         return paths;
     }
+
+    /// <summary>
+    /// list_library_files (#507), the movie half: <c>/api/v3/movie</c> rows carry the title's own id/name and,
+    /// when the movie has a file, the embedded <c>movieFile.path</c> (verified: <c>MovieResource</c> and
+    /// <c>MovieFileResource</c> in Radarr's <c>openapi.json</c> — a movie with no file simply has no
+    /// <c>movieFile</c>, which is skipped rather than treated as a match).
+    /// </summary>
+    public static List<ManagerLibraryFile> ArrMovieLibraryFiles(PyJson? payload)
+    {
+        var files = new List<ManagerLibraryFile>();
+        foreach (var row in PyValues.Dicts(payload))
+        {
+            if (PyValues.FirstNumber(row, "id") is not { } id)
+            {
+                continue;
+            }
+
+            if (row.Get("movieFile") is not PyDict file || PyValues.Text(file.Get("path")) is not { } path)
+            {
+                continue;
+            }
+
+            var idText = id.ToString(CultureInfo.InvariantCulture);
+            files.Add(new ManagerLibraryFile(idText, PyValues.FirstText(row, "title") ?? idText, path));
+        }
+
+        return files;
+    }
+
+    /// <summary>
+    /// list_library_files (#507), the series half: one series' <c>/api/v3/episodefile?seriesId=</c> rows, each
+    /// tagged with the series id/title the caller already looked up (verified: Sonarr's <c>EpisodeFileController
+    /// .GetEpisodeFiles</c> throws <c>BadRequestException</c> without <c>seriesId</c> or <c>episodeFileIds</c>,
+    /// so listing every file means walking <c>/api/v3/series</c> first, one call per series).
+    /// </summary>
+    public static List<ManagerLibraryFile> ArrEpisodeLibraryFiles(PyJson? payload, string seriesId, string seriesTitle)
+    {
+        var files = new List<ManagerLibraryFile>();
+        foreach (var row in PyValues.Dicts(payload))
+        {
+            if (PyValues.Text(row.Get("path")) is { } path)
+            {
+                files.Add(new ManagerLibraryFile(seriesId, seriesTitle, path));
+            }
+        }
+
+        return files;
+    }
+
+    /// <summary>
+    /// file_changed (#507)'s <c>POST /api/v3/command</c> shape: the command's own name (matched
+    /// case-insensitively against its class name minus "Command" — <c>CommandController.StartCommand</c>) and
+    /// its one id property, camelCase (<c>STJson</c>'s <c>JsonNamingPolicy.CamelCase</c>). Verified against
+    /// <c>RescanMovieCommand</c>/<c>RescanSeriesCommand</c> in each product's <c>MediaFiles/Commands</c>.
+    /// </summary>
+    public static (string CommandName, string IdProperty) ArrRescanCommand(string mediaScope) =>
+        mediaScope == MediaManagerKinds.Tv ? ("RescanSeries", "seriesId") : ("RescanMovie", "movieId");
 
     /// <summary><c>_manifest_libraries</c>.</summary>
     public static List<PyDict> ManifestLibraries(PyJson? payload)
