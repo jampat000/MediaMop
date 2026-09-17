@@ -63,7 +63,7 @@ public sealed class RefinerJobProcessor
 {
     public const int DefaultLeaseSeconds = 300;
     public const string TerminalizationFailurePrefix = "refiner_terminalization_failure: ";
-    public const string Module = "Refiner";
+    public const string Module = "Weir";
 
     private readonly RefinerJobStore _queue;
     private readonly JobHandlerRegistry _handlers;
@@ -133,7 +133,7 @@ public sealed class RefinerJobProcessor
                 context,
                 WorkerFailures.RefusedJobError(Module, WorkerFailures.RetiredKindReason(context.JobKind, context.Id), willRetry),
                 when,
-                "Refiner fail_claimed after retired job_kind guard job_id={JobId}").ConfigureAwait(false);
+                "fail_claimed after retired job_kind guard job_id={JobId}").ConfigureAwait(false);
             return JobProcessOutcome.Processed;
         }
 
@@ -143,7 +143,7 @@ public sealed class RefinerJobProcessor
                 context,
                 WorkerFailures.RefusedJobError(Module, WorkerFailures.UnprefixedKindReason(context.JobKind, context.Id), willRetry),
                 when,
-                "Refiner fail_claimed after refiner.* prefix guard job_id={JobId}").ConfigureAwait(false);
+                "fail_claimed after refiner.* prefix guard job_id={JobId}").ConfigureAwait(false);
             return JobProcessOutcome.Processed;
         }
 
@@ -154,7 +154,7 @@ public sealed class RefinerJobProcessor
                 context,
                 WorkerFailures.StoredError(WorkerFailures.JobFailure(Module, WorkerFailures.NoHandler(context.JobKind), willRetry)),
                 when,
-                "Refiner fail_claimed_refiner_job failed after missing handler job_id={JobId}").ConfigureAwait(false);
+                "fail_claimed_refiner_job failed after missing handler job_id={JobId}").ConfigureAwait(false);
             return JobProcessOutcome.Processed;
         }
 
@@ -176,7 +176,7 @@ public sealed class RefinerJobProcessor
         {
             var failure = WorkerFailures.JobFailure(Module, FailureMessages.FromDotNet(exception), willRetry);
             _logger.LogError(
-                "Refiner job handler failed for job_id={JobId} kind={JobKind}: {Message} {Detail}",
+                "Job handler failed for job_id={JobId} kind={JobKind}: {Message} {Detail}",
                 context.Id,
                 context.JobKind,
                 failure.Message,
@@ -191,7 +191,7 @@ public sealed class RefinerJobProcessor
                 context,
                 WorkerFailures.StoredError(failure),
                 when,
-                "Refiner fail_claimed_refiner_job failed after handler error job_id={JobId}").ConfigureAwait(false);
+                "fail_claimed_refiner_job failed after handler error job_id={JobId}").ConfigureAwait(false);
             _notifications.Dispatch("refiner", "failed", context.Id, context.JobKind, willRetry);
             return JobProcessOutcome.Processed;
         }
@@ -214,7 +214,7 @@ public sealed class RefinerJobProcessor
 #pragma warning restore CA1031
         {
             completeOk = false;
-            _logger.LogError(exception, "Refiner complete_claimed_refiner_job failed job_id={JobId}", context.Id);
+            _logger.LogError(exception, "complete_claimed_refiner_job failed job_id={JobId}", context.Id);
             completeError = exception.Message;
         }
 
@@ -240,7 +240,7 @@ public sealed class RefinerJobProcessor
             if (!recovered)
             {
                 _logger.LogWarning(
-                    "Refiner terminalization recovery did not apply job_id={JobId} owner={Owner}",
+                    "Terminalization recovery did not apply job_id={JobId} owner={Owner}",
                     context.Id,
                     context.LeaseOwner);
             }
@@ -249,7 +249,7 @@ public sealed class RefinerJobProcessor
         catch (Exception exception)
 #pragma warning restore CA1031
         {
-            _logger.LogError(exception, "Refiner fail_leased_refiner_job_after_complete_failure failed job_id={JobId}", context.Id);
+            _logger.LogError(exception, "fail_leased_refiner_job_after_complete_failure failed job_id={JobId}", context.Id);
         }
 
         return JobProcessOutcome.Processed;
@@ -293,7 +293,7 @@ public sealed class RefinerJobProcessor
                 if (!renewed)
                 {
                     _logger.LogWarning(
-                        "Refiner lease renewal found the lease no longer held job_id={JobId} owner={Owner}; no longer renewing.",
+                        "Lease renewal found the lease no longer held job_id={JobId} owner={Owner}; no longer renewing.",
                         jobId,
                         leaseOwner);
                     return;
@@ -308,7 +308,7 @@ public sealed class RefinerJobProcessor
         catch (Exception exception)
 #pragma warning restore CA1031
         {
-            _logger.LogError(exception, "Refiner lease renewal loop crashed job_id={JobId} owner={Owner}", jobId, leaseOwner);
+            _logger.LogError(exception, "Lease renewal loop crashed job_id={JobId} owner={Owner}", jobId, leaseOwner);
         }
     }
 
@@ -355,14 +355,14 @@ public sealed class RefinerJobProcessor
 
             AddProvenance(detail, payload);
             await _activity.RecordAsync(
-                new ActivityEventDraft(ActivityEventTypes.RefinerWorkerFailure, "refiner", "A Refiner job stopped with an error", PyJsonWriter.Dumps(detail, PyJsonFormat.Compact)),
+                new ActivityEventDraft(ActivityEventTypes.RefinerWorkerFailure, "refiner", "A Weir job stopped with an error", PyJsonWriter.Dumps(detail, PyJsonFormat.Compact)),
                 CancellationToken.None).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Diagnostics must never stop the worker from failing the job.
         catch (Exception exception)
 #pragma warning restore CA1031
         {
-            _logger.LogError(exception, "Refiner failure diagnostics could not be persisted job_id={JobId}", context.Id);
+            _logger.LogError(exception, "Failure diagnostics could not be persisted job_id={JobId}", context.Id);
         }
     }
 

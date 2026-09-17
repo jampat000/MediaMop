@@ -21,7 +21,7 @@ public static class HandoffPaths
         {
             return new HandoffPathResult(
                 null,
-                "Refiner's watched folder is not set for this media scope, so there is nowhere to resolve the hand-off against.");
+                "Weir's watched folder is not set for this media scope, so there is nowhere to resolve the hand-off against.");
         }
 
         var target = PyStrings.Strip(filePath ?? string.Empty);
@@ -55,6 +55,6 @@ public static class HandoffPaths
         PyStrings.Strip(part.Replace('\\', '/')).TrimEnd('/').ToLowerInvariant();
 
     private static string OutsideMessage(string folder, string target) =>
-        $"The hand-off names {PyStrings.Repr(target)}, which is not inside Refiner's watched folder {PyStrings.Repr(folder)}. " +
-        "Point the media manager and Refiner at the same folder — both hosts have to see it at that path.";
+        $"The hand-off names {PyStrings.Repr(target)}, which is not inside Weir's watched folder {PyStrings.Repr(folder)}. " +
+        "Point the media manager and Weir at the same folder — both hosts have to see it at that path.";
 }

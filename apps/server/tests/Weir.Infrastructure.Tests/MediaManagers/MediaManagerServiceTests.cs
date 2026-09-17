@@ -288,7 +288,7 @@ public sealed class MediaManagerServiceTests
         Assert.Equal("k1", post.Headers["X-Api-Key"]);
         Assert.False(post.FollowRedirects);
         Assert.Equal(
-            """{"handoffId":"h1","status":"completed","processorName":"Weir Refiner","libraryId":"lib-movies","outputPath":"/out/b.mkv","message":"Remux finished."}""",
+            """{"handoffId":"h1","status":"completed","processorName":"Weir","libraryId":"lib-movies","outputPath":"/out/b.mkv","message":"Remux finished."}""",
             post.Body);
         Assert.Equal(1, await fixture.Store.Scalar("SELECT count(*) FROM activity_events WHERE event_type = 'refiner.handoff_reported' AND title = 'Told Deluno that film.mkv is ready to import'"));
     }

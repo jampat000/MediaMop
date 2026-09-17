@@ -21,6 +21,16 @@ public sealed class WorkerHeartbeats
     /// <summary>A running worker that has not reported for this long counts as stale.</summary>
     public static readonly TimeSpan StaleAfter = TimeSpan.FromSeconds(360);
 
+    /// <summary>
+    /// Display names for module keys whose plain <see cref="TitleCase"/> would not read as a person
+    /// expects. The "refiner" module key is unchanged (it is a stored identifier other modules and the
+    /// web app match on), but the app that runs it is just called Weir now.
+    /// </summary>
+    private static readonly Dictionary<string, string> ModuleDisplayNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["refiner"] = "Weir",
+    };
+
     private readonly TimeProvider _time;
     private readonly Lock _lock = new();
     private readonly Dictionary<(string Module, int Index), Heartbeat> _heartbeats = [];
@@ -50,7 +60,7 @@ public sealed class WorkerHeartbeats
         foreach (var (module, expectedRaw) in expectedWorkers)
         {
             var expected = Math.Max(0, expectedRaw);
-            var title = TitleCase(module);
+            var title = ModuleDisplayNames.TryGetValue(module, out var displayName) ? displayName : TitleCase(module);
             if (expected == 0)
             {
                 lanes.Add(new WorkerLaneHealth(

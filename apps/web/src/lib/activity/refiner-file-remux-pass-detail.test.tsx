@@ -61,7 +61,7 @@ describe("RefinerFileRemuxPassActivityDetail", () => {
       processed_seconds: 1200,
       duration_seconds: 2800,
       speed: "16x",
-      message: "Refiner is writing the cleaned-up file.",
+      message: "Weir is writing the cleaned-up file.",
     });
     render(<RefinerFileProcessingProgressDetail detail={detail} />);
     expect(
@@ -92,7 +92,7 @@ describe("RefinerFileRemuxPassActivityDetail", () => {
       percent: 100,
       eta_seconds: 0,
       elapsed_seconds: 183,
-      message: "Refiner is writing the cleaned-up file.",
+      message: "Weir is writing the cleaned-up file.",
     });
     render(<RefinerFileProcessingProgressDetail detail={detail} />);
     const card = screen.getByTestId("refiner-processing-progress-detail");

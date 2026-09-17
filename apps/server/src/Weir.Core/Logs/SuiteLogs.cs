@@ -185,7 +185,7 @@ public sealed class SuiteLogFilter
         var haystack = $"{logger} {sourceText}".ToLowerInvariant();
         if (haystack.Contains("weir.refiner", StringComparison.Ordinal))
         {
-            return "Refiner";
+            return "Processing";
         }
 
         if (haystack.Contains("platform.auth", StringComparison.Ordinal))

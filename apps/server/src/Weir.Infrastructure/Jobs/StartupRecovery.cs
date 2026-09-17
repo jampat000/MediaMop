@@ -273,7 +273,7 @@ public static class StartupRecovery
                 File.Delete(path);
                 removed++;
                 logger.LogInformation(
-                    "Removed interrupted Refiner temp output {Path}{JobSuffix}",
+                    "Removed interrupted temp output {Path}{JobSuffix}",
                     path,
                     jobId is { } id ? string.Create(CultureInfo.InvariantCulture, $" job_id={id}") : string.Empty);
             }

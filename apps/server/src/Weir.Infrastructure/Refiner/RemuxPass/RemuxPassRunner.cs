@@ -188,7 +188,7 @@ public sealed class RemuxPassRunner
         {
             return FailBefore(
                 relativeMediaPath,
-                $"Refiner does not process {(suffix.Length > 0 ? suffix : "this")} files in this pass. " +
+                $"Weir does not process {(suffix.Length > 0 ? suffix : "this")} files in this pass. " +
                 "Use a supported media file or update the library's media types, then try again.",
                 inspected);
         }
@@ -203,7 +203,7 @@ public sealed class RemuxPassRunner
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
-                return FailBefore(relativeMediaPath, $"Refiner could not read the source file size: {exception.Message}", inspected);
+                return FailBefore(relativeMediaPath, $"Weir could not read the source file size: {exception.Message}", inspected);
             }
 
             var sourceMb = FileLifecycle.BytesToMb(sourceSize);
@@ -239,7 +239,7 @@ public sealed class RemuxPassRunner
             {
                 return FailBefore(
                     relativeMediaPath,
-                    "file was modified too recently for Refiner safety guardrails " +
+                    "file was modified too recently for safety guardrails " +
                     $"(minimum age {minAge.ToString(CultureInfo.InvariantCulture)}s, current age {((long)Math.Max(0, Math.Truncate(age))).ToString(CultureInfo.InvariantCulture)}s)",
                     inspected);
             }
@@ -274,7 +274,7 @@ public sealed class RemuxPassRunner
         {
             // #500: a baseline that could not be read is treated as "no known warnings", so a genuine new warning on
             // the output still fails validation instead of being silently accepted.
-            _logger.LogWarning(exception, "Refiner could not read the source file's ffprobe warnings for {Path}.", relativeMediaPath);
+            _logger.LogWarning(exception, "Weir could not read the source file's ffprobe warnings for {Path}.", relativeMediaPath);
             sourceWarnings = [];
         }
 
@@ -285,7 +285,7 @@ public sealed class RemuxPassRunner
         {
             return FailBefore(
                 relativeMediaPath,
-                "Refiner only processes movie and TV files that contain a video stream. " +
+                "Weir only processes movie and TV files that contain a video stream. " +
                 "This file contains no video, so it was rejected before any output was written.",
                 inspected,
                 new PyDict()
@@ -440,7 +440,7 @@ public sealed class RemuxPassRunner
         }
         else if (!Directory.Exists(workDir))
         {
-            return FailBefore(relativeMediaPath, "Refiner work/temp folder is missing on disk (custom path must exist before a live pass).", inspected);
+            return FailBefore(relativeMediaPath, "The work/temp folder is missing on disk (custom path must exist before a live pass).", inspected);
         }
 
         var relative = RemuxPassPaths.RelativeTo(src, watchedRoot)!;
@@ -497,13 +497,13 @@ public sealed class RemuxPassRunner
         {
             output.Set("after_track_lines_meaning", "No audio, subtitle, or metadata rules were applied because the operator chose Pass through unchanged.");
             output.Set("reason",
-                "The operator bypassed Refiner rules for this edge case. Weir validated and placed the unchanged file " +
+                "The operator bypassed the rules for this edge case. Weir validated and placed the unchanged file " +
                 "in the output folder before running normal post-success source cleanup.");
         }
         else
         {
-            output.Set("after_track_lines_meaning", "No ffmpeg run was needed because the file already matched the saved Refiner rules.");
-            output.Set("reason", "The file already matched the saved Refiner rules, so Refiner placed it in the output folder without rewriting it.");
+            output.Set("after_track_lines_meaning", "No ffmpeg run was needed because the file already matched the saved rules.");
+            output.Set("reason", "The file already matched the saved rules, so Weir placed it in the output folder without rewriting it.");
         }
 
         var finalSkip = Path.Join(context.OutputDirectory, relative);
@@ -597,7 +597,7 @@ public sealed class RemuxPassRunner
                 .Set("relative_media_path", relativeMediaPath)
                 .Set("inspected_source_path", context.Inspected)
                 .Set("media_scope", context.Scope)
-                .Set("message", "Refiner could not copy this unchanged file to the output folder.")
+                .Set("message", "Weir could not copy this unchanged file to the output folder.")
                 .Set("reason", exception.Message));
             return new PyDict()
                 .Set("ok", false)
@@ -708,7 +708,7 @@ public sealed class RemuxPassRunner
                 .Set("media_scope", context.Scope)
                 .Set("stream_counts", output["stream_counts"])
                 .Set("duration_seconds", NullableFloat(context.Duration))
-                .Set("message", "Refiner has started writing the cleaned-up file."));
+                .Set("message", "Weir has started writing the cleaned-up file."));
             var tmp = await _tools.RemuxToTempFileAsync(
                 src,
                 workDir,
@@ -725,7 +725,7 @@ public sealed class RemuxPassRunner
                             .Set("media_scope", context.Scope)
                             .Set("stream_counts", output["stream_counts"])
                             .Set("duration_seconds", NullableFloat(context.Duration))
-                            .Set("message", "Refiner is writing the cleaned-up file."),
+                            .Set("message", "Weir is writing the cleaned-up file."),
                         update)),
                 context.Duration,
                 hardware,
@@ -785,7 +785,7 @@ public sealed class RemuxPassRunner
                 .Set("relative_media_path", relativeMediaPath)
                 .Set("inspected_source_path", context.Inspected)
                 .Set("media_scope", context.Scope)
-                .Set("message", "Refiner is waiting for this file to finish downloading.")
+                .Set("message", "Weir is waiting for this file to finish downloading.")
                 .Set("reason", exception.Message));
             return SourceNotReady(relativeMediaPath, exception.Message, context.Inspected);
         }
@@ -798,7 +798,7 @@ public sealed class RemuxPassRunner
                 .Set("relative_media_path", relativeMediaPath)
                 .Set("inspected_source_path", context.Inspected)
                 .Set("media_scope", context.Scope)
-                .Set("message", "Refiner could not finish this file.")
+                .Set("message", "Weir could not finish this file.")
                 .Set("reason", exception.Message));
             return new PyDict()
                 .Set("ok", false)
@@ -861,7 +861,7 @@ public sealed class RemuxPassRunner
             .Set("inspected_source_path", context.Inspected)
             .Set("output_file", resolvedFinal)
             .Set("media_scope", context.Scope)
-            .Set("message", "The cleaned-up file was written. Refiner is doing final safety checks."));
+            .Set("message", "The cleaned-up file was written. Weir is doing final safety checks."));
         await MigrateSidecarsBeforeCleanupAsync(src, final, sidecarPatterns, request.Runtime.PreserveOriginalTimestamps, output).ConfigureAwait(false);
         await HandleCleanupAfterSuccessAsync(context, output, final, cancellationToken).ConfigureAwait(false);
         await RunScopeOutputCleanupAsync(context, output, final, cancellationToken).ConfigureAwait(false);
@@ -873,7 +873,7 @@ public sealed class RemuxPassRunner
             .Set("inspected_source_path", context.Inspected)
             .Set("output_file", resolvedFinal)
             .Set("media_scope", context.Scope)
-            .Set("message", "Refiner finished processing this file."));
+            .Set("message", "Finished processing this file."));
         return output;
     }
 
@@ -895,7 +895,7 @@ public sealed class RemuxPassRunner
         var replacedExisting = File.Exists(final) || Directory.Exists(final);
         if (replacedExisting && RemuxPassPaths.SamePath(RemuxPassPaths.Resolve(final), src))
         {
-            throw new InvalidOperationException("Refiner output path resolves to the watched source file; output and watched folders must differ.");
+            throw new InvalidOperationException("The output path resolves to the watched source file; output and watched folders must differ.");
         }
 
         async Task ValidateStaged(string staged)
@@ -961,14 +961,14 @@ public sealed class RemuxPassRunner
         {
             output.Set("sidecar_migration_blocked", true);
             output.Set("sidecar_migration_blocked_reason", result.BlockingReason);
-            _logger.LogWarning("Refiner sidecar migration: {Reason}", result.BlockingReason);
+            _logger.LogWarning("Sidecar migration: {Reason}", result.BlockingReason);
         }
 
         if (preserveTimestamps && SidecarMigration.ApplyOriginalTimestamps(src, finalOutputFile) is { } problem)
         {
             // Never fatal: the output is correct either way.
             output.Set("original_timestamps_note", problem);
-            _logger.LogInformation("Refiner timestamps: {Problem}", problem);
+            _logger.LogInformation("Timestamps: {Problem}", problem);
         }
     }
 
@@ -997,7 +997,7 @@ public sealed class RemuxPassRunner
             output.Set("source_folder_skip_reason", output.Get("sidecar_migration_blocked_reason") is { IsTruthy: true } blocked
                 ? blocked
                 : new PyStr("Weir did not remove the source folder because a file set to travel with the video could not be copied."));
-            _logger.LogWarning("Refiner cleanup blocked by sidecar migration: {Reason}", PyConvert.Str(output["source_folder_skip_reason"]));
+            _logger.LogWarning("Cleanup blocked by sidecar migration: {Reason}", PyConvert.Str(output["source_folder_skip_reason"]));
             return;
         }
 
@@ -1022,16 +1022,16 @@ public sealed class RemuxPassRunner
         var movieFolder = Path.GetDirectoryName(src)!;
         if (!RemuxPassPaths.IsUnder(movieFolder, watched))
         {
-            output.Set("source_folder_skip_reason", "The release folder would sit outside the watched folder, so Refiner did not change it.");
+            output.Set("source_folder_skip_reason", "The release folder would sit outside the watched folder, so Weir did not change it.");
             output.Set("source_deleted_after_success", false);
             return;
         }
 
         if (RemuxPassPaths.SamePath(movieFolder, watched))
         {
-            output.Set("source_folder_skip_reason", "The video file sits directly in the watched folder root, so Refiner does not remove a release folder here.");
+            output.Set("source_folder_skip_reason", "The video file sits directly in the watched folder root, so Weir does not remove a release folder here.");
             output.Set("source_deleted_after_success", false);
-            _logger.LogWarning("Refiner Movies cleanup: immediate parent is watched root ({Root}).", watched);
+            _logger.LogWarning("Movies cleanup: immediate parent is watched root ({Root}).", watched);
             return;
         }
 
@@ -1062,7 +1062,7 @@ public sealed class RemuxPassRunner
                 ? note
                 : new PyStr("The output file did not pass the safety check, so the release folder was not removed."));
             output.Set("source_deleted_after_success", false);
-            _logger.LogWarning("Refiner Movies cleanup: skipped — {Reason}", PyConvert.Str(output["source_folder_skip_reason"]));
+            _logger.LogWarning("Movies cleanup: skipped — {Reason}", PyConvert.Str(output["source_folder_skip_reason"]));
             return;
         }
 
@@ -1072,8 +1072,8 @@ public sealed class RemuxPassRunner
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            var message = $"Refiner could not remove the release folder ({movieFolder}): {exception.Message}";
-            _logger.LogWarning("Refiner Movies cleanup: {Message}", message);
+            var message = $"Weir could not remove the release folder ({movieFolder}): {exception.Message}";
+            _logger.LogWarning("Movies cleanup: {Message}", message);
             output.Set("source_folder_skip_reason", message);
             output.Set("source_deleted_after_success", false);
             output.Set("source_folder_deleted", false);
@@ -1093,7 +1093,7 @@ public sealed class RemuxPassRunner
     {
         if (!File.Exists(outputFile))
         {
-            return Completeness("failed", null, null, "The output file is missing at the path Refiner expected.");
+            return Completeness("failed", null, null, "The output file is missing at the expected path.");
         }
 
         long outSize;
@@ -1105,7 +1105,7 @@ public sealed class RemuxPassRunner
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            return Completeness("failed", null, null, $"Refiner could not read the file size ({exception.Message}).");
+            return Completeness("failed", null, null, $"Weir could not read the file size ({exception.Message}).");
         }
 
         if (outSize <= 0)
@@ -1120,8 +1120,8 @@ public sealed class RemuxPassRunner
                 outSize,
                 srcSize,
                 tv
-                    ? "The output file is much smaller than the source (under 1% of source size), so Refiner blocked TV season cleanup as a safety step."
-                    : "The output file is much smaller than the source (under 1% of source size), so Refiner skipped removing the release folder as a safety step.");
+                    ? "The output file is much smaller than the source (under 1% of source size), so Weir blocked TV season cleanup as a safety step."
+                    : "The output file is much smaller than the source (under 1% of source size), so Weir skipped removing the release folder as a safety step.");
         }
 
         return Completeness("passed", outSize, srcSize, null);
@@ -1158,7 +1158,7 @@ public sealed class RemuxPassRunner
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            _logger.LogWarning(exception, "Refiner original-language lookup failed for {Path}.", relativeMediaPath);
+            _logger.LogWarning(exception, "Original-language lookup failed for {Path}.", relativeMediaPath);
             lookup = new LookupResult { Status = LookupResult.StatusUnreachable, Detail = $"The metadata lookup failed ({exception.Message})." };
         }
 
@@ -1194,7 +1194,7 @@ public sealed class RemuxPassRunner
         if (current != expected)
         {
             throw new MediaCompletenessException(
-                "The source changed while Refiner was reading it. The staged output was discarded and Weir will wait " +
+                "The source changed while Weir was reading it. The staged output was discarded and Weir will wait " +
                 "for the downloader or importer to finish.");
         }
     }

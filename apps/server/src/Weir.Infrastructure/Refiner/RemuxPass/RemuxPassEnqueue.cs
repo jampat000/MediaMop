@@ -49,17 +49,17 @@ public static class RemuxPassEnqueue
         var library = await RemuxPassHandler.ResolveLibraryAsync(uow, libraryId, mediaScope).ConfigureAwait(false);
         if (libraryId is not null && (library is null || library.Id != libraryId))
         {
-            throw new RemuxPassEnqueueException(404, "The selected Refiner library no longer exists. Refresh Libraries and try again.");
+            throw new RemuxPassEnqueueException(404, "The selected library no longer exists. Refresh Libraries and try again.");
         }
 
         if (library is null || PyStrings.Strip(library.WatchedFolder ?? string.Empty).Length == 0)
         {
-            var label = mediaScope == "tv" ? "TV Refiner" : "Movies Refiner";
+            var label = mediaScope == "tv" ? "TV" : "Movies";
             throw new RemuxPassEnqueueException(
                 400,
                 $"{label} watched folder is not set in saved path settings. " +
                 "Manual refiner.file.remux_pass.v1 jobs require it to resolve relative_media_path and for bounded source cleanup. " +
-                "Saving Refiner path settings does not require a watched folder, but you must configure it before enqueueing this job kind.");
+                "Saving path settings does not require a watched folder, but you must configure it before enqueueing this job kind.");
         }
 
         var relative = PyStrings.Strip(relativeMediaPath);

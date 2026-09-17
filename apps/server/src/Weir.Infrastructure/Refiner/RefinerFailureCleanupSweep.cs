@@ -40,7 +40,7 @@ public static class RefinerFailureCleanupActivity
         var withOutcome = WithOutcome(detail, "running", trigger);
         return SqliteActivityWriter.RecordAsync(uow, new ActivityEventDraft(
             ActivityEventTypes.RefinerFailureCleanupSweepCompleted, "refiner",
-            $"Refiner cleanup started for {Label(mediaScope)}",
+            $"Cleanup started for {Label(mediaScope)}",
             PyStrings.Slice(PyJsonWriter.Dumps(withOutcome, PyJsonFormat.Compact), 10_000)));
     }
 
@@ -50,9 +50,9 @@ public static class RefinerFailureCleanupActivity
         var status = detail.Get("cleanup_run_status") is PyStr statusValue ? statusValue.Value : null;
         var (title, result) = status switch
         {
-            "no_eligible_files" => ($"Refiner cleanup checked {label}: no changes needed", "success"),
-            "skipped" => ($"Refiner cleanup skipped {label}", "skipped"),
-            _ => ($"Refiner cleaned up after failed files ({label})", "success"),
+            "no_eligible_files" => ($"Cleanup checked {label}: no changes needed", "success"),
+            "skipped" => ($"Cleanup skipped {label}", "skipped"),
+            _ => ($"Cleaned up after failed files ({label})", "success"),
         };
         var withOutcome = WithOutcome(detail, result, trigger);
         return SqliteActivityWriter.RecordAsync(uow, new ActivityEventDraft(
@@ -148,7 +148,7 @@ public sealed class RefinerFailureCleanupSweep
         if (failedRows.Count == 0)
         {
             outResult.Set("cleanup_run_status", "no_eligible_files");
-            outResult.Set("skip_reason", "No eligible failed Refiner jobs were old enough for cleanup.");
+            outResult.Set("skip_reason", "No eligible failed jobs were old enough for cleanup.");
             return outResult;
         }
 
@@ -185,7 +185,7 @@ public sealed class RefinerFailureCleanupSweep
             {
                 detail.Set(
                     $"{scope}_failure_cleanup_skip_reason",
-                    "Skipped for compatibility: this failed remux row uses legacy dry_run payload format, which is not a current Refiner mode.");
+                    "Skipped for compatibility: this failed remux row uses legacy dry_run payload format, which is not a current mode.");
                 continue;
             }
 
@@ -294,7 +294,7 @@ public sealed class RefinerFailureCleanupSweep
 
         if (episodes.Count == 0)
         {
-            detail.Set("tv_failure_cleanup_skip_reason", "No direct-child episode media files were found in this season folder, so Refiner skipped season cleanup.");
+            detail.Set("tv_failure_cleanup_skip_reason", "No direct-child episode media files were found in this season folder, so season cleanup was skipped.");
             return;
         }
 
@@ -310,7 +310,7 @@ public sealed class RefinerFailureCleanupSweep
             var rel = RemuxPassPaths.RelativeTo(episode, watchedRoot);
             if (rel is null)
             {
-                _logger.LogWarning("Refiner TV failure cleanup skipped episode outside watched root path={Path}", episode);
+                _logger.LogWarning("TV failure cleanup skipped episode outside watched root path={Path}", episode);
                 continue;
             }
 
@@ -443,7 +443,7 @@ public sealed class RefinerFailureCleanupSweep
             }
             catch (Exception exception) when (exception is FormatException or PyJsonDecodeException)
             {
-                _logger.LogDebug(exception, "Refiner failure cleanup ignored malformed failed-job payload job_id={JobId}", row.Id);
+                _logger.LogDebug(exception, "Failure cleanup ignored malformed failed-job payload job_id={JobId}", row.Id);
                 continue;
             }
 
@@ -653,7 +653,7 @@ public sealed class RefinerFailureCleanupSweep
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             var message = $"Could not remove {path} because it is in use or blocked ({exception.Message}).";
-            _logger.LogWarning("Refiner failure cleanup: {Message}", message);
+            _logger.LogWarning("Failure cleanup: {Message}", message);
             return (false, message);
         }
     }
@@ -668,7 +668,7 @@ public sealed class RefinerFailureCleanupSweep
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             var message = $"Could not remove temp file {path} because it is in use or blocked ({exception.Message}).";
-            _logger.LogWarning("Refiner failure cleanup: {Message}", message);
+            _logger.LogWarning("Failure cleanup: {Message}", message);
             return (false, message);
         }
     }

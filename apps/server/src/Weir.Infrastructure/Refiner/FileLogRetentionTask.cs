@@ -20,7 +20,7 @@ public sealed class FileLogRetentionTask(SqliteDatabase database, TimeProvider t
 
     public TimeSpan? FailureCooldown => null;
 
-    public string FailureMessage => "Refiner processing-record retention failed.";
+    public string FailureMessage => "Processing-record retention failed.";
 
     public async Task RunOnceAsync(CancellationToken cancellationToken)
     {
@@ -37,7 +37,7 @@ public sealed class FileLogRetentionTask(SqliteDatabase database, TimeProvider t
             await uow.CommitAsync().ConfigureAwait(false);
             if (removed > 0)
             {
-                logger.LogInformation("Refiner removed {Removed} processing record(s) past their retention window.", removed);
+                logger.LogInformation("Removed {Removed} processing record(s) past their retention window.", removed);
             }
         }
     }

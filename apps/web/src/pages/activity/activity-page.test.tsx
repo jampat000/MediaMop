@@ -250,8 +250,7 @@ describe("ActivityPage", () => {
           event_type: "system.reconciliation.repair",
           module: "system",
           title: "System repair action completed",
-          detail:
-            "remove_refiner_temp_artifact: Removed the Refiner temp artifact.",
+          detail: "remove_refiner_temp_artifact: Removed the temp artifact.",
         }),
       ]),
     );
@@ -263,7 +262,7 @@ describe("ActivityPage", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "remove_refiner_temp_artifact: Removed the Refiner temp artifact.",
+        "remove_refiner_temp_artifact: Removed the temp artifact.",
       ),
     ).toBeInTheDocument();
   });

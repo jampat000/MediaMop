@@ -45,7 +45,7 @@ public static class RefinerWatchedFolderScanDispatchEndpoints
                 throw new ApiException(StatusCodes.Status400BadRequest, "enqueue_remux_jobs requires a saved output folder for this media scope.");
             }
 
-            var label = mediaScope == "tv" ? "TV Refiner" : "Movies Refiner";
+            var label = mediaScope == "tv" ? "TV" : "Movies";
             throw new ApiException(
                 StatusCodes.Status400BadRequest,
                 $"{label} watched folder is not set in saved path settings. This scan reads media files under that folder — configure it first.");

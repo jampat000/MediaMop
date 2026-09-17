@@ -92,7 +92,7 @@ public static class RemuxPassVisibility
             RemuxPassOutcomes.SourceNotReady => $"Waiting for {name}",
             RemuxPassOutcomes.FailedDuringExecution => $"{name} could not be processed",
             _ when outcome == RemuxPassOutcomes.FailedBeforeExecution || payload.Get("ok") is PyBool { Value: false } => $"{name} could not be checked",
-            _ => "Refiner file processing finished",
+            _ => "File processing finished",
         };
     }
 

@@ -324,7 +324,7 @@ it("carries the old dashboard's stopped-worker and failed-job warnings (#459)", 
     {
       failedJobs: 2,
       workerDetail:
-        "Refiner is not processing new work because 1 worker slot(s) stopped responding.",
+        "Weir is not processing new work because 1 worker slot(s) stopped responding.",
     },
   );
 

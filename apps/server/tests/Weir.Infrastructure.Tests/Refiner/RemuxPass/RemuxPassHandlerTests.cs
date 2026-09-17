@@ -112,7 +112,7 @@ public sealed class RemuxPassHandlerTests : IDisposable
         Assert.Equal("refiner.file_remux_pass_completed|refiner|file.mkv was processed successfully", await ScalarText("SELECT event_type || '|' || module || '|' || title FROM activity_events"));
         var detail = (PyDict)PyJsonParser.Parse(await ScalarText("SELECT detail FROM activity_events"));
         Assert.Equal(("live_output_written", "123"), (PyConvert.Str(detail["outcome"]), PyConvert.Str(detail["job_id"])));
-        Assert.Equal("processed|Refiner finished processing this file.", await ScalarText("SELECT status || '|' || status_reason FROM refiner_files"));
+        Assert.Equal("processed|Finished processing this file.", await ScalarText("SELECT status || '|' || status_reason FROM refiner_files"));
         Assert.Equal(1, await _fixture.Store.Scalar("SELECT count(*) FROM refiner_file_logs WHERE outcome = 'live_output_written' AND library_name = 'Movies' AND file_id IS NOT NULL"));
         Assert.Equal(1, await _fixture.Store.Scalar("SELECT count(*) FROM refiner_files WHERE video_codec = 'h264' AND audio_track_count = 2 AND output_collision_action = 'write'"));
     }
@@ -330,7 +330,7 @@ public sealed class RemuxPassHandlerTests : IDisposable
     [InlineData("{nope", "invalid json: ")]
     [InlineData("[1]", "payload must be a JSON object")]
     [InlineData("""{"media_scope":"movie"}""", "relative_media_path is required")]
-    [InlineData("""{"relative_media_path":"a.mkv","dry_run":false}""", "legacy Refiner dry_run")]
+    [InlineData("""{"relative_media_path":"a.mkv","dry_run":false}""", "legacy Weir dry_run")]
     public async Task A_payload_that_cannot_run_is_recorded_as_a_failed_check(string payload, string reason)
     {
         await LibraryAsync();

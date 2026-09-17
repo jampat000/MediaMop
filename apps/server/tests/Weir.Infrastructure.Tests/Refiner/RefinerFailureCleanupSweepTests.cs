@@ -188,7 +188,7 @@ public sealed class RefinerFailureCleanupSweepTests : IDisposable
 
         Assert.Equal("no_eligible_files", PyConvert.Str(result["cleanup_run_status"]));
         Assert.Equal(0L, (long)((PyInt)result["eligible_failed_jobs"]).Value);
-        Assert.Contains("No eligible failed Refiner jobs", PyConvert.Str(result["skip_reason"]), StringComparison.Ordinal);
+        Assert.Contains("No eligible failed jobs", PyConvert.Str(result["skip_reason"]), StringComparison.Ordinal);
     }
 
     [Fact]

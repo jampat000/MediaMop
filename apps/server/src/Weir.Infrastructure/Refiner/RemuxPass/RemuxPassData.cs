@@ -35,7 +35,7 @@ public static class LockedWrites
             }
             catch (SqliteException exception) when (IsLock(exception) && attempt < Attempts - 1)
             {
-                logger.LogWarning("Refiner metadata write is waiting for SQLite ({Label}; retry {Attempt}/{Max}).", label, attempt + 1, Attempts - 1);
+                logger.LogWarning("Metadata write is waiting for SQLite ({Label}; retry {Attempt}/{Max}).", label, attempt + 1, Attempts - 1);
                 await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
                 delay *= 2;
             }
@@ -125,7 +125,7 @@ public sealed class SqliteRemuxPassData : IRemuxPassFileFacts, IPostSuccessClean
         }
         catch (Exception exception) when (exception is SqliteException or InvalidOperationException)
         {
-            _logger.LogWarning(exception, "Refiner could not commit optional file metadata ({Label}); continuing the media pass.", label);
+            _logger.LogWarning(exception, "Weir could not commit optional file metadata ({Label}); continuing the media pass.", label);
         }
     }
 }

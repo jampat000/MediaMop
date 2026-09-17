@@ -74,7 +74,7 @@ public sealed class RemuxPassVisibilityTests
         Assert.Equal("Skipped foo.mkv", RemuxPassVisibility.ActivityTitle(Payload(RemuxPassOutcomes.SkippedGuardrail)));
         Assert.Equal("foo.mkv could not be processed", RemuxPassVisibility.ActivityTitle(Payload(RemuxPassOutcomes.FailedDuringExecution)));
         Assert.Equal("foo.mkv could not be checked", RemuxPassVisibility.ActivityTitle(Payload("anything", ok: false)));
-        Assert.Equal("Refiner file processing finished", RemuxPassVisibility.ActivityTitle(new PyDict()));
+        Assert.Equal("File processing finished", RemuxPassVisibility.ActivityTitle(new PyDict()));
         Assert.Equal("unknown file could not be checked", RemuxPassVisibility.ActivityTitle(new PyDict().Set("ok", false)));
     }
 

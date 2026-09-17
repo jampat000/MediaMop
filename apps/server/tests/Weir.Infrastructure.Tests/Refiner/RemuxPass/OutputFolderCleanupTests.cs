@@ -171,7 +171,7 @@ public sealed class OutputFolderCleanupTests : IDisposable
         final = MovieOutput();
         _data.ActiveJobs.Add(new ActiveRemuxJob(3, """{"relative_media_path":"./Title/m.mkv"}"""));
         var blocked = await RunMovie(final);
-        Assert.Contains("Another Movies Refiner video pass", Str(blocked, "movie_output_folder_skip_reason"), StringComparison.Ordinal);
+        Assert.Contains("Another Movies video pass", Str(blocked, "movie_output_folder_skip_reason"), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -237,7 +237,7 @@ public sealed class OutputFolderCleanupTests : IDisposable
         _data.ActiveJobs.Add(new ActiveRemuxJob(7, """{"relative_media_path":"Show/S01/ep2.mkv","media_scope":"tv"}"""));
         var blocked = new PyDict();
         await Cleanup().RunTvAsync(blocked, _folders.Runtime(), _folders.Watched, _folders.Source(Path.Join("Show", "S01", "ep.mkv")), episode, 1, "tv", null, CancellationToken.None);
-        Assert.Contains("Another TV Refiner video pass", Str(blocked, "tv_output_season_folder_skip_reason"), StringComparison.Ordinal);
+        Assert.Contains("Another TV video pass", Str(blocked, "tv_output_season_folder_skip_reason"), StringComparison.Ordinal);
         Assert.True(File.Exists(episode));
     }
 }

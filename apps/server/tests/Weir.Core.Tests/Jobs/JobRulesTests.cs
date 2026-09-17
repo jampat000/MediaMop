@@ -50,7 +50,7 @@ public sealed class JobRulesTests
     public void Handler_registry_keys_must_be_live_refiner_kinds()
     {
         Assert.Equal(
-            "Refiner worker handler registry keys must start with 'refiner.' and must not use a retired prefix (offending keys: ['bare.kind', 'trimmer.x'])",
+            "Worker handler registry keys must start with 'refiner.' and must not use a retired prefix (offending keys: ['bare.kind', 'trimmer.x'])",
             Assert.Throws<ArgumentException>(() => JobKindGuard.ValidateHandlerRegistry(["bare.kind", "trimmer.x", "refiner.ok"])).Message);
         Assert.Throws<ArgumentException>(() => JobKindGuard.ValidateHandlerRegistry([LegacyPrunerJob]));
         Assert.Throws<ArgumentException>(() => JobKindGuard.ValidateHandlerRegistry([LegacySubberJob]));
@@ -72,7 +72,7 @@ public sealed class JobRulesTests
     [Fact]
     public void Refused_kind_wording_names_no_queue_kind_where_a_person_reads()
     {
-        var error = WorkerFailures.RefusedJobError("Refiner", "refused job_kind 'trimmer.x.v1' (row id=4)", willRetry: false);
+        var error = WorkerFailures.RefusedJobError("Weir", "refused job_kind 'trimmer.x.v1' (row id=4)", willRetry: false);
 
         Assert.DoesNotContain("trimmer.x.v1", error.Split(" Technical detail:")[0], StringComparison.Ordinal);
         Assert.Contains("trimmer.x.v1", error, StringComparison.Ordinal);
@@ -83,44 +83,44 @@ public sealed class JobRulesTests
     public void Worker_failure_wording_matches_python_exactly()
     {
         Assert.Equal(
-            "Refiner job failed: The job hit an unexpected error. Weir will try this job again shortly. Technical detail: RuntimeError: refiner worker refused a retired job_kind: 'trimmer.radarr.cleanup_drive.v1' (row id=7); nothing runs this kind any more",
-            WorkerFailures.RefusedJobError("Refiner", WorkerFailures.RetiredKindReason(LegacyTrimmerJob, 7), willRetry: true));
+            "Weir job failed: The job hit an unexpected error. Weir will try this job again shortly. Technical detail: RuntimeError: worker refused a retired job_kind: 'trimmer.radarr.cleanup_drive.v1' (row id=7); nothing runs this kind any more",
+            WorkerFailures.RefusedJobError("Weir", WorkerFailures.RetiredKindReason(LegacyTrimmerJob, 7), willRetry: true));
         Assert.Equal(
-            "Refiner job failed: The job hit an unexpected error. This job is marked failed so it does not look successful. Technical detail: RuntimeError: refiner worker refused job_kind missing required refiner.* prefix: 'legacy.unprefixed' (row id=2); enqueue only refiner-owned kinds",
-            WorkerFailures.RefusedJobError("Refiner", WorkerFailures.UnprefixedKindReason("legacy.unprefixed", 2), willRetry: false));
+            "Weir job failed: The job hit an unexpected error. This job is marked failed so it does not look successful. Technical detail: RuntimeError: worker refused job_kind missing required refiner.* prefix: 'legacy.unprefixed' (row id=2); enqueue only refiner-owned kinds",
+            WorkerFailures.RefusedJobError("Weir", WorkerFailures.UnprefixedKindReason("legacy.unprefixed", 2), willRetry: false));
         Assert.Equal(
-            "Refiner job failed: The job hit an unexpected error. Weir will try this job again shortly. Technical detail: RuntimeError: boom",
-            WorkerFailures.StoredError(WorkerFailures.JobFailure("Refiner", FailureMessages.RuntimeError("boom"), willRetry: true)));
+            "Weir job failed: The job hit an unexpected error. Weir will try this job again shortly. Technical detail: RuntimeError: boom",
+            WorkerFailures.StoredError(WorkerFailures.JobFailure("Weir", FailureMessages.RuntimeError("boom"), willRetry: true)));
         Assert.Equal(
-            "Refiner job failed: The job hit an unexpected error. This job is marked failed so it does not look successful. Technical detail: RuntimeError: boom",
-            WorkerFailures.StoredError(WorkerFailures.JobFailure("Refiner", FailureMessages.RuntimeError("boom"), willRetry: false)));
+            "Weir job failed: The job hit an unexpected error. This job is marked failed so it does not look successful. Technical detail: RuntimeError: boom",
+            WorkerFailures.StoredError(WorkerFailures.JobFailure("Weir", FailureMessages.RuntimeError("boom"), willRetry: false)));
         Assert.Equal(
-            "Refiner job failed: The job hit an unexpected error. Weir will try this job again shortly. Technical detail: RefinerNoHandlerForJobKind: no Refiner job handler registered for job_kind='refiner.test.unknown.v1'",
-            WorkerFailures.StoredError(WorkerFailures.JobFailure("Refiner", WorkerFailures.NoHandler("refiner.test.unknown.v1"), willRetry: true)));
+            "Weir job failed: The job hit an unexpected error. Weir will try this job again shortly. Technical detail: RefinerNoHandlerForJobKind: no job handler registered for job_kind='refiner.test.unknown.v1'",
+            WorkerFailures.StoredError(WorkerFailures.JobFailure("Weir", WorkerFailures.NoHandler("refiner.test.unknown.v1"), willRetry: true)));
         // #540 item 7: Python's next-action fallback doubled "the" ("Re-enter the the provider
         // credentials...") when no provider is known; fixed here to say it once.
         Assert.Equal(
-            "Refiner job failed: Weir could not use the saved credentials. This job is marked failed so it does not look successful. Next action: Re-enter the provider credentials and run the connection test again. Technical detail: RuntimeError: api_key=[redacted] token: [redacted]",
-            WorkerFailures.StoredError(WorkerFailures.JobFailure("Refiner", FailureMessages.RuntimeError("api_key=abc123 token: xyz"), willRetry: false)));
+            "Weir job failed: Weir could not use the saved credentials. This job is marked failed so it does not look successful. Next action: Re-enter the provider credentials and run the connection test again. Technical detail: RuntimeError: api_key=[redacted] token: [redacted]",
+            WorkerFailures.StoredError(WorkerFailures.JobFailure("Weir", FailureMessages.RuntimeError("api_key=abc123 token: xyz"), willRetry: false)));
         Assert.Equal(
-            "Refiner job failed: The job hit an unexpected error. This job is marked failed so it does not look successful. Technical detail: AlreadyRecordedFailure: the output folder is not writable",
-            WorkerFailures.StoredError(WorkerFailures.JobFailure("Refiner", FailureMessages.FromDotNet(new AlreadyRecordedFailureException("the output folder is not writable")), willRetry: false)));
+            "Weir job failed: The job hit an unexpected error. This job is marked failed so it does not look successful. Technical detail: AlreadyRecordedFailure: the output folder is not writable",
+            WorkerFailures.StoredError(WorkerFailures.JobFailure("Weir", FailureMessages.FromDotNet(new AlreadyRecordedFailureException("the output folder is not writable")), willRetry: false)));
         Assert.Equal(
-            "Refiner job failed: The job hit an unexpected error. The work ran, but Weir could not record that it finished. Technical detail: RuntimeError: complete_claimed_refiner_job refused (lease/state mismatch)",
+            "Weir job failed: The job hit an unexpected error. The work ran, but Weir could not record that it finished. Technical detail: RuntimeError: complete_claimed_refiner_job refused (lease/state mismatch)",
             WorkerFailures.StoredError(FailureMessages.FromException(
-                "Refiner",
+                "Weir",
                 "job",
                 FailureMessages.RuntimeError("complete_claimed_refiner_job refused (lease/state mismatch)"),
                 continuation: "The work ran, but Weir could not record that it finished.")));
         Assert.Equal(
-            "Refiner job failed: Weir could not use a file or folder it needed. This job is marked failed so it does not look successful. Next action: Check that the file or folder still exists and that Weir can read and write it. Technical detail: FileNotFoundError: gone",
-            WorkerFailures.StoredError(WorkerFailures.JobFailure("Refiner", FailureMessages.FromDotNet(new FileNotFoundException("gone")), willRetry: false)));
+            "Weir job failed: Weir could not use a file or folder it needed. This job is marked failed so it does not look successful. Next action: Check that the file or folder still exists and that Weir can read and write it. Technical detail: FileNotFoundError: gone",
+            WorkerFailures.StoredError(WorkerFailures.JobFailure("Weir", FailureMessages.FromDotNet(new FileNotFoundException("gone")), willRetry: false)));
     }
 
     [Fact]
     public void Stored_errors_are_bounded_to_ten_thousand_characters()
     {
-        var failure = WorkerFailures.JobFailure("Refiner", FailureMessages.RuntimeError(new string('x', 20_000)), willRetry: false);
+        var failure = WorkerFailures.JobFailure("Weir", FailureMessages.RuntimeError(new string('x', 20_000)), willRetry: false);
         Assert.Equal(1000, failure.TechnicalDetail!.Length);
         Assert.True(WorkerFailures.StoredError(failure with { Message = new string('m', 12_000) }).Length == 10_000);
     }
@@ -186,13 +186,13 @@ public sealed class JobRulesTests
         var requeue = StartupJobRecovery.Decide(1, 3, now);
         Assert.Equal(RefinerJobStatus.Pending, requeue.Status);
         Assert.Equal(
-            "Refiner job was interrupted by a Weir restart. Recovered at 2026-04-29T12:00:00+00:00 and queued for another safe attempt.",
+            "This job was interrupted by a Weir restart. Recovered at 2026-04-29T12:00:00+00:00 and queued for another safe attempt.",
             requeue.LastError);
 
         var failed = StartupJobRecovery.Decide(3, 3, now);
         Assert.Equal(RefinerJobStatus.Failed, failed.Status);
         Assert.Equal(
-            "Refiner job was interrupted by a Weir restart after its final attempt. Recovered at 2026-04-29T12:00:00+00:00 and marked failed so the operator can inspect it.",
+            "This job was interrupted by a Weir restart after its final attempt. Recovered at 2026-04-29T12:00:00+00:00 and marked failed so the operator can inspect it.",
             failed.LastError);
 
         // max_attempts below one counts as one.

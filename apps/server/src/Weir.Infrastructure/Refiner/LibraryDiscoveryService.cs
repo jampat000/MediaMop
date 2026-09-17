@@ -271,7 +271,7 @@ public sealed class LibraryDiscoveryService
                     managerRoot,
                     saved,
                     $"{connectionRow.Name} now says this library lives at {PyStrings.Repr(managerRoot)}, but Weir is " +
-                    $"watching {PyStrings.Repr(saved)}. Nothing has been changed — Refiner deletes source folders after a " +
+                    $"watching {PyStrings.Repr(saved)}. Nothing has been changed — Weir deletes source folders after a " +
                     "successful pass, so a watched folder only moves when you move it."));
             }
 
@@ -302,7 +302,7 @@ public sealed class LibraryDiscoveryService
                 descriptor.Name,
                 descriptor.RootPath,
                 null,
-                $"{connectionRow.Name} reports a library Weir has not imported. Import it if you want Refiner to process it."));
+                $"{connectionRow.Name} reports a library Weir has not imported. Import it if you want Weir to process it."));
         }
 
         return drift;

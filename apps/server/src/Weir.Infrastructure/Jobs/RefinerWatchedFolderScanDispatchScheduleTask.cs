@@ -80,7 +80,7 @@ public sealed class RefinerWatchedFolderScanDispatchScheduleTask : IPeriodicTask
 
     public TimeSpan? FailureCooldown => PeriodicSchedule.FailureCooldown;
 
-    public string FailureMessage => "Refiner watched-folder scheduler failed.";
+    public string FailureMessage => "Watched-folder scheduler failed.";
 
     public async Task RunOnceAsync(CancellationToken cancellationToken)
     {
@@ -131,7 +131,7 @@ public sealed class RefinerWatchedFolderScanDispatchScheduleTask : IPeriodicTask
             if (missed > 0)
             {
                 _logger.LogWarning(
-                    "Refiner watched-folder scheduler missed {Missed} run(s) for library {Library}; enqueueing one catch-up scan",
+                    "Watched-folder scheduler missed {Missed} run(s) for library {Library}; enqueueing one catch-up scan",
                     missed, library.Name);
             }
 
@@ -146,7 +146,7 @@ public sealed class RefinerWatchedFolderScanDispatchScheduleTask : IPeriodicTask
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                _logger.LogError(exception, "Refiner watched-folder scheduler failed for library {Library}", library.Name);
+                _logger.LogError(exception, "Watched-folder scheduler failed for library {Library}", library.Name);
                 nextDelay = PeriodicSchedule.FailureCooldown;
             }
 

@@ -432,9 +432,9 @@ public sealed class MediaManagerApiTests
         }
 
         using var applied = await client.PostAsync("/api/v1/system/reconciliation/repair", new { action = "remove_refiner_temp_artifact", path = artifact, confirm = true, csrf_token = await client.CsrfAsync() }, origin);
-        Assert.Equal("""{"applied":true,"message":"Removed the Refiner temp artifact."}""", await applied.Content.ReadAsStringAsync());
+        Assert.Equal("""{"applied":true,"message":"Removed the temp artifact."}""", await applied.Content.ReadAsStringAsync());
         Assert.False(File.Exists(artifact));
-        Assert.Equal(1, await TestDatabase.ScalarAsync(server, "SELECT count(*) FROM activity_events WHERE event_type = 'system.reconciliation.repair' AND detail = 'remove_refiner_temp_artifact: Removed the Refiner temp artifact.'"));
+        Assert.Equal(1, await TestDatabase.ScalarAsync(server, "SELECT count(*) FROM activity_events WHERE event_type = 'system.reconciliation.repair' AND detail = 'remove_refiner_temp_artifact: Removed the temp artifact.'"));
     }
 
     [Fact]

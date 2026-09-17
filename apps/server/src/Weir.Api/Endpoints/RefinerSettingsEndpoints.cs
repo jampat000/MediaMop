@@ -108,14 +108,14 @@ public static class RefinerSettingsEndpoints
                                new[] { movieScheduleDays, movieScheduleStart, movieScheduleEnd }.Count(v => v is not null);
         if (movieGroupCount != 0 && movieGroupCount != 5)
         {
-            issues.Add(new ValidationIssue("value_error", ["body"], "Value error, Refiner movie schedule fields must all be omitted or all provided together.", PyJson.Null));
+            issues.Add(new ValidationIssue("value_error", ["body"], "Value error, Movie schedule fields must all be omitted or all provided together.", PyJson.Null));
         }
 
         var tvGroupCount = new bool?[] { tvScheduleEnabled, tvScheduleHoursLimited }.Count(v => v is not null) +
                             new[] { tvScheduleDays, tvScheduleStart, tvScheduleEnd }.Count(v => v is not null);
         if (tvGroupCount != 0 && tvGroupCount != 5)
         {
-            issues.Add(new ValidationIssue("value_error", ["body"], "Value error, Refiner TV schedule fields must all be omitted or all provided together.", PyJson.Null));
+            issues.Add(new ValidationIssue("value_error", ["body"], "Value error, TV schedule fields must all be omitted or all provided together.", PyJson.Null));
         }
 
         var hasProcessField = maxConcurrentFiles is not null || runnerCapacity is not null || runnerCostSd is not null ||
@@ -125,7 +125,7 @@ public static class RefinerSettingsEndpoints
                                minFileAgeSeconds is not null || refinerMinInputFileSizeMb is not null || minimumFreeDiskSpaceMb is not null;
         if (!hasProcessField && movieScheduleEnabled is null && tvScheduleEnabled is null)
         {
-            issues.Add(new ValidationIssue("value_error", ["body"], "Value error, No Refiner operator settings fields to update.", PyJson.Null));
+            issues.Add(new ValidationIssue("value_error", ["body"], "Value error, No operator settings fields to update.", PyJson.Null));
         }
 
         issues.ThrowIfAny();

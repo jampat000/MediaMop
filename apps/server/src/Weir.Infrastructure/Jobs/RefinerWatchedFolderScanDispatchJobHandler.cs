@@ -65,13 +65,13 @@ public sealed class RefinerWatchedFolderScanDispatchJobHandler : IJobHandler
         if (library is null)
         {
             var label = mediaScope == RefinerMediaScopes.Tv ? "TV" : "Movies";
-            throw new InvalidOperationException($"No Refiner library covers {label}. Add one on the Refiner Libraries settings page, then queue this work again.");
+            throw new InvalidOperationException($"No library covers {label}. Add one in Processing → Libraries, then queue this work again.");
         }
 
         var (runtime, pathError) = WatchedFolderScanOps.ResolvePathRuntimeForLibrary(library, _options.WeirHome);
         if (runtime is null)
         {
-            throw new InvalidOperationException(pathError ?? "Refiner path settings are incomplete for this scan.");
+            throw new InvalidOperationException(pathError ?? "Path settings are incomplete for this scan.");
         }
 
         // Manager queue signals: ask every manager linked to this library, and note who did not answer.

@@ -74,7 +74,7 @@ public class RefinerWatchedFolderWatcherService : BackgroundService
             // One line, once. A per-tick warning about a switch an operator deliberately flipped off is
             // noise that buries the next real problem.
             _logger.LogInformation(
-                "Refiner's filesystem watcher is switched off (WEIR_REFINER_WATCHER_ENABLED=0), so Weir " +
+                "The filesystem watcher is switched off (WEIR_REFINER_WATCHER_ENABLED=0), so Weir " +
                 "finds new files on the scan interval only.");
             _state.Clear();
             return;
@@ -95,7 +95,7 @@ public class RefinerWatchedFolderWatcherService : BackgroundService
                 }
                 catch (Exception exception) when (exception is not OperationCanceledException)
                 {
-                    _logger.LogError(exception, "Refiner filesystem watcher could not read library settings; keeping the previous watch set.");
+                    _logger.LogError(exception, "Filesystem watcher could not read library settings; keeping the previous watch set.");
                 }
 
                 RestartFlagged(watches, pending, immediateScans, restarts);
@@ -261,7 +261,7 @@ public class RefinerWatchedFolderWatcherService : BackgroundService
             {
                 _logger.LogWarning(
                     e.GetException(),
-                    "Refiner's filesystem watcher for {Library} reported an error; queuing a full scan and restarting the watcher.",
+                    "The filesystem watcher for {Library} reported an error; queuing a full scan and restarting the watcher.",
                     library.Name);
                 immediateScans.Enqueue(libraryId);
                 restarts.Enqueue(libraryId);
@@ -309,11 +309,11 @@ public class RefinerWatchedFolderWatcherService : BackgroundService
                     uow, _jobStore, fresh, _options.RefinerWatchedFolderRemuxScanDispatchPeriodicEnqueueRemuxJobs).ConfigureAwait(false);
                 if (inserted)
                 {
-                    _logger.LogInformation("Refiner queued a scan of {Library} because its watched folder changed.", fresh.Name);
+                    _logger.LogInformation("Queued a scan of {Library} because its watched folder changed.", fresh.Name);
                 }
                 else
                 {
-                    _logger.LogDebug("Refiner did not queue a watcher scan for {Library}: {Skip}", fresh.Name, skip);
+                    _logger.LogDebug("Did not queue a watcher scan for {Library}: {Skip}", fresh.Name, skip);
                 }
             }
 
@@ -323,7 +323,7 @@ public class RefinerWatchedFolderWatcherService : BackgroundService
         {
             // A failed enqueue must not kill the watcher: the periodic scan is still running, and the next
             // event (or tick, for an overflow) gets another attempt.
-            _logger.LogError(exception, "Refiner filesystem watcher could not queue a scan.");
+            _logger.LogError(exception, "Filesystem watcher could not queue a scan.");
         }
     }
 

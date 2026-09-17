@@ -56,7 +56,7 @@ public sealed class MediaManagerRulesTests
 
         Assert.Contains("did not name a file path", HandoffPaths.RelativeMediaPathForHandoff("/srv/handoff", "  ").Problem, StringComparison.Ordinal);
         Assert.Equal(
-            "The hand-off names '/x/y.mkv', which is not inside Refiner's watched folder '/srv'. Point the media manager and Refiner at the same folder — both hosts have to see it at that path.",
+            "The hand-off names '/x/y.mkv', which is not inside Weir's watched folder '/srv'. Point the media manager and Weir at the same folder — both hosts have to see it at that path.",
             HandoffPaths.RelativeMediaPathForHandoff("/srv", "/x/y.mkv").Problem);
     }
 
@@ -190,7 +190,7 @@ public sealed class MediaManagerRulesTests
     {
         var body = CompletionReports.BuildCompletionBody(Origin, Dict("""{"ok":true,"outcome":"live_output_written","output_file":"D:\\Refined\\Blade.Runner.2049\\film.mkv","removed_audio":["fre","deu"],"removed_subtitles":["spa"]}"""));
         Assert.Equal(
-            """{"handoffId":"handoff-1","status":"completed","processorName":"Weir Refiner","releaseName":"Blade.Runner.2049","outputPath":"D:\\Refined\\Blade.Runner.2049\\film.mkv","message":"Removed 2 audio track(s) and 1 subtitle track(s)."}""",
+            """{"handoffId":"handoff-1","status":"completed","processorName":"Weir","releaseName":"Blade.Runner.2049","outputPath":"D:\\Refined\\Blade.Runner.2049\\film.mkv","message":"Removed 2 audio track(s) and 1 subtitle track(s)."}""",
             PyJsonWriter.Dumps(body, PyJsonFormat.Compact));
     }
 
@@ -214,7 +214,7 @@ public sealed class MediaManagerRulesTests
         Assert.Equal(("failed", "File is too small."), (((PyStr)guardrail["status"]).Value, ((PyStr)guardrail["message"]).Value));
 
         Assert.Equal(
-            """{"handoffId":"handoff-1","status":"failed","processorName":"Weir Refiner","libraryId":"lib-movies","message":"ffmpeg failed","disposition":"held","sourceRemoved":false,"failureClass":"execution"}""",
+            """{"handoffId":"handoff-1","status":"failed","processorName":"Weir","libraryId":"lib-movies","message":"ffmpeg failed","disposition":"held","sourceRemoved":false,"failureClass":"execution"}""",
             PyJsonWriter.Dumps(CompletionReports.BuildCompletionBody(DelunoOrigin, Dict("""{"ok":false,"outcome":"failed_execution","reason":"ffmpeg failed","failure_class":"execution"}""")), PyJsonFormat.Compact));
 
         var deleted = CompletionReports.BuildCompletionBody(DelunoOrigin, Dict("""{"ok":false,"outcome":"skipped_rejected","reason":"No wanted audio language.","rejected_cleanup_status":"deleted"}"""));

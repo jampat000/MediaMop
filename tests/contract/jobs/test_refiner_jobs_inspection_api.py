@@ -167,7 +167,7 @@ def test_refiner_jobs_inspection_returns_operator_guidance_and_keeps_lock_detail
 
     assert response.status_code == 200, response.text
     job = next(item for item in response.json()["jobs"] if item["dedupe_key"] == "operator-guidance-lock")
-    assert "could not save the Refiner result" in job["operator_message"]
+    assert "could not save the result" in job["operator_message"]
     assert "Files at once" in job["next_action"]
     assert job["technical_detail"] == "sqlite3.OperationalError: database is locked"
 

@@ -188,7 +188,7 @@ public sealed class JobServicesTests : IDisposable
         Assert.Equal("{\"media_scope\":\"tv\",\"trigger\":\"scheduled\"}", job.PayloadJson);
         var entry = Assert.Single(_db.ActivityEvents());
         Assert.Equal(ActivityEventTypes.RefinerFailureCleanupSweepCompleted, entry.EventType);
-        Assert.Equal("Refiner cleanup skipped for TV", entry.Title);
+        Assert.Equal("Cleanup skipped for TV", entry.Title);
         Assert.Equal(
             $"{{\"media_scope\":\"tv\",\"cleanup_run_status\":\"skipped\",\"reason\":\"Previous cleanup job is still queued or running.\",\"existing_job_id\":{job.Id},\"result\":\"skipped\",\"trigger\":\"scheduled\"}}",
             entry.Detail);
