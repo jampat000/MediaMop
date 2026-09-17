@@ -100,9 +100,7 @@ def test_disabling_the_periodic_scan_switch_stops_the_scan_timer(
     assert job["job_kind"] == SCAN_KIND
 
 
-def test_periodic_scan_switch_left_on_lets_the_scan_timer_run(
-    server_factory, client_factory, tmp_path: Path
-) -> None:
+def test_periodic_scan_switch_left_on_lets_the_scan_timer_run(server_factory, client_factory, tmp_path: Path) -> None:
     """Positive control for the test above: with the switch untouched (on by default), the same
     library, on the same short cadence, must eventually get a periodic scan — proving the negative
     result above is the switch actually working, not the timer coincidentally never firing in time."""
