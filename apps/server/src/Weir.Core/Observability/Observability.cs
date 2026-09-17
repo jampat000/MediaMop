@@ -330,8 +330,11 @@ public static class FailureMessages
 
     public static string? NextActionForKind(FailureKind kind, string? provider, bool recoverable)
     {
-        // Python: provider_label(provider) or "the provider" (an all-space provider labels as "").
-        var providerText = OperatorMessages.ProviderLabel(provider) is { Length: > 0 } label ? label : "the provider";
+        // #540 item 7: Python's fallback is provider_label(provider) or "the provider", combined
+        // into templates that already say "the {provider_s}" — so an unknown provider produced
+        // "Re-enter the the provider credentials..." (and the same "the the" in the network message).
+        // The fallback here is just "provider", so the templates' own "the " is the only one.
+        var providerText = OperatorMessages.ProviderLabel(provider) is { Length: > 0 } label ? label : "provider";
         return kind switch
         {
             FailureKind.Credential or FailureKind.Auth => $"Re-enter the {providerText} credentials and run the connection test again.",

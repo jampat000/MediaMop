@@ -64,6 +64,14 @@ public sealed record WeirOptions
 
     /// <summary>0 = no in-process Refiner workers; 1..8 worker slots otherwise.</summary>
     public required int RefinerWorkerCount { get; init; }
+
+    /// <summary>
+    /// How long a worker's claim on a <c>refiner_jobs</c> row lasts before another worker may reclaim
+    /// it (<c>WEIR_REFINER_JOB_LEASE_SECONDS</c>, #540 item 1). A heartbeat renews it roughly every
+    /// third of this while a handler runs, so a job taking longer than this is still never claimed
+    /// twice; this only bounds how long a crashed worker's row sits unclaimed before recovery.
+    /// </summary>
+    public required int RefinerJobLeaseSeconds { get; init; }
     public required bool RefinerWatcherEnabled { get; init; }
     public required double RefinerWatcherDebounceSeconds { get; init; }
     public required bool RefinerWatchedFolderRemuxScanDispatchPeriodicEnqueueRemuxJobs { get; init; }

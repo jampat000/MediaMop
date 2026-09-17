@@ -161,6 +161,38 @@ public sealed class RefinerJobStoreTests : IDisposable
         Assert.Equal("2026-04-10 12:01:31.000000", _db.Scalar("SELECT not_before FROM refiner_jobs"));
     }
 
+    [Theory]
+    [InlineData(0, true)] // now has zero microseconds: the sqlite3 adapter omits the fraction entirely.
+    [InlineData(1, true)] // now has a fraction: the old text comparison already got this one right.
+    public async Task A_job_is_claimable_at_exactly_its_not_before_second_in_either_now_format(int extraTicks, bool expectClaimable)
+    {
+        // #540 item 2: not_before is always written with an explicit fraction and no offset
+        // ("...30.000000"), while `now` goes through the sqlite3 adapter, which omits a zero fraction
+        // and adds an offset ("...30+00:00"). A text comparison sorts '+' before '.', so the exact
+        // not_before second was missed whenever `now`'s microseconds happened to be zero. Comparing by
+        // julianday() instead reads both shapes as the same instant.
+        await _db.Store.EnqueueOrGetAsync("exact", Kind, maxAttempts: 5);
+        var job = (await _db.Store.ClaimNextAsync("w", T0.AddSeconds(30), T0))!;
+        Assert.True(await _db.Store.FailClaimedAsync(job.Id, "w", "boom", T0));
+        Assert.Equal("2026-04-10 12:00:30.000000", _db.Scalar("SELECT not_before FROM refiner_jobs"));
+
+        var now = T0.AddSeconds(30).AddTicks(extraTicks);
+        var claimed = await _db.Store.ClaimNextAsync("w2", T0.AddHours(1), now);
+        Assert.Equal(expectClaimable, claimed is not null);
+    }
+
+    [Fact]
+    public async Task A_not_before_row_written_the_way_python_writes_it_still_compares_correctly()
+    {
+        // A raw row shaped exactly as SQLAlchemy's SQLite DATETIME column writes it (no offset, always
+        // six fraction digits) — not a row this store itself produced — claimable at its exact second.
+        _db.InsertRawJob("python-written", Kind, maxAttempts: 5);
+        _db.Execute("UPDATE refiner_jobs SET not_before = '2026-04-10 12:00:30.000000' WHERE dedupe_key = 'python-written'");
+
+        Assert.Null(await _db.Store.ClaimNextAsync("w", T0.AddHours(1), T0.AddSeconds(29)));
+        Assert.NotNull(await _db.Store.ClaimNextAsync("w", T0.AddHours(1), T0.AddSeconds(30)));
+    }
+
     [Fact]
     public async Task Fail_refuses_a_wrong_owner_or_expired_lease()
     {
@@ -170,6 +202,26 @@ public sealed class RefinerJobStoreTests : IDisposable
         Assert.False(await _db.Store.FailClaimedAsync(job.Id, "evil", "x", T0));
         Assert.False(await _db.Store.FailClaimedAsync(job.Id, "good", "x", T0.AddSeconds(6)));
         Assert.Equal(RefinerJobStatus.Leased, (await _db.Store.GetAsync(job.Id))!.Status);
+    }
+
+    [Fact]
+    public async Task Renew_lease_extends_expiry_only_for_the_owning_unexpired_lease()
+    {
+        // #540 item 1: the store-level half of lease renewal (the processor's heartbeat calls this).
+        await _db.Store.EnqueueOrGetAsync("renew", Kind);
+        var job = (await _db.Store.ClaimNextAsync("good", T0.AddSeconds(30), T0))!;
+
+        Assert.True(await _db.Store.RenewLeaseAsync(job.Id, "good", T0.AddSeconds(60), T0.AddSeconds(10)));
+        Assert.Equal(T0.AddSeconds(60), (await _db.Store.GetAsync(job.Id))!.LeaseExpiresAt);
+
+        // Wrong owner, and a lease that has already lapsed: neither renews.
+        Assert.False(await _db.Store.RenewLeaseAsync(job.Id, "evil", T0.AddSeconds(90), T0.AddSeconds(20)));
+        Assert.False(await _db.Store.RenewLeaseAsync(job.Id, "good", T0.AddSeconds(200), T0.AddSeconds(61)));
+        Assert.Equal(T0.AddSeconds(60), (await _db.Store.GetAsync(job.Id))!.LeaseExpiresAt);
+
+        // A completed row no longer holds a lease to renew.
+        Assert.True(await _db.Store.CompleteClaimedAsync(job.Id, "good", T0.AddSeconds(15)));
+        Assert.False(await _db.Store.RenewLeaseAsync(job.Id, "good", T0.AddSeconds(400), T0.AddSeconds(16)));
     }
 
     [Fact]

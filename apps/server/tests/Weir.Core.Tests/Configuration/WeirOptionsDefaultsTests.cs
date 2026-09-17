@@ -62,6 +62,7 @@ public sealed class WeirOptionsDefaultsTests
     public void Refiner()
     {
         Assert.Equal(8, Defaults.RefinerWorkerCount);
+        Assert.Equal(300, Defaults.RefinerJobLeaseSeconds);
         Assert.True(Defaults.RefinerWatcherEnabled);
         Assert.Equal(3.0, Defaults.RefinerWatcherDebounceSeconds);
         Assert.True(Defaults.RefinerWatchedFolderRemuxScanDispatchPeriodicEnqueueRemuxJobs);

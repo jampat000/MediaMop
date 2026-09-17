@@ -31,16 +31,20 @@ public sealed partial class ActivityClassifierTests
         Assert.Equal(new ActivityFacts("manual", "failed", null, null, null), ActivityClassifier.Classify(ActivityEventTypes.AuthBootstrapDenied, "An admin account already exists."));
         Assert.Equal(new ActivityFacts("manual", null, null, null, null), ActivityClassifier.Classify(ActivityEventTypes.SystemReconciliationRepair, null));
         Assert.Equal(new ActivityFacts(null, "failed", null, null, null), ActivityClassifier.Classify(ActivityEventTypes.RefinerWorkerFailure, null));
-        // Python's word order: "failure" (in the event type's name) is checked before "completed".
-        Assert.Equal("failed", ActivityClassifier.Classify(ActivityEventTypes.RefinerFailureCleanupSweepCompleted, "not json").Result);
+        // #540 item 8: Python checks "failure" (in the event type's name) before "completed", so a
+        // cleanup sweep that finished with no result given reads as "failed". Fixed here to match the
+        // type's own terminal verb ("completed") first, so it reads as "success" instead.
+        Assert.Equal("success", ActivityClassifier.Classify(ActivityEventTypes.RefinerFailureCleanupSweepCompleted, "not json").Result);
         Assert.Equal("warning", ActivityClassifier.Classify(ActivityEventTypes.RefinerFileRejectFellBack, null).Result);
     }
 
     [Fact]
-    public void Booleans_are_not_library_ids_but_are_run_ids()
+    public void Booleans_are_not_library_ids_and_not_run_ids()
     {
         Assert.Equal(new ActivityFacts(null, "failed", null, null, null), ActivityClassifier.Classify("refiner.x", "{\"ok\": false, \"library_id\": true}"));
-        Assert.Equal(new ActivityFacts("manual", "failed", null, null, "run:True"), ActivityClassifier.Classify("auth.login", "{\"ok\":false,\"library_id\":true,\"run_id\":true}"));
+        // #540 item 5: Python's isinstance(run_id, (str, int)) also accepts a bool, so run_id: true
+        // read as the run key "run:True". Fixed here to reject booleans, so neither id is set.
+        Assert.Equal(new ActivityFacts("manual", "failed", null, null, null), ActivityClassifier.Classify("auth.login", "{\"ok\":false,\"library_id\":true,\"run_id\":true}"));
         Assert.Equal(new ActivityFacts(null, null, null, null, null), ActivityClassifier.Classify("refiner.x", "{\"library_id\": 1.0, \"run_id\": \" \"}"));
     }
 

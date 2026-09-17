@@ -71,7 +71,14 @@ public static class ActivityClassifier
         if (result is null)
         {
             var lowered = type.ToLowerInvariant();
-            result = ResultByTypeWord.FirstOrDefault(pair => lowered.Contains(pair.Word, StringComparison.Ordinal)).Result;
+            // #540 item 8: Python scans for the first word that occurs anywhere in the event type, so
+            // "refiner.failure_cleanup_sweep_completed" reads as "failed" because "failure" is checked
+            // before "completed" ever gets a look in, even though "completed" is the type's actual
+            // terminal verb. An event type's own name always ends in its terminal verb, so a suffix
+            // match is checked first and wins; only when nothing is a suffix does the old substring
+            // scan run, matching Python for the handful of odd names that will not benefit.
+            result = ResultByTypeWord.FirstOrDefault(pair => lowered.EndsWith(pair.Word, StringComparison.Ordinal)).Result
+                ?? ResultByTypeWord.FirstOrDefault(pair => lowered.Contains(pair.Word, StringComparison.Ordinal)).Result;
         }
 
         // isinstance(x, int) and not isinstance(x, bool); a value beyond SQLite's INTEGER is left out.
@@ -83,9 +90,11 @@ public static class ActivityClassifier
             relativePath = PyStrings.Slice(stripped, 2000);
         }
 
-        // isinstance(run_id, (str, int)): a bool is an int, so True reads "run:True".
+        // #540 item 5: strict payload parsing. Python's isinstance(run_id, (str, int)) also accepts a
+        // bool (a bool is an int in Python), so run_id: true became the literal run key "run:True".
+        // Booleans are rejected here instead, the same as library_id below.
         string? runKey = null;
-        if (data.Get("run_id") is (PyStr or PyInt or PyBool) and var runId && PyStrings.Strip(PyConvert.Str(runId)).Length > 0)
+        if (data.Get("run_id") is (PyStr or PyInt) and var runId && PyStrings.Strip(PyConvert.Str(runId)).Length > 0)
         {
             runKey = PyStrings.Slice("run:" + PyConvert.Str(runId), 128);
         }

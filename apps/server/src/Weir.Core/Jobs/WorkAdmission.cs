@@ -202,7 +202,13 @@ public static class WorkAdmissionRules
         ArgumentNullException.ThrowIfNull(libraries);
         if (suite is null)
         {
-            return new WorkAdmission(new PauseState(false, null, ScanWhilePaused: true), new HashSet<long>());
+            // #540 item 4: a missing suite_settings row must not starve every job kind of runner
+            // capacity; nothing is running yet, so the whole default budget is free.
+            return new WorkAdmission(
+                new PauseState(false, null, ScanWhilePaused: true),
+                new HashSet<long>(),
+                AvailableUnits: RunnerBudget.Default.Available(0),
+                Capacity: RunnerBudget.Default.Capacity);
         }
 
         var timezoneName = (suite.AppTimezone ?? "UTC").Trim();
@@ -257,25 +263,14 @@ public static class WorkAdmissionRules
 public static class JobPayload
 {
     /// <summary>
-    /// <c>_library_id_of</c>: the payload's <c>library_id</c> when it is a JSON integer. A JSON
-    /// boolean counts too (Python's <c>bool</c> is an <c>int</c>), as <c>true</c> = 1.
+    /// <c>_library_id_of</c>: the payload's <c>library_id</c> when it is a JSON integer, not a boolean.
     /// </summary>
-    public static long? LibraryIdForAdmission(string? payloadJson)
-    {
-        var root = ParseObject(payloadJson);
-        if (root is not { } element || !element.TryGetProperty("library_id", out var value))
-        {
-            return null;
-        }
-
-        return value.ValueKind switch
-        {
-            JsonValueKind.True => 1,
-            JsonValueKind.False => 0,
-            JsonValueKind.Number when value.TryGetInt64(out var id) && IsIntegerLiteral(value) => id,
-            _ => null,
-        };
-    }
+    /// <remarks>
+    /// #540 item 5: Python's <c>isinstance(value, int)</c> also accepts a bool (a bool is an int in
+    /// Python), so <c>library_id: true</c> counted as library 1 when tallying jobs running per
+    /// library. Fixed here to reject booleans and only accept a genuine JSON integer literal.
+    /// </remarks>
+    public static long? LibraryIdForAdmission(string? payloadJson) => StrictInteger(ParseObject(payloadJson), "library_id");
 
     /// <summary>A payload object, or null when the text is empty, invalid or not an object.</summary>
     public static JsonElement? ParseObject(string? payloadJson)

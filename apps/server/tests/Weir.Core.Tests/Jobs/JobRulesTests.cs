@@ -97,8 +97,10 @@ public sealed class JobRulesTests
         Assert.Equal(
             "Refiner job failed: The job hit an unexpected error. Weir will try this job again shortly. Technical detail: RefinerNoHandlerForJobKind: no Refiner job handler registered for job_kind='refiner.test.unknown.v1'",
             WorkerFailures.StoredError(WorkerFailures.JobFailure("Refiner", WorkerFailures.NoHandler("refiner.test.unknown.v1"), willRetry: true)));
+        // #540 item 7: Python's next-action fallback doubled "the" ("Re-enter the the provider
+        // credentials...") when no provider is known; fixed here to say it once.
         Assert.Equal(
-            "Refiner job failed: Weir could not use the saved credentials. This job is marked failed so it does not look successful. Next action: Re-enter the the provider credentials and run the connection test again. Technical detail: RuntimeError: api_key=[redacted] token: [redacted]",
+            "Refiner job failed: Weir could not use the saved credentials. This job is marked failed so it does not look successful. Next action: Re-enter the provider credentials and run the connection test again. Technical detail: RuntimeError: api_key=[redacted] token: [redacted]",
             WorkerFailures.StoredError(WorkerFailures.JobFailure("Refiner", FailureMessages.RuntimeError("api_key=abc123 token: xyz"), willRetry: false)));
         Assert.Equal(
             "Refiner job failed: The job hit an unexpected error. This job is marked failed so it does not look successful. Technical detail: AlreadyRecordedFailure: the output folder is not writable",
