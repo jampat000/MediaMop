@@ -21,3 +21,5 @@ and timing-based pruning must follow [ADR-0009](ADR-0009-suite-wide-timing-isola
 | [ADR-0013](ADR-0013-media-managers-are-kinds-not-products.md) | A media manager is a kind, not a product name |
 | [ADR-0014](ADR-0014-refiner-libraries-replace-fixed-scopes.md) | A Refiner library is a row, not one of two fixed scopes |
 | [ADR-0015](ADR-0015-media-manager-port-outbound.md) | Refiner asks a port, and "no answer" is not "nothing" |
+| [ADR-0016](ADR-0016-one-thing-that-never-strands-a-file.md) | One thing that never strands a file |
+| [ADR-0017](ADR-0017-backend-on-dotnet.md) | Weir's backend moves to C# on .NET 10 |
