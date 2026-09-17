@@ -22,6 +22,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
 import pytest
+
 from tests.contract.activity._helpers import insert_event
 from tests.contract.support import seed
 from tests.contract.support.client import API, WeirClient

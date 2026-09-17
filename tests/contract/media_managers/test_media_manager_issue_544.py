@@ -203,7 +203,9 @@ def test_hand_off_ledger_prefix_matching_is_exact_not_a_sql_wildcard(
 
     # seed.stopped() restarts the server on a fresh port, so this reads server.base_url again
     # rather than reusing a client bound to the port that was live before the restart.
-    status = httpx.get(f"{server.base_url}{API}/intake/handoffs/deluno/{handoff_id}", headers=WEBHOOK_SECRET, timeout=30)
+    status = httpx.get(
+        f"{server.base_url}{API}/intake/handoffs/deluno/{handoff_id}", headers=WEBHOOK_SECRET, timeout=30
+    )
     assert status.status_code == 200, status.text
     assert status.json()["state"] == "queued", (
         "an unrelated sibling folder's file must not be folded into this hand-off's status"
@@ -222,15 +224,23 @@ def test_two_radarr_connections_each_authenticate_with_their_own_secret(operator
 
     row_1080p = _create(operator, kind="radarr", name="1080p", base_url="http://10.1.1.5:7878")
     row_4k = _create(operator, kind="radarr", name="4K", base_url="http://10.1.1.6:7878")
-    secret_1080p = operator.post_csrf(f"{API}/media-managers/connections/{row_1080p['id']}/webhook-secret").json()["webhook_secret"]
-    secret_4k = operator.post_csrf(f"{API}/media-managers/connections/{row_4k['id']}/webhook-secret").json()["webhook_secret"]
+    secret_1080p = operator.post_csrf(f"{API}/media-managers/connections/{row_1080p['id']}/webhook-secret").json()[
+        "webhook_secret"
+    ]
+    secret_4k = operator.post_csrf(f"{API}/media-managers/connections/{row_4k['id']}/webhook-secret").json()[
+        "webhook_secret"
+    ]
     assert secret_1080p != secret_4k
 
     body = {"eventType": "Grab"}
-    accepted_1080p = operator.post(f"{API}/intake/webhook/radarr", json=body, headers={"X-Webhook-Secret": secret_1080p})
+    accepted_1080p = operator.post(
+        f"{API}/intake/webhook/radarr", json=body, headers={"X-Webhook-Secret": secret_1080p}
+    )
     assert accepted_1080p.status_code == 200, accepted_1080p.text
     accepted_4k = operator.post(f"{API}/intake/webhook/radarr", json=body, headers={"X-Webhook-Secret": secret_4k})
     assert accepted_4k.status_code == 200, accepted_4k.text
 
-    refused = operator.post(f"{API}/intake/webhook/radarr", json=body, headers={"X-Webhook-Secret": "neither connections secret"})
+    refused = operator.post(
+        f"{API}/intake/webhook/radarr", json=body, headers={"X-Webhook-Secret": "neither connections secret"}
+    )
     assert refused.status_code == 401, refused.text
