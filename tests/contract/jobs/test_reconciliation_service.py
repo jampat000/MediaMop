@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from tests.contract.jobs._helpers import (
     VIEWER_PASSWORD,
     VIEWER_USERNAME,
@@ -30,7 +32,8 @@ def test_reconciliation_temp_artifact_repair_requires_confirmation(admin: WeirCl
         assert report.status_code == 200, report.text
         issue = next(item for item in report.json()["issues"] if item["kind"] == "partial_temp_artifact")
 
-        refused = admin.post(
+        # The CSRF token is required on .NET (#527); Python ignores the extra field.
+        refused = admin.post_csrf(
             f"{REPORT}/repair",
             json={"action": issue["repair_action"], "path": issue["path"], "confirm": False},
         )
@@ -38,7 +41,7 @@ def test_reconciliation_temp_artifact_repair_requires_confirmation(admin: WeirCl
         assert "confirm=true" in refused.json()["detail"]
         assert artifact.exists()
 
-        applied = admin.post(
+        applied = admin.post_csrf(
             f"{REPORT}/repair",
             json={"action": issue["repair_action"], "path": issue["path"], "confirm": True},
         )
@@ -61,3 +64,41 @@ def test_reconciliation_report_allows_admin(admin: WeirClient) -> None:
     r = admin.get(REPORT)
     assert r.status_code == 200, r.text
     assert "issues" in r.json()
+
+
+TRUSTED = "http://127.0.0.1:9000"
+XRW = {"X-Requested-With": "XMLHttpRequest"}
+REPAIR_BODY = {"action": "remove_refiner_temp_artifact", "path": "/nowhere/.x.partial", "confirm": False}
+
+
+@pytest.mark.backends("dotnet", reason="#527: the Python backend accepts a repair without CSRF or Origin checks")
+def test_reconciliation_repair_requires_a_csrf_token(admin: WeirClient) -> None:
+    missing = admin.post(f"{REPORT}/repair", json=REPAIR_BODY)
+    assert missing.status_code == 400, missing.text
+    assert missing.json() == {"detail": "Invalid or expired CSRF token."}
+
+    wrong = admin.post(f"{REPORT}/repair", json={**REPAIR_BODY, "csrf_token": "not-a-token"})
+    assert wrong.status_code == 400, wrong.text
+
+    # A valid token reaches the repair itself, which refuses without confirmation.
+    valid = admin.post_csrf(f"{REPORT}/repair", json=REPAIR_BODY)
+    assert valid.status_code == 400, valid.text
+    assert "confirm=true" in valid.json()["detail"]
+
+
+@pytest.mark.backends("dotnet", reason="#527: the Python backend accepts a repair without CSRF or Origin checks")
+def test_reconciliation_repair_checks_the_browser_origin(server_factory, client_factory) -> None:
+    sut = server_factory({"WEIR_TRUSTED_BROWSER_ORIGINS": TRUSTED})
+    trusted = client_factory(sut, headers={"Origin": TRUSTED, **XRW})
+    trusted.ensure_admin()
+    token = trusted.csrf()
+
+    evil = trusted.post(
+        f"{REPORT}/repair", json={**REPAIR_BODY, "csrf_token": token}, headers={"Origin": "http://evil.test"}
+    )
+    assert evil.status_code == 403, evil.text
+    assert evil.json() == {"detail": "Origin not allowed."}
+
+    allowed = trusted.post(f"{REPORT}/repair", json={**REPAIR_BODY, "csrf_token": token})
+    assert allowed.status_code == 400, allowed.text
+    assert "confirm=true" in allowed.json()["detail"]

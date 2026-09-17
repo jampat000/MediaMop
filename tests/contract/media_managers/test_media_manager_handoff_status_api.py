@@ -136,8 +136,14 @@ def _seed(
                 "status": file_status,
                 **file_fields,
             }
+            # An upsert: a server may already hold a Files row for a handed-over file that exists on disk
+            # (the .NET server records its size on receipt, #531).
+            updates = ", ".join(
+                f"{name} = excluded.{name}" for name in columns if name not in ("library_id", "relative_path")
+            )
             conn.execute(
-                f"INSERT INTO refiner_files ({', '.join(columns)}) VALUES ({', '.join('?' for _ in columns)})",
+                f"INSERT INTO refiner_files ({', '.join(columns)}) VALUES ({', '.join('?' for _ in columns)}) "
+                f"ON CONFLICT (library_id, relative_path) DO UPDATE SET {updates}",
                 tuple(columns.values()),
             )
 
@@ -203,6 +209,29 @@ def test_a_pending_retry_is_scheduled_for_when_it_will_run(server: ServerUnderTe
         job_status="completed",
         file_status="processing_failed",
         next_retry_at=seed.utc_text(retry_at),
+        status_reason="ffmpeg died.",
+    )
+    body = _status(server, hid)
+    assert body["state"] == "scheduled"
+    assert body["scheduledFor"].startswith(retry_at.strftime("%Y-%m-%dT%H:%M"))
+
+
+@pytest.mark.backends(
+    "dotnet", reason="#531: the Python backend reports failed once the backoff ends, before the retry is queued"
+)
+def test_a_retry_still_owed_after_its_backoff_is_scheduled_not_failed(
+    server: ServerUnderTest, movies: LibraryFolders
+) -> None:
+    hid = _new_id()
+    _hand_off(server, hid, movies.watched / hid / "film.mkv")
+    retry_at = datetime.now(UTC) - timedelta(minutes=5)
+    _seed(
+        server,
+        hid,
+        job_status="completed",
+        file_status="processing_failed",
+        next_retry_at=seed.utc_text(retry_at),
+        failure_attempts=1,
         status_reason="ffmpeg died.",
     )
     body = _status(server, hid)

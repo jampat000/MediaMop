@@ -60,6 +60,16 @@ public sealed class UnitOfWork : IAsyncDisposable
         _transaction = Connection.BeginTransaction(IsolationLevel.Serializable, deferred: false);
     }
 
+    /// <summary>
+    /// The write transaction, begun now if this unit of work has not written yet: for code that issues its own
+    /// commands on <see cref="Connection"/> as part of this unit of work (the job queue's enqueue).
+    /// </summary>
+    public SqliteTransaction WriteTransaction()
+    {
+        EnsureTransaction();
+        return _transaction!;
+    }
+
     public async Task<int> ExecuteAsync(string sql, params (string Name, object? Value)[] parameters)
     {
         EnsureTransaction();

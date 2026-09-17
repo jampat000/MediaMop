@@ -10,6 +10,7 @@ using Weir.Core.Metrics;
 using Weir.Infrastructure;
 using Weir.Infrastructure.Auth;
 using Weir.Infrastructure.Http;
+using Weir.Infrastructure.MediaManagers;
 using Weir.Infrastructure.Runtime;
 using Weir.Infrastructure.Scheduling;
 using Weir.Infrastructure.Settings;
@@ -35,6 +36,7 @@ public static class WeirApi
         services.AddSingleton<IReleaseCatalogClient, GitHubReleaseCatalogClient>();
         services.AddSingleton<IExternalJsonPoster, ExternalJsonPoster>();
         services.AddSingleton<NotificationDispatcher>();
+        services.AddWeirMediaManagers(options);
 
         // Scheduled work, hosted with the jobs (AddWeirJobs) by PeriodicTaskService.
         services.AddSingleton<SessionCleanupTask>();
@@ -88,6 +90,8 @@ public static class WeirApi
             endpoints.MapMetricsEndpoint();
             endpoints.MapAuthEndpoints();
             endpoints.MapSuiteEndpoints();
+            endpoints.MapReconciliationEndpoints();
+            endpoints.MapMediaManagerEndpoints();
             endpoints.MapNotificationEndpoints();
             endpoints.MapActivityEndpoints();
             var routes = endpoints.ServiceProvider.GetRequiredService<RouteTable>();

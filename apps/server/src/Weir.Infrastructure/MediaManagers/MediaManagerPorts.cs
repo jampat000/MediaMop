@@ -1,0 +1,170 @@
+using System.Globalization;
+using Weir.Core.Configuration;
+using Weir.Core.Json;
+using Weir.Core.MediaManagers;
+
+namespace Weir.Infrastructure.MediaManagers;
+
+/// <summary><c>port_for_kind</c>: the outbound dialect for a kind, or null for a kind Weir does not know.</summary>
+public interface IMediaManagerPorts
+{
+    IMediaManagerPort? PortForKind(string? kind);
+}
+
+/// <summary>The four ports over HTTP (port of <c>manager_dialects._PORTS</c>).</summary>
+public sealed class HttpMediaManagerPorts : IMediaManagerPorts
+{
+    private readonly IManagerHttpHandlerFactory _handlers;
+
+    public HttpMediaManagerPorts(IManagerHttpHandlerFactory handlers)
+    {
+        _handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
+    }
+
+    public IMediaManagerPort? PortForKind(string? kind) =>
+        ManagerKindProfiles.ForKind(kind) is { } profile ? new HttpMediaManagerPort(profile, _handlers) : null;
+
+    /// <summary>
+    /// <c>environment_connection_for_scope</c>: the <c>WEIR_ARR_*</c> credentials that predate the connections table.
+    /// </summary>
+    public static ManagerConnection? EnvironmentConnectionForScope(WeirOptions options, string mediaScope)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        var (url, key, kind) = mediaScope == MediaManagerKinds.Tv
+            ? (options.ArrSonarrBaseUrl, options.ArrSonarrApiKey, "sonarr")
+            : (options.ArrRadarrBaseUrl, options.ArrRadarrApiKey, "radarr");
+        return string.IsNullOrEmpty(url) || string.IsNullOrEmpty(key)
+            ? null
+            : new ManagerConnection(kind, "from environment", url, key);
+    }
+}
+
+/// <summary><c>ArrV3ManagerPort</c> and <c>ExternalIntegrationManagerPort</c>, chosen by the kind's profile.</summary>
+public sealed class HttpMediaManagerPort : IMediaManagerPort
+{
+    private readonly ManagerKindProfile _profile;
+    private readonly IManagerHttpHandlerFactory _handlers;
+
+    public HttpMediaManagerPort(ManagerKindProfile profile, IManagerHttpHandlerFactory handlers)
+    {
+        _profile = profile ?? throw new ArgumentNullException(nameof(profile));
+        _handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
+    }
+
+    public string Kind => _profile.Kind;
+
+    public ManagerCapabilities Capabilities() => _profile.Capabilities;
+
+    public async Task<ManagerDescription> DescribeAsync(ManagerConnection connection, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        var capabilities = Capabilities();
+        var path = _profile.IsArr ? "/api/v3/rootfolder" : ManagerDialectRules.ExternalManifestPath;
+        PyJson? payload;
+        try
+        {
+            payload = await Client(connection, ManagerDialectRules.DescribeTimeout).GetJsonAsync(path, cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is MediaManagerHttpException or MediaManagerUnreachableException)
+        {
+            return new ManagerDescription(
+                connection,
+                SignalStatus.Unreachable,
+                capabilities,
+                [],
+                [],
+                ManagerDialectRules.Unreachable(connection, exception, _profile.IsArr ? "which folders it manages" : "what it manages"),
+                new SortedSet<string>(StringComparer.Ordinal));
+        }
+
+        if (!_profile.IsArr)
+        {
+            return ManagerDialectRules.ExternalDescription(connection, capabilities, payload);
+        }
+
+        var (roots, libraries) = ManagerDialectRules.ArrRootFolders(payload, _profile.ArrScope!);
+        return new ManagerDescription(connection, SignalStatus.Reported, capabilities, roots, libraries, AdvertisedCapabilities: new SortedSet<string>(StringComparer.Ordinal));
+    }
+
+    public async Task<ManagerQueueSignal> QueueRowsAsync(ManagerConnection connection, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        PyJson? payload;
+        try
+        {
+            var client = Client(connection, ManagerDialectRules.QueueTimeout);
+            payload = _profile.IsArr
+                ? await client.GetJsonAsync("/api/v3/queue", [new("pageSize", ManagerDialectRules.ArrQueuePageSize)], cancellationToken).ConfigureAwait(false)
+                : await client.GetJsonAsync(ManagerDialectRules.ExternalQueuePath, cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is MediaManagerHttpException or MediaManagerUnreachableException)
+        {
+            return new ManagerQueueSignal(connection, SignalStatus.Unreachable, [], ManagerDialectRules.Unreachable(connection, exception, "what it is importing"));
+        }
+
+        if (_profile.IsArr)
+        {
+            return new ManagerQueueSignal(connection, SignalStatus.Reported, ManagerDialectRules.ArrQueueRows(payload, _profile.ArrScope!));
+        }
+
+        var rows = ManagerDialectRules.ExternalQueueEntries(payload)
+            .Select(ManagerDialectRules.ExternalQueueRow)
+            .OfType<ManagerQueueRow>()
+            .ToList();
+        return new ManagerQueueSignal(connection, SignalStatus.Reported, rows);
+    }
+
+    public async Task RemoveQueueItemAsync(ManagerConnection connection, PyDict row, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        ArgumentNullException.ThrowIfNull(row);
+        if (!_profile.IsArr)
+        {
+            throw new MediaManagerHttpException(
+                $"{connection.Label} takes a rejection through its hand-off report, not by removing a queue item.");
+        }
+
+        var queueId = PyValues.FirstNumber(row, "id")
+            ?? throw new MediaManagerHttpException($"{connection.Label}'s queue item has no id.");
+        await Client(connection, ManagerDialectRules.QueueTimeout).DeleteAsync(
+            $"/api/v3/queue/{queueId.ToString(CultureInfo.InvariantCulture)}",
+            [new("removeFromClient", true), new("blocklist", true)],
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<ManagerLibraryTruth> LibraryTruthAsync(ManagerConnection connection, string mediaScope, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        if (!_profile.IsArr)
+        {
+            return new ManagerLibraryTruth(
+                connection,
+                SignalStatus.NoSignal,
+                [],
+                $"{connection.Label} tells Weir what it manages and what it is importing, but not which " +
+                "individual files it still keeps, so it cannot clear a folder for deletion.");
+        }
+
+        if (mediaScope != _profile.ArrScope)
+        {
+            return new ManagerLibraryTruth(connection, SignalStatus.NoSignal, [], $"{connection.Label} does not look after this kind of library.");
+        }
+
+        PyJson? payload;
+        try
+        {
+            payload = await Client(connection, ManagerDialectRules.LibraryTimeout)
+                .GetJsonAsync(_profile.ArrLibraryPath!, [new("pageSize", ManagerDialectRules.ArrLibraryPageSize)], cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is MediaManagerHttpException or MediaManagerUnreachableException)
+        {
+            return new ManagerLibraryTruth(connection, SignalStatus.Unreachable, [], ManagerDialectRules.Unreachable(connection, exception, "which files it still keeps"));
+        }
+
+        return new ManagerLibraryTruth(connection, SignalStatus.Reported, ManagerDialectRules.ArrLibraryFilePaths(payload, _profile.ArrFileKey));
+    }
+
+    private MediaManagerHttpClient Client(ManagerConnection connection, TimeSpan timeout) =>
+        new(connection.BaseUrl, connection.ApiKey, _handlers, timeout);
+}
