@@ -12,7 +12,7 @@ public sealed record SchemaMigration(int Number, string Revision, string Resourc
 /// <summary>Why the database could not be used, mirroring the Python <c>DatabaseSchemaMismatch.kind</c> values where they apply.</summary>
 public enum SchemaMismatchKind
 {
-    /// <summary>Tables exist but no revision is recorded.</summary>
+    /// <summary>The file exists but no revision is recorded (including an empty file).</summary>
     Unversioned,
 
     /// <summary>A revision this build has never heard of (probably a newer release).</summary>
@@ -54,7 +54,7 @@ public sealed class DatabaseSchemaMismatchException : Exception
 /// <summary>What startup did to the database.</summary>
 public enum SchemaStartupOutcome
 {
-    /// <summary>The file was new or empty; the schema was created and seeded.</summary>
+    /// <summary>The file did not exist; the schema was created and seeded.</summary>
     Created,
 
     /// <summary>The database was already at this build's revision (created by Alembic or by an earlier .NET start); nothing was written.</summary>
@@ -74,8 +74,9 @@ public enum SchemaStartupOutcome
 /// after the switch (#523) new migrations continue Alembic's numbering (<c>0037_…</c>).
 /// </para>
 /// <para>
-/// <b>On startup:</b> an empty database is created at head; a database whose recorded revision is
-/// head is adopted unchanged; anything else is refused with a message and no change. Python would
+/// <b>On startup:</b> a missing database file is created at head; a database whose recorded revision is
+/// head is adopted unchanged; anything else, including an existing file with no schema, is refused
+/// with a message and no change. Python would
 /// upgrade a known older revision in place by running Alembic, which this build cannot do.
 /// </para>
 /// </remarks>
@@ -140,10 +141,24 @@ public sealed class SchemaMigrator
 
     public SchemaStartupOutcome EnsureAtHead()
     {
+        // Only a missing file is a new install. A file that exists but holds no schema was made by
+        // something else (or by a start that failed half-way); Python refuses it as unversioned, and so
+        // does this build, without opening it (opening would switch it to WAL).
+        var existed = File.Exists(_database.DatabasePath);
+        if (existed && new FileInfo(_database.DatabasePath).Length == 0)
+        {
+            throw UnversionedError();
+        }
+
         using var connection = _database.Open();
         var userObjects = ScalarLong(connection, "SELECT COUNT(*) FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'");
         if (userObjects == 0)
         {
+            if (existed)
+            {
+                throw UnversionedError();
+            }
+
             ApplyAll(connection);
             return SchemaStartupOutcome.Created;
         }
@@ -227,12 +242,7 @@ public sealed class SchemaMigrator
 
         return revisions.Count switch
         {
-            0 => throw new DatabaseSchemaMismatchException(
-                "No Alembic revision is recorded for this database (migrations have not been applied). " +
-                $"This build requires schema revision {Quote(HeadRevision)}. " +
-                "Weir only opens a database that Weir created: point WEIR_DB_PATH at the right file, " +
-                "restore a backup, or move this file aside so Weir creates a new one.",
-                SchemaMismatchKind.Unversioned),
+            0 => throw UnversionedError(),
             1 => revisions[0],
             _ => throw new DatabaseSchemaMismatchException(
                 $"Database records several schema revisions ({string.Join(", ", revisions.Select(Quote))}); " +
@@ -240,6 +250,14 @@ public sealed class SchemaMigrator
                 SchemaMismatchKind.Incompatible),
         };
     }
+
+    /// <summary>Python's <c>kind="unversioned"</c> refusal, with this build's advice instead of Alembic's.</summary>
+    private static DatabaseSchemaMismatchException UnversionedError() => new(
+        "No Alembic revision is recorded for this database (migrations have not been applied). " +
+        $"This build requires schema revision {Quote(HeadRevision)}. " +
+        "Weir only opens a database that Weir created: point WEIR_DB_PATH at the right file, " +
+        "restore a backup, or move this file aside so Weir creates a new one.",
+        SchemaMismatchKind.Unversioned);
 
     private static long ScalarLong(SqliteConnection connection, string sql)
     {

@@ -35,12 +35,22 @@ The end of every run prints a pass/fail line per area.
 
 ### Against .NET
 
-`WEIR_CONTRACT_SERVER=dotnet` runs `dotnet run --project apps/server/src/Weir.Host --no-build -- --urls
-http://127.0.0.1:<port>` (build it first), or the executable in `WEIR_CONTRACT_DOTNET_EXE`, with the same
+`WEIR_CONTRACT_SERVER=dotnet` runs `dotnet run --project apps/server/src/Weir.Host --no-build -- --host
+127.0.0.1 --port <port>` (build it first), or the executable in `WEIR_CONTRACT_DOTNET_EXE`, with the same
 environment the Python server gets (`WEIR_HOME`, `WEIR_*` settings, plus `ASPNETCORE_URLS`). The server
 must answer `GET /health` and `GET /ready` with `{"ready": true}` once it can take requests, and must
 create or migrate its own database on start. Until `apps/server` exists every test is skipped with that
 reason.
+
+A test that describes behaviour only one backend has on purpose is marked with the server kinds it
+applies to, and is skipped with the reason on the others:
+
+```python
+@pytest.mark.backends("python", reason="the .NET server only opens databases at the current schema head (ADR-0017)")
+def test_api_startup_auto_upgrades_known_behind_revision_to_head(...): ...
+```
+
+Use it only for a decision recorded in an ADR or issue, never to hide a port that is not finished.
 
 Areas are listed in [`areas.json`](areas.json). Each has a `required` list: when an area's port issue
 is done, add `"dotnet"` to it, and the CI `contract` job's .NET run (`--contract-required-only`) starts

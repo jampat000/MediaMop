@@ -87,6 +87,47 @@ public sealed class SchemaMigratorTests
         Assert.Equal(1, SchemaSnapshot.ScalarLong(path, "SELECT COUNT(*) FROM sqlite_master"));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void An_existing_file_without_a_schema_is_refused_and_left_empty(bool zeroBytes)
+    {
+        // Python refuses any unversioned database; only a missing file is a new install.
+        using var temp = new TempDirectory();
+        var path = temp.Join("weir.sqlite3");
+        if (zeroBytes)
+        {
+            File.WriteAllBytes(path, []);
+        }
+        else
+        {
+            SchemaSnapshot.Execute(path, "PRAGMA user_version = 0; VACUUM;");
+        }
+
+        var error = Assert.Throws<DatabaseSchemaMismatchException>(() => new SchemaMigrator(new SqliteDatabase(path)).EnsureAtHead());
+        SqliteConnection.ClearAllPools();
+
+        Assert.Equal(SchemaMismatchKind.Unversioned, error.Kind);
+        Assert.StartsWith("No Alembic revision is recorded for this database", error.Message, StringComparison.Ordinal);
+        Assert.Equal(0, SchemaSnapshot.ScalarLong(path, "SELECT COUNT(*) FROM sqlite_master"));
+        if (zeroBytes)
+        {
+            Assert.False(File.Exists(path + "-wal"));
+        }
+    }
+
+    [Fact]
+    public void A_missing_file_is_created_at_head()
+    {
+        using var temp = new TempDirectory();
+        var path = temp.Join("weir.sqlite3");
+
+        Assert.Equal(SchemaStartupOutcome.Created, new SchemaMigrator(new SqliteDatabase(path)).EnsureAtHead());
+        SqliteConnection.ClearAllPools();
+
+        Assert.Equal(1, SchemaSnapshot.ScalarLong(path, "SELECT COUNT(*) FROM alembic_version"));
+    }
+
     [Fact]
     public void An_empty_version_table_is_unversioned_and_several_rows_are_incompatible()
     {

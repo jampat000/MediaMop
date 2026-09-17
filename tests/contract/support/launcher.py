@@ -6,7 +6,7 @@ and reads the SQLite file only while the server is stopped. Which server runs is
 
 - ``python`` (default): ``alembic upgrade head`` then ``uvicorn weir.api.main:app``, the same way
   the E2E harness starts it (``tests/e2e/weir/conftest.py``).
-- ``dotnet``: ``dotnet run --project apps/server/src/Weir.Host --no-build``, or the published
+- ``dotnet``: ``dotnet run --project apps/server/src/Weir.Host --no-build -- --host 127.0.0.1 --port N``, or the published
   executable named by ``WEIR_CONTRACT_DOTNET_EXE``. The .NET server owns its own migrations, so
   "migrate" for it means one start-and-stop.
 
@@ -191,7 +191,8 @@ class ServerUnderTest:
         if reason is not None:
             raise RuntimeError(reason)
         exe = (os.environ.get("WEIR_CONTRACT_DOTNET_EXE") or "").strip()
-        urls = ["--urls", self.base_url]
+        # The .NET host listens where --host/--port say (ServerListenOptions); it ignores --urls.
+        urls = ["--host", "127.0.0.1", "--port", str(self.port)]
         if exe:
             return [exe, *urls], Path(exe).parent
         return ["dotnet", "run", "--project", str(DOTNET_PROJECT), "--no-build", "--", *urls], REPO_ROOT
