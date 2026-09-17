@@ -89,6 +89,7 @@ public static class WeirApi
             endpoints.MapAuthEndpoints();
             endpoints.MapSuiteEndpoints();
             endpoints.MapNotificationEndpoints();
+            endpoints.MapActivityEndpoints();
             var routes = endpoints.ServiceProvider.GetRequiredService<RouteTable>();
             routes.Add("/", [HttpMethods.Get], "/");
             routes.Add("/index.html", [HttpMethods.Get], "/index.html");

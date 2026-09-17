@@ -76,6 +76,12 @@ The durable queue is the Python backend's `refiner_jobs` table, used the same wa
 
 Startup recovery also fixes #534: besides requeuing leased rows and removing `.partial` outputs, it removes the remux temp output of interrupted jobs, and any other remux temp output at the top of a library work folder. Only Weir's exact temp names (`{stem}.refiner.XXXXXXXX{suffix}` and the dry-run placeholder) are ever deleted.
 
+## Activity
+
+`Weir.Api/Endpoints/ActivityEndpoints` ports `weir.platform.activity.router`: `recent` (filters, `before_id` paging), `export` (CSV and JSON), `file-history` and its removal, and the `stream` of `activity.latest` frames. The SQL in `Weir.Infrastructure/Activity/ActivityHistoryStore` is the text SQLAlchemy compiles, so rows that tie on `created_at` come back in the same order; `ActivityHistoryStoreTests` compares the response and export bytes with the Python router on one database. Python quirks kept on purpose: with no filter the `total` is the page size (the count loses its `FROM`), and `file-history` removal deletes processing records for the path without the library's null fallback that Activity events get.
+
+Writers never notify listeners directly. `SqliteActivityWriter` records the ids it wrote on the unit of work or raw transaction, and `ActivityNotifications` tells the database's `ActivityLatestNotifier` after the commit (a rollback tells nobody). Code that commits its own raw transaction after `SqliteActivityWriter.Record` calls `ActivityNotifications.TransactionCommitted`, as `RefinerJobStore.InTransactionAsync` does. `RefinerFileLogRetentionTask` prunes processing records hourly by `file_log_retention_days`.
+
 ## Publish
 
 Self-contained single-file builds for `win-x64`, `linux-x64` and `linux-arm64`:

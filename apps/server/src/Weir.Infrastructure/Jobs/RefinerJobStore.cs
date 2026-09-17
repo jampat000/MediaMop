@@ -390,6 +390,7 @@ public sealed class RefinerJobStore
             {
                 var result = work(connection, transaction);
                 await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+                Activity.ActivityNotifications.TransactionCommitted(_database, transaction);
                 return result;
             }
         }

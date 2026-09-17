@@ -529,6 +529,7 @@ public static class WeirJobs
         services.AddSingleton<JobsStartupRecoveryService>();
         services.AddHostedService(sp => sp.GetRequiredService<JobsStartupRecoveryService>());
         services.AddSingleton<IPeriodicTask, JobRowsRetentionTask>();
+        services.AddSingleton<IPeriodicTask, RefinerFileLogRetentionTask>();
         services.AddWeirPeriodicTasks();
         services.AddHostedService<PeriodicEnqueueService>();
         if (options.RefinerWorkerCount > 0)

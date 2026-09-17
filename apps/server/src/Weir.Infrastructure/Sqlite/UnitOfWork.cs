@@ -14,21 +14,39 @@ namespace Weir.Infrastructure.Sqlite;
 public sealed class UnitOfWork : IAsyncDisposable
 {
     private SqliteTransaction? _transaction;
+    private List<Action>? _afterCommit;
+    private Dictionary<string, object>? _items;
 
-    private UnitOfWork(SqliteConnection connection)
+    private UnitOfWork(SqliteDatabase database, SqliteConnection connection)
     {
+        Database = database;
         Connection = connection;
     }
+
+    public SqliteDatabase Database { get; }
 
     public SqliteConnection Connection { get; }
 
     public bool InTransaction => _transaction is not null;
 
+    /// <summary>Per-unit state for writers (SQLAlchemy's <c>session.info</c>); cleared when the unit commits or rolls back.</summary>
+    public IDictionary<string, object> Items => _items ??= new Dictionary<string, object>(StringComparer.Ordinal);
+
     public static async Task<UnitOfWork> OpenAsync(SqliteDatabase database, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(database);
         var connection = await database.OpenAsync(cancellationToken).ConfigureAwait(false);
-        return new UnitOfWork(connection);
+        return new UnitOfWork(database, connection);
+    }
+
+    /// <summary>
+    /// Run <paramref name="callback"/> once, after the next successful commit (SQLAlchemy's <c>after_commit</c>
+    /// event); a rollback discards it.
+    /// </summary>
+    public void OnCommitted(Action callback)
+    {
+        ArgumentNullException.ThrowIfNull(callback);
+        (_afterCommit ??= []).Add(callback);
     }
 
     /// <summary><c>BEGIN IMMEDIATE</c> (the bootstrap lock). Must be the first statement of the transaction.</summary>
@@ -104,18 +122,26 @@ public sealed class UnitOfWork : IAsyncDisposable
 
     public async Task CommitAsync()
     {
-        if (_transaction is null)
+        if (_transaction is not null)
         {
-            return;
+            await _transaction.CommitAsync().ConfigureAwait(false);
+            await _transaction.DisposeAsync().ConfigureAwait(false);
+            _transaction = null;
         }
 
-        await _transaction.CommitAsync().ConfigureAwait(false);
-        await _transaction.DisposeAsync().ConfigureAwait(false);
-        _transaction = null;
+        var callbacks = _afterCommit;
+        _afterCommit = null;
+        _items = null;
+        foreach (var callback in callbacks ?? [])
+        {
+            callback();
+        }
     }
 
     public async Task RollbackAsync()
     {
+        _afterCommit = null;
+        _items = null;
         if (_transaction is null)
         {
             return;

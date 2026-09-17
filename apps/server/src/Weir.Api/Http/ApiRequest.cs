@@ -140,6 +140,20 @@ public sealed class ApiRequest : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Commit and close this request's database work now, for a response that outlives it (the Activity
+    /// stream must not hold a connection for its lifetime).
+    /// </summary>
+    public async Task ReleaseDbAsync()
+    {
+        if (_uow is not null)
+        {
+            await _uow.CommitAsync().ConfigureAwait(false);
+            await _uow.DisposeAsync().ConfigureAwait(false);
+            _uow = null;
+        }
+    }
+
     /// <summary><c>current_raw_session_token</c>.</summary>
     public string? RawSessionToken
     {
