@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Weir.Core.LibraryMode;
+using Weir.Infrastructure.Refiner;
 using Weir.Infrastructure.Refiner.RemuxPass;
 
 namespace Weir.Infrastructure.LibraryMode;
@@ -85,13 +86,15 @@ public sealed class SafeSwap
     private readonly ISwapJournal _journal;
     private readonly ISwapOutputValidator _validator;
     private readonly ILogger _logger;
+    private readonly IOutputOwnership? _ownership;
 
-    public SafeSwap(ISwapFileSystem files, ISwapJournal journal, ISwapOutputValidator validator, ILogger<SafeSwap> logger)
+    public SafeSwap(ISwapFileSystem files, ISwapJournal journal, ISwapOutputValidator validator, ILogger<SafeSwap> logger, IOutputOwnership? ownership = null)
     {
         _files = files;
         _journal = journal;
         _validator = validator;
         _logger = logger;
+        _ownership = ownership;
     }
 
     /// <summary>The checks made before any work, without changing anything. A scan can show the refusal reasons.</summary>
@@ -274,6 +277,9 @@ public sealed class SafeSwap
 
             stage = "putting the cleaned copy in place";
             _files.Move(temp, originalPath);
+            // #555: the swapped-in file is a fresh name (the rename above), so it needs the output-ownership
+            // policy applied like any other file Weir just published; never fails the swap.
+            _ownership?.ApplyToFile(originalPath);
         }
         catch (OperationCanceledException)
         {

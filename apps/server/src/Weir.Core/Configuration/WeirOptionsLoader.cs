@@ -97,6 +97,12 @@ public static class WeirOptionsLoader
         var remuxRoot = (runtime.Get("WEIR_REFINER_REMUX_MEDIA_ROOT") ?? string.Empty).Trim();
         var webDist = (runtime.Get("WEIR_WEB_DIST") ?? string.Empty).Trim();
 
+        var outputOwnershipChown = EnvBool(runtime, "WEIR_CHOWN_OUTPUT", false);
+        var outputOwnershipUid = (uint)Math.Max(0, FirstEnvInt(runtime, 1000, "WEIR_PUID", "PUID"));
+        var outputOwnershipGid = (uint)Math.Max(0, FirstEnvInt(runtime, 1000, "WEIR_PGID", "PGID"));
+        var outputFileMode = ParseOctalMode(runtime.Get("WEIR_FILE_MODE_OUTPUT"), "WEIR_FILE_MODE_OUTPUT");
+        var outputDirMode = ParseOctalMode(runtime.Get("WEIR_DIR_MODE_OUTPUT"), "WEIR_DIR_MODE_OUTPUT");
+
         return new WeirOptions
         {
             Env = env,
@@ -171,6 +177,11 @@ public static class WeirOptionsLoader
             WebDist = webDist.Length == 0 ? null : PythonCompat.Resolve(PythonCompat.ExpandUser(webDist, runtime), runtime),
             VersionOverride = NullIfEmpty(runtime.Get("WEIR_VERSION")?.Trim()),
             RuntimeKind = runtime.Get("WEIR_RUNTIME"),
+            OutputOwnershipChownEnabled = outputOwnershipChown,
+            OutputOwnershipUid = outputOwnershipUid,
+            OutputOwnershipGid = outputOwnershipGid,
+            OutputOwnershipFileMode = outputFileMode,
+            OutputOwnershipDirectoryMode = outputDirMode,
         };
     }
 
@@ -259,6 +270,43 @@ public static class WeirOptionsLoader
     {
         var raw = (runtime.Get(name) ?? string.Empty).Trim();
         return raw.Length > 0 && PythonCompat.TryParseInt(raw, out var value) ? value : defaultValue;
+    }
+
+    /// <summary>The first of <paramref name="names"/> that is set to a non-blank, parseable integer; <paramref name="defaultValue"/> otherwise.</summary>
+    internal static long FirstEnvInt(RuntimeEnvironment runtime, long defaultValue, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            var raw = (runtime.Get(name) ?? string.Empty).Trim();
+            if (raw.Length > 0 && PythonCompat.TryParseInt(raw, out var value))
+            {
+                return value;
+            }
+        }
+
+        return defaultValue;
+    }
+
+    /// <summary>
+    /// #555: an octal file/directory mode such as <c>664</c>, <c>775</c> or the setuid/setgid/sticky 4-digit form
+    /// <c>2775</c>. <see langword="null"/> when unset; a set but malformed value refuses to start, as
+    /// <see cref="CorsWildcardMessage"/> does for <c>WEIR_CORS_ORIGINS</c> — an operator should see this at startup,
+    /// not have it silently ignored, since a mode Weir cannot parse is a mode it cannot apply.
+    /// </summary>
+    internal static UnixFileMode? ParseOctalMode(string? raw, string name)
+    {
+        var value = (raw ?? string.Empty).Trim();
+        if (value.Length == 0)
+        {
+            return null;
+        }
+
+        if (value.Length is not (3 or 4) || value.Any(ch => ch is < '0' or > '7'))
+        {
+            throw new WeirConfigurationException($"{name} must be an octal file mode such as 664 or 775.");
+        }
+
+        return (UnixFileMode)Convert.ToInt32(value, 8);
     }
 
     private static string HttpUrlOrEmpty(string? raw)

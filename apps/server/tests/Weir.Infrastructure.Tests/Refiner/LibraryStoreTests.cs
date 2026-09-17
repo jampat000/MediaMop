@@ -187,6 +187,96 @@ public sealed class LibraryStoreTests
     }
 
     [Fact]
+    public async Task Creating_and_updating_a_rule_set_round_trips_every_495_497_498_field()
+    {
+        using var db = new JobsTestDatabase();
+        await using var uow = await UnitOfWork.OpenAsync(db.Database);
+        var overrides = new Weir.Core.Rules.TrackNameOverrides
+        {
+            Forced = "{language} (Forced)",
+            HearingImpaired = "{language} (SDH)",
+            Commentary = "{language} (Commentary)",
+            AudioDescription = "{language} (AD)",
+        };
+        var input = new Weir.Core.Refiner.LibraryRules.RuleSetInput
+        {
+            Name = "Round trip",
+            RemoveHearingImpairedSubs = true,
+            AudioKeepMode = Weir.Core.Rules.RemuxRuleValues.AudioKeepModePerLanguage,
+            SubtitleMaxPerLanguage = 3,
+            SubtitleQualityStrategy = Weir.Core.Rules.RemuxRuleValues.SubtitleStrategyImageFirst,
+            StandardizeTrackNames = true,
+            TrackNameTemplate = "{language} {channels} {codec}",
+            TrackNameOverrides = overrides,
+            ClearVideoTrackNames = true,
+            RemoveChapters = true,
+        };
+
+        var created = await LibraryStore.CreateRuleSetAsync(uow, input);
+        var reloadedAfterCreate = await LibraryStore.GetRuleSetAsync(uow, created.Id);
+
+        foreach (var row in new[] { created, reloadedAfterCreate })
+        {
+            Assert.True(row!.RemoveHearingImpairedSubs);
+            Assert.Equal(Weir.Core.Rules.RemuxRuleValues.AudioKeepModePerLanguage, row.AudioKeepMode);
+            Assert.Equal(3, row.SubtitleMaxPerLanguage);
+            Assert.Equal(Weir.Core.Rules.RemuxRuleValues.SubtitleStrategyImageFirst, row.SubtitleQualityStrategy);
+            Assert.True(row.StandardizeTrackNames);
+            Assert.Equal("{language} {channels} {codec}", row.TrackNameTemplate);
+            Assert.Equal(overrides, row.TrackNameOverrides);
+            Assert.True(row.ClearVideoTrackNames);
+            Assert.True(row.RemoveChapters);
+        }
+
+        // The plain sorter list (filled from the default preset, same as any other new rule set)
+        // survives the same round trip, unaffected by packing the new fields alongside it in the
+        // same column.
+        Assert.False(string.IsNullOrWhiteSpace(reloadedAfterCreate!.SubtitleSortersJson));
+        Assert.Equal(created.SubtitleSortersJson, reloadedAfterCreate.SubtitleSortersJson);
+
+        var updated = await LibraryStore.UpdateRuleSetAsync(
+            uow,
+            created,
+            input with { RemoveHearingImpairedSubs = false, AudioKeepMode = Weir.Core.Rules.RemuxRuleValues.AudioKeepModeSingle, SubtitleMaxPerLanguage = 0 });
+        var reloadedAfterUpdate = await LibraryStore.GetRuleSetAsync(uow, created.Id);
+
+        Assert.False(updated.RemoveHearingImpairedSubs);
+        Assert.Equal(Weir.Core.Rules.RemuxRuleValues.AudioKeepModeSingle, updated.AudioKeepMode);
+        Assert.Equal(0, updated.SubtitleMaxPerLanguage);
+        Assert.False(reloadedAfterUpdate!.RemoveHearingImpairedSubs);
+        // Untouched-by-the-update fields (#498) survive the update too.
+        Assert.True(reloadedAfterUpdate.StandardizeTrackNames);
+        Assert.Equal(overrides, reloadedAfterUpdate.TrackNameOverrides);
+    }
+
+    [Fact]
+    public async Task A_pre_495_497_498_row_with_a_plain_sorter_array_column_reads_back_every_new_field_at_its_default()
+    {
+        using var db = new JobsTestDatabase();
+        await using var uow = await UnitOfWork.OpenAsync(db.Database);
+        var created = await LibraryStore.CreateRuleSetAsync(uow, new Weir.Core.Refiner.LibraryRules.RuleSetInput { Name = "Legacy row" });
+        await uow.CommitAsync(); // release the write lock before the raw connection below takes it
+
+        // Simulate a row written before #495/#497/#498 existed: subtitle_sorters_json holds only the
+        // plain sorter array this column has always stored, never the extras envelope.
+        const string legacySorters = """[{"field":"forced","value":null,"reversed":false}]""";
+        db.Execute("UPDATE refiner_rule_sets SET subtitle_sorters_json = @json WHERE id = @id", ("@json", legacySorters), ("@id", created.Id));
+
+        var reloaded = await LibraryStore.GetRuleSetAsync(uow, created.Id);
+
+        Assert.Equal(legacySorters, reloaded!.SubtitleSortersJson);
+        Assert.False(reloaded.RemoveHearingImpairedSubs);
+        Assert.Equal(Weir.Core.Rules.RemuxRuleValues.AudioKeepModeSingle, reloaded.AudioKeepMode);
+        Assert.Equal(0, reloaded.SubtitleMaxPerLanguage);
+        Assert.Equal(Weir.Core.Rules.RemuxRuleValues.SubtitleStrategyTextFirst, reloaded.SubtitleQualityStrategy);
+        Assert.False(reloaded.StandardizeTrackNames);
+        Assert.Equal(Weir.Core.Rules.TrackNaming.DefaultTemplate, reloaded.TrackNameTemplate);
+        Assert.Equal(new Weir.Core.Rules.TrackNameOverrides(), reloaded.TrackNameOverrides);
+        Assert.False(reloaded.ClearVideoTrackNames);
+        Assert.False(reloaded.RemoveChapters);
+    }
+
+    [Fact]
     public async Task Active_job_count_matches_the_library_id_carried_in_the_payload()
     {
         using var db = new JobsTestDatabase();

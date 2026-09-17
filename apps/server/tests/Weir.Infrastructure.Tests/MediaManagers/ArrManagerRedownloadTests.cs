@@ -140,6 +140,18 @@ public sealed class ArrManagerRedownloadTests
         Assert.Contains("download it again yourself", ManagerRedownloadRules.NoManagerMessage, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>#551: can_redownload needs both a supported kind and #551's own scan match (connection + title id).</summary>
+    [Fact]
+    public void Can_redownload_needs_a_supported_kind_and_a_scan_match()
+    {
+        Assert.True(ManagerRedownloadRules.CanRedownload("radarr", 1, "7"));
+        Assert.True(ManagerRedownloadRules.CanRedownload("sonarr", 1, "12"));
+        Assert.False(ManagerRedownloadRules.CanRedownload("deluno", 1, "7"));
+        Assert.False(ManagerRedownloadRules.CanRedownload("radarr", null, "7"));
+        Assert.False(ManagerRedownloadRules.CanRedownload("radarr", 1, null));
+        Assert.False(ManagerRedownloadRules.CanRedownload(null, null, null));
+    }
+
     [Fact]
     public void The_confirmation_states_the_file_is_replaced_before_a_replacement_exists_and_is_not_guaranteed()
     {

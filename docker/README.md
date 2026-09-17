@@ -73,11 +73,23 @@ docker run --rm \
   ghcr.io/jampat000/weir:latest
 ```
 
-`WEIR_CHOWN_WATCHED`, `WEIR_CHOWN_TEMP`, `WEIR_CHOWN_OUTPUT` and `WEIR_DIR_MODE_*` are still
-validated, so a typo stops the container, but they are **not applied**: the entrypoint logs a
-line and ignores them. They used to recursively chown the Refiner folders stored in the old
-path settings table, which went away when folders moved onto libraries (#363), so they had
-already stopped changing anything before the move to .NET. Fix ownership on the host instead.
+### Output ownership (#555)
+
+`WEIR_CHOWN_OUTPUT`, `WEIR_FILE_MODE_OUTPUT` (a file mode, not just a directory mode) and
+`WEIR_DIR_MODE_OUTPUT` are read at startup by the .NET server itself (validated then, with a
+clear error for a malformed octal mode) and applied in-process to each output file or folder
+right after Weir writes or creates it — see `apps/server/README.md`, "Output ownership (#555)".
+This is a narrower, directly-applied replacement for the old Refiner path-ownership sweep, which
+recursively chowned folders read from a path settings table that went away when folders moved
+onto libraries (#363), so it had already stopped changing anything before the move to .NET.
+
+`WEIR_CHOWN_WATCHED`/`WEIR_CHOWN_TEMP`/`WEIR_DIR_MODE_WATCHED`/`WEIR_DIR_MODE_TEMP` have no .NET
+equivalent: the watched and work folders are never Weir's own output, so there is nothing for a
+"just wrote this" hook to apply them to. They are still validated, so a typo stops the container,
+but the entrypoint logs a line and ignores them. Fix ownership on the host instead.
+
+`WEIR_PUID`/`PGID` still choose the container's own runtime user as described above; only the
+output-folder policy is applied differently.
 
 ## Health
 

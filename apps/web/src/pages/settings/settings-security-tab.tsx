@@ -519,7 +519,7 @@ export function SettingsSecurityTab() {
           </label>
           <label className="block">
             <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-              New password
+              New password (min. 8 characters)
             </span>
             <div className="mt-1 flex flex-wrap gap-2">
               <input

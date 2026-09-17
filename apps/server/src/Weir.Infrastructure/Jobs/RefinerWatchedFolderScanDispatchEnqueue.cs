@@ -177,4 +177,32 @@ public static class RefinerWatchedFolderScanDispatchEnqueue
         await EnqueueScanDispatchJobAsync(uow, jobStore, enqueueRemuxJobs, "periodic", scope, library.Id).ConfigureAwait(false);
         return (true, null);
     }
+
+    /// <summary>
+    /// <c>enqueue_scan_for_library</c>: turn a settled burst of filesystem events — or a watcher overflow/
+    /// error, which asks for the same "look at this library again" scan — into one job. Identical to what
+    /// the periodic timer enqueues apart from <c>scan_trigger</c>, which is the whole design: there is one
+    /// admission implementation, and the watcher is not a second one. Used by
+    /// <c>RefinerWatchedFolderWatcherService</c>.
+    /// </summary>
+    public static async Task<(bool Inserted, string? Skip)> TryEnqueueForWatcherEventAsync(
+        UnitOfWork uow, RefinerJobStore jobStore, RefinerLibraryRecord library, bool enqueueRemuxJobs)
+    {
+        ArgumentNullException.ThrowIfNull(library);
+        var scope = RefinerMediaScopes.Normalize(library.MediaType);
+        if (await QueueHasActiveScanAsync(uow, scope, library.Id).ConfigureAwait(false))
+        {
+            // A queued scan will already look at this file. Adding another would mean two walks of the
+            // same tree for one arrival.
+            return (false, "active_scan_already_queued");
+        }
+
+        if (string.IsNullOrWhiteSpace(library.OutputFolder) && enqueueRemuxJobs)
+        {
+            return (false, "missing_output_for_live_remux");
+        }
+
+        await EnqueueScanDispatchJobAsync(uow, jobStore, enqueueRemuxJobs, "filesystem_event", scope, library.Id).ConfigureAwait(false);
+        return (true, null);
+    }
 }

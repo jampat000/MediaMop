@@ -129,4 +129,82 @@ public sealed class RulesPreviewTests
         Assert.Null(RulesPreview.EstimateDroppedBytes(probe, plan, durationSeconds: null));
         Assert.Null(RulesPreview.EstimateDroppedBytes(probe, plan, durationSeconds: 0));
     }
+
+    /// <summary>
+    /// End to end for #495 (remove hearing-impaired subtitles), #496 (regional variants) and #497
+    /// (per_language audio) together: the original Japanese track and an English dub are both shown
+    /// kept, an English "(SDH)" subtitle is dropped outright, and of two French subtitles sharing the
+    /// bare "fre" tag, only the one named "VFQ" survives a rule that names "fre-CA" specifically.
+    /// </summary>
+    private const string PerLanguageVariantSdhFixture = """
+        {
+          "format": {"duration": "120.0"},
+          "streams": [
+            {"index": 0, "codec_type": "video", "codec_name": "h264", "width": 1920, "height": 1080},
+            {"index": 1, "codec_type": "audio", "codec_name": "dts", "channels": 6, "bit_rate": "1500000",
+             "tags": {"language": "jpn"}, "disposition": {"default": 1}},
+            {"index": 2, "codec_type": "audio", "codec_name": "aac", "channels": 2, "bit_rate": "128000",
+             "tags": {"language": "eng"}},
+            {"index": 3, "codec_type": "subtitle", "codec_name": "subrip", "tags": {"language": "eng", "title": "English (SDH)"}},
+            {"index": 4, "codec_type": "subtitle", "codec_name": "subrip", "tags": {"language": "fre", "title": "VFQ"}},
+            {"index": 5, "codec_type": "subtitle", "codec_name": "subrip", "tags": {"language": "fre", "title": "VFF"}}
+          ]
+        }
+        """;
+
+    private static (ProbeResult Probe, RemuxPlan Plan) PerLanguageVariantSdhPlan()
+    {
+        var probe = ProbeResult.Parse(PerLanguageVariantSdhFixture);
+        var (video, audio, subtitles) = RemuxRules.SplitStreams(probe);
+        var config = RemuxRules.DefaultConfig() with
+        {
+            PrimaryAudioLang = "jpn",
+            SecondaryAudioLang = "eng",
+            AudioKeepMode = RemuxRuleValues.AudioKeepModePerLanguage,
+            SubtitleMode = RemuxRuleValues.SubtitleModeKeepSelected,
+            SubtitleLangs = ["eng", "fre-CA"],
+            RemoveHearingImpairedSubs = true,
+        };
+        var plan = RemuxRules.PlanRemux(video, audio, subtitles, config);
+        Assert.NotNull(plan);
+        return (probe, plan!);
+    }
+
+    [Fact]
+    public void Per_language_mode_keeps_the_original_and_the_dub_and_both_rows_say_so()
+    {
+        var (probe, plan) = PerLanguageVariantSdhPlan();
+
+        var rows = RulesPreview.BuildTrackRows(probe, plan);
+
+        var japanese = rows.Single(r => r.Index == 1);
+        var english = rows.Single(r => r.Index == 2);
+        Assert.True(japanese.Kept);
+        Assert.True(english.Kept);
+        Assert.True(japanese.Default);
+        Assert.False(english.Default);
+    }
+
+    [Fact]
+    public void A_hearing_impaired_named_subtitle_is_dropped_outright()
+    {
+        var (probe, plan) = PerLanguageVariantSdhPlan();
+
+        var sdh = RulesPreview.BuildTrackRows(probe, plan).Single(r => r.Index == 3);
+
+        Assert.False(sdh.Kept);
+    }
+
+    [Fact]
+    public void A_rule_naming_a_specific_variant_keeps_only_that_variant()
+    {
+        var (probe, plan) = PerLanguageVariantSdhPlan();
+
+        var rows = RulesPreview.BuildTrackRows(probe, plan);
+        var quebecFrench = rows.Single(r => r.Index == 4);
+        var franceFrench = rows.Single(r => r.Index == 5);
+
+        Assert.True(quebecFrench.Kept);
+        Assert.False(franceFrench.Kept);
+    }
 }

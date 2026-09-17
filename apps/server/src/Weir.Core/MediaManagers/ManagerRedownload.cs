@@ -80,6 +80,16 @@ public static class ManagerRedownloadRules
         ManagerKindProfiles.ForKind(kind)?.IsArr == true;
 
     /// <summary>
+    /// Whether "Download again" can be offered for a library-mode file (issue #551, feeding #509's
+    /// <c>can_redownload</c>): a manager kind issue #509 verified (Sonarr/Radarr) <em>and</em> a scan actually
+    /// matched the file to one of that manager's own titles — <paramref name="managerConnectionId"/> and
+    /// <paramref name="managerTitleId"/> are #551's <c>LibraryScanFileEntry</c> fields, present together or not
+    /// at all. Without a match there is no manager file to act on, however capable the kind is in principle.
+    /// </summary>
+    public static bool CanRedownload(string? managerKind, long? managerConnectionId, string? managerTitleId) =>
+        KindSupportsRedownload(managerKind) && managerConnectionId is not null && !string.IsNullOrEmpty(managerTitleId);
+
+    /// <summary>
     /// The sentence a UI must show before running a redownload: it must state that the current file is
     /// replaced, that removal happens before a replacement exists, and that there is no guarantee a
     /// matching release will be found (issue #509's explicit-request confirmation requirements).

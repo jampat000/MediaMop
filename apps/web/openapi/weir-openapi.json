@@ -1237,7 +1237,7 @@
       },
       "LibraryRedownloadOut": {
         "additionalProperties": false,
-        "description": "Issue #509 step 3's answer. Always outcome 'unsupported' today — see LibraryRedownloadTitleOut.can_redownload's remarks.",
+        "description": "Issue #509 step 3's answer: outcome is 'requested', 'deleted_but_search_failed', 'unsupported' (no manager, or issue #551's title matching never resolved this file) or 'failed' (the manager call itself could not be reached).",
         "properties": {
           "message": {
             "title": "Message",
@@ -1265,7 +1265,7 @@
         "description": "Library mode (#505) / issue #509. One title whose current rules would now keep a track a past clean removed for good.",
         "properties": {
           "can_redownload": {
-            "description": "Whether the 'Download again' action can be offered for this title: a manager kind issue #509 verified (Sonarr/Radarr) and a manager file id Weir can act on. Always false until #505's title matching resolves that id.",
+            "description": "Whether the 'Download again' action can be offered for this title: a manager kind issue #509 verified (Sonarr/Radarr) and a file issue #551's title matching actually resolved to one of that manager's titles.",
             "title": "Can Redownload",
             "type": "boolean"
           },
@@ -5716,6 +5716,16 @@
       "RefinerRuleSetIn": {
         "additionalProperties": false,
         "properties": {
+          "audio_keep_mode": {
+            "default": "single",
+            "description": "Issue #497: \"single\" keeps today's one winning audio track; \"per_language\" keeps the best track (by the configured sorters) of each configured audio language slot that has one, never zero.",
+            "enum": [
+              "single",
+              "per_language"
+            ],
+            "title": "Audio Keep Mode",
+            "type": "string"
+          },
           "audio_preference_mode": {
             "default": "preferred_langs_quality",
             "enum": [
@@ -5731,6 +5741,12 @@
             "description": "Ordered track sorters as JSON: [{\"field\": \"language\", \"value\": \"eng\"}, {\"field\": \"channels\", \"value\": \">=5.1\"}]. Fields: bitrate, channels, codec, language, title, default, forced, commentary. Omit \"value\" to sort by the field itself; \"reversed\" flips it. Empty uses the default order, which is what Refiner has always applied.",
             "title": "Audio Sorters Json",
             "type": "string"
+          },
+          "clear_video_track_names": {
+            "default": false,
+            "description": "Issue #498: clear scene-tag video track names (e.g. \"x265-GROUP\") by writing an empty title.",
+            "title": "Clear Video Track Names",
+            "type": "boolean"
           },
           "csrf_token": {
             "minLength": 1,
@@ -5806,9 +5822,21 @@
             "title": "Remove Attachments",
             "type": "boolean"
           },
+          "remove_chapters": {
+            "default": false,
+            "description": "Issue #498: drop the container's chapter list.",
+            "title": "Remove Chapters",
+            "type": "boolean"
+          },
           "remove_commentary": {
             "default": false,
             "title": "Remove Commentary",
+            "type": "boolean"
+          },
+          "remove_hearing_impaired_subs": {
+            "default": false,
+            "description": "Issue #495: drop a subtitle track detected as hearing-impaired (SDH/CC), from its disposition or its name.",
+            "title": "Remove Hearing Impaired Subs",
             "type": "boolean"
           },
           "remove_images": {
@@ -5841,11 +5869,24 @@
             "title": "Secondary Audio Lang",
             "type": "string"
           },
+          "standardize_track_names": {
+            "default": false,
+            "description": "Issue #498: write a standard name (track_name_template, or a matching track_name_overrides entry) on every kept audio and subtitle track.",
+            "title": "Standardize Track Names",
+            "type": "boolean"
+          },
           "subtitle_langs_csv": {
             "default": "",
             "maxLength": 500,
             "title": "Subtitle Langs Csv",
             "type": "string"
+          },
+          "subtitle_max_per_language": {
+            "default": 0,
+            "description": "Issue #497: caps how many subtitle tracks survive per language, keeping the best by subtitle_quality_strategy. 0 means unlimited, today's behaviour.",
+            "minimum": 0,
+            "title": "Subtitle Max Per Language",
+            "type": "integer"
           },
           "subtitle_mode": {
             "default": "keep_all",
@@ -5855,6 +5896,17 @@
               "remove_all"
             ],
             "title": "Subtitle Mode",
+            "type": "string"
+          },
+          "subtitle_quality_strategy": {
+            "default": "text_first",
+            "description": "Issue #497: how the subtitle cap (subtitle_max_per_language) picks a winner within a language. Unused while the cap is 0.",
+            "enum": [
+              "text_first",
+              "image_first",
+              "accessibility"
+            ],
+            "title": "Subtitle Quality Strategy",
             "type": "string"
           },
           "subtitle_sorters_json": {
@@ -5868,6 +5920,16 @@
             "maxLength": 24,
             "title": "Tertiary Audio Lang",
             "type": "string"
+          },
+          "track_name_overrides": {
+            "$ref": "#/components/schemas/TrackNameOverrides"
+          },
+          "track_name_template": {
+            "default": "{language}{variant} {channels} {codec}",
+            "description": "Issue #498: the template used when standardize_track_names is on and no track_name_overrides entry matches. Placeholders: {language} {variant} {channels} {codec} {flags}. An unknown placeholder is a 400.",
+            "maxLength": 200,
+            "title": "Track Name Template",
+            "type": "string"
           }
         },
         "required": [
@@ -5879,6 +5941,10 @@
       },
       "RefinerRuleSetOut": {
         "properties": {
+          "audio_keep_mode": {
+            "title": "Audio Keep Mode",
+            "type": "string"
+          },
           "audio_preference_mode": {
             "title": "Audio Preference Mode",
             "type": "string"
@@ -5886,6 +5952,10 @@
           "audio_sorters_json": {
             "title": "Audio Sorters Json",
             "type": "string"
+          },
+          "clear_video_track_names": {
+            "title": "Clear Video Track Names",
+            "type": "boolean"
           },
           "default_audio_slot": {
             "title": "Default Audio Slot",
@@ -5935,8 +6005,16 @@
             "title": "Remove Attachments",
             "type": "boolean"
           },
+          "remove_chapters": {
+            "title": "Remove Chapters",
+            "type": "boolean"
+          },
           "remove_commentary": {
             "title": "Remove Commentary",
+            "type": "boolean"
+          },
+          "remove_hearing_impaired_subs": {
+            "title": "Remove Hearing Impaired Subs",
             "type": "boolean"
           },
           "remove_images": {
@@ -5959,12 +6037,24 @@
             "title": "Secondary Audio Lang",
             "type": "string"
           },
+          "standardize_track_names": {
+            "title": "Standardize Track Names",
+            "type": "boolean"
+          },
           "subtitle_langs_csv": {
             "title": "Subtitle Langs Csv",
             "type": "string"
           },
+          "subtitle_max_per_language": {
+            "title": "Subtitle Max Per Language",
+            "type": "integer"
+          },
           "subtitle_mode": {
             "title": "Subtitle Mode",
+            "type": "string"
+          },
+          "subtitle_quality_strategy": {
+            "title": "Subtitle Quality Strategy",
             "type": "string"
           },
           "subtitle_sorters_json": {
@@ -5973,6 +6063,13 @@
           },
           "tertiary_audio_lang": {
             "title": "Tertiary Audio Lang",
+            "type": "string"
+          },
+          "track_name_overrides": {
+            "$ref": "#/components/schemas/TrackNameOverrides"
+          },
+          "track_name_template": {
+            "title": "Track Name Template",
             "type": "string"
           },
           "updated_at": {
@@ -6018,7 +6115,16 @@
           "remove_attachments",
           "remove_title",
           "remove_language_tags",
-          "remove_other_metadata"
+          "remove_other_metadata",
+          "remove_hearing_impaired_subs",
+          "audio_keep_mode",
+          "subtitle_max_per_language",
+          "subtitle_quality_strategy",
+          "standardize_track_names",
+          "track_name_template",
+          "track_name_overrides",
+          "clear_video_track_names",
+          "remove_chapters"
         ],
         "title": "RefinerRuleSetOut",
         "type": "object"
@@ -6208,6 +6314,15 @@
         "additionalProperties": false,
         "description": "The same fields RefinerRuleSetIn accepts, minus csrf_token — validated exactly like a rule-set save, but never written to the database.",
         "properties": {
+          "audio_keep_mode": {
+            "default": "single",
+            "enum": [
+              "single",
+              "per_language"
+            ],
+            "title": "Audio Keep Mode",
+            "type": "string"
+          },
           "audio_preference_mode": {
             "default": "preferred_langs_quality",
             "enum": [
@@ -6222,6 +6337,11 @@
             "default": "",
             "title": "Audio Sorters Json",
             "type": "string"
+          },
+          "clear_video_track_names": {
+            "default": false,
+            "title": "Clear Video Track Names",
+            "type": "boolean"
           },
           "default_audio_slot": {
             "default": "primary",
@@ -6286,9 +6406,19 @@
             "title": "Remove Attachments",
             "type": "boolean"
           },
+          "remove_chapters": {
+            "default": false,
+            "title": "Remove Chapters",
+            "type": "boolean"
+          },
           "remove_commentary": {
             "default": false,
             "title": "Remove Commentary",
+            "type": "boolean"
+          },
+          "remove_hearing_impaired_subs": {
+            "default": false,
+            "title": "Remove Hearing Impaired Subs",
             "type": "boolean"
           },
           "remove_images": {
@@ -6317,11 +6447,22 @@
             "title": "Secondary Audio Lang",
             "type": "string"
           },
+          "standardize_track_names": {
+            "default": false,
+            "title": "Standardize Track Names",
+            "type": "boolean"
+          },
           "subtitle_langs_csv": {
             "default": "",
             "maxLength": 500,
             "title": "Subtitle Langs Csv",
             "type": "string"
+          },
+          "subtitle_max_per_language": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Subtitle Max Per Language",
+            "type": "integer"
           },
           "subtitle_mode": {
             "default": "keep_all",
@@ -6333,6 +6474,16 @@
             "title": "Subtitle Mode",
             "type": "string"
           },
+          "subtitle_quality_strategy": {
+            "default": "text_first",
+            "enum": [
+              "text_first",
+              "image_first",
+              "accessibility"
+            ],
+            "title": "Subtitle Quality Strategy",
+            "type": "string"
+          },
           "subtitle_sorters_json": {
             "default": "",
             "title": "Subtitle Sorters Json",
@@ -6342,6 +6493,15 @@
             "default": "",
             "maxLength": 24,
             "title": "Tertiary Audio Lang",
+            "type": "string"
+          },
+          "track_name_overrides": {
+            "$ref": "#/components/schemas/TrackNameOverrides"
+          },
+          "track_name_template": {
+            "default": "{language}{variant} {channels} {codec}",
+            "maxLength": 200,
+            "title": "Track Name Template",
             "type": "string"
           }
         },
@@ -7784,6 +7944,38 @@
           "summary"
         ],
         "title": "SuiteUpdateStatusOut",
+        "type": "object"
+      },
+      "TrackNameOverrides": {
+        "additionalProperties": false,
+        "description": "Issue #498: per-flag track name templates, checked forced, then hearing-impaired, then commentary, then audio description; the first whose flag matches on a track and whose template is non-empty wins over track_name_template. Each template is validated the same way (unknown placeholder is a 400).",
+        "properties": {
+          "audio_description": {
+            "default": "{language} {flags}",
+            "maxLength": 200,
+            "title": "Audio Description",
+            "type": "string"
+          },
+          "commentary": {
+            "default": "{language} {flags}",
+            "maxLength": 200,
+            "title": "Commentary",
+            "type": "string"
+          },
+          "forced": {
+            "default": "{language} {flags}",
+            "maxLength": 200,
+            "title": "Forced",
+            "type": "string"
+          },
+          "hearing_impaired": {
+            "default": "{language} {flags}",
+            "maxLength": 200,
+            "title": "Hearing Impaired",
+            "type": "string"
+          }
+        },
+        "title": "TrackNameOverrides",
         "type": "object"
       },
       "UpdateSettingsOut": {

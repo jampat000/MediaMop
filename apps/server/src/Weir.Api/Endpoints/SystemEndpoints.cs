@@ -7,6 +7,7 @@ using Weir.Api.Http;
 using Weir.Core;
 using Weir.Core.Configuration;
 using Weir.Core.Readiness;
+using Weir.Core.Refiner;
 using Weir.Core.Workers;
 using Weir.Infrastructure.Sqlite;
 
@@ -77,13 +78,16 @@ public static class SystemEndpoints
         var heartbeats = services.GetRequiredService<WorkerHeartbeats>();
         var databaseReady = await DatabaseIsConnectedAsync(services).ConfigureAwait(false);
         var workers = heartbeats.Snapshot([new KeyValuePair<string, int>("refiner", options.RefinerWorkerCount)]);
+        // #552: the watcher (Weir.Infrastructure.Refiner.RefinerWatchedFolderWatcherService) reports here
+        // through the shared WatcherStateStore singleton; a host that never registered the Refiner watched-
+        // folder area (a minimal test host) still reports "no libraries watched" rather than throwing.
+        var watcherSummary = services.GetService<WatcherStateStore>()?.Summary() ?? ReadinessBuilder.NoWatchedLibraries;
         var inputs = new ReadinessInputs(
             lifecycle.Elapsed,
             databaseReady,
             lifecycle.StartupComplete,
             workers,
-            // The watcher is ported with the workers (#521); until then nothing is watched.
-            ReadinessBuilder.NoWatchedLibraries);
+            watcherSummary);
         return ReadinessBuilder.Build(inputs, WeirVersion.Resolve(options.VersionOverride));
     }
 

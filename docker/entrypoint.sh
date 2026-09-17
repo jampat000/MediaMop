@@ -98,6 +98,13 @@ ensure_runtime_home_ownership() {
 }
 
 warn_unported_refiner_permissions() {
+  # As of #555, Weir.Host applies WEIR_CHOWN_OUTPUT/WEIR_FILE_MODE_OUTPUT/WEIR_DIR_MODE_OUTPUT
+  # itself, directly, right after it writes or creates each output file or folder (see
+  # apps/server/README.md, "Output ownership (#555)") — this script's job for those three is
+  # already done at that point, not here. WEIR_CHOWN_WATCHED/WEIR_CHOWN_TEMP/
+  # WEIR_DIR_MODE_WATCHED/WEIR_DIR_MODE_TEMP still have no .NET equivalent, so the warning below
+  # is still correct for those four; its wording covering all six together is now stale for the
+  # output three specifically. Left as-is (a functional fix, not a doc fix); see docker/README.md.
   if bool_enabled "$WEIR_CHOWN_WATCHED" || [ -n "$WEIR_DIR_MODE_WATCHED" ] ||
      bool_enabled "$WEIR_CHOWN_TEMP" || [ -n "$WEIR_DIR_MODE_TEMP" ] ||
      bool_enabled "$WEIR_CHOWN_OUTPUT" || [ -n "$WEIR_DIR_MODE_OUTPUT" ]; then

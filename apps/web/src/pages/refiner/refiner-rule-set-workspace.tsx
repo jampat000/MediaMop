@@ -20,6 +20,14 @@ import {
   useTestRefinerMetadataProvider,
 } from "../../lib/refiner/metadata-provider-queries";
 import { REFINER_STREAM_LANGUAGE_OPTIONS } from "../../lib/refiner/stream-language-options";
+import { refinerLanguageVariantsFor } from "../../lib/refiner/language-variant-options";
+import {
+  previewTrackName,
+  trackNameTemplateError,
+  DEFAULT_TRACK_NAME_TEMPLATE,
+  SAMPLE_TRACK,
+  type TrackNamePreviewFlags,
+} from "../../lib/refiner/track-name-preview";
 import {
   mmActionButtonClass,
   mmCheckboxControlClass,
@@ -60,6 +68,19 @@ const LANGUAGE_OPTIONS = REFINER_STREAM_LANGUAGE_OPTIONS.map((option) => ({
   label: `${option.label} (${option.code})`,
 }));
 
+/**
+ * Issue #496: every base language option, immediately followed by its regional variants (an
+ * indented, visually nested entry), so a picker built from a flat option list still reads as
+ * "variants listed under their base language" even without native optgroup support.
+ */
+const LANGUAGE_OPTIONS_WITH_VARIANTS = LANGUAGE_OPTIONS.flatMap((option) => [
+  option,
+  ...refinerLanguageVariantsFor(option.value).map((variant) => ({
+    value: variant.code,
+    label: `— ${variant.label} (${variant.code})`,
+  })),
+]);
+
 const DEFAULT_AUDIO_SORTERS: TrackSorter[] = [
   { field: "commentary", value: "", reversed: false },
   { field: "channels", value: "", reversed: false },
@@ -98,6 +119,20 @@ const EMPTY_RULE_SET: RefinerRuleSetWrite = {
   remove_title: false,
   remove_language_tags: false,
   remove_other_metadata: false,
+  remove_hearing_impaired_subs: false,
+  audio_keep_mode: "single",
+  subtitle_max_per_language: 0,
+  subtitle_quality_strategy: "text_first",
+  standardize_track_names: false,
+  track_name_template: DEFAULT_TRACK_NAME_TEMPLATE,
+  track_name_overrides: {
+    forced: "{language} {flags}",
+    hearing_impaired: "{language} {flags}",
+    commentary: "{language} {flags}",
+    audio_description: "{language} {flags}",
+  },
+  clear_video_track_names: false,
+  remove_chapters: false,
 };
 
 function canEdit(role: string | undefined): boolean {
@@ -147,11 +182,13 @@ function csvValues(value: string): string[] {
 }
 
 function languageOptionsFor(values: readonly string[]) {
-  const known = new Set(LANGUAGE_OPTIONS.map((option) => option.value));
+  const known = new Set(
+    LANGUAGE_OPTIONS_WITH_VARIANTS.map((option) => option.value),
+  );
   const custom = values
     .filter((value) => !known.has(value))
     .map((value) => ({ value, label: value }));
-  return [...LANGUAGE_OPTIONS, ...custom];
+  return [...LANGUAGE_OPTIONS_WITH_VARIANTS, ...custom];
 }
 
 function LanguageSelectField({
@@ -167,7 +204,10 @@ function LanguageSelectField({
   disabled: boolean;
   onChange: (value: string) => void;
 }) {
-  const options = languageOptionsFor(value ? [value] : []);
+  const known = new Set(
+    LANGUAGE_OPTIONS_WITH_VARIANTS.map((option) => option.value),
+  );
+  const isCustom = value.length > 0 && !known.has(value);
   return (
     <label className="block text-sm">
       <span className="text-[var(--mm-text2)]">{label}</span>
@@ -178,11 +218,28 @@ function LanguageSelectField({
         onChange={(event) => onChange(event.target.value)}
       >
         {optional ? <option value="">None</option> : null}
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
+        {isCustom ? <option value={value}>{value}</option> : null}
+        {LANGUAGE_OPTIONS.map((base) => {
+          const variants = refinerLanguageVariantsFor(base.value);
+          if (variants.length === 0) {
+            return (
+              <option key={base.value} value={base.value}>
+                {base.label}
+              </option>
+            );
+          }
+          return (
+            // Issue #496: regional variants are listed under their base language.
+            <optgroup key={base.value} label={base.label}>
+              <option value={base.value}>{base.label} (any variant)</option>
+              {variants.map((variant) => (
+                <option key={variant.code} value={variant.code}>
+                  {variant.label} ({variant.code})
+                </option>
+              ))}
+            </optgroup>
+          );
+        })}
       </select>
     </label>
   );
@@ -215,6 +272,63 @@ function LanguageMultiField({
         onChange={(next) => onChange(next.join(","))}
       />
     </div>
+  );
+}
+
+/**
+ * Issue #498: a track name template field with a live preview against a sample track
+ * (`SAMPLE_TRACK`: "English", VFQ, 5.1, TrueHD), or an inline error naming the first unknown
+ * placeholder — the exact rule `TrackNaming.ValidateAll` enforces on save.
+ */
+function TrackNameTemplateField({
+  label,
+  detail,
+  value,
+  disabled,
+  sampleFlags,
+  onChange,
+}: {
+  label: string;
+  detail?: string;
+  value: string;
+  disabled: boolean;
+  sampleFlags?: TrackNamePreviewFlags;
+  onChange: (value: string) => void;
+}) {
+  const error = trackNameTemplateError(value);
+  const preview =
+    error === null
+      ? previewTrackName(value, { ...SAMPLE_TRACK, flags: sampleFlags })
+      : null;
+  return (
+    <label className="block text-sm">
+      <span className="text-[var(--mm-text2)]">{label}</span>
+      <input
+        className={mmEditableTextFieldClass}
+        value={value}
+        placeholder={DEFAULT_TRACK_NAME_TEMPLATE}
+        disabled={disabled}
+        aria-invalid={error !== null}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      {detail ? (
+        <span className="mt-1 block text-xs leading-5 text-[var(--mm-text3)]">
+          {detail}
+        </span>
+      ) : null}
+      {error ? (
+        <span
+          role="alert"
+          className="mt-1 block text-xs text-[var(--mm-status-failed-text)]"
+        >
+          {error}
+        </span>
+      ) : (
+        <span className="mt-1 block text-xs leading-5 text-[var(--mm-text3)]">
+          Preview: <span className="font-medium">{preview}</span>
+        </span>
+      )}
+    </label>
   );
 }
 
@@ -728,6 +842,32 @@ export function RefinerRuleSetWorkspace() {
                   "Exclude commentary before selecting the preferred audio.",
                   "remove_commentary",
                 )}
+                <label className="block text-sm">
+                  <span className="text-[var(--mm-text2)]">
+                    Audio tracks kept
+                  </span>
+                  <select
+                    className={mmSelectFieldClass}
+                    value={draft.audio_keep_mode}
+                    disabled={disabled}
+                    onChange={(event) =>
+                      change("audio_keep_mode", event.target.value)
+                    }
+                  >
+                    <option value="single">
+                      One winning track (today&apos;s behavior)
+                    </option>
+                    <option value="per_language">
+                      Best track of each configured language
+                    </option>
+                  </select>
+                  <span className="mt-1 block text-xs leading-5 text-[var(--mm-text3)]">
+                    &quot;Best track of each configured language&quot; keeps the
+                    original alongside a dub, e.g. Japanese plus an English dub,
+                    each the best available track of its language. Never keeps
+                    zero audio tracks.
+                  </span>
+                </label>
               </ProfileSettingsSection>
 
               <ProfileSettingsSection
@@ -764,7 +904,7 @@ export function RefinerRuleSetWorkspace() {
                   <div className="grid gap-3">
                     {toggle(
                       "Keep forced subtitles",
-                      "Preserve tracks needed to translate foreign dialogue.",
+                      "Preserve tracks needed to translate foreign dialogue. A signs track counts as forced too.",
                       "preserve_forced_subs",
                     )}
                     {toggle(
@@ -772,6 +912,66 @@ export function RefinerRuleSetWorkspace() {
                       "Preserve tracks already marked as default.",
                       "preserve_default_subs",
                     )}
+                    {toggle(
+                      "Remove hearing-impaired subtitles",
+                      'Drop a subtitle track detected as SDH/CC, from its flag or its name (e.g. "English (SDH)").',
+                      "remove_hearing_impaired_subs",
+                    )}
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="block text-sm">
+                        <span className="text-[var(--mm-text2)]">
+                          Limit subtitles kept per language
+                        </span>
+                        <input
+                          type="number"
+                          min={0}
+                          className={mmEditableTextFieldClass}
+                          value={draft.subtitle_max_per_language}
+                          disabled={disabled}
+                          onChange={(event) =>
+                            change(
+                              "subtitle_max_per_language",
+                              Math.max(0, Number(event.target.value) || 0),
+                            )
+                          }
+                        />
+                        <span className="mt-1 block text-xs leading-5 text-[var(--mm-text3)]">
+                          0 means unlimited (today&apos;s behavior). A forced
+                          track kept above doesn&apos;t count toward this cap.
+                        </span>
+                      </label>
+                      <label className="block text-sm">
+                        <span className="text-[var(--mm-text2)]">
+                          How to pick the best subtitle
+                        </span>
+                        <select
+                          className={mmSelectFieldClass}
+                          value={draft.subtitle_quality_strategy}
+                          disabled={
+                            disabled || draft.subtitle_max_per_language === 0
+                          }
+                          onChange={(event) =>
+                            change(
+                              "subtitle_quality_strategy",
+                              event.target.value,
+                            )
+                          }
+                        >
+                          <option value="text_first">
+                            Text subtitles first (SRT/ASS over PGS)
+                          </option>
+                          <option value="image_first">
+                            Image subtitles first (PGS over SRT/ASS)
+                          </option>
+                          <option value="accessibility">
+                            Hearing-impaired (SDH) first
+                          </option>
+                        </select>
+                        <span className="mt-1 block text-xs leading-5 text-[var(--mm-text3)]">
+                          Only used while the cap above is set.
+                        </span>
+                      </label>
+                    </div>
                   </div>
                 ) : null}
               </ProfileSettingsSection>
@@ -849,6 +1049,95 @@ export function RefinerRuleSetWorkspace() {
                     "remove_other_metadata",
                   )}
                 </div>
+              </ProfileSettingsSection>
+
+              <ProfileSettingsSection
+                step={5}
+                title="Track naming & chapters"
+                detail="Optional, off by default: give kept tracks consistent names and drop chapter lists."
+              >
+                {toggle(
+                  "Standardize audio and subtitle track names",
+                  "Write a name from the template below on every kept track, instead of whatever the release called it.",
+                  "standardize_track_names",
+                )}
+                {draft.standardize_track_names ? (
+                  <div className="space-y-4 border-l-2 border-[var(--mm-border)] pl-4">
+                    <TrackNameTemplateField
+                      label="Track name template"
+                      detail="Placeholders: {language} {variant} {channels} {codec} {flags}."
+                      value={draft.track_name_template}
+                      disabled={disabled}
+                      onChange={(value) => change("track_name_template", value)}
+                    />
+                    <div className="space-y-3">
+                      <p className="text-xs font-medium text-[var(--mm-text2)]">
+                        Overrides for flagged tracks (checked in this order;
+                        leave blank to fall back to the template above)
+                      </p>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <TrackNameTemplateField
+                          label="Forced tracks"
+                          value={draft.track_name_overrides.forced}
+                          disabled={disabled}
+                          sampleFlags={{ forced: true }}
+                          onChange={(value) =>
+                            change("track_name_overrides", {
+                              ...draft.track_name_overrides,
+                              forced: value,
+                            })
+                          }
+                        />
+                        <TrackNameTemplateField
+                          label="Hearing-impaired tracks"
+                          value={draft.track_name_overrides.hearing_impaired}
+                          disabled={disabled}
+                          sampleFlags={{ hearingImpaired: true }}
+                          onChange={(value) =>
+                            change("track_name_overrides", {
+                              ...draft.track_name_overrides,
+                              hearing_impaired: value,
+                            })
+                          }
+                        />
+                        <TrackNameTemplateField
+                          label="Commentary tracks"
+                          value={draft.track_name_overrides.commentary}
+                          disabled={disabled}
+                          sampleFlags={{ commentary: true }}
+                          onChange={(value) =>
+                            change("track_name_overrides", {
+                              ...draft.track_name_overrides,
+                              commentary: value,
+                            })
+                          }
+                        />
+                        <TrackNameTemplateField
+                          label="Audio description tracks"
+                          value={draft.track_name_overrides.audio_description}
+                          disabled={disabled}
+                          sampleFlags={{ audioDescription: true }}
+                          onChange={(value) =>
+                            change("track_name_overrides", {
+                              ...draft.track_name_overrides,
+                              audio_description: value,
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+                {toggle(
+                  "Clear video track names",
+                  'Blank out scene-tag video titles such as "x265-GROUP".',
+                  "clear_video_track_names",
+                )}
+                {toggle(
+                  "Remove chapters",
+                  "Drop the container's chapter list.",
+                  "remove_chapters",
+                )}
               </ProfileSettingsSection>
             </div>
 

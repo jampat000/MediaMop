@@ -17,6 +17,20 @@ export const LIBRARY_FILE_CLASSIFICATION_LABELS: Record<
   cannot_process: "Cannot process",
 };
 
+/**
+ * Issue #551: the manager kinds a library file can be matched to (only Sonarr/Radarr support the title
+ * listing the match is built from — see apps/server/README.md's "Manager title matching"), for the Library
+ * tab's manager filter. Matches the `manager` query param `fetchLibraryFiles` already sends straight through
+ * to `manager_kind` on the server.
+ */
+export const LIBRARY_MANAGER_FILTER_OPTIONS: {
+  value: string;
+  label: string;
+}[] = [
+  { value: "radarr", label: "Radarr" },
+  { value: "sonarr", label: "Sonarr" },
+];
+
 export interface LibrarySettings {
   library_folders: string[];
   library_schedule_enabled: boolean;
@@ -251,9 +265,9 @@ export interface RemovedTrack {
 
 /**
  * One title whose current rules would now keep a track a past clean removed for good (#509 step 2). The
- * "Download again" action is only ever shown when `can_redownload` is true — see its own doc comment on the
- * server (`LibraryModeEndpoints.GetRedownloadsAsync`) for why that is always false until #505's manager title
- * matching lands: `unavailable_reason` explains why in plain language instead.
+ * "Download again" action is only ever shown when `can_redownload` is true: a manager kind #509 verified
+ * (Sonarr/Radarr) and a file #551's title matching actually resolved to one of that manager's titles.
+ * `unavailable_reason` explains why in plain language when it is false.
  */
 export interface LibraryRedownloadTitle {
   path: string;

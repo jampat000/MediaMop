@@ -204,8 +204,9 @@ public sealed class HttpMediaManagerPort : IMediaManagerPort
 
                 var idText = seriesId.ToString(CultureInfo.InvariantCulture);
                 var title = PyValues.FirstText(series, "title") ?? idText;
+                var qualityProfileId = PyValues.FirstNumber(series, "qualityProfileId") is { } profileNumber ? (long)profileNumber : (long?)null;
                 var episodePayload = await client.GetJsonAsync("/api/v3/episodefile", [new("seriesId", seriesId)], cancellationToken).ConfigureAwait(false);
-                files.AddRange(ManagerDialectRules.ArrEpisodeLibraryFiles(episodePayload, idText, title));
+                files.AddRange(ManagerDialectRules.ArrEpisodeLibraryFiles(episodePayload, idText, title, qualityProfileId));
             }
 
             return new ManagerLibraryFilesSignal(connection, SignalStatus.Reported, files);

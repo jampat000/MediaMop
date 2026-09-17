@@ -56,7 +56,17 @@ If the container needs to write as a specific NAS or host user, set:
 
 - `WEIR_PUID` / `WEIR_PGID` — the entrypoint remaps the `weir` user to this UID/GID before starting the server
 
-The `WEIR_CHOWN_*` and `WEIR_DIR_MODE_*` settings are still checked for valid values but are **not applied**. They had already stopped taking effect when folders moved onto libraries (#363). Set ownership and permissions on your host folders directly, or pick a `WEIR_PUID` / `WEIR_PGID` that can already write to them.
+`WEIR_CHOWN_OUTPUT`, `WEIR_FILE_MODE_OUTPUT` and `WEIR_DIR_MODE_OUTPUT` (#555) are applied by the
+server itself, directly to every output file and folder Weir publishes, right after it publishes
+it — not as a startup sweep. See `apps/server/README.md`, "Output ownership (#555)", for how it
+works and `docker/README.md` for the full variable list.
+
+`WEIR_CHOWN_WATCHED`, `WEIR_CHOWN_TEMP`, `WEIR_DIR_MODE_WATCHED` and `WEIR_DIR_MODE_TEMP` are
+still checked for valid values but are **not applied**: the watched and work folders are never
+something Weir itself just wrote, so there is nothing for that hook to attach them to. They had
+already stopped taking effect before the move to .NET, when folders moved onto libraries (#363).
+Set ownership and permissions on your host folders directly, or pick a `WEIR_PUID` / `WEIR_PGID`
+that can already write to them.
 
 ## What not to do
 

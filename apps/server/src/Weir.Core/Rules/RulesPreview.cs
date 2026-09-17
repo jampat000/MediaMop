@@ -57,7 +57,11 @@ public static partial class RulesPreview
         ArgumentNullException.ThrowIfNull(plan);
 
         var keptVideo = new HashSet<int>(plan.VideoIndices);
-        var keptAudio = plan.Audio.Count > 0 ? plan.Audio[0] : null;
+
+        // Issue #497: AudioKeepMode.PerLanguage can keep more than one audio track, so every kept
+        // index needs its own row marked "kept" — not only the first, as a single-winner lookup
+        // would leave every audio track after the first showing as dropped.
+        var keptAudioByIndex = plan.Audio.ToDictionary(t => t.InputIndex);
         var keptSubtitles = plan.Subtitles.ToDictionary(t => t.InputIndex);
         var notesByIndex = NotesByStreamIndex(plan.AudioSelectionNotes);
 
@@ -94,9 +98,9 @@ public static partial class RulesPreview
                     break;
                 case "audio":
                     channels = Py.TryInt(stream.Get("channels"), out var ch) ? ch : 0;
-                    kept = keptAudio?.InputIndex == index;
-                    isDefault = kept && keptAudio!.Default;
-                    isForced = kept ? keptAudio!.Forced : disposition.GetValueOrDefault("forced") != 0;
+                    kept = keptAudioByIndex.TryGetValue(index, out var audioTrack);
+                    isDefault = kept && audioTrack!.Default;
+                    isForced = kept ? audioTrack!.Forced : disposition.GetValueOrDefault("forced") != 0;
                     break;
                 default: // subtitle
                     kept = keptSubtitles.TryGetValue(index, out var subTrack);

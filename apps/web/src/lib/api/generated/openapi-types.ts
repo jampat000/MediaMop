@@ -2462,7 +2462,7 @@ export interface components {
     };
     /**
      * LibraryRedownloadOut
-     * @description Issue #509 step 3's answer. Always outcome 'unsupported' today — see LibraryRedownloadTitleOut.can_redownload's remarks.
+     * @description Issue #509 step 3's answer: outcome is 'requested', 'deleted_but_search_failed', 'unsupported' (no manager, or issue #551's title matching never resolved this file) or 'failed' (the manager call itself could not be reached).
      */
     LibraryRedownloadOut: {
       /** Message */
@@ -2479,7 +2479,7 @@ export interface components {
     LibraryRedownloadTitleOut: {
       /**
        * Can Redownload
-       * @description Whether the 'Download again' action can be offered for this title: a manager kind issue #509 verified (Sonarr/Radarr) and a manager file id Weir can act on. Always false until #505's title matching resolves that id.
+       * @description Whether the 'Download again' action can be offered for this title: a manager kind issue #509 verified (Sonarr/Radarr) and a file issue #551's title matching actually resolved to one of that manager's titles.
        */
       can_redownload: boolean;
       /**
@@ -4625,6 +4625,13 @@ export interface components {
     /** RefinerRuleSetIn */
     RefinerRuleSetIn: {
       /**
+       * Audio Keep Mode
+       * @description Issue #497: "single" keeps today's one winning audio track; "per_language" keeps the best track (by the configured sorters) of each configured audio language slot that has one, never zero.
+       * @default single
+       * @enum {string}
+       */
+      audio_keep_mode: "single" | "per_language";
+      /**
        * Audio Preference Mode
        * @default preferred_langs_quality
        * @enum {string}
@@ -4639,6 +4646,12 @@ export interface components {
        * @default
        */
       audio_sorters_json: string;
+      /**
+       * Clear Video Track Names
+       * @description Issue #498: clear scene-tag video track names (e.g. "x265-GROUP") by writing an empty title.
+       * @default false
+       */
+      clear_video_track_names: boolean;
       /** Csrf Token */
       csrf_token: string;
       /**
@@ -4701,10 +4714,22 @@ export interface components {
        */
       remove_attachments: boolean;
       /**
+       * Remove Chapters
+       * @description Issue #498: drop the container's chapter list.
+       * @default false
+       */
+      remove_chapters: boolean;
+      /**
        * Remove Commentary
        * @default false
        */
       remove_commentary: boolean;
+      /**
+       * Remove Hearing Impaired Subs
+       * @description Issue #495: drop a subtitle track detected as hearing-impaired (SDH/CC), from its disposition or its name.
+       * @default false
+       */
+      remove_hearing_impaired_subs: boolean;
       /**
        * Remove Images
        * @description Strip embedded cover art. An embedded poster is carried as a video stream, so this removes a stream as well as an image.
@@ -4735,16 +4760,35 @@ export interface components {
        */
       secondary_audio_lang: string;
       /**
+       * Standardize Track Names
+       * @description Issue #498: write a standard name (track_name_template, or a matching track_name_overrides entry) on every kept audio and subtitle track.
+       * @default false
+       */
+      standardize_track_names: boolean;
+      /**
        * Subtitle Langs Csv
        * @default
        */
       subtitle_langs_csv: string;
+      /**
+       * Subtitle Max Per Language
+       * @description Issue #497: caps how many subtitle tracks survive per language, keeping the best by subtitle_quality_strategy. 0 means unlimited, today's behaviour.
+       * @default 0
+       */
+      subtitle_max_per_language: number;
       /**
        * Subtitle Mode
        * @default keep_all
        * @enum {string}
        */
       subtitle_mode: "keep_all" | "keep_listed" | "remove_all";
+      /**
+       * Subtitle Quality Strategy
+       * @description Issue #497: how the subtitle cap (subtitle_max_per_language) picks a winner within a language. Unused while the cap is 0.
+       * @default text_first
+       * @enum {string}
+       */
+      subtitle_quality_strategy: "text_first" | "image_first" | "accessibility";
       /**
        * Subtitle Sorters Json
        * @description The same, for subtitle tracks.
@@ -4756,13 +4800,24 @@ export interface components {
        * @default
        */
       tertiary_audio_lang: string;
+      track_name_overrides?: components["schemas"]["TrackNameOverrides"];
+      /**
+       * Track Name Template
+       * @description Issue #498: the template used when standardize_track_names is on and no track_name_overrides entry matches. Placeholders: {language} {variant} {channels} {codec} {flags}. An unknown placeholder is a 400.
+       * @default {language}{variant} {channels} {codec}
+       */
+      track_name_template: string;
     };
     /** RefinerRuleSetOut */
     RefinerRuleSetOut: {
+      /** Audio Keep Mode */
+      audio_keep_mode: string;
       /** Audio Preference Mode */
       audio_preference_mode: string;
       /** Audio Sorters Json */
       audio_sorters_json: string;
+      /** Clear Video Track Names */
+      clear_video_track_names: boolean;
       /** Default Audio Slot */
       default_audio_slot: string;
       /** Id */
@@ -4787,8 +4842,12 @@ export interface components {
       primary_audio_lang: string;
       /** Remove Attachments */
       remove_attachments: boolean;
+      /** Remove Chapters */
+      remove_chapters: boolean;
       /** Remove Commentary */
       remove_commentary: boolean;
+      /** Remove Hearing Impaired Subs */
+      remove_hearing_impaired_subs: boolean;
       /** Remove Images */
       remove_images: boolean;
       /** Remove Language Tags */
@@ -4799,14 +4858,23 @@ export interface components {
       remove_title: boolean;
       /** Secondary Audio Lang */
       secondary_audio_lang: string;
+      /** Standardize Track Names */
+      standardize_track_names: boolean;
       /** Subtitle Langs Csv */
       subtitle_langs_csv: string;
+      /** Subtitle Max Per Language */
+      subtitle_max_per_language: number;
       /** Subtitle Mode */
       subtitle_mode: string;
+      /** Subtitle Quality Strategy */
+      subtitle_quality_strategy: string;
       /** Subtitle Sorters Json */
       subtitle_sorters_json: string;
       /** Tertiary Audio Lang */
       tertiary_audio_lang: string;
+      track_name_overrides: components["schemas"]["TrackNameOverrides"];
+      /** Track Name Template */
+      track_name_template: string;
       /** Updated At */
       updated_at?: string | null;
       /**
@@ -4892,6 +4960,12 @@ export interface components {
      */
     RefinerRulesPreviewRulesIn: {
       /**
+       * Audio Keep Mode
+       * @default single
+       * @enum {string}
+       */
+      audio_keep_mode: "single" | "per_language";
+      /**
        * Audio Preference Mode
        * @default preferred_langs_quality
        * @enum {string}
@@ -4905,6 +4979,11 @@ export interface components {
        * @default
        */
       audio_sorters_json: string;
+      /**
+       * Clear Video Track Names
+       * @default false
+       */
+      clear_video_track_names: boolean;
       /**
        * Default Audio Slot
        * @default primary
@@ -4959,10 +5038,20 @@ export interface components {
        */
       remove_attachments: boolean;
       /**
+       * Remove Chapters
+       * @default false
+       */
+      remove_chapters: boolean;
+      /**
        * Remove Commentary
        * @default false
        */
       remove_commentary: boolean;
+      /**
+       * Remove Hearing Impaired Subs
+       * @default false
+       */
+      remove_hearing_impaired_subs: boolean;
       /**
        * Remove Images
        * @default false
@@ -4989,16 +5078,32 @@ export interface components {
        */
       secondary_audio_lang: string;
       /**
+       * Standardize Track Names
+       * @default false
+       */
+      standardize_track_names: boolean;
+      /**
        * Subtitle Langs Csv
        * @default
        */
       subtitle_langs_csv: string;
+      /**
+       * Subtitle Max Per Language
+       * @default 0
+       */
+      subtitle_max_per_language: number;
       /**
        * Subtitle Mode
        * @default keep_all
        * @enum {string}
        */
       subtitle_mode: "keep_all" | "keep_listed" | "remove_all";
+      /**
+       * Subtitle Quality Strategy
+       * @default text_first
+       * @enum {string}
+       */
+      subtitle_quality_strategy: "text_first" | "image_first" | "accessibility";
       /**
        * Subtitle Sorters Json
        * @default
@@ -5009,6 +5114,12 @@ export interface components {
        * @default
        */
       tertiary_audio_lang: string;
+      track_name_overrides?: components["schemas"]["TrackNameOverrides"];
+      /**
+       * Track Name Template
+       * @default {language}{variant} {channels} {codec}
+       */
+      track_name_template: string;
     };
     /** RefinerRulesPreviewTrackOut */
     RefinerRulesPreviewTrackOut: {
@@ -5738,6 +5849,32 @@ export interface components {
       summary: string;
       /** Windows Installer Url */
       windows_installer_url?: string | null;
+    };
+    /**
+     * TrackNameOverrides
+     * @description Issue #498: per-flag track name templates, checked forced, then hearing-impaired, then commentary, then audio description; the first whose flag matches on a track and whose template is non-empty wins over track_name_template. Each template is validated the same way (unknown placeholder is a 400).
+     */
+    TrackNameOverrides: {
+      /**
+       * Audio Description
+       * @default {language} {flags}
+       */
+      audio_description: string;
+      /**
+       * Commentary
+       * @default {language} {flags}
+       */
+      commentary: string;
+      /**
+       * Forced
+       * @default {language} {flags}
+       */
+      forced: string;
+      /**
+       * Hearing Impaired
+       * @default {language} {flags}
+       */
+      hearing_impaired: string;
     };
     /**
      * UpdateSettingsOut

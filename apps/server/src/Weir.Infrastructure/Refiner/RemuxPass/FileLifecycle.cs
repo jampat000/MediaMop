@@ -67,11 +67,18 @@ public static partial class FileLifecycle
         string final,
         Func<string, Task>? validateStaged = null,
         Action<long, long>? progressCallback = null,
-        bool preserveMetadata = true)
+        bool preserveMetadata = true,
+        IOutputOwnership? ownership = null)
     {
         var src = Path.GetFullPath(source);
         var directory = Path.GetDirectoryName(Path.GetFullPath(final))!;
+        var directoryExisted = Directory.Exists(directory);
         Directory.CreateDirectory(directory);
+        if (!directoryExisted)
+        {
+            ownership?.ApplyToDirectory(directory);
+        }
+
         var tmp = CreateTempFile(directory, "." + Path.GetFileName(final) + ".", ".partial");
         try
         {
@@ -135,17 +142,25 @@ public static partial class FileLifecycle
             BestEffortDelete(tmp);
             throw new FileLifecycleException($"Could not safely publish the validated copy at {final}: {exception.Message}", exception);
         }
+
+        ownership?.ApplyToFile(Path.GetFullPath(final));
     }
 
     /// <summary>
     /// <c>try_hardlink_to_final</c>: validate and atomically expose a same-volume hard link. False means the link was refused
     /// and the caller should copy; validation and publication errors still throw.
     /// </summary>
-    public static async Task<bool> TryHardlinkToFinalAsync(string source, string final, Func<string, Task>? validateStaged = null)
+    public static async Task<bool> TryHardlinkToFinalAsync(string source, string final, Func<string, Task>? validateStaged = null, IOutputOwnership? ownership = null)
     {
         var src = Path.GetFullPath(source);
         var directory = Path.GetDirectoryName(Path.GetFullPath(final))!;
+        var directoryExisted = Directory.Exists(directory);
         Directory.CreateDirectory(directory);
+        if (!directoryExisted)
+        {
+            ownership?.ApplyToDirectory(directory);
+        }
+
         var tmp = CreateTempFile(directory, "." + Path.GetFileName(final) + ".", ".link");
         BestEffortDelete(tmp);
         if (!CreateHardLink(tmp, src))
@@ -169,6 +184,9 @@ public static partial class FileLifecycle
             throw;
         }
 
+        // A hard link shares one inode with the source, so the ownership/mode change lands on the source's file
+        // too (and its other names, if any) — the same trade-off Python accepted for this fast path.
+        ownership?.ApplyToFile(Path.GetFullPath(final));
         return true;
     }
 
@@ -176,14 +194,21 @@ public static partial class FileLifecycle
     /// <c>safe_finalize_file</c>: a rename when it can be one; across volumes, a copy into a hidden partial beside the
     /// destination, an atomic replace, then removal of the staged file.
     /// </summary>
-    public static void SafeFinalizeFile(string staged, string final)
+    public static void SafeFinalizeFile(string staged, string final, IOutputOwnership? ownership = null)
     {
         var src = Path.GetFullPath(staged);
         var directory = Path.GetDirectoryName(Path.GetFullPath(final))!;
+        var directoryExisted = Directory.Exists(directory);
         Directory.CreateDirectory(directory);
+        if (!directoryExisted)
+        {
+            ownership?.ApplyToDirectory(directory);
+        }
+
         try
         {
             File.Move(src, final, overwrite: true);
+            ownership?.ApplyToFile(Path.GetFullPath(final));
             return;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
@@ -203,6 +228,8 @@ public static partial class FileLifecycle
             BestEffortDelete(tmp);
             throw new FileLifecycleException($"Could not safely finalize {src} to {final}: {exception.Message}", exception);
         }
+
+        ownership?.ApplyToFile(Path.GetFullPath(final));
     }
 
     /// <summary><c>tempfile.mkstemp</c>: a new file named prefix + 8 random characters + suffix, created exclusively.</summary>

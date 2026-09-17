@@ -11,6 +11,7 @@ using Weir.Core.Rules;
 using Weir.Core.Validation;
 using Weir.Infrastructure.Jobs;
 using Weir.Infrastructure.LibraryMode;
+using Weir.Infrastructure.MediaManagers;
 using Weir.Infrastructure.Refiner;
 using Weir.Infrastructure.Refiner.RemuxPass;
 
@@ -221,12 +222,19 @@ public static class LibraryModeEndpoints
     /// <summary>
     /// #508's hardlink preflight (step 1) for a set of already-scanned files, run at request time rather than trusting the
     /// scan's own cached classification, since a download client can start seeding a file at any moment after it was scanned.
-    /// The re-download-risk half (step 2) needs the manager's file id and quality profile id, which #505's title matching does
-    /// not resolve yet (<c>apps/server/README.md</c>, "Seams for #507, #508 and #509") — <see cref="LibraryCleanPreflight"/> is
-    /// still the single place that decision is made, it just never receives a risk assessment here.
+    /// The re-download-risk half (step 2, #551) runs too, for any file a scan matched to a Sonarr/Radarr title: the match
+    /// already carries the manager's file id and quality profile id, so no extra lookup is needed beyond the two calls
+    /// <see cref="RedownloadRiskChecker"/> itself makes. A file with nothing removed, or no match, never dials out.
     /// </summary>
-    private static List<LibraryFilePreflightResult> Preflight(
-        IEnumerable<LibraryScanFileEntry> files, LibrarySettings settings, IHardlinkInspector inspector)
+    private static async Task<List<LibraryFilePreflightResult>> PreflightAsync(
+        IEnumerable<LibraryScanFileEntry> files,
+        LibrarySettings settings,
+        RefinerRulesConfig rules,
+        string mediaScope,
+        IHardlinkInspector inspector,
+        RedownloadRiskChecker riskChecker,
+        IReadOnlyDictionary<long, ManagerConnection> connectionsById,
+        CancellationToken cancellationToken)
     {
         var results = new List<LibraryFilePreflightResult>();
         foreach (var file in files)
@@ -242,14 +250,86 @@ public static class LibraryModeEndpoints
             }
 
             var hardlink = HardlinkPolicy.Evaluate(linkCount, settings.CleanHardlinkedFiles);
-            results.Add(LibraryCleanPreflight.Evaluate(file.Path, hardlink, redownloadRisk: null));
+            var risk = await RedownloadRiskForFileAsync(file, rules, mediaScope, riskChecker, connectionsById, settings.SkipIfManagerWouldRedownload, cancellationToken).ConfigureAwait(false);
+            results.Add(LibraryCleanPreflight.Evaluate(file.Path, hardlink, risk));
         }
 
         return results;
     }
 
+    private static async Task<RedownloadRiskAssessment?> RedownloadRiskForFileAsync(
+        LibraryScanFileEntry file,
+        RefinerRulesConfig rules,
+        string mediaScope,
+        RedownloadRiskChecker riskChecker,
+        IReadOnlyDictionary<long, ManagerConnection> connectionsById,
+        bool skipIfManagerWouldRedownload,
+        CancellationToken cancellationToken)
+    {
+        if (file.ManagerConnectionId is not { } connectionId ||
+            file.ManagerFileId is not { } fileId ||
+            file.ManagerQualityProfileId is not { } qualityProfileId ||
+            !connectionsById.TryGetValue(connectionId, out var connection))
+        {
+            return null;
+        }
+
+        var removedAudioLanguages = RemovedAudioLanguages(file, rules);
+        if (removedAudioLanguages.Count == 0)
+        {
+            return null;
+        }
+
+        return await riskChecker.CheckAsync(
+                connection, mediaScope, fileId, qualityProfileId, file.ManagerTitle ?? Path.GetFileName(file.Path),
+                removedAudioLanguages, skipIfManagerWouldRedownload, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The languages of the audio tracks the current rules would remove from an already-scanned file, re-derived
+    /// from its cached ffprobe JSON (the scan's own plan cache carries only a count, not the languages) — the same
+    /// replan <see cref="LibraryCleanHandler"/> runs before actually touching the file.
+    /// </summary>
+    private static List<string> RemovedAudioLanguages(LibraryScanFileEntry file, RefinerRulesConfig rules)
+    {
+        if (file.RemovedAudioCount == 0 || file.ProbeJson is not { Length: > 0 } probeJson)
+        {
+            return [];
+        }
+
+        try
+        {
+            var classification = LibraryFilePlanner.Classify(ProbeResult.Parse(probeJson), rules);
+            return classification.Plan?.RemovedTrackRecords
+                .Where(track => track.Type == RemovedTrackType.Audio)
+                .Select(track => track.Language)
+                .ToList() ?? [];
+        }
+        catch (RulesInputException)
+        {
+            return [];
+        }
+    }
+
     private static List<string> PreflightWarningMessages(IEnumerable<LibraryFilePreflightResult> preflight) =>
         preflight.Where(r => r.Skip).Select(r => $"{Path.GetFileName(r.FilePath)}: {string.Join(" ", r.SkipReasons)}").ToList();
+
+    /// <summary>The library's rules, exactly as the scan and clean handlers resolve them (no rule set = the defaults).</summary>
+    private static async Task<RefinerRulesConfig> RulesForAsync(Weir.Infrastructure.Sqlite.UnitOfWork uow, RefinerLibraryRecord library)
+    {
+        var ruleSet = library.RuleSetId is { } ruleSetId ? await LibraryStore.GetRuleSetAsync(uow, ruleSetId).ConfigureAwait(false) : null;
+        return ruleSet is not null ? RemuxPassPaths.RulesConfigFor(ruleSet) : RuleSetConversion.ToRulesConfig(null);
+    }
+
+    /// <summary>Every distinct manager connection a set of scanned files was matched to, resolved once for a preflight pass.</summary>
+    private static async Task<Dictionary<long, ManagerConnection>> ConnectionsForFilesAsync(
+        Weir.Infrastructure.Sqlite.UnitOfWork uow, MediaManagerConnectionService connections, IEnumerable<LibraryScanFileEntry> files)
+    {
+        var ids = files.Select(f => f.ManagerConnectionId).OfType<long>().Distinct().ToList();
+        var resolved = await connections.ConnectionsByIdAsync(uow, ids).ConfigureAwait(false);
+        return resolved.Where(c => c.ConnectionId is not null).ToDictionary(c => c.ConnectionId!.Value);
+    }
 
     private static async Task<ApiResult> PostCleanAsync(ApiRequest request)
     {
@@ -282,7 +362,13 @@ public static class LibraryModeEndpoints
         }
 
         var settings = await LibrarySettingsStore.GetAsync(uow, libraryId).ConfigureAwait(false);
-        var preflight = Preflight(selected, settings, request.Service<IHardlinkInspector>()).ToDictionary(r => r.FilePath, StringComparer.Ordinal);
+        var rules = await RulesForAsync(uow, library).ConfigureAwait(false);
+        var connectionsById = await ConnectionsForFilesAsync(uow, request.Service<MediaManagerConnectionService>(), selected).ConfigureAwait(false);
+        var preflightResults = await PreflightAsync(
+                selected, settings, rules, library.MediaType, request.Service<IHardlinkInspector>(),
+                request.Service<RedownloadRiskChecker>(), connectionsById, request.Context.RequestAborted)
+            .ConfigureAwait(false);
+        var preflight = preflightResults.ToDictionary(r => r.FilePath, StringComparer.Ordinal);
 
         var (removingFiles, removingTracks, bytesSaved) = RemovalTotals(selected);
         if (removingFiles > 0 && !confirmed)
@@ -340,7 +426,7 @@ public static class LibraryModeEndpoints
         request.RequireConfirmationToken(csrfToken);
 
         var uow = await request.DbAsync().ConfigureAwait(false);
-        await RequireLibraryAsync(uow, libraryId).ConfigureAwait(false);
+        var library = await RequireLibraryAsync(uow, libraryId).ConfigureAwait(false);
         var settings = await LibrarySettingsStore.GetAsync(uow, libraryId).ConfigureAwait(false);
 
         if (enabled && !settings.ScheduleEnabled)
@@ -351,7 +437,12 @@ public static class LibraryModeEndpoints
             var (removingFiles, removingTracks, bytesSaved) = RemovalTotals(files);
             if (removingFiles > 0 && !confirmed)
             {
-                var preflight = Preflight(files, settings, request.Service<IHardlinkInspector>());
+                var rules = await RulesForAsync(uow, library).ConfigureAwait(false);
+                var connectionsById = await ConnectionsForFilesAsync(uow, request.Service<MediaManagerConnectionService>(), files).ConfigureAwait(false);
+                var preflight = await PreflightAsync(
+                        files, settings, rules, library.MediaType, request.Service<IHardlinkInspector>(),
+                        request.Service<RedownloadRiskChecker>(), connectionsById, request.Context.RequestAborted)
+                    .ConfigureAwait(false);
                 return ConfirmationRequired(removingFiles, removingTracks, bytesSaved, PreflightWarningMessages(preflight));
             }
         }
@@ -372,10 +463,9 @@ public static class LibraryModeEndpoints
     /// <summary>
     /// #509: titles a library's *current* rules would now keep a track for that a past clean removed for good — "12
     /// titles are missing tracks your new rules keep" (issue #509 step 2's diff), scoped to this library. The
-    /// "Download again" action <see cref="PostRedownloadAsync"/> offers is gated on <c>can_redownload</c>: true only
-    /// for a manager kind issue #509 verified (Sonarr/Radarr) <em>and</em> one Weir can actually name the manager's own
-    /// file for — #505's title matching (<c>apps/server/README.md</c>, "Seams for #507, #508 and #509") does not
-    /// resolve that id yet, so this is always false today; the field exists so the web needs no change once it does.
+    /// "Download again" action <see cref="PostRedownloadAsync"/> offers is gated on <c>can_redownload</c>
+    /// (<see cref="ManagerRedownloadRules.CanRedownload"/>): true only for a manager kind issue #509 verified
+    /// (Sonarr/Radarr) <em>and</em> a file #551's title matching actually resolved to one of that manager's titles.
     /// </summary>
     private static async Task<ApiResult> GetRedownloadsAsync(ApiRequest request)
     {
@@ -386,8 +476,7 @@ public static class LibraryModeEndpoints
 
         var uow = await request.DbAsync().ConfigureAwait(false);
         var library = await RequireLibraryAsync(uow, libraryId).ConfigureAwait(false);
-        var ruleSet = library.RuleSetId is { } ruleSetId ? await LibraryStore.GetRuleSetAsync(uow, ruleSetId).ConfigureAwait(false) : null;
-        var rules = ruleSet is not null ? RemuxPassPaths.RulesConfigFor(ruleSet) : RuleSetConversion.ToRulesConfig(null);
+        var rules = await RulesForAsync(uow, library).ConfigureAwait(false);
 
         var removedTrackStore = request.Service<IRemovedTrackStore>();
         var allRemoved = await removedTrackStore.GetAllAsync().ConfigureAwait(false);
@@ -402,7 +491,7 @@ public static class LibraryModeEndpoints
             var path = result.File.RelativePath;
             scannedByPath.TryGetValue(path, out var scanned);
             var titleName = scanned?.ManagerTitle ?? System.IO.Path.GetFileName(path);
-            var canRedownload = false; // see the method doc comment: never true until #505's title matching lands.
+            var canRedownload = ManagerRedownloadRules.CanRedownload(scanned?.ManagerKind, scanned?.ManagerConnectionId, scanned?.ManagerTitleId);
             return new PyDict()
                 .Set("path", path)
                 .Set("manager_kind", scanned?.ManagerKind)
@@ -413,7 +502,7 @@ public static class LibraryModeEndpoints
                 .Set("unavailable_reason", canRedownload
                     ? null
                     : (scanned?.ManagerKind is { } kind && ManagerRedownloadRules.KindSupportsRedownload(kind)
-                        ? "Weir does not yet track which manager file this is, so it cannot ask for a redownload automatically."
+                        ? "Weir does not know which manager file this is, so it cannot ask for a redownload automatically. Scan the library again."
                         : ManagerRedownloadRules.NoManagerMessage));
         }).ToList();
 
@@ -426,9 +515,11 @@ public static class LibraryModeEndpoints
     /// <summary>
     /// #509 step 3: asks a manager to redownload one title's file. Requires <c>confirm_destructive</c>
     /// (the operator has seen <see cref="ManagerRedownloadRules.DestructiveConfirmation"/>'s exact wording — the
-    /// web only shows this action once <c>GET .../library-redownloads</c> said <c>can_redownload: true</c>). Always
-    /// answers <see cref="RedownloadOutcome.Unsupported"/> today for the reason <see cref="GetRedownloadsAsync"/>
-    /// documents: no manager file id to act on.
+    /// web only shows this action once <c>GET .../library-redownloads</c> said <c>can_redownload: true</c>).
+    /// Resolves the manager connection and title id #551's title matching stored on the latest scan for this
+    /// path; answers <see cref="RedownloadOutcome.Unsupported"/> when no scan ever matched it (stale scan, or the
+    /// file was cleaned by hand between the two), and <c>"failed"</c> when the manager call itself throws before
+    /// committing to anything destructive (a network problem, not a data-safety one).
     /// </summary>
     private static async Task<ApiResult> PostRedownloadAsync(ApiRequest request)
     {
@@ -451,14 +542,45 @@ public static class LibraryModeEndpoints
         }
 
         var uow = await request.DbAsync().ConfigureAwait(false);
-        await RequireLibraryAsync(uow, libraryId).ConfigureAwait(false);
+        var library = await RequireLibraryAsync(uow, libraryId).ConfigureAwait(false);
+        var snapshot = await LibraryScanStore.LatestSnapshotAsync(uow, libraryId).ConfigureAwait(false);
+        var scanned = (snapshot?.Files ?? []).FirstOrDefault(f => string.Equals(f.Path, path, StringComparison.Ordinal));
 
-        // No numeric manager file id is available yet (see GetRedownloadsAsync's remarks) — nothing here can
-        // safely name a specific manager file to delete, so this never reaches IManagerRedownload today.
+        if (!ManagerRedownloadRules.CanRedownload(scanned?.ManagerKind, scanned?.ManagerConnectionId, scanned?.ManagerTitleId))
+        {
+            await request.CommitAsync().ConfigureAwait(false);
+            return ApiRoutes.Ok(new PyDict().Set("path", path).Set("outcome", "unsupported").Set("message", ManagerRedownloadRules.NoManagerMessage));
+        }
+
+        var connections = await request.Service<MediaManagerConnectionService>().ConnectionsByIdAsync(uow, [scanned!.ManagerConnectionId!.Value]).ConfigureAwait(false);
+        var connection = connections.FirstOrDefault();
         await request.CommitAsync().ConfigureAwait(false);
-        return ApiRoutes.Ok(new PyDict()
-            .Set("path", path)
-            .Set("outcome", "unsupported")
-            .Set("message", ManagerRedownloadRules.NoManagerMessage));
+        if (connection is null)
+        {
+            return ApiRoutes.Ok(new PyDict().Set("path", path).Set("outcome", "unsupported").Set("message", ManagerRedownloadRules.NoManagerMessage));
+        }
+
+        RedownloadResult result;
+        try
+        {
+            result = await request.Service<IManagerRedownload>()
+                .RequestRedownloadAsync(connection, library.MediaType, scanned.ManagerTitleId!, path, request.Context.RequestAborted)
+                .ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is MediaManagerHttpException or MediaManagerUnreachableException)
+        {
+            return ApiRoutes.Ok(new PyDict()
+                .Set("path", path)
+                .Set("outcome", "failed")
+                .Set("message", $"Weir could not ask {connection.Label} to download this again: {exception.Message}"));
+        }
+
+        var outcome = result.Outcome switch
+        {
+            RedownloadOutcome.Requested => "requested",
+            RedownloadOutcome.DeletedButSearchFailed => "deleted_but_search_failed",
+            _ => "unsupported",
+        };
+        return ApiRoutes.Ok(new PyDict().Set("path", path).Set("outcome", outcome).Set("message", result.Summary));
     }
 }

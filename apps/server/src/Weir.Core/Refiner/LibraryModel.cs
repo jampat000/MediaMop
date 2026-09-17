@@ -1,3 +1,4 @@
+using Weir.Core.Rules;
 using Weir.Core.Time;
 
 namespace Weir.Core.Refiner;
@@ -58,6 +59,34 @@ public sealed record RefinerRuleSetRecord
     public bool RemoveTitle { get; init; }
     public bool RemoveLanguageTags { get; init; }
     public bool RemoveOtherMetadata { get; init; }
+
+    /// <summary>Issue #495: off by default, so an upgrade changes nothing (<see cref="RefinerRulesConfig.RemoveHearingImpairedSubs"/>).</summary>
+    public bool RemoveHearingImpairedSubs { get; init; }
+
+    /// <summary>Issue #497: <see cref="RemuxRuleValues.AudioKeepModeSingle"/> (default) or <see cref="RemuxRuleValues.AudioKeepModePerLanguage"/>.</summary>
+    public string AudioKeepMode { get; init; } = RemuxRuleValues.AudioKeepModeSingle;
+
+    /// <summary>Issue #497: 0 (default) means unlimited.</summary>
+    public int SubtitleMaxPerLanguage { get; init; }
+
+    /// <summary>Issue #497: text_first (default), image_first or accessibility.</summary>
+    public string SubtitleQualityStrategy { get; init; } = RemuxRuleValues.SubtitleStrategyTextFirst;
+
+    /// <summary>Issue #498: off by default.</summary>
+    public bool StandardizeTrackNames { get; init; }
+
+    /// <summary>Issue #498: the template used when <see cref="StandardizeTrackNames"/> is on and no override matches.</summary>
+    public string TrackNameTemplate { get; init; } = TrackNaming.DefaultTemplate;
+
+    /// <summary>Issue #498: per-flag template overrides.</summary>
+    public TrackNameOverrides TrackNameOverrides { get; init; } = new();
+
+    /// <summary>Issue #498: off by default.</summary>
+    public bool ClearVideoTrackNames { get; init; }
+
+    /// <summary>Issue #498: off by default.</summary>
+    public bool RemoveChapters { get; init; }
+
     public PyDateTime CreatedAt { get; init; }
     public PyDateTime UpdatedAt { get; init; }
 }

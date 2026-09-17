@@ -105,7 +105,8 @@ public static class RemuxPassServices
             sp.GetRequiredService<RemuxPassSettings>(),
             sp.GetRequiredService<TimeProvider>(),
             sp.GetRequiredService<ILogger<RemuxPassRunner>>(),
-            sp.GetService<RuntimeMetricsStore>()));
+            sp.GetService<RuntimeMetricsStore>(),
+            sp.GetService<Weir.Infrastructure.Refiner.IOutputOwnership>()));
         services.TryAddSingleton(sp => new RemuxPassHandler(
             sp.GetRequiredService<SqliteDatabase>(),
             sp.GetRequiredService<WeirOptions>(),

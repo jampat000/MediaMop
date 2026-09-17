@@ -41,6 +41,23 @@ public static class RuleSetConversion
             PreserveDefaultSubs = row.PreserveDefaultSubs,
             AudioPreferenceMode = RemuxRules.NormalizeAudioPreferenceMode(row.AudioPreferenceMode),
             AudioSortersJson = row.AudioSortersJson ?? string.Empty,
+            RemoveHearingImpairedSubs = row.RemoveHearingImpairedSubs,
+            AudioKeepMode = RemuxRules.NormalizeAudioKeepMode(row.AudioKeepMode),
+            SubtitleMaxPerLanguage = row.SubtitleMaxPerLanguage,
+            SubtitleQualityStrategy = RemuxRules.NormalizeSubtitleQualityStrategy(row.SubtitleQualityStrategy),
+            Metadata = new MetadataRules
+            {
+                RemoveImages = row.RemoveImages,
+                RemoveAttachments = row.RemoveAttachments,
+                RemoveTitle = row.RemoveTitle,
+                RemoveLanguageTags = row.RemoveLanguageTags,
+                RemoveOtherMetadata = row.RemoveOtherMetadata,
+                StandardizeTrackNames = row.StandardizeTrackNames,
+                TrackNameTemplate = row.TrackNameTemplate,
+                TrackNameOverrides = row.TrackNameOverrides,
+                ClearVideoTrackNames = row.ClearVideoTrackNames,
+                RemoveChapters = row.RemoveChapters,
+            },
         };
     }
 }

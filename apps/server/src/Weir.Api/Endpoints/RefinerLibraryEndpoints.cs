@@ -4,6 +4,7 @@ using Weir.Api.Http;
 using Weir.Core.Auth;
 using Weir.Core.Json;
 using Weir.Core.Refiner;
+using Weir.Core.Rules;
 using Weir.Core.Time;
 using Weir.Core.Validation;
 using Weir.Infrastructure.MediaManagers;
@@ -15,7 +16,8 @@ namespace Weir.Api.Endpoints;
 /// <summary>Refiner libraries and rule sets — <c>/api/v1/refiner/libraries</c>, <c>/refiner/rule-sets</c>
 /// (port of <c>refiner_libraries_api.py</c>). Manager coverage now reads the linked connections' saved
 /// test results (#520). The opt-in Reject failure policy's support gate (<c>GET /refiner/reject-support</c>,
-/// and the same check on save) is ported (#522 part 4). Discovery/import/drift/unlink are still not ported.</summary>
+/// and the same check on save) is ported (#522 part 4). Media-manager library discovery (discover/drift/
+/// import) and library unlink are ported in #554, backed by <see cref="LibraryDiscoveryService"/>.</summary>
 public static class RefinerLibraryEndpoints
 {
     public static IEndpointRouteBuilder MapRefinerLibraryEndpoints(this IEndpointRouteBuilder endpoints)
@@ -23,9 +25,13 @@ public static class RefinerLibraryEndpoints
         endpoints.MapV1("GET", "/refiner/libraries", GetLibrariesAsync);
         endpoints.MapV1("POST", "/refiner/libraries", PostLibraryAsync);
         endpoints.MapV1("GET", "/refiner/reject-support", GetRejectSupportAsync);
+        endpoints.MapV1("GET", "/refiner/libraries/discover/{connection_id}", GetDiscoverableLibrariesAsync);
+        endpoints.MapV1("POST", "/refiner/libraries/discover/{connection_id}/import", PostImportLibrariesAsync);
+        endpoints.MapV1("GET", "/refiner/libraries/discover/{connection_id}/drift", GetLibraryDriftAsync);
         endpoints.MapV1("GET", "/refiner/libraries/{library_id}", GetLibraryAsync);
         endpoints.MapV1("PUT", "/refiner/libraries/{library_id}", PutLibraryAsync);
         endpoints.MapV1("DELETE", "/refiner/libraries/{library_id}", DeleteLibraryAsync);
+        endpoints.MapV1("POST", "/refiner/libraries/{library_id}/unlink", PostLibraryUnlinkAsync);
         endpoints.MapV1("POST", "/refiner/libraries/reorder", PostReorderAsync);
         endpoints.MapV1("GET", "/refiner/rule-sets", GetRuleSetsAsync);
         endpoints.MapV1("POST", "/refiner/rule-sets", PostRuleSetAsync);
@@ -37,6 +43,19 @@ public static class RefinerLibraryEndpoints
     private static async Task<RefinerLibraryRecord> RequireLibraryAsync(UnitOfWork uow, long id) =>
         await LibraryStore.GetAsync(uow, id).ConfigureAwait(false)
         ?? throw new ApiException(StatusCodes.Status404NotFound, "That Refiner library does not exist.");
+
+    /// <summary><c>_require_connection</c>: <c>int = Path(ge=1)</c>.</summary>
+    private static long ConnectionId(ApiRequest request, ValidationIssues issues)
+    {
+        var raw = request.RouteValue("connection_id") ?? string.Empty;
+        return PydanticRules.TryInt(new PyStr(raw), ["path", "connection_id"], 1, null, issues, out var value)
+            ? value > long.MaxValue ? long.MaxValue : (long)value
+            : 0;
+    }
+
+    private static async Task<MediaManagerConnectionRecord> RequireConnectionAsync(UnitOfWork uow, long connectionId) =>
+        await MediaManagerConnectionStore.GetAsync(uow, connectionId).ConfigureAwait(false)
+        ?? throw new ApiException(StatusCodes.Status404NotFound, "That media manager connection does not exist.");
 
     private static async Task<RefinerRuleSetRecord> RequireRuleSetAsync(UnitOfWork uow, long id) =>
         await LibraryStore.GetRuleSetAsync(uow, id).ConfigureAwait(false)
@@ -166,6 +185,19 @@ public static class RefinerLibraryEndpoints
         .Set("remove_title", row.RemoveTitle)
         .Set("remove_language_tags", row.RemoveLanguageTags)
         .Set("remove_other_metadata", row.RemoveOtherMetadata)
+        .Set("remove_hearing_impaired_subs", row.RemoveHearingImpairedSubs)
+        .Set("audio_keep_mode", row.AudioKeepMode)
+        .Set("subtitle_max_per_language", row.SubtitleMaxPerLanguage)
+        .Set("subtitle_quality_strategy", row.SubtitleQualityStrategy)
+        .Set("standardize_track_names", row.StandardizeTrackNames)
+        .Set("track_name_template", row.TrackNameTemplate)
+        .Set("track_name_overrides", new PyDict()
+            .Set("forced", row.TrackNameOverrides.Forced)
+            .Set("hearing_impaired", row.TrackNameOverrides.HearingImpaired)
+            .Set("commentary", row.TrackNameOverrides.Commentary)
+            .Set("audio_description", row.TrackNameOverrides.AudioDescription))
+        .Set("clear_video_track_names", row.ClearVideoTrackNames)
+        .Set("remove_chapters", row.RemoveChapters)
         .Set("used_by_library_count", usedByLibraryCount)
         .Set("updated_at", row.UpdatedAt.PydanticJson());
 
@@ -485,6 +517,147 @@ public static class RefinerLibraryEndpoints
         });
     }
 
+    // ---- Media-manager library discovery (#554) ----------------------------------------------
+
+    private static PyDict DiscoverableLibraryOut(DiscoverableLibrary item) => new PyDict()
+        .Set("key", item.Key)
+        .Set("name", item.Name)
+        .Set("media_type", item.MediaType)
+        .Set("root_path", item.RootPath)
+        .Set("already_imported", item.AlreadyImported)
+        .Set("local_path_problem", item.LocalPathProblem)
+        .Set("output_path", item.OutputPath)
+        .Set("processes_before_import", item.ProcessesBeforeImport)
+        .Set("output_path_problem", item.OutputPathProblem);
+
+    private static PyDict LibraryDriftOut(LibraryDrift item) => new PyDict()
+        .Set("kind", item.Kind)
+        .Set("library_id", item.LibraryId)
+        .Set("library_name", item.LibraryName)
+        .Set("manager_value", item.ManagerValue)
+        .Set("weir_value", item.WeirValue)
+        .Set("detail", item.Detail);
+
+    /// <summary><c>GET /refiner/libraries/discover/{connection_id}</c>: what this manager says it looks
+    /// after, and whether Weir already has it.</summary>
+    private static async Task<ApiResult> GetDiscoverableLibrariesAsync(ApiRequest request)
+    {
+        var issues = new ValidationIssues();
+        var connectionId = ConnectionId(request, issues);
+        issues.ThrowIfAny();
+
+        await request.RequireUserAsync(UserRoles.OperatorOrAdmin).ConfigureAwait(false);
+
+        var uow = await request.DbAsync().ConfigureAwait(false);
+        var connection = await RequireConnectionAsync(uow, connectionId).ConfigureAwait(false);
+        List<DiscoverableLibrary> found;
+        try
+        {
+            found = await request.Service<LibraryDiscoveryService>()
+                .DiscoverableLibrariesAsync(uow, connection, request.Context.RequestAborted).ConfigureAwait(false);
+        }
+        catch (RefinerDiscoveryException exception)
+        {
+            throw new ApiException(StatusCodes.Status502BadGateway, exception.Message);
+        }
+
+        return ApiRoutes.Ok(new PyList(found.Select(item => (PyJson)DiscoverableLibraryOut(item))));
+    }
+
+    /// <summary><c>POST /refiner/libraries/discover/{connection_id}/import</c>: create a Refiner library per
+    /// selected manager library.</summary>
+    private static async Task<ApiResult> PostImportLibrariesAsync(ApiRequest request)
+    {
+        var payload = await request.ReadBodyAsync().ConfigureAwait(false);
+        var issues = new ValidationIssues();
+        var connectionId = ConnectionId(request, issues);
+        var model = new BodyModel(payload, issues);
+        var csrfToken = model.Str("csrf_token", minLength: 1);
+        var keys = model.StrList("keys", []);
+        model.Finish(ExtraFields.Forbid);
+        if (keys.Count == 0)
+        {
+            issues.Add(new ValidationIssue("too_short", ["body", "keys"], "List should have at least 1 item after validation, not 0", new PyList()));
+        }
+
+        issues.ThrowIfAny();
+
+        await request.RequireUserAsync(UserRoles.OperatorOrAdmin).ConfigureAwait(false);
+        // Python's <c>_verify_csrf</c> (shared by every route in this file) refuses with this exact wording.
+        request.RequireConfirmationToken(csrfToken, "Invalid or expired CSRF token.");
+
+        var uow = await request.DbAsync().ConfigureAwait(false);
+        var connection = await RequireConnectionAsync(uow, connectionId).ConfigureAwait(false);
+        List<RefinerLibraryRecord> created;
+        try
+        {
+            created = await request.Service<LibraryDiscoveryService>()
+                .ImportLibrariesAsync(uow, connection, keys, request.Context.RequestAborted).ConfigureAwait(false);
+        }
+        catch (RefinerDiscoveryException exception)
+        {
+            throw new ApiException(StatusCodes.Status400BadRequest, exception.Message);
+        }
+
+        await request.CommitAsync().ConfigureAwait(false);
+        var items = new List<PyJson>();
+        foreach (var row in created)
+        {
+            items.Add(await LibraryOutAsync(uow, row).ConfigureAwait(false));
+        }
+
+        return new JsonApiResult(StatusCodes.Status201Created, new PyList(items));
+    }
+
+    /// <summary><c>GET /refiner/libraries/discover/{connection_id}/drift</c>: differences between the manager
+    /// and Weir. Reported only — nothing is applied.</summary>
+    private static async Task<ApiResult> GetLibraryDriftAsync(ApiRequest request)
+    {
+        var issues = new ValidationIssues();
+        var connectionId = ConnectionId(request, issues);
+        issues.ThrowIfAny();
+
+        await request.RequireUserAsync(UserRoles.OperatorOrAdmin).ConfigureAwait(false);
+
+        var uow = await request.DbAsync().ConfigureAwait(false);
+        var connection = await RequireConnectionAsync(uow, connectionId).ConfigureAwait(false);
+        List<LibraryDrift> drift;
+        try
+        {
+            drift = await request.Service<LibraryDiscoveryService>()
+                .ResyncDriftAsync(uow, connection, request.Context.RequestAborted).ConfigureAwait(false);
+        }
+        catch (RefinerDiscoveryException exception)
+        {
+            throw new ApiException(StatusCodes.Status502BadGateway, exception.Message);
+        }
+
+        return ApiRoutes.Ok(new PyList(drift.Select(item => (PyJson)LibraryDriftOut(item))));
+    }
+
+    /// <summary><c>POST /refiner/libraries/{library_id}/unlink</c>: forget where a library came from. The
+    /// library itself is untouched.</summary>
+    private static async Task<ApiResult> PostLibraryUnlinkAsync(ApiRequest request)
+    {
+        var payload = await request.ReadBodyAsync().ConfigureAwait(false);
+        var issues = new ValidationIssues();
+        var id = request.PathInt("library_id", issues);
+        var model = new BodyModel(payload, issues);
+        var csrfToken = model.Str("csrf_token", minLength: 1);
+        model.Finish(ExtraFields.Forbid);
+        issues.ThrowIfAny();
+
+        await request.RequireUserAsync(UserRoles.OperatorOrAdmin).ConfigureAwait(false);
+        // Python's <c>_verify_csrf</c> (shared by every route in this file) refuses with this exact wording.
+        request.RequireConfirmationToken(csrfToken, "Invalid or expired CSRF token.");
+
+        var uow = await request.DbAsync().ConfigureAwait(false);
+        var row = await RequireLibraryAsync(uow, id).ConfigureAwait(false);
+        var updated = await LibraryDiscoveryService.UnlinkLibraryAsync(uow, row).ConfigureAwait(false);
+        await request.CommitAsync().ConfigureAwait(false);
+        return ApiRoutes.Ok(await LibraryOutAsync(uow, updated).ConfigureAwait(false));
+    }
+
     private static async Task<ApiResult> PostReorderAsync(ApiRequest request)
     {
         var payload = await request.ReadBodyAsync().ConfigureAwait(false);
@@ -541,33 +714,71 @@ public static class RefinerLibraryEndpoints
     }
 
     /// <summary>Shared with <see cref="RefinerRulesPreviewEndpoints"/>, which validates an unsaved rules
-    /// payload the same way a save does, without touching the database.</summary>
-    internal static LibraryRules.RuleSetInput ReadRuleSetBody(BodyModel model) => new()
+    /// payload the same way a save does, without touching the database. <paramref name="issues"/> must be
+    /// the same collector <paramref name="model"/> itself reports to, so a bad nested
+    /// <c>track_name_overrides</c> field surfaces as one of this request's own validation errors.</summary>
+    internal static LibraryRules.RuleSetInput ReadRuleSetBody(BodyModel model, ValidationIssues issues)
     {
-        Name = model.Str("name", minLength: 1, maxLength: 120),
-        PrimaryAudioLang = model.OptionalStr("primary_audio_lang", defaultValue: "", maxLength: 24) ?? string.Empty,
-        SecondaryAudioLang = model.OptionalStr("secondary_audio_lang", defaultValue: "", maxLength: 24) ?? string.Empty,
-        TertiaryAudioLang = model.OptionalStr("tertiary_audio_lang", defaultValue: "", maxLength: 24) ?? string.Empty,
-        DefaultAudioSlot = model.Literal("default_audio_slot", ["primary", "secondary", "tertiary"], defaultValue: "primary"),
-        RemoveCommentary = model.Bool("remove_commentary", defaultValue: false),
-        SubtitleMode = model.Literal("subtitle_mode", ["keep_all", "keep_listed", "remove_all"], defaultValue: "keep_all"),
-        SubtitleLangsCsv = model.OptionalStr("subtitle_langs_csv", defaultValue: "", maxLength: 500) ?? string.Empty,
-        PreserveForcedSubs = model.Bool("preserve_forced_subs", defaultValue: true),
-        PreserveDefaultSubs = model.Bool("preserve_default_subs", defaultValue: true),
-        AudioSortersJson = model.OptionalStr("audio_sorters_json", defaultValue: "") ?? string.Empty,
-        SubtitleSortersJson = model.OptionalStr("subtitle_sorters_json", defaultValue: "") ?? string.Empty,
-        KeepOriginalLanguage = model.Bool("keep_original_language", defaultValue: false),
-        OriginalLanguageAdditionalCsv = model.OptionalStr("original_language_additional_csv", defaultValue: "", maxLength: 200) ?? string.Empty,
-        OriginalLanguageKeepOnlyFirst = model.Bool("original_language_keep_only_first", defaultValue: true),
-        OriginalLanguageFirstIfNone = model.Bool("original_language_first_if_none", defaultValue: true),
-        OriginalLanguageTreatEmptyAsOriginal = model.Bool("original_language_treat_empty_as_original", defaultValue: false),
-        RemoveImages = model.Bool("remove_images", defaultValue: false),
-        RemoveAttachments = model.Bool("remove_attachments", defaultValue: false),
-        RemoveTitle = model.Bool("remove_title", defaultValue: false),
-        RemoveLanguageTags = model.Bool("remove_language_tags", defaultValue: false),
-        RemoveOtherMetadata = model.Bool("remove_other_metadata", defaultValue: false),
-        AudioPreferenceMode = model.Literal("audio_preference_mode", ["preferred_langs_quality", "preferred_langs_strict", "quality_all_languages"], defaultValue: "preferred_langs_quality"),
-    };
+        var overridesDict = model.OptionalDict("track_name_overrides");
+        var overrides = new TrackNameOverrides();
+        if (overridesDict is not null)
+        {
+            var overridesModel = new BodyModel(overridesDict, issues);
+            overrides = new TrackNameOverrides
+            {
+                Forced = overridesModel.OptionalStr("forced", defaultValue: overrides.Forced, maxLength: 200) ?? overrides.Forced,
+                HearingImpaired = overridesModel.OptionalStr("hearing_impaired", defaultValue: overrides.HearingImpaired, maxLength: 200) ?? overrides.HearingImpaired,
+                Commentary = overridesModel.OptionalStr("commentary", defaultValue: overrides.Commentary, maxLength: 200) ?? overrides.Commentary,
+                AudioDescription = overridesModel.OptionalStr("audio_description", defaultValue: overrides.AudioDescription, maxLength: 200) ?? overrides.AudioDescription,
+            };
+            overridesModel.Finish(ExtraFields.Forbid);
+        }
+
+        return new LibraryRules.RuleSetInput
+        {
+            Name = model.Str("name", minLength: 1, maxLength: 120),
+            PrimaryAudioLang = model.OptionalStr("primary_audio_lang", defaultValue: "", maxLength: 24) ?? string.Empty,
+            SecondaryAudioLang = model.OptionalStr("secondary_audio_lang", defaultValue: "", maxLength: 24) ?? string.Empty,
+            TertiaryAudioLang = model.OptionalStr("tertiary_audio_lang", defaultValue: "", maxLength: 24) ?? string.Empty,
+            DefaultAudioSlot = model.Literal("default_audio_slot", ["primary", "secondary", "tertiary"], defaultValue: "primary"),
+            RemoveCommentary = model.Bool("remove_commentary", defaultValue: false),
+            SubtitleMode = model.Literal("subtitle_mode", ["keep_all", "keep_listed", "remove_all"], defaultValue: "keep_all"),
+            SubtitleLangsCsv = model.OptionalStr("subtitle_langs_csv", defaultValue: "", maxLength: 500) ?? string.Empty,
+            PreserveForcedSubs = model.Bool("preserve_forced_subs", defaultValue: true),
+            PreserveDefaultSubs = model.Bool("preserve_default_subs", defaultValue: true),
+            AudioSortersJson = model.OptionalStr("audio_sorters_json", defaultValue: "") ?? string.Empty,
+            SubtitleSortersJson = model.OptionalStr("subtitle_sorters_json", defaultValue: "") ?? string.Empty,
+            KeepOriginalLanguage = model.Bool("keep_original_language", defaultValue: false),
+            OriginalLanguageAdditionalCsv = model.OptionalStr("original_language_additional_csv", defaultValue: "", maxLength: 200) ?? string.Empty,
+            OriginalLanguageKeepOnlyFirst = model.Bool("original_language_keep_only_first", defaultValue: true),
+            OriginalLanguageFirstIfNone = model.Bool("original_language_first_if_none", defaultValue: true),
+            OriginalLanguageTreatEmptyAsOriginal = model.Bool("original_language_treat_empty_as_original", defaultValue: false),
+            RemoveImages = model.Bool("remove_images", defaultValue: false),
+            RemoveAttachments = model.Bool("remove_attachments", defaultValue: false),
+            RemoveTitle = model.Bool("remove_title", defaultValue: false),
+            RemoveLanguageTags = model.Bool("remove_language_tags", defaultValue: false),
+            RemoveOtherMetadata = model.Bool("remove_other_metadata", defaultValue: false),
+            AudioPreferenceMode = model.Literal("audio_preference_mode", ["preferred_langs_quality", "preferred_langs_strict", "quality_all_languages"], defaultValue: "preferred_langs_quality"),
+
+            // #495
+            RemoveHearingImpairedSubs = model.Bool("remove_hearing_impaired_subs", defaultValue: false),
+
+            // #497
+            AudioKeepMode = model.Literal("audio_keep_mode", [RemuxRuleValues.AudioKeepModeSingle, RemuxRuleValues.AudioKeepModePerLanguage], defaultValue: RemuxRuleValues.AudioKeepModeSingle),
+            SubtitleMaxPerLanguage = (int)model.Number("subtitle_max_per_language", defaultValue: 0, required: false, ge: 0),
+            SubtitleQualityStrategy = model.Literal(
+                "subtitle_quality_strategy",
+                [RemuxRuleValues.SubtitleStrategyTextFirst, RemuxRuleValues.SubtitleStrategyImageFirst, RemuxRuleValues.SubtitleStrategyAccessibility],
+                defaultValue: RemuxRuleValues.SubtitleStrategyTextFirst),
+
+            // #498
+            StandardizeTrackNames = model.Bool("standardize_track_names", defaultValue: false),
+            TrackNameTemplate = model.OptionalStr("track_name_template", defaultValue: TrackNaming.DefaultTemplate, maxLength: 200) ?? TrackNaming.DefaultTemplate,
+            TrackNameOverrides = overrides,
+            ClearVideoTrackNames = model.Bool("clear_video_track_names", defaultValue: false),
+            RemoveChapters = model.Bool("remove_chapters", defaultValue: false),
+        };
+    }
 
     private static async Task<ApiResult> PostRuleSetAsync(ApiRequest request)
     {
@@ -575,7 +786,7 @@ public static class RefinerLibraryEndpoints
         var issues = new ValidationIssues();
         var model = new BodyModel(payload, issues);
         var csrfToken = model.Str("csrf_token", minLength: 1);
-        var body = ReadRuleSetBody(model);
+        var body = ReadRuleSetBody(model, issues);
         model.Finish(ExtraFields.Forbid);
         issues.ThrowIfAny();
 
@@ -605,7 +816,7 @@ public static class RefinerLibraryEndpoints
         var id = request.PathInt("rule_set_id", pathIssues);
         var model = new BodyModel(payload, issues);
         var csrfToken = model.Str("csrf_token", minLength: 1);
-        var body = ReadRuleSetBody(model);
+        var body = ReadRuleSetBody(model, issues);
         model.Finish(ExtraFields.Forbid);
         pathIssues.ThrowIfAny();
         issues.ThrowIfAny();

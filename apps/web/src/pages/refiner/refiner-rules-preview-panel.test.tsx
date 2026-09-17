@@ -36,6 +36,20 @@ const rules: RefinerRuleSetWrite = {
   remove_title: false,
   remove_language_tags: false,
   remove_other_metadata: false,
+  remove_hearing_impaired_subs: false,
+  audio_keep_mode: "single",
+  subtitle_max_per_language: 0,
+  subtitle_quality_strategy: "text_first",
+  standardize_track_names: false,
+  track_name_template: "{language}{variant} {channels} {codec}",
+  track_name_overrides: {
+    forced: "{language} {flags}",
+    hearing_impaired: "{language} {flags}",
+    commentary: "{language} {flags}",
+    audio_description: "{language} {flags}",
+  },
+  clear_video_track_names: false,
+  remove_chapters: false,
 };
 
 const result: RefinerRulesPreviewResult = {

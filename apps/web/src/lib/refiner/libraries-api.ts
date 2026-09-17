@@ -160,6 +160,14 @@ export interface RefinerLibraryDrift {
   detail: string;
 }
 
+/** Issue #498: per-flag track name templates, checked forced, then hearing-impaired, then commentary, then audio description. */
+export interface RefinerTrackNameOverrides {
+  forced: string;
+  hearing_impaired: string;
+  commentary: string;
+  audio_description: string;
+}
+
 export interface RefinerRuleSet {
   id: number;
   name: string;
@@ -188,6 +196,23 @@ export interface RefinerRuleSet {
   remove_title: boolean;
   remove_language_tags: boolean;
   remove_other_metadata: boolean;
+  /** Issue #495: drop a subtitle track detected as hearing-impaired (SDH/CC), from its flag or its name. Off by default. */
+  remove_hearing_impaired_subs: boolean;
+  /** Issue #497: "single" (today's behaviour) or "per_language" — keep the best track of each configured audio language. */
+  audio_keep_mode: string;
+  /** Issue #497: 0 (default) means unlimited; otherwise the most subtitle tracks kept per language. */
+  subtitle_max_per_language: number;
+  /** Issue #497: "text_first" (default), "image_first" or "accessibility" — how the subtitle cap picks a winner. */
+  subtitle_quality_strategy: string;
+  /** Issue #498: write a standard name on every kept audio/subtitle track, from a template. Off by default. */
+  standardize_track_names: boolean;
+  /** Issue #498: placeholders {language} {variant} {channels} {codec} {flags}. */
+  track_name_template: string;
+  track_name_overrides: RefinerTrackNameOverrides;
+  /** Issue #498: clear scene-tag video track names (e.g. "x265-GROUP"). Off by default. */
+  clear_video_track_names: boolean;
+  /** Issue #498: drop the container's chapter list. Off by default. */
+  remove_chapters: boolean;
   /** Libraries pointing at this rule set. Deleting one still in use is refused. */
   used_by_library_count: number;
   updated_at: string | null;
@@ -227,6 +252,15 @@ export function writeFromRefinerRuleSet(
     remove_title: value.remove_title,
     remove_language_tags: value.remove_language_tags,
     remove_other_metadata: value.remove_other_metadata,
+    remove_hearing_impaired_subs: value.remove_hearing_impaired_subs,
+    audio_keep_mode: value.audio_keep_mode,
+    subtitle_max_per_language: value.subtitle_max_per_language,
+    subtitle_quality_strategy: value.subtitle_quality_strategy,
+    standardize_track_names: value.standardize_track_names,
+    track_name_template: value.track_name_template,
+    track_name_overrides: { ...value.track_name_overrides },
+    clear_video_track_names: value.clear_video_track_names,
+    remove_chapters: value.remove_chapters,
   };
 }
 

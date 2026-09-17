@@ -39,6 +39,20 @@ const ruleSet: RefinerRuleSet = {
   remove_title: false,
   remove_language_tags: false,
   remove_other_metadata: false,
+  remove_hearing_impaired_subs: false,
+  audio_keep_mode: "single",
+  subtitle_max_per_language: 0,
+  subtitle_quality_strategy: "text_first",
+  standardize_track_names: false,
+  track_name_template: "{language}{variant} {channels} {codec}",
+  track_name_overrides: {
+    forced: "{language} {flags}",
+    hearing_impaired: "{language} {flags}",
+    commentary: "{language} {flags}",
+    audio_description: "{language} {flags}",
+  },
+  clear_video_track_names: false,
+  remove_chapters: false,
   used_by_library_count: 2,
   updated_at: "2026-09-01T04:00:00Z",
 };
@@ -122,6 +136,60 @@ it("edits ordered rules, original-language behavior, metadata cleanup, and the p
     screen.getByRole("checkbox", { name: /Keep the original language/ }),
   );
   fireEvent.click(screen.getByRole("checkbox", { name: /Embedded images/ }));
+
+  // Issue #495/#497: audio keep mode, SDH removal and the subtitle cap/strategy.
+  expect(
+    screen.getByRole("heading", { name: "Track naming & chapters" }),
+  ).toBeInTheDocument();
+  fireEvent.change(
+    screen.getByRole("combobox", { name: /Audio tracks kept/ }),
+    { target: { value: "per_language" } },
+  );
+  fireEvent.click(
+    screen.getByRole("checkbox", { name: /Remove hearing-impaired subtitles/ }),
+  );
+  fireEvent.change(
+    screen.getByRole("spinbutton", {
+      name: /Limit subtitles kept per language/,
+    }),
+    { target: { value: "2" } },
+  );
+  fireEvent.change(
+    screen.getByRole("combobox", { name: /How to pick the best subtitle/ }),
+    { target: { value: "accessibility" } },
+  );
+
+  // Issue #498: standardize track names, template live preview, and chapters.
+  fireEvent.click(
+    screen.getByRole("checkbox", {
+      name: /Standardize audio and subtitle track names/,
+    }),
+  );
+  expect(
+    screen.getByText(
+      (_, element) =>
+        element?.tagName.toLowerCase() === "span" &&
+        element.textContent?.replace(/\s+/g, " ").trim() ===
+          "Preview: English (VFQ) 5.1 TrueHD",
+    ),
+  ).toBeInTheDocument();
+  const templateField = screen.getByRole("textbox", {
+    name: /Track name template/,
+  });
+  fireEvent.change(templateField, {
+    target: { value: "{language} {bogus}" },
+  });
+  expect(
+    screen.getByText(/Unknown placeholder '\{bogus\}'/),
+  ).toBeInTheDocument();
+  fireEvent.change(templateField, {
+    target: { value: "{language} {codec}" },
+  });
+  fireEvent.click(
+    screen.getByRole("checkbox", { name: /Clear video track names/ }),
+  );
+  fireEvent.click(screen.getByRole("checkbox", { name: /Remove chapters/ }));
+
   fireEvent.click(screen.getByRole("button", { name: "Save profile" }));
 
   await waitFor(() => {
@@ -131,6 +199,14 @@ it("edits ordered rules, original-language behavior, metadata cleanup, and the p
         keep_original_language: true,
         remove_images: true,
         audio_sorters_json: expect.stringContaining("channels"),
+        audio_keep_mode: "per_language",
+        remove_hearing_impaired_subs: true,
+        subtitle_max_per_language: 2,
+        subtitle_quality_strategy: "accessibility",
+        standardize_track_names: true,
+        track_name_template: "{language} {codec}",
+        clear_video_track_names: true,
+        remove_chapters: true,
       }),
     );
   });
