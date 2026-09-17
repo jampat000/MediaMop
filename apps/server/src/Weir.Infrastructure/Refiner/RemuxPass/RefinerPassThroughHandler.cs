@@ -137,7 +137,7 @@ public sealed class RefinerPassThroughHandler : IJobHandler
     /// <summary><c>record_delivery</c>: the short bookkeeping transaction after a delivery.</summary>
     private static async Task RecordDeliveryAsync(UnitOfWork uow, PassThroughDeliverySettings settings, string relativePath, PassThroughDeliveryResult result, long jobId, DateTimeOffset now)
     {
-        await RemuxPassFileState.RecordOutputCollisionAsync(uow, relativePath, result.Collision).ConfigureAwait(false);
+        await RemuxPassFileState.RecordOutputCollisionAsync(uow, relativePath, result.Collision, settings.LibraryId).ConfigureAwait(false);
         await RemuxPassFileState.MarkFileStatusAsync(uow, settings.LibraryId, relativePath, RefinerFileStatuses.PassedThrough, result.Sentence, now).ConfigureAwait(false);
         var detail = new PyDict()
             .Set("job_id", jobId)

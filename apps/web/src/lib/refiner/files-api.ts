@@ -256,3 +256,75 @@ export async function fetchRefinerFileLog(id: number): Promise<RefinerFileLog> {
 export function refinerFileLogDownloadPath(id: number): string {
   return `${refinerFilesPath()}/${id}/log/download`;
 }
+
+/** One ffprobe stream on a held file (issue #501), with what the saved rules would do to it and why. */
+export interface RefinerFileTrack {
+  index: number;
+  /** video, audio, subtitle, image, attachment or other. Only video, audio and subtitle can be chosen. */
+  type: "video" | "audio" | "subtitle" | "image" | "attachment" | "other";
+  codec: string | null;
+  language: string | null;
+  title: string | null;
+  /** Audio only. */
+  channels: number | null;
+  /** The stream's own disposition on the held source, not what the rules would choose. */
+  default: boolean;
+  forced: boolean;
+  rule_would_keep: boolean;
+  rule_reason: string;
+}
+
+export interface RefinerFileTracks {
+  file_id: number;
+  relative_path: string;
+  media_scope: string;
+  source_fingerprint: {
+    device: number;
+    inode: number;
+    size_bytes: number;
+    modified_time_ns: number;
+  };
+  streams: RefinerFileTrack[];
+}
+
+export async function fetchRefinerFileTracks(
+  id: number,
+): Promise<RefinerFileTracks> {
+  const path = `${refinerFilesPath()}/${id}/tracks`;
+  const response = await apiFetch(path);
+  await requireOk(path, response, "Could not read that file's tracks");
+  return readJson<RefinerFileTracks>(response);
+}
+
+export interface RefinerManualPlanKeep {
+  index: number;
+  default: boolean;
+  forced: boolean;
+}
+
+export interface RefinerManualPlanChoice {
+  keep: RefinerManualPlanKeep[];
+  order: number[];
+}
+
+export interface RefinerManualPlanResult {
+  ok: boolean;
+  job_id: number;
+  dedupe_key: string;
+  job_kind: string;
+}
+
+export async function postRefinerManualPlan(
+  id: number,
+  choice: RefinerManualPlanChoice,
+): Promise<RefinerManualPlanResult> {
+  const csrf_token = await fetchCsrfToken();
+  const path = `${refinerFilesPath()}/${id}/manual-plan`;
+  const response = await apiFetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...choice, csrf_token }),
+  });
+  await requireOk(path, response, "Could not queue that track choice");
+  return readJson<RefinerManualPlanResult>(response);
+}

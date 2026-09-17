@@ -92,8 +92,12 @@ public sealed class MediaManagerHttpClient
         return SendAsync(request, allowEmpty: false, cancellationToken);
     }
 
-    /// <summary><c>post_json</c>: the body as <c>json.dumps(body)</c>.</summary>
-    public Task<PyJson?> PostJsonAsync(string path, PyDict body, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// <c>post_json</c>: the body as <c>json.dumps(body)</c>. <paramref name="acceptedStatuses"/> widens the
+    /// success set beyond 200/201/204 for an endpoint verified to answer differently (Deluno's file-changed
+    /// answers 202 Accepted, #507); every other caller keeps Python's exact three.
+    /// </summary>
+    public Task<PyJson?> PostJsonAsync(string path, PyDict body, IReadOnlyCollection<int>? acceptedStatuses = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(body);
         var request = new HttpRequestMessage(HttpMethod.Post, Url(path))
@@ -101,7 +105,7 @@ public sealed class MediaManagerHttpClient
             Content = JsonContent(body),
         };
         request.Headers.TryAddWithoutValidation("X-Api-Key", _apiKey);
-        return SendAsync(request, allowEmpty: false, cancellationToken);
+        return SendAsync(request, allowEmpty: false, cancellationToken, acceptedStatuses);
     }
 
     /// <summary><c>put_json</c>.</summary>
@@ -141,8 +145,10 @@ public sealed class MediaManagerHttpClient
         return content;
     }
 
+    private static readonly int[] DefaultAcceptedStatuses = [200, 201, 204];
+
     /// <summary><c>_read_json</c>.</summary>
-    private async Task<PyJson?> SendAsync(HttpRequestMessage request, bool allowEmpty, CancellationToken cancellationToken)
+    private async Task<PyJson?> SendAsync(HttpRequestMessage request, bool allowEmpty, CancellationToken cancellationToken, IReadOnlyCollection<int>? acceptedStatuses = null)
     {
         using (request)
         {
@@ -188,7 +194,7 @@ public sealed class MediaManagerHttpClient
                     return null;
                 }
 
-                if (status is not (200 or 201 or 204))
+                if (!(acceptedStatuses ?? DefaultAcceptedStatuses).Contains(status))
                 {
                     throw new MediaManagerHttpException($"unexpected HTTP {status.ToString(CultureInfo.InvariantCulture)}");
                 }

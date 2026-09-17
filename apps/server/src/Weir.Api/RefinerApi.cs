@@ -60,6 +60,7 @@ public static class RefinerApi
         endpoints.MapRefinerOverviewMaintenanceEndpoints();
         endpoints.MapRefinerSettingsEndpoints();
         endpoints.MapRefinerWatchedFolderScanDispatchEndpoints();
+        endpoints.MapLibraryModeEndpoints();
         return endpoints;
     }
 }

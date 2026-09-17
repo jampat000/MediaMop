@@ -473,6 +473,10 @@ public static class RefinerLibraryEndpoints
             throw new ApiException(StatusCodes.Status409Conflict, exception.Message);
         }
 
+        // #505: a deleted library takes its library-mode settings and scan history with it (both live on
+        // refiner_jobs rows, not a foreign-keyed table — see apps/server/README.md, "Library mode").
+        await Weir.Infrastructure.LibraryMode.LibrarySettingsStore.DeleteAllForLibraryAsync(uow, row.Id).ConfigureAwait(false);
+
         await request.CommitAsync().ConfigureAwait(false);
         return new CustomApiResult(context =>
         {
@@ -621,8 +625,30 @@ public static class RefinerLibraryEndpoints
             throw new ApiException(StatusCodes.Status400BadRequest, exception.Message);
         }
 
+        // #505 point 6: saving rules on a library with library folders runs a background re-plan (a normal scan, trigger
+        // "rule_change"); the web shows "Apply to library? N files would change" once it finishes. Nothing runs on its own.
+        var rescanJobIds = new List<long>();
+        var jobStore = request.Service<Weir.Infrastructure.Jobs.RefinerJobStore>();
+        foreach (var library in await LibraryStore.ListAsync(uow).ConfigureAwait(false))
+        {
+            if (library.RuleSetId != updated.Id)
+            {
+                continue;
+            }
+
+            var librarySettings = await Weir.Infrastructure.LibraryMode.LibrarySettingsStore.GetAsync(uow, library.Id).ConfigureAwait(false);
+            if (librarySettings.Folders.Count == 0)
+            {
+                continue;
+            }
+
+            var job = await Weir.Infrastructure.LibraryMode.LibraryScanStore.RequestScanAsync(uow, jobStore, library.Id, "rule_change").ConfigureAwait(false);
+            rescanJobIds.Add(job.Id);
+        }
+
         await request.CommitAsync().ConfigureAwait(false);
-        return ApiRoutes.Ok(RuleSetOut(updated, await LibraryStore.RuleSetUsageCountAsync(uow, updated.Id).ConfigureAwait(false)));
+        return ApiRoutes.Ok(RuleSetOut(updated, await LibraryStore.RuleSetUsageCountAsync(uow, updated.Id).ConfigureAwait(false))
+            .Set("library_rescan_job_ids", new PyList(rescanJobIds.Select(id => (PyJson)new PyInt(id)))));
     }
 
     private static async Task<ApiResult> DeleteRuleSetAsync(ApiRequest request)

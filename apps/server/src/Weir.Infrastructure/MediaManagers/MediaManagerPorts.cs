@@ -165,6 +165,97 @@ public sealed class HttpMediaManagerPort : IMediaManagerPort
         return new ManagerLibraryTruth(connection, SignalStatus.Reported, ManagerDialectRules.ArrLibraryFilePaths(payload, _profile.ArrFileKey));
     }
 
+    public async Task<ManagerLibraryFilesSignal> ListLibraryFilesAsync(ManagerConnection connection, string mediaScope, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        if (!_profile.IsArr)
+        {
+            return new ManagerLibraryFilesSignal(
+                connection,
+                SignalStatus.NoSignal,
+                [],
+                $"{connection.Label} does not offer a file-by-file library listing Weir can match to a title.");
+        }
+
+        if (mediaScope != _profile.ArrScope)
+        {
+            return new ManagerLibraryFilesSignal(connection, SignalStatus.NoSignal, [], $"{connection.Label} does not look after this kind of library.");
+        }
+
+        var client = Client(connection, ManagerDialectRules.LibraryTimeout);
+        try
+        {
+            if (mediaScope == MediaManagerKinds.Movie)
+            {
+                var payload = await client.GetJsonAsync("/api/v3/movie", [new("pageSize", ManagerDialectRules.ArrLibraryPageSize)], cancellationToken).ConfigureAwait(false);
+                return new ManagerLibraryFilesSignal(connection, SignalStatus.Reported, ManagerDialectRules.ArrMovieLibraryFiles(payload));
+            }
+
+            // Sonarr has no "every episode file" endpoint: EpisodeFileController.GetEpisodeFiles requires
+            // seriesId or episodeFileIds, so every series is listed first and asked for its files in turn.
+            var seriesPayload = await client.GetJsonAsync("/api/v3/series", [new("pageSize", ManagerDialectRules.ArrLibraryPageSize)], cancellationToken).ConfigureAwait(false);
+            var files = new List<ManagerLibraryFile>();
+            foreach (var series in PyValues.Dicts(seriesPayload))
+            {
+                if (PyValues.FirstNumber(series, "id") is not { } seriesId)
+                {
+                    continue;
+                }
+
+                var idText = seriesId.ToString(CultureInfo.InvariantCulture);
+                var title = PyValues.FirstText(series, "title") ?? idText;
+                var episodePayload = await client.GetJsonAsync("/api/v3/episodefile", [new("seriesId", seriesId)], cancellationToken).ConfigureAwait(false);
+                files.AddRange(ManagerDialectRules.ArrEpisodeLibraryFiles(episodePayload, idText, title));
+            }
+
+            return new ManagerLibraryFilesSignal(connection, SignalStatus.Reported, files);
+        }
+        catch (Exception exception) when (exception is MediaManagerHttpException or MediaManagerUnreachableException)
+        {
+            return new ManagerLibraryFilesSignal(connection, SignalStatus.Unreachable, [], ManagerDialectRules.Unreachable(connection, exception, "which files it keeps and their titles"));
+        }
+    }
+
+    public async Task<ManagerNotifyOutcome> FileChangedAsync(
+        ManagerConnection connection,
+        IReadOnlySet<string> advertisedCapabilities,
+        string? titleId,
+        string filePath,
+        string? reason,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        ArgumentNullException.ThrowIfNull(advertisedCapabilities);
+        ArgumentNullException.ThrowIfNull(filePath);
+        var client = Client(connection, ManagerDialectRules.QueueTimeout);
+        if (_profile.IsArr)
+        {
+            if (titleId is null || !long.TryParse(titleId, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id))
+            {
+                throw new MediaManagerHttpException($"{connection.Label} needs a matched title id to rescan {filePath}, and none was given.");
+            }
+
+            var (name, idProperty) = ManagerDialectRules.ArrRescanCommand(_profile.ArrScope!);
+            await client.PostJsonAsync("/api/v3/command", new PyDict().Set("name", name).Set(idProperty, id), cancellationToken: cancellationToken).ConfigureAwait(false);
+            return ManagerNotifyOutcome.Notified;
+        }
+
+        if (!advertisedCapabilities.Contains(ManagerDialectRules.ExternalFileChangedCapability))
+        {
+            return ManagerNotifyOutcome.NotSupported;
+        }
+
+        var body = new PyDict().Set("path", filePath).Set("tool", "Weir");
+        if (!string.IsNullOrEmpty(reason))
+        {
+            body.Set("reason", reason);
+        }
+
+        // Deluno answers 202 Accepted (a queued re-read), not one of the three statuses every other call here accepts.
+        await client.PostJsonAsync(ManagerDialectRules.ExternalFileChangedPath, body, acceptedStatuses: [200, 201, 202, 204], cancellationToken: cancellationToken).ConfigureAwait(false);
+        return ManagerNotifyOutcome.Notified;
+    }
+
     private MediaManagerHttpClient Client(ManagerConnection connection, TimeSpan timeout) =>
         new(connection.BaseUrl, connection.ApiKey, _handlers, timeout);
 }

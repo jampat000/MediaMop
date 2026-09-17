@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Weir.Core.Json;
 using Weir.Core.Media;
@@ -35,8 +36,13 @@ public sealed class MediaGoldenParityTests
                 flags.ValueKind == JsonValueKind.Null ? null : Strings(flags));
 
             var expected = item.GetProperty("expected");
-            AssertTokens(Strings(expected.GetProperty("argv")), argv, name);
-            AssertTokens(Strings(expected.GetProperty("progress_argv")), FfmpegCommands.WithProgress(argv), name + " (progress)");
+            var expectedArgv = GoldenDivergences.RemuxArgv(Strings(expected.GetProperty("argv")), input);
+            AssertTokens(expectedArgv, argv, name);
+            // #547 changed the plain argv (see GoldenDivergences.RemuxArgv), which shifts where "-progress pipe:1
+            // -nostats" lands relative to the output path too; re-deriving the expectation from the same patched
+            // list (rather than patching the fixture's separately-recorded progress_argv a second, differently
+            // shaped way) keeps this a proof of WithProgress's insertion logic instead of a second copy of item 1-3.
+            AssertTokens(FfmpegCommands.WithProgress(expectedArgv), FfmpegCommands.WithProgress(argv), name + " (progress)");
         }
     }
 
@@ -397,5 +403,108 @@ internal static class GoldenDivergences
         }
 
         return patched;
+    }
+
+    private static readonly HashSet<string> AttachmentIncapableExtensions = new(StringComparer.OrdinalIgnoreCase) { ".mp4", ".m4v", ".mov" };
+
+    private static readonly string[] StaleStatisticsTagKeys =
+    [
+        "DURATION", "NUMBER_OF_FRAMES", "NUMBER_OF_BYTES", "BPS",
+        "_STATISTICS_WRITING_APP", "_STATISTICS_WRITING_DATE_UTC", "_STATISTICS_TAGS", "ENCODER",
+    ];
+
+    /// <summary>
+    /// #547 fixes three bugs in <see cref="Weir.Core.Media.FfmpegCommands.BuildRemuxArgv"/> that change nearly
+    /// every remux argv fixture with an audio or subtitle track (which is nearly all of them): item 1 adds an
+    /// attachment map (<c>-map 0:t?</c>) unless attachments are being removed or the output container cannot
+    /// carry one (mirroring the production extension check); item 2 changes each disposition token from a flat
+    /// overwrite (<c>default</c>/<c>0</c>/<c>forced</c>/<c>default+forced</c>) to the additive form
+    /// (<c>+default</c>/<c>-default</c> combined with <c>+forced</c>/<c>-forced</c>) that preserves whatever else
+    /// ffmpeg copied through from the source stream's own disposition instead of discarding it; item 3 adds a
+    /// fixed clear of stale per-track statistics tags on every kept video/audio/subtitle stream. None of the
+    /// fixtures these cases were captured from ever set #498's StandardizeTrackNames/ClearVideoTrackNames
+    /// (<see cref="MediaGoldenParityTests.ReadPlan"/> does not even read those two fields), so the new tags always
+    /// land right before the output path, at the very end — see apps/server/README.md, "ffmpeg parity".
+    /// </summary>
+    public static IReadOnlyList<string> RemuxArgv(IReadOnlyList<string> golden, JsonElement input)
+    {
+        var argv = golden.ToList();
+        var plan = input.GetProperty("plan");
+        var metadata = plan.GetProperty("metadata");
+        var dst = input.GetProperty("dst").GetString()!;
+        var videoCount = plan.GetProperty("video_indices").GetArrayLength();
+        var audioCount = plan.GetProperty("audio").GetArrayLength();
+        var subtitleCount = plan.GetProperty("subtitles").GetArrayLength();
+        var rules = new MetadataRules
+        {
+            RemoveImages = metadata.GetProperty("remove_images").GetBoolean(),
+            RemoveAttachments = metadata.GetProperty("remove_attachments").GetBoolean(),
+            RemoveTitle = metadata.GetProperty("remove_title").GetBoolean(),
+            RemoveLanguageTags = metadata.GetProperty("remove_language_tags").GetBoolean(),
+            RemoveOtherMetadata = metadata.GetProperty("remove_other_metadata").GetBoolean(),
+        };
+
+        var mapsAttachments = !rules.RemoveAttachments && SupportsAttachmentOutput(dst);
+        if (mapsAttachments)
+        {
+            argv.InsertRange(argv.IndexOf("-c"), ["-map", "0:t?"]);
+        }
+
+        if (mapsAttachments && rules.RemoveOtherMetadata)
+        {
+            // The restore lands after the *whole* MetadataStreams.ArgvFlags(rules) block (which, when both
+            // RemoveOtherMetadata and RemoveTitle are set, also carries a "-metadata title=" pair after
+            // "-map_metadata -1" — see MetadataStreams.ArgvFlags), not right after "-map_metadata -1" itself;
+            // reusing the real production flags list here keeps this in step with that block's actual length.
+            var insertAt = argv.IndexOf("-c") + 2 + MetadataStreams.ArgvFlags(rules).Count;
+            argv.InsertRange(insertAt, ["-map_metadata:s:t", "0:s:t"]);
+        }
+
+        for (var i = 0; i < argv.Count - 1; i++)
+        {
+            if (argv[i].StartsWith("-disposition:a:", StringComparison.Ordinal))
+            {
+                argv[i + 1] = argv[i + 1] == "default" ? "+default" : "-default";
+            }
+            else if (argv[i].StartsWith("-disposition:s:", StringComparison.Ordinal))
+            {
+                var (hasDefault, hasForced) = argv[i + 1] switch
+                {
+                    "default+forced" => (true, true),
+                    "default" => (true, false),
+                    "forced" => (false, true),
+                    _ => (false, false),
+                };
+                argv[i + 1] = (hasDefault ? "+default" : "-default") + (hasForced ? "+forced" : "-forced");
+            }
+        }
+
+        var statsTokens = new List<string>();
+        AppendStatsClearTokens(statsTokens, 'v', videoCount);
+        AppendStatsClearTokens(statsTokens, 'a', audioCount);
+        AppendStatsClearTokens(statsTokens, 's', subtitleCount);
+        argv.InsertRange(argv.Count - 1, statsTokens);
+
+        return argv;
+    }
+
+    private static bool SupportsAttachmentOutput(string dst)
+    {
+        var lastDot = dst.LastIndexOf('.');
+        var lastSeparator = Math.Max(dst.LastIndexOf('/'), dst.LastIndexOf('\\'));
+        return lastDot <= lastSeparator || !AttachmentIncapableExtensions.Contains(dst[lastDot..]);
+    }
+
+    private static void AppendStatsClearTokens(List<string> tokens, char streamType, int count)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            var specifier = $"-metadata:s:{streamType}:{i.ToString(CultureInfo.InvariantCulture)}";
+            foreach (var key in StaleStatisticsTagKeys)
+            {
+                tokens.Add(specifier);
+                tokens.Add($"{key}=");
+            }
+        }
     }
 }

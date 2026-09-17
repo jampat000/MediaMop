@@ -669,6 +669,31 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/refiner/files/{file_id}/manual-plan": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Refiner File Manual Plan
+     * @description Queue a remux pass built from an operator's hand-picked track choice (issue #501).
+     *
+     *     Validates at least one video and one audio track kept, every index against a fresh probe
+     *     of the held source, and at most one default per audio and subtitle. The pass re-probes
+     *     before running: if the source changed, or a chosen track is missing or changed type, it
+     *     fails asking the operator to choose again rather than guessing.
+     */
+    post: operations["post_refiner_file_manual_plan_api_v1_refiner_files__file_id__manual_plan_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/refiner/files/{file_id}/move-to-top": {
     parameters: {
       query?: never;
@@ -710,6 +735,27 @@ export interface paths {
      *     because the automatic attempts are spent — would answer a question they did not ask.
      */
     post: operations["requeue_refiner_file_api_v1_refiner_files__file_id__requeue_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/files/{file_id}/tracks": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Refiner File Tracks
+     * @description A fresh ffprobe of a held file's source: every stream with its index, type, codec, language,
+     *     title, channels and disposition, and what the saved rules would do with it and why (issue #501).
+     */
+    get: operations["get_refiner_file_tracks_api_v1_refiner_files__file_id__tracks_get"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -984,6 +1030,134 @@ export interface paths {
      * @description Remove a library. Refused while it still has queued or running work.
      */
     delete: operations["delete_refiner_library_api_v1_refiner_libraries__library_id__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/libraries/{library_id}/library-files": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Library Files
+     * @description Library mode (#505 point 4). The latest scan's file list, filtered by classification, matched manager kind or a path search, plus the removal/size summary the Clean confirmation dialog uses.
+     */
+    get: operations["get_library_files"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/libraries/{library_id}/library-files/clean": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Library Files Clean
+     * @description Library mode (#505 point 5). Cleans the selected files in place. Refused with 400 (LibraryConfirmationRequired) when any selected file would have tracks removed and confirm_final_removal is not true.
+     */
+    post: operations["post_library_files_clean"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/libraries/{library_id}/library-redownloads": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Library Redownloads
+     * @description Library mode (#505) / issue #509 step 2. Titles whose current rules would now keep a track a past clean removed for good, scoped to this library.
+     */
+    get: operations["get_library_redownloads"];
+    put?: never;
+    /**
+     * Post Library Redownload
+     * @description Library mode (#505) / issue #509 step 3. Asks a manager to redownload one title's file. Refused (400) without confirm_destructive.
+     */
+    post: operations["post_library_redownload"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/libraries/{library_id}/library-scan": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Library Scan
+     * @description Library mode (#505 point 2). Queues a read-only scan of this library's folders: cached ffprobe by path/size/mtime, classified against the library's current rules. Never writes to a file. Returns the already-running scan instead of queuing a duplicate.
+     */
+    post: operations["post_library_scan"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/libraries/{library_id}/library-schedule": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Post Library Schedule
+     * @description Library mode (#505 point 7). Turns the off-by-default scheduled scan-and-clean on or off, reusing the library's existing schedule window. Turning it on for the first time is refused with 400 (LibraryConfirmationRequired) unless confirm_final_removal is true, when the latest scan found tracks that would be removed.
+     */
+    post: operations["post_library_schedule"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/libraries/{library_id}/library-settings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Library Settings
+     * @description Library mode (#505). Weir server (.NET) only; there is no Python backend route to match, since library mode has no Python implementation.
+     */
+    get: operations["get_library_settings"];
+    /**
+     * Put Library Settings
+     * @description Save this library's library folders (#505 point 1). The schedule flag is unchanged; use library-schedule to change it. Refused (400) when a folder overlaps this library's watched, work or output folder.
+     */
+    put: operations["put_library_settings"];
+    post?: never;
+    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -2121,6 +2295,76 @@ export interface components {
       status: string;
     };
     /**
+     * LibraryCleanIn
+     * @description Library mode (#505 point 5). Weir server (.NET) only.
+     */
+    LibraryCleanIn: {
+      /**
+       * Confirm Final Removal
+       * @default false
+       */
+      confirm_final_removal: boolean;
+      /** Csrf Token */
+      csrf_token: string;
+      /** Paths */
+      paths: string[];
+    };
+    /**
+     * LibraryCleanOut
+     * @description Library mode (#505 point 5, #508 preflight). Weir server (.NET) only.
+     */
+    LibraryCleanOut: {
+      /** Estimated Bytes Saved */
+      estimated_bytes_saved: number;
+      /** Files Count */
+      files_count: number;
+      /** Job Ids */
+      job_ids: number[];
+      /** Queued */
+      queued: number;
+      /**
+       * Skipped Paths
+       * @description #508: paths selected for cleaning but skipped outright (still shared with a download).
+       */
+      skipped_paths: string[];
+      /** Tracks Count */
+      tracks_count: number;
+      /**
+       * Warnings
+       * @description #508's per-file preflight notes (seeding, re-download risk).
+       */
+      warnings: string[];
+    };
+    /**
+     * LibraryConfirmationRequired
+     * @description Library mode (#505 point 5). Weir server (.NET) only. The exact confirmation sentence the web renders, plus the numbers behind it.
+     */
+    LibraryConfirmationRequired: {
+      /** Detail */
+      detail: string;
+      /** Error */
+      error: string;
+      /** Estimated Bytes Saved */
+      estimated_bytes_saved: number;
+      /** Files Count */
+      files_count: number;
+      /** Tracks Count */
+      tracks_count: number;
+      /**
+       * Warnings
+       * @description #508's per-file preflight notes (seeding, re-download risk), one line per file that would be skipped.
+       */
+      warnings: string[];
+    };
+    /**
+     * LibraryCsrfIn
+     * @description Library mode (#505). Weir server (.NET) only.
+     */
+    LibraryCsrfIn: {
+      /** Csrf Token */
+      csrf_token: string;
+    };
+    /**
      * LibraryDriftOut
      * @description A difference between the manager and Weir. Reported, never applied.
      */
@@ -2141,6 +2385,200 @@ export interface components {
       manager_value?: string | null;
       /** Weir Value */
       weir_value?: string | null;
+    };
+    /**
+     * LibraryFileOut
+     * @description Library mode (#505 point 2). Weir server (.NET) only.
+     */
+    LibraryFileOut: {
+      /**
+       * Classification
+       * @enum {string}
+       */
+      classification: "matches" | "would_change" | "cannot_process";
+      /** Estimated Bytes Saved */
+      estimated_bytes_saved: number;
+      /** Manager Kind */
+      manager_kind: string | null;
+      /** Manager Title */
+      manager_title: string | null;
+      /** Path */
+      path: string;
+      /** Reason */
+      reason: string | null;
+      /** Removed Audio Tracks */
+      removed_audio_tracks: number;
+      /** Removed Subtitle Tracks */
+      removed_subtitle_tracks: number;
+      /** Size Bytes */
+      size_bytes: number;
+      /** Summary */
+      summary: string | null;
+    };
+    /**
+     * LibraryFilesOut
+     * @description Library mode (#505 point 4). Weir server (.NET) only.
+     */
+    LibraryFilesOut: {
+      /** Files */
+      files: components["schemas"]["LibraryFileOut"][];
+      /** Library Id */
+      library_id: number;
+      /** Scan */
+      scan: Record<string, never> | null;
+      summary: components["schemas"]["LibraryFilesSummaryOut"];
+      /** Total */
+      total: number;
+    };
+    /**
+     * LibraryFilesSummaryOut
+     * @description Library mode (#505 point 5). Weir server (.NET) only.
+     */
+    LibraryFilesSummaryOut: {
+      /** Cannot Process */
+      cannot_process: number;
+      /** Estimated Bytes Saved */
+      estimated_bytes_saved: number;
+      /** Matches */
+      matches: number;
+      /** Total Removed Audio Tracks */
+      total_removed_audio_tracks: number;
+      /** Total Removed Subtitle Tracks */
+      total_removed_subtitle_tracks: number;
+      /** Would Change */
+      would_change: number;
+    };
+    /**
+     * LibraryRedownloadIn
+     * @description Issue #509 step 3. confirm_destructive must be true: the operator has seen ManagerRedownloadRules.DestructiveConfirmation's wording.
+     */
+    LibraryRedownloadIn: {
+      /** Confirm Destructive */
+      confirm_destructive: boolean;
+      /** Csrf Token */
+      csrf_token: string;
+      /** Path */
+      path: string;
+    };
+    /**
+     * LibraryRedownloadOut
+     * @description Issue #509 step 3's answer. Always outcome 'unsupported' today — see LibraryRedownloadTitleOut.can_redownload's remarks.
+     */
+    LibraryRedownloadOut: {
+      /** Message */
+      message: string;
+      /** Outcome */
+      outcome: string;
+      /** Path */
+      path: string;
+    };
+    /**
+     * LibraryRedownloadTitleOut
+     * @description Library mode (#505) / issue #509. One title whose current rules would now keep a track a past clean removed for good.
+     */
+    LibraryRedownloadTitleOut: {
+      /**
+       * Can Redownload
+       * @description Whether the 'Download again' action can be offered for this title: a manager kind issue #509 verified (Sonarr/Radarr) and a manager file id Weir can act on. Always false until #505's title matching resolves that id.
+       */
+      can_redownload: boolean;
+      /**
+       * Confirmation Message
+       * @description ManagerRedownloadRules.DestructiveConfirmation's exact wording, present only when can_redownload is true.
+       */
+      confirmation_message?: string | null;
+      /** Manager Kind */
+      manager_kind?: string | null;
+      /** Manager Title */
+      manager_title?: string | null;
+      /** Path */
+      path: string;
+      /** Removed Tracks */
+      removed_tracks: components["schemas"]["RemovedTrackOut"][];
+      /**
+       * Unavailable Reason
+       * @description Why can_redownload is false, for a plain-language note instead of hiding the title outright.
+       */
+      unavailable_reason?: string | null;
+    };
+    /**
+     * LibraryRedownloadsListOut
+     * @description Library mode (#505) / issue #509.
+     */
+    LibraryRedownloadsListOut: {
+      /** Library Id */
+      library_id: number;
+      /** Titles */
+      titles: components["schemas"]["LibraryRedownloadTitleOut"][];
+      /** Total */
+      total: number;
+    };
+    /**
+     * LibraryScanTriggerOut
+     * @description Library mode (#505 point 2). Weir server (.NET) only.
+     */
+    LibraryScanTriggerOut: {
+      /** Already Running */
+      already_running: boolean;
+      /** Job Id */
+      job_id: number;
+      /** Status */
+      status: string;
+    };
+    /**
+     * LibraryScheduleIn
+     * @description Library mode (#505 point 7). Weir server (.NET) only.
+     */
+    LibraryScheduleIn: {
+      /**
+       * Confirm Final Removal
+       * @default false
+       */
+      confirm_final_removal: boolean;
+      /** Csrf Token */
+      csrf_token: string;
+      /** Enabled */
+      enabled: boolean;
+    };
+    /**
+     * LibrarySettingsOut
+     * @description Library mode (#505). Weir server (.NET) only.
+     */
+    LibrarySettingsOut: {
+      /**
+       * Clean Hardlinked Files
+       * @description #508 step 1: clean a file even while another name still shares its data (seeding). Default false.
+       */
+      clean_hardlinked_files: boolean;
+      /** Library Folders */
+      library_folders: string[];
+      /** Library Schedule Enabled */
+      library_schedule_enabled: boolean;
+      /**
+       * Skip If Manager Would Redownload
+       * @description #508 step 2: skip a clean that would make a manager re-download the title. Default true.
+       */
+      skip_if_manager_would_redownload: boolean;
+    };
+    /**
+     * LibrarySettingsUpdateIn
+     * @description Library mode (#505 point 1, #508 steps 1-2). Weir server (.NET) only.
+     */
+    LibrarySettingsUpdateIn: {
+      /**
+       * Clean Hardlinked Files
+       * @description Left out to keep the saved value.
+       */
+      clean_hardlinked_files?: boolean;
+      /** Csrf Token */
+      csrf_token: string;
+      /** Library Folders */
+      library_folders: string[];
+      /**
+       * Skip If Manager Would Redownload
+       * @description Left out to keep the saved value.
+       */
+      skip_if_manager_would_redownload?: boolean;
     };
     /** LoginIn */
     LoginIn: {
@@ -3021,6 +3459,56 @@ export interface components {
       tone: string;
     };
     /**
+     * RefinerFileTrackOut
+     * @description One ffprobe stream on a held file, with what the saved rules would do to it and why (issue #501).
+     */
+    RefinerFileTrackOut: {
+      /** Channels */
+      channels: number | null;
+      /** Codec */
+      codec: string | null;
+      /**
+       * Default
+       * @description The stream's own disposition on the held source, not what the rules would choose.
+       */
+      default: boolean;
+      /**
+       * Forced
+       * @description The stream's own disposition on the held source, not what the rules would choose.
+       */
+      forced: boolean;
+      /** Index */
+      index: number;
+      /** Language */
+      language: string | null;
+      /** Rule Reason */
+      rule_reason: string;
+      /** Rule Would Keep */
+      rule_would_keep: boolean;
+      /** Title */
+      title: string | null;
+      /**
+       * Type
+       * @description video, audio, subtitle, image, attachment or other.
+       */
+      type: string;
+    };
+    /**
+     * RefinerFileTracksOut
+     * @description A fresh ffprobe of a held file's source, and what the saved rules would do with it (issue #501).
+     */
+    RefinerFileTracksOut: {
+      /** File Id */
+      file_id: number;
+      /** Media Scope */
+      media_scope: string;
+      /** Relative Path */
+      relative_path: string;
+      source_fingerprint: components["schemas"]["RefinerSourceFingerprintOut"];
+      /** Streams */
+      streams: components["schemas"]["RefinerFileTrackOut"][];
+    };
+    /**
      * RefinerFilesBulkRequeueIn
      * @description Requeue everything matching a filter, described the same way the list is filtered.
      */
@@ -3894,6 +4382,49 @@ export interface components {
        */
       work_folder: string;
     };
+    /**
+     * RefinerManualPlanIn
+     * @description An operator's hand-picked track choice for a held file (issue #501). At least one video and one
+     *     audio track must be kept, every index must exist on a fresh probe of the source, and at most one
+     *     audio track and one subtitle track may be marked default. order must list every kept index exactly once.
+     */
+    RefinerManualPlanIn: {
+      /** Csrf Token */
+      csrf_token: string;
+      /** Keep */
+      keep: components["schemas"]["RefinerManualPlanKeepIn"][];
+      /** Order */
+      order: number[];
+    };
+    /**
+     * RefinerManualPlanKeepIn
+     * @description One kept track's disposition choice (issue #501): default and forced only matter for audio and subtitle tracks.
+     */
+    RefinerManualPlanKeepIn: {
+      /**
+       * Default
+       * @default false
+       */
+      default: boolean;
+      /**
+       * Forced
+       * @default false
+       */
+      forced: boolean;
+      /** Index */
+      index: number;
+    };
+    /** RefinerManualPlanOut */
+    RefinerManualPlanOut: {
+      /** Dedupe Key */
+      dedupe_key: string;
+      /** Job Id */
+      job_id: number;
+      /** Job Kind */
+      job_kind: string;
+      /** Ok */
+      ok: boolean;
+    };
     /** RefinerOperatorSettingsOut */
     RefinerOperatorSettingsOut: {
       /**
@@ -4668,6 +5199,20 @@ export interface components {
       worker_mode_summary: string;
     };
     /**
+     * RefinerSourceFingerprintOut
+     * @description The source's identity and content state at the moment it was probed (issue #501): device, inode, size and modified time. Compared again when the pass runs, to detect a file that changed since the operator chose its tracks.
+     */
+    RefinerSourceFingerprintOut: {
+      /** Device */
+      device: number;
+      /** Inode */
+      inode: number;
+      /** Modified Time Ns */
+      modified_time_ns: number;
+      /** Size Bytes */
+      size_bytes: number;
+    };
+    /**
      * RefinerWatchedFolderRemuxScanDispatchManualEnqueueIn
      * @description Queue one watched-folder scan.
      */
@@ -4775,6 +5320,25 @@ export interface components {
        * @description One plain sentence explaining the answer, shown next to the option.
        */
       reason: string;
+    };
+    /**
+     * RemovedTrackOut
+     * @description One track a Refiner pass removed from a file for good (issue #509).
+     */
+    RemovedTrackOut: {
+      /** Codec */
+      codec: string;
+      /** Language */
+      language: string;
+      /** Reason */
+      reason: string;
+      /**
+       * Type
+       * @enum {string}
+       */
+      type: "audio" | "subtitle";
+      /** Variant */
+      variant?: string | null;
     };
     /** SessionActionOut */
     SessionActionOut: {
@@ -6463,6 +7027,41 @@ export interface operations {
       };
     };
   };
+  post_refiner_file_manual_plan_api_v1_refiner_files__file_id__manual_plan_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        file_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RefinerManualPlanIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerManualPlanOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   move_refiner_file_to_top_api_v1_refiner_files__file_id__move_to_top_post: {
     parameters: {
       query?: never;
@@ -6520,6 +7119,37 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["RefinerRequeueOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_refiner_file_tracks_api_v1_refiner_files__file_id__tracks_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        file_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RefinerFileTracksOut"];
         };
       };
       /** @description Validation Error */
@@ -7020,6 +7650,319 @@ export interface operations {
     responses: {
       /** @description Successful Response */
       204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_library_files: {
+    parameters: {
+      query?: {
+        classification?: "matches" | "would_change" | "cannot_process";
+        manager?: string;
+        q?: string;
+      };
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibraryFilesOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  post_library_files_clean: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LibraryCleanIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibraryCleanOut"];
+        };
+      };
+      /** @description Removing tracks was not confirmed */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibraryConfirmationRequired"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_library_redownloads: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibraryRedownloadsListOut"];
+        };
+      };
+      /** @description No Refiner library with that id */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  post_library_redownload: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LibraryRedownloadIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibraryRedownloadOut"];
+        };
+      };
+      /** @description confirm_destructive was not true */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  post_library_scan: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LibraryCsrfIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibraryScanTriggerOut"];
+        };
+      };
+      /** @description No library folders are configured yet */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  post_library_schedule: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LibraryScheduleIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibrarySettingsOut"];
+        };
+      };
+      /** @description Removing tracks was not confirmed */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibraryConfirmationRequired"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_library_settings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibrarySettingsOut"];
+        };
+      };
+      /** @description No Refiner library with that id */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  put_library_settings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LibrarySettingsUpdateIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibrarySettingsOut"];
+        };
+      };
+      /** @description A library folder overlaps this library's watched, work or output folder */
+      400: {
         headers: {
           [name: string]: unknown;
         };

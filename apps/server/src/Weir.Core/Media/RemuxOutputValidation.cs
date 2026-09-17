@@ -168,6 +168,15 @@ public static partial class RemuxOutputValidation
             }
 
             var codecType = Py.IsStr(Py.Get(stream, "codec_type")) ? Py.Lower(Py.Get(stream, "codec_type")!.Value.GetString()!) : string.Empty;
+
+            // #547: an attachment stream (a font for ASS/SSA, say) is mapped through unchanged when the container
+            // supports it, but it is not part of the plan's video/audio/subtitle layout — the plan has no
+            // PlannedOutputTrack for it and never will, so it never belongs in this position-by-position comparison.
+            if (codecType == "attachment")
+            {
+                continue;
+            }
+
             var disposition = Py.Get(stream, "disposition");
             var tags = Py.Get(stream, "tags");
             string? language = null;

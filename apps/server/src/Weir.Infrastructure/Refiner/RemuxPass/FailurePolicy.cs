@@ -61,7 +61,7 @@ public sealed class QueueingFailurePolicy : IFailurePolicy
         }
 
         body.Set("failure_class", "preflight");
-        Enqueue(uow, $"{RejectJobKind}:{library.Id}:{relativePath}", RejectJobKind, body, library);
+        Enqueue(uow, $"{RejectJobKind}:{library.Id}:{relativePath}:{FingerprintTag(library, relativePath)}", RejectJobKind, body, library);
         return Task.FromResult(true);
     }
 
@@ -89,7 +89,7 @@ public sealed class QueueingFailurePolicy : IFailurePolicy
         }
 
         // Any other failure is not evidence the release is bad, so under reject it is handed back like pass_through.
-        Enqueue(uow, $"{PassThroughJobKind}:{library.Id}:{relativePath}", PassThroughJobKind, Body(library, relativePath, origin), library);
+        Enqueue(uow, $"{PassThroughJobKind}:{library.Id}:{relativePath}:{FingerprintTag(library, relativePath)}", PassThroughJobKind, Body(library, relativePath, origin), library);
         await RemuxPassFileState.AppendStatusReasonAsync(uow, library.Id, relativePath,
             "Weir could not process this file, so it is handing the original back to the output folder unchanged.").ConfigureAwait(false);
         return RefinerFailurePolicies.PassThrough;
@@ -116,6 +116,24 @@ public sealed class QueueingFailurePolicy : IFailurePolicy
             JobQueueRules.DefaultMaxAttempts,
             0,
             (int)Math.Clamp(library.Priority, int.MinValue, int.MaxValue));
+
+    /// <summary>
+    /// Issue #545 item 2: the source's own fingerprint, folded into the dedupe key so a later failure of a since-replaced
+    /// file (same relative path, different content) queues a fresh pass-through or reject instead of being absorbed by a
+    /// row still sitting under the old key — while a repeat enqueue for the very same, unchanged file still dedupes.
+    /// </summary>
+    internal static string FingerprintTag(RefinerLibraryRecord library, string relativePath)
+    {
+        try
+        {
+            var absolute = RemuxPassPaths.Resolve(Path.Combine(library.WatchedFolder, relativePath));
+            return SourceFiles.DedupeFingerprintTag(absolute);
+        }
+        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException or System.Security.SecurityException)
+        {
+            return "unreadable";
+        }
+    }
 }
 
 /// <summary>A policy that never queues a follow-up: every failure is left held where it is. For tests and diagnostics.</summary>

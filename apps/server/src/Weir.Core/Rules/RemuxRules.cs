@@ -150,6 +150,15 @@ public sealed record RemuxPlan
     public required IReadOnlyList<PlannedTrack> Subtitles { get; init; }
     public IReadOnlyList<string> RemovedAudio { get; init; } = [];
     public IReadOnlyList<string> RemovedSubtitles { get; init; } = [];
+
+    /// <summary>
+    /// The same removals as <see cref="RemovedAudio"/>/<see cref="RemovedSubtitles"/>, structured for #509
+    /// (a rule change surfacing titles that can only be fixed by re-downloading): one entry per removed
+    /// track with its language, kind and codec, captured from the same source data those display strings
+    /// are built from rather than parsed back out of them. Additive — existing golden fixtures compare
+    /// only the fields <c>GoldenParityTests.WritePlanResult</c> names, which does not include this one.
+    /// </summary>
+    public IReadOnlyList<RemovedTrackRecord> RemovedTrackRecords { get; init; } = [];
     public int DefaultAudioOutputIndex { get; init; }
     public IReadOnlyList<string> AudioSelectionNotes { get; init; } = [];
 
@@ -696,6 +705,9 @@ public static partial class RemuxRules
         return best ?? throw new InvalidOperationException("min() arg is an empty sequence");
     }
 
+    /// <summary>#509's removed-track records never leave <see cref="RemovedTrackRecord.Codec"/> blank.</summary>
+    private static string CodecOrUnknown(string codecName) => codecName.Length > 0 ? codecName : "unknown";
+
     private static string DescribeCandidate(AudioCandidate c)
     {
         var lang = c.LangLabel.Length > 0 ? c.LangLabel : "unknown";
@@ -1096,6 +1108,7 @@ public static partial class RemuxRules
             : [];
 
         var removedAudio = new List<string>();
+        var removedTrackRecords = new List<RemovedTrackRecord>();
         var notes = new List<string>();
         var candidates = new List<AudioCandidate>();
 
@@ -1107,8 +1120,19 @@ public static partial class RemuxRules
             var flags = TrackFlagsReader.Detect(s);
             if (config.RemoveCommentary && flags.Commentary.Value)
             {
-                var lang = NormalizeLang(s.Tag("language"));
-                removedAudio.Add($"{(lang.Length > 0 ? lang : "und")} (commentary excluded — remove commentary enabled)");
+                var rawLanguageTag = s.Tag("language");
+                var lang = NormalizeLang(rawLanguageTag);
+                var langLabel = lang.Length > 0 ? lang : "und";
+                removedAudio.Add($"{langLabel} (commentary excluded — remove commentary enabled)");
+                removedTrackRecords.Add(new RemovedTrackRecord
+                {
+                    Language = langLabel,
+                    Type = RemovedTrackType.Audio,
+                    Codec = CodecOrUnknown(s.CodecName),
+                    // Issue #496: regional/script variant from the track's name or an explicit BCP 47 tag.
+                    Variant = LanguageVariants.DetectVariant(s.Tag("title"), lang, rawLanguageTag),
+                    Reason = "commentary excluded — remove commentary enabled",
+                });
                 notes.Add($"Excluded commentary track (stream {streamIndex}) because remove commentary is enabled.");
                 continue;
             }
@@ -1142,6 +1166,14 @@ public static partial class RemuxRules
             foreach (var c in candidates.Where(c => !keptIndices.Contains(c.InputIndex)).OrderBy(c => c.InputIndex))
             {
                 removedAudio.Add($"{DescribeCandidate(c)}: removed (not selected for its language slot)");
+                removedTrackRecords.Add(new RemovedTrackRecord
+                {
+                    Language = c.LangLabel.Length > 0 ? c.LangLabel : "und",
+                    Type = RemovedTrackType.Audio,
+                    Codec = CodecOrUnknown(c.CodecName),
+                    Variant = c.Variant.Identifier,
+                    Reason = "not selected for its language slot",
+                });
                 notes.Add($"Removed non-selected {DescribeCandidate(c)}.");
             }
         }
@@ -1162,6 +1194,14 @@ public static partial class RemuxRules
             foreach (var c in candidates.Where(c => c.InputIndex != winnerIndex))
             {
                 removedAudio.Add($"{DescribeCandidate(c)}: removed (not selected — {DescribeCandidate(winner)} kept)");
+                removedTrackRecords.Add(new RemovedTrackRecord
+                {
+                    Language = c.LangLabel.Length > 0 ? c.LangLabel : "und",
+                    Type = RemovedTrackType.Audio,
+                    Codec = CodecOrUnknown(c.CodecName),
+                    Variant = c.Variant.Identifier,
+                    Reason = $"not selected — {DescribeCandidate(winner)} kept",
+                });
                 notes.Add($"Removed non-selected {DescribeCandidate(c)} after selecting {DescribeCandidate(winner)}.");
             }
 
@@ -1199,8 +1239,19 @@ public static partial class RemuxRules
         {
             foreach (var s in subtitles)
             {
-                var lang = NormalizeLang(s.Tag("language"));
-                removedSubtitleLabels.Add(lang.Length > 0 ? lang : "und");
+                var rawLanguageTag = s.Tag("language");
+                var lang = NormalizeLang(rawLanguageTag);
+                var langLabel = lang.Length > 0 ? lang : "und";
+                removedSubtitleLabels.Add(langLabel);
+                removedTrackRecords.Add(new RemovedTrackRecord
+                {
+                    Language = langLabel,
+                    Type = RemovedTrackType.Subtitle,
+                    Codec = CodecOrUnknown(s.CodecName),
+                    // Issue #496: regional/script variant from the track's name or an explicit BCP 47 tag.
+                    Variant = LanguageVariants.DetectVariant(s.Tag("title"), lang, rawLanguageTag),
+                    Reason = "subtitle mode removes every subtitle track",
+                });
             }
         }
         else
@@ -1221,6 +1272,7 @@ public static partial class RemuxRules
             {
                 var rawLanguageTag = s.Tag("language");
                 var lang = NormalizeLang(rawLanguageTag);
+                var langLabel = lang.Length > 0 ? lang : "und";
                 var disposition = s.Disposition;
 
                 // A variant-specific tier ("fre-CA") takes priority over a broader base tier
@@ -1231,7 +1283,15 @@ public static partial class RemuxRules
                     : rank.GetValueOrDefault(lang, -1);
                 if (lang.Length == 0 || matchedTier < 0)
                 {
-                    removedSubtitleLabels.Add(lang.Length > 0 ? lang : "und");
+                    removedSubtitleLabels.Add(langLabel);
+                    removedTrackRecords.Add(new RemovedTrackRecord
+                    {
+                        Language = langLabel,
+                        Type = RemovedTrackType.Subtitle,
+                        Codec = CodecOrUnknown(s.CodecName),
+                        Variant = variant,
+                        Reason = "language not kept by subtitle rules",
+                    });
                     continue;
                 }
 
@@ -1240,7 +1300,15 @@ public static partial class RemuxRules
                 var flags = TrackFlagsReader.Detect(s);
                 if (config.RemoveHearingImpairedSubs && flags.HearingImpaired.Value)
                 {
-                    removedSubtitleLabels.Add(lang.Length > 0 ? lang : "und");
+                    removedSubtitleLabels.Add(langLabel);
+                    removedTrackRecords.Add(new RemovedTrackRecord
+                    {
+                        Language = langLabel,
+                        Type = RemovedTrackType.Subtitle,
+                        Codec = CodecOrUnknown(s.CodecName),
+                        Variant = variant,
+                        Reason = "hearing-impaired subtitle removed",
+                    });
                     var hiSource = flags.HearingImpaired.Source == TrackFlagSource.Disposition ? "its hearing-impaired flag" : "its name";
                     notes.Add($"Removed hearing-impaired subtitle track (stream {index}) because remove hearing-impaired subtitles is enabled ({hiSource}).");
                     continue;
@@ -1288,6 +1356,7 @@ public static partial class RemuxRules
             Subtitles = keptSubtitles,
             RemovedAudio = removedAudio,
             RemovedSubtitles = removedSubtitleLabels,
+            RemovedTrackRecords = removedTrackRecords,
             DefaultAudioOutputIndex = defaultAudioOutputIndex,
             AudioSelectionNotes = notes,
             RemovedImages = droppedImages.Select(MetadataStreams.DescribeImageStream).ToList(),

@@ -386,4 +386,47 @@ public sealed class MediaManagerRulesTests
         Assert.Equal("api_key=k&query=Blade+Runner%C3%A9&year=1982", TmdbResponses.UrlEncode([new("api_key", "k"), new("query", "Blade Runneré"), new("year", "1982")]));
         Assert.StartsWith("https://", TmdbResponses.DefaultBaseUrl, StringComparison.Ordinal);
     }
+
+    // --- list_library_files / file_changed (#507) -----------------------------------------------
+
+    [Fact]
+    public void Movie_library_files_carry_the_movies_own_id_and_title()
+    {
+        var files = ManagerDialectRules.ArrMovieLibraryFiles(PyJsonParser.Parse(
+            """[{"id":7,"title":"Solaris","movieFile":{"path":"/media/Solaris/f.mkv"}},{"id":8,"title":"No File"},{"id":9,"movieFile":{"path":"/media/9/f.mkv"}}]"""));
+        Assert.Equal(
+            [new ManagerLibraryFile("7", "Solaris", "/media/Solaris/f.mkv"), new ManagerLibraryFile("9", "9", "/media/9/f.mkv")],
+            files);
+    }
+
+    [Fact]
+    public void Episode_library_files_are_tagged_with_the_series_already_looked_up()
+    {
+        var files = ManagerDialectRules.ArrEpisodeLibraryFiles(
+            PyJsonParser.Parse("""[{"path":"/tv/Show/S01/e01.mkv"},{"path":"/tv/Show/S01/e02.mkv"},{"seasonNumber":1}]"""), "12", "Show");
+        Assert.Equal(
+            [new ManagerLibraryFile("12", "Show", "/tv/Show/S01/e01.mkv"), new ManagerLibraryFile("12", "Show", "/tv/Show/S01/e02.mkv")],
+            files);
+    }
+
+    [Theory]
+    [InlineData("movie", "RescanMovie", "movieId")]
+    [InlineData("tv", "RescanSeries", "seriesId")]
+    public void The_rescan_command_matches_each_products_own_class(string scope, string name, string idProperty) =>
+        Assert.Equal((name, idProperty), ManagerDialectRules.ArrRescanCommand(scope));
+
+    [Theory]
+    [InlineData("/media/Movies/f.mkv", "/media/Movies/f.mkv", true)]
+    [InlineData(@"D:\Media\Movies\f.mkv", "d:/media/movies/f.mkv", true)]
+    [InlineData("/media/Movies/f.mkv", "/media/Movies/g.mkv", false)]
+    [InlineData("", "", false)]
+    public void Paths_compare_ignoring_case_and_separator_style(string left, string right, bool equal) =>
+        Assert.Equal(equal, LibraryFileChangeRules.PathsEqual(left, right));
+
+    [Fact]
+    public void The_warning_names_the_manager_and_says_it_will_catch_up_on_its_own()
+    {
+        var warning = LibraryFileChangeRules.CouldNotTellWarning(new ManagerConnection("radarr", "4K", "http://m", "k"));
+        Assert.Equal("Weir cleaned the file but couldn't tell Radarr (4K); it will catch up at its next disk scan.", warning);
+    }
 }

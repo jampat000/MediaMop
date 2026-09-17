@@ -158,6 +158,39 @@ public static class FfmpegCommands
     }
 
     /// <summary>
+    /// #547: the mov,mp4,m4a,3gp,3g2,mj2 muxer family — the only extensions Weir's remux ever writes that share
+    /// it are <c>.mp4</c>, <c>.m4v</c> and <c>.mov</c> — refuses an attachment output stream outright ("Attachments
+    /// are not supported in QuickTime/MP4"), verified against the bundled ffmpeg. Every other container Weir
+    /// writes accepts one, Matroska above all (where attachments actually originate), and <c>-map 0:t?</c>'s
+    /// <c>?</c> already makes the map a no-op when the source has none, so a container that cannot itself carry an
+    /// <c>attachment</c>-typed input stream (there being no such ffprobe <c>codec_type</c> for it) is unaffected
+    /// either way; only the containers that could plausibly receive one but reject it need excluding here.
+    /// </summary>
+    private static readonly HashSet<string> AttachmentIncapableExtensions = new(StringComparer.OrdinalIgnoreCase) { ".mp4", ".m4v", ".mov" };
+
+    /// <summary>
+    /// #547: mkvmerge's own per-track statistics tags (<c>DURATION</c>, <c>NUMBER_OF_FRAMES</c>,
+    /// <c>NUMBER_OF_BYTES</c>, <c>BPS</c>, the three <c>_STATISTICS_*</c> keys) plus ffmpeg's <c>ENCODER</c> tag:
+    /// all describe how the *elementary stream* was produced, not this remux, and survive a plain <c>-c copy</c>
+    /// unchanged (confirmed against the bundled ffmpeg) even when the track set around them changes. Cleared on
+    /// every kept video/audio/subtitle output stream so a player is not shown stale lineage. Matroska's own muxer
+    /// recomputes a fresh, correct <c>DURATION</c> tag from the packets it actually writes regardless of this
+    /// clear (also confirmed against the bundled ffmpeg), so clearing it here loses nothing; a stream with no such
+    /// tag to begin with is unaffected, since setting an absent key to empty is a no-op.
+    /// </summary>
+    private static readonly IReadOnlyList<string> StaleStatisticsTagKeys =
+    [
+        "DURATION",
+        "NUMBER_OF_FRAMES",
+        "NUMBER_OF_BYTES",
+        "BPS",
+        "_STATISTICS_WRITING_APP",
+        "_STATISTICS_WRITING_DATE_UTC",
+        "_STATISTICS_TAGS",
+        "ENCODER",
+    ];
+
+    /// <summary>
     /// <c>build_ffmpeg_argv</c>. <paramref name="inputFlags"/> (hardware acceleration and strictness) go
     /// before <c>-i</c>, because <c>-hwaccel</c> applies to the input that follows it.
     /// </summary>
@@ -196,30 +229,50 @@ public static class FfmpegCommands
             args.AddRange(["-map", Map(track.InputIndex)]);
         }
 
+        // #547 item 1: map every attachment (fonts attached for ASS/SSA subtitles, chiefly) unless the rules say
+        // to drop them, or the output container cannot carry one at all (see AttachmentIncapableExtensions).
+        // "0:t?" is ffmpeg's stream-type specifier for attachments; the trailing "?" makes it optional so a
+        // source with none does not fail the map.
+        var mapsAttachments = !plan.Metadata.RemoveAttachments && SupportsAttachmentOutput(dst);
+        if (mapsAttachments)
+        {
+            args.AddRange(["-map", "0:t?"]);
+        }
+
         args.AddRange(["-c", "copy"]);
         // After the maps: the maps decide which streams exist, these decide what they carry.
         args.AddRange(MetadataStreams.ArgvFlags(plan.Metadata));
+        if (mapsAttachments && plan.Metadata.RemoveOtherMetadata)
+        {
+            // #547: "-map_metadata -1" above also erases an attachment's own filename/mimetype tags, unlike every
+            // other stream type — unlike a video/audio/subtitle track, Matroska requires an attachment to carry a
+            // filename tag at all, so without this restore ffmpeg refuses to write the file at all
+            // ("Attachment stream N has no filename tag"), confirmed against the bundled ffmpeg. Restoring only the
+            // attachment stream type's own metadata here keeps every other stream's "-map_metadata -1" intact.
+            args.AddRange(["-map_metadata:s:t", "0:s:t"]);
+        }
+
+        // #547 item 2: additive syntax ("+flag"/"-flag") only ever touches default/forced, whatever else ffmpeg
+        // already copied through from the source stream's own disposition (comment, descriptions,
+        // hearing_impaired, dub, original, ...) unlike the flat "default"/"0" this replaced, which discarded them;
+        // verified against the bundled ffmpeg's -dispositions and real remuxes.
         for (var i = 0; i < plan.Audio.Count; i++)
         {
-            args.AddRange([$"-disposition:a:{i.ToString(CultureInfo.InvariantCulture)}", plan.Audio[i].Default ? "default" : "0"]);
+            args.AddRange([$"-disposition:a:{i.ToString(CultureInfo.InvariantCulture)}", plan.Audio[i].Default ? "+default" : "-default"]);
         }
 
         for (var i = 0; i < plan.Subtitles.Count; i++)
         {
             var track = plan.Subtitles[i];
-            var flags = new List<string>();
-            if (track.Default)
-            {
-                flags.Add("default");
-            }
-
-            if (track.Forced)
-            {
-                flags.Add("forced");
-            }
-
-            args.AddRange([$"-disposition:s:{i.ToString(CultureInfo.InvariantCulture)}", flags.Count > 0 ? string.Join('+', flags) : "0"]);
+            var flags = (track.Default ? "+default" : "-default") + (track.Forced ? "+forced" : "-forced");
+            args.AddRange([$"-disposition:s:{i.ToString(CultureInfo.InvariantCulture)}", flags]);
         }
+
+        // #547 item 3: drop stale per-track statistics tags on every kept stream, indexed by output position like
+        // the dispositions above.
+        AddStatisticsTagClears(args, 'v', plan.VideoIndices.Count);
+        AddStatisticsTagClears(args, 'a', plan.Audio.Count);
+        AddStatisticsTagClears(args, 's', plan.Subtitles.Count);
 
         // #498: standard track names and cleared video names, after the dispositions, indexed by output position
         // (same as the dispositions above) rather than the original input index.
@@ -268,4 +321,32 @@ public static class FfmpegCommands
     }
 
     private static string Map(int index) => "0:" + index.ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>See <see cref="AttachmentIncapableExtensions"/>. A path with no extension (or none after the last
+    /// separator) is treated as capable, matching every container Weir actually names with a suffix.</summary>
+    private static bool SupportsAttachmentOutput(string dst)
+    {
+        var lastDot = dst.LastIndexOf('.');
+        var lastSeparator = Math.Max(dst.LastIndexOf('/'), dst.LastIndexOf('\\'));
+        if (lastDot <= lastSeparator)
+        {
+            return true;
+        }
+
+        return !AttachmentIncapableExtensions.Contains(dst[lastDot..]);
+    }
+
+    /// <summary>See <see cref="StaleStatisticsTagKeys"/>: clear each of them on every one of <paramref name="count"/>
+    /// kept output streams of <paramref name="streamType"/> ('v', 'a' or 's').</summary>
+    private static void AddStatisticsTagClears(List<string> args, char streamType, int count)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            var specifier = $"-metadata:s:{streamType}:{i.ToString(CultureInfo.InvariantCulture)}";
+            foreach (var key in StaleStatisticsTagKeys)
+            {
+                args.AddRange([specifier, $"{key}="]);
+            }
+        }
+    }
 }

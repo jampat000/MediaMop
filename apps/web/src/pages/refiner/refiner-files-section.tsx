@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { ChooseTracksPanel } from "../../components/refiner/choose-tracks-panel";
 import { DirectPlayLine } from "../../components/refiner/direct-play-line";
 import { PageLoading } from "../../components/shared/page-loading";
 import { useMeQuery } from "../../lib/auth/queries";
@@ -9,6 +10,8 @@ import {
   type RefinerFile,
   type RefinerFileLog,
   type RefinerFileStatus,
+  type RefinerFileTracks,
+  type RefinerManualPlanChoice,
 } from "../../lib/refiner/files-api";
 import {
   useForgetRefinerFile,
@@ -16,10 +19,12 @@ import {
   useProcessRefinerFileNow,
   useRefinerCheckLibraryAgain,
   useRefinerFileLog,
+  useRefinerFileTracks,
   useRefinerWhyHeld,
   useRequeueRefinerFile,
   useRequeueRefinerFiles,
   useRefinerFilesQuery,
+  useSubmitRefinerManualPlan,
 } from "../../lib/refiner/files-queries";
 import { useRefinerLibrariesQuery } from "../../lib/refiner/libraries-queries";
 import {
@@ -351,6 +356,12 @@ export function RefinerFilesSection() {
   const processNow = useProcessRefinerFileNow();
   const checkAgain = useRefinerCheckLibraryAgain();
   const [openLog, setOpenLog] = useState<RefinerFileLog | null>(null);
+  const fileTracks = useRefinerFileTracks();
+  const submitManualPlan = useSubmitRefinerManualPlan();
+  const [tracksFile, setTracksFile] = useState<RefinerFile | null>(null);
+  const [tracksData, setTracksData] = useState<RefinerFileTracks | null>(null);
+  const [tracksError, setTracksError] = useState<string | null>(null);
+  const [manualPlanError, setManualPlanError] = useState<string | null>(null);
   const editable = canEdit(me.data?.role);
 
   useEffect(() => {
@@ -577,6 +588,45 @@ export function RefinerFilesSection() {
       setOpenLog(log);
     } catch {
       setNotice("Weir could not read that file's processing record.");
+    }
+  };
+
+  const openChooseTracks = async (file: RefinerFile) => {
+    setNotice(null);
+    setTracksFile(file);
+    setTracksData(null);
+    setTracksError(null);
+    setManualPlanError(null);
+    try {
+      const tracks = await fileTracks.mutateAsync(file.id);
+      setTracksData(tracks);
+    } catch {
+      setTracksError(
+        "Weir could not read this file's tracks. Refresh and try again.",
+      );
+    }
+  };
+
+  const closeChooseTracks = () => {
+    setTracksFile(null);
+    setTracksData(null);
+    setTracksError(null);
+    setManualPlanError(null);
+  };
+
+  const submitChooseTracks = async (choice: RefinerManualPlanChoice) => {
+    if (!tracksFile) return;
+    setManualPlanError(null);
+    try {
+      await submitManualPlan.mutateAsync({ id: tracksFile.id, choice });
+      setNotice(
+        `Queued your track choice for ${tracksFile.relative_path}. Weir will check the file again before running the pass.`,
+      );
+      closeChooseTracks();
+    } catch {
+      setManualPlanError(
+        "That track choice could not be queued. Fix the reported problem, or refresh the tracks and try again.",
+      );
     }
   };
 
@@ -1034,6 +1084,19 @@ export function RefinerFilesSection() {
                             Why is this held?
                           </button>
                         ) : null}
+                        {file.status === "on_hold" ? (
+                          <button
+                            type="button"
+                            className={mmActionButtonClass({
+                              variant: "secondary",
+                            })}
+                            onClick={() => void openChooseTracks(file)}
+                            data-testid={`refiner-file-choose-tracks-${file.id}`}
+                            title="Re-reads this file's tracks and lets you pick which ones to keep by hand, instead of the saved rules."
+                          >
+                            Choose tracks
+                          </button>
+                        ) : null}
                         {file.status === "on_hold" ||
                         file.status === "blocked_upstream" ||
                         file.status === "skipped" ||
@@ -1109,6 +1172,18 @@ export function RefinerFilesSection() {
           })}
         </ul>
       )}
+
+      <ChooseTracksPanel
+        open={tracksFile !== null}
+        fileName={tracksFile?.relative_path ?? ""}
+        tracks={tracksData ?? undefined}
+        loading={fileTracks.isPending}
+        loadError={tracksError}
+        submitting={submitManualPlan.isPending}
+        submitError={manualPlanError}
+        onClose={closeChooseTracks}
+        onSubmit={(choice) => void submitChooseTracks(choice)}
+      />
     </div>
   );
 }

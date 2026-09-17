@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Issue #503 trial only: NOT part of Weir.slnx, NOT built by CI, and not referenced by any
+    production project. Exercises Weir.Core.Media.FfmpegCommands.BuildRemuxArgv exactly as the
+    real remux pass would, then runs an equivalent mkvmerge command line on the same corpus file
+    and diffs the two outputs. See docs/trials/503-mkvmerge-vs-ffmpeg.md.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Trial503Harness</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <NoWarn>$(NoWarn);CA1848;CA2007;CS1591</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Weir.Core\Weir.Core.csproj" />
+  </ItemGroup>
+</Project>

@@ -40,19 +40,65 @@ public sealed class JobsStartupRecoveryService : IHostedService
     private readonly WeirOptions _options;
     private readonly TimeProvider _time;
     private readonly ILogger<JobsStartupRecoveryService> _logger;
+    private readonly Weir.Infrastructure.LibraryMode.SwapRecoverySweep? _swapSweep;
 
-    public JobsStartupRecoveryService(RefinerJobStore store, WeirOptions options, TimeProvider time, ILogger<JobsStartupRecoveryService> logger)
+    public JobsStartupRecoveryService(
+        RefinerJobStore store,
+        WeirOptions options,
+        TimeProvider time,
+        ILogger<JobsStartupRecoveryService> logger,
+        Weir.Infrastructure.LibraryMode.SwapRecoverySweep? swapSweep = null)
     {
         _store = store;
         _options = options;
         _time = time;
         _logger = logger;
+        _swapSweep = swapSweep;
     }
 
     public StartupRecoveryReport? LastReport { get; private set; }
 
-    public async Task StartAsync(CancellationToken cancellationToken) =>
+    /// <summary>The #506 startup sweep's last report, when library mode is registered; null otherwise.</summary>
+    public Weir.Infrastructure.LibraryMode.SwapRecoveryReport? LastSwapSweepReport { get; private set; }
+
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
         LastReport = await StartupRecovery.RunAsync(_store, _options.WeirHome, _time.GetUtcNow(), _logger, cancellationToken).ConfigureAwait(false);
+
+        // #506's startup sweep runs after the existing recovery above and before any worker starts claiming jobs (this
+        // hosted service is registered ahead of the worker lane) — see apps/server/README.md, "Library mode: safe swap".
+        if (_swapSweep is not null)
+        {
+            var folders = await LibraryFoldersForSweepAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                LastSwapSweepReport = await _swapSweep.RunAsync(folders, walkFolders: true, cancellationToken).ConfigureAwait(false);
+            }
+#pragma warning disable CA1031 // Startup must not fail because a library-mode sweep could not run.
+            catch (Exception exception)
+#pragma warning restore CA1031
+            {
+                _logger.LogWarning(exception, "Library mode's startup sweep could not run; interrupted swaps, if any, are picked up at the next start.");
+            }
+        }
+    }
+
+    private async Task<IReadOnlyList<string>> LibraryFoldersForSweepAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var uow = await UnitOfWork.OpenAsync(_store.Database, cancellationToken).ConfigureAwait(false);
+            await using (uow.ConfigureAwait(false))
+            {
+                return await Weir.Infrastructure.LibraryMode.LibrarySettingsStore.AllFoldersAsync(uow).ConfigureAwait(false);
+            }
+        }
+        catch (Exception exception) when (exception is Microsoft.Data.Sqlite.SqliteException or InvalidOperationException)
+        {
+            _logger.LogWarning(exception, "Could not read library folders for the startup sweep; it will only look at paths recorded on job rows.");
+            return [];
+        }
+    }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

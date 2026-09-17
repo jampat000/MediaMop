@@ -384,7 +384,7 @@ public sealed class RefinerRejectHandler : IJobHandler
         _jobs.EnqueueOrGet(
             uow.Connection,
             uow.WriteTransaction(),
-            $"{IntakeRules.PassThroughJobKind}:{library.Id}:{relativePath}",
+            $"{IntakeRules.PassThroughJobKind}:{library.Id}:{relativePath}:{QueueingFailurePolicy.FingerprintTag(library, relativePath)}",
             IntakeRules.PassThroughJobKind,
             PyJsonWriter.Dumps(body, PyJsonFormat.Compact),
             JobQueueRules.DefaultMaxAttempts,

@@ -103,6 +103,8 @@ public sealed class RemuxPassHandler : IJobHandler
         var mediaScope = data.Get("media_scope") is PyStr { Value: "movie" or "tv" } scopeValue ? scopeValue.Value : "movie";
         long? libraryId = data.Get("library_id") is PyInt libraryValue ? (long)libraryValue.Value : null;
         var passThrough = data.Get("pass_through_unchanged") is PyBool { Value: true };
+        var manualPlan = ManualPlanJson.FromPyJson(data.Get("manual_plan"));
+        var manualPlanFingerprint = ManualPlanJson.FingerprintFromPyJson(data.Get("source_fingerprint"));
 
         var origin = data.Get("origin") as PyDict;
         var payloadJson = context.PayloadJson;
@@ -131,6 +133,7 @@ public sealed class RemuxPassHandler : IJobHandler
             {
                 Runtime = claim.Runtime!,
                 RelativeMediaPath = rel,
+                LibraryId = claim.Library?.Id ?? libraryId,
                 RulesConfig = claim.Rules,
                 MinFileAgeSeconds = claim.Operator!.MinFileAgeSeconds,
                 MinInputFileSizeMb = Math.Max(claim.Operator.RefinerMinInputFileSizeMb, claim.Library?.MinFileSizeMb ?? 0),
@@ -140,6 +143,8 @@ public sealed class RemuxPassHandler : IJobHandler
                 ProgressReporter = progress.Report,
                 PassThroughUnchanged = passThrough,
                 Origin = HandoffOrigin.FromPayload(origin is null ? null : new PyDict().Set("origin", origin)),
+                ManualPlan = manualPlan,
+                ManualPlanFingerprint = manualPlanFingerprint,
             },
             cancellationToken).ConfigureAwait(false);
         result.Set("job_id", context.Id);

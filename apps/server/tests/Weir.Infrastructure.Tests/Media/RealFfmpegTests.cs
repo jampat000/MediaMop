@@ -267,6 +267,215 @@ public sealed class RealFfmpegTests : IDisposable
         Assert.Empty(new ProbeResult(outputProbeJson).Chapters);
     }
 
+    /// <summary>Three seconds: mpeg4 video, one AAC track, an ASS subtitle, and an attached font with a mimetype tag.</summary>
+    private async Task<string> GenerateFixtureWithAttachmentAsync()
+    {
+        var assPath = Path.Combine(_root, "subs.ass");
+        await File.WriteAllTextAsync(
+            assPath,
+            "[Script Info]\nScriptType: v4.00+\n\n[Events]\nFormat: Layer, Start, End, Text\nDialogue: 0,0:00:00.00,0:00:03.00,Hello\n");
+        var fontPath = Path.Combine(_root, "font.ttf");
+        await File.WriteAllBytesAsync(fontPath, [0x00, 0x01, 0x00, 0x00, 0x00, 0x90, 0x00, 0x03]);
+        var path = Path.Combine(_root, "fixture-attachment.mkv");
+        string[] argv =
+        [
+            RealFfmpeg.Tools!.Value.Ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
+            "-f", "lavfi", "-i", "testsrc=duration=3:size=160x120:rate=10",
+            "-f", "lavfi", "-i", "sine=frequency=440:duration=3",
+            "-i", assPath,
+            "-attach", fontPath, "-metadata:s:3", "mimetype=application/x-font-ttf", "-metadata:s:3", "filename=font.ttf",
+            "-map", "0", "-map", "1", "-map", "2",
+            "-c:v", "mpeg4", "-c:a", "aac", "-c:s", "ass",
+            "-metadata:s:a:0", "language=eng",
+            "-metadata:s:2", "language=eng",
+            path,
+        ];
+        var result = await new ProcessRunner().RunAsync(new ProcessRequest { Argv = argv, Timeout = TimeSpan.FromMinutes(1) });
+        Assert.True(result.ExitCode == 0, "fixture generation failed: " + ProbeOutput.TailText(result.Stderr));
+        return path;
+    }
+
+    [RequiresFfmpegFact]
+    public async Task A_remux_keeps_an_attachment_with_its_mimetype_and_passes_validation()
+    {
+        // #547 item 1: FfmpegCommands.BuildRemuxArgv never mapped codec_type=attachment streams, so a font
+        // attached for an ASS/SSA subtitle was silently dropped on every remux even with RemoveAttachments off.
+        var fixture = await GenerateFixtureWithAttachmentAsync();
+        var tools = Tools();
+        var probe = await tools.FfprobeJsonAsync(fixture);
+        var sourceAttachment = Assert.Single(Streams(probe, "attachment"));
+        Assert.Equal("application/x-font-ttf", sourceAttachment.GetProperty("tags").GetProperty("mimetype").GetString());
+        Assert.Equal("font.ttf", sourceAttachment.GetProperty("tags").GetProperty("filename").GetString());
+
+        var config = RemuxRules.DefaultConfig() with
+        {
+            PrimaryAudioLang = "eng",
+            SecondaryAudioLang = string.Empty,
+            TertiaryAudioLang = string.Empty,
+            SubtitleMode = RemuxRuleValues.SubtitleModeKeepSelected,
+            SubtitleLangs = ["eng"],
+        };
+        var split = RemuxRules.SplitStreams(new ProbeResult(probe));
+        var plan = RemuxRules.PlanRemux(split.Video, split.Audio, split.Subtitles, config);
+        Assert.NotNull(plan);
+        Assert.Single(plan.Subtitles);
+        var workDir = Path.Combine(_root, "work-attachment");
+
+        // RemuxToTempFileAsync also runs ValidateRemuxOutputAsync on the result, proving the output validator
+        // (audio-stream count and duration) is not confused by the new attachment stream in the output.
+        var sourceWarnings = await tools.ProbeWarningLinesAsync(fixture);
+        var output = await tools.RemuxToTempFileAsync(fixture, workDir, plan, probe, sourceWarnings, durationSeconds: ProbeOutput.DurationSeconds(probe));
+
+        var outputProbe = await tools.FfprobeJsonAsync(output);
+        var outputAttachment = Assert.Single(Streams(outputProbe, "attachment"));
+        Assert.Equal("application/x-font-ttf", outputAttachment.GetProperty("tags").GetProperty("mimetype").GetString());
+        Assert.Equal("font.ttf", outputAttachment.GetProperty("tags").GetProperty("filename").GetString());
+        Assert.Single(Streams(outputProbe, "subtitle"));
+    }
+
+    [RequiresFfmpegFact]
+    public async Task A_remux_to_mp4_skips_attachments_the_container_cannot_carry()
+    {
+        // #547 item 1: the mov,mp4,m4a,3gp,3g2,mj2 muxer family refuses an attachment output stream outright, so
+        // mapping "0:t?" for it fails the whole remux; BuildRemuxArgv skips the map for these extensions instead.
+        var fixture = await GenerateFixtureWithAttachmentAsync();
+        var tools = Tools();
+        var probe = await tools.FfprobeJsonAsync(fixture);
+        var config = RemuxRules.DefaultConfig() with { PrimaryAudioLang = "eng", SecondaryAudioLang = string.Empty, TertiaryAudioLang = string.Empty };
+        var split = RemuxRules.SplitStreams(new ProbeResult(probe));
+        var plan = RemuxRules.PlanRemux(split.Video, split.Audio, split.Subtitles, config);
+        Assert.NotNull(plan);
+        var ffmpeg = RealFfmpeg.Tools!.Value.Ffmpeg;
+        var mp4Dst = Path.Combine(_root, "attachment-out.mp4");
+        var argv = FfmpegCommands.BuildRemuxArgv(ffmpeg, fixture, mp4Dst, plan);
+        Assert.DoesNotContain("0:t?", argv);
+
+        var result = await new ProcessRunner().RunAsync(new ProcessRequest { Argv = argv, Timeout = TimeSpan.FromMinutes(1) });
+
+        Assert.True(result.ExitCode == 0, "mp4 remux failed: " + ProbeOutput.TailText(result.Stderr));
+        var outputProbe = await tools.FfprobeJsonAsync(mp4Dst);
+        Assert.Empty(Streams(outputProbe, "attachment"));
+    }
+
+    [RequiresFfmpegFact]
+    public async Task A_remux_keeps_the_comment_disposition_while_changing_default()
+    {
+        // #547 item 2: "-disposition:a:N default|0" used to overwrite the whole disposition, clearing "comment"
+        // (and similarly "descriptions", "hearing_impaired", "dub", "original", ...) on a kept track. The
+        // additive "+default"/"-default" syntax only ever touches default/forced.
+        var fixture = Path.Combine(_root, "fixture-commentary.mkv");
+        string[] genArgv =
+        [
+            RealFfmpeg.Tools!.Value.Ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
+            "-f", "lavfi", "-i", "testsrc=duration=3:size=160x120:rate=10",
+            "-f", "lavfi", "-i", "sine=frequency=440:duration=3",
+            "-map", "0", "-map", "1",
+            "-c:v", "mpeg4", "-c:a", "aac",
+            "-metadata:s:a:0", "language=eng",
+            "-disposition:a:0", "comment",
+            fixture,
+        ];
+        var genResult = await new ProcessRunner().RunAsync(new ProcessRequest { Argv = genArgv, Timeout = TimeSpan.FromMinutes(1) });
+        Assert.True(genResult.ExitCode == 0, "fixture generation failed: " + ProbeOutput.TailText(genResult.Stderr));
+
+        var tools = Tools();
+        var probe = await tools.FfprobeJsonAsync(fixture);
+        var sourceAudio = Assert.Single(Streams(probe, "audio"));
+        Assert.Equal(1, sourceAudio.GetProperty("disposition").GetProperty("comment").GetInt32());
+        Assert.Equal(0, sourceAudio.GetProperty("disposition").GetProperty("default").GetInt32());
+
+        // Issue #495 (landed after this test's own base) now detects "commentary" straight from the disposition
+        // flag this fixture sets, not only from a track's name — correctly, but beside this test's point, which is
+        // the additive disposition edit below, not commentary removal. Keep the track in the plan by disabling that
+        // rule, exactly as a library that wants a lone commentary track kept would configure it.
+        var config = RemuxRules.DefaultConfig() with { PrimaryAudioLang = "eng", SecondaryAudioLang = string.Empty, TertiaryAudioLang = string.Empty, RemoveCommentary = false };
+        var split = RemuxRules.SplitStreams(new ProbeResult(probe));
+        var plan = RemuxRules.PlanRemux(split.Video, split.Audio, split.Subtitles, config);
+        Assert.NotNull(plan);
+        var kept = Assert.Single(plan.Audio);
+        Assert.True(kept.Default);
+        var workDir = Path.Combine(_root, "work-commentary");
+
+        var sourceWarnings = await tools.ProbeWarningLinesAsync(fixture);
+        var output = await tools.RemuxToTempFileAsync(fixture, workDir, plan, probe, sourceWarnings);
+
+        var outputProbe = await tools.FfprobeJsonAsync(output);
+        var outputAudio = Assert.Single(Streams(outputProbe, "audio"));
+        var disposition = outputAudio.GetProperty("disposition");
+        Assert.Equal(1, disposition.GetProperty("default").GetInt32());
+        Assert.Equal(1, disposition.GetProperty("comment").GetInt32());
+    }
+
+    [RequiresFfmpegFact]
+    public async Task A_remux_drops_stale_statistics_tags_and_the_output_DURATION_matches_the_output()
+    {
+        // #547 item 3: DURATION/NUMBER_OF_FRAMES/NUMBER_OF_BYTES/BPS/_STATISTICS_*/ENCODER describe how the
+        // *elementary stream* was produced, not this remux, and a plain "-c copy" carries them forward unchanged.
+        var fixture = Path.Combine(_root, "fixture-stale-tags.mkv");
+        string[] genArgv =
+        [
+            RealFfmpeg.Tools!.Value.Ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
+            "-f", "lavfi", "-i", "testsrc=duration=3:size=160x120:rate=10",
+            "-f", "lavfi", "-i", "sine=frequency=440:duration=3",
+            "-map", "0", "-map", "1",
+            "-c:v", "mpeg4", "-c:a", "aac",
+            "-metadata:s:a:0", "language=eng",
+            "-metadata:s:a:0", "NUMBER_OF_FRAMES=999999",
+            "-metadata:s:a:0", "NUMBER_OF_BYTES=123456789",
+            "-metadata:s:a:0", "BPS=64000",
+            "-metadata:s:a:0", "_STATISTICS_WRITING_APP=FakeTool",
+            "-metadata:s:a:0", "_STATISTICS_WRITING_DATE_UTC=2020-01-01 00:00:00",
+            "-metadata:s:a:0", "_STATISTICS_TAGS=BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES",
+            fixture,
+        ];
+        var genResult = await new ProcessRunner().RunAsync(new ProcessRequest { Argv = genArgv, Timeout = TimeSpan.FromMinutes(1) });
+        Assert.True(genResult.ExitCode == 0, "fixture generation failed: " + ProbeOutput.TailText(genResult.Stderr));
+
+        var tools = Tools();
+        var probe = await tools.FfprobeJsonAsync(fixture);
+        var sourceAudio = Assert.Single(Streams(probe, "audio"));
+        Assert.True(sourceAudio.GetProperty("tags").TryGetProperty("NUMBER_OF_FRAMES", out _), "fixture setup: source should carry the stale tag");
+
+        var config = RemuxRules.DefaultConfig() with { PrimaryAudioLang = "eng", SecondaryAudioLang = string.Empty, TertiaryAudioLang = string.Empty };
+        var split = RemuxRules.SplitStreams(new ProbeResult(probe));
+        var plan = RemuxRules.PlanRemux(split.Video, split.Audio, split.Subtitles, config);
+        Assert.NotNull(plan);
+        var workDir = Path.Combine(_root, "work-stale-tags");
+
+        var sourceWarnings = await tools.ProbeWarningLinesAsync(fixture);
+        var output = await tools.RemuxToTempFileAsync(fixture, workDir, plan, probe, sourceWarnings);
+
+        var outputProbe = await tools.FfprobeJsonAsync(output);
+        var outputAudio = Assert.Single(Streams(outputProbe, "audio"));
+        var outputVideo = Assert.Single(Streams(outputProbe, "video"));
+        foreach (var stream in new[] { outputAudio, outputVideo })
+        {
+            Assert.True(stream.TryGetProperty("tags", out var tags));
+            foreach (var staleKey in new[] { "NUMBER_OF_FRAMES", "NUMBER_OF_BYTES", "BPS", "_STATISTICS_WRITING_APP", "_STATISTICS_WRITING_DATE_UTC", "_STATISTICS_TAGS", "ENCODER" })
+            {
+                Assert.False(tags.TryGetProperty(staleKey, out _), $"{staleKey} should have been cleared");
+            }
+        }
+
+        var outputDurationSeconds = ProbeOutput.DurationSeconds(outputProbe);
+        Assert.NotNull(outputDurationSeconds);
+        var audioDurationTag = outputAudio.GetProperty("tags").GetProperty("DURATION").GetString();
+        Assert.NotNull(audioDurationTag);
+        var parsedTagSeconds = ParseFfmpegTimeTag(audioDurationTag!);
+        Assert.InRange(parsedTagSeconds, outputDurationSeconds!.Value - 0.5, outputDurationSeconds.Value + 0.5);
+    }
+
+    /// <summary>Parses a Matroska "DURATION"-style tag ("HH:MM:SS.fffffffff") into seconds, without relying on
+    /// <see cref="TimeSpan.Parse(string)"/>'s 7-digit fraction limit against ffmpeg's 9-digit nanosecond tags.</summary>
+    private static double ParseFfmpegTimeTag(string text)
+    {
+        var parts = text.Split(':');
+        Assert.Equal(3, parts.Length);
+        return (double.Parse(parts[0], CultureInfo.InvariantCulture) * 3600)
+            + (double.Parse(parts[1], CultureInfo.InvariantCulture) * 60)
+            + double.Parse(parts[2], CultureInfo.InvariantCulture);
+    }
+
     [RequiresFfmpegFact]
     public async Task Complete_media_passes_both_validations()
     {

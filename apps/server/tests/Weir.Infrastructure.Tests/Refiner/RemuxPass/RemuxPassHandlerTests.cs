@@ -118,6 +118,30 @@ public sealed class RemuxPassHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task Issue_545_item_5_media_facts_and_collision_writes_are_scoped_by_library_id()
+    {
+        // The reference matches measured-media-facts and output-collision writes on relative_path alone, so two
+        // libraries that happen to share a path both get the update. Only the pass's own library's row should change.
+        var library = await LibraryAsync();
+        var otherLibraryId = Convert.ToInt64(await _fixture.Db(uow => uow.ExecuteScalarWriteAsync(
+            "INSERT INTO refiner_libraries (name, media_type, watched_folder, display_order) VALUES ('Other', 'movie', '', 99) RETURNING id")), CultureInfo.InvariantCulture);
+        _folders.Source(Path.Join("Movie", "file.mkv"));
+        _media.Probes["file.mkv"] = FakeMediaRunner.EnglishAndJapanese;
+        await FileRowAsync(library, "Movie/file.mkv", "unprocessed");
+        await _fixture.Store.Execute($"INSERT INTO refiner_files (library_id, relative_path, status) VALUES ({otherLibraryId}, 'Movie/file.mkv', 'unprocessed')");
+        var payload = $$$"""{"relative_media_path":"Movie/file.mkv","media_scope":"movie","library_id":{{{library}}}}""";
+
+        await Handler().HandleAsync(Context(200, payload), CancellationToken.None);
+
+        Assert.Equal(
+            1,
+            await _fixture.Store.Scalar($"SELECT count(*) FROM refiner_files WHERE library_id = {library} AND video_codec = 'h264' AND audio_track_count = 2 AND output_collision_action = 'write'"));
+        Assert.Equal(
+            1,
+            await _fixture.Store.Scalar($"SELECT count(*) FROM refiner_files WHERE library_id = {otherLibraryId} AND video_codec IS NULL AND output_collision_action IS NULL"));
+    }
+
+    [Fact]
     public async Task A_source_that_is_not_ready_puts_the_file_on_hold_without_counting_a_failure()
     {
         var library = await LibraryAsync();
@@ -179,10 +203,54 @@ public sealed class RemuxPassHandlerTests : IDisposable
         Assert.Equal(
             $$$"""{"relative_media_path":"Film/film.mkv","library_id":{{{library}}},"trigger":"worker","origin":{"source_key":"deluno","handoff_id":"h1","callback_path":"{{{EventsPath}}}","release_name":"Film.2001"}}""",
             passThrough);
-        Assert.Equal($"refiner.file.pass_through.v1:{library}:Film/film.mkv", await ScalarText("SELECT dedupe_key FROM refiner_jobs WHERE job_kind = 'refiner.file.pass_through.v1'"));
+        // #545 item 2: the source's fingerprint is folded into the dedupe key so a later failure of a replaced file
+        // queues again; the base key (kind, library, path) is still a prefix of it.
+        Assert.StartsWith(
+            $"refiner.file.pass_through.v1:{library}:Film/film.mkv:",
+            await ScalarText("SELECT dedupe_key FROM refiner_jobs WHERE job_kind = 'refiner.file.pass_through.v1'"),
+            StringComparison.Ordinal);
         Assert.Contains("handing the original back to the output folder unchanged", await ScalarText("SELECT status_reason FROM refiner_files"), StringComparison.Ordinal);
         // The pass-through reports on its own once delivered, so nothing is sent yet.
         Assert.Empty(_fixture.Http.RequestsTo(HttpMethod.Post, EventsPath));
+    }
+
+    [Fact]
+    public async Task Issue_545_item_2_a_replaced_file_queues_again_after_the_first_pass_through_finished()
+    {
+        // A pass-through job is dedupe-keyed forever by path alone in the reference — once one finishes, a later
+        // failure of a re-download with the same name never queues another. The fingerprint folded into the key
+        // (size + modification time) tells the two files apart, while a repeat enqueue for the very same,
+        // unchanged file still dedupes against the row already sitting there.
+        var library = await LibraryAsync(maxAttempts: 1);
+        var path = _folders.Source(Path.Join("Film", "film.mkv"), 10);
+        _media.DefaultProbe = FakeMediaRunner.EnglishAndJapanese;
+        _media.RemuxError = "Conversion failed";
+        await FileRowAsync(library, "Film/film.mkv");
+        var payload = $$$"""{"relative_media_path":"Film/film.mkv","media_scope":"movie","library_id":{{{library}}}}""";
+
+        var first = await EnqueueAsync(payload, "remux:1");
+        await Handler().HandleAsync(Context(first, payload), CancellationToken.None);
+
+        var firstKey = await ScalarText("SELECT dedupe_key FROM refiner_jobs WHERE job_kind = 'refiner.file.pass_through.v1'");
+        Assert.StartsWith($"refiner.file.pass_through.v1:{library}:Film/film.mkv:", firstKey, StringComparison.Ordinal);
+        Assert.Equal(1, await _fixture.Store.Scalar("SELECT count(*) FROM refiner_jobs WHERE job_kind = 'refiner.file.pass_through.v1'"));
+
+        // Re-enqueuing a failure for the very same, unchanged file stays idempotent against the still-pending row.
+        var again = await EnqueueAsync(payload, "remux:1b");
+        await Handler().HandleAsync(Context(again, payload), CancellationToken.None);
+        Assert.Equal(1, await _fixture.Store.Scalar("SELECT count(*) FROM refiner_jobs WHERE job_kind = 'refiner.file.pass_through.v1'"));
+
+        // The manager delivers, then a re-download replaces the file at the same path with different content.
+        await _fixture.Store.Execute("UPDATE refiner_jobs SET status = 'completed' WHERE job_kind = 'refiner.file.pass_through.v1'");
+        File.WriteAllBytes(path, new byte[20]);
+
+        var second = await EnqueueAsync(payload, "remux:2");
+        await Handler().HandleAsync(Context(second, payload), CancellationToken.None);
+
+        Assert.Equal(2, await _fixture.Store.Scalar("SELECT count(*) FROM refiner_jobs WHERE job_kind = 'refiner.file.pass_through.v1'"));
+        var secondKey = await ScalarText("SELECT dedupe_key FROM refiner_jobs WHERE job_kind = 'refiner.file.pass_through.v1' AND status = 'pending'");
+        Assert.NotEqual(firstKey, secondKey);
+        Assert.StartsWith($"refiner.file.pass_through.v1:{library}:Film/film.mkv:", secondKey, StringComparison.Ordinal);
     }
 
     [Fact]

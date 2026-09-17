@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using Weir.Core.Json;
 using Weir.Core.MediaManagers;
+using Weir.Core.Refiner;
 using Weir.Core.Refiner.RemuxPass;
 using Weir.Core.Rules;
 using Weir.Infrastructure.Media;
@@ -26,8 +27,23 @@ internal sealed class FakeMediaRunner : IProcessRunner
     public const string EnglishAndJapanese =
         """{"format":{"duration":"100.0"},"streams":[{"index":0,"codec_type":"video","codec_name":"h264","duration":"100.0"},{"index":1,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"eng"},"disposition":{"default":1},"duration":"100.0"},{"index":2,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"jpn"},"duration":"100.0"}]}""";
 
+    /// <summary>
+    /// What a plan that keeps only the Japanese track (dropping English) produces, for tests that need the fake
+    /// <c>ffprobe</c> on the temp output file (a randomized name <see cref="Probes"/> can never pin) to look like
+    /// that instead of <see cref="DefaultProbe"/>'s English-only shape — see <c>DefaultProbe</c>'s remarks.
+    /// </summary>
+    public const string JapaneseOnly =
+        """{"format":{"duration":"100.0"},"streams":[{"index":0,"codec_type":"video","codec_name":"h264","width":1920,"height":1080,"duration":"100.0"},{"index":1,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"jpn"},"disposition":{"default":1},"duration":"100.0"}]}""";
+
     public Dictionary<string, string> Probes { get; } = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// The fake ffprobe's fallback for any path not in <see cref="Probes"/> by its exact file name — which, after a
+    /// remux, is always the temp output file, since <c>MediaTools.CreateTempFile</c> gives it a randomized name a
+    /// test cannot pin ahead of time. So a test asserting the pass succeeded needs this set to what the *output*
+    /// should probe as (the #500 staged-output validator re-probes it for real), separately from <see cref="Probes"/>
+    /// entries pinning what each *source* file probes as.
+    /// </summary>
     public string DefaultProbe { get; set; } = EnglishOnly;
 
     public string? ProbeError { get; set; }
@@ -103,9 +119,12 @@ internal sealed class RecordingFacts : IRemuxPassFileFacts
         return Task.CompletedTask;
     }
 
-    public Task RecordOutputCollisionAsync(string relativePath, CollisionDecision decision, CancellationToken cancellationToken)
+    public List<long?> CollisionLibraryIds { get; } = [];
+
+    public Task RecordOutputCollisionAsync(string relativePath, CollisionDecision decision, long? libraryId, CancellationToken cancellationToken)
     {
         Collisions.Add(decision);
+        CollisionLibraryIds.Add(libraryId);
         return Task.CompletedTask;
     }
 }
@@ -116,11 +135,16 @@ internal sealed class FakeCleanupData : IPostSuccessCleanupData
 
     public List<ActiveRemuxJob> ActiveJobs { get; } = [];
 
+    public bool HandoffAcknowledged { get; set; }
+
     public Task<IReadOnlyList<ManagerLibraryTruth>> CollectLibraryTruthAsync(string mediaScope, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<ManagerLibraryTruth>>(Truth);
 
     public Task<IReadOnlyList<ActiveRemuxJob>> ActiveRemuxJobsAsync(CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<ActiveRemuxJob>>(ActiveJobs);
+
+    public Task<bool> HandoffOutcomeAcknowledgedAsync(HandoffOrigin? origin, CancellationToken cancellationToken) =>
+        Task.FromResult(HandoffAcknowledged);
 }
 
 internal sealed class FakeOriginalLanguage : IOriginalLanguageLookup
@@ -232,7 +256,9 @@ public sealed class RemuxPassRunnerTests : IDisposable
         long? minAge = 0,
         RefinerRulesConfig? rules = null,
         long minimumFreeMb = 0,
-        RemuxPassRunner? runner = null) =>
+        RemuxPassRunner? runner = null,
+        Weir.Core.Refiner.ManualPlanChoice? manualPlan = null,
+        SourceFingerprint? manualPlanFingerprint = null) =>
         (runner ?? Runner()).RunAsync(new RemuxPassRequest
         {
             Runtime = runtime ?? _folders.Runtime(),
@@ -245,6 +271,8 @@ public sealed class RemuxPassRunnerTests : IDisposable
             MinimumFreeDiskSpaceMb = minimumFreeMb,
             CurrentJobId = 1,
             ProgressReporter = _progress.Add,
+            ManualPlan = manualPlan,
+            ManualPlanFingerprint = manualPlanFingerprint,
         });
 
     private static string Str(PyDict result, string key) => PyConvert.Str(result[key]);
@@ -493,7 +521,11 @@ public sealed class RemuxPassRunnerTests : IDisposable
     {
         var episode = _folders.Source(Path.Join("Show", "S01", "ep.mkv"), 400);
         Directory.CreateDirectory(_folders.Out(Path.Join("Show", "S01")));
-        _cleanup.Truth.Add(new ManagerLibraryTruth(new ManagerConnection("sonarr", "Main", "http://x", "k"), SignalStatus.Reported, []));
+        // #545 item 1: a manager clears the folder only once it has positive evidence of this release (here, the
+        // same title kept at its own separate library path) — not merely because it reports no files sitting in
+        // the folder being considered (which would equally describe "hasn't imported yet").
+        _cleanup.Truth.Add(new ManagerLibraryTruth(
+            new ManagerConnection("sonarr", "Main", "http://x", "k"), SignalStatus.Reported, [_folders.Out(Path.Join("ManagerLibrary", "ep.mkv"))]));
 
         var result = await Run("Show/S01/ep.mkv", scope: "tv");
 
@@ -507,6 +539,42 @@ public sealed class RemuxPassRunnerTests : IDisposable
         Assert.False(result.ContainsKey("movie_output_folder_deleted"));
         Assert.False(result.ContainsKey("movie_output_truth_check"));
         Assert.False(result.ContainsKey("source_folder_deleted"));
+    }
+
+    [Fact]
+    public async Task Issue_545_item_1_a_manager_that_has_not_imported_yet_keeps_the_season_folder()
+    {
+        // The manager answers (it is reachable and reporting), but its own library listing does not yet include
+        // this release — exactly what a manager that has not scanned or finished importing yet looks like. Reporting
+        // zero *conflicting* files inside the folder must not, by itself, be read as "safe to delete".
+        var episode = _folders.Source(Path.Join("Show", "S01", "ep.mkv"), 400);
+        Directory.CreateDirectory(_folders.Out(Path.Join("Show", "S01")));
+        _cleanup.Truth.Add(new ManagerLibraryTruth(new ManagerConnection("sonarr", "Main", "http://x", "k"), SignalStatus.Reported, []));
+
+        var result = await Run("Show/S01/ep.mkv", scope: "tv");
+
+        Assert.True(Bool(result, "ok"));
+        Assert.False(Bool(result, "tv_output_season_folder_deleted"));
+        Assert.Contains("not yet reported this release as imported", Str(result, "tv_output_season_folder_skip_reason"), StringComparison.Ordinal);
+        Assert.True(File.Exists(episode));
+        Assert.True(Directory.Exists(_folders.Out(Path.Join("Show", "S01"))));
+    }
+
+    [Fact]
+    public async Task Issue_545_item_1_a_manager_that_renamed_the_release_on_import_still_confirms_it()
+    {
+        // A manager that renames on import (a common *arr pattern) will not report the exact output path Weir wrote,
+        // but the same title (file-name stem) shows up at a different path — that is still positive evidence.
+        _folders.Source(Path.Join("ReleaseTitle", "movie.mkv"), 400);
+        Directory.CreateDirectory(_folders.Out("ReleaseTitle"));
+        _cleanup.Truth.Add(new ManagerLibraryTruth(
+            new ManagerConnection("radarr", "Main", "http://x", "k"), SignalStatus.Reported, [_folders.Out(Path.Join("Renamed", "movie.mkv"))]));
+
+        var result = await Run("ReleaseTitle/movie.mkv");
+
+        Assert.True(Bool(result, "ok"));
+        Assert.True(Bool(result, "movie_output_folder_deleted"));
+        Assert.False(Directory.Exists(_folders.Out("ReleaseTitle")));
     }
 
     [Fact]
@@ -667,5 +735,70 @@ public sealed class RemuxPassRunnerTests : IDisposable
         Assert.Empty(_language.Asked);
         Assert.Contains("0:1", Assert.Single(_media.Remuxes));
         Assert.False(plain.ContainsKey("original_language"));
+    }
+
+    // ---- Issue #501: manual track plans ------------------------------------------------------
+
+    [Fact]
+    public async Task A_manual_plan_builds_its_plan_directly_from_the_choice_skipping_PlanRemux()
+    {
+        var source = _folders.Source(Path.Join("Show", "ep.mkv"));
+        _media.Probes["ep.mkv"] = FakeMediaRunner.EnglishAndJapanese;
+        // The #500 staged-output validator re-probes the temp output for real; since it gets a randomized name,
+        // the fake tool answers from DefaultProbe (see its remarks) rather than a Probes[] entry. The manual choice
+        // below keeps only the Japanese track, so the output it validates against must look like that, not the
+        // English-only default.
+        _media.DefaultProbe = FakeMediaRunner.JapaneseOnly;
+        var fingerprint = SourceFiles.Fingerprint(source);
+        // Keep the Japanese track (not what the automatic rules would have picked) and mark it default.
+        var choice = new ManualPlanChoice(
+            [new ManualKeepEntry(0, Default: false, Forced: false), new ManualKeepEntry(2, Default: true, Forced: false)],
+            [0, 2]);
+
+        var result = await Run("Show/ep.mkv", manualPlan: choice, manualPlanFingerprint: fingerprint);
+
+        Assert.True(Bool(result, "ok"), PyJsonWriter.Dumps(result, PyJsonFormat.Compact));
+        var executed = Assert.Single(_media.Remuxes);
+        var maps = executed.Select((token, i) => (token, i)).Where(p => p.token == "-map").Select(p => executed[p.i + 1]).ToList();
+        // #547: "-map 0:t?" (an attachment, if any) is added for every Matroska output regardless of the plan.
+        Assert.Equal(["0:0", "0:2", "0:t?"], maps);
+        Assert.DoesNotContain("0:1", executed);
+        var dispositionIndex = executed.ToList().IndexOf("-disposition:a:0");
+        Assert.True(dispositionIndex >= 0);
+        // #547: the additive syntax, not the flat "default" this replaced.
+        Assert.Equal("+default", executed[dispositionIndex + 1]);
+        Assert.Contains("chose these tracks by hand", string.Join(" ", ((PyList)result["audio_selection_notes"]).Items.Select(PyConvert.Str)), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_manual_plan_with_a_stale_fingerprint_fails_with_the_choose_again_message()
+    {
+        _folders.Source(Path.Join("Show", "ep2.mkv"));
+        _media.Probes["ep2.mkv"] = FakeMediaRunner.EnglishAndJapanese;
+        var staleFingerprint = new SourceFingerprint(0, 0, 999_999, 1);
+        var choice = new ManualPlanChoice([new ManualKeepEntry(0, false, false), new ManualKeepEntry(1, true, false)], [0, 1]);
+
+        var result = await Run("Show/ep2.mkv", manualPlan: choice, manualPlanFingerprint: staleFingerprint);
+
+        Assert.False(Bool(result, "ok"));
+        Assert.Equal(RemuxPassOutcomes.FailedBeforeExecution, Str(result, "outcome"));
+        Assert.Equal(ManualTrackPlan.ChangedMessage, Str(result, "reason"));
+        Assert.Empty(_media.Remuxes);
+    }
+
+    [Fact]
+    public async Task A_manual_plan_referencing_a_track_that_no_longer_exists_fails_with_the_choose_again_message()
+    {
+        var source = _folders.Source(Path.Join("Show", "ep3.mkv"));
+        // Only indices 0 (video) and 1 (audio) exist now — the operator chose index 2 before the file changed.
+        _media.Probes["ep3.mkv"] = FakeMediaRunner.EnglishOnly;
+        var fingerprint = SourceFiles.Fingerprint(source);
+        var choice = new ManualPlanChoice([new ManualKeepEntry(0, false, false), new ManualKeepEntry(2, true, false)], [0, 2]);
+
+        var result = await Run("Show/ep3.mkv", manualPlan: choice, manualPlanFingerprint: fingerprint);
+
+        Assert.False(Bool(result, "ok"));
+        Assert.Equal(ManualTrackPlan.ChangedMessage, Str(result, "reason"));
+        Assert.Empty(_media.Remuxes);
     }
 }

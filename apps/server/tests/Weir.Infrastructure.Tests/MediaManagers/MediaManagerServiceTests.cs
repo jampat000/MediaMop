@@ -512,6 +512,39 @@ public sealed class MediaManagerServiceTests
     }
 
     [Fact]
+    public async Task Issue_545_item_3_the_ledger_reports_a_pass_through_jobs_own_state_and_its_final_failure()
+    {
+        // #545 item 3: a pass-through or reject job that is queued (but not yet delivered) must still be visible to
+        // the manager polling the status API — as scheduled or working, never silently dropped — and one that
+        // exhausted its own retries must be reported failed, with the reason, rather than vanish once it is no
+        // longer pending or leased.
+        using var fixture = new MediaManagerFixture();
+        var watched = fixture.Store.Home.Join("movies");
+        var libraryId = await fixture.LibraryAsync("movie", watched);
+        await fixture.Store.Execute($"INSERT INTO refiner_files (library_id, relative_path, status) VALUES ({libraryId}, 'Film/film.mkv', 'processing_failed')");
+        await fixture.Db(async uow => { await fixture.Ledger.RecordReceivedAsync(uow, "deluno", "h1", libraryId, "Film/film.mkv"); return 0; });
+        var row = (await fixture.Db(uow => HandoffLedgerStore.FindAsync(uow, "deluno", "h1")))!;
+
+        var dedupe = $"refiner.file.pass_through.v1:{libraryId}:Film/film.mkv:10-123";
+        await fixture.Store.Execute(
+            $"INSERT INTO refiner_jobs (dedupe_key, job_kind, payload_json, status) VALUES " +
+            $"('{dedupe}', 'refiner.file.pass_through.v1', '{{\"relative_media_path\":\"Film/film.mkv\",\"library_id\":{libraryId}}}', 'pending')");
+
+        var pending = await fixture.Db(uow => fixture.Ledger.CurrentStatusAsync(uow, row));
+        Assert.Equal("scheduled", pending.State);
+        Assert.Null(pending.QueuePosition);
+
+        await fixture.Store.Execute($"UPDATE refiner_jobs SET status = 'leased' WHERE dedupe_key = '{dedupe}'");
+        var working = await fixture.Db(uow => fixture.Ledger.CurrentStatusAsync(uow, row));
+        Assert.Equal("working", working.State);
+
+        await fixture.Store.Execute($"UPDATE refiner_jobs SET status = 'failed', last_error = 'Weir could not deliver the file: disk full.' WHERE dedupe_key = '{dedupe}'");
+        var failed = await fixture.Db(uow => fixture.Ledger.CurrentStatusAsync(uow, row));
+        Assert.Equal("failed", failed.State);
+        Assert.Equal("Weir could not deliver the file: disk full.", failed.Message);
+    }
+
+    [Fact]
     public async Task Only_a_hand_off_that_has_not_started_can_be_cancelled_and_resending_starts_it_again()
     {
         using var fixture = new MediaManagerFixture();

@@ -1,8 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Weir.Core.Configuration;
+using Weir.Core.Library;
+using Weir.Core.MediaManagers;
 using Weir.Core.Security;
 using Weir.Infrastructure.Jobs;
+using Weir.Infrastructure.Library;
 using Weir.Infrastructure.Sqlite;
 
 namespace Weir.Infrastructure.MediaManagers;
@@ -25,6 +28,14 @@ public static class MediaManagerServices
         services.TryAddSingleton<MediaManagerIntake>();
         services.TryAddSingleton<HandoffCompletionReporter>();
         services.TryAddSingleton<MetadataProviderService>();
+        services.TryAddSingleton<ILibraryFileChangeNotifier, LibraryFileChangeNotifier>();
+
+        // #509: redownloading a title after a removed track can no longer be restored. The store and
+        // tracker default to in-memory (see their remarks for why); FileLogRemovedTrackStore is available
+        // to opt into instead once a caller wants the payload-backed history to survive a restart.
+        services.TryAddSingleton<IManagerRedownload, ArrManagerRedownload>();
+        services.TryAddSingleton<IRemovedTrackStore, InMemoryRemovedTrackStore>();
+        services.TryAddSingleton<IRedownloadTracker, InMemoryRedownloadTracker>();
         return services;
     }
 }

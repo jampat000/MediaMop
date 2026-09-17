@@ -4,7 +4,12 @@ using Weir.Core.Rules;
 
 namespace Weir.Infrastructure.Refiner.RemuxPass;
 
-/// <summary>What a pass measured about the source, for the scheduler and the Files screen (<c>record_measured_media_facts</c>).</summary>
+/// <summary>
+/// What a pass measured about the source, for the scheduler and the Files screen (<c>record_measured_media_facts</c>).
+/// <c>LibraryId</c> (issue #545 item 5) says which library's row to update; null only when a pass ran with no library
+/// resolved (which the handler never does in practice), and the write is then skipped rather than touching every
+/// library's row for the path.
+/// </summary>
 public sealed record MeasuredMediaFacts(
     string RelativePath,
     long? VideoWidth,
@@ -14,14 +19,16 @@ public sealed record MeasuredMediaFacts(
     long? SubtitleTrackCount,
     double? DurationSeconds,
     IReadOnlyList<string>? AudioCodecs,
-    long? VideoBitDepth);
+    long? VideoBitDepth,
+    long? LibraryId = null);
 
 /// <summary>The optional metadata a pass keeps on the file row while it works. Implementations never throw.</summary>
 public interface IRemuxPassFileFacts
 {
     Task RecordMeasuredMediaFactsAsync(MeasuredMediaFacts facts, CancellationToken cancellationToken);
 
-    Task RecordOutputCollisionAsync(string relativePath, CollisionDecision decision, CancellationToken cancellationToken);
+    /// <summary><paramref name="libraryId"/>: issue #545 item 5 — scopes the write to this library's row for the path.</summary>
+    Task RecordOutputCollisionAsync(string relativePath, CollisionDecision decision, long? libraryId, CancellationToken cancellationToken);
 }
 
 /// <summary>Everything the TV season-folder cleanup (<c>handle_tv_cleanup_after_success</c>) is handed.</summary>
