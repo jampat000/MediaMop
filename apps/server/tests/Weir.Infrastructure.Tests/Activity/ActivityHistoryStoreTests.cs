@@ -141,7 +141,133 @@ public sealed class ActivityHistoryStoreTests
             ActivityHistory.ExportCsv([row]));
     }
 
-    /// <summary>The same rows and filters answered by the Python router functions and by .NET, compared byte for byte.</summary>
+    /// <summary>#543 item 1: Python's dropped-FROM count query always counts one row with no filter; .NET counts them all.</summary>
+    [Fact]
+    public async Task Count_activity_events_counts_every_row_even_unfiltered()
+    {
+        using var fixture = new StoreFixture();
+        await fixture.Execute(
+            "INSERT INTO activity_events (created_at, event_type, module, title) VALUES " +
+            "('2026-01-01 00:00:01', 'a.1', 'refiner', 'one'), " +
+            "('2026-01-01 00:00:02', 'a.2', 'refiner', 'two'), " +
+            "('2026-01-01 00:00:03', 'a.3', 'refiner', 'three')");
+
+        Assert.Equal(3, await fixture.WithUnitOfWork(uow => ActivityHistoryStore.CountAsync(uow, ActivityFilter.None)));
+
+        var (total, hasMore, pageCount) = await fixture.WithUnitOfWork(async uow =>
+        {
+            var rows = await ActivityHistoryStore.ListRecentAsync(uow, ActivityFilter.None, limit: 2, beforeId: null);
+            var count = await ActivityHistoryStore.CountAsync(uow, ActivityFilter.None);
+            var body = ActivityHistory.RecentOut(rows, count, 0, 90, null);
+            using var doc = JsonDocument.Parse(PyJsonWriter.DumpsUtf8(body, PyJsonFormat.Response));
+            return (doc.RootElement.GetProperty("total").GetInt64(), doc.RootElement.GetProperty("has_more").GetBoolean(), rows.Count);
+        });
+        Assert.Equal(3, total);
+        Assert.True(hasMore);
+        Assert.Equal(2, pageCount);
+    }
+
+    /// <summary>
+    /// #543 item 3: ordered by <c>(created_at DESC, id DESC)</c>, and <c>before_id</c> pages by that same key.
+    /// Row 2 is chronologically the oldest despite its small id, and rows 1 and 3 tie — an arrangement plain
+    /// <c>id &lt; before_id</c> paging (Python's, and .NET's before #543) gets wrong: it would repeat row 4 on
+    /// a later page (its id is small, but it was already returned) or lose rows entirely.
+    /// </summary>
+    [Fact]
+    public async Task List_recent_pages_by_before_id_without_skipping_or_repeating_a_tied_row()
+    {
+        using var fixture = new StoreFixture();
+        await fixture.Execute(
+            "INSERT INTO activity_events (created_at, event_type, module, title) VALUES " +
+            "('2026-01-01 00:00:10', 'a.1', 'refiner', 'A'), " + // id 1, ties id 3
+            "('2026-01-01 00:00:05', 'a.2', 'refiner', 'B'), " + // id 2, older than id 1 and id 3
+            "('2026-01-01 00:00:10', 'a.3', 'refiner', 'C'), " + // id 3, ties id 1
+            "('2026-01-01 00:00:01', 'a.4', 'refiner', 'D')"); // id 4, oldest
+
+        var first = await fixture.WithUnitOfWork(uow => ActivityHistoryStore.ListRecentAsync(uow, ActivityFilter.None, limit: 2, beforeId: null));
+        Assert.Equal(["C", "A"], first.Select(r => r.Title)); // the tie broken by id DESC: 3 before 1
+
+        var second = await fixture.WithUnitOfWork(uow => ActivityHistoryStore.ListRecentAsync(uow, ActivityFilter.None, limit: 2, beforeId: first[^1].Id));
+        Assert.Equal(["B", "D"], second.Select(r => r.Title)); // never id 1 again, never loses B or D
+
+        Assert.Equal(4, first.Concat(second).Select(r => r.Id).Distinct().Count());
+    }
+
+    /// <summary>A cursor row that no longer exists (deleted since the page it came from was read) still pages, by id alone.</summary>
+    [Fact]
+    public async Task List_recent_before_a_missing_cursor_row_falls_back_to_id_only_paging()
+    {
+        using var fixture = new StoreFixture();
+        await fixture.Execute(
+            "INSERT INTO activity_events (created_at, event_type, module, title) VALUES " +
+            "('2026-01-01 00:00:01', 'a.1', 'refiner', 'one'), " +
+            "('2026-01-01 00:00:02', 'a.2', 'refiner', 'two')");
+
+        var rows = await fixture.WithUnitOfWork(uow => ActivityHistoryStore.ListRecentAsync(uow, ActivityFilter.None, limit: 10, beforeId: 999));
+        Assert.Equal(["two", "one"], rows.Select(r => r.Title));
+    }
+
+    /// <summary>
+    /// #543 item 2: a query offset must be honored (not silently taken as the naive wall clock), and a stored
+    /// row without a fractional part must not be excluded from a boundary that names its exact second.
+    /// </summary>
+    [Fact]
+    public async Task Date_filters_normalize_to_utc_and_compare_stored_shapes_not_raw_text()
+    {
+        using var fixture = new StoreFixture();
+        // Stored with no fractional part: the shape SQLAlchemy (and Weir) write for an exact second.
+        await fixture.Execute(
+            "INSERT INTO activity_events (created_at, event_type, module, title) VALUES ('2026-01-02 03:04:05', 'a.1', 'refiner', 'exact')");
+
+        Assert.True(PyDateTime.TryFromIsoFormat("2026-01-02T03:04:05", out var naiveBoundary));
+        var atBoundary = new ActivityFilter(DateFrom: naiveBoundary);
+        Assert.Single(await fixture.WithUnitOfWork(uow => ActivityHistoryStore.ListRecentAsync(uow, atBoundary, limit: 10, beforeId: null)));
+
+        // The same instant, named with a +02:00 offset: an ignored offset would compare "05:04:05" against
+        // the stored "03:04:05" and wrongly exclude the row.
+        Assert.True(PyDateTime.TryFromIsoFormat("2026-01-02T05:04:05+02:00", out var sameInstantOffset));
+        var atOffsetBoundary = new ActivityFilter(DateFrom: sameInstantOffset);
+        Assert.Single(await fixture.WithUnitOfWork(uow => ActivityHistoryStore.ListRecentAsync(uow, atOffsetBoundary, limit: 10, beforeId: null)));
+
+        // One second later in the same offset: now past the row, in either timezone.
+        Assert.True(PyDateTime.TryFromIsoFormat("2026-01-02T06:04:06+02:00", out var pastIt));
+        var pastFilter = new ActivityFilter(DateFrom: pastIt);
+        Assert.Empty(await fixture.WithUnitOfWork(uow => ActivityHistoryStore.ListRecentAsync(uow, pastFilter, limit: 10, beforeId: null)));
+    }
+
+    /// <summary>
+    /// #543 item 4: <c>_file_history_filter</c> (Activity events) already matches a row that never recorded a
+    /// library id even when one is given; processing records now get the same fallback, so removing one
+    /// file's history with a library id cleans up both consistently instead of leaving old records behind.
+    /// </summary>
+    [Fact]
+    public async Task File_history_removal_gives_processing_records_the_same_library_null_fallback_as_events()
+    {
+        using var fixture = new StoreFixture();
+        await fixture.Execute(
+            "INSERT INTO activity_events (created_at, event_type, module, title, relative_path, library_id) VALUES " +
+            "('2026-01-01 00:00:01', 'a.1', 'refiner', 'no library recorded', 'Film/movie.mkv', NULL)");
+        await fixture.Execute(
+            "INSERT INTO refiner_file_logs (relative_path, recorded_at, library_id) VALUES ('Film/movie.mkv', '2026-01-01 00:00:01', NULL)");
+
+        var counts = await fixture.WithUnitOfWork(uow => ActivityHistoryStore.CountFileHistoryAsync(uow, libraryId: 7, "Film/movie.mkv"));
+        Assert.Equal(1, counts.ActivityEvents);
+        Assert.Equal(1, counts.ProcessingRecords);
+
+        var deleted = await fixture.WithUnitOfWork(uow => ActivityHistoryStore.DeleteFileHistoryAsync(uow, libraryId: 7, "Film/movie.mkv"));
+        Assert.Equal(1, deleted.ActivityEvents);
+        Assert.Equal(1, deleted.ProcessingRecords);
+    }
+
+    /// <summary>
+    /// The same rows and filters answered by the Python router functions and by .NET, compared byte for byte —
+    /// except the cases tagged with a <c>#543</c> issue number, where .NET now gives the *fixed* answer and
+    /// Python still gives the old, buggy one (items 1 and 3; both kept faithfully everywhere else). Those
+    /// cases assert the two bodies differ, so a Python fix (or an accidental regression back to parity) is
+    /// caught rather than silently ignored; <see cref="Count_activity_events_counts_every_row_even_unfiltered"/>
+    /// and <see cref="List_recent_pages_by_before_id_without_skipping_or_repeating_a_tied_row"/> assert what the
+    /// fixed .NET answer actually is.
+    /// </summary>
     [PythonFact]
     public async Task Recent_and_export_bytes_match_the_python_router_on_the_same_database()
     {
@@ -157,31 +283,33 @@ public sealed class ActivityHistoryStoreTests
             "('2026-01-02 03:04:05', 'refiner.file_passed_through', 'refiner', 'tie b', NULL, 'manual', 'success', 3, 'Film/ä ö.mkv', NULL), " +
             "('2026-01-02 03:04:05', 'refiner.file_passed_through', 'refiner', 'tie c', NULL, 'webhook', 'success', 1, 'x.mkv', NULL)");
 
-        (string Kind, string Query)[] cases =
+        // DivergesForIssue: null keeps byte-for-byte parity; #543 marks a case whose .NET answer is now the
+        // fixed one (item 1: total/has_more with no filter; item 3: created_at ties and before_id paging).
+        (string Kind, string Query, int? DivergesForIssue)[] cases =
         [
-            ("recent", "limit=50"),
-            ("recent", "limit=2"),
-            ("recent", "limit=2&before_id=3"),
-            ("recent", "limit=1&before_id=8"),
-            ("recent", "limit=3&before_id=8"),
-            ("recent", "limit=2&before_id=8&module=refiner"),
-            ("recent", "limit=2&before_id=8&module=system"),
-            ("recent", "limit=1&before_id=8&trigger=manual"),
-            ("recent", "limit=2&before_id=9&file=mkv"),
-            ("recent", "limit=2&before_id=9&relative_path=x&library_id=3"),
-            ("recent", "limit=3"),
-            ("recent", "limit=3&module=refiner"),
-            ("recent", "module=system"),
-            ("recent", "module=refiner&search=QUOTE"),
-            ("recent", "file=%C3%A4"),
-            ("recent", "trigger=MANUAL&result=success"),
-            ("recent", "date_from=2026-01-02T03:04:05"),
-            ("recent", "date_from=2026-01-02&date_to=2026-01-03T00:00:00Z"),
-            ("recent", "library_id=3&event_type=refiner.file_remux_pass_completed"),
-            ("export", "format=csv"),
-            ("export", "format=json"),
-            ("export", "format=csv&module=refiner&date_to=2026-01-02 03:04:05.5"),
-            ("export", "format=json&search=%E2%98%83"),
+            ("recent", "limit=50", null),
+            ("recent", "limit=2", 543), // item 1: 8 rows exist; python's total is still the dropped-FROM 1
+            ("recent", "limit=2&before_id=3", 543), // item 3: python pages id<3 alone; .NET anchors on id 3's created_at too
+            ("recent", "limit=1&before_id=8", 543), // item 3: python repeats id 4 here, already returned before id 8
+            ("recent", "limit=3&before_id=8", 543), // item 3: same repeat, over a longer page
+            ("recent", "limit=2&before_id=8&module=refiner", 543), // item 3: paging order, with a filter applied too
+            ("recent", "limit=2&before_id=8&module=system", 543), // item 3: paging order, with a filter applied too
+            ("recent", "limit=1&before_id=8&trigger=manual", 543), // item 3: paging order, with a filter applied too
+            ("recent", "limit=2&before_id=9&file=mkv", null), // before_id 9 has no row either side of the fix: same fallback
+            ("recent", "limit=2&before_id=9&relative_path=x&library_id=3", null), // same: id 9 never existed
+            ("recent", "limit=3", 543), // item 1 total (8 rows, page of 3) and item 3's created_at-tie order both move
+            ("recent", "limit=3&module=refiner", 543), // item 3: the tied refiner rows now cut off in id-DESC order
+            ("recent", "module=system", null),
+            ("recent", "module=refiner&search=QUOTE", null),
+            ("recent", "file=%C3%A4", null),
+            ("recent", "trigger=MANUAL&result=success", null),
+            ("recent", "date_from=2026-01-02T03:04:05", 543), // item 2: python excludes the exact-second rows; .NET keeps them
+            ("recent", "date_from=2026-01-02&date_to=2026-01-03T00:00:00Z", null), // no row sits on a text-format boundary here
+            ("recent", "library_id=3&event_type=refiner.file_remux_pass_completed", null),
+            ("export", "format=csv", null),
+            ("export", "format=json", null),
+            ("export", "format=csv&module=refiner&date_to=2026-01-02 03:04:05.5", null),
+            ("export", "format=json&search=%E2%98%83", null),
         ];
 
         var casesPath = fixture.Home.Join("cases.json");
@@ -212,14 +340,28 @@ public sealed class ActivityHistoryStoreTests
             new Dictionary<string, string> { ["WEIR_HOME"] = fixture.Home.Path, ["CASES"] = casesPath, ["OUT"] = outputPath });
 
         var python = JsonSerializer.Deserialize<string[]>(await File.ReadAllTextAsync(outputPath))!.Select(Convert.FromBase64String).ToArray();
+        var failures = new List<string>();
         for (var index = 0; index < cases.Length; index++)
         {
-            var (kind, query) = cases[index];
+            var (kind, query, divergesForIssue) = cases[index];
             var dotnet = await fixture.WithUnitOfWork(uow => DotnetBodyAsync(uow, kind, query));
-            Assert.True(
-                python[index].AsSpan().SequenceEqual(dotnet),
-                $"{kind}?{query}\npython: {Encoding.UTF8.GetString(python[index])}\ndotnet: {Encoding.UTF8.GetString(dotnet)}");
+            var matches = python[index].AsSpan().SequenceEqual(dotnet);
+            if (divergesForIssue is { } issue)
+            {
+                // The fix must actually change the answer: an accidental match here means either Python's bug
+                // was fixed too (drop the marker) or .NET's fix silently stopped applying (a regression).
+                if (matches)
+                {
+                    failures.Add(
+                        $"{kind}?{query}\nmarked as diverging for #{issue}, but matched Python byte for byte:\n{Encoding.UTF8.GetString(dotnet)}");
+                }
+            }
+            else if (!matches)
+            {
+                failures.Add($"{kind}?{query}\npython: {Encoding.UTF8.GetString(python[index])}\ndotnet: {Encoding.UTF8.GetString(dotnet)}");
+            }
         }
+        Assert.True(failures.Count == 0, string.Join("\n---\n", failures));
     }
 
     private static async Task<byte[]> DotnetBodyAsync(UnitOfWork uow, string kind, string query)

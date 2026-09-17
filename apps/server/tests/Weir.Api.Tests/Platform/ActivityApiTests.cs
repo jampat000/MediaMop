@@ -71,16 +71,17 @@ public sealed class ActivityApiTests
     }
 
     [Fact]
-    public async Task Without_a_filter_the_total_is_pythons_fromless_count()
+    public async Task Without_a_filter_the_total_counts_every_matching_row()
     {
-        // Python's count replaces the selected columns with count(*), which drops FROM when nothing filters:
-        // "SELECT count(*)" is 1, so the total is the page size and has_more is false. Ported as-is.
+        // #543 item 1: Python's count query replaces the selected columns with count(*), which drops FROM
+        // when nothing filters ("SELECT count(*)" is 1), so its total is just the page size and has_more is
+        // always false. Fixed here: always count from activity_events, filtered or not.
         await using var server = await SeededServerAsync();
         var client = await AdminAsync(server);
         using var response = await client.GetAsync("/api/v1/activity/recent?limit=2");
         var body = await Json(response);
-        Assert.Equal(2, body["total"]!.GetValue<int>());
-        Assert.False(body["has_more"]!.GetValue<bool>());
+        Assert.Equal(5, body["total"]!.GetValue<int>()); // the 4 seeded refiner rows, plus the admin sign-in's own event
+        Assert.True(body["has_more"]!.GetValue<bool>());
     }
 
     [Fact]

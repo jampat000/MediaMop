@@ -9,7 +9,9 @@ namespace Weir.Infrastructure.Activity;
 /// <summary>
 /// Reading and removing Activity history (the query half of <c>weir.platform.activity.service</c>, plus the
 /// processing-record statements of its router). The SQL is the text SQLAlchemy compiles, clause for clause,
-/// so SQLite chooses the same plan and returns rows that tie on <c>created_at</c> in the same order.
+/// except for the defects fixed in #543 (the <c>total</c>/<c>has_more</c> count, date-filter comparison,
+/// paging order, and the file-history library fallback) — each documented where it is fixed. Python keeps
+/// those defects; the byte-for-byte comparisons against it are only for cases they do not touch.
 /// </summary>
 public static class ActivityHistoryStore
 {
@@ -18,26 +20,46 @@ public static class ActivityHistoryStore
         "activity_events.detail, activity_events.\"trigger\", activity_events.result, activity_events.library_id, " +
         "activity_events.relative_path, activity_events.run_key";
 
-    /// <summary><c>list_recent_activity_events</c>: newest first, at most 100.</summary>
-    public static Task<List<ActivityEventRow>> ListRecentAsync(UnitOfWork uow, ActivityFilter filter, long limit, long? beforeId)
+    /// <summary>
+    /// <c>list_recent_activity_events</c>: newest first, at most 100. #543 item 3: ordered by
+    /// <c>(created_at DESC, id DESC)</c>, a total order that no longer depends on which plan SQLite
+    /// chooses for ties (the old code range-scanned the rowid with a unary-plus hint to keep .NET's
+    /// SQLite 3.53 choosing the same plan as the Python backend's 3.45; needless once ties have an
+    /// explicit tie-breaker). <paramref name="beforeId"/> pages by that same key: everything strictly
+    /// after the cursor row in the order, not just a smaller id, so a row tied on <c>created_at</c> with
+    /// the cursor is never skipped or repeated. Python still pages by id alone (bug kept there on purpose).
+    /// </summary>
+    public static async Task<List<ActivityEventRow>> ListRecentAsync(UnitOfWork uow, ActivityFilter filter, long limit, long? beforeId)
     {
         ArgumentNullException.ThrowIfNull(uow);
         var (where, parameters) = Where(filter);
         if (beforeId is { } before)
         {
-            // Unary plus keeps this term off the rowid. Rows that tie on created_at come back in plan order,
-            // and with a small LIMIT the SQLite bundled with .NET (3.53) would range-scan the rowid and sort,
-            // where the Python backend's SQLite (3.45) walks the created_at index (or an equality index, which
-            // gives the same order). Without the rowid option both versions choose the same plan.
-            where.Add("+activity_events.id < @before_id");
-            parameters.Add(("@before_id", before));
+            var cursor = await uow.ScalarAsync(
+                "SELECT activity_events.created_at FROM activity_events WHERE activity_events.id = @before_id",
+                ("@before_id", before)).ConfigureAwait(false);
+            if (cursor is string beforeCreatedAt)
+            {
+                where.Add(
+                    "(activity_events.created_at < @before_created_at OR " +
+                    "(activity_events.created_at = @before_created_at AND activity_events.id < @before_id))");
+                parameters.Add(("@before_created_at", beforeCreatedAt));
+                parameters.Add(("@before_id", before));
+            }
+            else
+            {
+                // The cursor row is gone (deleted since the page it came from was read): no created_at to
+                // anchor on, so fall back to Weir's best guess, an id-only cursor.
+                where.Add("activity_events.id < @before_id");
+                parameters.Add(("@before_id", before));
+            }
         }
 
         parameters.Add(("@limit", Math.Max(1, Math.Min(limit, 100))));
-        return uow.QueryAsync(
-            $"SELECT {Columns} FROM activity_events{WhereText(where)} ORDER BY activity_events.created_at DESC LIMIT @limit OFFSET 0",
+        return await uow.QueryAsync(
+            $"SELECT {Columns} FROM activity_events{WhereText(where)} ORDER BY activity_events.created_at DESC, activity_events.id DESC LIMIT @limit OFFSET 0",
             ReadRow,
-            [.. parameters]);
+            [.. parameters]).ConfigureAwait(false);
     }
 
     /// <summary><c>list_activity_events_for_export</c>: oldest first, up to <see cref="ActivityHistory.ExportMaxRows"/>.</summary>
@@ -53,15 +75,16 @@ public static class ActivityHistoryStore
     }
 
     /// <summary>
-    /// <c>count_activity_events</c>. Python replaces the columns with <c>count(*)</c>, which drops the FROM
-    /// clause when there is no filter: the statement is then <c>SELECT count(*)</c>, which counts one. Ported as-is.
+    /// <c>count_activity_events</c>. #543 item 1: Python's SQLAlchemy statement replaces the columns with
+    /// <c>count(*)</c> and, when there is no filter, drops the FROM clause along with them — the statement
+    /// becomes <c>SELECT count(*)</c>, which always counts one regardless of how many rows exist. Fixed here:
+    /// always count from <c>activity_events</c>, filtered or not.
     /// </summary>
     public static Task<long> CountAsync(UnitOfWork uow, ActivityFilter filter)
     {
         ArgumentNullException.ThrowIfNull(uow);
         var (where, parameters) = Where(filter);
-        var sql = where.Count == 0 ? "SELECT count(*) AS count_1" : $"SELECT count(*) AS count_1 FROM activity_events{WhereText(where)}";
-        return uow.CountAsync(sql, [.. parameters]);
+        return uow.CountAsync($"SELECT count(*) AS count_1 FROM activity_events{WhereText(where)}", [.. parameters]);
     }
 
     /// <summary><c>count_system_activity_events</c>: everything outside Refiner, with the other filters that apply to it.</summary>
@@ -189,16 +212,21 @@ public static class ActivityHistoryStore
             parameters.Add(("@search_module", pattern));
         }
 
+        // #543 item 2: Python compares raw text, so a query offset is ignored (only the wall-clock digits
+        // are ever bound) and a stored row missing its ".000000" (an exact second) sorts as "less than" the
+        // same instant written with one, silently excluding it. Fixed here: normalize the query value to
+        // UTC — a naive value is already the server's own clock, so it needs no conversion, only an aware
+        // one does — and compare with julianday(), which parses both stored shapes to the same instant.
         if (filter.DateFrom is { } from)
         {
-            where.Add("activity_events.created_at >= @date_from");
-            parameters.Add(("@date_from", from.ToSqlite()));
+            where.Add("julianday(activity_events.created_at) >= julianday(@date_from)");
+            parameters.Add(("@date_from", PyDateTime.FromUtc(from.AsUtc).ToSqlite()));
         }
 
         if (filter.DateTo is { } to)
         {
-            where.Add("activity_events.created_at <= @date_to");
-            parameters.Add(("@date_to", to.ToSqlite()));
+            where.Add("julianday(activity_events.created_at) <= julianday(@date_to)");
+            parameters.Add(("@date_to", PyDateTime.FromUtc(to.AsUtc).ToSqlite()));
         }
 
         return (where, parameters);
@@ -216,10 +244,16 @@ public static class ActivityHistoryStore
             : ("activity_events.relative_path = @relative_path", [("@relative_path", path)]);
     }
 
-    /// <summary><c>_processing_records</c>.</summary>
+    /// <summary>
+    /// <c>_processing_records</c>. #543 item 4: Python requires an exact <c>library_id</c> match here, unlike
+    /// <see cref="FileHistoryClause"/>'s events, which also match a record that never recorded one — so
+    /// removing one file's history with a library id left processing records about it (recorded before the
+    /// library was known) behind. Fixed to match: give processing records the same null fallback.
+    /// </summary>
     private static (string Clause, (string Name, object? Value)[] Parameters) ProcessingRecordsClause(long? libraryId, string relativePath) =>
         libraryId is { } id
-            ? ("refiner_file_logs.relative_path = @relative_path AND refiner_file_logs.library_id = @library_id", [("@relative_path", relativePath), ("@library_id", id)])
+            ? ("refiner_file_logs.relative_path = @relative_path AND (refiner_file_logs.library_id = @library_id OR refiner_file_logs.library_id IS NULL)",
+                [("@relative_path", relativePath), ("@library_id", id)])
             : ("refiner_file_logs.relative_path = @relative_path", [("@relative_path", relativePath)]);
 
     private static ActivityEventRow ReadRow(SqliteDataReader reader) => new(
