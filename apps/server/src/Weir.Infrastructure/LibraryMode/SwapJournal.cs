@@ -1,5 +1,3 @@
-using System.Globalization;
-using Weir.Core.Json;
 using Weir.Core.LibraryMode;
 using Weir.Infrastructure.Sqlite;
 
@@ -42,20 +40,13 @@ public interface ISwapJournal
 }
 
 /// <summary>
-/// Records each swap on its job row: <c>refiner_jobs.payload_json</c> gains a <c>library_swap</c> object
-/// (<c>state</c>, <c>original_path</c>, <c>temp_path</c>, <c>backup_path</c>) and, once committed, <c>swap_committed: true</c>.
+/// Records each swap in the <c>library_swaps</c> table, one row per job (upserted by <c>job_id</c>): #557's
+/// migration (0040_library_swaps) moved this off <c>refiner_jobs.payload_json</c>'s <c>library_swap</c>
+/// object and <c>swap_committed</c> flag, which <c>RefinerJobSwapJournal</c> used to pack in there while
+/// ADR-0017 froze the schema and both backends needed to open the same database.
 /// </summary>
-/// <remarks>
-/// A job row rather than a new table: ADR-0017 keeps the SQLite schema fixed until the switch (#523), so both backends keep
-/// opening the same database, and the issue asks for <c>swap_committed</c> on the job row. The payload is read, changed and
-/// written back in one <c>BEGIN IMMEDIATE</c> transaction, keeping every other key and its order; the Python backend ignores
-/// keys it does not know.
-/// </remarks>
 public sealed class RefinerJobSwapJournal : ISwapJournal
 {
-    public const string PayloadKey = "library_swap";
-    public const string CommittedKey = "swap_committed";
-
     private readonly SqliteDatabase _database;
 
     public RefinerJobSwapJournal(SqliteDatabase database)
@@ -68,44 +59,37 @@ public sealed class RefinerJobSwapJournal : ISwapJournal
         ArgumentNullException.ThrowIfNull(entry);
         await using var connection = await _database.OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction();
-        string? payloadJson;
-        await using (var select = connection.CreateCommand())
+        using (var exists = connection.CreateCommand())
         {
-            select.Transaction = transaction;
-            select.CommandText = "SELECT payload_json FROM refiner_jobs WHERE id = $id";
-            select.Parameters.AddWithValue("$id", entry.JobId);
-            await using var reader = await select.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-            if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            exists.Transaction = transaction;
+            exists.CommandText = "SELECT COUNT(*) FROM refiner_jobs WHERE id = $id";
+            exists.Parameters.AddWithValue("$id", entry.JobId);
+            var count = Convert.ToInt64(await exists.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false), System.Globalization.CultureInfo.InvariantCulture);
+            if (count == 0)
             {
                 throw new InvalidOperationException(
-                    string.Create(CultureInfo.InvariantCulture, $"Job {entry.JobId} does not exist, so its swap could not be recorded."));
+                    string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Job {entry.JobId} does not exist, so its swap could not be recorded."));
             }
-
-            payloadJson = reader.IsDBNull(0) ? null : reader.GetString(0);
         }
 
-        var payload = ParsePayload(payloadJson)
-            ?? throw new InvalidOperationException(
-                string.Create(CultureInfo.InvariantCulture, $"Job {entry.JobId}'s payload is not a JSON object, so its swap was not recorded over it."));
-        payload.Set(
-            PayloadKey,
-            new PyDict()
-                .Set("state", StateName(entry.State))
-                .Set("original_path", entry.OriginalPath)
-                .Set("temp_path", SafeSwapRules.TempPath(entry.OriginalPath))
-                .Set("backup_path", SafeSwapRules.BackupPath(entry.OriginalPath)));
-        if (entry.State is SwapJournalState.Committed or SwapJournalState.Finished)
+        using (var upsert = connection.CreateCommand())
         {
-            payload.Set(CommittedKey, true);
-        }
-
-        await using (var update = connection.CreateCommand())
-        {
-            update.Transaction = transaction;
-            update.CommandText = "UPDATE refiner_jobs SET payload_json = $payload WHERE id = $id";
-            update.Parameters.AddWithValue("$payload", PyJsonWriter.Dumps(payload, PyJsonFormat.Compact));
-            update.Parameters.AddWithValue("$id", entry.JobId);
-            await update.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            upsert.Transaction = transaction;
+            upsert.CommandText =
+                """
+                INSERT INTO library_swaps (job_id, state, original_path, temp_path, backup_path, committed, updated_at)
+                VALUES ($job_id, $state, $original_path, $temp_path, $backup_path, $committed, CURRENT_TIMESTAMP)
+                ON CONFLICT(job_id) DO UPDATE SET state = excluded.state, original_path = excluded.original_path,
+                    temp_path = excluded.temp_path, backup_path = excluded.backup_path,
+                    committed = committed OR excluded.committed, updated_at = CURRENT_TIMESTAMP
+                """;
+            upsert.Parameters.AddWithValue("$job_id", entry.JobId);
+            upsert.Parameters.AddWithValue("$state", StateName(entry.State));
+            upsert.Parameters.AddWithValue("$original_path", entry.OriginalPath);
+            upsert.Parameters.AddWithValue("$temp_path", SafeSwapRules.TempPath(entry.OriginalPath));
+            upsert.Parameters.AddWithValue("$backup_path", SafeSwapRules.BackupPath(entry.OriginalPath));
+            upsert.Parameters.AddWithValue("$committed", entry.State is SwapJournalState.Committed or SwapJournalState.Finished ? 1 : 0);
+            await upsert.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
 
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
@@ -116,21 +100,16 @@ public sealed class RefinerJobSwapJournal : ISwapJournal
         var entries = new List<SwapJournalEntry>();
         await using var connection = await _database.OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT id, payload_json FROM refiner_jobs WHERE payload_json LIKE $marker ORDER BY id";
-        command.Parameters.AddWithValue("$marker", $"%\"{PayloadKey}\"%");
+        command.CommandText = "SELECT job_id, original_path, state FROM library_swaps ORDER BY job_id";
         await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
         while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
         {
-            if (reader.IsDBNull(1)
-                || ParsePayload(reader.GetString(1))?.Get(PayloadKey) is not PyDict swap
-                || swap.Get("original_path") is not PyStr { Value.Length: > 0 } original
-                || swap.Get("state") is not PyStr state
-                || ParseState(state.Value) is not { } parsed)
+            if (reader.IsDBNull(1) || ParseState(reader.GetString(2)) is not { } parsed)
             {
                 continue;
             }
 
-            var entry = new SwapJournalEntry(reader.GetInt64(0), original.Value, parsed);
+            var entry = new SwapJournalEntry(reader.GetInt64(0), reader.GetString(1), parsed);
             if (entry.IsUnfinished)
             {
                 entries.Add(entry);
@@ -153,21 +132,4 @@ public sealed class RefinerJobSwapJournal : ISwapJournal
 
     private static SwapJournalState? ParseState(string name) =>
         Enum.GetValues<SwapJournalState>().Where(state => StateName(state) == name).Select(state => (SwapJournalState?)state).FirstOrDefault();
-
-    private static PyDict? ParsePayload(string? json)
-    {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return new PyDict();
-        }
-
-        try
-        {
-            return PyJsonParser.Parse(json) as PyDict;
-        }
-        catch (PyJsonDecodeException)
-        {
-            return null;
-        }
-    }
 }

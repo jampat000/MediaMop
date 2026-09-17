@@ -27,29 +27,54 @@ public sealed class RefinerJobSwapJournalTests : IDisposable
 
     private string? PayloadOf(long id) => _db.Scalar("SELECT payload_json FROM refiner_jobs WHERE id = $id", ("$id", id)) as string;
 
-    [Fact]
-    public async Task Each_state_is_written_onto_the_job_payload_keeping_every_other_key()
+    private (string State, string OriginalPath, string TempPath, string BackupPath, bool Committed)? SwapRowOf(long id)
     {
-        var id = Job("a", "{\"library_id\": 3, \"trigger\": \"library\"}");
-
-        await _journal.RecordAsync(new SwapJournalEntry(id, "/lib/a.mkv", SwapJournalState.Committing));
-        Assert.Equal(
-            "{\"library_id\":3,\"trigger\":\"library\",\"library_swap\":{\"state\":\"committing\",\"original_path\":\"/lib/a.mkv\"," +
-            "\"temp_path\":\"/lib/a.weir-tmp.mkv\",\"backup_path\":\"/lib/a.weir-bak.mkv\"}}",
-            PayloadOf(id));
-
-        await _journal.RecordAsync(new SwapJournalEntry(id, "/lib/a.mkv", SwapJournalState.Committed));
-        Assert.EndsWith("\"state\":\"committed\",\"original_path\":\"/lib/a.mkv\",\"temp_path\":\"/lib/a.weir-tmp.mkv\",\"backup_path\":\"/lib/a.weir-bak.mkv\"},\"swap_committed\":true}", PayloadOf(id), StringComparison.Ordinal);
+        var row = _db.QueryRow(
+            "SELECT state, original_path, temp_path, backup_path, committed FROM library_swaps WHERE job_id = $id", ("$id", id));
+        return row is null
+            ? null
+            : ((string)row[0]!, (string)row[1]!, (string)row[2]!, (string)row[3]!, Convert.ToInt64(row[4]) != 0);
     }
 
     [Fact]
-    public async Task A_job_without_a_payload_gets_one()
+    public async Task Each_state_is_recorded_in_the_swap_table_and_the_jobs_own_payload_is_never_touched()
+    {
+        const string originalPayload = "{\"library_id\": 3, \"trigger\": \"library\"}";
+        var id = Job("a", originalPayload);
+
+        await _journal.RecordAsync(new SwapJournalEntry(id, "/lib/a.mkv", SwapJournalState.Committing));
+        var committing = SwapRowOf(id);
+        Assert.Equal(("committing", "/lib/a.mkv", "/lib/a.weir-tmp.mkv", "/lib/a.weir-bak.mkv", false), committing);
+        Assert.Equal(originalPayload, PayloadOf(id));
+
+        await _journal.RecordAsync(new SwapJournalEntry(id, "/lib/a.mkv", SwapJournalState.Committed));
+        var committed = SwapRowOf(id);
+        Assert.Equal(("committed", "/lib/a.mkv", "/lib/a.weir-tmp.mkv", "/lib/a.weir-bak.mkv", true), committed);
+        Assert.Equal(originalPayload, PayloadOf(id));
+    }
+
+    [Fact]
+    public async Task A_job_without_a_payload_still_gets_a_swap_row()
     {
         var id = Job("a", null);
 
         await _journal.RecordAsync(new SwapJournalEntry(id, "/lib/a.mkv", SwapJournalState.Writing));
 
-        Assert.StartsWith("{\"library_swap\":{\"state\":\"writing\"", PayloadOf(id), StringComparison.Ordinal);
+        Assert.Equal(("writing", "/lib/a.mkv", "/lib/a.weir-tmp.mkv", "/lib/a.weir-bak.mkv", false), SwapRowOf(id));
+        Assert.Null(PayloadOf(id));
+    }
+
+    [Fact]
+    public async Task Committed_stays_true_once_set_even_through_a_later_recovery()
+    {
+        var id = Job("a", null);
+        await _journal.RecordAsync(new SwapJournalEntry(id, "/lib/a.mkv", SwapJournalState.Committed));
+        Assert.True(SwapRowOf(id)!.Value.Committed);
+
+        // A crash after commit but before "finished" is recovered rather than rolled back; committed must
+        // not be forgotten just because the recorded state moved past Committed.
+        await _journal.RecordAsync(new SwapJournalEntry(id, "/lib/a.mkv", SwapJournalState.Recovered));
+        Assert.True(SwapRowOf(id)!.Value.Committed);
     }
 
     [Fact]
@@ -62,9 +87,6 @@ public sealed class RefinerJobSwapJournalTests : IDisposable
         var rolledBack = Job("r", null);
         var recovered = Job("v", null);
         Job("plain", "{\"relative_media_path\": \"a.mkv\"}");
-        Job("malformed", "{\"library_swap\": ");
-        Job("odd", "{\"library_swap\": {\"state\": \"exploded\", \"original_path\": \"/x.mkv\"}}");
-        Job("no-path", "{\"library_swap\": {\"state\": \"writing\"}}");
 
         await _journal.RecordAsync(new SwapJournalEntry(writing, "/lib/w.mkv", SwapJournalState.Writing));
         await _journal.RecordAsync(new SwapJournalEntry(committing, "/lib/c.mkv", SwapJournalState.Committing));
@@ -90,18 +112,5 @@ public sealed class RefinerJobSwapJournalTests : IDisposable
         var error = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _journal.RecordAsync(new SwapJournalEntry(999, "/lib/a.mkv", SwapJournalState.Writing)));
         Assert.Equal("Job 999 does not exist, so its swap could not be recorded.", error.Message);
-    }
-
-    [Theory]
-    [InlineData("[1, 2]")]
-    [InlineData("{\"broken\": ")]
-    public async Task A_payload_that_is_not_an_object_is_never_overwritten(string payload)
-    {
-        var id = Job("a", payload);
-
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _journal.RecordAsync(new SwapJournalEntry(id, "/lib/a.mkv", SwapJournalState.Writing)));
-
-        Assert.Equal(payload, PayloadOf(id));
     }
 }

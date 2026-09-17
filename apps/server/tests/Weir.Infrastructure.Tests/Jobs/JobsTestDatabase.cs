@@ -91,6 +91,32 @@ internal sealed class JobsTestDatabase : IDisposable
     public long Count(string sql, params (string Name, object? Value)[] parameters) =>
         Convert.ToInt64(Scalar(sql, parameters), CultureInfo.InvariantCulture);
 
+    /// <summary>The first row's values, or null when the query matched nothing.</summary>
+    public object?[]? QueryRow(string sql, params (string Name, object? Value)[] parameters)
+    {
+        using var connection = Database.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        foreach (var (name, value) in parameters)
+        {
+            command.Parameters.AddWithValue(name, value ?? DBNull.Value);
+        }
+
+        using var reader = command.ExecuteReader();
+        if (!reader.Read())
+        {
+            return null;
+        }
+
+        var row = new object?[reader.FieldCount];
+        for (var i = 0; i < reader.FieldCount; i++)
+        {
+            row[i] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+        }
+
+        return row;
+    }
+
     public List<(string EventType, string Title, string? Detail, string? Result)> ActivityEvents()
     {
         using var connection = Database.Open();
