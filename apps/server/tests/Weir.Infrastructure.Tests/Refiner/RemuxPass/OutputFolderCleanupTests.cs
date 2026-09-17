@@ -40,7 +40,7 @@ public sealed class OutputFolderCleanupTests : IDisposable
     {
         var output = new PyDict();
         var source = _folders.Source(relative);
-        return Cleanup(minAge).RunMovieAsync(output, _folders.Runtime(), _folders.Watched, source, finalOutputFile, relative, 1, scope, CancellationToken.None)
+        return Cleanup(minAge).RunMovieAsync(output, _folders.Runtime(), _folders.Watched, source, finalOutputFile, relative, 1, scope, null, CancellationToken.None)
             .ContinueWith(_ => output, TaskScheduler.Default);
     }
 
@@ -62,7 +62,7 @@ public sealed class OutputFolderCleanupTests : IDisposable
             output.Keys);
 
         var tv = new PyDict();
-        await Cleanup().RunTvAsync(tv, _folders.Runtime(), _folders.Watched, _folders.Source("m.mkv"), MovieOutput(), 1, "movie", CancellationToken.None);
+        await Cleanup().RunTvAsync(tv, _folders.Runtime(), _folders.Watched, _folders.Source("m.mkv"), MovieOutput(), 1, "movie", null, CancellationToken.None);
         Assert.Contains("Movies output-folder cleanup is separate", Str(tv, "tv_output_season_folder_skip_reason"), StringComparison.Ordinal);
     }
 
@@ -83,7 +83,10 @@ public sealed class OutputFolderCleanupTests : IDisposable
     public async Task Every_manager_clear_and_old_enough_deletes_the_folder_and_its_empty_parents()
     {
         var final = MovieOutput(Path.Join("Collection", "Title"));
-        _data.Truth.Add(Reported(_folders.Out(Path.Join("Other", "x.mkv"))));
+        // Confirms this exact release (not merely "no other files sit in this folder"): the manager's own library
+        // keeps a file under the same title (file-name stem) elsewhere — this is how a manager that copies on
+        // import, rather than leaving the file in place, would record it — alongside an unrelated file.
+        _data.Truth.Add(Reported(_folders.Out(Path.Join("ManagerLibrary", "m.mkv")), _folders.Out(Path.Join("Other", "x.mkv"))));
 
         var output = await RunMovie(final, "Collection/Title/m.mkv");
 
@@ -93,6 +96,41 @@ public sealed class OutputFolderCleanupTests : IDisposable
         Assert.True(Directory.Exists(_folders.Output));
         Assert.Equal(PyNull.Instance, output["movie_output_folder_skip_reason"]);
         Assert.Single(((PyList)output["movie_output_cascade_folders_deleted"]).Items);
+    }
+
+    [Fact]
+    public async Task Issue_545_item_1_a_manager_that_has_not_imported_yet_keeps_the_folder()
+    {
+        // The manager is reachable and answers, but its library does not yet include this release — exactly what
+        // "hasn't imported yet" (or "imports by copy and scans later") looks like. Reporting zero files that
+        // conflict with the folder must not be read as "safe to delete": nothing here says the manager has this
+        // release at all yet.
+        var final = MovieOutput(Path.Join("Collection", "Title"));
+        _data.Truth.Add(Reported());
+
+        var output = await RunMovie(final, "Collection/Title/m.mkv");
+
+        Assert.Equal("skipped", Str(output, "movie_output_truth_check"));
+        Assert.False(((PyBool)output["movie_output_folder_deleted"]).Value);
+        Assert.Contains("not yet reported this release as imported", Str(output, "movie_output_folder_skip_reason"), StringComparison.Ordinal);
+        Assert.True(File.Exists(final));
+        Assert.True(Directory.Exists(_folders.Out(Path.Join("Collection", "Title"))));
+    }
+
+    [Fact]
+    public async Task A_hand_off_the_ledger_already_recorded_as_delivered_needs_no_further_import_evidence()
+    {
+        // Second way to be "confirmed" (issue #545 item 1): the hand-off ledger already recorded this pass's
+        // outcome as delivered to the manager that asked for it, so the "no evidence of import yet" caution does
+        // not apply even though the manager's own library listing is still empty.
+        var final = MovieOutput(Path.Join("Collection", "Title"));
+        _data.Truth.Add(Reported());
+        _data.HandoffAcknowledged = true;
+
+        var output = await RunMovie(final, "Collection/Title/m.mkv");
+
+        Assert.Equal("passed", Str(output, "movie_output_truth_check"));
+        Assert.True(((PyBool)output["movie_output_folder_deleted"]).Value);
     }
 
     [Fact]
@@ -123,7 +161,7 @@ public sealed class OutputFolderCleanupTests : IDisposable
     public async Task Another_movie_pass_for_the_same_file_blocks_but_a_tv_pass_does_not()
     {
         var final = MovieOutput();
-        _data.Truth.Add(Reported());
+        _data.Truth.Add(Reported(_folders.Out(Path.Join("ManagerLibrary", "m.mkv"))));
         _data.ActiveJobs.Add(new ActiveRemuxJob(2, """{"relative_media_path":"Title\\m.mkv","media_scope":"tv"}"""));
         _data.ActiveJobs.Add(new ActiveRemuxJob(1, """{"relative_media_path":"Title/m.mkv","media_scope":"movie"}"""));
 
@@ -151,7 +189,7 @@ public sealed class OutputFolderCleanupTests : IDisposable
     public async Task A_locked_folder_is_reported_and_left()
     {
         var final = MovieOutput();
-        _data.Truth.Add(Reported());
+        _data.Truth.Add(Reported(_folders.Out(Path.Join("ManagerLibrary", "m.mkv"))));
         PyDict output;
         using (new FileStream(final, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
         {
@@ -176,10 +214,10 @@ public sealed class OutputFolderCleanupTests : IDisposable
         var nested = _folders.Out(Path.Join("Show", "S01", "extras", "new.mkv"));
         Directory.CreateDirectory(Path.GetDirectoryName(nested)!);
         File.WriteAllText(nested, "fresh");
-        _data.Truth.Add(Reported());
+        _data.Truth.Add(Reported(_folders.Out(Path.Join("ManagerLibrary", "ep.mkv"))));
         var output = new PyDict();
 
-        await Cleanup(minAge: 3600).RunTvAsync(output, _folders.Runtime(), _folders.Watched, _folders.Source(Path.Join("Show", "S01", "ep.mkv")), episode, 1, "tv", CancellationToken.None);
+        await Cleanup(minAge: 3600).RunTvAsync(output, _folders.Runtime(), _folders.Watched, _folders.Source(Path.Join("Show", "S01", "ep.mkv")), episode, 1, "tv", null, CancellationToken.None);
 
         Assert.True(((PyBool)output["tv_output_season_folder_deleted"]).Value, PyJsonWriter.Dumps(output, PyJsonFormat.Compact));
         Assert.False(Directory.Exists(_folders.Out("Show")));
@@ -192,13 +230,13 @@ public sealed class OutputFolderCleanupTests : IDisposable
         Directory.CreateDirectory(Path.GetDirectoryName(episode)!);
         _data.Truth.Add(Reported());
         var empty = new PyDict();
-        await Cleanup().RunTvAsync(empty, _folders.Runtime(), _folders.Watched, _folders.Source(Path.Join("Show", "S01", "ep.mkv")), episode, 1, "tv", CancellationToken.None);
+        await Cleanup().RunTvAsync(empty, _folders.Runtime(), _folders.Watched, _folders.Source(Path.Join("Show", "S01", "ep.mkv")), episode, 1, "tv", null, CancellationToken.None);
         Assert.Contains("did not find any supported episode media file", Str(empty, "tv_output_season_folder_skip_reason"), StringComparison.Ordinal);
 
         File.WriteAllText(episode, "x");
         _data.ActiveJobs.Add(new ActiveRemuxJob(7, """{"relative_media_path":"Show/S01/ep2.mkv","media_scope":"tv"}"""));
         var blocked = new PyDict();
-        await Cleanup().RunTvAsync(blocked, _folders.Runtime(), _folders.Watched, _folders.Source(Path.Join("Show", "S01", "ep.mkv")), episode, 1, "tv", CancellationToken.None);
+        await Cleanup().RunTvAsync(blocked, _folders.Runtime(), _folders.Watched, _folders.Source(Path.Join("Show", "S01", "ep.mkv")), episode, 1, "tv", null, CancellationToken.None);
         Assert.Contains("Another TV Refiner video pass", Str(blocked, "tv_output_season_folder_skip_reason"), StringComparison.Ordinal);
         Assert.True(File.Exists(episode));
     }

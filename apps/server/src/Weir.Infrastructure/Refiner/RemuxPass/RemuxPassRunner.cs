@@ -16,6 +16,10 @@ public sealed record RemuxPassRequest
 {
     public required RefinerPathRuntime Runtime { get; init; }
     public required string RelativeMediaPath { get; init; }
+
+    /// <summary>Issue #545 item 5: which library this pass belongs to, so its file-row writes never touch another library's row.</summary>
+    public long? LibraryId { get; init; }
+
     public RefinerRulesConfig? RulesConfig { get; init; }
     public long? MinFileAgeSeconds { get; init; }
     public string? MediaScope { get; init; } = "movie";
@@ -290,7 +294,8 @@ public sealed class RemuxPassRunner
                 subtitles.Count,
                 duration,
                 [.. audio.Select(stream => RemuxPassMedia.TruthyText(stream.Get("codec_name")))],
-                RemuxPassMedia.VideoBitDepth(video[0])),
+                RemuxPassMedia.VideoBitDepth(video[0]),
+                request.LibraryId),
             cancellationToken).ConfigureAwait(false);
 
         try
@@ -585,7 +590,7 @@ public sealed class RemuxPassRunner
         output.Set("output_collision_policy", collision.Policy);
         output.Set("output_collision_action", collision.Action);
         output.Set("output_collision_reason", collision.Reason);
-        await _facts.RecordOutputCollisionAsync(relativeMediaPath, collision, cancellationToken).ConfigureAwait(false);
+        await _facts.RecordOutputCollisionAsync(relativeMediaPath, collision, request.LibraryId, cancellationToken).ConfigureAwait(false);
         output.Set("output_copied_without_remux", true);
         output.Set("unchanged_output_method", method);
         output.Set("live_mutations_skipped", false);
@@ -792,7 +797,7 @@ public sealed class RemuxPassRunner
         output.Set("output_collision_action", collision.Action);
         // For the person asking "why is there no new output for this file".
         output.Set("output_collision_reason", collision.Reason);
-        await _facts.RecordOutputCollisionAsync(relativeMediaPath, collision, cancellationToken).ConfigureAwait(false);
+        await _facts.RecordOutputCollisionAsync(relativeMediaPath, collision, context.Request.LibraryId, cancellationToken).ConfigureAwait(false);
         if (!collision.Wrote || replacedExisting)
         {
             output.Set("output_replacement_note", collision.Reason);
@@ -1094,8 +1099,8 @@ public sealed class RemuxPassRunner
 
     private Task RunScopeOutputCleanupAsync(PassContext context, PyDict output, string? finalOutputFile, CancellationToken cancellationToken) =>
         context.Scope == "tv"
-            ? _outputCleanup.RunTvAsync(output, context.Request.Runtime, context.WatchedRoot, context.Source, finalOutputFile, context.Request.CurrentJobId, context.Scope, cancellationToken)
-            : _outputCleanup.RunMovieAsync(output, context.Request.Runtime, context.WatchedRoot, context.Source, finalOutputFile, context.RelativeMediaPath, context.Request.CurrentJobId, context.Scope, cancellationToken);
+            ? _outputCleanup.RunTvAsync(output, context.Request.Runtime, context.WatchedRoot, context.Source, finalOutputFile, context.Request.CurrentJobId, context.Scope, context.Request.Origin, cancellationToken)
+            : _outputCleanup.RunMovieAsync(output, context.Request.Runtime, context.WatchedRoot, context.Source, finalOutputFile, context.RelativeMediaPath, context.Request.CurrentJobId, context.Scope, context.Request.Origin, cancellationToken);
 
     /// <summary>
     /// #537 item 4: the metadata lookup decides which audio the planner prefers. Declining (no provider, no match, unreachable)

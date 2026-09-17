@@ -103,9 +103,12 @@ internal sealed class RecordingFacts : IRemuxPassFileFacts
         return Task.CompletedTask;
     }
 
-    public Task RecordOutputCollisionAsync(string relativePath, CollisionDecision decision, CancellationToken cancellationToken)
+    public List<long?> CollisionLibraryIds { get; } = [];
+
+    public Task RecordOutputCollisionAsync(string relativePath, CollisionDecision decision, long? libraryId, CancellationToken cancellationToken)
     {
         Collisions.Add(decision);
+        CollisionLibraryIds.Add(libraryId);
         return Task.CompletedTask;
     }
 }
@@ -116,11 +119,16 @@ internal sealed class FakeCleanupData : IPostSuccessCleanupData
 
     public List<ActiveRemuxJob> ActiveJobs { get; } = [];
 
+    public bool HandoffAcknowledged { get; set; }
+
     public Task<IReadOnlyList<ManagerLibraryTruth>> CollectLibraryTruthAsync(string mediaScope, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<ManagerLibraryTruth>>(Truth);
 
     public Task<IReadOnlyList<ActiveRemuxJob>> ActiveRemuxJobsAsync(CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<ActiveRemuxJob>>(ActiveJobs);
+
+    public Task<bool> HandoffOutcomeAcknowledgedAsync(HandoffOrigin? origin, CancellationToken cancellationToken) =>
+        Task.FromResult(HandoffAcknowledged);
 }
 
 internal sealed class FakeOriginalLanguage : IOriginalLanguageLookup
@@ -493,7 +501,11 @@ public sealed class RemuxPassRunnerTests : IDisposable
     {
         var episode = _folders.Source(Path.Join("Show", "S01", "ep.mkv"), 400);
         Directory.CreateDirectory(_folders.Out(Path.Join("Show", "S01")));
-        _cleanup.Truth.Add(new ManagerLibraryTruth(new ManagerConnection("sonarr", "Main", "http://x", "k"), SignalStatus.Reported, []));
+        // #545 item 1: a manager clears the folder only once it has positive evidence of this release (here, the
+        // same title kept at its own separate library path) — not merely because it reports no files sitting in
+        // the folder being considered (which would equally describe "hasn't imported yet").
+        _cleanup.Truth.Add(new ManagerLibraryTruth(
+            new ManagerConnection("sonarr", "Main", "http://x", "k"), SignalStatus.Reported, [_folders.Out(Path.Join("ManagerLibrary", "ep.mkv"))]));
 
         var result = await Run("Show/S01/ep.mkv", scope: "tv");
 
@@ -507,6 +519,42 @@ public sealed class RemuxPassRunnerTests : IDisposable
         Assert.False(result.ContainsKey("movie_output_folder_deleted"));
         Assert.False(result.ContainsKey("movie_output_truth_check"));
         Assert.False(result.ContainsKey("source_folder_deleted"));
+    }
+
+    [Fact]
+    public async Task Issue_545_item_1_a_manager_that_has_not_imported_yet_keeps_the_season_folder()
+    {
+        // The manager answers (it is reachable and reporting), but its own library listing does not yet include
+        // this release — exactly what a manager that has not scanned or finished importing yet looks like. Reporting
+        // zero *conflicting* files inside the folder must not, by itself, be read as "safe to delete".
+        var episode = _folders.Source(Path.Join("Show", "S01", "ep.mkv"), 400);
+        Directory.CreateDirectory(_folders.Out(Path.Join("Show", "S01")));
+        _cleanup.Truth.Add(new ManagerLibraryTruth(new ManagerConnection("sonarr", "Main", "http://x", "k"), SignalStatus.Reported, []));
+
+        var result = await Run("Show/S01/ep.mkv", scope: "tv");
+
+        Assert.True(Bool(result, "ok"));
+        Assert.False(Bool(result, "tv_output_season_folder_deleted"));
+        Assert.Contains("not yet reported this release as imported", Str(result, "tv_output_season_folder_skip_reason"), StringComparison.Ordinal);
+        Assert.True(File.Exists(episode));
+        Assert.True(Directory.Exists(_folders.Out(Path.Join("Show", "S01"))));
+    }
+
+    [Fact]
+    public async Task Issue_545_item_1_a_manager_that_renamed_the_release_on_import_still_confirms_it()
+    {
+        // A manager that renames on import (a common *arr pattern) will not report the exact output path Weir wrote,
+        // but the same title (file-name stem) shows up at a different path — that is still positive evidence.
+        _folders.Source(Path.Join("ReleaseTitle", "movie.mkv"), 400);
+        Directory.CreateDirectory(_folders.Out("ReleaseTitle"));
+        _cleanup.Truth.Add(new ManagerLibraryTruth(
+            new ManagerConnection("radarr", "Main", "http://x", "k"), SignalStatus.Reported, [_folders.Out(Path.Join("Renamed", "movie.mkv"))]));
+
+        var result = await Run("ReleaseTitle/movie.mkv");
+
+        Assert.True(Bool(result, "ok"));
+        Assert.True(Bool(result, "movie_output_folder_deleted"));
+        Assert.False(Directory.Exists(_folders.Out("ReleaseTitle")));
     }
 
     [Fact]

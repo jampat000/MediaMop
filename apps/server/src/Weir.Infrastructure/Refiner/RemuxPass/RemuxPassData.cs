@@ -76,8 +76,8 @@ public sealed class SqliteRemuxPassData : IRemuxPassFileFacts, IPostSuccessClean
     public Task RecordMeasuredMediaFactsAsync(MeasuredMediaFacts facts, CancellationToken cancellationToken) =>
         BestEffortAsync(uow => RemuxPassFileState.RecordMeasuredMediaFactsAsync(uow, facts), "measured media facts", cancellationToken);
 
-    public Task RecordOutputCollisionAsync(string relativePath, CollisionDecision decision, CancellationToken cancellationToken) =>
-        BestEffortAsync(uow => RemuxPassFileState.RecordOutputCollisionAsync(uow, relativePath, decision), "output collision", cancellationToken);
+    public Task RecordOutputCollisionAsync(string relativePath, CollisionDecision decision, long? libraryId, CancellationToken cancellationToken) =>
+        BestEffortAsync(uow => RemuxPassFileState.RecordOutputCollisionAsync(uow, relativePath, decision, libraryId), "output collision", cancellationToken);
 
     public async Task<IReadOnlyList<ManagerLibraryTruth>> CollectLibraryTruthAsync(string mediaScope, CancellationToken cancellationToken)
     {
@@ -97,6 +97,22 @@ public sealed class SqliteRemuxPassData : IRemuxPassFileFacts, IPostSuccessClean
                 "SELECT id, payload_json FROM refiner_jobs WHERE job_kind = $kind AND status IN ('pending', 'leased') ORDER BY id",
                 reader => new ActiveRemuxJob(reader.GetInt64(0), reader.IsDBNull(1) ? null : reader.GetString(1)),
                 ("$kind", RemuxPassOutcomes.JobKind)).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Issue #545 item 1: has the ledger already recorded this hand-off's outcome as delivered?</summary>
+    public async Task<bool> HandoffOutcomeAcknowledgedAsync(HandoffOrigin? origin, CancellationToken cancellationToken)
+    {
+        if (origin is not { HandoffId.Length: > 0 })
+        {
+            return false;
+        }
+
+        var uow = await UnitOfWork.OpenAsync(_database, cancellationToken).ConfigureAwait(false);
+        await using (uow.ConfigureAwait(false))
+        {
+            var row = await HandoffLedgerStore.FindAsync(uow, origin.SourceKey, origin.HandoffId!).ConfigureAwait(false);
+            return row is not null && row.State is HandoffLedgerRules.Completed or HandoffLedgerRules.PassedThrough;
         }
     }
 

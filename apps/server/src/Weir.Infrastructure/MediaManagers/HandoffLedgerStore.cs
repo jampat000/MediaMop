@@ -178,18 +178,30 @@ public sealed class HandoffLedgerStore
             var index = 0;
             foreach (var path in paths)
             {
-                conditions.Add($"dedupe_key = $pass_{index}");
-                parameters.Add(($"$pass_{index}", $"{IntakeRules.PassThroughJobKind}:{libraryId.ToString(CultureInfo.InvariantCulture)}:{path}"));
-                conditions.Add($"dedupe_key = $reject_{index}");
-                parameters.Add(($"$reject_{index}", $"{IntakeRules.RejectJobKind}:{libraryId.ToString(CultureInfo.InvariantCulture)}:{path}"));
+                // #545 item 2: pass-through and reject dedupe keys now carry the source's fingerprint as a trailing
+                // segment (so a later failure of a since-replaced file queues again), so the ledger matches the base
+                // "{kind}:{library}:{path}" either exactly (older rows written before the fix) or as a prefix.
+                var passBase = $"{IntakeRules.PassThroughJobKind}:{libraryId.ToString(CultureInfo.InvariantCulture)}:{path}";
+                var rejectBase = $"{IntakeRules.RejectJobKind}:{libraryId.ToString(CultureInfo.InvariantCulture)}:{path}";
+                conditions.Add($"(dedupe_key = $pass_{index} OR dedupe_key LIKE $pass_{index} || ':%')");
+                parameters.Add(($"$pass_{index}", passBase));
+                conditions.Add($"(dedupe_key = $reject_{index} OR dedupe_key LIKE $reject_{index} || ':%')");
+                parameters.Add(($"$reject_{index}", rejectBase));
                 index++;
             }
         }
 
         parameters.Add(("$pending", RefinerJobStatus.Pending));
         parameters.Add(("$leased", RefinerJobStatus.Leased));
+        parameters.Add(("$failed", RefinerJobStatus.Failed));
+        parameters.Add(("$pass_kind", IntakeRules.PassThroughJobKind));
+        parameters.Add(("$reject_kind", IntakeRules.RejectJobKind));
+        // #545 item 3: a pass-through or reject job that exhausted its own retries drops out of pending/leased, but it
+        // is still an undelivered outcome the manager needs to hear about (as failed, with the reason) rather than
+        // silently vanishing from the ledger's view.
         return await uow.QueryAsync(
-            $"SELECT {JobColumns} FROM refiner_jobs WHERE ({string.Join(" OR ", conditions)}) AND status IN ($pending, $leased)",
+            $"SELECT {JobColumns} FROM refiner_jobs WHERE ({string.Join(" OR ", conditions)}) AND " +
+            "(status IN ($pending, $leased) OR (status = $failed AND job_kind IN ($pass_kind, $reject_kind)))",
             ReadJob,
             [.. parameters]).ConfigureAwait(false);
     }
@@ -235,9 +247,35 @@ public sealed class HandoffLedgerStore
                     busyPaths.Add(busyPath);
                 }
 
+                var isOutcomeJob = job.JobKind is IntakeRules.PassThroughJobKind or IntakeRules.RejectJobKind;
+
+                // #545 item 3: a pass-through or reject job that exhausted its own retries is a final, undelivered
+                // outcome — report it as failed, with the reason the job itself recorded, rather than let it vanish
+                // once it drops out of pending/leased (JobsForAsync still returns it for exactly this reason).
+                if (job.Status == RefinerJobStatus.Failed)
+                {
+                    states.Add(HandoffLedgerRules.Failed);
+                    message ??= string.IsNullOrEmpty(job.LastError) ? "Weir could not hand this file back to your media manager." : job.LastError;
+                    continue;
+                }
+
                 if (job.Status == RefinerJobStatus.Leased)
                 {
                     states.Add(HandoffLedgerRules.Working);
+                    continue;
+                }
+
+                if (isOutcomeJob)
+                {
+                    // A pending pass-through or reject job is a decided disposition about to run, not a normal place
+                    // in the remux queue, so it is reported as scheduled rather than queued (and carries no queue
+                    // position — that field means something only for the remux queue itself).
+                    states.Add(HandoffLedgerRules.Scheduled);
+                    if (job.NotBefore is { } outcomeNotBefore && outcomeNotBefore > now)
+                    {
+                        scheduledFor = scheduledFor is { } currentOutcome ? Min(currentOutcome, outcomeNotBefore) : outcomeNotBefore;
+                    }
+
                     continue;
                 }
 

@@ -231,8 +231,9 @@ public static class RemuxPassPaths
             TertiaryAudioLang = ruleSet.TertiaryAudioLang,
             DefaultAudioSlot = ruleSet.DefaultAudioSlot,
             RemoveCommentary = ruleSet.RemoveCommentary,
-            // rules_config_for passes the stored mode through; the planner treats anything but remove_all as keep-selected.
-            SubtitleMode = ruleSet.SubtitleMode,
+            // #545 item 4: rules_config_for used to pass the stored mode through unchanged while the fallback path
+            // (RuleSetConversion.ToRulesConfig) normalized it; both paths now agree on the same normalization.
+            SubtitleMode = RuleSetConversion.NormalizeSubtitleMode(ruleSet.SubtitleMode),
             SubtitleLangs = [.. (ruleSet.SubtitleLangsCsv ?? string.Empty).Split(',').Select(PyStrings.Strip).Where(x => x.Length > 0)],
             PreserveForcedSubs = ruleSet.PreserveForcedSubs,
             PreserveDefaultSubs = ruleSet.PreserveDefaultSubs,

@@ -151,15 +151,22 @@ public static class RemuxPassFileState
     }
 
     /// <summary>
-    /// <c>record_measured_media_facts</c>: matched on the path alone, on every row carrying it; a value not measured leaves the
-    /// column alone.
+    /// <c>record_measured_media_facts</c>: matched on the path within the pass's own library (issue #545 item 5 — the
+    /// reference matched on the path alone, across every library that happened to share it); a value not measured leaves
+    /// the column alone. A null <see cref="MeasuredMediaFacts.LibraryId"/> updates nothing, rather than falling back to
+    /// the old cross-library match.
     /// </summary>
     public static Task RecordMeasuredMediaFactsAsync(UnitOfWork uow, MeasuredMediaFacts facts)
     {
         ArgumentNullException.ThrowIfNull(uow);
         ArgumentNullException.ThrowIfNull(facts);
+        if (facts.LibraryId is not { } libraryId)
+        {
+            return Task.CompletedTask;
+        }
+
         var sets = new List<string>();
-        var parameters = new List<(string, object?)> { ("$path", facts.RelativePath) };
+        var parameters = new List<(string, object?)> { ("$path", facts.RelativePath), ("$library", libraryId) };
         void Add(string column, object? value)
         {
             if (value is null)
@@ -187,21 +194,31 @@ public static class RemuxPassFileState
         }
 
         sets.Add("updated_at = CURRENT_TIMESTAMP");
-        return uow.ExecuteAsync($"UPDATE refiner_files SET {string.Join(", ", sets)} WHERE relative_path = $path", [.. parameters]);
+        return uow.ExecuteAsync($"UPDATE refiner_files SET {string.Join(", ", sets)} WHERE relative_path = $path AND library_id = $library", [.. parameters]);
     }
 
-    /// <summary><c>record_output_collision</c>: the decision kept on every row for the path.</summary>
-    public static Task RecordOutputCollisionAsync(UnitOfWork uow, string relativePath, CollisionDecision decision)
+    /// <summary>
+    /// <c>record_output_collision</c>: the decision kept on the pass's own library's row for the path (issue #545 item 5 —
+    /// the reference matched on the path alone, across every library that happened to share it). A null
+    /// <paramref name="libraryId"/> updates nothing.
+    /// </summary>
+    public static Task RecordOutputCollisionAsync(UnitOfWork uow, string relativePath, CollisionDecision decision, long? libraryId)
     {
         ArgumentNullException.ThrowIfNull(uow);
         ArgumentNullException.ThrowIfNull(decision);
+        if (libraryId is not { } library)
+        {
+            return Task.CompletedTask;
+        }
+
         return uow.ExecuteAsync(
             "UPDATE refiner_files SET output_collision_policy = $policy, output_collision_action = $action, output_collision_reason = $reason, " +
-            "updated_at = CURRENT_TIMESTAMP WHERE relative_path = $path",
+            "updated_at = CURRENT_TIMESTAMP WHERE relative_path = $path AND library_id = $library",
             ("$policy", decision.Policy),
             ("$action", decision.Action),
             ("$reason", decision.Reason),
-            ("$path", relativePath));
+            ("$path", relativePath),
+            ("$library", library));
     }
 
     /// <summary><c>record_file_log</c>: one completed pass, bounded, beside the file and library it belongs to.</summary>

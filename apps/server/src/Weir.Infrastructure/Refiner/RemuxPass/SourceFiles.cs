@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 using Weir.Core.Refiner;
@@ -146,6 +147,27 @@ public static partial class SourceFiles
         }
 
         return new SourceFingerprint(device, inode, info.Length, modifiedNs);
+    }
+
+    /// <summary>
+    /// Issue #545 item 2: a short, stable tag for a dedupe key so a pass-through or reject job for a since-replaced file
+    /// (same relative path, different content — e.g. a re-download with the same name) queues again instead of being
+    /// silently absorbed by a finished or failed row still sitting under the old key. Built from the fingerprint's size
+    /// and modification time (not the device/inode, which are 0 off Windows); a file that cannot be read yet (already
+    /// gone, or a race with the writer) falls back to a fixed tag, so two enqueue attempts for the same still-unreadable
+    /// file keep deduping against each other rather than piling up job rows.
+    /// </summary>
+    public static string DedupeFingerprintTag(string absolutePath)
+    {
+        try
+        {
+            var fingerprint = Fingerprint(absolutePath);
+            return string.Create(CultureInfo.InvariantCulture, $"{fingerprint.SizeBytes}-{fingerprint.ModifiedTimeNs}");
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return "unreadable";
+        }
     }
 
     private static bool IsSharingViolation(IOException exception)

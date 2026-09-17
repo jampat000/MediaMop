@@ -18,6 +18,13 @@ public interface IPostSuccessCleanupData
 
     /// <summary>Every pending or leased <c>refiner.file.remux_pass.v1</c> row.</summary>
     Task<IReadOnlyList<ActiveRemuxJob>> ActiveRemuxJobsAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Issue #545 item 1: whether the hand-off ledger already recorded this origin's outcome as delivered
+    /// (<c>completed</c> or <c>passed-through</c>) to the manager that asked for it. False for no origin, an origin the
+    /// ledger has never heard of, or one still short of that terminal state.
+    /// </summary>
+    Task<bool> HandoffOutcomeAcknowledgedAsync(HandoffOrigin? origin, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -55,7 +62,7 @@ public sealed class OutputFolderCleanup
     }
 
     /// <summary><c>maybe_run_movie_output_folder_cleanup_after_remux</c>.</summary>
-    public async Task RunMovieAsync(PyDict output, RefinerPathRuntime runtime, string watchedRoot, string source, string? finalOutputFile, string relativeMediaPath, long? currentJobId, string mediaScope, CancellationToken cancellationToken)
+    public async Task RunMovieAsync(PyDict output, RefinerPathRuntime runtime, string watchedRoot, string source, string? finalOutputFile, string relativeMediaPath, long? currentJobId, string mediaScope, HandoffOrigin? origin, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(output);
         ArgumentNullException.ThrowIfNull(runtime);
@@ -104,12 +111,12 @@ public sealed class OutputFolderCleanup
             return;
         }
 
-        await DeleteWhenTruthClearsAsync(output, Prefix, "movie_output_folder_skip_reason", "movie_output_folder_deleted", "movie_output_cascade_folders_deleted", "movie", place, "movie output folder", "Movies", cancellationToken)
+        await DeleteWhenTruthClearsAsync(output, Prefix, "movie_output_folder_skip_reason", "movie_output_folder_deleted", "movie_output_cascade_folders_deleted", "movie", place, "movie output folder", "Movies", origin, cancellationToken)
             .ConfigureAwait(false);
     }
 
     /// <summary><c>maybe_run_tv_output_season_folder_cleanup_after_remux</c>.</summary>
-    public async Task RunTvAsync(PyDict output, RefinerPathRuntime runtime, string watchedRoot, string source, string? finalOutputFile, long? currentJobId, string mediaScope, CancellationToken cancellationToken)
+    public async Task RunTvAsync(PyDict output, RefinerPathRuntime runtime, string watchedRoot, string source, string? finalOutputFile, long? currentJobId, string mediaScope, HandoffOrigin? origin, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(output);
         ArgumentNullException.ThrowIfNull(runtime);
@@ -178,11 +185,11 @@ public sealed class OutputFolderCleanup
             return;
         }
 
-        await DeleteWhenTruthClearsAsync(output, Prefix, "tv_output_season_folder_skip_reason", "tv_output_season_folder_deleted", "tv_output_cascade_folders_deleted", "tv", place, "TV season output folder", "TV", cancellationToken)
+        await DeleteWhenTruthClearsAsync(output, Prefix, "tv_output_season_folder_skip_reason", "tv_output_season_folder_deleted", "tv_output_cascade_folders_deleted", "tv", place, "TV season output folder", "TV", origin, cancellationToken)
             .ConfigureAwait(false);
     }
 
-    private readonly record struct TitleFolder(string OutputRoot, string Folder);
+    private readonly record struct TitleFolder(string OutputRoot, string Folder, string MediaOutputFile);
 
     private static TitleFolder? LocateTitleFolder(PyDict output, RefinerPathRuntime runtime, string watchedRoot, string source, string? finalOutputFile, string skipKey, string prefix, bool tv)
     {
@@ -242,13 +249,14 @@ public sealed class OutputFolderCleanup
             return null;
         }
 
-        return new TitleFolder(outputRoot, folder);
+        return new TitleFolder(outputRoot, folder, mediaOut);
     }
 
-    private async Task DeleteWhenTruthClearsAsync(PyDict output, string prefix, string skipKey, string deletedKey, string cascadeKey, string scope, TitleFolder place, string noun, string logLabel, CancellationToken cancellationToken)
+    private async Task DeleteWhenTruthClearsAsync(PyDict output, string prefix, string skipKey, string deletedKey, string cascadeKey, string scope, TitleFolder place, string noun, string logLabel, HandoffOrigin? origin, CancellationToken cancellationToken)
     {
         var answers = await _data.CollectLibraryTruthAsync(scope, cancellationToken).ConfigureAwait(false);
-        var truth = LibraryTruthGate.EvaluateForFolder(answers, place.Folder, scope, ResolveOrNull, OperatingSystem.IsWindows());
+        var acknowledged = await _data.HandoffOutcomeAcknowledgedAsync(origin, cancellationToken).ConfigureAwait(false);
+        var truth = LibraryTruthGate.EvaluateForFolder(answers, place.Folder, scope, ResolveOrNull, OperatingSystem.IsWindows(), place.MediaOutputFile, acknowledged);
         output.Set($"{prefix}_truth_check", truth.Check);
         output.Set($"{prefix}_truth_note", truth.Note);
         if (!truth.ClearsDelete)

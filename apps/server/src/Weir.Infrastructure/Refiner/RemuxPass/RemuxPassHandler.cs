@@ -131,6 +131,7 @@ public sealed class RemuxPassHandler : IJobHandler
             {
                 Runtime = claim.Runtime!,
                 RelativeMediaPath = rel,
+                LibraryId = claim.Library?.Id ?? libraryId,
                 RulesConfig = claim.Rules,
                 MinFileAgeSeconds = claim.Operator!.MinFileAgeSeconds,
                 MinInputFileSizeMb = Math.Max(claim.Operator.RefinerMinInputFileSizeMb, claim.Library?.MinFileSizeMb ?? 0),
