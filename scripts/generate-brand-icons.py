@@ -1,0 +1,75 @@
+"""Regenerate every raster Weir icon from the SVG sources in packaging/brand.
+
+The SVGs are the source of truth. This renders them with Playwright's Chromium (already a test
+dependency: tests/requirements.txt) and writes PNG-framed .ico files, the format Windows has read
+since Vista and the format the previous icons used.
+
+    python scripts/generate-brand-icons.py
+
+Outputs (all committed):
+  apps/web/public/favicon.svg, favicon.ico, apple-touch-icon.png
+  packaging/windows/assets/weir-tray-icon.ico      (tray and installer icon)
+  docs-site/static/img/favicon.ico, logo.svg, logo-dark.svg
+"""
+
+from __future__ import annotations
+
+import shutil
+import struct
+from pathlib import Path
+
+from playwright.sync_api import sync_playwright
+
+ROOT = Path(__file__).resolve().parent.parent
+BRAND = ROOT / "packaging" / "brand"
+APP_ICON = BRAND / "weir-app-icon.svg"
+MARK_DARK = BRAND / "weir-mark.svg"
+MARK_LIGHT = BRAND / "weir-mark-light.svg"
+
+
+def render_png(page, svg_path: Path, size: int) -> bytes:
+    svg = svg_path.read_text(encoding="utf-8").replace("<svg ", f'<svg width="{size}" height="{size}" ', 1)
+    page.set_viewport_size({"width": size, "height": size})
+    page.set_content(f"<html><body style='margin:0;background:transparent'>{svg}</body></html>")
+    return page.locator("svg").screenshot(omit_background=True, type="png")
+
+
+def pack_ico(frames: dict[int, bytes]) -> bytes:
+    sizes = sorted(frames)
+    header = struct.pack("<HHH", 0, 1, len(sizes))
+    offset = 6 + 16 * len(sizes)
+    entries = b""
+    data = b""
+    for size in sizes:
+        png = frames[size]
+        dim = 0 if size >= 256 else size
+        entries += struct.pack("<BBBBHHII", dim, dim, 0, 0, 1, 32, len(png), offset + len(data))
+        data += png
+    return header + entries + data
+
+
+def main() -> None:
+    web_public = ROOT / "apps" / "web" / "public"
+    docs_img = ROOT / "docs-site" / "static" / "img"
+    tray_ico = ROOT / "packaging" / "windows" / "assets" / "weir-tray-icon.ico"
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page(device_scale_factor=1)
+        frames = {n: render_png(page, APP_ICON, n) for n in (16, 24, 32, 48, 64, 128, 256)}
+        touch = render_png(page, APP_ICON, 180)
+        browser.close()
+
+    favicon = pack_ico({n: frames[n] for n in (16, 24, 32, 48, 64, 256)})
+    (web_public / "favicon.ico").write_bytes(favicon)
+    (web_public / "apple-touch-icon.png").write_bytes(touch)
+    shutil.copyfile(APP_ICON, web_public / "favicon.svg")
+    tray_ico.write_bytes(pack_ico(frames))
+    (docs_img / "favicon.ico").write_bytes(favicon)
+    shutil.copyfile(MARK_LIGHT, docs_img / "logo.svg")
+    shutil.copyfile(MARK_DARK, docs_img / "logo-dark.svg")
+    print("Brand icons regenerated from", BRAND.relative_to(ROOT))
+
+
+if __name__ == "__main__":
+    main()

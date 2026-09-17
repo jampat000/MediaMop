@@ -58,6 +58,11 @@ const config: Config = {
     },
     navbar: {
       title: 'Weir',
+      logo: {
+        alt: 'Weir',
+        src: 'img/logo.svg',
+        srcDark: 'img/logo-dark.svg',
+      },
       items: [
         {
           type: 'docSidebar',

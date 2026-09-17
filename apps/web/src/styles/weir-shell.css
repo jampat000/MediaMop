@@ -581,15 +581,25 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   box-shadow:
     inset -1px 0 0 rgba(0, 0, 0, 0.2),
     var(--mm-shadow-shell);
+  /* The panel stretches the full height of the page, so its surface never stops partway down a
+     long screen; the contents stick to the viewport inside it (.mm-sidebar-inner). */
   display: flex;
   flex-direction: column;
-  padding: calc(8px * var(--mm-density-ui-scale)) 0
-    calc(14px * var(--mm-density-ui-scale));
-  overflow-y: auto;
+  align-self: stretch;
+  min-height: 100dvh;
+  position: relative;
+  z-index: 2;
+}
+
+.mm-sidebar-inner {
   position: sticky;
   top: 0;
+  display: flex;
+  flex-direction: column;
   height: 100dvh;
-  z-index: 2;
+  padding: calc(14px * var(--mm-density-ui-scale)) 0
+    calc(14px * var(--mm-density-ui-scale));
+  overflow-y: auto;
 }
 
 .mm-sidebar-brand {
@@ -668,21 +678,7 @@ html[data-mm-theme="light"] .mm-theme-toggle {
 
 .mm-sidebar--collapsed .mm-sidebar-brand-logo {
   align-self: center;
-  display: grid;
-  width: calc(52px * var(--mm-density-ui-scale));
-  height: calc(52px * var(--mm-density-ui-scale));
-  place-items: center;
   margin: 0;
-  border: 1px solid rgba(212, 175, 55, 0.28);
-  border-radius: 16px;
-  background: linear-gradient(
-    145deg,
-    rgba(212, 175, 55, 0.18),
-    rgba(79, 86, 239, 0.1)
-  );
-  box-shadow:
-    0 10px 24px rgba(0, 0, 0, 0.22),
-    0 0 0 5px rgba(212, 175, 55, 0.035);
 }
 
 .mm-sidebar--collapsed .mm-sidebar-tagline,
@@ -731,41 +727,51 @@ html[data-mm-theme="light"] .mm-theme-toggle {
   width: fit-content;
   max-width: 100%;
   align-self: flex-start;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
 }
 
-.mm-sidebar-brand-logo .mm-logo {
-  width: auto;
-  max-width: 100%;
-}
-
-.mm-sidebar--collapsed .mm-sidebar-brand-logo .mm-logo--sidebar {
-  width: calc(48px * var(--mm-density-ui-scale));
-  height: calc(48px * var(--mm-density-ui-scale));
-  object-fit: cover;
-  object-position: left center;
-}
-
+/* Weir mark + wordmark (components/brand/weir-logo.tsx). */
 .mm-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.34em;
+  font-family: var(--mm-font);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.015em;
+  color: var(--mm-brand-wordmark);
+  white-space: nowrap;
+}
+
+.mm-logo-mark {
   display: block;
-  width: 100%;
-  max-width: 100%;
-  height: auto;
-  object-fit: contain;
+  flex-shrink: 0;
+  width: 1.75em;
+  height: 1.75em;
+}
+
+.mm-logo-mark__wall {
+  fill: var(--mm-brand-wall);
+}
+
+.mm-logo-mark__water {
+  fill: none;
+  stroke: var(--mm-brand-water);
+  stroke-width: 3.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .mm-logo--sidebar {
-  height: 48px;
-  width: auto;
+  font-size: calc(1.6rem * var(--mm-density-ui-scale));
 }
 
 .mm-logo--auth {
-  height: 64px;
-  width: auto;
+  font-size: 2.4rem;
 }
 
-.mm-logo--hero {
-  max-height: 160px;
+.mm-sidebar--collapsed .mm-logo-wordmark {
+  display: none;
 }
 
 .mm-sidebar-product-title {

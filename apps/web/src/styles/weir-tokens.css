@@ -96,6 +96,10 @@
   --mm-input-focus-ring: rgba(212, 175, 55, 0.18);
   --mm-font-feature: "cv11", "ss01";
   --mm-eyebrow-color: var(--mm-stone-muted);
+  /* Brand mark (components/brand/weir-logo.tsx; packaging/brand/weir-mark.svg). */
+  --mm-brand-water: #d4af37;
+  --mm-brand-wall: #e7e7ea;
+  --mm-brand-wordmark: #d4af37;
 }
 
 html[data-mm-theme="light"] {
@@ -154,6 +158,10 @@ html[data-mm-theme="light"] {
   --mm-input-border-focus: rgba(184, 135, 25, 0.55);
   --mm-input-focus-ring: rgba(184, 135, 25, 0.18);
   --mm-eyebrow-color: rgba(33, 31, 26, 0.6);
+  /* packaging/brand/weir-mark-light.svg; wordmark #7d5a11 is 5.9:1 on the light page. */
+  --mm-brand-water: #9f7417;
+  --mm-brand-wall: #211f1a;
+  --mm-brand-wordmark: #7d5a11;
 }
 
 html[data-mm-density="comfortable"] {
