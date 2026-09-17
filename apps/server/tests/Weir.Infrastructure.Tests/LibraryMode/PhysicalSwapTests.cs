@@ -67,6 +67,13 @@ public sealed class PhysicalSwapTests : IDisposable
 
     private PyDict Payload() => (PyDict)PyJsonParser.Parse((string)_db.Scalar("SELECT payload_json FROM refiner_jobs WHERE id = $id", ("$id", _jobId))!);
 
+    private (string State, string OriginalPath, string TempPath, string BackupPath, bool Committed) SwapRow()
+    {
+        var row = _db.QueryRow("SELECT state, original_path, temp_path, backup_path, committed FROM library_swaps WHERE job_id = $id", ("$id", _jobId))
+            ?? throw new InvalidOperationException("No library_swaps row was recorded for this job.");
+        return ((string)row[0]!, (string)row[1]!, (string)row[2]!, (string)row[3]!, Convert.ToInt64(row[4]) != 0);
+    }
+
     [Fact]
     public async Task A_real_file_is_replaced_in_place_with_a_new_mtime_and_the_job_row_records_it()
     {
@@ -78,14 +85,14 @@ public sealed class PhysicalSwapTests : IDisposable
         Assert.Equal("cleaned content", await File.ReadAllTextAsync(_original));
         Assert.True(File.GetLastWriteTimeUtc(_original) > OldTime.AddYears(10), "the manager's rescan needs the mtime to move");
 
-        var payload = Payload();
-        Assert.Equal(["library_id", "relative_media_path", "library_swap", "swap_committed"], payload.Keys);
-        var swap = (PyDict)payload["library_swap"];
-        Assert.Equal("finished", ((PyStr)swap["state"]).Value);
-        Assert.Equal(_original, ((PyStr)swap["original_path"]).Value);
-        Assert.Equal(Temp, ((PyStr)swap["temp_path"]).Value);
-        Assert.Equal(Backup, ((PyStr)swap["backup_path"]).Value);
-        Assert.True(payload["swap_committed"].IsTruthy);
+        // The job's own payload is never touched by the swap journal (#557 moved it to library_swaps).
+        Assert.Equal(["library_id", "relative_media_path"], Payload().Keys);
+        var swap = SwapRow();
+        Assert.Equal("finished", swap.State);
+        Assert.Equal(_original, swap.OriginalPath);
+        Assert.Equal(Temp, swap.TempPath);
+        Assert.Equal(Backup, swap.BackupPath);
+        Assert.True(swap.Committed);
         Assert.Empty(await _journal.ListUnfinishedAsync());
     }
 
@@ -123,8 +130,9 @@ public sealed class PhysicalSwapTests : IDisposable
         }
 
         Assert.Equal([Path.Join("Movie (2020)", "Movie (2020).mkv")], FilesInLibrary());
-        Assert.Equal("rolled_back", ((PyStr)((PyDict)Payload()["library_swap"])["state"]).Value);
-        Assert.False(Payload().ContainsKey("swap_committed"));
+        var swap = SwapRow();
+        Assert.Equal("rolled_back", swap.State);
+        Assert.False(swap.Committed);
     }
 
     [WindowsFact("Share modes are a Windows behaviour.")]
@@ -283,6 +291,6 @@ public sealed class PhysicalSwapTests : IDisposable
         Assert.Equal(new SwapRecoveryReport(1, 0, 1, 0), report);
         Assert.Equal([Path.Join("Movie (2020)", "Movie (2020).mkv")], FilesInLibrary());
         Assert.Equal("original content", await File.ReadAllTextAsync(_original));
-        Assert.Equal("recovered", ((PyStr)((PyDict)Payload()["library_swap"])["state"]).Value);
+        Assert.Equal("recovered", SwapRow().State);
     }
 }

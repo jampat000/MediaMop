@@ -7,23 +7,31 @@ namespace Weir.Infrastructure.Tests.Sqlite;
 public sealed class SchemaMigratorTests
 {
     [Fact]
-    public void An_alembic_database_at_head_is_adopted_without_any_change()
+    public void An_alembic_database_at_the_frozen_baseline_is_upgraded_to_head()
     {
+        // Before #557, the .NET head *was* the frozen Alembic baseline, so an Alembic-created database
+        // needed no change at all. #557 lifted the freeze and added migrations past it, so this database
+        // is now merely at the oldest revision this build knows how to reach, and EnsureAtHead upgrades
+        // it in place instead of adopting it unchanged.
         using var temp = new TempDirectory();
         var path = temp.Join("weir.sqlite3");
         SchemaSnapshot.Execute(path, File.ReadAllText(RepositoryPaths.AlembicHeadReference));
-        var before = SchemaSnapshot.Describe(path);
-        var schemaVersionBefore = SchemaSnapshot.ScalarLong(path, "PRAGMA schema_version");
-        var changesBefore = SchemaSnapshot.ScalarLong(path, "SELECT COUNT(*) FROM suite_settings");
 
         var database = new SqliteDatabase(path);
         var outcome = new SchemaMigrator(database).EnsureAtHead();
         database.ClearPool();
 
-        Assert.Equal(SchemaStartupOutcome.AlreadyCurrent, outcome);
-        Assert.Equal(before, SchemaSnapshot.Describe(path));
-        Assert.Equal(schemaVersionBefore, SchemaSnapshot.ScalarLong(path, "PRAGMA schema_version"));
-        Assert.Equal(changesBefore, SchemaSnapshot.ScalarLong(path, "SELECT COUNT(*) FROM suite_settings"));
+        Assert.Equal(SchemaStartupOutcome.Upgraded, outcome);
+        Assert.Equal(1, SchemaSnapshot.ScalarLong(path, $"SELECT COUNT(*) FROM alembic_version WHERE version_num = '{SchemaMigrator.HeadRevision}'"));
+
+        // Matches a database created fresh at head, once the seeded suite_settings row's timestamps
+        // (masked by SchemaSnapshot) and the fact a fresh install seeds no libraries/rule sets are allowed for.
+        using var freshTemp = new TempDirectory();
+        var freshPath = freshTemp.Join("fresh.sqlite3");
+        var freshDatabase = new SqliteDatabase(freshPath);
+        Assert.Equal(SchemaStartupOutcome.Created, new SchemaMigrator(freshDatabase).EnsureAtHead());
+        freshDatabase.ClearPool();
+        Assert.Equal(SchemaSnapshot.Describe(freshPath), SchemaSnapshot.Describe(path));
     }
 
     [Fact]
@@ -33,7 +41,7 @@ public sealed class SchemaMigratorTests
         var database = new SqliteDatabase(temp.Join("weir.sqlite3"));
         Assert.Equal(SchemaStartupOutcome.Created, new SchemaMigrator(database).EnsureAtHead());
         Assert.Equal(SchemaStartupOutcome.AlreadyCurrent, new SchemaMigrator(database).EnsureAtHead());
-        Assert.Equal(1, SchemaSnapshot.ScalarLong(database.DatabasePath, "SELECT COUNT(*) FROM alembic_version WHERE version_num = '0036_drop_pruner_tables'"));
+        Assert.Equal(1, SchemaSnapshot.ScalarLong(database.DatabasePath, $"SELECT COUNT(*) FROM alembic_version WHERE version_num = '{SchemaMigrator.HeadRevision}'"));
         database.ClearPool();
     }
 
@@ -51,7 +59,7 @@ public sealed class SchemaMigratorTests
         Assert.Equal(SchemaMismatchKind.BehindHead, error.Kind);
         Assert.Equal(
             "Database revision '0035_direct_play_facts' was created by an older Weir release. " +
-            "This build requires schema revision '0036_drop_pruner_tables' and cannot upgrade older databases itself. " +
+            $"This build requires schema revision '{SchemaMigrator.HeadRevision}' and cannot upgrade older databases itself. " +
             "Start the previous Weir release once so it migrates the database, then start this build again.",
             error.Message);
         Assert.Equal(before, SchemaSnapshot.Describe(path));
@@ -69,7 +77,7 @@ public sealed class SchemaMigratorTests
 
         Assert.Equal(SchemaMismatchKind.UnknownRevision, error.Kind);
         Assert.Equal(
-            "Database revision '0099_from_the_future' is not recognized by this Weir build (expected head '0036_drop_pruner_tables'). " +
+            $"Database revision '0099_from_the_future' is not recognized by this Weir build (expected head '{SchemaMigrator.HeadRevision}'). " +
             "The database may come from a newer release; upgrade the application or restore a backup that matches this version.",
             error.Message);
     }
@@ -87,7 +95,7 @@ public sealed class SchemaMigratorTests
 
         Assert.Equal(SchemaMismatchKind.Unversioned, error.Kind);
         Assert.StartsWith(
-            "No Alembic revision is recorded for this database (migrations have not been applied). This build requires schema revision '0036_drop_pruner_tables'.",
+            $"No Alembic revision is recorded for this database (migrations have not been applied). This build requires schema revision '{SchemaMigrator.HeadRevision}'.",
             error.Message,
             StringComparison.Ordinal);
         Assert.Equal(1, SchemaSnapshot.ScalarLong(path, "SELECT COUNT(*) FROM sqlite_master"));

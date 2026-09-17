@@ -23,13 +23,16 @@ Root causes, read from the source while writing these tests (both in
   forever. See the comment on ``test_failure_is_retried_then_the_original_is_passed_through_unchanged``
   in ``test_failure_policies.py``: its ``all(report["status"] != "failed" ...)`` assertion is true
   today only because the callback list is empty, not because a real completion was reported.
+
+dotnet fixed item 2 too: ``RefinerWatchedFolderScanDispatchJobHandler.EnqueueRemuxPassAsync`` (the scan's
+own automatic retry path — the same method used for a fresh candidate) now looks up
+``HandoffOriginCarry.FindAsync`` and copies ``origin`` onto the requeued job's payload, the same fix
+``RequeueStore.RequeueFileAsync`` already applied to the manual-retry half (#531 item 2).
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-
-import pytest
 
 from tests.contract.processing import _helpers as h
 from tests.contract.support.fake_ffmpeg import fake_media_bytes, probe
@@ -84,7 +87,6 @@ def test_a_hand_offs_fingerprint_is_recorded_up_front_so_a_scan_never_resets_its
     assert settled["failure_attempts"] == 1, "an intervening scan must not reset the failure count (#531 item 1)"
 
 
-@pytest.mark.known_bug(issue=531)
 def test_pass_through_after_a_retry_reports_a_completion_callback_with_output_path(
     server_factory, client_factory, fake_ffmpeg, fake_managers, tmp_path: Path
 ) -> None:
@@ -119,7 +121,12 @@ def test_pass_through_after_a_retry_reports_a_completion_callback_with_output_pa
 
     status = h.handoff_status(admin, "handoff-origin-531")
     assert status["outputPath"], "the origin (and so the output path) must survive a scan-driven retry"
-    assert Path(status["outputPath"]).resolve() == delivered.resolve()
+    # deluno_setup's manifest declares a "refine-before-import" library with its own processorOutputPath,
+    # so — same as a first-attempt pass-through, see test_handoff_scenarios.py's
+    # test_handoff_is_remuxed_and_reported_complete_with_the_managers_output_path — the reported path is
+    # rebuilt under the manager's own root, not Weir's local output folder.
+    expected = f"{h.DELUNO_OUTPUT_ROOT}/Broken.Origin.531/film.mkv"
+    assert status["outputPath"].replace("\\", "/") == expected
 
     reports = h.callbacks(fake, "handoff-origin-531")
     assert reports, "a retried-then-passed-through hand-off must still report a completion callback"

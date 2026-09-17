@@ -179,7 +179,7 @@ public sealed class SystemEndpointsTests
         using var stream = new FileStream(Path.Join(server.Home, "logs", "weir.log"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
         using var reader = new StreamReader(stream);
         var log = await reader.ReadToEndAsync();
-        Assert.Contains("\"message\": \"Created database schema revision=0036_drop_pruner_tables", log, StringComparison.Ordinal);
+        Assert.Contains($"\"message\": \"Created database schema revision={Weir.Infrastructure.Sqlite.SchemaMigrator.HeadRevision}", log, StringComparison.Ordinal);
     }
 
     [Fact]

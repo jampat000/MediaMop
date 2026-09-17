@@ -1,18 +1,13 @@
-using Weir.Core.Jobs;
-using Weir.Core.Json;
 using Weir.Core.LibraryMode;
-using Weir.Infrastructure.Jobs;
 using Weir.Infrastructure.Sqlite;
 
 namespace Weir.Infrastructure.LibraryMode;
 
 /// <summary>
-/// Per-library #505 settings (<see cref="LibrarySettings"/>), kept on a single, permanent <c>refiner_jobs</c> row rather than a
-/// new table or column (built while ADR-0017 froze the schema; it can move to a proper table in a later migration — see
-/// <c>apps/server/README.md</c>, "Library mode"). The row's
-/// <c>job_kind</c> is <see cref="LibraryModeJobKinds.SettingsKind"/>, its status is always <c>completed</c> so no worker ever
-/// claims it, and it is written with a plain <c>INSERT ... ON CONFLICT DO UPDATE</c> rather than through
-/// <see cref="RefinerJobStore"/>'s enqueue path, which always inserts a fresh <c>pending</c> row.
+/// Per-library #505 settings (<see cref="LibrarySettings"/>): real columns on <c>refiner_libraries</c>
+/// (<c>library_schedule_enabled</c>, <c>clean_hardlinked_files</c>, <c>skip_if_manager_would_redownload</c>)
+/// plus the <c>library_folders</c> table, since #557's migration (0038_library_mode_settings) moved this off
+/// the one permanent <c>refiner_jobs</c> row per library that job-row retention could otherwise prune.
 /// </summary>
 public static class LibrarySettingsStore
 {
@@ -21,74 +16,57 @@ public static class LibrarySettingsStore
     {
         ArgumentNullException.ThrowIfNull(uow);
         var rows = await uow.QueryAsync(
-            "SELECT payload_json FROM refiner_jobs WHERE job_kind = @kind",
-            reader => reader.IsDBNull(0) ? null : reader.GetString(0),
-            ("@kind", LibraryModeJobKinds.SettingsKind)).ConfigureAwait(false);
-        var folders = new List<string>();
-        foreach (var json in rows)
-        {
-            if (string.IsNullOrWhiteSpace(json))
-            {
-                continue;
-            }
-
-            try
-            {
-                folders.AddRange(LibrarySettings.FromPayload(PyJsonParser.Parse(json) as PyDict).Folders);
-            }
-            catch (PyJsonDecodeException)
-            {
-            }
-        }
-
-        return folders.Distinct(StringComparer.Ordinal).ToList();
+            "SELECT DISTINCT folder FROM library_folders",
+            reader => reader.GetString(0)).ConfigureAwait(false);
+        return rows.Distinct(StringComparer.Ordinal).ToList();
     }
 
     public static async Task<LibrarySettings> GetAsync(UnitOfWork uow, long libraryId)
     {
         ArgumentNullException.ThrowIfNull(uow);
-        var payloadJson = await uow.ScalarAsync(
-            "SELECT payload_json FROM refiner_jobs WHERE dedupe_key = @key",
-            ("@key", LibraryModeJobKinds.SettingsDedupeKey(libraryId))).ConfigureAwait(false);
-        if (payloadJson is not string json || string.IsNullOrWhiteSpace(json))
+        var rows = await uow.QueryAsync(
+            "SELECT library_schedule_enabled, clean_hardlinked_files, skip_if_manager_would_redownload FROM refiner_libraries WHERE id = @id",
+            reader => (
+                ScheduleEnabled: SqliteValues.GetBool(reader, 0),
+                CleanHardlinkedFiles: SqliteValues.GetBool(reader, 1),
+                SkipIfManagerWouldRedownload: SqliteValues.GetBool(reader, 2)),
+            ("@id", libraryId)).ConfigureAwait(false);
+        if (rows.Count == 0)
         {
             return LibrarySettings.Empty;
         }
 
-        try
-        {
-            return LibrarySettings.FromPayload(PyJsonParser.Parse(json) as PyDict);
-        }
-        catch (PyJsonDecodeException)
-        {
-            return LibrarySettings.Empty;
-        }
+        var row = rows[0];
+        var folders = await FoldersForAsync(uow, libraryId).ConfigureAwait(false);
+        return new LibrarySettings(folders, row.ScheduleEnabled, row.CleanHardlinkedFiles, row.SkipIfManagerWouldRedownload);
     }
 
     public static async Task SetAsync(UnitOfWork uow, long libraryId, LibrarySettings settings)
     {
         ArgumentNullException.ThrowIfNull(uow);
         ArgumentNullException.ThrowIfNull(settings);
-        var json = PyJsonWriter.Dumps(settings.ToPayload(libraryId), PyJsonFormat.Compact);
         await uow.ExecuteAsync(
-            """
-            INSERT INTO refiner_jobs (dedupe_key, job_kind, payload_json, status, max_attempts, runner_cost, priority)
-            VALUES (@key, @kind, @payload, @status, 1, 0, 0)
-            ON CONFLICT(dedupe_key) DO UPDATE SET payload_json = excluded.payload_json, updated_at = CURRENT_TIMESTAMP
-            """,
-            ("@key", LibraryModeJobKinds.SettingsDedupeKey(libraryId)),
-            ("@kind", LibraryModeJobKinds.SettingsKind),
-            ("@payload", json),
-            ("@status", RefinerJobStatus.Completed)).ConfigureAwait(false);
+            "UPDATE refiner_libraries SET library_schedule_enabled = @schedule, clean_hardlinked_files = @clean_hardlinked, " +
+            "skip_if_manager_would_redownload = @skip_redownload, updated_at = CURRENT_TIMESTAMP WHERE id = @id",
+            ("@schedule", settings.ScheduleEnabled ? 1 : 0),
+            ("@clean_hardlinked", settings.CleanHardlinkedFiles ? 1 : 0),
+            ("@skip_redownload", settings.SkipIfManagerWouldRedownload ? 1 : 0),
+            ("@id", libraryId)).ConfigureAwait(false);
+
+        await uow.ExecuteAsync("DELETE FROM library_folders WHERE library_id = @id", ("@id", libraryId)).ConfigureAwait(false);
+        for (var position = 0; position < settings.Folders.Count; position++)
+        {
+            await uow.ExecuteAsync(
+                "INSERT INTO library_folders (library_id, folder, position) VALUES (@id, @folder, @position)",
+                ("@id", libraryId), ("@folder", settings.Folders[position]), ("@position", position)).ConfigureAwait(false);
+        }
     }
 
-    /// <summary>Removes a library's settings and scan-history rows (the library itself is being deleted).</summary>
+    /// <summary>Removes a library's scan-history rows (the library itself is being deleted; its settings and folder
+    /// rows go with it automatically — <c>library_folders</c>/<c>library_files</c> both cascade from <c>refiner_libraries</c>).</summary>
     public static async Task DeleteAllForLibraryAsync(UnitOfWork uow, long libraryId)
     {
         ArgumentNullException.ThrowIfNull(uow);
-        await uow.ExecuteAsync(
-            "DELETE FROM refiner_jobs WHERE dedupe_key = @key",
-            ("@key", LibraryModeJobKinds.SettingsDedupeKey(libraryId))).ConfigureAwait(false);
         await uow.ExecuteAsync(
             "DELETE FROM refiner_jobs WHERE job_kind = @scanKind AND dedupe_key LIKE @prefix ESCAPE '\\'",
             ("@scanKind", LibraryModeJobKinds.ScanKind),
@@ -98,6 +76,12 @@ public static class LibrarySettingsStore
             ("@cleanKind", LibraryModeJobKinds.CleanKind),
             ("@prefix", EscapeLike($"{LibraryModeJobKinds.CleanKind}:{libraryId}:") + "%")).ConfigureAwait(false);
     }
+
+    private static async Task<List<string>> FoldersForAsync(UnitOfWork uow, long libraryId) =>
+        await uow.QueryAsync(
+            "SELECT folder FROM library_folders WHERE library_id = @id ORDER BY position, id",
+            reader => reader.GetString(0),
+            ("@id", libraryId)).ConfigureAwait(false);
 
     private static string EscapeLike(string value) =>
         value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal);

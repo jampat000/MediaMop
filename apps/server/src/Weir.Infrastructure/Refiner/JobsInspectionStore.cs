@@ -42,14 +42,11 @@ public static class JobsInspectionStore
             return (rows, false);
         }
 
-        // Also hides #505's one permanent per-library settings row (job_kind refiner.library.settings.v1): it is a durable
-        // JSON store, not real work, and its status is always "completed" (see Weir.Core.LibraryMode.LibraryModeJobKinds).
         var recent = await uow.QueryAsync(
-            $"SELECT {columns} FROM refiner_jobs WHERE NOT (status = @completed AND job_kind IN (@scan_kind, @library_settings_kind)) ORDER BY updated_at DESC LIMIT {limit}",
+            $"SELECT {columns} FROM refiner_jobs WHERE NOT (status = @completed AND job_kind = @scan_kind) ORDER BY updated_at DESC LIMIT {limit}",
             Read,
             ("@completed", RefinerJobStatus.Completed),
-            ("@scan_kind", "refiner.watched_folder.remux_scan_dispatch.v1"),
-            ("@library_settings_kind", Weir.Core.LibraryMode.LibraryModeJobKinds.SettingsKind)).ConfigureAwait(false);
+            ("@scan_kind", "refiner.watched_folder.remux_scan_dispatch.v1")).ConfigureAwait(false);
         return (recent, true);
     }
 

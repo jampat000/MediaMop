@@ -9,6 +9,7 @@ using Weir.Core.Settings;
 using Weir.Core.Time;
 using Weir.Infrastructure.MediaManagers;
 using Weir.Infrastructure.Refiner;
+using Weir.Infrastructure.Refiner.RemuxPass;
 using Weir.Infrastructure.Settings;
 using Weir.Infrastructure.Sqlite;
 
@@ -347,6 +348,15 @@ public sealed class RefinerWatchedFolderScanDispatchJobHandler : IJobHandler
             .Set("trigger", ActivityProvenance.ScanTriggerToTrigger.GetValueOrDefault(scanTrigger, "manual"))
             .Set("run_id", $"scan-{context.Id.ToString(CultureInfo.InvariantCulture)}")
             .Set("library_id", library.Id);
+        // Deliberate fix (#531 item 2): a scan-driven retry (this is also how a failed hand-off's file gets
+        // requeued automatically, not just a fresh candidate) keeps the hand-off's origin, so a pass-through
+        // or reject reached after such a retry still has an output path to report and a callback to send —
+        // same fix as RequeueStore.RequeueFileAsync's manual half.
+        if (await HandoffOriginCarry.FindAsync(uow, library.Id, rel).ConfigureAwait(false) is { } origin)
+        {
+            payload.Set("origin", origin);
+        }
+
         var dedupe = $"{RequeueStore.RemuxPassJobKind}:scan:{Guid.NewGuid():N}";
         var resolutionClass = RunnerUnits.ResolutionClassForDimensions(previousRow?.VideoWidth, previousRow?.VideoHeight);
 

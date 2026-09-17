@@ -184,6 +184,10 @@ public static class WeirServer
         {
             logger.LogInformation("Created database schema revision={Revision} path={Path}", SchemaMigrator.HeadRevision, options.DbPath);
         }
+        else if (outcome == SchemaStartupOutcome.Upgraded)
+        {
+            logger.LogInformation("Upgraded database to schema revision={Revision} path={Path}", SchemaMigrator.HeadRevision, options.DbPath);
+        }
         else
         {
             logger.LogInformation("Opened database at schema revision={Revision} path={Path}", SchemaMigrator.HeadRevision, options.DbPath);
