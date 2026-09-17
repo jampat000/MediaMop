@@ -28,7 +28,7 @@ function Hero(): ReactNode {
           </Link>
           <Link
             className="button button--secondary button--lg"
-            to="https://github.com/jampat000/weir">
+            to="https://github.com/jampat000/Weir">
             GitHub
           </Link>
         </div>

@@ -3,7 +3,7 @@
 Audit date: 2026-09-01
 
 This is the durable follow-up to closed epic
-[#347, Refiner — reach FileFlows and pass it](https://github.com/jampat000/weir/issues/347).
+[#347, Refiner — reach FileFlows and pass it](https://github.com/jampat000/Weir/issues/347).
 It answers two questions:
 
 1. Did every capability identified by the live FileFlows audit survive later

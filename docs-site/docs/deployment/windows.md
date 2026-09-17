@@ -9,7 +9,7 @@ Weir ships a Velopack-based Windows package. It installs as a desktop app with a
 
 ## Installation
 
-1. Download the setup exe from [GitHub Releases](https://github.com/jampat000/weir/releases)
+1. Download the setup exe from [GitHub Releases](https://github.com/jampat000/Weir/releases)
 2. Run the installer (no admin required)
 3. Launch **Weir** from the Start Menu or desktop shortcut
 

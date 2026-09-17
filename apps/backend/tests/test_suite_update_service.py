@@ -24,8 +24,8 @@ def _release_record(version: str = "2.0.8") -> GitHubReleaseRecord:
         assets=(
             GitHubReleaseAsset(
                 name="Weir-win-Setup.exe",
-                api_url="https://api.github.com/repos/jampat000/weir/releases/assets/1",
-                browser_download_url=f"https://github.com/jampat000/weir/releases/download/v{version}/Weir-win-Setup.exe",
+                api_url="https://api.github.com/repos/jampat000/Weir/releases/assets/1",
+                browser_download_url=f"https://github.com/jampat000/Weir/releases/download/v{version}/Weir-win-Setup.exe",
                 size_bytes=123456789,
                 content_type="application/octet-stream",
             ),
@@ -49,7 +49,7 @@ def test_build_suite_update_status_returns_update_available(monkeypatch: pytest.
     assert status.install_type == "windows"
     assert status.in_app_upgrade_supported is True
     assert status.windows_installer_url == (
-        "https://github.com/jampat000/weir/releases/download/v2.0.8/Weir-win-Setup.exe"
+        "https://github.com/jampat000/Weir/releases/download/v2.0.8/Weir-win-Setup.exe"
     )
 
 

@@ -15,7 +15,7 @@ Get Weir running locally in under five minutes.
 ## 1. Clone and set up the backend
 
 ```powershell
-git clone https://github.com/jampat000/weir.git
+git clone https://github.com/jampat000/Weir.git
 cd Weir/apps/backend
 py -3 -m venv .venv
 .\.venv\Scripts\Activate.ps1

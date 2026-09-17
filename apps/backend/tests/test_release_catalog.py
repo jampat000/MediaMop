@@ -51,7 +51,7 @@ def test_fetch_release_record_by_version_rejects_wrong_returned_tag(monkeypatch:
     payload = {
         "tag_name": "v2.0.7",
         "name": "Weir 2.0.7",
-        "html_url": "https://github.com/jampat000/weir/releases/tag/v2.0.7",
+        "html_url": "https://github.com/jampat000/Weir/releases/tag/v2.0.7",
         "published_at": "2026-05-07T00:00:00Z",
         "draft": False,
         "prerelease": False,
@@ -88,7 +88,7 @@ def test_fetch_release_record_by_version_rejects_prerelease(monkeypatch: pytest.
     payload = {
         "tag_name": "v2.0.8",
         "name": "Weir 2.0.8-rc1",
-        "html_url": "https://github.com/jampat000/weir/releases/tag/v2.0.8",
+        "html_url": "https://github.com/jampat000/Weir/releases/tag/v2.0.8",
         "published_at": "2026-05-07T00:00:00Z",
         "draft": False,
         "prerelease": True,

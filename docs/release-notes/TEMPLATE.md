@@ -1,4 +1,4 @@
-# MediaMop vX.Y.Z
+# Weir vX.Y.Z
 
 Date: YYYY-MM-DD
 
@@ -18,18 +18,18 @@ This release focuses on <plain-language summary in one sentence>.
 
 ## Upgrade Notes
 
-- Windows users can install the release with `MediaMop-win-Setup.exe`; existing application data is preserved.
+- Windows users can install the release with `Weir-win-Setup.exe`; existing application data is preserved.
 - After that one-time bootstrap, future upgrades can be started from **Settings -> Upgrade**.
 - <Any additional one-time action or compatibility warning>
 
 ## Docker
 
-- `ghcr.io/jampat000/mediamop:X.Y.Z`  <!-- no `v`: release.yml strips it for the image tag -->
-- `ghcr.io/jampat000/mediamop:latest`
+- `ghcr.io/jampat000/weir:X.Y.Z`  <!-- no `v`: release.yml strips it for the image tag -->
+- `ghcr.io/jampat000/weir:latest`
 
 ## Full Changelog
 
-https://github.com/jampat000/MediaMop/compare/vPREVIOUS...vX.Y.Z
+https://github.com/jampat000/Weir/compare/vPREVIOUS...vX.Y.Z
 
 ---
 

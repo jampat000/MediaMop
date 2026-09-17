@@ -73,7 +73,7 @@ const windowsUpdateAvailableStatus: SuiteUpdateStatusOut = {
   latest_version: "2.0.8",
   latest_name: "Weir 2.0.8",
   windows_installer_url:
-    "https://github.com/jampat000/weir/releases/download/v2.0.8/Weir-win-Setup.exe",
+    "https://github.com/jampat000/Weir/releases/download/v2.0.8/Weir-win-Setup.exe",
   in_app_upgrade_supported: true,
   in_app_upgrade_summary:
     "Updates are managed by the Weir desktop app via Velopack.",

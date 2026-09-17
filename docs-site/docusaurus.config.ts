@@ -12,10 +12,10 @@ const config: Config = {
   },
 
   url: 'https://jampat000.github.io',
-  baseUrl: '/weir/',
+  baseUrl: '/Weir/',
 
   organizationName: 'jampat000',
-  projectName: 'weir',
+  projectName: 'Weir',
 
   onBrokenLinks: 'throw',
 
@@ -40,7 +40,7 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebars.ts',
           editUrl:
-            'https://github.com/jampat000/weir/tree/main/docs-site/',
+            'https://github.com/jampat000/Weir/tree/main/docs-site/',
         },
         blog: false,
         theme: {
@@ -72,7 +72,7 @@ const config: Config = {
           label: 'API',
         },
         {
-          href: 'https://github.com/jampat000/weir',
+          href: 'https://github.com/jampat000/Weir',
           label: 'GitHub',
           position: 'right',
         },
@@ -94,15 +94,15 @@ const config: Config = {
           items: [
             {
               label: 'GitHub',
-              href: 'https://github.com/jampat000/weir',
+              href: 'https://github.com/jampat000/Weir',
             },
             {
               label: 'Releases',
-              href: 'https://github.com/jampat000/weir/releases',
+              href: 'https://github.com/jampat000/Weir/releases',
             },
             {
               label: 'Issues',
-              href: 'https://github.com/jampat000/weir/issues',
+              href: 'https://github.com/jampat000/Weir/issues',
             },
           ],
         },

@@ -19,7 +19,7 @@ static class Program
     internal const int HealthTimeoutSeconds = 60;
     internal const int ServerStopTimeoutMs = 10_000;
     internal const double BrowserDebounceCooldownMs = 1250;
-    internal const string GitHubRepo = "https://github.com/jampat000/weir";
+    internal const string GitHubRepo = "https://github.com/jampat000/Weir";
     internal const string UpgradeSettingsPath = "/settings?tab=upgrade";
 
     [STAThread]
