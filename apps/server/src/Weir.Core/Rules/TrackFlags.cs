@@ -48,10 +48,8 @@ public sealed record TrackFlags
 /// </summary>
 public static partial class TrackFlagsReader
 {
-    // Whole-word only: a short abbreviation would otherwise match inside an unrelated word.
-    private static readonly string[] HearingImpairedWords = ["cc", "hi", "hoh", "sdh", "shd"];
-    private static readonly string[] ForcedWords = ["signs"];
-    private static readonly string[] DubWords = ["dub", "dubbed", "dubbing", "dubtitle"];
+    // Whole-word abbreviations (a short one would otherwise match inside an unrelated word) are the
+    // generated regexes below.
 
     // Substrings: multi-word or long enough that an accidental match inside another word is not a risk.
     private static readonly string[] HearingImpairedKeywords =

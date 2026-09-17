@@ -17,7 +17,6 @@ public sealed class RefinerRejectHandlerTests : IDisposable
 {
     private const string EventsPath = "/api/integrations/processors/events";
     private const string ManifestPath = "/api/integrations/external/manifest";
-    private const string ExternalQueuePath = "/api/integrations/external/queue";
 
     private readonly MediaManagerFixture _fixture = new();
     private readonly PassFolders _folders = new();

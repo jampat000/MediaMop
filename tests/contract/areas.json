@@ -1,47 +1,47 @@
 {
-  "_comment": "One entry per contract area. A test belongs to the area named by its folder under tests/contract. 'required' lists the backends that must pass the area: add \"dotnet\" when the area's port issue is done, and CI then fails the .NET run on that area instead of only reporting it.",
+  "_comment": "One entry per contract area. A test belongs to the area named by its folder under tests/contract. 'required' lists the servers that must pass the area; CI's contract job runs exactly those (--contract-required-only). Every area is required on the .NET server, the only server since #523.",
   "areas": [
     {
       "name": "auth",
       "description": "Sign-in, sessions, CSRF, bootstrap, cookies, CORS and HTTP hardening.",
       "port_issue": 517,
-      "required": ["python"]
+      "required": ["dotnet"]
     },
     {
       "name": "system",
       "description": "Suite settings, logs, configuration bundle and backups, pause, health and readiness, metrics, notifications, directory browsing.",
       "port_issue": 518,
-      "required": ["python"]
+      "required": ["dotnet"]
     },
     {
       "name": "activity",
       "description": "Activity feed, stream, export and file history.",
       "port_issue": 519,
-      "required": ["python"]
+      "required": ["dotnet"]
     },
     {
       "name": "media_managers",
       "description": "Media manager connections and capabilities, the intake webhook, and hand-off status.",
       "port_issue": 520,
-      "required": ["python"]
+      "required": ["dotnet"]
     },
     {
       "name": "jobs",
       "description": "Job inspection, manual enqueue, reconciliation and worker behaviour visible over HTTP.",
       "port_issue": 521,
-      "required": ["python"]
+      "required": ["dotnet"]
     },
     {
       "name": "refiner",
       "description": "Refiner libraries, rule sets, files, operator and runtime settings, overview stats, direct play, hardware and maintenance APIs.",
       "port_issue": 522,
-      "required": ["python"]
+      "required": ["dotnet"]
     },
     {
       "name": "processing",
       "description": "Black-box processing scenarios with fake media managers and fake ffmpeg: hand-off, retry, pass-through, reject, crash recovery, pause and schedule.",
       "port_issue": 522,
-      "required": ["python"]
+      "required": ["dotnet"]
     }
   ]
 }

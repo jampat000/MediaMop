@@ -20,6 +20,9 @@ Some ADR numbers are intentionally absent — those were reserved for drafts or 
 | [ADR-0008](adr-0008) | WeirSettings aggregate for runtime configuration |
 | [ADR-0009](adr-0009) | Suite-wide timing isolation (durable work) |
 | [ADR-0012](adr-0012) | Refiner preflight parity boundary |
+| [ADR-0017](https://github.com/jampat000/Weir/blob/main/docs/adr/ADR-0017-backend-on-dotnet.md) | Weir's backend moves to C# on .NET 10 |
+
+ADR-0001 and ADR-0002 describe the original Python backend. ADR-0017 replaced it with the .NET server in `apps/server`; each of those pages notes what changed.
 
 ## When to add an ADR
 

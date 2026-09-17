@@ -7,13 +7,13 @@ Weir 1.x is designed for a simple, explicit runtime:
 - one SQLite database writer topology
 - same-origin web app and API by default
 
-Horizontal scaling, multiple app processes, and multiple uvicorn workers are not supported unless a future release moves job coordination and rate limiting to shared external storage.
+Horizontal scaling and multiple Weir server processes are not supported unless a future release moves job coordination and rate limiting to shared external storage.
 
 ## Workers
 
 Module worker settings such as the Refiner worker count control in-process job slots inside the single application process. They do not make Weir multi-node safe.
 
-Docker and Windows packaged runtimes start one uvicorn process. Do not add `--workers` to the Docker command or run multiple Weir containers against the same SQLite database.
+Docker and Windows packaged runtimes start one .NET server process. Do not start a second server process or run multiple Weir containers against the same SQLite database.
 
 ## Rate limiting
 

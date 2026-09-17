@@ -5,14 +5,16 @@ title: API Reference
 
 # API Reference
 
-Weir exposes a REST API via FastAPI. The API is served at `/api/v1` under the same origin as the web UI.
+Weir exposes a REST API from its .NET server. The API is served at `/api/v1` under the same origin as the web UI.
 
 ## OpenAPI specification
 
-The full OpenAPI schema is auto-generated from the FastAPI backend and available at:
+The OpenAPI document is a hand-maintained contract committed to the repository. The server embeds it and serves the operations it implements:
 
-- **Development**: `http://localhost:8788/docs` (Swagger UI) or `http://localhost:8788/redoc` (ReDoc)
+- **Running server**: `http://localhost:8788/openapi.json`
 - **Source**: [`apps/web/openapi/weir-openapi.json`](https://github.com/jampat000/Weir/blob/main/apps/web/openapi/weir-openapi.json)
+
+When you change an endpoint's request or response shape, update this file in the same change.
 
 ## Authentication
 
@@ -52,11 +54,11 @@ Weir uses cookie-based sessions with CSRF protection:
 
 ## TypeScript types
 
-The frontend generates TypeScript types from the OpenAPI schema:
+The frontend generates TypeScript types from the committed OpenAPI document:
 
 ```bash
 cd apps/web
-npm run api:types:sync
+npm run api:types:generate
 ```
 
-This produces typed API clients in `apps/web/src/lib/api/generated/openapi-types.ts`.
+This produces typed API clients in `apps/web/src/lib/api/generated/openapi-types.ts`. CI runs `npm run api:types:check` to make sure the generated types match the document.

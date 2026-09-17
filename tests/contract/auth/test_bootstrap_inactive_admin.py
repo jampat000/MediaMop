@@ -1,4 +1,4 @@
-"""HTTP-observable parts of apps/backend/tests/test_bootstrap_inactive_admin.py.
+"""HTTP-observable parts of the retired Python backend's tests/test_bootstrap_inactive_admin.py.
 
 A deactivated sole admin must not brick the install (#456): sign-in rejects it, so bootstrap reopens.
 """

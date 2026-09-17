@@ -23,13 +23,12 @@
   </PropertyGroup>
 
   <!--
-    One version for the whole product. Until the Python backend is retired (#523) its
-    pyproject.toml stays the single source: packaging and the release workflow already read it.
+    One version for the whole product. The server, the Windows package (packaging/windows/build-velopack.ps1),
+    the Docker image and the release workflow all read WeirVersion from this line; apps/web/package.json
+    carries the same number, and the release workflow refuses a tag that does not match both.
   -->
   <PropertyGroup>
-    <WeirPyprojectPath>$(MSBuildThisFileDirectory)../backend/pyproject.toml</WeirPyprojectPath>
-    <WeirVersion Condition="Exists('$(WeirPyprojectPath)')">$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText('$(WeirPyprojectPath)')), '(?m)^version\s*=\s*"([^"]+)"').Groups[1].Value)</WeirVersion>
-    <WeirVersion Condition="'$(WeirVersion)' == ''">0.0.0</WeirVersion>
+    <WeirVersion>2.6.6</WeirVersion>
     <Version>$(WeirVersion)</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>

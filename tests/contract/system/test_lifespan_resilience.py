@@ -1,4 +1,4 @@
-"""Port of apps/backend/tests/test_lifespan_resilience.py."""
+"""Port of the retired Python backend's tests/test_lifespan_resilience.py."""
 
 from __future__ import annotations
 

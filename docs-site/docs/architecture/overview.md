@@ -14,12 +14,13 @@ holding right now and anything that needs a person.
 
 ```mermaid
 flowchart LR
-  UI["Frontend (React/Vite)"] --> API["FastAPI API Layer"]
-  API --> Core["Core + Platform Services"]
-  Core --> Refiner["Refiner (the application)"]
-  Core --> Activity["Activity"]
-  Core --> Integrations["External Integrations (Arr, OpenSubtitles, etc.)"]
-  Core --> DB["SQLite (Alembic managed)"]
+  UI["Frontend (React/Vite)"] --> API["Weir.Api (ASP.NET Core endpoints)"]
+  API --> Core["Weir.Core (records + rules)"]
+  API --> Infra["Weir.Infrastructure (SQLite, filesystem, ffmpeg, jobs)"]
+  Infra --> Refiner["Refiner (the application)"]
+  Infra --> Activity["Activity"]
+  Infra --> Integrations["External Integrations (Arr, OpenSubtitles, etc.)"]
+  Infra --> DB["SQLite (numbered SQL migrations)"]
   Refiner --> Jobs["Durable jobs (refiner_jobs) + workers"]
 ```
 
@@ -27,22 +28,27 @@ flowchart LR
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Python / FastAPI / SQLite / Alembic |
+| Backend | C# / .NET 10, ASP.NET Core minimal APIs, SQLite via Microsoft.Data.Sqlite with numbered SQL migrations |
 | Frontend | React 19 / Vite / TailwindCSS / TanStack Query |
-| Tray app | Python / pystray |
-| Installer | Inno Setup 6 + PyInstaller |
-| Packaging | Docker + Windows installer |
+| Tray app | C# / .NET 9 WinForms tray |
+| Installer | Velopack |
+| Packaging | Docker (linux/amd64 + linux/arm64) + Windows installer |
 
-## Backend map
+## Server map
 
-| Package | Responsibility |
+The server lives in `apps/server` (solution `Weir.slnx`).
+
+| Project | Responsibility |
 |---------|---------------|
-| `weir.api` | FastAPI app factory, router composition, request dependencies |
-| `weir.core` | Config, runtime paths, database setup, lifespan, logging |
-| `weir.platform` | Shared services: auth, activity, jobs, settings, observability |
-| `weir.refiner` | The application: libraries, files, durable jobs and workers, remux passes |
-| `weir.integrations` | External service integration code |
-| `weir.windows` | Windows tray and package-specific helpers |
+| `src/Weir.Host` | The process itself: startup, configuration from `WEIR_*` variables, builds `Weir` / `Weir.exe` |
+| `src/Weir.Api` | HTTP endpoints under `/api/v1`, request and response behaviour, OpenAPI document, serving the web app |
+| `src/Weir.Infrastructure` | SQLite access with explicit SQL, numbered SQL migrations in `Migrations/`, filesystem work, the ffmpeg process runner, durable jobs and workers |
+| `src/Weir.Core` | Records and rules only — no disk, network or database access |
+| `tests/` | xUnit tests for each project |
+
+The database schema is unchanged from the earlier Python backend. The server still records its
+schema revision in the `alembic_version` table so it can open databases that backend created,
+but the .NET migrations are now the only source of schema changes.
 
 ## Frontend map
 
@@ -64,6 +70,9 @@ flowchart LR
   Result --> Metrics["Runtime metrics / Prometheus"]
 ```
 
+New files are picked up by the periodic watched-folder scan. The filesystem watcher that reacted
+to new files immediately has not been ported to the .NET server yet.
+
 ## Deployment model
 
 Weir 1.x supports a single-instance deployment:
@@ -78,7 +87,7 @@ Horizontal scaling is not supported. Worker counts control in-process job slots 
 ## Boundary rules
 
 - Refiner code keeps destructive behavior behind explicit services and tests
-- Backend APIs expose typed schemas at boundaries
+- Server APIs expose typed contracts at boundaries, described in the committed OpenAPI document
 - Frontend pages use typed API/query helpers from `src/lib`
-- Cross-cutting concerns belong in `weir.platform` or `weir.core`
+- Rules with no side effects belong in `Weir.Core`; anything that touches disk, database or processes belongs in `Weir.Infrastructure`
 - File lifecycle changes must preserve the [safety contract](../guides/file-lifecycle)

@@ -7,7 +7,8 @@ namespace Weir.Core.LibraryMode;
 /// Library mode's job kinds (#505) and where they sort against the download pipeline's jobs.
 /// </summary>
 /// <remarks>
-/// ADR-0017 keeps the SQLite schema frozen until the switch-over (#523): none of #505's state lives in a new table or column.
+/// Built while ADR-0017 froze the SQLite schema, so none of #505's state lives in a new table or column; it is stored on job
+/// rows and can move to proper tables in a later migration now that the freeze has ended (#523).
 /// <see cref="SettingsKind"/> and <see cref="ScanKind"/> are <c>refiner_jobs</c> rows used as a durable JSON store, the same trick
 /// <c>RefinerJobSwapJournal</c> (#506) already uses for the swap journal — see <c>apps/server/README.md</c>, "Library mode" for
 /// the full storage decision.

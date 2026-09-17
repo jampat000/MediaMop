@@ -1,15 +1,15 @@
 # Local stabilization verification from repo root.
 #
 # Phases (fail fast, concrete messages):
-#   1) Static/unit — pytest subset; no running API.
-#   2) Config presence — apps/backend/.env file hint + required env vars after dotenv load (values never printed).
-#   3) Live database — SQLite path + Alembic head via scripts/verify_local_db.py (WEIR_HOME / WEIR_DB_PATH).
-#   4) Live API — GET /health and GET /api/v1/auth/bootstrap/status (needs dev-backend.ps1 running).
-#   5) Static repo check only — vite.config.ts mentions API port and /api (NOT proof Vite is running or proxying).
+#   1) Build — the .NET server builds with warnings as errors; no running API.
+#   2) Config presence — repository .env hint + required env vars after .env load (values never printed).
+#   3) Live API — GET /health, GET /ready and GET /api/v1/auth/bootstrap/status (needs dev-backend.ps1 running).
+#   4) Static repo check only — vite.config.ts mentions API port and /api (NOT proof Vite is running or proxying).
 #
+# The server creates or migrates its own database on start, so a reachable /ready is the database check.
 # See docs/local-development.md.
 param(
-    [switch] $SkipBackendTests,
+    [switch] $SkipServerBuild,
     [switch] $SkipLiveChecks
 )
 
@@ -17,7 +17,7 @@ $ErrorActionPreference = "Stop"
 . "$PSScriptRoot\weir-env.ps1"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$backend = Join-Path $repoRoot "apps\backend"
+$serverSolution = Join-Path $repoRoot "apps\server\Weir.slnx"
 $portsPath = Join-Path $PSScriptRoot "dev-ports.json"
 $viteConfig = Join-Path $repoRoot "apps\web\vite.config.ts"
 
@@ -26,30 +26,15 @@ function Write-Section($title) {
     Write-Host "== $title ==" -ForegroundColor Cyan
 }
 
-if (-not (Test-Path $backend)) {
-    Write-Error "Expected apps/backend under $repoRoot"
+if (-not (Test-Path $serverSolution)) {
+    Write-Error "Expected apps/server/Weir.slnx under $repoRoot"
 }
 
-# --- Phase 1: static/unit tests (no DB, no API) ---
-if (-not $SkipBackendTests) {
-    Write-Section "Phase 1: static/unit tests (no live API)"
-    Push-Location $backend
-    $env:PYTHONPATH = "src"
-    try {
-        & py -3 -m pytest `
-            tests/test_health.py `
-            tests/test_sqlite_foundation.py `
-            tests/test_bootstrap_status_db_unit.py `
-            tests/test_bootstrap_status_router.py `
-            tests/test_db_dep.py `
-            tests/test_config_env_parsing.py `
-            tests/test_password_invalid_hash.py `
-            tests/test_csrf_unit.py `
-            -q --tb=short
-        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    } finally {
-        Pop-Location
-    }
+# --- Phase 1: build (no DB, no API) ---
+if (-not $SkipServerBuild) {
+    Write-Section "Phase 1: .NET server build (warnings are errors)"
+    & dotnet build $serverSolution -warnaserror --nologo --verbosity quiet
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
 if ($SkipLiveChecks) {
@@ -59,14 +44,14 @@ if ($SkipLiveChecks) {
 }
 
 Write-Section "Phase 2: config presence (.env file + required variables)"
-$envFile = Join-Path $backend ".env"
+$envFile = Join-Path $repoRoot ".env"
 if (Test-Path -LiteralPath $envFile) {
-    Write-Host "OK: apps/backend/.env exists (values not shown)." -ForegroundColor Green
+    Write-Host "OK: .env exists at the repository root (values not shown)." -ForegroundColor Green
 } else {
-    Write-Host "MISSING: apps/backend/.env — copy apps/backend/.env.example or set WEIR_* in this shell." -ForegroundColor Yellow
+    Write-Host "MISSING: .env at the repository root — copy .env.example or set WEIR_* in this shell." -ForegroundColor Yellow
 }
 
-Import-WeirBackendDotEnv -BackendDir $backend
+Import-WeirDotEnv -RepoRoot $repoRoot
 
 $sessionSecret = if ($env:WEIR_SESSION_SECRET -and $env:WEIR_SESSION_SECRET.Trim()) {
     $env:WEIR_SESSION_SECRET.Trim()
@@ -80,26 +65,7 @@ Write-Host "OK: WEIR_SESSION_SECRET is set (value not shown)." -ForegroundColor 
 if ($env:WEIR_HOME -and $env:WEIR_HOME.Trim()) {
     Write-Host "OK: WEIR_HOME is set (value not shown)." -ForegroundColor Green
 } else {
-    Write-Host "Note: WEIR_HOME unset — default OS data directory will be used for SQLite (see apps/backend/.env.example)." -ForegroundColor DarkGray
-}
-
-$venvPython = Join-Path $backend '.venv\Scripts\python.exe'
-if (Test-Path $venvPython) {
-    $pyExe = $venvPython
-} else {
-    $py = Get-Command python -ErrorAction SilentlyContinue
-    if (-not $py) { $py = Get-Command py -ErrorAction SilentlyContinue }
-    if (-not $py) {
-        Write-Error 'Python not on PATH. From apps/backend: py -3 -m venv .venv; python -m pip install --require-hashes -r requirements-runtime.lock; python -m pip install --no-deps --no-build-isolation -e .'
-    }
-    $pyExe = $py.Source
-}
-
-Write-Section "Phase 3: live database + Alembic head"
-& $pyExe (Join-Path $PSScriptRoot "verify_local_db.py")
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "FAIL: database / migration check (exit $($LASTEXITCODE))." -ForegroundColor Red
-    exit $LASTEXITCODE
+    Write-Host "Note: WEIR_HOME unset — scripts/dev-backend.ps1 uses .local-dev-home in the repository." -ForegroundColor DarkGray
 }
 
 if (-not (Test-Path $portsPath)) {
@@ -112,7 +78,7 @@ $webPort = [int]$ports.development.webPort
 $healthUrl = "http://${apiHost}:${apiPort}/health"
 $bootstrapUrl = "http://${apiHost}:${apiPort}/api/v1/auth/bootstrap/status"
 
-Write-Section "Phase 4: live API (health + bootstrap status)"
+Write-Section "Phase 3: live API (health, ready and bootstrap status)"
 try {
     $health = Invoke-WebRequest -Uri $healthUrl -UseBasicParsing -TimeoutSec 8
     if ($health.StatusCode -ne 200) {
@@ -120,6 +86,12 @@ try {
         exit 30
     }
     Write-Host "OK: GET /health returned 200 (liveness; does not imply /api/v1 is ready)." -ForegroundColor Green
+    $ready = Invoke-RestMethod -Uri "http://${apiHost}:${apiPort}/ready" -TimeoutSec 8
+    if ($ready.ready -ne $true) {
+        Write-Host "FAIL: GET /ready did not report ready (database or startup not finished; see the server log)." -ForegroundColor Red
+        exit 34
+    }
+    Write-Host "OK: GET /ready reports ready (database opened at the current schema)." -ForegroundColor Green
 } catch {
     Write-Host "FAIL: cannot reach API at $healthUrl — start .\scripts\dev-backend.ps1 (see docs/local-development.md)." -ForegroundColor Red
     Write-Host "  $($_.Exception.Message)" -ForegroundColor DarkGray
@@ -158,7 +130,7 @@ if ($code -ne 200 -and $code -ne 503) {
     Write-Host "OK: GET bootstrap/status returned $code (readiness under /api/v1; 503 is expected when DB/schema unset)." -ForegroundColor Green
 }
 
-Write-Section "Phase 5: static check — Vite proxy config in repo (not a live proxy test)"
+Write-Section "Phase 4: static check — Vite proxy config in repo (not a live proxy test)"
 if (-not (Test-Path $viteConfig)) {
     Write-Host "FAIL: missing $viteConfig" -ForegroundColor Red
     exit 40

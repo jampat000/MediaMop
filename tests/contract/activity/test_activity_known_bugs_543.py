@@ -1,9 +1,7 @@
-"""Correct-behaviour proof for #543 items 1-3, fixed in the .NET server only (ADR-0017: Python is retiring).
+"""Correct-behaviour proof for #543 items 1-3, fixed when the backend moved to .NET.
 
-Each test asserts what ``/api/v1/activity/recent`` should do; Python still has the underlying bug
-(the README section of ``apps/server`` documents the fix), so these are marked ``known_bug`` for
-``backends=("python",)`` — dotnet must pass them now, and the marker comes off once (if ever)
-Python is fixed too.
+Each test asserts what ``/api/v1/activity/recent`` should do (the Activity section of
+``apps/server/README.md`` documents the fix).
 
 Two things every test here works around:
 
@@ -29,7 +27,6 @@ from tests.contract.support.client import API, WeirClient
 from tests.contract.support.launcher import ServerUnderTest
 
 
-@pytest.mark.known_bug(issue=543, backends=("python",))
 def test_recent_total_and_has_more_count_every_matching_row_with_no_filter(
     server: ServerUnderTest, client_factory: Callable[..., WeirClient]
 ) -> None:
@@ -67,7 +64,6 @@ def _offset_text(instant: datetime, offset: timedelta) -> str:
     return f"{local:%Y-%m-%dT%H:%M:%S}{sign}{hours:02d}:{minutes:02d}"
 
 
-@pytest.mark.known_bug(issue=543, backends=("python",))
 def test_recent_date_filters_normalize_stored_timestamps_and_honor_offsets(
     server: ServerUnderTest, client_factory: Callable[..., WeirClient]
 ) -> None:
@@ -102,7 +98,6 @@ def test_recent_date_filters_normalize_stored_timestamps_and_honor_offsets(
     assert body["items"] == []
 
 
-@pytest.mark.known_bug(issue=543, backends=("python",))
 def test_recent_paging_by_before_id_never_skips_or_repeats_a_tied_or_out_of_order_row(
     server: ServerUnderTest, client_factory: Callable[..., WeirClient]
 ) -> None:

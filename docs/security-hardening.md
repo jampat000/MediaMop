@@ -31,11 +31,11 @@ This checklist defines the current practical hardening baseline for Weir.
 
 - `main` is protected by GitHub rules.
 - Required checks are `weir`, `docker-smoke`, and `windows-package-smoke`.
-- Dependabot is enabled for Python and GitHub Actions dependencies.
-- CodeQL code scanning runs on `main`, pull requests to `main`, weekly schedule, and manual dispatch.
+- Dependabot is enabled for NuGet (`apps/server`, `apps/tray`), npm, GitHub Actions, and the Python test-runner packages in `tests/requirements.txt`.
+- CodeQL code scanning (C# and JavaScript/TypeScript) runs on `main`, pull requests to `main`, weekly schedule, and manual dispatch.
 - Security vulnerabilities are reported privately through `SECURITY.md`.
 - Public issues are not used for unpatched vulnerabilities.
-- CI runs `bandit`, `pip-audit`, and `npm audit` in addition to CodeQL and standard test gates.
+- CI runs a NuGet vulnerability scan (`node scripts/check-dotnet-vulnerabilities.mjs apps/server/Weir.slnx`, failing on High or Critical) and `npm audit` in addition to CodeQL and standard test gates.
 
 ## Release controls
 

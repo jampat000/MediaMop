@@ -1,6 +1,8 @@
 # Weir server (.NET)
 
-The C# / .NET 10 backend that replaces the Python backend in `apps/backend`, area by area, without changing the HTTP API, the web app or the SQLite schema. Why and how: [ADR-0017](../../docs/adr/ADR-0017-backend-on-dotnet.md). Until the switch (#523), `apps/backend` is the reference and the shipped server.
+Weir's server: C# on .NET 10. It was ported from the Python backend area by area without changing the HTTP API, the web app or the SQLite schema, proven by the contract suite (`tests/contract`), and replaced it in #523, which deleted the Python backend. It is what the Docker image and the Windows package run. Why and how: [ADR-0017](../../docs/adr/ADR-0017-backend-on-dotnet.md).
+
+Many comments and tests below still name the Python module or function a piece of code was ported from (`refiner_remux_rules.py`, `get_activity_recent`, ...). Those names are provenance: the Python code is in git history before #523, not in the tree.
 
 | Project | Holds |
 | --- | --- |
@@ -21,7 +23,7 @@ dotnet test apps/server/Weir.slnx
 
 ## Run
 
-It reads the same `WEIR_*` environment variables as the Python backend, with the same defaults (see `apps/backend/.env.example`). It does not read `apps/backend/.env`.
+It reads `WEIR_*` environment variables (documented in the repository's `.env.example`) and nothing else; it does not read a `.env` file itself (`scripts/dev-backend.ps1` loads one for it).
 
 ```powershell
 $env:WEIR_HOME = "$env:TEMP\weir-dotnet"          # optional; defaults to %PROGRAMDATA%\Weir
@@ -31,29 +33,23 @@ dotnet run --project apps/server/src/Weir.Host -- --host 127.0.0.1 --port 8788
 
 `--port` (what the Windows tray passes) wins over `PORT` (what the Docker entrypoint sets); both default to 8788 on every interface.
 
-On startup the server creates an empty database at the current schema, opens a database already at Alembic head `0036_drop_pruner_tables` without changing it, and refuses anything else with a message. It records its version in Alembic's own `alembic_version` table, so either backend can open a database the other created.
+On startup the server creates an empty database at the current schema, opens a database already at the schema head `0036_drop_pruner_tables` without changing it, and refuses anything else with a message. It records its revision in the `alembic_version` table, the table the retired Python backend's Alembic migrations used, so every database a released Weir created still opens.
 
-## Schema parity
+## Schema
 
-`tests/Weir.Infrastructure.Tests/schema/alembic-head.sql` is the schema and seed rows that `alembic upgrade head` creates. The parity test builds a database from it and one from the .NET migrations and compares tables, columns, types, defaults, keys, indexes, foreign keys, SQL text and rows. After an Alembic change, regenerate it with the backend's virtualenv:
+**The .NET migrations in `src/Weir.Infrastructure/Migrations/` are the only source of the schema.** ADR-0017 froze the SQLite schema while both backends existed; that freeze ended with #523. The next schema change is a new numbered migration here (with its revision recorded in `alembic_version`, and `SchemaMigrator` taught to upgrade a database at the previous head), and it may diverge from the old Alembic head. There is no Alembic, and nothing regenerates a schema from Python.
 
-```powershell
-apps/backend/.venv/Scripts/python.exe scripts/dump-alembic-schema.py          # write
-apps/backend/.venv/Scripts/python.exe scripts/dump-alembic-schema.py --check  # CI runs this
-```
+`tests/Weir.Infrastructure.Tests/schema/alembic-head.sql` is the schema and seed rows the Python backend's last `alembic upgrade head` created, dumped before it was deleted. It is a frozen reference: `SchemaParityTests` builds a database from it and one from the .NET baseline migration and compares tables, columns, types, defaults, keys, indexes, foreign keys, SQL text and rows, which proves a database created by a released Python Weir is exactly what the baseline expects. When a later migration changes the schema, keep that comparison pointed at the baseline (it stays true) and test the new migration on its own; do not edit the reference file.
 
 ## Rules parity
 
-`Weir.Core.Rules` is a port of Refiner's rules engine (`refiner_remux_rules.py`, `refiner_track_sorters.py`, `refiner_metadata_rules.py`, the pure parts of `refiner_original_language.py` and the display helpers). `tests/Weir.Core.Tests/Rules/golden/*.json` hold ffprobe-style inputs with the plan, notes and display lines the Python engine produced for them; `GoldenParityTests` requires the same answers. After a change to those Python modules, regenerate them with the backend's virtualenv:
+`Weir.Core.Rules` is a port of Refiner's rules engine (`refiner_remux_rules.py`, `refiner_track_sorters.py`, `refiner_metadata_rules.py`, the pure parts of `refiner_original_language.py` and the display helpers). `tests/Weir.Core.Tests/Rules/golden/*.json` hold ffprobe-style inputs with the plan, notes and display lines the Python engine produced for them; `GoldenParityTests` requires the same answers.
 
-```powershell
-apps/backend/.venv/Scripts/python.exe scripts/generate-rules-golden.py          # write
-apps/backend/.venv/Scripts/python.exe scripts/generate-rules-golden.py --check  # compare only
-```
+**The golden files are .NET test fixtures now.** The Python generators (`scripts/generate-rules-golden.py`, `scripts/generate-ffmpeg-golden.py`) were deleted with the Python backend in #523, so nothing regenerates these files. A deliberate behaviour change updates the expected output by hand in the same change: an override file (below) for an existing case, or a new case file for new behaviour, with the issue number that justifies it.
 
 ### Golden overrides (deliberate divergence from Python)
 
-Issue #537 fixed defects in the rules engine that the golden corpus had pinned as "today's behaviour" (its items 1, 2, 3, 5 and 6 — see the issue for each one). `apps/backend` is being retired (ADR-0017) and is not touched to "fix" these in Python, so regenerating the golden files from Python would just re-record the same bugs. Instead, a case whose correct answer now differs from Python's recorded one gets a same-named file in `tests/Weir.Core.Tests/Rules/golden/overrides/`, holding the issue number, which item(s) of it, and the new expected output, e.g.:
+Issue #537 fixed defects in the rules engine that the golden corpus had pinned as "today's behaviour" (its items 1, 2, 3, 5 and 6 — see the issue for each one). Rather than rewrite the recorded Python answers, a case whose correct answer now differs from Python's recorded one gets a same-named file in `tests/Weir.Core.Tests/Rules/golden/overrides/`, holding the issue number, which item(s) of it, and the new expected output, e.g.:
 
 ```json
 {
@@ -76,14 +72,9 @@ Issue #497 put a new `content_tier` key first in `TrackSorters.DefaultAudioSorte
 
 ## ffmpeg parity
 
-`Weir.Core.Media` ports the decisions in `refiner_remux_mux.py` and `refiner_hardware_acceleration.py`: ffprobe and ffmpeg command lines (token for token), unreadable-media classification, output and duration validation, progress parsing and hardware choice. `Weir.Infrastructure.Media.MediaTools` runs the tools through `IProcessRunner` (`ProcessRunner` kills the whole process tree on timeout or cancellation). `tests/Weir.Core.Tests/Media/golden/*.json` record what the Python functions did with their processes replaced by recorded inputs, including log payloads and exception messages; `MediaGoldenParityTests` and `MediaToolsGoldenTests` require the same. Regenerate after a change to those Python modules:
+`Weir.Core.Media` ports the decisions in `refiner_remux_mux.py` and `refiner_hardware_acceleration.py`: ffprobe and ffmpeg command lines (token for token), unreadable-media classification, output and duration validation, progress parsing and hardware choice. `Weir.Infrastructure.Media.MediaTools` runs the tools through `IProcessRunner` (`ProcessRunner` kills the whole process tree on timeout or cancellation). `tests/Weir.Core.Tests/Media/golden/*.json` record what the Python functions did with their processes replaced by recorded inputs, including log payloads and exception messages; `MediaGoldenParityTests` and `MediaToolsGoldenTests` require the same. Like the rules corpus, these are maintained as .NET fixtures now (see "Rules parity").
 
-```powershell
-apps/backend/.venv/Scripts/python.exe scripts/generate-ffmpeg-golden.py          # write
-apps/backend/.venv/Scripts/python.exe scripts/generate-ffmpeg-golden.py --check  # compare only
-```
-
-`RealFfmpegTests` run real ffprobe and ffmpeg on files generated with `-f lavfi`. They skip unless the tools are found through `WEIR_FFMPEG_DIR` or `PATH`; on Windows, point `WEIR_FFMPEG_DIR` at a packaged build's `_internal/bin/ffmpeg`.
+`RealFfmpegTests` run real ffprobe and ffmpeg on files generated with `-f lavfi`. They skip unless the tools are found through `WEIR_FFMPEG_DIR` or `PATH`; on Windows, point `WEIR_FFMPEG_DIR` at a packaged build's `server/bin/ffmpeg` or at `packaging/windows/vendor/ffmpeg` after a package build.
 
 ### Deliberate divergences from the golden fixtures
 
@@ -114,7 +105,7 @@ Fixed in #547 (found by the #503 trial, `docs/trials/503-mkvmerge-vs-ffmpeg.md`)
 
 ## Jobs and workers
 
-The durable queue is the Python backend's `refiner_jobs` table, used the same way: the same statuses, dedupe keys, claim statement, lease checks, retry backoff and failure wording, and the same timestamp text, so either backend can claim, finish or recover a row the other wrote (`tests/Weir.Infrastructure.Tests/Jobs/CrossBackendTests.cs` proves it against the Python code when `apps/backend/.venv` exists, or `WEIR_TEST_PYTHON` names an interpreter with the backend's dependencies; the cross-checks always import this checkout's `apps/backend/src`).
+The durable queue is the `refiner_jobs` table the Python backend used, used the same way: the same statuses, dedupe keys, claim statement, lease checks, retry backoff and failure wording, and the same timestamp text, so a row a released Python Weir left behind is claimed, finished or recovered correctly. (Cross-backend tests that ran the Python queue against the same database proved this until #523 deleted the Python backend.)
 
 - `Weir.Core/Jobs`: the rules (job kind guard, admission, schedule grid, backoff, failure wording, recovery wording, Weir's temp file names).
 - `Weir.Infrastructure/Jobs`: `RefinerJobStore` (SQLite), `RefinerJobProcessor` (one worker pass), startup recovery, history retention, periodic enqueue and the hosted services. `AddWeirJobs` registers all of it.
@@ -168,14 +159,14 @@ Fixes included:
 - **Commit:** re-fingerprint (changed → discard, "The file changed while Weir was working; nothing was replaced"); copy permissions (Windows DACL; POSIX mode bits, and owner when root; never the mtime); rename original → `<name>.weir-bak<ext>` and check the backup is still the fingerprinted file; rename temp → original name (the commit); record it; delete the backup (a failure is logged and left for the sweep).
 - **Renames** are same-folder and never replace an existing file: `MoveFileExW` with only `MOVEFILE_WRITE_THROUGH` on Windows (no replace, no copy fallback), `File.Move(overwrite: false)` elsewhere.
 - **Rollback and sweep** judge from the files alone: backup present and original missing → rename it back; backup and original present → delete the backup; temp → delete. A locked file (sharing violation, `EBUSY`) is the `InUse` outcome, requeued after 5, 15 and 60 minutes (`SafeSwapRules.InUseRetryDelay`).
-- **Persistence:** progress is recorded on the job row, not in a new table, because ADR-0017 keeps the SQLite schema fixed until the switch (#523). `RefinerJobSwapJournal` adds `library_swap` (`state`: `writing`, `committing`, `committed`, `finished`, `rolled_back`, `recovered`, plus the three paths) and `swap_committed: true` to `refiner_jobs.payload_json`, keeping every other key. The sweep visits the paths of unfinished swaps first; walking library folders is a fallback. No migration and no schema-parity change.
+- **Persistence:** progress is recorded on the job row, not in a new table, because ADR-0017 kept the SQLite schema fixed until the switch (#523). `RefinerJobSwapJournal` adds `library_swap` (`state`: `writing`, `committing`, `committed`, `finished`, `rolled_back`, `recovered`, plus the three paths) and `swap_committed: true` to `refiner_jobs.payload_json`, keeping every other key. The sweep visits the paths of unfinished swaps first; walking library folders is a fallback. No migration and no schema-parity change.
 - **Tests:** `SafeSwapTests` injects a failure, a failure after the effect, a crash and a crash after the effect at every one of the swap's 23 filesystem and journal operations and proves exactly one intact file remains (original content before the commit rename, cleaned content after), with the journal alone enough to recover every crash. `PhysicalSwapTests` run the swap and sweep on real files and a real job row, including a file held open by another handle.
 
 ### Fixed in #545
 
-Defects the .NET port kept parity with while porting the remux pass (#522 part 3); fixed here, after the switch-over, so `apps/backend` is not touched.
+Defects the .NET port kept parity with while porting the remux pass (#522 part 3), fixed afterwards in .NET only.
 
-1. **Output-folder cleanup could delete a folder before a manager imported it.** `LibraryTruthGate.EvaluateForFolder` used to clear a folder for deletion whenever every reporting manager had no *conflicting* file sitting inside it — which is exactly what a manager that has not scanned or finished importing yet (or one that imports by copy and scans later) looks like. It now also requires positive evidence the release was picked up: a manager's own reported library names this exact output path anywhere (not only inside the folder), or the same title (file-name stem) at a different path, which is how a manager that renames or reorganises on import records it — or the hand-off ledger already recorded this pass's outcome as `completed`/`passed-through` (`IPostSuccessCleanupData.HandoffOutcomeAcknowledgedAsync`). Absent either, the folder is left in place regardless of age. The existing movie/TV output-cleanup minimum-age settings (`WEIR_REFINER_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS` / `..._TV_...`, floored at one hour) double as the manager's import window: nothing is ever removed before that age, confirmed or not. `tests/contract/processing/test_output_folder_cleanup.py` proves it end to end with a fake Radarr that reports an empty library (`known_bug(issue=545, backends=("python",))`, since the Python reference still has this bug) and a companion test proving the folder is removed once the manager confirms the import.
+1. **Output-folder cleanup could delete a folder before a manager imported it.** `LibraryTruthGate.EvaluateForFolder` used to clear a folder for deletion whenever every reporting manager had no *conflicting* file sitting inside it — which is exactly what a manager that has not scanned or finished importing yet (or one that imports by copy and scans later) looks like. It now also requires positive evidence the release was picked up: a manager's own reported library names this exact output path anywhere (not only inside the folder), or the same title (file-name stem) at a different path, which is how a manager that renames or reorganises on import records it — or the hand-off ledger already recorded this pass's outcome as `completed`/`passed-through` (`IPostSuccessCleanupData.HandoffOutcomeAcknowledgedAsync`). Absent either, the folder is left in place regardless of age. The existing movie/TV output-cleanup minimum-age settings (`WEIR_REFINER_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS` / `..._TV_...`, floored at one hour) double as the manager's import window: nothing is ever removed before that age, confirmed or not. `tests/contract/processing/test_output_folder_cleanup.py` proves it end to end with a fake Radarr that reports an empty library and a companion test proving the folder is removed once the manager confirms the import.
 2. **Pass-through and reject jobs deduped forever.** Their dedupe key was `{kind}:{library}:{path}` alone, so once one finished, a later failure of a replaced file (e.g. a re-download with the same name) never queued another. `QueueingFailurePolicy.FingerprintTag` (built on `SourceFiles.DedupeFingerprintTag`: size and modification time) is now folded into the key, so a changed file gets a fresh key while a repeat enqueue for the same, unchanged file still dedupes against the row already there. `HandoffLedgerStore.JobsForAsync` matches the base key as an exact match or a prefix, so the ledger keeps finding these jobs regardless of the fingerprint suffix.
 3. **An undelivered pass-through or reject reported nothing.** Once such a job exhausted its own retries it dropped out of `JobsForAsync`'s pending/leased filter and vanished from the hand-off status API. `JobsForAsync` now also returns a `failed`-status row for these two job kinds, and `HandoffLedgerStore.CurrentStatusAsync` reports a pending one as `scheduled` (never `queued` — that field means the remux queue, not a decided disposition about to run) or `working` while leased, and a permanently failed one as `failed` with the job's own `last_error` as the reason.
 4. **Stored subtitle mode wasn't normalized on both rule-config paths.** `RemuxPassPaths.RulesConfigFor` (the live pass) used to pass the stored mode through unchanged, while `RuleSetConversion.ToRulesConfig` (the rule-less fallback) normalized it. Both now call `RuleSetConversion.NormalizeSubtitleMode`.
@@ -184,14 +175,13 @@ Defects the .NET port kept parity with while porting the remux pass (#522 part 3
 ### Manual track plans (choosing tracks by hand, issue #501)
 
 `GET /api/v1/refiner/files/{id}/tracks` and `POST /api/v1/refiner/files/{id}/manual-plan` let an
-operator finish a held file by hand instead of changing a library's rules. This is a C#-only
-feature: ADR-0017 freezes the SQLite schema until the backend switch-over (#523), and `apps/backend`
-is retiring, so nothing here is ported from or mirrored back to Python.
+operator finish a held file by hand instead of changing a library's rules. It was built in
+C# only, while ADR-0017 still froze the SQLite schema, so it adds no migration.
 
 - **No migration, no new column.** The chosen plan is never persisted as file state; it lives only
   in the enqueued job's `payload_json`, alongside the source fingerprint taken at submission time
-  (`manual_plan` and `source_fingerprint`, see `ManualPlanJson`). This is why: the schema is frozen,
-  a manual plan is a one-off instruction for exactly one queued pass rather than a durable setting,
+  (`manual_plan` and `source_fingerprint`, see `ManualPlanJson`). This is why: the schema was frozen
+  when it was built (it no longer is, since #523, but nothing here needs a table), a manual plan is a one-off instruction for exactly one queued pass rather than a durable setting,
   and the job row already is the mechanism Weir uses to carry a one-time instruction to a worker
   (compare `pass_through_unchanged` and `origin` on the same payload). If the pass fails, the
   operator chooses again from a fresh probe rather than a stale plan being retried blind.
@@ -221,9 +211,6 @@ is retiring, so nothing here is ported from or mirrored back to Python.
   issue names is muxarr's `CustomConversionEditor`/`ConversionPlan`, where a custom plan is
   authoritative and the automatic mutations do not apply; the owner cleared following that
   precedent. Normal output validation, collision handling and cleanup run unchanged afterward.
-- The activity classifier's Python-parity test (`ActivityClassifierTests`) has one deliberate
-  exemption (`CSharpOnlyEventTypes`) for `RefinerFileManualPlanQueued`, the only activity event type
-  with no Python constant, for the reason above.
 
 ## Library mode (#505)
 
@@ -231,14 +218,14 @@ is retiring, so nothing here is ported from or mirrored back to Python.
 
 ### Storage decision
 
-ADR-0017 keeps the SQLite schema frozen until the switch-over (#523): no migration, no new table or column. Everything lives on `refiner_jobs` rows, the same trick `RefinerJobSwapJournal` (#506) already uses for state that does not fit the frozen schema:
+Library mode was built while ADR-0017 froze the SQLite schema, so its state is stored on `refiner_jobs` rows rather than new tables, the same approach `RefinerJobSwapJournal` (#506) uses. The freeze ended with #523; this state can move to proper tables in a later migration.
 
 - **`library_folders` / `library_schedule_enabled`** (`Weir.Core.LibraryMode.LibrarySettings`): one permanent row per library, `job_kind = "refiner.library.settings.v1"`, dedupe key `…:{library_id}`, status always `completed` so no worker ever claims it. Written with a plain `INSERT … ON CONFLICT(dedupe_key) DO UPDATE` (`LibrarySettingsStore`), not `RefinerJobStore.EnqueueOrGetAsync` (which always inserts a fresh `pending` row). Excluded from the Jobs page's default "recent" listing (`JobsInspectionStore`) the same way completed watched-folder scan-dispatch rows already are, so an idle settings row never looks like a stuck job.
 - **The file index / plan cache**: not a separate cache at all — the *latest completed* `job_kind = "refiner.library.scan.v1"` row for a library **is** the cache. Each scan request is an ordinary job (a fresh dedupe key per request, `…:{library_id}:{guid}`), so it is visible in the Jobs page like any real work; its completed `payload_json`'s `scan_result` key holds every file's classification and its raw ffprobe JSON, keyed by path, size and mtime for reuse on the next scan. `LibraryScanStore` reads/writes it directly with parameterised SQL (`dedupe_key LIKE '{prefix}%'`), never SQLite's JSON1 functions, to avoid depending on a build option.
 - **Clean jobs** (`job_kind = "refiner.library.clean.v1"`, dedupe key `…:{library_id}:{sha256(path)}`) are ordinary, real jobs: one per file, claimed, run and completed exactly like a download-pipeline job.
 - Deleting a library deletes its settings and scan-history rows (`LibrarySettingsStore.DeleteAllForLibraryAsync`, called from `RefinerLibraryEndpoints.DeleteLibraryAsync`).
 
-A real table was **not** chosen: `SchemaParityTests.Migrations_create_the_alembic_head_schema_and_seed_rows` requires the .NET migrations to produce a database byte-for-byte identical (tables, columns, indexes, rows) to `alembic upgrade head`'s output, regenerated only from `apps/backend`'s own Alembic revisions. Since Python is retiring and gets no new migration, a .NET-only table has no way to stay "gated off" and still pass that test — it would just permanently fail schema parity. The `refiner_jobs`-row approach needs no migration and so cannot break it.
+A real table was **not** chosen at the time because the schema was frozen and `SchemaParityTests` required the .NET migrations to match the Alembic head exactly. Now that the .NET migrations are the only schema source, moving this state into its own tables is an ordinary migration.
 
 ### Processing flow
 
@@ -283,11 +270,20 @@ A real table was **not** chosen: `SchemaParityTests.Migrations_create_the_alembi
 
 Writers never notify listeners directly. `SqliteActivityWriter` records the ids it wrote on the unit of work or raw transaction, and `ActivityNotifications` tells the database's `ActivityLatestNotifier` after the commit (a rollback tells nobody). Code that commits its own raw transaction after `SqliteActivityWriter.Record` calls `ActivityNotifications.TransactionCommitted`, as `RefinerJobStore.InTransactionAsync` does. `RefinerFileLogRetentionTask` prunes processing records hourly by `file_log_retention_days`.
 
-## Publish
+## Publish and packaging
 
-Self-contained single-file builds for `win-x64`, `linux-x64` and `linux-arm64`:
+Self-contained single-file builds for `win-x64`, `linux-x64` and `linux-arm64`, through the checked-in profiles in `src/Weir.Host/Properties/PublishProfiles`:
 
 ```powershell
-dotnet publish apps/server/src/Weir.Host -r win-x64 -o apps/server/artifacts/publish/win-x64
+dotnet publish apps/server/src/Weir.Host -p:PublishProfile=win-x64       # apps/server/artifacts/publish/win-x64/Weir.exe
 dotnet publish apps/server/src/Weir.Host -p:PublishProfile=linux-arm64
 ```
+
+Always publish through a profile, never with `-r`/`--self-contained`/`-p:PublishSingleFile=true` on the command line: a command-line `PublishSingleFile` is a global property that reaches every project, and the single-file analyzer then fails `Weir.Infrastructure` with IL3000 on the `Assembly.Location` check that detects single-file mode on purpose (`SystemServices.DetectInstallType`, `MediaToolResolver.ForCurrentProcess`). The profiles scope those properties to `Weir.Host`.
+
+A single-file publish is .NET's equivalent of a frozen build: `MediaToolResolver` then also looks for ffmpeg and ffprobe in `<app>/bin/ffmpeg`, after `WEIR_FFMPEG_DIR` and `<WEIR_HOME>/bin/ffmpeg` and before `PATH`.
+
+The product version is `WeirVersion` in `Directory.Build.props`; the assembly version, `--version`, `/openapi.json` and the packages all take it from there.
+
+- **Docker** (`Dockerfile`, `docker/entrypoint.sh`, `compose.yaml`, [`docker/README.md`](../../docker/README.md)): the SDK stage runs on the build machine's architecture and cross-publishes `linux-x64` or `linux-arm64` (no emulation needed for the .NET build); the final stage is `mcr.microsoft.com/dotnet/runtime-deps:10.0-bookworm-slim` with ffmpeg, curl and gosu, user `weir` (UID/GID 1000), `/opt/weir/Weir`, `/opt/weir/web-dist`, the `/data/weir` volume, port 8788 and a `/health` healthcheck. The entrypoint has no migration step (the server migrates its own database) and generates the persisted session secret with coreutils. Releases publish `linux/amd64` and `linux/arm64`.
+- **Windows** (`packaging/windows/build-velopack.ps1`): builds the web app, publishes the server with the `win-x64` profile, smoke-tests the raw publish, publishes the tray app, and packs `dist/windows/pack` with Velopack (`--packId Weir --mainExe Weir.exe`): the tray at the root, the server renamed to `server/WeirServer.exe` (its assembly name `Weir` would collide with the tray's `Weir.exe`), `server/web-dist` and `server/bin/ffmpeg`. `scripts/smoke-windows-package.ps1` then starts `server/WeirServer.exe` the way the tray does, with ffmpeg removed from `PATH`, checks it finds its bundled ffmpeg and runs a real pass-through job.

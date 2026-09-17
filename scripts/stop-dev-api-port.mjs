@@ -3,7 +3,7 @@
  * Stops processes **listening** on the dev API port from ``scripts/dev-ports.json``
  * (override with ``WEIR_DEV_API_PORT``).
  *
- * Use when an old Weir ``uvicorn`` is still bound (a current route returns 404) or the
+ * Use when an old Weir API process is still bound (a current route returns 404) or the
  * port is stuck. Then run ``npm run dev`` from ``apps/web`` again.
  */
 import { execFileSync } from "node:child_process";
@@ -185,7 +185,7 @@ if (platform() === "win32") {
       console.error(`[stop-dev-api-port] Stopped ${stopped} process(es).`);
     } else {
       console.error(
-        "[stop-dev-api-port] Could not stop listener(s) — close the terminal running uvicorn, or run this from an elevated PowerShell.",
+        "[stop-dev-api-port] Could not stop listener(s) — close the terminal running the API, or run this from an elevated PowerShell.",
       );
     }
     process.exit(0);

@@ -35,9 +35,9 @@ export function ApiEntryError({ error }: { error: unknown }) {
           starts Vite (ports in{" "}
           <code className="text-[0.85em]">scripts/dev-ports.json</code>
           ). If you still see this screen, the API never became ready: read the
-          same terminal for Python errors (venv,{" "}
-          <code className="text-[0.85em]">WEIR_SESSION_SECRET</code>,
-          migrations).
+          same terminal for server errors (.NET SDK, build errors,{" "}
+          <code className="text-[0.85em]">WEIR_SESSION_SECRET</code>, the
+          database path).
         </p>
         <p className="mm-auth-lead">
           <strong>Alternative:</strong> two terminals from the repo root —{" "}
@@ -95,20 +95,9 @@ export function ApiEntryError({ error }: { error: unknown }) {
             <code className="rounded bg-[rgba(0,0,0,0.35)] px-1.5 py-0.5 text-[0.85em] text-[var(--mm-text)]">
               WEIR_SESSION_SECRET
             </code>
-            . Run{" "}
-            <code className="rounded bg-[rgba(0,0,0,0.35)] px-1.5 py-0.5 text-[0.85em] text-[var(--mm-text)]">
-              .\scripts\dev-migrate.ps1
-            </code>{" "}
-            from the repo root (or{" "}
-            <code className="rounded bg-[rgba(0,0,0,0.35)] px-1.5 py-0.5 text-[0.85em] text-[var(--mm-text)]">
-              alembic upgrade head
-            </code>{" "}
-            from <code className="text-[0.85em]">apps/backend</code> with{" "}
-            <code className="text-[0.85em]">PYTHONPATH=src</code>
-            ), then restart the backend. See{" "}
-            <code className="text-[0.85em]">
-              apps/backend/.env.example
-            </code> and{" "}
+            . The server creates or migrates its database when it starts, so
+            check its log for the reason, fix it and restart the server. See{" "}
+            <code className="text-[0.85em]">.env.example</code> and{" "}
             <code className="text-[0.85em]">docs/local-development.md</code>.
           </p>
           <p className="mm-auth-lead">

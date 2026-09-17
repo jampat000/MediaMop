@@ -1,6 +1,6 @@
 # Contributing - Weir
 
-Weir is a self-hosted media workflow app with a FastAPI + SQLite backend in `apps/backend` and a React + Vite web shell in `apps/web`.
+Weir is a self-hosted media workflow app with a C# / .NET 10 server and SQLite in `apps/server`, a React + Vite web shell in `apps/web`, and a .NET Windows tray app in `apps/tray`.
 
 ## Workflow
 
@@ -8,45 +8,55 @@ Use short-lived branches and open pull requests into `main`. Keep CI green befor
 
 ## Local checks
 
-Backend unit tests. `tests/conftest.py` sets an isolated temporary `WEIR_HOME` for the session.
+Server build and unit tests. Needs the .NET 10 SDK (pinned in `apps/server/global.json`). Warnings are errors, including the unused-code analyzers.
 
 ```powershell
-cd apps/backend
-$env:PYTHONPATH = "src"
-$env:WEIR_SESSION_SECRET = "local-dev-secret-at-least-32-characters-long"
-python -m pip install --require-hashes -r requirements.lock
-python -m pip install --no-deps --no-build-isolation -e .
-alembic upgrade head
-pytest -q
+dotnet build apps/server/Weir.slnx -warnaserror
+dotnet test apps/server/Weir.slnx
 ```
 
-`requirements.lock` is the reproducible development and packaging set. Regenerate it only when
-dependencies change, then review the resulting hashes and run the full validation suite.
+`RealFfmpegTests` skip unless ffmpeg and ffprobe are on `PATH` or `WEIR_FFMPEG_DIR` names a folder holding them. Dependency advisories: `node scripts/check-dotnet-vulnerabilities.mjs apps/server/Weir.slnx`.
 
-CI runs `alembic upgrade head` before `pytest` in `apps/backend`; include it locally if migrations are ahead of your SQLite file.
-
-Web checks from the repo root. `package-lock.json` is committed, so prefer reproducible installs.
+Web checks. `package-lock.json` is committed, so prefer reproducible installs.
 
 ```powershell
 cd apps/web
 npm ci
+npm run lint
+npm run format
+npm run api:types:check
 npm run build
 npm run test
+cd ../..
+node scripts/check-dead-code.mjs
 ```
 
-Optional E2E checks use a temporary SQLite home, Playwright Chromium, and the built web app.
+The contract suite and the E2E smoke are Python test runners that judge a running .NET server from outside. Install their locked dependencies once (Python 3.11+):
 
 ```powershell
-python -m pip install playwright
+python -m pip install --require-hashes -r tests/requirements.txt
 python -m playwright install chromium
-cd apps/web
-npm ci
-npm run build
-cd ../..
+```
+
+Contract suite (every area is required on .NET; see [`tests/contract/README.md`](tests/contract/README.md)):
+
+```powershell
+dotnet build apps/server/Weir.slnx
+cd apps/web; npm ci; npm run build; cd ../..
+python -m pytest tests/contract -q --contract-required-only
+```
+
+E2E smoke (a temporary SQLite home, Playwright Chromium, the built web app served by the .NET server):
+
+```powershell
+dotnet build apps/server/Weir.slnx
+cd apps/web; npm ci; npm run build; cd ../..
 $env:WEIR_E2E = "1"
 $env:WEIR_SESSION_SECRET = "local-dev-secret-at-least-32-characters-long"
-pytest tests/e2e/weir -q --tb=short
+python -m pytest tests/e2e/weir -q --tb=short
 ```
+
+Windows package: `powershell -ExecutionPolicy Bypass -File packaging/windows/build-velopack.ps1`, then `powershell -ExecutionPolicy Bypass -File scripts/smoke-windows-package.ps1`.
 
 See `docs/local-development.md` for env layout and CI parity.
 

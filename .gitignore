@@ -10,18 +10,14 @@ node_modules/
 dist/
 .vite/
 
-*.egg-info/
+# Python test runners (tests/contract, tests/e2e)
 .pytest_cache/
 pytest-cache-files-*/
-.mypy_cache/
 .ruff_cache/
 
 .env
 .env.*
 !.env.example
-
-# Backend local secrets (also covered by `.env` above)
-apps/backend/.env
 
 .DS_Store
 Thumbs.db
@@ -59,15 +55,11 @@ apps/tray/*/obj/
 apps/server/**/bin/
 apps/server/**/obj/
 apps/server/**/TestResults/
+apps/server/artifacts/
 
 # Docusaurus
 docs-site/build/
 docs-site/.docusaurus/
-
-# pytest --cov side effects (the documented backend gate produces these)
-.coverage
-.coverage.*
-htmlcov/
 
 # Scratch WEIR_CONTRACT_LEDGER files from local contract-suite runs
 .contract-ledger/

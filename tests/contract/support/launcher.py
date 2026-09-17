@@ -1,14 +1,10 @@
 """Start, stop, restart and kill the Weir server under test.
 
 The suite never imports Weir. It starts the server as a separate process, talks to it over HTTP,
-and reads the SQLite file only while the server is stopped. Which server runs is chosen by
-``WEIR_CONTRACT_SERVER``:
-
-- ``python`` (default): ``alembic upgrade head`` then ``uvicorn weir.api.main:app``, the same way
-  the E2E harness starts it (``tests/e2e/weir/conftest.py``).
-- ``dotnet``: ``dotnet run --project apps/server/src/Weir.Host --no-build -- --host 127.0.0.1 --port N``, or the published
-  executable named by ``WEIR_CONTRACT_DOTNET_EXE``. The .NET server owns its own migrations, so
-  "migrate" for it means one start-and-stop.
+and reads the SQLite file only while the server is stopped. The server is the .NET server
+(``WEIR_CONTRACT_SERVER=dotnet``, the only kind): ``dotnet run --project apps/server/src/Weir.Host --no-build --
+--host 127.0.0.1 --port N``, or the published executable named by ``WEIR_CONTRACT_DOTNET_EXE``. It owns its
+own migrations, so "migrate" means one start-and-stop.
 
 Process-tree teardown, the port guard, and the ledger that reaps servers an aborted run left
 behind all come from the E2E runtime helpers (#462). The contract suite keeps its own ledger file
@@ -33,12 +29,12 @@ from pathlib import Path
 from types import ModuleType
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-BACKEND_DIR = REPO_ROOT / "apps" / "backend"
 WEB_DIST = REPO_ROOT / "apps" / "web" / "dist"
 DOTNET_PROJECT = REPO_ROOT / "apps" / "server" / "src" / "Weir.Host"
 
 DEFAULT_SESSION_SECRET = "contract-suite-session-secret-at-least-32-chars"
-SERVER_KINDS = ("python", "dotnet")
+# The kinds of server the suite can judge. The Python backend was retired in #523.
+SERVER_KINDS = ("dotnet",)
 
 
 def _load_runtime() -> ModuleType:
@@ -69,22 +65,10 @@ runtime = _load_runtime()
 
 
 def server_kind() -> str:
-    kind = (os.environ.get("WEIR_CONTRACT_SERVER") or "python").strip().lower()
+    kind = (os.environ.get("WEIR_CONTRACT_SERVER") or "dotnet").strip().lower()
     if kind not in SERVER_KINDS:
         raise RuntimeError(f"WEIR_CONTRACT_SERVER must be one of {', '.join(SERVER_KINDS)}; got {kind!r}.")
     return kind
-
-
-def python_executable() -> str:
-    """The interpreter that has Weir installed: ``WEIR_CONTRACT_PYTHON``, the backend venv, or this one."""
-
-    explicit = (os.environ.get("WEIR_CONTRACT_PYTHON") or "").strip()
-    if explicit:
-        return explicit
-    venv = BACKEND_DIR / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-    if venv.is_file():
-        return str(venv)
-    return sys.executable
 
 
 def dotnet_unavailable_reason() -> str | None:
@@ -94,10 +78,7 @@ def dotnet_unavailable_reason() -> str | None:
     if exe:
         return None if Path(exe).is_file() else f"WEIR_CONTRACT_DOTNET_EXE points at {exe}, which does not exist."
     if not DOTNET_PROJECT.is_dir():
-        return (
-            f"The .NET server project {DOTNET_PROJECT.relative_to(REPO_ROOT)} does not exist yet "
-            "(it is scaffolded by #515), so there is nothing to run the contract against."
-        )
+        return f"The .NET server project {DOTNET_PROJECT.relative_to(REPO_ROOT)} does not exist."
     if shutil.which("dotnet") is None:
         return "The dotnet CLI is not on PATH."
     return None
@@ -141,15 +122,13 @@ class ServerUnderTest:
             # The limits themselves are covered by their own contract tests, which lower these.
             "WEIR_BOOTSTRAP_RATE_MAX_ATTEMPTS": "10000",
             "WEIR_AUTH_LOGIN_RATE_MAX_ATTEMPTS": "10000",
-            # Quiet by default, like the backend's HTTP tests: no in-process workers, no file-system
+            # Quiet by default: no in-process workers, no file-system
             # watcher, and periodic scans that do not queue files. Scenarios turn workers on.
             # Periodic scan *jobs* are still queued for every enabled library with a watched folder by
             # default here (this env block does not set the switch below), so count only the jobs a
             # test caused, or pass WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED=0
-            # to turn the timer off outright. That variable is #533: on Python nothing reads it (removed
-            # from WeirSettings in #329, though a fossil comment still calls it documented); the .NET
-            # port (#522) honours it as a real, working kill switch. The correct behaviour is asserted in
-            # tests/contract/jobs/test_watched_folder_scan_schedule_toggle.py.
+            # to turn the timer off outright (#533; asserted in
+            # tests/contract/jobs/test_watched_folder_scan_schedule_toggle.py).
             "WEIR_REFINER_WORKER_COUNT": "0",
             "WEIR_REFINER_WATCHER_ENABLED": "0",
             "WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS": "0",
@@ -170,38 +149,10 @@ class ServerUnderTest:
         """Bring the database to the current schema without leaving a server running."""
 
         self.home.mkdir(parents=True, exist_ok=True)
-        if self.kind == "python":
-            result = subprocess.run(
-                [python_executable(), "-m", "alembic", "upgrade", "head"],
-                cwd=str(BACKEND_DIR),
-                env={**self.environment(), "PYTHONPATH": str(BACKEND_DIR / "src")},
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            if result.returncode != 0:
-                raise RuntimeError(f"alembic upgrade head failed:\n{result.stdout}\n{result.stderr}")
-            return
         self.start()
         self.stop()
 
     def _command(self) -> tuple[list[str], Path]:
-        if self.kind == "python":
-            return (
-                [
-                    python_executable(),
-                    "-m",
-                    "uvicorn",
-                    "weir.api.main:app",
-                    "--host",
-                    "127.0.0.1",
-                    "--port",
-                    str(self.port),
-                    "--log-level",
-                    "warning",
-                ],
-                BACKEND_DIR,
-            )
         reason = dotnet_unavailable_reason()
         if reason is not None:
             raise RuntimeError(reason)
@@ -215,14 +166,10 @@ class ServerUnderTest:
     def start(self, *, timeout_s: float = 90.0) -> None:
         if self.running:
             return
-        if not self.db_path.is_file() and self.kind == "python":
-            self.migrate()
         self.port = runtime.pick_free_port()
         command, cwd = self._command()
         env = self.environment()
         env["ASPNETCORE_URLS"] = self.base_url
-        if self.kind == "python":
-            env["PYTHONPATH"] = str(BACKEND_DIR / "src")
         self.starts += 1
         server = runtime.start_server(
             f"Weir {self.kind} server",

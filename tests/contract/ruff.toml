@@ -1,6 +1,11 @@
-# The contract suite follows the backend's lint and format rules, so `ruff check tests/contract`
-# from the repo root means the same thing it does for apps/backend.
-extend = "../../apps/backend/pyproject.toml"
+# Lint and format rules for the Python test harnesses (the contract suite; the E2E suite follows the
+# same style). `ruff check tests/contract` and `ruff format --check tests/contract` from the repo root.
+line-length = 120
+target-version = "py311"
 
 # Resolve first-party imports (`tests.contract...`) from the repo root.
 src = ["../.."]
+
+[lint]
+select = ["E9", "F63", "F7", "F82", "B", "C4", "I", "UP", "SIM"]
+ignore = ["B008"]

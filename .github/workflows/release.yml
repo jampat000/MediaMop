@@ -21,6 +21,8 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
 
 jobs:
   windows-smoke:
@@ -37,75 +39,46 @@ jobs:
         shell: bash
         run: echo "plain=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
-        with:
-          python-version: "3.11"
-          cache: pip
-          cache-dependency-path: apps/backend/requirements.lock
-
-      - name: Validate release version alignment
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import json
-          import os
-          import sys
-          import tomllib
-          from pathlib import Path
-
-          tag_version = os.environ["TAG_VERSION"].strip()
-          if tag_version.startswith("v"):
-              tag_version = tag_version[1:]
-
-          backend = tomllib.loads(Path("apps/backend/pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
-          web = json.loads(Path("apps/web/package.json").read_text(encoding="utf-8"))["version"]
-
-          mismatches = []
-          for name, value in [
-              ("apps/backend/pyproject.toml [project].version", backend),
-              ("apps/web/package.json version", web),
-          ]:
-              if value != tag_version:
-                  mismatches.append((name, value))
-
-          if mismatches:
-              print(f"ERROR: Release tag v{tag_version} does not match versioned files:", file=sys.stderr)
-              for name, value in mismatches:
-                  print(f"  - {name}: {value}", file=sys.stderr)
-              raise SystemExit(1)
-
-          print(f"Release versions aligned at {tag_version}.")
-          PY
-        env:
-          TAG_VERSION: ${{ github.ref_name }}
-
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
 
+      # The product version lives in two files: WeirVersion in apps/server/Directory.Build.props (the
+      # server, installer and image) and apps/web/package.json. Both must equal the tag.
+      - name: Validate release version alignment
+        shell: bash
+        env:
+          TAG_VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          node - <<'JS'
+          const fs = require("node:fs");
+          const tag = process.env.TAG_VERSION.trim().replace(/^v/, "");
+          const props = fs.readFileSync("apps/server/Directory.Build.props", "utf8");
+          const server = (props.match(/<WeirVersion>([^<]+)<\/WeirVersion>/) || [])[1]?.trim();
+          const web = JSON.parse(fs.readFileSync("apps/web/package.json", "utf8")).version;
+          const mismatches = [
+            ["apps/server/Directory.Build.props WeirVersion", server],
+            ["apps/web/package.json version", web],
+          ].filter(([, value]) => value !== tag);
+          if (mismatches.length) {
+            console.error(`ERROR: Release tag v${tag} does not match versioned files:`);
+            for (const [name, value] of mismatches) console.error(`  - ${name}: ${value}`);
+            process.exit(1);
+          }
+          console.log(`Release versions aligned at ${tag}.`);
+          JS
+
+      # .NET 10 for the server (apps/server/global.json), .NET 9 for the tray app it ships with.
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: "9.0.x"
+          global-json-file: apps/server/global.json
 
       - name: Install Velopack CLI
         run: dotnet tool install -g vpk --version 1.2.0
-
-      - name: Install locked Weir backend (editable)
-        run: |
-          python -m pip install --require-hashes -r apps/backend/requirements.lock
-          python -m pip install --no-deps --no-build-isolation -e "./apps/backend"
-
-      - name: Weir web - install and build
-        working-directory: apps/web
-        env:
-          VITE_SUPPORT_URL: ${{ vars.VITE_SUPPORT_URL }}
-        run: |
-          npm ci
-          npm run api:types:check
-          npm run build
 
       # FFmpeg is ~46% of this job (203.8s of 444.9s measured on v2.4.1) and the
       # vendor folder is gitignored, so every run started from nothing. The key
@@ -120,6 +93,7 @@ jobs:
           restore-keys: |
             ffmpeg-vendor-${{ runner.os }}-
 
+      # Builds the web app, publishes the .NET server (win-x64 single file) and the tray, vendors FFmpeg and packs.
       - name: Build Weir Windows package (Velopack)
         env:
           WEIR_BUILD_VERSION: ${{ steps.version.outputs.plain }}
@@ -199,33 +173,30 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: apps/server/global.json
+
+      - name: Build Weir server (warnings are errors)
+        run: dotnet build apps/server/Weir.slnx -warnaserror
+
+      - name: Test Weir server
+        run: dotnet test apps/server/Weir.slnx --no-build
+
+      - name: Server dependency vulnerability scan
+        run: node scripts/check-dotnet-vulnerabilities.mjs apps/server/Weir.slnx
+
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: apps/backend/requirements.lock
+          cache-dependency-path: tests/requirements.txt
 
-      - name: Install locked Weir backend and Playwright browser
+      - name: Install locked test runner, Playwright browser and ffmpeg
         run: |
-          python -m pip install --require-hashes -r apps/backend/requirements.lock
-          python -m pip install --no-deps --no-build-isolation -e "./apps/backend"
+          python -m pip install --require-hashes -r tests/requirements.txt
           python -m playwright install --with-deps chromium
-
-      - name: Backend dependency vulnerability scan (pip-audit)
-        working-directory: apps/backend
-        run: |
-          python -m pip freeze --exclude-editable > pip-audit-requirements.txt
-          pip-audit --strict -r pip-audit-requirements.txt
-          rm pip-audit-requirements.txt
-
-      - name: Run Weir backend tests
-        working-directory: apps/backend
-        env:
-          WEIR_HOME: ${{ runner.temp }}/weir-ci
-        run: |
-          alembic upgrade head
-          alembic check
-          pytest -q --cov=weir --cov-fail-under=75
+          command -v ffmpeg >/dev/null || (sudo apt-get update && sudo apt-get install -y ffmpeg)
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
@@ -254,11 +225,15 @@ jobs:
           cd apps/web
           zip -r "$GITHUB_WORKSPACE/weir-web-dist.zip" dist
 
-      - name: Weir E2E smoke (Playwright + real API)
+      - name: Contract suite, required areas (dotnet)
+        env:
+          WEIR_CONTRACT_SERVER: dotnet
+        run: python -m pytest tests/contract -q --tb=short -p no:cacheprovider --contract-required-only
+
+      - name: Weir E2E smoke (Playwright + real .NET server)
         env:
           WEIR_E2E: "1"
           WEIR_HOME: ${{ runner.temp }}/weir-e2e
-          PYTHONPATH: ${{ github.workspace }}/apps/backend/src
         run: python -m pytest tests/e2e/weir -q --tb=short
 
       - name: Upload web dist
@@ -271,7 +246,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     if: ${{ !contains(github.ref_name, '-') }}
-    timeout-minutes: 90
+    timeout-minutes: 120
     # Both gates. Publishing on a green validation but a failed installer would put a
     # Docker image on ghcr for a release that has no Windows build.
     needs: [windows-smoke, validate]
@@ -290,11 +265,11 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: apps/backend/requirements.lock
+          cache-dependency-path: tests/requirements.txt
 
       - name: Install locked live-audit dependencies and browser
         run: |
-          python -m pip install --require-hashes -r apps/backend/requirements.lock
+          python -m pip install --require-hashes -r tests/requirements.txt
           python -m playwright install --with-deps chromium
           command -v ffmpeg >/dev/null || (sudo apt-get update && sudo apt-get install -y ffmpeg)
 
@@ -317,6 +292,11 @@ jobs:
         with:
           name: weir-windows-velopack
           path: ${{ github.workspace }}/windows-artifact
+
+      # QEMU for the arm64 image's final stage (apt-get). The .NET server is cross-published natively.
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
+        with:
+          platforms: arm64
 
       - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
 
@@ -369,6 +349,16 @@ jobs:
         if: always()
         run: docker rm -f weir-release-candidate >/dev/null 2>&1 || true
 
+      # The arm64 variant of the same candidate must build before anything is pushed.
+      - name: Build unpushed Docker release candidate (linux/arm64)
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/arm64
+          push: false
+          tags: weir-release-candidate:${{ steps.version.outputs.plain }}-arm64
+
       # Registry credentials and public tags are not created until the local image
       # has passed the complete packaged browser/API audit above.
       - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
@@ -382,7 +372,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: true
           provenance: true
           sbom: true
@@ -395,7 +385,15 @@ jobs:
             org.opencontainers.image.version=${{ steps.version.outputs.plain }}
 
       - name: Verify published Docker manifest
-        run: docker manifest inspect "${{ steps.image.outputs.name }}:latest"
+        run: |
+          manifest="$(docker manifest inspect "${{ steps.image.outputs.name }}:latest")"
+          echo "$manifest"
+          for arch in amd64 arm64; do
+            if ! echo "$manifest" | grep -q "\"architecture\": \"$arch\""; then
+              echo "::error::The published manifest has no linux/$arch image."
+              exit 1
+            fi
+          done
 
       - name: Smoke test published Docker image
         run: |

@@ -6,44 +6,44 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Smoke test for the assembled Windows package (packaging/windows/build-velopack.ps1): the exact
+# server directory the tray app launches (dist\windows\pack\server), started the way the tray starts
+# it, then driven through sign-up, a library and a real pass-through job with the bundled ffmpeg.
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 if (-not $PackageDir) {
-  $PackageDir = Join-Path $repoRoot "dist\windows\WeirServer"
+  $PackageDir = Join-Path $repoRoot "dist\windows\pack\server"
 }
 $packagePath = (Resolve-Path -LiteralPath $PackageDir).Path
-$backendPyproject = Join-Path $repoRoot "apps\backend\pyproject.toml"
 if (-not $ExpectedVersion) {
-  $ExpectedVersion = ((Get-Content -Path $backendPyproject) | Where-Object { $_ -match '^version = ' } | Select-Object -First 1).Split('"')[1]
+  $propsPath = Join-Path $repoRoot "apps\server\Directory.Build.props"
+  $propsMatch = [regex]::Match((Get-Content -LiteralPath $propsPath -Raw), '<WeirVersion>([^<]+)</WeirVersion>')
+  if (-not $propsMatch.Success) {
+    throw "WeirVersion was not found in $propsPath."
+  }
+  $ExpectedVersion = $propsMatch.Groups[1].Value.Trim()
 }
 $serverExe = Join-Path $packagePath "WeirServer.exe"
-$internalRoot = Join-Path $packagePath "_internal"
-$webIndex = Join-Path $packagePath "_internal\web-dist\index.html"
-$trayIcon = Join-Path $packagePath "_internal\assets\weir-tray-icon.png"
-$alembicIni = Join-Path $packagePath "_internal\alembic.ini"
-$ffmpegExe = Join-Path $packagePath "_internal\bin\ffmpeg\ffmpeg.exe"
-$ffprobeExe = Join-Path $packagePath "_internal\bin\ffmpeg\ffprobe.exe"
+$webDist = Join-Path $packagePath "web-dist"
+$webIndex = Join-Path $webDist "index.html"
+$ffmpegExe = Join-Path $packagePath "bin\ffmpeg\ffmpeg.exe"
+$ffprobeExe = Join-Path $packagePath "bin\ffmpeg\ffprobe.exe"
+$trayExe = Join-Path (Split-Path -Parent $packagePath) "Weir.exe"
 
 if (-not (Test-Path -LiteralPath $serverExe)) {
   throw "Packaged server executable not found: $serverExe"
 }
+if (-not (Test-Path -LiteralPath $trayExe)) {
+  throw "Packaged tray executable not found next to the server folder: $trayExe"
+}
 if (-not (Test-Path -LiteralPath $webIndex)) {
   throw "Packaged web index not found: $webIndex"
-}
-if (-not (Test-Path -LiteralPath $trayIcon)) {
-  throw "Packaged tray icon not found: $trayIcon"
-}
-if (-not (Test-Path -LiteralPath $alembicIni)) {
-  throw "Packaged database migration config not found: $alembicIni"
 }
 if (-not (Test-Path -LiteralPath $ffmpegExe)) {
   throw "Packaged ffmpeg executable not found: $ffmpegExe"
 }
 if (-not (Test-Path -LiteralPath $ffprobeExe)) {
   throw "Packaged ffprobe executable not found: $ffprobeExe"
-}
-$distInfoDirs = Get-ChildItem -Path $internalRoot -Directory -Filter "weir_backend-*.dist-info" -ErrorAction SilentlyContinue
-if (-not $distInfoDirs -or $distInfoDirs.Count -eq 0) {
-  throw "Packaged backend dist-info metadata was not found in $internalRoot"
 }
 $indexText = Get-Content -LiteralPath $webIndex -Raw
 if ($indexText -notmatch "Weir") {
@@ -65,19 +65,25 @@ $oldSecret = $env:WEIR_SESSION_SECRET
 $oldCookieSecure = $env:WEIR_SESSION_COOKIE_SECURE
 $oldEnv = $env:WEIR_ENV
 $oldWebDist = $env:WEIR_WEB_DIST
-$oldAlembicRoot = $env:WEIR_ALEMBIC_ROOT
+$oldFfmpegDir = $env:WEIR_FFMPEG_DIR
+$oldPath = $env:PATH
 $proc = $null
 
 try {
   $env:WEIR_HOME = $runtimeHome
   $env:WEIR_SESSION_SECRET = "ci-weir-session-secret-32chars-min"
   $env:WEIR_SESSION_COOKIE_SECURE = "false"
-  Remove-Item Env:\WEIR_ENV -ErrorAction SilentlyContinue
-  Remove-Item Env:\WEIR_WEB_DIST -ErrorAction SilentlyContinue
-  Remove-Item Env:\WEIR_ALEMBIC_ROOT -ErrorAction SilentlyContinue
+  # The environment the tray app gives the server (apps/tray/Weir.Tray/Program.cs, PrepareEnvironment).
+  $env:WEIR_ENV = "production"
+  $env:WEIR_WEB_DIST = $webDist
+  # The bundled ffmpeg must be found on its own (<app>\bin\ffmpeg), not through a developer's PATH.
+  Remove-Item Env:\WEIR_FFMPEG_DIR -ErrorAction SilentlyContinue
+  $env:PATH = (($oldPath -split ";") | Where-Object {
+      $_ -and -not (Test-Path -LiteralPath (Join-Path $_ "ffprobe.exe")) -and -not (Test-Path -LiteralPath (Join-Path $_ "ffmpeg.exe"))
+    }) -join ";"
 
   $proc = Start-Process -FilePath $serverExe `
-    -ArgumentList @("--serve", "--port", [string]$Port) `
+    -ArgumentList @("--port", [string]$Port) `
     -WorkingDirectory $packagePath `
     -RedirectStandardOutput $stdout `
     -RedirectStandardError $stderr `
@@ -170,6 +176,13 @@ try {
     throw "The packaged app could not load its Direct Play device list."
   }
 
+  # The server must find the ffmpeg bundled next to it (<app>\bin\ffmpeg); PATH was stripped of ffmpeg above.
+  $hardware = Invoke-RestMethod -Uri "$baseUrl/api/v1/refiner/hardware" -WebSession $webSession -Headers $readHeaders -TimeoutSec 60
+  if ([string]$hardware.detail -match "could not find ffmpeg") {
+    throw "The packaged server did not find its bundled ffmpeg: $($hardware.detail)"
+  }
+  Write-Host "Packaged server found its bundled ffmpeg."
+
   # Configure the seeded Movies library directly (the path-settings route was retired in #460).
   $libraries = Invoke-RestMethod -Uri "$baseUrl/api/v1/refiner/libraries" -WebSession $webSession -Headers $readHeaders -TimeoutSec 15
   $moviesLibrary = $libraries | Where-Object { $_.media_type -eq "movie" } | Select-Object -First 1
@@ -259,6 +272,7 @@ try {
   if ($null -ne $oldCookieSecure) { $env:WEIR_SESSION_COOKIE_SECURE = $oldCookieSecure } else { Remove-Item Env:\WEIR_SESSION_COOKIE_SECURE -ErrorAction SilentlyContinue }
   if ($null -ne $oldEnv) { $env:WEIR_ENV = $oldEnv } else { Remove-Item Env:\WEIR_ENV -ErrorAction SilentlyContinue }
   if ($null -ne $oldWebDist) { $env:WEIR_WEB_DIST = $oldWebDist } else { Remove-Item Env:\WEIR_WEB_DIST -ErrorAction SilentlyContinue }
-  if ($null -ne $oldAlembicRoot) { $env:WEIR_ALEMBIC_ROOT = $oldAlembicRoot } else { Remove-Item Env:\WEIR_ALEMBIC_ROOT -ErrorAction SilentlyContinue }
+  if ($null -ne $oldFfmpegDir) { $env:WEIR_FFMPEG_DIR = $oldFfmpegDir } else { Remove-Item Env:\WEIR_FFMPEG_DIR -ErrorAction SilentlyContinue }
+  $env:PATH = $oldPath
   Remove-Item -LiteralPath $runtimeHome -Recurse -Force -ErrorAction SilentlyContinue
 }

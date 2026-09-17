@@ -27,8 +27,9 @@ This file is the short entry point for coding agents. Keep detailed rules in lin
 
 ## Validation Defaults
 
-- Backend: from `apps/backend`, run `pytest -q` after setting local dev env.
-- Frontend: from `apps/web`, run `npm run build` and `npm run test`.
+- Server: `dotnet build apps/server/Weir.slnx -warnaserror` and `dotnet test apps/server/Weir.slnx`.
+- Frontend: from `apps/web`, run `npm run lint`, `npm run build` and `npm run test`.
+- Contract suite (judges a running server over HTTP): see [`tests/contract/README.md`](tests/contract/README.md).
 - E2E and packaging smoke checks are documented in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - Docs map validation: `node scripts/check-agent-docs.mjs`.
 

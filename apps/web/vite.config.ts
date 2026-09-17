@@ -51,7 +51,7 @@ function apiProxyTarget(mode: string, envDir: string): string {
     return forced;
   }
   // ``run-dev-stack.mjs`` sets this when the default API port holds an outdated build but a
-  // fresh uvicorn is started on another port (see the stale-route probes).
+  // fresh API is started on another port (see the stale-route probes).
   const devStackProxy = (
     process.env.WEIR_DEV_STACK_API_PROXY_TARGET || ""
   ).trim();

@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
  * Starts the Weir API, waits until it actually serves traffic, then starts Vite.
- * Avoids the browser hitting the proxy before uvicorn has finished lifespan/migrations
+ * Avoids the browser hitting the proxy before the API has finished startup/migrations
  * (which produced HTTP 500 / "Cannot reach the API" on every dev refresh).
  *
- * If something (e.g. a Cursor terminal) already left uvicorn listening on the dev API port
+ * If something (e.g. a Cursor terminal) already left an API listening on the dev API port
  * with a healthy ``/health``, we **reuse** it and only start Vite — otherwise a second API
  * would bind-fail and the web UI would not come up. (``npm run dev`` in ``package.json`` stops
  * the default API/web ports first so a leftover process is not reused by accident.)
@@ -38,7 +38,7 @@ const repoRoot = path.resolve(webDir, "..", "..");
 const apiScript = path.join(__dirname, "run-api-dev.mjs");
 const viteEntry = path.join(webDir, "node_modules", "vite", "bin", "vite.js");
 const portsPath = path.join(repoRoot, "scripts", "dev-ports.json");
-const backendPyprojectPath = path.join(repoRoot, "apps", "backend", "pyproject.toml");
+const serverPropsPath = path.join(repoRoot, "apps", "server", "Directory.Build.props");
 
 if (!existsSync(viteEntry)) {
   console.error(`Missing ${viteEntry}. Run npm install (or npm ci) in apps/web.`);
@@ -52,8 +52,8 @@ function readDevPorts() {
 
 function readExpectedApiVersion() {
   try {
-    const raw = readFileSync(backendPyprojectPath, "utf8");
-    const match = raw.match(/^\s*version\s*=\s*"([^"]+)"/m);
+    const raw = readFileSync(serverPropsPath, "utf8");
+    const match = raw.match(/<WeirVersion>([^<]+)<\/WeirVersion>/);
     return match?.[1]?.trim() || null;
   } catch {
     return null;
@@ -250,7 +250,7 @@ function probeApiVersionMatchesSource(apiHost, apiPort, expectedVersion) {
 
 /**
  * First port in ``[startPort, inclusiveMax]`` with nothing answering ``/health`` like our API
- * probe (frees the slot for a new uvicorn).
+ * probe (frees the slot for a new API process).
  */
 async function findFirstTcpPortWithoutHealthyApi(apiHost, startPort, inclusiveMax) {
   for (let p = startPort; p <= inclusiveMax; p += 1) {
@@ -337,9 +337,8 @@ async function waitForHttpOk(opts) {
     if (child && child.exitCode !== null) {
       if (label.includes("API")) {
         console.error(
-          "[dev-stack] API exited before startup finished. Fix errors above (venv, " +
-            "WEIR_SESSION_SECRET, SQLite path, or Alembic). If you see duplicate-column errors " +
-            "after splitting migration 0041/0042, pull latest backend and run migrations again.",
+          "[dev-stack] API exited before startup finished. Fix errors above (dotnet SDK, " +
+            "a build error, WEIR_SESSION_SECRET, or the SQLite path under WEIR_HOME).",
         );
       } else {
         console.error(`[dev-stack] ${label} exited before startup finished — see errors above.`);

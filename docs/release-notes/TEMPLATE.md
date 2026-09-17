@@ -26,6 +26,7 @@ This release focuses on <plain-language summary in one sentence>.
 
 - `ghcr.io/jampat000/weir:X.Y.Z`  <!-- no `v`: release.yml strips it for the image tag -->
 - `ghcr.io/jampat000/weir:latest`
+- Images are published for `linux/amd64` and `linux/arm64`, and run the .NET build of the Weir server.
 
 ## Full Changelog
 

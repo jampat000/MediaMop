@@ -76,7 +76,9 @@ public sealed class ProcessRunnerTests
     /// for the final exit), while still proving the tree was actually killed rather than left to run the
     /// child's full 60 second sleep to completion.
     /// </summary>
-    private static readonly TimeSpan MaxTimeToKillAndDrain = TimeSpan.FromSeconds(2) + (ProcessRunner.DrainAfterKill * 2);
+    /// A loaded Windows runner has been measured at 12.8 s, so the margin is the kill budget again, still
+    /// well under the child's 60 s sleep.
+    private static readonly TimeSpan MaxTimeToKillAndDrain = TimeSpan.FromSeconds(10) + (ProcessRunner.DrainAfterKill * 4);
 
     [Fact]
     public async Task A_timeout_kills_the_whole_tree_and_returns_promptly()

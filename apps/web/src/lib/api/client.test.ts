@@ -19,7 +19,7 @@ describe("apiErrorDetailToString", () => {
     expect(apiErrorDetailToString("Wrong password")).toBe("Wrong password");
   });
 
-  it("joins FastAPI-style validation array messages with field path", () => {
+  it("joins validation array messages with field path", () => {
     expect(
       apiErrorDetailToString([
         {
@@ -45,7 +45,7 @@ describe("apiErrorDetailToString", () => {
 });
 
 describe("apiResponseErrorMessage", () => {
-  it("normalizes FastAPI string detail", async () => {
+  it("normalizes a string detail", async () => {
     const response = new Response(
       JSON.stringify({ detail: "Wrong password" }),
       {

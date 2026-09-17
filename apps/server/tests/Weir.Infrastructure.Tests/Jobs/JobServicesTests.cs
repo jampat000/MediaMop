@@ -10,7 +10,6 @@ namespace Weir.Infrastructure.Tests.Jobs;
 /// <summary>Worker slots, heartbeats, history retention, periodic enqueue and the Activity writer.</summary>
 public sealed class JobServicesTests : IDisposable
 {
-    private static readonly DateTimeOffset T0 = JobsTestDatabase.T0;
     private readonly JobsTestDatabase _db = new(keepSeedRows: true);
 
     public void Dispose() => _db.Dispose();

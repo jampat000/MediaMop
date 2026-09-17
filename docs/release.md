@@ -13,8 +13,10 @@ Weir is released under AGPL-3.0-or-later. Release artifacts are built from the t
 ## Contract
 
 1. Update the version in both files in a normal PR:
-   - `apps/backend/pyproject.toml`
-   - `apps/web/package.json`
+   - `<WeirVersion>` in `apps/server/Directory.Build.props`
+   - `version` in `apps/web/package.json`
+
+   The release workflow checks that the tag `vX.Y.Z` matches both and stops if either differs.
 2. Merge to `main` after `Test / weir` passes.
 3. Create user-facing release notes for the target tag before pushing it:
 
@@ -42,7 +44,7 @@ Actions runners.
 
 The `Release` workflow:
 
-- reruns backend tests on Linux
+- reruns the .NET server build and tests on Linux
 - reruns web build and unit tests on Linux
 - reruns the E2E auth smoke on Linux
 - builds the Velopack Windows package on `windows-latest`
@@ -52,7 +54,7 @@ The `Release` workflow:
   a mounted disposable Refiner file that must pass through byte-identically into
   the processed tree before its watched source is removed, and uploads screenshots
   plus JSON evidence
-- builds and pushes Docker tags:
+- builds and pushes Docker tags for linux/amd64 and linux/arm64:
   - `ghcr.io/<owner>/<repo>:X.Y.Z` (the git tag is `vX.Y.Z`; the image tag drops the `v`)
   - `ghcr.io/<owner>/<repo>:latest`
 - verifies the published Docker manifest resolves
@@ -78,9 +80,9 @@ The release workflow publishes GHCR images with the repository `GITHUB_TOKEN` an
 | Deliverable | Meaning |
 |-------------|---------|
 | `Tag + source tree` | Canonical source snapshot for the release. |
-| `weir-web-dist.zip` | Static production build of `apps/web/dist`. Backend still required. |
-| `Weir-win-Setup.exe` | Windows desktop installer (Velopack) with .NET tray host, bundled backend runtime, bundled web UI, and delta update support. |
-| `ghcr.io/<owner>/<repo>:vX.Y.Z` | Versioned all-in-one container image. |
+| `weir-web-dist.zip` | Static production build of `apps/web/dist`. The Weir server is still required. |
+| `Weir-win-Setup.exe` | Windows desktop installer (Velopack) with .NET tray host, bundled .NET server (`server\WeirServer.exe`), bundled web UI, bundled FFmpeg, and delta update support. |
+| `ghcr.io/<owner>/<repo>:X.Y.Z` | Versioned all-in-one container image (linux/amd64 and linux/arm64). |
 | `ghcr.io/<owner>/<repo>:latest` | Latest stable container image. |
 
 ## Windows package
@@ -98,7 +100,7 @@ After installing:
 
 1. Launch `Weir` from the Start Menu or desktop shortcut.
 2. Weir starts in the user session, not as a Windows service.
-3. The .NET tray app launches the Python backend server as a child process.
+3. The .NET tray app (`Weir.exe`) launches the Weir server (`server\WeirServer.exe`) as a child process, watches it, and restarts it if it stops.
 4. The tray icon opens the local app in the browser and exposes `Open Weir`, `Open Data Folder`, `Check for updates`, and `Quit`.
 5. Application binaries install under `%LocalAppData%\Weir` (per-user, no admin required).
 6. The local runtime root is created under `C:\ProgramData\Weir`.
@@ -149,7 +151,7 @@ only if you want to override defaults such as the image tag or runtime home.
 
 - Windows service mode
 - Windows installer code signing
-- PyPI publishing
+- NuGet publishing
 - npm publishing
 - automatic version bumps or release bots
 

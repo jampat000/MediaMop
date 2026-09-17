@@ -2,9 +2,11 @@
 
 Weir publishes an all-in-one container image with:
 
-- FastAPI backend
-- bundled production web UI
+- the Weir server (C# / .NET 10, a self-contained single-file build)
+- bundled production web UI and ffmpeg
 - SQLite runtime under `WEIR_HOME`
+
+Images are published for `linux/amd64` and `linux/arm64`.
 
 The stable image tags are published by the release workflow:
 
@@ -52,39 +54,15 @@ and run `docker compose --env-file .env.weir up -d`.
 
 ## Docker ownership controls
 
-The container starts as `root`, reconciles optional filesystem ownership, then launches
-Weir as the unprivileged `weir` user. This keeps the app itself non-root while
-allowing host-mounted media paths to be aligned with your NAS or Docker user strategy.
+The container starts as `root`, remaps the `weir` user, makes sure `WEIR_HOME` belongs to it,
+then launches Weir as that unprivileged user. This keeps the app itself non-root while
+letting host-mounted media paths match your NAS or Docker user strategy.
 
-Available environment variables:
+- `WEIR_PUID` / `PUID` (default `1000`)
+- `WEIR_PGID` / `PGID` (default `1000`)
 
-- `WEIR_PUID` / `PUID`
-- `WEIR_PGID` / `PGID`
-- `WEIR_CHOWN_WATCHED`
-- `WEIR_CHOWN_TEMP`
-- `WEIR_CHOWN_OUTPUT`
-- `WEIR_DIR_MODE_WATCHED`
-- `WEIR_DIR_MODE_TEMP`
-- `WEIR_DIR_MODE_OUTPUT`
-
-Defaults:
-
-- `WEIR_PUID=1000`
-- `WEIR_PGID=1000`
-- all `WEIR_CHOWN_*` flags default to `false`
-- directory modes are unset unless you opt in
-
-The `WEIR_CHOWN_*` flags recursively chown the configured Refiner folders stored in
-Weir settings:
-
-- watched = Movies/TV watched folders
-- temp = Movies/TV work folders
-- output = Movies/TV output folders
-
-The `WEIR_DIR_MODE_*` values are optional octal directory modes such as `2775`. When
-set, they are applied recursively to directories only for the selected folder category.
-
-Example:
+Set them to the owner of your host folders so Weir can read the watched folders and write the
+work and output folders:
 
 ```bash
 docker run --rm \
@@ -92,19 +70,14 @@ docker run --rm \
   -v weir-data:/data/weir \
   -e WEIR_PUID=1001 \
   -e WEIR_PGID=1001 \
-  -e WEIR_CHOWN_OUTPUT=true \
-  -e WEIR_DIR_MODE_OUTPUT=2775 \
   ghcr.io/jampat000/weir:latest
 ```
 
-Migration note:
-
-- Existing containers keep working with no env changes.
-- If your output or work folders are bind-mounted from the host and Weir cannot write to them,
-  set `WEIR_PUID` / `WEIR_PGID` to the host owner and enable the matching `WEIR_CHOWN_*`
-  flag for the folder category you want Weir to manage.
-- Leave `WEIR_CHOWN_WATCHED=false` unless you explicitly want Weir to take ownership of
-  your watched/download folders.
+`WEIR_CHOWN_WATCHED`, `WEIR_CHOWN_TEMP`, `WEIR_CHOWN_OUTPUT` and `WEIR_DIR_MODE_*` are still
+validated, so a typo stops the container, but they are **not applied**: the entrypoint logs a
+line and ignores them. They used to recursively chown the Refiner folders stored in the old
+path settings table, which went away when folders moved onto libraries (#363), so they had
+already stopped changing anything before the move to .NET. Fix ownership on the host instead.
 
 ## Health
 
@@ -152,6 +125,10 @@ Per-vendor disables exist on each library for the case where auto-detection pick
 that is present but wrong.
 
 ## Filesystem events on bind mounts
+
+> **Not in the .NET server yet.** The filesystem watcher has not been ported: the server
+> currently finds new files with the periodic watched-folder scan only, and readiness reports
+> no watched libraries. The rest of this section describes the watcher's intended behaviour.
 
 Refiner watches its watched folders so a new file becomes a candidate within seconds, and
 runs its periodic scan as a backstop. **Bind mounts frequently deliver no inotify events**,

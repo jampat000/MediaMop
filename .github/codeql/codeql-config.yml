@@ -1,7 +1,8 @@
 name: Weir CodeQL security scan
 
 paths:
-  - apps/backend/src
+  - apps/server/src
+  - apps/tray/Weir.Tray
   - apps/web/src
 
 paths-ignore:

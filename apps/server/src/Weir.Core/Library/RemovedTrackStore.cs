@@ -14,8 +14,8 @@ public sealed record RemovedTrackFileKey(long? LibraryId, string RelativePath)
 
 /// <summary>
 /// Where the removed tracks a Refiner pass recorded for a file are kept (#509, step 1 — "store removed
-/// tracks per file"). The schema is frozen until #523 (ADR-0017 — the .NET port keeps the Python-created
-/// SQLite schema unchanged), so this is deliberately not a new table: an implementation either keeps the
+/// tracks per file"). This was built while ADR-0017 froze the SQLite schema, so it is not a new table
+/// (the freeze ended with #523; the records can move to a proper table in a later migration): an implementation either keeps the
 /// records in memory (fine until the process restarts — see <c>InMemoryRemovedTrackStore</c>) or reads them
 /// back out of a JSON-capable column a pass already writes into, such as <c>refiner_file_logs.detail_json</c>
 /// (see <c>Weir.Infrastructure.Library.FileLogRemovedTrackStore</c>'s remarks for why that one was chosen

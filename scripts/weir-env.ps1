@@ -1,12 +1,13 @@
-# Shared helpers for PowerShell dev scripts — load apps/backend/.env into the process.
+# Shared helpers for PowerShell dev scripts — load the repository-root .env into the process.
+# The .NET server reads WEIR_* from its environment only, so the launchers load .env for it.
 # Shell environment variables always win over .env file lines.
 
-function Import-WeirBackendDotEnv {
+function Import-WeirDotEnv {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$BackendDir
+        [string]$RepoRoot
     )
-    $EnvFilePath = Join-Path $BackendDir '.env'
+    $EnvFilePath = Join-Path $RepoRoot '.env'
     if (-not (Test-Path -LiteralPath $EnvFilePath)) {
         return
     }

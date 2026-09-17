@@ -32,6 +32,14 @@ public sealed class MediaToolResolver : IMediaToolResolver
         _windows = OperatingSystem.IsWindows();
     }
 
+    /// <summary>
+    /// The resolver for this process: a single-file publish (the Windows package and the Docker image, .NET's
+    /// equivalent of a frozen build) also looks in <c>&lt;app&gt;/bin/ffmpeg</c>, where the Windows package
+    /// bundles ffmpeg and ffprobe.
+    /// </summary>
+    public static MediaToolResolver ForCurrentProcess(string weirHome) =>
+        new(weirHome, string.IsNullOrEmpty(typeof(MediaToolResolver).Assembly.Location) ? AppContext.BaseDirectory : null);
+
     public (string Ffprobe, string Ffmpeg) Resolve()
     {
         var userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);

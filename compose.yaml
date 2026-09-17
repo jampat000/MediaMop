@@ -1,4 +1,4 @@
-# Weir all-in-one (API + production web UI) from GHCR.
+# Weir all-in-one (the .NET server + production web UI) from GHCR.
 # This is the default `docker compose` entrypoint at repo root.
 #
 # From repo root:
@@ -6,8 +6,9 @@
 #   docker compose up -d
 #
 # Open http://localhost:8788/ after the container starts.
-# Stable releases currently publish linux/amd64 images.
-# Override the image with WEIR_DOCKER_IMAGE if needed.
+# Stable releases publish linux/amd64 and linux/arm64 images.
+# Override the image with WEIR_DOCKER_IMAGE if needed (for a local build: `docker build -t weir:local .`
+# then WEIR_DOCKER_IMAGE=weir:local docker compose up -d --pull never).
 
 name: weir
 
@@ -22,14 +23,6 @@ services:
       # Optional UID/GID remap for the runtime account inside the container.
       # WEIR_PUID: ${WEIR_PUID:-1000}
       # WEIR_PGID: ${WEIR_PGID:-1000}
-      # Optional Refiner path ownership policies for configured watched/work/output folders.
-      # WEIR_CHOWN_WATCHED: ${WEIR_CHOWN_WATCHED:-false}
-      # WEIR_CHOWN_TEMP: ${WEIR_CHOWN_TEMP:-false}
-      # WEIR_CHOWN_OUTPUT: ${WEIR_CHOWN_OUTPUT:-false}
-      # Optional directory-only modes (octal) applied recursively to configured folders.
-      # WEIR_DIR_MODE_WATCHED: ${WEIR_DIR_MODE_WATCHED:-}
-      # WEIR_DIR_MODE_TEMP: ${WEIR_DIR_MODE_TEMP:-}
-      # WEIR_DIR_MODE_OUTPUT: ${WEIR_DIR_MODE_OUTPUT:-}
       # Optional. If omitted, the container generates and persists /data/weir/session.secret.
       # To provide your own value, generate one with: openssl rand -hex 32
       # WEIR_SESSION_SECRET: ${WEIR_SESSION_SECRET}

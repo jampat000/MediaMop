@@ -1,4 +1,4 @@
-"""Contract port of apps/backend/tests/test_auth_username.py (case-insensitive usernames, renaming, #455)."""
+"""Contract port of the retired Python backend's tests/test_auth_username.py (case-insensitive usernames, renaming, #455)."""
 
 from __future__ import annotations
 

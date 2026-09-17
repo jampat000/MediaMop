@@ -6,7 +6,6 @@ Nothing here imports Weir. See ``tests/contract/README.md``.
 from __future__ import annotations
 
 import json
-import os
 import sys
 from collections import defaultdict
 from collections.abc import Callable, Iterator
@@ -57,7 +56,8 @@ def pytest_configure(config: pytest.Config) -> None:
     )
     config.addinivalue_line(
         "markers",
-        "backends(*kinds, reason): runs only against these servers (python, dotnet); skipped with the reason on others",
+        f"backends(*kinds, reason): runs only against these servers ({', '.join(launcher.SERVER_KINDS)}); "
+        "skipped with the reason on others",
     )
     config.addinivalue_line(
         "markers",
@@ -327,4 +327,4 @@ def fake_managers() -> Iterator[Callable[..., FakeManager]]:
 
 @pytest.fixture(scope="session")
 def contract_backend() -> str:
-    return os.environ.get("WEIR_CONTRACT_SERVER", "python")
+    return launcher.server_kind()

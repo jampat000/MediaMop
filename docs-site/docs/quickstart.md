@@ -9,42 +9,36 @@ Get Weir running locally in under five minutes.
 
 ## Prerequisites
 
-- **Python 3.11+**
-- **Node.js LTS** (npm on `PATH`)
+- **.NET 10 SDK** (`dotnet` on `PATH`; the exact version is pinned in `apps/server/global.json`)
+- **Node.js 24** (npm on `PATH`)
 
-## 1. Clone and set up the backend
+Python is not needed to run Weir.
+
+## 1. Clone the repository
 
 ```powershell
 git clone https://github.com/jampat000/Weir.git
-cd Weir/apps/backend
-py -3 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --require-hashes -r requirements-runtime.lock
-python -m pip install --no-deps --no-build-isolation -e .
+cd Weir
 ```
 
 ## 2. Configure environment
 
-Copy `apps/backend/.env.example` to `apps/backend/.env` and set:
+Copy `.env.example` to `.env` in the repository root and set:
 
 - **`WEIR_SESSION_SECRET`** — a long random string (required for auth)
 - **`WEIR_CREDENTIALS_SECRET`** — a separate long random value (required before saving provider credentials)
 
-## 3. Run database migrations
-
-From the repository root:
-
-```powershell
-.\scripts\dev-migrate.ps1
-```
-
-## 4. Start the dev stack
+## 3. Start the dev stack
 
 ```powershell
 cd apps/web
 npm ci
 npm run dev
 ```
+
+This starts the .NET server (with `dotnet watch`) and the Vite dev server together. If you prefer two terminals, run `.\scripts\dev-backend.ps1` in one and `.\scripts\dev-web.ps1` in the other.
+
+There is no separate migration step. The server creates its SQLite database, or brings an existing one up to date, when it starts.
 
 Open **http://localhost:8782/** in your browser. You'll be guided through first-run setup.
 
@@ -53,9 +47,9 @@ Open **http://localhost:8782/** in your browser. You'll be guided through first-
 | Component | URL | Port |
 |-----------|-----|------|
 | Web UI (Vite dev server) | http://localhost:8782 | 8782 |
-| API (uvicorn) | http://127.0.0.1:8788 | 8788 |
+| API (the .NET server) | http://127.0.0.1:8788 | 8788 |
 
-The Vite dev server proxies `/api` requests to the backend automatically — no CORS configuration needed for local development.
+The Vite dev server proxies `/api` requests to the server automatically — no CORS configuration needed for local development.
 
 ## Next steps
 

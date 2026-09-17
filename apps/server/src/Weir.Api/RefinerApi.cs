@@ -25,7 +25,7 @@ public static class RefinerApi
     /// registered by the auth/settings and jobs ports respectively).</summary>
     public static IServiceCollection AddWeirRefinerApis(this IServiceCollection services)
     {
-        services.TryAddSingleton<IMediaToolResolver>(sp => new MediaToolResolver(sp.GetRequiredService<WeirOptions>().WeirHome));
+        services.TryAddSingleton<IMediaToolResolver>(sp => MediaToolResolver.ForCurrentProcess(sp.GetRequiredService<WeirOptions>().WeirHome));
         services.TryAddSingleton<IProcessRunner, ProcessRunner>();
         services.TryAddSingleton<MediaTools>();
         // Caps the #502 "Try on a file" preview at one run at a time (see RulesPreviewGate's own docs).

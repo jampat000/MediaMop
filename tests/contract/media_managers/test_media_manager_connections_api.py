@@ -1,4 +1,4 @@
-"""Contract port of apps/backend/tests/test_media_manager_connections_api.py."""
+"""Contract port of the retired Python backend's tests/test_media_manager_connections_api.py."""
 
 from __future__ import annotations
 

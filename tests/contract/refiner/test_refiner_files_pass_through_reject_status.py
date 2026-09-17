@@ -25,7 +25,6 @@ from tests.contract.support.launcher import ServerUnderTest
 FILES = f"{API}/refiner/files"
 
 
-@pytest.mark.known_bug(issue=530, backends=("python",))
 def test_refiner_files_lists_and_filters_passed_through_and_rejected_rows(server_factory, client_factory) -> None:
     sut: ServerUnderTest = server_factory()
     # signed_in_admin must come after seed.stopped: stopping and restarting the server picks a new

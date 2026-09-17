@@ -73,6 +73,8 @@ requireOrder(
     "push: false",
     "- name: Full live E2E against unpushed Docker release candidate",
     "- name: Cleanup unpushed Docker release candidate",
+    // Both published architectures must build before registry credentials exist.
+    "- name: Build unpushed Docker release candidate (linux/arm64)",
     "uses: docker/login-action@",
     "- name: Publish release Docker image",
     "- name: Verify published Docker manifest",
@@ -94,6 +96,8 @@ requireOrder(
 );
 
 for (const marker of [
+  "uses: docker/setup-qemu-action@",
+  "platforms: linux/amd64,linux/arm64",
   "WEIR_LIVE_EXPECTED_VERSION: ${{ steps.version.outputs.plain }}",
   "WEIR_SESSION_COOKIE_SECURE=false",
   "WEIR_LIVE_E2E_FIXTURE_SERVER_ROOT: /e2e-fixture",

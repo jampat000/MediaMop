@@ -8,7 +8,8 @@ namespace Weir.Infrastructure.LibraryMode;
 
 /// <summary>
 /// Per-library #505 settings (<see cref="LibrarySettings"/>), kept on a single, permanent <c>refiner_jobs</c> row rather than a
-/// new table or column (ADR-0017 freezes the schema until #523 — see <c>apps/server/README.md</c>, "Library mode"). The row's
+/// new table or column (built while ADR-0017 froze the schema; it can move to a proper table in a later migration — see
+/// <c>apps/server/README.md</c>, "Library mode"). The row's
 /// <c>job_kind</c> is <see cref="LibraryModeJobKinds.SettingsKind"/>, its status is always <c>completed</c> so no worker ever
 /// claims it, and it is written with a plain <c>INSERT ... ON CONFLICT DO UPDATE</c> rather than through
 /// <see cref="RefinerJobStore"/>'s enqueue path, which always inserts a fresh <c>pending</c> row.

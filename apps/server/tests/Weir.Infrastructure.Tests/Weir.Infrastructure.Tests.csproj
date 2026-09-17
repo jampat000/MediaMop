@@ -9,14 +9,13 @@
     <ProjectReference Include="..\..\src\Weir.Infrastructure\Weir.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <!-- The Alembic-head reference (scripts/dump-alembic-schema.py regenerates it). -->
+    <!-- The frozen Alembic-head schema reference (see SchemaParityTests). -->
     <None Include="schema/alembic-head.sql" CopyToOutputDirectory="PreserveNewest" />
     <!-- A configuration bundle exported by the Python server (format version 4). -->
     <None Include="Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
-    <!-- The ffmpeg layer's recorded Python answers, shared with Weir.Core.Tests (scripts/generate-ffmpeg-golden.py). -->
+    <!-- The ffmpeg layer's golden fixtures, shared with Weir.Core.Tests (checked-in .NET fixtures; see apps/server/README.md). -->
     <None Include="../Weir.Core.Tests/Media/golden/*.json" CopyToOutputDirectory="PreserveNewest" LinkBase="Media/golden" />
     <!-- Drives the Python job queue for the cross-backend tests. -->
-    <None Include="Jobs/python_queue_driver.py" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />

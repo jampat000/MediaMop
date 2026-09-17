@@ -1,4 +1,4 @@
-"""Port of apps/backend/tests/test_health.py (smoke tests for the backend spine)."""
+"""Port of the retired Python backend's tests/test_health.py (smoke tests for the backend spine)."""
 
 from __future__ import annotations
 

@@ -1,6 +1,6 @@
 # Weir — web shell
 
-**React + TypeScript + Vite** app: real consumer of `apps/backend` cookie session auth and bootstrap APIs. **This directory is the forward visual source of truth** for the Weir shell (tokens, logo, **Outfit**, sidebar/main). Branding was initially ported from an older static/CSS spike (not maintained in this repository); ongoing UI work should live here only.
+**React + TypeScript + Vite** app: real consumer of the .NET server's (`apps/server`) cookie session auth and bootstrap APIs. **This directory is the forward visual source of truth** for the Weir shell (tokens, logo, **Outfit**, sidebar/main). Branding was initially ported from an older static/CSS spike (not maintained in this repository); ongoing UI work should live here only.
 
 **Version:** the shell footer reads **`package.json`** `version`, injected at build time via `vite.config.ts` `define` (`WEB_APP_VERSION` in `src/lib/app-meta.ts`).
 
@@ -18,22 +18,22 @@ npm ci
 npm run dev
 ```
 
-**`npm run dev`** first runs **`dev:stop-api`** and **`dev:stop-web`** (listeners on the default ports from **`../../scripts/dev-ports.json`**, overridable with **`WEIR_DEV_API_PORT`** / **`WEIR_DEV_WEB_PORT`**), then starts **both** the FastAPI process (same as `../../scripts/dev-backend.ps1`) and Vite in one terminal via `scripts/run-dev-stack.mjs` (no reliance on `node_modules/.bin` shims, which some Windows setups omit). The stack **waits for `GET /health` on the API port before starting Vite**, so the browser is not served until the backend has finished lifespan (including Alembic). Override wait with **`WEIR_DEV_STACK_API_WAIT_MS`** (default `120000`). Use **`npm run dev:quick`** to skip the port-stop step when you know the default ports are free. Use **`npm run dev:web`** for Vite only (e.g. when the API is already running elsewhere).
+**`npm run dev`** first runs **`dev:stop-api`** and **`dev:stop-web`** (listeners on the default ports from **`../../scripts/dev-ports.json`**, overridable with **`WEIR_DEV_API_PORT`** / **`WEIR_DEV_WEB_PORT`**), then starts **both** the .NET server (`dotnet watch run`, same as `../../scripts/dev-backend.ps1`) and Vite in one terminal via `scripts/run-dev-stack.mjs` (no reliance on `node_modules/.bin` shims, which some Windows setups omit). The stack **waits for `GET /health` on the API port before starting Vite**, so the browser is not served until the server has finished starting up (including creating or migrating its SQLite database). Override wait with **`WEIR_DEV_STACK_API_WAIT_MS`** (default `120000`). Use **`npm run dev:quick`** to skip the port-stop step when you know the default ports are free. Use **`npm run dev:web`** for Vite only (e.g. when the API is already running elsewhere).
 
 **`package-lock.json`** is committed; use **`npm ci`** for reproducible installs (CI uses **`npm ci`**).
 
 - **Frontend:** **`http://127.0.0.1:8782`** (locked in **`../../scripts/dev-ports.json`**; see **`../../docs/ports.md`**)
-- **Backend (standalone):** **`../../scripts/dev-backend.ps1`** or uvicorn on the **API** host/port from the same JSON file.
+- **Server (standalone):** **`../../scripts/dev-backend.ps1`** (the .NET server via `dotnet watch run`) on the **API** host/port from the same JSON file.
 
 Vite **`server`** and **`preview`** proxy **`/api`** to that API origin (override with `VITE_DEV_API_PROXY_TARGET`). The browser uses one origin for the page and `/api/*`, so **HttpOnly** cookies work in dev and **`npm run preview`** (E2E uses ephemeral ports).
 
 Do not point the SPA at the raw API port unless CORS and cookie **`SameSite`** / **`Secure`** are set for cross-origin deployment.
 
-### Backend CORS / trusted origins
+### Server CORS / trusted origins
 
-With **`npm run dev`**, the browser talks to **`/api` on the same origin as the Vite page**, so you normally **do not** need CORS entries for that path. In **`WEIR_ENV=development`**, the backend also pairs **`http://localhost:<port>`** with **`http://127.0.0.1:<port>`** for any loopback origin you list, so either URL works.
+With **`npm run dev`**, the browser talks to **`/api` on the same origin as the Vite page**, so you normally **do not** need CORS entries for that path. In **`WEIR_ENV=development`**, the server also pairs **`http://localhost:<port>`** with **`http://127.0.0.1:<port>`** for any loopback origin you list, so either URL works.
 
-For **non-proxied** setups (e.g. static hosting on another port), set on the backend:
+For **non-proxied** setups (e.g. static hosting on another port), set on the server:
 
 - `WEIR_CORS_ORIGINS` — include the exact web origin (e.g. `http://127.0.0.1:8782`)
 - Optionally `WEIR_TRUSTED_BROWSER_ORIGINS` for stricter POST Origin/Referer checks
@@ -42,7 +42,7 @@ Then set in this app:
 
 - `VITE_API_BASE_URL` — split-origin **production** (or `vite preview`) API origin (no trailing slash); **ignored in `vite dev`** so `/api` always goes through the dev proxy
 
-**Production (split origins):** use **HTTPS** end-to-end; set **`WEIR_CORS_ORIGINS`** / **`WEIR_TRUSTED_BROWSER_ORIGINS`** to the **single** public web origin you ship; set **`VITE_API_BASE_URL`** here to the API origin (no trailing slash). Session cookies on the API host generally need **`SameSite=None; Secure`** so credentialed `fetch` from the web origin works. The backend’s cookie flags are env-driven — see ADR-0003 and **`../../docs/local-development.md`**.
+**Production (split origins):** use **HTTPS** end-to-end; set **`WEIR_CORS_ORIGINS`** / **`WEIR_TRUSTED_BROWSER_ORIGINS`** to the **single** public web origin you ship; set **`VITE_API_BASE_URL`** here to the API origin (no trailing slash). Session cookies on the API host generally need **`SameSite=None; Secure`** so credentialed `fetch` from the web origin works. The server’s cookie flags are env-driven — see ADR-0003 and **`../../docs/local-development.md`**.
 
 ## Routes
 
@@ -80,7 +80,7 @@ All calls use `credentials: 'include'` and the real endpoints:
 
 ## CI
 
-GitHub Actions **Test** workflow runs **`npm ci`**, **`npm run build`**, and **`npm run test`** in this directory after backend tests, then Playwright E2E in `tests/e2e/weir/` against a real API + **`vite preview`** (see **`../../docs/local-development.md`**).
+GitHub Actions **Test** workflow runs **`npm ci`**, **`npm run build`**, and **`npm run test`** in this directory after the .NET server build and tests, then Playwright E2E in `tests/e2e/weir/` against the real .NET server serving the built web app (not `vite preview`) (see **`../../docs/local-development.md`**).
 
 ## Intentionally not built
 

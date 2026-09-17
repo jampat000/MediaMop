@@ -1,4 +1,4 @@
-"""HTTP-observable rate limiting (apps/backend/tests/test_rate_limit.py tests the limiter class directly).
+"""HTTP-observable rate limiting (the retired Python backend's tests/test_rate_limit.py tests the limiter class directly).
 
 Login and bootstrap each have a per-address sliding window configured by
 ``WEIR_AUTH_LOGIN_RATE_*`` and ``WEIR_BOOTSTRAP_RATE_*``; exceeding it answers 429 with ``Retry-After``.
@@ -12,7 +12,8 @@ from tests.contract.auth import _helpers as h
 from tests.contract.support.client import WeirClient
 from tests.contract.support.polling import wait_until
 
-WINDOW_SECONDS = 2
+# Long enough that three Argon2-hashed sign-ins fit inside it on a slow CI runner.
+WINDOW_SECONDS = 10
 
 
 @pytest.fixture(scope="module")
