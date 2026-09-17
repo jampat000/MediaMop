@@ -42,8 +42,8 @@ public sealed class InMemoryRemovedTrackStore : IRemovedTrackStore
 /// The payload-backed alternative (#509 step 1's other option): <c>refiner_file_logs.detail_json</c> is an
 /// existing JSON-capable column ("free-form JSON" per <c>refiner_file_log_model.py</c>) that a completed
 /// Refiner pass already writes plan detail into on the Python side (<c>removed_audio</c>/<c>removed_subtitles</c>
-/// among other keys — see <c>apps/backend/tests/test_refiner_file_remux_pass_run.py::test_live_result_keeps_removed_track_lists_for_activity_detail</c>).
-/// Reusing it needs no migration, honouring the schema freeze until #523 (ADR-0017).
+/// among other keys — see the retired Python backend's <c>test_refiner_file_remux_pass_run.py::test_live_result_keeps_removed_track_lists_for_activity_detail</c>).
+/// Reusing it needed no migration while ADR-0017 froze the schema; a proper table is possible in a later migration now (#523).
 ///
 /// <para><b>What this class actually does today.</b> The .NET remux-pass job handler that would write a
 /// real <c>refiner_file_logs</c> row is not ported yet (<c>Weir.Infrastructure.Refiner.FileLogStore</c> only

@@ -31,7 +31,6 @@ public sealed class LibraryScanHandler : IJobHandler
     private readonly SqliteDatabase _database;
     private readonly MediaTools _tools;
     private readonly TimeProvider _time;
-    private readonly ILogger<LibraryScanHandler> _logger;
 
     public LibraryScanHandler(
         SqliteDatabase database,
@@ -42,7 +41,8 @@ public sealed class LibraryScanHandler : IJobHandler
         _database = database ?? throw new ArgumentNullException(nameof(database));
         _tools = tools ?? throw new ArgumentNullException(nameof(tools));
         _time = time ?? throw new ArgumentNullException(nameof(time));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        // Kept in the constructor for DI symmetry with LibraryCleanHandler; nothing here logs yet.
+        ArgumentNullException.ThrowIfNull(logger);
     }
 
     public string JobKind => LibraryModeJobKinds.ScanKind;

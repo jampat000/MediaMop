@@ -19,7 +19,7 @@ from tests.contract.processing import _helpers as h
 from tests.contract.support.fake_ffmpeg import fake_media_bytes, probe
 from tests.contract.support.polling import wait_until
 
-# Comfortably past the movie output-cleanup minimum age, which both backends floor at one hour
+# Comfortably past the movie output-cleanup minimum age, which the server floors at one hour
 # regardless of configuration (WEIR_REFINER_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS is clamped to
 # 3600s..30d). "pass_through_unchanged" forces the copy-without-remux path (a Windows hard link, or
 # a copy that preserves metadata), which carries the source's own modification time onto the
@@ -30,7 +30,7 @@ _OLD_ENOUGH_SECONDS = 2 * 3600
 
 def _signed_in_working_server(server_factory, client_factory, fake_ffmpeg):
     # The default minimum age (48h) would make this test wait that long for real; the environment
-    # variable is clamped to 3600s..30d on both backends, so this is as low as it can go.
+    # variable is clamped to 3600s..30d, so this is as low as it can go.
     server = h.start_working_server(
         server_factory, fake_ffmpeg, WEIR_REFINER_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS="3600"
     )
@@ -58,7 +58,6 @@ def _wait_for_the_pass_to_finish(admin) -> None:
     )
 
 
-@pytest.mark.known_bug(issue=545, backends=("python",))
 def test_output_folder_is_kept_when_the_manager_has_not_imported_yet(
     server_factory, client_factory, fake_ffmpeg, fake_managers, tmp_path: Path
 ) -> None:

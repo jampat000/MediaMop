@@ -164,9 +164,9 @@ Fixes included:
 
 ### Fixed in #545
 
-Defects the .NET port kept parity with while porting the remux pass (#522 part 3); fixed here, after the switch-over, so `apps/backend` is not touched.
+Defects the .NET port kept parity with while porting the remux pass (#522 part 3), fixed afterwards in .NET only.
 
-1. **Output-folder cleanup could delete a folder before a manager imported it.** `LibraryTruthGate.EvaluateForFolder` used to clear a folder for deletion whenever every reporting manager had no *conflicting* file sitting inside it — which is exactly what a manager that has not scanned or finished importing yet (or one that imports by copy and scans later) looks like. It now also requires positive evidence the release was picked up: a manager's own reported library names this exact output path anywhere (not only inside the folder), or the same title (file-name stem) at a different path, which is how a manager that renames or reorganises on import records it — or the hand-off ledger already recorded this pass's outcome as `completed`/`passed-through` (`IPostSuccessCleanupData.HandoffOutcomeAcknowledgedAsync`). Absent either, the folder is left in place regardless of age. The existing movie/TV output-cleanup minimum-age settings (`WEIR_REFINER_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS` / `..._TV_...`, floored at one hour) double as the manager's import window: nothing is ever removed before that age, confirmed or not. `tests/contract/processing/test_output_folder_cleanup.py` proves it end to end with a fake Radarr that reports an empty library (`known_bug(issue=545, backends=("python",))`, since the Python reference still has this bug) and a companion test proving the folder is removed once the manager confirms the import.
+1. **Output-folder cleanup could delete a folder before a manager imported it.** `LibraryTruthGate.EvaluateForFolder` used to clear a folder for deletion whenever every reporting manager had no *conflicting* file sitting inside it — which is exactly what a manager that has not scanned or finished importing yet (or one that imports by copy and scans later) looks like. It now also requires positive evidence the release was picked up: a manager's own reported library names this exact output path anywhere (not only inside the folder), or the same title (file-name stem) at a different path, which is how a manager that renames or reorganises on import records it — or the hand-off ledger already recorded this pass's outcome as `completed`/`passed-through` (`IPostSuccessCleanupData.HandoffOutcomeAcknowledgedAsync`). Absent either, the folder is left in place regardless of age. The existing movie/TV output-cleanup minimum-age settings (`WEIR_REFINER_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS` / `..._TV_...`, floored at one hour) double as the manager's import window: nothing is ever removed before that age, confirmed or not. `tests/contract/processing/test_output_folder_cleanup.py` proves it end to end with a fake Radarr that reports an empty library and a companion test proving the folder is removed once the manager confirms the import.
 2. **Pass-through and reject jobs deduped forever.** Their dedupe key was `{kind}:{library}:{path}` alone, so once one finished, a later failure of a replaced file (e.g. a re-download with the same name) never queued another. `QueueingFailurePolicy.FingerprintTag` (built on `SourceFiles.DedupeFingerprintTag`: size and modification time) is now folded into the key, so a changed file gets a fresh key while a repeat enqueue for the same, unchanged file still dedupes against the row already there. `HandoffLedgerStore.JobsForAsync` matches the base key as an exact match or a prefix, so the ledger keeps finding these jobs regardless of the fingerprint suffix.
 3. **An undelivered pass-through or reject reported nothing.** Once such a job exhausted its own retries it dropped out of `JobsForAsync`'s pending/leased filter and vanished from the hand-off status API. `JobsForAsync` now also returns a `failed`-status row for these two job kinds, and `HandoffLedgerStore.CurrentStatusAsync` reports a pending one as `scheduled` (never `queued` — that field means the remux queue, not a decided disposition about to run) or `working` while leased, and a permanently failed one as `failed` with the job's own `last_error` as the reason.
 4. **Stored subtitle mode wasn't normalized on both rule-config paths.** `RemuxPassPaths.RulesConfigFor` (the live pass) used to pass the stored mode through unchanged, while `RuleSetConversion.ToRulesConfig` (the rule-less fallback) normalized it. Both now call `RuleSetConversion.NormalizeSubtitleMode`.
@@ -175,14 +175,13 @@ Defects the .NET port kept parity with while porting the remux pass (#522 part 3
 ### Manual track plans (choosing tracks by hand, issue #501)
 
 `GET /api/v1/refiner/files/{id}/tracks` and `POST /api/v1/refiner/files/{id}/manual-plan` let an
-operator finish a held file by hand instead of changing a library's rules. This is a C#-only
-feature: ADR-0017 freezes the SQLite schema until the backend switch-over (#523), and `apps/backend`
-is retiring, so nothing here is ported from or mirrored back to Python.
+operator finish a held file by hand instead of changing a library's rules. It was built in
+C# only, while ADR-0017 still froze the SQLite schema, so it adds no migration.
 
 - **No migration, no new column.** The chosen plan is never persisted as file state; it lives only
   in the enqueued job's `payload_json`, alongside the source fingerprint taken at submission time
-  (`manual_plan` and `source_fingerprint`, see `ManualPlanJson`). This is why: the schema is frozen,
-  a manual plan is a one-off instruction for exactly one queued pass rather than a durable setting,
+  (`manual_plan` and `source_fingerprint`, see `ManualPlanJson`). This is why: the schema was frozen
+  when it was built (it no longer is, since #523, but nothing here needs a table), a manual plan is a one-off instruction for exactly one queued pass rather than a durable setting,
   and the job row already is the mechanism Weir uses to carry a one-time instruction to a worker
   (compare `pass_through_unchanged` and `origin` on the same payload). If the pass fails, the
   operator chooses again from a fresh probe rather than a stale plan being retried blind.
@@ -212,9 +211,6 @@ is retiring, so nothing here is ported from or mirrored back to Python.
   issue names is muxarr's `CustomConversionEditor`/`ConversionPlan`, where a custom plan is
   authoritative and the automatic mutations do not apply; the owner cleared following that
   precedent. Normal output validation, collision handling and cleanup run unchanged afterward.
-- The activity classifier's Python-parity test (`ActivityClassifierTests`) has one deliberate
-  exemption (`CSharpOnlyEventTypes`) for `RefinerFileManualPlanQueued`, the only activity event type
-  with no Python constant, for the reason above.
 
 ## Library mode (#505)
 
@@ -222,14 +218,14 @@ is retiring, so nothing here is ported from or mirrored back to Python.
 
 ### Storage decision
 
-ADR-0017 keeps the SQLite schema frozen until the switch-over (#523): no migration, no new table or column. Everything lives on `refiner_jobs` rows, the same trick `RefinerJobSwapJournal` (#506) already uses for state that does not fit the frozen schema:
+Library mode was built while ADR-0017 froze the SQLite schema, so its state is stored on `refiner_jobs` rows rather than new tables, the same approach `RefinerJobSwapJournal` (#506) uses. The freeze ended with #523; this state can move to proper tables in a later migration.
 
 - **`library_folders` / `library_schedule_enabled`** (`Weir.Core.LibraryMode.LibrarySettings`): one permanent row per library, `job_kind = "refiner.library.settings.v1"`, dedupe key `…:{library_id}`, status always `completed` so no worker ever claims it. Written with a plain `INSERT … ON CONFLICT(dedupe_key) DO UPDATE` (`LibrarySettingsStore`), not `RefinerJobStore.EnqueueOrGetAsync` (which always inserts a fresh `pending` row). Excluded from the Jobs page's default "recent" listing (`JobsInspectionStore`) the same way completed watched-folder scan-dispatch rows already are, so an idle settings row never looks like a stuck job.
 - **The file index / plan cache**: not a separate cache at all — the *latest completed* `job_kind = "refiner.library.scan.v1"` row for a library **is** the cache. Each scan request is an ordinary job (a fresh dedupe key per request, `…:{library_id}:{guid}`), so it is visible in the Jobs page like any real work; its completed `payload_json`'s `scan_result` key holds every file's classification and its raw ffprobe JSON, keyed by path, size and mtime for reuse on the next scan. `LibraryScanStore` reads/writes it directly with parameterised SQL (`dedupe_key LIKE '{prefix}%'`), never SQLite's JSON1 functions, to avoid depending on a build option.
 - **Clean jobs** (`job_kind = "refiner.library.clean.v1"`, dedupe key `…:{library_id}:{sha256(path)}`) are ordinary, real jobs: one per file, claimed, run and completed exactly like a download-pipeline job.
 - Deleting a library deletes its settings and scan-history rows (`LibrarySettingsStore.DeleteAllForLibraryAsync`, called from `RefinerLibraryEndpoints.DeleteLibraryAsync`).
 
-A real table was **not** chosen: `SchemaParityTests.Migrations_create_the_alembic_head_schema_and_seed_rows` requires the .NET migrations to produce a database byte-for-byte identical (tables, columns, indexes, rows) to `alembic upgrade head`'s output, regenerated only from `apps/backend`'s own Alembic revisions. Since Python is retiring and gets no new migration, a .NET-only table has no way to stay "gated off" and still pass that test — it would just permanently fail schema parity. The `refiner_jobs`-row approach needs no migration and so cannot break it.
+A real table was **not** chosen at the time because the schema was frozen and `SchemaParityTests` required the .NET migrations to match the Alembic head exactly. Now that the .NET migrations are the only schema source, moving this state into its own tables is an ordinary migration.
 
 ### Processing flow
 

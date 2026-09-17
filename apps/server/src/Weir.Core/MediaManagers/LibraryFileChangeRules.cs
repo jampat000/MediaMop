@@ -32,10 +32,8 @@ public interface ILibraryFileChangeNotifier
 public static class LibraryFileChangeRules
 {
     /// <summary>
-    /// Activity <c>event_type</c>s for this area. Deliberately not in <see cref="Weir.Core.Activity.ActivityEventTypes"/>:
-    /// that class is an append-only contract required to match <c>weir.platform.activity.constants</c> exactly
-    /// (<c>ActivityClassifierTests.Event_types_match_the_python_constants_exactly</c>), and apps/backend has no
-    /// library-mode area yet for these to match against.
+    /// Activity <c>event_type</c>s for this area. Kept here rather than in <see cref="Weir.Core.Activity.ActivityEventTypes"/>,
+    /// which was pinned to the retired Python backend's constants when this was written; they can move there now.
     /// </summary>
     public const string NotifiedEventType = "library.file_change_notified";
 
