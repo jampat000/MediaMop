@@ -258,6 +258,64 @@ public static class PydanticRules
         return ok;
     }
 
+    public static bool TryIntList(PyJson input, IReadOnlyList<object> loc, ValidationIssues issues, out List<long> value)
+    {
+        ArgumentNullException.ThrowIfNull(loc);
+        ArgumentNullException.ThrowIfNull(issues);
+        value = [];
+        if (input is not PyList list)
+        {
+            issues.Add(new ValidationIssue("list_type", loc, "Input should be a valid list", input));
+            return false;
+        }
+
+        var ok = true;
+        for (var index = 0; index < list.Items.Count; index++)
+        {
+            if (TryInt(list.Items[index], [.. loc, index], null, null, issues, out var parsed))
+            {
+                value.Add(parsed > long.MaxValue ? long.MaxValue : parsed < long.MinValue ? long.MinValue : (long)parsed);
+            }
+            else
+            {
+                ok = false;
+            }
+        }
+
+        return ok;
+    }
+
+    /// <summary>
+    /// Pydantic's lax <c>datetime</c> parsing for the one shape Weir's request models use: an ISO-8601
+    /// string with an explicit UTC offset (a bare <c>PyDateTime.Naive</c> value is never produced here —
+    /// the caller's own <c>field_validator</c> rejects a naive value with its own message instead).
+    /// </summary>
+    public static bool TryDateTime(PyJson input, IReadOnlyList<object> loc, ValidationIssues issues, out Time.PyDateTime? value)
+    {
+        ArgumentNullException.ThrowIfNull(issues);
+        value = null;
+        if (input is PyNull)
+        {
+            return true;
+        }
+
+        if (input is not PyStr s)
+        {
+            issues.Add(new ValidationIssue("datetime_type", loc, "Input should be a valid datetime", input));
+            return false;
+        }
+
+        if (!DateTimeOffset.TryParse(s.Value, CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsed))
+        {
+            issues.Add(new ValidationIssue("datetime_parsing", loc, "Input should be a valid datetime, invalid character in year", input));
+            return false;
+        }
+
+        var hasOffset = s.Value.TrimEnd().EndsWith('Z') || System.Text.RegularExpressions.Regex.IsMatch(s.Value.TrimEnd(), @"[+-]\d{2}:?\d{2}$");
+        value = hasOffset ? Time.PyDateTime.FromDateTimeOffset(parsed) : Time.PyDateTime.Naive(parsed.DateTime);
+        return true;
+    }
+
     public static bool TryDict(PyJson input, IReadOnlyList<object> loc, ValidationIssues issues, out PyDict value)
     {
         ArgumentNullException.ThrowIfNull(issues);
@@ -487,6 +545,16 @@ public sealed class BodyModel
 
     public PyDict Dict(string name) =>
         Read(name, required: true, input => PydanticRules.TryDict(input, Loc(name), _issues, out var v) ? v : null) ?? new PyDict();
+
+    public List<long> IntList(string name, IReadOnlyList<long>? defaultValue = null) =>
+        Read(name, required: false, input => PydanticRules.TryIntList(input, Loc(name), _issues, out var v) ? v : null) ?? [.. defaultValue ?? []];
+
+    public Time.PyDateTime? OptionalDateTime(string name) =>
+        ReadNullableStruct<Time.PyDateTime>(name, input =>
+        {
+            var ok = PydanticRules.TryDateTime(input, Loc(name), _issues, out var v);
+            return (ok, v ?? default);
+        });
 
     /// <summary>Report undeclared keys when the model forbids them.</summary>
     public void Finish(ExtraFields extra)

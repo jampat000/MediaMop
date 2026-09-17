@@ -23,6 +23,14 @@ public sealed record SuiteSettingsRecord
     public bool ProcessingPaused { get; init; }
     public PyDateTime? ProcessingPausedUntil { get; init; }
     public bool ScanWhilePaused { get; init; } = true;
+
+    /// <summary>Refiner's optional metadata provider (<c>refiner_metadata_provider_api.py</c>). Empty means none configured.</summary>
+    public string MetadataProvider { get; init; } = string.Empty;
+    public string MetadataProviderBaseUrl { get; init; } = string.Empty;
+
+    /// <summary>Encrypted at rest with <see cref="Weir.Core.Security.CredentialCipher"/>; never returned by the API.</summary>
+    public string MetadataProviderKeyCiphertext { get; init; } = string.Empty;
+
     public PyDateTime UpdatedAt { get; init; }
 }
 

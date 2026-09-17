@@ -37,6 +37,7 @@ public static class WeirApi
         services.AddSingleton<IExternalJsonPoster, ExternalJsonPoster>();
         services.AddSingleton<NotificationDispatcher>();
         services.AddWeirMediaManagers(options);
+        services.AddWeirRefinerApis();
 
         // Scheduled work, hosted with the jobs (AddWeirJobs) by PeriodicTaskService.
         services.AddSingleton<SessionCleanupTask>();
@@ -94,6 +95,7 @@ public static class WeirApi
             endpoints.MapMediaManagerEndpoints();
             endpoints.MapNotificationEndpoints();
             endpoints.MapActivityEndpoints();
+            endpoints.MapWeirRefinerApis();
             var routes = endpoints.ServiceProvider.GetRequiredService<RouteTable>();
             routes.Add("/", [HttpMethods.Get], "/");
             routes.Add("/index.html", [HttpMethods.Get], "/index.html");
