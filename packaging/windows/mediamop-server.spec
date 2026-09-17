@@ -23,8 +23,8 @@ datas = [
     (str(THIRD_PARTY_NOTICES), "."),
     # The Direct Play device list is data read at runtime (#467); without it the badge cannot load.
     (
-        str(BACKEND / "src" / "mediamop" / "modules" / "refiner" / "direct_play" / "devices.json"),
-        "mediamop/modules/refiner/direct_play",
+        str(BACKEND / "src" / "mediamop" / "refiner" / "direct_play" / "devices.json"),
+        "mediamop/refiner/direct_play",
     ),
 ]
 datas += copy_metadata("mediamop-backend")

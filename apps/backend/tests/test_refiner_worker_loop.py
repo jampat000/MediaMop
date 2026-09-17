@@ -10,17 +10,17 @@ from unittest.mock import patch
 import pytest
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.modules.refiner.jobs_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
+import mediamop.refiner.jobs_model  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
-from mediamop.modules.refiner import worker_loop as refiner_worker_loop_mod
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.refiner.jobs_ops import complete_claimed_refiner_job as real_complete_claimed
-from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
-from mediamop.modules.refiner.worker_limits import clamp_refiner_worker_count
-from mediamop.modules.refiner.worker_loop import (
+from mediamop.refiner import worker_loop as refiner_worker_loop_mod
+from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.refiner.jobs_ops import complete_claimed_refiner_job as real_complete_claimed
+from mediamop.refiner.jobs_ops import refiner_enqueue_or_get_job
+from mediamop.refiner.worker_limits import clamp_refiner_worker_count
+from mediamop.refiner.worker_loop import (
     process_one_refiner_job,
     refiner_worker_run_forever,
     start_refiner_worker_background_tasks,
@@ -125,7 +125,7 @@ def test_refiner_worker_slots_are_gated_by_max_concurrent_files(
 
     async def _run() -> None:
         with patch(
-            "mediamop.modules.refiner.worker_loop.refiner_worker_run_forever",
+            "mediamop.refiner.worker_loop.refiner_worker_run_forever",
             side_effect=_fake_worker_run_forever,
         ):
             stop, tasks = start_refiner_worker_background_tasks(
@@ -223,7 +223,7 @@ def test_process_one_missing_handler_fails_claimed_job(session_factory) -> None:
 
 def test_refiner_worker_loop_processes_one_job_then_stops(session_factory, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "mediamop.modules.refiner.worker_loop.REFINER_WORKER_IDLE_SLEEP_SECONDS",
+        "mediamop.refiner.worker_loop.REFINER_WORKER_IDLE_SLEEP_SECONDS",
         0.05,
     )
     t0 = datetime(2026, 4, 10, 12, 0, 0, tzinfo=UTC)

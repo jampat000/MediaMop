@@ -20,21 +20,6 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.refiner import refiner_reject
-from mediamop.modules.refiner.jobs_model import RefinerJob
-from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
-from mediamop.modules.refiner.refiner_library_model import RefinerLibraryManagerLinkRow
-from mediamop.modules.refiner.refiner_pass_through import (
-    REFINER_FILE_PASS_THROUGH_JOB_KIND,
-    REFINER_FILE_REJECT_JOB_KIND,
-    apply_failure_policy,
-    normalize_failure_policy,
-)
-from mediamop.modules.refiner.refiner_reject import (
-    REJECT_CAPABILITY,
-    make_refiner_file_reject_handler,
-    reject_support,
-)
 from mediamop.platform.activity import constants as activity_constants
 from mediamop.platform.activity.models import ActivityEvent
 from mediamop.platform.media_managers.connection_model import MediaManagerConnectionRow
@@ -47,6 +32,21 @@ from mediamop.platform.media_managers.manager_port import (
     ManagerDescription,
     ManagerQueueRow,
     ManagerQueueSignal,
+)
+from mediamop.refiner import refiner_reject
+from mediamop.refiner.jobs_model import RefinerJob
+from mediamop.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
+from mediamop.refiner.refiner_library_model import RefinerLibraryManagerLinkRow
+from mediamop.refiner.refiner_pass_through import (
+    REFINER_FILE_PASS_THROUGH_JOB_KIND,
+    REFINER_FILE_REJECT_JOB_KIND,
+    apply_failure_policy,
+    normalize_failure_policy,
+)
+from mediamop.refiner.refiner_reject import (
+    REJECT_CAPABILITY,
+    make_refiner_file_reject_handler,
+    reject_support,
 )
 from tests.refiner_library_fixtures import seed_refiner_library
 

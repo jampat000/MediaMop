@@ -31,13 +31,6 @@ import {
 } from "../../lib/ui/display-density";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 
-const LANDING_OPTIONS = [
-  // "/" is In hand since 3.0 (#463); the dashboard moved to /dashboard.
-  { value: "/", label: "In hand" },
-  { value: "/dashboard", label: "Dashboard" },
-  { value: "/refiner", label: "Refiner" },
-] as const;
-
 const BACKUP_INTERVAL_OPTIONS = [
   { value: "24", label: "Every day" },
   { value: "48", label: "Every 2 days" },
@@ -87,7 +80,6 @@ export function SetupWizardPage() {
   const [displayDensity, setDisplayDensity] = useState<DisplayDensity>(() =>
     readStoredDisplayDensity(),
   );
-  const [landingPath, setLandingPath] = useState<string>("/");
   const [backupEnabled, setBackupEnabled] = useState(false);
   const [backupIntervalHours, setBackupIntervalHours] = useState("24");
   const [backupPreferredTime, setBackupPreferredTime] = useState("02:00");
@@ -310,7 +302,7 @@ export function SetupWizardPage() {
         });
       }
 
-      void navigate(landingPath, { replace: true });
+      void navigate("/", { replace: true });
     } catch (err) {
       setStatusMessage(
         err instanceof Error ? err.message : "Could not save setup.",
@@ -326,14 +318,14 @@ export function SetupWizardPage() {
           <p className="mm-auth-eyebrow">First run</p>
           <h1 className="mm-auth-title">Setup wizard</h1>
           <p className="mm-auth-lead">
-            Set the suite basics, backup schedule, and starter connections now.
-            You can skip this and reopen it later from Settings.
+            Set the basics, backup schedule, and starter connections now. You
+            can skip this and reopen it later from Settings.
           </p>
 
           <div className="grid gap-4 lg:grid-cols-2">
             <WizardSection
               title="App basics"
-              description="Set the app clock, visual density, and where MediaMop opens after setup."
+              description="Set the app clock and visual density."
             >
               <div className="space-y-4">
                 <div className="max-w-md">
@@ -351,39 +343,6 @@ export function SetupWizardPage() {
                     value={appTimezone}
                     onChange={(value) => setAppTimezone(value)}
                   />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--mm-text3)]">
-                    Open first
-                  </label>
-                  <div
-                    className="grid gap-2 sm:grid-cols-2"
-                    role="radiogroup"
-                    aria-label="Open first"
-                  >
-                    {LANDING_OPTIONS.map((option) => (
-                      <label
-                        key={option.value}
-                        className={[
-                          "relative isolate flex min-h-[2.6rem] min-w-0 cursor-pointer items-center gap-2.5 overflow-hidden rounded-md border px-3 py-2 text-sm transition-colors",
-                          landingPath === option.value
-                            ? "border-[var(--mm-accent)] bg-[var(--mm-accent-soft)] text-[var(--mm-text)]"
-                            : "border-[var(--mm-border)] bg-transparent text-[var(--mm-text2)] hover:bg-[var(--mm-card-bg)]",
-                        ].join(" ")}
-                      >
-                        <input
-                          type="radio"
-                          name="setup-landing-path"
-                          className="h-4 w-4 shrink-0 accent-[var(--mm-accent)]"
-                          checked={landingPath === option.value}
-                          onChange={() => setLandingPath(option.value)}
-                        />
-                        <span className="min-w-0 whitespace-nowrap font-medium text-[var(--mm-text)]">
-                          {option.label}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
                 </div>
               </div>
               <div>

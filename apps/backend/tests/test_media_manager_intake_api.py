@@ -19,7 +19,7 @@ from starlette.testclient import TestClient
 
 from alembic import command
 from mediamop.api.factory import create_app
-from mediamop.modules.refiner.jobs_model import RefinerJob
+from mediamop.refiner.jobs_model import RefinerJob
 from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_in_process_workers,
     integration_test_quiesce_periodic_enqueue,

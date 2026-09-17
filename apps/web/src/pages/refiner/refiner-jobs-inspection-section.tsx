@@ -16,7 +16,7 @@ import type { RefinerJobInspectionRow } from "../../lib/refiner/jobs-inspection/
 import { MmListboxPicker } from "../../components/ui/mm-listbox-picker";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
-import { useSuitePauseQuery } from "../../lib/suite/pause-queries";
+import { usePauseQuery } from "../../lib/pause/pause-queries";
 
 function canCancelRefinerJobs(role: string | undefined): boolean {
   return role === "operator" || role === "admin";
@@ -99,7 +99,7 @@ function filterFromUrl(
 export function RefinerJobsInspectionSection() {
   const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
   const me = useMeQuery();
-  const pause = useSuitePauseQuery();
+  const pause = usePauseQuery();
   const [searchParams] = useSearchParams();
   const filterLabelId = useId();
   const urlFilter = filterFromUrl(searchParams.get("status"));

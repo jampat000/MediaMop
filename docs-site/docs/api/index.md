@@ -33,12 +33,12 @@ MediaMop uses cookie-based sessions with CSRF protection:
 | `/ready` | GET | No | Full readiness (DB, migrations) |
 | `/metrics` | GET | Token | Prometheus metrics |
 
-### Modules
+### Refiner
 
-| Prefix | Module | Description |
-|--------|--------|-------------|
-| `/api/v1/refiner/` | Refiner | Media remuxing configuration and jobs |
-| `/api/v1/dashboard/` | Dashboard | System health and activity |
+| Prefix | Description |
+|--------|-------------|
+| `/api/v1/refiner/` | Libraries, files, rule sets, jobs, and maintenance |
+| `/api/v1/pause` | The one pause switch for processing |
 
 ### Platform
 

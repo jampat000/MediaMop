@@ -10,14 +10,14 @@ from alembic.config import Config
 from sqlalchemy import delete
 from starlette.testclient import TestClient
 
-import mediamop.modules.refiner.jobs_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
+import mediamop.refiner.jobs_model  # noqa: F401
 from alembic import command
 from mediamop.api.factory import create_app
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from tests.integration_app_runtime_quiesce import (
     integration_test_quiesce_in_process_workers,
     integration_test_quiesce_periodic_enqueue,

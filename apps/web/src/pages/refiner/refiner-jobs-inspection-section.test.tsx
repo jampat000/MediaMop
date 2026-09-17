@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RefinerJobsInspectionSection } from "./refiner-jobs-inspection-section";
 
 const useMeQuery = vi.fn();
-const useSuitePauseQuery = vi.fn();
+const usePauseQuery = vi.fn();
 const useRefinerJobsInspectionQuery = vi.fn();
 const useCancelMutation = vi.fn();
 const useRecoverMutation = vi.fn();
@@ -14,8 +14,8 @@ vi.mock("../../lib/auth/queries", () => ({
   useMeQuery: () => useMeQuery(),
 }));
 
-vi.mock("../../lib/suite/pause-queries", () => ({
-  useSuitePauseQuery: () => useSuitePauseQuery(),
+vi.mock("../../lib/pause/pause-queries", () => ({
+  usePauseQuery: () => usePauseQuery(),
 }));
 
 vi.mock("../../lib/refiner/jobs-inspection/queries", () => ({
@@ -35,7 +35,7 @@ describe("RefinerJobsInspectionSection", () => {
       isPending: false,
       data: { role: "admin" },
     });
-    useSuitePauseQuery.mockReturnValue({ data: { paused: true } });
+    usePauseQuery.mockReturnValue({ data: { paused: true } });
     useRefinerJobsInspectionQuery.mockReturnValue({
       isPending: false,
       isError: false,

@@ -19,20 +19,20 @@ import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.modules.refiner.refiner_file_state_model  # noqa: F401
-import mediamop.modules.refiner.refiner_library_model  # noqa: F401
+import mediamop.refiner.jobs_model  # noqa: F401
+import mediamop.refiner.refiner_file_state_model  # noqa: F401
+import mediamop.refiner.refiner_library_model  # noqa: F401
 from mediamop.core.db import Base
-from mediamop.modules.refiner.jobs_model import RefinerJob
-from mediamop.modules.refiner.refiner_failure_classes import (
+from mediamop.refiner.jobs_model import RefinerJob
+from mediamop.refiner.refiner_failure_classes import (
     RefinerFailureClass,
     backoff_seconds_for_attempt,
     classify_failure,
     is_retryable,
 )
-from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
-from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
-from mediamop.modules.refiner.refiner_requeue_service import (
+from mediamop.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
+from mediamop.refiner.refiner_library_model import RefinerLibraryRow
+from mediamop.refiner.refiner_requeue_service import (
     decide_retry,
     files_due_for_automatic_retry,
     record_failure,

@@ -9,8 +9,8 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from mediamop.modules.refiner.refiner_library_service import list_libraries
 from mediamop.platform.file_lifecycle.mutations import safe_unlink_under_roots
+from mediamop.refiner.refiner_library_service import list_libraries
 
 TEMP_ARTIFACT_SUFFIXES = (".partial", ".part", ".tmp", ".link")
 MAX_ISSUES_PER_CATEGORY = 200

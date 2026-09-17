@@ -119,7 +119,6 @@ export function useRefinerCheckLibraryAgain() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["refiner", "files"] });
       void qc.invalidateQueries({ queryKey: ["refiner", "jobs"] });
-      void qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }

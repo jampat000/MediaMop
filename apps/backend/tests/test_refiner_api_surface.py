@@ -46,8 +46,8 @@ REQUIRED_SURFACES: tuple[tuple[str, str], ...] = (
     ("POST", "/api/v1/refiner/files/{file_id}/move-to-top"),
     ("POST", "/api/v1/refiner/files/requeue"),
     # Runtime control.
-    ("GET", "/api/v1/suite/pause"),
-    ("PUT", "/api/v1/suite/pause"),
+    ("GET", "/api/v1/pause"),
+    ("PUT", "/api/v1/pause"),
     # Capacity and schedules live on the operator settings and the library respectively,
     # both covered above and by the settings surface.
     ("GET", "/api/v1/refiner/operator-settings"),

@@ -12,13 +12,13 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.modules.refiner.jobs_model  # noqa: F401
+import mediamop.refiner.jobs_model  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
-from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
-from mediamop.modules.refiner.refiner_tv_output_cleanup import (
+from mediamop.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.refiner.refiner_path_settings_service import RefinerPathRuntime
+from mediamop.refiner.refiner_tv_output_cleanup import (
     iter_direct_child_refiner_media_candidates,
     maybe_run_tv_output_season_folder_cleanup_after_remux,
     normalize_relative_media_path_for_match,
@@ -86,7 +86,7 @@ def test_truth_failed_when_a_manager_keeps_an_episode_inside_the_folder(
     _, session = _session(tmp_path)
     ep_path = (tmp_path / "o" / "Show" / "S01" / "e.mkv").resolve()
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_tv_output_cleanup.collect_library_truth",
         _library_truth(truth_reported([str(ep_path)], kind="sonarr")),
     )
     watched = tmp_path / "w"
@@ -128,7 +128,7 @@ def test_truth_failed_when_a_manager_keeps_an_episode_inside_the_folder(
 def test_truth_pass_deletes_season_and_cascades_show(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_tv_output_cleanup.collect_library_truth",
         _library_truth(truth_reported([], kind="sonarr")),
     )
     watched = tmp_path / "w"
@@ -173,7 +173,7 @@ def test_truth_pass_deletes_season_and_cascades_show(tmp_path: Path, monkeypatch
 def test_unreachable_manager_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_tv_output_cleanup.collect_library_truth",
         _library_truth(truth_unreachable(kind="sonarr", detail="Connection refused.")),
     )
     watched = tmp_path / "w"
@@ -214,7 +214,7 @@ def test_unreachable_manager_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPat
 def test_too_young_by_direct_child_episode_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_tv_output_cleanup.collect_library_truth",
         _library_truth(truth_reported([], kind="sonarr")),
     )
     watched = tmp_path / "w"
@@ -255,7 +255,7 @@ def test_age_gate_uses_direct_child_only_not_subfolder_file(tmp_path: Path, monk
 
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_tv_output_cleanup.collect_library_truth",
         _library_truth(truth_reported([], kind="sonarr")),
     )
     watched = tmp_path / "w"
@@ -302,7 +302,7 @@ def test_no_direct_child_media_skips(tmp_path: Path, monkeypatch: pytest.MonkeyP
 
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_tv_output_cleanup.collect_library_truth",
         _library_truth(truth_reported([], kind="sonarr")),
     )
     watched = tmp_path / "w"
@@ -352,7 +352,7 @@ def test_iter_direct_child_skips_nested_subfolder_files(tmp_path: Path) -> None:
 def test_active_tv_job_same_season_blocks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_tv_output_cleanup.collect_library_truth",
         _library_truth(truth_reported([], kind="sonarr")),
     )
     watched = tmp_path / "w"
@@ -405,7 +405,7 @@ def test_active_tv_job_same_season_blocks(tmp_path: Path, monkeypatch: pytest.Mo
 def test_active_movie_job_does_not_block_tv_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_tv_output_cleanup.collect_library_truth",
         _library_truth(truth_reported([], kind="sonarr")),
     )
     watched = tmp_path / "w"
@@ -465,7 +465,7 @@ def test_live_cleanup_runs_even_when_legacy_dry_run_flag_passed(
         return (truth_reported([], kind="sonarr"),)
 
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_tv_output_cleanup.collect_library_truth",
         _record_and_answer,
     )
     watched = tmp_path / "w"
@@ -504,14 +504,14 @@ def test_live_cleanup_runs_even_when_legacy_dry_run_flag_passed(
 def test_rmtree_failure_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_tv_output_cleanup.collect_library_truth",
         _library_truth(truth_reported([], kind="sonarr")),
     )
 
     def _boom(path: str | Path, *a: object, **k: object) -> None:
         raise PermissionError(13, "locked", str(path))
 
-    monkeypatch.setattr("mediamop.modules.refiner.refiner_tv_output_cleanup.shutil.rmtree", _boom)
+    monkeypatch.setattr("mediamop.refiner.refiner_tv_output_cleanup.shutil.rmtree", _boom)
     watched = tmp_path / "w"
     out_root = tmp_path / "o"
     season = out_root / "T" / "S01"
@@ -618,7 +618,7 @@ def test_season_folder_is_output_root_skips(tmp_path: Path) -> None:
 def test_cascade_stops_at_output_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_tv_output_cleanup.collect_library_truth",
         _library_truth(truth_reported([], kind="sonarr")),
     )
     watched = tmp_path / "w"

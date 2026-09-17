@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.refiner_remux_mux import build_ffprobe_argv, resolve_ffprobe_ffmpeg
+from mediamop.refiner.refiner_remux_mux import build_ffprobe_argv, resolve_ffprobe_ffmpeg
 
 
 def test_build_ffprobe_argv_includes_probe_controls() -> None:

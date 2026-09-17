@@ -39,11 +39,11 @@ MediaMop is a self-hosted media operations app:
 flowchart LR
   UI["Frontend (React/Vite)"] --> API["FastAPI API Layer"]
   API --> Core["Core + Platform Services"]
-  Core --> Refiner["Refiner Module"]
-  Core --> Dashboard["Dashboard + Activity"]
+  Core --> Refiner["Refiner (the application)"]
+  Core --> Activity["Activity"]
   Core --> Integrations["External Integrations (Arr, OpenSubtitles, etc.)"]
   Core --> DB["SQLite (Alembic managed)"]
-  Refiner --> Lanes["Worker Lanes / Durable Jobs"]
+  Refiner --> Jobs["Durable jobs (refiner_jobs) + workers"]
 ```
 
 ## Backend Map
@@ -51,7 +51,7 @@ flowchart LR
 - `mediamop.api`: FastAPI app factory, router composition, request dependencies.
 - `mediamop.core`: config, runtime paths, database setup, lifespan, logging, schema revision checks.
 - `mediamop.platform`: shared product services such as auth, activity, jobs, local browse, settings, observability, and suite settings.
-- `mediamop.modules`: module-owned domains for Refiner and Dashboard.
+- `mediamop.refiner`: the application — libraries, files, durable jobs and workers, remux passes.
 - `mediamop.integrations`: external service integration code.
 - `mediamop.windows`: Windows tray and package-specific helpers.
 
@@ -59,7 +59,7 @@ flowchart LR
 
 - `src/app`: app-level router and providers.
 - `src/layouts`: shell/navigation layout.
-- `src/pages`: feature pages by module.
+- `src/pages`: feature pages (In hand, Refiner, Activity, Settings, setup).
 - `src/lib`: API clients, query hooks, typed data helpers, and UI helpers.
 - `src/components`: reusable UI and brand components.
 - `src/styles`: design tokens and shell styling.
@@ -67,18 +67,18 @@ flowchart LR
 
 ## Boundary Rules
 
-- Module code should keep destructive or irreversible behavior behind explicit services and tests.
+- Refiner code should keep destructive or irreversible behavior behind explicit services and tests.
 - Backend APIs should expose typed schemas at boundaries instead of inferred shapes.
 - Frontend pages should use typed API/query helpers from `src/lib` rather than ad hoc fetch calls.
-- Cross-cutting runtime concerns belong in `mediamop.platform` or `mediamop.core`, not inside module implementation details.
+- Cross-cutting runtime concerns belong in `mediamop.platform` or `mediamop.core`, not inside Refiner implementation details.
 - File lifecycle changes must preserve the safety contract in [`docs/file-lifecycle-contract.md`](docs/file-lifecycle-contract.md).
 
 ## Job Lifecycle
 
 ```mermaid
 flowchart LR
-  Enqueue["Enqueue request"] --> Lane["Module worker lane"]
-  Lane --> Result["Job result (completed/failed/pending retry)"]
+  Enqueue["Enqueue request"] --> Jobs["refiner_jobs + workers"]
+  Jobs --> Result["Job result (completed/failed/pending retry)"]
   Result --> Activity["Activity + logs"]
   Result --> Metrics["Runtime metrics / Prometheus"]
 ```
@@ -87,4 +87,4 @@ flowchart LR
 
 Current ADR index: [`docs/adr/README.md`](docs/adr/README.md).
 
-Add an ADR when a decision changes module ownership, runtime storage, data safety, security boundaries, release mechanics, or packaging behavior.
+Add an ADR when a decision changes runtime storage, data safety, security boundaries, release mechanics, or packaging behavior.

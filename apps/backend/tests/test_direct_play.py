@@ -15,19 +15,19 @@ import pytest
 from sqlalchemy import delete, select
 from starlette.testclient import TestClient
 
-import mediamop.modules.refiner as refiner_pkg
+import mediamop.refiner as refiner_pkg
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.refiner.direct_play import (
+from mediamop.refiner.direct_play import (
     MediaFacts,
     container_for_path,
     evaluate,
     load_device_profiles,
 )
-from mediamop.modules.refiner.file_remux_pass.run import _video_bit_depth
-from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow
-from mediamop.modules.refiner.refiner_file_state_service import record_measured_media_facts
-from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
+from mediamop.refiner.file_remux_pass.run import _video_bit_depth
+from mediamop.refiner.refiner_file_state_model import RefinerFileRow
+from mediamop.refiner.refiner_file_state_service import record_measured_media_facts
+from mediamop.refiner.refiner_library_model import RefinerLibraryRow
 from tests.integration_helpers import auth_post, auth_put
 from tests.integration_helpers import csrf as fetch_csrf
 

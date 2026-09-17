@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from mediamop.modules.refiner.manager_library_truth import evaluate_library_truth_for_folder
+from mediamop.refiner.manager_library_truth import evaluate_library_truth_for_folder
 from tests.manager_signal_helpers import truth_no_signal, truth_reported, truth_unreachable
 
 

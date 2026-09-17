@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from mediamop.modules.refiner.refiner_candidate_gate_evaluate import (
+from mediamop.refiner.refiner_candidate_gate_evaluate import (
     evaluate_refiner_candidate_gate_from_manager_signals,
 )
 from tests.manager_signal_helpers import no_queue_signal, reported, unreachable

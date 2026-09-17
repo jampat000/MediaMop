@@ -13,16 +13,16 @@ import pytest
 from sqlalchemy import create_engine, delete
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.modules.refiner.jobs_model  # noqa: F401
+import mediamop.refiner.jobs_model  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
-from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.refiner.refiner_movie_output_cleanup import (
+from mediamop.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.refiner.refiner_movie_output_cleanup import (
     maybe_run_movie_output_folder_cleanup_after_remux,
     normalize_relative_media_path_for_match,
 )
-from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
+from mediamop.refiner.refiner_path_settings_service import RefinerPathRuntime
 from tests.manager_signal_helpers import truth_reported, truth_unreachable
 
 
@@ -84,7 +84,7 @@ def test_truth_failed_when_a_manager_keeps_a_file_inside_the_folder(
 ) -> None:
     fac, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_movie_output_cleanup.collect_library_truth",
         _library_truth(truth_reported([str((tmp_path / "o" / "Title" / "f.mkv").resolve())])),
     )
     watched = tmp_path / "w"
@@ -125,7 +125,7 @@ def test_truth_failed_when_a_manager_keeps_a_file_inside_the_folder(
 def test_deleted_when_every_manager_reports_clear_and_age_ok(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_movie_output_cleanup.collect_library_truth",
         _library_truth(truth_reported([])),
     )
     watched = tmp_path / "w"
@@ -167,7 +167,7 @@ def test_deleted_when_every_manager_reports_clear_and_age_ok(tmp_path: Path, mon
 def test_unreachable_manager_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_movie_output_cleanup.collect_library_truth",
         _library_truth(truth_unreachable(name="Main", detail="Connection refused.")),
     )
     watched = tmp_path / "w"
@@ -208,7 +208,7 @@ def test_unreachable_manager_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPat
 def test_age_gate_blocks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_movie_output_cleanup.collect_library_truth",
         _library_truth(truth_reported([])),
     )
     watched = tmp_path / "w"
@@ -247,7 +247,7 @@ def test_age_gate_blocks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
 def test_active_movies_remux_blocks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     fac, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_movie_output_cleanup.collect_library_truth",
         _library_truth(truth_reported([])),
     )
     session.add(
@@ -301,7 +301,7 @@ def test_active_movies_remux_blocks(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 def test_tv_remux_job_does_not_block_movies_output_cleanup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     fac, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_movie_output_cleanup.collect_library_truth",
         _library_truth(truth_reported([])),
     )
     session.add(
@@ -354,7 +354,7 @@ def test_tv_remux_job_does_not_block_movies_output_cleanup(tmp_path: Path, monke
 def test_cascade_removes_empty_parent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_movie_output_cleanup.collect_library_truth",
         _library_truth(truth_reported([])),
     )
     watched = tmp_path / "w"
@@ -398,7 +398,7 @@ def test_cascade_removes_empty_parent(tmp_path: Path, monkeypatch: pytest.Monkey
 def test_output_folder_is_root_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_movie_output_cleanup.collect_library_truth",
         _library_truth(truth_reported([])),
     )
     watched = tmp_path / "w"
@@ -437,7 +437,7 @@ def test_output_folder_is_root_skips(tmp_path: Path, monkeypatch: pytest.MonkeyP
 def test_rmtree_lock_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _, session = _session(tmp_path)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_movie_output_cleanup.collect_library_truth",
         _library_truth(truth_reported([])),
     )
     watched = tmp_path / "w"
@@ -460,7 +460,7 @@ def test_rmtree_lock_skips(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> N
     )
     out: dict = {}
     with patch(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.shutil.rmtree",
+        "mediamop.refiner.refiner_movie_output_cleanup.shutil.rmtree",
         side_effect=PermissionError("locked"),
     ):
         maybe_run_movie_output_folder_cleanup_after_remux(
@@ -490,7 +490,7 @@ def test_live_cleanup_runs_even_when_legacy_dry_run_flag_passed(
         return (truth_reported([]),)
 
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_movie_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_movie_output_cleanup.collect_library_truth",
         _record_and_answer,
     )
     watched = tmp_path / "w"

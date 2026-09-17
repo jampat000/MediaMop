@@ -14,7 +14,7 @@ and timing-based pruning must follow [ADR-0009](ADR-0009-suite-wide-timing-isola
 | [ADR-0001](ADR-0001-repo-structure.md) | Repository and application layout |
 | [ADR-0002](ADR-0002-database-sqlite-alembic.md) | Database and Alembic (SQLite-first) |
 | [ADR-0003](ADR-0003-auth-session-model.md) | Auth and session model |
-| [ADR-0007](ADR-0007-module-owned-worker-lanes.md) | Module-owned worker lanes (SQLite) |
+| [ADR-0007](ADR-0007-module-owned-worker-lanes.md) | Module-owned worker lanes (SQLite) — superseded in part by one lane (#459) |
 | [ADR-0008](ADR-0008-mediamop-settings-aggregate-runtime-config.md) | `MediaMopSettings` aggregate for runtime configuration |
 | [ADR-0009](ADR-0009-suite-wide-timing-isolation.md) | Suite-wide timing isolation (durable work) |
 | [ADR-0012](ADR-0012-refiner-preflight-parity-boundary.md) | Refiner preflight parity boundary (FileFlows-aligned) |

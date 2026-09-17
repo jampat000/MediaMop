@@ -295,7 +295,7 @@ export function SettingsPage() {
       }
       if (
         !window.confirm(
-          "Replace suite and module settings on this server from this file? This cannot be undone.",
+          "Replace the settings on this server from this file? This cannot be undone.",
         )
       ) {
         return;
@@ -499,8 +499,8 @@ export function SettingsPage() {
       dataTestId="suite-settings-page"
       description={
         <>
-          MediaMop-wide choices that are not part of Refiner. Integration
-          details stay on its module page.
+          MediaMop-wide choices that are not part of Refiner. Library and
+          processing details stay on the Refiner page.
         </>
       }
     >

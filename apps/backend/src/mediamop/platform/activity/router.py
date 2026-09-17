@@ -16,7 +16,6 @@ from sqlalchemy.orm import Session
 from starlette.responses import Response, StreamingResponse
 
 from mediamop.api.deps import DbSessionDep, SettingsDep
-from mediamop.modules.refiner.refiner_file_log_model import RefinerFileLogRow
 from mediamop.platform.activity.live_stream import activity_latest_notifier
 from mediamop.platform.activity.schemas import (
     ActivityEventItemOut,
@@ -48,6 +47,7 @@ from mediamop.platform.auth.csrf import (
 from mediamop.platform.auth.deps_auth import UserPublicDep
 from mediamop.platform.auth.models import UserRole
 from mediamop.platform.suite_settings.service import ensure_suite_settings_row
+from mediamop.refiner.refiner_file_log_model import RefinerFileLogRow
 
 _VALID_SESSION_ROLES = frozenset(
     {UserRole.admin.value, UserRole.operator.value, UserRole.viewer.value},

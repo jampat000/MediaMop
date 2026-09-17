@@ -21,7 +21,7 @@ from mediamop.integrations.metadata.tmdb_provider import (
     TmdbMetadataProvider,
     clear_metadata_cache,
 )
-from mediamop.modules.refiner.refiner_original_language import (
+from mediamop.refiner.refiner_original_language import (
     OriginalLanguageRules,
     parse_additional_languages,
     select_original_language_tracks,
@@ -381,7 +381,7 @@ def test_provider_and_file_language_codes_are_matched_across_standards() -> None
     (fre/fra, ger/deu) have to agree too.
     """
 
-    from mediamop.modules.refiner.refiner_original_language import canonical_language
+    from mediamop.refiner.refiner_original_language import canonical_language
 
     for provider_code, file_code in (
         ("fr", "fre"),
@@ -396,7 +396,7 @@ def test_provider_and_file_language_codes_are_matched_across_standards() -> None
 
 
 def test_a_language_mediamop_does_not_know_still_matches_itself() -> None:
-    from mediamop.modules.refiner.refiner_original_language import canonical_language
+    from mediamop.refiner.refiner_original_language import canonical_language
 
     assert canonical_language("qaa") == canonical_language("qaa")
     assert canonical_language("qaa") == "qaa"
@@ -418,7 +418,7 @@ def test_the_canonical_form_is_stable_across_processes() -> None:
     """A set would pick between two equal-length codes by hash order, which varies by
     process — the same file could be described differently on different runs."""
 
-    from mediamop.modules.refiner.refiner_original_language import canonical_language
+    from mediamop.refiner.refiner_original_language import canonical_language
 
     # The bibliographic form, which is what media files are tagged with.
     assert canonical_language("fr") == "fre"

@@ -28,7 +28,7 @@ import {
   mmSelectFieldClass,
 } from "../../lib/ui/mm-control-roles";
 import { parseAppDate, useAppDateFormatter } from "../../lib/ui/mm-format-date";
-import { useSuitePauseQuery } from "../../lib/suite/pause-queries";
+import { usePauseQuery } from "../../lib/pause/pause-queries";
 
 function canEdit(role: string | undefined): boolean {
   return role === "operator" || role === "admin";
@@ -341,7 +341,7 @@ export function RefinerFilesSection() {
     path_contains: pathContains.trim() || undefined,
     limit,
   });
-  const suitePause = useSuitePauseQuery();
+  const pause = usePauseQuery();
   const forget = useForgetRefinerFile();
   const moveToTopMutation = useMoveRefinerFileToTop();
   const requeueOne = useRequeueRefinerFile();
@@ -368,7 +368,7 @@ export function RefinerFilesSection() {
   const page = files.data;
   const counts = page?.status_counts ?? {};
   const rows = page?.files ?? [];
-  const processingPaused = suitePause.data?.paused === true;
+  const processingPaused = pause.data?.paused === true;
   const stalePausedRows = processingPaused
     ? 0
     : rows.filter(fileHasPausedReason).length;

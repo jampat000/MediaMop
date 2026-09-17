@@ -8,7 +8,7 @@ import {
   useActivityStreamInvalidation,
   useActivityStreamInvalidations,
 } from "./use-activity-stream-invalidation";
-import { dashboardStatusKey } from "../dashboard/queries";
+import { refinerOverviewStatsQueryKey } from "../refiner/queries";
 
 class FakeEventSource {
   url: string;
@@ -58,7 +58,7 @@ describe("useActivityStreamInvalidation", () => {
     vi.unstubAllGlobals();
   });
 
-  it("coalesces dashboard event bursts and invalidates only exact queries", () => {
+  it("coalesces event bursts and invalidates only exact queries", () => {
     vi.useFakeTimers();
     vi.setSystemTime(10_000);
     vi.stubGlobal(
@@ -67,7 +67,7 @@ describe("useActivityStreamInvalidation", () => {
     );
     const qc = new QueryClient();
     const spy = vi.spyOn(qc, "invalidateQueries");
-    const keys = [dashboardStatusKey, activityRecentKey] as const;
+    const keys = [refinerOverviewStatsQueryKey, activityRecentKey] as const;
 
     renderHook(
       () =>
@@ -85,7 +85,7 @@ describe("useActivityStreamInvalidation", () => {
 
     expect(spy).toHaveBeenCalledTimes(2);
     expect(spy).toHaveBeenCalledWith({
-      queryKey: dashboardStatusKey,
+      queryKey: refinerOverviewStatsQueryKey,
       exact: true,
     });
     expect(spy).toHaveBeenCalledWith({
@@ -166,7 +166,7 @@ describe("useActivityStreamInvalidation", () => {
     expect(spy).toHaveBeenCalledWith({ queryKey: activityRecentKey });
   });
 
-  it("invalidates dashboard status query on activity.latest", () => {
+  it("invalidates the overview stats query on activity.latest", () => {
     vi.stubGlobal(
       "EventSource",
       FakeEventSource as unknown as typeof EventSource,
@@ -174,14 +174,19 @@ describe("useActivityStreamInvalidation", () => {
     const qc = new QueryClient();
     const spy = vi.spyOn(qc, "invalidateQueries");
 
-    renderHook(() => useActivityStreamInvalidation(dashboardStatusKey), {
-      wrapper: withQueryClient(qc),
-    });
+    renderHook(
+      () => useActivityStreamInvalidation(refinerOverviewStatsQueryKey),
+      {
+        wrapper: withQueryClient(qc),
+      },
+    );
 
     const src = FakeEventSource.instances[0];
     src.emit("activity.latest", JSON.stringify({ latest_event_id: 77 }));
 
-    expect(spy).toHaveBeenCalledWith({ queryKey: dashboardStatusKey });
+    expect(spy).toHaveBeenCalledWith({
+      queryKey: refinerOverviewStatsQueryKey,
+    });
   });
 
   it("shares one EventSource across multiple query subscribers", () => {
@@ -199,7 +204,7 @@ describe("useActivityStreamInvalidation", () => {
       },
     );
     const second = renderHook(
-      () => useActivityStreamInvalidation(dashboardStatusKey),
+      () => useActivityStreamInvalidation(refinerOverviewStatsQueryKey),
       {
         wrapper: withQueryClient(qc),
       },
@@ -210,7 +215,9 @@ describe("useActivityStreamInvalidation", () => {
     src.emit("activity.latest", JSON.stringify({ latest_event_id: 88 }));
 
     expect(spy).toHaveBeenCalledWith({ queryKey: activityRecentKey });
-    expect(spy).toHaveBeenCalledWith({ queryKey: dashboardStatusKey });
+    expect(spy).toHaveBeenCalledWith({
+      queryKey: refinerOverviewStatsQueryKey,
+    });
 
     first.unmount();
     expect(src.closed).toBe(false);

@@ -14,13 +14,13 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.modules.refiner.refiner_operator_settings_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.arr_library.arr_operator_settings_model  # noqa: F401
 import mediamop.platform.auth.models  # noqa: F401
 import mediamop.platform.suite_settings.model  # noqa: F401
 import mediamop.platform.suite_settings.suite_configuration_backup_model  # noqa: F401
+import mediamop.refiner.jobs_model  # noqa: F401
+import mediamop.refiner.refiner_operator_settings_model  # noqa: F401
 from alembic import op
 
 # Register all ORM tables on Base.metadata (must mirror ``alembic/env.py``).

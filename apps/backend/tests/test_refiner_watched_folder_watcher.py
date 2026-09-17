@@ -19,26 +19,26 @@ import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.modules.refiner.refiner_file_state_model  # noqa: F401
-import mediamop.modules.refiner.refiner_library_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 import mediamop.platform.media_managers.connection_model  # noqa: F401
+import mediamop.refiner.jobs_model  # noqa: F401
+import mediamop.refiner.refiner_file_state_model  # noqa: F401
+import mediamop.refiner.refiner_library_model  # noqa: F401
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
-from mediamop.modules.refiner.jobs_model import RefinerJob
-from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
-from mediamop.modules.refiner.refiner_watched_folder_remux_scan_dispatch_job_kinds import (
+from mediamop.refiner.jobs_model import RefinerJob
+from mediamop.refiner.refiner_library_model import RefinerLibraryRow
+from mediamop.refiner.refiner_watched_folder_remux_scan_dispatch_job_kinds import (
     REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_JOB_KIND,
 )
-from mediamop.modules.refiner.refiner_watched_folder_watcher import (
+from mediamop.refiner.refiner_watched_folder_watcher import (
     PendingChanges,
     _run_refiner_watched_folder_watcher,
     disabled_watch_reports,
     enqueue_scan_for_library,
     libraries_to_watch,
 )
-from mediamop.modules.refiner.refiner_watcher_state import (
+from mediamop.refiner.refiner_watcher_state import (
     WatcherStatus,
     clear_watcher_state,
     watcher_reports,
@@ -279,7 +279,7 @@ def test_an_unavailable_watcher_falls_back_to_polling_and_logs_once(
     settings = _settings(monkeypatch)
 
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_watched_folder_watcher._watchdog_modules",
+        "mediamop.refiner.refiner_watched_folder_watcher._watchdog_modules",
         lambda: None,
     )
     # Record what the module logs by standing in for its logger. Handler- and
@@ -300,7 +300,7 @@ def test_an_unavailable_watcher_falls_back_to_polling_and_logs_once(
         def exception(self, *args: object, **kwargs: object) -> None:
             pass
 
-    monkeypatch.setattr("mediamop.modules.refiner.refiner_watched_folder_watcher.logger", _RecordingLogger())
+    monkeypatch.setattr("mediamop.refiner.refiner_watched_folder_watcher.logger", _RecordingLogger())
 
     async def _drive_and_capture() -> tuple:
         stop = asyncio.Event()

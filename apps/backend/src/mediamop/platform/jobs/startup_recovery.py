@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
 
 
 @dataclass(frozen=True, slots=True)

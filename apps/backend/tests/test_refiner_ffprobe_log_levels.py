@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from mediamop.modules.refiner import refiner_remux_mux
+from mediamop.refiner import refiner_remux_mux
 
 
 def test_ffprobe_success_diagnostics_are_debug_not_warning(tmp_path: Path, monkeypatch) -> None:

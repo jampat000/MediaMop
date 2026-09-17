@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { dashboardStatusKey } from "../dashboard/queries";
 import {
   createNotificationChannel,
   deleteNotificationChannel,
@@ -128,10 +127,7 @@ export function useSuiteOperationalHistoryResetMutation() {
   return useMutation({
     mutationFn: (confirm: string) => resetSuiteOperationalHistory(confirm),
     onSuccess: async () => {
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: suiteMetricsQueryKey }),
-        qc.invalidateQueries({ queryKey: dashboardStatusKey }),
-      ]);
+      await qc.invalidateQueries({ queryKey: suiteMetricsQueryKey });
     },
   });
 }

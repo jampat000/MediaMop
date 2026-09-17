@@ -18,14 +18,15 @@ import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.modules.refiner.refiner_library_model  # noqa: F401
 import mediamop.platform.suite_settings.model  # noqa: F401
+import mediamop.refiner.jobs_model  # noqa: F401
+import mediamop.refiner.refiner_library_model  # noqa: F401
 from mediamop.core.db import Base
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.refiner.jobs_ops import claim_next_eligible_refiner_job, refiner_enqueue_or_get_job
-from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
-from mediamop.modules.refiner.refiner_schedule_grid import (
+from mediamop.platform.suite_settings.model import SuiteSettingsRow
+from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.refiner.jobs_ops import claim_next_eligible_refiner_job, refiner_enqueue_or_get_job
+from mediamop.refiner.refiner_library_model import RefinerLibraryRow
+from mediamop.refiner.refiner_schedule_grid import (
     SLOTS_PER_DAY,
     SLOTS_PER_WEEK,
     ScheduleGridError,
@@ -35,13 +36,12 @@ from mediamop.modules.refiner.refiner_schedule_grid import (
     normalize_grid,
     slot_index,
 )
-from mediamop.modules.refiner.refiner_work_admission import (
+from mediamop.refiner.refiner_work_admission import (
     evaluate_work_admission,
     is_detection_job_kind,
     library_window_open,
     resolve_pause_state,
 )
-from mediamop.platform.suite_settings.model import SuiteSettingsRow
 
 REMUX = "refiner.file.remux_pass.v1"
 SCAN = "refiner.watched_folder.remux_scan_dispatch.v1"

@@ -4,7 +4,7 @@ Run with MEDIAMOP_E2E=1. Screenshots are saved to artifacts/screenshots/ for
 visual inspection. The artifacts/ directory is .gitignored so no pixel-exact
 baselines are committed; these are informational smoke checks. What is asserted is
 the structure of each screen, rebaselined for the 3.0 screens in #462: In hand at
-"/", the dashboard at "/dashboard", and the Activity page's history statement.
+"/" (the dashboard folded into it in #459) and the Activity page's history statement.
 
 Usage:
     MEDIAMOP_E2E=1 pytest tests/e2e/mediamop/test_visual_smoke_audit.py -v
@@ -99,8 +99,8 @@ def _assert_tab_workspace(page, *, page_test_id: str, tabs_test_id: str) -> None
     expect(panel).to_have_attribute("aria-labelledby", active_tab.get_attribute("id"))
 
 
-def test_dashboard_renders_without_error(mediamop_shell: str) -> None:
-    """Dashboard page loads, shows key structural elements, and is error-free."""
+def test_old_dashboard_address_lands_on_in_hand(mediamop_shell: str) -> None:
+    """The dashboard folded into In hand (#459); a bookmark to /dashboard still works."""
     base = mediamop_shell.rstrip("/")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -110,23 +110,17 @@ def test_dashboard_renders_without_error(mediamop_shell: str) -> None:
 
             ensure_signed_in(page, base)
 
-            open_sidebar(page, "Dashboard")
-            # 3.0 moved the dashboard off "/" (In hand is the landing page); the old pattern matched any URL.
-            expect(page).to_have_url(re.compile(r".*/dashboard(?:$|[/?#])"))
-
-            expect(page.get_by_test_id("dashboard-page")).to_be_visible()
-            expect(page.get_by_test_id("dashboard-status-strip")).to_be_visible()
-            expect(page.get_by_test_id("dashboard-module-cards")).to_be_visible()
-
-            _assert_document_owns_vertical_scroll(page)
+            page.goto(f"{base}/dashboard", wait_until="domcontentloaded")
+            expect(page).to_have_url(re.compile(r".*/(?:$|[?#])"))
+            expect(page.get_by_role("heading", name="In hand", exact=True)).to_be_visible()
+            expect(page.get_by_role("link", name="Dashboard", exact=True)).to_have_count(0)
             _assert_no_error_state(page)
-            _save_screenshot(page, "dashboard")
         finally:
             browser.close()
 
 
 def test_in_hand_is_the_landing_page(mediamop_shell: str) -> None:
-    """3.0 lands on In hand at "/": what MediaMop is holding, not a module dashboard (#463)."""
+    """3.0 lands on In hand at "/": what MediaMop is holding (#463)."""
     base = mediamop_shell.rstrip("/")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)

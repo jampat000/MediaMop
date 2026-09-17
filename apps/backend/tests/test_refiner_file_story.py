@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from mediamop.modules.refiner.refiner_file_story import narrate_pass
+from mediamop.refiner.refiner_file_story import narrate_pass
 
 
 def _headings(steps: list[Any]) -> list[str]:

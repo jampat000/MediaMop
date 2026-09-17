@@ -1,6 +1,6 @@
 /** Thin gold-outline nav icons (one-pager iconography). */
 
-export function NavIconDashboard({ className = "" }: { className?: string }) {
+export function NavIconHome({ className = "" }: { className?: string }) {
   return (
     <svg
       className={className}

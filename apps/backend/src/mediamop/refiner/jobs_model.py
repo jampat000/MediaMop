@@ -1,0 +1,84 @@
+"""Refiner-local persisted job queue — coordination for in-process workers.
+
+Every durable job lives here: enqueue, claim and complete all go through this table.
+"""
+
+from __future__ import annotations
+
+import enum
+from datetime import datetime
+
+from sqlalchemy import DateTime, Index, Integer, String, Text, func, text
+from sqlalchemy.orm import Mapped, mapped_column
+
+from mediamop.core.db import Base
+
+
+class RefinerJobStatus(enum.StrEnum):
+    """Persisted in ``refiner_jobs.status`` (VARCHAR).
+
+    ``failed`` means the handler (or missing-handler path) failed or exhausted retries.
+    ``handler_ok_finalize_failed`` means the handler ran without error but persisting
+    ``completed`` (finalize) failed — distinct from ordinary failure, not re-runnable.
+    ``cancelled`` means the operator removed a still-``pending`` row from the queue before
+    workers claimed it; not claimable and not a handler failure.
+    """
+
+    PENDING = "pending"
+    LEASED = "leased"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    HANDLER_OK_FINALIZE_FAILED = "handler_ok_finalize_failed"
+    CANCELLED = "cancelled"
+
+
+class RefinerJob(Base):
+    """One row of durable Refiner work — claim/lease before execution."""
+
+    __tablename__ = "refiner_jobs"
+    __table_args__ = (Index("ix_refiner_jobs_status_id", "status", "id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    dedupe_key: Mapped[str] = mapped_column(String(512), unique=True, nullable=False)
+    job_kind: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        server_default=text("'pending'"),
+    )
+    lease_owner: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    lease_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    attempt_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        server_default=text("0"),
+    )
+    max_attempts: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        server_default=text("3"),
+    )
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    not_before: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # What this job costs against the runner budget, fixed at enqueue. On the row rather
+    # than looked up at lease time so the claim can compare instead of joining against a
+    # probe result that may not exist yet.
+    runner_cost: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    # Higher goes first. Seeded from the library's priority; "move to top" raises it
+    # above everything currently queued.
+    priority: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )

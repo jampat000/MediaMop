@@ -12,21 +12,21 @@ from unittest.mock import patch
 from sqlalchemy import create_engine, delete, select
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.modules.refiner.jobs_model  # noqa: F401
-import mediamop.modules.refiner.refiner_temp_cleanup as refiner_temp_cleanup
+import mediamop.refiner.jobs_model  # noqa: F401
+import mediamop.refiner.refiner_temp_cleanup as refiner_temp_cleanup
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base
-from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
-from mediamop.modules.refiner.refiner_temp_cleanup import (
+from mediamop.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
+from mediamop.refiner.refiner_temp_cleanup import (
     is_refiner_owned_temp_work_file,
     refiner_file_remux_pass_job_active_for_scope,
     run_refiner_work_temp_stale_sweep_for_scope,
 )
-from mediamop.modules.refiner.refiner_work_temp_stale_sweep_enqueue import (
+from mediamop.refiner.refiner_work_temp_stale_sweep_enqueue import (
     enqueue_refiner_work_temp_stale_sweep_job,
 )
-from mediamop.modules.refiner.refiner_work_temp_stale_sweep_job_kinds import (
+from mediamop.refiner.refiner_work_temp_stale_sweep_job_kinds import (
     REFINER_WORK_TEMP_STALE_SWEEP_DEDUPE_KEY_MOVIE,
     REFINER_WORK_TEMP_STALE_SWEEP_DEDUPE_KEY_TV,
 )

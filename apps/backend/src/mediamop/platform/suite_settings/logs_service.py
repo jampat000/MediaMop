@@ -138,7 +138,7 @@ def _parse_log_line(raw: str) -> ParsedLogEntry | None:
 
 def _component_label(*, logger: str, source: object) -> str:
     haystack = f"{logger} {source or ''}".lower()
-    if "modules.refiner" in haystack:
+    if "mediamop.refiner" in haystack:
         return "Refiner"
     if "platform.auth" in haystack:
         return "Authentication"

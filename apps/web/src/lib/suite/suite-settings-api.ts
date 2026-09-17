@@ -198,7 +198,7 @@ export async function resetSuiteOperationalHistory(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ csrf_token, confirm }),
   });
-  await requireOk(path, r, "Could not reset dashboard and activity history");
+  await requireOk(path, r, "Could not reset activity history");
   return readJson<SuiteOperationalHistoryResetOut>(r);
 }
 

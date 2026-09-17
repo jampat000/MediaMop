@@ -86,8 +86,8 @@ export function SettingsGeneralTab({
       <div className="grid grid-cols-1 gap-5">
         <div className={mmModuleTabBlurbBandClass}>
           <p className={mmModuleTabBlurbTextClass}>
-            Suite-wide choices saved in the app database. Integration details
-            for Refiner stay on its module page.
+            App-wide choices saved in the app database. Library and processing
+            details stay on the Refiner page.
           </p>
         </div>
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
@@ -321,7 +321,7 @@ export function SettingsGeneralTab({
                     id="suite-settings-history-reset-heading"
                     className="text-base font-semibold text-[var(--mm-text1)]"
                   >
-                    Dashboard and activity history
+                    Activity history
                   </h3>
                   <p className="mt-1 text-sm leading-6 text-[var(--mm-text2)]">
                     History is kept for as long as the Activity history setting
@@ -356,7 +356,7 @@ export function SettingsGeneralTab({
                   >
                     {resetHistory.error instanceof Error
                       ? resetHistory.error.message
-                      : "Could not reset dashboard and activity history."}
+                      : "Could not reset activity history."}
                   </p>
                 ) : null}
               </div>

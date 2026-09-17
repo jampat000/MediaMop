@@ -12,14 +12,14 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import Base, create_db_engine, create_session_factory
-from mediamop.modules.refiner.file_remux_pass import handlers as handler_mod
-from mediamop.modules.refiner.file_remux_pass.visibility import REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN
-from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
-from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
-from mediamop.modules.refiner.worker_loop import RefinerJobWorkContext
 from mediamop.platform.activity import constants as activity_constants
 from mediamop.platform.activity.live_stream import activity_latest_notifier
 from mediamop.platform.activity.models import ActivityEvent
+from mediamop.refiner.file_remux_pass import handlers as handler_mod
+from mediamop.refiner.file_remux_pass.visibility import REMUX_PASS_OUTCOME_LIVE_OUTPUT_WRITTEN
+from mediamop.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
+from mediamop.refiner.refiner_library_model import RefinerLibraryRow
+from mediamop.refiner.worker_loop import RefinerJobWorkContext
 
 
 def test_refiner_remux_handler_updates_progress_row_to_completed_activity(

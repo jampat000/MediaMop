@@ -6,10 +6,11 @@ import time
 from dataclasses import asdict
 from typing import Any
 
-from mediamop.modules.refiner.refiner_watcher_state import watcher_summary
+from mediamop import __version__
 from mediamop.platform.health.service import database_is_connected
 from mediamop.platform.jobs.worker_health import build_worker_health_snapshot
 from mediamop.platform.readiness.schemas import ReadinessResponse, ReadinessStep, ReadinessWorkerOut
+from mediamop.refiner.refiner_watcher_state import watcher_summary
 
 
 def build_readiness(app_state: Any) -> ReadinessResponse:
@@ -72,6 +73,7 @@ def build_readiness(app_state: Any) -> ReadinessResponse:
     status = "ready" if ready else "failed" if any(step.status == "failed" for step in steps) else "starting"
     return ReadinessResponse(
         ready=ready,
+        version=__version__,
         status=status,
         startup_seconds=round(startup_seconds, 3),
         steps=steps,

@@ -10,17 +10,17 @@ from pathlib import Path
 import pytest
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.file_remux_pass import run as runmod
-from mediamop.modules.refiner.file_remux_pass.visibility import (
+from mediamop.platform.file_lifecycle.guardrails import DiskSpaceCheck
+from mediamop.refiner.file_remux_pass import run as runmod
+from mediamop.refiner.file_remux_pass.visibility import (
     REMUX_PASS_OUTCOME_FAILED_BEFORE_EXECUTION,
     REMUX_PASS_OUTCOME_FAILED_DURING_EXECUTION,
     REMUX_PASS_OUTCOME_LIVE_SKIPPED_NOT_REQUIRED,
     REMUX_PASS_OUTCOME_SKIPPED_GUARDRAIL,
 )
-from mediamop.modules.refiner.manager_queue_signals import report_for_signals
-from mediamop.modules.refiner.refiner_path_settings_service import RefinerPathRuntime
-from mediamop.modules.refiner.refiner_remux_rules import PlannedTrack, RemuxPlan
-from mediamop.platform.file_lifecycle.guardrails import DiskSpaceCheck
+from mediamop.refiner.manager_queue_signals import report_for_signals
+from mediamop.refiner.refiner_path_settings_service import RefinerPathRuntime
+from mediamop.refiner.refiner_remux_rules import PlannedTrack, RemuxPlan
 from tests.manager_signal_helpers import reported, truth_reported
 
 from .test_refiner_tv_season_folder_cleanup import _sqlite_session
@@ -671,11 +671,11 @@ def test_tv_live_skips_movie_folder_cleanup_deletes_season_folder_when_gates_pas
     monkeypatch.setattr(runmod, "is_remux_required", lambda *_a, **_k: False)
     quiet = (reported([], scope="tv", kind="sonarr"),)
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
+        "mediamop.refiner.refiner_tv_season_folder_cleanup.fetch_manager_queue_signals_for_scan",
         lambda _s, _settings, *, media_scope: (quiet, report_for_signals(quiet)),
     )
     monkeypatch.setattr(
-        "mediamop.modules.refiner.refiner_tv_output_cleanup.collect_library_truth",
+        "mediamop.refiner.refiner_tv_output_cleanup.collect_library_truth",
         lambda _s, _settings, *, media_scope: (truth_reported([], kind="sonarr"),),
     )
     old = time.time() - 200_000

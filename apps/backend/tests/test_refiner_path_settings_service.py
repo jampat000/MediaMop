@@ -7,8 +7,8 @@ from pathlib import Path
 import pytest
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
-from mediamop.modules.refiner.refiner_path_settings_service import (
+from mediamop.refiner.refiner_library_model import RefinerLibraryRow
+from mediamop.refiner.refiner_path_settings_service import (
     _validate_path_separation,
     effective_library_work_folder,
     resolved_default_refiner_tv_work_folder,

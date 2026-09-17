@@ -1,0 +1,521 @@
+"""Refiner-only in-process asyncio worker loop.
+
+Claims rows from ``refiner_jobs`` only, dispatches by ``job_kind``, then completes or fails via
+:class:`mediamop.refiner.jobs_ops`.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+import os
+import socket
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta, timezone
+from typing import Literal
+
+from sqlalchemy.orm import Session, sessionmaker
+
+from mediamop.core.config import MediaMopSettings
+from mediamop.platform.activity import constants as activity_constants
+from mediamop.platform.activity import service as activity_service
+from mediamop.platform.activity.provenance import job_provenance
+from mediamop.platform.http.request_context import job_logging_context
+from mediamop.platform.jobs.worker_failures import (
+    AlreadyRecordedFailure,
+    job_failure,
+    refused_job_error,
+    retry_coming,
+    stored_error,
+)
+from mediamop.platform.jobs.worker_health import worker_heartbeat, worker_started, worker_stopped
+from mediamop.platform.notifications.dispatch import dispatch_job_notification
+from mediamop.platform.observability.failure_messages import operator_failure_from_exception
+from mediamop.refiner.job_kind_guard import (
+    JOB_KIND_PREFIX,
+    job_kind_is_retired,
+    validate_refiner_worker_handler_registry,
+)
+from mediamop.refiner.jobs_ops import (
+    claim_next_eligible_refiner_job,
+    complete_claimed_refiner_job,
+    fail_claimed_refiner_job,
+    fail_leased_refiner_job_after_complete_failure,
+)
+from mediamop.refiner.refiner_failure_classes import RefinerFailureClass
+from mediamop.refiner.refiner_library_service import resolve_library
+from mediamop.refiner.refiner_pass_through import apply_failure_policy
+from mediamop.refiner.refiner_requeue_service import record_failure
+from mediamop.refiner.refiner_work_admission import evaluate_work_admission
+
+logger = logging.getLogger(__name__)
+
+DEFAULT_REFINER_JOB_LEASE_SECONDS = 300
+REFINER_WORKER_IDLE_SLEEP_SECONDS = 5.0
+REFINER_WORKER_TICK_ERROR_BACKOFF_SECONDS = 1.0
+REFINER_TERMINALIZATION_FAILURE_PREFIX = "refiner_terminalization_failure: "
+
+
+def _record_unhandled_refiner_failure(
+    session_factory: sessionmaker[Session],
+    *,
+    ctx: RefinerJobWorkContext,
+    message: str,
+) -> None:
+    """Persist bounded diagnostics when a handler exits before writing Activity."""
+
+    try:
+        payload = json.loads(ctx.payload_json or "{}")
+    except (TypeError, ValueError):
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+    relative_path = payload.get("relative_media_path")
+    media_scope = payload.get("media_scope") if payload.get("media_scope") in {"movie", "tv"} else "movie"
+    library_id = payload.get("library_id") if isinstance(payload.get("library_id"), int) else None
+    safe_message = " ".join(str(message).split())[:1200]
+    try:
+        with session_factory() as session, session.begin():
+            library = resolve_library(session, library_id=library_id, media_scope=media_scope)
+            decision = None
+            if library is not None and isinstance(relative_path, str) and relative_path.strip():
+                decision = record_failure(
+                    session,
+                    library=library,
+                    relative_path=relative_path.strip(),
+                    failure_class=RefinerFailureClass.UNKNOWN,
+                    reason=safe_message,
+                )
+                # A crash is still a failure; the file must not be stranded by it either (#465).
+                apply_failure_policy(
+                    session,
+                    library=library,
+                    relative_path=relative_path.strip(),
+                    will_retry=decision.will_retry,
+                    origin=payload.get("origin") if isinstance(payload.get("origin"), dict) else None,
+                )
+            detail = json.dumps(
+                {
+                    "job_id": ctx.id,
+                    "job_kind": ctx.job_kind,
+                    "failure_class": RefinerFailureClass.UNKNOWN.value,
+                    "message": safe_message,
+                    "next_action": "Review this job and use Start again after fixing the cause.",
+                    "retry_scheduled": bool(decision and decision.will_retry),
+                    "result": "retrying" if decision and decision.will_retry else "failed",
+                    **(
+                        {"relative_media_path": relative_path.strip()}
+                        if isinstance(relative_path, str) and relative_path.strip()
+                        else {}
+                    ),
+                    **({"library_id": library_id} if library_id is not None else {}),
+                    **job_provenance(payload),
+                },
+                separators=(",", ":"),
+            )
+            activity_service.record_activity_event(
+                session,
+                event_type=activity_constants.REFINER_WORKER_FAILURE,
+                module="refiner",
+                title="A Refiner job stopped with an error",
+                detail=detail,
+            )
+    except Exception:
+        logger.exception("Refiner failure diagnostics could not be persisted job_id=%s", ctx.id)
+
+
+@dataclass(frozen=True, slots=True)
+class RefinerJobWorkContext:
+    """Immutable view passed to job handlers after a successful claim (outside the claim txn)."""
+
+    id: int
+    job_kind: str
+    payload_json: str | None
+    lease_owner: str
+    #: This claim's attempt and the job's limit, so failure wording can say whether it will be retried.
+    attempt_count: int = 1
+    max_attempts: int = 1
+
+
+class RefinerNoHandlerForJobKind(LookupError):
+    """Raised when ``job_kind`` has no registered handler (becomes ``fail_claimed`` path)."""
+
+    def __init__(self, job_kind: str) -> None:
+        self.job_kind = job_kind
+        super().__init__(f"no Refiner job handler registered for job_kind={job_kind!r}")
+
+
+def default_refiner_job_handler_registry() -> dict[str, Callable[[RefinerJobWorkContext], None]]:
+    """Empty registry for tests or callers that inject handlers explicitly."""
+
+    return {}
+
+
+def process_one_refiner_job(
+    session_factory: sessionmaker[Session],
+    *,
+    lease_owner: str,
+    job_handlers: Mapping[str, Callable[[RefinerJobWorkContext], None]],
+    lease_seconds: int = DEFAULT_REFINER_JOB_LEASE_SECONDS,
+    now: datetime | None = None,
+) -> Literal["idle", "processed"]:
+    """Claim at most one job, run handler, then complete or fail via :mod:`jobs_ops`.
+
+    Returns ``\"idle\"`` when no row was claimable; ``\"processed\"`` when a row was leased and
+    finished (success or handler failure).
+    """
+
+    when = now if now is not None else datetime.now(UTC)
+    lease_until = when + timedelta(seconds=lease_seconds)
+
+    with session_factory() as session, session.begin():
+        # The schedule and the suite pause are evaluated here, at lease time, rather than
+        # only at enqueue. A window that gated enqueue alone let a job queued two minutes
+        # before closing run all night, which is the outcome the window exists to prevent
+        # (#337). A job already leased is left to finish — see refiner_work_admission.
+        admission = evaluate_work_admission(session, now=when)
+        job = claim_next_eligible_refiner_job(
+            session,
+            lease_owner=lease_owner,
+            lease_expires_at=lease_until,
+            now=when,
+            admission=admission,
+        )
+        if job is None:
+            return "idle"
+        ctx = RefinerJobWorkContext(
+            id=job.id,
+            job_kind=job.job_kind,
+            payload_json=job.payload_json,
+            lease_owner=lease_owner,
+            attempt_count=int(job.attempt_count or 1),
+            max_attempts=int(job.max_attempts or 1),
+        )
+
+    if job_kind_is_retired(ctx.job_kind):
+        err_text = refused_job_error(
+            module="Refiner",
+            technical_reason=(
+                "refiner worker refused a retired job_kind: "
+                f"{ctx.job_kind!r} (row id={ctx.id}); nothing runs this kind any more"
+            ),
+            will_retry=retry_coming(attempt_count=ctx.attempt_count, max_attempts=ctx.max_attempts),
+        )
+        try:
+            with session_factory() as session, session.begin():
+                fail_claimed_refiner_job(
+                    session,
+                    job_id=ctx.id,
+                    lease_owner=ctx.lease_owner,
+                    error_message=err_text,
+                    now=when,
+                )
+        except Exception:
+            logger.exception(
+                "Refiner fail_claimed after retired job_kind guard job_id=%s",
+                ctx.id,
+            )
+        return "processed"
+
+    if not ctx.job_kind.startswith(JOB_KIND_PREFIX):
+        err_text = refused_job_error(
+            module="Refiner",
+            technical_reason=(
+                "refiner worker refused job_kind missing required refiner.* prefix: "
+                f"{ctx.job_kind!r} (row id={ctx.id}); enqueue only refiner-owned kinds"
+            ),
+            will_retry=retry_coming(attempt_count=ctx.attempt_count, max_attempts=ctx.max_attempts),
+        )
+        try:
+            with session_factory() as session, session.begin():
+                fail_claimed_refiner_job(
+                    session,
+                    job_id=ctx.id,
+                    lease_owner=ctx.lease_owner,
+                    error_message=err_text,
+                    now=when,
+                )
+        except Exception:
+            logger.exception(
+                "Refiner fail_claimed after refiner.* prefix guard job_id=%s",
+                ctx.id,
+            )
+        return "processed"
+
+    handler = job_handlers.get(ctx.job_kind)
+    if handler is None:
+        exc: BaseException = RefinerNoHandlerForJobKind(ctx.job_kind)
+        err_text = stored_error(
+            job_failure(
+                module="Refiner",
+                exc=exc,
+                will_retry=retry_coming(attempt_count=ctx.attempt_count, max_attempts=ctx.max_attempts),
+            )
+        )
+        try:
+            with session_factory() as session, session.begin():
+                fail_claimed_refiner_job(
+                    session,
+                    job_id=ctx.id,
+                    lease_owner=ctx.lease_owner,
+                    error_message=err_text,
+                    now=when,
+                )
+        except Exception:
+            logger.exception(
+                "Refiner fail_claimed_refiner_job failed after missing handler job_id=%s",
+                ctx.id,
+            )
+        return "processed"
+
+    try:
+        with job_logging_context(ctx.id):
+            handler(ctx)
+    except Exception as exc:
+        failure = job_failure(
+            module="Refiner",
+            exc=exc,
+            will_retry=retry_coming(attempt_count=ctx.attempt_count, max_attempts=ctx.max_attempts),
+        )
+        logger.error(
+            "Refiner job handler failed for job_id=%s kind=%s: %s",
+            ctx.id,
+            ctx.job_kind,
+            failure.message,
+            extra={"detail": failure.technical_detail},
+        )
+        if not isinstance(exc, AlreadyRecordedFailure):
+            # A handler that recorded its own failure has said it once already (#488).
+            _record_unhandled_refiner_failure(session_factory, ctx=ctx, message=failure.message)
+        error_text = stored_error(failure)
+        try:
+            with session_factory() as session, session.begin():
+                fail_claimed_refiner_job(
+                    session,
+                    job_id=ctx.id,
+                    lease_owner=ctx.lease_owner,
+                    error_message=error_text,
+                    now=when,
+                )
+        except Exception:
+            logger.exception(
+                "Refiner fail_claimed_refiner_job failed after handler error job_id=%s",
+                ctx.id,
+            )
+        dispatch_job_notification(
+            session_factory, module="refiner", event_kind="failed", job_id=ctx.id, job_kind=ctx.job_kind
+        )
+        return "processed"
+
+    complete_ok = True
+    complete_err: str | None = None
+    try:
+        with session_factory() as session, session.begin():
+            ok = complete_claimed_refiner_job(
+                session,
+                job_id=ctx.id,
+                lease_owner=ctx.lease_owner,
+                now=when,
+            )
+            if not ok:
+                complete_ok = False
+                complete_err = "complete_claimed_refiner_job refused (lease/state mismatch)"
+    except Exception as exc:
+        complete_ok = False
+        logger.exception("Refiner complete_claimed_refiner_job failed job_id=%s", ctx.id)
+        complete_err = str(exc)
+
+    if complete_ok:
+        dispatch_job_notification(
+            session_factory, module="refiner", event_kind="completed", job_id=ctx.id, job_kind=ctx.job_kind
+        )
+
+    if not complete_ok and complete_err is not None:
+        # The handler finished; only recording that failed. Said plainly, with the detail after it.
+        bounded = (
+            REFINER_TERMINALIZATION_FAILURE_PREFIX
+            + stored_error(
+                operator_failure_from_exception(
+                    module="Refiner",
+                    action="job",
+                    exc=RuntimeError(complete_err),
+                    continuation="The work ran, but MediaMop could not record that it finished.",
+                )
+            )
+        )[:10_000]
+        try:
+            with session_factory() as session, session.begin():
+                recovered = fail_leased_refiner_job_after_complete_failure(
+                    session,
+                    job_id=ctx.id,
+                    lease_owner=ctx.lease_owner,
+                    error_message=bounded,
+                    now=when,
+                )
+            if not recovered:
+                logger.warning(
+                    "Refiner terminalization recovery did not apply job_id=%s owner=%s",
+                    ctx.id,
+                    ctx.lease_owner,
+                )
+        except Exception:
+            logger.exception(
+                "Refiner fail_leased_refiner_job_after_complete_failure failed job_id=%s",
+                ctx.id,
+            )
+    return "processed"
+
+
+_CONCURRENT_FILES_CACHE_TTL = 30.0
+
+
+def _lease_owner(worker_index: int) -> str:
+    return f"{socket.gethostname()}-{os.getpid()}-w{worker_index}"
+
+
+async def refiner_worker_run_forever(
+    session_factory: sessionmaker[Session],
+    *,
+    worker_index: int,
+    stop_event: asyncio.Event,
+    job_handlers: Mapping[str, Callable[[RefinerJobWorkContext], None]] | None = None,
+    max_concurrent_files_getter: Callable[[], int] | None = None,
+    idle_sleep_seconds: float = REFINER_WORKER_IDLE_SLEEP_SECONDS,
+    lease_seconds: int = DEFAULT_REFINER_JOB_LEASE_SECONDS,
+) -> None:
+    """One asyncio task: repeatedly process jobs until ``stop_event`` is set."""
+
+    owner = _lease_owner(worker_index)
+    handlers = job_handlers if job_handlers is not None else default_refiner_job_handler_registry()
+    worker_started("refiner", worker_index)
+    _cached_max_concurrent: int = 8
+    _cache_expires_at: float = 0.0
+    try:
+        while not stop_event.is_set():
+            worker_heartbeat("refiner", worker_index)
+            if max_concurrent_files_getter is not None:
+                loop = asyncio.get_running_loop()
+                if loop.time() >= _cache_expires_at:
+                    try:
+                        fetched = await asyncio.to_thread(max_concurrent_files_getter)
+                        _cached_max_concurrent = max(1, min(8, int(fetched)))
+                        _cache_expires_at = loop.time() + _CONCURRENT_FILES_CACHE_TTL
+                    except Exception:
+                        pass
+                if worker_index >= _cached_max_concurrent:
+                    loop = asyncio.get_running_loop()
+                    deadline = loop.time() + idle_sleep_seconds
+                    while loop.time() < deadline and not stop_event.is_set():
+                        worker_heartbeat("refiner", worker_index)
+                        remaining = deadline - loop.time()
+                        if remaining <= 0:
+                            break
+                        await asyncio.sleep(min(1.0, remaining))
+                    continue
+
+            def _tick() -> Literal["idle", "processed"]:
+                return process_one_refiner_job(
+                    session_factory,
+                    lease_owner=owner,
+                    job_handlers=handlers,
+                    lease_seconds=lease_seconds,
+                )
+
+            try:
+                outcome = await asyncio.to_thread(_tick)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("Refiner worker tick crashed worker_index=%s", worker_index)
+                await asyncio.sleep(REFINER_WORKER_TICK_ERROR_BACKOFF_SECONDS)
+                continue
+
+            if stop_event.is_set():
+                break
+
+            if outcome == "idle":
+                loop = asyncio.get_running_loop()
+                deadline = loop.time() + idle_sleep_seconds
+                while loop.time() < deadline and not stop_event.is_set():
+                    worker_heartbeat("refiner", worker_index)
+                    remaining = deadline - loop.time()
+                    if remaining <= 0:
+                        break
+                    await asyncio.sleep(min(1.0, remaining))
+            # processed: tight spin for back-to-back queue drain
+    finally:
+        worker_stopped("refiner", worker_index)
+
+
+def start_refiner_worker_background_tasks(
+    session_factory: sessionmaker[Session],
+    settings: MediaMopSettings,
+    *,
+    job_handlers: Mapping[str, Callable[[RefinerJobWorkContext], None]] | None = None,
+    max_concurrent_files_getter: Callable[[], int] | None = None,
+    stop_event: asyncio.Event | None = None,
+) -> tuple[asyncio.Event, list[asyncio.Task[None]]]:
+    """Create Refiner worker slots and let operator settings control active file concurrency.
+
+    When ``refiner_worker_count > 0``, callers must pass ``job_handlers`` (built at the application
+    composition root).
+
+    Modes:
+
+    - **0** — Returns an empty task list (workers intentionally off; lifespan still stops cleanly).
+    - **1** — One available worker slot.
+    - **>1** — Multiple available worker slots; ``max_concurrent_files_getter`` gates the active slots
+      from the user-facing "Files at once" setting while SQLite still serializes writes.
+    """
+
+    # The shipped default is 8 slots, so warning above 1 warned about the intended
+    # configuration on every startup of every install (#329). The slot cap is not the
+    # concurrency limit — the saved "Files at once" value is — so this is a debug detail.
+    logger.debug(
+        "Refiner worker slot cap is %s; the saved files-at-once setting gates how many are active.",
+        settings.refiner_worker_count,
+    )
+
+    handlers: Mapping[str, Callable[[RefinerJobWorkContext], None]]
+    if job_handlers is not None:
+        handlers = job_handlers
+    elif settings.refiner_worker_count == 0:
+        handlers = {}
+    else:
+        msg = "job_handlers is required when refiner_worker_count > 0"
+        raise TypeError(msg)
+
+    validate_refiner_worker_handler_registry(handlers)
+
+    stop = stop_event if stop_event is not None else asyncio.Event()
+    tasks: list[asyncio.Task[None]] = []
+    # ``refiner_worker_count`` is an internal startup slot cap. In normal app usage it is 8, and
+    # ``max_concurrent_files_getter`` makes the saved "Files at once" value the effective worker count.
+    worker_slots = int(settings.refiner_worker_count)
+    for i in range(worker_slots):
+        t = asyncio.create_task(
+            refiner_worker_run_forever(
+                session_factory,
+                worker_index=i,
+                stop_event=stop,
+                job_handlers=handlers,
+                max_concurrent_files_getter=max_concurrent_files_getter,
+            ),
+            name=f"refiner-worker-{i}",
+        )
+        tasks.append(t)
+    return stop, tasks
+
+
+async def stop_refiner_worker_background_tasks(
+    stop: asyncio.Event,
+    tasks: list[asyncio.Task[None]],
+) -> None:
+    stop.set()
+    for t in tasks:
+        if not t.done():
+            t.cancel()
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)

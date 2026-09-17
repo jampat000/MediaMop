@@ -1,10 +1,7 @@
 import { useState } from "react";
 
 import { useMeQuery } from "../../lib/auth/queries";
-import {
-  useSaveSuitePause,
-  useSuitePauseQuery,
-} from "../../lib/suite/pause-queries";
+import { useSavePause, usePauseQuery } from "../../lib/pause/pause-queries";
 
 /** Minutes offered for a pause that lifts itself. */
 const DURATIONS: { label: string; minutes: number | null }[] = [
@@ -27,8 +24,8 @@ function canEdit(role: string | undefined): boolean {
  */
 export function PauseControl() {
   const me = useMeQuery();
-  const pause = useSuitePauseQuery();
-  const save = useSaveSuitePause();
+  const pause = usePauseQuery();
+  const save = useSavePause();
   const [open, setOpen] = useState(false);
 
   const editable = canEdit(me.data?.role);

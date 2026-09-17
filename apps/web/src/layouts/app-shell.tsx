@@ -5,15 +5,15 @@ import {
   NavIconActivity,
   NavIconChevronLeft,
   NavIconChevronRight,
-  NavIconDashboard,
+  NavIconHome,
   NavIconRefiner,
   NavIconSettings,
   NavIconSignOut,
 } from "../components/shell/nav-icons";
 import { PauseControl } from "../components/shell/pause-control";
 import { useLogoutMutation } from "../lib/auth/queries";
-import { useDashboardStatusQuery } from "../lib/dashboard/queries";
 import { useSuiteSettingsQuery } from "../lib/suite/queries";
+import { useSystemReadinessQuery } from "../lib/system/readiness-queries";
 import {
   persistAppTheme,
   readStoredAppTheme,
@@ -29,13 +29,13 @@ export function AppShell() {
   const location = useLocation();
   const logout = useLogoutMutation();
   const suite = useSuiteSettingsQuery();
-  const dashboard = useDashboardStatusQuery();
+  const readiness = useSystemReadinessQuery();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [theme, setTheme] = useState<AppTheme>(() => readStoredAppTheme());
   const productTitle =
     (suite.data?.product_display_name ?? "MediaMop").trim() || "MediaMop";
-  const appVersion = dashboard.data?.system.api_version;
+  const appVersion = readiness.data?.version;
   const nextTheme: AppTheme = theme === "dark" ? "light" : "dark";
 
   useEffect(() => {
@@ -90,20 +90,9 @@ export function AppShell() {
             onClick={() => setSidebarOpen(false)}
           >
             <span className="mm-sidebar-link-icon" aria-hidden="true">
-              <NavIconDashboard />
+              <NavIconHome />
             </span>
             <span className="mm-sidebar-link-label">In hand</span>
-          </NavLink>
-          <NavLink
-            to="/dashboard"
-            className={sidebarNavClass}
-            title="Dashboard"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <span className="mm-sidebar-link-icon" aria-hidden="true">
-              <NavIconDashboard />
-            </span>
-            <span className="mm-sidebar-link-label">Dashboard</span>
           </NavLink>
           <NavLink
             to="/activity"
@@ -117,7 +106,7 @@ export function AppShell() {
             <span className="mm-sidebar-link-label">Activity</span>
           </NavLink>
 
-          <p className="mm-sidebar-section-label">Modules</p>
+          <p className="mm-sidebar-section-label">Processing</p>
           <NavLink
             to="/refiner"
             className={sidebarNavClass}

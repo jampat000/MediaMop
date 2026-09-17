@@ -10,7 +10,7 @@ scope* three things.
 
 ``queue_rows()``
     Is anything mid-import right now? Rows come back in a shape
-    :func:`~mediamop.modules.refiner.queue_adapter.map_queue_row_to_refiner_view` can
+    :func:`~mediamop.refiner.queue_adapter.map_queue_row_to_refiner_view` can
     read, each tagged with the scope it describes.
 
 ``library_truth()``

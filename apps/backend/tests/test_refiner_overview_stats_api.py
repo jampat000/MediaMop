@@ -9,10 +9,10 @@ from starlette.testclient import TestClient
 
 from mediamop.core.config import MediaMopSettings
 from mediamop.core.db import create_db_engine, create_session_factory
-from mediamop.modules.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
-from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.platform.activity import constants as activity_constants
 from mediamop.platform.activity.models import ActivityEvent
+from mediamop.refiner.file_remux_pass.job_kinds import REFINER_FILE_REMUX_PASS_JOB_KIND
+from mediamop.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from tests.integration_helpers import auth_post
 from tests.integration_helpers import csrf as fetch_csrf
 

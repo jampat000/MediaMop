@@ -7,7 +7,7 @@ from dataclasses import replace
 import pytest
 
 from mediamop.core.config import MediaMopSettings
-from mediamop.modules.refiner.refiner_runtime_visibility import refiner_runtime_settings_from_settings
+from mediamop.refiner.refiner_runtime_visibility import refiner_runtime_settings_from_settings
 
 
 def test_refiner_runtime_settings_default_workers_enabled(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from mediamop.modules.refiner.refiner_operator_settings_model import RefinerOperatorSettingsRow
 from mediamop.platform.arr_library.arr_operator_settings_model import ArrLibraryOperatorSettingsRow
 from mediamop.platform.suite_settings.service import ensure_suite_settings_row
+from mediamop.refiner.refiner_operator_settings_model import RefinerOperatorSettingsRow
 
 
 def seed_greenfield_singleton_rows(session: Session) -> None:
