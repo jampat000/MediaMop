@@ -26,7 +26,8 @@ RUN npm run build
 # Runs on the build machine's own architecture (--platform=$BUILDPLATFORM): the .NET SDK cross-publishes
 # a self-contained app for another runtime without emulation (it only downloads the target runtime pack),
 # so this stage stays fast even when the final stage is emulated for a second architecture.
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS server-build
+# Pinned to the exact SDK in apps/server/global.json: newer SDKs add analyzer rules, and warnings are errors.
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.400-noble AS server-build
 ARG TARGETARCH
 WORKDIR /src
 # The solution-level MSBuild files (Directory.Build.props holds the product version) and the server source.
