@@ -1075,6 +1075,30 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/refiner/libraries/{library_id}/library-redownloads": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Library Redownloads
+     * @description Library mode (#505) / issue #509 step 2. Titles whose current rules would now keep a track a past clean removed for good, scoped to this library.
+     */
+    get: operations["get_library_redownloads"];
+    put?: never;
+    /**
+     * Post Library Redownload
+     * @description Library mode (#505) / issue #509 step 3. Asks a manager to redownload one title's file. Refused (400) without confirm_destructive.
+     */
+    post: operations["post_library_redownload"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/refiner/libraries/{library_id}/library-scan": {
     parameters: {
       query?: never;
@@ -2287,7 +2311,7 @@ export interface components {
     };
     /**
      * LibraryCleanOut
-     * @description Library mode (#505 point 5). Weir server (.NET) only.
+     * @description Library mode (#505 point 5, #508 preflight). Weir server (.NET) only.
      */
     LibraryCleanOut: {
       /** Estimated Bytes Saved */
@@ -2298,8 +2322,18 @@ export interface components {
       job_ids: number[];
       /** Queued */
       queued: number;
+      /**
+       * Skipped Paths
+       * @description #508: paths selected for cleaning but skipped outright (still shared with a download).
+       */
+      skipped_paths: string[];
       /** Tracks Count */
       tracks_count: number;
+      /**
+       * Warnings
+       * @description #508's per-file preflight notes (seeding, re-download risk).
+       */
+      warnings: string[];
     };
     /**
      * LibraryConfirmationRequired
@@ -2318,7 +2352,7 @@ export interface components {
       tracks_count: number;
       /**
        * Warnings
-       * @description Seeding/re-download risk notes from #508's LibraryCleanPreflight. Always empty until that lands.
+       * @description #508's per-file preflight notes (seeding, re-download risk), one line per file that would be skipped.
        */
       warnings: string[];
     };
@@ -2415,6 +2449,71 @@ export interface components {
       would_change: number;
     };
     /**
+     * LibraryRedownloadIn
+     * @description Issue #509 step 3. confirm_destructive must be true: the operator has seen ManagerRedownloadRules.DestructiveConfirmation's wording.
+     */
+    LibraryRedownloadIn: {
+      /** Confirm Destructive */
+      confirm_destructive: boolean;
+      /** Csrf Token */
+      csrf_token: string;
+      /** Path */
+      path: string;
+    };
+    /**
+     * LibraryRedownloadOut
+     * @description Issue #509 step 3's answer. Always outcome 'unsupported' today — see LibraryRedownloadTitleOut.can_redownload's remarks.
+     */
+    LibraryRedownloadOut: {
+      /** Message */
+      message: string;
+      /** Outcome */
+      outcome: string;
+      /** Path */
+      path: string;
+    };
+    /**
+     * LibraryRedownloadTitleOut
+     * @description Library mode (#505) / issue #509. One title whose current rules would now keep a track a past clean removed for good.
+     */
+    LibraryRedownloadTitleOut: {
+      /**
+       * Can Redownload
+       * @description Whether the 'Download again' action can be offered for this title: a manager kind issue #509 verified (Sonarr/Radarr) and a manager file id Weir can act on. Always false until #505's title matching resolves that id.
+       */
+      can_redownload: boolean;
+      /**
+       * Confirmation Message
+       * @description ManagerRedownloadRules.DestructiveConfirmation's exact wording, present only when can_redownload is true.
+       */
+      confirmation_message?: string | null;
+      /** Manager Kind */
+      manager_kind?: string | null;
+      /** Manager Title */
+      manager_title?: string | null;
+      /** Path */
+      path: string;
+      /** Removed Tracks */
+      removed_tracks: components["schemas"]["RemovedTrackOut"][];
+      /**
+       * Unavailable Reason
+       * @description Why can_redownload is false, for a plain-language note instead of hiding the title outright.
+       */
+      unavailable_reason?: string | null;
+    };
+    /**
+     * LibraryRedownloadsListOut
+     * @description Library mode (#505) / issue #509.
+     */
+    LibraryRedownloadsListOut: {
+      /** Library Id */
+      library_id: number;
+      /** Titles */
+      titles: components["schemas"]["LibraryRedownloadTitleOut"][];
+      /** Total */
+      total: number;
+    };
+    /**
      * LibraryScanTriggerOut
      * @description Library mode (#505 point 2). Weir server (.NET) only.
      */
@@ -2446,20 +2545,40 @@ export interface components {
      * @description Library mode (#505). Weir server (.NET) only.
      */
     LibrarySettingsOut: {
+      /**
+       * Clean Hardlinked Files
+       * @description #508 step 1: clean a file even while another name still shares its data (seeding). Default false.
+       */
+      clean_hardlinked_files: boolean;
       /** Library Folders */
       library_folders: string[];
       /** Library Schedule Enabled */
       library_schedule_enabled: boolean;
+      /**
+       * Skip If Manager Would Redownload
+       * @description #508 step 2: skip a clean that would make a manager re-download the title. Default true.
+       */
+      skip_if_manager_would_redownload: boolean;
     };
     /**
      * LibrarySettingsUpdateIn
-     * @description Library mode (#505 point 1). Weir server (.NET) only.
+     * @description Library mode (#505 point 1, #508 steps 1-2). Weir server (.NET) only.
      */
     LibrarySettingsUpdateIn: {
+      /**
+       * Clean Hardlinked Files
+       * @description Left out to keep the saved value.
+       */
+      clean_hardlinked_files?: boolean;
       /** Csrf Token */
       csrf_token: string;
       /** Library Folders */
       library_folders: string[];
+      /**
+       * Skip If Manager Would Redownload
+       * @description Left out to keep the saved value.
+       */
+      skip_if_manager_would_redownload?: boolean;
     };
     /** LoginIn */
     LoginIn: {
@@ -5202,6 +5321,25 @@ export interface components {
        */
       reason: string;
     };
+    /**
+     * RemovedTrackOut
+     * @description One track a Refiner pass removed from a file for good (issue #509).
+     */
+    RemovedTrackOut: {
+      /** Codec */
+      codec: string;
+      /** Language */
+      language: string;
+      /** Reason */
+      reason: string;
+      /**
+       * Type
+       * @enum {string}
+       */
+      type: "audio" | "subtitle";
+      /** Variant */
+      variant?: string | null;
+    };
     /** SessionActionOut */
     SessionActionOut: {
       /** Message */
@@ -7594,6 +7732,81 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["LibraryConfirmationRequired"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_library_redownloads: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibraryRedownloadsListOut"];
+        };
+      };
+      /** @description No Refiner library with that id */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  post_library_redownload: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LibraryRedownloadIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibraryRedownloadOut"];
+        };
+      };
+      /** @description confirm_destructive was not true */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
       /** @description Validation Error */

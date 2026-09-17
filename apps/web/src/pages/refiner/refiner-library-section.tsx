@@ -15,8 +15,11 @@ import {
 import {
   useCleanLibraryFiles,
   useLibraryFilesQuery,
+  useLibraryRedownloadsQuery,
   useLibrarySettingsQuery,
+  useRequestLibraryRedownload,
   useSaveLibraryFolders,
+  useSaveLibraryPreflightSettings,
   useSetLibrarySchedule,
   useTriggerLibraryScan,
 } from "../../lib/refiner/library-queries";
@@ -47,11 +50,18 @@ export function RefinerLibrarySection() {
 
   const settings = useLibrarySettingsQuery(libraryId ?? 0, libraryId !== null);
   const saveFolders = useSaveLibraryFolders(libraryId ?? 0);
+  const savePreflight = useSaveLibraryPreflightSettings(libraryId ?? 0);
   const scheduleMutation = useSetLibrarySchedule(libraryId ?? 0);
   const scanMutation = useTriggerLibraryScan(libraryId ?? 0);
 
   const [newFolder, setNewFolder] = useState("");
   const [folderError, setFolderError] = useState<string | null>(null);
+  const [preflightError, setPreflightError] = useState<string | null>(null);
+  const [cleanNotice, setCleanNotice] = useState<{
+    queued: number;
+    skipped: string[];
+    warnings: string[];
+  } | null>(null);
 
   const [classification, setClassification] = useState<
     LibraryFileClassification | ""
@@ -65,6 +75,15 @@ export function RefinerLibrarySection() {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const cleanMutation = useCleanLibraryFiles(libraryId ?? 0);
+  const redownloads = useLibraryRedownloadsQuery(
+    libraryId ?? 0,
+    libraryId !== null,
+  );
+  const redownloadMutation = useRequestLibraryRedownload(libraryId ?? 0);
+  const [confirmingRedownload, setConfirmingRedownload] = useState<
+    string | null
+  >(null);
+  const [redownloadError, setRedownloadError] = useState<string | null>(null);
   const [cleanConfirmation, setCleanConfirmation] =
     useState<LibraryConfirmationRequired | null>(null);
   const [cleanError, setCleanError] = useState<string | null>(null);
@@ -122,10 +141,31 @@ export function RefinerLibrarySection() {
           } else {
             setCleanConfirmation(null);
             setSelected(new Set());
+            setCleanNotice(
+              result.skipped_paths.length > 0 || result.warnings.length > 0
+                ? {
+                    queued: result.queued,
+                    skipped: result.skipped_paths,
+                    warnings: result.warnings,
+                  }
+                : null,
+            );
           }
         },
         onError: (error) => setCleanError((error as Error).message),
       },
+    );
+  };
+
+  const togglePreflightSetting = (
+    field: "clean_hardlinked_files" | "skip_if_manager_would_redownload",
+    next: boolean,
+  ) => {
+    if (!settings.data) return;
+    setPreflightError(null);
+    savePreflight.mutate(
+      { library_folders: settings.data.library_folders, [field]: next },
+      { onError: (error) => setPreflightError((error as Error).message) },
     );
   };
 
@@ -277,6 +317,40 @@ export function RefinerLibrarySection() {
               {scheduleError}
             </p>
           ) : null}
+
+          <div className="space-y-2 border-t border-[var(--mm-border)] pt-3">
+            <MmOnOffSwitch
+              id="library-clean-hardlinked-toggle"
+              label="Clean files still shared with a download (seeding)"
+              enabled={settings.data.clean_hardlinked_files}
+              disabled={!editable || savePreflight.isPending}
+              onChange={(next) =>
+                togglePreflightSetting("clean_hardlinked_files", next)
+              }
+            />
+            <p className="text-xs text-[var(--mm-text3)]">
+              Off by default: cleaning a file another name still shares data
+              with doesn&apos;t free anything, since the original bytes stay
+              allocated under the other name.
+            </p>
+            <MmOnOffSwitch
+              id="library-skip-redownload-risk-toggle"
+              label="Skip a clean that would make a manager re-download the title"
+              enabled={settings.data.skip_if_manager_would_redownload}
+              disabled={!editable || savePreflight.isPending}
+              onChange={(next) =>
+                togglePreflightSetting("skip_if_manager_would_redownload", next)
+              }
+            />
+          </div>
+          {preflightError ? (
+            <p
+              className="text-sm text-[var(--mm-status-failed-text)]"
+              role="alert"
+            >
+              {preflightError}
+            </p>
+          ) : null}
         </section>
       ) : null}
 
@@ -413,6 +487,123 @@ export function RefinerLibrarySection() {
               role="alert"
             >
               {cleanError}
+            </p>
+          ) : null}
+          {cleanNotice ? (
+            <div
+              className="space-y-1 rounded border border-[var(--mm-border)] p-2 text-sm text-[var(--mm-text2)]"
+              data-testid="library-clean-notice"
+            >
+              <p>
+                {cleanNotice.queued} file(s) queued to clean
+                {cleanNotice.skipped.length > 0
+                  ? `; ${cleanNotice.skipped.length} skipped (still shared with a download)`
+                  : ""}
+                .
+              </p>
+              {cleanNotice.warnings.map((warning) => (
+                <p key={warning} className="text-xs text-[var(--mm-text3)]">
+                  {warning}
+                </p>
+              ))}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {libraryId !== null &&
+      redownloads.data &&
+      redownloads.data.titles.length > 0 ? (
+        <section
+          className="mm-bubble space-y-3 p-4"
+          data-testid="library-redownloads-section"
+        >
+          <h3 className="text-sm font-semibold text-[var(--mm-text1)]">
+            Titles missing tracks your new rules keep
+          </h3>
+          <p className="text-xs text-[var(--mm-text3)]">
+            A past clean removed these tracks for good; the only way to get one
+            back is downloading the title again.
+          </p>
+          <ul className="space-y-2">
+            {redownloads.data.titles.map((title) => (
+              <li
+                key={title.path}
+                className="rounded border border-[var(--mm-border)] p-2 text-sm"
+                data-testid="library-redownload-row"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="break-all font-medium text-[var(--mm-text1)]">
+                      {title.manager_title ?? title.path}
+                    </div>
+                    <div className="text-xs text-[var(--mm-text3)]">
+                      {title.removed_tracks
+                        .map((t) => `${t.language} ${t.type}`)
+                        .join(", ")}
+                    </div>
+                  </div>
+                  {editable && title.can_redownload ? (
+                    <button
+                      type="button"
+                      className={mmActionButtonClass({ variant: "secondary" })}
+                      onClick={() => setConfirmingRedownload(title.path)}
+                    >
+                      Download again
+                    </button>
+                  ) : (
+                    <span className="text-xs text-[var(--mm-text3)]">
+                      {title.unavailable_reason}
+                    </span>
+                  )}
+                </div>
+                {confirmingRedownload === title.path ? (
+                  <div className="mt-2 space-y-2 border-t border-[var(--mm-border)] pt-2">
+                    <p className="text-sm text-[var(--mm-status-failed-text)]">
+                      {title.confirmation_message}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        className={mmActionButtonClass({
+                          variant: "primary",
+                          disabled: redownloadMutation.isPending,
+                        })}
+                        disabled={redownloadMutation.isPending}
+                        onClick={() => {
+                          setRedownloadError(null);
+                          redownloadMutation.mutate(title.path, {
+                            onSuccess: () => setConfirmingRedownload(null),
+                            onError: (error) =>
+                              setRedownloadError((error as Error).message),
+                          });
+                        }}
+                      >
+                        {redownloadMutation.isPending
+                          ? "Requesting…"
+                          : "Confirm download again"}
+                      </button>
+                      <button
+                        type="button"
+                        className={mmActionButtonClass({
+                          variant: "tertiary",
+                        })}
+                        onClick={() => setConfirmingRedownload(null)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+          {redownloadError ? (
+            <p
+              className="text-sm text-[var(--mm-status-failed-text)]"
+              role="alert"
+            >
+              {redownloadError}
             </p>
           ) : null}
         </section>

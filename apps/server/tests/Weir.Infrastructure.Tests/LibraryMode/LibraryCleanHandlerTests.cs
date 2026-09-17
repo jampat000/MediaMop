@@ -44,7 +44,8 @@ public sealed class LibraryCleanHandlerTests : IDisposable
         // same #507 code the running server does.
         var notifier = new LibraryFileChangeNotifier(
             _fixture.Connections, _fixture.Store.Database, new SqliteActivityWriter(_fixture.Store.Database), _fixture.Store.Clock, delay: (_, _) => Task.CompletedTask);
-        return new LibraryCleanHandler(_fixture.Store.Database, tools, swap, notifier, PhysicalHardlinkInspector.Instance, _fixture.Store.Clock, NullLogger<LibraryCleanHandler>.Instance);
+        var removedTrackStore = new Weir.Infrastructure.Library.FileLogRemovedTrackStore(_fixture.Store.Database, _fixture.Store.Clock);
+        return new LibraryCleanHandler(_fixture.Store.Database, tools, swap, notifier, PhysicalHardlinkInspector.Instance, removedTrackStore, _fixture.Store.Clock, NullLogger<LibraryCleanHandler>.Instance);
     }
 
     /// <summary>A library whose rule set keeps only English audio, strictly — the same policy proven in

@@ -30,6 +30,7 @@ public sealed class LibraryCleanHandler : IJobHandler
     private readonly SafeSwap _swap;
     private readonly ILibraryFileChangeNotifier _notifier;
     private readonly IHardlinkInspector _hardlinkInspector;
+    private readonly Weir.Core.Library.IRemovedTrackStore _removedTrackStore;
     private readonly TimeProvider _time;
     private readonly ILogger<LibraryCleanHandler> _logger;
 
@@ -39,6 +40,7 @@ public sealed class LibraryCleanHandler : IJobHandler
         SafeSwap swap,
         ILibraryFileChangeNotifier notifier,
         IHardlinkInspector hardlinkInspector,
+        Weir.Core.Library.IRemovedTrackStore removedTrackStore,
         TimeProvider time,
         ILogger<LibraryCleanHandler> logger)
     {
@@ -47,6 +49,7 @@ public sealed class LibraryCleanHandler : IJobHandler
         _swap = swap ?? throw new ArgumentNullException(nameof(swap));
         _notifier = notifier ?? throw new ArgumentNullException(nameof(notifier));
         _hardlinkInspector = hardlinkInspector ?? throw new ArgumentNullException(nameof(hardlinkInspector));
+        _removedTrackStore = removedTrackStore ?? throw new ArgumentNullException(nameof(removedTrackStore));
         _time = time ?? throw new ArgumentNullException(nameof(time));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -207,6 +210,24 @@ public sealed class LibraryCleanHandler : IJobHandler
 
     private async Task OnCommittedAsync(RefinerLibraryRecord library, string path, LibraryFilePlanResult plan, SwapResult result, CancellationToken cancellationToken)
     {
+        // #509 step 1: record what this clean removed for good, keyed the same way library mode identifies the
+        // file everywhere else (library id + this path). A future rule change can then ask #509's diff whether
+        // any of it would now be kept. Best-effort: a store failure here must never undo an already-committed swap.
+        if (plan.Plan is { RemovedTrackRecords.Count: > 0 } committedPlan)
+        {
+            try
+            {
+                var key = new Weir.Core.Library.RemovedTrackFileKey(library.Id, path);
+                await _removedTrackStore.RecordAsync(key, committedPlan.RemovedTrackRecords, cancellationToken).ConfigureAwait(false);
+            }
+#pragma warning disable CA1031 // Best-effort, like the notify step below: recording removed tracks must never fail a committed clean.
+            catch (Exception exception)
+#pragma warning restore CA1031
+            {
+                _logger.LogWarning(exception, "Library clean committed but recording its removed tracks (#509) failed.");
+            }
+        }
+
         // #507 (telling the manager) records its own Activity entries for a notify failure or warning; this handler's own
         // "cleaned" entry below never depends on how that call went.
         try

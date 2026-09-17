@@ -3,8 +3,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   cleanLibraryFiles,
   fetchLibraryFiles,
+  fetchLibraryRedownloads,
   fetchLibrarySettings,
+  requestLibraryRedownload,
   saveLibraryFolders,
+  saveLibrarySettings,
   setLibrarySchedule,
   triggerLibraryScan,
   type LibraryFileClassification,
@@ -37,6 +40,20 @@ export function useSaveLibraryFolders(libraryId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (folders: string[]) => saveLibraryFolders(libraryId, folders),
+    onSuccess: () =>
+      void qc.invalidateQueries({ queryKey: librarySettingsKey(libraryId) }),
+  });
+}
+
+/** #508: the two preflight checkboxes, saved together with the library's current folders (see saveLibrarySettings). */
+export function useSaveLibraryPreflightSettings(libraryId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (updates: {
+      library_folders: string[];
+      clean_hardlinked_files?: boolean;
+      skip_if_manager_would_redownload?: boolean;
+    }) => saveLibrarySettings(libraryId, updates),
     onSuccess: () =>
       void qc.invalidateQueries({ queryKey: librarySettingsKey(libraryId) }),
   });
@@ -81,6 +98,31 @@ export function useCleanLibraryFiles(libraryId: number) {
         });
       }
     },
+  });
+}
+
+export const libraryRedownloadsKey = (libraryId: number) => [
+  "refiner",
+  "library-redownloads",
+  libraryId,
+];
+
+/** #509 step 2: titles a rule change now keeps a track for that a past clean removed. */
+export function useLibraryRedownloadsQuery(libraryId: number, enabled = true) {
+  return useQuery({
+    queryKey: libraryRedownloadsKey(libraryId),
+    queryFn: () => fetchLibraryRedownloads(libraryId),
+    enabled: enabled && libraryId > 0,
+  });
+}
+
+/** #509 step 3: "Download again", shown only when the title's can_redownload is true. */
+export function useRequestLibraryRedownload(libraryId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (path: string) => requestLibraryRedownload(libraryId, path),
+    onSuccess: () =>
+      void qc.invalidateQueries({ queryKey: libraryRedownloadsKey(libraryId) }),
   });
 }
 

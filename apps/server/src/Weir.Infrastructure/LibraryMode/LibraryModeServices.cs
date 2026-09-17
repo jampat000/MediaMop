@@ -2,6 +2,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Weir.Core.Configuration;
 using Weir.Core.Jobs;
+using Weir.Core.Library;
+using Weir.Core.MediaManagers;
+using Weir.Infrastructure.Library;
 using Weir.Infrastructure.Media;
 using Weir.Infrastructure.MediaManagers;
 using Weir.Infrastructure.Sqlite;
@@ -36,6 +39,13 @@ public static class LibraryModeServices
         services.TryAddSingleton<IHardlinkInspector>(_ => PhysicalHardlinkInspector.Instance);
         services.TryAddSingleton<IRedownloadRiskGateway, ArrRedownloadRiskGateway>();
         services.TryAddSingleton<RedownloadRiskChecker>();
+
+        // #509: what a clean removed for good, and asking a manager to redownload a title that is missing it.
+        // FileLogRemovedTrackStore is durable (refiner_file_logs.detail_json — no migration, ADR-0017); the
+        // redownload tracker stays in-memory (see its own remarks) since nothing yet calls its ClearAsync hook.
+        services.TryAddSingleton<IRemovedTrackStore, FileLogRemovedTrackStore>();
+        services.TryAddSingleton<IRedownloadTracker, InMemoryRedownloadTracker>();
+        services.TryAddSingleton<IManagerRedownload, ArrManagerRedownload>();
 
         // #507's notify seam: AddWeirMediaManagers (above) registers the real LibraryFileChangeNotifier.
         services.TryAddSingleton<LibraryScanHandler>();

@@ -854,7 +854,7 @@
       },
       "LibraryCleanOut": {
         "additionalProperties": false,
-        "description": "Library mode (#505 point 5). Weir server (.NET) only.",
+        "description": "Library mode (#505 point 5, #508 preflight). Weir server (.NET) only.",
         "properties": {
           "estimated_bytes_saved": {
             "title": "Estimated Bytes Saved",
@@ -875,9 +875,25 @@
             "title": "Queued",
             "type": "integer"
           },
+          "skipped_paths": {
+            "description": "#508: paths selected for cleaning but skipped outright (still shared with a download).",
+            "items": {
+              "type": "string"
+            },
+            "title": "Skipped Paths",
+            "type": "array"
+          },
           "tracks_count": {
             "title": "Tracks Count",
             "type": "integer"
+          },
+          "warnings": {
+            "description": "#508's per-file preflight notes (seeding, re-download risk).",
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
           }
         },
         "required": [
@@ -885,7 +901,9 @@
           "job_ids",
           "files_count",
           "tracks_count",
-          "estimated_bytes_saved"
+          "estimated_bytes_saved",
+          "skipped_paths",
+          "warnings"
         ],
         "title": "LibraryCleanOut",
         "type": "object"
@@ -915,7 +933,7 @@
             "type": "integer"
           },
           "warnings": {
-            "description": "Seeding/re-download risk notes from #508's LibraryCleanPreflight. Always empty until that lands.",
+            "description": "#508's per-file preflight notes (seeding, re-download risk), one line per file that would be skipped.",
             "items": {
               "type": "string"
             },
@@ -1190,6 +1208,161 @@
         "title": "LibraryFilesSummaryOut",
         "type": "object"
       },
+      "LibraryRedownloadIn": {
+        "additionalProperties": false,
+        "description": "Issue #509 step 3. confirm_destructive must be true: the operator has seen ManagerRedownloadRules.DestructiveConfirmation's wording.",
+        "properties": {
+          "confirm_destructive": {
+            "title": "Confirm Destructive",
+            "type": "boolean"
+          },
+          "csrf_token": {
+            "minLength": 1,
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "path": {
+            "minLength": 1,
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "confirm_destructive",
+          "csrf_token"
+        ],
+        "title": "LibraryRedownloadIn",
+        "type": "object"
+      },
+      "LibraryRedownloadOut": {
+        "additionalProperties": false,
+        "description": "Issue #509 step 3's answer. Always outcome 'unsupported' today — see LibraryRedownloadTitleOut.can_redownload's remarks.",
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "outcome": {
+            "title": "Outcome",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "outcome",
+          "message"
+        ],
+        "title": "LibraryRedownloadOut",
+        "type": "object"
+      },
+      "LibraryRedownloadTitleOut": {
+        "additionalProperties": false,
+        "description": "Library mode (#505) / issue #509. One title whose current rules would now keep a track a past clean removed for good.",
+        "properties": {
+          "can_redownload": {
+            "description": "Whether the 'Download again' action can be offered for this title: a manager kind issue #509 verified (Sonarr/Radarr) and a manager file id Weir can act on. Always false until #505's title matching resolves that id.",
+            "title": "Can Redownload",
+            "type": "boolean"
+          },
+          "confirmation_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ManagerRedownloadRules.DestructiveConfirmation's exact wording, present only when can_redownload is true.",
+            "title": "Confirmation Message"
+          },
+          "manager_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Kind"
+          },
+          "manager_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Title"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "removed_tracks": {
+            "items": {
+              "$ref": "#/components/schemas/RemovedTrackOut"
+            },
+            "title": "Removed Tracks",
+            "type": "array"
+          },
+          "unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why can_redownload is false, for a plain-language note instead of hiding the title outright.",
+            "title": "Unavailable Reason"
+          }
+        },
+        "required": [
+          "path",
+          "removed_tracks",
+          "can_redownload"
+        ],
+        "title": "LibraryRedownloadTitleOut",
+        "type": "object"
+      },
+      "LibraryRedownloadsListOut": {
+        "additionalProperties": false,
+        "description": "Library mode (#505) / issue #509.",
+        "properties": {
+          "library_id": {
+            "title": "Library Id",
+            "type": "integer"
+          },
+          "titles": {
+            "items": {
+              "$ref": "#/components/schemas/LibraryRedownloadTitleOut"
+            },
+            "title": "Titles",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "library_id",
+          "titles",
+          "total"
+        ],
+        "title": "LibraryRedownloadsListOut",
+        "type": "object"
+      },
       "LibraryScanTriggerOut": {
         "additionalProperties": false,
         "description": "Library mode (#505 point 2). Weir server (.NET) only.",
@@ -1245,6 +1418,11 @@
         "additionalProperties": false,
         "description": "Library mode (#505). Weir server (.NET) only.",
         "properties": {
+          "clean_hardlinked_files": {
+            "description": "#508 step 1: clean a file even while another name still shares its data (seeding). Default false.",
+            "title": "Clean Hardlinked Files",
+            "type": "boolean"
+          },
           "library_folders": {
             "items": {
               "type": "string"
@@ -1255,19 +1433,31 @@
           "library_schedule_enabled": {
             "title": "Library Schedule Enabled",
             "type": "boolean"
+          },
+          "skip_if_manager_would_redownload": {
+            "description": "#508 step 2: skip a clean that would make a manager re-download the title. Default true.",
+            "title": "Skip If Manager Would Redownload",
+            "type": "boolean"
           }
         },
         "required": [
           "library_folders",
-          "library_schedule_enabled"
+          "library_schedule_enabled",
+          "clean_hardlinked_files",
+          "skip_if_manager_would_redownload"
         ],
         "title": "LibrarySettingsOut",
         "type": "object"
       },
       "LibrarySettingsUpdateIn": {
         "additionalProperties": false,
-        "description": "Library mode (#505 point 1). Weir server (.NET) only.",
+        "description": "Library mode (#505 point 1, #508 steps 1-2). Weir server (.NET) only.",
         "properties": {
+          "clean_hardlinked_files": {
+            "description": "Left out to keep the saved value.",
+            "title": "Clean Hardlinked Files",
+            "type": "boolean"
+          },
           "csrf_token": {
             "minLength": 1,
             "title": "Csrf Token",
@@ -1279,6 +1469,11 @@
             },
             "title": "Library Folders",
             "type": "array"
+          },
+          "skip_if_manager_would_redownload": {
+            "description": "Left out to keep the saved value.",
+            "title": "Skip If Manager Would Redownload",
+            "type": "boolean"
           }
         },
         "required": [
@@ -6662,6 +6857,51 @@
         "title": "RejectSupportOut",
         "type": "object"
       },
+      "RemovedTrackOut": {
+        "additionalProperties": false,
+        "description": "One track a Refiner pass removed from a file for good (issue #509).",
+        "properties": {
+          "codec": {
+            "title": "Codec",
+            "type": "string"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "audio",
+              "subtitle"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "variant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variant"
+          }
+        },
+        "required": [
+          "language",
+          "type",
+          "codec",
+          "reason"
+        ],
+        "title": "RemovedTrackOut",
+        "type": "object"
+      },
       "SessionActionOut": {
         "properties": {
           "message": {
@@ -10903,6 +11143,112 @@
           }
         },
         "summary": "Post Library Files Clean",
+        "tags": [
+          "library-mode"
+        ]
+      }
+    },
+    "/api/v1/refiner/libraries/{library_id}/library-redownloads": {
+      "get": {
+        "description": "Library mode (#505) / issue #509 step 2. Titles whose current rules would now keep a track a past clean removed for good, scoped to this library.",
+        "operationId": "get_library_redownloads",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "library_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Library Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryRedownloadsListOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "No Refiner library with that id"
+          }
+        },
+        "summary": "Get Library Redownloads",
+        "tags": [
+          "library-mode"
+        ]
+      },
+      "post": {
+        "description": "Library mode (#505) / issue #509 step 3. Asks a manager to redownload one title's file. Refused (400) without confirm_destructive.",
+        "operationId": "post_library_redownload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "library_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Library Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LibraryRedownloadIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryRedownloadOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "confirm_destructive was not true"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Library Redownload",
         "tags": [
           "library-mode"
         ]

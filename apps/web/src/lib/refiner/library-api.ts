@@ -20,6 +20,11 @@ export const LIBRARY_FILE_CLASSIFICATION_LABELS: Record<
 export interface LibrarySettings {
   library_folders: string[];
   library_schedule_enabled: boolean;
+  /** #508 step 1: clean a file even while another name still shares its data (seeding). Default false. */
+  clean_hardlinked_files: boolean;
+  /** #508 step 2: skip a clean that would make a manager re-download the title. Default true. Not yet enforced
+   * server-side — see apps/server/README.md's "Seams for #507, #508 and #509" — but always safe to save. */
+  skip_if_manager_would_redownload: boolean;
 }
 
 export interface LibraryFile {
@@ -71,7 +76,7 @@ export interface LibraryConfirmationRequired {
   files_count: number;
   tracks_count: number;
   estimated_bytes_saved: number;
-  /** Seeding/re-download risk notes from #508's `LibraryCleanPreflight`, once that branch lands. Absent today. */
+  /** #508's per-file preflight notes (seeding, re-download risk), one line per file that would be skipped. */
   warnings?: string[];
 }
 
@@ -82,6 +87,10 @@ export interface LibraryCleanResult {
   files_count: number;
   tracks_count: number;
   estimated_bytes_saved: number;
+  /** #508: paths selected for cleaning but skipped outright (still shared with a download). */
+  skipped_paths: string[];
+  /** #508's per-file preflight notes, same shape as the confirmation dialog's. */
+  warnings: string[];
 }
 
 function librarySettingsPath(libraryId: number): string {
@@ -105,14 +114,31 @@ export async function saveLibraryFolders(
   libraryId: number,
   library_folders: string[],
 ): Promise<LibrarySettings> {
+  return saveLibrarySettings(libraryId, { library_folders });
+}
+
+/**
+ * PUTs library-mode settings. `library_folders` is required on every call (the API replaces the whole list, not
+ * just the fields sent, when it is present — an absent list is read as "no folders", not "leave unchanged"), so a
+ * checkbox-only save must still pass the library's current folders. `clean_hardlinked_files` and
+ * `skip_if_manager_would_redownload` are each optional and keep their saved value when left out.
+ */
+export async function saveLibrarySettings(
+  libraryId: number,
+  updates: {
+    library_folders: string[];
+    clean_hardlinked_files?: boolean;
+    skip_if_manager_would_redownload?: boolean;
+  },
+): Promise<LibrarySettings> {
   const csrf_token = await fetchCsrfToken();
   const path = librarySettingsPath(libraryId);
   const r = await apiFetch(path, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ library_folders, csrf_token }),
+    body: JSON.stringify({ ...updates, csrf_token }),
   });
-  await requireOk(path, r, "Could not save this library's folders");
+  await requireOk(path, r, "Could not save this library's settings");
   return readJson<LibrarySettings>(r);
 }
 
@@ -212,6 +238,71 @@ export async function setLibrarySchedule(
     r,
     "Could not change the library schedule",
   );
+}
+
+/** One track a Refiner pass removed from a file for good (issue #509). */
+export interface RemovedTrack {
+  language: string;
+  type: "audio" | "subtitle";
+  codec: string;
+  variant: string | null;
+  reason: string;
+}
+
+/**
+ * One title whose current rules would now keep a track a past clean removed for good (#509 step 2). The
+ * "Download again" action is only ever shown when `can_redownload` is true — see its own doc comment on the
+ * server (`LibraryModeEndpoints.GetRedownloadsAsync`) for why that is always false until #505's manager title
+ * matching lands: `unavailable_reason` explains why in plain language instead.
+ */
+export interface LibraryRedownloadTitle {
+  path: string;
+  manager_kind: string | null;
+  manager_title: string | null;
+  removed_tracks: RemovedTrack[];
+  can_redownload: boolean;
+  confirmation_message: string | null;
+  unavailable_reason: string | null;
+}
+
+export interface LibraryRedownloadsResult {
+  library_id: number;
+  titles: LibraryRedownloadTitle[];
+  total: number;
+}
+
+export interface LibraryRedownloadResult {
+  path: string;
+  outcome: string;
+  message: string;
+}
+
+export async function fetchLibraryRedownloads(
+  libraryId: number,
+): Promise<LibraryRedownloadsResult> {
+  const path = `/api/v1/refiner/libraries/${libraryId}/library-redownloads`;
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load titles missing tracks");
+  return readJson<LibraryRedownloadsResult>(r);
+}
+
+export async function requestLibraryRedownload(
+  libraryId: number,
+  filePath: string,
+): Promise<LibraryRedownloadResult> {
+  const csrf_token = await fetchCsrfToken();
+  const path = `/api/v1/refiner/libraries/${libraryId}/library-redownloads`;
+  const r = await apiFetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      path: filePath,
+      confirm_destructive: true,
+      csrf_token,
+    }),
+  });
+  await requireOk(path, r, "Could not ask the manager to download this again");
+  return readJson<LibraryRedownloadResult>(r);
 }
 
 /** Bytes as an operator reads them: binary units, one decimal from KB up (mirrors SafeSwapRules.FormatBytes). */

@@ -98,6 +98,13 @@ it("shows the library's folders and files, with a would-change file selectable",
   vi.spyOn(libraryApi, "fetchLibrarySettings").mockResolvedValue({
     library_folders: ["/srv/movies/library"],
     library_schedule_enabled: false,
+    clean_hardlinked_files: false,
+    skip_if_manager_would_redownload: true,
+  });
+  vi.spyOn(libraryApi, "fetchLibraryRedownloads").mockResolvedValue({
+    library_id: 1,
+    titles: [],
+    total: 0,
   });
   vi.spyOn(libraryApi, "fetchLibraryFiles").mockResolvedValue({
     library_id: 1,
@@ -146,6 +153,13 @@ it("shows the exact final-removal confirmation text before cleaning, then cleans
   vi.spyOn(libraryApi, "fetchLibrarySettings").mockResolvedValue({
     library_folders: ["/srv/movies/library"],
     library_schedule_enabled: false,
+    clean_hardlinked_files: false,
+    skip_if_manager_would_redownload: true,
+  });
+  vi.spyOn(libraryApi, "fetchLibraryRedownloads").mockResolvedValue({
+    library_id: 1,
+    titles: [],
+    total: 0,
   });
   vi.spyOn(libraryApi, "fetchLibraryFiles").mockResolvedValue({
     library_id: 1,
@@ -191,6 +205,8 @@ it("shows the exact final-removal confirmation text before cleaning, then cleans
       files_count: 1,
       tracks_count: 1,
       estimated_bytes_saved: 2_000_000,
+      skipped_paths: [],
+      warnings: [],
     });
 
   render(<RefinerLibrarySection />, { wrapper });
