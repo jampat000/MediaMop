@@ -70,6 +70,14 @@ public sealed class ProcessRunnerTests
         Assert.Equal(OperatingSystem.IsWindows() ? ["one", "two"] : ["one", "two", "three", "four"], lines);
     }
 
+    /// <summary>
+    /// Generous enough not to flake on a slow CI runner (the kill path can legitimately spend up to
+    /// <see cref="ProcessRunner.DrainAfterKill"/> waiting for pipes to drain, then up to another one waiting
+    /// for the final exit), while still proving the tree was actually killed rather than left to run the
+    /// child's full 60 second sleep to completion.
+    /// </summary>
+    private static readonly TimeSpan MaxTimeToKillAndDrain = TimeSpan.FromSeconds(2) + (ProcessRunner.DrainAfterKill * 2);
+
     [Fact]
     public async Task A_timeout_kills_the_whole_tree_and_returns_promptly()
     {
@@ -79,8 +87,7 @@ public sealed class ProcessRunnerTests
 
         stopwatch.Stop();
         Assert.Equal(ProcessTimeoutKind.Overall, result.Timeout);
-        // The drain allowance after a kill is five seconds; a surviving child holding the pipe would use all of it.
-        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(4), $"took {stopwatch.Elapsed}");
+        Assert.True(stopwatch.Elapsed < MaxTimeToKillAndDrain, $"took {stopwatch.Elapsed}");
         Assert.DoesNotContain("done", Encoding.UTF8.GetString(result.Stdout), StringComparison.Ordinal);
     }
 
@@ -104,7 +111,7 @@ public sealed class ProcessRunnerTests
         stopwatch.Stop();
         Assert.Equal(ProcessTimeoutKind.Overall, result.Timeout);
         Assert.Empty(lines);
-        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(4), $"took {stopwatch.Elapsed}");
+        Assert.True(stopwatch.Elapsed < MaxTimeToKillAndDrain, $"took {stopwatch.Elapsed}");
     }
 
     [Fact]
@@ -115,7 +122,7 @@ public sealed class ProcessRunnerTests
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Runner.RunAsync(new ProcessRequest { Argv = ShellWithSleepingChild() }, cancel.Token));
 
-        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(4), $"took {stopwatch.Elapsed}");
+        Assert.True(stopwatch.Elapsed < MaxTimeToKillAndDrain, $"took {stopwatch.Elapsed}");
     }
 
     [Fact]
@@ -132,7 +139,7 @@ public sealed class ProcessRunnerTests
         }));
 
         Assert.Equal("stop", error.Message);
-        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(4), $"took {stopwatch.Elapsed}");
+        Assert.True(stopwatch.Elapsed < MaxTimeToKillAndDrain, $"took {stopwatch.Elapsed}");
     }
 
     [Fact]

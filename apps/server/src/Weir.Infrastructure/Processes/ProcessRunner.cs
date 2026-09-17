@@ -100,8 +100,11 @@ public interface IProcessRunner
 /// <summary><see cref="IProcessRunner"/> over <see cref="Process"/>, for Windows and Linux.</summary>
 public sealed class ProcessRunner : IProcessRunner
 {
-    /// <summary>How long to wait for pipes to drain after a kill before giving up on them.</summary>
-    private static readonly TimeSpan DrainAfterKill = TimeSpan.FromSeconds(5);
+    /// <summary>
+    /// How long to wait for pipes to drain after a kill before giving up on them. Internal (not private)
+    /// so tests can size their own wall-clock assertions off the real allowance instead of guessing one.
+    /// </summary>
+    internal static readonly TimeSpan DrainAfterKill = TimeSpan.FromSeconds(5);
 
     public async Task<ProcessResult> RunAsync(ProcessRequest request, CancellationToken cancellationToken = default)
     {
