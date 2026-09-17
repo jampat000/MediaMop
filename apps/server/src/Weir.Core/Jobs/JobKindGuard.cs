@@ -85,7 +85,7 @@ public static class JobKindGuard
         if (bad.Count > 0)
         {
             throw new ArgumentException(
-                "Refiner worker handler registry keys must start with " +
+                "Worker handler registry keys must start with " +
                 $"{PyStrings.Repr(JobKindPrefix)} and must not use a retired prefix (offending keys: [{string.Join(", ", bad.Select(PyStrings.Repr))}])");
         }
     }

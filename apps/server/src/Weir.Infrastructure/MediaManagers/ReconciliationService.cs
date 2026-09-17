@@ -39,7 +39,7 @@ public static class ReconciliationService
         {
             if (!confirm)
             {
-                throw new PyValueErrorException("confirm=true is required before removing a Refiner temp artifact.");
+                throw new PyValueErrorException("confirm=true is required before removing a temp artifact.");
             }
 
             if (path is null || PyStrings.Strip(path).Length == 0)
@@ -56,7 +56,7 @@ public static class ReconciliationService
             var removed = SafeUnlinkUnderRoots(path, roots);
             return new PyDict()
                 .Set("applied", removed)
-                .Set("message", removed ? "Removed the Refiner temp artifact." : "Temp artifact is already gone.");
+                .Set("message", removed ? "Removed the temp artifact." : "Temp artifact is already gone.");
         }
 
         throw new PyValueErrorException($"Unknown reconciliation repair action: {action}");
@@ -145,7 +145,7 @@ public static class ReconciliationService
                         "partial_temp_artifact",
                         "refiner",
                         "info",
-                        "Refiner work folder contains a temporary artifact from an interrupted operation.",
+                        "The work folder contains a temporary artifact from an interrupted operation.",
                         entry,
                         RepairAction: ReconciliationRules.RemoveTempArtifactAction,
                         RequiresConfirmation: true));

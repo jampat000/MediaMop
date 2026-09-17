@@ -42,12 +42,12 @@ public sealed record RefinerRuntimeSettings
 public static class RuntimeVisibility
 {
     private const string SqliteThroughputNote =
-        "Weir stores durable jobs on SQLite. Several Refiner workers can each claim a different refiner_jobs row, " +
+        "Weir stores durable jobs on SQLite. Several workers can each claim a different refiner_jobs row, " +
         "but the database still serializes writes, so raising the count may not speed things up proportionally and can add contention.";
 
     private const string ConfigurationNote =
-        "Refiner concurrency is controlled by the Processing settings page. Set Files at once to 1 for one active " +
-        "Refiner file worker or up to 8 for parallel file work. No restart is needed after changing that setting.";
+        "Concurrency is controlled by Processing → Libraries. Set Files at once to 1 for one active " +
+        "file worker or up to 8 for parallel file work. No restart is needed after changing that setting.";
 
     private const string VisibilityNote =
         "Values reflect this API process startup configuration. They do not prove a worker is mid-job or that " +
@@ -56,13 +56,13 @@ public static class RuntimeVisibility
     private const string WatchedFolderScanPeriodicNote =
         "Periodic scanning for refiner.watched_folder.remux_scan_dispatch.v1 is controlled per library (its own " +
         "enabled switch and scan interval, saved in the database and applied without a restart) and per scope on " +
-        "the Refiner operator-settings screen (Movies/TV periodic-scan switch). It can also be turned off " +
+        "the Processing → Libraries screen (Movies/TV periodic-scan switch). It can also be turned off " +
         "altogether, for every scope, with WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED in " +
         "the server's environment (default on; #533 — a manual scan still works with this off). Whether a periodic scan " +
         "that does run may also queue file work is the separate " +
         "WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS (default on). Restart the API " +
         "after changing either environment variable — both are read at process start only. " +
-        "Refiner ffprobe preflight depth: WEIR_REFINER_PROBE_SIZE_MB and WEIR_REFINER_ANALYZE_DURATION_SECONDS in " +
+        "ffprobe preflight depth: WEIR_REFINER_PROBE_SIZE_MB and WEIR_REFINER_ANALYZE_DURATION_SECONDS in " +
         "the server's environment (read at startup; restart required).";
 
     private const string MovieOutputCleanupNote =
@@ -76,7 +76,7 @@ public static class RuntimeVisibility
         "Restart the API after changing this value.";
 
     private const string FailureCleanupNote =
-        "Refiner Pass 4 failed-remux cleanup sweep uses separate Movies and TV timers and grace periods in " +
+        "The Pass 4 failed-remux cleanup sweep uses separate Movies and TV timers and grace periods in " +
         "the server's environment. Only terminal failed remux rows are eligible, and failure age uses refiner_jobs.updated_at. Restart required.";
 
     private const string WorkTempStaleSweepPeriodicNote =
@@ -89,10 +89,10 @@ public static class RuntimeVisibility
         var n = options.RefinerWorkerCount;
         var disabled = n == 0;
         var summary = disabled
-            ? "In-process Refiner workers are off (0). refiner_jobs rows stay queued until you set WEIR_REFINER_WORKER_COUNT to at least 1 and restart this API."
+            ? "In-process workers are off (0). refiner_jobs rows stay queued until you set WEIR_REFINER_WORKER_COUNT to at least 1 and restart this API."
             : n == 1
-                ? "Refiner has one available refiner_jobs worker slot. The Processing settings page controls the active Files at once value."
-                : $"{n} in-process Refiner worker slots are available. The Processing settings page decides how many of those refiner_jobs slots may process files at once.";
+                ? "Weir has one available refiner_jobs worker slot. Processing → Libraries controls the active Files at once value."
+                : $"{n} in-process worker slots are available. Processing → Libraries decides how many of those refiner_jobs slots may process files at once.";
 
         return new RefinerRuntimeSettings
         {

@@ -28,7 +28,7 @@ public sealed class StartupRecoveryTests : IDisposable
         Assert.Null(row.LeaseOwner);
         Assert.Null(row.LeaseExpiresAt);
         Assert.Equal(
-            "Refiner job was interrupted by a Weir restart. Recovered at 2026-04-29T12:00:00+00:00 and queued for another safe attempt.",
+            "This job was interrupted by a Weir restart. Recovered at 2026-04-29T12:00:00+00:00 and queued for another safe attempt.",
             row.LastError);
         // Claimable straight away, not after the dead lease would have expired.
         Assert.NotNull(await _db.Store.ClaimNextAsync("w", Now.AddHours(1), Now));

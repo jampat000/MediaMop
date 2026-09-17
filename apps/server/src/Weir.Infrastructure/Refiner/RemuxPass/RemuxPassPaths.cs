@@ -99,7 +99,7 @@ public static class RemuxPassPaths
         var root = Resolve(mediaRoot);
         if (!Directory.Exists(root))
         {
-            throw new ArgumentException("Refiner watched folder (saved settings) must be an existing directory");
+            throw new ArgumentException("The watched folder (saved settings) must be an existing directory");
         }
 
         var rel = PyStrings.Strip(relativePath ?? string.Empty).Replace('\\', '/').TrimStart('/');
@@ -116,7 +116,7 @@ public static class RemuxPassPaths
         var candidate = Resolve(Path.Join(root, rel));
         if (!IsUnder(candidate, root))
         {
-            throw new ArgumentException("resolved file path escapes the saved Refiner watched folder");
+            throw new ArgumentException("resolved file path escapes the saved watched folder");
         }
 
         return candidate;
@@ -147,14 +147,14 @@ public static class RemuxPassPaths
     public static (RefinerPathRuntime? Runtime, string? Problem) RuntimeForLibrary(RefinerLibraryRecord library, string weirHome)
     {
         ArgumentNullException.ThrowIfNull(library);
-        var label = PyStrings.Strip(library.Name).Length > 0 ? PyStrings.Strip(library.Name) : library.MediaType == "tv" ? "TV Refiner" : "Movies Refiner";
+        var label = PyStrings.Strip(library.Name).Length > 0 ? PyStrings.Strip(library.Name) : library.MediaType == "tv" ? "TV" : "Movies";
         var watchedRaw = PyStrings.Strip(library.WatchedFolder ?? string.Empty);
         if (watchedRaw.Length == 0)
         {
             return (null,
                 $"The {label} library has no watched folder set. " +
                 "Manual remux and folder-scan jobs need a watched folder to resolve relative paths. " +
-                "Set it on the Refiner Libraries settings page before enqueueing or running those jobs.");
+                "Set it on Processing → Libraries before enqueueing or running those jobs.");
         }
 
         var watched = Resolve(watchedRaw);
@@ -170,7 +170,7 @@ public static class RemuxPassPaths
         {
             return (null,
                 $"The {label} library has no output folder set. " +
-                "Set it on the Refiner Libraries settings page before running a live remux pass.");
+                "Set it on Processing → Libraries before running a live remux pass.");
         }
 
         var output = Resolve(outputRaw);
@@ -181,17 +181,17 @@ public static class RemuxPassPaths
 
         if (SameOrNested(work, output))
         {
-            return (null, "Refiner work/temp folder and output folder must be separate (no overlap or containment).");
+            return (null, "The work/temp folder and output folder must be separate (no overlap or containment).");
         }
 
         if (SameOrNested(watched, output))
         {
-            return (null, "Refiner watched folder and output folder must be separate (no overlap or containment).");
+            return (null, "The watched folder and output folder must be separate (no overlap or containment).");
         }
 
         if (SameOrNested(watched, work))
         {
-            return (null, "Refiner watched folder and work/temp folder must be separate (no overlap or containment).");
+            return (null, "The watched folder and work/temp folder must be separate (no overlap or containment).");
         }
 
         if (!workIsDefault && !Directory.Exists(work))

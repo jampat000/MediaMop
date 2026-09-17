@@ -48,7 +48,7 @@ public sealed record HandoffReportDelivery(bool Accepted, string Status);
 /// <summary>The report body and its wording (port of the pure parts of <c>completion_callback</c>).</summary>
 public static class CompletionReports
 {
-    public const string ProcessorName = "Weir Refiner";
+    public const string ProcessorName = "Weir";
 
     public const string PassThroughAfterFailureMessage =
         "Weir could not process this file, so it handed the original back unchanged; it is ready to import.";

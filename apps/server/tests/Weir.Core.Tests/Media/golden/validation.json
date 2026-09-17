@@ -274,7 +274,7 @@
       "expected": {
         "error": {
           "type": "MediaCompletenessError",
-          "message": "Validation failed: Refiner could not confirm the staged output duration, so it was not published."
+          "message": "Validation failed: Weir could not confirm the staged output duration, so it was not published."
         }
       }
     },
@@ -310,7 +310,7 @@
       "expected": {
         "error": {
           "type": "MediaCompletenessError",
-          "message": "Validation failed: Refiner could not confirm the staged output duration, so it was not published."
+          "message": "Validation failed: Weir could not confirm the staged output duration, so it was not published."
         }
       }
     },
@@ -360,7 +360,7 @@
       "expected": {
         "error": {
           "type": "MediaCompletenessError",
-          "message": "Validation failed: Refiner could not confirm the staged output duration, so it was not published."
+          "message": "Validation failed: Weir could not confirm the staged output duration, so it was not published."
         }
       }
     },
@@ -374,7 +374,7 @@
       "expected": {
         "error": {
           "type": "MediaCompletenessError",
-          "message": "Validation failed: Refiner could not confirm the staged output duration, so it was not published."
+          "message": "Validation failed: Weir could not confirm the staged output duration, so it was not published."
         }
       }
     },
@@ -399,7 +399,7 @@
       "expected": {
         "error": {
           "type": "MediaCompletenessError",
-          "message": "Validation failed: Refiner could not confirm the staged output duration, so it was not published."
+          "message": "Validation failed: Weir could not confirm the staged output duration, so it was not published."
         }
       }
     },

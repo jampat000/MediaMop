@@ -17,7 +17,7 @@ public static class MediaToolLocations
     public const string FfmpegDirEnvironmentVariable = "WEIR_FFMPEG_DIR";
 
     public const string MissingToolsMessage =
-        "Refiner could not find the video tools it needs. Windows and Docker installs should include them; "
+        "Weir could not find the video tools it needs. Windows and Docker installs should include them; "
         + "source installs must provide ffprobe and ffmpeg on PATH or set WEIR_FFMPEG_DIR.";
 
     /// <summary>(ffprobe, ffmpeg) file names for the platform.</summary>

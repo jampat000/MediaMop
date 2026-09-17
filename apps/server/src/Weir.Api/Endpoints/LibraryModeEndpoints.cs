@@ -38,7 +38,7 @@ public static class LibraryModeEndpoints
 
     private static async Task<RefinerLibraryRecord> RequireLibraryAsync(Weir.Infrastructure.Sqlite.UnitOfWork uow, long id) =>
         await LibraryStore.GetAsync(uow, id).ConfigureAwait(false)
-        ?? throw new ApiException(StatusCodes.Status404NotFound, "No Refiner library with that id.");
+        ?? throw new ApiException(StatusCodes.Status404NotFound, "No library with that id.");
 
     private static PyDict SettingsOut(LibrarySettings settings) => new PyDict()
         .Set("library_folders", new PyList(settings.Folders.Select(f => (PyJson)new PyStr(f))))

@@ -545,12 +545,12 @@ public static class WatchedFolderScanOps
     public static (RefinerScanPathRuntime? Runtime, string? Error) ResolvePathRuntimeForLibrary(RefinerLibraryRecord library, string weirHome)
     {
         ArgumentNullException.ThrowIfNull(library);
-        var label = library.Name.Trim().Length > 0 ? library.Name.Trim() : (library.MediaType == RefinerMediaScopes.Tv ? "TV Refiner" : "Movies Refiner");
+        var label = library.Name.Trim().Length > 0 ? library.Name.Trim() : (library.MediaType == RefinerMediaScopes.Tv ? "TV" : "Movies");
 
         var watchedRaw = (library.WatchedFolder ?? string.Empty).Trim();
         if (watchedRaw.Length == 0)
         {
-            return (null, $"The {label} library has no watched folder set. Manual remux and folder-scan jobs need a watched folder to resolve relative paths. Set it on the Refiner Libraries settings page before enqueueing or running those jobs.");
+            return (null, $"The {label} library has no watched folder set. Manual remux and folder-scan jobs need a watched folder to resolve relative paths. Set it on Processing → Libraries before enqueueing or running those jobs.");
         }
 
         var watchedPath = RefinerLibraryFolders.ExpandForFilesystem(watchedRaw);
@@ -568,7 +568,7 @@ public static class WatchedFolderScanOps
         var outRaw = (library.OutputFolder ?? string.Empty).Trim();
         if (outRaw.Length == 0)
         {
-            return (null, $"The {label} library has no output folder set. Set it on the Refiner Libraries settings page before running a live remux pass.");
+            return (null, $"The {label} library has no output folder set. Set it on Processing → Libraries before running a live remux pass.");
         }
 
         var outputPath = RefinerLibraryFolders.ExpandForFilesystem(outRaw);
@@ -610,18 +610,18 @@ public static class WatchedFolderScanOps
         {
             if (IsSameOrNested(work, output))
             {
-                return "Refiner work/temp folder and output folder must be separate (no overlap or containment).";
+                return "The work/temp folder and output folder must be separate (no overlap or containment).";
             }
 
             if (watched is not null && IsSameOrNested(watched, output))
             {
-                return "Refiner watched folder and output folder must be separate (no overlap or containment).";
+                return "The watched folder and output folder must be separate (no overlap or containment).";
             }
         }
 
         if (watched is not null && IsSameOrNested(watched, work))
         {
-            return "Refiner watched folder and work/temp folder must be separate (no overlap or containment).";
+            return "The watched folder and work/temp folder must be separate (no overlap or containment).";
         }
 
         return null;

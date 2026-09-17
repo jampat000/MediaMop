@@ -80,7 +80,7 @@ public sealed class RefinerPassThroughHandler : IJobHandler
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or PassThroughIntegrityException or FileNotFoundException or InvalidOperationException)
         {
-            _logger.LogWarning(exception, "Refiner pass-through could not deliver {Path}.", relativePath);
+            _logger.LogWarning(exception, "Pass-through could not deliver {Path}.", relativePath);
             await LockedWrites.RunAsync(
                 _database,
                 uow => SqliteActivityWriter.RecordAsync(uow, new ActivityEventDraft(
@@ -137,7 +137,7 @@ public sealed class RefinerPassThroughHandler : IJobHandler
                 status = await _reporter.ReportHandoffCompletionAsync(uow, reportPayload, reportResult, cancellationToken).ConfigureAwait(false);
             }
 
-            _logger.LogInformation("Refiner pass-through hand-off report: {Status}", status);
+            _logger.LogInformation("Pass-through hand-off report: {Status}", status);
         }
     }
 

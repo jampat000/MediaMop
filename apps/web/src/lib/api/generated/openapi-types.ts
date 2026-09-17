@@ -572,7 +572,7 @@ export interface paths {
     };
     /**
      * Get Refiner Files
-     * @description Files Refiner has seen, with the reason it is or is not working on each.
+     * @description Files Weir has seen, with the reason it is or is not working on each.
      */
     get: operations["get_refiner_files_api_v1_refiner_files_get"];
     put?: never;
@@ -835,7 +835,7 @@ export interface paths {
     };
     /**
      * Get Refiner Jobs Inspection
-     * @description Refiner: read-only persisted ``refiner_jobs`` rows (all Refiner ``job_kind`` values on this lane).
+     * @description Read-only persisted ``refiner_jobs`` rows (all ``job_kind`` values on this lane).
      */
     get: operations["get_refiner_jobs_inspection_api_v1_refiner_jobs_inspection_get"];
     put?: never;
@@ -857,7 +857,7 @@ export interface paths {
     put?: never;
     /**
      * Post Refiner Watched Folder Remux Scan Dispatch Enqueue
-     * @description Enqueue one scan of the saved watched folder (manual trigger; Refiner-local).
+     * @description Enqueue one scan of the saved watched folder (manual trigger).
      */
     post: operations["post_refiner_watched_folder_remux_scan_dispatch_enqueue_api_v1_refiner_jobs_watched_folder_remux_scan_dispatch_enqueue_post"];
     delete?: never;
@@ -915,13 +915,13 @@ export interface paths {
     };
     /**
      * Get Refiner Libraries
-     * @description Every configured Refiner library, in display order.
+     * @description Every configured library, in display order.
      */
     get: operations["get_refiner_libraries_api_v1_refiner_libraries_get"];
     put?: never;
     /**
      * Post Refiner Library
-     * @description Add a Refiner library.
+     * @description Add a library.
      */
     post: operations["post_refiner_library_api_v1_refiner_libraries_post"];
     delete?: never;
@@ -981,7 +981,7 @@ export interface paths {
     put?: never;
     /**
      * Post Refiner Import Libraries
-     * @description Create a Refiner library per selected manager library.
+     * @description Create a library per selected manager library.
      */
     post: operations["post_refiner_import_libraries_api_v1_refiner_libraries_discover__connection_id__import_post"];
     delete?: never;
@@ -1021,7 +1021,7 @@ export interface paths {
     get: operations["get_refiner_library_api_v1_refiner_libraries__library_id__get"];
     /**
      * Put Refiner Library
-     * @description Save a Refiner library. Edited whole, so a partial save cannot half-apply.
+     * @description Save a library. Edited whole, so a partial save cannot half-apply.
      */
     put: operations["put_refiner_library_api_v1_refiner_libraries__library_id__put"];
     post?: never;
@@ -1390,7 +1390,7 @@ export interface paths {
     };
     /**
      * Get Refiner Runtime Settings
-     * @description Refiner-only snapshot of configured in-process worker concurrency (env at process start).
+     * @description Snapshot of configured in-process worker concurrency (env at process start).
      */
     get: operations["get_refiner_runtime_settings_api_v1_refiner_runtime_settings_get"];
     put?: never;
@@ -2691,7 +2691,7 @@ export interface components {
      * @description What one connected manager can be asked, and what it says it manages.
      *
      *     This is the outbound half of ADR-0013 made visible: an operator can see, before
-     *     anything runs, whether a manager will give Refiner an upstream safety check and
+     *     anything runs, whether a manager will give Weir an upstream safety check and
      *     whether it can clear a folder for deletion. A manager that cannot do one of those
      *     says so here rather than looking like a clean pass later.
      */
@@ -3395,14 +3395,14 @@ export interface components {
     };
     /**
      * RefinerFileRemuxPassManualEnqueueIn
-     * @description Manual ``refiner.file.remux_pass.v1`` enqueue — requires a saved Refiner watched folder before this POST succeeds.
+     * @description Manual ``refiner.file.remux_pass.v1`` enqueue — requires a saved watched folder before this POST succeeds.
      */
     RefinerFileRemuxPassManualEnqueueIn: {
       /** Csrf Token */
       csrf_token: string;
       /**
        * Library Id
-       * @description The Refiner library owning the file. Omit only for legacy scope-based jobs.
+       * @description The library owning the file. Omit only for legacy scope-based jobs.
        */
       library_id?: number | null;
       /**
@@ -3420,7 +3420,7 @@ export interface components {
       pass_through_unchanged: boolean;
       /**
        * Relative Media Path
-       * @description Path relative to the saved Refiner watched folder (no .. segments). The watched folder is not required when saving path settings alone, but it must be configured before enqueue.
+       * @description Path relative to the saved watched folder (no .. segments). The watched folder is not required when saving path settings alone, but it must be configured before enqueue.
        */
       relative_media_path: string;
     };
@@ -3608,7 +3608,7 @@ export interface components {
     };
     /**
      * RefinerJobInspectionRow
-     * @description One persisted Refiner durable job row (lifecycle from ``refiner_jobs`` only).
+     * @description One persisted durable job row (lifecycle from ``refiner_jobs`` only).
      */
     RefinerJobInspectionRow: {
       /** Attempt Count */
@@ -3979,7 +3979,7 @@ export interface components {
     RefinerLibraryOut: {
       /**
        * Active Job Count
-       * @description Queued or running Refiner jobs for this library. Deletion is refused while this is non-zero.
+       * @description Queued or running jobs for this library. Deletion is refused while this is non-zero.
        * @default 0
        */
       active_job_count: number;
@@ -4466,7 +4466,7 @@ export interface components {
       movie_schedule_start: string;
       /**
        * Refiner Min Input File Size Mb
-       * @description Files smaller than this are skipped before Refiner probes or writes them.
+       * @description Files smaller than this are skipped before Weir probes or writes them.
        */
       refiner_min_input_file_size_mb: number;
       /**
@@ -4577,7 +4577,7 @@ export interface components {
     RefinerOverviewStatsOut: {
       /**
        * Already Optimized Count
-       * @description No-change rows where Refiner copied the unchanged file to output and that output exists.
+       * @description No-change rows where Weir copied the unchanged file to output and that output exists.
        */
       already_optimized_count: number;
       /**
@@ -4587,7 +4587,7 @@ export interface components {
       files_failed: number;
       /**
        * Files Processed
-       * @description Finalized Refiner file outcomes in the window; queued/scanned/attempted jobs are excluded.
+       * @description Finalized file outcomes in the window; queued/scanned/attempted jobs are excluded.
        */
       files_processed: number;
       /**
@@ -4602,7 +4602,7 @@ export interface components {
       net_space_saved_percent: number;
       /**
        * Output Written Count
-       * @description Refiner remux activity rows whose output file still exists at the finalized path.
+       * @description Remux activity rows whose output file still exists at the finalized path.
        */
       output_written_count: number;
       /** Success Rate Percent */
@@ -4642,7 +4642,7 @@ export interface components {
         | "quality_all_languages";
       /**
        * Audio Sorters Json
-       * @description Ordered track sorters as JSON: [{"field": "language", "value": "eng"}, {"field": "channels", "value": ">=5.1"}]. Fields: bitrate, channels, codec, language, title, default, forced, commentary. Omit "value" to sort by the field itself; "reversed" flips it. Empty uses the default order, which is what Refiner has always applied.
+       * @description Ordered track sorters as JSON: [{"field": "language", "value": "eng"}, {"field": "channels", "value": ">=5.1"}]. Fields: bitrate, channels, codec, language, title, default, forced, commentary. Omit "value" to sort by the field itself; "reversed" flips it. Empty uses the default order, which is what Weir has always applied.
        * @default
        */
       audio_sorters_json: string;
@@ -5170,17 +5170,17 @@ export interface components {
       failure_cleanup_configuration_note: string;
       /**
        * In Process Refiner Worker Count
-       * @description Mirrors WEIR_REFINER_WORKER_COUNT after clamping — Refiner lane only.
+       * @description Mirrors WEIR_REFINER_WORKER_COUNT after clamping — the processing lane only.
        */
       in_process_refiner_worker_count: number;
       /**
        * In Process Workers Disabled
-       * @description True when worker count is 0 (no in-process Refiner worker tasks).
+       * @description True when worker count is 0 (no in-process worker tasks).
        */
       in_process_workers_disabled: boolean;
       /**
        * In Process Workers Enabled
-       * @description True when at least one in-process Refiner worker task is configured.
+       * @description True when at least one in-process worker task is configured.
        */
       in_process_workers_enabled: boolean;
       /**
@@ -5190,12 +5190,12 @@ export interface components {
       movie_output_cleanup_configuration_note: string;
       /**
        * Refiner Analyze Duration Seconds
-       * @description ffprobe analyze duration in seconds for Refiner preflight analysis.
+       * @description ffprobe analyze duration in seconds for preflight analysis.
        */
       refiner_analyze_duration_seconds: number;
       /**
        * Refiner Media Extensions
-       * @description File types Refiner will pick up in a watched folder. Anything else is ignored and counted.
+       * @description File types Weir will pick up in a watched folder. Anything else is ignored and counted.
        */
       refiner_media_extensions: string[];
       /**
@@ -5220,7 +5220,7 @@ export interface components {
       refiner_movie_output_cleanup_min_age_seconds: number;
       /**
        * Refiner Probe Size Mb
-       * @description ffprobe probe size in MB for Refiner preflight analysis.
+       * @description ffprobe probe size in MB for preflight analysis.
        */
       refiner_probe_size_mb: number;
       /**
@@ -5255,7 +5255,7 @@ export interface components {
       refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs: boolean;
       /**
        * Refiner Work Temp Stale Sweep Min Stale Age Seconds
-       * @description Minimum file age before Refiner removes its own stale temp work files (60s..30d). Shared for both scopes (narrow exception: same temp filename semantics).
+       * @description Minimum file age before Weir removes its own stale temp work files (60s..30d). Shared for both scopes (narrow exception: same temp filename semantics).
        */
       refiner_work_temp_stale_sweep_min_stale_age_seconds: number;
       /**
@@ -5305,7 +5305,7 @@ export interface components {
       work_temp_stale_sweep_periodic_configuration_note: string;
       /**
        * Worker Mode Summary
-       * @description Plain-language summary for 0 / 1 / >1 Refiner workers.
+       * @description Plain-language summary for 0 / 1 / >1 workers.
        */
       worker_mode_summary: string;
     };
@@ -5332,13 +5332,13 @@ export interface components {
       csrf_token: string;
       /**
        * Enqueue Remux Jobs
-       * @description When true, files found in the watched folder are added to Refiner's processing queue. When false, Weir only checks the folder and writes an activity summary.
+       * @description When true, files found in the watched folder are added to Weir's processing queue. When false, Weir only checks the folder and writes an activity summary.
        * @default true
        */
       enqueue_remux_jobs: boolean;
       /**
        * Library Id
-       * @description Limit the recheck to this saved Refiner library; omit for the scope default.
+       * @description Limit the recheck to this saved library; omit for the scope default.
        */
       library_id?: number | null;
       /**
@@ -5434,7 +5434,7 @@ export interface components {
     };
     /**
      * RemovedTrackOut
-     * @description One track a Refiner pass removed from a file for good (issue #509).
+     * @description One track a remux pass removed from a file for good (issue #509).
      */
     RemovedTrackOut: {
       /** Codec */
@@ -7902,7 +7902,7 @@ export interface operations {
           "application/json": components["schemas"]["LibraryRedownloadsListOut"];
         };
       };
-      /** @description No Refiner library with that id */
+      /** @description No library with that id */
       404: {
         headers: {
           [name: string]: unknown;
@@ -8063,7 +8063,7 @@ export interface operations {
           "application/json": components["schemas"]["LibrarySettingsOut"];
         };
       };
-      /** @description No Refiner library with that id */
+      /** @description No library with that id */
       404: {
         headers: {
           [name: string]: unknown;

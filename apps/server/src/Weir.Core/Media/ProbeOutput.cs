@@ -212,7 +212,7 @@ public static class ProbeOutput
             if (outputDuration is null)
             {
                 throw new MediaCompletenessException(
-                    "Validation failed: Refiner could not confirm the staged output duration, so it was not published.");
+                    "Validation failed: Weir could not confirm the staged output duration, so it was not published.");
             }
 
             var tolerance = Math.Max(5.0, expected * 0.01);
@@ -235,7 +235,7 @@ public static class ProbeOutput
         detail = PyText.Clip(detail, FfmpegCommands.ProbeLogMaxChars);
         return new MediaCompletenessException(
             "Weir could not read this media file from start to finish. It may still be downloading or may be "
-            + $"incomplete, so Refiner will wait. The media check reported: {(detail.Length > 0 ? detail : "incomplete media data")}.");
+            + $"incomplete, so Weir will wait. The media check reported: {(detail.Length > 0 ? detail : "incomplete media data")}.");
     }
 
     /// <summary>
@@ -246,7 +246,7 @@ public static class ProbeOutput
     public static MediaCompletenessException IntegrityShortfall(double decodedSeconds, double expectedSeconds) =>
         new(
             "Weir could not read this media file from start to finish. It may still be downloading or may be "
-            + "incomplete, so Refiner will wait. The media check decoded "
+            + "incomplete, so Weir will wait. The media check decoded "
             + $"{PyText.FormatFixed(decodedSeconds, 1)}s of {PyText.FormatFixed(expectedSeconds, 1)}s expected.");
 
     /// <summary>

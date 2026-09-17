@@ -90,7 +90,7 @@ public static class RefinerJobsEndpoints
         var outcome = await jobStore.CancelPendingAsync(id).ConfigureAwait(false);
         if (outcome == JobActionOutcome.NotFound)
         {
-            throw new ApiException(StatusCodes.Status404NotFound, "Refiner job not found.");
+            throw new ApiException(StatusCodes.Status404NotFound, "Job not found.");
         }
 
         if (outcome == JobActionOutcome.WrongStatus)
@@ -117,7 +117,7 @@ public static class RefinerJobsEndpoints
         var outcome = await jobStore.RecoverHandlerOkFinalizeFailedToCompletedAsync(id, user.User.Username).ConfigureAwait(false);
         if (outcome == JobActionOutcome.NotFound)
         {
-            throw new ApiException(StatusCodes.Status404NotFound, "Refiner job not found.");
+            throw new ApiException(StatusCodes.Status404NotFound, "Job not found.");
         }
 
         if (outcome == JobActionOutcome.WrongStatus)

@@ -343,7 +343,7 @@ def test_unlink_keeps_the_library_but_forgets_where_it_came_from(
 def test_unlink_of_an_unknown_library_is_404(operator: WeirClient) -> None:
     response = operator.post_csrf(f"{LIBRARIES}/999999/unlink", {})
     assert response.status_code == 404, response.text
-    assert response.json()["detail"] == "That Refiner library does not exist."
+    assert response.json()["detail"] == "That library does not exist."
 
 
 # --- openapi ------------------------------------------------------------------------------------

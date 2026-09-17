@@ -371,7 +371,7 @@ public sealed partial class MediaTools
         if (expectedDuration is null)
         {
             throw new MediaCompletenessException(
-                "Validation failed: Refiner could not establish how long the kept streams should run — none of them reported a " +
+                "Validation failed: Weir could not establish how long the kept streams should run — none of them reported a " +
                 "duration and measuring the source directly did not produce one — so the staged output was not published.");
         }
 
@@ -562,7 +562,7 @@ public sealed partial class MediaTools
     [LoggerMessage(Level = LogLevel.Debug, Message = "{Summary}")]
     private partial void LogFfmpegDebug(string summary);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Refiner: could not remove temp file {Path}")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not remove temp file {Path}")]
     private partial void LogTempRemoveFailed(Exception error, string path);
 }
 

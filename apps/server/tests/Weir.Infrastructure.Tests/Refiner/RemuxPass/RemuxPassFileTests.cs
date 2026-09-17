@@ -400,7 +400,7 @@ public sealed class RemuxPassPathsTests : IDisposable
         Assert.Contains("parent", Assert.Throws<ArgumentException>(() => RemuxPassPaths.ResolveMediaFileUnderRoot(media, "../a.mkv")).Message, StringComparison.Ordinal);
         Assert.Equal("relative_media_path is required", Assert.Throws<ArgumentException>(() => RemuxPassPaths.ResolveMediaFileUnderRoot(media, "  ")).Message);
         Assert.Equal(
-            "Refiner watched folder (saved settings) must be an existing directory",
+            "The watched folder (saved settings) must be an existing directory",
             Assert.Throws<ArgumentException>(() => RemuxPassPaths.ResolveMediaFileUnderRoot(_root.Join("nope"), "a.mkv")).Message);
     }
 
@@ -428,7 +428,7 @@ public sealed class RemuxPassPathsTests : IDisposable
         Assert.Equal("The Movies library's watched folder must be an existing directory.", RemuxPassPaths.RuntimeForLibrary(Library(_root.Join("gone"), output), _root.Path).Problem);
         Assert.Contains("has no output folder set", RemuxPassPaths.RuntimeForLibrary(Library(watched, string.Empty), _root.Path).Problem, StringComparison.Ordinal);
         Assert.Equal(
-            "Refiner watched folder and output folder must be separate (no overlap or containment).",
+            "The watched folder and output folder must be separate (no overlap or containment).",
             RemuxPassPaths.RuntimeForLibrary(Library(watched, watched), _root.Path).Problem);
         Assert.Equal(
             "The Movies library's work/temp folder must be an existing directory when set to a custom path.",

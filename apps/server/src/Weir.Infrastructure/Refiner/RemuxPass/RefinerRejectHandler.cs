@@ -211,7 +211,7 @@ public sealed class RefinerRejectHandler : IJobHandler
             _logger,
             "reject bookkeeping",
             cancellationToken).ConfigureAwait(false);
-        _logger.LogInformation("Refiner reject for {Path}: {Reason}", relativePath, attempt.Reason);
+        _logger.LogInformation("Reject for {Path}: {Reason}", relativePath, attempt.Reason);
     }
 
     /// <summary><c>_reject_through_handoff</c>: a manager that hands files over gets a failed report with disposition: rejected.</summary>

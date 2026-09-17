@@ -388,7 +388,7 @@ public sealed class RemuxPassRunnerTests : IDisposable
         Assert.Contains(_progress, update => PyConvert.Str(update.Get("message") ?? PyNull.Instance).Contains("passing this file through unchanged", StringComparison.Ordinal));
         Assert.False(File.Exists(source));
         Assert.Equal("[]", PyJsonWriter.Dumps(result["ffmpeg_argv"], PyJsonFormat.Compact));
-        Assert.Contains("operator bypassed Refiner rules", Str(result, "reason"), StringComparison.Ordinal);
+        Assert.Contains("operator bypassed the rules", Str(result, "reason"), StringComparison.Ordinal);
     }
 
     [WindowsFact("The hard-link fast path is Windows only.")]

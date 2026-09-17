@@ -59,7 +59,7 @@ public sealed class ActivityHistoryStoreTests
         using var fixture = new StoreFixture();
         var notifier = ActivityNotifications.For(fixture.Database);
         var writer = new SqliteActivityWriter(fixture.Database);
-        var id = await writer.RecordAsync(new ActivityEventDraft(ActivityEventTypes.RefinerFileProcessingProgress, "refiner", "Refiner is processing movie.mkv", "{\"percent\":10}"));
+        var id = await writer.RecordAsync(new ActivityEventDraft(ActivityEventTypes.RefinerFileProcessingProgress, "refiner", "Processing movie.mkv", "{\"percent\":10}"));
         Assert.Equal(new ActivityLatest(id, 1), notifier.Snapshot());
 
         var uow = await UnitOfWork.OpenAsync(fixture.Database);
@@ -73,7 +73,7 @@ public sealed class ActivityHistoryStoreTests
 
         Assert.Equal(new ActivityLatest(id, 2), notifier.Snapshot());
         Assert.Equal(1, await fixture.Scalar(
-            $"SELECT count(*) FROM activity_events WHERE id = {id} AND title = 'Refiner is processing movie.mkv' AND result = 'failed' AND relative_path = 'm.mkv' AND event_type = 'refiner.file_remux_pass_completed'"));
+            $"SELECT count(*) FROM activity_events WHERE id = {id} AND title = 'Processing movie.mkv' AND result = 'failed' AND relative_path = 'm.mkv' AND event_type = 'refiner.file_remux_pass_completed'"));
     }
 
     [Fact]

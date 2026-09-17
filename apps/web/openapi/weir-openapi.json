@@ -1718,7 +1718,7 @@
         "type": "object"
       },
       "MediaManagerCapabilityOut": {
-        "description": "What one connected manager can be asked, and what it says it manages.\n\nThis is the outbound half of ADR-0013 made visible: an operator can see, before\nanything runs, whether a manager will give Refiner an upstream safety check and\nwhether it can clear a folder for deletion. A manager that cannot do one of those\nsays so here rather than looking like a clean pass later.",
+        "description": "What one connected manager can be asked, and what it says it manages.\n\nThis is the outbound half of ADR-0013 made visible: an operator can see, before\nanything runs, whether a manager will give Weir an upstream safety check and\nwhether it can clear a folder for deletion. A manager that cannot do one of those\nsays so here rather than looking like a clean pass later.",
         "properties": {
           "connection_id": {
             "title": "Connection Id",
@@ -3233,7 +3233,7 @@
       },
       "RefinerFileRemuxPassManualEnqueueIn": {
         "additionalProperties": false,
-        "description": "Manual ``refiner.file.remux_pass.v1`` enqueue — requires a saved Refiner watched folder before this POST succeeds.",
+        "description": "Manual ``refiner.file.remux_pass.v1`` enqueue — requires a saved watched folder before this POST succeeds.",
         "properties": {
           "csrf_token": {
             "minLength": 1,
@@ -3250,7 +3250,7 @@
                 "type": "null"
               }
             ],
-            "description": "The Refiner library owning the file. Omit only for legacy scope-based jobs.",
+            "description": "The library owning the file. Omit only for legacy scope-based jobs.",
             "title": "Library Id"
           },
           "media_scope": {
@@ -3270,7 +3270,7 @@
             "type": "boolean"
           },
           "relative_media_path": {
-            "description": "Path relative to the saved Refiner watched folder (no .. segments). The watched folder is not required when saving path settings alone, but it must be configured before enqueue.",
+            "description": "Path relative to the saved watched folder (no .. segments). The watched folder is not required when saving path settings alone, but it must be configured before enqueue.",
             "minLength": 1,
             "title": "Relative Media Path",
             "type": "string"
@@ -3675,7 +3675,7 @@
         "type": "object"
       },
       "RefinerJobInspectionRow": {
-        "description": "One persisted Refiner durable job row (lifecycle from ``refiner_jobs`` only).",
+        "description": "One persisted durable job row (lifecycle from ``refiner_jobs`` only).",
         "properties": {
           "attempt_count": {
             "title": "Attempt Count",
@@ -4285,7 +4285,7 @@
         "properties": {
           "active_job_count": {
             "default": 0,
-            "description": "Queued or running Refiner jobs for this library. Deletion is refused while this is non-zero.",
+            "description": "Queued or running jobs for this library. Deletion is refused while this is non-zero.",
             "title": "Active Job Count",
             "type": "integer"
           },
@@ -5190,7 +5190,7 @@
             "type": "string"
           },
           "refiner_min_input_file_size_mb": {
-            "description": "Files smaller than this are skipped before Refiner probes or writes them.",
+            "description": "Files smaller than this are skipped before Weir probes or writes them.",
             "maximum": 1048576.0,
             "minimum": 0.0,
             "title": "Refiner Min Input File Size Mb",
@@ -5631,7 +5631,7 @@
       "RefinerOverviewStatsOut": {
         "properties": {
           "already_optimized_count": {
-            "description": "No-change rows where Refiner copied the unchanged file to output and that output exists.",
+            "description": "No-change rows where Weir copied the unchanged file to output and that output exists.",
             "minimum": 0.0,
             "title": "Already Optimized Count",
             "type": "integer"
@@ -5643,7 +5643,7 @@
             "type": "integer"
           },
           "files_processed": {
-            "description": "Finalized Refiner file outcomes in the window; queued/scanned/attempted jobs are excluded.",
+            "description": "Finalized file outcomes in the window; queued/scanned/attempted jobs are excluded.",
             "minimum": 0.0,
             "title": "Files Processed",
             "type": "integer"
@@ -5659,7 +5659,7 @@
             "type": "number"
           },
           "output_written_count": {
-            "description": "Refiner remux activity rows whose output file still exists at the finalized path.",
+            "description": "Remux activity rows whose output file still exists at the finalized path.",
             "minimum": 0.0,
             "title": "Output Written Count",
             "type": "integer"
@@ -5738,7 +5738,7 @@
           },
           "audio_sorters_json": {
             "default": "",
-            "description": "Ordered track sorters as JSON: [{\"field\": \"language\", \"value\": \"eng\"}, {\"field\": \"channels\", \"value\": \">=5.1\"}]. Fields: bitrate, channels, codec, language, title, default, forced, commentary. Omit \"value\" to sort by the field itself; \"reversed\" flips it. Empty uses the default order, which is what Refiner has always applied.",
+            "description": "Ordered track sorters as JSON: [{\"field\": \"language\", \"value\": \"eng\"}, {\"field\": \"channels\", \"value\": \">=5.1\"}]. Fields: bitrate, channels, codec, language, title, default, forced, commentary. Omit \"value\" to sort by the field itself; \"reversed\" flips it. Empty uses the default order, which is what Weir has always applied.",
             "title": "Audio Sorters Json",
             "type": "string"
           },
@@ -6596,19 +6596,19 @@
             "type": "string"
           },
           "in_process_refiner_worker_count": {
-            "description": "Mirrors WEIR_REFINER_WORKER_COUNT after clamping — Refiner lane only.",
+            "description": "Mirrors WEIR_REFINER_WORKER_COUNT after clamping — the processing lane only.",
             "maximum": 8.0,
             "minimum": 0.0,
             "title": "In Process Refiner Worker Count",
             "type": "integer"
           },
           "in_process_workers_disabled": {
-            "description": "True when worker count is 0 (no in-process Refiner worker tasks).",
+            "description": "True when worker count is 0 (no in-process worker tasks).",
             "title": "In Process Workers Disabled",
             "type": "boolean"
           },
           "in_process_workers_enabled": {
-            "description": "True when at least one in-process Refiner worker task is configured.",
+            "description": "True when at least one in-process worker task is configured.",
             "title": "In Process Workers Enabled",
             "type": "boolean"
           },
@@ -6618,14 +6618,14 @@
             "type": "string"
           },
           "refiner_analyze_duration_seconds": {
-            "description": "ffprobe analyze duration in seconds for Refiner preflight analysis.",
+            "description": "ffprobe analyze duration in seconds for preflight analysis.",
             "maximum": 300.0,
             "minimum": 1.0,
             "title": "Refiner Analyze Duration Seconds",
             "type": "integer"
           },
           "refiner_media_extensions": {
-            "description": "File types Refiner will pick up in a watched folder. Anything else is ignored and counted.",
+            "description": "File types Weir will pick up in a watched folder. Anything else is ignored and counted.",
             "items": {
               "type": "string"
             },
@@ -6657,7 +6657,7 @@
             "type": "integer"
           },
           "refiner_probe_size_mb": {
-            "description": "ffprobe probe size in MB for Refiner preflight analysis.",
+            "description": "ffprobe probe size in MB for preflight analysis.",
             "maximum": 1024.0,
             "minimum": 1.0,
             "title": "Refiner Probe Size Mb",
@@ -6699,7 +6699,7 @@
             "type": "boolean"
           },
           "refiner_work_temp_stale_sweep_min_stale_age_seconds": {
-            "description": "Minimum file age before Refiner removes its own stale temp work files (60s..30d). Shared for both scopes (narrow exception: same temp filename semantics).",
+            "description": "Minimum file age before Weir removes its own stale temp work files (60s..30d). Shared for both scopes (narrow exception: same temp filename semantics).",
             "minimum": 60.0,
             "title": "Refiner Work Temp Stale Sweep Min Stale Age Seconds",
             "type": "integer"
@@ -6752,7 +6752,7 @@
             "type": "string"
           },
           "worker_mode_summary": {
-            "description": "Plain-language summary for 0 / 1 / >1 Refiner workers.",
+            "description": "Plain-language summary for 0 / 1 / >1 workers.",
             "title": "Worker Mode Summary",
             "type": "string"
           }
@@ -6832,7 +6832,7 @@
           },
           "enqueue_remux_jobs": {
             "default": true,
-            "description": "When true, files found in the watched folder are added to Refiner's processing queue. When false, Weir only checks the folder and writes an activity summary.",
+            "description": "When true, files found in the watched folder are added to Weir's processing queue. When false, Weir only checks the folder and writes an activity summary.",
             "title": "Enqueue Remux Jobs",
             "type": "boolean"
           },
@@ -6846,7 +6846,7 @@
                 "type": "null"
               }
             ],
-            "description": "Limit the recheck to this saved Refiner library; omit for the scope default.",
+            "description": "Limit the recheck to this saved library; omit for the scope default.",
             "title": "Library Id"
           },
           "media_scope": {
@@ -7019,7 +7019,7 @@
       },
       "RemovedTrackOut": {
         "additionalProperties": false,
-        "description": "One track a Refiner pass removed from a file for good (issue #509).",
+        "description": "One track a remux pass removed from a file for good (issue #509).",
         "properties": {
           "codec": {
             "title": "Codec",
@@ -9928,7 +9928,7 @@
     },
     "/api/v1/refiner/files": {
       "get": {
-        "description": "Files Refiner has seen, with the reason it is or is not working on each.",
+        "description": "Files Weir has seen, with the reason it is or is not working on each.",
         "operationId": "get_refiner_files_api_v1_refiner_files_get",
         "parameters": [
           {
@@ -10566,7 +10566,7 @@
     },
     "/api/v1/refiner/jobs/inspection": {
       "get": {
-        "description": "Refiner: read-only persisted ``refiner_jobs`` rows (all Refiner ``job_kind`` values on this lane).",
+        "description": "Read-only persisted ``refiner_jobs`` rows (all ``job_kind`` values on this lane).",
         "operationId": "get_refiner_jobs_inspection_api_v1_refiner_jobs_inspection_get",
         "parameters": [
           {
@@ -10636,7 +10636,7 @@
     },
     "/api/v1/refiner/jobs/watched-folder-remux-scan-dispatch/enqueue": {
       "post": {
-        "description": "Enqueue one scan of the saved watched folder (manual trigger; Refiner-local).",
+        "description": "Enqueue one scan of the saved watched folder (manual trigger).",
         "operationId": "post_refiner_watched_folder_remux_scan_dispatch_enqueue_api_v1_refiner_jobs_watched_folder_remux_scan_dispatch_enqueue_post",
         "requestBody": {
           "content": {
@@ -10787,7 +10787,7 @@
     },
     "/api/v1/refiner/libraries": {
       "get": {
-        "description": "Every configured Refiner library, in display order.",
+        "description": "Every configured library, in display order.",
         "operationId": "get_refiner_libraries_api_v1_refiner_libraries_get",
         "responses": {
           "200": {
@@ -10812,7 +10812,7 @@
         ]
       },
       "post": {
-        "description": "Add a Refiner library.",
+        "description": "Add a library.",
         "operationId": "post_refiner_library_api_v1_refiner_libraries_post",
         "requestBody": {
           "content": {
@@ -10953,7 +10953,7 @@
     },
     "/api/v1/refiner/libraries/discover/{connection_id}/import": {
       "post": {
-        "description": "Create a Refiner library per selected manager library.",
+        "description": "Create a library per selected manager library.",
         "operationId": "post_refiner_import_libraries_api_v1_refiner_libraries_discover__connection_id__import_post",
         "parameters": [
           {
@@ -11147,7 +11147,7 @@
         ]
       },
       "put": {
-        "description": "Save a Refiner library. Edited whole, so a partial save cannot half-apply.",
+        "description": "Save a library. Edited whole, so a partial save cannot half-apply.",
         "operationId": "put_refiner_library_api_v1_refiner_libraries__library_id__put",
         "parameters": [
           {
@@ -11375,7 +11375,7 @@
                 }
               }
             },
-            "description": "No Refiner library with that id"
+            "description": "No library with that id"
           }
         },
         "summary": "Get Library Redownloads",
@@ -11602,7 +11602,7 @@
                 }
               }
             },
-            "description": "No Refiner library with that id"
+            "description": "No library with that id"
           }
         },
         "summary": "Get Library Settings",
@@ -12272,7 +12272,7 @@
     },
     "/api/v1/refiner/runtime-settings": {
       "get": {
-        "description": "Refiner-only snapshot of configured in-process worker concurrency (env at process start).",
+        "description": "Snapshot of configured in-process worker concurrency (env at process start).",
         "operationId": "get_refiner_runtime_settings_api_v1_refiner_runtime_settings_get",
         "responses": {
           "200": {

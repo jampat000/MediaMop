@@ -78,7 +78,7 @@ public sealed class TvSeasonFolderCleanup : ITvSeasonFolderCleanup
         var seasonFolder = Path.GetDirectoryName(srcResolved)!;
         if (!RemuxPassPaths.IsUnder(seasonFolder, watchedResolved))
         {
-            output.Set("tv_season_folder_skip_reason", "The season folder would sit outside the TV watched folder, so Refiner did nothing.");
+            output.Set("tv_season_folder_skip_reason", "The season folder would sit outside the TV watched folder, so nothing was done.");
             AddSummary("Stopped: season folder is outside the TV watched folder.");
             return;
         }
@@ -86,7 +86,7 @@ public sealed class TvSeasonFolderCleanup : ITvSeasonFolderCleanup
         if (RemuxPassPaths.SamePath(seasonFolder, watchedResolved))
         {
             output.Set("tv_season_folder_skip_reason",
-                "The video file sits directly in the TV watched folder root. Refiner does not delete the watched folder or " +
+                "The video file sits directly in the TV watched folder root. This does not delete the watched folder or " +
                 "treat the whole library as one season.");
             AddSummary("Stopped: the season folder is the same as the TV watched folder root — nothing removed.");
             return;
@@ -122,7 +122,7 @@ public sealed class TvSeasonFolderCleanup : ITvSeasonFolderCleanup
         var episodes = GetTvEpisodeSetMediaFiles(seasonFolder);
         if (episodes.Count == 0)
         {
-            output.Set("tv_season_folder_skip_reason", "This season folder has no direct video files Refiner treats as episodes, so nothing was removed.");
+            output.Set("tv_season_folder_skip_reason", "This season folder has no direct video files treated as episodes, so nothing was removed.");
             AddSummary("Stopped: no episode media files found as direct children of the season folder.");
             return;
         }
@@ -163,13 +163,13 @@ public sealed class TvSeasonFolderCleanup : ITvSeasonFolderCleanup
 
             if (await WatchedFolderScanOps.ActiveRemuxPassExistsForRelativePathAsync(uow, rel, RefinerMediaScopes.Tv, libraryId: null, excludeJobId: context.CurrentJobId).ConfigureAwait(false))
             {
-                output.Set("tv_season_folder_skip_reason", $"Another Refiner TV job is already queued or running for {name}, so the whole season folder was left in place.");
-                lineParts.Add("Active Refiner TV job check failed — a TV remux job is pending or running for this path.");
+                output.Set("tv_season_folder_skip_reason", $"Another TV job is already queued or running for {name}, so the whole season folder was left in place.");
+                lineParts.Add("Active TV job check failed — a TV remux job is pending or running for this path.");
                 AddSummary(string.Join(" ", lineParts));
                 return;
             }
 
-            lineParts.Add("Active Refiner TV job check passed — no other pending or running TV remux job for this path.");
+            lineParts.Add("Active TV job check passed — no other pending or running TV remux job for this path.");
 
             var relEq = rel == remuxRel;
             if (relEq && liveOk)
@@ -182,19 +182,19 @@ public sealed class TvSeasonFolderCleanup : ITvSeasonFolderCleanup
                     return;
                 }
 
-                lineParts.Add("Refiner-processed check passed — this episode is the pass that just finished, and the output file passed the size checks.");
+                lineParts.Add("Processed check passed — this episode is the pass that just finished, and the output file passed the size checks.");
             }
             else if (await ActivityDocumentsTvLiveSuccessAsync(uow, rel, cancellationToken).ConfigureAwait(false))
             {
                 var expectedOut = RemuxPassPaths.Resolve(Path.Join(outDir, rel));
                 var check = RemuxPassRunner.CheckOutputFileCompleteness(expectedOut, episode, tv: true);
                 if (!RecordCompleteness(completeness, output, name, check,
-                        "Output completeness check failed for a previously finished Refiner TV pass", lineParts, AddSummary))
+                        "Output completeness check failed for a previously finished TV pass", lineParts, AddSummary))
                 {
                     return;
                 }
 
-                lineParts.Add("Refiner-processed check passed — a successful live TV pass is on record and the output file passed the size checks.");
+                lineParts.Add("Processed check passed — a successful live TV pass is on record and the output file passed the size checks.");
             }
             else
             {
@@ -212,7 +212,7 @@ public sealed class TvSeasonFolderCleanup : ITvSeasonFolderCleanup
                 if (minAge > 0 && ageSeconds < minAge)
                 {
                     output.Set("tv_season_folder_skip_reason",
-                        $"Episode {name} was never finished by Refiner in TV mode and is newer than the minimum age " +
+                        $"Episode {name} was never finished in TV mode and is newer than the minimum age " +
                         $"({minAge.ToString(CultureInfo.InvariantCulture)}s), so the season folder was left in place.");
                     lineParts.Add($"Never-processed check failed — file is not old enough yet (minimum {minAge.ToString(CultureInfo.InvariantCulture)}s since last change).");
                     AddSummary(string.Join(" ", lineParts));
@@ -221,7 +221,7 @@ public sealed class TvSeasonFolderCleanup : ITvSeasonFolderCleanup
 
                 completeness.Set(name, "skipped");
                 lineParts.Add(
-                    "Never-processed check passed — Refiner has no successful live TV pass on record for this file, " +
+                    "Never-processed check passed — Weir has no successful live TV pass on record for this file, " +
                     "no connected media manager still lists it, and the file is old enough under your minimum-age setting.");
             }
 
@@ -237,7 +237,7 @@ public sealed class TvSeasonFolderCleanup : ITvSeasonFolderCleanup
             var human = $"A file or folder could not be removed because the system reported it is in use or locked: {seasonFolder}. The whole season folder was left in place.";
             output.Set("tv_season_folder_skip_reason", human);
             AddSummary($"Deletion failed: {human}");
-            _logger.LogWarning("Refiner TV cleanup: {Reason}", human);
+            _logger.LogWarning("TV cleanup: {Reason}", human);
             return;
         }
 
@@ -276,7 +276,7 @@ public sealed class TvSeasonFolderCleanup : ITvSeasonFolderCleanup
 
         var note = check.Get("output_completeness_note") is PyStr n && n.Value.Length > 0
             ? n.Value
-            : $"Refiner expected a finished output file for {name}, but the safety check did not pass.";
+            : $"Weir expected a finished output file for {name}, but the safety check did not pass.";
         output.Set("tv_season_folder_skip_reason", note);
         lineParts.Add($"{failurePrefix} — {note}.");
         addSummary(string.Join(" ", lineParts));

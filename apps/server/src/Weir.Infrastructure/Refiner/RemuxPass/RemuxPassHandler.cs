@@ -94,7 +94,7 @@ public sealed class RemuxPassHandler : IJobHandler
         {
             var legacy = FailedPayload(
                     context.Id,
-                    "This job payload uses legacy Refiner dry_run, which is no longer supported. Re-enqueue without dry_run.")
+                    "This job payload uses legacy Weir dry_run, which is no longer supported. Re-enqueue without dry_run.")
                 .Set("relative_media_path", rel);
             await RecordFailedResultAsync(Merge(legacy, provenance), null, "movie", null).ConfigureAwait(false);
             return;
@@ -201,7 +201,7 @@ public sealed class RemuxPassHandler : IJobHandler
                 if (library is null)
                 {
                     var label = mediaScope == "tv" ? "TV" : "Movies";
-                    (runtime, problem) = (null, $"No Refiner library covers {label}. Add one on the Refiner Libraries settings page, then queue this work again.");
+                    (runtime, problem) = (null, $"No library covers {label}. Add one on Processing → Libraries, then queue this work again.");
                 }
                 else
                 {
@@ -221,7 +221,7 @@ public sealed class RemuxPassHandler : IJobHandler
 
                 if (library is not null)
                 {
-                    await RemuxPassFileState.MarkFileStatusAsync(uow, library.Id, rel, RefinerFileStatuses.Processing, "Refiner has claimed this file and is checking it now.", _time.GetUtcNow())
+                    await RemuxPassFileState.MarkFileStatusAsync(uow, library.Id, rel, RefinerFileStatuses.Processing, "Weir has claimed this file and is checking it now.", _time.GetUtcNow())
                         .ConfigureAwait(false);
                 }
 
@@ -268,7 +268,7 @@ public sealed class RemuxPassHandler : IJobHandler
         }
         catch (Exception exception) when (exception is SqliteException or InvalidOperationException)
         {
-            _logger.LogWarning(exception, "Refiner could not look up the hand-off this file came from.");
+            _logger.LogWarning(exception, "Weir could not look up the hand-off this file came from.");
             return null;
         }
     }
@@ -299,7 +299,7 @@ public sealed class RemuxPassHandler : IJobHandler
                     var now = _time.GetUtcNow();
                     if (result.Get("rejection_kind") is { IsTruthy: true })
                     {
-                        var rejectionReason = PyStrings.Slice(CollapseWhitespace(TextOr(result.Get("reason"), "Refiner rejected this file before processing.")), 1200);
+                        var rejectionReason = PyStrings.Slice(CollapseWhitespace(TextOr(result.Get("reason"), "Weir rejected this file before processing.")), 1200);
                         var cleanupDetail = TextOr(result.Get("rejected_cleanup_detail"), "The saved rejected-file action has not run yet.");
                         if (await _failurePolicy.RejectBadReleaseAsync(uow, library, rel, rejectionReason, origin).ConfigureAwait(false))
                         {
@@ -333,7 +333,7 @@ public sealed class RemuxPassHandler : IJobHandler
                     if (result.Get("ok") is PyBool { Value: false })
                     {
                         var failureClass = RefinerFailureClasses.Classify(TextOr(result.Get("outcome"), string.Empty));
-                        var reason = PyStrings.Slice(CollapseWhitespace(TextOr(result.Get("reason"), "Refiner returned an unsuccessful result.")), 1200);
+                        var reason = PyStrings.Slice(CollapseWhitespace(TextOr(result.Get("reason"), "Weir returned an unsuccessful result.")), 1200);
                         var decision = await RemuxPassFileState.RecordFailureAsync(uow, library, rel, failureClass, reason, now).ConfigureAwait(false);
                         var followUp = await _failurePolicy.ApplyFailurePolicyAsync(
                             uow, library, rel, decision.WillRetry, origin, result.Get("content_unusable") is PyBool { Value: true }).ConfigureAwait(false);
@@ -351,8 +351,8 @@ public sealed class RemuxPassHandler : IJobHandler
                     var processedReason = result.Get("pass_through_unchanged") is PyBool { Value: true }
                         ? "Weir passed this file through unchanged at the operator's request and placed it in the output folder."
                         : result.Get("outcome") is PyStr { Value: RemuxPassOutcomes.LiveSkippedNotRequired }
-                            ? "Refiner checked this file and found that no changes were needed."
-                            : "Refiner finished processing this file.";
+                            ? "Checked this file and found that no changes were needed."
+                            : "Finished processing this file.";
                     if (await RemuxPassFileState.MarkFileStatusAsync(uow, library.Id, rel, RefinerFileStatuses.Processed, processedReason, now).ConfigureAwait(false))
                     {
                         await RemuxPassFileState.ClearFailureFieldsAsync(uow, library.Id, rel).ConfigureAwait(false);
@@ -368,7 +368,7 @@ public sealed class RemuxPassHandler : IJobHandler
         catch (Exception exception) when (exception is SqliteException or InvalidOperationException)
         {
             // The media pass remains the source of truth; a false failure over a completed file would be worse.
-            _logger.LogWarning(exception, "Refiner could not save the durable Files state; inspect the processing record.");
+            _logger.LogWarning(exception, "Weir could not save the durable Files state; inspect the processing record.");
         }
     }
 
@@ -405,7 +405,7 @@ public sealed class RemuxPassHandler : IJobHandler
                         }
                         catch (Exception exception) when (exception is SqliteException or InvalidOperationException)
                         {
-                            _logger.LogError(exception, "Refiner could not write the processing record for {Path}.", rel.Value);
+                            _logger.LogError(exception, "Weir could not write the processing record for {Path}.", rel.Value);
                         }
                     }
 
@@ -424,7 +424,7 @@ public sealed class RemuxPassHandler : IJobHandler
         catch (Exception exception) when (exception is SqliteException or InvalidOperationException)
         {
             // Activity is observability, never a prerequisite for a safe media mutation.
-            _logger.LogWarning(exception, "Refiner could not save the processing record; the pass result remains authoritative.");
+            _logger.LogWarning(exception, "Weir could not save the processing record; the pass result remains authoritative.");
         }
     }
 
@@ -477,7 +477,7 @@ public sealed class RemuxPassHandler : IJobHandler
                 var status = await _reporter.ReportHandoffCompletionAsync(uow, payloadJson, result).ConfigureAwait(false);
                 if (!status.StartsWith("skipped", StringComparison.Ordinal))
                 {
-                    _logger.LogInformation("Refiner hand-off callback: {Status}", status);
+                    _logger.LogInformation("Hand-off callback: {Status}", status);
                 }
             }
         }
@@ -485,7 +485,7 @@ public sealed class RemuxPassHandler : IJobHandler
         catch (Exception exception)
 #pragma warning restore CA1031
         {
-            _logger.LogError(exception, "Refiner hand-off callback raised unexpectedly.");
+            _logger.LogError(exception, "Hand-off callback raised unexpectedly.");
         }
     }
 
@@ -565,7 +565,7 @@ public sealed class ActivityProgressReporter
                 catch (Exception exception)
 #pragma warning restore CA1031
                 {
-                    _logger.LogWarning(exception, "Refiner could not save a progress update; continuing the media pass.");
+                    _logger.LogWarning(exception, "Weir could not save a progress update; continuing the media pass.");
                     return;
                 }
             }
@@ -580,7 +580,7 @@ public sealed class ActivityProgressReporter
         var detail = PyStrings.Slice(PyJsonWriter.Dumps(body, PyJsonFormat.Compact), 6000);
         if (ActivityId is null)
         {
-            var id = SqliteActivityWriter.Record(connection, transaction, new ActivityEventDraft(ActivityEventTypes.RefinerFileProcessingProgress, "refiner", $"Refiner is processing {name}", detail));
+            var id = SqliteActivityWriter.Record(connection, transaction, new ActivityEventDraft(ActivityEventTypes.RefinerFileProcessingProgress, "refiner", $"Processing {name}", detail));
             transaction.Commit();
             ActivityNotifications.TransactionCommitted(_database, transaction);
             ActivityId = id;
@@ -590,10 +590,10 @@ public sealed class ActivityProgressReporter
         var title = (body.Get("status") is { IsTruthy: true } status ? PyConvert.Str(status) : "processing") switch
         {
             "waiting" => $"Waiting to process {name}",
-            "finishing" => $"Refiner is finishing {name}",
+            "finishing" => $"Finishing {name}",
             "finished" => $"{name} finished processing",
             "failed" => $"{name} could not be processed",
-            _ => $"Refiner is processing {name}",
+            _ => $"Processing {name}",
         };
         SqliteActivityWriter.Update(connection, transaction, ActivityId.Value, title: title, detail: detail);
         transaction.Commit();

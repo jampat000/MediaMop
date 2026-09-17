@@ -164,7 +164,7 @@ def test_handoff_outside_the_watched_folder_is_refused_with_a_plain_reason(
         },
     )
     assert r.status_code == 400, r.text
-    assert "not inside Refiner's watched folder" in r.json()["detail"]
+    assert "not inside Weir's watched folder" in r.json()["detail"]
     assert len(remux_jobs(client)) == before
 
 

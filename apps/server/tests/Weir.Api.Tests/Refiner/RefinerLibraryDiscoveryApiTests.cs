@@ -525,7 +525,7 @@ public sealed class RefinerLibraryDiscoveryApiTests
         using var response = await client.PostAsync(UnlinkPath(999), new { csrf_token = await client.CsrfAsync() });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.Equal("That Refiner library does not exist.", await Detail(response));
+        Assert.Equal("That library does not exist.", await Detail(response));
     }
 
     [Fact]

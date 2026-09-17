@@ -50,7 +50,7 @@ public sealed class RefinerJobProcessorTests : IDisposable
 
         var row = (await _db.Store.GetAsync(1))!;
         Assert.Equal(RefinerJobStatus.Failed, row.Status);
-        Assert.Contains("Refiner job failed", row.LastError, StringComparison.Ordinal);
+        Assert.Contains("Weir job failed", row.LastError, StringComparison.Ordinal);
         Assert.Contains("marked failed", row.LastError, StringComparison.Ordinal);
         Assert.Equal(["failed 1 refiner.test.bad.v1 willRetry=False"], notifications.Sent);
     }
@@ -83,7 +83,7 @@ public sealed class RefinerJobProcessorTests : IDisposable
         Assert.Contains("try this job again shortly", row.LastError, StringComparison.Ordinal);
         Assert.DoesNotContain("marked failed", row.LastError, StringComparison.Ordinal);
         Assert.Equal(
-            "Refiner job failed: The job hit an unexpected error. Weir will try this job again shortly. Technical detail: InvalidOperationException: boom",
+            "Weir job failed: The job hit an unexpected error. Weir will try this job again shortly. Technical detail: InvalidOperationException: boom",
             row.LastError);
     }
 
@@ -102,10 +102,10 @@ public sealed class RefinerJobProcessorTests : IDisposable
 
         var entry = Assert.Single(_db.ActivityEvents());
         Assert.Equal(ActivityEventTypes.RefinerWorkerFailure, entry.EventType);
-        Assert.Equal("A Refiner job stopped with an error", entry.Title);
+        Assert.Equal("A Weir job stopped with an error", entry.Title);
         Assert.Equal(
             "{\"job_id\":1,\"job_kind\":\"refiner.test.crash.v1\",\"failure_class\":\"unknown\"," +
-            "\"message\":\"Refiner job failed: The job hit an unexpected error. This job is marked failed so it does not look successful.\"," +
+            "\"message\":\"Weir job failed: The job hit an unexpected error. This job is marked failed so it does not look successful.\"," +
             "\"next_action\":\"Review this job and use Start again after fixing the cause.\",\"retry_scheduled\":false,\"result\":\"failed\"," +
             "\"relative_media_path\":\"Films/Caf\\u00e9.mkv\",\"library_id\":4,\"trigger\":\"webhook\",\"run_id\":\"r-1\"}",
             entry.Detail);
@@ -142,7 +142,7 @@ public sealed class RefinerJobProcessorTests : IDisposable
         Assert.Empty(_db.ActivityEvents());
         Assert.Empty(recorder.Failures);
         Assert.Equal(
-            "Refiner job failed: The job hit an unexpected error. This job is marked failed so it does not look successful. Technical detail: AlreadyRecordedFailure: the output folder is not writable",
+            "Weir job failed: The job hit an unexpected error. This job is marked failed so it does not look successful. Technical detail: AlreadyRecordedFailure: the output folder is not writable",
             (await _db.Store.GetAsync(1))!.LastError);
     }
 
@@ -156,7 +156,7 @@ public sealed class RefinerJobProcessorTests : IDisposable
         var row = (await _db.Store.GetAsync(1))!;
         Assert.Equal(RefinerJobStatus.Pending, row.Status);
         Assert.Equal(
-            "Refiner job failed: The job hit an unexpected error. Weir will try this job again shortly. Technical detail: RuntimeError: refiner worker refused a retired job_kind: 'trimmer.radarr.cleanup_drive.v1' (row id=1); nothing runs this kind any more",
+            "Weir job failed: The job hit an unexpected error. Weir will try this job again shortly. Technical detail: RuntimeError: worker refused a retired job_kind: 'trimmer.radarr.cleanup_drive.v1' (row id=1); nothing runs this kind any more",
             row.LastError);
     }
 
@@ -167,7 +167,7 @@ public sealed class RefinerJobProcessorTests : IDisposable
         var processor = _db.Processor();
 
         await processor.ProcessOneAsync("t", now: T0);
-        Assert.Contains("refiner worker refused", (await _db.Store.GetAsync(1))!.LastError, StringComparison.Ordinal);
+        Assert.Contains("worker refused", (await _db.Store.GetAsync(1))!.LastError, StringComparison.Ordinal);
         await processor.ProcessOneAsync("t", now: T0.AddMinutes(1));
 
         var row = (await _db.Store.GetAsync(1))!;
@@ -241,7 +241,7 @@ public sealed class RefinerJobProcessorTests : IDisposable
         var row = (await _db.Store.GetAsync(1))!;
         Assert.Equal(RefinerJobStatus.HandlerOkFinalizeFailed, row.Status);
         Assert.Equal(
-            "refiner_terminalization_failure: Refiner job failed: The job hit an unexpected error. The work ran, but Weir could not record that it finished. Technical detail: RuntimeError: complete_claimed_refiner_job refused (lease/state mismatch)",
+            "refiner_terminalization_failure: Weir job failed: The job hit an unexpected error. The work ran, but Weir could not record that it finished. Technical detail: RuntimeError: complete_claimed_refiner_job refused (lease/state mismatch)",
             row.LastError);
     }
 

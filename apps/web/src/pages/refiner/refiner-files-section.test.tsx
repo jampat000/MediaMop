@@ -27,7 +27,7 @@ function file(over: Partial<RefinerFile> = {}): RefinerFile {
     library_name: "Movies",
     relative_path: "Some Film/film.mkv",
     status: "unprocessed",
-    status_reason: "Ready for Refiner to process as part of Movies.",
+    status_reason: "Ready to process as part of Movies.",
     blocked_by_connection: null,
     size_bytes: 2048,
     failure_class: null,

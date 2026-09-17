@@ -78,7 +78,7 @@ public static class RefinerRulesPreviewEndpoints
 
         var uow = await request.DbAsync().ConfigureAwait(false);
         var library = await LibraryStore.GetAsync(uow, libraryId).ConfigureAwait(false)
-            ?? throw new ApiException(StatusCodes.Status404NotFound, "That Refiner library does not exist.");
+            ?? throw new ApiException(StatusCodes.Status404NotFound, "That library does not exist.");
 
         var resolvedPath = hasRelative
             ? ResolveWithinLibraryFolders(library, relativePath!)

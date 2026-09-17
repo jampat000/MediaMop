@@ -388,7 +388,7 @@ public static class FileStateDecision
                 BlockedByConnection: blockedByConnection);
         }
 
-        return new FileStateVerdict(RefinerFileStatuses.Unprocessed, $"Ready for Refiner to process as part of {scopeWord}.");
+        return new FileStateVerdict(RefinerFileStatuses.Unprocessed, $"Ready to process as part of {scopeWord}.");
     }
 }
 

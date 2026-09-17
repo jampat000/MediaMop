@@ -41,7 +41,7 @@ def test_handoff_is_remuxed_and_reported_complete_with_the_managers_output_path(
     body = report.json
     assert body["handoffId"] == "handoff-ok-1"
     assert body["status"] == "completed"
-    assert body["processorName"] == "Weir Refiner"
+    assert body["processorName"] == "Weir"
     assert body["libraryId"] == h.DELUNO_LIBRARY_KEY
     assert body["releaseName"] == "Contract.Release.2024"
     assert body["message"] == "Removed 1 audio track(s)."

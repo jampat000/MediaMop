@@ -434,7 +434,7 @@ public static partial class RemuxOutputValidation
         if (outputDuration is null)
         {
             throw new MediaCompletenessException(
-                "Validation failed: Refiner could not confirm the staged output duration, so it was not published.");
+                "Validation failed: Weir could not confirm the staged output duration, so it was not published.");
         }
 
         var tolerance = Math.Max(0.5, expectedDurationSeconds * 0.01);

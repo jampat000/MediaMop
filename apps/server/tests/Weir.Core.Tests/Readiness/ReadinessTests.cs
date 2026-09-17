@@ -15,7 +15,7 @@ public sealed class ReadinessTests
         Assert.Equal(
             new WorkerLaneHealth(
                 "refiner", 8, 0, 8, 0, "degraded",
-                "Refiner is not processing new work because 8 worker slot(s) stopped responding. Restart Weir; queued work remains safe."),
+                "Weir is not processing new work because 8 worker slot(s) stopped responding. Restart Weir; queued work remains safe."),
             lane);
     }
 
@@ -24,7 +24,7 @@ public sealed class ReadinessTests
     {
         var lane = Assert.Single(new WorkerHeartbeats(new ManualTimeProvider()).Snapshot([new("refiner", 0)]));
         Assert.Equal(
-            new WorkerLaneHealth("refiner", 0, 0, 0, 0, "disabled", "Refiner is turned off in Settings, so no new background work will run."),
+            new WorkerLaneHealth("refiner", 0, 0, 0, 0, "disabled", "Weir is turned off in Settings, so no new background work will run."),
             lane);
     }
 
@@ -38,7 +38,7 @@ public sealed class ReadinessTests
         heartbeats.Started("refiner", 5); // outside the expected slots, ignored
 
         Assert.Equal(
-            new WorkerLaneHealth("refiner", 2, 2, 0, 0, "healthy", "Refiner worker heartbeats are current."),
+            new WorkerLaneHealth("refiner", 2, 2, 0, 0, "healthy", "Weir worker heartbeats are current."),
             Assert.Single(heartbeats.Snapshot([new("refiner", 2)])));
 
         time.Advance(TimeSpan.FromSeconds(361));
@@ -121,5 +121,5 @@ public sealed class ReadinessTests
         Assert.False(HealthReport.FromDatabase(false).IsOk);
     }
 
-    private static WorkerLaneHealth Healthy() => new("refiner", 1, 1, 0, 0, "healthy", "Refiner worker heartbeats are current.");
+    private static WorkerLaneHealth Healthy() => new("refiner", 1, 1, 0, 0, "healthy", "Weir worker heartbeats are current.");
 }

@@ -350,13 +350,13 @@ public sealed class PlatformRulesTests
         // attempt about to retry. Fixed here to say a retry is coming instead, using the same #488
         // vocabulary WorkerFailures already uses for the stored job error.
         Assert.Equal(
-            ("refiner_job_completed", "Refiner job completed", "Job 5 (refiner.test.v1) finished successfully."),
+            ("refiner_job_completed", "Weir job completed", "Job 5 (refiner.test.v1) finished successfully."),
             NotificationRules.JobNotification("refiner", "completed", 5, "refiner.test.v1"));
         Assert.Equal(
-            ("refiner_job_failed", "Refiner job failed", "Job 5 (refiner.test.v1) exhausted all retry attempts."),
+            ("refiner_job_failed", "Weir job failed", "Job 5 (refiner.test.v1) exhausted all retry attempts."),
             NotificationRules.JobNotification("refiner", "failed", 5, "refiner.test.v1"));
         Assert.Equal(
-            ("refiner_job_failed", "Refiner job failed", "Job 5 (refiner.test.v1) failed. Weir will try this job again shortly."),
+            ("refiner_job_failed", "Weir job failed", "Job 5 (refiner.test.v1) failed. Weir will try this job again shortly."),
             NotificationRules.JobNotification("refiner", "failed", 5, "refiner.test.v1", willRetry: true));
     }
 

@@ -217,7 +217,7 @@ public sealed class RuntimeMetricsStore
 
         if (summary.ModuleSavingsBytes.Count > 0)
         {
-            lines.Add("# HELP weir_module_savings_bytes_total Bytes saved by each module (Refiner remux).");
+            lines.Add("# HELP weir_module_savings_bytes_total Bytes saved by each module (remux).");
             lines.Add("# TYPE weir_module_savings_bytes_total counter");
             foreach (var (module, total) in summary.ModuleSavingsBytes.OrderBy(pair => pair.Key, StringComparer.Ordinal))
             {

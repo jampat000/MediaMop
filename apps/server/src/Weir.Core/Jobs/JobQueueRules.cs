@@ -71,7 +71,7 @@ public sealed record StartupRecoveryDecision(string Status, string LastError, bo
 /// <summary>Pure rules of <c>recover_incomplete_jobs_after_startup</c>.</summary>
 public static class StartupJobRecovery
 {
-    public const string ModuleName = "Refiner";
+    public const string ModuleName = "Weir";
 
     /// <summary>
     /// A leased row at startup belongs to a dead worker: requeue it when attempts remain, or mark it
@@ -85,12 +85,12 @@ public static class StartupJobRecovery
         return attempts >= max
             ? new StartupRecoveryDecision(
                 RefinerJobStatus.Failed,
-                $"{ModuleName} job was interrupted by a Weir restart after its final attempt. " +
+                "This job was interrupted by a Weir restart after its final attempt. " +
                 $"Recovered at {iso} and marked failed so the operator can inspect it.",
                 Requeued: false)
             : new StartupRecoveryDecision(
                 RefinerJobStatus.Pending,
-                $"{ModuleName} job was interrupted by a Weir restart. " +
+                "This job was interrupted by a Weir restart. " +
                 $"Recovered at {iso} and queued for another safe attempt.",
                 Requeued: true);
     }

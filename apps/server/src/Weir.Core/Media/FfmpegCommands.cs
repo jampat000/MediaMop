@@ -317,7 +317,7 @@ public static class FfmpegCommands
     public static string DebugSummary(IReadOnlyList<string> argv)
     {
         ArgumentNullException.ThrowIfNull(argv);
-        return "Refiner: ffmpeg " + string.Join(' ', argv.Take(8)) + " ...";
+        return "ffmpeg " + string.Join(' ', argv.Take(8)) + " ...";
     }
 
     private static string Map(int index) => "0:" + index.ToString(CultureInfo.InvariantCulture);

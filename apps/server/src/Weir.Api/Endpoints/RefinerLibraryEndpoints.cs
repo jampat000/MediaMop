@@ -42,7 +42,7 @@ public static class RefinerLibraryEndpoints
 
     private static async Task<RefinerLibraryRecord> RequireLibraryAsync(UnitOfWork uow, long id) =>
         await LibraryStore.GetAsync(uow, id).ConfigureAwait(false)
-        ?? throw new ApiException(StatusCodes.Status404NotFound, "That Refiner library does not exist.");
+        ?? throw new ApiException(StatusCodes.Status404NotFound, "That library does not exist.");
 
     /// <summary><c>_require_connection</c>: <c>int = Path(ge=1)</c>.</summary>
     private static long ConnectionId(ApiRequest request, ValidationIssues issues)
@@ -59,7 +59,7 @@ public static class RefinerLibraryEndpoints
 
     private static async Task<RefinerRuleSetRecord> RequireRuleSetAsync(UnitOfWork uow, long id) =>
         await LibraryStore.GetRuleSetAsync(uow, id).ConfigureAwait(false)
-        ?? throw new ApiException(StatusCodes.Status404NotFound, "That Refiner rule set does not exist.");
+        ?? throw new ApiException(StatusCodes.Status404NotFound, "That rule set does not exist.");
 
     private static async Task<PyDict> LibraryOutAsync(UnitOfWork uow, RefinerLibraryRecord row)
     {

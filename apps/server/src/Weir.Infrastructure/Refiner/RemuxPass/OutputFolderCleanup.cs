@@ -87,7 +87,7 @@ public sealed class OutputFolderCleanup
         if (relNorm.Length > 0 && await MovieJobBlocksAsync(relNorm, currentJobId, cancellationToken).ConfigureAwait(false))
         {
             Skip(output, Prefix, "movie_output_folder_skip_reason",
-                "Another Movies Refiner video pass is already waiting or running for this same watched file path, " +
+                "Another Movies video pass is already waiting or running for this same watched file path, " +
                 "so output-folder cleanup was skipped to avoid racing another remux.");
             return;
         }
@@ -97,7 +97,7 @@ public sealed class OutputFolderCleanup
         if (newest is null)
         {
             Skip(output, Prefix, "movie_output_folder_skip_reason",
-                "Refiner could not read file timestamps under the movie output folder, so nothing was removed for safety.");
+                "Weir could not read file timestamps under the movie output folder, so nothing was removed for safety.");
             return;
         }
 
@@ -140,7 +140,7 @@ public sealed class OutputFolderCleanup
         if (await TvJobBlocksAsync(place.OutputRoot, place.Folder, currentJobId, cancellationToken).ConfigureAwait(false))
         {
             Skip(output, Prefix, "tv_output_season_folder_skip_reason",
-                "Another TV Refiner video pass is already waiting or running for an episode whose output maps to this same " +
+                "Another TV video pass is already waiting or running for an episode whose output maps to this same " +
                 "season folder under your TV output library, so TV output-folder cleanup was skipped to avoid racing another remux.");
             return;
         }
@@ -149,7 +149,7 @@ public sealed class OutputFolderCleanup
         if (episodes.Count == 0)
         {
             Skip(output, Prefix, "tv_output_season_folder_skip_reason",
-                "Refiner did not find any supported episode media file as a direct child of this season output folder, " +
+                "Weir did not find any supported episode media file as a direct child of this season output folder, " +
                 "so it could not apply the minimum-age gate for TV output cleanup. The folder was left in place.");
             return;
         }
@@ -171,7 +171,7 @@ public sealed class OutputFolderCleanup
         if (newest is null)
         {
             Skip(output, Prefix, "tv_output_season_folder_skip_reason",
-                "Refiner could not read timestamps for direct-child episode files in this season output folder, so nothing was removed for safety.");
+                "Weir could not read timestamps for direct-child episode files in this season output folder, so nothing was removed for safety.");
             return;
         }
 
@@ -198,8 +198,8 @@ public sealed class OutputFolderCleanup
         if (rootRaw.Length == 0)
         {
             Skip(output, prefix, skipKey, tv
-                ? "No TV output folder is configured, so Refiner did not evaluate TV output-folder cleanup."
-                : "No Movies output folder is configured, so Refiner did not evaluate output-folder cleanup.");
+                ? "No TV output folder is configured, so TV output-folder cleanup was not evaluated."
+                : "No Movies output folder is configured, so output-folder cleanup was not evaluated.");
             return null;
         }
 
@@ -236,16 +236,16 @@ public sealed class OutputFolderCleanup
         if (!RemuxPassPaths.IsUnder(folder, outputRoot))
         {
             Skip(output, prefix, skipKey, tv
-                ? "The TV season output folder would sit outside the TV output root, so Refiner did not change it."
-                : "The movie output folder would sit outside the Movies output root, so Refiner did not change it.");
+                ? "The TV season output folder would sit outside the TV output root, so it was not changed."
+                : "The movie output folder would sit outside the Movies output root, so it was not changed.");
             return null;
         }
 
         if (RemuxPassPaths.SamePath(folder, outputRoot))
         {
             Skip(output, prefix, skipKey, tv
-                ? "The episode file sits directly in the TV output folder root, so Refiner does not remove a season folder here."
-                : "The movie file sits directly in the Movies output folder root, so Refiner does not remove a per-title folder here.");
+                ? "The episode file sits directly in the TV output folder root, so a season folder is not removed here."
+                : "The movie file sits directly in the Movies output folder root, so a per-title folder is not removed here.");
             return null;
         }
 
@@ -264,7 +264,7 @@ public sealed class OutputFolderCleanup
             output.Set(skipKey, truth.Note);
             if (truth.Check == LibraryTruthVerdict.Skipped)
             {
-                _logger.LogWarning("Refiner {Label} output cleanup: {Note}", logLabel, truth.Note);
+                _logger.LogWarning("{Label} output cleanup: {Note}", logLabel, truth.Note);
             }
 
             return;
@@ -276,12 +276,12 @@ public sealed class OutputFolderCleanup
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            var human = $"Refiner could not remove the {noun} because a file or folder was in use or blocked ({exception.Message}).";
+            var human = $"Weir could not remove the {noun} because a file or folder was in use or blocked ({exception.Message}).";
             output.Set(skipKey, human);
             output.Set(deletedKey, false);
             output.Set($"{prefix}_truth_check", LibraryTruthVerdict.Skipped);
             output.Set($"{prefix}_truth_note", human);
-            _logger.LogWarning("Refiner {Label} output cleanup: {Reason}", logLabel, human);
+            _logger.LogWarning("{Label} output cleanup: {Reason}", logLabel, human);
             return;
         }
 
@@ -303,7 +303,7 @@ public sealed class OutputFolderCleanup
         {
             if (!RemuxPassPaths.IsUnder(current, resolvedRoot))
             {
-                logger.LogWarning("Refiner cleanup: stopped cascade because folder is outside the root ({Folder}).", current);
+                logger.LogWarning("Cleanup stopped cascade because folder is outside the root ({Folder}).", current);
                 break;
             }
 
@@ -324,7 +324,7 @@ public sealed class OutputFolderCleanup
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
-                logger.LogWarning("Refiner cleanup: could not remove an empty parent folder ({Folder}): {Error}", current, exception.Message);
+                logger.LogWarning("Cleanup could not remove an empty parent folder ({Folder}): {Error}", current, exception.Message);
                 break;
             }
 

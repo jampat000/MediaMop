@@ -147,7 +147,7 @@ public sealed class RefinerWorkerService : BackgroundService
         await Task.Yield();
         // The shipped default is 8 slots; the saved files-at-once value gates how many are active (#329).
         _logger.LogDebug(
-            "Refiner worker slot cap is {SlotCap}; the saved files-at-once setting gates how many are active.",
+            "Worker slot cap is {SlotCap}; the saved files-at-once setting gates how many are active.",
             _options.RefinerWorkerCount);
         var slots = Enumerable.Range(0, _options.RefinerWorkerCount)
             .Select(index => Task.Run(() => RunSlotAsync(index, stoppingToken), CancellationToken.None))
@@ -201,7 +201,7 @@ public sealed class RefinerWorkerService : BackgroundService
                 catch (Exception exception)
 #pragma warning restore CA1031
                 {
-                    _logger.LogError(exception, "Refiner worker tick crashed worker_index={WorkerIndex}", workerIndex);
+                    _logger.LogError(exception, "Worker tick crashed worker_index={WorkerIndex}", workerIndex);
                     await Task.Delay(_timings.TickErrorBackoff, _time, stoppingToken).ConfigureAwait(false);
                     continue;
                 }
@@ -362,7 +362,7 @@ public sealed class PeriodicEnqueueService : BackgroundService
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                _logger.LogError(exception, "Refiner could not read whether {Name} is enabled; leaving it off.", enqueuer.Name);
+                _logger.LogError(exception, "Could not read whether {Name} is enabled; leaving it off.", enqueuer.Name);
                 enabled = false;
             }
 
@@ -389,7 +389,7 @@ public sealed class PeriodicEnqueueService : BackgroundService
 
         public TimeSpan? FailureCooldown => PeriodicSchedule.FailureCooldown;
 
-        public string FailureMessage => $"Refiner periodic enqueue failed ({enqueuer.Name})";
+        public string FailureMessage => $"Periodic enqueue failed ({enqueuer.Name})";
 
         public Task RunOnceAsync(CancellationToken cancellationToken) => enqueuer.EnqueueOnceAsync(cancellationToken);
     }
@@ -500,7 +500,7 @@ public sealed class FailureCleanupSweepEnqueuer : IPeriodicEnqueuer
                     SqliteActivityWriter.Record(
                         connection,
                         transaction,
-                        new ActivityEventDraft(ActivityEventTypes.RefinerFailureCleanupSweepCompleted, "refiner", $"Refiner cleanup skipped for {label}", PyJsonWriter.Dumps(detail, PyJsonFormat.Compact)));
+                        new ActivityEventDraft(ActivityEventTypes.RefinerFailureCleanupSweepCompleted, "refiner", $"Cleanup skipped for {label}", PyJsonWriter.Dumps(detail, PyJsonFormat.Compact)));
                 }
 
                 return inserted;
