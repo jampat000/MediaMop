@@ -12,7 +12,7 @@ Weir exposes a REST API via FastAPI. The API is served at `/api/v1` under the sa
 The full OpenAPI schema is auto-generated from the FastAPI backend and available at:
 
 - **Development**: `http://localhost:8788/docs` (Swagger UI) or `http://localhost:8788/redoc` (ReDoc)
-- **Source**: [`apps/web/openapi/weir-openapi.json`](https://github.com/jampat000/weir/blob/main/apps/web/openapi/weir-openapi.json)
+- **Source**: [`apps/web/openapi/weir-openapi.json`](https://github.com/jampat000/Weir/blob/main/apps/web/openapi/weir-openapi.json)
 
 ## Authentication
 

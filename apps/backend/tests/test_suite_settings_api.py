@@ -52,8 +52,8 @@ def _release_record(version: str = "1.2.3") -> GitHubReleaseRecord:
         assets=(
             GitHubReleaseAsset(
                 name="Weir-win-Setup.exe",
-                api_url=f"https://api.github.com/repos/jampat000/weir/releases/assets/{version.replace('.', '')}",
-                browser_download_url=f"https://github.com/jampat000/weir/releases/download/v{version}/Weir-win-Setup.exe",
+                api_url=f"https://api.github.com/repos/jampat000/Weir/releases/assets/{version.replace('.', '')}",
+                browser_download_url=f"https://github.com/jampat000/Weir/releases/download/v{version}/Weir-win-Setup.exe",
                 size_bytes=123456789,
                 content_type="application/octet-stream",
             ),
@@ -457,7 +457,7 @@ def test_suite_update_status_not_published_when_release_missing(
 ) -> None:
     _login_admin(client_with_admin)
 
-    request = httpx.Request("GET", "https://api.github.com/repos/jampat000/weir/releases/latest")
+    request = httpx.Request("GET", "https://api.github.com/repos/jampat000/Weir/releases/latest")
     response = httpx.Response(404, request=request)
 
     def _raise_not_found(**_kwargs) -> None:  # noqa: ANN003

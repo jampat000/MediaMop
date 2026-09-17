@@ -24,8 +24,8 @@ This release focuses on <plain-language summary in one sentence>.
 
 ## Docker
 
-- `ghcr.io/jampat000/mediamop:X.Y.Z`  <!-- no `v`: release.yml strips it for the image tag -->
-- `ghcr.io/jampat000/mediamop:latest`
+- `ghcr.io/jampat000/weir:X.Y.Z`  <!-- no `v`: release.yml strips it for the image tag -->
+- `ghcr.io/jampat000/weir:latest`
 
 ## Full Changelog
 

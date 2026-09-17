@@ -174,5 +174,5 @@ prefix, or a queue. Everything stays on `refiner_jobs` under `refiner.*`.
 - [ADR-0013](ADR-0013-media-managers-are-kinds-not-products.md) — a media manager is a kind
 - Execution plan: [`docs/exec-plans/completed/refiner-library-model.md`](../exec-plans/completed/refiner-library-model.md)
 
-[#350]: https://github.com/jampat000/weir/issues/350
-[#351]: https://github.com/jampat000/weir/issues/351
+[#350]: https://github.com/jampat000/Weir/issues/350
+[#351]: https://github.com/jampat000/Weir/issues/351
