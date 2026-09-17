@@ -377,7 +377,9 @@ internal static class GoldenDivergences
 {
     /// <summary>
     /// #539 item 1: ffprobe now runs with "-v error" (the golden fixture has Python's "-v quiet") so that
-    /// unreadable-media markers reach stderr instead of being suppressed.
+    /// unreadable-media markers reach stderr instead of being suppressed. #498: ffprobe also now runs with
+    /// "-show_chapters" (absent from the fixture, captured before that option existed) so a probe's JSON always
+    /// carries a chapters array for <see cref="Weir.Core.Rules.ProbeResult.Chapters"/>.
     /// </summary>
     public static IReadOnlyList<string> FfprobeArgv(IReadOnlyList<string> golden)
     {
@@ -386,6 +388,12 @@ internal static class GoldenDivergences
         if (index >= 0 && index + 1 < patched.Count && patched[index + 1] == "quiet")
         {
             patched[index + 1] = "error";
+        }
+
+        var showFormatIndex = patched.IndexOf("-show_format");
+        if (showFormatIndex >= 0)
+        {
+            patched.Insert(showFormatIndex + 1, "-show_chapters");
         }
 
         return patched;

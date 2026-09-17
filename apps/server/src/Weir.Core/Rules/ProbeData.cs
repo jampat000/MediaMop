@@ -182,4 +182,28 @@ public sealed record ProbeResult
                 .ToList();
         }
     }
+
+    /// <summary>
+    /// The entries of <c>chapters</c> that are objects (#498: present when the probe ran with
+    /// <c>-show_chapters</c>, see <see cref="Weir.Core.Media.FfmpegCommands.BuildFfprobeArgv"/>); empty when the
+    /// document has no chapter list, including a probe made before that flag existed.
+    /// </summary>
+    public IReadOnlyList<JsonElement> Chapters
+    {
+        get
+        {
+            if (Json.ValueKind != JsonValueKind.Object)
+            {
+                return [];
+            }
+
+            var chapters = Py.Get(Json, "chapters");
+            if (!Py.IsList(chapters))
+            {
+                return [];
+            }
+
+            return chapters!.Value.EnumerateArray().Where(c => c.ValueKind == JsonValueKind.Object).ToList();
+        }
+    }
 }

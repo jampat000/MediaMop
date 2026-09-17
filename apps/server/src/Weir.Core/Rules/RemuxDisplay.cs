@@ -72,6 +72,12 @@ public static class RemuxDisplay
         return c.Length == 0 ? string.Empty : Label(c) ?? Py.Upper(c);
     }
 
+    /// <summary>The {channels} placeholder in <see cref="TrackNaming"/>: the same 2.0/5.1/7.1 label as the track lines.</summary>
+    public static string ChannelsDisplay(long channels) => ChannelLayoutLabel(channels);
+
+    /// <summary>The {codec} placeholder in <see cref="TrackNaming"/>: the same display label as the track lines.</summary>
+    public static string CodecDisplayName(string? codecName) => CodecLabel(codecName ?? string.Empty);
+
     private static string ChannelLayoutLabel(long n) => n switch
     {
         <= 0 => string.Empty,

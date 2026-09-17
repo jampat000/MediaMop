@@ -348,10 +348,14 @@ internal static class GoldenDivergences
     /// has Python's "-v quiet" — the REFERENCE_FFPROBE_CALL debug log (JSON, double-quoted) and a timeout's
     /// <c>Command '[...]' timed out after N seconds</c> message (Python <c>repr()</c>, single-quoted). Every other
     /// field of either is unaffected by this fix, so a plain substring patch on the one changed token is enough
-    /// to reuse the rest of the fixture unmodified.
+    /// to reuse the rest of the fixture unmodified. #498 patches the same two places again: both now also carry
+    /// "-show_chapters" (see <see cref="Weir.Core.Media.FfmpegCommands.BuildFfprobeArgv"/>), absent from fixtures
+    /// captured before that option existed.
     /// </summary>
     public static string FfprobeCallLog(string message) =>
         message
             .Replace("\"-v\", \"quiet\"", "\"-v\", \"error\"", StringComparison.Ordinal)
-            .Replace("'-v', 'quiet'", "'-v', 'error'", StringComparison.Ordinal);
+            .Replace("'-v', 'quiet'", "'-v', 'error'", StringComparison.Ordinal)
+            .Replace("\"-show_format\", \"", "\"-show_format\", \"-show_chapters\", \"", StringComparison.Ordinal)
+            .Replace("'-show_format', '", "'-show_format', '-show_chapters', '", StringComparison.Ordinal);
 }

@@ -11,7 +11,24 @@ public sealed record MetadataRules
     public bool RemoveLanguageTags { get; init; }
     public bool RemoveOtherMetadata { get; init; }
 
-    public bool AnyEnabled => RemoveImages || RemoveAttachments || RemoveTitle || RemoveLanguageTags || RemoveOtherMetadata;
+    /// <summary>#498 (muxarr-inspired): write a standard <see cref="TrackNameTemplate"/> title on every kept audio and subtitle track.</summary>
+    public bool StandardizeTrackNames { get; init; }
+
+    /// <summary>The template rendered by <see cref="TrackNaming"/> when <see cref="StandardizeTrackNames"/> is on and no <see cref="TrackNameOverrides"/> entry matches.</summary>
+    public string TrackNameTemplate { get; init; } = TrackNaming.DefaultTemplate;
+
+    /// <summary>Per-flag templates that take priority over <see cref="TrackNameTemplate"/> (forced, then hearing-impaired, then commentary, then audio description).</summary>
+    public TrackNameOverrides TrackNameOverrides { get; init; } = new();
+
+    /// <summary>#498: clear scene-tag video track names (e.g. "x265-GROUP") by writing an empty title.</summary>
+    public bool ClearVideoTrackNames { get; init; }
+
+    /// <summary>#498: drop the container's chapter list (<c>-map_chapters -1</c>).</summary>
+    public bool RemoveChapters { get; init; }
+
+    public bool AnyEnabled =>
+        RemoveImages || RemoveAttachments || RemoveTitle || RemoveLanguageTags || RemoveOtherMetadata
+        || StandardizeTrackNames || ClearVideoTrackNames || RemoveChapters;
 }
 
 /// <summary>
@@ -128,6 +145,13 @@ public static class MetadataStreams
             flags.AddRange(["-metadata:s", "language="]);
         }
 
+        // #498: independent of the title/metadata cascade above; appended last so every pre-existing flag keeps
+        // its exact position.
+        if (rules.RemoveChapters)
+        {
+            flags.AddRange(["-map_chapters", "-1"]);
+        }
+
         return flags;
     }
 
@@ -156,6 +180,21 @@ public static class MetadataStreams
         if (rules.RemoveOtherMetadata)
         {
             notes.Add("Removed the remaining container metadata.");
+        }
+
+        if (rules.StandardizeTrackNames)
+        {
+            notes.Add("Standardized audio and subtitle track names.");
+        }
+
+        if (rules.ClearVideoTrackNames)
+        {
+            notes.Add("Cleared the video track name.");
+        }
+
+        if (rules.RemoveChapters)
+        {
+            notes.Add("Removed chapters.");
         }
 
         return notes;
