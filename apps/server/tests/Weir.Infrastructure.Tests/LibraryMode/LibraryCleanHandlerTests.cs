@@ -4,8 +4,10 @@ using Weir.Core.Activity;
 using Weir.Core.Jobs;
 using Weir.Core.LibraryMode;
 using Weir.Core.Refiner.RemuxPass;
+using Weir.Infrastructure.Activity;
 using Weir.Infrastructure.LibraryMode;
 using Weir.Infrastructure.Media;
+using Weir.Infrastructure.MediaManagers;
 using Weir.Infrastructure.Tests.Media;
 using Weir.Infrastructure.Tests.MediaManagers;
 using Weir.Infrastructure.Tests.Refiner.RemuxPass;
@@ -37,7 +39,11 @@ public sealed class LibraryCleanHandlerTests : IDisposable
             new RefinerJobSwapJournal(_fixture.Store.Database),
             new RemuxOutputSwapValidator(tools, NullLogger<RemuxOutputSwapValidator>.Instance),
             NullLogger<SafeSwap>.Instance);
-        var notifier = new NoOpLibraryFileChangeNotifier(NullLogger<NoOpLibraryFileChangeNotifier>.Instance);
+        // No manager connections are configured in this fixture, so the real notifier finds nothing that owns
+        // the changed path and makes no HTTP call — equivalent to a no-op for these tests, but exercising the
+        // same #507 code the running server does.
+        var notifier = new LibraryFileChangeNotifier(
+            _fixture.Connections, _fixture.Store.Database, new SqliteActivityWriter(_fixture.Store.Database), _fixture.Store.Clock, delay: (_, _) => Task.CompletedTask);
         return new LibraryCleanHandler(_fixture.Store.Database, tools, swap, notifier, _fixture.Store.Clock, NullLogger<LibraryCleanHandler>.Instance);
     }
 

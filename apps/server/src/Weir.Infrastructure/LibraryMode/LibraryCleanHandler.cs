@@ -142,13 +142,15 @@ public sealed class LibraryCleanHandler : IJobHandler
             durationSeconds = parsedDuration;
         }
 
+        var sourceWarnings = await _tools.ProbeWarningLinesAsync(path, cancellationToken).ConfigureAwait(false);
+
         var result = await _swap.RunAsync(
             context.Id,
             path,
             async (tempPath, ct) =>
             {
                 var workDir = Path.GetDirectoryName(tempPath) is { Length: > 0 } dir ? dir : ".";
-                var written = await _tools.RemuxToTempFileAsync(path, workDir, plan.Plan!, durationSeconds: durationSeconds, cancellationToken: ct).ConfigureAwait(false);
+                var written = await _tools.RemuxToTempFileAsync(path, workDir, plan.Plan!, probe.Json, sourceWarnings, durationSeconds: durationSeconds, cancellationToken: ct).ConfigureAwait(false);
                 try
                 {
                     File.Move(written, tempPath, overwrite: false);

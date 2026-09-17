@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Weir.Core.Configuration;
 using Weir.Core.Jobs;
-using Weir.Core.MediaManagers;
 using Weir.Infrastructure.Media;
 using Weir.Infrastructure.MediaManagers;
 using Weir.Infrastructure.Sqlite;
@@ -11,7 +10,9 @@ namespace Weir.Infrastructure.LibraryMode;
 
 /// <summary>
 /// Registers library mode (#505): the #506 safe swap (not wired into anything until now — see
-/// <c>apps/server/README.md</c>, "Library mode: safe swap"), its scan and clean job handlers, and the notify seam (#507).
+/// <c>apps/server/README.md</c>, "Library mode: safe swap"), its scan and clean job handlers, and the real
+/// notify seam (#507, <c>Weir.Infrastructure.MediaManagers.LibraryFileChangeNotifier</c>, registered by
+/// <c>AddWeirMediaManagers</c>).
 /// </summary>
 public static class LibraryModeServices
 {
@@ -31,9 +32,7 @@ public static class LibraryModeServices
         services.TryAddSingleton<SafeSwap>();
         services.TryAddSingleton<SwapRecoverySweep>();
 
-        // #507's notify seam: a no-op default until feat/507-file-changed's own registration replaces it (see
-        // NoOpLibraryFileChangeNotifier's doc comment).
-        services.TryAddSingleton<ILibraryFileChangeNotifier, NoOpLibraryFileChangeNotifier>();
+        // #507's notify seam: AddWeirMediaManagers (above) registers the real LibraryFileChangeNotifier.
         services.TryAddSingleton<LibraryScanHandler>();
         services.TryAddSingleton<LibraryCleanHandler>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IJobHandler, LibraryScanHandler>(sp => sp.GetRequiredService<LibraryScanHandler>()));
