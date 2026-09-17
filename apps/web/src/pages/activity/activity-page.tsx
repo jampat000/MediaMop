@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FileStoryPanel } from "../../components/refiner/file-story-panel";
 import { PageLoading } from "../../components/shared/page-loading";
@@ -48,20 +48,19 @@ import {
   RemoveFileHistoryDialog,
 } from "./activity-history-dialogs";
 
-type ActivityModuleFilter = "all" | "refiner" | "system";
 type ActivityTone = "info" | "success" | "warning" | "error";
 
 type ActivityDisplay = {
   title: string;
   summary: string;
   detail: string | null;
-  chip: string;
+  /** A status badge, only when it says more than the title does. */
+  chip: string | null;
   tone: ActivityTone;
   compact: boolean;
 };
 
 type ActivityFiltersState = {
-  module: ActivityModuleFilter;
   eventType: string;
   search: string;
   from: string;
@@ -73,7 +72,6 @@ type ActivityFiltersState = {
 };
 
 const EMPTY_FILTERS: ActivityFiltersState = {
-  module: "all",
   eventType: "",
   search: "",
   from: "",
@@ -90,12 +88,6 @@ type ActivityEventOption = {
 };
 
 type ParsedDetail = Record<string, unknown>;
-
-const MODULE_OPTIONS: Array<{ value: ActivityModuleFilter; label: string }> = [
-  { value: "all", label: "All modules" },
-  { value: "refiner", label: "Refiner" },
-  { value: "system", label: "System" },
-];
 
 const EVENT_LABELS: Record<string, string> = {
   "auth.login_succeeded": "Sign-in finished",
@@ -132,10 +124,6 @@ function eventOptionLabel(eventType: string): string {
     EVENT_LABELS[eventType] ??
     eventType.split(".").slice(-1)[0].replaceAll("_", " ")
   );
-}
-
-function titleCase(value: string): string {
-  return value ? value[0].toUpperCase() + value.slice(1) : value;
 }
 
 /** A local date and time in the shape a datetime-local input holds. */
@@ -211,19 +199,6 @@ function asBoolean(value: unknown): boolean | null {
   return null;
 }
 
-function toneClasses(tone: ActivityTone): string {
-  switch (tone) {
-    case "success":
-      return "mm-activity-tone--success";
-    case "warning":
-      return "mm-activity-tone--warning";
-    case "error":
-      return "mm-activity-tone--error";
-    default:
-      return "border-[var(--mm-border)] bg-[var(--mm-card-bg)]";
-  }
-}
-
 function chipToneClasses(tone: ActivityTone): string {
   switch (tone) {
     case "success":
@@ -255,11 +230,11 @@ function normalizeRefinerSummary(
           ? `${name} finished processing`
           : status === "failed"
             ? `${name} could not be processed`
-            : `Refiner is processing ${name}`,
+            : `Processing ${name}`,
       summary:
         percent == null
-          ? "Refiner is preparing the cleaned-up file"
-          : `Refiner is writing the cleaned-up file (${Math.round(percent)}%)`,
+          ? "Preparing the cleaned-up file"
+          : `Writing the cleaned-up file (${Math.round(percent)}%)`,
       detail: ev.detail ?? null,
       chip:
         status === "failed"
@@ -300,14 +275,14 @@ function normalizeRefinerSummary(
             ? `${fileName} could not be processed`
             : `${fileName} was processed successfully`,
       summary: passedThrough
-        ? "Refiner rules were bypassed for this file"
+        ? "Handed back without applying your rules"
         : outcome === "live_skipped_not_required"
           ? "No changes were needed"
           : outcome?.startsWith("failed")
-            ? "Refiner could not finish this file"
+            ? "Weir could not finish this file"
             : remuxNeeded === false
-              ? "The file already fits your Refiner rules"
-              : "Refiner finished writing the cleaned-up file",
+              ? "The file already fits your rules"
+              : "Cleaned-up file written",
       detail: ev.detail ?? null,
       chip: passedThrough
         ? "Passed through"
@@ -325,7 +300,7 @@ function normalizeRefinerSummary(
       title: "Manual queue check finished",
       summary: "Download queue safety check",
       detail: ev.detail ?? null,
-      chip: "Queue check finished",
+      chip: null,
       tone: "success",
       compact: true,
     };
@@ -335,7 +310,7 @@ function normalizeRefinerSummary(
       title: "Queue check finished",
       summary: "Download queue safety check",
       detail: ev.detail ?? null,
-      chip: "Queue check finished",
+      chip: null,
       tone: "success",
       compact: true,
     };
@@ -345,7 +320,7 @@ function normalizeRefinerSummary(
       title: "Temporary files cleanup finished",
       summary: "Background cleanup result",
       detail: ev.detail ?? null,
-      chip: "Cleanup finished",
+      chip: null,
       tone: "success",
       compact: true,
     };
@@ -355,7 +330,7 @@ function normalizeRefinerSummary(
       title: "Failed-remux cleanup finished",
       summary: "Background cleanup result",
       detail: ev.detail ?? null,
-      chip: "Cleanup finished",
+      chip: null,
       tone: "success",
       compact: true,
     };
@@ -372,7 +347,7 @@ function normalizeAuthSummary(ev: ActivityEventItem): ActivityDisplay | null {
       ? "Service connection check"
       : "Account and sign-in activity",
     detail: ev.detail ?? null,
-    chip: "System event",
+    chip: null,
     tone:
       ev.event_type.includes("failed") || ev.event_type.includes("denied")
         ? "warning"
@@ -400,31 +375,12 @@ function eventDisplay(ev: ActivityEventItem): ActivityDisplay {
         : "info";
   return {
     title: eventOptionLabel(ev.event_type),
-    summary: ev.module === "refiner" ? "Refiner activity" : "System event",
+    summary: ev.module === "refiner" ? "Processing" : "System",
     detail: ev.detail ?? null,
-    chip: eventOptionLabel(ev.event_type),
+    chip: null,
     tone,
     compact: Boolean(ev.detail && ev.detail.length > 120),
   };
-}
-
-function ActivitySummaryCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <section className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-text3)]">
-        {label}
-      </p>
-      <p className="mt-1 text-lg font-semibold text-[var(--mm-text1)]">
-        {value}
-      </p>
-    </section>
-  );
 }
 
 function StructuredActivityDetails({ ev }: { ev: ActivityEventItem }) {
@@ -442,6 +398,21 @@ function StructuredActivityDetails({ ev }: { ev: ActivityEventItem }) {
   return null;
 }
 
+/** Short plain-text detail (a username, a one-line reason) reads best on the summary line. */
+function inlineDetailOf(
+  ev: ActivityEventItem,
+  display: ActivityDisplay,
+): string | null {
+  if (!display.detail || display.compact) return null;
+  if (
+    ev.event_type === REFINER_FILE_PROCESSING_PROGRESS_EVENT ||
+    ev.event_type === REFINER_FILE_REMUX_PASS_COMPLETED_EVENT
+  ) {
+    return null;
+  }
+  return parseDetail(display.detail) ? null : display.detail;
+}
+
 function ActivityEventDetails({
   ev,
   display,
@@ -450,31 +421,27 @@ function ActivityEventDetails({
   display: ActivityDisplay;
 }) {
   if (!display.detail) return null;
+  let body: ReactNode = null;
   if (ev.event_type === REFINER_FILE_PROCESSING_PROGRESS_EVENT) {
-    return <RefinerFileProcessingProgressDetail detail={display.detail} />;
+    body = <RefinerFileProcessingProgressDetail detail={display.detail} />;
+  } else if (ev.event_type === REFINER_FILE_REMUX_PASS_COMPLETED_EVENT) {
+    body = <RefinerFileRemuxPassActivityDetail detail={display.detail} />;
+  } else {
+    body = StructuredActivityDetails({ ev });
   }
-  if (ev.event_type === REFINER_FILE_REMUX_PASS_COMPLETED_EVENT) {
-    return <RefinerFileRemuxPassActivityDetail detail={display.detail} />;
-  }
-  const structured = StructuredActivityDetails({ ev });
-  if (structured) {
-    return structured;
-  }
-  if (!display.compact) {
-    return (
-      <p className="text-sm leading-6 text-[var(--mm-text2)]">
-        {display.detail}
-      </p>
-    );
+  if (!body && inlineDetailOf(ev, display) !== null) {
+    return null;
   }
   return (
-    <details className="rounded-md border border-[var(--mm-border)] bg-black/10 px-3 py-2">
-      <summary className="cursor-pointer text-sm font-medium text-[var(--mm-text2)]">
-        Show event detail
-      </summary>
-      <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[var(--mm-text2)]">
-        {display.detail}
-      </p>
+    <details className="mm-activity-item__more">
+      <summary>Details</summary>
+      <div className="mm-activity-item__more-body">
+        {body ?? (
+          <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--mm-text2)]">
+            {display.detail}
+          </p>
+        )}
+      </div>
     </details>
   );
 }
@@ -494,7 +461,8 @@ function collectEventOptions(
 }
 
 type ActivityGroup = {
-  kind: "failures" | "run";
+  /** failures: repeated failures, listed; repeat: identical routine entries, one row ×N. */
+  kind: "failures" | "repeat" | "run";
   key: string;
   events: ActivityEventItem[];
 };
@@ -506,11 +474,18 @@ function groupRepeatedFailures(items: ActivityEventItem[]): ActivityGroup[] {
     const isFailure =
       display.tone === "error" || /failed|denied/i.test(event.event_type);
     const previous = groups.at(-1);
-    const key = `${event.module}|${event.event_type}|${display.title}`;
-    if (isFailure && previous?.key === key) {
+    const key = isFailure
+      ? `failures|${event.module}|${event.event_type}|${display.title}`
+      : // Routine entries only merge when nothing tells them apart (e.g. six sign-ins).
+        `repeat|${event.module}|${event.event_type}|${display.title}|${event.detail ?? ""}|${event.trigger ?? ""}|${event.relative_path ?? ""}`;
+    if (previous?.key === key) {
       previous.events.push(event);
     } else {
-      groups.push({ kind: "failures", key, events: [event] });
+      groups.push({
+        kind: isFailure ? "failures" : "repeat",
+        key,
+        events: [event],
+      });
     }
   }
   return groups;
@@ -553,10 +528,15 @@ function groupActivityFeed(items: ActivityEventItem[]): ActivityGroup[] {
 
 type FileTarget = { relative_path: string; library_id: number | null };
 
+function toneIcon(tone: ActivityTone): string {
+  return tone === "success" ? "✓" : tone === "info" ? "·" : "!";
+}
+
 function ActivityEventRow({
   ev,
   fmt,
   compact = false,
+  repeats,
   libraryName,
   onOpenStory,
   onRemoveHistory,
@@ -564,6 +544,8 @@ function ActivityEventRow({
   ev: ActivityEventItem;
   fmt: (iso: string) => string;
   compact?: boolean;
+  /** Identical earlier entries folded into this row (newest first, this one included). */
+  repeats?: ActivityEventItem[];
   libraryName?: string;
   onOpenStory: (ev: ActivityEventItem) => void;
   onRemoveHistory?: (target: FileTarget) => void;
@@ -572,103 +554,115 @@ function ActivityEventRow({
   const renderedTitle = compactActivityTitle(display.title);
   const triggerLabel = activityTriggerLabel(ev.trigger);
   const path = ev.relative_path;
+  const count = repeats?.length ?? 1;
+  const earliest = repeats?.at(-1)?.created_at;
+  const inlineDetail = inlineDetailOf(ev, display);
   return (
     <article
-      className={`rounded-xl border px-4 ${compact ? "mm-activity-row--compact py-2.5" : "py-4"} ${toneClasses(display.tone)}`}
+      className={`mm-activity-item mm-activity-item--${display.tone}${compact ? " mm-activity-item--compact" : ""}`}
       data-testid="activity-row"
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1 space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="mm-activity-event-icon" aria-hidden="true">
-              {display.tone === "success"
-                ? "✓"
-                : display.tone === "error"
-                  ? "!"
-                  : display.tone === "warning"
-                    ? "!"
-                    : "·"}
-            </span>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mm-gold)]">
-              {ev.module === "system" ||
-              ev.module === "auth" ||
-              ev.module === "arr_library"
-                ? "System"
-                : titleCase(ev.module)}
-            </span>
-            <span
-              className={`rounded-full border px-2.5 py-1 text-xs font-medium ${chipToneClasses(display.tone)}`}
-            >
-              {display.chip}
-            </span>
-            {triggerLabel ? (
-              <span
-                className="rounded-full border border-[var(--mm-border)] bg-black/10 px-2.5 py-1 text-xs text-[var(--mm-text2)]"
-                data-testid="activity-trigger-chip"
-                title="Why this happened"
-              >
-                {triggerLabel}
-              </span>
-            ) : null}
-          </div>
+      <span
+        className={`mm-activity-event-icon mm-activity-event-icon--${display.tone}`}
+        aria-hidden="true"
+      >
+        {toneIcon(display.tone)}
+      </span>
+      <div className="mm-activity-item__main">
+        <div className="mm-activity-item__head">
           <h2
-            className="min-w-0 break-words text-lg font-semibold text-[var(--mm-text1)] [overflow-wrap:anywhere]"
+            className="mm-activity-item__title min-w-0 break-words [overflow-wrap:anywhere]"
             title={display.title}
           >
             {renderedTitle}
           </h2>
-          {!compact ? (
-            <p className="break-words text-sm text-[var(--mm-text3)]">
-              {display.summary}
-            </p>
-          ) : null}
-          {path ? (
-            <div
-              className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm"
-              data-testid="activity-row-file"
+          {count > 1 ? (
+            <span
+              className="mm-activity-item__count"
+              data-testid="activity-repeat-count"
+              title={`${count} identical entries`}
             >
-              <span
-                className="min-w-0 break-words font-mono text-xs text-[var(--mm-text2)] [overflow-wrap:anywhere]"
-                title={path}
-              >
-                {libraryName ? `${libraryName} · ` : ""}
-                {path}
-              </span>
-              {ev.module === "refiner" ? (
-                <button
-                  type="button"
-                  className="text-xs font-medium text-[var(--mm-gold)] underline-offset-2 hover:underline"
-                  onClick={() => onOpenStory(ev)}
-                >
-                  File story
-                </button>
-              ) : null}
-              {onRemoveHistory ? (
-                <button
-                  type="button"
-                  className="text-xs font-medium text-[var(--mm-text3)] underline-offset-2 hover:text-[var(--mm-text1)] hover:underline"
-                  onClick={() =>
-                    onRemoveHistory({
-                      relative_path: path,
-                      library_id: ev.library_id ?? null,
-                    })
-                  }
-                >
-                  Remove this file&apos;s history
-                </button>
-              ) : null}
-            </div>
+              ×{count}
+            </span>
+          ) : null}
+          {display.chip ? (
+            <span
+              className={`mm-activity-item__badge ${chipToneClasses(display.tone)}`}
+            >
+              {display.chip}
+            </span>
+          ) : null}
+          {triggerLabel ? (
+            <span
+              className="mm-activity-item__badge mm-activity-item__badge--quiet"
+              data-testid="activity-trigger-chip"
+              title="Why this happened"
+            >
+              {triggerLabel}
+            </span>
           ) : null}
         </div>
-        <time className="text-sm text-[var(--mm-text3)]">
-          {fmt(ev.created_at)}
-        </time>
+        {!compact && !path ? (
+          <p className="mm-activity-item__summary">
+            <span>{display.summary}</span>
+            {inlineDetail ? (
+              <>
+                <span aria-hidden="true"> · </span>
+                <span className="mm-activity-item__detail">{inlineDetail}</span>
+              </>
+            ) : null}
+          </p>
+        ) : null}
+        {path ? (
+          <div
+            className="mm-activity-item__file"
+            data-testid="activity-row-file"
+          >
+            <span
+              className="min-w-0 break-words font-mono [overflow-wrap:anywhere]"
+              title={path}
+            >
+              {libraryName ? `${libraryName} · ` : ""}
+              {path}
+            </span>
+            {ev.module === "refiner" ? (
+              <button
+                type="button"
+                className="mm-activity-item__link"
+                onClick={() => onOpenStory(ev)}
+              >
+                File story
+              </button>
+            ) : null}
+            {onRemoveHistory ? (
+              <button
+                type="button"
+                className="mm-activity-item__link mm-activity-item__link--quiet"
+                onClick={() =>
+                  onRemoveHistory({
+                    relative_path: path,
+                    library_id: ev.library_id ?? null,
+                  })
+                }
+              >
+                Remove this file&apos;s history
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        {!compact ? <ActivityEventDetails ev={ev} display={display} /> : null}
       </div>
-      {!compact ? (
-        <div className="mt-3">
-          <ActivityEventDetails ev={ev} display={display} />
-        </div>
-      ) : null}
+      <time
+        className="mm-activity-item__time"
+        dateTime={ev.created_at}
+        title={
+          count > 1 && earliest
+            ? `Latest ${fmt(ev.created_at)}, first ${fmt(earliest)}`
+            : undefined
+        }
+      >
+        {fmt(ev.created_at)}
+      </time>
     </article>
   );
 }
@@ -698,6 +692,8 @@ export function ActivityPage() {
   const [clearError, setClearError] = useState<string | null>(null);
   const [storyName, setStoryName] = useState<string | null>(null);
   const [storyLookupError, setStoryLookupError] = useState<string | null>(null);
+  // Phones show search first; the other filters open on request (always shown when wide).
+  const [moreFilters, setMoreFilters] = useState(false);
 
   const navigate = useNavigate();
   const me = useMeQuery();
@@ -710,7 +706,6 @@ export function ActivityPage() {
     const libraryId = Number(applied.libraryId);
     return {
       limit: 100,
-      module: applied.module === "all" ? undefined : applied.module,
       event_type: applied.eventType || undefined,
       search: applied.search.trim() || undefined,
       date_from: localInputToIso(applied.from),
@@ -775,7 +770,6 @@ export function ActivityPage() {
     return (
       <div className="mm-page">
         <header className="mm-page__intro">
-          <p className="mm-page__eyebrow">Overview</p>
           <h1 className="mm-page__title">Activity</h1>
           <p className="mm-page__lead">
             {isLikelyNetworkFailure(err)
@@ -820,9 +814,17 @@ export function ActivityPage() {
     applied.trigger ||
     applied.result ||
     applied.libraryId ||
-    applied.file.trim() ||
-    applied.module !== "all",
+    applied.file.trim(),
   );
+  const extraFiltersActive = [
+    applied.eventType,
+    applied.result,
+    applied.trigger,
+    applied.libraryId,
+    applied.file.trim(),
+    applied.from,
+    applied.to,
+  ].filter(Boolean).length;
   const hasMore =
     Boolean(shown.has_more) || visibleItems.length < matchingTotal;
   const retentionDays = shown.retention_days;
@@ -926,7 +928,7 @@ export function ActivityPage() {
       );
       if (!match) {
         // No tracked file to tell the story of: show the Files screen for that path instead.
-        void navigate(`/refiner?tab=files&path=${encodeURIComponent(path)}`);
+        void navigate(`/processing?tab=files&path=${encodeURIComponent(path)}`);
         return;
       }
       setStoryName(fileNameOf(path));
@@ -996,7 +998,7 @@ export function ActivityPage() {
       const out = await resetHistory.mutateAsync(confirm);
       setClearPreview(null);
       setNotice(
-        `History cleared. Removed ${plural(out.activity_events_deleted, "Activity event", "Activity events")} and ${plural(out.refiner_jobs_deleted, "finished Refiner job", "finished Refiner jobs")}. No media file was touched.`,
+        `History cleared. Removed ${plural(out.activity_events_deleted, "Activity event", "Activity events")} and ${plural(out.refiner_jobs_deleted, "finished job", "finished jobs")}. No media file was touched.`,
       );
       await refreshAfterRemoval();
     } catch (e) {
@@ -1019,19 +1021,13 @@ export function ActivityPage() {
   return (
     <div className="mm-page">
       <header className="mm-page__intro">
-        <p className="mm-page__eyebrow">Overview</p>
         <h1 className="mm-page__title">Activity</h1>
-        <p className="mm-page__subtitle">
-          Live activity timeline for Weir, newest first.
-        </p>
         <p className="mm-page__lead">
-          Use this page to understand what just happened across Refiner and the
-          platform. It updates live and keeps the language focused on what the
-          action means.
+          What Weir did, newest first. New entries appear as they happen.
         </p>
         {typeof retentionDays === "number" ? (
           <p
-            className="mt-2 text-sm text-[var(--mm-text2)]"
+            className="mt-1 text-sm text-[var(--mm-text2)]"
             data-testid="activity-retention"
           >
             {retentionDays > 0
@@ -1047,44 +1043,29 @@ export function ActivityPage() {
         ) : null}
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <ActivitySummaryCard
-          label="Showing now"
-          value={`${visibleItems.length} ${visibleItems.length === 1 ? "event" : "events"}`}
-        />
-        <ActivitySummaryCard
-          label="Matches in store"
-          value={`${matchingTotal} ${matchingTotal === 1 ? "event" : "events"}`}
-        />
-        <ActivitySummaryCard
-          label="System events"
-          value={String(shown.system_events ?? 0)}
-        />
-        <ActivitySummaryCard label="Refresh" value="Live" />
-      </section>
-
-      <section className="mm-activity-filters mt-4 rounded-xl border border-[var(--mm-border)] bg-[var(--mm-card-bg)] p-4">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <label className={FIELD_LABEL_CLASS}>
-            Module
-            <select
+      <section
+        className="mm-activity-filters"
+        aria-label="Filter activity"
+        data-testid="activity-filters"
+        data-expanded={moreFilters}
+      >
+        <div className="mm-activity-filters__grid">
+          <label className={`${FIELD_LABEL_CLASS} mm-activity-filters__search`}>
+            Search
+            <input
               className="mm-input"
-              value={filters.module}
+              type="search"
+              value={filters.search}
               onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  module: e.target.value as ActivityModuleFilter,
-                }))
+                setFilters((prev) => ({ ...prev, search: e.target.value }))
               }
-            >
-              {MODULE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              onKeyDown={(e) => {
+                if (e.key === "Enter") applyFilters(filters);
+              }}
+              placeholder="Search titles and details"
+            />
           </label>
-          <label className={FIELD_LABEL_CLASS}>
+          <label className={`${FIELD_LABEL_CLASS} mm-activity-filters__extra`}>
             Event
             <select
               className="mm-input"
@@ -1101,24 +1082,7 @@ export function ActivityPage() {
               ))}
             </select>
           </label>
-          <label className={FIELD_LABEL_CLASS}>
-            Why it happened
-            <select
-              className="mm-input"
-              value={filters.trigger}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, trigger: e.target.value }))
-              }
-            >
-              <option value="">Any reason</option>
-              {Object.entries(ACTIVITY_TRIGGER_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={FIELD_LABEL_CLASS}>
+          <label className={`${FIELD_LABEL_CLASS} mm-activity-filters__extra`}>
             Result
             <select
               className="mm-input"
@@ -1135,8 +1099,25 @@ export function ActivityPage() {
               ))}
             </select>
           </label>
-          <label className={FIELD_LABEL_CLASS}>
-            Refiner library
+          <label className={`${FIELD_LABEL_CLASS} mm-activity-filters__extra`}>
+            Why it happened
+            <select
+              className="mm-input"
+              value={filters.trigger}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, trigger: e.target.value }))
+              }
+            >
+              <option value="">Any reason</option>
+              {Object.entries(ACTIVITY_TRIGGER_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={`${FIELD_LABEL_CLASS} mm-activity-filters__extra`}>
+            Library
             <select
               className="mm-input"
               value={filters.libraryId}
@@ -1144,7 +1125,7 @@ export function ActivityPage() {
                 setFilters((prev) => ({ ...prev, libraryId: e.target.value }))
               }
             >
-              <option value="">All Refiner libraries</option>
+              <option value="">All libraries</option>
               {(libraries.data ?? []).map((library) => (
                 <option key={library.id} value={String(library.id)}>
                   {library.name}
@@ -1152,7 +1133,7 @@ export function ActivityPage() {
               ))}
             </select>
           </label>
-          <label className={FIELD_LABEL_CLASS}>
+          <label className={`${FIELD_LABEL_CLASS} mm-activity-filters__extra`}>
             File
             <input
               className="mm-input"
@@ -1163,18 +1144,7 @@ export function ActivityPage() {
               placeholder="Part of a file path"
             />
           </label>
-          <label className={FIELD_LABEL_CLASS}>
-            Search
-            <input
-              className="mm-input"
-              value={filters.search}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, search: e.target.value }))
-              }
-              placeholder="Search titles and details"
-            />
-          </label>
-          <label className={FIELD_LABEL_CLASS}>
+          <label className={`${FIELD_LABEL_CLASS} mm-activity-filters__extra`}>
             From
             <input
               type="datetime-local"
@@ -1185,7 +1155,7 @@ export function ActivityPage() {
               }
             />
           </label>
-          <label className={FIELD_LABEL_CLASS}>
+          <label className={`${FIELD_LABEL_CLASS} mm-activity-filters__extra`}>
             To
             <input
               type="datetime-local"
@@ -1197,13 +1167,25 @@ export function ActivityPage() {
             />
           </label>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mm-activity-filters__actions">
           <button
             type="button"
             className={mmActionButtonClass({ variant: "primary" })}
             onClick={() => applyFilters(filters)}
           >
             Apply filters
+          </button>
+          <button
+            type="button"
+            className={`${mmActionButtonClass({ variant: "tertiary" })} mm-activity-filters__toggle`}
+            aria-expanded={moreFilters}
+            onClick={() => setMoreFilters((open) => !open)}
+          >
+            {moreFilters
+              ? "Fewer filters"
+              : extraFiltersActive > 0
+                ? `More filters (${extraFiltersActive})`
+                : "More filters"}
           </button>
           <button
             type="button"
@@ -1216,9 +1198,7 @@ export function ActivityPage() {
           >
             Clear
           </button>
-          <span className="mx-1 text-xs uppercase tracking-[0.12em] text-[var(--mm-text3)]">
-            Quick
-          </span>
+          <span className="mm-activity-filters__divider" aria-hidden="true" />
           <button
             type="button"
             className={mmActionButtonClass({ variant: "secondary" })}
@@ -1239,68 +1219,6 @@ export function ActivityPage() {
             Last 24 hours
           </button>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[var(--mm-text2)]">
-          <span>
-            Showing {visibleItems.length} of {matchingTotal} matching{" "}
-            {matchingTotal === 1 ? "event" : "events"}.
-          </span>
-          {filtersActive ? (
-            <span className="rounded-full border border-[var(--mm-border)] bg-black/10 px-2 py-0.5 text-xs text-[var(--mm-text2)]">
-              Filters active
-            </span>
-          ) : null}
-          {hasMore ? (
-            <button
-              type="button"
-              className={mmActionButtonClass({
-                variant: "tertiary",
-                disabled: loadingOlder,
-              })}
-              disabled={loadingOlder}
-              onClick={() => void loadOlderActivity()}
-            >
-              {loadingOlder ? "Loading older…" : "Load older activity"}
-            </button>
-          ) : null}
-          {olderError ? (
-            <span className="text-[var(--mm-status-failed-text)]" role="alert">
-              {olderError}
-            </span>
-          ) : null}
-          <span className="ml-auto flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className={mmActionButtonClass({
-                variant: "secondary",
-                disabled: exporting !== null,
-              })}
-              disabled={exporting !== null}
-              onClick={() => void exportHistory("csv")}
-            >
-              {exporting === "csv" ? "Exporting…" : "Export CSV"}
-            </button>
-            <button
-              type="button"
-              className={mmActionButtonClass({
-                variant: "secondary",
-                disabled: exporting !== null,
-              })}
-              disabled={exporting !== null}
-              onClick={() => void exportHistory("json")}
-            >
-              {exporting === "json" ? "Exporting…" : "Export JSON"}
-            </button>
-            {canRemove ? (
-              <button
-                type="button"
-                className={mmActionButtonClass({ variant: "tertiary" })}
-                onClick={() => void startClearAll()}
-              >
-                Clear all history
-              </button>
-            ) : null}
-          </span>
-        </div>
         {actionError ? (
           <p
             className="mt-3 text-sm text-[var(--mm-status-failed-text)]"
@@ -1318,6 +1236,71 @@ export function ActivityPage() {
           </p>
         ) : null}
       </section>
+
+      <div className="mm-activity-summary" data-testid="activity-summary">
+        <p className="mm-activity-summary__text">
+          <span className="mm-activity-summary__live" aria-hidden="true" />
+          <span>
+            Showing {visibleItems.length} of {matchingTotal}{" "}
+            {matchingTotal === 1 ? "event" : "events"}
+            {filtersActive ? " matching your filters" : ""} · live
+          </span>
+        </p>
+        {hasMore ? (
+          <button
+            type="button"
+            className={mmActionButtonClass({
+              variant: "tertiary",
+              disabled: loadingOlder,
+            })}
+            disabled={loadingOlder}
+            onClick={() => void loadOlderActivity()}
+          >
+            {loadingOlder ? "Loading older…" : "Load older activity"}
+          </button>
+        ) : null}
+        {olderError ? (
+          <span
+            className="text-sm text-[var(--mm-status-failed-text)]"
+            role="alert"
+          >
+            {olderError}
+          </span>
+        ) : null}
+        <span className="mm-activity-summary__tools">
+          <button
+            type="button"
+            className={mmActionButtonClass({
+              variant: "tertiary",
+              disabled: exporting !== null,
+            })}
+            disabled={exporting !== null}
+            onClick={() => void exportHistory("csv")}
+          >
+            {exporting === "csv" ? "Exporting…" : "Export CSV"}
+          </button>
+          <button
+            type="button"
+            className={mmActionButtonClass({
+              variant: "tertiary",
+              disabled: exporting !== null,
+            })}
+            disabled={exporting !== null}
+            onClick={() => void exportHistory("json")}
+          >
+            {exporting === "json" ? "Exporting…" : "Export JSON"}
+          </button>
+          {canRemove ? (
+            <button
+              type="button"
+              className={mmActionButtonClass({ variant: "tertiary" })}
+              onClick={() => void startClearAll()}
+            >
+              Clear all history
+            </button>
+          ) : null}
+        </span>
+      </div>
 
       {applied.file.trim() ? (
         <section
@@ -1343,7 +1326,7 @@ export function ActivityPage() {
 
       <section
         ref={feedRef}
-        className="mt-4 space-y-3"
+        className="mm-activity-list"
         data-testid="activity-feed"
       >
         {pendingCount > 0 ? (
@@ -1358,7 +1341,7 @@ export function ActivityPage() {
           </div>
         ) : null}
         {visibleItems.length === 0 ? (
-          <div className="rounded-lg border border-[var(--mm-border)] bg-[var(--mm-card-bg)] px-4 py-4 text-sm text-[var(--mm-text2)]">
+          <div className="mm-activity-list__empty">
             No activity matched the current filters.
           </div>
         ) : (
@@ -1368,7 +1351,7 @@ export function ActivityPage() {
               return (
                 <details
                   key={group.key}
-                  className="mm-activity-cluster"
+                  className="mm-activity-cluster mm-activity-cluster--run"
                   data-testid="activity-run"
                 >
                   <summary className="mm-activity-cluster__summary">
@@ -1404,6 +1387,17 @@ export function ActivityPage() {
                     ))}
                   </div>
                 </details>
+              );
+            }
+            if (group.kind === "repeat") {
+              return (
+                <ActivityEventRow
+                  key={group.key}
+                  ev={group.events[0]}
+                  repeats={group.events.length > 1 ? group.events : undefined}
+                  libraryName={libraryNameFor(group.events[0])}
+                  {...rowProps}
+                />
               );
             }
             return group.events.length > 1 ? (
