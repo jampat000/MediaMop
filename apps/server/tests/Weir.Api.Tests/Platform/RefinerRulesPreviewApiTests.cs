@@ -24,6 +24,8 @@ internal sealed class FakePreviewProbeRunner : IProcessRunner
 internal sealed class FakePreviewToolResolver : IMediaToolResolver
 {
     public (string Ffprobe, string Ffmpeg) Resolve() => ("ffprobe", "ffmpeg");
+
+    public string? ResolveMkvmerge() => null;
 }
 
 /// <summary>

@@ -21,6 +21,30 @@ public sealed class RequiresFfmpegFactAttribute : FactAttribute
     }
 }
 
+/// <summary>#548: a fact that runs only where mkvmerge can be found (WEIR_MKVTOOLNIX_DIR or PATH).</summary>
+[AttributeUsage(AttributeTargets.Method)]
+public sealed class RequiresMkvmergeFactAttribute : FactAttribute
+{
+    public RequiresMkvmergeFactAttribute()
+    {
+        if (RealMkvmerge.Tool is null)
+        {
+            Skip = "mkvmerge was not found: set WEIR_MKVTOOLNIX_DIR or put it on PATH to run the real-mkvmerge tests.";
+        }
+
+        if (RealFfmpeg.Tools is null)
+        {
+            Skip = "ffprobe and ffmpeg were not found, and the mkvmerge tests generate their fixtures with them.";
+        }
+    }
+}
+
+internal static class RealMkvmerge
+{
+    public static readonly string? Tool =
+        new MediaToolResolver(Path.Combine(Path.GetTempPath(), "weir-no-home-" + Guid.NewGuid().ToString("N"))).ResolveMkvmerge();
+}
+
 internal static class RealFfmpeg
 {
     public static readonly (string Ffprobe, string Ffmpeg)? Tools = Find();
@@ -630,5 +654,7 @@ public sealed class RealFfmpegTests : IDisposable
     private sealed class StaticResolver : IMediaToolResolver
     {
         public (string Ffprobe, string Ffmpeg) Resolve() => RealFfmpeg.Tools!.Value;
+
+        public string? ResolveMkvmerge() => RealMkvmerge.Tool;
     }
 }

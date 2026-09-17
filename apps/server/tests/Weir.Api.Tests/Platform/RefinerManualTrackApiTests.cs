@@ -10,6 +10,8 @@ namespace Weir.Api.Tests.Platform;
 internal sealed class FixedMediaToolResolver : IMediaToolResolver
 {
     public (string Ffprobe, string Ffmpeg) Resolve() => ("ffprobe", "ffmpeg");
+
+    public string? ResolveMkvmerge() => null;
 }
 
 /// <summary>Answers every ffprobe call with a fixed two-audio-track probe. These tests never run the worker

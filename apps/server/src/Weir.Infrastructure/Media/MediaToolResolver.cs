@@ -7,6 +7,13 @@ public interface IMediaToolResolver
 {
     /// <summary>(ffprobe, ffmpeg) paths. Throws <see cref="MediaToolException"/> when either is missing.</summary>
     (string Ffprobe, string Ffmpeg) Resolve();
+
+    /// <summary>
+    /// #548: the mkvmerge path, or null when it is not installed. Unlike ffprobe and ffmpeg this is optional —
+    /// Weir runs perfectly well without it, writing every container with ffmpeg — so a missing mkvmerge is a
+    /// null rather than a <see cref="MediaToolException"/>, and the writer setting falls back accordingly.
+    /// </summary>
+    string? ResolveMkvmerge();
 }
 
 /// <summary>
@@ -71,6 +78,39 @@ public sealed class MediaToolResolver : IMediaToolResolver
         }
 
         return (foundProbe, foundMpeg);
+    }
+
+    /// <summary>
+    /// #548: <c>WEIR_MKVTOOLNIX_DIR</c>, then the bundled MKVToolNix under the Weir home, then (packaged builds
+    /// only) the one next to the executable, then PATH — the same order as <see cref="Resolve"/>, and read fresh
+    /// on every call for the same reason. Null when mkvmerge is nowhere to be found.
+    /// </summary>
+    public string? ResolveMkvmerge()
+    {
+        var userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var home = MediaToolLocations.Normalize(Path.GetFullPath(MediaToolLocations.ExpandUser(_weirHome, userHome, _windows)), _windows);
+        var name = MediaToolLocations.MkvmergeToolName(_windows);
+        var directories = MediaToolLocations.MkvtoolnixCandidateDirectories(
+            home,
+            _getEnvironmentVariable(MediaToolLocations.MkvtoolnixDirEnvironmentVariable),
+            userHome,
+            _packagedAppDirectory,
+            _windows);
+        foreach (var directory in directories)
+        {
+            var candidate = MediaToolLocations.Join(_windows, directory, name);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return MediaToolLocations.Which(
+            "mkvmerge",
+            _getEnvironmentVariable("PATH"),
+            _getEnvironmentVariable("PATHEXT"),
+            _windows,
+            IsExecutableFile);
     }
 
     /// <summary><c>shutil._access_check</c>: exists, is not a directory, and (off Windows) is executable.</summary>

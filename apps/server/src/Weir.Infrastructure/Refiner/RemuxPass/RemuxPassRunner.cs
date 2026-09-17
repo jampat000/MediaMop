@@ -729,7 +729,7 @@ public sealed class RemuxPassRunner
                         update)),
                 context.Duration,
                 hardware,
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken: cancellationToken).ConfigureAwait(false);
             try
             {
                 AssertSourceUnchanged(src, context.Expected);

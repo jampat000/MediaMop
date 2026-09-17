@@ -16,6 +16,12 @@ public static class MediaToolLocations
 
     public const string FfmpegDirEnvironmentVariable = "WEIR_FFMPEG_DIR";
 
+    /// <summary>#548: where a source install points Weir at MKVToolNix, beside <see cref="FfmpegDirEnvironmentVariable"/>.</summary>
+    public const string MkvtoolnixDirEnvironmentVariable = "WEIR_MKVTOOLNIX_DIR";
+
+    /// <summary>The bundled subdirectory MKVToolNix lives in, as <c>ffmpeg</c> is for ffprobe and ffmpeg.</summary>
+    public const string MkvtoolnixBundleDirectory = "mkvtoolnix";
+
     public const string MissingToolsMessage =
         "Weir could not find the video tools it needs. Windows and Docker installs should include them; "
         + "source installs must provide ffprobe and ffmpeg on PATH or set WEIR_FFMPEG_DIR.";
@@ -23,6 +29,45 @@ public static class MediaToolLocations
     /// <summary>(ffprobe, ffmpeg) file names for the platform.</summary>
     public static (string Ffprobe, string Ffmpeg) ToolNames(bool windows) =>
         windows ? ("ffprobe.exe", "ffmpeg.exe") : ("ffprobe", "ffmpeg");
+
+    /// <summary>#548: the mkvmerge file name for the platform.</summary>
+    public static string MkvmergeToolName(bool windows) => windows ? "mkvmerge.exe" : "mkvmerge";
+
+    /// <summary>
+    /// #548: the directories checked for mkvmerge, in order, mirroring <see cref="CandidateDirectories"/>:
+    /// <c>WEIR_MKVTOOLNIX_DIR</c> (expanded, not resolved), <c>&lt;home&gt;/bin/mkvtoolnix</c>, then, for a
+    /// packaged app, <c>&lt;app&gt;/bin/mkvtoolnix</c> and <c>&lt;app&gt;/_internal/bin/mkvtoolnix</c>.
+    /// </summary>
+    /// <param name="resolvedWeirHome">The Weir home, already made absolute.</param>
+    /// <param name="mkvtoolnixDirEnvironment">The raw <c>WEIR_MKVTOOLNIX_DIR</c> value, or null.</param>
+    /// <param name="userHome">What <c>~</c> expands to.</param>
+    /// <param name="packagedAppDirectory">The packaged executable's directory, or null when not packaged.</param>
+    /// <param name="windows">Windows path rules.</param>
+    public static IReadOnlyList<string> MkvtoolnixCandidateDirectories(
+        string resolvedWeirHome,
+        string? mkvtoolnixDirEnvironment,
+        string userHome,
+        string? packagedAppDirectory,
+        bool windows)
+    {
+        ArgumentNullException.ThrowIfNull(resolvedWeirHome);
+        ArgumentNullException.ThrowIfNull(userHome);
+        var candidates = new List<string>();
+        var rawEnvDir = PyStrings.Strip(mkvtoolnixDirEnvironment ?? string.Empty);
+        if (rawEnvDir.Length > 0)
+        {
+            candidates.Add(Normalize(ExpandUser(rawEnvDir, userHome, windows), windows));
+        }
+
+        candidates.Add(Join(windows, resolvedWeirHome, "bin", MkvtoolnixBundleDirectory));
+        if (packagedAppDirectory is not null)
+        {
+            candidates.Add(Join(windows, packagedAppDirectory, "bin", MkvtoolnixBundleDirectory));
+            candidates.Add(Join(windows, packagedAppDirectory, "_internal", "bin", MkvtoolnixBundleDirectory));
+        }
+
+        return candidates;
+    }
 
     /// <summary>
     /// The directories checked in order, as pathlib would print them: <c>WEIR_FFMPEG_DIR</c> (expanded, not

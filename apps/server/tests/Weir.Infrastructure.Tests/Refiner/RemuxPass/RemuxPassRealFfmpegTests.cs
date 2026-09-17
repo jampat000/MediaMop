@@ -25,6 +25,8 @@ public sealed class RemuxPassRealFfmpegTests : IDisposable
     private sealed class RealResolver : IMediaToolResolver
     {
         public (string Ffprobe, string Ffmpeg) Resolve() => RealFfmpeg.Tools!.Value;
+
+        public string? ResolveMkvmerge() => RealMkvmerge.Tool;
     }
 
     private RemuxPassRunner Runner() =>

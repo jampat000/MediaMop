@@ -290,6 +290,15 @@ public sealed partial class MediaTools
     /// both: its result is what <see cref="LogFfmpegDebug"/> shows and what <see cref="RunFfmpegAsync"/> executes,
     /// so a decided acceleration can no longer diverge between the two.
     /// </param>
+    /// <param name="writer">
+    /// #548: which tool writes the output. Null keeps today's behaviour, ffmpeg. Whatever writes it, the
+    /// staged output is validated here by <see cref="ValidateStagedOutputAsync"/> in exactly the same way.
+    /// </param>
+    /// <param name="rewriteWithFfmpegOnFailure">
+    /// #548: when <paramref name="writer"/> is not ffmpeg and its output fails to be written or to validate,
+    /// write the file again with ffmpeg and validate that instead. On by default, and the reason a writer other
+    /// than ffmpeg is safe to prefer: the result can only match or beat what ffmpeg alone would have produced.
+    /// </param>
     /// <param name="cancellationToken">Cancellation.</param>
     public async Task<string> RemuxToTempFileAsync(
         string src,
@@ -300,22 +309,44 @@ public sealed partial class MediaTools
         Action<FfmpegProgressUpdate>? progressCallback = null,
         double? durationSeconds = null,
         AccelerationDecision? acceleration = null,
+        IRemuxWriter? writer = null,
+        bool rewriteWithFfmpegOnFailure = true,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(src);
         ArgumentNullException.ThrowIfNull(workDir);
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(sourceWarnings);
-        var (_, ffmpeg) = _resolver.Resolve();
         Directory.CreateDirectory(workDir);
         var suffix = MediaPathNames.Suffix(src, _windows);
         var tmpPath = CreateTempFile(workDir, prefix: MediaPathNames.Stem(src, _windows) + ".refiner.", suffix: suffix.Length > 0 ? suffix : ".mkv");
         try
         {
-            var argv = FfmpegCommands.BuildRemuxArgv(ffmpeg, src, tmpPath, plan, acceleration?.ArgvFlags);
-            LogFfmpegDebug(FfmpegCommands.DebugSummary(argv));
-            await RunFfmpegAsync(argv, progressCallback: progressCallback, durationSeconds: durationSeconds, cancellationToken: cancellationToken).ConfigureAwait(false);
-            await ValidateStagedOutputAsync(tmpPath, src, sourceProbe, plan, sourceWarnings, cancellationToken).ConfigureAwait(false);
+            var request = new RemuxWriteRequest(src, tmpPath, plan, sourceProbe, progressCallback, durationSeconds, acceleration);
+            var chosen = writer ?? new FfmpegRemuxWriter(this);
+            var ffmpeg = new FfmpegRemuxWriter(this);
+            var usedWriter = chosen.Name;
+            try
+            {
+                await chosen.WriteAsync(request, cancellationToken).ConfigureAwait(false);
+                // #548: whichever tool wrote it, #500's validation is the same and is run here rather than in
+                // the writer, so no writer can grade its own work.
+                await ValidateStagedOutputAsync(tmpPath, src, sourceProbe, plan, sourceWarnings, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception error) when (ShouldRewriteWithFfmpeg(error, chosen, rewriteWithFfmpegOnFailure))
+            {
+                // #548: the reason the better writer can be the default. A file mkvmerge declined, or wrote in a
+                // shape the validation above rejected, is written again by ffmpeg and validated again — so the
+                // preferred writer can only ever match or beat "ffmpeg only", never lose to it. If this second
+                // attempt fails too, it throws and the outer catch cleans up, exactly as a plain ffmpeg write
+                // always has. The temp file is overwritten in place by the retry.
+                LogWriterFellBack(chosen.Name, error.Message);
+                usedWriter = ffmpeg.Name;
+                await ffmpeg.WriteAsync(request, cancellationToken).ConfigureAwait(false);
+                await ValidateStagedOutputAsync(tmpPath, src, sourceProbe, plan, sourceWarnings, cancellationToken).ConfigureAwait(false);
+            }
+
+            LogWriterUsed(usedWriter, tmpPath);
         }
         catch
         {
@@ -547,6 +578,122 @@ public sealed partial class MediaTools
         }
     }
 
+    /// <summary>
+    /// #548: ffmpeg's half of <see cref="IRemuxWriter"/> — the same call
+    /// <see cref="RemuxToTempFileAsync"/> has always made, lifted out so the writer choice has somewhere to
+    /// dispatch to. Validation is deliberately not here: the caller runs it on whichever writer wrote the file.
+    /// </summary>
+    public Task WriteWithFfmpegAsync(RemuxWriteRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var (_, ffmpeg) = _resolver.Resolve();
+        var argv = FfmpegCommands.BuildRemuxArgv(ffmpeg, request.Source, request.Destination, request.Plan, request.Acceleration?.ArgvFlags);
+        LogFfmpegDebug(FfmpegCommands.DebugSummary(argv));
+        return RunFfmpegAsync(
+            argv,
+            progressCallback: request.ProgressCallback,
+            durationSeconds: request.DurationSeconds,
+            cancellationToken: cancellationToken);
+    }
+
+    /// <summary>#548: <c>mkvmerge -J</c>, which reads headers only, for the track and attachment numbering.</summary>
+    public async Task<MkvmergeIdentification> IdentifyMkvmergeAsync(string mkvmergeBin, string src, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(mkvmergeBin);
+        ArgumentNullException.ThrowIfNull(src);
+        var argv = MkvmergeCommands.BuildIdentifyArgv(mkvmergeBin, src);
+        var result = await _runner.RunAsync(
+            new ProcessRequest
+            {
+                Argv = argv,
+                Timeout = TimeSpan.FromSeconds(MkvmergeCommands.IdentifyTimeoutSeconds),
+                Stdin = ProcessInput.Null,
+                Stdout = ProcessOutput.Capture,
+                Stderr = ProcessOutput.Tail,
+                TailBytes = MkvmergeCommands.StderrTailBytes,
+            },
+            cancellationToken).ConfigureAwait(false);
+        if (result.TimedOut)
+        {
+            throw new MediaToolTimeoutException(ProbeOutput.TimeoutMessage(argv, MkvmergeCommands.IdentifyTimeoutSeconds));
+        }
+
+        // mkvmerge's exit code 1 means "identified, with warnings", which is still a usable answer.
+        if (result.ExitCode is not 0 and not MkvmergeCommands.ExitCodeWarnings)
+        {
+            throw new MediaToolException("mkvmerge could not identify the file: " + ProbeOutput.TailText(result.Stderr));
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(result.Stdout);
+            return MkvmergeCommands.ParseIdentification(document.RootElement);
+        }
+        catch (JsonException error)
+        {
+            throw new MediaToolException("mkvmerge's identification output was not valid JSON.", error);
+        }
+    }
+
+    /// <summary>
+    /// #548: runs one mkvmerge write, reporting <c>--gui-mode</c>'s percentage through the same
+    /// <see cref="FfmpegProgressUpdate"/> the ffmpeg path reports (see
+    /// <see cref="MkvmergeCommands.TryParseProgressPercent"/> for what mkvmerge does and does not tell us).
+    /// </summary>
+    public async Task RunMkvmergeAsync(
+        IReadOnlyList<string> argv,
+        Action<FfmpegProgressUpdate>? progressCallback = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(argv);
+        LogFfmpegDebug(MkvmergeCommands.DebugSummary(argv));
+        var started = _timeProvider.GetTimestamp();
+        var result = await _runner.RunAsync(
+            new ProcessRequest
+            {
+                Argv = argv,
+                Timeout = TimeSpan.FromSeconds(MkvmergeCommands.MkvmergeTimeoutSeconds),
+                Stdin = ProcessInput.Null,
+                // mkvmerge writes its diagnostics to stdout as well as its progress, so the tail that a failure
+                // message needs is collected from the lines as they arrive rather than from Stderr alone.
+                Stdout = progressCallback is null ? ProcessOutput.Capture : ProcessOutput.Discard,
+                Stderr = ProcessOutput.Tail,
+                TailBytes = MkvmergeCommands.StderrTailBytes,
+                OnStdoutLine = progressCallback is null
+                    ? null
+                    : line =>
+                    {
+                        if (MkvmergeCommands.TryParseProgressPercent(line) is not { } percent)
+                        {
+                            return;
+                        }
+
+                        progressCallback(new FfmpegProgressUpdate
+                        {
+                            Percent = percent,
+                            ElapsedSeconds = (long)_timeProvider.GetElapsedTime(started).TotalSeconds,
+                            Progress = percent >= 100 ? "end" : "continue",
+                        });
+                    },
+            },
+            cancellationToken).ConfigureAwait(false);
+        if (result.TimedOut)
+        {
+            throw new MediaToolTimeoutException(ProbeOutput.TimeoutMessage(argv, MkvmergeCommands.MkvmergeTimeoutSeconds));
+        }
+
+        if (result.ExitCode is not 0 and not MkvmergeCommands.ExitCodeWarnings)
+        {
+            var detail = ProbeOutput.TailText(result.Stderr);
+            if (detail.Length == 0)
+            {
+                detail = ProbeOutput.TailText(result.Stdout);
+            }
+
+            throw new MediaToolException("mkvmerge failed: " + detail);
+        }
+    }
+
     [LoggerMessage(Level = LogLevel.Debug, Message = "REFINER_FFPROBE_FILE_STATE: {Payload}")]
     private partial void LogFfprobeFileState(string payload);
 
@@ -564,6 +711,27 @@ public sealed partial class MediaTools
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not remove temp file {Path}")]
     private partial void LogTempRemoveFailed(Exception error, string path);
+
+    /// <summary>
+    /// #548: whether a failed write by <paramref name="chosen"/> should be attempted again with ffmpeg.
+    /// <para>
+    /// Only for a writer that is not already ffmpeg (there is nothing to fall back to), only when the setting
+    /// allows it, and never for cancellation — a cancelled job must stay cancelled rather than quietly start a
+    /// second, longer write. Everything else is worth retrying: whether mkvmerge declined the plan, failed to
+    /// run, or produced something <see cref="ValidateStagedOutputAsync"/> rejected, ffmpeg writing it the way
+    /// it always has is the outcome the user would have had anyway.
+    /// </para>
+    /// </summary>
+    private static bool ShouldRewriteWithFfmpeg(Exception error, IRemuxWriter chosen, bool enabled) =>
+        enabled
+        && chosen is not FfmpegRemuxWriter
+        && error is not OperationCanceledException;
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "{Writer} could not write this file, so ffmpeg is writing it instead: {Reason}")]
+    private partial void LogWriterFellBack(string writer, string reason);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "{Writer} wrote {Path}")]
+    private partial void LogWriterUsed(string writer, string path);
 }
 
 /// <summary>The file facts <c>ffprobe_json</c> logs and checks: resolved path, existence, size and mtime (seconds since the epoch).</summary>
