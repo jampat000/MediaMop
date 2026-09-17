@@ -184,22 +184,33 @@ public static class LibraryScanStore
         await uow.QueryAsync(
             "SELECT path, size_bytes, mtime, classification, summary, reason, removed_audio_tracks, removed_subtitle_tracks, " +
             "manager_kind, manager_title, probe_json, estimated_bytes_saved, manager_connection_id, manager_title_id, " +
-            "manager_file_id, manager_quality_profile_id FROM library_files WHERE library_id = @id ORDER BY path",
+            "manager_file_id, manager_quality_profile_id, problem_kind, link_count FROM library_files WHERE library_id = @id ORDER BY path",
             ReadFile,
             ("@id", libraryId)).ConfigureAwait(false);
 
+    /// <summary>
+    /// Replaces a library's file index. Each row also gets the #568 codec/resolution/track columns and its
+    /// <c>library_file_facets</c> rows, derived here from the ffprobe JSON the scan already cached on the row
+    /// (<see cref="LibraryFileFactsReader"/>) — so the Library view's totals, breakdowns and facet filters are
+    /// plain indexed SQL and never re-open a probe document, let alone re-probe a file.
+    /// </summary>
     private static async Task ReplaceFilesAsync(UnitOfWork uow, long libraryId, IReadOnlyList<LibraryScanFileEntry> files)
     {
+        // library_file_facets cascades from library_files, so deleting the rows clears their facets too.
         await uow.ExecuteAsync("DELETE FROM library_files WHERE library_id = @id", ("@id", libraryId)).ConfigureAwait(false);
         foreach (var file in files)
         {
-            await uow.ExecuteAsync(
+            var facts = LibraryFileFactsReader.Derive(file.ProbeJson);
+            var fileId = await uow.ExecuteScalarWriteAsync(
                 "INSERT INTO library_files (library_id, path, size_bytes, mtime, classification, summary, reason, " +
                 "removed_audio_tracks, removed_subtitle_tracks, estimated_bytes_saved, manager_kind, manager_title, " +
-                "manager_connection_id, manager_title_id, manager_file_id, manager_quality_profile_id, probe_json) VALUES " +
+                "manager_connection_id, manager_title_id, manager_file_id, manager_quality_profile_id, probe_json, " +
+                "video_codec, video_height, resolution_class, audio_track_count, subtitle_track_count, audio_summary, " +
+                "subtitle_summary, link_count, problem_kind) VALUES " +
                 "(@library_id, @path, @size_bytes, @mtime, @classification, @summary, @reason, @removed_audio, @removed_subtitle, " +
                 "@estimated_bytes_saved, @manager_kind, @manager_title, @manager_connection_id, @manager_title_id, @manager_file_id, " +
-                "@manager_quality_profile_id, @probe_json)",
+                "@manager_quality_profile_id, @probe_json, @video_codec, @video_height, @resolution_class, @audio_tracks, " +
+                "@subtitle_tracks, @audio_summary, @subtitle_summary, @link_count, @problem_kind) RETURNING id",
                 ("@library_id", libraryId),
                 ("@path", file.Path),
                 ("@size_bytes", file.SizeBytes),
@@ -216,7 +227,32 @@ public static class LibraryScanStore
                 ("@manager_title_id", file.ManagerTitleId),
                 ("@manager_file_id", file.ManagerFileId),
                 ("@manager_quality_profile_id", file.ManagerQualityProfileId),
-                ("@probe_json", file.ProbeJson)).ConfigureAwait(false);
+                ("@probe_json", file.ProbeJson),
+                ("@video_codec", facts.VideoCodec),
+                ("@video_height", facts.VideoHeight),
+                ("@resolution_class", facts.ResolutionClass),
+                ("@audio_tracks", facts.AudioTrackCount),
+                ("@subtitle_tracks", facts.SubtitleTrackCount),
+                ("@audio_summary", facts.AudioSummary),
+                ("@subtitle_summary", facts.SubtitleSummary),
+                ("@link_count", file.LinkCount),
+                ("@problem_kind", file.ProblemKind is { } kind ? LibraryProblems.Name(kind) : null)).ConfigureAwait(false);
+
+            if (fileId is null)
+            {
+                continue;
+            }
+
+            foreach (var facet in facts.Facets)
+            {
+                await uow.ExecuteAsync(
+                    "INSERT OR IGNORE INTO library_file_facets (library_id, library_file_id, facet, value) " +
+                    "VALUES (@library_id, @file_id, @facet, @value)",
+                    ("@library_id", libraryId),
+                    ("@file_id", Convert.ToInt64(fileId, System.Globalization.CultureInfo.InvariantCulture)),
+                    ("@facet", facet.Facet),
+                    ("@value", facet.Value)).ConfigureAwait(false);
+            }
         }
     }
 
@@ -236,7 +272,9 @@ public static class LibraryScanStore
         ManagerConnectionId: reader.IsDBNull(12) ? null : reader.GetInt64(12),
         ManagerTitleId: SqliteValues.GetStringOrNull(reader, 13),
         ManagerFileId: reader.IsDBNull(14) ? null : reader.GetInt64(14),
-        ManagerQualityProfileId: reader.IsDBNull(15) ? null : reader.GetInt64(15));
+        ManagerQualityProfileId: reader.IsDBNull(15) ? null : reader.GetInt64(15),
+        ProblemKind: LibraryProblems.Parse(SqliteValues.GetStringOrNull(reader, 16)),
+        LinkCount: reader.IsDBNull(17) ? null : (int)reader.GetInt64(17));
 
     private static LibraryFileClassification ClassificationOf(string value) => value switch
     {

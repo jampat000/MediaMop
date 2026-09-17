@@ -23,11 +23,17 @@ public sealed record LibraryFilePlanResult(
     int RemovedAudioCount,
     int RemovedSubtitleCount,
     RemuxPlan? Plan,
-    long EstimatedBytesSaved = 0)
+    long EstimatedBytesSaved = 0,
+    LibraryProblemKind? ProblemKind = null)
 {
     public static LibraryFilePlanResult Matches() => new(LibraryFileClassification.Matches, null, null, 0, 0, null);
 
-    public static LibraryFilePlanResult CannotProcess(string reason) => new(LibraryFileClassification.CannotProcess, null, reason, 0, 0, null);
+    /// <summary>
+    /// <paramref name="problemKind"/> is what the #568 Problems view groups by; it is recorded alongside the
+    /// sentence rather than parsed back out of it, so the wording stays free to change.
+    /// </summary>
+    public static LibraryFilePlanResult CannotProcess(string reason, LibraryProblemKind problemKind = LibraryProblemKind.Unreadable) =>
+        new(LibraryFileClassification.CannotProcess, null, reason, 0, 0, null, 0, problemKind);
 
     /// <summary>
     /// <paramref name="estimatedBytesSaved"/> is a lower-bound estimate from removed tracks' own bit rate times the file's
@@ -94,7 +100,7 @@ public static class LibraryFilePlanner
 
         if (split.Video.Count == 0)
         {
-            return LibraryFilePlanResult.CannotProcess("This file has no video track that Weir could find.");
+            return LibraryFilePlanResult.CannotProcess("This file has no video track that Weir could find.", LibraryProblemKind.NoVideo);
         }
 
         RemuxPlan? plan;
@@ -109,7 +115,9 @@ public static class LibraryFilePlanner
 
         if (plan is null)
         {
-            return LibraryFilePlanResult.CannotProcess("No audio track would remain after applying this library's rules, so Weir will not touch this file.");
+            return LibraryFilePlanResult.CannotProcess(
+                "No audio track would remain after applying this library's rules, so Weir will not touch this file.",
+                LibraryProblemKind.NoAudioLeft);
         }
 
         if (!RemuxRules.IsRemuxRequired(plan, split.Audio, split.Subtitles))

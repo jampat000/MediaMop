@@ -42,7 +42,7 @@ const REFINER_TAB_BLURBS: Record<RefinerPageTabId, string> = {
   files:
     "Every file Weir has looked at, and why it is or is not being processed.",
   library:
-    "Clean files that are already in your library, in place, with the library's own rules. Separate from new downloads.",
+    "What your library holds and the state of it, and cleaning files that are already in it, in place, with the library's own rules. Separate from new downloads.",
   jobs: "Queued, running and recent jobs, for troubleshooting and progress.",
   maintenance:
     "Housekeeping Weir runs on a schedule, and what this instance is configured with. Start one now if you need to.",
@@ -54,13 +54,24 @@ const REFINER_TABS = [
   { id: "audio-subtitles", label: "Audio & subtitles" },
   { id: "schedules", label: "Schedules" },
   { id: "files", label: "Files" },
-  { id: "library", label: "Existing library" },
+  { id: "library", label: "Library" },
   { id: "jobs", label: "Jobs" },
   { id: "maintenance", label: "Maintenance" },
 ] as const satisfies readonly WorkspaceTabOption<RefinerPageTabId>[];
 
 const REFINER_CAPABILITY_NOTE =
   "A library works on its own once its folders are set. Linking a media manager adds import protection, library discovery and safe cleanup; if the manager does not answer, Weir waits rather than assuming its queue is empty.";
+
+/**
+ * Query values that used to name a tab and still turn up in a bookmark or a link someone shared. Issue #568
+ * renamed "Existing library" to **Library**; the tab's own id was already `library`, but the label was the
+ * visible name, so these spellings are redirected rather than silently dropping the reader on Overview.
+ */
+const RETIRED_REFINER_TAB_VALUES: Record<string, RefinerPageTabId> = {
+  "existing-library": "library",
+  existing_library: "library",
+  "existing library": "library",
+};
 
 function refinerTabFromQuery(value: string | null): RefinerPageTabId {
   const allowed: RefinerPageTabId[] = [
@@ -73,9 +84,10 @@ function refinerTabFromQuery(value: string | null): RefinerPageTabId {
     "jobs",
     "maintenance",
   ];
-  return allowed.includes(value as RefinerPageTabId)
-    ? (value as RefinerPageTabId)
-    : "overview";
+  if (allowed.includes(value as RefinerPageTabId)) {
+    return value as RefinerPageTabId;
+  }
+  return RETIRED_REFINER_TAB_VALUES[(value ?? "").toLowerCase()] ?? "overview";
 }
 
 export function RefinerPage() {
@@ -85,8 +97,21 @@ export function RefinerPage() {
   );
 
   useEffect(() => {
-    setTab(refinerTabFromQuery(searchParams.get("tab")));
-  }, [searchParams]);
+    const raw = searchParams.get("tab");
+    const resolved = refinerTabFromQuery(raw);
+    setTab(resolved);
+    // An old anchor lands on the right tab and then gets the current spelling in the address bar, so the
+    // next copy of the link is the new one.
+    if (
+      raw !== null &&
+      raw !== resolved &&
+      raw.toLowerCase() in RETIRED_REFINER_TAB_VALUES
+    ) {
+      const params = new URLSearchParams(searchParams);
+      params.set("tab", resolved);
+      setSearchParams(params, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const selectTab = (next: RefinerPageTabId) => {
     setTab(next);

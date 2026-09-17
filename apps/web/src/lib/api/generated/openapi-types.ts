@@ -1044,7 +1044,7 @@ export interface paths {
     };
     /**
      * Get Library Files
-     * @description Library mode (#505 point 4). The latest scan's file list, filtered by classification, matched manager kind or a path search, plus the removal/size summary the Clean confirmation dialog uses.
+     * @description Library view (#568). One page of the library's files, sorted by any listed column and narrowed by classification, matched manager kind, a path/title search, any breakdown facet, or a Problems group. Carries the whole library's totals as well as the filtered subset's, plus the removal/size summary the Clean confirmation dialog uses.
      */
     get: operations["get_library_files"];
     put?: never;
@@ -1069,6 +1069,46 @@ export interface paths {
      * @description Library mode (#505 point 5). Cleans the selected files in place. Refused with 400 (LibraryConfirmationRequired) when any selected file would have tracks removed and confirm_final_removal is not true.
      */
     post: operations["post_library_files_clean"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/libraries/{library_id}/library-overview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Library Overview
+     * @description Library view (#568). What the library holds and its state: totals, how many files match the rules, would change or cannot be processed, and the breakdowns by video codec, resolution class, audio codec/channels and audio/subtitle language. Every number is a SQL aggregate over the scan index.
+     */
+    get: operations["get_library_overview"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/refiner/libraries/{library_id}/library-problems": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Library Problems
+     * @description Library view (#568). Files Weir will not clean, grouped by reason (still shared with a download, unreadable, no permission, no video track, no audio would remain, the manager would download it again), each with what to do about it.
+     */
+    get: operations["get_library_problems"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -2295,6 +2335,36 @@ export interface components {
       status: string;
     };
     /**
+     * LibraryBreakdownRowOut
+     * @description Issue #568: one row of a breakdown - how many files carry a value, and their share of the library.
+     */
+    LibraryBreakdownRowOut: {
+      /** Files */
+      files: number;
+      /** Share */
+      share: number;
+      /** Size Bytes */
+      size_bytes: number;
+      /** Value */
+      value: string;
+    };
+    /**
+     * LibraryBreakdownsOut
+     * @description Issue #568: every breakdown the Overview, Codecs and Languages views show.
+     */
+    LibraryBreakdownsOut: {
+      /** Audio */
+      audio: components["schemas"]["LibraryBreakdownRowOut"][];
+      /** Audio Language */
+      audio_language: components["schemas"]["LibraryBreakdownRowOut"][];
+      /** Resolution */
+      resolution: components["schemas"]["LibraryBreakdownRowOut"][];
+      /** Subtitle Language */
+      subtitle_language: components["schemas"]["LibraryBreakdownRowOut"][];
+      /** Video Codec */
+      video_codec: components["schemas"]["LibraryBreakdownRowOut"][];
+    };
+    /**
      * LibraryCleanIn
      * @description Library mode (#505 point 5). Weir server (.NET) only.
      */
@@ -2391,6 +2461,10 @@ export interface components {
      * @description Library mode (#505 point 2). Weir server (.NET) only.
      */
     LibraryFileOut: {
+      /** Audio Summary */
+      audio_summary: string | null;
+      /** Audio Track Count */
+      audio_track_count: number;
       /**
        * Classification
        * @enum {string}
@@ -2398,35 +2472,85 @@ export interface components {
       classification: "matches" | "would_change" | "cannot_process";
       /** Estimated Bytes Saved */
       estimated_bytes_saved: number;
+      /** Link Count */
+      link_count: number | null;
       /** Manager Kind */
       manager_kind: string | null;
       /** Manager Title */
       manager_title: string | null;
+      /** Modified At */
+      modified_at: number;
       /** Path */
       path: string;
+      /** Problem Kind */
+      problem_kind:
+        | (
+            | "seeding"
+            | "manager_redownload"
+            | "no_permission"
+            | "unreadable"
+            | "no_video"
+            | "no_audio_left"
+          )
+        | null;
       /** Reason */
       reason: string | null;
       /** Removed Audio Tracks */
       removed_audio_tracks: number;
       /** Removed Subtitle Tracks */
       removed_subtitle_tracks: number;
+      /** Resolution Class */
+      resolution_class: string;
       /** Size Bytes */
       size_bytes: number;
+      /** Subtitle Summary */
+      subtitle_summary: string | null;
+      /** Subtitle Track Count */
+      subtitle_track_count: number;
       /** Summary */
       summary: string | null;
+      /** Video Codec */
+      video_codec: string;
+      /** Video Height */
+      video_height: number | null;
     };
     /**
      * LibraryFilesOut
      * @description Library mode (#505 point 4). Weir server (.NET) only.
      */
     LibraryFilesOut: {
+      /**
+       * Direction
+       * @enum {string}
+       */
+      direction: "asc" | "desc";
       /** Files */
       files: components["schemas"]["LibraryFileOut"][];
+      filtered: components["schemas"]["LibraryTotalsOut"];
       /** Library Id */
       library_id: number;
+      /** Page */
+      page: number;
+      /** Page Size */
+      page_size: number;
       /** Scan */
-      scan: Record<string, never> | null;
-      summary: components["schemas"]["LibraryFilesSummaryOut"];
+      scan: components["schemas"]["LibraryScanStateOut"] | null;
+      /**
+       * Sort
+       * @enum {string}
+       */
+      sort:
+        | "path"
+        | "title"
+        | "size"
+        | "state"
+        | "saved"
+        | "video"
+        | "resolution"
+        | "audio"
+        | "subtitles"
+        | "modified";
+      summary: components["schemas"]["LibraryTotalsOut"];
       /** Total */
       total: number;
     };
@@ -2447,6 +2571,63 @@ export interface components {
       total_removed_subtitle_tracks: number;
       /** Would Change */
       would_change: number;
+    };
+    /**
+     * LibraryOverviewOut
+     * @description Issue #568: what the library holds and its state, aggregated in SQL rather than in the browser.
+     */
+    LibraryOverviewOut: {
+      breakdowns: components["schemas"]["LibraryBreakdownsOut"];
+      /** Folders Configured */
+      folders_configured: number;
+      /** Library Id */
+      library_id: number;
+      /** Problems */
+      problems: components["schemas"]["LibraryProblemGroupOut"][];
+      /** Scan */
+      scan: components["schemas"]["LibraryScanStateOut"] | null;
+      totals: components["schemas"]["LibraryTotalsOut"];
+    };
+    /**
+     * LibraryProblemGroupOut
+     * @description Issue #568: one reason files are not something Weir will clean, with what to do about it.
+     */
+    LibraryProblemGroupOut: {
+      /** Files */
+      files: number;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind:
+        | "seeding"
+        | "manager_redownload"
+        | "no_permission"
+        | "unreadable"
+        | "no_video"
+        | "no_audio_left";
+      /** Sample Paths */
+      sample_paths: string[];
+      /** Size Bytes */
+      size_bytes: number;
+      /** Title */
+      title: string;
+      /** What To Do */
+      what_to_do: string;
+    };
+    /**
+     * LibraryProblemsOut
+     * @description Issue #568's Problems view: skipped files grouped by reason.
+     */
+    LibraryProblemsOut: {
+      /** Groups */
+      groups: components["schemas"]["LibraryProblemGroupOut"][];
+      /** Library Id */
+      library_id: number;
+      /** Scan */
+      scan: components["schemas"]["LibraryScanStateOut"] | null;
+      /** Total */
+      total: number;
     };
     /**
      * LibraryRedownloadIn
@@ -2514,6 +2695,22 @@ export interface components {
       total: number;
     };
     /**
+     * LibraryScanStateOut
+     * @description Issue #568: what the library's most recent scan is doing and when it last finished.
+     */
+    LibraryScanStateOut: {
+      /** Errors */
+      errors: string[];
+      /** Generated At */
+      generated_at: number | null;
+      /** Job Id */
+      job_id: number | null;
+      /** Running */
+      running: boolean;
+      /** Status */
+      status: string;
+    };
+    /**
      * LibraryScanTriggerOut
      * @description Library mode (#505 point 2). Weir server (.NET) only.
      */
@@ -2579,6 +2776,28 @@ export interface components {
        * @description Left out to keep the saved value.
        */
       skip_if_manager_would_redownload?: boolean;
+    };
+    /**
+     * LibraryTotalsOut
+     * @description Issue #568: how many files a library holds and what its rules would do to them.
+     */
+    LibraryTotalsOut: {
+      /** Cannot Process */
+      cannot_process: number;
+      /** Estimated Bytes Saved */
+      estimated_bytes_saved: number;
+      /** Files */
+      files: number;
+      /** Matches */
+      matches: number;
+      /** Size Bytes */
+      size_bytes: number;
+      /** Total Removed Audio Tracks */
+      total_removed_audio_tracks: number;
+      /** Total Removed Subtitle Tracks */
+      total_removed_subtitle_tracks: number;
+      /** Would Change */
+      would_change: number;
     };
     /** LoginIn */
     LoginIn: {
@@ -7809,6 +8028,32 @@ export interface operations {
         classification?: "matches" | "would_change" | "cannot_process";
         manager?: string;
         q?: string;
+        problem?:
+          | "seeding"
+          | "manager_redownload"
+          | "no_permission"
+          | "unreadable"
+          | "no_video"
+          | "no_audio_left";
+        video_codec?: string;
+        resolution?: string;
+        audio?: string;
+        audio_language?: string;
+        subtitle_language?: string;
+        sort?:
+          | "path"
+          | "title"
+          | "size"
+          | "state"
+          | "saved"
+          | "video"
+          | "resolution"
+          | "audio"
+          | "subtitles"
+          | "modified";
+        direction?: "asc" | "desc";
+        page?: number;
+        page_size?: number;
       };
       header?: never;
       path: {
@@ -7869,6 +8114,68 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["LibraryConfirmationRequired"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_library_overview: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibraryOverviewOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_library_problems: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        library_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LibraryProblemsOut"];
         };
       };
       /** @description Validation Error */

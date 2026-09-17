@@ -4,6 +4,7 @@
  */
 import { fetchCsrfToken } from "../api/auth-api";
 import { apiFetch, readJson, requireOk } from "../api/client";
+import { refinerStreamLanguageLabel } from "./stream-language-options";
 
 export type LibraryFileClassification =
   "matches" | "would_change" | "cannot_process";
@@ -41,9 +42,49 @@ export interface LibrarySettings {
   skip_if_manager_would_redownload: boolean;
 }
 
+/**
+ * Issue #568: the facets the Library view breaks a library down by and filters its Files table on. Same names
+ * the server stores and accepts, so a "show files" link is just this value in the query string.
+ */
+export const LIBRARY_FACETS = [
+  "video_codec",
+  "resolution",
+  "audio",
+  "audio_language",
+  "subtitle_language",
+] as const;
+
+export type LibraryFacet = (typeof LIBRARY_FACETS)[number];
+
+/** Why a file is not something Weir will clean (#568's Problems view). */
+export type LibraryProblemKind =
+  | "seeding"
+  | "manager_redownload"
+  | "no_permission"
+  | "unreadable"
+  | "no_video"
+  | "no_audio_left";
+
+/** The Files table's sortable columns, as the server names them. */
+export const LIBRARY_FILE_SORTS = [
+  "path",
+  "title",
+  "size",
+  "state",
+  "saved",
+  "video",
+  "resolution",
+  "audio",
+  "subtitles",
+  "modified",
+] as const;
+
+export type LibraryFileSort = (typeof LIBRARY_FILE_SORTS)[number];
+
 export interface LibraryFile {
   path: string;
   size_bytes: number;
+  modified_at: number;
   classification: LibraryFileClassification;
   summary: string | null;
   reason: string | null;
@@ -52,9 +93,21 @@ export interface LibraryFile {
   estimated_bytes_saved: number;
   manager_kind: string | null;
   manager_title: string | null;
+  /** #568's media facts, from the ffprobe JSON the scan cached; "unknown" when it did not carry one. */
+  video_codec: string;
+  video_height: number | null;
+  resolution_class: string;
+  audio_track_count: number;
+  subtitle_track_count: number;
+  audio_summary: string | null;
+  subtitle_summary: string | null;
+  link_count: number | null;
+  problem_kind: LibraryProblemKind | null;
 }
 
-export interface LibraryFilesSummary {
+export interface LibraryTotals {
+  files: number;
+  size_bytes: number;
   matches: number;
   would_change: number;
   cannot_process: number;
@@ -64,17 +117,75 @@ export interface LibraryFilesSummary {
 }
 
 export interface LibraryScanInfo {
-  job_id: number;
+  job_id: number | null;
   status: string;
+  /** Queued or being worked on right now — what "Scan now" shows progress for. */
+  running: boolean;
   generated_at: number | null;
+  errors: string[];
+}
+
+export interface LibraryBreakdownRow {
+  value: string;
+  files: number;
+  size_bytes: number;
+  /** 0-1, computed on the server so every bar is drawn from one number. */
+  share: number;
+}
+
+export type LibraryBreakdowns = Record<LibraryFacet, LibraryBreakdownRow[]>;
+
+export interface LibraryProblemGroup {
+  kind: LibraryProblemKind;
+  title: string;
+  what_to_do: string;
+  files: number;
+  size_bytes: number;
+  sample_paths: string[];
+}
+
+export interface LibraryOverview {
+  library_id: number;
+  folders_configured: number;
+  scan: LibraryScanInfo | null;
+  totals: LibraryTotals;
+  breakdowns: LibraryBreakdowns;
+  problems: LibraryProblemGroup[];
+}
+
+export interface LibraryProblemsResult {
+  library_id: number;
+  scan: LibraryScanInfo | null;
+  groups: LibraryProblemGroup[];
+  total: number;
+}
+
+/** Every way the Files table can be narrowed, sorted and paged. */
+export interface LibraryFileFilters {
+  classification?: LibraryFileClassification;
+  manager?: string;
+  q?: string;
+  problem?: LibraryProblemKind;
+  facets?: Partial<Record<LibraryFacet, string>>;
+  sort?: LibraryFileSort;
+  direction?: "asc" | "desc";
+  page?: number;
+  page_size?: number;
 }
 
 export interface LibraryFilesResult {
   library_id: number;
   scan: LibraryScanInfo | null;
-  summary: LibraryFilesSummary;
+  /** The whole library, whatever the filters say — what the header reads. */
+  summary: LibraryTotals;
+  /** Just what the current filters select. */
+  filtered: LibraryTotals;
   files: LibraryFile[];
   total: number;
+  page: number;
+  page_size: number;
+  sort: LibraryFileSort;
+  direction: "asc" | "desc";
 }
 
 export interface LibraryScanTrigger {
@@ -170,24 +281,57 @@ export async function triggerLibraryScan(
   return readJson<LibraryScanTrigger>(r);
 }
 
-export async function fetchLibraryFiles(
-  libraryId: number,
-  filters: {
-    classification?: LibraryFileClassification;
-    manager?: string;
-    q?: string;
-  } = {},
-): Promise<LibraryFilesResult> {
+/** Turns the Files table's filters into the query string the server reads them from. */
+export function libraryFileFiltersToParams(
+  filters: LibraryFileFilters,
+): URLSearchParams {
   const params = new URLSearchParams();
   if (filters.classification)
     params.set("classification", filters.classification);
   if (filters.manager) params.set("manager", filters.manager);
   if (filters.q) params.set("q", filters.q);
-  const suffix = params.toString();
+  if (filters.problem) params.set("problem", filters.problem);
+  for (const facet of LIBRARY_FACETS) {
+    const value = filters.facets?.[facet];
+    if (value) params.set(facet, value);
+  }
+  if (filters.sort) params.set("sort", filters.sort);
+  if (filters.direction) params.set("direction", filters.direction);
+  if (filters.page && filters.page > 1)
+    params.set("page", String(filters.page));
+  if (filters.page_size) params.set("page_size", String(filters.page_size));
+  return params;
+}
+
+export async function fetchLibraryFiles(
+  libraryId: number,
+  filters: LibraryFileFilters = {},
+): Promise<LibraryFilesResult> {
+  const suffix = libraryFileFiltersToParams(filters).toString();
   const path = `/api/v1/refiner/libraries/${libraryId}/library-files${suffix ? `?${suffix}` : ""}`;
   const r = await apiFetch(path);
   await requireOk(path, r, "Could not load this library's files");
   return readJson<LibraryFilesResult>(r);
+}
+
+/** #568's Overview: totals and every breakdown, aggregated on the server. */
+export async function fetchLibraryOverview(
+  libraryId: number,
+): Promise<LibraryOverview> {
+  const path = `/api/v1/refiner/libraries/${libraryId}/library-overview`;
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load this library's overview");
+  return readJson<LibraryOverview>(r);
+}
+
+/** #568's Problems: files Weir will not clean, grouped by reason, each with what to do. */
+export async function fetchLibraryProblems(
+  libraryId: number,
+): Promise<LibraryProblemsResult> {
+  const path = `/api/v1/refiner/libraries/${libraryId}/library-problems`;
+  const r = await apiFetch(path);
+  await requireOk(path, r, "Could not load this library's problems");
+  return readJson<LibraryProblemsResult>(r);
 }
 
 /** Parses the structured 400 the API returns when removal needs confirming. Rethrows anything else. */
@@ -317,6 +461,65 @@ export async function requestLibraryRedownload(
   });
   await requireOk(path, r, "Could not ask the manager to download this again");
   return readJson<LibraryRedownloadResult>(r);
+}
+
+/** The heading each breakdown gets, and which sub-view shows it. */
+export const LIBRARY_FACET_LABELS: Record<LibraryFacet, string> = {
+  video_codec: "Video codec",
+  resolution: "Resolution",
+  audio: "Audio codec and channels",
+  audio_language: "Audio languages",
+  subtitle_language: "Subtitle languages",
+};
+
+/**
+ * The server canonicalises a track language with `OriginalLanguage.CanonicalLanguage`, which picks the
+ * ISO 639-2/B spelling ("ger", "fre", "chi"), while the operator picker lists the /T spelling ("deu",
+ * "fra", "zho") for some of the same languages. Both name the same language, so a breakdown row would
+ * otherwise read "ger" where the rest of the app says "German". Only the entries where the two standards
+ * actually differ are listed.
+ */
+const LIBRARY_LANGUAGE_LABEL_ALIASES: Record<string, string> = {
+  ger: "deu",
+  chi: "zho",
+  dut: "nld",
+  cze: "ces",
+  gre: "ell",
+  rum: "ron",
+  ice: "isl",
+};
+
+/** What one value of a facet reads as in the UI. Codes stay codes; only the display changes. */
+export function libraryFacetValueLabel(
+  facet: LibraryFacet,
+  value: string,
+): string {
+  if (value === "unknown") return "Unknown";
+  if (facet === "audio_language" || facet === "subtitle_language") {
+    return refinerStreamLanguageLabel(
+      LIBRARY_LANGUAGE_LABEL_ALIASES[value] ?? value,
+    );
+  }
+  if (facet === "resolution") {
+    return (
+      { "4k": "4K", "1080p": "1080p", "720p": "720p", sd: "SD" }[value] ?? value
+    );
+  }
+  if (facet === "audio") {
+    const [codec, ...rest] = value.split(" ");
+    return `${codec.toUpperCase()} ${rest.join(" ")}`.trim();
+  }
+  return value.toUpperCase();
+}
+
+/** A file's resolution as the Files table shows it, e.g. "4K" or "1080p". */
+export function libraryResolutionLabel(resolutionClass: string): string {
+  return libraryFacetValueLabel("resolution", resolutionClass);
+}
+
+/** A file's video codec as the Files table shows it; "Unknown" when the probe did not say. */
+export function libraryCodecLabel(codec: string): string {
+  return codec === "unknown" ? "Unknown" : codec.toUpperCase();
 }
 
 /** Bytes as an operator reads them: binary units, one decimal from KB up (mirrors SafeSwapRules.FormatBytes). */

@@ -84,10 +84,14 @@ const seededLibraries: RefinerLibrary[] = [
   }),
 ];
 
-function wrap(ui: ReactNode, client: QueryClient) {
+function wrap(
+  ui: ReactNode,
+  client: QueryClient,
+  initialEntry = "/processing",
+) {
   return (
     <QueryClientProvider client={client}>
-      <MemoryRouter>{ui}</MemoryRouter>
+      <MemoryRouter initialEntries={[initialEntry]}>{ui}</MemoryRouter>
     </QueryClientProvider>
   );
 }
@@ -143,13 +147,13 @@ function openTab(label: string) {
   fireEvent.click(screen.getByRole("tab", { name: label }));
 }
 
-function renderRefinerPage() {
+function renderRefinerPage(initialEntry = "/processing") {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
   seedRefinerQueries(qc);
   qc.setQueryData(qk.me, operatorMe);
-  return render(wrap(<RefinerPage />, qc));
+  return render(wrap(<RefinerPage />, qc, initialEntry));
 }
 
 describe("RefinerPage", () => {
@@ -159,10 +163,20 @@ describe("RefinerPage", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Processing" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("tab", { name: "Existing library" }),
-    ).toBeInTheDocument();
+    // #568 renamed this tab from "Existing library"; it is the library itself, not a category of file.
+    expect(screen.getByRole("tab", { name: "Library" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Existing library" })).toBeNull();
     expect(screen.queryByText(/Refiner/)).toBeNull();
+  });
+
+  it("an old ?tab=existing-library anchor still opens the Library tab", async () => {
+    renderRefinerPage("/processing?tab=existing-library");
+    await waitFor(() =>
+      expect(screen.getByRole("tab", { name: "Library" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      ),
+    );
   });
 
   it("Overview is the default tab and links Activity without leaking env keys", () => {

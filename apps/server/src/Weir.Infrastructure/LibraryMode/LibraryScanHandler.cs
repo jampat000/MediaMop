@@ -34,18 +34,21 @@ public sealed class LibraryScanHandler : IJobHandler
     private readonly SqliteDatabase _database;
     private readonly MediaTools _tools;
     private readonly MediaManagerConnectionService _connections;
+    private readonly IHardlinkInspector _hardlinks;
     private readonly TimeProvider _time;
 
     public LibraryScanHandler(
         SqliteDatabase database,
         MediaTools tools,
         MediaManagerConnectionService connections,
+        IHardlinkInspector hardlinks,
         TimeProvider time,
         ILogger<LibraryScanHandler> logger)
     {
         _database = database ?? throw new ArgumentNullException(nameof(database));
         _tools = tools ?? throw new ArgumentNullException(nameof(tools));
         _connections = connections ?? throw new ArgumentNullException(nameof(connections));
+        _hardlinks = hardlinks ?? throw new ArgumentNullException(nameof(hardlinks));
         _time = time ?? throw new ArgumentNullException(nameof(time));
         // Kept in the constructor for DI symmetry with LibraryCleanHandler; nothing here logs yet.
         ArgumentNullException.ThrowIfNull(logger);
@@ -145,6 +148,11 @@ public sealed class LibraryScanHandler : IJobHandler
         Dictionary<string, LibraryScanFileEntry> previousByPath,
         CancellationToken cancellationToken)
     {
+        // #568: how many names share this file's data, recorded per scan so the Problems view can group seeding
+        // files in SQL instead of stat()-ing a whole library on every page load. Unknown stays null (see
+        // HardlinkPolicy: unknown is never treated as evidence of sharing).
+        var linkCount = LinkCountOf(walked.Path);
+
         string probeJson;
         if (previousByPath.TryGetValue(walked.Path, out var cached) && cached.MatchesFile(walked.Path, walked.SizeBytes, walked.ModifiedTimeUnixSeconds) && cached.ProbeJson is { Length: > 0 })
         {
@@ -161,7 +169,8 @@ public sealed class LibraryScanHandler : IJobHandler
             {
                 return new LibraryScanFileEntry(
                     walked.Path, walked.SizeBytes, walked.ModifiedTimeUnixSeconds, LibraryFileClassification.CannotProcess,
-                    null, $"Weir could not read this file: {exception.Message}", 0, 0, null, null, null);
+                    null, $"Weir could not read this file: {exception.Message}", 0, 0, null, null, null,
+                    ProblemKind: ProblemKindForReadFailure(walked.Path, exception), LinkCount: linkCount);
             }
         }
 
@@ -187,7 +196,44 @@ public sealed class LibraryScanHandler : IJobHandler
             null,
             null,
             probeJson,
-            classification.EstimatedBytesSaved);
+            classification.EstimatedBytesSaved,
+            ProblemKind: classification.ProblemKind,
+            LinkCount: linkCount);
+    }
+
+    private int? LinkCountOf(string path)
+    {
+        try
+        {
+            return _hardlinks.LinkCount(path);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Tells "Weir is not allowed to open this" apart from "this file is damaged", since #568's Problems view
+    /// gives each a different thing to do (fix the permissions, versus download the title again). The evidence is
+    /// whether Weir itself can open the file for reading right now, not the tool's wording, which varies by build.
+    /// </summary>
+    private static LibraryProblemKind ProblemKindForReadFailure(string path, Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        try
+        {
+            using var probe = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            return LibraryProblemKind.Unreadable;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return LibraryProblemKind.NoPermission;
+        }
+        catch (Exception open) when (open is IOException)
+        {
+            return LibraryProblemKind.Unreadable;
+        }
     }
 
     /// <summary>

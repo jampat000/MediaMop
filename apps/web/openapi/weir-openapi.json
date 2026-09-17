@@ -823,6 +823,86 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "LibraryBreakdownRowOut": {
+        "additionalProperties": false,
+        "description": "Issue #568: one row of a breakdown - how many files carry a value, and their share of the library.",
+        "properties": {
+          "files": {
+            "title": "Files",
+            "type": "integer"
+          },
+          "share": {
+            "title": "Share",
+            "type": "number"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "files",
+          "share",
+          "size_bytes",
+          "value"
+        ],
+        "title": "LibraryBreakdownRowOut",
+        "type": "object"
+      },
+      "LibraryBreakdownsOut": {
+        "additionalProperties": false,
+        "description": "Issue #568: every breakdown the Overview, Codecs and Languages views show.",
+        "properties": {
+          "audio": {
+            "items": {
+              "$ref": "#/components/schemas/LibraryBreakdownRowOut"
+            },
+            "title": "Audio",
+            "type": "array"
+          },
+          "audio_language": {
+            "items": {
+              "$ref": "#/components/schemas/LibraryBreakdownRowOut"
+            },
+            "title": "Audio Language",
+            "type": "array"
+          },
+          "resolution": {
+            "items": {
+              "$ref": "#/components/schemas/LibraryBreakdownRowOut"
+            },
+            "title": "Resolution",
+            "type": "array"
+          },
+          "subtitle_language": {
+            "items": {
+              "$ref": "#/components/schemas/LibraryBreakdownRowOut"
+            },
+            "title": "Subtitle Language",
+            "type": "array"
+          },
+          "video_codec": {
+            "items": {
+              "$ref": "#/components/schemas/LibraryBreakdownRowOut"
+            },
+            "title": "Video Codec",
+            "type": "array"
+          }
+        },
+        "required": [
+          "video_codec",
+          "resolution",
+          "audio",
+          "audio_language",
+          "subtitle_language"
+        ],
+        "title": "LibraryBreakdownsOut",
+        "type": "object"
+      },
       "LibraryCleanIn": {
         "additionalProperties": false,
         "description": "Library mode (#505 point 5). Weir server (.NET) only.",
@@ -1035,6 +1115,21 @@
         "additionalProperties": false,
         "description": "Library mode (#505 point 2). Weir server (.NET) only.",
         "properties": {
+          "audio_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio Summary"
+          },
+          "audio_track_count": {
+            "title": "Audio Track Count",
+            "type": "integer"
+          },
           "classification": {
             "enum": [
               "matches",
@@ -1047,6 +1142,17 @@
           "estimated_bytes_saved": {
             "title": "Estimated Bytes Saved",
             "type": "integer"
+          },
+          "link_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link Count"
           },
           "manager_kind": {
             "anyOf": [
@@ -1070,9 +1176,32 @@
             ],
             "title": "Manager Title"
           },
+          "modified_at": {
+            "title": "Modified At",
+            "type": "integer"
+          },
           "path": {
             "title": "Path",
             "type": "string"
+          },
+          "problem_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "seeding",
+                  "manager_redownload",
+                  "no_permission",
+                  "unreadable",
+                  "no_video",
+                  "no_audio_left"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem Kind"
           },
           "reason": {
             "anyOf": [
@@ -1093,8 +1222,27 @@
             "title": "Removed Subtitle Tracks",
             "type": "integer"
           },
+          "resolution_class": {
+            "title": "Resolution Class",
+            "type": "string"
+          },
           "size_bytes": {
             "title": "Size Bytes",
+            "type": "integer"
+          },
+          "subtitle_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subtitle Summary"
+          },
+          "subtitle_track_count": {
+            "title": "Subtitle Track Count",
             "type": "integer"
           },
           "summary": {
@@ -1107,19 +1255,44 @@
               }
             ],
             "title": "Summary"
+          },
+          "video_codec": {
+            "title": "Video Codec",
+            "type": "string"
+          },
+          "video_height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Height"
           }
         },
         "required": [
-          "path",
-          "size_bytes",
           "classification",
-          "summary",
+          "estimated_bytes_saved",
+          "manager_kind",
+          "manager_title",
+          "path",
           "reason",
           "removed_audio_tracks",
           "removed_subtitle_tracks",
-          "estimated_bytes_saved",
-          "manager_kind",
-          "manager_title"
+          "size_bytes",
+          "summary",
+          "audio_summary",
+          "audio_track_count",
+          "link_count",
+          "modified_at",
+          "problem_kind",
+          "resolution_class",
+          "subtitle_summary",
+          "subtitle_track_count",
+          "video_codec",
+          "video_height"
         ],
         "title": "LibraryFileOut",
         "type": "object"
@@ -1128,6 +1301,14 @@
         "additionalProperties": false,
         "description": "Library mode (#505 point 4). Weir server (.NET) only.",
         "properties": {
+          "direction": {
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
           "files": {
             "items": {
               "$ref": "#/components/schemas/LibraryFileOut"
@@ -1135,14 +1316,25 @@
             "title": "Files",
             "type": "array"
           },
+          "filtered": {
+            "$ref": "#/components/schemas/LibraryTotalsOut"
+          },
           "library_id": {
             "title": "Library Id",
+            "type": "integer"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
             "type": "integer"
           },
           "scan": {
             "anyOf": [
               {
-                "type": "object"
+                "$ref": "#/components/schemas/LibraryScanStateOut"
               },
               {
                 "type": "null"
@@ -1150,8 +1342,24 @@
             ],
             "title": "Scan"
           },
+          "sort": {
+            "enum": [
+              "path",
+              "title",
+              "size",
+              "state",
+              "saved",
+              "video",
+              "resolution",
+              "audio",
+              "subtitles",
+              "modified"
+            ],
+            "title": "Sort",
+            "type": "string"
+          },
           "summary": {
-            "$ref": "#/components/schemas/LibraryFilesSummaryOut"
+            "$ref": "#/components/schemas/LibraryTotalsOut"
           },
           "total": {
             "title": "Total",
@@ -1159,11 +1367,16 @@
           }
         },
         "required": [
+          "files",
           "library_id",
           "scan",
           "summary",
-          "files",
-          "total"
+          "total",
+          "direction",
+          "filtered",
+          "page",
+          "page_size",
+          "sort"
         ],
         "title": "LibraryFilesOut",
         "type": "object"
@@ -1206,6 +1419,145 @@
           "estimated_bytes_saved"
         ],
         "title": "LibraryFilesSummaryOut",
+        "type": "object"
+      },
+      "LibraryOverviewOut": {
+        "additionalProperties": false,
+        "description": "Issue #568: what the library holds and its state, aggregated in SQL rather than in the browser.",
+        "properties": {
+          "breakdowns": {
+            "$ref": "#/components/schemas/LibraryBreakdownsOut"
+          },
+          "folders_configured": {
+            "title": "Folders Configured",
+            "type": "integer"
+          },
+          "library_id": {
+            "title": "Library Id",
+            "type": "integer"
+          },
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/LibraryProblemGroupOut"
+            },
+            "title": "Problems",
+            "type": "array"
+          },
+          "scan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LibraryScanStateOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/LibraryTotalsOut"
+          }
+        },
+        "required": [
+          "breakdowns",
+          "folders_configured",
+          "library_id",
+          "problems",
+          "scan",
+          "totals"
+        ],
+        "title": "LibraryOverviewOut",
+        "type": "object"
+      },
+      "LibraryProblemGroupOut": {
+        "additionalProperties": false,
+        "description": "Issue #568: one reason files are not something Weir will clean, with what to do about it.",
+        "properties": {
+          "files": {
+            "title": "Files",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "seeding",
+              "manager_redownload",
+              "no_permission",
+              "unreadable",
+              "no_video",
+              "no_audio_left"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "sample_paths": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sample Paths",
+            "type": "array"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "what_to_do": {
+            "title": "What To Do",
+            "type": "string"
+          }
+        },
+        "required": [
+          "files",
+          "kind",
+          "sample_paths",
+          "size_bytes",
+          "title",
+          "what_to_do"
+        ],
+        "title": "LibraryProblemGroupOut",
+        "type": "object"
+      },
+      "LibraryProblemsOut": {
+        "additionalProperties": false,
+        "description": "Issue #568's Problems view: skipped files grouped by reason.",
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/LibraryProblemGroupOut"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "library_id": {
+            "title": "Library Id",
+            "type": "integer"
+          },
+          "scan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LibraryScanStateOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "groups",
+          "library_id",
+          "scan",
+          "total"
+        ],
+        "title": "LibraryProblemsOut",
         "type": "object"
       },
       "LibraryRedownloadIn": {
@@ -1363,6 +1715,58 @@
         "title": "LibraryRedownloadsListOut",
         "type": "object"
       },
+      "LibraryScanStateOut": {
+        "additionalProperties": false,
+        "description": "Issue #568: what the library's most recent scan is doing and when it last finished.",
+        "properties": {
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "running": {
+            "title": "Running",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "errors",
+          "generated_at",
+          "job_id",
+          "running",
+          "status"
+        ],
+        "title": "LibraryScanStateOut",
+        "type": "object"
+      },
       "LibraryScanTriggerOut": {
         "additionalProperties": false,
         "description": "Library mode (#505 point 2). Weir server (.NET) only.",
@@ -1481,6 +1885,56 @@
           "library_folders"
         ],
         "title": "LibrarySettingsUpdateIn",
+        "type": "object"
+      },
+      "LibraryTotalsOut": {
+        "additionalProperties": false,
+        "description": "Issue #568: how many files a library holds and what its rules would do to them.",
+        "properties": {
+          "cannot_process": {
+            "title": "Cannot Process",
+            "type": "integer"
+          },
+          "estimated_bytes_saved": {
+            "title": "Estimated Bytes Saved",
+            "type": "integer"
+          },
+          "files": {
+            "title": "Files",
+            "type": "integer"
+          },
+          "matches": {
+            "title": "Matches",
+            "type": "integer"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "total_removed_audio_tracks": {
+            "title": "Total Removed Audio Tracks",
+            "type": "integer"
+          },
+          "total_removed_subtitle_tracks": {
+            "title": "Total Removed Subtitle Tracks",
+            "type": "integer"
+          },
+          "would_change": {
+            "title": "Would Change",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cannot_process",
+          "estimated_bytes_saved",
+          "files",
+          "matches",
+          "size_bytes",
+          "total_removed_audio_tracks",
+          "total_removed_subtitle_tracks",
+          "would_change"
+        ],
+        "title": "LibraryTotalsOut",
         "type": "object"
       },
       "LoginIn": {
@@ -11202,7 +11656,7 @@
     },
     "/api/v1/refiner/libraries/{library_id}/library-files": {
       "get": {
-        "description": "Library mode (#505 point 4). The latest scan's file list, filtered by classification, matched manager kind or a path search, plus the removal/size summary the Clean confirmation dialog uses.",
+        "description": "Library view (#568). One page of the library's files, sorted by any listed column and narrowed by classification, matched manager kind, a path/title search, any breakdown facet, or a Problems group. Carries the whole library's totals as well as the filtered subset's, plus the removal/size summary the Clean confirmation dialog uses.",
         "operationId": "get_library_files",
         "parameters": [
           {
@@ -11245,6 +11699,123 @@
             "schema": {
               "title": "Q",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "problem",
+            "required": false,
+            "schema": {
+              "enum": [
+                "seeding",
+                "manager_redownload",
+                "no_permission",
+                "unreadable",
+                "no_video",
+                "no_audio_left"
+              ],
+              "title": "Problem",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "video_codec",
+            "required": false,
+            "schema": {
+              "title": "Video Codec",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resolution",
+            "required": false,
+            "schema": {
+              "title": "Resolution",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "audio",
+            "required": false,
+            "schema": {
+              "title": "Audio",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "audio_language",
+            "required": false,
+            "schema": {
+              "title": "Audio Language",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "subtitle_language",
+            "required": false,
+            "schema": {
+              "title": "Subtitle Language",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "enum": [
+                "path",
+                "title",
+                "size",
+                "state",
+                "saved",
+                "video",
+                "resolution",
+                "audio",
+                "subtitles",
+                "modified"
+              ],
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Direction",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
             }
           }
         ],
@@ -11335,6 +11906,94 @@
           }
         },
         "summary": "Post Library Files Clean",
+        "tags": [
+          "library-mode"
+        ]
+      }
+    },
+    "/api/v1/refiner/libraries/{library_id}/library-overview": {
+      "get": {
+        "description": "Library view (#568). What the library holds and its state: totals, how many files match the rules, would change or cannot be processed, and the breakdowns by video codec, resolution class, audio codec/channels and audio/subtitle language. Every number is a SQL aggregate over the scan index.",
+        "operationId": "get_library_overview",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "library_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Library Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryOverviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Library Overview",
+        "tags": [
+          "library-mode"
+        ]
+      }
+    },
+    "/api/v1/refiner/libraries/{library_id}/library-problems": {
+      "get": {
+        "description": "Library view (#568). Files Weir will not clean, grouped by reason (still shared with a download, unreadable, no permission, no video track, no audio would remain, the manager would download it again), each with what to do about it.",
+        "operationId": "get_library_problems",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "library_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Library Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryProblemsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Library Problems",
         "tags": [
           "library-mode"
         ]
