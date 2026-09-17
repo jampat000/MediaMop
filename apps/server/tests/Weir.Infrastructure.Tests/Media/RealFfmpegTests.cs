@@ -254,9 +254,10 @@ public sealed class RealFfmpegTests : IDisposable
         var plan = RemuxRules.PlanRemux(split.Video, split.Audio, split.Subtitles, config);
         Assert.NotNull(plan);
         Assert.True(RemuxRules.IsRemuxRequired(plan, split.Audio, split.Subtitles, split.Video, chaptersPresent: true));
+        var sourceWarnings = await tools.ProbeWarningLinesAsync(fixture);
         var workDir = Path.Combine(_root, "work");
 
-        var output = await tools.RemuxToTempFileAsync(fixture, workDir, plan);
+        var output = await tools.RemuxToTempFileAsync(fixture, workDir, plan, probe, sourceWarnings, durationSeconds: ProbeOutput.DurationSeconds(probe));
 
         var outputProbeJson = await tools.FfprobeJsonAsync(output);
         var audio = Assert.Single(Streams(outputProbeJson, "audio"));

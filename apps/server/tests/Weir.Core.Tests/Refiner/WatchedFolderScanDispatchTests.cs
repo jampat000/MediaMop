@@ -1,4 +1,5 @@
 using Weir.Core.Refiner;
+using Weir.Core.Refiner.RemuxPass;
 
 namespace Weir.Core.Tests.Refiner;
 
@@ -97,7 +98,7 @@ public sealed class WatchedFolderScanDispatchTests
     public void A_first_observation_is_always_settling()
     {
         var now = DateTimeOffset.UtcNow;
-        var result = FileSettling.ObserveSizeSettling(false, 30, null, null, 100, now);
+        var result = FileSettling.ObserveSizeSettling(Library(), null, null, 100, now);
         Assert.True(result.IsSettling);
     }
 
@@ -105,7 +106,7 @@ public sealed class WatchedFolderScanDispatchTests
     public void A_size_that_changed_since_the_last_scan_is_settling()
     {
         var now = DateTimeOffset.UtcNow;
-        var result = FileSettling.ObserveSizeSettling(false, 30, previousSizeBytes: 50, previousSizeChangedAt: now.AddSeconds(-5), currentSizeBytes: 100, now);
+        var result = FileSettling.ObserveSizeSettling(Library(), previousSizeBytes: 50, previousSizeChangedAt: now.AddSeconds(-5), currentSizeBytes: 100, now);
         Assert.True(result.IsSettling);
     }
 
@@ -113,7 +114,7 @@ public sealed class WatchedFolderScanDispatchTests
     public void A_size_unchanged_past_the_interval_is_stable()
     {
         var now = DateTimeOffset.UtcNow;
-        var result = FileSettling.ObserveSizeSettling(false, 30, previousSizeBytes: 100, previousSizeChangedAt: now.AddSeconds(-31), currentSizeBytes: 100, now);
+        var result = FileSettling.ObserveSizeSettling(Library(), previousSizeBytes: 100, previousSizeChangedAt: now.AddSeconds(-31), currentSizeBytes: 100, now);
         Assert.False(result.IsSettling);
     }
 
@@ -121,7 +122,7 @@ public sealed class WatchedFolderScanDispatchTests
     public void Ignoring_size_changes_never_settles()
     {
         var now = DateTimeOffset.UtcNow;
-        var result = FileSettling.ObserveSizeSettling(true, 30, null, null, 100, now);
+        var result = FileSettling.ObserveSizeSettling(Library() with { IgnoreSizeChanges = true }, null, null, 100, now);
         Assert.False(result.IsSettling);
     }
 

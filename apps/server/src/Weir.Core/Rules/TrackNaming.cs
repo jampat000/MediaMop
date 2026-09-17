@@ -189,22 +189,22 @@ public static partial class TrackNaming
     private static string FormatFlags(TrackFlags flags)
     {
         var parts = new List<string>();
-        if (flags.Forced)
+        if (flags.Forced.Value)
         {
             parts.Add("Forced");
         }
 
-        if (flags.HearingImpaired)
+        if (flags.HearingImpaired.Value)
         {
             parts.Add("Hearing Impaired");
         }
 
-        if (flags.Commentary)
+        if (flags.Commentary.Value)
         {
             parts.Add("Commentary");
         }
 
-        if (flags.AudioDescription)
+        if (flags.AudioDescription.Value)
         {
             parts.Add("Audio Description");
         }

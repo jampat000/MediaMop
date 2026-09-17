@@ -305,57 +305,10 @@ internal static class Glob
     }
 }
 
-/// <summary>The candidate this scan saw (media_scope-neutral shape of one file's decisions).</summary>
-public sealed record SettlingObservation(bool IsSettling, DateTimeOffset? SizeChangedAt, DateTimeOffset? StableAt, string? Reason = null);
-
-/// <summary>Port of <c>refiner_file_settling.observe_size_settling</c> (the size-comparison half; the OS
-/// file-lock probe lives in infrastructure as it touches the filesystem).</summary>
-public static class FileSettling
-{
-    public static SettlingObservation ObserveSizeSettling(
-        bool ignoreSizeChanges,
-        long fileDetectionIntervalSeconds,
-        long? previousSizeBytes,
-        DateTimeOffset? previousSizeChangedAt,
-        long currentSizeBytes,
-        DateTimeOffset now)
-    {
-        var interval = Math.Max(0, fileDetectionIntervalSeconds);
-        if (ignoreSizeChanges || interval == 0)
-        {
-            return new SettlingObservation(false, now, now);
-        }
-
-        if (previousSizeBytes is null)
-        {
-            return new SettlingObservation(
-                true, now, now.AddSeconds(interval),
-                "Weir has only just found this file and is checking whether anything is still writing to it.");
-        }
-
-        if (previousSizeBytes.Value != currentSizeBytes)
-        {
-            return new SettlingObservation(
-                true, now, now.AddSeconds(interval),
-                "This file is still growing, so something is writing to it. Weir will wait until it stops.");
-        }
-
-        if (previousSizeChangedAt is not { } changedAt)
-        {
-            return new SettlingObservation(true, now, now.AddSeconds(interval), "Weir is confirming that nothing is still writing to this file.");
-        }
-
-        var stableAt = changedAt.AddSeconds(interval);
-        if (now < stableAt)
-        {
-            return new SettlingObservation(
-                true, changedAt, stableAt,
-                $"This file stopped changing very recently. Weir waits {interval}s to be sure nothing else is writing to it.");
-        }
-
-        return new SettlingObservation(false, changedAt, stableAt);
-    }
-}
+// FileSettling/SettlingObservation (observe_size_settling) live in Weir.Core.Refiner.RemuxPass — #522 part 3
+// (the remux pass) and this scan port each independently ported it; the RemuxPass one (whose
+// ObserveSizeSettling takes the RefinerLibraryRecord directly, matching Python's keyword-argument call) is the
+// one kept, so this file uses it via that namespace instead of defining its own copy.
 
 /// <summary>A status and the sentence that explains it (<c>FileStateVerdict</c>).</summary>
 public sealed record FileStateVerdict(string Status, string Reason, string? BlockedByConnection = null, DateTimeOffset? HoldUntil = null)

@@ -45,10 +45,12 @@ public sealed class TrackNamingTests
     [Fact]
     public void Flags_is_empty_when_no_flag_is_set() => Assert.Equal(string.Empty, TrackNaming.Render("{flags}", Context()));
 
+    private static TrackFlag Set() => new(true, TrackFlagSource.Name);
+
     [Fact]
     public void Flags_lists_every_active_flag_in_a_fixed_order()
     {
-        var flags = new TrackFlags { AudioDescription = true, Forced = true, Commentary = true, HearingImpaired = true };
+        var flags = new TrackFlags { AudioDescription = Set(), Forced = Set(), Commentary = Set(), HearingImpaired = Set() };
 
         Assert.Equal("Forced, Hearing Impaired, Commentary, Audio Description", TrackNaming.Render("{flags}", Context(flags: flags)));
     }
@@ -115,7 +117,7 @@ public sealed class TrackNamingTests
     public void Forced_takes_priority_over_every_other_flag()
     {
         var rules = new MetadataRules();
-        var flags = new TrackFlags { Forced = true, HearingImpaired = true, Commentary = true, AudioDescription = true };
+        var flags = new TrackFlags { Forced = Set(), HearingImpaired = Set(), Commentary = Set(), AudioDescription = Set() };
 
         Assert.Equal(rules.TrackNameOverrides.Forced, TrackNaming.ResolveTemplate(rules, flags));
     }
@@ -124,7 +126,7 @@ public sealed class TrackNamingTests
     public void HearingImpaired_is_used_when_forced_is_not_set()
     {
         var rules = new MetadataRules();
-        var flags = new TrackFlags { HearingImpaired = true, Commentary = true, AudioDescription = true };
+        var flags = new TrackFlags { HearingImpaired = Set(), Commentary = Set(), AudioDescription = Set() };
 
         Assert.Equal(rules.TrackNameOverrides.HearingImpaired, TrackNaming.ResolveTemplate(rules, flags));
     }
@@ -133,7 +135,7 @@ public sealed class TrackNamingTests
     public void Commentary_is_used_when_forced_and_hearing_impaired_are_not_set()
     {
         var rules = new MetadataRules();
-        var flags = new TrackFlags { Commentary = true, AudioDescription = true };
+        var flags = new TrackFlags { Commentary = Set(), AudioDescription = Set() };
 
         Assert.Equal(rules.TrackNameOverrides.Commentary, TrackNaming.ResolveTemplate(rules, flags));
     }
@@ -143,7 +145,7 @@ public sealed class TrackNamingTests
     {
         var rules = new MetadataRules();
 
-        Assert.Equal(rules.TrackNameOverrides.AudioDescription, TrackNaming.ResolveTemplate(rules, new TrackFlags { AudioDescription = true }));
+        Assert.Equal(rules.TrackNameOverrides.AudioDescription, TrackNaming.ResolveTemplate(rules, new TrackFlags { AudioDescription = Set() }));
     }
 
     [Fact]
@@ -151,14 +153,14 @@ public sealed class TrackNamingTests
     {
         var rules = new MetadataRules { TrackNameOverrides = new TrackNameOverrides { Forced = string.Empty } };
 
-        Assert.Equal(rules.TrackNameTemplate, TrackNaming.ResolveTemplate(rules, new TrackFlags { Forced = true }));
+        Assert.Equal(rules.TrackNameTemplate, TrackNaming.ResolveTemplate(rules, new TrackFlags { Forced = Set() }));
     }
 
     [Fact]
     public void The_default_forced_override_reads_language_then_forced()
     {
         var rules = new MetadataRules();
-        var flags = new TrackFlags { Forced = true };
+        var flags = new TrackFlags { Forced = Set() };
 
         var rendered = TrackNaming.Render(TrackNaming.ResolveTemplate(rules, flags), Context(flags: flags));
 
@@ -192,10 +194,18 @@ public sealed class TrackNamingTests
     }
 
     [Fact]
-    public void ContextFor_never_sets_a_variant_in_this_branch()
+    public void ContextFor_has_no_variant_when_the_planned_track_has_none()
     {
         var track = new PlannedTrack { InputIndex = 0, LangLabel = "eng" };
 
         Assert.Null(TrackNaming.ContextFor(track).Variant);
+    }
+
+    [Fact]
+    public void ContextFor_reads_the_variant_from_the_planned_track()
+    {
+        var track = new PlannedTrack { InputIndex = 0, LangLabel = "fre", Variant = "fre-CA" };
+
+        Assert.Equal("fre-CA", TrackNaming.ContextFor(track).Variant);
     }
 }

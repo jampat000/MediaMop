@@ -4,6 +4,7 @@ using Weir.Core.Configuration;
 using Weir.Core.Jobs;
 using Weir.Core.Json;
 using Weir.Core.Refiner;
+using Weir.Core.Refiner.RemuxPass;
 using Weir.Core.Settings;
 using Weir.Core.Time;
 using Weir.Infrastructure.MediaManagers;
@@ -184,8 +185,7 @@ public sealed class RefinerWatchedFolderScanDispatchJobHandler : IJobHandler
             }
 
             var settling = FileSettling.ObserveSizeSettling(
-                library.IgnoreSizeChanges,
-                library.FileDetectionIntervalSeconds,
+                library,
                 previous?.SizeBytes,
                 previous?.SizeChangedAt?.AsUtc,
                 observedSize,
