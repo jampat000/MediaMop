@@ -59,6 +59,13 @@ public enum SchemaStartupOutcome
 
     /// <summary>The database was already at this build's revision (created by Alembic or by an earlier .NET start); nothing was written.</summary>
     AlreadyCurrent,
+
+    /// <summary>
+    /// The database was at an earlier revision this build knows how to reach (created by Alembic at the
+    /// frozen baseline, or by an earlier .NET build at one of its own migrations): every migration after
+    /// that revision, in order, was applied to bring it to head.
+    /// </summary>
+    Upgraded,
 }
 
 /// <summary>
@@ -75,9 +82,13 @@ public enum SchemaStartupOutcome
 /// </para>
 /// <para>
 /// <b>On startup:</b> a missing database file is created at head; a database whose recorded revision is
-/// head is adopted unchanged; anything else, including an existing file with no schema, is refused
-/// with a message and no change. Python would
-/// upgrade a known older revision in place by running Alembic, which this build cannot do.
+/// head is adopted unchanged; a database recorded at any earlier revision in <see cref="Migrations"/> —
+/// the frozen Alembic baseline, or one of this build's own earlier migrations — is upgraded in place by
+/// applying every migration after it, in order, in one transaction (issue #557 lifted the freeze and
+/// this is the "SchemaMigrator taught to upgrade a database at the previous head" the schema docs
+/// promise); anything else, including an existing file with no schema or a genuinely pre-baseline
+/// Alembic revision, is refused with a message and no change — the pre-baseline case still needs the
+/// retired Python backend's own Alembic to reach the baseline first.
 /// </para>
 /// </remarks>
 public sealed class SchemaMigrator
@@ -85,7 +96,21 @@ public sealed class SchemaMigrator
     public static readonly IReadOnlyList<SchemaMigration> Migrations =
     [
         new(1, "0036_drop_pruner_tables", "Weir.Infrastructure.Migrations.0001_baseline_0036_drop_pruner_tables.sql"),
+        new(2, "0037_refiner_rule_set_extra_columns", "Weir.Infrastructure.Migrations.0002_refiner_rule_set_extra_columns.sql"),
+        new(3, "0038_library_mode_settings", "Weir.Infrastructure.Migrations.0003_library_mode_settings.sql"),
+        new(4, "0039_library_files", "Weir.Infrastructure.Migrations.0004_library_files.sql"),
+        new(5, "0040_library_swaps", "Weir.Infrastructure.Migrations.0005_library_swaps.sql"),
+        new(6, "0041_removed_tracks", "Weir.Infrastructure.Migrations.0006_removed_tracks.sql"),
     ];
+
+    /// <summary>
+    /// The schema before issue #557's migrations (the frozen Alembic-head shape every released Weir up to
+    /// and including #523's switch-over could create): the checked-in <c>schema/alembic-head.sql</c>
+    /// reference and <c>SchemaParityTests</c> stay pinned to this revision on purpose (see
+    /// apps/server/README.md, "Schema") rather than to the moving <see cref="HeadRevision"/>, since #557
+    /// deliberately diverges from the frozen Alembic shape.
+    /// </summary>
+    public static string BaselineRevision => Migrations[0].Revision;
 
     /// <summary>
     /// Alembic revisions before the baseline, oldest first. A database at one of these was made by
@@ -169,6 +194,13 @@ public sealed class SchemaMigrator
             return SchemaStartupOutcome.AlreadyCurrent;
         }
 
+        var currentIndex = Migrations.ToList().FindIndex(m => m.Revision == current);
+        if (currentIndex >= 0)
+        {
+            ApplyRange(connection, Migrations.Skip(currentIndex + 1), HeadRevision);
+            return SchemaStartupOutcome.Upgraded;
+        }
+
         if (AlembicRevisionsBeforeBaseline.Contains(current, StringComparer.Ordinal))
         {
             throw new DatabaseSchemaMismatchException(
@@ -194,7 +226,21 @@ public sealed class SchemaMigrator
         return reader.ReadToEnd().Replace("\r\n", "\n", StringComparison.Ordinal);
     }
 
-    private static void ApplyAll(SqliteConnection connection)
+    /// <summary>
+    /// Builds a fresh database at exactly <see cref="BaselineRevision"/> (the frozen Alembic-head shape),
+    /// ignoring every migration #557 and later added. Test-only: <c>SchemaParityTests</c> uses this to keep
+    /// comparing against <c>alembic-head.sql</c> without that reference file ever changing.
+    /// </summary>
+    public SchemaStartupOutcome EnsureAtBaseline()
+    {
+        using var connection = _database.Open();
+        ApplyRange(connection, Migrations.Take(1), BaselineRevision);
+        return SchemaStartupOutcome.Created;
+    }
+
+    private static void ApplyAll(SqliteConnection connection) => ApplyRange(connection, Migrations.OrderBy(m => m.Number), HeadRevision);
+
+    private static void ApplyRange(SqliteConnection connection, IEnumerable<SchemaMigration> migrations, string revision)
     {
         using var transaction = connection.BeginTransaction();
         using (var deferForeignKeys = connection.CreateCommand())
@@ -204,7 +250,7 @@ public sealed class SchemaMigrator
             deferForeignKeys.ExecuteNonQuery();
         }
 
-        foreach (var migration in Migrations.OrderBy(m => m.Number))
+        foreach (var migration in migrations)
         {
             using var command = connection.CreateCommand();
             command.Transaction = transaction;
@@ -216,7 +262,7 @@ public sealed class SchemaMigrator
         {
             record.Transaction = transaction;
             record.CommandText = "DELETE FROM alembic_version; INSERT INTO alembic_version (version_num) VALUES ($revision);";
-            record.Parameters.AddWithValue("$revision", HeadRevision);
+            record.Parameters.AddWithValue("$revision", revision);
             record.ExecuteNonQuery();
         }
 

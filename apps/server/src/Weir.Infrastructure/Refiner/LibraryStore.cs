@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Weir.Core.Json;
 using Weir.Core.Refiner;
+using Weir.Core.Rules;
 using Weir.Infrastructure.Sqlite;
 
 namespace Weir.Infrastructure.Refiner;
@@ -29,7 +30,10 @@ public static class LibraryStore
         "subtitle_mode, subtitle_langs_csv, preserve_forced_subs, preserve_default_subs, audio_preference_mode, audio_sorters_json, " +
         "subtitle_sorters_json, keep_original_language, original_language_additional_csv, original_language_keep_only_first, " +
         "original_language_first_if_none, original_language_treat_empty_as_original, remove_images, remove_attachments, " +
-        "remove_title, remove_language_tags, remove_other_metadata, created_at, updated_at";
+        "remove_title, remove_language_tags, remove_other_metadata, remove_hearing_impaired_subs, audio_keep_mode, " +
+        "subtitle_max_per_language, subtitle_quality_strategy, standardize_track_names, track_name_template, " +
+        "track_name_override_forced, track_name_override_hearing_impaired, track_name_override_commentary, " +
+        "track_name_override_audio_description, clear_video_track_names, remove_chapters, created_at, updated_at";
 
     public static async Task<List<RefinerLibraryRecord>> ListAsync(UnitOfWork uow, bool enabledOnly = false)
     {
@@ -419,12 +423,18 @@ public static class LibraryStore
             "remove_commentary, subtitle_mode, subtitle_langs_csv, preserve_forced_subs, preserve_default_subs, audio_preference_mode, " +
             "audio_sorters_json, subtitle_sorters_json, keep_original_language, original_language_additional_csv, " +
             "original_language_keep_only_first, original_language_first_if_none, original_language_treat_empty_as_original, " +
-            "remove_images, remove_attachments, remove_title, remove_language_tags, remove_other_metadata) VALUES " +
+            "remove_images, remove_attachments, remove_title, remove_language_tags, remove_other_metadata, " +
+            "remove_hearing_impaired_subs, audio_keep_mode, subtitle_max_per_language, subtitle_quality_strategy, " +
+            "standardize_track_names, track_name_template, track_name_override_forced, track_name_override_hearing_impaired, " +
+            "track_name_override_commentary, track_name_override_audio_description, clear_video_track_names, remove_chapters) VALUES " +
             "(@name, @primary_audio_lang, @secondary_audio_lang, @tertiary_audio_lang, @default_audio_slot, @remove_commentary, " +
             "@subtitle_mode, @subtitle_langs_csv, @preserve_forced_subs, @preserve_default_subs, @audio_preference_mode, " +
             "@audio_sorters_json, @subtitle_sorters_json, @keep_original_language, @original_language_additional_csv, " +
             "@original_language_keep_only_first, @original_language_first_if_none, @original_language_treat_empty_as_original, " +
-            "@remove_images, @remove_attachments, @remove_title, @remove_language_tags, @remove_other_metadata)",
+            "@remove_images, @remove_attachments, @remove_title, @remove_language_tags, @remove_other_metadata, " +
+            "@remove_hearing_impaired_subs, @audio_keep_mode, @subtitle_max_per_language, @subtitle_quality_strategy, " +
+            "@standardize_track_names, @track_name_template, @track_name_override_forced, @track_name_override_hearing_impaired, " +
+            "@track_name_override_commentary, @track_name_override_audio_description, @clear_video_track_names, @remove_chapters)",
             RuleSetParameters(row)).ConfigureAwait(false);
     }
 
@@ -440,29 +450,17 @@ public static class LibraryStore
             "original_language_first_if_none=@original_language_first_if_none, " +
             "original_language_treat_empty_as_original=@original_language_treat_empty_as_original, remove_images=@remove_images, " +
             "remove_attachments=@remove_attachments, remove_title=@remove_title, remove_language_tags=@remove_language_tags, " +
-            "remove_other_metadata=@remove_other_metadata, updated_at=CURRENT_TIMESTAMP WHERE id=@id",
+            "remove_other_metadata=@remove_other_metadata, remove_hearing_impaired_subs=@remove_hearing_impaired_subs, " +
+            "audio_keep_mode=@audio_keep_mode, subtitle_max_per_language=@subtitle_max_per_language, " +
+            "subtitle_quality_strategy=@subtitle_quality_strategy, standardize_track_names=@standardize_track_names, " +
+            "track_name_template=@track_name_template, track_name_override_forced=@track_name_override_forced, " +
+            "track_name_override_hearing_impaired=@track_name_override_hearing_impaired, " +
+            "track_name_override_commentary=@track_name_override_commentary, " +
+            "track_name_override_audio_description=@track_name_override_audio_description, " +
+            "clear_video_track_names=@clear_video_track_names, remove_chapters=@remove_chapters, " +
+            "updated_at=CURRENT_TIMESTAMP WHERE id=@id",
             [.. RuleSetParameters(row), ("@id", row.Id)]).ConfigureAwait(false);
     }
-
-    /// <summary>
-    /// Issues #495/#497/#498: the schema is frozen (ADR-0017), so their new rule-set fields are packed into the
-    /// <c>subtitle_sorters_json</c> column alongside its original payload (see <see cref="RuleSetRuleExtras"/> for the
-    /// exact shape and why that column). This is the only place that packs a <see cref="RefinerRuleSetRecord"/>'s
-    /// flattened fields into the one column actually written to SQLite; <see cref="ReadRuleSet"/> is the reverse.
-    /// </summary>
-    private static string EncodeSubtitleSortersColumn(RefinerRuleSetRecord row) => RuleSetRuleExtras.Encode(new RuleSetRuleExtras.Decoded
-    {
-        SubtitleSortersJson = row.SubtitleSortersJson,
-        RemoveHearingImpairedSubs = row.RemoveHearingImpairedSubs,
-        AudioKeepMode = row.AudioKeepMode,
-        SubtitleMaxPerLanguage = row.SubtitleMaxPerLanguage,
-        SubtitleQualityStrategy = row.SubtitleQualityStrategy,
-        StandardizeTrackNames = row.StandardizeTrackNames,
-        TrackNameTemplate = row.TrackNameTemplate,
-        TrackNameOverrides = row.TrackNameOverrides,
-        ClearVideoTrackNames = row.ClearVideoTrackNames,
-        RemoveChapters = row.RemoveChapters,
-    });
 
     private static (string, object?)[] RuleSetParameters(RefinerRuleSetRecord row) =>
     [
@@ -478,7 +476,7 @@ public static class LibraryStore
         ("@preserve_default_subs", row.PreserveDefaultSubs ? 1 : 0),
         ("@audio_preference_mode", row.AudioPreferenceMode),
         ("@audio_sorters_json", row.AudioSortersJson),
-        ("@subtitle_sorters_json", EncodeSubtitleSortersColumn(row)),
+        ("@subtitle_sorters_json", row.SubtitleSortersJson),
         ("@keep_original_language", row.KeepOriginalLanguage ? 1 : 0),
         ("@original_language_additional_csv", row.OriginalLanguageAdditionalCsv),
         ("@original_language_keep_only_first", row.OriginalLanguageKeepOnlyFirst ? 1 : 0),
@@ -489,6 +487,18 @@ public static class LibraryStore
         ("@remove_title", row.RemoveTitle ? 1 : 0),
         ("@remove_language_tags", row.RemoveLanguageTags ? 1 : 0),
         ("@remove_other_metadata", row.RemoveOtherMetadata ? 1 : 0),
+        ("@remove_hearing_impaired_subs", row.RemoveHearingImpairedSubs ? 1 : 0),
+        ("@audio_keep_mode", row.AudioKeepMode),
+        ("@subtitle_max_per_language", row.SubtitleMaxPerLanguage),
+        ("@subtitle_quality_strategy", row.SubtitleQualityStrategy),
+        ("@standardize_track_names", row.StandardizeTrackNames ? 1 : 0),
+        ("@track_name_template", row.TrackNameTemplate),
+        ("@track_name_override_forced", row.TrackNameOverrides.Forced),
+        ("@track_name_override_hearing_impaired", row.TrackNameOverrides.HearingImpaired),
+        ("@track_name_override_commentary", row.TrackNameOverrides.Commentary),
+        ("@track_name_override_audio_description", row.TrackNameOverrides.AudioDescription),
+        ("@clear_video_track_names", row.ClearVideoTrackNames ? 1 : 0),
+        ("@remove_chapters", row.RemoveChapters ? 1 : 0),
     ];
 
     private static RefinerLibraryRecord ReadLibrary(SqliteDataReader reader) => new()
@@ -548,48 +558,48 @@ public static class LibraryStore
         UpdatedAt = SqliteValues.GetDateTime(reader, 52),
     };
 
-    private static RefinerRuleSetRecord ReadRuleSet(SqliteDataReader reader)
+    private static RefinerRuleSetRecord ReadRuleSet(SqliteDataReader reader) => new()
     {
-        // Issues #495/#497/#498: the raw column carries the plain sorter list plus the packed extras envelope
-        // (see EncodeSubtitleSortersColumn/RuleSetRuleExtras); decode both back into the record's plain fields.
-        var extras = RuleSetRuleExtras.Decode(SqliteValues.GetString(reader, 13));
-        return new RefinerRuleSetRecord
+        Id = reader.GetInt64(0),
+        Name = SqliteValues.GetString(reader, 1),
+        PrimaryAudioLang = SqliteValues.GetString(reader, 2),
+        SecondaryAudioLang = SqliteValues.GetString(reader, 3),
+        TertiaryAudioLang = SqliteValues.GetString(reader, 4),
+        DefaultAudioSlot = SqliteValues.GetString(reader, 5),
+        RemoveCommentary = SqliteValues.GetBool(reader, 6),
+        SubtitleMode = SqliteValues.GetString(reader, 7),
+        SubtitleLangsCsv = SqliteValues.GetString(reader, 8),
+        PreserveForcedSubs = SqliteValues.GetBool(reader, 9),
+        PreserveDefaultSubs = SqliteValues.GetBool(reader, 10),
+        AudioPreferenceMode = SqliteValues.GetString(reader, 11),
+        AudioSortersJson = SqliteValues.GetString(reader, 12),
+        SubtitleSortersJson = SqliteValues.GetString(reader, 13),
+        KeepOriginalLanguage = SqliteValues.GetBool(reader, 14),
+        OriginalLanguageAdditionalCsv = SqliteValues.GetString(reader, 15),
+        OriginalLanguageKeepOnlyFirst = SqliteValues.GetBool(reader, 16),
+        OriginalLanguageFirstIfNone = SqliteValues.GetBool(reader, 17),
+        OriginalLanguageTreatEmptyAsOriginal = SqliteValues.GetBool(reader, 18),
+        RemoveImages = SqliteValues.GetBool(reader, 19),
+        RemoveAttachments = SqliteValues.GetBool(reader, 20),
+        RemoveTitle = SqliteValues.GetBool(reader, 21),
+        RemoveLanguageTags = SqliteValues.GetBool(reader, 22),
+        RemoveOtherMetadata = SqliteValues.GetBool(reader, 23),
+        RemoveHearingImpairedSubs = SqliteValues.GetBool(reader, 24),
+        AudioKeepMode = SqliteValues.GetString(reader, 25),
+        SubtitleMaxPerLanguage = (int)SqliteValues.GetInt64(reader, 26),
+        SubtitleQualityStrategy = SqliteValues.GetString(reader, 27),
+        StandardizeTrackNames = SqliteValues.GetBool(reader, 28),
+        TrackNameTemplate = SqliteValues.GetString(reader, 29),
+        TrackNameOverrides = new TrackNameOverrides
         {
-            Id = reader.GetInt64(0),
-            Name = SqliteValues.GetString(reader, 1),
-            PrimaryAudioLang = SqliteValues.GetString(reader, 2),
-            SecondaryAudioLang = SqliteValues.GetString(reader, 3),
-            TertiaryAudioLang = SqliteValues.GetString(reader, 4),
-            DefaultAudioSlot = SqliteValues.GetString(reader, 5),
-            RemoveCommentary = SqliteValues.GetBool(reader, 6),
-            SubtitleMode = SqliteValues.GetString(reader, 7),
-            SubtitleLangsCsv = SqliteValues.GetString(reader, 8),
-            PreserveForcedSubs = SqliteValues.GetBool(reader, 9),
-            PreserveDefaultSubs = SqliteValues.GetBool(reader, 10),
-            AudioPreferenceMode = SqliteValues.GetString(reader, 11),
-            AudioSortersJson = SqliteValues.GetString(reader, 12),
-            SubtitleSortersJson = extras.SubtitleSortersJson,
-            KeepOriginalLanguage = SqliteValues.GetBool(reader, 14),
-            OriginalLanguageAdditionalCsv = SqliteValues.GetString(reader, 15),
-            OriginalLanguageKeepOnlyFirst = SqliteValues.GetBool(reader, 16),
-            OriginalLanguageFirstIfNone = SqliteValues.GetBool(reader, 17),
-            OriginalLanguageTreatEmptyAsOriginal = SqliteValues.GetBool(reader, 18),
-            RemoveImages = SqliteValues.GetBool(reader, 19),
-            RemoveAttachments = SqliteValues.GetBool(reader, 20),
-            RemoveTitle = SqliteValues.GetBool(reader, 21),
-            RemoveLanguageTags = SqliteValues.GetBool(reader, 22),
-            RemoveOtherMetadata = SqliteValues.GetBool(reader, 23),
-            RemoveHearingImpairedSubs = extras.RemoveHearingImpairedSubs,
-            AudioKeepMode = extras.AudioKeepMode,
-            SubtitleMaxPerLanguage = extras.SubtitleMaxPerLanguage,
-            SubtitleQualityStrategy = extras.SubtitleQualityStrategy,
-            StandardizeTrackNames = extras.StandardizeTrackNames,
-            TrackNameTemplate = extras.TrackNameTemplate,
-            TrackNameOverrides = extras.TrackNameOverrides,
-            ClearVideoTrackNames = extras.ClearVideoTrackNames,
-            RemoveChapters = extras.RemoveChapters,
-            CreatedAt = SqliteValues.GetDateTime(reader, 24),
-            UpdatedAt = SqliteValues.GetDateTime(reader, 25),
-        };
-    }
+            Forced = SqliteValues.GetString(reader, 30),
+            HearingImpaired = SqliteValues.GetString(reader, 31),
+            Commentary = SqliteValues.GetString(reader, 32),
+            AudioDescription = SqliteValues.GetString(reader, 33),
+        },
+        ClearVideoTrackNames = SqliteValues.GetBool(reader, 34),
+        RemoveChapters = SqliteValues.GetBool(reader, 35),
+        CreatedAt = SqliteValues.GetDateTime(reader, 36),
+        UpdatedAt = SqliteValues.GetDateTime(reader, 37),
+    };
 }
