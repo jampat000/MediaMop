@@ -1,0 +1,203 @@
+{
+  "name": "long-language-tier-english",
+  "input": {
+    "probe": {
+      "streams": [
+        {
+          "index": 0,
+          "codec_type": "video",
+          "codec_name": "h264",
+          "width": 1920,
+          "height": 1080,
+          "avg_frame_rate": "24000/1001",
+          "nb_frames": "150000",
+          "disposition": {
+            "default": 1,
+            "attached_pic": 0
+          }
+        },
+        {
+          "index": 1,
+          "codec_type": "audio",
+          "codec_name": "ac3",
+          "channels": 6,
+          "bit_rate": "448000",
+          "tags": {
+            "language": "english"
+          },
+          "disposition": {
+            "default": 0,
+            "forced": 0
+          }
+        },
+        {
+          "index": 2,
+          "codec_type": "audio",
+          "codec_name": "aac",
+          "channels": 2,
+          "bit_rate": "128000",
+          "tags": {
+            "language": "pt-BR"
+          },
+          "disposition": {
+            "default": 0,
+            "forced": 0
+          }
+        },
+        {
+          "index": 3,
+          "codec_type": "audio",
+          "codec_name": "aac",
+          "channels": 2,
+          "bit_rate": "128000",
+          "tags": {
+            "language": "zh-Hans"
+          },
+          "disposition": {
+            "default": 0,
+            "forced": 0
+          }
+        },
+        {
+          "index": 4,
+          "codec_type": "audio",
+          "codec_name": "aac",
+          "channels": 2,
+          "bit_rate": "128000",
+          "tags": {
+            "language": "a-very-long-language-tag"
+          },
+          "disposition": {
+            "default": 0,
+            "forced": 0
+          }
+        },
+        {
+          "index": 5,
+          "codec_type": "subtitle",
+          "codec_name": "subrip",
+          "tags": {
+            "language": "pt-br"
+          },
+          "disposition": {
+            "default": 0,
+            "forced": 0
+          }
+        },
+        {
+          "index": 6,
+          "codec_type": "subtitle",
+          "codec_name": "subrip",
+          "tags": {
+            "language": "zh-Hans"
+          },
+          "disposition": {
+            "default": 0,
+            "forced": 0
+          }
+        }
+      ],
+      "format": {
+        "format_name": "matroska,webm"
+      }
+    },
+    "config": {
+      "primary_audio_lang": "english",
+      "secondary_audio_lang": "PT-br",
+      "tertiary_audio_lang": "",
+      "default_audio_slot": "primary",
+      "remove_commentary": true,
+      "subtitle_mode": "remove_all",
+      "subtitle_langs": [],
+      "preserve_forced_subs": true,
+      "preserve_default_subs": true,
+      "audio_preference_mode": "preferred_langs_quality",
+      "audio_sorters_json": "",
+      "metadata": {
+        "remove_images": false,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      },
+      "preferred_audio_indices": [],
+      "original_language_note": ""
+    }
+  },
+  "expected": {
+    "split": {
+      "video": [
+        0
+      ],
+      "audio": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "subtitles": [
+        5,
+        6
+      ],
+      "attachments": []
+    },
+    "plan": {
+      "video_indices": [
+        0
+      ],
+      "audio": [
+        {
+          "input_index": 1,
+          "lang_label": "english",
+          "commentary": false,
+          "forced": false,
+          "default": true,
+          "channels": 6,
+          "lossless": false,
+          "bitrate": 448000,
+          "codec_rank": 13,
+          "codec_name": "ac3",
+          "kind": "audio"
+        }
+      ],
+      "subtitles": [],
+      "removed_audio": [
+        "pt aac 2 ch (stream 2): removed (not selected — english ac3 6 ch (stream 1) kept)",
+        "zh aac 2 ch (stream 3): removed (not selected — english ac3 6 ch (stream 1) kept)",
+        "a-very-long- aac 2 ch (stream 4): removed (not selected — english ac3 6 ch (stream 1) kept)"
+      ],
+      "removed_subtitles": [
+        "pt",
+        "zh"
+      ],
+      "default_audio_output_index": 0,
+      "audio_selection_notes": [
+        "Track ranking: commentary first, then channels lowest first, then codec order, then bitrate lowest first, then default first.",
+        "Selected english ac3 6 ch (stream 1) as the only track in the first matching language tier.",
+        "Removed non-selected pt aac 2 ch (stream 2) after selecting english ac3 6 ch (stream 1).",
+        "Removed non-selected zh aac 2 ch (stream 3) after selecting english ac3 6 ch (stream 1).",
+        "Removed non-selected a-very-long- aac 2 ch (stream 4) after selecting english ac3 6 ch (stream 1).",
+        "Ignored pt aac 2 ch (stream 2) because preferred languages (tiered quality) had candidates in 'english' first."
+      ],
+      "removed_images": [],
+      "removed_attachments": [],
+      "metadata_notes": [],
+      "metadata": {
+        "remove_images": false,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      }
+    },
+    "remux_required": true,
+    "lines": {
+      "audio_before": "ENGLISH 5.1 AC-3 · PT 2.0 AAC · ZH 2.0 AAC · A-VERY-LONG- 2.0 AAC",
+      "audio_after": "ENGLISH 5.1 AC-3",
+      "subtitle_before": "PT · ZH",
+      "subtitle_after": "None",
+      "metadata_removed": "—"
+    },
+    "metadata_argv": []
+  }
+}

@@ -1,0 +1,203 @@
+{
+  "name": "tier-all-languages",
+  "input": {
+    "probe": {
+      "streams": [
+        {
+          "index": 0,
+          "codec_type": "video",
+          "codec_name": "h264",
+          "width": 1920,
+          "height": 1080,
+          "avg_frame_rate": "24000/1001",
+          "nb_frames": "150000",
+          "disposition": {
+            "default": 1,
+            "attached_pic": 0
+          }
+        },
+        {
+          "index": 1,
+          "codec_type": "audio",
+          "codec_name": "truehd",
+          "channels": 8,
+          "bit_rate": "4000000",
+          "tags": {
+            "language": "eng"
+          },
+          "disposition": {
+            "default": 1,
+            "forced": 0
+          }
+        },
+        {
+          "index": 2,
+          "codec_type": "audio",
+          "codec_name": "ac3",
+          "channels": 6,
+          "bit_rate": "640000",
+          "tags": {
+            "language": "eng"
+          },
+          "disposition": {
+            "default": 0,
+            "forced": 0
+          }
+        },
+        {
+          "index": 3,
+          "codec_type": "audio",
+          "codec_name": "aac",
+          "channels": 2,
+          "bit_rate": "128000",
+          "tags": {
+            "language": "eng",
+            "title": "Director's Commentary"
+          },
+          "disposition": {
+            "default": 0,
+            "forced": 0
+          }
+        },
+        {
+          "index": 4,
+          "codec_type": "audio",
+          "codec_name": "dts",
+          "channels": 6,
+          "bit_rate": "1509000",
+          "tags": {
+            "language": "fre"
+          },
+          "disposition": {
+            "default": 0,
+            "forced": 0
+          }
+        },
+        {
+          "index": 5,
+          "codec_type": "subtitle",
+          "codec_name": "subrip",
+          "tags": {
+            "language": "eng"
+          },
+          "disposition": {
+            "default": 0,
+            "forced": 0
+          }
+        },
+        {
+          "index": 6,
+          "codec_type": "subtitle",
+          "codec_name": "subrip",
+          "tags": {
+            "language": "fre"
+          },
+          "disposition": {
+            "default": 0,
+            "forced": 1
+          }
+        }
+      ],
+      "format": {
+        "format_name": "matroska,webm"
+      }
+    },
+    "config": {
+      "primary_audio_lang": "eng",
+      "secondary_audio_lang": "jpn",
+      "tertiary_audio_lang": "",
+      "default_audio_slot": "primary",
+      "remove_commentary": false,
+      "subtitle_mode": "remove_all",
+      "subtitle_langs": [],
+      "preserve_forced_subs": true,
+      "preserve_default_subs": true,
+      "audio_preference_mode": "quality_all_languages",
+      "audio_sorters_json": "",
+      "metadata": {
+        "remove_images": false,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      },
+      "preferred_audio_indices": [],
+      "original_language_note": ""
+    }
+  },
+  "expected": {
+    "split": {
+      "video": [
+        0
+      ],
+      "audio": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "subtitles": [
+        5,
+        6
+      ],
+      "attachments": []
+    },
+    "plan": {
+      "video_indices": [
+        0
+      ],
+      "audio": [
+        {
+          "input_index": 1,
+          "lang_label": "eng",
+          "commentary": false,
+          "forced": false,
+          "default": true,
+          "channels": 8,
+          "lossless": true,
+          "bitrate": 4000000,
+          "codec_rank": 0,
+          "codec_name": "truehd",
+          "kind": "audio"
+        }
+      ],
+      "subtitles": [],
+      "removed_audio": [
+        "eng ac3 6 ch (stream 2): removed (not selected — eng truehd 8 ch (stream 1) kept)",
+        "eng aac 2 ch (stream 3): removed (not selected — eng truehd 8 ch (stream 1) kept)",
+        "fre dts 6 ch (stream 4): removed (not selected — eng truehd 8 ch (stream 1) kept)"
+      ],
+      "removed_subtitles": [
+        "eng",
+        "fre"
+      ],
+      "default_audio_output_index": 0,
+      "audio_selection_notes": [
+        "Track ranking: commentary first, then channels lowest first, then codec order, then bitrate lowest first, then default first.",
+        "Selected eng truehd 8 ch (stream 1) using quality across all languages (policy: quality across all languages).",
+        "Removed non-selected eng ac3 6 ch (stream 2) after selecting eng truehd 8 ch (stream 1).",
+        "Removed non-selected eng aac 2 ch (stream 3) after selecting eng truehd 8 ch (stream 1).",
+        "Removed non-selected fre dts 6 ch (stream 4) after selecting eng truehd 8 ch (stream 1)."
+      ],
+      "removed_images": [],
+      "removed_attachments": [],
+      "metadata_notes": [],
+      "metadata": {
+        "remove_images": false,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      }
+    },
+    "remux_required": true,
+    "lines": {
+      "audio_before": "English 7.1 TrueHD · English 5.1 AC-3 · English 2.0 AAC · French 5.1 DTS",
+      "audio_after": "English 7.1 TrueHD",
+      "subtitle_before": "English · French",
+      "subtitle_after": "None",
+      "metadata_removed": "—"
+    },
+    "metadata_argv": []
+  }
+}

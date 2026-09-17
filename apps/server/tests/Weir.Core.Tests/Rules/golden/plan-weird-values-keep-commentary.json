@@ -1,0 +1,168 @@
+{
+  "name": "weird-values-keep-commentary",
+  "input": {
+    "probe": {
+      "streams": [
+        {
+          "index": "0",
+          "codec_type": "Video ",
+          "codec_name": "hevc"
+        },
+        {
+          "index": "1",
+          "codec_type": " AUDIO",
+          "codec_name": "DTS",
+          "channels": "6",
+          "bit_rate": 1509000,
+          "tags": {
+            "language": "ENG",
+            "title": null,
+            "comment": "Commentary track"
+          },
+          "disposition": {
+            "default": "1",
+            "forced": "yes",
+            "comment": null
+          }
+        },
+        {
+          "index": 2,
+          "codec_type": "audio",
+          "codec_name": "",
+          "channels": 0,
+          "tags": [
+            "not",
+            "a",
+            "dict"
+          ],
+          "disposition": "nope"
+        },
+        {
+          "index": 3,
+          "codec_type": "audio",
+          "codec_name": "aac",
+          "channels": 2.9,
+          "bit_rate": true,
+          "tags": {
+            "language": null,
+            "LANGUAGE": "fre",
+            "title": 5
+          },
+          "disposition": {
+            "default": 1.7
+          }
+        },
+        {
+          "index": 4,
+          "codec_type": "subtitle",
+          "tags": {
+            "language": "EN-gb"
+          },
+          "disposition": {
+            "forced": "1"
+          }
+        },
+        "not a stream",
+        42,
+        {
+          "codec_type": "data"
+        }
+      ],
+      "format": {
+        "format_name": "matroska,webm"
+      }
+    },
+    "config": {
+      "primary_audio_lang": "eng",
+      "secondary_audio_lang": "jpn",
+      "tertiary_audio_lang": "",
+      "default_audio_slot": "primary",
+      "remove_commentary": false,
+      "subtitle_mode": "remove_all",
+      "subtitle_langs": [],
+      "preserve_forced_subs": true,
+      "preserve_default_subs": true,
+      "audio_preference_mode": "preferred_langs_quality",
+      "audio_sorters_json": "",
+      "metadata": {
+        "remove_images": false,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      },
+      "preferred_audio_indices": [],
+      "original_language_note": ""
+    }
+  },
+  "expected": {
+    "split": {
+      "video": [
+        "0"
+      ],
+      "audio": [
+        "1",
+        2,
+        3
+      ],
+      "subtitles": [
+        4
+      ],
+      "attachments": []
+    },
+    "plan": {
+      "video_indices": [
+        0
+      ],
+      "audio": [
+        {
+          "input_index": 1,
+          "lang_label": "eng",
+          "commentary": true,
+          "forced": false,
+          "default": true,
+          "channels": 6,
+          "lossless": false,
+          "bitrate": 1509000,
+          "codec_rank": 15,
+          "codec_name": "DTS",
+          "kind": "audio"
+        }
+      ],
+      "subtitles": [],
+      "removed_audio": [
+        "unknown unknown unknown channels (stream 2): removed (not selected — eng DTS 6 ch (stream 1) kept)",
+        "none aac 2 ch (stream 3): removed (not selected — eng DTS 6 ch (stream 1) kept)"
+      ],
+      "removed_subtitles": [
+        "en"
+      ],
+      "default_audio_output_index": 0,
+      "audio_selection_notes": [
+        "Track ranking: commentary first, then channels lowest first, then codec order, then bitrate lowest first, then default first.",
+        "Selected eng DTS 6 ch (stream 1) as the only track in the first matching language tier.",
+        "Removed non-selected unknown unknown unknown channels (stream 2) after selecting eng DTS 6 ch (stream 1).",
+        "Removed non-selected none aac 2 ch (stream 3) after selecting eng DTS 6 ch (stream 1)."
+      ],
+      "removed_images": [],
+      "removed_attachments": [],
+      "metadata_notes": [],
+      "metadata": {
+        "remove_images": false,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      }
+    },
+    "remux_required": true,
+    "lines": {
+      "audio_before": "English 5.1 DTS · NONE 2.0 AAC",
+      "audio_after": "English 5.1 DTS",
+      "subtitle_before": "EN",
+      "subtitle_after": "None",
+      "metadata_removed": "—"
+    },
+    "metadata_argv": []
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "name": "error-attached-pic-not-an-int",
+  "input": {
+    "probe": {
+      "streams": [
+        {
+          "index": 0,
+          "codec_type": "video",
+          "codec_name": "h264",
+          "width": 1920,
+          "height": 1080,
+          "avg_frame_rate": "24000/1001",
+          "nb_frames": "150000",
+          "disposition": {
+            "default": 1,
+            "attached_pic": 0
+          }
+        },
+        {
+          "index": 1,
+          "codec_type": "video",
+          "disposition": {
+            "attached_pic": "x"
+          }
+        }
+      ],
+      "format": {
+        "format_name": "matroska,webm"
+      }
+    },
+    "config": {
+      "primary_audio_lang": "eng",
+      "secondary_audio_lang": "jpn",
+      "tertiary_audio_lang": "",
+      "default_audio_slot": "primary",
+      "remove_commentary": true,
+      "subtitle_mode": "remove_all",
+      "subtitle_langs": [],
+      "preserve_forced_subs": true,
+      "preserve_default_subs": true,
+      "audio_preference_mode": "preferred_langs_quality",
+      "audio_sorters_json": "",
+      "metadata": {
+        "remove_images": false,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      },
+      "preferred_audio_indices": [],
+      "original_language_note": ""
+    }
+  },
+  "expected": {
+    "error": "ValueError"
+  }
+}
