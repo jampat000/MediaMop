@@ -31,3 +31,13 @@ def test_failure_message_marks_rate_limits_as_recoverable() -> None:
     assert failure.kind == "rate_limit"
     assert "skipped and continued" in failure.message
     assert "continue with the next available provider" in failure.what_happens_next
+
+
+def test_a_missing_or_locked_file_is_a_filesystem_problem_not_a_network_one() -> None:
+    for exc in (FileNotFoundError("D:/Downloads/film.mkv"), PermissionError("denied")):
+        assert classify_exception(exc) == "filesystem"
+    failure = operator_failure_from_exception(
+        module="Refiner", action="remux", provider=None, exc=FileNotFoundError("gone"), recoverable=False
+    )
+    assert "file or folder" in failure.message + (failure.next_action or "")
+    assert classify_exception(ConnectionRefusedError("refused")) == "network"

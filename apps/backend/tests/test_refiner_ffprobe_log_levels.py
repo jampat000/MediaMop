@@ -51,3 +51,30 @@ def test_ffprobe_failure_result_still_warns(tmp_path: Path, monkeypatch) -> None
         refiner_remux_mux.ffprobe_json(media, mediamop_home=str(tmp_path))
 
     assert any("REFINER_FFPROBE_RESULT" in message for message in warning_messages)
+
+
+@pytest.mark.parametrize(
+    ("stderr", "unreadable"),
+    [
+        ("film.mkv: Invalid data found when processing input", True),
+        ("EBML header parsing failed", True),
+        ("film.mkv: Permission denied", False),
+        ("broken", False),
+    ],
+)
+def test_only_ffprobe_saying_the_contents_are_unreadable_marks_the_media_bad(
+    tmp_path: Path, monkeypatch, stderr: str, unreadable: bool
+) -> None:
+    # Only this is evidence the release is bad; a denied or missing ffprobe says nothing about it.
+    media = tmp_path / "movie.mkv"
+    media.write_bytes(b"\0" * 64)
+    monkeypatch.setattr(refiner_remux_mux, "resolve_ffprobe_ffmpeg", lambda *, mediamop_home: ("ffprobe", "ffmpeg"))
+    monkeypatch.setattr(
+        refiner_remux_mux.subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(returncode=1, stdout="", stderr=stderr),
+    )
+
+    with pytest.raises(RuntimeError) as caught:
+        refiner_remux_mux.ffprobe_json(media, mediamop_home=str(tmp_path))
+    assert isinstance(caught.value, refiner_remux_mux.MediaUnreadableError) is unreadable

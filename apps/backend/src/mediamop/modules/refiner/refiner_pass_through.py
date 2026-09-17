@@ -170,6 +170,33 @@ def enqueue_reject(
     )
 
 
+def reject_bad_release(
+    session: Session,
+    *,
+    library: RefinerLibraryRow,
+    relative_path: str,
+    reason: str,
+    origin: dict[str, Any] | None = None,
+) -> bool:
+    """Under ``reject``, queue a reject for a file whose *content* was found unusable.
+
+    Returns True when a reject was queued. Called only for content rejections (no video stream,
+    no retainable audio), which are the evidence that the release itself is bad.
+    """
+
+    if normalize_failure_policy(library.failure_policy) != FAILURE_POLICY_REJECT:
+        return False
+    enqueue_reject(
+        session,
+        library=library,
+        relative_path=relative_path,
+        origin=origin,
+        reason=reason,
+        failure_class="preflight",
+    )
+    return True
+
+
 def apply_failure_policy(
     session: Session,
     *,
@@ -177,6 +204,7 @@ def apply_failure_policy(
     relative_path: str,
     will_retry: bool,
     origin: dict[str, Any] | None = None,
+    bad_release: bool = False,
 ) -> str | None:
     """Act on a recorded failure. Returns the follow-up queued — ``pass_through`` or ``reject`` — or None.
 
@@ -197,22 +225,24 @@ def apply_failure_policy(
         ),
     ).first()
 
-    if policy == FAILURE_POLICY_REJECT:
-        enqueue_reject(
-            session,
-            library=library,
-            relative_path=relative_path,
-            origin=origin,
-            reason=row.status_reason if row is not None else None,
-            failure_class=row.failure_class if row is not None else None,
-        )
+    if bad_release and reject_bad_release(
+        session,
+        library=library,
+        relative_path=relative_path,
+        reason=row.status_reason if row is not None else "MediaMop could not read this file's contents.",
+        origin=origin,
+    ):
         if row is not None:
             row.status_reason = (
-                f"{row.status_reason} MediaMop could not process this file, so it is telling your media manager "
-                "the release is bad so it can find a different one."
+                f"{row.status_reason} MediaMop is telling your media manager this release is bad so it can find "
+                "a different one."
             ).strip()[:10000]
         return FAILURE_POLICY_REJECT
 
+    # Any other failure that reaches this point is not evidence the release is bad: a path MediaMop cannot
+    # use, a file it cannot read, a crashed ffmpeg, a full disk. Rejecting on those would have the
+    # manager blocklist a good release, so under ``reject`` they are handed back like ``pass_through``.
+    # Only a content rejection (no video, no usable audio) rejects — see ``reject_bad_release``.
     enqueue_pass_through(session, library=library, relative_path=relative_path, origin=origin)
     if row is not None:
         # Say what is about to happen, so the screen never shows a failure that is already being

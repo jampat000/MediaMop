@@ -19,6 +19,8 @@ for N hours" as a stall.
 
 from __future__ import annotations
 
+import contextlib
+import json
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -156,15 +158,34 @@ class HandoffStatus:
         }
 
 
+def _file_rows(session: Session, row: MediaManagerHandoffRow) -> list[RefinerFileRow]:
+    """The file, or every file under the folder, this hand-off covers."""
+
+    if row.library_id is None:
+        return []
+    path = row.relative_path.rstrip("/")
+    return list(
+        session.scalars(
+            select(RefinerFileRow).where(
+                RefinerFileRow.library_id == row.library_id,
+                or_(RefinerFileRow.relative_path == path, RefinerFileRow.relative_path.startswith(f"{path}/")),
+            )
+        )
+    )
+
+
 def _jobs_for(session: Session, row: MediaManagerHandoffRow) -> list[RefinerJob]:
-    keys = [remux_dedupe_key(row.source_key, row.handoff_id)]
+    base = remux_dedupe_key(row.source_key, row.handoff_id)
+    conditions = [RefinerJob.dedupe_key == base, RefinerJob.dedupe_key.startswith(f"{base}:")]
     if row.library_id is not None:
-        keys.append(f"{REFINER_FILE_PASS_THROUGH_JOB_KIND}:{row.library_id}:{row.relative_path}")
-        keys.append(f"{REFINER_FILE_REJECT_JOB_KIND}:{row.library_id}:{row.relative_path}")
+        paths = {row.relative_path, *(f.relative_path for f in _file_rows(session, row))}
+        for path in paths:
+            conditions.append(RefinerJob.dedupe_key == f"{REFINER_FILE_PASS_THROUGH_JOB_KIND}:{row.library_id}:{path}")
+            conditions.append(RefinerJob.dedupe_key == f"{REFINER_FILE_REJECT_JOB_KIND}:{row.library_id}:{path}")
     return list(
         session.scalars(
             select(RefinerJob).where(
-                RefinerJob.dedupe_key.in_(keys),
+                or_(*conditions),
                 RefinerJob.status.in_([RefinerJobStatus.PENDING.value, RefinerJobStatus.LEASED.value]),
             )
         )
@@ -184,15 +205,45 @@ def _queue_position(session: Session, job: RefinerJob) -> int:
     return int(ahead or 0) + 1
 
 
-def _file_row(session: Session, row: MediaManagerHandoffRow) -> RefinerFileRow | None:
-    if row.library_id is None:
-        return None
-    return session.scalars(
-        select(RefinerFileRow).where(
-            RefinerFileRow.library_id == row.library_id,
-            RefinerFileRow.relative_path == row.relative_path,
-        )
-    ).first()
+def _file_state(file_row: RefinerFileRow, now: datetime) -> tuple[str, datetime | None]:
+    """One file's state in the manager's words, and when it would next run if that is known."""
+
+    status = file_row.status
+    retry_at = _utc(file_row.next_retry_at)
+    if status == RefinerFileStatus.PROCESSING.value:
+        return STATE_WORKING, None
+    if status == RefinerFileStatus.PROCESSED.value:
+        return STATE_COMPLETED, None
+    if status == RefinerFileStatus.PASSED_THROUGH.value:
+        return STATE_PASSED_THROUGH, None
+    if status == RefinerFileStatus.REJECTED.value:
+        return STATE_REJECTED, None
+    if status == RefinerFileStatus.PROCESSING_FAILED.value:
+        return (STATE_SCHEDULED, retry_at) if retry_at is not None and retry_at > now else (STATE_FAILED, None)
+    if status == RefinerFileStatus.SKIPPED.value:
+        # A library rule turned the file away. Nothing will happen to it on its own.
+        return STATE_FAILED, None
+    if status == RefinerFileStatus.OUT_OF_SCHEDULE.value:
+        return STATE_SCHEDULED, None
+    if status == RefinerFileStatus.ON_HOLD.value and int(file_row.failure_attempts or 0) >= 3:
+        # Quarantined after repeated failures: nothing happens until a person acts. A manager
+        # waiting on this would wait for its stall limit, so it is reported as failed.
+        return STATE_FAILED, None
+    # Waiting, on hold while it settles, library off, or held because the manager is itself
+    # mid-import: all "not yet", none of them a stall.
+    return STATE_QUEUED, None
+
+
+def _combine(states: list[str]) -> str:
+    """A hand-off covering several files is as far along as its least finished file."""
+
+    for waiting in (STATE_WORKING, STATE_QUEUED, STATE_SCHEDULED):
+        if waiting in states:
+            return waiting
+    for outcome in (STATE_FAILED, STATE_REJECTED, STATE_PASSED_THROUGH):
+        if outcome in states:
+            return outcome
+    return STATE_COMPLETED
 
 
 def current_status(session: Session, row: MediaManagerHandoffRow) -> HandoffStatus:
@@ -207,50 +258,52 @@ def current_status(session: Session, row: MediaManagerHandoffRow) -> HandoffStat
 
     if row.state != STATE_CANCELLED:
         jobs = _jobs_for(session, row)
-        file_row = _file_row(session, row)
-        leased = [j for j in jobs if j.status == RefinerJobStatus.LEASED.value]
-        pending = sorted((j for j in jobs if j.status == RefinerJobStatus.PENDING.value), key=lambda j: j.id)
-        if leased:
-            live_state = STATE_WORKING
-            changed_at = max(_utc(j.updated_at) or now for j in leased)
-        elif pending:
-            job = pending[0]
+        files = _file_rows(session, row)
+        states: list[str] = []
+        stamps: list[datetime] = []
+        busy_paths: set[str] = set()
+
+        for job in jobs:
+            stamp = _utc(job.updated_at)
+            if stamp is not None:
+                stamps.append(stamp)
+            with contextlib.suppress(ValueError):
+                busy_paths.add(str(json.loads(job.payload_json or "{}").get("relative_media_path") or ""))
+            if job.status == RefinerJobStatus.LEASED.value:
+                states.append(STATE_WORKING)
+                continue
             not_before = _utc(job.not_before)
             if not_before is not None and not_before > now:
-                live_state, scheduled_for = STATE_SCHEDULED, not_before
+                states.append(STATE_SCHEDULED)
+                scheduled_for = min(scheduled_for, not_before) if scheduled_for else not_before
             else:
-                live_state = STATE_QUEUED
-                queue_position = _queue_position(session, job)
-            changed_at = _utc(job.updated_at)
-            if file_row is not None and file_row.status_reason:
+                states.append(STATE_QUEUED)
+                position = _queue_position(session, job)
+                queue_position = min(queue_position, position) if queue_position else position
+
+        for file_row in files:
+            stamp = _utc(file_row.updated_at)
+            if stamp is not None:
+                stamps.append(stamp)
+            if file_row.relative_path in busy_paths:
+                # A queued or running job speaks for this file more recently than its row does.
+                if file_row.status_reason and message is None:
+                    message = file_row.status_reason
+                continue
+            state, when = _file_state(file_row, now)
+            states.append(state)
+            if when is not None:
+                scheduled_for = min(scheduled_for, when) if scheduled_for else when
+            if file_row.status_reason and (message is None or state not in TERMINAL_STATES):
                 message = file_row.status_reason
-        elif file_row is not None:
-            status = file_row.status
-            message = file_row.status_reason or None
-            changed_at = _utc(file_row.updated_at)
-            retry_at = _utc(file_row.next_retry_at)
-            if status == RefinerFileStatus.PROCESSING.value:
-                live_state = STATE_WORKING
-            elif status == RefinerFileStatus.PROCESSED.value:
-                live_state = STATE_COMPLETED
-            elif status == RefinerFileStatus.PASSED_THROUGH.value:
-                live_state = STATE_PASSED_THROUGH
-            elif status == RefinerFileStatus.REJECTED.value:
-                live_state = STATE_REJECTED
-            elif status == RefinerFileStatus.PROCESSING_FAILED.value:
-                if retry_at is not None and retry_at > now:
-                    live_state, scheduled_for = STATE_SCHEDULED, retry_at
-                else:
-                    live_state = STATE_FAILED
-            elif status == RefinerFileStatus.SKIPPED.value:
-                # A library rule turned the file away. Nothing will happen to it on its own.
-                live_state = STATE_FAILED
-            elif status == RefinerFileStatus.OUT_OF_SCHEDULE.value:
-                live_state = STATE_SCHEDULED
-            else:
-                # Waiting, on hold while it settles, library off, or held because the manager is
-                # itself mid-import: all "not yet", none of them a stall.
-                live_state = STATE_QUEUED
+
+        if states:
+            live_state = _combine(states)
+            changed_at = max(stamps) if stamps else None
+            if live_state != STATE_QUEUED:
+                queue_position = None
+            if live_state != STATE_SCHEDULED:
+                scheduled_for = None
 
     if live_state is not None:
         previous = _utc(row.last_changed_at)
@@ -289,9 +342,9 @@ def cancel_handoff(session: Session, row: MediaManagerHandoffRow) -> tuple[bool,
     for job in _jobs_for(session, row):
         if job.status == RefinerJobStatus.PENDING.value:
             cancel_pending_refiner_job(session, job_id=job.id)
-    file_row = _file_row(session, row)
-    if file_row is not None and file_row.next_retry_at is not None:
-        file_row.next_retry_at = None
+    for file_row in _file_rows(session, row):
+        if file_row.next_retry_at is not None:
+            file_row.next_retry_at = None
     row.state = STATE_CANCELLED
     row.message = "The media manager cancelled this hand-off before MediaMop started on it."
     row.last_changed_at = datetime.now(UTC)
