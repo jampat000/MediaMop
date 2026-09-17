@@ -23,6 +23,10 @@ dotnet_diagnostic.IDE0005.severity = warning  # unnecessary usings
 dotnet_diagnostic.IDE0161.severity = warning  # file-scoped namespaces
 dotnet_diagnostic.IDE0011.severity = warning  # braces
 dotnet_diagnostic.IDE0044.severity = warning  # readonly fields
+# Dead-code guard (scripts/check-dead-code.mjs covers the web app): unused private members and private
+# members that are written but never read fail the build.
+dotnet_diagnostic.IDE0051.severity = warning  # unused private members
+dotnet_diagnostic.IDE0052.severity = warning  # unread private members
 dotnet_sort_system_directives_first = true
 
 # Weir writes explicit SQL through Microsoft.Data.Sqlite; table and column names come from

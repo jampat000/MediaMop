@@ -116,11 +116,11 @@ public static class AuthEndpoints
 
     private static async Task<ApiResult> GetBootstrapStatusAsync(ApiRequest request)
     {
-        const string schemaNotReady = "Local SQLite schema is not ready (run alembic upgrade head).";
+        const string schemaNotReady = "Local SQLite schema is not ready (Weir migrates its database at startup; check the server log and restart it).";
         const string databaseUnavailable = "SQLite database unavailable or cannot be opened (check WEIR_HOME and WEIR_DB_PATH).";
         const string queryFailed =
             "Database query failed while checking bootstrap status. " +
-            "See backend logs, run alembic upgrade head, and verify WEIR_HOME / WEIR_DB_PATH.";
+            "See the server log, restart Weir so it can migrate the database, and verify WEIR_HOME / WEIR_DB_PATH.";
         bool allowed;
         try
         {
@@ -150,8 +150,8 @@ public static class AuthEndpoints
             request.LoggerFactory.CreateLogger("weir.platform.auth.router").LogError(exception, "bootstrap status: unexpected failure");
             throw new ApiException(
                 StatusCodes.Status503ServiceUnavailable,
-                "Could not read bootstrap status. Check backend logs, run database migrations " +
-                "(alembic upgrade head), and verify WEIR_HOME / WEIR_DB_PATH.");
+                "Could not read bootstrap status. Check the server log, restart Weir so it can migrate " +
+                "the database, and verify WEIR_HOME / WEIR_DB_PATH.");
         }
 
         return ApiRoutes.Ok(new PyDict()

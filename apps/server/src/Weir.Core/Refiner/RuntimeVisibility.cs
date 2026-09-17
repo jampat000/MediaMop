@@ -58,30 +58,30 @@ public static class RuntimeVisibility
         "enabled switch and scan interval, saved in the database and applied without a restart) and per scope on " +
         "the Refiner operator-settings screen (Movies/TV periodic-scan switch). It can also be turned off " +
         "altogether, for every scope, with WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED in " +
-        "apps/backend/.env (default on; #533 — a manual scan still works with this off). Whether a periodic scan " +
+        "the server's environment (default on; #533 — a manual scan still works with this off). Whether a periodic scan " +
         "that does run may also queue file work is the separate " +
         "WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS (default on). Restart the API " +
         "after changing either environment variable — both are read at process start only. " +
         "Refiner ffprobe preflight depth: WEIR_REFINER_PROBE_SIZE_MB and WEIR_REFINER_ANALYZE_DURATION_SECONDS in " +
-        "apps/backend/.env (read at startup; restart required).";
+        "the server's environment (read at startup; restart required).";
 
     private const string MovieOutputCleanupNote =
         "Movies output-folder cleanup (Pass 3a) after a successful Movies remux uses " +
-        "WEIR_REFINER_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS in apps/backend/.env (default 48 hours, clamped 1h..30d). " +
+        "WEIR_REFINER_MOVIE_OUTPUT_CLEANUP_MIN_AGE_SECONDS in the server's environment (default 48 hours, clamped 1h..30d). " +
         "Restart the API after changing this value.";
 
     private const string TvOutputCleanupNote =
         "TV output-folder cleanup (Pass 3b) after a successful TV remux uses " +
-        "WEIR_REFINER_TV_OUTPUT_CLEANUP_MIN_AGE_SECONDS in apps/backend/.env (default 48 hours, clamped 1h..30d). " +
+        "WEIR_REFINER_TV_OUTPUT_CLEANUP_MIN_AGE_SECONDS in the server's environment (default 48 hours, clamped 1h..30d). " +
         "Restart the API after changing this value.";
 
     private const string FailureCleanupNote =
         "Refiner Pass 4 failed-remux cleanup sweep uses separate Movies and TV timers and grace periods in " +
-        "apps/backend/.env. Only terminal failed remux rows are eligible, and failure age uses refiner_jobs.updated_at. Restart required.";
+        "the server's environment. Only terminal failed remux rows are eligible, and failure age uses refiner_jobs.updated_at. Restart required.";
 
     private const string WorkTempStaleSweepPeriodicNote =
         "Optional periodic enqueue for refiner.work_temp_stale_sweep.v1 is per scope (Movies vs TV) in " +
-        "apps/backend/.env. Each tick enqueues one durable job per enabled scope. Restart the API after changing any of these.";
+        "the server's environment. Each tick enqueues one durable job per enabled scope. Restart the API after changing any of these.";
 
     public static RefinerRuntimeSettings From(WeirOptions options)
     {
