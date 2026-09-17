@@ -1,2 +1,5 @@
 # Shell entrypoints must use LF so Linux containers do not see /bin/sh^M.
 docker/*.sh text eol=lf
+# The .NET server's SQL migrations become sqlite_master text; it must match an Alembic-created
+# database byte for byte, so these stay LF on every checkout.
+apps/server/**/*.sql text eol=lf

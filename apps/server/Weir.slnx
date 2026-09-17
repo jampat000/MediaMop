@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Weir.Api/Weir.Api.csproj" />
+    <Project Path="src/Weir.Core/Weir.Core.csproj" />
+    <Project Path="src/Weir.Host/Weir.Host.csproj" />
+    <Project Path="src/Weir.Infrastructure/Weir.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Weir.Api.Tests/Weir.Api.Tests.csproj" />
+    <Project Path="tests/Weir.Core.Tests/Weir.Core.Tests.csproj" />
+    <Project Path="tests/Weir.Infrastructure.Tests/Weir.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>

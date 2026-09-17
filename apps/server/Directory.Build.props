@@ -1,0 +1,41 @@
+<Project>
+  <!-- Build rules from ADR-0017: nullable warnings are errors, all warnings are errors, latest analyzers. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <WarningsAsErrors>$(WarningsAsErrors);nullable</WarningsAsErrors>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- CS1591: public members without XML docs. Docs are written where they explain a decision, not everywhere. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <Deterministic>true</Deterministic>
+    <!-- Symbols inside the assemblies, so a single-file publish is one file. -->
+    <DebugType>embedded</DebugType>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <Company>Weir</Company>
+    <Product>Weir</Product>
+    <Copyright>Weir contributors</Copyright>
+  </PropertyGroup>
+
+  <!--
+    One version for the whole product. Until the Python backend is retired (#523) its
+    pyproject.toml stays the single source: packaging and the release workflow already read it.
+  -->
+  <PropertyGroup>
+    <WeirPyprojectPath>$(MSBuildThisFileDirectory)../backend/pyproject.toml</WeirPyprojectPath>
+    <WeirVersion Condition="Exists('$(WeirPyprojectPath)')">$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText('$(WeirPyprojectPath)')), '(?m)^version\s*=\s*"([^"]+)"').Groups[1].Value)</WeirVersion>
+    <WeirVersion Condition="'$(WeirVersion)' == ''">0.0.0</WeirVersion>
+    <Version>$(WeirVersion)</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+</Project>

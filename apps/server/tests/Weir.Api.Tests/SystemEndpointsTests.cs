@@ -1,0 +1,179 @@
+using System.Net;
+using System.Text.Json;
+using Microsoft.Data.Sqlite;
+using Weir.Core;
+using Weir.Infrastructure.Sqlite;
+
+namespace Weir.Api.Tests;
+
+public sealed class SystemEndpointsTests
+{
+    [Fact]
+    public async Task Health_is_ok_with_the_python_body_and_headers()
+    {
+        await using var server = await WeirTestServer.StartAsync();
+
+        using var response = await server.Client.GetAsync("/health");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("{\"status\":\"ok\",\"dependencies\":{\"database\":\"ok\"}}", await response.Content.ReadAsStringAsync());
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.ToString());
+        Assert.Equal("no-store, private", response.Headers.CacheControl?.ToString());
+        Assert.Equal("nosniff", Header(response, "X-Content-Type-Options"));
+        Assert.Equal("DENY", Header(response, "X-Frame-Options"));
+        Assert.Equal("strict-origin-when-cross-origin", Header(response, "Referrer-Policy"));
+        Assert.Equal("default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'", Header(response, "Content-Security-Policy"));
+        Assert.Matches("^[0-9a-f]{32}$", Header(response, "X-Request-ID"));
+        Assert.False(response.Headers.Contains("Strict-Transport-Security"));
+    }
+
+    [Fact]
+    public async Task Health_answers_head_and_refuses_other_methods_with_fastapi_bodies()
+    {
+        await using var server = await WeirTestServer.StartAsync();
+
+        using var head = await server.Client.SendAsync(new HttpRequestMessage(HttpMethod.Head, "/health"));
+        Assert.Equal(HttpStatusCode.OK, head.StatusCode);
+
+        using var post = await server.Client.PostAsync("/health", null);
+        Assert.Equal(HttpStatusCode.MethodNotAllowed, post.StatusCode);
+        Assert.Equal("{\"detail\":\"Method Not Allowed\"}", await post.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Request_id_is_echoed_and_hsts_is_opt_in()
+    {
+        await using var server = await WeirTestServer.StartAsync([("WEIR_SECURITY_ENABLE_HSTS", "true")]);
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/health");
+        request.Headers.Add("X-Request-ID", "trace-me");
+
+        using var response = await server.Client.SendAsync(request);
+
+        Assert.Equal("trace-me", Header(response, "X-Request-ID"));
+        Assert.Equal("max-age=31536000; includeSubDomains", Header(response, "Strict-Transport-Security"));
+    }
+
+    [Fact]
+    public async Task Health_is_unhealthy_when_the_database_cannot_be_reached()
+    {
+        await using var server = await WeirTestServer.StartAsync();
+        SqliteConnection.ClearAllPools();
+        var dbPath = Path.Join(server.Home, "data", "weir.sqlite3");
+        // Replace the file with a directory: any new connection now fails.
+        File.Delete(dbPath);
+        File.Delete(dbPath + "-wal");
+        File.Delete(dbPath + "-shm");
+        Directory.CreateDirectory(dbPath);
+
+        using var response = await server.Client.GetAsync("/health");
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Equal("{\"status\":\"unhealthy\",\"dependencies\":{\"database\":\"failed\"}}", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Readiness_requires_a_signed_in_operator()
+    {
+        await using var server = await WeirTestServer.StartAsync();
+
+        using var response = await server.Client.GetAsync("/api/v1/system/readiness");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal("{\"detail\":\"Not authenticated.\"}", await response.Content.ReadAsStringAsync());
+        Assert.Equal("no-store, private", response.Headers.CacheControl?.ToString());
+    }
+
+    [Fact]
+    public async Task Readiness_reports_workers_as_not_started()
+    {
+        await using var server = await WeirTestServer.StartAsync([("WEIR_VERSION", "7.8.9")], signedIn: true);
+
+        using var response = await server.Client.GetAsync("/api/v1/system/readiness");
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var root = body.RootElement;
+        Assert.Equal(["ready", "version", "status", "startup_seconds", "steps", "worker_health"], root.EnumerateObject().Select(p => p.Name));
+        Assert.False(root.GetProperty("ready").GetBoolean());
+        Assert.Equal("7.8.9", root.GetProperty("version").GetString());
+        Assert.Equal("failed", root.GetProperty("status").GetString());
+        Assert.True(root.GetProperty("startup_seconds").GetDouble() >= 0);
+        Assert.Equal(
+            "[{\"name\":\"database\",\"status\":\"ready\",\"detail\":\"Local database is connected and migrations are complete.\"}," +
+            "{\"name\":\"workers\",\"status\":\"failed\",\"detail\":\"One or more background workers are stale or stopped.\"}," +
+            "{\"name\":\"filesystem_watcher\",\"status\":\"ready\",\"detail\":\"No libraries are being watched for filesystem events.\"}]",
+            root.GetProperty("steps").GetRawText());
+        Assert.Equal(
+            "[{\"module\":\"refiner\",\"expected_workers\":8,\"active_workers\":0,\"stale_workers\":8,\"stopped_workers\":0,\"status\":\"degraded\"," +
+            "\"detail\":\"Refiner is not processing new work because 8 worker slot(s) stopped responding. Restart Weir; queued work remains safe.\"}]",
+            root.GetProperty("worker_health").GetRawText());
+    }
+
+    [Fact]
+    public async Task Readiness_is_ready_when_workers_are_turned_off()
+    {
+        await using var server = await WeirTestServer.StartAsync([("WEIR_REFINER_WORKER_COUNT", "0")], signedIn: true);
+
+        using var detailed = await server.Client.GetAsync("/api/v1/system/readiness");
+        using var brief = await server.Client.GetAsync("/ready");
+
+        Assert.Equal(HttpStatusCode.OK, detailed.StatusCode);
+        using var body = JsonDocument.Parse(await detailed.Content.ReadAsStringAsync());
+        Assert.True(body.RootElement.GetProperty("ready").GetBoolean());
+        Assert.Equal(WeirVersion.BuildVersion, body.RootElement.GetProperty("version").GetString());
+        Assert.Equal("disabled", body.RootElement.GetProperty("worker_health")[0].GetProperty("status").GetString());
+        Assert.Equal(HttpStatusCode.OK, brief.StatusCode);
+        Assert.Equal("{\"ready\":true,\"status\":\"ready\"}", await brief.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Public_ready_is_503_while_workers_are_not_running()
+    {
+        await using var server = await WeirTestServer.StartAsync();
+
+        using var response = await server.Client.GetAsync("/ready");
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Equal("{\"ready\":false,\"status\":\"failed\"}", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Startup_creates_the_database_and_the_log_file()
+    {
+        await using var server = await WeirTestServer.StartAsync();
+        using (await server.Client.GetAsync("/health"))
+        {
+        }
+
+        var dbPath = Path.Join(server.Home, "data", "weir.sqlite3");
+        Assert.True(File.Exists(dbPath));
+        Assert.True(Directory.Exists(Path.Join(server.Home, "backups")));
+        Assert.True(Directory.Exists(Path.Join(server.Home, "temp")));
+        using var stream = new FileStream(Path.Join(server.Home, "logs", "weir.log"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        using var reader = new StreamReader(stream);
+        var log = await reader.ReadToEndAsync();
+        Assert.Contains("\"message\": \"Created database schema revision=0036_drop_pruner_tables", log, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Startup_refuses_a_database_from_an_unknown_release()
+    {
+        var error = await Assert.ThrowsAsync<DatabaseSchemaMismatchException>(() => WeirTestServer.StartAsync(prepareHome: home =>
+        {
+            var dbPath = Path.Join(home, "data", "weir.sqlite3");
+            Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
+            using var connection = new SqliteConnection($"Data Source={dbPath};Pooling=False");
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL); INSERT INTO alembic_version VALUES ('0100_future');";
+            command.ExecuteNonQuery();
+        }));
+
+        Assert.Equal(SchemaMismatchKind.UnknownRevision, error.Kind);
+    }
+
+    private static string Header(HttpResponseMessage response, string name) =>
+        response.Headers.TryGetValues(name, out var values) || response.Content.Headers.TryGetValues(name, out values)
+            ? string.Join(", ", values)
+            : string.Empty;
+}
