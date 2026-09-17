@@ -1,0 +1,226 @@
+{
+  "name": "anime-jpn-strip-fonts",
+  "input": {
+    "probe": {
+      "streams": [
+        {
+          "index": 0,
+          "codec_type": "video",
+          "codec_name": "h264",
+          "width": 1920,
+          "height": 1080,
+          "avg_frame_rate": "24000/1001",
+          "nb_frames": "150000",
+          "disposition": {
+            "default": 1,
+            "attached_pic": 0
+          }
+        },
+        {
+          "index": 1,
+          "codec_type": "audio",
+          "codec_name": "flac",
+          "channels": 2,
+          "bit_rate": "1000000",
+          "tags": {
+            "language": "jpn"
+          },
+          "disposition": {
+            "default": 1,
+            "forced": 0
+          }
+        },
+        {
+          "index": 2,
+          "codec_type": "audio",
+          "codec_name": "eac3",
+          "channels": 6,
+          "bit_rate": "640000",
+          "tags": {
+            "language": "eng"
+          },
+          "disposition": {
+            "default": 0,
+            "forced": 0
+          }
+        },
+        {
+          "index": 3,
+          "codec_type": "subtitle",
+          "codec_name": "ass",
+          "tags": {
+            "language": "eng"
+          },
+          "disposition": {
+            "default": 0,
+            "forced": 1
+          }
+        },
+        {
+          "index": 4,
+          "codec_type": "subtitle",
+          "codec_name": "ass",
+          "tags": {
+            "language": "eng"
+          },
+          "disposition": {
+            "default": 1,
+            "forced": 0
+          }
+        },
+        {
+          "index": 5,
+          "codec_type": "attachment",
+          "codec_name": "ttf",
+          "tags": {
+            "filename": "font1.otf",
+            "mimetype": "application/x-truetype-font"
+          }
+        },
+        {
+          "index": 6,
+          "codec_type": "attachment",
+          "codec_name": "ttf",
+          "tags": {
+            "filename": "font2.ttf",
+            "mimetype": "application/x-truetype-font"
+          }
+        }
+      ],
+      "format": {
+        "format_name": "matroska,webm"
+      }
+    },
+    "config": {
+      "primary_audio_lang": "jpn",
+      "secondary_audio_lang": "eng",
+      "tertiary_audio_lang": "",
+      "default_audio_slot": "primary",
+      "remove_commentary": true,
+      "subtitle_mode": "keep_selected",
+      "subtitle_langs": [
+        "eng"
+      ],
+      "preserve_forced_subs": true,
+      "preserve_default_subs": true,
+      "audio_preference_mode": "preferred_langs_quality",
+      "audio_sorters_json": "",
+      "metadata": {
+        "remove_images": false,
+        "remove_attachments": true,
+        "remove_title": true,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      },
+      "preferred_audio_indices": [],
+      "original_language_note": ""
+    }
+  },
+  "expected": {
+    "split": {
+      "video": [
+        0
+      ],
+      "audio": [
+        1,
+        2
+      ],
+      "subtitles": [
+        3,
+        4
+      ],
+      "attachments": [
+        5,
+        6
+      ]
+    },
+    "plan": {
+      "video_indices": [
+        0
+      ],
+      "audio": [
+        {
+          "input_index": 1,
+          "lang_label": "jpn",
+          "commentary": false,
+          "forced": false,
+          "default": true,
+          "channels": 2,
+          "lossless": true,
+          "bitrate": 1000000,
+          "codec_rank": 2,
+          "codec_name": "flac",
+          "kind": "audio"
+        }
+      ],
+      "subtitles": [
+        {
+          "input_index": 3,
+          "lang_label": "eng",
+          "commentary": false,
+          "forced": true,
+          "default": false,
+          "channels": 0,
+          "lossless": false,
+          "bitrate": 0,
+          "codec_rank": 55,
+          "codec_name": "",
+          "kind": "subtitle"
+        },
+        {
+          "input_index": 4,
+          "lang_label": "eng",
+          "commentary": false,
+          "forced": false,
+          "default": true,
+          "channels": 0,
+          "lossless": false,
+          "bitrate": 0,
+          "codec_rank": 55,
+          "codec_name": "",
+          "kind": "subtitle"
+        }
+      ],
+      "removed_audio": [
+        "eng eac3 6 ch (stream 2): removed (not selected — jpn flac 2 ch (stream 1) kept)"
+      ],
+      "removed_subtitles": [],
+      "default_audio_output_index": 0,
+      "audio_selection_notes": [
+        "Track ranking: commentary first, then channels lowest first, then codec order, then bitrate lowest first, then default first.",
+        "Selected jpn flac 2 ch (stream 1) as the only track in the first matching language tier.",
+        "Removed non-selected eng eac3 6 ch (stream 2) after selecting jpn flac 2 ch (stream 1).",
+        "Ignored eng eac3 6 ch (stream 2) because preferred languages (tiered quality) had candidates in 'jpn' first."
+      ],
+      "removed_images": [],
+      "removed_attachments": [
+        "attachment (font1.otf)",
+        "attachment (font2.ttf)"
+      ],
+      "metadata_notes": [
+        "Removed attachment (font1.otf).",
+        "Removed attachment (font2.ttf).",
+        "Removed the container title."
+      ],
+      "metadata": {
+        "remove_images": false,
+        "remove_attachments": true,
+        "remove_title": true,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      }
+    },
+    "remux_required": true,
+    "lines": {
+      "audio_before": "Japanese 2.0 FLAC · English 5.1 E-AC-3",
+      "audio_after": "Japanese 2.0 FLAC",
+      "subtitle_before": "English · English",
+      "subtitle_after": "English · English",
+      "metadata_removed": "Removed attachment (font1.otf). · Removed attachment (font2.ttf). · Removed the container title."
+    },
+    "metadata_argv": [
+      "-metadata",
+      "title="
+    ]
+  }
+}

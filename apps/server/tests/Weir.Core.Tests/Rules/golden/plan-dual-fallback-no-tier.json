@@ -1,0 +1,138 @@
+{
+  "name": "dual-fallback-no-tier",
+  "input": {
+    "probe": {
+      "streams": [
+        {
+          "index": 0,
+          "codec_type": "video",
+          "codec_name": "h264",
+          "width": 1920,
+          "height": 1080,
+          "avg_frame_rate": "24000/1001",
+          "nb_frames": "150000",
+          "disposition": {
+            "default": 1,
+            "attached_pic": 0
+          }
+        },
+        {
+          "index": 1,
+          "codec_type": "audio",
+          "codec_name": "flac",
+          "channels": 2,
+          "bit_rate": "1500000",
+          "tags": {
+            "language": "jpn"
+          },
+          "disposition": {
+            "default": 1,
+            "forced": 0
+          }
+        },
+        {
+          "index": 2,
+          "codec_type": "audio",
+          "codec_name": "ac3",
+          "channels": 6,
+          "bit_rate": "448000",
+          "tags": {
+            "language": "eng"
+          },
+          "disposition": {
+            "default": 0,
+            "forced": 0
+          }
+        }
+      ],
+      "format": {
+        "format_name": "matroska,webm"
+      }
+    },
+    "config": {
+      "primary_audio_lang": "ger",
+      "secondary_audio_lang": "spa",
+      "tertiary_audio_lang": "",
+      "default_audio_slot": "primary",
+      "remove_commentary": true,
+      "subtitle_mode": "remove_all",
+      "subtitle_langs": [],
+      "preserve_forced_subs": true,
+      "preserve_default_subs": true,
+      "audio_preference_mode": "preferred_langs_quality",
+      "audio_sorters_json": "",
+      "metadata": {
+        "remove_images": false,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      },
+      "preferred_audio_indices": [],
+      "original_language_note": ""
+    }
+  },
+  "expected": {
+    "split": {
+      "video": [
+        0
+      ],
+      "audio": [
+        1,
+        2
+      ],
+      "subtitles": [],
+      "attachments": []
+    },
+    "plan": {
+      "video_indices": [
+        0
+      ],
+      "audio": [
+        {
+          "input_index": 2,
+          "lang_label": "eng",
+          "commentary": false,
+          "forced": false,
+          "default": true,
+          "channels": 6,
+          "lossless": false,
+          "bitrate": 448000,
+          "codec_rank": 13,
+          "codec_name": "ac3",
+          "kind": "audio"
+        }
+      ],
+      "subtitles": [],
+      "removed_audio": [
+        "jpn flac 2 ch (stream 1): removed (not selected — eng ac3 6 ch (stream 2) kept)"
+      ],
+      "removed_subtitles": [],
+      "default_audio_output_index": 0,
+      "audio_selection_notes": [
+        "Track ranking: commentary first, then channels lowest first, then codec order, then bitrate lowest first, then default first.",
+        "Fell back to eng ac3 6 ch (stream 2) because no track matched configured language tiers (ger, spa); ranked by quality with preferred-language matches first.",
+        "Removed non-selected jpn flac 2 ch (stream 1) after selecting eng ac3 6 ch (stream 2)."
+      ],
+      "removed_images": [],
+      "removed_attachments": [],
+      "metadata_notes": [],
+      "metadata": {
+        "remove_images": false,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      }
+    },
+    "remux_required": true,
+    "lines": {
+      "audio_before": "Japanese 2.0 FLAC · English 5.1 AC-3",
+      "audio_after": "English 5.1 AC-3",
+      "subtitle_before": "—",
+      "subtitle_after": "None",
+      "metadata_removed": "—"
+    },
+    "metadata_argv": []
+  }
+}

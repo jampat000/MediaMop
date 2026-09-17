@@ -11,4 +11,8 @@
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Answers recorded from the Python rules engine by scripts/generate-rules-golden.py. -->
+    <None Include="Rules/golden/*.json" CopyToOutputDirectory="PreserveNewest" LinkBase="Rules/golden" />
+  </ItemGroup>
 </Project>

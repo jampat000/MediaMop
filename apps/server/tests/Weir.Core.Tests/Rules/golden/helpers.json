@@ -1,0 +1,486 @@
+{
+  "languages": [
+    {
+      "input": null,
+      "normalize_lang": "",
+      "canonical_language": "",
+      "display": "—",
+      "display_or_blank": ""
+    },
+    {
+      "input": "",
+      "normalize_lang": "",
+      "canonical_language": "",
+      "display": "—",
+      "display_or_blank": ""
+    },
+    {
+      "input": "   ",
+      "normalize_lang": "",
+      "canonical_language": "",
+      "display": "—",
+      "display_or_blank": ""
+    },
+    {
+      "input": "eng",
+      "normalize_lang": "eng",
+      "canonical_language": "eng",
+      "display": "English",
+      "display_or_blank": "English"
+    },
+    {
+      "input": "ENG",
+      "normalize_lang": "eng",
+      "canonical_language": "eng",
+      "display": "English",
+      "display_or_blank": "English"
+    },
+    {
+      "input": " en ",
+      "normalize_lang": "en",
+      "canonical_language": "eng",
+      "display": "EN",
+      "display_or_blank": "EN"
+    },
+    {
+      "input": "en-US",
+      "normalize_lang": "en",
+      "canonical_language": "eng",
+      "display": "EN",
+      "display_or_blank": "EN"
+    },
+    {
+      "input": "pt-BR",
+      "normalize_lang": "pt",
+      "canonical_language": "por",
+      "display": "PT",
+      "display_or_blank": "PT"
+    },
+    {
+      "input": "zh-Hans",
+      "normalize_lang": "zh",
+      "canonical_language": "chi",
+      "display": "ZH",
+      "display_or_blank": "ZH"
+    },
+    {
+      "input": "zh_Hans",
+      "normalize_lang": "zh_hans",
+      "canonical_language": "zh_hans",
+      "display": "ZH_HANS",
+      "display_or_blank": "ZH_HANS"
+    },
+    {
+      "input": "und",
+      "normalize_lang": "und",
+      "canonical_language": "und",
+      "display": "Undetermined",
+      "display_or_blank": "Undetermined"
+    },
+    {
+      "input": "fre",
+      "normalize_lang": "fre",
+      "canonical_language": "fre",
+      "display": "French",
+      "display_or_blank": "French"
+    },
+    {
+      "input": "fra",
+      "normalize_lang": "fra",
+      "canonical_language": "fre",
+      "display": "FRA",
+      "display_or_blank": "FRA"
+    },
+    {
+      "input": "fr",
+      "normalize_lang": "fr",
+      "canonical_language": "fre",
+      "display": "FR",
+      "display_or_blank": "FR"
+    },
+    {
+      "input": "deu",
+      "normalize_lang": "deu",
+      "canonical_language": "ger",
+      "display": "German",
+      "display_or_blank": "German"
+    },
+    {
+      "input": "ger",
+      "normalize_lang": "ger",
+      "canonical_language": "ger",
+      "display": "GER",
+      "display_or_blank": "GER"
+    },
+    {
+      "input": "de",
+      "normalize_lang": "de",
+      "canonical_language": "ger",
+      "display": "DE",
+      "display_or_blank": "DE"
+    },
+    {
+      "input": "zho",
+      "normalize_lang": "zho",
+      "canonical_language": "chi",
+      "display": "Chinese",
+      "display_or_blank": "Chinese"
+    },
+    {
+      "input": "chi",
+      "normalize_lang": "chi",
+      "canonical_language": "chi",
+      "display": "CHI",
+      "display_or_blank": "CHI"
+    },
+    {
+      "input": "nld",
+      "normalize_lang": "nld",
+      "canonical_language": "dut",
+      "display": "Dutch",
+      "display_or_blank": "Dutch"
+    },
+    {
+      "input": "dut",
+      "normalize_lang": "dut",
+      "canonical_language": "dut",
+      "display": "DUT",
+      "display_or_blank": "DUT"
+    },
+    {
+      "input": "ces",
+      "normalize_lang": "ces",
+      "canonical_language": "cze",
+      "display": "Czech",
+      "display_or_blank": "Czech"
+    },
+    {
+      "input": "ell",
+      "normalize_lang": "ell",
+      "canonical_language": "gre",
+      "display": "Greek",
+      "display_or_blank": "Greek"
+    },
+    {
+      "input": "ron",
+      "normalize_lang": "ron",
+      "canonical_language": "rum",
+      "display": "Romanian",
+      "display_or_blank": "Romanian"
+    },
+    {
+      "input": "isl",
+      "normalize_lang": "isl",
+      "canonical_language": "ice",
+      "display": "ISL",
+      "display_or_blank": "ISL"
+    },
+    {
+      "input": "vie",
+      "normalize_lang": "vie",
+      "canonical_language": "vie",
+      "display": "Vietnamese",
+      "display_or_blank": "Vietnamese"
+    },
+    {
+      "input": "msa",
+      "normalize_lang": "msa",
+      "canonical_language": "msa",
+      "display": "Malay",
+      "display_or_blank": "Malay"
+    },
+    {
+      "input": "qaa",
+      "normalize_lang": "qaa",
+      "canonical_language": "qaa",
+      "display": "QAA",
+      "display_or_blank": "QAA"
+    },
+    {
+      "input": "e",
+      "normalize_lang": "e",
+      "canonical_language": "e",
+      "display": "E",
+      "display_or_blank": "E"
+    },
+    {
+      "input": "english",
+      "normalize_lang": "english",
+      "canonical_language": "english",
+      "display": "ENGLISH",
+      "display_or_blank": "ENGLISH"
+    },
+    {
+      "input": "a-very-long-language-tag",
+      "normalize_lang": "a-very-long-",
+      "canonical_language": "a-very-long-",
+      "display": "A-VERY-LONG-",
+      "display_or_blank": "A-VERY-LONG-"
+    },
+    {
+      "input": "none",
+      "normalize_lang": "none",
+      "canonical_language": "none",
+      "display": "NONE",
+      "display_or_blank": "NONE"
+    },
+    {
+      "input": "x1",
+      "normalize_lang": "x1",
+      "canonical_language": "x1",
+      "display": "X1",
+      "display_or_blank": "X1"
+    },
+    {
+      "input": "éng",
+      "normalize_lang": "éng",
+      "canonical_language": "éng",
+      "display": "ÉNG",
+      "display_or_blank": "ÉNG"
+    },
+    {
+      "input": "en-",
+      "normalize_lang": "en-",
+      "canonical_language": "en-",
+      "display": "EN-",
+      "display_or_blank": "EN-"
+    },
+    {
+      "input": "en-us-x",
+      "normalize_lang": "en-us-x",
+      "canonical_language": "en-us-x",
+      "display": "EN-US-X",
+      "display_or_blank": "EN-US-X"
+    },
+    {
+      "input": "\teng\n",
+      "normalize_lang": "eng",
+      "canonical_language": "eng",
+      "display": "English",
+      "display_or_blank": "English"
+    }
+  ],
+  "codec_ranks": [
+    {
+      "input": null,
+      "rank": 55
+    },
+    {
+      "input": "",
+      "rank": 55
+    },
+    {
+      "input": "truehd",
+      "rank": 0
+    },
+    {
+      "input": "TrueHD",
+      "rank": 0
+    },
+    {
+      "input": " flac ",
+      "rank": 2
+    },
+    {
+      "input": "dts_hd_ma",
+      "rank": 1
+    },
+    {
+      "input": "dca",
+      "rank": 14
+    },
+    {
+      "input": "wmav2",
+      "rank": 22
+    },
+    {
+      "input": "atmos",
+      "rank": 55
+    }
+  ],
+  "subtitle_langs_csv": [
+    {
+      "input": "",
+      "output": []
+    },
+    {
+      "input": "eng",
+      "output": [
+        "eng"
+      ]
+    },
+    {
+      "input": "eng,fre",
+      "output": [
+        "eng",
+        "fre"
+      ]
+    },
+    {
+      "input": " ENG , en-US,\nfre\n,,jpn, eng",
+      "output": [
+        "eng",
+        "en",
+        "fre",
+        "jpn"
+      ]
+    },
+    {
+      "input": "e,english,EN",
+      "output": [
+        "e",
+        "english",
+        "en"
+      ]
+    },
+    {
+      "input": "en, FR ,en, ",
+      "output": [
+        "en",
+        "fr"
+      ]
+    }
+  ],
+  "additional_languages_csv": [
+    {
+      "input": "",
+      "output": []
+    },
+    {
+      "input": "eng",
+      "output": [
+        "eng"
+      ]
+    },
+    {
+      "input": "eng,fre",
+      "output": [
+        "eng",
+        "fre"
+      ]
+    },
+    {
+      "input": " ENG , en-US,\nfre\n,,jpn, eng",
+      "output": [
+        "eng",
+        "fre",
+        "jpn"
+      ]
+    },
+    {
+      "input": "e,english,EN",
+      "output": [
+        "e",
+        "english",
+        "eng"
+      ]
+    },
+    {
+      "input": "en, FR ,en, ",
+      "output": [
+        "eng",
+        "fre"
+      ]
+    }
+  ],
+  "audio_preference_modes": [
+    {
+      "input": null,
+      "output": "preferred_langs_quality"
+    },
+    {
+      "input": "",
+      "output": "preferred_langs_quality"
+    },
+    {
+      "input": "preferred_langs_strict",
+      "output": "preferred_langs_strict"
+    },
+    {
+      "input": " QUALITY_ALL_LANGUAGES ",
+      "output": "quality_all_languages"
+    },
+    {
+      "input": "loudest",
+      "output": "preferred_langs_quality"
+    }
+  ],
+  "path_lines": [
+    {
+      "input": "",
+      "output": []
+    },
+    {
+      "input": "  /a  \n\n b \r\n\tc",
+      "output": [
+        "/a",
+        "b",
+        "c"
+      ]
+    },
+    {
+      "input": "one",
+      "output": [
+        "one"
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "input": null,
+      "output": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]"
+    },
+    {
+      "input": "",
+      "output": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]"
+    },
+    {
+      "input": "preferred_langs_quality",
+      "output": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]"
+    },
+    {
+      "input": " Quality_All_Languages ",
+      "output": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false}]"
+    },
+    {
+      "input": "other",
+      "output": "[{\"field\":\"commentary\",\"value\":null,\"reversed\":false},{\"field\":\"channels\",\"value\":null,\"reversed\":false},{\"field\":\"codec\",\"value\":null,\"reversed\":false},{\"field\":\"bitrate\",\"value\":null,\"reversed\":false},{\"field\":\"default\",\"value\":null,\"reversed\":false}]"
+    }
+  ],
+  "media_extensions": [
+    ".avchd",
+    ".avi",
+    ".flv",
+    ".m4v",
+    ".mkv",
+    ".mov",
+    ".mp4",
+    ".mpe",
+    ".mpeg",
+    ".mpg",
+    ".webm",
+    ".wmv"
+  ],
+  "default_config": {
+    "primary_audio_lang": "eng",
+    "secondary_audio_lang": "jpn",
+    "tertiary_audio_lang": "",
+    "default_audio_slot": "primary",
+    "remove_commentary": true,
+    "subtitle_mode": "remove_all",
+    "subtitle_langs": [],
+    "preserve_forced_subs": true,
+    "preserve_default_subs": true,
+    "audio_preference_mode": "preferred_langs_quality",
+    "audio_sorters_json": "",
+    "metadata": {
+      "remove_images": false,
+      "remove_attachments": false,
+      "remove_title": false,
+      "remove_language_tags": false,
+      "remove_other_metadata": false
+    },
+    "preferred_audio_indices": [],
+    "original_language_note": ""
+  }
+}

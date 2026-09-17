@@ -1,0 +1,222 @@
+{
+  "name": "python-values-all-languages",
+  "input": {
+    "probe": {
+      "streams": [
+        {
+          "index": 0,
+          "codec_type": "video",
+          "codec_name": "h264",
+          "avg_frame_rate": "25/1"
+        },
+        {
+          "index": 1,
+          "codec_type": "video",
+          "codec_name": "PNG",
+          "nb_frames": " 1 ",
+          "width": 600.0,
+          "height": 1e+20
+        },
+        {
+          "index": 2,
+          "codec_type": "video",
+          "codec_name": "gif",
+          "nb_frames": 2,
+          "width": 1.5e-07,
+          "height": -0.0001
+        },
+        {
+          "index": 3,
+          "codec_type": "video",
+          "codec_name": " ",
+          "nb_frames": 1,
+          "width": 12,
+          "height": 7
+        },
+        {
+          "index": 4,
+          "codec_type": "audio",
+          "codec_name": "TrueHD ",
+          "channels": "  8 ",
+          "bit_rate": "4_000_000",
+          "tags": {
+            "language": 1.5,
+            "title": [
+              "Commentary"
+            ]
+          },
+          "disposition": {
+            "default": 0.0,
+            "forced": "0x1"
+          }
+        },
+        {
+          "index": 5,
+          "codec_type": "audio",
+          "codec_name": "flac",
+          "channels": 1000.0,
+          "bit_rate": -5,
+          "tags": {
+            "language": true,
+            "title": {
+              "a": null,
+              "b": [
+                1,
+                2.5,
+                "it's"
+              ]
+            }
+          },
+          "disposition": {
+            "default": true,
+            "forced": "1"
+          }
+        },
+        {
+          "index": 6,
+          "codec_type": "audio",
+          "codec_name": "ac3",
+          "channels": 6,
+          "tags": {
+            "language": "Ñed",
+            "title": "café"
+          }
+        },
+        {
+          "index": 7,
+          "codec_type": "subtitle",
+          "tags": {
+            "language": "EN "
+          },
+          "disposition": {
+            "default": 2,
+            "forced": -1
+          }
+        },
+        {
+          "index": 8,
+          "codec_type": "attachment",
+          "tags": {
+            "filename": 3.0
+          }
+        },
+        {
+          "index": 9,
+          "codec_type": "attachment",
+          "tags": {
+            "filename": "",
+            "title": "\tquo'te\"s\t"
+          }
+        }
+      ],
+      "format": {
+        "format_name": "matroska,webm"
+      }
+    },
+    "config": {
+      "primary_audio_lang": "eng",
+      "secondary_audio_lang": "jpn",
+      "tertiary_audio_lang": "",
+      "default_audio_slot": "primary",
+      "remove_commentary": true,
+      "subtitle_mode": "remove_all",
+      "subtitle_langs": [],
+      "preserve_forced_subs": true,
+      "preserve_default_subs": true,
+      "audio_preference_mode": "quality_all_languages",
+      "audio_sorters_json": "",
+      "metadata": {
+        "remove_images": true,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      },
+      "preferred_audio_indices": [],
+      "original_language_note": ""
+    }
+  },
+  "expected": {
+    "split": {
+      "video": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "audio": [
+        4,
+        5,
+        6
+      ],
+      "subtitles": [
+        7
+      ],
+      "attachments": [
+        8,
+        9
+      ]
+    },
+    "plan": {
+      "video_indices": [
+        0,
+        3
+      ],
+      "audio": [
+        {
+          "input_index": 5,
+          "lang_label": "true",
+          "commentary": false,
+          "forced": true,
+          "default": true,
+          "channels": 1000,
+          "lossless": true,
+          "bitrate": -5,
+          "codec_rank": 2,
+          "codec_name": "flac",
+          "kind": "audio"
+        }
+      ],
+      "subtitles": [],
+      "removed_audio": [
+        "1.5 (commentary excluded — remove commentary enabled)",
+        "ñed ac3 6 ch (stream 6): removed (not selected — true flac 1000 ch (stream 5) kept)"
+      ],
+      "removed_subtitles": [
+        "en"
+      ],
+      "default_audio_output_index": 0,
+      "audio_selection_notes": [
+        "Excluded commentary track (stream 4) because remove commentary is enabled.",
+        "Track ranking: commentary first, then channels lowest first, then codec order, then bitrate lowest first, then default first.",
+        "Selected true flac 1000 ch (stream 5) using quality across all languages (policy: quality across all languages).",
+        "Removed non-selected ñed ac3 6 ch (stream 6) after selecting true flac 1000 ch (stream 5)."
+      ],
+      "removed_images": [
+        "embedded image (PNG, 600.0x1e+20)",
+        "embedded image (gif, 1.5e-07x-0.0001)"
+      ],
+      "removed_attachments": [],
+      "metadata_notes": [
+        "Removed embedded image (PNG, 600.0x1e+20).",
+        "Removed embedded image (gif, 1.5e-07x-0.0001)."
+      ],
+      "metadata": {
+        "remove_images": true,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      }
+    },
+    "remux_required": true,
+    "lines": {
+      "audio_before": "1.5 7.1 TrueHD · TRUE 1000 ch FLAC · ÑED 5.1 AC-3",
+      "audio_after": "TRUE 1000 ch FLAC",
+      "subtitle_before": "EN",
+      "subtitle_after": "None",
+      "metadata_removed": "Removed embedded image (PNG, 600.0x1e+20). · Removed embedded image (gif, 1.5e-07x-0.0001)."
+    },
+    "metadata_argv": []
+  }
+}

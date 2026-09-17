@@ -1,0 +1,172 @@
+{
+  "name": "image-edge-remove",
+  "input": {
+    "probe": {
+      "streams": [
+        {
+          "index": 0,
+          "codec_type": "video",
+          "codec_name": "h264",
+          "width": 1920,
+          "height": 1080,
+          "avg_frame_rate": "24000/1001",
+          "nb_frames": "150000",
+          "disposition": {
+            "default": 1,
+            "attached_pic": 0
+          }
+        },
+        {
+          "index": 1,
+          "codec_type": "video",
+          "codec_name": "PNG",
+          "nb_frames": "N/A",
+          "avg_frame_rate": "25/1"
+        },
+        {
+          "index": 2,
+          "codec_type": "video",
+          "codec_name": "gif",
+          "nb_frames": "N/A",
+          "avg_frame_rate": " 0/1 "
+        },
+        {
+          "index": 3,
+          "codec_type": "video",
+          "codec_name": "webp",
+          "width": 0,
+          "height": 300
+        },
+        {
+          "index": 4,
+          "codec_type": "video",
+          "codec_name": "h264",
+          "disposition": {
+            "attached_pic": "1"
+          }
+        },
+        {
+          "index": 5,
+          "codec_type": "video",
+          "codec_name": "bmp",
+          "nb_frames": 0.5,
+          "avg_frame_rate": "30/1"
+        },
+        {
+          "index": 6,
+          "codec_type": "audio",
+          "codec_name": "eac3",
+          "channels": 6,
+          "bit_rate": "640000",
+          "tags": {
+            "language": "eng"
+          },
+          "disposition": {
+            "default": 0,
+            "forced": 0
+          }
+        }
+      ],
+      "format": {
+        "format_name": "matroska,webm"
+      }
+    },
+    "config": {
+      "primary_audio_lang": "eng",
+      "secondary_audio_lang": "jpn",
+      "tertiary_audio_lang": "",
+      "default_audio_slot": "primary",
+      "remove_commentary": true,
+      "subtitle_mode": "remove_all",
+      "subtitle_langs": [],
+      "preserve_forced_subs": true,
+      "preserve_default_subs": true,
+      "audio_preference_mode": "preferred_langs_quality",
+      "audio_sorters_json": "",
+      "metadata": {
+        "remove_images": true,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      },
+      "preferred_audio_indices": [],
+      "original_language_note": ""
+    }
+  },
+  "expected": {
+    "split": {
+      "video": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "audio": [
+        6
+      ],
+      "subtitles": [],
+      "attachments": []
+    },
+    "plan": {
+      "video_indices": [
+        0,
+        1
+      ],
+      "audio": [
+        {
+          "input_index": 6,
+          "lang_label": "eng",
+          "commentary": false,
+          "forced": false,
+          "default": true,
+          "channels": 6,
+          "lossless": false,
+          "bitrate": 640000,
+          "codec_rank": 12,
+          "codec_name": "eac3",
+          "kind": "audio"
+        }
+      ],
+      "subtitles": [],
+      "removed_audio": [],
+      "removed_subtitles": [],
+      "default_audio_output_index": 0,
+      "audio_selection_notes": [
+        "Track ranking: commentary first, then channels lowest first, then codec order, then bitrate lowest first, then default first.",
+        "Selected eng eac3 6 ch (stream 6) as the only track in the first matching language tier."
+      ],
+      "removed_images": [
+        "embedded image (gif, unknown size)",
+        "embedded image (webp, unknown size)",
+        "embedded image (h264, unknown size)",
+        "embedded image (bmp, unknown size)"
+      ],
+      "removed_attachments": [],
+      "metadata_notes": [
+        "Removed embedded image (gif, unknown size).",
+        "Removed embedded image (webp, unknown size).",
+        "Removed embedded image (h264, unknown size).",
+        "Removed embedded image (bmp, unknown size)."
+      ],
+      "metadata": {
+        "remove_images": true,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      }
+    },
+    "remux_required": true,
+    "lines": {
+      "audio_before": "English 5.1 E-AC-3",
+      "audio_after": "English 5.1 E-AC-3",
+      "subtitle_before": "—",
+      "subtitle_after": "None",
+      "metadata_removed": "Removed embedded image (gif, unknown size). · Removed embedded image (webp, unknown size). · Removed embedded image (h264, unknown size). · Removed embedded image (bmp, unknown size)."
+    },
+    "metadata_argv": []
+  }
+}

@@ -42,6 +42,15 @@ apps/backend/.venv/Scripts/python.exe scripts/dump-alembic-schema.py          # 
 apps/backend/.venv/Scripts/python.exe scripts/dump-alembic-schema.py --check  # CI runs this
 ```
 
+## Rules parity
+
+`Weir.Core.Rules` is a port of Refiner's rules engine (`refiner_remux_rules.py`, `refiner_track_sorters.py`, `refiner_metadata_rules.py`, the pure parts of `refiner_original_language.py` and the display helpers). `tests/Weir.Core.Tests/Rules/golden/*.json` hold ffprobe-style inputs with the plan, notes and display lines the Python engine produced for them; `GoldenParityTests` requires the same answers. After a change to those Python modules, regenerate them with the backend's virtualenv:
+
+```powershell
+apps/backend/.venv/Scripts/python.exe scripts/generate-rules-golden.py          # write
+apps/backend/.venv/Scripts/python.exe scripts/generate-rules-golden.py --check  # compare only
+```
+
 ## Publish
 
 Self-contained single-file builds for `win-x64`, `linux-x64` and `linux-arm64`:

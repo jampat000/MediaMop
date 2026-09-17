@@ -1,0 +1,655 @@
+[
+  {
+    "name": "original-wins",
+    "input": {
+      "rules": {
+        "enabled": true,
+        "additional_languages": [],
+        "keep_only_first": true,
+        "first_if_none": true,
+        "treat_empty_as_original": false
+      },
+      "lookup": {
+        "status": "matched",
+        "detail": "matched",
+        "metadata": {
+          "original_language": "fr",
+          "title": "Film",
+          "year": 2001,
+          "provider_id": ""
+        }
+      },
+      "tracks": [
+        {
+          "index": 0,
+          "language": "eng"
+        },
+        {
+          "index": 1,
+          "language": "fre"
+        }
+      ]
+    },
+    "expected": {
+      "preferred_indices": [
+        1
+      ],
+      "note": "Kept audio in the original language (fre) because the metadata provider identified it. Preferred languages: fre.",
+      "chose": true
+    }
+  },
+  {
+    "name": "additional-languages",
+    "input": {
+      "rules": {
+        "enabled": true,
+        "additional_languages": [
+          "eng"
+        ],
+        "keep_only_first": true,
+        "first_if_none": true,
+        "treat_empty_as_original": false
+      },
+      "lookup": {
+        "status": "matched",
+        "detail": "matched",
+        "metadata": {
+          "original_language": "es",
+          "title": "Film",
+          "year": 2001,
+          "provider_id": ""
+        }
+      },
+      "tracks": [
+        {
+          "index": 0,
+          "language": "eng"
+        },
+        {
+          "index": 1,
+          "language": "eng"
+        },
+        {
+          "index": 2,
+          "language": "spa"
+        },
+        {
+          "index": 3,
+          "language": "spa"
+        },
+        {
+          "index": 4,
+          "language": "spa"
+        },
+        {
+          "index": 5,
+          "language": "ger"
+        }
+      ]
+    },
+    "expected": {
+      "preferred_indices": [
+        2,
+        0
+      ],
+      "note": "Kept audio in the original language (spa, plus eng) because the metadata provider identified it. Preferred languages: spa, eng.",
+      "chose": true
+    }
+  },
+  {
+    "name": "keep-every-track",
+    "input": {
+      "rules": {
+        "enabled": true,
+        "additional_languages": [
+          "eng",
+          "spa"
+        ],
+        "keep_only_first": false,
+        "first_if_none": true,
+        "treat_empty_as_original": false
+      },
+      "lookup": {
+        "status": "matched",
+        "detail": "matched",
+        "metadata": {
+          "original_language": "es",
+          "title": "Film",
+          "year": 2001,
+          "provider_id": ""
+        }
+      },
+      "tracks": [
+        {
+          "index": 0,
+          "language": "spa"
+        },
+        {
+          "index": 1,
+          "language": "spa"
+        },
+        {
+          "index": 2,
+          "language": "eng"
+        },
+        {
+          "index": 3,
+          "language": "ENG-us"
+        }
+      ]
+    },
+    "expected": {
+      "preferred_indices": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "note": "Kept audio in the original language (spa, plus eng, spa) because the metadata provider identified it. Preferred languages: spa, eng.",
+      "chose": true
+    }
+  },
+  {
+    "name": "japanese-plus-english",
+    "input": {
+      "rules": {
+        "enabled": true,
+        "additional_languages": [
+          "eng"
+        ],
+        "keep_only_first": true,
+        "first_if_none": true,
+        "treat_empty_as_original": false
+      },
+      "lookup": {
+        "status": "matched",
+        "detail": "matched",
+        "metadata": {
+          "original_language": "ja",
+          "title": "Film",
+          "year": 2001,
+          "provider_id": ""
+        }
+      },
+      "tracks": [
+        {
+          "index": 0,
+          "language": "eng"
+        },
+        {
+          "index": 1,
+          "language": "jpn"
+        }
+      ]
+    },
+    "expected": {
+      "preferred_indices": [
+        1,
+        0
+      ],
+      "note": "Kept audio in the original language (jpn, plus eng) because the metadata provider identified it. Preferred languages: jpn, eng.",
+      "chose": true
+    }
+  },
+  {
+    "name": "untagged-ignored",
+    "input": {
+      "rules": {
+        "enabled": true,
+        "additional_languages": [],
+        "keep_only_first": true,
+        "first_if_none": true,
+        "treat_empty_as_original": false
+      },
+      "lookup": {
+        "status": "matched",
+        "detail": "matched",
+        "metadata": {
+          "original_language": "fr",
+          "title": "Film",
+          "year": 2001,
+          "provider_id": ""
+        }
+      },
+      "tracks": [
+        {
+          "index": 0,
+          "language": ""
+        },
+        {
+          "index": 1,
+          "language": "eng"
+        }
+      ]
+    },
+    "expected": {
+      "preferred_indices": [],
+      "note": "No audio track matched the original language (fre), so Weir fell back to the configured language preferences to be sure the output still has audio.",
+      "chose": false
+    }
+  },
+  {
+    "name": "untagged-as-original",
+    "input": {
+      "rules": {
+        "enabled": true,
+        "additional_languages": [],
+        "keep_only_first": true,
+        "first_if_none": true,
+        "treat_empty_as_original": true
+      },
+      "lookup": {
+        "status": "matched",
+        "detail": "matched",
+        "metadata": {
+          "original_language": "fr",
+          "title": "Film",
+          "year": 2001,
+          "provider_id": ""
+        }
+      },
+      "tracks": [
+        {
+          "index": 0,
+          "language": ""
+        },
+        {
+          "index": 1,
+          "language": "eng"
+        },
+        {
+          "index": 2,
+          "language": "fra"
+        }
+      ]
+    },
+    "expected": {
+      "preferred_indices": [
+        0
+      ],
+      "note": "Kept audio in the original language (fre) because the metadata provider identified it. Preferred languages: fre.",
+      "chose": true
+    }
+  },
+  {
+    "name": "disabled",
+    "input": {
+      "rules": {
+        "enabled": false,
+        "additional_languages": [],
+        "keep_only_first": true,
+        "first_if_none": true,
+        "treat_empty_as_original": false
+      },
+      "lookup": {
+        "status": "matched",
+        "detail": "matched",
+        "metadata": {
+          "original_language": "fr",
+          "title": "Film",
+          "year": 2001,
+          "provider_id": ""
+        }
+      },
+      "tracks": [
+        {
+          "index": 0,
+          "language": "eng"
+        }
+      ]
+    },
+    "expected": {
+      "preferred_indices": [],
+      "note": "",
+      "chose": false
+    }
+  },
+  {
+    "name": "no-match",
+    "input": {
+      "rules": {
+        "enabled": true,
+        "additional_languages": [],
+        "keep_only_first": true,
+        "first_if_none": true,
+        "treat_empty_as_original": false
+      },
+      "lookup": {
+        "status": "no_match",
+        "detail": "The metadata provider had no match for Film.",
+        "metadata": null
+      },
+      "tracks": [
+        {
+          "index": 0,
+          "language": "eng"
+        }
+      ]
+    },
+    "expected": {
+      "preferred_indices": [],
+      "note": "Original-language selection did not apply (The metadata provider had no match for Film.), so the configured language preferences chose the track.",
+      "chose": false
+    }
+  },
+  {
+    "name": "no-match-no-detail",
+    "input": {
+      "rules": {
+        "enabled": true,
+        "additional_languages": [],
+        "keep_only_first": true,
+        "first_if_none": true,
+        "treat_empty_as_original": false
+      },
+      "lookup": {
+        "status": "unreachable",
+        "detail": "",
+        "metadata": null
+      },
+      "tracks": [
+        {
+          "index": 0,
+          "language": "eng"
+        }
+      ]
+    },
+    "expected": {
+      "preferred_indices": [],
+      "note": "Original-language selection did not apply (unreachable), so the configured language preferences chose the track.",
+      "chose": false
+    }
+  },
+  {
+    "name": "matched-without-metadata",
+    "input": {
+      "rules": {
+        "enabled": true,
+        "additional_languages": [],
+        "keep_only_first": true,
+        "first_if_none": true,
+        "treat_empty_as_original": false
+      },
+      "lookup": {
+        "status": "matched",
+        "detail": "",
+        "metadata": null
+      },
+      "tracks": [
+        {
+          "index": 0,
+          "language": "eng"
+        }
+      ]
+    },
+    "expected": {
+      "preferred_indices": [],
+      "note": "Original-language selection did not apply (matched), so the configured language preferences chose the track.",
+      "chose": false
+    }
+  },
+  {
+    "name": "no-original-language",
+    "input": {
+      "rules": {
+        "enabled": true,
+        "additional_languages": [],
+        "keep_only_first": true,
+        "first_if_none": true,
+        "treat_empty_as_original": false
+      },
+      "lookup": {
+        "status": "matched",
+        "detail": "",
+        "metadata": {
+          "original_language": "  ",
+          "title": "",
+          "year": null,
+          "provider_id": ""
+        }
+      },
+      "tracks": [
+        {
+          "index": 0,
+          "language": "eng"
+        }
+      ]
+    },
+    "expected": {
+      "preferred_indices": [],
+      "note": "The metadata provider matched this title but reported no original language, so the configured language preferences chose the track.",
+      "chose": false
+    }
+  },
+  {
+    "name": "first-if-none",
+    "input": {
+      "rules": {
+        "enabled": true,
+        "additional_languages": [],
+        "keep_only_first": true,
+        "first_if_none": true,
+        "treat_empty_as_original": false
+      },
+      "lookup": {
+        "status": "matched",
+        "detail": "matched",
+        "metadata": {
+          "original_language": "fr",
+          "title": "Film",
+          "year": 2001,
+          "provider_id": ""
+        }
+      },
+      "tracks": [
+        {
+          "index": 0,
+          "language": "eng"
+        },
+        {
+          "index": 1,
+          "language": "ger"
+        }
+      ]
+    },
+    "expected": {
+      "preferred_indices": [],
+      "note": "No audio track matched the original language (fre), so Weir fell back to the configured language preferences to be sure the output still has audio.",
+      "chose": false
+    }
+  },
+  {
+    "name": "first-if-none-no-tracks",
+    "input": {
+      "rules": {
+        "enabled": true,
+        "additional_languages": [],
+        "keep_only_first": true,
+        "first_if_none": true,
+        "treat_empty_as_original": false
+      },
+      "lookup": {
+        "status": "matched",
+        "detail": "matched",
+        "metadata": {
+          "original_language": "fr",
+          "title": "Film",
+          "year": 2001,
+          "provider_id": ""
+        }
+      },
+      "tracks": []
+    },
+    "expected": {
+      "preferred_indices": [],
+      "note": "No audio track matched the original language (fre), so the configured language preferences chose the track.",
+      "chose": false
+    }
+  },
+  {
+    "name": "first-if-none-off",
+    "input": {
+      "rules": {
+        "enabled": true,
+        "additional_languages": [],
+        "keep_only_first": true,
+        "first_if_none": false,
+        "treat_empty_as_original": false
+      },
+      "lookup": {
+        "status": "matched",
+        "detail": "matched",
+        "metadata": {
+          "original_language": "fr",
+          "title": "Film",
+          "year": 2001,
+          "provider_id": ""
+        }
+      },
+      "tracks": [
+        {
+          "index": 0,
+          "language": "eng"
+        }
+      ]
+    },
+    "expected": {
+      "preferred_indices": [],
+      "note": "No audio track matched the original language (fre), so the configured language preferences chose the track.",
+      "chose": false
+    }
+  },
+  {
+    "name": "other-standard",
+    "input": {
+      "rules": {
+        "enabled": true,
+        "additional_languages": [],
+        "keep_only_first": true,
+        "first_if_none": true,
+        "treat_empty_as_original": false
+      },
+      "lookup": {
+        "status": "matched",
+        "detail": "matched",
+        "metadata": {
+          "original_language": "fr",
+          "title": "Film",
+          "year": 2001,
+          "provider_id": ""
+        }
+      },
+      "tracks": [
+        {
+          "index": 0,
+          "language": "eng"
+        },
+        {
+          "index": 1,
+          "language": "fra"
+        }
+      ]
+    },
+    "expected": {
+      "preferred_indices": [
+        1
+      ],
+      "note": "Kept audio in the original language (fre) because the metadata provider identified it. Preferred languages: fre.",
+      "chose": true
+    }
+  },
+  {
+    "name": "unknown-code",
+    "input": {
+      "rules": {
+        "enabled": true,
+        "additional_languages": [
+          "qaa",
+          "fre"
+        ],
+        "keep_only_first": true,
+        "first_if_none": true,
+        "treat_empty_as_original": false
+      },
+      "lookup": {
+        "status": "matched",
+        "detail": "matched",
+        "metadata": {
+          "original_language": "qaa",
+          "title": "Film",
+          "year": 2001,
+          "provider_id": ""
+        }
+      },
+      "tracks": [
+        {
+          "index": 0,
+          "language": "qaa"
+        },
+        {
+          "index": 1,
+          "language": "fre"
+        },
+        {
+          "index": 2,
+          "language": "fr-CA"
+        }
+      ]
+    },
+    "expected": {
+      "preferred_indices": [
+        0,
+        1
+      ],
+      "note": "Kept audio in the original language (qaa, plus qaa, fre) because the metadata provider identified it. Preferred languages: qaa, fre.",
+      "chose": true
+    }
+  },
+  {
+    "name": "additional-includes-original",
+    "input": {
+      "rules": {
+        "enabled": true,
+        "additional_languages": [
+          "ger",
+          "eng"
+        ],
+        "keep_only_first": true,
+        "first_if_none": true,
+        "treat_empty_as_original": false
+      },
+      "lookup": {
+        "status": "matched",
+        "detail": "matched",
+        "metadata": {
+          "original_language": "de",
+          "title": "Film",
+          "year": 2001,
+          "provider_id": ""
+        }
+      },
+      "tracks": [
+        {
+          "index": 0,
+          "language": "eng"
+        },
+        {
+          "index": 1,
+          "language": "deu"
+        },
+        {
+          "index": 2,
+          "language": "ger"
+        }
+      ]
+    },
+    "expected": {
+      "preferred_indices": [
+        1,
+        0
+      ],
+      "note": "Kept audio in the original language (ger, plus ger, eng) because the metadata provider identified it. Preferred languages: ger, eng.",
+      "chose": true
+    }
+  }
+]
