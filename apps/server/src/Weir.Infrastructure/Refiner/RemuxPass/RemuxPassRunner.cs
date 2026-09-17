@@ -709,6 +709,11 @@ public sealed class RemuxPassRunner
                 .Set("stream_counts", output["stream_counts"])
                 .Set("duration_seconds", NullableFloat(context.Duration))
                 .Set("message", "Weir has started writing the cleaned-up file."));
+            // #548: the library's writer choice. The staged output keeps the source's own extension
+            // (RemuxToTempFileAsync), so the source path is what decides whether mkvmerge can take it.
+            var writer = new RemuxWriterSelector(
+                new FfmpegRemuxWriter(_tools),
+                new MkvmergeRemuxWriter(_tools, _resolver)).Select(src, request.Runtime.RemuxWriter);
             var tmp = await _tools.RemuxToTempFileAsync(
                 src,
                 workDir,
@@ -729,7 +734,9 @@ public sealed class RemuxPassRunner
                         update)),
                 context.Duration,
                 hardware,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+                writer,
+                request.Runtime.RewriteWithFfmpeg,
+                cancellationToken).ConfigureAwait(false);
             try
             {
                 AssertSourceUnchanged(src, context.Expected);

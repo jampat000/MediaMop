@@ -18,6 +18,12 @@ public sealed record RefinerPathRuntime
     public string HardwareDevice { get; init; } = string.Empty;
     public string HardwareDisabledVendorsCsv { get; init; } = string.Empty;
     public string FfmpegStrictness { get; init; } = "normal";
+
+    /// <summary>#548: which tool writes this library's output (<see cref="Weir.Core.Media.RemuxWriterChoice"/>).</summary>
+    public string RemuxWriter { get; init; } = Weir.Core.Media.RemuxWriterChoice.Best;
+
+    /// <summary>#548: rewrite with ffmpeg when the preferred writer cannot write or validate a file.</summary>
+    public bool RewriteWithFfmpeg { get; init; } = true;
 }
 
 /// <summary>The rejected-file deletion's outcome (<c>RejectedFileCleanupResult</c>).</summary>
@@ -212,6 +218,8 @@ public static class RemuxPassPaths
             HardwareDevice = library.HardwareDevice ?? string.Empty,
             HardwareDisabledVendorsCsv = library.HardwareDisabledVendorsCsv ?? string.Empty,
             FfmpegStrictness = string.IsNullOrEmpty(library.FfmpegStrictness) ? "normal" : library.FfmpegStrictness,
+            RemuxWriter = Weir.Core.Media.RemuxWriterChoice.Normalize(library.RemuxWriter),
+            RewriteWithFfmpeg = library.RewriteWithFfmpeg,
         }, null);
     }
 

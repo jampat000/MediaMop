@@ -4,23 +4,6 @@ using Weir.Core.Rules;
 
 namespace Weir.Infrastructure.Media;
 
-/// <summary>
-/// Which tool writes a remux (#548). The default stays <see cref="Ffmpeg"/> until the real-sample gate in
-/// issue #548 passes — the #503 trial could not obtain Dolby Vision, TrueHD Atmos, PGS or DTS-HD MA media, so
-/// mkvmerge's handling of them is still unproven.
-/// </summary>
-public enum RemuxWriterChoice
-{
-    /// <summary>ffmpeg writes every container. Today's behaviour, and the default.</summary>
-    Ffmpeg,
-
-    /// <summary>mkvmerge writes Matroska when it is installed; ffmpeg writes everything else.</summary>
-    Auto,
-
-    /// <summary>mkvmerge writes Matroska; a non-Matroska container still goes to ffmpeg, which is the only tool that can write it.</summary>
-    Mkvmerge,
-}
-
 /// <summary>One remux to perform, independent of which tool performs it.</summary>
 /// <param name="Source">The file to read.</param>
 /// <param name="Destination">The staged output to write.</param>

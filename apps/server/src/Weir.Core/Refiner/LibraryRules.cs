@@ -42,6 +42,8 @@ public sealed record RefinerLibraryInput
     public string HardwareDevice { get; init; } = string.Empty;
     public string HardwareDisabledVendorsCsv { get; init; } = string.Empty;
     public string FfmpegStrictness { get; init; } = "normal";
+    public string RemuxWriter { get; init; } = Weir.Core.Media.RemuxWriterChoice.Best;
+    public bool RewriteWithFfmpeg { get; init; } = true;
     public long ScanIntervalSeconds { get; init; } = 300;
     public long HoldMinutes { get; init; }
     public long FileDetectionIntervalSeconds { get; init; } = 30;
