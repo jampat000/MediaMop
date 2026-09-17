@@ -247,6 +247,19 @@ public sealed class RemuxPassRunner
             return FailBefore(relativeMediaPath, $"ffprobe failed: {exception.Message}", inspected);
         }
 
+        IReadOnlyList<string> sourceWarnings;
+        try
+        {
+            sourceWarnings = await _tools.ProbeWarningLinesAsync(src, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // #500: a baseline that could not be read is treated as "no known warnings", so a genuine new warning on
+            // the output still fails validation instead of being silently accepted.
+            _logger.LogWarning(exception, "Refiner could not read the source file's ffprobe warnings for {Path}.", relativeMediaPath);
+            sourceWarnings = [];
+        }
+
         var probe = new ProbeResult(probeJson);
         var (video, audio, subtitles) = RemuxRules.SplitStreams(probe);
         var watchedRoot = RemuxPassPaths.Resolve(runtime.WatchedFolder);
@@ -391,7 +404,7 @@ public sealed class RemuxPassRunner
         }
 
         var relative = RemuxPassPaths.RelativeTo(src, watchedRoot)!;
-        var context = new PassContext(request, src, inspected, scope, watchedRoot, outDir, expected, audio.Count, duration, minAge);
+        var context = new PassContext(request, src, inspected, scope, watchedRoot, outDir, expected, audio.Count, duration, minAge, plan, probeJson, sourceWarnings);
         if (!remuxNeeded)
         {
             return await PlaceUnchangedAsync(context, output, plan, argv, audioBefore, audioAfter, subsBefore, subsAfter, relative, collisionPolicy, sidecarPatterns, cancellationToken)
@@ -412,7 +425,10 @@ public sealed class RemuxPassRunner
         SourceFingerprint Expected,
         int ExpectedAudio,
         double? Duration,
-        long MinAge)
+        long MinAge,
+        RemuxPlan Plan,
+        JsonElement SourceProbe,
+        IReadOnlyList<string> SourceWarnings)
     {
         public string RelativeMediaPath => Request.RelativeMediaPath;
     }
@@ -657,6 +673,8 @@ public sealed class RemuxPassRunner
                 src,
                 workDir,
                 plan,
+                context.SourceProbe,
+                context.SourceWarnings,
                 report is null
                     ? null
                     : update => report(ProgressWithUpdate(
@@ -842,7 +860,7 @@ public sealed class RemuxPassRunner
 
         async Task ValidateStaged(string staged)
         {
-            await _tools.ValidateRemuxOutputAsync(staged, context.ExpectedAudio, context.Duration, cancellationToken).ConfigureAwait(false);
+            await _tools.ValidateStagedOutputAsync(staged, src, context.SourceProbe, context.Plan, context.SourceWarnings, cancellationToken).ConfigureAwait(false);
             AssertSourceUnchanged(src, context.Expected);
         }
 
@@ -875,7 +893,7 @@ public sealed class RemuxPassRunner
             final,
             async staged =>
             {
-                await _tools.ValidateRemuxOutputAsync(staged, context.ExpectedAudio, context.Duration).ConfigureAwait(false);
+                await _tools.ValidateStagedOutputAsync(staged, context.Source, context.SourceProbe, context.Plan, context.SourceWarnings).ConfigureAwait(false);
                 AssertSourceUnchanged(context.Source, context.Expected);
             },
             progress).ConfigureAwait(false);

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Weir.Core.Media;
 using Weir.Core.Rules;
@@ -181,12 +182,13 @@ public sealed class MediaToolsTests : IDisposable
         var workDir = Path.Combine(_root, "work");
         var plan = new RemuxPlan { VideoIndices = [0], Audio = [new PlannedTrack { InputIndex = 1, LangLabel = "eng", Default = true }], Subtitles = [] };
         var runner = new ScriptedRunner(request => request.Argv[0] == "ffprobe"
-            ? new ScriptedRun { Stdout = """{"format": {"duration": "100.0"}, "streams": [{"codec_type": "audio"}]}"""u8.ToArray() }
+            ? new ScriptedRun { Stdout = Encoding.UTF8.GetBytes(MatchingRemuxOutputJson) }
             : new ScriptedRun());
         var tools = new MediaTools(runner, new FixedResolver(), new ListLogger<MediaTools>(), TimeProvider.System, p => new MediaFileState(p, true, true, 100, 0));
         var acceleration = new AccelerationDecision { Method = "cuda", ArgvFlags = ["-hwaccel", "cuda"], Reason = "test" };
+        using var sourceDocument = JsonDocument.Parse(SourceWithKeptStreamDurationsJson);
 
-        await tools.RemuxToTempFileAsync(source, workDir, plan, durationSeconds: 100.0, acceleration: acceleration);
+        await tools.RemuxToTempFileAsync(source, workDir, plan, sourceDocument.RootElement, [], durationSeconds: 100.0, acceleration: acceleration);
 
         var ffmpeg = Assert.Single(runner.Requests, r => r.Argv[0] == "ffmpeg");
         Assert.Equal(["-hwaccel", "cuda"], ffmpeg.Argv.SkipWhile(a => a != "-y").Skip(1).TakeWhile(a => a != "-i"));
@@ -201,11 +203,12 @@ public sealed class MediaToolsTests : IDisposable
         var workDir = Path.Combine(_root, "work");
         var plan = new RemuxPlan { VideoIndices = [0], Audio = [new PlannedTrack { InputIndex = 1, LangLabel = "eng", Default = true }], Subtitles = [] };
         var runner = new ScriptedRunner(request => request.Argv[0] == "ffprobe"
-            ? new ScriptedRun { Stdout = """{"format": {"duration": "1.0"}, "streams": [{"codec_type": "audio"}]}"""u8.ToArray() }
+            ? new ScriptedRun { Stdout = Encoding.UTF8.GetBytes(StructurallyMatchingButShortOutputJson) }
             : new ScriptedRun());
         var tools = new MediaTools(runner, new FixedResolver(), new ListLogger<MediaTools>(), TimeProvider.System, p => new MediaFileState(p, true, true, 100, 0));
+        using var sourceDocument = JsonDocument.Parse(SourceWithKeptStreamDurationsJson);
 
-        var error = await Assert.ThrowsAsync<MediaCompletenessException>(() => tools.RemuxToTempFileAsync(source, workDir, plan, durationSeconds: 100.0));
+        var error = await Assert.ThrowsAsync<MediaCompletenessException>(() => tools.RemuxToTempFileAsync(source, workDir, plan, sourceDocument.RootElement, [], durationSeconds: 100.0));
 
         Assert.Contains("incomplete", error.Message, StringComparison.Ordinal);
         Assert.Empty(Directory.EnumerateFileSystemEntries(workDir));
@@ -313,4 +316,19 @@ public sealed class MediaToolsTests : IDisposable
         Assert.False(report.Detected);
         Assert.Equal(TimeSpan.FromSeconds(10), Assert.Single(runner.Requests).Timeout);
     }
+
+    // --- #500 fixtures for the RemuxToTempFileAsync tests above -----------------------------
+    // The plan in those tests keeps video index 0 and audio index 1: one video and one English,
+    // "default" audio track, no subtitles. Each kept stream reports its own duration so #500's
+    // staged-output validation does not need to fall back to measuring the source directly.
+    private const string SourceWithKeptStreamDurationsJson =
+        """{"streams": [{"index": 0, "codec_type": "video", "duration": "100.0"}, {"index": 1, "codec_type": "audio", "duration": "100.0", "tags": {"language": "eng"}}]}""";
+
+    /// <summary>Structurally matches the plan above (one video, one default English audio) with a full-length duration.</summary>
+    private const string MatchingRemuxOutputJson =
+        """{"format": {"duration": "100.0"}, "streams": [{"codec_type": "video"}, {"codec_type": "audio", "disposition": {"default": 1}, "tags": {"language": "eng"}}]}""";
+
+    /// <summary>The same shape as <see cref="MatchingRemuxOutputJson"/>, but 1 second long instead of 100.</summary>
+    private const string StructurallyMatchingButShortOutputJson =
+        """{"format": {"duration": "1.0"}, "streams": [{"codec_type": "video"}, {"codec_type": "audio", "disposition": {"default": 1}, "tags": {"language": "eng"}}]}""";
 }

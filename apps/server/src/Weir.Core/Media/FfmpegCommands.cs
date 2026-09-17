@@ -68,6 +68,51 @@ public static class FfmpegCommands
         ];
     }
 
+    /// <summary>
+    /// #500: the same probe as <see cref="BuildFfprobeArgv"/> but at <c>-v warning</c>, so ffprobe's warning-level
+    /// diagnostics (not just errors) land on stderr for the source-vs-output comparison in
+    /// <see cref="RemuxOutputValidation"/>. Verbosity does not affect <c>-print_format json</c> or the JSON on
+    /// stdout, which callers of this argv discard — only stderr is read.
+    /// </summary>
+    public static IReadOnlyList<string> BuildFfprobeWarningsArgv(string ffprobeBin, string src, long probeSizeMb = 10, long analyzeDurationSeconds = 10)
+    {
+        var argv = BuildFfprobeArgv(ffprobeBin, src, probeSizeMb, analyzeDurationSeconds).ToList();
+        var index = argv.IndexOf("-v");
+        argv[index + 1] = "warning";
+        return argv;
+    }
+
+    /// <summary>
+    /// #500: demuxes exactly the streams <paramref name="plan"/> keeps (video, then audio, then subtitles, matching
+    /// <see cref="BuildRemuxArgv"/>'s map order) without writing them anywhere, so the last <c>-progress pipe:1</c>
+    /// timestamp reached is the source's playable duration restricted to those streams. Used only when none of the
+    /// kept streams' own probed duration is usable (<see cref="RemuxOutputValidation.ExpectedDurationFromKeptStreams"/>).
+    /// </summary>
+    public static IReadOnlyList<string> BuildKeptStreamsDemuxArgv(string ffmpegBin, string src, RemuxPlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(ffmpegBin);
+        ArgumentNullException.ThrowIfNull(src);
+        ArgumentNullException.ThrowIfNull(plan);
+        var args = new List<string> { ffmpegBin, "-hide_banner", "-v", "error", "-i", src };
+        foreach (var vi in plan.VideoIndices)
+        {
+            args.AddRange(["-map", Map(vi)]);
+        }
+
+        foreach (var track in plan.Audio)
+        {
+            args.AddRange(["-map", Map(track.InputIndex)]);
+        }
+
+        foreach (var track in plan.Subtitles)
+        {
+            args.AddRange(["-map", Map(track.InputIndex)]);
+        }
+
+        args.AddRange(["-c", "copy", "-f", "null", "-"]);
+        return args;
+    }
+
     /// <summary>The full demux of the primary video that <c>validate_media_integrity</c> runs.</summary>
     public static IReadOnlyList<string> BuildIntegrityArgv(string ffmpegBin, string path)
     {

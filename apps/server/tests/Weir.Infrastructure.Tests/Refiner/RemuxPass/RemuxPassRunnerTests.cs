@@ -17,11 +17,14 @@ namespace Weir.Infrastructure.Tests.Refiner.RemuxPass;
 /// </summary>
 internal sealed class FakeMediaRunner : IProcessRunner
 {
+    // #500: every stream carries its own "duration" matching the format's, so the staged-output validation's
+    // expected-duration-from-kept-streams check has an answer without needing to fall back to measuring the
+    // (fake) source directly.
     public const string EnglishOnly =
-        """{"format":{"duration":"100.0"},"streams":[{"index":0,"codec_type":"video","codec_name":"h264","width":1920,"height":1080},{"index":1,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"eng"},"disposition":{"default":1}}]}""";
+        """{"format":{"duration":"100.0"},"streams":[{"index":0,"codec_type":"video","codec_name":"h264","width":1920,"height":1080,"duration":"100.0"},{"index":1,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"eng"},"disposition":{"default":1},"duration":"100.0"}]}""";
 
     public const string EnglishAndJapanese =
-        """{"format":{"duration":"100.0"},"streams":[{"index":0,"codec_type":"video","codec_name":"h264"},{"index":1,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"eng"},"disposition":{"default":1}},{"index":2,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"jpn"}}]}""";
+        """{"format":{"duration":"100.0"},"streams":[{"index":0,"codec_type":"video","codec_name":"h264","duration":"100.0"},{"index":1,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"eng"},"disposition":{"default":1},"duration":"100.0"},{"index":2,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"jpn"},"duration":"100.0"}]}""";
 
     public Dictionary<string, string> Probes { get; } = new(StringComparer.OrdinalIgnoreCase);
 
@@ -343,7 +346,7 @@ public sealed class RemuxPassRunnerTests : IDisposable
     {
         var source = _folders.Source(Path.Join("ForeignLanguageFilm", "film.mkv"), 4400);
         _media.DefaultProbe =
-            """{"format":{"duration":"7200"},"streams":[{"index":0,"codec_type":"video","codec_name":"h264"},{"index":1,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"fra"},"disposition":{"default":1}}]}""";
+            """{"format":{"duration":"7200"},"streams":[{"index":0,"codec_type":"video","codec_name":"h264","duration":"7200"},{"index":1,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"fra"},"disposition":{"default":1},"duration":"7200"}]}""";
 
         var result = await Run("ForeignLanguageFilm/film.mkv", minSizeMb: 999, passThrough: true);
 
@@ -635,7 +638,12 @@ public sealed class RemuxPassRunnerTests : IDisposable
     {
         _folders.Source(Path.Join("Amelie.2001.1080p", "film.mkv"));
         _media.Probes["film.mkv"] =
-            """{"streams":[{"index":0,"codec_type":"video","codec_name":"h264"},{"index":1,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"eng"},"disposition":{"default":1}},{"index":2,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"fre"}}]}""";
+            """{"streams":[{"index":0,"codec_type":"video","codec_name":"h264","duration":"100.0"},{"index":1,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"eng"},"disposition":{"default":1},"duration":"100.0"},{"index":2,"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"fre"},"duration":"100.0"}]}""";
+        // #500: the fake output probe (the temp file's random name never matches a Probes entry, so this is what
+        // the staged-output validation sees) must match the plan this scenario actually produces — the French
+        // track kept as the sole, default audio.
+        _media.DefaultProbe =
+            """{"format":{"duration":"100.0"},"streams":[{"codec_type":"video","duration":"100.0"},{"codec_type":"audio","codec_name":"aac","channels":2,"tags":{"language":"fre"},"disposition":{"default":1},"duration":"100.0"}]}""";
         _language.Answer = new LookupResult { Status = LookupResult.StatusMatched, Metadata = new TitleMetadata { OriginalLanguage = "fr", Title = "Amélie", Year = 2001 } };
         var rules = RemuxRules.DefaultConfig() with { OriginalLanguage = new OriginalLanguageRules { Enabled = true } };
 
@@ -652,8 +660,10 @@ public sealed class RemuxPassRunnerTests : IDisposable
         // Without the option, the preference list (English first) decides and nobody is asked.
         _language.Asked.Clear();
         _media.Calls.Clear();
+        _media.DefaultProbe = FakeMediaRunner.EnglishOnly;
         _folders.Source(Path.Join("Amelie.2001.1080p", "film.mkv"));
         var plain = await Run("Amelie.2001.1080p/film.mkv", rules: RemuxRules.DefaultConfig());
+        Assert.True(Bool(plain, "ok"), PyJsonWriter.Dumps(plain, PyJsonFormat.Compact));
         Assert.Empty(_language.Asked);
         Assert.Contains("0:1", Assert.Single(_media.Remuxes));
         Assert.False(plain.ContainsKey("original_language"));
