@@ -15,7 +15,8 @@ namespace Weir.Api.Endpoints;
 /// <summary>Refiner libraries and rule sets — <c>/api/v1/refiner/libraries</c>, <c>/refiner/rule-sets</c>
 /// (port of <c>refiner_libraries_api.py</c>). Manager coverage now reads the linked connections' saved
 /// test results (#520). The opt-in Reject failure policy's support gate (<c>GET /refiner/reject-support</c>,
-/// and the same check on save) is ported (#522 part 4). Discovery/import/drift/unlink are still not ported.</summary>
+/// and the same check on save) is ported (#522 part 4). Media-manager library discovery (discover/drift/
+/// import) and library unlink are ported in #554, backed by <see cref="LibraryDiscoveryService"/>.</summary>
 public static class RefinerLibraryEndpoints
 {
     public static IEndpointRouteBuilder MapRefinerLibraryEndpoints(this IEndpointRouteBuilder endpoints)
@@ -23,9 +24,13 @@ public static class RefinerLibraryEndpoints
         endpoints.MapV1("GET", "/refiner/libraries", GetLibrariesAsync);
         endpoints.MapV1("POST", "/refiner/libraries", PostLibraryAsync);
         endpoints.MapV1("GET", "/refiner/reject-support", GetRejectSupportAsync);
+        endpoints.MapV1("GET", "/refiner/libraries/discover/{connection_id}", GetDiscoverableLibrariesAsync);
+        endpoints.MapV1("POST", "/refiner/libraries/discover/{connection_id}/import", PostImportLibrariesAsync);
+        endpoints.MapV1("GET", "/refiner/libraries/discover/{connection_id}/drift", GetLibraryDriftAsync);
         endpoints.MapV1("GET", "/refiner/libraries/{library_id}", GetLibraryAsync);
         endpoints.MapV1("PUT", "/refiner/libraries/{library_id}", PutLibraryAsync);
         endpoints.MapV1("DELETE", "/refiner/libraries/{library_id}", DeleteLibraryAsync);
+        endpoints.MapV1("POST", "/refiner/libraries/{library_id}/unlink", PostLibraryUnlinkAsync);
         endpoints.MapV1("POST", "/refiner/libraries/reorder", PostReorderAsync);
         endpoints.MapV1("GET", "/refiner/rule-sets", GetRuleSetsAsync);
         endpoints.MapV1("POST", "/refiner/rule-sets", PostRuleSetAsync);
@@ -37,6 +42,19 @@ public static class RefinerLibraryEndpoints
     private static async Task<RefinerLibraryRecord> RequireLibraryAsync(UnitOfWork uow, long id) =>
         await LibraryStore.GetAsync(uow, id).ConfigureAwait(false)
         ?? throw new ApiException(StatusCodes.Status404NotFound, "That Refiner library does not exist.");
+
+    /// <summary><c>_require_connection</c>: <c>int = Path(ge=1)</c>.</summary>
+    private static long ConnectionId(ApiRequest request, ValidationIssues issues)
+    {
+        var raw = request.RouteValue("connection_id") ?? string.Empty;
+        return PydanticRules.TryInt(new PyStr(raw), ["path", "connection_id"], 1, null, issues, out var value)
+            ? value > long.MaxValue ? long.MaxValue : (long)value
+            : 0;
+    }
+
+    private static async Task<MediaManagerConnectionRecord> RequireConnectionAsync(UnitOfWork uow, long connectionId) =>
+        await MediaManagerConnectionStore.GetAsync(uow, connectionId).ConfigureAwait(false)
+        ?? throw new ApiException(StatusCodes.Status404NotFound, "That media manager connection does not exist.");
 
     private static async Task<RefinerRuleSetRecord> RequireRuleSetAsync(UnitOfWork uow, long id) =>
         await LibraryStore.GetRuleSetAsync(uow, id).ConfigureAwait(false)
@@ -483,6 +501,147 @@ public static class RefinerLibraryEndpoints
             PyResponses.NoContentJson(context);
             return Task.CompletedTask;
         });
+    }
+
+    // ---- Media-manager library discovery (#554) ----------------------------------------------
+
+    private static PyDict DiscoverableLibraryOut(DiscoverableLibrary item) => new PyDict()
+        .Set("key", item.Key)
+        .Set("name", item.Name)
+        .Set("media_type", item.MediaType)
+        .Set("root_path", item.RootPath)
+        .Set("already_imported", item.AlreadyImported)
+        .Set("local_path_problem", item.LocalPathProblem)
+        .Set("output_path", item.OutputPath)
+        .Set("processes_before_import", item.ProcessesBeforeImport)
+        .Set("output_path_problem", item.OutputPathProblem);
+
+    private static PyDict LibraryDriftOut(LibraryDrift item) => new PyDict()
+        .Set("kind", item.Kind)
+        .Set("library_id", item.LibraryId)
+        .Set("library_name", item.LibraryName)
+        .Set("manager_value", item.ManagerValue)
+        .Set("weir_value", item.WeirValue)
+        .Set("detail", item.Detail);
+
+    /// <summary><c>GET /refiner/libraries/discover/{connection_id}</c>: what this manager says it looks
+    /// after, and whether Weir already has it.</summary>
+    private static async Task<ApiResult> GetDiscoverableLibrariesAsync(ApiRequest request)
+    {
+        var issues = new ValidationIssues();
+        var connectionId = ConnectionId(request, issues);
+        issues.ThrowIfAny();
+
+        await request.RequireUserAsync(UserRoles.OperatorOrAdmin).ConfigureAwait(false);
+
+        var uow = await request.DbAsync().ConfigureAwait(false);
+        var connection = await RequireConnectionAsync(uow, connectionId).ConfigureAwait(false);
+        List<DiscoverableLibrary> found;
+        try
+        {
+            found = await request.Service<LibraryDiscoveryService>()
+                .DiscoverableLibrariesAsync(uow, connection, request.Context.RequestAborted).ConfigureAwait(false);
+        }
+        catch (RefinerDiscoveryException exception)
+        {
+            throw new ApiException(StatusCodes.Status502BadGateway, exception.Message);
+        }
+
+        return ApiRoutes.Ok(new PyList(found.Select(item => (PyJson)DiscoverableLibraryOut(item))));
+    }
+
+    /// <summary><c>POST /refiner/libraries/discover/{connection_id}/import</c>: create a Refiner library per
+    /// selected manager library.</summary>
+    private static async Task<ApiResult> PostImportLibrariesAsync(ApiRequest request)
+    {
+        var payload = await request.ReadBodyAsync().ConfigureAwait(false);
+        var issues = new ValidationIssues();
+        var connectionId = ConnectionId(request, issues);
+        var model = new BodyModel(payload, issues);
+        var csrfToken = model.Str("csrf_token", minLength: 1);
+        var keys = model.StrList("keys", []);
+        model.Finish(ExtraFields.Forbid);
+        if (keys.Count == 0)
+        {
+            issues.Add(new ValidationIssue("too_short", ["body", "keys"], "List should have at least 1 item after validation, not 0", new PyList()));
+        }
+
+        issues.ThrowIfAny();
+
+        await request.RequireUserAsync(UserRoles.OperatorOrAdmin).ConfigureAwait(false);
+        // Python's <c>_verify_csrf</c> (shared by every route in this file) refuses with this exact wording.
+        request.RequireConfirmationToken(csrfToken, "Invalid or expired CSRF token.");
+
+        var uow = await request.DbAsync().ConfigureAwait(false);
+        var connection = await RequireConnectionAsync(uow, connectionId).ConfigureAwait(false);
+        List<RefinerLibraryRecord> created;
+        try
+        {
+            created = await request.Service<LibraryDiscoveryService>()
+                .ImportLibrariesAsync(uow, connection, keys, request.Context.RequestAborted).ConfigureAwait(false);
+        }
+        catch (RefinerDiscoveryException exception)
+        {
+            throw new ApiException(StatusCodes.Status400BadRequest, exception.Message);
+        }
+
+        await request.CommitAsync().ConfigureAwait(false);
+        var items = new List<PyJson>();
+        foreach (var row in created)
+        {
+            items.Add(await LibraryOutAsync(uow, row).ConfigureAwait(false));
+        }
+
+        return new JsonApiResult(StatusCodes.Status201Created, new PyList(items));
+    }
+
+    /// <summary><c>GET /refiner/libraries/discover/{connection_id}/drift</c>: differences between the manager
+    /// and Weir. Reported only — nothing is applied.</summary>
+    private static async Task<ApiResult> GetLibraryDriftAsync(ApiRequest request)
+    {
+        var issues = new ValidationIssues();
+        var connectionId = ConnectionId(request, issues);
+        issues.ThrowIfAny();
+
+        await request.RequireUserAsync(UserRoles.OperatorOrAdmin).ConfigureAwait(false);
+
+        var uow = await request.DbAsync().ConfigureAwait(false);
+        var connection = await RequireConnectionAsync(uow, connectionId).ConfigureAwait(false);
+        List<LibraryDrift> drift;
+        try
+        {
+            drift = await request.Service<LibraryDiscoveryService>()
+                .ResyncDriftAsync(uow, connection, request.Context.RequestAborted).ConfigureAwait(false);
+        }
+        catch (RefinerDiscoveryException exception)
+        {
+            throw new ApiException(StatusCodes.Status502BadGateway, exception.Message);
+        }
+
+        return ApiRoutes.Ok(new PyList(drift.Select(item => (PyJson)LibraryDriftOut(item))));
+    }
+
+    /// <summary><c>POST /refiner/libraries/{library_id}/unlink</c>: forget where a library came from. The
+    /// library itself is untouched.</summary>
+    private static async Task<ApiResult> PostLibraryUnlinkAsync(ApiRequest request)
+    {
+        var payload = await request.ReadBodyAsync().ConfigureAwait(false);
+        var issues = new ValidationIssues();
+        var id = request.PathInt("library_id", issues);
+        var model = new BodyModel(payload, issues);
+        var csrfToken = model.Str("csrf_token", minLength: 1);
+        model.Finish(ExtraFields.Forbid);
+        issues.ThrowIfAny();
+
+        await request.RequireUserAsync(UserRoles.OperatorOrAdmin).ConfigureAwait(false);
+        // Python's <c>_verify_csrf</c> (shared by every route in this file) refuses with this exact wording.
+        request.RequireConfirmationToken(csrfToken, "Invalid or expired CSRF token.");
+
+        var uow = await request.DbAsync().ConfigureAwait(false);
+        var row = await RequireLibraryAsync(uow, id).ConfigureAwait(false);
+        var updated = await LibraryDiscoveryService.UnlinkLibraryAsync(uow, row).ConfigureAwait(false);
+        await request.CommitAsync().ConfigureAwait(false);
+        return ApiRoutes.Ok(await LibraryOutAsync(uow, updated).ConfigureAwait(false));
     }
 
     private static async Task<ApiResult> PostReorderAsync(ApiRequest request)

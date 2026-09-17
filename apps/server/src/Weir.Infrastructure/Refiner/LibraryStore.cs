@@ -7,8 +7,9 @@ namespace Weir.Infrastructure.Refiner;
 
 /// <summary>
 /// SQLite access for Refiner libraries and rule sets (port of <c>refiner_library_service.py</c> and
-/// <c>refiner_library_crud.py</c>'s persistence). Media-manager library discovery/import/drift/unlink and
-/// the reject-support gate are not ported here: they need the media-manager port (#520).
+/// <c>refiner_library_crud.py</c>'s persistence), plus the row IO <c>LibraryDiscoveryService</c> (#554,
+/// port of <c>refiner_library_discovery.py</c>) needs for a discovered library's create and unlink. The
+/// reject-support gate is not ported here: it lives in <c>RejectSupportEvaluator</c>.
 /// </summary>
 public static class LibraryStore
 {
@@ -167,6 +168,31 @@ public static class LibraryStore
         return updated;
     }
 
+    /// <summary>
+    /// <c>import_libraries</c>'s row creation: a library made from a manager's own descriptor rather than an
+    /// operator's request body, so <c>LibraryRules.ApplyFields</c>/<c>ValidateFolders</c> (folder-overlap and
+    /// full-field validation) never runs — Python's version does not call <c>create_library</c> either, only
+    /// <c>session.add</c>/<c>flush</c> on a row built from a handful of fields, every other column keeping its
+    /// schema default (mirrored by <see cref="RefinerLibraryRecord"/>'s own property defaults).
+    /// </summary>
+    public static async Task<RefinerLibraryRecord> CreateDiscoveredAsync(UnitOfWork uow, RefinerLibraryRecord row)
+    {
+        await InsertAsync(uow, row).ConfigureAwait(false);
+        return await GetByNameAsync(uow, row.Name).ConfigureAwait(false)
+            ?? throw new InvalidOperationException("Discovered library insert race.");
+    }
+
+    /// <summary><c>unlink_library</c>: forget where a library came from, keeping the library itself untouched.</summary>
+    public static async Task<RefinerLibraryRecord> UnlinkAsync(UnitOfWork uow, RefinerLibraryRecord row)
+    {
+        await uow.ExecuteAsync(
+            "UPDATE refiner_libraries SET discovered_from_connection_id = NULL, discovered_library_key = NULL, " +
+            "updated_at = CURRENT_TIMESTAMP WHERE id = @id",
+            ("@id", row.Id)).ConfigureAwait(false);
+        return await GetAsync(uow, row.Id).ConfigureAwait(false)
+            ?? throw new InvalidOperationException("Library disappeared during unlink.");
+    }
+
     public static async Task DeleteAsync(UnitOfWork uow, RefinerLibraryRecord row)
     {
         var active = await ActiveJobCountAsync(uow, row).ConfigureAwait(false);
@@ -297,7 +323,8 @@ public static class LibraryStore
             "hold_minutes, file_detection_interval_seconds, ignore_size_changes, file_system_events_enabled, skip_access_tests, " +
             "schedule_enabled, schedule_hours_limited, schedule_days, schedule_grid, schedule_start, schedule_end, max_attempts, " +
             "retry_backoff_seconds, retry_execution_failures, retry_preflight_failures, failure_policy, max_concurrent_files, " +
-            "priority, rule_set_id) VALUES (@name, @enabled, @media_type, @display_order, @watched_folder, @work_folder, @output_folder, " +
+            "priority, rule_set_id, discovered_from_connection_id, discovered_library_key) VALUES (@name, @enabled, @media_type, " +
+            "@display_order, @watched_folder, @work_folder, @output_folder, " +
             "@media_extensions_csv, @exclude_markers_csv, @include_patterns_csv, @exclude_patterns_csv, @min_file_size_mb, @max_file_size_mb, " +
             "@rejected_file_action, @min_file_age_seconds, @created_after, @created_before, @modified_after, @modified_before, " +
             "@exclude_hidden, @top_level_only, @sidecar_patterns_csv, @preserve_original_timestamps, @output_collision_policy, " +
@@ -305,7 +332,7 @@ public static class LibraryStore
             "@hold_minutes, @file_detection_interval_seconds, @ignore_size_changes, @file_system_events_enabled, @skip_access_tests, " +
             "@schedule_enabled, @schedule_hours_limited, @schedule_days, @schedule_grid, @schedule_start, @schedule_end, @max_attempts, " +
             "@retry_backoff_seconds, @retry_execution_failures, @retry_preflight_failures, @failure_policy, @max_concurrent_files, " +
-            "@priority, @rule_set_id)",
+            "@priority, @rule_set_id, @discovered_from_connection_id, @discovered_library_key)",
             LibraryParameters(row)).ConfigureAwait(false);
     }
 
@@ -381,6 +408,8 @@ public static class LibraryStore
         ("@max_concurrent_files", row.MaxConcurrentFiles),
         ("@priority", row.Priority),
         ("@rule_set_id", row.RuleSetId),
+        ("@discovered_from_connection_id", row.DiscoveredFromConnectionId),
+        ("@discovered_library_key", row.DiscoveredLibraryKey),
     ];
 
     private static async Task InsertRuleSetAsync(UnitOfWork uow, RefinerRuleSetRecord row)

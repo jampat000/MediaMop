@@ -6,6 +6,7 @@ using Weir.Core.MediaManagers;
 using Weir.Core.Security;
 using Weir.Infrastructure.Jobs;
 using Weir.Infrastructure.Library;
+using Weir.Infrastructure.Refiner;
 using Weir.Infrastructure.Sqlite;
 
 namespace Weir.Infrastructure.MediaManagers;
@@ -22,6 +23,7 @@ public static class MediaManagerServices
         services.TryAddSingleton<IManagerHttpHandlerFactory, SocketsManagerHttpHandlerFactory>();
         services.TryAddSingleton<IMediaManagerPorts, HttpMediaManagerPorts>();
         services.TryAddSingleton<MediaManagerConnectionService>();
+        services.TryAddSingleton<LibraryDiscoveryService>();
         services.TryAddSingleton<HandoffLedgerStore>();
         services.TryAddSingleton(sp => new RefinerJobStore(
             sp.GetRequiredService<SqliteDatabase>(), sp.GetRequiredService<TimeProvider>(), sp.GetService<IJobQueueMetrics>()));

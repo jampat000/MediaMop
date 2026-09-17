@@ -23,17 +23,7 @@ public sealed class OpenApiDocumentParityTests
     /// <see cref="Not_implemented_yet_matches_exactly_the_allowlisted_gaps"/> fails if the .NET server starts
     /// answering one (remove it here) or stops answering one that is not listed (add it here with a reason).
     /// </summary>
-    private static readonly (string Method, string Path, string Reason)[] KnownGaps =
-    [
-        ("GET", "/api/v1/refiner/libraries/discover/{connection_id}",
-            "Media-manager library discovery browsing is not ported yet (depends on the manager browsing APIs)."),
-        ("GET", "/api/v1/refiner/libraries/discover/{connection_id}/drift",
-            "Same discovery feature as the row above; the drift report depends on the same unported browsing code."),
-        ("POST", "/api/v1/refiner/libraries/discover/{connection_id}/import",
-            "Same discovery feature; importing a discovered library depends on the same unported browsing code."),
-        ("POST", "/api/v1/refiner/libraries/{library_id}/unlink",
-            "Library unlink (detach without deleting rows) is not ported yet."),
-    ];
+    private static readonly (string Method, string Path, string Reason)[] KnownGaps = [];
 
     [Fact]
     public async Task Serves_openapi_json_unauthenticated_with_the_running_version()
