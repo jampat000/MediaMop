@@ -63,13 +63,20 @@ public sealed class MediaManagerIntake
 
     /// <summary>
     /// <c>_authorise</c>: this source's own connection secret when it has one, else the instance-wide secret, else no check.
+    /// #544 item 6: Python (and the first cut of this port) resolved only the first enabled connection of the kind,
+    /// so a second connection of the same kind — a 4K Radarr next to a 1080p one, each with its own secret — could
+    /// never authenticate: its secret was never even considered. The presented secret is now matched against every
+    /// enabled connection of the kind, and the event is authorised (attributed) as coming from whichever one
+    /// matches. The instance-wide secret remains the fallback only when none of them has a secret configured at
+    /// all — once any connection of this kind is using its own secret, that connection's callers must present it.
     /// </summary>
     public async Task AuthoriseAsync(UnitOfWork uow, string sourceKey, string? presented)
     {
-        var connection = await MediaManagerConnectionStore.FirstEnabledForKindAsync(uow, sourceKey).ConfigureAwait(false);
-        if (connection is not null && !string.IsNullOrEmpty(connection.WebhookSecretCiphertext))
+        var connections = await MediaManagerConnectionStore.ListEnabledForKindAsync(uow, sourceKey).ConfigureAwait(false);
+        var withSecret = connections.Where(connection => !string.IsNullOrEmpty(connection.WebhookSecretCiphertext)).ToList();
+        if (withSecret.Count > 0)
         {
-            if (!_connections.WebhookSecretMatches(connection, presented))
+            if (!withSecret.Any(connection => _connections.WebhookSecretMatches(connection, presented)))
             {
                 throw new IntakeRefusedException(401, IntakeRules.MissingSecretDetail);
             }

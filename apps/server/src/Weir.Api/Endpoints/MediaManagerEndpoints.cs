@@ -280,7 +280,28 @@ public static class MediaManagerEndpoints
             throw new ApiException(StatusCodes.Status400BadRequest, exception.Message);
         }
 
-        // Python lets a ValueError from normalize_hhmm escape as a 500; kept.
+        // #544 item 2: Python lets a ValueError from normalize_hhmm escape as a 500; a bad time (`25:00`, `9`)
+        // now answers 400 naming the field that could not be read, instead of crashing.
+        string start;
+        try
+        {
+            start = ScheduleCsv.NormalizeHhmm(scheduleStart, "00:00");
+        }
+        catch (PyValueErrorException exception)
+        {
+            throw new ApiException(StatusCodes.Status400BadRequest, $"schedule_start: {exception.Message}");
+        }
+
+        string end;
+        try
+        {
+            end = ScheduleCsv.NormalizeHhmm(scheduleEnd, "23:59");
+        }
+        catch (PyValueErrorException exception)
+        {
+            throw new ApiException(StatusCodes.Status400BadRequest, $"schedule_end: {exception.Message}");
+        }
+
         var saved = await MediaManagerConnectionStore.SaveLaneAsync(uow, new MediaManagerSearchLaneRecord(
             0,
             connectionId,
@@ -290,8 +311,8 @@ public static class MediaManagerEndpoints
             retryDelay,
             scheduleEnabled,
             days,
-            ScheduleCsv.NormalizeHhmm(scheduleStart, "00:00"),
-            ScheduleCsv.NormalizeHhmm(scheduleEnd, "23:59"),
+            start,
+            end,
             interval)).ConfigureAwait(false);
         await request.CommitAsync().ConfigureAwait(false);
         return ApiRoutes.Ok(saved.ToOut());

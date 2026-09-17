@@ -71,7 +71,7 @@ public sealed class MediaManagerConnectionService
         var key = PyStrings.Strip(apiKey ?? string.Empty);
         var validKind = ValidateKind(kind);
         var validUrl = ValidateBaseUrl(baseUrl);
-        var ciphertext = key.Length > 0 ? _cipher.Encrypt(key) : null;
+        var ciphertext = key.Length > 0 ? EncryptApiKey(key) : null;
         return await MediaManagerConnectionStore.InsertAsync(uow, validKind, label, enabled, validUrl, ciphertext).ConfigureAwait(false);
     }
 
@@ -117,7 +117,7 @@ public sealed class MediaManagerConnectionService
         if (apiKey is not null)
         {
             var stripped = PyStrings.Strip(apiKey);
-            var ciphertext = stripped.Length > 0 ? _cipher.Encrypt(stripped) : null;
+            var ciphertext = stripped.Length > 0 ? EncryptApiKey(stripped) : null;
             if (ciphertext != row.ApiKeyCiphertext)
             {
                 changes.Add(("api_key_ciphertext", ciphertext));
@@ -276,6 +276,24 @@ public sealed class MediaManagerConnectionService
         }
 
         return described;
+    }
+
+    /// <summary>
+    /// #544 item 3: <c>encrypt_arr_api_key</c> raises a plain <see cref="PyValueErrorException"/> when no
+    /// <c>WEIR_CREDENTIALS_SECRET</c> or <c>WEIR_SESSION_SECRET</c> is configured. Python's <c>create_connection</c>
+    /// and <c>update_connection</c> let that escape uncaught (a 500); here it becomes the same operator-readable
+    /// 400 as any other <see cref="MediaManagerConnectionException"/>, still naming the env var to set.
+    /// </summary>
+    private string EncryptApiKey(string plaintext)
+    {
+        try
+        {
+            return _cipher.Encrypt(plaintext);
+        }
+        catch (PyValueErrorException exception)
+        {
+            throw new MediaManagerConnectionException(exception.Message, exception);
+        }
     }
 
     private static string ValidateKind(string? kind)

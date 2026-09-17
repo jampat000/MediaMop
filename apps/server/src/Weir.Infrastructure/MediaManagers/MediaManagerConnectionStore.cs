@@ -127,6 +127,21 @@ public static class MediaManagerConnectionStore
             ("$kind", kind));
     }
 
+    /// <summary>
+    /// #544 item 6: every enabled connection of a kind, by id. Used to authenticate an inbound webhook against
+    /// whichever connection's own secret was presented, instead of only <see cref="FirstEnabledForKindAsync"/>'s
+    /// single row — a second connection of the same kind (a 4K Radarr alongside a 1080p one, say) could not
+    /// authenticate otherwise, because its secret was never even considered.
+    /// </summary>
+    public static Task<List<MediaManagerConnectionRecord>> ListEnabledForKindAsync(UnitOfWork uow, string kind)
+    {
+        ArgumentNullException.ThrowIfNull(uow);
+        return uow.QueryAsync(
+            $"SELECT {ConnectionColumns} FROM media_manager_connections WHERE kind = $kind AND enabled IS 1 ORDER BY id",
+            ReadConnection,
+            ("$kind", kind));
+    }
+
     /// <summary>Enabled connections that have a webhook secret saved, by id (as <c>_require_secret</c> reads them).</summary>
     public static Task<List<MediaManagerConnectionRecord>> ListEnabledWithWebhookSecretAsync(UnitOfWork uow)
     {

@@ -70,11 +70,17 @@ public static class ManagerDialectRules
         }
     }
 
-    /// <summary><c>_paths_under</c> over <c>str(row.get("path", ""))</c>: Python's <c>str()</c> of whatever was there.</summary>
+    /// <summary>
+    /// <c>_paths_under</c>. #544 item 4: Python reads the raw value with <c>str(row.get("path", ""))</c>, so a
+    /// root folder whose <c>path</c> is JSON <c>null</c> (present but empty) turns into the literal string
+    /// <c>"None"</c> and is reported as a root folder called "None" — the default in <c>dict.get</c> only ever
+    /// applies when the key is missing, never when it is <c>null</c>. Decision: skip it, the same as a root
+    /// folder with no <c>path</c> at all, rather than invent a label for a folder the manager did not name.
+    /// This matches the <c>libraries</c> side of <see cref="ArrRootFolders"/>, which already used
+    /// <see cref="PyValues.Text"/> and so already dropped these rows; only the <c>roots</c> list disagreed.
+    /// </summary>
     public static List<string> ArrRootPaths(IEnumerable<PyDict> rows) =>
-        [.. rows.Select(row => row.Get("path") is { } value ? PyConvert.Str(value) : string.Empty)
-            .Select(PyStrings.Strip)
-            .Where(path => path.Length > 0)];
+        [.. rows.Select(row => PyValues.Text(row.Get("path"))).OfType<string>()];
 
     /// <summary>The arr <c>describe</c> answer from a <c>/api/v3/rootfolder</c> payload.</summary>
     public static (List<string> Roots, List<ManagerLibraryDescriptor> Libraries) ArrRootFolders(PyJson? payload, string scope)

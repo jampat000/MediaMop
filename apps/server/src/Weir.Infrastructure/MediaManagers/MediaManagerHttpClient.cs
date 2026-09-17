@@ -198,8 +198,20 @@ public sealed class MediaManagerHttpClient
                     return null;
                 }
 
-                // Python's json.loads raises ValueError here, which no caller catches: kept, so the answer is the same 500.
-                return PyJsonParser.Parse(new UTF8Encoding(false, true).GetString(raw));
+                // #544 item 1: Python's json.loads raises ValueError here, uncaught, so a 2xx answer that is not
+                // JSON (an HTML login page from a reverse proxy, most often) surfaced as a 500. Classified instead,
+                // so a connection test and the capabilities list report a plain "this is not that API" message.
+                try
+                {
+                    return PyJsonParser.Parse(new UTF8Encoding(false, true).GetString(raw));
+                }
+                catch (Exception exception) when (exception is PyJsonDecodeException or DecoderFallbackException)
+                {
+                    throw new MediaManagerHttpException(
+                        $"HTTP {status.ToString(CultureInfo.InvariantCulture)}: the response was not valid JSON. " +
+                        "This does not look like a Sonarr, Radarr or Deluno API at this address.",
+                        exception);
+                }
             }
         }
     }

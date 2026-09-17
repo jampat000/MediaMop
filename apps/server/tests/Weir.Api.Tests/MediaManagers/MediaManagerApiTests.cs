@@ -175,6 +175,36 @@ public sealed class MediaManagerApiTests
         Assert.Equal(("literal_error", "path"), ((await Json(badLane))["detail"]![0]!["type"]!.GetValue<string>(), (await Json(badLane))["detail"]![0]!["loc"]![0]!.GetValue<string>()));
     }
 
+    /// <summary>
+    /// #544 item 2: an invalid lane time (an hour past 23, or a value that is not even <c>HH:MM</c>) answered 500
+    /// from an uncaught <c>PyValueErrorException</c>; it is now a 400 naming the field that could not be read.
+    /// </summary>
+    [Fact]
+    public async Task An_invalid_lane_time_is_a_400_naming_the_field()
+    {
+        var (server, client, _) = await StartAsync();
+        await using var _server = server;
+        await CreateAsync(client);
+        object Lane(string start, string end) => new { csrf_token = client.CsrfAsync().Result, enabled = true, max_items_per_run = 25, retry_delay_minutes = 60, schedule_enabled = true, schedule_days = "Mon", schedule_start = start, schedule_end = end, schedule_interval_seconds = 900 };
+
+        using (var badHour = await client.PutAsync($"{Connections}/1/lanes/missing", Lane("25:00", "23:59")))
+        {
+            Assert.Equal(HttpStatusCode.BadRequest, badHour.StatusCode);
+            var detail = await Detail(badHour);
+            Assert.StartsWith("schedule_start:", detail, StringComparison.Ordinal);
+            Assert.Contains("0", detail, StringComparison.Ordinal);
+        }
+
+        using var notATime = await client.PutAsync($"{Connections}/1/lanes/missing", Lane("00:00", "9"));
+        Assert.Equal(HttpStatusCode.BadRequest, notATime.StatusCode);
+        Assert.StartsWith("schedule_end:", await Detail(notATime), StringComparison.Ordinal);
+
+        // The lane was not left half-saved by the refused write: it still holds its untouched default.
+        using var unchanged = await client.GetAsync($"{Connections}/1");
+        var lane = (await Json(unchanged))["lanes"]!.AsArray().Single(l => l!["lane"]!.GetValue<string>() == "missing")!;
+        Assert.Equal(("", "00:00", "23:59"), (lane["schedule_days"]!.GetValue<string>(), lane["schedule_start"]!.GetValue<string>(), lane["schedule_end"]!.GetValue<string>()));
+    }
+
     [Fact]
     public async Task A_generated_secret_is_shown_once_and_the_webhook_then_enforces_it_for_that_manager_only()
     {
@@ -237,6 +267,27 @@ public sealed class MediaManagerApiTests
         });
         using var removed = await client.PostAsync($"{Connections}/1/test", new { csrf_token = await client.CsrfAsync() });
         Assert.Equal((HttpStatusCode.NotFound, "That media manager connection was removed while its connection test was running."), (removed.StatusCode, await Detail(removed)));
+    }
+
+    /// <summary>
+    /// #544 item 1: a manager answering 2xx with a body that is not JSON (a reverse proxy's HTML login page,
+    /// most often) made the connection test 500 from an uncaught JSON-decode exception; it is now reported as a
+    /// plain, unsuccessful test result.
+    /// </summary>
+    [Fact]
+    public async Task A_connection_test_classifies_a_2xx_non_json_answer_instead_of_crashing()
+    {
+        var (server, client, manager) = await StartAsync();
+        await using var _server = server;
+        await CreateAsync(client, "radarr", "Radarr", "http://10.1.1.5:7878");
+        manager.Json(HttpMethod.Get, "/api/v3/system/status", "<html>this is a login page, not Radarr</html>");
+        using var tested = await client.PostAsync($"{Connections}/1/test", new { csrf_token = await client.CsrfAsync() });
+        Assert.Equal(HttpStatusCode.OK, tested.StatusCode);
+        var body = await Json(tested);
+        Assert.False(body["ok"]!.GetValue<bool>());
+        Assert.Equal(
+            "Weir reached Radarr but did not get the answer it expected. Check the address points at the app itself, not a page inside it.",
+            body["detail"]!.GetValue<string>());
     }
 
     [Fact]

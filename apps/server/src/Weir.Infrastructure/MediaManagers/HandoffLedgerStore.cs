@@ -111,7 +111,18 @@ public sealed class HandoffLedgerStore
         }
     }
 
-    /// <summary><c>_file_rows</c>: the file, or every file under the folder, this hand-off covers.</summary>
+    /// <summary>
+    /// <c>_file_rows</c>: the file, or every file under the folder, this hand-off covers.
+    /// #544 item 5: Python's SQLAlchemy <c>.startswith()</c> (and the SQL <c>LIKE</c> it ported to here) treats an
+    /// unescaped <c>_</c> or <c>%</c> in the hand-off's path as a wildcard, so a sibling folder whose name merely
+    /// resembles this one (<c>Foo_Bar</c> matching a folder literally named <c>FooXBar</c>) is wrongly folded into
+    /// this hand-off's status, and SQLite's default <c>LIKE</c> also ignores case regardless of platform. Matching
+    /// is exact prefix comparison instead — a plain string compare, so no character needs escaping — with case
+    /// handled per OS path semantics, the same decision already used for filesystem-path comparisons elsewhere in
+    /// this codebase (<see cref="ReconciliationService.SafeUnlinkUnderRoots"/>,
+    /// <see cref="HandoffCompletionReporter.TranslateOutputPath"/>): case-insensitive on Windows, case-sensitive
+    /// everywhere else. Filtering happens in .NET rather than in SQL so no escaping scheme is needed at all.
+    /// </summary>
     public static async Task<List<HandoffFileRow>> FileRowsAsync(UnitOfWork uow, HandoffLedgerRow row)
     {
         ArgumentNullException.ThrowIfNull(uow);
@@ -122,9 +133,9 @@ public sealed class HandoffLedgerStore
         }
 
         var path = row.RelativePath.TrimEnd('/');
-        return await uow.QueryAsync(
+        var rows = await uow.QueryAsync(
             "SELECT id, relative_path, status, status_reason, failure_attempts, next_retry_at, updated_at FROM refiner_files " +
-            "WHERE library_id = $library AND (relative_path = $path OR (relative_path LIKE $prefix || '%'))",
+            "WHERE library_id = $library",
             reader => new HandoffFileRow(
                 SqliteValues.GetInt64(reader, 0),
                 SqliteValues.GetString(reader, 1),
@@ -133,18 +144,28 @@ public sealed class HandoffLedgerStore
                 SqliteValues.GetInt64(reader, 4),
                 PythonTimestamps.Parse(reader.GetValue(5)),
                 PythonTimestamps.Parse(reader.GetValue(6))),
-            ("$library", libraryId),
-            ("$path", path),
-            ("$prefix", path + "/")).ConfigureAwait(false);
+            ("$library", libraryId)).ConfigureAwait(false);
+
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        var prefix = path + "/";
+        return [.. rows.Where(file => string.Equals(file.RelativePath, path, comparison) || file.RelativePath.StartsWith(prefix, comparison))];
     }
 
-    /// <summary><c>_jobs_for</c>: pending or leased jobs keyed to this hand-off, or the failure-policy jobs for its files.</summary>
+    /// <summary>
+    /// <c>_jobs_for</c>: pending or leased jobs keyed to this hand-off, or the failure-policy jobs for its files.
+    /// #544 item 5: the same <c>LIKE</c>-as-prefix-match defect as <see cref="FileRowsAsync"/>, here over
+    /// <c>dedupe_key</c> — a hand-off id containing <c>_</c> or <c>%</c> could match another hand-off's jobs. A job
+    /// dedupe key is an opaque identifier rather than a filesystem path, so unlike the file-path comparison this
+    /// one is always case-sensitive (ordinal), matching Python's own <c>str.startswith</c> semantics; the exact
+    /// comparison is still done in SQL (<c>substr(...) =</c>, SQLite's default <c>BINARY</c>/case-sensitive
+    /// collation for <c>=</c>) since it can stay parameterised alongside this query's other conditions.
+    /// </summary>
     public static async Task<List<RefinerJob>> JobsForAsync(UnitOfWork uow, HandoffLedgerRow row)
     {
         ArgumentNullException.ThrowIfNull(uow);
         ArgumentNullException.ThrowIfNull(row);
         var baseKey = IntakeRules.RemuxDedupeKey(row.SourceKey, row.HandoffId);
-        var conditions = new List<string> { "dedupe_key = $base", "(dedupe_key LIKE $base_prefix || '%')" };
+        var conditions = new List<string> { "dedupe_key = $base", "substr(dedupe_key, 1, length($base_prefix)) = $base_prefix" };
         var parameters = new List<(string, object?)> { ("$base", baseKey), ("$base_prefix", baseKey + ":") };
         if (row.LibraryId is { } libraryId)
         {

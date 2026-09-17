@@ -76,6 +76,131 @@ public sealed class MediaManagerServiceTests
         Assert.Equal("arr-key", new Core.Security.CredentialCipher("new-credentials-secret", "session-c", [], TimeProvider.System).Decrypt(rewrapped));
     }
 
+    /// <summary>
+    /// #544 item 1: a manager answering 2xx with a body that is not JSON (an HTML login page from a reverse
+    /// proxy, most often) is classified as an unreachable answer with a plain message, not a 500 from an
+    /// uncaught JSON-decode exception. Exercised through <c>describe_connections</c>, the same path
+    /// <c>GET /media-managers/capabilities</c> uses.
+    /// </summary>
+    [Fact]
+    public async Task A_2xx_non_json_answer_is_classified_not_a_crash()
+    {
+        using var fixture = new MediaManagerFixture();
+        fixture.Http.Json(HttpMethod.Get, "/api/v3/rootfolder", "<html>this is a login page, not Radarr</html>");
+        await fixture.AddConnectionAsync("radarr", "Radarr");
+        var described = Assert.Single(await fixture.Db(uow => fixture.Connections.DescribeConnectionsAsync(uow)));
+        Assert.Equal(SignalStatus.Unreachable, described.Status);
+        Assert.Contains("did not give Weir the answer it expected", described.Detail, StringComparison.Ordinal);
+        Assert.DoesNotContain("Exception", described.Detail, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// #544 item 3: <c>create_connection</c>/<c>update_connection</c> let a plain <c>PyValueErrorException</c> from
+    /// encrypting the API key escape uncaught when no secret is configured; it now becomes the same
+    /// <see cref="MediaManagerConnectionException"/> (a 400) any other operator mistake here does, still naming
+    /// the env var to set.
+    /// </summary>
+    [Fact]
+    public async Task Saving_an_api_key_without_a_configured_secret_names_the_env_var()
+    {
+        using var fixture = new MediaManagerFixture();
+        var noSecretCipher = new Core.Security.CredentialCipher(null, null, [], TimeProvider.System);
+        var service = new MediaManagerConnectionService(fixture.Store.Options, noSecretCipher, fixture.Ports);
+
+        var created = await Assert.ThrowsAsync<MediaManagerConnectionException>(
+            () => fixture.Db(uow => service.CreateAsync(uow, "radarr", "No Secret", "http://10.1.1.5:7878", "some-api-key")));
+        Assert.Equal(Core.Security.CredentialCipher.MissingSecretMessage, created.Message);
+        Assert.Contains("WEIR_CREDENTIALS_SECRET", created.Message, StringComparison.Ordinal);
+        Assert.Contains("WEIR_SESSION_SECRET", created.Message, StringComparison.Ordinal);
+
+        // A connection with no key at all is unaffected: nothing needs encrypting.
+        var id = await fixture.Db(uow => service.CreateAsync(uow, "radarr", "No Key Needed", "http://10.1.1.6:7878"));
+        Assert.True(id > 0);
+
+        var row = (await fixture.Db(uow => MediaManagerConnectionStore.GetAsync(uow, id)))!;
+        var updated = await Assert.ThrowsAsync<MediaManagerConnectionException>(
+            () => fixture.Db(async uow => { await service.UpdateAsync(uow, row, apiKey: "new-key"); return 0; }));
+        Assert.Equal(Core.Security.CredentialCipher.MissingSecretMessage, updated.Message);
+    }
+
+    /// <summary>
+    /// #544 item 5: matching is an exact prefix comparison, not the SQL <c>LIKE</c> Python's
+    /// <c>.startswith()</c> compiled to — so <c>_</c> and <c>%</c> in a folder name are plain characters, and a
+    /// sibling folder whose name merely resembles this one is not folded into the hand-off's files.
+    /// </summary>
+    [Fact]
+    public async Task File_prefix_matching_for_a_hand_off_is_exact_not_a_sql_wildcard()
+    {
+        using var fixture = new MediaManagerFixture();
+        var libraryId = await fixture.LibraryAsync("movie", fixture.Store.Home.Join("movies"));
+        await fixture.Store.Execute($"INSERT INTO refiner_files (library_id, relative_path, status) VALUES ({libraryId}, 'Foo_Bar/real.mkv', 'processed')");
+        // Under SQL LIKE, "Foo_Bar/%" wildcards the "_" and matches this unrelated sibling folder too — an exact
+        // prefix compare never does, on any platform.
+        await fixture.Store.Execute($"INSERT INTO refiner_files (library_id, relative_path, status) VALUES ({libraryId}, 'FooXBar/other.mkv', 'processing')");
+        // A pure case difference is not the wildcard bug: it follows the documented OS path-semantics decision
+        // (case-insensitive on Windows, case-sensitive elsewhere), same as SQLite's LIKE default happened to give
+        // for ASCII — kept, not changed, by this fix.
+        await fixture.Store.Execute($"INSERT INTO refiner_files (library_id, relative_path, status) VALUES ({libraryId}, 'FOO_BAR/upper.mkv', 'processing')");
+
+        var row = new HandoffLedgerRow(1, "deluno", "h1", libraryId, "Foo_Bar", HandoffLedgerRules.Queued, null, null, null);
+        var files = await fixture.Db(uow => HandoffLedgerStore.FileRowsAsync(uow, row));
+        var expected = OperatingSystem.IsWindows() ? ["Foo_Bar/real.mkv", "FOO_BAR/upper.mkv"] : new[] { "Foo_Bar/real.mkv" };
+        Assert.Equal(expected, files.Select(f => f.RelativePath));
+    }
+
+    /// <summary>#544 item 5: the same defect, over a hand-off's job rows keyed by a dedupe key containing its id.</summary>
+    [Fact]
+    public async Task Job_dedupe_key_prefix_matching_for_a_hand_off_is_exact_not_a_sql_wildcard()
+    {
+        using var fixture = new MediaManagerFixture();
+        await fixture.Store.Execute(
+            "INSERT INTO refiner_jobs (dedupe_key, job_kind) VALUES " +
+            "('refiner.file.remux_pass.v1:deluno:handoff:h_1:part1', 'refiner.file.remux_pass.v1'), " +
+            // Under SQL LIKE, "...:handoff:h_1:%" wildcards the "_" and matches this other hand-off's job too.
+            "('refiner.file.remux_pass.v1:deluno:handoff:hX1:part2', 'refiner.file.remux_pass.v1')");
+
+        var row = new HandoffLedgerRow(1, "deluno", "h_1", null, "h_1", HandoffLedgerRules.Queued, null, null, null);
+        var jobs = await fixture.Db(uow => HandoffLedgerStore.JobsForAsync(uow, row));
+        Assert.Equal(["refiner.file.remux_pass.v1:deluno:handoff:h_1:part1"], jobs.Select(j => j.DedupeKey));
+    }
+
+    /// <summary>
+    /// #544 item 6: the presented secret is matched against every enabled connection of the kind, so a second
+    /// connection of the same kind (a 4K Radarr next to a 1080p one) authenticates with its own secret instead
+    /// of only the first one (by id) ever being considered.
+    /// </summary>
+    [Fact]
+    public async Task Several_enabled_connections_of_one_kind_each_authenticate_with_their_own_secret()
+    {
+        using var fixture = new MediaManagerFixture();
+        var id1 = await fixture.AddConnectionAsync("radarr", "1080p", "http://10.1.1.5:7878");
+        var id2 = await fixture.AddConnectionAsync("radarr", "4K", "http://10.1.1.6:7878");
+        var row1 = (await fixture.Db(uow => MediaManagerConnectionStore.GetAsync(uow, id1)))!;
+        var row2 = (await fixture.Db(uow => MediaManagerConnectionStore.GetAsync(uow, id2)))!;
+        var secret1 = await fixture.Db(uow => fixture.Connections.RotateWebhookSecretAsync(uow, row1));
+        var secret2 = await fixture.Db(uow => fixture.Connections.RotateWebhookSecretAsync(uow, row2));
+        Assert.NotEqual(secret1, secret2);
+
+        await fixture.Db(async uow => { await fixture.Intake.AuthoriseAsync(uow, "radarr", secret1); return 0; });
+        await fixture.Db(async uow => { await fixture.Intake.AuthoriseAsync(uow, "radarr", secret2); return 0; });
+
+        var wrong = await Assert.ThrowsAsync<IntakeRefusedException>(
+            () => fixture.Db(async uow => { await fixture.Intake.AuthoriseAsync(uow, "radarr", "neither-connections-secret"); return 0; }));
+        Assert.Equal(401, wrong.StatusCode);
+    }
+
+    /// <summary>
+    /// #544 item 7: Python's <c>secrets.compare_digest</c> raises <c>TypeError</c> for a non-ASCII <c>str</c>; the
+    /// .NET port compares UTF-8 bytes (a deliberate difference kept from the original port), so it never crashes.
+    /// </summary>
+    [Fact]
+    public void Non_ascii_secrets_compare_by_bytes_without_crashing()
+    {
+        Assert.True(MediaManagerConnectionService.CompareDigest("clé-secrète-日本語", "clé-secrète-日本語"));
+        Assert.False(MediaManagerConnectionService.CompareDigest("clé-secrète-日本語", "clé-secrète-français"));
+        Assert.False(MediaManagerConnectionService.CompareDigest("clé-secrète-日本語", string.Empty));
+    }
+
     [Fact]
     public async Task Connections_validate_names_addresses_and_keep_or_clear_the_key()
     {

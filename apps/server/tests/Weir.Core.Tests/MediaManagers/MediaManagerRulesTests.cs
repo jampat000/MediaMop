@@ -150,8 +150,11 @@ public sealed class MediaManagerRulesTests
         Assert.Equal(["movie"], ManagerDialectRules.ArrQueueRows(PyJsonParser.Parse("""{"records":[{"status":"downloading"},"junk"]}"""), "movie").Select(r => r.Scope));
         Assert.Equal(["/media/Solaris/f.mkv"], ManagerDialectRules.ArrLibraryFilePaths(PyJsonParser.Parse("""[{"movieFile":{"path":"/media/Solaris/f.mkv"}},{"movieFile":null},{}]"""), "movieFile"));
         Assert.Equal(["/tv/Show/S01/e.mkv"], ManagerDialectRules.ArrLibraryFilePaths(PyJsonParser.Parse("""[{"path":"/tv/Show/S01/e.mkv"}]"""), null));
+        // #544 item 4: a root folder with a null path is skipped, not reported as a root literally called "None"
+        // (`str(row.get("path", ""))` in Python turns a JSON null into the text "None" — the `dict.get` default
+        // only applies when the key is missing, never when it is present and null).
         var (roots, libraries) = ManagerDialectRules.ArrRootFolders(PyJsonParser.Parse("""[{"id":3,"path":"/m"},{"id":0,"path":"/z"},{"path":null}]"""), "movie");
-        Assert.Equal(["/m", "/z", "None"], roots);
+        Assert.Equal(["/m", "/z"], roots);
         Assert.Equal(["3", "/z"], libraries.Select(l => l.Key));
     }
 
