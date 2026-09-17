@@ -8,10 +8,10 @@ import styles from './index.module.css';
 
 const features = [
   {
-    title: 'Refiner',
+    title: 'Processing',
     description:
-      'Remux media files into cleaner, more consistent outputs with configurable worker lanes.',
-    screenshot: '/Weir/img/refiner.png',
+      'Keep the audio and subtitle tracks you want in each download and remove the rest, library by library, with configurable worker lanes.',
+    screenshot: '/Weir/img/processing.png',
   },
 ];
 
@@ -75,18 +75,18 @@ function Features(): ReactNode {
   );
 }
 
-function DashboardPreview(): ReactNode {
+function InHandPreview(): ReactNode {
   return (
     <section className={styles.preview}>
       <div className="container">
-        <h2>Dashboard at a glance</h2>
+        <h2>In hand, at a glance</h2>
         <p>
-          Live system health, recent work, logs, and core app configuration in
-          one place.
+          Files Weir is responsible for right now, between your media manager
+          handing them over and getting them back.
         </p>
         <img
-          src="/Weir/img/dashboard.png"
-          alt="Weir Dashboard"
+          src="/Weir/img/in-hand.png"
+          alt="Weir In hand page"
           className={styles.dashboardImage}
         />
       </div>
@@ -101,7 +101,7 @@ export default function Home(): ReactNode {
       <Hero />
       <main>
         <Features />
-        <DashboardPreview />
+        <InHandPreview />
       </main>
     </Layout>
   );

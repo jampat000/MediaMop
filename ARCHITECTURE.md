@@ -26,7 +26,7 @@ Weir is a self-hosted media operations app:
   one is asked what it is importing and which files it still keeps. "Could not ask" is a
   distinct answer from "nothing is importing", and only the latter clears a delete. See
   [ADR-0015](docs/adr/ADR-0015-media-manager-port-outbound.md).
-- **Dashboard, Activity, and Settings** expose runtime health, history, logs, backups, upgrades, and security posture.
+- **In hand, Activity, and Settings** expose runtime health, history, logs, backups, upgrades, and security posture.
 
 ## Runtime Shape
 
@@ -64,7 +64,7 @@ Solution `apps/server/Weir.slnx`; details in [`apps/server/README.md`](apps/serv
 
 - `src/app`: app-level router and providers.
 - `src/layouts`: shell/navigation layout.
-- `src/pages`: feature pages (In hand, Refiner, Activity, Settings, setup).
+- `src/pages`: feature pages (In hand, Processing, Activity, Settings, setup).
 - `src/lib`: API clients, query hooks, typed data helpers, and UI helpers.
 - `src/components`: reusable UI and brand components.
 - `src/styles`: design tokens and shell styling.

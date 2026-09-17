@@ -56,7 +56,7 @@ but the .NET migrations are now the only source of schema changes.
 |-----------|---------------|
 | `src/app` | App-level router and providers |
 | `src/layouts` | Shell/navigation layout |
-| `src/pages` | Feature pages (In hand, Refiner, Activity, Settings, setup) |
+| `src/pages` | Feature pages (In hand, Processing, Activity, Settings, setup) |
 | `src/lib` | API clients, query hooks, typed data helpers |
 | `src/components` | Reusable UI and brand components |
 
@@ -70,8 +70,19 @@ flowchart LR
   Result --> Metrics["Runtime metrics / Prometheus"]
 ```
 
-New files are picked up by the periodic watched-folder scan. The filesystem watcher that reacted
-to new files immediately has not been ported to the .NET server yet.
+New files are noticed two ways, and both end at the same job.
+
+- **Straight away.** Each enabled library with a watched folder and "watch for changes" turned on gets
+  its own recursive filesystem watcher. Events are debounced (`WEIR_REFINER_WATCHER_DEBOUNCE_SECONDS`,
+  3 seconds by default) and then queue the ordinary watched-folder scan. Creating, editing or deleting a
+  library takes effect without a restart, and if the operating system reports lost events the library is
+  scanned in full and its watcher replaced. `WEIR_REFINER_WATCHER_ENABLED=0` turns the watchers off.
+- **As a backstop.** Every library is scanned on its own timer anyway (`scan_interval_seconds`, five
+  minutes by default), so a folder a watcher cannot see — a network share, a container mount that does
+  not forward events — still gets picked up.
+
+The watcher decides nothing about a file itself: extension checks, exclusions, size limits, the hold
+timer and settling all stay in the scan handler that already owns them.
 
 ## Deployment model
 
