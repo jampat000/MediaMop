@@ -215,26 +215,6 @@ export function MmNeedsAttentionList({
   );
 }
 
-// ─── Next steps nav button ────────────────────────────────────────────────
-
-export function MmNextStepsButton({
-  label,
-  onClick,
-}: {
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      className={mmActionButtonClass({ variant: "secondary" })}
-      onClick={onClick}
-    >
-      {label}
-    </button>
-  );
-}
-
 export function MmJobsPagination({
   page,
   totalPages,

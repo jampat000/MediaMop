@@ -5,10 +5,9 @@ title: Overview
 
 # Architecture Overview
 
-MediaMop is a self-hosted media operations app with three main modules:
+MediaMop is a self-hosted media operations app with two main areas:
 
 - **Refiner** — remuxes watched media into cleaner outputs
-- **Pruner** — previews and removes media matching cleanup rules
 - **Dashboard** — exposes runtime health, history, logs, backups, upgrades, and security posture
 
 ## Runtime shape
@@ -18,12 +17,10 @@ flowchart LR
   UI["Frontend (React/Vite)"] --> API["FastAPI API Layer"]
   API --> Core["Core + Platform Services"]
   Core --> Refiner["Refiner Module"]
-  Core --> Pruner["Pruner Module"]
   Core --> Dashboard["Dashboard + Activity"]
   Core --> Integrations["External Integrations (Arr, OpenSubtitles, etc.)"]
   Core --> DB["SQLite (Alembic managed)"]
   Refiner --> Lanes["Worker Lanes / Durable Jobs"]
-  Pruner --> Lanes
 ```
 
 ## Technology stack
@@ -43,7 +40,7 @@ flowchart LR
 | `mediamop.api` | FastAPI app factory, router composition, request dependencies |
 | `mediamop.core` | Config, runtime paths, database setup, lifespan, logging |
 | `mediamop.platform` | Shared services: auth, activity, jobs, settings, observability |
-| `mediamop.modules` | Module-owned domains for Refiner, Pruner, Dashboard |
+| `mediamop.modules` | Module-owned domains for Refiner, Dashboard |
 | `mediamop.integrations` | External service integration code |
 | `mediamop.windows` | Windows tray and package-specific helpers |
 

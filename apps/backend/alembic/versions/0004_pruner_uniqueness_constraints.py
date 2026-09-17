@@ -32,8 +32,17 @@ def _normalize(raw: str) -> str:
     return urlunparse((scheme, canon_netloc, path.rstrip("/"), "", "", "")).rstrip("/")
 
 
+def _has_pruner_tables(bind: sa.engine.Connection) -> bool:
+    # Pruner moved to Deluno (#473): ``0001`` no longer creates these tables on a fresh
+    # database, and ``0036`` drops them on one that still has them.
+    present = set(sa.inspect(bind).get_table_names())
+    return {"pruner_server_instances", "pruner_scope_settings", "pruner_preview_runs"} <= present
+
+
 def upgrade() -> None:
     bind = op.get_bind()
+    if not _has_pruner_tables(bind):
+        return
     columns = {c["name"] for c in sa.inspect(bind).get_columns("pruner_server_instances")}
     if "normalized_base_url" not in columns:
         op.add_column(
@@ -89,6 +98,8 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     bind = op.get_bind()
+    if not _has_pruner_tables(bind):
+        return
     inspector = sa.inspect(bind)
     idx = {i["name"] for i in inspector.get_indexes("pruner_server_instances")}
     if "uq_pruner_server_provider_normalized_url" in idx:

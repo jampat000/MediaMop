@@ -57,7 +57,6 @@ export function AppErrorScreen({
           <nav className="mm-nav-list" aria-label="Unavailable sections">
             <span className="mm-nav-link">Dashboard</span>
             <span className="mm-nav-link">Refiner</span>
-            <span className="mm-nav-link">Pruner</span>
             <span className="mm-nav-link">Settings</span>
           </nav>
         </aside>

@@ -146,9 +146,7 @@ class RuntimeMetricsStore:
             lines.append(f'mediamop_module_queue_depth{{module="{module}"}} {depth}')
         savings = summary["module_savings_bytes"]
         if savings:
-            lines.append(
-                "# HELP mediamop_module_savings_bytes_total Bytes saved by each module (Refiner remux, Pruner removal)."
-            )
+            lines.append("# HELP mediamop_module_savings_bytes_total Bytes saved by each module (Refiner remux).")
             lines.append("# TYPE mediamop_module_savings_bytes_total counter")
             for module, total in sorted(savings.items()):
                 lines.append(f'mediamop_module_savings_bytes_total{{module="{module}"}} {total}')

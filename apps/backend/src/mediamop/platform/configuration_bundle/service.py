@@ -8,8 +8,6 @@ from typing import Any, TypeVar, cast
 from sqlalchemy import DateTime, delete, inspect, select
 from sqlalchemy.orm import Mapper, Session
 
-from mediamop.modules.pruner.pruner_scope_settings_model import PrunerScopeSettings
-from mediamop.modules.pruner.pruner_server_instance_model import PrunerServerInstance
 from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow, RefinerRuleSetRow
 from mediamop.modules.refiner.refiner_library_service import resolve_library
 from mediamop.modules.refiner.refiner_operator_settings_model import RefinerOperatorSettingsRow
@@ -72,25 +70,12 @@ def dict_to_model_kwargs(model_cls: type[T], data: dict[str, Any]) -> dict[str, 
     return out
 
 
-def _sanitize_pruner_scope_export(d: dict[str, Any]) -> dict[str, Any]:
-    """Avoid dangling FKs to pruner_preview_runs when restoring on a fresh DB."""
-    x = dict(d)
-    x["last_preview_run_id"] = None
-    x["last_preview_at"] = None
-    x["last_preview_candidate_count"] = None
-    x["last_preview_outcome"] = None
-    x["last_preview_error"] = None
-    return x
-
-
 def build_configuration_bundle(session: Session) -> dict[str, Any]:
     suite_row = ensure_suite_settings_row(session)
     arr_library = session.get(ArrLibraryOperatorSettingsRow, 1)
     ref_op = session.get(RefinerOperatorSettingsRow, 1)
     libraries = list(session.scalars(select(RefinerLibraryRow).order_by(RefinerLibraryRow.id)).all())
     rule_sets = list(session.scalars(select(RefinerRuleSetRow).order_by(RefinerRuleSetRow.id)).all())
-    pruner_instances = list(session.scalars(select(PrunerServerInstance).order_by(PrunerServerInstance.id)).all())
-    pruner_scopes = list(session.scalars(select(PrunerScopeSettings).order_by(PrunerScopeSettings.id)).all())
 
     def _req(row: Any | None, label: str) -> Any:
         if row is None:
@@ -105,8 +90,6 @@ def build_configuration_bundle(session: Session) -> dict[str, Any]:
         "refiner_operator_settings": orm_row_to_dict(_req(ref_op, "refiner_operator_settings")),
         "refiner_rule_sets": [orm_row_to_dict(r) for r in rule_sets],
         "refiner_libraries": [orm_row_to_dict(r) for r in libraries],
-        "pruner_server_instances": [orm_row_to_dict(r) for r in pruner_instances],
-        "pruner_scope_settings": [_sanitize_pruner_scope_export(orm_row_to_dict(r)) for r in pruner_scopes],
     }
 
 
@@ -133,8 +116,8 @@ def _restore_refiner_libraries(session: Session, bundle: dict[str, Any]) -> None
     """
 
     if "refiner_libraries" in bundle:
-        # Replaced wholesale, like the Pruner sections above: a restore is "make it look
-        # like the backup", not "merge with whatever is here".
+        # Replaced wholesale: a restore is "make it look like the backup", not "merge
+        # with whatever is here".
         session.execute(delete(RefinerLibraryRow))
         session.execute(delete(RefinerRuleSetRow))
         session.flush()
@@ -204,12 +187,13 @@ def apply_configuration_bundle(session: Session, bundle: dict[str, Any]) -> None
         msg = f"Unsupported configuration bundle format_version (this build reads {supported})."
         raise ValueError(msg)
 
+    # Bundles written before Pruner moved to Deluno (#473) also carry
+    # ``pruner_server_instances`` and ``pruner_scope_settings``. They are not required and
+    # are ignored, so an older backup still restores everything this build does own.
     required = (
         "suite_settings",
         "arr_library_operator_settings",
         "refiner_operator_settings",
-        "pruner_server_instances",
-        "pruner_scope_settings",
     )
     for key in required:
         if key not in bundle:
@@ -231,18 +215,3 @@ def apply_configuration_bundle(session: Session, bundle: dict[str, Any]) -> None
     _apply_singleton(session, ArrLibraryOperatorSettingsRow, bundle["arr_library_operator_settings"])
     _apply_singleton(session, RefinerOperatorSettingsRow, bundle["refiner_operator_settings"])
     _restore_refiner_libraries(session, bundle)
-
-    session.execute(delete(PrunerScopeSettings))
-    session.execute(delete(PrunerServerInstance))
-    session.flush()
-    for row in bundle["pruner_server_instances"]:
-        session.add(PrunerServerInstance(**dict_to_model_kwargs(PrunerServerInstance, row)))
-    session.flush()
-    for row in bundle["pruner_scope_settings"]:
-        kwargs = dict_to_model_kwargs(PrunerScopeSettings, row)
-        kwargs["last_preview_run_id"] = None
-        kwargs["last_preview_at"] = None
-        kwargs["last_preview_candidate_count"] = None
-        kwargs["last_preview_outcome"] = None
-        kwargs["last_preview_error"] = None
-        session.add(PrunerScopeSettings(**kwargs))

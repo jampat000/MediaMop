@@ -140,8 +140,6 @@ def _component_label(*, logger: str, source: object) -> str:
     haystack = f"{logger} {source or ''}".lower()
     if "modules.refiner" in haystack:
         return "Refiner"
-    if "modules.pruner" in haystack:
-        return "Pruner"
     if "platform.auth" in haystack:
         return "Authentication"
     if "platform.activity" in haystack:

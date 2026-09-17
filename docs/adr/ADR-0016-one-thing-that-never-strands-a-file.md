@@ -9,6 +9,10 @@ retention half of [ADR-0015](ADR-0015-media-manager-port-outbound.md) out of thi
 product entirely. [ADR-0013](ADR-0013-media-managers-are-kinds-not-products.md) survives
 unchanged and is load-bearing here.
 
+> **Update (2026-09-17):** Pruner was removed ahead of the `4.0` schedule below, by product
+> decision in #473. Its retention job now lives in Deluno; migration
+> ``0036_drop_pruner_tables`` drops its tables.
+
 ## Context
 
 MediaMop has been built as a suite: a platform with modules, a dashboard that aggregates

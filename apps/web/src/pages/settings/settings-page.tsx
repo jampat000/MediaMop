@@ -499,8 +499,8 @@ export function SettingsPage() {
       dataTestId="suite-settings-page"
       description={
         <>
-          MediaMop-wide choices that are not part of Refiner or Pruner.
-          Integration details stay on their module pages.
+          MediaMop-wide choices that are not part of Refiner. Integration
+          details stay on its module page.
         </>
       }
     >

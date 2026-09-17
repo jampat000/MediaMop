@@ -10,7 +10,7 @@ from mediamop.platform.observability.diagnostics import (
 
 def test_diagnostic_event_uses_shared_shape_and_redacts_secret_like_values() -> None:
     event = DiagnosticEvent(
-        module=DiagnosticModule.PRUNER,
+        module=DiagnosticModule.REFINER,
         action=DiagnosticAction.PREVIEW,
         trigger=DiagnosticTrigger.SCHEDULED,
         result=DiagnosticResult.FAILED,
@@ -24,7 +24,7 @@ def test_diagnostic_event_uses_shared_shape_and_redacts_secret_like_values() -> 
     )
 
     assert event.as_safe_dict() == {
-        "module": "pruner",
+        "module": "refiner",
         "action": "preview",
         "trigger": "scheduled",
         "result": "failed",

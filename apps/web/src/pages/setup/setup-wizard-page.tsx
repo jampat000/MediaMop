@@ -7,12 +7,6 @@ import { MmListboxPicker } from "../../components/ui/mm-listbox-picker";
 import { ServerFolderPickerButton } from "../../components/ui/server-folder-picker-button";
 import { useMeQuery } from "../../lib/auth/queries";
 import {
-  patchPrunerInstance,
-  postPrunerInstance,
-  type PrunerServerInstance,
-} from "../../lib/pruner/api";
-import { usePrunerInstancesQuery } from "../../lib/pruner/queries";
-import {
   writeFromRefinerLibrary,
   type RefinerLibrary,
   type RefinerMediaType,
@@ -42,19 +36,12 @@ const LANDING_OPTIONS = [
   { value: "/", label: "In hand" },
   { value: "/dashboard", label: "Dashboard" },
   { value: "/refiner", label: "Refiner" },
-  { value: "/pruner", label: "Pruner" },
 ] as const;
 
 const BACKUP_INTERVAL_OPTIONS = [
   { value: "24", label: "Every day" },
   { value: "48", label: "Every 2 days" },
   { value: "168", label: "Every week" },
-] as const;
-
-const PRUNER_PROVIDER_OPTIONS = [
-  { value: "jellyfin", label: "Jellyfin" },
-  { value: "emby", label: "Emby" },
-  { value: "plex", label: "Plex" },
 ] as const;
 
 function WizardSection({
@@ -87,25 +74,11 @@ function firstLibraryOfType(
     .sort((a, b) => a.display_order - b.display_order)[0];
 }
 
-function labelForPrunerSecret(provider: string): string {
-  return provider === "plex" ? "Plex token" : "API key";
-}
-
-function defaultPrunerDisplayName(
-  provider: "jellyfin" | "emby" | "plex",
-): string {
-  const label =
-    PRUNER_PROVIDER_OPTIONS.find((option) => option.value === provider)
-      ?.label ?? "Media server";
-  return `${label} server`;
-}
-
 export function SetupWizardPage() {
   const navigate = useNavigate();
   const me = useMeQuery();
   const settingsQ = useSuiteSettingsQuery();
   const refinerQ = useRefinerLibrariesQuery();
-  const prunerInstancesQ = usePrunerInstancesQuery();
   const saveSuite = useSuiteSettingsSaveMutation();
   const createLibrary = useCreateRefinerLibrary();
   const updateLibrary = useUpdateRefinerLibrary();
@@ -122,16 +95,10 @@ export function SetupWizardPage() {
   const [movieOutputFolder, setMovieOutputFolder] = useState("");
   const [tvWatchedFolder, setTvWatchedFolder] = useState("");
   const [tvOutputFolder, setTvOutputFolder] = useState("");
-  const [prunerProvider, setPrunerProvider] = useState<
-    "jellyfin" | "emby" | "plex"
-  >("jellyfin");
-  const [prunerBaseUrl, setPrunerBaseUrl] = useState("");
-  const [prunerSecret, setPrunerSecret] = useState("");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const seededSettings = useRef(false);
   const seededRefiner = useRef(false);
-  const seededPruner = useRef(false);
 
   useEffect(() => {
     if (!settingsQ.data || seededSettings.current) {
@@ -164,22 +131,7 @@ export function SetupWizardPage() {
   }, [refinerQ.data]);
 
   useEffect(() => {
-    const first = prunerInstancesQ.data?.[0];
-    if (!first || seededPruner.current) {
-      return;
-    }
-    seededPruner.current = true;
-    const provider = String(first.provider) as "jellyfin" | "emby" | "plex";
-    setPrunerProvider(provider);
-    setPrunerBaseUrl(first.base_url || "");
-  }, [prunerInstancesQ.data]);
-
-  useEffect(() => {
-    const isLoading =
-      me.isPending ||
-      settingsQ.isPending ||
-      refinerQ.isPending ||
-      prunerInstancesQ.isPending;
+    const isLoading = me.isPending || settingsQ.isPending || refinerQ.isPending;
     const wState = (settingsQ.data?.setup_wizard_state || "pending")
       .trim()
       .toLowerCase();
@@ -189,13 +141,7 @@ export function SetupWizardPage() {
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
-  }, [
-    me.isPending,
-    settingsQ.isPending,
-    settingsQ.data,
-    refinerQ.isPending,
-    prunerInstancesQ.isPending,
-  ]);
+  }, [me.isPending, settingsQ.isPending, settingsQ.data, refinerQ.isPending]);
 
   const wizardState = (settingsQ.data?.setup_wizard_state || "pending")
     .trim()
@@ -209,11 +155,7 @@ export function SetupWizardPage() {
     [],
   );
 
-  const loading =
-    me.isPending ||
-    settingsQ.isPending ||
-    refinerQ.isPending ||
-    prunerInstancesQ.isPending;
+  const loading = me.isPending || settingsQ.isPending || refinerQ.isPending;
 
   if (loading) {
     return <PageLoading label="Loading setup wizard" />;
@@ -334,15 +276,6 @@ export function SetupWizardPage() {
       );
       return;
     }
-    if (
-      (prunerBaseUrl.trim() && !prunerSecret.trim()) ||
-      (!prunerBaseUrl.trim() && prunerSecret.trim())
-    ) {
-      setStatusMessage(
-        "Pruner setup needs both a base URL and a connection secret.",
-      );
-      return;
-    }
 
     persistDisplayDensity(displayDensity);
 
@@ -375,33 +308,6 @@ export function SetupWizardPage() {
           watchedFolder: tvWatchedFolder.trim(),
           outputFolder: tvOutputFolder.trim(),
         });
-      }
-
-      if (prunerBaseUrl.trim() && prunerSecret.trim()) {
-        const existing: PrunerServerInstance | undefined =
-          prunerInstancesQ.data?.find((row) => row.provider === prunerProvider);
-        const credentials: Record<string, string> =
-          prunerProvider === "plex"
-            ? { auth_token: prunerSecret.trim() }
-            : { api_key: prunerSecret.trim() };
-        const displayName =
-          existing?.display_name?.trim() ||
-          defaultPrunerDisplayName(prunerProvider);
-        if (existing) {
-          await patchPrunerInstance(existing.id, {
-            display_name: displayName,
-            base_url: prunerBaseUrl.trim(),
-            enabled: true,
-            credentials,
-          });
-        } else {
-          await postPrunerInstance({
-            provider: prunerProvider,
-            display_name: displayName,
-            base_url: prunerBaseUrl.trim(),
-            credentials,
-          });
-        }
       }
 
       void navigate(landingPath, { replace: true });
@@ -630,62 +536,6 @@ export function SetupWizardPage() {
                     title: "Choose Movies output folder",
                   })}
                 </div>
-              </div>
-            </WizardSection>
-
-            <WizardSection
-              title="Pruner connection"
-              description="Optionally add one media server so Pruner can preview cleanup candidates."
-            >
-              <div className="grid gap-4 lg:grid-cols-1">
-                <label className="block text-sm text-[var(--mm-text2)]">
-                  <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
-                    Server type
-                  </span>
-                  <select
-                    className="mm-input w-full"
-                    value={prunerProvider}
-                    onChange={(e) =>
-                      setPrunerProvider(
-                        e.target.value as "jellyfin" | "emby" | "plex",
-                      )
-                    }
-                  >
-                    {PRUNER_PROVIDER_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <div className="grid gap-4 lg:grid-cols-2">
-                <label className="block text-sm text-[var(--mm-text2)]">
-                  <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
-                    Base URL
-                  </span>
-                  <input
-                    className="mm-input w-full"
-                    value={prunerBaseUrl}
-                    onChange={(e) => setPrunerBaseUrl(e.target.value)}
-                    placeholder={
-                      prunerProvider === "plex"
-                        ? "http://127.0.0.1:32400"
-                        : "http://127.0.0.1:8096"
-                    }
-                  />
-                </label>
-                <label className="block text-sm text-[var(--mm-text2)]">
-                  <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--mm-text3)]">
-                    {labelForPrunerSecret(prunerProvider)}
-                  </span>
-                  <input
-                    className="mm-input w-full"
-                    value={prunerSecret}
-                    onChange={(e) => setPrunerSecret(e.target.value)}
-                    placeholder={labelForPrunerSecret(prunerProvider)}
-                  />
-                </label>
               </div>
             </WizardSection>
           </div>

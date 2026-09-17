@@ -155,13 +155,6 @@ export function ClearAllHistoryDialog({
             "finished Refiner jobs",
           )}
         </li>
-        <li>
-          {plural(
-            preview.pruner_jobs_deleted,
-            "finished Pruner job",
-            "finished Pruner jobs",
-          )}
-        </li>
       </ul>
       <p className="mt-3 text-sm leading-6 text-[var(--mm-text2)]">
         Queued and running work is kept, and so are all settings. No media file

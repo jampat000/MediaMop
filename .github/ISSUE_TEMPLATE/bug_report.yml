@@ -37,7 +37,6 @@ body:
         - Activity
         - Settings
         - Refiner
-        - Pruner
         - Logs
         - Setup wizard
         - Backup and restore

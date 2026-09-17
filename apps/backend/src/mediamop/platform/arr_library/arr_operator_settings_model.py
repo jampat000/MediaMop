@@ -11,7 +11,7 @@ from mediamop.core.db import Base
 
 
 class ArrLibraryOperatorSettingsRow(Base):
-    """One row (``id = 1``) — Sonarr/Radarr URLs and keys used by Refiner/Pruner."""
+    """One row (``id = 1``) — Sonarr/Radarr URLs and keys used by Refiner."""
 
     __tablename__ = "arr_library_operator_settings"
     __table_args__ = (CheckConstraint("id = 1", name="ck_arr_library_operator_settings_singleton"),)

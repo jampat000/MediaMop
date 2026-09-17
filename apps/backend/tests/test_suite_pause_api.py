@@ -1,6 +1,6 @@
 """The pause endpoint — ``/api/v1/suite/pause``.
 
-Pause is on the suite rather than on Refiner so Pruner can honour the same switch later
+Pause is on the suite rather than on Refiner so any later module can honour the same switch
 instead of a second one appearing beside it (#337).
 """
 

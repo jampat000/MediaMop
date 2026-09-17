@@ -19,13 +19,6 @@ import {
   useDashboardStatusQuery,
 } from "../../lib/dashboard/queries";
 import {
-  prunerJobsInspectionQueryKey,
-  prunerOverviewStatsQueryKey,
-  usePrunerInstancesQuery,
-  usePrunerJobsInspectionQuery,
-  usePrunerOverviewStatsQuery,
-} from "../../lib/pruner/queries";
-import {
   refinerJobsInspectionQueryKey,
   useRefinerJobsInspectionQuery,
 } from "../../lib/refiner/jobs-inspection/queries";
@@ -39,7 +32,7 @@ import { useSuitePauseQuery } from "../../lib/suite/pause-queries";
 import { mmActionButtonClass } from "../../lib/ui/mm-control-roles";
 import { useAppDateFormatter } from "../../lib/ui/mm-format-date";
 
-type ModuleKey = "refiner" | "pruner";
+type ModuleKey = "refiner";
 type ModuleStatus =
   "Healthy" | "Review needed" | "Active" | "Setup required" | "Paused";
 type OperationalModule = NonNullable<DashboardStatus["modules"]>[number];
@@ -80,8 +73,6 @@ const DASHBOARD_LIVE_INVALIDATION_KEYS = [
   [...activityRecentKey, DASHBOARD_ACTIVITY_FILTERS] as const,
   refinerOverviewStatsQueryKey,
   refinerJobsInspectionQueryKey("recent", 12),
-  prunerOverviewStatsQueryKey,
-  prunerJobsInspectionQueryKey(12),
 ] as const;
 
 type DashboardJobRow = {
@@ -385,13 +376,6 @@ function refinerJobTitle(jobKind: string): string {
   return "Refiner job";
 }
 
-function prunerJobTitle(jobKind: string): string {
-  if (jobKind.includes("preview")) return "Preview cleanup";
-  if (jobKind.includes("apply")) return "Run cleanup";
-  if (jobKind.includes("connection")) return "Check media server";
-  return "Pruner job";
-}
-
 function buildRefinerCard(args: {
   processed: number;
   failed: number;
@@ -490,84 +474,6 @@ function buildRefinerCard(args: {
   return card;
 }
 
-function buildPrunerCard(args: {
-  enabledServers: number;
-  totalServers: number;
-  previewRuns: number;
-  applyRuns: number;
-  itemsRemoved: number;
-  itemsSkipped: number;
-  failedApplies: number;
-  operational?: OperationalModule;
-}): ModuleCardData {
-  const attention = args.enabledServers === 0 || args.failedApplies > 0;
-  const active =
-    args.previewRuns > 0 || args.applyRuns > 0 || args.itemsRemoved > 0;
-  const reviewedItems = args.itemsRemoved + args.itemsSkipped;
-  const removalRate =
-    reviewedItems > 0 ? (args.itemsRemoved / reviewedItems) * 100.0 : 0;
-
-  const card: ModuleCardData = {
-    key: "pruner",
-    name: "Pruner",
-    status: statusFromSignals(attention, active),
-    summary:
-      args.enabledServers === 0
-        ? "No media servers are enabled yet."
-        : args.itemsRemoved > 0
-          ? `Pruner removed ${formatCount(args.itemsRemoved)} library ${args.itemsRemoved === 1 ? "item" : "items"} in the last 30 days.`
-          : active
-            ? "Preview and cleanup work has recent activity."
-            : "Ready. No recent preview or delete work recorded.",
-    metrics: [
-      { label: "Items removed", value: formatCount(args.itemsRemoved) },
-      {
-        label: "Cleanup runs",
-        value: formatCount(args.applyRuns),
-        detail: `Failed cleanups ${formatCount(args.failedApplies)}`,
-      },
-      {
-        label: "Candidates reviewed",
-        value: formatCount(reviewedItems),
-        detail: `Preview runs ${formatCount(args.previewRuns)}`,
-      },
-      {
-        label: "Removal rate",
-        value: formatPercent(removalRate),
-        detail: `${formatCount(args.itemsRemoved)} removed - ${formatCount(args.itemsSkipped)} skipped`,
-      },
-    ],
-    facts: [
-      `Servers enabled: ${formatCount(args.enabledServers)} of ${formatCount(args.totalServers)}`,
-      `Last 30 days: ${formatCount(args.previewRuns)} previews and ${formatCount(args.applyRuns)} cleanup ${args.applyRuns === 1 ? "run" : "runs"}`,
-    ],
-    actionLabel: "Open Pruner",
-    actionTo: "/pruner",
-  };
-  if (args.operational) {
-    card.status = statusFromOperationalState(args.operational.state);
-    card.summary = args.operational.summary;
-    if (card.status === "Setup required") {
-      card.actionTo = args.operational.action_path;
-      card.actionLabel = "Configure Pruner";
-    } else if (card.status === "Review needed") {
-      card.actionTo = args.operational.action_path;
-      card.actionLabel = "Review Pruner";
-    } else if (card.status === "Active") {
-      card.actionTo = "/pruner?tab=jobs";
-      card.actionLabel = "View live work";
-    } else {
-      card.actionTo = "/pruner";
-      card.actionLabel = "Open Pruner";
-    }
-    card.facts = [
-      `Current queue: ${formatCount(args.operational.queued_job_count)} queued, ${formatCount(args.operational.active_job_count)} active`,
-      `Current failures: ${formatCount(args.operational.failed_job_count)}`,
-    ];
-  }
-  return card;
-}
-
 export function DashboardPage() {
   const fmt = useAppDateFormatter();
   useActivityStreamInvalidations(DASHBOARD_LIVE_INVALIDATION_KEYS, {
@@ -580,9 +486,6 @@ export function DashboardPage() {
   const refinerStats = useRefinerOverviewStatsQuery();
   const refinerLibraries = useRefinerLibrariesQuery();
   const refinerJobs = useRefinerJobsInspectionQuery("recent", 12);
-  const prunerStats = usePrunerOverviewStatsQuery();
-  const prunerInstances = usePrunerInstancesQuery();
-  const prunerJobs = usePrunerJobsInspectionQuery(12);
   const suitePause = useSuitePauseQuery();
 
   if (dash.isPending) {
@@ -625,18 +528,6 @@ export function DashboardPage() {
     ),
     operational: operationalByModule.get("refiner"),
   });
-  const prunerCard = buildPrunerCard({
-    enabledServers:
-      prunerInstances.data?.filter((row) => row.enabled).length ?? 0,
-    totalServers: prunerInstances.data?.length ?? 0,
-    previewRuns: prunerStats.data?.preview_runs ?? 0,
-    applyRuns: prunerStats.data?.apply_runs ?? 0,
-    itemsRemoved: prunerStats.data?.items_removed ?? 0,
-    itemsSkipped: prunerStats.data?.items_skipped ?? 0,
-    failedApplies: prunerStats.data?.failed_applies ?? 0,
-    operational: operationalByModule.get("pruner"),
-  });
-
   const refinerFileOutcomes =
     (refinerStats.data?.output_written_count ?? 0) +
     (refinerStats.data?.already_optimized_count ?? 0);
@@ -656,7 +547,7 @@ export function DashboardPage() {
     ),
   };
 
-  const moduleCards = [refinerCardForDashboard, prunerCard];
+  const moduleCards = [refinerCardForDashboard];
   const modulesNeedingAttentionTotal = moduleCards.filter((m) =>
     moduleNeedsAttention(m.status),
   ).length;
@@ -680,8 +571,7 @@ export function DashboardPage() {
       key: `worker-${row.module}`,
       title: `${row.module[0].toUpperCase()}${row.module.slice(1)} workers`,
       detail: row.detail,
-      actionTo:
-        row.module === "pruner" ? "/pruner?tab=jobs" : "/refiner?tab=jobs",
+      actionTo: "/refiner?tab=jobs",
       actionLabel: "Open jobs",
     })),
   ];
@@ -755,27 +645,6 @@ export function DashboardPage() {
       technicalDetail: job.technical_detail ?? undefined,
       actionTo: "/refiner?tab=jobs",
       actionLabel: "Open Refiner jobs",
-      updatedAt: job.updated_at,
-    })) ?? []),
-    ...(prunerJobs.data?.jobs.slice(0, 4).map((job) => ({
-      key: `pruner-${job.id}`,
-      module: "Pruner",
-      status: jobStatusLabel(job.status),
-      title: prunerJobTitle(job.job_kind),
-      detail:
-        job.operator_message?.trim() ||
-        readableLegacyJobMessage(
-          "Pruner",
-          prunerJobTitle(job.job_kind),
-          job.status,
-          job.last_error,
-        ),
-      nextAction:
-        job.next_action?.trim() ||
-        "Open Pruner Jobs for the explanation and the next action.",
-      technicalDetail: job.technical_detail ?? undefined,
-      actionTo: "/pruner?tab=jobs",
-      actionLabel: "Open Pruner jobs",
       updatedAt: job.updated_at,
     })) ?? []),
   ]
@@ -963,9 +832,7 @@ export function DashboardPage() {
                 />
                 <div>
                   <strong>No active media work</strong>
-                  <p>
-                    New Refiner and Pruner work will surface here automatically.
-                  </p>
+                  <p>New Refiner work will surface here automatically.</p>
                 </div>
               </div>
             )}
@@ -1022,11 +889,10 @@ export function DashboardPage() {
       </section>
 
       <section
-        // Two modules, so two columns. This was three when Subber was one of them (#331)
-        // and was left behind when it went, so Refiner and Pruner sat in two thirds of the
-        // row with an empty column beside them. Two also lines the cards up with the
-        // Needs attention / Recent activity pair below, which is already xl:grid-cols-2.
-        className="mt-5 grid gap-4 xl:grid-cols-2"
+        // One column per module card. This was three when Subber was one of them (#331)
+        // and two while Pruner was (#473); a count left behind leaves the cards in part of
+        // the row with empty columns beside them.
+        className="mt-5 grid gap-4 xl:grid-cols-1"
         data-testid="dashboard-module-cards"
       >
         {moduleCards.map((card) => (

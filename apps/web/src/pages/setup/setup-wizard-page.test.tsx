@@ -14,19 +14,13 @@ const {
   suiteMutateAsyncMock,
   createLibraryMock,
   updateLibraryMock,
-  patchPrunerInstanceMock,
-  postPrunerInstanceMock,
   librariesState,
-  prunerQueryData,
 } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
   suiteMutateAsyncMock: vi.fn(),
   createLibraryMock: vi.fn(),
   updateLibraryMock: vi.fn(),
-  patchPrunerInstanceMock: vi.fn(),
-  postPrunerInstanceMock: vi.fn(),
   librariesState: { data: [] as RefinerLibrary[] },
-  prunerQueryData: [],
 }));
 
 function existingLibrary(over: Partial<RefinerLibrary>): RefinerLibrary {
@@ -81,18 +75,6 @@ vi.mock("../../lib/refiner/libraries-queries", () => ({
   }),
 }));
 
-vi.mock("../../lib/pruner/queries", () => ({
-  usePrunerInstancesQuery: () => ({
-    isPending: false,
-    data: prunerQueryData,
-  }),
-}));
-
-vi.mock("../../lib/pruner/api", () => ({
-  postPrunerInstance: postPrunerInstanceMock,
-  patchPrunerInstance: patchPrunerInstanceMock,
-}));
-
 vi.mock("../../lib/api/auth-api", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("../../lib/api/auth-api")>();
@@ -137,13 +119,9 @@ describe("SetupWizardPage", () => {
     createLibraryMock.mockReset();
     updateLibraryMock.mockReset();
     librariesState.data = [];
-    postPrunerInstanceMock.mockReset();
-    patchPrunerInstanceMock.mockReset();
     suiteMutateAsyncMock.mockResolvedValue({});
     createLibraryMock.mockResolvedValue({});
     updateLibraryMock.mockResolvedValue({});
-    postPrunerInstanceMock.mockResolvedValue({});
-    patchPrunerInstanceMock.mockResolvedValue({});
   });
 
   it("offers In hand as the start page at / and the dashboard at /dashboard", async () => {
@@ -188,12 +166,6 @@ describe("SetupWizardPage", () => {
     fireEvent.change(screen.getByPlaceholderText("Movies output folder"), {
       target: { value: "E:\\MoviesOut" },
     });
-    fireEvent.change(screen.getByPlaceholderText("http://127.0.0.1:8096"), {
-      target: { value: "http://jf:8096" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("API key"), {
-      target: { value: "jf-key" },
-    });
     fireEvent.click(screen.getByText("Refiner"));
     fireEvent.click(screen.getByRole("button", { name: "Finish setup" }));
 
@@ -213,13 +185,6 @@ describe("SetupWizardPage", () => {
       output_folder: "E:\\MoviesOut",
     });
     expect(updateLibraryMock).not.toHaveBeenCalled();
-    expect(postPrunerInstanceMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        provider: "jellyfin",
-        base_url: "http://jf:8096",
-        credentials: { api_key: "jf-key" },
-      }),
-    );
     await waitFor(() => {
       expect(navigateMock).toHaveBeenCalledWith("/refiner", {
         replace: true,

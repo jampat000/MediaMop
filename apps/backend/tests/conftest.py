@@ -23,9 +23,6 @@ def _mediamop_sqlite_runtime(tmp_path_factory: pytest.TempPathFactory) -> Iterat
     home = tmp_path_factory.mktemp("mediamop_pytest_home")
     os.environ["MEDIAMOP_HOME"] = str(home)
     os.environ["MEDIAMOP_REFINER_WORKER_COUNT"] = "0"
-    os.environ["MEDIAMOP_PRUNER_WORKER_COUNT"] = "0"
-    os.environ["MEDIAMOP_PRUNER_PREVIEW_SCHEDULE_ENQUEUE_ENABLED"] = "0"
-    os.environ["MEDIAMOP_PRUNER_APPLY_ENABLED"] = "0"
     backend = Path(__file__).resolve().parents[1]
     cfg = Config(str(backend / "alembic.ini"))
     cfg.set_main_option("script_location", str(backend / "alembic"))

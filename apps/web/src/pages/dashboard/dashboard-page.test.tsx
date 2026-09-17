@@ -8,9 +8,6 @@ const useActivityRecentQuery = vi.fn();
 const useRefinerOverviewStatsQuery = vi.fn();
 const useRefinerLibrariesQuery = vi.fn();
 const useRefinerJobsInspectionQuery = vi.fn();
-const usePrunerOverviewStatsQuery = vi.fn();
-const usePrunerInstancesQuery = vi.fn();
-const usePrunerJobsInspectionQuery = vi.fn();
 const useSuitePauseQuery = vi.fn();
 
 vi.mock("../../lib/activity/queries", () => ({
@@ -51,21 +48,6 @@ vi.mock("../../lib/refiner/jobs-inspection/queries", () => ({
   ],
   useRefinerJobsInspectionQuery: (...args: unknown[]) =>
     useRefinerJobsInspectionQuery(...args),
-}));
-
-vi.mock("../../lib/pruner/queries", () => ({
-  prunerOverviewStatsQueryKey: ["pruner", "overview-stats"],
-  prunerJobsInspectionQueryKey: (limit = 100) => [
-    "pruner",
-    "jobs-inspection",
-    limit,
-  ],
-  usePrunerOverviewStatsQuery: (...args: unknown[]) =>
-    usePrunerOverviewStatsQuery(...args),
-  usePrunerInstancesQuery: (...args: unknown[]) =>
-    usePrunerInstancesQuery(...args),
-  usePrunerJobsInspectionQuery: (...args: unknown[]) =>
-    usePrunerJobsInspectionQuery(...args),
 }));
 
 vi.mock("../../lib/suite/pause-queries", () => ({
@@ -121,17 +103,6 @@ describe("DashboardPage", () => {
       ],
     });
     useRefinerJobsInspectionQuery.mockReturnValue({ data: { jobs: [] } });
-    usePrunerOverviewStatsQuery.mockReturnValue({
-      data: {
-        items_removed: 0,
-        items_skipped: 0,
-        preview_runs: 0,
-        apply_runs: 0,
-        failed_applies: 0,
-      },
-    });
-    usePrunerInstancesQuery.mockReturnValue({ data: [] });
-    usePrunerJobsInspectionQuery.mockReturnValue({ data: { jobs: [] } });
     useSuitePauseQuery.mockReturnValue({ data: { paused: false } });
   });
 
@@ -192,12 +163,8 @@ describe("DashboardPage", () => {
       screen.queryByTestId("dashboard-runtime-health"),
     ).not.toBeInTheDocument();
     expect(screen.getAllByText("Refiner").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Pruner").length).toBeGreaterThan(0);
-    expect(
-      screen.getByText("Needs setup: Refiner, Pruner."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Needs setup: Refiner.")).toBeInTheDocument();
     expect(screen.getByText("Net space saved")).toBeInTheDocument();
-    expect(screen.getByText("Removal rate")).toBeInTheDocument();
   });
 
   it("lists each Refiner library's watched folder and needs setup only when none has one", () => {
@@ -217,13 +184,13 @@ describe("DashboardPage", () => {
       "Films watched folder: Configured",
       "4K films watched folder: Not set",
     ]);
-    expect(screen.getByText("Needs setup: Pruner.")).toBeInTheDocument();
+    expect(screen.queryByText(/Needs setup/)).not.toBeInTheDocument();
   });
 
   it("gives the module cards a column each, so they fill the row", () => {
-    // The grid said three columns while only Refiner and Pruner were left, so the cards
-    // sat in two thirds of the row with an empty column beside them. Nothing tied the
-    // column count to the number of modules, so removing Subber could not have caught it.
+    // The grid said three columns while only two modules were left, so the cards sat in
+    // two thirds of the row with an empty column beside them. Nothing tied the column
+    // count to the number of modules, so removing Subber could not have caught it.
     render(
       <MemoryRouter>
         <DashboardPage />

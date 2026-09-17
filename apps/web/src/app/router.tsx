@@ -60,7 +60,7 @@ const router = createBrowserRouter([
                 errorElement: routeErrorElement,
               },
               {
-                // Still the cross-module summary while Pruner exists; retires with it (#459).
+                // The cross-module summary; its retirement is tracked in #459.
                 path: "dashboard",
                 lazy: async () => ({
                   Component: (await import("../pages/dashboard/dashboard-page"))
@@ -83,78 +83,6 @@ const router = createBrowserRouter([
                     .RefinerPage,
                 }),
                 errorElement: routeErrorElement,
-              },
-              {
-                path: "pruner",
-                errorElement: routeErrorElement,
-                children: [
-                  {
-                    index: true,
-                    lazy: async () => ({
-                      Component: (
-                        await import("../pages/pruner/pruner-instances-list-page")
-                      ).PrunerInstancesListPage,
-                    }),
-                    errorElement: routeErrorElement,
-                  },
-                  {
-                    path: "instances/:instanceId",
-                    lazy: async () => ({
-                      Component: (
-                        await import("../pages/pruner/pruner-instance-shell")
-                      ).PrunerInstanceShell,
-                    }),
-                    errorElement: routeErrorElement,
-                    children: [
-                      {
-                        index: true,
-                        element: <Navigate to="overview" replace />,
-                      },
-                      {
-                        path: "overview",
-                        lazy: async () => ({
-                          Component: (
-                            await import("../pages/pruner/pruner-instance-overview-tab")
-                          ).PrunerInstanceOverviewTab,
-                        }),
-                        errorElement: routeErrorElement,
-                      },
-                      {
-                        path: "tv",
-                        lazy: async () => {
-                          const mod =
-                            await import("../pages/pruner/pruner-scope-tab");
-                          return {
-                            Component: () => <mod.PrunerScopeTab scope="tv" />,
-                          };
-                        },
-                        errorElement: routeErrorElement,
-                      },
-                      {
-                        path: "movies",
-                        lazy: async () => {
-                          const mod =
-                            await import("../pages/pruner/pruner-scope-tab");
-                          return {
-                            Component: () => (
-                              <mod.PrunerScopeTab scope="movies" />
-                            ),
-                          };
-                        },
-                        errorElement: routeErrorElement,
-                      },
-                      {
-                        path: "connection",
-                        lazy: async () => ({
-                          Component: (
-                            await import("../pages/pruner/pruner-connection-tab")
-                          ).PrunerConnectionTab,
-                        }),
-                        errorElement: routeErrorElement,
-                      },
-                    ],
-                  },
-                ],
               },
               {
                 path: "settings",

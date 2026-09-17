@@ -20,7 +20,6 @@ SECRET_ASSIGNMENT_RE = re.compile(
 
 class DiagnosticModule(StrEnum):
     REFINER = "refiner"
-    PRUNER = "pruner"
     AUTH = "auth"
     SYSTEM = "system"
 

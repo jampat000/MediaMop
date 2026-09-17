@@ -355,15 +355,15 @@ describe("ActivityPage", () => {
         run(17, "d.mkv", { outcome: "ok" }),
         event({
           id: 10,
-          event_type: "pruner.preview_failed",
-          module: "pruner",
-          title: "Preview failed",
+          event_type: "auth.login_failed",
+          module: "auth",
+          title: "Sign-in failed",
         }),
         event({
           id: 9,
-          event_type: "pruner.preview_failed",
-          module: "pruner",
-          title: "Preview failed",
+          event_type: "auth.login_failed",
+          module: "auth",
+          title: "Sign-in failed",
         }),
       ]),
     );
@@ -513,15 +513,13 @@ describe("ActivityPage", () => {
       status: "preview",
       activity_events_deleted: 12,
       refiner_jobs_deleted: 4,
-      pruner_jobs_deleted: 1,
-      total_deleted: 17,
+      total_deleted: 16,
     });
     mocks.resetSuiteOperationalHistory.mockResolvedValue({
       status: "reset",
       activity_events_deleted: 12,
       refiner_jobs_deleted: 4,
-      pruner_jobs_deleted: 1,
-      total_deleted: 17,
+      total_deleted: 16,
     });
     renderPage();
 
@@ -531,7 +529,6 @@ describe("ActivityPage", () => {
     );
     expect(dialog).toHaveTextContent("12 Activity events");
     expect(dialog).toHaveTextContent("4 finished Refiner jobs");
-    expect(dialog).toHaveTextContent("1 finished Pruner job");
     expect(dialog).toHaveTextContent(
       "Queued and running work is kept, and so are all settings. No media file is touched.",
     );
@@ -554,7 +551,7 @@ describe("ActivityPage", () => {
     );
     await waitFor(() =>
       expect(screen.getByRole("status")).toHaveTextContent(
-        "History cleared. Removed 12 Activity events, 4 finished Refiner jobs and 1 finished Pruner job.",
+        "History cleared. Removed 12 Activity events and 4 finished Refiner jobs.",
       ),
     );
   });

@@ -8,8 +8,8 @@ Operational events should use the shared diagnostics vocabulary in `mediamop.pla
 
 Events should include the fields that apply:
 
-- `module`: `refiner`, `pruner`, `system`, or shared service name.
-- `provider`: upstream system such as Plex, Jellyfin, Emby, Radarr, Sonarr, or subtitle provider.
+- `module`: `refiner`, `system`, or shared service name.
+- `provider`: upstream system such as Radarr, Sonarr, or Deluno.
 - `media_scope`: `tv`, `movies`, or both when the operation spans both.
 - `action`: scan, preview, apply, remux, cleanup, search, import, connection test, schedule run, or upgrade.
 - `trigger`: manual, scheduled, worker, startup, retry, or system.

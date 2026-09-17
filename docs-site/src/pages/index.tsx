@@ -13,12 +13,6 @@ const features = [
       'Remux media files into cleaner, more consistent outputs with configurable worker lanes.',
     screenshot: '/MediaMop/img/refiner.png',
   },
-  {
-    title: 'Pruner',
-    description:
-      'Find and safely remove media matching your cleanup rules with preview before deletion.',
-    screenshot: '/MediaMop/img/pruner.png',
-  },
 ];
 
 function Hero(): ReactNode {

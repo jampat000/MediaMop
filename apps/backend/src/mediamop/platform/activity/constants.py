@@ -34,14 +34,3 @@ REFINER_FILE_REJECT_FELL_BACK = "refiner.file_reject_fell_back"
 REFINER_HANDOFF_REPORTED = "refiner.handoff_reported"
 # The manager cancelled a hand-off MediaMop had not started (#480).
 REFINER_HANDOFF_CANCELLED = "refiner.handoff_cancelled"
-
-# Pruner (pruner_jobs + server instances)
-# A Pruner job that stopped with an error before recording its own result (#488).
-PRUNER_JOB_FAILED = "pruner.job_failed"
-PRUNER_CONNECTION_TEST_SUCCEEDED = "pruner.connection_test_succeeded"
-PRUNER_CONNECTION_TEST_FAILED = "pruner.connection_test_failed"
-PRUNER_PREVIEW_SUCCEEDED = "pruner.preview_succeeded"
-PRUNER_PREVIEW_UNSUPPORTED = "pruner.preview_unsupported"
-PRUNER_PREVIEW_FAILED = "pruner.preview_failed"
-PRUNER_APPLY_LIBRARY_REMOVAL_COMPLETED = "pruner.apply_library_removal_completed"
-PRUNER_APPLY_LIBRARY_REMOVAL_FAILED = "pruner.apply_library_removal_failed"

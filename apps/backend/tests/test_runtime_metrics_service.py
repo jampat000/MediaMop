@@ -20,17 +20,17 @@ def test_runtime_metrics_summary_and_prometheus_include_module_job_metrics() -> 
     record_log_record("error")
     record_module_job_event(module="refiner", event="started")
     record_module_job_event(module="refiner", event="completed")
-    record_module_job_event(module="pruner", event="failed")
+    record_module_job_event(module="other", event="failed")
     set_module_queue_depth(module="refiner", depth=3)
-    set_module_queue_depth(module="pruner", depth=1)
+    set_module_queue_depth(module="other", depth=1)
 
     output = render_prometheus_metrics()
 
     assert 'mediamop_module_jobs_total{module="refiner",event="started"} 1' in output
     assert 'mediamop_module_jobs_total{module="refiner",event="completed"} 1' in output
-    assert 'mediamop_module_jobs_total{module="pruner",event="failed"} 1' in output
+    assert 'mediamop_module_jobs_total{module="other",event="failed"} 1' in output
     assert 'mediamop_module_queue_depth{module="refiner"} 3' in output
-    assert 'mediamop_module_queue_depth{module="pruner"} 1' in output
+    assert 'mediamop_module_queue_depth{module="other"} 1' in output
     assert "mediamop_http_requests_total 2" in output
 
 
@@ -39,11 +39,11 @@ def test_record_module_savings_increments_correctly() -> None:
 
     record_module_savings(module="refiner", bytes_saved=1_000_000)
     record_module_savings(module="refiner", bytes_saved=500_000)
-    record_module_savings(module="pruner", bytes_saved=2_000_000)
+    record_module_savings(module="other", bytes_saved=2_000_000)
 
     summary = build_runtime_metrics_summary()
     assert summary["module_savings_bytes"]["refiner"] == 1_500_000
-    assert summary["module_savings_bytes"]["pruner"] == 2_000_000
+    assert summary["module_savings_bytes"]["other"] == 2_000_000
 
 
 def test_record_module_savings_ignores_nonpositive() -> None:
@@ -70,14 +70,14 @@ def test_render_prometheus_includes_savings_metric() -> None:
     reset_runtime_metrics_for_tests()
 
     record_module_savings(module="refiner", bytes_saved=12_345_678)
-    record_module_savings(module="pruner", bytes_saved=9_876_543)
+    record_module_savings(module="other", bytes_saved=9_876_543)
 
     output = render_prometheus_metrics()
 
     assert "# HELP mediamop_module_savings_bytes_total" in output
     assert "# TYPE mediamop_module_savings_bytes_total counter" in output
     assert 'mediamop_module_savings_bytes_total{module="refiner"} 12345678' in output
-    assert 'mediamop_module_savings_bytes_total{module="pruner"} 9876543' in output
+    assert 'mediamop_module_savings_bytes_total{module="other"} 9876543' in output
 
 
 def test_render_prometheus_omits_savings_section_when_empty() -> None:

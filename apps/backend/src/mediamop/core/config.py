@@ -11,7 +11,6 @@ from urllib.parse import urlparse
 from mediamop.core.config_domains import (
     ArrSettings,
     AuthSettings,
-    PrunerSettings,
     RefinerSettings,
     SecuritySettings,
     SessionSettings,
@@ -22,7 +21,6 @@ from mediamop.core.runtime_paths import (
     resolve_all_runtime_paths,
     sqlalchemy_sqlite_url,
 )
-from mediamop.modules.pruner.worker_limits import clamp_pruner_worker_count
 from mediamop.modules.refiner.refiner_family_intervals import (
     clamp_refiner_min_file_age_seconds,
     clamp_refiner_schedule_interval_seconds,
@@ -149,20 +147,6 @@ class MediaMopSettings:
     # only trigger, which is the pre-watcher behaviour and still finds every file.
     refiner_watcher_enabled: bool
     refiner_watcher_debounce_seconds: float
-    # 0 = no in-process Pruner workers (Pruner-owned pruner_jobs only); >0 when Pruner queues durable work.
-    pruner_worker_count: int
-    # Pruner per-scope scheduled preview enqueue loop (reads ``pruner_scope_settings``; independent of worker count).
-    pruner_preview_schedule_enqueue_enabled: bool
-    pruner_preview_schedule_scan_interval_seconds: int
-    # Jellyfin + Emby Phase 3 apply: enqueue ``pruner.candidate_removal.apply.v1`` (default off).
-    pruner_apply_enabled: bool
-    # Deprecated: legacy ``MEDIAMOP_PRUNER_PLEX_LIVE_REMOVAL_ENABLED`` (Plex used to enqueue ``plex_live.v1``). Plex
-    # missing-primary removal now uses preview snapshots + apply only; this flag is loaded for API visibility only.
-    pruner_plex_live_removal_enabled: bool
-    # Caps Plex ``missing_primary_media_reported`` preview-only collection (per-scope ``preview_max_items`` and a 5k
-    # clamp). Env name keeps ``PLEX_LIVE`` for older installs; it does not re-enable live scan. Loaded from
-    # MEDIAMOP_PRUNER_PLEX_LIVE_ABS_MAX_ITEMS.
-    pruner_plex_live_abs_max_items: int
     # Refiner watched-folder remux scan dispatch (``refiner.watched_folder.remux_scan_dispatch.v1``).
     # Whether each scope is scheduled, and how often, is stored per scope in the database
     # (Refiner Libraries tab), not here — see ADR-0009 and docs/settings-truthfulness-audit.md.
@@ -265,17 +249,6 @@ class MediaMopSettings:
         )
 
     @property
-    def pruner(self) -> PrunerSettings:
-        return PrunerSettings(
-            worker_count=self.pruner_worker_count,
-            preview_schedule_enqueue_enabled=self.pruner_preview_schedule_enqueue_enabled,
-            preview_schedule_scan_interval_seconds=self.pruner_preview_schedule_scan_interval_seconds,
-            apply_enabled=self.pruner_apply_enabled,
-            plex_live_removal_enabled=self.pruner_plex_live_removal_enabled,
-            plex_live_abs_max_items=self.pruner_plex_live_abs_max_items,
-        )
-
-    @property
     def arr(self) -> ArrSettings:
         return ArrSettings(
             radarr_base_url=self.arr_radarr_base_url,
@@ -368,15 +341,6 @@ class MediaMopSettings:
         refiner_watcher_debounce = max(
             0.25, min(300.0, float(_env_int("MEDIAMOP_REFINER_WATCHER_DEBOUNCE_SECONDS", 3)))
         )
-        pruner_workers = clamp_pruner_worker_count(_env_int("MEDIAMOP_PRUNER_WORKER_COUNT", 1))
-        pruner_preview_sched_enq = _env_bool("MEDIAMOP_PRUNER_PREVIEW_SCHEDULE_ENQUEUE_ENABLED", True)
-        pruner_preview_sched_scan_iv = max(
-            10,
-            min(300, _env_int("MEDIAMOP_PRUNER_PREVIEW_SCHEDULE_SCAN_INTERVAL_SECONDS", 45)),
-        )
-        pruner_apply_on = _env_bool("MEDIAMOP_PRUNER_APPLY_ENABLED", False)
-        pruner_plex_live_on = _env_bool("MEDIAMOP_PRUNER_PLEX_LIVE_REMOVAL_ENABLED", False)
-        pruner_plex_live_abs_max = max(1, min(5000, _env_int("MEDIAMOP_PRUNER_PLEX_LIVE_ABS_MAX_ITEMS", 150)))
 
         refiner_wf_scan_periodic_remux_enq = _env_bool(
             "MEDIAMOP_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS",
@@ -510,12 +474,6 @@ class MediaMopSettings:
             refiner_worker_count=refiner_workers,
             refiner_watcher_enabled=refiner_watcher_on,
             refiner_watcher_debounce_seconds=refiner_watcher_debounce,
-            pruner_worker_count=pruner_workers,
-            pruner_preview_schedule_enqueue_enabled=pruner_preview_sched_enq,
-            pruner_preview_schedule_scan_interval_seconds=pruner_preview_sched_scan_iv,
-            pruner_apply_enabled=pruner_apply_on,
-            pruner_plex_live_removal_enabled=pruner_plex_live_on,
-            pruner_plex_live_abs_max_items=pruner_plex_live_abs_max,
             refiner_watched_folder_remux_scan_dispatch_periodic_enqueue_remux_jobs=refiner_wf_scan_periodic_remux_enq,
             refiner_probe_size_mb=refiner_probe_size_mb,
             refiner_analyze_duration_seconds=refiner_analyze_duration_seconds,

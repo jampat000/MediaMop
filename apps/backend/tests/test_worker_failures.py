@@ -9,13 +9,9 @@ import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.modules.pruner.pruner_jobs_model  # noqa: F401
 import mediamop.modules.refiner.jobs_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401
 from mediamop.core.db import Base
-from mediamop.modules.pruner.pruner_jobs_model import PrunerJob
-from mediamop.modules.pruner.pruner_jobs_ops import pruner_enqueue_or_get_job
-from mediamop.modules.pruner.worker_loop import process_one_pruner_job
 from mediamop.modules.refiner.jobs_model import RefinerJob
 from mediamop.modules.refiner.jobs_ops import refiner_enqueue_or_get_job
 from mediamop.modules.refiner.refiner_file_remux_pass_activity import (
@@ -45,10 +41,10 @@ def _operator_part(error: str) -> str:
 
 def test_a_refused_job_names_no_queue_kind_where_a_person_reads() -> None:
     error = refused_job_error(
-        module="Refiner", technical_reason="refused job_kind 'pruner.x.v1' (row id=4)", will_retry=False
+        module="Refiner", technical_reason="refused job_kind 'trimmer.x.v1' (row id=4)", will_retry=False
     )
-    assert "pruner.x.v1" not in _operator_part(error)
-    assert "pruner.x.v1" in error
+    assert "trimmer.x.v1" not in _operator_part(error)
+    assert "trimmer.x.v1" in error
     assert "marked failed" in error
 
 
@@ -85,32 +81,6 @@ def test_a_handler_that_recorded_its_own_failure_is_not_recorded_twice(factory) 
     with factory() as s:
         assert s.scalars(select(ActivityEvent).where(ActivityEvent.event_type == C.REFINER_WORKER_FAILURE)).all() == []
         assert "marked failed" in (s.scalars(select(RefinerJob)).one().last_error or "")
-
-
-def test_a_pruner_job_that_raises_now_leaves_one_plain_activity_entry(factory) -> None:  # type: ignore[no-untyped-def]
-    with factory() as s:
-        pruner_enqueue_or_get_job(
-            s,
-            dedupe_key="p",
-            job_kind="pruner.test.bad.v1",
-            payload_json=json.dumps({"trigger": "scheduled"}),
-            max_attempts=3,
-        )
-        s.commit()
-
-    def _boom(_ctx) -> None:  # type: ignore[no-untyped-def]
-        raise RuntimeError("Pruner credentials could not be read")
-
-    process_one_pruner_job(factory, lease_owner="w", job_handlers={"pruner.test.bad.v1": _boom}, now=T0)
-    with factory() as s:
-        events = s.scalars(select(ActivityEvent).where(ActivityEvent.event_type == C.PRUNER_JOB_FAILED)).all()
-        job = s.scalars(select(PrunerJob)).one()
-    assert len(events) == 1
-    assert events[0].title == "A Pruner job stopped with an error"
-    assert (events[0].result, events[0].trigger) == ("retrying", "scheduled")
-    detail = json.loads(events[0].detail or "{}")
-    assert "RuntimeError" not in detail["message"]
-    assert "try this job again shortly" in (job.last_error or "")
 
 
 def test_a_waiting_file_does_not_read_as_processing(factory) -> None:  # type: ignore[no-untyped-def]

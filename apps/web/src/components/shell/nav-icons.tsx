@@ -115,48 +115,6 @@ export function NavIconRefiner({ className = "" }: { className?: string }) {
   );
 }
 
-export function NavIconPruner({ className = "" }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <circle cx="8" cy="17" r="2.4" stroke="currentColor" strokeWidth="1.35" />
-      <circle
-        cx="16"
-        cy="17"
-        r="2.4"
-        stroke="currentColor"
-        strokeWidth="1.35"
-      />
-      <path
-        d="M9.7 15.8L14 6.5"
-        stroke="currentColor"
-        strokeWidth="1.35"
-        strokeLinecap="round"
-      />
-      <path
-        d="M14.3 15.8L10 6.5"
-        stroke="currentColor"
-        strokeWidth="1.35"
-        strokeLinecap="round"
-      />
-      <circle
-        cx="12"
-        cy="6.75"
-        r="1.1"
-        stroke="currentColor"
-        strokeWidth="1.2"
-      />
-    </svg>
-  );
-}
-
 export function NavIconChevronLeft({ className = "" }: { className?: string }) {
   return (
     <svg

@@ -12,7 +12,6 @@ from dataclasses import dataclass
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from mediamop.modules.pruner.pruner_jobs_model import PrunerJob, PrunerJobStatus
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.platform.activity.models import ActivityEvent
 
@@ -21,11 +20,10 @@ from mediamop.platform.activity.models import ActivityEvent
 class OperationalHistoryResetResult:
     activity_events_deleted: int
     refiner_jobs_deleted: int
-    pruner_jobs_deleted: int
 
     @property
     def total_deleted(self) -> int:
-        return self.activity_events_deleted + self.refiner_jobs_deleted + self.pruner_jobs_deleted
+        return self.activity_events_deleted + self.refiner_jobs_deleted
 
 
 def _count(session: Session, model, *criteria) -> int:
@@ -48,24 +46,16 @@ def reset_operational_history(session: Session) -> OperationalHistoryResetResult
         RefinerJobStatus.HANDLER_OK_FINALIZE_FAILED.value,
         RefinerJobStatus.CANCELLED.value,
     )
-    pruner_terminal = (
-        PrunerJobStatus.COMPLETED.value,
-        PrunerJobStatus.FAILED.value,
-        PrunerJobStatus.HANDLER_OK_FINALIZE_FAILED.value,
-    )
 
     activity_count = _count(session, ActivityEvent)
     refiner_count = _count(session, RefinerJob, RefinerJob.status.in_(refiner_terminal))
-    pruner_count = _count(session, PrunerJob, PrunerJob.status.in_(pruner_terminal))
 
     session.execute(delete(ActivityEvent))
     session.execute(delete(RefinerJob).where(RefinerJob.status.in_(refiner_terminal)))
-    session.execute(delete(PrunerJob).where(PrunerJob.status.in_(pruner_terminal)))
 
     return OperationalHistoryResetResult(
         activity_events_deleted=activity_count,
         refiner_jobs_deleted=refiner_count,
-        pruner_jobs_deleted=pruner_count,
     )
 
 
@@ -78,13 +68,7 @@ def preview_operational_history_reset(session: Session) -> OperationalHistoryRes
         RefinerJobStatus.HANDLER_OK_FINALIZE_FAILED.value,
         RefinerJobStatus.CANCELLED.value,
     )
-    pruner_terminal = (
-        PrunerJobStatus.COMPLETED.value,
-        PrunerJobStatus.FAILED.value,
-        PrunerJobStatus.HANDLER_OK_FINALIZE_FAILED.value,
-    )
     return OperationalHistoryResetResult(
         activity_events_deleted=_count(session, ActivityEvent),
         refiner_jobs_deleted=_count(session, RefinerJob, RefinerJob.status.in_(refiner_terminal)),
-        pruner_jobs_deleted=_count(session, PrunerJob, PrunerJob.status.in_(pruner_terminal)),
     )

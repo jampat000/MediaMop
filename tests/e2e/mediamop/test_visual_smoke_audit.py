@@ -218,7 +218,7 @@ def test_settings_general_tab_renders(mediamop_shell: str) -> None:
 def test_module_sections_share_themed_tabs_and_responsive_layout(
     mediamop_shell: str,
 ) -> None:
-    """Refiner and Pruner share the horizontal tab bar without page overflow."""
+    """Refiner uses the shared horizontal tab bar without page overflow."""
     base = mediamop_shell.rstrip("/")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -234,12 +234,6 @@ def test_module_sections_share_themed_tabs_and_responsive_layout(
                     "refiner-scope-page",
                     "refiner-section-tabs",
                     "refiner-workspace",
-                ),
-                (
-                    "Pruner",
-                    "pruner-scope-page",
-                    "pruner-top-level-tabs",
-                    "pruner-workspace",
                 ),
             ):
                 open_sidebar(page, label)

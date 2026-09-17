@@ -1,7 +1,7 @@
 """Suite HTTP: pause and resume processing — ``/api/v1/suite/pause``.
 
 Pause is a suite control rather than a Refiner one, so a second switch does not appear
-beside it when Pruner grows the same need. It is deliberately small: paused or not, an
+beside it when another module grows the same need. It is deliberately small: paused or not, an
 optional expiry, and whether detection keeps running.
 """
 

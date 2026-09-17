@@ -1,4 +1,4 @@
-"""What a worker says when a job fails, shared by the Refiner and Pruner workers (#488).
+"""What a worker says when a job fails, used by the Refiner workers (#488).
 
 Three rules from ``docs/operator-messaging-standard.md`` meet here:
 

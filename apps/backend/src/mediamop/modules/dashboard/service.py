@@ -17,8 +17,6 @@ from mediamop.modules.dashboard.schemas import (
     SystemStatusOut,
     WorkerLaneHealthOut,
 )
-from mediamop.modules.pruner.pruner_jobs_model import PrunerJob, PrunerJobStatus
-from mediamop.modules.pruner.pruner_server_instance_model import PrunerServerInstance
 from mediamop.modules.refiner.jobs_model import RefinerJob, RefinerJobStatus
 from mediamop.modules.refiner.refiner_file_state_model import RefinerFileRow, RefinerFileStatus
 from mediamop.modules.refiner.refiner_library_model import RefinerLibraryRow
@@ -145,70 +143,7 @@ def _build_module_statuses(
             ),
         )
     )
-
-    enabled_pruner = db.scalar(
-        select(func.count()).select_from(PrunerServerInstance).where(PrunerServerInstance.enabled.is_(True))
-    )
-    pruner_configured = bool(enabled_pruner)
-    pruner_active = _count_jobs(db, PrunerJob, (PrunerJobStatus.LEASED.value,))
-    pruner_queued = _count_jobs(db, PrunerJob, (PrunerJobStatus.PENDING.value,))
-    pruner_failed = _count_jobs(
-        db, PrunerJob, (PrunerJobStatus.FAILED.value, PrunerJobStatus.HANDLER_OK_FINALIZE_FAILED.value)
-    )
-    failed_connection = bool(
-        db.scalar(
-            select(func.count())
-            .select_from(PrunerServerInstance)
-            .where(PrunerServerInstance.enabled.is_(True))
-            .where(PrunerServerInstance.last_connection_test_ok.is_(False)),
-        )
-        or 0
-    )
-    pruner_worker = next((row for row in worker_health if row.module == "pruner"), None)
-    if paused:
-        pruner_state, pruner_summary = (
-            "paused",
-            "Processing is paused; scheduled cleanup will wait until it is resumed.",
-        )
-    elif not pruner_configured:
-        pruner_state, pruner_summary = (
-            "setup_required",
-            "Connect an enabled Emby, Jellyfin, or Plex server before Pruner can run.",
-        )
-    elif (pruner_worker and pruner_worker.status == "degraded") or failed_connection or pruner_failed:
-        pruner_state = "degraded"
-        parts = []
-        if failed_connection:
-            parts.append("The connected media server needs a connection test.")
-        if pruner_failed:
-            parts.append(f"{pruner_failed} Pruner job(s) need review in Pruner Jobs.")
-        if pruner_worker and pruner_worker.status == "degraded":
-            parts.append(pruner_worker.detail)
-        pruner_summary = " ".join(parts)
-    elif pruner_active or pruner_queued:
-        pruner_state, pruner_summary = (
-            "processing",
-            f"Pruner has {pruner_active + pruner_queued} current job(s) in flight.",
-        )
-    else:
-        pruner_state, pruner_summary = "healthy", "Pruner is configured and idle."
-    statuses.append(
-        ModuleOperationalStatusOut(
-            module="pruner",
-            state=pruner_state,
-            configured=pruner_configured,
-            active_job_count=pruner_active,
-            queued_job_count=pruner_queued,
-            failed_job_count=pruner_failed,
-            summary=pruner_summary,
-            action_path=(
-                "/pruner?tab=jobs"
-                if pruner_failed or (pruner_worker and pruner_worker.status == "degraded")
-                else "/pruner?tab=emby"
-            ),
-        )
-    )
-    incidents = refiner_failed + refiner_failed_files + pruner_failed + refiner_quarantined + int(failed_connection)
+    incidents = refiner_failed + refiner_failed_files + refiner_quarantined
     return statuses, incidents
 
 
@@ -216,7 +151,6 @@ def build_dashboard_status(db: Session, settings: MediaMopSettings) -> Dashboard
     worker_health = build_worker_health_snapshot(
         expected_workers={
             "refiner": int(settings.refiner_worker_count),
-            "pruner": int(settings.pruner_worker_count),
         },
     )
     workers_healthy = all(row.status in {"healthy", "disabled"} for row in worker_health)

@@ -73,6 +73,41 @@ def test_configuration_bundle_round_trip_suite_name(client_with_admin: TestClien
     )
 
 
+def test_configuration_bundle_no_longer_carries_pruner_and_ignores_it_on_restore(
+    client_with_admin: TestClient,
+) -> None:
+    """Pruner moved to Deluno (#473): exports drop its sections, older backups still restore."""
+
+    _login_admin(client_with_admin)
+    r0 = client_with_admin.get("/api/v1/system/suite-configuration-bundle")
+    assert r0.status_code == 200, r0.text
+    bundle = r0.json()
+    assert not any(key.startswith("pruner_") for key in bundle)
+
+    older = deepcopy(bundle)
+    older["suite_settings"] = dict(bundle["suite_settings"])
+    older["suite_settings"]["product_display_name"] = "Restored From Older Backup"
+    older["pruner_server_instances"] = [{"id": 1, "provider": "plex", "display_name": "Living room"}]
+    older["pruner_scope_settings"] = [{"id": 1, "server_instance_id": 1, "media_scope": "movies"}]
+
+    tok = fetch_csrf(client_with_admin)
+    r_put = client_with_admin.put(
+        "/api/v1/system/suite-configuration-bundle",
+        json={"csrf_token": tok, "bundle": older},
+        headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
+    )
+    assert r_put.status_code == 200, r_put.text
+    assert r_put.json()["suite_settings"]["product_display_name"] == "Restored From Older Backup"
+
+    tok2 = fetch_csrf(client_with_admin)
+    r_restore = client_with_admin.put(
+        "/api/v1/system/suite-configuration-bundle",
+        json={"csrf_token": tok2, "bundle": bundle},
+        headers={**trusted_browser_origin_headers(), "Content-Type": "application/json"},
+    )
+    assert r_restore.status_code == 200, r_restore.text
+
+
 def test_configuration_bundle_put_rejects_bad_version(client_with_admin: TestClient) -> None:
     _login_admin(client_with_admin)
     r0 = client_with_admin.get("/api/v1/system/suite-configuration-bundle")

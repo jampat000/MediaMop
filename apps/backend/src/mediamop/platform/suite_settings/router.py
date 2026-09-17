@@ -275,7 +275,6 @@ def get_suite_operational_history_preview(
         status="preview",
         activity_events_deleted=result.activity_events_deleted,
         refiner_jobs_deleted=result.refiner_jobs_deleted,
-        pruner_jobs_deleted=result.pruner_jobs_deleted,
         total_deleted=result.total_deleted,
     )
 
@@ -308,7 +307,6 @@ def post_suite_operational_history_reset(
         status="reset",
         activity_events_deleted=result.activity_events_deleted,
         refiner_jobs_deleted=result.refiner_jobs_deleted,
-        pruner_jobs_deleted=result.pruner_jobs_deleted,
         total_deleted=result.total_deleted,
     )
 

@@ -160,9 +160,10 @@ prefix, or a queue. Everything stays on `refiner_jobs` under `refiner.*`.
 - The media manager port itself ([#350]) — the dialects, the fan-out, and the
   no-queue-signal outcome. This ADR only settles that a library names its connections.
 - Library discovery from a manager ([#351]).
-- Whether Pruner adopts the same library shape. It has its own instance model and its
-  own constraints in `docs/pruner-forward-design-constraints.md`; folding the two is a
-  separate decision that should not be smuggled in here.
+- Whether Pruner adopts the same library shape. It had its own instance model and its
+  own constraints; folding the two was a separate decision that should not be smuggled
+  in here. (Pruner has since moved to Deluno, #473, and its constraints document went
+  with it.)
 
 ## Related
 

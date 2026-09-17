@@ -1,4 +1,4 @@
-"""Shared outbound HTTP URL policy helpers used by Pruner/Refiner and ARR clients.
+"""Shared outbound HTTP URL policy helpers used by Refiner and ARR clients.
 
 Configuration-time validation is intentionally cheap.  Callers that make an outbound
 request must use :func:`post_json_to_external_url`, which resolves and validates the
@@ -19,7 +19,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 
 def normalize_local_service_base_url(raw: str) -> str:
-    """Normalize base URL for locally configured services (Arr, Plex, Jellyfin, Emby)."""
+    """Normalize base URL for locally configured services (media managers such as Sonarr and Radarr)."""
 
     parsed = urlsplit(raw.strip().rstrip("/"))
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:

@@ -5,17 +5,15 @@ singleton configuration rows (suite, *arr* library operator settings, Refiner pa
 
 It builds from the live ORM metadata rather than a frozen DDL script, so what it creates
 follows the models. When Subber moved to Deluno its four tables stopped being created
-here; ``0007`` and ``0010`` both allow for their absence on a fresh database.
+here; ``0007`` and ``0010`` both allow for their absence on a fresh database. Pruner's
+four tables went the same way when it moved to Deluno (#473); ``0003``, ``0004``, ``0007``
+and ``0036`` allow for their absence.
 """
 
 from __future__ import annotations
 
 from sqlalchemy.orm import Session, sessionmaker
 
-import mediamop.modules.pruner.pruner_jobs_model  # noqa: F401
-import mediamop.modules.pruner.pruner_preview_run_model  # noqa: F401
-import mediamop.modules.pruner.pruner_scope_settings_model  # noqa: F401
-import mediamop.modules.pruner.pruner_server_instance_model  # noqa: F401
 import mediamop.modules.refiner.jobs_model  # noqa: F401
 import mediamop.modules.refiner.refiner_operator_settings_model  # noqa: F401
 import mediamop.platform.activity.models  # noqa: F401

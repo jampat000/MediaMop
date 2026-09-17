@@ -101,32 +101,3 @@ def activity_detail_envelope(
     if next_action:
         payload["next_action"] = next_action
     return payload
-
-
-def scan_title(
-    *,
-    module_label: str,
-    result: DiagnosticResult | str,
-    count: int,
-    scope: str | None,
-    source: str | None = None,
-    scheduled: bool = False,
-) -> str:
-    scope_label = media_scope_label(scope) or "items"
-    prefix = f"Scheduled {module_label} scan" if scheduled else f"{module_label} scan"
-    source_part = f" from {source}" if source else ""
-    result_value = str(result)
-    if result_value == DiagnosticResult.FAILED.value:
-        return f"{prefix} could not check {scope_label}{source_part}"
-    if result_value == DiagnosticResult.SKIPPED.value:
-        return f"{prefix} skipped {scope_label}{source_part}"
-    if count == 0:
-        return f"{prefix} found no {scope_label} needing action{source_part}"
-    return f"{prefix} found {count} {scope_label} needing action{source_part}"
-
-
-def connection_test_title(*, module_label: str, name: str, provider: str | None, ok: bool) -> str:
-    provider_s = provider_label(provider)
-    target = f"{name} ({provider_s})" if provider_s else name
-    result = "passed" if ok else "failed"
-    return f"{module_label} connection test {result} for {target}"

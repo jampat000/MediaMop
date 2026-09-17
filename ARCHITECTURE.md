@@ -17,7 +17,6 @@ MediaMop is a self-hosted media operations app:
   [ADR-0014](docs/adr/ADR-0014-refiner-libraries-replace-fixed-scopes.md). The singleton
   settings rows that libraries replaced were dropped in `0025`, and the scope-shaped
   `path-settings` and `remux-rules-settings` routes that outlived them were removed in #460.
-- **Pruner** previews and removes media from connected media servers.
 - **Media managers** are the products MediaMop accepts work from and reports back to.
   A connection carries a *kind* (Radarr, Sonarr, Deluno, or anything posting MediaMop's
   own payload) rather than each product having its own routes and columns; every inbound
@@ -41,12 +40,10 @@ flowchart LR
   UI["Frontend (React/Vite)"] --> API["FastAPI API Layer"]
   API --> Core["Core + Platform Services"]
   Core --> Refiner["Refiner Module"]
-  Core --> Pruner["Pruner Module"]
   Core --> Dashboard["Dashboard + Activity"]
   Core --> Integrations["External Integrations (Arr, OpenSubtitles, etc.)"]
   Core --> DB["SQLite (Alembic managed)"]
   Refiner --> Lanes["Worker Lanes / Durable Jobs"]
-  Pruner --> Lanes
 ```
 
 ## Backend Map
@@ -54,7 +51,7 @@ flowchart LR
 - `mediamop.api`: FastAPI app factory, router composition, request dependencies.
 - `mediamop.core`: config, runtime paths, database setup, lifespan, logging, schema revision checks.
 - `mediamop.platform`: shared product services such as auth, activity, jobs, local browse, settings, observability, and suite settings.
-- `mediamop.modules`: module-owned domains for Refiner, Pruner, and Dashboard.
+- `mediamop.modules`: module-owned domains for Refiner and Dashboard.
 - `mediamop.integrations`: external service integration code.
 - `mediamop.windows`: Windows tray and package-specific helpers.
 
