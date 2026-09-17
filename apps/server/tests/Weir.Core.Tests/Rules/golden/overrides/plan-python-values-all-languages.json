@@ -1,0 +1,90 @@
+{
+  "issue": 537,
+  "items": [
+    1,
+    5
+  ],
+  "expected": {
+    "split": {
+      "video": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "audio": [
+        4,
+        5,
+        6
+      ],
+      "subtitles": [
+        7
+      ],
+      "attachments": [
+        8,
+        9
+      ]
+    },
+    "plan": {
+      "video_indices": [
+        0,
+        3
+      ],
+      "audio": [
+        {
+          "input_index": 5,
+          "lang_label": "",
+          "commentary": false,
+          "forced": true,
+          "default": true,
+          "channels": 1000,
+          "lossless": true,
+          "bitrate": -5,
+          "codec_rank": 2,
+          "codec_name": "flac",
+          "kind": "audio"
+        }
+      ],
+      "subtitles": [],
+      "removed_audio": [
+        "unknown TrueHD  8 ch (stream 4): removed (not selected — unknown flac 1000 ch (stream 5) kept)",
+        "ñed ac3 6 ch (stream 6): removed (not selected — unknown flac 1000 ch (stream 5) kept)"
+      ],
+      "removed_subtitles": [
+        "en"
+      ],
+      "default_audio_output_index": 0,
+      "audio_selection_notes": [
+        "Track ranking: commentary last, then channels highest first, then codec order, then bitrate highest first, then default first.",
+        "Selected unknown flac 1000 ch (stream 5) using quality across all languages (policy: quality across all languages).",
+        "Removed non-selected unknown TrueHD  8 ch (stream 4) after selecting unknown flac 1000 ch (stream 5).",
+        "Removed non-selected ñed ac3 6 ch (stream 6) after selecting unknown flac 1000 ch (stream 5)."
+      ],
+      "removed_images": [
+        "embedded image (PNG, 600.0x1e+20)",
+        "embedded image (gif, 1.5e-07x-0.0001)"
+      ],
+      "removed_attachments": [],
+      "metadata_notes": [
+        "Removed embedded image (PNG, 600.0x1e+20).",
+        "Removed embedded image (gif, 1.5e-07x-0.0001)."
+      ],
+      "metadata": {
+        "remove_images": true,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      }
+    },
+    "remux_required": true,
+    "lines": {
+      "audio_before": "7.1 TrueHD · 1000 ch FLAC · ÑED 5.1 AC-3",
+      "audio_after": "1000 ch FLAC",
+      "subtitle_before": "EN",
+      "subtitle_after": "None",
+      "metadata_removed": "Removed embedded image (PNG, 600.0x1e+20). · Removed embedded image (gif, 1.5e-07x-0.0001)."
+    },
+    "metadata_argv": []
+  }
+}

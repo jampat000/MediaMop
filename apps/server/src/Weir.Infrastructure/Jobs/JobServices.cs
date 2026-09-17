@@ -505,7 +505,7 @@ public static class WeirJobs
         services.TryAddSingleton<IJobQueueMetrics>(NoJobQueueMetrics.Instance);
         services.TryAddSingleton<IJobNotifications, NoJobNotifications>();
         services.TryAddSingleton<IUnhandledJobFailureRecorder, NoUnhandledJobFailureRecorder>();
-        services.TryAddSingleton(new WorkerLoopTimings());
+        services.TryAddSingleton(new WorkerLoopTimings { LeaseSeconds = options.RefinerJobLeaseSeconds });
         services.TryAddSingleton(sp => new RefinerJobStore(
             sp.GetRequiredService<SqliteDatabase>(), sp.GetRequiredService<TimeProvider>(), sp.GetRequiredService<IJobQueueMetrics>()));
         services.TryAddSingleton(sp => new JobHandlerRegistry(sp.GetServices<IJobHandler>()));

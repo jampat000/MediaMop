@@ -1,0 +1,106 @@
+{
+  "issue": 537,
+  "items": [
+    1
+  ],
+  "expected": {
+    "split": {
+      "video": [
+        0
+      ],
+      "audio": [
+        1
+      ],
+      "subtitles": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "attachments": []
+    },
+    "plan": {
+      "video_indices": [
+        0
+      ],
+      "audio": [
+        {
+          "input_index": 1,
+          "lang_label": "eng",
+          "commentary": false,
+          "forced": false,
+          "default": true,
+          "channels": 6,
+          "lossless": false,
+          "bitrate": 640000,
+          "codec_rank": 12,
+          "codec_name": "eac3",
+          "kind": "audio"
+        }
+      ],
+      "subtitles": [
+        {
+          "input_index": 3,
+          "lang_label": "eng",
+          "commentary": false,
+          "forced": true,
+          "default": false,
+          "channels": 0,
+          "lossless": false,
+          "bitrate": 0,
+          "codec_rank": 55,
+          "codec_name": "",
+          "kind": "subtitle"
+        },
+        {
+          "input_index": 4,
+          "lang_label": "eng",
+          "commentary": false,
+          "forced": false,
+          "default": false,
+          "channels": 0,
+          "lossless": false,
+          "bitrate": 0,
+          "codec_rank": 55,
+          "codec_name": "",
+          "kind": "subtitle"
+        }
+      ],
+      "removed_audio": [],
+      "removed_subtitles": [
+        "fre",
+        "jpn",
+        "und",
+        "en",
+        "spa"
+      ],
+      "default_audio_output_index": 0,
+      "audio_selection_notes": [
+        "Track ranking: commentary last, then channels highest first, then codec order, then bitrate highest first, then default first.",
+        "Selected eng eac3 6 ch (stream 1) as the only track in the first matching language tier."
+      ],
+      "removed_images": [],
+      "removed_attachments": [],
+      "metadata_notes": [],
+      "metadata": {
+        "remove_images": false,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      }
+    },
+    "remux_required": true,
+    "lines": {
+      "audio_before": "English 5.1 E-AC-3",
+      "audio_after": "English 5.1 E-AC-3",
+      "subtitle_before": "French · English · English · Japanese · Undetermined · EN · Spanish",
+      "subtitle_after": "English · English",
+      "metadata_removed": "—"
+    },
+    "metadata_argv": []
+  }
+}

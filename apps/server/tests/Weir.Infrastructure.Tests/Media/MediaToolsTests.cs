@@ -64,6 +64,13 @@ public sealed class MediaToolsTests : IDisposable
     [InlineData("EBML header parsing failed", true)]
     [InlineData("film.mkv: Permission denied", false)]
     [InlineData("broken", false)]
+    // #539 item 5: "end of file" is ffmpeg's av_strerror text for a plain AVERROR_EOF, so a bare occurrence still
+    // means "there was nothing there to read" - but "premature end of file" / "unexpected end of file" is the
+    // same underlying error qualified as ffmpeg's wording for a truncated or still-downloading file, which is a
+    // completeness problem (ValidateMediaIntegrityAsync), not evidence the content itself is unreadable.
+    [InlineData("film.mkv: End of file", true)]
+    [InlineData("Premature end of file", false)]
+    [InlineData("[mov,mp4,m4a,3gp,3g2,mj2] Unexpected end of file", false)]
     public async Task Only_ffprobe_saying_the_contents_are_unreadable_marks_the_media_bad(string stderr, bool unreadable)
     {
         var media = WriteFile("movie.mkv", new byte[64]);
@@ -113,6 +120,78 @@ public sealed class MediaToolsTests : IDisposable
         var error = await Assert.ThrowsAsync<MediaCompletenessException>(() => Tools(runner).ValidateMediaIntegrityAsync(source));
 
         Assert.Contains("Invalid data found when processing input", error.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("[in#0/matroska,webm] File ended prematurely")]
+    [InlineData("Truncating packet of size 246 to 203")]
+    [InlineData("[mov,mp4,m4a,3gp,3g2,mj2] stream 0, offset 0x12d3: partial file")]
+    public async Task Integrity_validation_rejects_an_exit_zero_warning_that_means_incomplete(string stderr)
+    {
+        // #539 item 3: fixed, not parity. The reference only looks at the exit code, so a real ffmpeg build that
+        // exits 0 from a truncated demux with only one of these warnings (see RealFfmpegTests for the real
+        // wording observed) would be reported as passing.
+        var source = WriteFile("truncated.mkv", "source"u8.ToArray());
+        var runner = new ScriptedRunner(_ => new ScriptedRun { ExitCode = 0, Stderr = Encoding.UTF8.GetBytes(stderr) });
+
+        var error = await Assert.ThrowsAsync<MediaCompletenessException>(() => Tools(runner).ValidateMediaIntegrityAsync(source));
+
+        Assert.Contains(stderr, error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Integrity_validation_ignores_an_exit_zero_warning_that_is_not_a_known_marker()
+    {
+        var source = WriteFile("complete.mkv", "source"u8.ToArray());
+        var runner = new ScriptedRunner(_ => new ScriptedRun { ExitCode = 0, Stderr = "deprecated pixel format used, make sure you did set range correctly"u8.ToArray() });
+
+        await Tools(runner).ValidateMediaIntegrityAsync(source);
+    }
+
+    [Fact]
+    public async Task Integrity_validation_rejects_output_that_decoded_far_short_of_the_probed_duration()
+    {
+        // #539 item 3: comparing the last decoded timestamp against the duration "where practical", alongside the
+        // stderr markers - a container can keep a header duration the stream data never reaches.
+        var source = WriteFile("truncated.mkv", "source"u8.ToArray());
+        var runner = new ScriptedRunner(_ => new ScriptedRun { ExitCode = 0, Stdout = "out_time_ms=12000000\nprogress=end\n"u8.ToArray() });
+
+        var error = await Assert.ThrowsAsync<MediaCompletenessException>(() => Tools(runner).ValidateMediaIntegrityAsync(source, expectedDurationSeconds: 30.0));
+
+        Assert.Contains("decoded 12.0s of 30.0s expected", error.Message, StringComparison.Ordinal);
+        var request = Assert.Single(runner.Requests);
+        Assert.Equal(["ffmpeg", "-hide_banner", "-v", "error", "-xerror", "-err_detect", "explode", "-i", source, "-map", "0:v:0", "-c", "copy", "-f", "null", "-progress", "pipe:1", "-nostats", "-"], request.Argv);
+    }
+
+    [Fact]
+    public async Task Integrity_validation_passes_output_within_tolerance_of_the_probed_duration()
+    {
+        var source = WriteFile("complete.mkv", "source"u8.ToArray());
+        var runner = new ScriptedRunner(_ => new ScriptedRun { ExitCode = 0, Stdout = "out_time_ms=29500000\nprogress=end\n"u8.ToArray() });
+
+        await Tools(runner).ValidateMediaIntegrityAsync(source, expectedDurationSeconds: 30.0);
+    }
+
+    [Fact]
+    public async Task A_decided_hardware_acceleration_reaches_the_executed_remux_argv()
+    {
+        // #539 item 2: fixed, not parity. The reference's remux_to_temp_file builds its own argv that never
+        // includes the hwaccel flags run.py decided on, so the setting has no effect on what actually runs.
+        var source = WriteFile("source.mkv", "source"u8.ToArray());
+        var workDir = Path.Combine(_root, "work");
+        var plan = new RemuxPlan { VideoIndices = [0], Audio = [new PlannedTrack { InputIndex = 1, LangLabel = "eng", Default = true }], Subtitles = [] };
+        var runner = new ScriptedRunner(request => request.Argv[0] == "ffprobe"
+            ? new ScriptedRun { Stdout = """{"format": {"duration": "100.0"}, "streams": [{"codec_type": "audio"}]}"""u8.ToArray() }
+            : new ScriptedRun());
+        var tools = new MediaTools(runner, new FixedResolver(), new ListLogger<MediaTools>(), TimeProvider.System, p => new MediaFileState(p, true, true, 100, 0));
+        var acceleration = new AccelerationDecision { Method = "cuda", ArgvFlags = ["-hwaccel", "cuda"], Reason = "test" };
+
+        await tools.RemuxToTempFileAsync(source, workDir, plan, durationSeconds: 100.0, acceleration: acceleration);
+
+        var ffmpeg = Assert.Single(runner.Requests, r => r.Argv[0] == "ffmpeg");
+        Assert.Equal(["-hwaccel", "cuda"], ffmpeg.Argv.SkipWhile(a => a != "-y").Skip(1).TakeWhile(a => a != "-i"));
+        Assert.Contains("-i", ffmpeg.Argv);
+        Assert.True(ffmpeg.Argv.ToList().IndexOf("-hwaccel") < ffmpeg.Argv.ToList().IndexOf("-i"), "hwaccel flags must come before -i");
     }
 
     [Fact]

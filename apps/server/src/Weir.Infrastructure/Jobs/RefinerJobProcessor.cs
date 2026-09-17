@@ -39,14 +39,18 @@ public sealed class NoUnhandledJobFailureRecorder : IUnhandledJobFailureRecorder
 /// <summary>Job completion and failure notifications (Python's <c>dispatch_job_notification</c>); the notifications port owns delivery.</summary>
 public interface IJobNotifications
 {
-    /// <summary><paramref name="eventKind"/> is <c>completed</c> or <c>failed</c>. Must not throw.</summary>
-    void Dispatch(string moduleName, string eventKind, long jobId, string jobKind);
+    /// <summary>
+    /// <paramref name="eventKind"/> is <c>completed</c> or <c>failed</c>. <paramref name="willRetry"/>
+    /// (#540 item 6) says whether another attempt follows a <c>failed</c> event, so the wording says so
+    /// instead of always claiming retries are exhausted; it is ignored for <c>completed</c>. Must not throw.
+    /// </summary>
+    void Dispatch(string moduleName, string eventKind, long jobId, string jobKind, bool willRetry = false);
 }
 
 /// <summary>Sends nothing until the notifications port supplies an implementation.</summary>
 public sealed class NoJobNotifications : IJobNotifications
 {
-    public void Dispatch(string moduleName, string eventKind, long jobId, string jobKind)
+    public void Dispatch(string moduleName, string eventKind, long jobId, string jobKind, bool willRetry = false)
     {
     }
 }
@@ -158,7 +162,7 @@ public sealed class RefinerJobProcessor
         {
             using (_logger.BeginScope(new Dictionary<string, object> { ["job_id"] = context.Id }))
             {
-                await handler.HandleAsync(context, cancellationToken).ConfigureAwait(false);
+                await RunHandlerWithLeaseRenewalAsync(handler, context, leaseSeconds, cancellationToken).ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -188,7 +192,7 @@ public sealed class RefinerJobProcessor
                 WorkerFailures.StoredError(failure),
                 when,
                 "Refiner fail_claimed_refiner_job failed after handler error job_id={JobId}").ConfigureAwait(false);
-            _notifications.Dispatch("refiner", "failed", context.Id, context.JobKind);
+            _notifications.Dispatch("refiner", "failed", context.Id, context.JobKind, willRetry);
             return JobProcessOutcome.Processed;
         }
 
@@ -249,6 +253,63 @@ public sealed class RefinerJobProcessor
         }
 
         return JobProcessOutcome.Processed;
+    }
+
+    /// <summary>
+    /// #540 item 1: run the handler while a background heartbeat renews its lease roughly every
+    /// <paramref name="leaseSeconds"/> / 3 seconds, so a handler that runs longer than one lease (a
+    /// remux longer than 300 s, say) keeps its row leased instead of letting a second worker claim it
+    /// and start a second ffmpeg process on the same file. Completion and failure already verify the
+    /// lease owner themselves (<see cref="RefinerJobStore.CompleteClaimedAsync"/> and
+    /// <see cref="RefinerJobStore.FailClaimedAsync"/>); this only keeps the lease alive while the
+    /// handler is genuinely still running.
+    /// </summary>
+    private async Task RunHandlerWithLeaseRenewalAsync(IJobHandler handler, JobWorkContext context, int leaseSeconds, CancellationToken cancellationToken)
+    {
+        using var renewalCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var heartbeat = RenewLeaseHeartbeatAsync(context.Id, context.LeaseOwner, leaseSeconds, renewalCts.Token);
+        try
+        {
+            await handler.HandleAsync(context, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            await renewalCts.CancelAsync().ConfigureAwait(false);
+            await heartbeat.ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>The lease-renewal heartbeat itself: sleep, renew, repeat, until cancelled.</summary>
+    private async Task RenewLeaseHeartbeatAsync(long jobId, string leaseOwner, int leaseSeconds, CancellationToken cancellationToken)
+    {
+        var interval = TimeSpan.FromSeconds(Math.Max(0.05, leaseSeconds / 3.0));
+        try
+        {
+            while (true)
+            {
+                await Task.Delay(interval, _time, cancellationToken).ConfigureAwait(false);
+                var now = _time.GetUtcNow();
+                var renewed = await _queue.RenewLeaseAsync(jobId, leaseOwner, now + TimeSpan.FromSeconds(leaseSeconds), now, CancellationToken.None).ConfigureAwait(false);
+                if (!renewed)
+                {
+                    _logger.LogWarning(
+                        "Refiner lease renewal found the lease no longer held job_id={JobId} owner={Owner}; no longer renewing.",
+                        jobId,
+                        leaseOwner);
+                    return;
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The handler finished, or the worker is shutting down: stop renewing either way.
+        }
+#pragma warning disable CA1031 // A renewal-loop crash must never take the handler down with it.
+        catch (Exception exception)
+#pragma warning restore CA1031
+        {
+            _logger.LogError(exception, "Refiner lease renewal loop crashed job_id={JobId} owner={Owner}", jobId, leaseOwner);
+        }
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO.Pipes;
 using System.Text.Json;
 using Weir.Core.Media;
 using Weir.Core.Rules;
@@ -154,8 +155,8 @@ public sealed class RealFfmpegTests : IDisposable
     public async Task A_truncated_matroska_file_passes_the_duration_check_as_in_the_reference()
     {
         // Parity, not approval: Matroska keeps its duration in the header, so a file cut in half still reports the
-        // full length and passes the staged-output check. (The Windows package's ffmpeg also exits 0 from the integrity read, only
-        // warning "File ended prematurely"; that depends on the ffmpeg build, so it is not asserted here.)
+        // full length and passes the staged-output check. This is exactly why #539 item 3 fixes the *integrity*
+        // read (the next test) rather than this one: the header cannot be trusted, only a full demux can.
         var fixture = await GenerateFixtureAsync();
         var bytes = await File.ReadAllBytesAsync(fixture);
         var truncated = Path.Combine(_root, "truncated.mkv");
@@ -165,17 +166,47 @@ public sealed class RealFfmpegTests : IDisposable
     }
 
     [RequiresFfmpegFact]
-    public async Task Unreadable_input_fails_the_probe_but_is_not_classified_unreadable_because_ffprobe_runs_quiet()
+    public async Task A_truncated_matroska_file_fails_the_fixed_integrity_read()
     {
-        // Parity, not approval: the reference probes with "-v quiet", so ffprobe never prints the words the
-        // unreadable-media markers look for; the failure message is whatever ffprobe wrote to stdout.
+        // #539 item 3: fixed, not parity. The reference's validate_media_integrity only looks at ffmpeg's exit
+        // code; this build's ffmpeg exits 0 from the full demux of a file cut in half, only warning "File ended
+        // prematurely", so the reference would call this file complete. ValidateMediaIntegrityAsync now treats
+        // that warning as failure (Weir.Core.Media.ProbeOutput.IntegrityIncompleteMarkers).
+        var fixture = await GenerateFixtureAsync();
+        var bytes = await File.ReadAllBytesAsync(fixture);
+        var truncated = Path.Combine(_root, "truncated.mkv");
+        await File.WriteAllBytesAsync(truncated, bytes[..(bytes.Length / 2)]);
+
+        var error = await Assert.ThrowsAsync<MediaCompletenessException>(() => Tools().ValidateMediaIntegrityAsync(truncated, expectedDurationSeconds: 3.0));
+
+        Assert.Contains("could not read this media file from start to finish", error.Message, StringComparison.Ordinal);
+    }
+
+    [RequiresFfmpegFact]
+    public async Task Garbage_input_is_classified_unreadable_now_that_ffprobe_runs_with_v_error()
+    {
+        // #539 item 1: fixed, not parity. The reference probes with "-v quiet", so ffprobe never prints the
+        // words the unreadable-media markers look for and this comes back as a plain RuntimeError instead of
+        // MediaUnreadableError; "-v error" (Weir.Core.Media.FfmpegCommands.BuildFfprobeArgv) puts them on stderr.
         var garbage = Path.Combine(_root, "garbage.mkv");
         await File.WriteAllBytesAsync(garbage, Enumerable.Range(1, 4096).Select(i => (byte)(i * 37 % 256)).ToArray());
 
-        var error = await Assert.ThrowsAsync<MediaToolException>(() => Tools().FfprobeJsonAsync(garbage));
+        var error = await Assert.ThrowsAsync<MediaUnreadableException>(() => Tools().FfprobeJsonAsync(garbage));
 
-        Assert.IsNotType<MediaUnreadableException>(error);
-        Assert.StartsWith("{", error.Message, StringComparison.Ordinal);
+        Assert.Contains("Invalid data found when processing input", error.Message, StringComparison.Ordinal);
+    }
+
+    [RequiresFfmpegFact]
+    public async Task A_zero_filled_mkv_is_classified_unreadable()
+    {
+        // #539: the exact repro from issue #494 (a 10 GB all-zero .mkv on the Deluno rig, reported completed with
+        // a copy of itself as output). One megabyte is enough for ffprobe to hit the header immediately.
+        var zeroFilled = Path.Combine(_root, "zero-filled.mkv");
+        await File.WriteAllBytesAsync(zeroFilled, new byte[1024 * 1024]);
+
+        var error = await Assert.ThrowsAsync<MediaUnreadableException>(() => Tools().FfprobeJsonAsync(zeroFilled));
+
+        Assert.Contains("EBML header parsing failed", error.Message, StringComparison.Ordinal);
     }
 
     [RequiresFfmpegFact]
@@ -203,6 +234,37 @@ public sealed class RealFfmpegTests : IDisposable
         var error = await Assert.ThrowsAsync<MediaToolException>(() => Tools().RunFfmpegAsync(argv, timeoutSeconds: 1, progressCallback: _ => { }, durationSeconds: 60));
 
         Assert.Equal("ffmpeg timed out", error.Message);
+        Assert.True(DateTime.UtcNow - started < TimeSpan.FromSeconds(15), string.Create(CultureInfo.InvariantCulture, $"took {DateTime.UtcNow - started}"));
+    }
+
+    [RequiresFfmpegFact]
+    public async Task A_progress_run_that_never_writes_a_line_is_still_stopped_by_the_timer()
+    {
+        // #539 item 4: the reference's progress loop only checks its timeout as a line arrives ("for raw in
+        // proc.stdout: ..."), so a process stuck reading its input - one that never gets to write a progress line
+        // at all - would hang forever. ProcessRunner's timeout is a wall-clock timer instead (see
+        // ProcessRunnerTests for the same guarantee without a real ffmpeg), so this is enforced even though
+        // nothing is ever read. A Windows named pipe with no writer makes ffmpeg block inside avformat_open_input,
+        // before it can emit anything.
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var pipeName = "weir-hang-" + Guid.NewGuid().ToString("N");
+        using var pipeServer = new NamedPipeServerStream(pipeName, PipeDirection.Out);
+        string[] argv =
+        [
+            RealFfmpeg.Tools!.Value.Ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
+            "-i", @"\\.\pipe\" + pipeName, "-c", "copy", Path.Combine(_root, "hang.mkv"),
+        ];
+        var updates = new List<FfmpegProgressUpdate>();
+        var started = DateTime.UtcNow;
+
+        var error = await Assert.ThrowsAsync<MediaToolException>(() => Tools().RunFfmpegAsync(argv, timeoutSeconds: 2, progressCallback: updates.Add));
+
+        Assert.Equal("ffmpeg timed out", error.Message);
+        Assert.Empty(updates);
         Assert.True(DateTime.UtcNow - started < TimeSpan.FromSeconds(15), string.Create(CultureInfo.InvariantCulture, $"took {DateTime.UtcNow - started}"));
     }
 

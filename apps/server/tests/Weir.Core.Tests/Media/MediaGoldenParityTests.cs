@@ -53,7 +53,7 @@ public sealed class MediaGoldenParityTests
                 input.GetProperty("src").GetString()!,
                 input.GetProperty("probe_size_mb").GetInt64(),
                 input.GetProperty("analyze_duration_seconds").GetInt64());
-            AssertTokens(Strings(item.GetProperty("expected")), argv, input.GetRawText());
+            AssertTokens(GoldenDivergences.FfprobeArgv(Strings(item.GetProperty("expected"))), argv, input.GetRawText());
         }
 
         foreach (var item in root.GetProperty("integrity").EnumerateArray())
@@ -363,4 +363,31 @@ public sealed class MediaGoldenParityTests
     private static string? NullableString(JsonElement value) => value.ValueKind == JsonValueKind.Null ? null : value.GetString();
 
     private static JsonDocument Load(string fileName) => JsonDocument.Parse(File.ReadAllText(Path.Combine(GoldenDirectory, fileName)));
+}
+
+/// <summary>
+/// Deliberate divergences from the golden fixtures in <c>tests/Weir.Core.Tests/Media/golden</c>: fixing a bug on
+/// purpose makes the .NET port behave differently from the Python code the fixtures were captured from.
+/// Regenerating the fixtures with <c>scripts/generate-ffmpeg-golden.py</c> would erase that difference (Python
+/// was not changed), so each entry here patches the loaded expectation instead, named for the GitHub issue that
+/// required it, keeping every other case in the file an unmodified proof of parity. See apps/server/README.md,
+/// "ffmpeg parity", for the mechanism.
+/// </summary>
+internal static class GoldenDivergences
+{
+    /// <summary>
+    /// #539 item 1: ffprobe now runs with "-v error" (the golden fixture has Python's "-v quiet") so that
+    /// unreadable-media markers reach stderr instead of being suppressed.
+    /// </summary>
+    public static IReadOnlyList<string> FfprobeArgv(IReadOnlyList<string> golden)
+    {
+        var patched = golden.ToList();
+        var index = patched.IndexOf("-v");
+        if (index >= 0 && index + 1 < patched.Count && patched[index + 1] == "quiet")
+        {
+            patched[index + 1] = "error";
+        }
+
+        return patched;
+    }
 }

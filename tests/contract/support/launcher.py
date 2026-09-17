@@ -19,6 +19,7 @@ servers.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import importlib.util
 import os
 import shutil
@@ -51,8 +52,17 @@ def _load_runtime() -> ModuleType:
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     ledger = (os.environ.get("WEIR_CONTRACT_LEDGER") or "").strip()
-    module.LEDGER = Path(ledger) if ledger else Path(tempfile.gettempdir()) / "weir-contract-servers.json"
+    module.LEDGER = Path(ledger) if ledger else Path(tempfile.gettempdir()) / _default_ledger_name()
     return module
+
+
+def _default_ledger_name() -> str:
+    """Per-checkout ledger filename: several worktrees on one machine (parallel agents, each with its
+    own clone of this repo) must not reap each other's contract servers through one shared ledger file,
+    so the default path is salted with a short hash of this checkout's root."""
+
+    checksum = hashlib.sha1(str(REPO_ROOT.resolve()).encode("utf-8"), usedforsecurity=False).hexdigest()[:10]
+    return f"weir-contract-servers-{checksum}.json"
 
 
 runtime = _load_runtime()
@@ -135,6 +145,9 @@ class ServerUnderTest:
             # watcher, and periodic scans that do not queue files. Scenarios turn workers on.
             # Periodic scan *jobs* are still queued for every enabled library with a watched folder
             # (nothing switches the scan timer off any more), so count only the jobs a test caused.
+            # That is #533: WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_SCHEDULE_ENABLED is
+            # documented but nothing reads it. The correct behaviour is asserted in
+            # tests/contract/jobs/test_watched_folder_scan_schedule_toggle.py.
             "WEIR_REFINER_WORKER_COUNT": "0",
             "WEIR_REFINER_WATCHER_ENABLED": "0",
             "WEIR_REFINER_WATCHED_FOLDER_REMUX_SCAN_DISPATCH_PERIODIC_ENQUEUE_REMUX_JOBS": "0",

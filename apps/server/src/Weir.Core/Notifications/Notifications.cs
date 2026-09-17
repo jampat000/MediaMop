@@ -1,4 +1,5 @@
 using System.Globalization;
+using Weir.Core.Jobs;
 using Weir.Core.Json;
 using Weir.Core.Net;
 using Weir.Core.Time;
@@ -124,14 +125,30 @@ public static class NotificationRules
         return PyJsonWriter.DumpsUtf8(new PyDict().Set("embeds", new PyList([embed])), PyJsonFormat.Default);
     }
 
-    /// <summary>The title and detail <c>dispatch_job_notification</c> sends.</summary>
-    public static (string Event, string Title, string Detail) JobNotification(string module, string eventKind, long jobId, string jobKind)
+    /// <summary>
+    /// The title and detail <c>dispatch_job_notification</c> sends. <paramref name="willRetry"/> is
+    /// meaningless for <c>completed</c> and defaults to <see langword="false"/> for every other caller.
+    /// </summary>
+    /// <remarks>
+    /// #540 item 6: Python always says "exhausted all retry attempts" for a failed event, even for the
+    /// attempt that is about to retry (the permanently-failed check in <c>DispatchJobNotification</c>
+    /// keeps that wrong wording from actually reaching a channel today, but the text itself was still
+    /// wrong on its own terms). This reuses the retry-aware vocabulary <c>WorkerFailures</c> already has
+    /// from #488, so the wording is correct independently of that guard.
+    /// </remarks>
+    public static (string Event, string Title, string Detail) JobNotification(string module, string eventKind, long jobId, string jobKind, bool willRetry = false)
     {
         ArgumentNullException.ThrowIfNull(module);
         var capitalized = module.Length == 0 ? module : char.ToUpperInvariant(module[0]) + module[1..].ToLowerInvariant();
-        return eventKind == "completed"
-            ? ($"{module}_job_{eventKind}", $"{capitalized} job completed", $"Job {jobId} ({jobKind}) finished successfully.")
-            : ($"{module}_job_{eventKind}", $"{capitalized} job failed", $"Job {jobId} ({jobKind}) exhausted all retry attempts.");
+        if (eventKind == "completed")
+        {
+            return ($"{module}_job_{eventKind}", $"{capitalized} job completed", $"Job {jobId} ({jobKind}) finished successfully.");
+        }
+
+        var detail = willRetry
+            ? $"Job {jobId} ({jobKind}) failed. {WorkerFailures.WillRetryContinuation}"
+            : $"Job {jobId} ({jobKind}) exhausted all retry attempts.";
+        return ($"{module}_job_{eventKind}", $"{capitalized} job failed", detail);
     }
 }
 

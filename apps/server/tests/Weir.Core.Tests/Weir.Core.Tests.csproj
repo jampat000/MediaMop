@@ -18,6 +18,8 @@
   <ItemGroup>
     <!-- Answers recorded from the Python rules engine by scripts/generate-rules-golden.py. -->
     <None Include="Rules/golden/*.json" CopyToOutputDirectory="PreserveNewest" LinkBase="Rules/golden" />
+    <!-- Issue #537: golden cases whose correct answer now deliberately differs from Python's recorded one. See GoldenParityTests for the mechanism. -->
+    <None Include="Rules/golden/overrides/*.json" CopyToOutputDirectory="PreserveNewest" LinkBase="Rules/golden/overrides" />
     <!-- Answers recorded from the Python ffmpeg layer by scripts/generate-ffmpeg-golden.py. -->
     <None Include="Media/golden/*.json" CopyToOutputDirectory="PreserveNewest" LinkBase="Media/golden" />
   </ItemGroup>

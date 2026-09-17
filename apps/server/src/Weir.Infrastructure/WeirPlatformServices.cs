@@ -24,6 +24,7 @@ public static class WeirPlatformServices
         services.TryAddSingleton<WorkerHeartbeats>();
         services.TryAddSingleton<ITimeZoneResolver, IanaTimeZoneResolver>();
         services.TryAddSingleton<IActivityWriter, SqliteActivityWriter>();
+        services.TryAddSingleton(sp => ActivityNotifications.For(sp.GetRequiredService<SqliteDatabase>()));
         return services;
     }
 

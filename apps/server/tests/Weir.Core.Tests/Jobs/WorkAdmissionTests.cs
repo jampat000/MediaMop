@@ -71,14 +71,17 @@ public sealed class WorkAdmissionTests
     }
 
     [Fact]
-    public void Without_suite_settings_nothing_is_blocked_but_the_budget_is_zero()
+    public void Without_suite_settings_nothing_is_blocked_and_the_default_budget_applies()
     {
+        // #540 item 4: a missing suite_settings row used to zero the runner budget, so only free jobs
+        // could run. Fixed to fall back to the default budget (capacity 4, nothing in use) instead.
         var admission = WorkAdmissionRules.Evaluate(null, null, [], [Library(1) with { Enabled = false }], Now);
 
         Assert.False(admission.Pause.Paused);
         Assert.True(admission.Pause.ScanWhilePaused);
         Assert.Empty(admission.BlockedLibraryIds);
-        Assert.Equal(0, admission.AvailableUnits);
+        Assert.Equal(4, admission.AvailableUnits);
+        Assert.Equal(4, admission.Capacity);
         Assert.Equal("UTC", admission.TimezoneName);
     }
 
@@ -148,13 +151,16 @@ public sealed class WorkAdmissionTests
 
     [Theory]
     [InlineData("{\"library_id\": 7}", 7L)]
-    [InlineData("{\"library_id\": true}", 1L)]
+    // #540 item 5: Python's isinstance(value, int) also accepts a bool, so library_id: true counted
+    // as library 1. Fixed here to reject booleans; only a genuine integer literal counts.
+    [InlineData("{\"library_id\": true}", null)]
+    [InlineData("{\"library_id\": false}", null)]
     [InlineData("{\"library_id\": 7.0}", null)]
     [InlineData("{\"library_id\": \"7\"}", null)]
     [InlineData("[7]", null)]
     [InlineData("", null)]
     [InlineData("{", null)]
-    public void Library_ids_are_read_from_payloads_as_python_reads_them(string payload, long? expected)
+    public void Library_ids_are_read_from_payloads_strictly(string payload, long? expected)
     {
         Assert.Equal(expected, JobPayload.LibraryIdForAdmission(payload));
     }

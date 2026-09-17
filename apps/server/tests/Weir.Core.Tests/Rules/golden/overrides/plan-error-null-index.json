@@ -1,0 +1,19 @@
+{
+  "issue": 537,
+  "items": [
+    6
+  ],
+  "expected": {
+    "split": {
+      "video": [
+        0
+      ],
+      "audio": [
+        null
+      ],
+      "subtitles": [],
+      "attachments": []
+    },
+    "plan": null
+  }
+}

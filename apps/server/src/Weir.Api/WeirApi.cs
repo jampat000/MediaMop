@@ -10,6 +10,7 @@ using Weir.Core.Metrics;
 using Weir.Infrastructure;
 using Weir.Infrastructure.Auth;
 using Weir.Infrastructure.Http;
+using Weir.Infrastructure.MediaManagers;
 using Weir.Infrastructure.Runtime;
 using Weir.Infrastructure.Scheduling;
 using Weir.Infrastructure.Settings;
@@ -27,6 +28,7 @@ public static class WeirApi
         services.AddSingleton(WebApp.Resolve(options.WebDist));
         services.AddSingleton<IOperatorAuthentication, SessionOperatorAuthentication>();
         services.AddSingleton<RouteTable>();
+        services.AddSingleton<WeirOpenApiDocumentCache>();
         services.TryAddSingleton<RuntimeMetricsStore>();
         services.AddSingleton<AuthService>();
         services.AddSingleton<AuthRateLimiters>();
@@ -35,6 +37,8 @@ public static class WeirApi
         services.AddSingleton<IReleaseCatalogClient, GitHubReleaseCatalogClient>();
         services.AddSingleton<IExternalJsonPoster, ExternalJsonPoster>();
         services.AddSingleton<NotificationDispatcher>();
+        services.AddWeirMediaManagers(options);
+        services.AddWeirRefinerApis();
 
         // Scheduled work, hosted with the jobs (AddWeirJobs) by PeriodicTaskService.
         services.AddSingleton<SessionCleanupTask>();
@@ -85,10 +89,15 @@ public static class WeirApi
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapSystemEndpoints();
+            endpoints.MapOpenApiEndpoint();
             endpoints.MapMetricsEndpoint();
             endpoints.MapAuthEndpoints();
             endpoints.MapSuiteEndpoints();
+            endpoints.MapReconciliationEndpoints();
+            endpoints.MapMediaManagerEndpoints();
             endpoints.MapNotificationEndpoints();
+            endpoints.MapActivityEndpoints();
+            endpoints.MapWeirRefinerApis();
             var routes = endpoints.ServiceProvider.GetRequiredService<RouteTable>();
             routes.Add("/", [HttpMethods.Get], "/");
             routes.Add("/index.html", [HttpMethods.Get], "/index.html");

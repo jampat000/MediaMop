@@ -1,0 +1,88 @@
+{
+  "issue": 537,
+  "items": [
+    1
+  ],
+  "expected": {
+    "split": {
+      "video": [
+        0,
+        2
+      ],
+      "audio": [
+        1,
+        5
+      ],
+      "subtitles": [
+        4
+      ],
+      "attachments": []
+    },
+    "plan": {
+      "video_indices": [
+        0,
+        2
+      ],
+      "audio": [
+        {
+          "input_index": 5,
+          "lang_label": "eng",
+          "commentary": false,
+          "forced": false,
+          "default": true,
+          "channels": 2,
+          "lossless": false,
+          "bitrate": 192000,
+          "codec_rank": 13,
+          "codec_name": "ac3",
+          "kind": "audio"
+        }
+      ],
+      "subtitles": [
+        {
+          "input_index": 4,
+          "lang_label": "eng",
+          "commentary": false,
+          "forced": false,
+          "default": false,
+          "channels": 0,
+          "lossless": false,
+          "bitrate": 0,
+          "codec_rank": 55,
+          "codec_name": "",
+          "kind": "subtitle"
+        }
+      ],
+      "removed_audio": [
+        "jpn aac 2 ch (stream 1): removed (not selected — eng ac3 2 ch (stream 5) kept)"
+      ],
+      "removed_subtitles": [],
+      "default_audio_output_index": 0,
+      "audio_selection_notes": [
+        "Track ranking: commentary last, then channels highest first, then codec order, then bitrate highest first, then default first.",
+        "Selected eng ac3 2 ch (stream 5) as the only track in the first matching language tier.",
+        "Removed non-selected jpn aac 2 ch (stream 1) after selecting eng ac3 2 ch (stream 5).",
+        "Ignored jpn aac 2 ch (stream 1) because preferred languages (tiered quality) had candidates in 'eng' first."
+      ],
+      "removed_images": [],
+      "removed_attachments": [],
+      "metadata_notes": [],
+      "metadata": {
+        "remove_images": false,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      }
+    },
+    "remux_required": true,
+    "lines": {
+      "audio_before": "Japanese 2.0 AAC · English 2.0 AC-3",
+      "audio_after": "English 2.0 AC-3",
+      "subtitle_before": "English",
+      "subtitle_after": "English",
+      "metadata_removed": "—"
+    },
+    "metadata_argv": []
+  }
+}

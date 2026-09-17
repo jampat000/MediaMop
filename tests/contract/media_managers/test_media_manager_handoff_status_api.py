@@ -136,8 +136,14 @@ def _seed(
                 "status": file_status,
                 **file_fields,
             }
+            # An upsert: a server may already hold a Files row for a handed-over file that exists on disk
+            # (the .NET server records its size on receipt, #531).
+            updates = ", ".join(
+                f"{name} = excluded.{name}" for name in columns if name not in ("library_id", "relative_path")
+            )
             conn.execute(
-                f"INSERT INTO refiner_files ({', '.join(columns)}) VALUES ({', '.join('?' for _ in columns)})",
+                f"INSERT INTO refiner_files ({', '.join(columns)}) VALUES ({', '.join('?' for _ in columns)}) "
+                f"ON CONFLICT (library_id, relative_path) DO UPDATE SET {updates}",
                 tuple(columns.values()),
             )
 
@@ -208,6 +214,56 @@ def test_a_pending_retry_is_scheduled_for_when_it_will_run(server: ServerUnderTe
     body = _status(server, hid)
     assert body["state"] == "scheduled"
     assert body["scheduledFor"].startswith(retry_at.strftime("%Y-%m-%dT%H:%M"))
+
+
+@pytest.mark.backends(
+    "dotnet", reason="#531: the Python backend reports failed once the backoff ends, before the retry is queued"
+)
+def test_a_retry_still_owed_after_its_backoff_is_scheduled_not_failed(
+    server: ServerUnderTest, movies: LibraryFolders
+) -> None:
+    hid = _new_id()
+    _hand_off(server, hid, movies.watched / hid / "film.mkv")
+    retry_at = datetime.now(UTC) - timedelta(minutes=5)
+    _seed(
+        server,
+        hid,
+        job_status="completed",
+        file_status="processing_failed",
+        next_retry_at=seed.utc_text(retry_at),
+        failure_attempts=1,
+        status_reason="ffmpeg died.",
+    )
+    body = _status(server, hid)
+    assert body["state"] == "scheduled"
+    assert body["scheduledFor"].startswith(retry_at.strftime("%Y-%m-%dT%H:%M"))
+
+
+# #531 item 3 is already fixed on .NET (an overdue-but-pending retry reads "scheduled"), so this
+# known_bug only asserts the bug is still present on Python; dotnet is expected to pass outright.
+@pytest.mark.known_bug(issue=531, backends=("python",))
+def test_an_overdue_retry_still_reads_scheduled_not_failed(server: ServerUnderTest, movies: LibraryFolders) -> None:
+    """#531 item 3: once the backoff has elapsed but no scan has picked the file up yet,
+
+    ``_file_state`` (``platform/media_managers/handoff_ledger.py``) only reports ``scheduled`` while
+    ``next_retry_at > now``; the moment that timestamp is in the past it falls through to ``failed``,
+    even though a retry is still coming (a scan can be up to five minutes away by default). Deluno
+    treats ``failed`` as final and would give up on a hand-off about to succeed.
+    """
+
+    hid = _new_id()
+    _hand_off(server, hid, movies.watched / hid / "film.mkv")
+    overdue = datetime.now(UTC) - timedelta(seconds=5)
+    _seed(
+        server,
+        hid,
+        job_status="completed",
+        file_status="processing_failed",
+        next_retry_at=seed.utc_text(overdue),
+        status_reason="ffmpeg died.",
+    )
+    body = _status(server, hid)
+    assert body["state"] == "scheduled", "a retry that is merely overdue for its next scan is not a final failure"
 
 
 def test_waiting_for_the_manager_is_queued_not_stalled(server: ServerUnderTest, movies: LibraryFolders) -> None:

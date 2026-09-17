@@ -255,7 +255,9 @@ def detect_without_queueing(admin: WeirClient, library: dict[str, Any], relative
 
     Needed before a hand-off whose retries a scenario counts: a file Weir has only ever seen through a
     hand-off has no recorded size, so the first scan after a failure treats it as a changed source and
-    starts its failure count again (reported with #516).
+    starts its failure count again (#531 item 1; the correct behaviour — a hand-off's fingerprint is
+    recorded up front, so a scan never resets it — is asserted in
+    ``tests/contract/processing/test_handoff_retry_correctness.py``).
     """
 
     enqueue_scan(admin, library, enqueue_remux_jobs=False)
@@ -330,7 +332,9 @@ def file_state_after_stop(server: ServerUnderTest, library_id: int, relative_pat
     """The ``refiner_files`` row, read from SQLite with the server stopped (and started again).
 
     Used where ``GET /refiner/files`` cannot answer: it fails with HTTP 500 for any page that contains a
-    ``passed_through`` or ``rejected`` row, because its response schema does not list those statuses.
+    ``passed_through`` or ``rejected`` row, because its response schema does not list those statuses
+    (#530; the correct behaviour is asserted in
+    ``tests/contract/refiner/test_refiner_files_pass_through_reject_status.py``).
     """
 
     with seed.stopped(server) as conn:

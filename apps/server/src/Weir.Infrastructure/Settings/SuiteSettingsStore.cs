@@ -11,7 +11,8 @@ public static class SuiteSettingsStore
     private const string Columns =
         "product_display_name, signed_in_home_notice, setup_wizard_state, app_timezone, log_retention_days, activity_retention_days, " +
         "direct_play_devices, configuration_backup_enabled, configuration_backup_interval_hours, configuration_backup_preferred_time, " +
-        "configuration_backup_last_run_at, processing_paused, processing_paused_until, scan_while_paused, updated_at";
+        "configuration_backup_last_run_at, processing_paused, processing_paused_until, scan_while_paused, " +
+        "metadata_provider, metadata_provider_base_url, metadata_provider_key_ciphertext, updated_at";
 
     public static Task<SuiteSettingsRecord?> GetAsync(UnitOfWork uow)
     {
@@ -70,6 +71,10 @@ public static class SuiteSettingsStore
         Compare("processing_paused", before.ProcessingPaused, after.ProcessingPaused, v => v ? 1 : 0);
         Compare("processing_paused_until", before.ProcessingPausedUntil, after.ProcessingPausedUntil, v => SqliteValues.ToSqlite(v));
         Compare("scan_while_paused", before.ScanWhilePaused, after.ScanWhilePaused, v => v ? 1 : 0);
+        Compare("direct_play_devices", before.DirectPlayDevices, after.DirectPlayDevices, v => v);
+        Compare("metadata_provider", before.MetadataProvider, after.MetadataProvider, v => v);
+        Compare("metadata_provider_base_url", before.MetadataProviderBaseUrl, after.MetadataProviderBaseUrl, v => v);
+        Compare("metadata_provider_key_ciphertext", before.MetadataProviderKeyCiphertext, after.MetadataProviderKeyCiphertext, v => v);
         if (sets.Count == 0)
         {
             return;
@@ -95,6 +100,9 @@ public static class SuiteSettingsStore
         ProcessingPaused = SqliteValues.GetBool(reader, 11),
         ProcessingPausedUntil = SqliteValues.GetDateTimeOrNull(reader, 12),
         ScanWhilePaused = SqliteValues.GetBool(reader, 13),
-        UpdatedAt = SqliteValues.GetDateTime(reader, 14),
+        MetadataProvider = SqliteValues.GetString(reader, 14),
+        MetadataProviderBaseUrl = SqliteValues.GetString(reader, 15),
+        MetadataProviderKeyCiphertext = SqliteValues.GetString(reader, 16),
+        UpdatedAt = SqliteValues.GetDateTime(reader, 17),
     };
 }

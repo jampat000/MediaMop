@@ -18,6 +18,9 @@ public static class WeirOptionsLoader
     private const int SevenDaysSeconds = 7 * 24 * 3600;
     private const int ThirtyDaysSeconds = 30 * 24 * 3600;
 
+    /// <summary>Python's <c>DEFAULT_REFINER_JOB_LEASE_SECONDS</c> (#540 item 1).</summary>
+    public const int DefaultRefinerJobLeaseSeconds = 300;
+
     public static WeirOptions Load(RuntimeEnvironment runtime)
     {
         ArgumentNullException.ThrowIfNull(runtime);
@@ -75,6 +78,7 @@ public static class WeirOptionsLoader
         var paths = RuntimePaths.Resolve(runtime);
 
         var refinerWorkers = ClampRefinerWorkerCount(EnvInt(runtime, "WEIR_REFINER_WORKER_COUNT", 8));
+        var refinerJobLeaseSeconds = ClampRefinerJobLeaseSeconds(EnvInt(runtime, "WEIR_REFINER_JOB_LEASE_SECONDS", DefaultRefinerJobLeaseSeconds));
         var watcherEnabled = EnvBool(runtime, "WEIR_REFINER_WATCHER_ENABLED", true);
         var watcherDebounce = Math.Max(0.25, Math.Min(300.0, EnvInt(runtime, "WEIR_REFINER_WATCHER_DEBOUNCE_SECONDS", 3)));
 
@@ -123,6 +127,7 @@ public static class WeirOptionsLoader
             LogDir = paths.LogDir,
             TempDir = paths.TempDir,
             RefinerWorkerCount = refinerWorkers,
+            RefinerJobLeaseSeconds = refinerJobLeaseSeconds,
             RefinerWatcherEnabled = watcherEnabled,
             RefinerWatcherDebounceSeconds = watcherDebounce,
             RefinerWatchedFolderRemuxScanDispatchPeriodicEnqueueRemuxJobs = EnvBool(
@@ -169,6 +174,13 @@ public static class WeirOptionsLoader
 
     /// <summary><c>clamp_refiner_worker_count</c>: 0..8 slots; negative values mean 1.</summary>
     public static int ClampRefinerWorkerCount(long raw) => raw < 0 ? 1 : (int)Math.Min(8, raw);
+
+    /// <summary>
+    /// #540 item 1: 30 s .. 1 day. Below 30 s the lease-renewal heartbeat (every ~lease/3) would fire
+    /// so often it could swamp the database; above a day, a crashed worker's row would sit unclaimed
+    /// for an unreasonable time before startup recovery or a reclaim picks it up.
+    /// </summary>
+    public static int ClampRefinerJobLeaseSeconds(long raw) => Clamp(raw, 30, 86_400);
 
     /// <summary><c>clamp_refiner_schedule_interval_seconds</c>: 60 s .. 7 days.</summary>
     public static int ClampRefinerScheduleIntervalSeconds(long raw) => Clamp(raw, 60, SevenDaysSeconds);

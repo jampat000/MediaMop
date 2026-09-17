@@ -52,8 +52,15 @@ public sealed class NoJobQueueMetrics : IJobQueueMetrics
 /// <remarks>
 /// Every operation runs in one <c>BEGIN IMMEDIATE</c> transaction, so SQLite's single writer serialises
 /// it against every other connection, including the Python backend's. The claim is Python's single
-/// <c>UPDATE … WHERE id = (SELECT … LIMIT 1) RETURNING id</c> statement, with the same text comparisons
-/// on the same timestamp strings.
+/// <c>UPDATE … WHERE id = (SELECT … LIMIT 1) RETURNING id</c> statement, with the same timestamp
+/// strings, compared with <c>julianday()</c> rather than as text (#540 item 2): Python's own text
+/// comparison sorts <c>+</c> (the sqlite3 adapter's offset marker) before <c>.</c> (a fractional
+/// second's leading character), so a <c>not_before</c> with microseconds compares greater than an
+/// <c>@now</c> at the exact same instant whose microseconds happen to be zero (the adapter omits a
+/// zero fraction entirely) — a retried job then misses its own <c>not_before</c> second. Comparing by
+/// Julian day is immune to that and reads both the ORM's offset-less, always-fractional shape and the
+/// adapter's offset-bearing, zero-fraction-omitted shape identically, so rows either backend wrote
+/// still compare correctly.
 /// </remarks>
 public sealed class RefinerJobStore
 {
@@ -74,10 +81,10 @@ public sealed class RefinerJobStore
         WHERE id = (
           SELECT id FROM refiner_jobs
           WHERE (
-              (status = @pending AND (not_before IS NULL OR not_before <= @now))
+              (status = @pending AND (not_before IS NULL OR julianday(not_before) <= julianday(@now)))
               OR (
                 status = @leased
-                AND (lease_expires_at IS NULL OR lease_expires_at < @now)
+                AND (lease_expires_at IS NULL OR julianday(lease_expires_at) < julianday(@now))
               )
             )
             {admission}{kinds}
@@ -156,6 +163,39 @@ public sealed class RefinerJobStore
                 return ClaimNext(connection, transaction, leaseOwner, leaseExpiresAt, now, admission, kinds);
             },
             cancellationToken);
+
+    /// <summary>
+    /// #540 item 1: extend the lease of a row this owner still holds, so a handler that outlives its
+    /// original lease (a long remux, for instance) is never reclaimed by another worker while it is
+    /// still genuinely running. There is no Python equivalent — nothing renews a lease today — so this
+    /// is .NET-only; a worker calls it on a heartbeat, well inside the lease, while the handler runs.
+    /// Returns <see langword="false"/> when the lease is no longer this owner's (already completed,
+    /// failed, or reclaimed after running unrenewed past its expiry), in which case the caller should
+    /// stop renewing and let completion/failure fail its own lease check.
+    /// </summary>
+    public Task<bool> RenewLeaseAsync(long jobId, string leaseOwner, DateTimeOffset newLeaseExpiresAt, DateTimeOffset? now = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(leaseOwner);
+        var when = now ?? _time.GetUtcNow();
+        return InTransactionAsync(
+            (connection, transaction) =>
+            {
+                var job = Get(connection, transaction, jobId);
+                if (!HoldsLease(job, leaseOwner, when))
+                {
+                    return false;
+                }
+
+                Execute(
+                    connection,
+                    transaction,
+                    "UPDATE refiner_jobs SET lease_expires_at = @lease_exp, updated_at = CURRENT_TIMESTAMP WHERE id = @id",
+                    ("@lease_exp", PythonTimestamps.Adapter(newLeaseExpiresAt)),
+                    ("@id", jobId));
+                return true;
+            },
+            cancellationToken);
+    }
 
     /// <summary><c>complete_claimed_refiner_job</c>: only for the owning, unexpired lease.</summary>
     public Task<bool> CompleteClaimedAsync(long jobId, string leaseOwner, DateTimeOffset? now = null, CancellationToken cancellationToken = default)
@@ -390,6 +430,7 @@ public sealed class RefinerJobStore
             {
                 var result = work(connection, transaction);
                 await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+                Activity.ActivityNotifications.TransactionCommitted(_database, transaction);
                 return result;
             }
         }
@@ -497,15 +538,17 @@ public sealed class RefinerJobStore
         {
             if (admission.Pause.ScanWhilePaused)
             {
-                var likes = new List<string>();
+                // #540 item 3: substr/= rather than LIKE, for the same reason KindsPredicate uses it —
+                // LIKE is case-insensitive and treats '_' as a wildcard, so
+                // "refiner.watched-folder.remux-scan-dispatch" (hyphens) also read as the detection
+                // prefix and kept running through a pause.
+                var prefixes = new List<string>();
                 for (var index = 0; index < WorkAdmissionRules.DetectionJobKindPrefixes.Count; index++)
                 {
-                    var name = $"@detect_{index}";
-                    likes.Add($"job_kind LIKE {name}");
-                    parameters.Add((name, WorkAdmissionRules.DetectionJobKindPrefixes[index] + "%"));
+                    prefixes.Add(PrefixTest(WorkAdmissionRules.DetectionJobKindPrefixes[index], $"@detect_{index}", parameters, negate: false));
                 }
 
-                clauses.Add($"AND ({string.Join(" OR ", likes)})");
+                clauses.Add($"AND ({string.Join(" OR ", prefixes)})");
             }
             else
             {

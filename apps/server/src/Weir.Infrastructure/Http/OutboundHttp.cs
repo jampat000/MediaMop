@@ -254,12 +254,24 @@ public sealed class NotificationDispatcher
     /// to it or to its generic form, without the caller waiting. For <c>failed</c> the job must be permanently
     /// failed. Never throws; failures are logged through <paramref name="warn"/>.
     /// </summary>
+    /// <param name="database">The database to read channels and the job's status from.</param>
+    /// <param name="module">The module the job belongs to (e.g. <c>refiner</c>).</param>
+    /// <param name="eventKind"><c>completed</c> or <c>failed</c>.</param>
+    /// <param name="jobId">The job's id, for the notification payload and the permanently-failed check.</param>
+    /// <param name="jobKind">The job's kind, for the notification payload.</param>
+    /// <param name="warn">Where a delivery or lookup failure is logged; never thrown to the caller.</param>
+    /// <param name="willRetry">
+    /// #540 item 6: whether another attempt follows this failure, so the detail text says so instead
+    /// of claiming retries are exhausted. Ignored for <c>completed</c>. The permanently-failed check
+    /// below already keeps a wrongly-worded "failed" notification from reaching a channel while a
+    /// retry is still coming; this makes the text correct on its own terms too.
+    /// </param>
     public void DispatchJobNotification(
-        Sqlite.SqliteDatabase database, string module, string eventKind, long jobId, string jobKind, Action<string, Exception?> warn)
+        Sqlite.SqliteDatabase database, string module, string eventKind, long jobId, string jobKind, Action<string, Exception?> warn, bool willRetry = false)
     {
         ArgumentNullException.ThrowIfNull(database);
         ArgumentNullException.ThrowIfNull(warn);
-        var (jobEvent, title, detail) = NotificationRules.JobNotification(module, eventKind, jobId, jobKind);
+        var (jobEvent, title, detail) = NotificationRules.JobNotification(module, eventKind, jobId, jobKind, willRetry);
         _ = Task.Run(async () =>
         {
             List<NotificationChannelRecord> channels;

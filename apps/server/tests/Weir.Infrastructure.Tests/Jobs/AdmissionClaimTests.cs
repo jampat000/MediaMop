@@ -199,13 +199,16 @@ public sealed class AdmissionClaimTests : IDisposable
     }
 
     [Fact]
-    public async Task Detection_prefix_matching_uses_like_as_python_does()
+    public async Task Detection_prefix_matching_is_exact_not_a_like_pattern()
     {
-        // LIKE ignores ASCII case and treats '_' as a wildcard; Python's pause filter has the same reach.
+        // #540 item 3: Python's LIKE-based pause filter ignores ASCII case and treats '_' as a
+        // wildcard, so "refiner.watched-folder.remux-scan-dispatch" (hyphens, not underscores) also
+        // reads as the detection prefix and keeps running through a pause. Fixed here to compare the
+        // literal prefix, so only the real detection kind survives a pause.
         _db.InsertRawJob("odd", "refiner.watched-folder.remux-scan-dispatch.v1");
         _db.Pause(scanWhilePaused: true);
 
-        Assert.NotNull(await ClaimAsync(await EvaluateAsync(Now)));
+        Assert.Null(await ClaimAsync(await EvaluateAsync(Now)));
     }
 
     private Task<WorkAdmission> EvaluateAsync(DateTimeOffset now) =>

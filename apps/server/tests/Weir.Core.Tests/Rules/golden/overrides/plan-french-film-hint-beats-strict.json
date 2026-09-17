@@ -1,0 +1,72 @@
+{
+  "issue": 537,
+  "items": [
+    1
+  ],
+  "expected": {
+    "split": {
+      "video": [
+        0
+      ],
+      "audio": [
+        1,
+        2,
+        3
+      ],
+      "subtitles": [],
+      "attachments": []
+    },
+    "plan": {
+      "video_indices": [
+        0
+      ],
+      "audio": [
+        {
+          "input_index": 2,
+          "lang_label": "fra",
+          "commentary": false,
+          "forced": false,
+          "default": true,
+          "channels": 6,
+          "lossless": false,
+          "bitrate": 448000,
+          "codec_rank": 13,
+          "codec_name": "ac3",
+          "kind": "audio"
+        }
+      ],
+      "subtitles": [],
+      "removed_audio": [
+        "fre (commentary excluded — remove commentary enabled)",
+        "eng eac3 6 ch (stream 1): removed (not selected — fra ac3 6 ch (stream 2) kept)"
+      ],
+      "removed_subtitles": [],
+      "default_audio_output_index": 0,
+      "audio_selection_notes": [
+        "Excluded commentary track (stream 3) because remove commentary is enabled.",
+        "Track ranking: commentary last, then channels highest first, then codec order, then bitrate highest first, then default first.",
+        "Selected fra ac3 6 ch (stream 2) by original language.",
+        "Removed non-selected eng eac3 6 ch (stream 1) after selecting fra ac3 6 ch (stream 2)."
+      ],
+      "removed_images": [],
+      "removed_attachments": [],
+      "metadata_notes": [],
+      "metadata": {
+        "remove_images": false,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      }
+    },
+    "remux_required": true,
+    "lines": {
+      "audio_before": "English 5.1 E-AC-3 · FRA 5.1 AC-3 · French 2.0 AAC",
+      "audio_after": "FRA 5.1 AC-3",
+      "subtitle_before": "—",
+      "subtitle_after": "None",
+      "metadata_removed": "—"
+    },
+    "metadata_argv": []
+  }
+}

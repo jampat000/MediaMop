@@ -1,0 +1,81 @@
+{
+  "issue": 537,
+  "items": [
+    1
+  ],
+  "expected": {
+    "split": {
+      "video": [
+        0
+      ],
+      "audio": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "subtitles": [
+        5,
+        6
+      ],
+      "attachments": []
+    },
+    "plan": {
+      "video_indices": [
+        0
+      ],
+      "audio": [
+        {
+          "input_index": 3,
+          "lang_label": "eng",
+          "commentary": true,
+          "forced": false,
+          "default": true,
+          "channels": 2,
+          "lossless": false,
+          "bitrate": 128000,
+          "codec_rank": 16,
+          "codec_name": "aac",
+          "kind": "audio"
+        }
+      ],
+      "subtitles": [],
+      "removed_audio": [
+        "eng truehd 8 ch (stream 1): removed (not selected — eng aac 2 ch (stream 3) kept)",
+        "eng ac3 6 ch (stream 2): removed (not selected — eng aac 2 ch (stream 3) kept)",
+        "fre dts 6 ch (stream 4): removed (not selected — eng aac 2 ch (stream 3) kept)"
+      ],
+      "removed_subtitles": [
+        "eng",
+        "fre"
+      ],
+      "default_audio_output_index": 0,
+      "audio_selection_notes": [
+        "Track ranking: commentary first.",
+        "Selected eng aac 2 ch (stream 3) over eng truehd 8 ch (stream 1); eng ac3 6 ch (stream 2) within the same language tier (ranked by quality).",
+        "Removed non-selected eng truehd 8 ch (stream 1) after selecting eng aac 2 ch (stream 3).",
+        "Removed non-selected eng ac3 6 ch (stream 2) after selecting eng aac 2 ch (stream 3).",
+        "Removed non-selected fre dts 6 ch (stream 4) after selecting eng aac 2 ch (stream 3)."
+      ],
+      "removed_images": [],
+      "removed_attachments": [],
+      "metadata_notes": [],
+      "metadata": {
+        "remove_images": false,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      }
+    },
+    "remux_required": true,
+    "lines": {
+      "audio_before": "English 7.1 TrueHD · English 5.1 AC-3 · English 2.0 AAC · French 5.1 DTS",
+      "audio_after": "English 2.0 AAC",
+      "subtitle_before": "English · French",
+      "subtitle_after": "None",
+      "metadata_removed": "—"
+    },
+    "metadata_argv": []
+  }
+}

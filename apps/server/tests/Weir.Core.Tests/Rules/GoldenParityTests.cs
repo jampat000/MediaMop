@@ -11,9 +11,25 @@ namespace Weir.Core.Tests.Rules;
 /// these tests run the same input through <c>Weir.Core.Rules</c> and require the same result,
 /// down to the bytes of every note.
 /// </summary>
+/// <remarks>
+/// <para>
+/// <b>Golden overrides.</b> Issue #537 fixed defects that the golden corpus had pinned as "today's
+/// behaviour" (see items 1, 2, 3, 5, 6). Regenerating those cases from Python would just re-record
+/// the same bugs, since the fix is deliberately not in Python — <c>apps/backend</c> is being
+/// retired (ADR-0017) and is not touched by this change. Instead, a case whose correct answer now
+/// differs from Python's recorded one gets a file in <c>golden/overrides/</c> with the same name
+/// (for a <c>plan-*.json</c> case) holding <c>{"issue": 537, "items": [...], "expected": {...}}</c>
+/// — the issue number, which item(s) of it, and the new expected output — and this test compares
+/// against that instead of the original file's "expected". Every other case is still compared
+/// against Python's recorded output, unchanged. <c>sorters.json</c> holds several cases in one
+/// file, so its override (same shape, plus a "cases" list of <c>{"index": N, "expected": {...}}</c>
+/// keyed by position in the file's "cases" array) overrides only the cases named in it.
+/// </para>
+/// </remarks>
 public sealed class GoldenParityTests
 {
     private static readonly string GoldenDirectory = Path.Combine(AppContext.BaseDirectory, "Rules", "golden");
+    private static readonly string OverridesDirectory = Path.Combine(GoldenDirectory, "overrides");
 
     public static TheoryData<string> PlanCases()
     {
@@ -32,6 +48,22 @@ public sealed class GoldenParityTests
         Assert.True(PlanCases().Count >= 60, $"Expected at least 60 plan cases in {GoldenDirectory}.");
     }
 
+    /// <summary>An override file's "expected" for a whole-file case (a <c>plan-*.json</c>), or null when there is none.</summary>
+    private static JsonElement? LoadFileOverrideExpected(string fileName)
+    {
+        var path = Path.Combine(OverridesDirectory, fileName);
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        using var document = JsonDocument.Parse(File.ReadAllText(path, Encoding.UTF8));
+        var root = document.RootElement;
+        Assert.True(root.TryGetProperty("issue", out _), $"golden/overrides/{fileName} must record which issue it diverges for.");
+        Assert.True(root.TryGetProperty("items", out _), $"golden/overrides/{fileName} must record which item(s) of the issue it diverges for.");
+        return root.GetProperty("expected").Clone();
+    }
+
     [Theory]
     [MemberData(nameof(PlanCases))]
     public void Plans_match_the_python_engine(string fileName)
@@ -43,7 +75,48 @@ public sealed class GoldenParityTests
 
         var actual = Write(writer => WritePlanOutcome(writer, probe, config));
 
-        AssertJsonEqual(document.RootElement.GetProperty("expected"), actual, fileName);
+        var expected = LoadFileOverrideExpected(fileName) ?? document.RootElement.GetProperty("expected");
+        AssertJsonEqual(expected, actual, fileName);
+    }
+
+    [Fact]
+    public void Every_override_names_a_real_golden_case()
+    {
+        if (!Directory.Exists(OverridesDirectory))
+        {
+            return;
+        }
+
+        var planFiles = new HashSet<string>(Directory.GetFiles(GoldenDirectory, "plan-*.json").Select(Path.GetFileName)!, StringComparer.Ordinal);
+        foreach (var path in Directory.GetFiles(OverridesDirectory, "*.json"))
+        {
+            var name = Path.GetFileName(path);
+            Assert.True(
+                name == "sorters.json" || planFiles.Contains(name),
+                $"golden/overrides/{name} does not correspond to a golden case; remove it or fix the name.");
+        }
+    }
+
+    /// <summary>An override file's per-case "expected" for <c>sorters.json</c>, keyed by position in its "cases" array.</summary>
+    private static Dictionary<int, JsonElement> LoadSorterOverrides()
+    {
+        var path = Path.Combine(OverridesDirectory, "sorters.json");
+        if (!File.Exists(path))
+        {
+            return [];
+        }
+
+        using var document = JsonDocument.Parse(File.ReadAllText(path, Encoding.UTF8));
+        var root = document.RootElement;
+        Assert.True(root.TryGetProperty("issue", out _), "golden/overrides/sorters.json must record which issue it diverges for.");
+
+        var result = new Dictionary<int, JsonElement>();
+        foreach (var entry in root.GetProperty("cases").EnumerateArray())
+        {
+            result[entry.GetProperty("index").GetInt32()] = entry.GetProperty("expected").Clone();
+        }
+
+        return result;
     }
 
     [Fact]
@@ -53,9 +126,11 @@ public sealed class GoldenParityTests
         var tracks = document.RootElement.GetProperty("tracks").EnumerateArray().Select(ReadSortableTrack).ToList();
         var cases = document.RootElement.GetProperty("cases").EnumerateArray().ToList();
         Assert.NotEmpty(cases);
+        var overrides = LoadSorterOverrides();
 
-        foreach (var item in cases)
+        for (var caseIndex = 0; caseIndex < cases.Count; caseIndex++)
         {
+            var item = cases[caseIndex];
             var raw = item.GetProperty("input").ValueKind == JsonValueKind.Null ? null : item.GetProperty("input").GetString();
             var actual = Write(writer =>
             {
@@ -94,7 +169,8 @@ public sealed class GoldenParityTests
                 writer.WriteEndObject();
             });
 
-            AssertJsonEqual(item.GetProperty("expected"), actual, $"sorters.json input {raw ?? "None"}");
+            var expected = overrides.TryGetValue(caseIndex, out var overridden) ? overridden : item.GetProperty("expected");
+            AssertJsonEqual(expected, actual, $"sorters.json input {raw ?? "None"}");
         }
     }
 
@@ -393,6 +469,9 @@ public sealed class GoldenParityTests
             },
             PreferredAudioIndices = json.GetProperty("preferred_audio_indices").EnumerateArray().Select(e => e.GetInt32()).ToList(),
             OriginalLanguageNote = json.GetProperty("original_language_note").GetString()!,
+            // Issue #495: new in the C# port, so it is absent from every golden file recorded from
+            // the Python engine; absent means false, exactly like every other case that never sets it.
+            RemoveHearingImpairedSubs = json.TryGetProperty("remove_hearing_impaired_subs", out var hi) && hi.GetBoolean(),
         };
     }
 

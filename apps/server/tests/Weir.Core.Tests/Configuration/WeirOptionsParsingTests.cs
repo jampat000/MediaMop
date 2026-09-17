@@ -205,6 +205,15 @@ public sealed class WeirOptionsParsingTests
         Assert.Equal(expected, TestRuntime.Load(("WEIR_REFINER_WORKER_COUNT", raw)).RefinerWorkerCount);
 
     [Theory]
+    [InlineData("1", 30)]
+    [InlineData("0", 30)]
+    [InlineData("-5", 30)]
+    [InlineData("120", 120)]
+    [InlineData("999999", 86_400)]
+    public void Refiner_job_lease_seconds_is_thirty_seconds_to_a_day(string raw, int expected) =>
+        Assert.Equal(expected, TestRuntime.Load(("WEIR_REFINER_JOB_LEASE_SECONDS", raw)).RefinerJobLeaseSeconds);
+
+    [Theory]
     [InlineData("0", 0.25)]
     [InlineData("10", 10.0)]
     [InlineData("1000", 300.0)]

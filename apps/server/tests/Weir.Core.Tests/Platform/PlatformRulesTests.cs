@@ -197,9 +197,10 @@ public sealed class PlatformRulesTests
         Assert.Equal(FailureKind.RateLimit, FailureMessages.Classify(FailureMessages.RuntimeError("HTTP 429")));
         Assert.Equal("PermissionError: denied", FailureMessages.FromException("Refiner", "job", FailureMessages.FromDotNet(new UnauthorizedAccessException("denied"))).TechnicalDetail);
 
-        // provider_label(provider) or "the provider": a blank provider is not named.
+        // #540 item 7: a blank provider is not named, and the fallback no longer doubles "the" (was
+        // "Re-enter the the provider credentials...").
         var blank = FailureMessages.FromException("Refiner", "sync", new FailureSubject("RuntimeError", "401", ExceptionCategory.Other), provider: "   ");
-        Assert.Equal(("Refiner sync failed: The service from  rejected the credentials or permission level. This job is marked failed so it does not look successful.", "Re-enter the the provider credentials and run the connection test again."), (blank.Message, blank.NextAction));
+        Assert.Equal(("Refiner sync failed: The service from  rejected the credentials or permission level. This job is marked failed so it does not look successful.", "Re-enter the provider credentials and run the connection test again."), (blank.Message, blank.NextAction));
     }
 
     [Fact]
@@ -327,6 +328,23 @@ public sealed class PlatformRulesTests
         Assert.False(PyIpAddress.TryParse("01.1.1.1", out _));
         Assert.True(PyIpNetwork.TryParse("10.0.0.5/24", strict: false, out var network) && network.Contains(documentation) is false);
         Assert.False(PyIpNetwork.TryParse("10.0.0.5/24", strict: true, out _));
+    }
+
+    [Fact]
+    public void Job_notification_wording_is_retry_aware()
+    {
+        // #540 item 6: Python always says "exhausted all retry attempts" for a failed event, even the
+        // attempt about to retry. Fixed here to say a retry is coming instead, using the same #488
+        // vocabulary WorkerFailures already uses for the stored job error.
+        Assert.Equal(
+            ("refiner_job_completed", "Refiner job completed", "Job 5 (refiner.test.v1) finished successfully."),
+            NotificationRules.JobNotification("refiner", "completed", 5, "refiner.test.v1"));
+        Assert.Equal(
+            ("refiner_job_failed", "Refiner job failed", "Job 5 (refiner.test.v1) exhausted all retry attempts."),
+            NotificationRules.JobNotification("refiner", "failed", 5, "refiner.test.v1"));
+        Assert.Equal(
+            ("refiner_job_failed", "Refiner job failed", "Job 5 (refiner.test.v1) failed. Weir will try this job again shortly."),
+            NotificationRules.JobNotification("refiner", "failed", 5, "refiner.test.v1", willRetry: true));
     }
 
     private static UserSessionRecord Session(DateTime now, DateTime absolute, DateTime lastSeen) =>

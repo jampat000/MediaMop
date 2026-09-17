@@ -1,0 +1,81 @@
+{
+  "issue": 537,
+  "items": [
+    1
+  ],
+  "expected": {
+    "split": {
+      "video": [
+        0
+      ],
+      "audio": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "subtitles": [],
+      "attachments": []
+    },
+    "plan": {
+      "video_indices": [
+        0
+      ],
+      "audio": [
+        {
+          "input_index": 3,
+          "lang_label": "jpn",
+          "commentary": false,
+          "forced": false,
+          "default": true,
+          "channels": 8,
+          "lossless": true,
+          "bitrate": 3000000,
+          "codec_rank": 0,
+          "codec_name": "truehd",
+          "kind": "audio"
+        }
+      ],
+      "subtitles": [],
+      "removed_audio": [
+        "ger dts 8 ch (stream 1): removed (not selected — jpn truehd 8 ch (stream 3) kept)",
+        "spa ac3 6 ch (stream 2): removed (not selected — jpn truehd 8 ch (stream 3) kept)",
+        "eng aac 2 ch (stream 4): removed (not selected — jpn truehd 8 ch (stream 3) kept)",
+        "eng eac3 6 ch (stream 5): removed (not selected — jpn truehd 8 ch (stream 3) kept)",
+        "ita opus 2 ch (stream 6): removed (not selected — jpn truehd 8 ch (stream 3) kept)"
+      ],
+      "removed_subtitles": [],
+      "default_audio_output_index": 0,
+      "audio_selection_notes": [
+        "Track ranking: commentary last, then channels highest first, then codec order, then bitrate highest first, then default first.",
+        "Selected jpn truehd 8 ch (stream 3) using quality across all languages (policy: quality across all languages).",
+        "Removed non-selected ger dts 8 ch (stream 1) after selecting jpn truehd 8 ch (stream 3).",
+        "Removed non-selected spa ac3 6 ch (stream 2) after selecting jpn truehd 8 ch (stream 3).",
+        "Removed non-selected eng aac 2 ch (stream 4) after selecting jpn truehd 8 ch (stream 3).",
+        "Removed non-selected eng eac3 6 ch (stream 5) after selecting jpn truehd 8 ch (stream 3).",
+        "Removed non-selected ita opus 2 ch (stream 6) after selecting jpn truehd 8 ch (stream 3)."
+      ],
+      "removed_images": [],
+      "removed_attachments": [],
+      "metadata_notes": [],
+      "metadata": {
+        "remove_images": false,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      }
+    },
+    "remux_required": true,
+    "lines": {
+      "audio_before": "GER 7.1 DTS · Spanish 5.1 AC-3 · Japanese 7.1 TrueHD · English 2.0 AAC · English 5.1 E-AC-3 · Italian 2.0 Opus",
+      "audio_after": "Japanese 7.1 TrueHD",
+      "subtitle_before": "—",
+      "subtitle_after": "None",
+      "metadata_removed": "—"
+    },
+    "metadata_argv": []
+  }
+}

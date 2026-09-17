@@ -36,7 +36,7 @@ public sealed class RefinerJobProcessorTests : IDisposable
 
         Assert.Equal(new JobWorkContext(1, "refiner.test.ok.v1", null, "w", 1, 3), seen);
         Assert.Equal(RefinerJobStatus.Completed, (await _db.Store.GetAsync(1))!.Status);
-        Assert.Equal(["completed 1 refiner.test.ok.v1"], notifications.Sent);
+        Assert.Equal(["completed 1 refiner.test.ok.v1 willRetry=False"], notifications.Sent);
     }
 
     [Fact]
@@ -52,7 +52,22 @@ public sealed class RefinerJobProcessorTests : IDisposable
         Assert.Equal(RefinerJobStatus.Failed, row.Status);
         Assert.Contains("Refiner job failed", row.LastError, StringComparison.Ordinal);
         Assert.Contains("marked failed", row.LastError, StringComparison.Ordinal);
-        Assert.Equal(["failed 1 refiner.test.bad.v1"], notifications.Sent);
+        Assert.Equal(["failed 1 refiner.test.bad.v1 willRetry=False"], notifications.Sent);
+    }
+
+    [Fact]
+    public async Task Process_one_marks_a_failure_notification_retry_aware_when_another_attempt_follows()
+    {
+        // #540 item 6: the notification wording says a retry is coming instead of always claiming
+        // retries are exhausted.
+        await _db.Store.EnqueueOrGetAsync("d2b", "refiner.test.bad.v1", maxAttempts: 3);
+        var notifications = new RecordingNotifications();
+        var processor = _db.Processor([new DelegateHandler("refiner.test.bad.v1", _ => throw new InvalidOperationException("boom"))], notifications: notifications);
+
+        Assert.Equal(JobProcessOutcome.Processed, await processor.ProcessOneAsync("w", 3600, T0));
+
+        Assert.Equal(RefinerJobStatus.Pending, (await _db.Store.GetAsync(1))!.Status);
+        Assert.Equal(["failed 1 refiner.test.bad.v1 willRetry=True"], notifications.Sent);
     }
 
     [Fact]
@@ -303,7 +318,8 @@ public sealed class RefinerJobProcessorTests : IDisposable
     {
         public List<string> Sent { get; } = [];
 
-        public void Dispatch(string moduleName, string eventKind, long jobId, string jobKind) => Sent.Add($"{eventKind} {jobId} {jobKind}");
+        public void Dispatch(string moduleName, string eventKind, long jobId, string jobKind, bool willRetry = false) =>
+            Sent.Add($"{eventKind} {jobId} {jobKind} willRetry={willRetry}");
     }
 
     private sealed class RecordingFailureRecorder(bool? willRetry) : IUnhandledJobFailureRecorder

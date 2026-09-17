@@ -1,0 +1,89 @@
+{
+  "issue": 537,
+  "items": [
+    1,
+    5
+  ],
+  "expected": {
+    "split": {
+      "video": [
+        "0"
+      ],
+      "audio": [
+        "1",
+        2,
+        3
+      ],
+      "subtitles": [
+        4
+      ],
+      "attachments": []
+    },
+    "plan": {
+      "video_indices": [
+        0
+      ],
+      "audio": [
+        {
+          "input_index": 3,
+          "lang_label": "",
+          "commentary": false,
+          "forced": false,
+          "default": true,
+          "channels": 2,
+          "lossless": false,
+          "bitrate": 1,
+          "codec_rank": 16,
+          "codec_name": "aac",
+          "kind": "audio"
+        }
+      ],
+      "subtitles": [
+        {
+          "input_index": 4,
+          "lang_label": "en",
+          "commentary": false,
+          "forced": true,
+          "default": false,
+          "channels": 0,
+          "lossless": false,
+          "bitrate": 0,
+          "codec_rank": 55,
+          "codec_name": "",
+          "kind": "subtitle"
+        }
+      ],
+      "removed_audio": [
+        "eng (commentary excluded — remove commentary enabled)",
+        "unknown unknown unknown channels (stream 2): removed (not selected — unknown aac 2 ch (stream 3) kept)"
+      ],
+      "removed_subtitles": [],
+      "default_audio_output_index": 0,
+      "audio_selection_notes": [
+        "Excluded commentary track (stream 1) because remove commentary is enabled.",
+        "Track ranking: commentary last, then channels highest first, then codec order, then bitrate highest first, then default first.",
+        "Fell back to unknown aac 2 ch (stream 3) because no track matched configured language tiers (eng, jpn); ranked by quality with preferred-language matches first.",
+        "Removed non-selected unknown unknown unknown channels (stream 2) after selecting unknown aac 2 ch (stream 3)."
+      ],
+      "removed_images": [],
+      "removed_attachments": [],
+      "metadata_notes": [],
+      "metadata": {
+        "remove_images": false,
+        "remove_attachments": false,
+        "remove_title": false,
+        "remove_language_tags": false,
+        "remove_other_metadata": false
+      }
+    },
+    "remux_required": true,
+    "lines": {
+      "audio_before": "English 5.1 DTS · 2.0 AAC",
+      "audio_after": "2.0 AAC",
+      "subtitle_before": "EN",
+      "subtitle_after": "EN",
+      "metadata_removed": "—"
+    },
+    "metadata_argv": []
+  }
+}
