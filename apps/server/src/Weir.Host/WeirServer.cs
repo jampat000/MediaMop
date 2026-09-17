@@ -6,6 +6,7 @@ using Weir.Core;
 using Weir.Core.Configuration;
 using Weir.Core.Metrics;
 using Weir.Infrastructure.Auth;
+using Weir.Infrastructure.Jobs;
 using Weir.Infrastructure.Logging;
 using Weir.Infrastructure.Runtime;
 using Weir.Infrastructure.Sqlite;
@@ -96,6 +97,7 @@ public static class WeirServer
         builder.Logging.AddProvider(new MetricsLoggerProvider(metrics, minimumLevel));
 
         builder.Services.AddWeirApi(options);
+        builder.Services.AddWeirJobs(options, runtime);
         configureBuilder?.Invoke(builder);
 
         var app = builder.Build();

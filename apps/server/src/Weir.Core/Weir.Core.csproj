@@ -7,4 +7,8 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Weir.Core.Tests" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- IANA to Windows time zone ids (CLDR, via ICU): the server runs with invariant globalization, so Windows cannot convert them itself. -->
+    <EmbeddedResource Include="Jobs\windows-zones.txt" LogicalName="Weir.Core.Jobs.windows-zones.txt" />
+  </ItemGroup>
 </Project>

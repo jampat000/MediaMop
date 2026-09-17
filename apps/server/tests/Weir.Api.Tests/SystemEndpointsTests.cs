@@ -1,7 +1,9 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.DependencyInjection;
 using Weir.Core;
+using Weir.Core.Workers;
 using Weir.Infrastructure.Sqlite;
 
 namespace Weir.Api.Tests;
@@ -56,14 +58,27 @@ public sealed class SystemEndpointsTests
     [Fact]
     public async Task Health_is_unhealthy_when_the_database_cannot_be_reached()
     {
-        await using var server = await WeirTestServer.StartAsync();
-        SqliteConnection.ClearAllPools();
+        // No workers, so nothing but the start-up retention tick holds the file open.
+        await using var server = await WeirTestServer.StartAsync([("WEIR_REFINER_WORKER_COUNT", "0")]);
         var dbPath = Path.Join(server.Home, "data", "weir.sqlite3");
-        // Replace the file with a directory: any new connection now fails.
-        File.Delete(dbPath);
-        File.Delete(dbPath + "-wal");
-        File.Delete(dbPath + "-shm");
-        Directory.CreateDirectory(dbPath);
+        // Replace the file with a directory: any new connection now fails. A background connection
+        // closing at the same moment can leave the delete pending briefly on Windows, so retry.
+        for (var attempt = 0; ; attempt++)
+        {
+            SqliteConnection.ClearAllPools();
+            File.Delete(dbPath);
+            File.Delete(dbPath + "-wal");
+            File.Delete(dbPath + "-shm");
+            try
+            {
+                Directory.CreateDirectory(dbPath);
+                break;
+            }
+            catch (IOException) when (attempt < 50)
+            {
+                await Task.Delay(100);
+            }
+        }
 
         using var response = await server.Client.GetAsync("/health");
 
@@ -84,29 +99,44 @@ public sealed class SystemEndpointsTests
     }
 
     [Fact]
-    public async Task Readiness_reports_workers_as_not_started()
+    public async Task Readiness_reports_running_workers()
     {
         await using var server = await WeirTestServer.StartAsync([("WEIR_VERSION", "7.8.9")], signedIn: true);
 
-        using var response = await server.Client.GetAsync("/api/v1/system/readiness");
+        // The worker slots report their first heartbeat as soon as they start (#521).
+        var responseText = await WaitForReadyAsync(server, "/api/v1/system/readiness");
 
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        using var body = JsonDocument.Parse(responseText);
         var root = body.RootElement;
         Assert.Equal(["ready", "version", "status", "startup_seconds", "steps", "worker_health"], root.EnumerateObject().Select(p => p.Name));
-        Assert.False(root.GetProperty("ready").GetBoolean());
+        Assert.True(root.GetProperty("ready").GetBoolean());
         Assert.Equal("7.8.9", root.GetProperty("version").GetString());
-        Assert.Equal("failed", root.GetProperty("status").GetString());
+        Assert.Equal("ready", root.GetProperty("status").GetString());
         Assert.True(root.GetProperty("startup_seconds").GetDouble() >= 0);
         Assert.Equal(
             "[{\"name\":\"database\",\"status\":\"ready\",\"detail\":\"Local database is connected and migrations are complete.\"}," +
-            "{\"name\":\"workers\",\"status\":\"failed\",\"detail\":\"One or more background workers are stale or stopped.\"}," +
+            "{\"name\":\"workers\",\"status\":\"ready\",\"detail\":\"Background workers and schedules are ready.\"}," +
             "{\"name\":\"filesystem_watcher\",\"status\":\"ready\",\"detail\":\"No libraries are being watched for filesystem events.\"}]",
             root.GetProperty("steps").GetRawText());
         Assert.Equal(
-            "[{\"module\":\"refiner\",\"expected_workers\":8,\"active_workers\":0,\"stale_workers\":8,\"stopped_workers\":0,\"status\":\"degraded\"," +
-            "\"detail\":\"Refiner is not processing new work because 8 worker slot(s) stopped responding. Restart Weir; queued work remains safe.\"}]",
+            "[{\"module\":\"refiner\",\"expected_workers\":8,\"active_workers\":8,\"stale_workers\":0,\"stopped_workers\":0,\"status\":\"healthy\"," +
+            "\"detail\":\"Refiner worker heartbeats are current.\"}]",
             root.GetProperty("worker_health").GetRawText());
+    }
+
+    [Fact]
+    public async Task Readiness_reports_worker_slots_as_stopped_after_shutdown()
+    {
+        var server = await WeirTestServer.StartAsync(signedIn: true);
+        WorkerHeartbeats heartbeats;
+        await using (server)
+        {
+            await WaitForReadyAsync(server, "/api/v1/system/readiness");
+            heartbeats = server.Services.GetRequiredService<WorkerHeartbeats>();
+        }
+
+        var lane = Assert.Single(heartbeats.Snapshot([new KeyValuePair<string, int>("refiner", 8)]));
+        Assert.Equal(("degraded", 0, 8), (lane.Status, lane.ActiveWorkers, lane.StoppedWorkers));
     }
 
     [Fact]
@@ -127,14 +157,29 @@ public sealed class SystemEndpointsTests
     }
 
     [Fact]
-    public async Task Public_ready_is_503_while_workers_are_not_running()
+    public async Task Public_ready_is_200_once_workers_are_running()
     {
         await using var server = await WeirTestServer.StartAsync();
 
-        using var response = await server.Client.GetAsync("/ready");
+        Assert.Equal("{\"ready\":true,\"status\":\"ready\"}", await WaitForReadyAsync(server, "/ready"));
+    }
 
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-        Assert.Equal("{\"ready\":false,\"status\":\"failed\"}", await response.Content.ReadAsStringAsync());
+    /// <summary>Poll until the endpoint answers 200, and return its body.</summary>
+    private static async Task<string> WaitForReadyAsync(WeirTestServer server, string path)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(15);
+        while (true)
+        {
+            using var response = await server.Client.GetAsync(path);
+            var text = await response.Content.ReadAsStringAsync();
+            if (response.StatusCode == HttpStatusCode.OK || DateTime.UtcNow > deadline)
+            {
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                return text;
+            }
+
+            await Task.Delay(50);
+        }
     }
 
     [Fact]
