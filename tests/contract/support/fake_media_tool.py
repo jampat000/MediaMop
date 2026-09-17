@@ -28,6 +28,7 @@ from __future__ import annotations
 import fnmatch
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -140,13 +141,18 @@ def _arg_after(argv: list[str], flag: str) -> str | None:
 _DISPOSITION_CODEC_TYPES = {"v": "video", "a": "audio", "s": "subtitle"}
 
 
+_DISPOSITION_TOKEN_RE = re.compile(r"([+-])([A-Za-z_]+)")
+
+
 def _apply_disposition_flags(streams: list[dict], argv: list[str]) -> None:
-    """Real ffmpeg's ``-disposition:{v|a|s}:{n} value`` replaces stream n's whole disposition (of that
-    type, 0-indexed among streams of that type alone) with the named, ``+``-joined flags (each set to 1),
-    or clears every flag when ``value`` is ``"0"``. Weir sets this after every remux (e.g. to mark the
-    default audio track, or a subtitle forced/hearing-impaired); #500's staged-output validation checks
-    the output actually carries it, so the fake tool must honour it, not just echo the source's own
-    disposition through unchanged.
+    """Real ffmpeg's ``-disposition:{v|a|s}:{n} value`` edits stream n's disposition (of that type,
+    0-indexed among streams of that type alone). Weir (issue #547) uses the additive ``+flag``/``-flag``
+    syntax exclusively — e.g. ``+default-forced`` — which sets or clears only the named flags and leaves
+    every other flag (comment, dub, hearing_impaired, ...) as the source stream already had it, unlike the
+    older flat ``"default"``/``"0"`` syntax this replaced, which discarded everything else. Weir sets this
+    after every remux (e.g. to mark the default audio track, or a subtitle forced/hearing-impaired);
+    #500's staged-output validation checks the output actually carries it, so the fake tool must honour
+    it, not just echo the source's own disposition through unchanged.
     """
 
     by_type: dict[str, list[dict]] = {}
@@ -166,8 +172,17 @@ def _apply_disposition_flags(streams: list[dict], argv: list[str]) -> None:
         if position >= len(candidates):
             continue
         raw = argv[i + 1]
-        disposition = dict.fromkeys(candidates[position].get("disposition", {}), 0)
-        if raw != "0":
+        disposition = dict(candidates[position].get("disposition", {}))
+        if raw == "0":
+            # Pre-#547 flat clear-all, kept for any script still exercising the older syntax.
+            disposition = dict.fromkeys(disposition, 0)
+        elif "+" in raw or "-" in raw:
+            # #547's additive syntax: only the named flags change, everything else survives untouched.
+            for sign, flag in _DISPOSITION_TOKEN_RE.findall(raw):
+                disposition[flag] = 1 if sign == "+" else 0
+        else:
+            # Pre-#547 flat overwrite: replace the whole disposition with the named, "+"-joined flags.
+            disposition = dict.fromkeys(disposition, 0)
             for flag in raw.split("+"):
                 if flag:
                     disposition[flag] = 1

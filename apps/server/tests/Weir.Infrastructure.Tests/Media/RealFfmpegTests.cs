@@ -323,7 +323,8 @@ public sealed class RealFfmpegTests : IDisposable
 
         // RemuxToTempFileAsync also runs ValidateRemuxOutputAsync on the result, proving the output validator
         // (audio-stream count and duration) is not confused by the new attachment stream in the output.
-        var output = await tools.RemuxToTempFileAsync(fixture, workDir, plan, durationSeconds: ProbeOutput.DurationSeconds(probe));
+        var sourceWarnings = await tools.ProbeWarningLinesAsync(fixture);
+        var output = await tools.RemuxToTempFileAsync(fixture, workDir, plan, probe, sourceWarnings, durationSeconds: ProbeOutput.DurationSeconds(probe));
 
         var outputProbe = await tools.FfprobeJsonAsync(output);
         var outputAttachment = Assert.Single(Streams(outputProbe, "attachment"));
@@ -383,7 +384,11 @@ public sealed class RealFfmpegTests : IDisposable
         Assert.Equal(1, sourceAudio.GetProperty("disposition").GetProperty("comment").GetInt32());
         Assert.Equal(0, sourceAudio.GetProperty("disposition").GetProperty("default").GetInt32());
 
-        var config = RemuxRules.DefaultConfig() with { PrimaryAudioLang = "eng", SecondaryAudioLang = string.Empty, TertiaryAudioLang = string.Empty };
+        // Issue #495 (landed after this test's own base) now detects "commentary" straight from the disposition
+        // flag this fixture sets, not only from a track's name — correctly, but beside this test's point, which is
+        // the additive disposition edit below, not commentary removal. Keep the track in the plan by disabling that
+        // rule, exactly as a library that wants a lone commentary track kept would configure it.
+        var config = RemuxRules.DefaultConfig() with { PrimaryAudioLang = "eng", SecondaryAudioLang = string.Empty, TertiaryAudioLang = string.Empty, RemoveCommentary = false };
         var split = RemuxRules.SplitStreams(new ProbeResult(probe));
         var plan = RemuxRules.PlanRemux(split.Video, split.Audio, split.Subtitles, config);
         Assert.NotNull(plan);
@@ -391,7 +396,8 @@ public sealed class RealFfmpegTests : IDisposable
         Assert.True(kept.Default);
         var workDir = Path.Combine(_root, "work-commentary");
 
-        var output = await tools.RemuxToTempFileAsync(fixture, workDir, plan);
+        var sourceWarnings = await tools.ProbeWarningLinesAsync(fixture);
+        var output = await tools.RemuxToTempFileAsync(fixture, workDir, plan, probe, sourceWarnings);
 
         var outputProbe = await tools.FfprobeJsonAsync(output);
         var outputAudio = Assert.Single(Streams(outputProbe, "audio"));
@@ -436,7 +442,8 @@ public sealed class RealFfmpegTests : IDisposable
         Assert.NotNull(plan);
         var workDir = Path.Combine(_root, "work-stale-tags");
 
-        var output = await tools.RemuxToTempFileAsync(fixture, workDir, plan);
+        var sourceWarnings = await tools.ProbeWarningLinesAsync(fixture);
+        var output = await tools.RemuxToTempFileAsync(fixture, workDir, plan, probe, sourceWarnings);
 
         var outputProbe = await tools.FfprobeJsonAsync(output);
         var outputAudio = Assert.Single(Streams(outputProbe, "audio"));
