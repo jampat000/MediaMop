@@ -22,8 +22,8 @@ namespace Weir.Infrastructure.Jobs;
 /// </summary>
 /// <remarks>
 /// Per-file attribution to a specific media-manager queue row (path/id/title-year matching a manager's
-/// raw JSON to a candidate) is not ported — see <see cref="WatchedFileDispatch"/> for why; the scan still
-/// asks every linked manager and reports how many answered.
+/// raw JSON to a candidate) is <see cref="ManagerQueueSignals.AttributedRowsForFile"/>, applied through
+/// <see cref="WatchedFileDispatch"/> exactly as the "why held" diagnostic applies it.
 /// </remarks>
 public sealed class RefinerWatchedFolderScanDispatchJobHandler : IJobHandler
 {
@@ -79,8 +79,6 @@ public sealed class RefinerWatchedFolderScanDispatchJobHandler : IJobHandler
         // and an empty selector must mean "ask nobody", not "fall back to every connection for the scope".
         var connectionIds = await LibraryStore.ManagerConnectionIdsAsync(uow, library.Id).ConfigureAwait(false);
         var signals = await _managerConnections.CollectQueueSignalsAsync(uow, mediaScope, connectionIds, cancellationToken).ConfigureAwait(false);
-        var silentLabels = signals.Where(s => !s.IsReported).Select(s => s.Connection.Label).ToList();
-        var candidate = new FileAnchorCandidate(HoldDiagnosticStore.ReleaseTitleFromRelativePath(library.Name));
 
         var operatorSettings = await OperatorSettingsStore.EnsureAsync(uow).ConfigureAwait(false);
         var suite = await SuiteSettingsStore.EnsureAsync(uow).ConfigureAwait(false);
@@ -119,7 +117,11 @@ public sealed class RefinerWatchedFolderScanDispatchJobHandler : IJobHandler
             }
 
             var rel = WatchedFolderScanOps.RelativePosixPathUnderWatched(runtime.WatchedFolder, filePath);
-            var outcome = WatchedFileDispatch.Evaluate([], candidate);
+            // `evaluate_watched_media_file_for_dispatch`: the candidate anchor is this file's own stem
+            // (not the library's name), so anchor matching only ever compares one release title to another.
+            var candidate = new FileAnchorCandidate(Path.GetFileNameWithoutExtension(filePath));
+            var attributedRows = ManagerQueueSignals.AttributedRowsForFile(signals, mediaScope, Path.GetFullPath(filePath));
+            var outcome = WatchedFileDispatch.Evaluate(attributedRows, candidate);
 
             var observedSize = FileSizeBytes(filePath);
             var previous = await FileStateStore.ExistingFileRowAsync(uow, library.Id, rel).ConfigureAwait(false);

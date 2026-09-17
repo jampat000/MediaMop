@@ -7,6 +7,7 @@ using Weir.Core.Json;
 using Weir.Core.Refiner;
 using Weir.Core.Validation;
 using Weir.Infrastructure.Jobs;
+using Weir.Infrastructure.MediaManagers;
 using Weir.Infrastructure.Refiner;
 
 namespace Weir.Api.Endpoints;
@@ -140,7 +141,8 @@ public static class RefinerJobsEndpoints
         var library = await LibraryStore.GetAsync(uow, file.LibraryId).ConfigureAwait(false)
             ?? throw new ApiException(StatusCodes.Status404NotFound, "The library this file belonged to no longer exists.");
 
-        var outcome = await HoldDiagnosticStore.EvaluateAsync(uow, file, library).ConfigureAwait(false);
+        var connections = request.Service<MediaManagerConnectionService>();
+        var outcome = await HoldDiagnosticStore.EvaluateAsync(uow, file, library, connections, request.Context.RequestAborted).ConfigureAwait(false);
         var verdict = outcome.Verdict switch
         {
             CandidateGateVerdict.Proceed => "proceed",

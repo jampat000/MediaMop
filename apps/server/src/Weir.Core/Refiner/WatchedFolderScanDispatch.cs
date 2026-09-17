@@ -401,24 +401,20 @@ public sealed record WatchedFileDispatchOutcome(string Verdict, string? BlockedR
 }
 
 /// <summary>
-/// Port of <c>refiner_watched_folder_remux_scan_dispatch_evaluate.verdict_for_watched_scan_file</c>.
-/// <para>
-/// The per-file attribution of a raw manager queue row to a specific candidate (path/id/title-year
-/// matching, <c>manager_queue_signals.attributed_rows_for_file</c>) is media-manager domain logic that is
-/// not yet ported (tracked with the rest of #520's remaining surface; see
-/// <c>Weir.Infrastructure.Refiner.HoldDiagnosticStore</c> for the same, already-shipped, honestly-labeled
-/// gap on the "why held" diagnostic). Until it lands, this evaluates against whatever attributed rows the
-/// caller can supply — today, none — so a scan never blocks a file it cannot actually prove is upstream,
-/// while still reporting how many managers were consulted and reporting in the scan summary.
-/// </para>
+/// Port of <c>refiner_watched_folder_remux_scan_dispatch_evaluate.verdict_for_watched_scan_file</c>: decide
+/// whether a watched-folder file can be processed. A block from any manager blocks the file — two
+/// connections covering one library is an ordinary 4K-plus-1080p setup, and either of them may be
+/// mid-import. Its rows are built by <see cref="ManagerQueueSignals.AttributedRowsForFile"/>, so the reason
+/// can name the connection rather than just "a media manager".
 /// </summary>
 public static class WatchedFileDispatch
 {
-    public static WatchedFileDispatchOutcome Evaluate(IReadOnlyList<RefinerQueueRowView> attributedRows, FileAnchorCandidate candidate)
+    public static WatchedFileDispatchOutcome Evaluate(IReadOnlyList<AttributedQueueRow> rows, FileAnchorCandidate candidate)
     {
-        ArgumentNullException.ThrowIfNull(attributedRows);
-        return RefinerDomain.ShouldBlockForUpstream(attributedRows, candidate)
-            ? new WatchedFileDispatchOutcome(WatchedFileDispatchOutcome.WaitUpstream, "Weir left this file alone for now because a media manager is still importing it.")
+        ArgumentNullException.ThrowIfNull(rows);
+        var label = ManagerQueueSignals.BlockingConnectionLabel(rows, candidate);
+        return label is not null
+            ? new WatchedFileDispatchOutcome(WatchedFileDispatchOutcome.WaitUpstream, $"{label} is still importing this file, so Weir left it alone for now.", label)
             : new WatchedFileDispatchOutcome(WatchedFileDispatchOutcome.Proceed);
     }
 }

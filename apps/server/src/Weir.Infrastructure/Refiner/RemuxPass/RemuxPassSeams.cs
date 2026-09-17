@@ -36,8 +36,9 @@ public sealed record TvSeasonCleanupContext(
     string? FinalOutputFile);
 
 /// <summary>
-/// Seam: the TV watched-folder season cleanup after a successful pass (<c>refiner_tv_season_folder_cleanup.py</c>). It needs
-/// the manager queue-row mapping (<c>queue_adapter.py</c>) that the watched-folder scan port brings, so it is not ported here.
+/// Seam: the TV watched-folder season cleanup after a successful pass (<c>refiner_tv_season_folder_cleanup.py</c>), ported
+/// as <see cref="TvSeasonFolderCleanup"/> using the manager queue-row mapping (<c>queue_adapter.py</c> /
+/// <see cref="Weir.Core.Refiner.ManagerQueueSignals"/>) that the watched-folder scan port brought.
 /// </summary>
 public interface ITvSeasonFolderCleanup
 {
@@ -45,8 +46,9 @@ public interface ITvSeasonFolderCleanup
 }
 
 /// <summary>
-/// The default until the scan port lands: records the season-cleanup fields as a skip and removes nothing, which is the
-/// outcome Python reaches whenever one of its gates cannot be checked.
+/// A no-op double for tests that exercise other remux-pass behaviour without the TV season cleanup's own gates: records
+/// the season-cleanup fields as a skip and removes nothing, which is the outcome Python reaches whenever one of its gates
+/// cannot be checked.
 /// </summary>
 public sealed class SkippedTvSeasonFolderCleanup : ITvSeasonFolderCleanup
 {

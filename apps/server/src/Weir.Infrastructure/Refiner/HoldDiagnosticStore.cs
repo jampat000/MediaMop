@@ -1,13 +1,14 @@
 using Weir.Core.Refiner;
+using Weir.Infrastructure.MediaManagers;
 using Weir.Infrastructure.Sqlite;
 
 namespace Weir.Infrastructure.Refiner;
 
 /// <summary>
-/// "Why is this file held?" (port of <c>refiner_hold_diagnostic_api.py</c>). The real answer asks every
-/// linked media manager's live queue; that needs the manager-port HTTP clients from #520, which are not in
-/// this build. Until then, a library's linked connections are reported as consulted-but-silent, which is
-/// the honest state (Weir cannot yet get an import check from them) rather than a guessed verdict.
+/// "Why is this file held?" (port of <c>refiner_hold_diagnostic_api.py</c>): ask every media manager
+/// linked to this file's library what it is doing with it, right now. Deliberately live rather than
+/// cached — the question is only ever asked because the recorded state looks wrong or stale, and answering
+/// it from the same record would be no answer at all.
 /// </summary>
 public static class HoldDiagnosticStore
 {
@@ -30,49 +31,28 @@ public static class HoldDiagnosticStore
         return dot > 0 ? stem[..dot] : stem;
     }
 
-    /// <summary>Labels of the connections linked to a library, for the "no signal yet" report.</summary>
-    public static async Task<List<string>> ConnectionLabelsAsync(UnitOfWork uow, IReadOnlyList<long> connectionIds)
+    /// <summary>
+    /// Ask every manager linked to <paramref name="library"/> what it is importing, and apply the same
+    /// domain rules the watched-folder scan applies per file (port of <c>get_refiner_file_why_held</c>).
+    /// <paramref name="connections"/> is the shared connection-resolution/HTTP service (<c>manager_binding.py</c>,
+    /// already ported): this call never duplicates its HTTP or dialect logic.
+    /// </summary>
+    public static async Task<CandidateGateOutcome> EvaluateAsync(
+        UnitOfWork uow, RefinerFileRecord file, RefinerLibraryRecord library, MediaManagerConnectionService connections, CancellationToken cancellationToken = default)
     {
-        if (connectionIds.Count == 0)
-        {
-            return [];
-        }
-
-        var placeholders = string.Join(",", connectionIds.Select((_, i) => $"@id{i}"));
-        var parameters = connectionIds.Select((id, i) => ($"@id{i}", (object?)id)).ToArray();
-        var rows = await uow.QueryAsync(
-            $"SELECT kind, name FROM media_manager_connections WHERE id IN ({placeholders}) ORDER BY id",
-            reader => (Kind: reader.GetString(0), Name: reader.GetString(1)), parameters).ConfigureAwait(false);
-        return [.. rows.Select(row => LabelForConnection(row.Kind, row.Name))];
-    }
-
-    /// <summary><c>label_for_connection</c>: "Deluno (Main)" — what a blocked-upstream reason names.</summary>
-    public static string LabelForConnection(string kind, string name)
-    {
-        var product = kind.Trim().ToLowerInvariant() switch
-        {
-            "radarr" => "Radarr",
-            "sonarr" => "Sonarr",
-            "deluno" => "Deluno",
-            "native" => "Media manager",
-            _ => "Media manager",
-        };
-        var label = (name ?? string.Empty).Trim();
-        if (label.Length == 0)
-        {
-            return product;
-        }
-
-        return string.Equals(label, product, StringComparison.OrdinalIgnoreCase) ? product : $"{product} ({label})";
-    }
-
-    public static async Task<CandidateGateOutcome> EvaluateAsync(UnitOfWork uow, RefinerFileRecord file, RefinerLibraryRecord library)
-    {
-        var connectionIds = await LibraryStore.ManagerConnectionIdsAsync(uow, library.Id).ConfigureAwait(false);
-        var labels = await ConnectionLabelsAsync(uow, connectionIds).ConfigureAwait(false);
-        var report = new QueueSignalReport(connectionIds.Count, 0, labels);
+        ArgumentNullException.ThrowIfNull(file);
+        ArgumentNullException.ThrowIfNull(library);
+        ArgumentNullException.ThrowIfNull(connections);
         var scope = RefinerMediaScopes.Normalize(library.MediaType);
+        var connectionIds = await LibraryStore.ManagerConnectionIdsAsync(uow, library.Id).ConfigureAwait(false);
+        // `connection_ids or None`: unlike the watched-folder scan (which must ask nobody when a library
+        // links nothing), this diagnostic falls back to every connection covering the scope when the
+        // library names none — matching Python's hold-diagnostic endpoint exactly.
+        var signals = await connections.CollectQueueSignalsAsync(
+            uow, scope, connectionIds.Count > 0 ? connectionIds : null, cancellationToken).ConfigureAwait(false);
+        var report = ManagerQueueSignals.ReportForSignals(signals);
         var candidate = new FileAnchorCandidate(ReleaseTitleFromRelativePath(file.RelativePath));
-        return CandidateGate.Evaluate(scope, report, [], candidate);
+        var rows = ManagerQueueSignals.AttributedQueueRows(signals, scope, candidatePath: file.RelativePath);
+        return CandidateGate.Evaluate(scope, report, rows, candidate);
     }
 }

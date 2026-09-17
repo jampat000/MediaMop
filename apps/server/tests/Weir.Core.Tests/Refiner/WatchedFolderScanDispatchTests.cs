@@ -73,10 +73,13 @@ public sealed class WatchedFolderScanDispatchTests
     [Fact]
     public void Watched_file_dispatch_waits_upstream_when_a_row_is_actively_importing_it()
     {
-        var row = new RefinerQueueRowView(AppliesToFile: true, IsUpstreamActive: true, IsImportPending: false);
+        var view = new RefinerQueueRowView(AppliesToFile: true, IsUpstreamActive: true, IsImportPending: false);
+        var row = new AttributedQueueRow("Radarr (4K)", view);
         var outcome = WatchedFileDispatch.Evaluate([row], new FileAnchorCandidate("Movie"));
         Assert.Equal(WatchedFileDispatchOutcome.WaitUpstream, outcome.Verdict);
         Assert.NotNull(outcome.BlockedReason);
+        Assert.Equal("Radarr (4K)", outcome.BlockedConnection);
+        Assert.Contains("Radarr (4K)", outcome.BlockedReason, StringComparison.Ordinal);
     }
 
     // --- resolution class weighting ------------------------------------------------------------------

@@ -82,10 +82,9 @@ public static class RemuxPassServices
         services.TryAddSingleton<SqliteRemuxPassData>();
         services.TryAddSingleton<IRemuxPassFileFacts>(sp => sp.GetRequiredService<SqliteRemuxPassData>());
         services.TryAddSingleton<IPostSuccessCleanupData>(sp => sp.GetRequiredService<SqliteRemuxPassData>());
-        // Seam for work ported separately: the TV watched-folder season cleanup needs the scan port's queue mapping.
-        // The failure policy's follow-up handlers (pass-through and reject) are registered by
-        // AddWeirRefinerFailureFollowUps, which calls this method rather than duplicating it.
-        services.TryAddSingleton<ITvSeasonFolderCleanup, SkippedTvSeasonFolderCleanup>();
+        services.TryAddSingleton<ITvSeasonFolderCleanup, TvSeasonFolderCleanup>();
+        // Seam for work ported separately: the failure policy's follow-up handlers (pass-through and reject) are
+        // registered by AddWeirRefinerFailureFollowUps, which calls this method rather than duplicating it.
         services.TryAddSingleton<IFailurePolicy, QueueingFailurePolicy>();
         services.TryAddSingleton<IOriginalLanguageLookup, MetadataProviderOriginalLanguageLookup>();
         services.TryAddSingleton(new RemuxPassSettings
