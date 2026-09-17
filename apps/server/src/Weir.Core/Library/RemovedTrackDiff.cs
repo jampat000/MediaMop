@@ -18,19 +18,22 @@ public sealed record RemovedTrackDiffResult(RemovedTrackFileKey File, IReadOnlyL
 /// languages (primary/secondary/tertiary) that it was not before an operator can act on it. The exact
 /// winner can only be known by re-probing the file, which is what the offered re-download itself does.</para>
 ///
-/// <para><b>Variant-aware once a variant exists.</b> This codebase has no <c>LanguageVariants</c> concept
-/// today (see <see cref="RemovedTrackRecord"/>'s remarks), so every comparison here is base-language only.
-/// If <see cref="RemovedTrackRecord.Variant"/> is ever populated, a record whose variant does not match the
-/// current rules' variant should <i>not</i> be reported as now-wanted; the check point is marked below.</para>
+/// <para><b>Variant-aware</b> (issue #496 landed after this diff's own base, so <see cref="RemovedTrackRecord.Variant"/>
+/// is now populated): each configured language is compared with <see cref="LanguageVariants.Matches"/>, exactly as
+/// <c>RemuxRules.PlanRemux</c> compares a candidate — a plain base-language configuration ("eng") matches any variant of
+/// it, while a variant-specific configuration ("fre-CA") matches only a removed track recorded with that same variant,
+/// never its base ("fre") or a different variant ("fre-FR").</para>
 /// </summary>
 public static class RemovedTrackDiff
 {
     /// <summary>
-    /// The audio languages current rules prefer, normalized and de-duplicated, in the same order
-    /// <c>RemuxRules.PlanRemux</c>'s private <c>OrderedPreferenceLangs</c> builds them from
+    /// The audio languages (or language variants) current rules prefer, normalized and de-duplicated, in the same
+    /// order <c>RemuxRules.PlanRemux</c>'s private <c>OrderedPreferenceLangs</c> builds them from
     /// <see cref="RefinerRulesConfig.PrimaryAudioLang"/>/<see cref="RefinerRulesConfig.SecondaryAudioLang"/>/
     /// <see cref="RefinerRulesConfig.TertiaryAudioLang"/> (duplicated here rather than exposed from Rules
     /// because it is a three-line pure helper and Rules' internals stay private to the golden-tested engine).
+    /// Normalized with <see cref="LanguageVariants.NormalizeLanguageOrVariant"/>, not <c>RemuxRules.NormalizeLang</c>,
+    /// so a configured variant identifier ("fre-CA") survives rather than collapsing to its base ("fre").
     /// </summary>
     private static HashSet<string> PreferredAudioLangs(RefinerRulesConfig rules)
     {
@@ -38,7 +41,7 @@ public static class RemovedTrackDiff
         var langs = new HashSet<string>(StringComparer.Ordinal);
         foreach (var raw in new[] { rules.PrimaryAudioLang, rules.SecondaryAudioLang, rules.TertiaryAudioLang })
         {
-            var lang = RemuxRules.NormalizeLang(raw);
+            var lang = LanguageVariants.NormalizeLanguageOrVariant(raw);
             if (lang.Length > 0)
             {
                 langs.Add(lang);
@@ -48,7 +51,7 @@ public static class RemovedTrackDiff
         return langs;
     }
 
-    /// <summary>The subtitle languages current rules would keep; empty when subtitle mode removes everything.</summary>
+    /// <summary>The subtitle languages (or language variants) current rules would keep; empty when subtitle mode removes everything.</summary>
     private static HashSet<string> KeptSubtitleLangs(RefinerRulesConfig rules)
     {
         ArgumentNullException.ThrowIfNull(rules);
@@ -57,26 +60,26 @@ public static class RemovedTrackDiff
             return new HashSet<string>(StringComparer.Ordinal);
         }
 
-        return new HashSet<string>(rules.SubtitleLangs.Select(RemuxRules.NormalizeLang), StringComparer.Ordinal);
+        return new HashSet<string>(rules.SubtitleLangs.Select(LanguageVariants.NormalizeLanguageOrVariant), StringComparer.Ordinal);
     }
 
     /// <summary>
     /// Whether <paramref name="rules"/> would now keep <paramref name="removed"/> if the file still had it.
-    /// See the type's remarks for the audio approximation and the variant caveat.
+    /// See the type's remarks for the audio approximation and the variant comparison.
     /// </summary>
     public static bool WouldNowBeKept(RefinerRulesConfig rules, RemovedTrackRecord removed)
     {
         ArgumentNullException.ThrowIfNull(rules);
         ArgumentNullException.ThrowIfNull(removed);
 
-        // Variant check point: once RemovedTrackRecord.Variant is ever non-null, a rules concept for
-        // "which variant" must be compared here too, before falling through to the base-language test.
-        return removed.Type switch
+        var configuredLangs = removed.Type switch
         {
-            RemovedTrackType.Audio => PreferredAudioLangs(rules).Contains(removed.Language),
-            RemovedTrackType.Subtitle => KeptSubtitleLangs(rules).Contains(removed.Language),
-            _ => false,
+            RemovedTrackType.Audio => PreferredAudioLangs(rules),
+            RemovedTrackType.Subtitle => KeptSubtitleLangs(rules),
+            _ => (HashSet<string>?)null,
         };
+
+        return configuredLangs is not null && configuredLangs.Any(configured => LanguageVariants.Matches(configured, removed.Language, removed.Variant));
     }
 
     /// <summary>The removed tracks of one file that current rules would now keep, in their original order.</summary>
